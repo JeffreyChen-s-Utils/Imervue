@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+from Imervue.gpu_image_view.images.image_loader import load_image
 
 
 class ImervueMainWindow(QMainWindow):
@@ -113,7 +114,7 @@ class ImervueMainWindow(QMainWindow):
                 self.viewer.clear_tile_grid()
                 self.viewer.load_tile_grid_async(self.viewer.model.images)
             else:
-                self.viewer.load_image(self.viewer.model.images[0])
+                load_image(self.viewer.model.images[0], self.viewer)
 
     # ==========================
     # 開啟資料夾
@@ -144,7 +145,7 @@ class ImervueMainWindow(QMainWindow):
                 self.filename_label.setText(f"目前資料夾：{path}")
         elif os.path.isfile(path):
             if path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
-                self.viewer.load_image(path)
+                load_image(path, self.viewer)
                 self.viewer.current_index = 0
                 self.viewer.image_list = [path]
                 self.filename_label.setText(f"目前檔名：{os.path.basename(path)}")

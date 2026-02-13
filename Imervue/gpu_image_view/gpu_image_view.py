@@ -3,10 +3,9 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
+from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
 from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image
-from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete, \
-    clear_thumbnail_cache
-from Imervue.gpu_image_view.image_processing import load_image_file
+from Imervue.gpu_image_view.images.image_loader import load_image_file
 from Imervue.gpu_image_view.images.image_model import ImageModel
 
 if TYPE_CHECKING:
@@ -14,7 +13,6 @@ if TYPE_CHECKING:
 
 import numpy as np
 from OpenGL.GL import *
-from PIL import Image
 from PySide6.QtCore import QThreadPool, QMutex, QTimer, QRectF, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -91,20 +89,6 @@ class GPUImageView(QOpenGLWidget):
         # ===== Focus ======
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
-
-    # ===========================
-    # 載入 DeepZoom 圖片
-    # ===========================
-    def load_image(self, path):
-        img = Image.open(path).convert("RGBA")
-        img_data = np.array(img)
-        self.deep_zoom = DeepZoomImage(img_data)
-        self.tile_manager = TileManager(self.deep_zoom)
-        self.zoom = 1.0
-        # 居中
-        self.offset_x = (self.width() - img_data.shape[1]) / 2
-        self.offset_y = (self.height() - img_data.shape[0]) / 2
-        self.update()
 
     # ===========================
     # OpenGL 初始化
@@ -335,33 +319,6 @@ class GPUImageView(QOpenGLWidget):
                     glTexCoord2f(0, 0)
                     glVertex2f(x, y)
                     glEnd()
-
-    # ===========================
-    # 計算可見 tile
-    # ===========================
-    def compute_visible_tiles(self, level_image):
-        tile_size = self.deep_zoom_tile_size
-        h, w = level_image.shape[:2]
-
-        scale_x = level_image.shape[1] / self.deep_zoom.levels[0].shape[1]
-        scale_y = level_image.shape[0] / self.deep_zoom.levels[0].shape[0]
-
-        left = -self.dz_offset_x / (self.zoom * scale_x)
-        top = -self.dz_offset_y / (self.zoom * scale_y)
-        right = left + self.width() / (self.zoom * scale_x)
-        bottom = top + self.height() / (self.zoom * scale_y)
-
-        tx0 = int(left // tile_size)
-        tx1 = int(right // tile_size)
-        ty0 = int(top // tile_size)
-        ty1 = int(bottom // tile_size)
-
-        tiles = []
-        for tx in range(tx0, tx1 + 1):
-            for ty in range(ty0, ty1 + 1):
-                if 0 <= tx * tile_size < w and 0 <= ty * tile_size < h:
-                    tiles.append((tx, ty))
-        return tiles
 
     # ===========================
     # 非同步載入縮圖

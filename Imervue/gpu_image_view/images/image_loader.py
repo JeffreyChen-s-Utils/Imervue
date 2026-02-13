@@ -1,3 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from Imervue.image_type.pyramid import DeepZoomImage
+from Imervue.image_type.tile_manager import TileManager
+
+if TYPE_CHECKING:
+    from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
 import os
 
 import imageio
@@ -59,3 +69,14 @@ def load_image_file(path, thumbnail=False):
         img_data = np.concatenate([img_data, alpha], axis=2)
 
     return img_data
+
+def load_image(path: str, main_gui: GPUImageView):
+    img = Image.open(path).convert("RGBA")
+    img_data = np.array(img)
+    main_gui.deep_zoom = DeepZoomImage(img_data)
+    main_gui.tile_manager = TileManager(main_gui.deep_zoom)
+    main_gui.zoom = 1.0
+    # 居中
+    main_gui.offset_x = (main_gui.width() - img_data.shape[1]) / 2
+    main_gui.offset_y = (main_gui.height() - img_data.shape[0]) / 2
+    main_gui.update()
