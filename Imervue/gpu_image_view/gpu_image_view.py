@@ -5,18 +5,18 @@ from typing import TYPE_CHECKING
 
 from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
 from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image
-from Imervue.gpu_image_view.images.image_loader import load_image_file
+from Imervue.gpu_image_view.images.image_loader import load_image_file, switch_back_to_grid
 from Imervue.gpu_image_view.images.image_model import ImageModel
+from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 
 if TYPE_CHECKING:
-    from Imervue.main_window import ImervueMainWindow
+    from Imervue.Imervue_main_window import ImervueMainWindow
 
 import numpy as np
 from OpenGL.GL import *
 from PySide6.QtCore import QThreadPool, QMutex, QTimer, QRectF, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from Imervue.image_type.load_thumbnail_worker import LoadThumbnailWorker
 from Imervue.image_type.pyramid import DeepZoomImage
 from Imervue.image_type.tile_manager import TileManager
 
@@ -399,6 +399,7 @@ class GPUImageView(QOpenGLWidget):
     def mousePressEvent(self, event):
         self.last_pos = event.position()
         self.drag_accumulator = 0
+
         # ===== 中鍵 → 進入拖動模式 =====
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = True
@@ -415,6 +416,7 @@ class GPUImageView(QOpenGLWidget):
                 self._press_timer.start(self.long_press_threshold)
 
         super().mousePressEvent(event)
+
 
     def mouseMoveEvent(self, event):
         delta = event.position() - self.last_pos
@@ -515,6 +517,11 @@ class GPUImageView(QOpenGLWidget):
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_Z:
                 undo_delete(main_gui=self)
+                return
+
+        if key == Qt.Key.Key_Escape:
+            if self.deep_zoom:
+                switch_back_to_grid(main_gui=self)
                 return
 
         # Tile Grid 刪除

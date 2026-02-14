@@ -80,3 +80,22 @@ def load_image(path: str, main_gui: GPUImageView):
     main_gui.offset_x = (main_gui.width() - img_data.shape[1]) / 2
     main_gui.offset_y = (main_gui.height() - img_data.shape[0]) / 2
     main_gui.update()
+
+def switch_back_to_grid(main_gui: GPUImageView):
+
+    # 1️⃣ 停止 DeepZoom tile manager
+    if main_gui.tile_manager:
+        main_gui.clear_tile_grid()
+        main_gui.tile_manager = None
+        main_gui.deep_zoom_mode = False
+
+    main_gui.deep_zoom = None
+
+    main_gui.tile_grid_mode = True
+
+    main_gui.zoom = 1.0
+    main_gui.dz_offset_x = 0
+    main_gui.dz_offset_y = 0
+
+    main_gui.update()
+

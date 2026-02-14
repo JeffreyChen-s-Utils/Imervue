@@ -1,8 +1,9 @@
 import os
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QActionGroup
+from PySide6.QtGui import QActionGroup, QIcon
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog,
     QTreeView, QFileSystemModel, QSplitter, QSizePolicy
@@ -10,7 +11,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
-from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 from Imervue.gpu_image_view.images.image_loader import load_image
 
 
@@ -18,7 +18,17 @@ class ImervueMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Professional DeepZoom Image Viewer")
+        self.setWindowTitle("Imervue")
+
+        # Windows 平台設定 AppUserModelID
+        # Set AppUserModelID for Windows platform
+        self.id = "Imervue"
+        from ctypes import windll
+        windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
+
+        self.icon_path = Path(os.getcwd()) / "Imervue.ico"
+        self.icon = QIcon(str(self.icon_path))
+        self.setWindowIcon(self.icon)
 
         # ===== 中央 Splitter =====
         splitter = QSplitter()
@@ -54,6 +64,7 @@ class ImervueMainWindow(QMainWindow):
         right_layout.addWidget(self.filename_label, stretch=0)
 
         # GPU Viewer 佔滿剩餘空間
+        from Imervue.gpu_image_view.gpu_image_view import GPUImageView
         self.viewer = GPUImageView(main_window=self)
         right_layout.addWidget(self.viewer, stretch=1)
 
@@ -112,7 +123,7 @@ class ImervueMainWindow(QMainWindow):
         if self.viewer.model.images:
             if len(self.viewer.model.images) > 1:
                 self.viewer.clear_tile_grid()
-                self.viewer.load_tile_grid_async(self.viewer.model.images)
+                self.viewer.load_tile_grid_async(image_paths=self.viewer.model.images)
             else:
                 load_image(self.viewer.model.images[0], self.viewer)
 
@@ -141,7 +152,7 @@ class ImervueMainWindow(QMainWindow):
                 if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff"))
             ]
             if images:
-                self.viewer.load_tile_grid_async(images)
+                self.viewer.load_tile_grid_async(image_paths=images)
                 self.filename_label.setText(f"目前資料夾：{path}")
         elif os.path.isfile(path):
             if path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
@@ -153,6 +164,7 @@ class ImervueMainWindow(QMainWindow):
     def closeEvent(self, event):
         commit_pending_deletions(self.viewer)
         event.accept()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

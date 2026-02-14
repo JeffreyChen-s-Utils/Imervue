@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from OpenGL.GL import glDeleteTextures
 
-from Imervue.image_type.load_thumbnail_worker import LoadThumbnailWorker
+from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView

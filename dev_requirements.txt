@@ -1,0 +1,11 @@
+PySide6==6.10.2
+qt-material
+Pillow
+PyOpenGL
+numpy
+rawpy
+imageio
+PyOpenGL_accelerate
+auto-py-to-exe
+twine
+build
