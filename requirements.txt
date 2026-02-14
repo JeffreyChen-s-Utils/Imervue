@@ -6,3 +6,4 @@ numpy
 rawpy
 imageio
 PyOpenGL_accelerate
+Imervue
