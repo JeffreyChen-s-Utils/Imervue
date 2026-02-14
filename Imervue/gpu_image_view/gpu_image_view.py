@@ -33,7 +33,6 @@ class GPUImageView(QOpenGLWidget):
         self.selected_image_path = None
 
         # ===== Undo =====
-        self.deleted_stack = []
         self.undo_stack = []
 
         # ===== Tile Grid =====
@@ -52,6 +51,7 @@ class GPUImageView(QOpenGLWidget):
         self.last_pos = None
         self.tile_manager = None
         self.deep_zoom = None
+        self._saved_tile_state = None
 
         # ===== offset =====
         self.offset_x = None
@@ -125,14 +125,22 @@ class GPUImageView(QOpenGLWidget):
         glLoadIdentity()
 
         images = self.model.images
-        scaled_tile = self.thumbnail_size * self.tile_scale
-        cols = max(1, int(self.width() // scaled_tile))
+        if self.thumbnail_size is not None:
+            base_tile = self.thumbnail_size
+        elif self.tile_cache:
+            # 用第一張圖實際寬度當排版基準
+            first_img = next(iter(self.tile_cache.values()))
+            base_tile = first_img.shape[1]
+        else:
+            base_tile = 256
 
+        scaled_tile = base_tile * self.tile_scale
+        cols = max(1, int(self.width() // scaled_tile))
         self.tile_rects = []
 
         for i, path in enumerate(images):
 
-            # 🔥 沒載入完成就跳過
+            # 沒載入完成就跳過
             if path not in self.tile_cache:
                 continue
 
@@ -405,17 +413,25 @@ class GPUImageView(QOpenGLWidget):
             self._middle_dragging = True
             return
 
-        # ===== 左鍵 → 原本邏輯 =====
-        elif event.button() == Qt.MouseButton.LeftButton:
+        # ===== 左鍵 =====
+        if event.button() == Qt.MouseButton.LeftButton:
             if self.tile_grid_mode:
-                self._press_pos = event.position()
+                mx, my = event.position().x(), event.position().y()
+                for x0, y0, x1, y1, path in self.tile_rects:
+                    if x0 <= mx <= x1 and y0 <= my <= y1:
+                        # 先存 Tile Grid 狀態
+                        self._saved_tile_state = {
+                            "grid_offset_x": self.grid_offset_x,
+                            "grid_offset_y": self.grid_offset_y,
+                            "tile_scale": self.tile_scale,
+                        }
 
-                self._press_timer = QTimer(self)
-                self._press_timer.setSingleShot(True)
-                self._press_timer.timeout.connect(self.start_tile_selection)
-                self._press_timer.start(self.long_press_threshold)
-
-        super().mousePressEvent(event)
+                        self.current_index = self.model.images.index(path)
+                        self.tile_grid_mode = False
+                        self.load_deep_zoom_image(path)
+                        self.update()
+                        return
+        super().mouseReleaseEvent(event)
 
 
     def mouseMoveEvent(self, event):
@@ -513,15 +529,53 @@ class GPUImageView(QOpenGLWidget):
 
     def keyPressEvent(self, event):
         key = event.key()
+        modifiers = event.modifiers()
         # Undo
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_Z:
                 undo_delete(main_gui=self)
                 return
 
+        step = self.thumbnail_size  # 每次偏移量，可根據需求調整
+        fine_step = int(self.thumbnail_size / 2)  # 精細調整
+
+        # 如果按住 Shift 做精細移動
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            move_step = fine_step
+        else:
+            move_step = step
+
+        # ===== Tile Grid 模式 =====
+        if self.tile_grid_mode:
+            if key == Qt.Key.Key_Up:
+                self.grid_offset_y += move_step
+                self.update()
+                return
+            elif key == Qt.Key.Key_Down:
+                self.grid_offset_y -= move_step
+                self.update()
+                return
+            elif key == Qt.Key.Key_Left:
+                self.grid_offset_x += move_step
+                self.update()
+                return
+            elif key == Qt.Key.Key_Right:
+                self.grid_offset_x -= move_step
+                self.update()
+                return
+
         if key == Qt.Key.Key_Escape:
             if self.deep_zoom:
-                switch_back_to_grid(main_gui=self)
+                # 回到原本 Tile Grid
+                self.deep_zoom = None
+                self.tile_grid_mode = True
+                if self._saved_tile_state:
+                    self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
+                    self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
+                    self.tile_scale = self._saved_tile_state["tile_scale"]
+                    self._saved_tile_state = None
+
+                self.update()
                 return
 
         # Tile Grid 刪除
