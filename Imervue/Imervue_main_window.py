@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QActionGroup, QIcon
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QFileDialog,
@@ -18,7 +18,7 @@ from Imervue.user_settings.user_setting_dict import write_user_setting, read_use
 
 
 class ImervueMainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, debug: bool = False):
         super().__init__()
 
         self.setWindowTitle("Imervue")
@@ -89,7 +89,14 @@ class ImervueMainWindow(QMainWindow):
         # ===== 選單列 =====
         self.create_menu()
 
-        # ===== 變數 =====
+        # ===== Debug =====
+        # Debug 模式下自動關閉
+        # Auto close in debug mode
+        if debug:
+            self.debug_timer = QTimer()
+            self.debug_timer.setInterval(10000)
+            self.debug_timer.timeout.connect(self.debug_close)
+            self.debug_timer.start()
 
     # ==========================
     # 選單
@@ -194,6 +201,11 @@ class ImervueMainWindow(QMainWindow):
         event.accept()
         write_user_setting()
         super().closeEvent(event)
+
+    @classmethod
+    def debug_close(cls) -> None:
+        """Debug 模式下強制退出 / Force exit in debug mode"""
+        sys.exit(0)
 
 
 if __name__ == "__main__":
