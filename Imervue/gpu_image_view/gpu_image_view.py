@@ -65,7 +65,7 @@ class GPUImageView(QOpenGLWidget):
         self.drag_accumulator = 0
         self.on_filename_changed = None
         self.deep_zoom_tile_size = 512
-        self.thumbnail_size = 256
+        self.thumbnail_size = 512
 
         # ===== Tile Grid 選取模式 =====
         self.tile_selection_mode = False  # 是否在選取模式
@@ -537,7 +537,9 @@ class GPUImageView(QOpenGLWidget):
                 return
 
         step = self.thumbnail_size  # 每次偏移量，可根據需求調整
-        fine_step = int(self.thumbnail_size / 2)  # 精細調整
+        if step is None:
+            step = 1024
+        fine_step = int(step / 2)  # 精細調整
 
         # 如果按住 Shift 做精細移動
         if modifiers & Qt.KeyboardModifier.ShiftModifier:

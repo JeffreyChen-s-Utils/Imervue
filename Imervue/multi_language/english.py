@@ -17,4 +17,17 @@ english_word_dict = {
     "language_menu_bar_chinese": "Chinese",
     "language_menu_bar_koren": "Korean",
     "language_menu_bar_japanese": "Japanese",
+    # Tip menu
+    "main_window_tip_menu": "Instructions",
+    "main_window_mouse_tip_menu": "Mouse Control",
+    "main_window_keyboard_tip_menu": "Keyboard Control",
+    "mouse_control_middle_tip": "You can move using the mouse middle button",
+    "mouse_control_left_tip": "Clicking an image with the left mouse button enters Deep zoom mode",
+    "mouse_control_left_move_tip": "Holding the left mouse button allows multi-selection in thumbnail mode",
+    "keyboard_control_esc_tip": "Press ESC to exit Deep zoom mode",
+    "keyboard_control_tile_arrow_up_tip": "In thumbnail mode, use the Up arrow key to move upward",
+    "keyboard_control_tile_arrow_down_tip": "In thumbnail mode, use the Down arrow key to move downward",
+    "keyboard_control_tile_arrow_left_tip": "In thumbnail mode, use the Left arrow key to move left",
+    "keyboard_control_tile_arrow_right_tip": "In thumbnail mode, use the Right arrow key to move right",
+    "keyboard_control_delete_tip": "You can use Delete to remove images in both thumbnail and Deep zoom modes",
 }

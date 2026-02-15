@@ -16,4 +16,17 @@ korean_word_dict = {
     "language_menu_bar_chinese": "간체 중국어",
     "language_menu_bar_koren": "한국어",
     "language_menu_bar_japanese": "일본어",
+    # Tip menu
+    "main_window_tip_menu": "사용 설명",
+    "mouse_control_middle_tip": "마우스 휠 버튼으로 이동할 수 있습니다",
+    "main_window_mouse_tip_menu": "마우스 조작",
+    "main_window_keyboard_tip_menu": "키보드 조작",
+    "mouse_control_left_tip": "마우스 왼쪽 버튼으로 이미지를 클릭하면 Deep zoom 모드로 들어갑니다",
+    "mouse_control_left_move_tip": "마우스 왼쪽 버튼을 누른 상태에서 썸네일 모드에서 여러 이미지를 선택할 수 있습니다",
+    "keyboard_control_esc_tip": "Deep zoom 모드에서는 ESC 키로 종료할 수 있습니다",
+    "keyboard_control_tile_arrow_up_tip": "썸네일 모드에서는 방향키 위로 위쪽으로 이동할 수 있습니다",
+    "keyboard_control_tile_arrow_down_tip": "썸네일 모드에서는 방향키 아래로 아래쪽으로 이동할 수 있습니다",
+    "keyboard_control_tile_arrow_left_tip": "썸네일 모드에서는 방향키 왼쪽으로 왼쪽으로 이동할 수 있습니다",
+    "keyboard_control_tile_arrow_right_tip": "썸네일 모드에서는 방향키 오른쪽으로 오른쪽으로 이동할 수 있습니다",
+    "keyboard_control_delete_tip": "썸네일 모드와 Deep zoom 모드 모두에서 Delete 키로 이미지를 삭제할 수 있습니다",
 }

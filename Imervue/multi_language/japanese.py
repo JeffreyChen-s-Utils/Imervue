@@ -16,4 +16,17 @@ japanese_word_dict = {
     "language_menu_bar_chinese": "簡体字中国語",
     "language_menu_bar_koren": "韓国語",
     "language_menu_bar_japanese": "日本語",
+    # Tip menu
+    "main_window_tip_menu": "使用説明",
+    "mouse_control_middle_tip": "マウスの中ボタンで移動できます",
+    "main_window_mouse_tip_menu": "マウス操作",
+    "main_window_keyboard_tip_menu": "キーボード操作",
+    "mouse_control_left_tip": "マウス左ボタンで画像をクリックすると Deep zoom モードに入ります",
+    "mouse_control_left_move_tip": "マウス左ボタンを押しながらでサムネイルモードで複数選択ができます",
+    "keyboard_control_esc_tip": "Deep zoom モードでは ESC キーで終了できます",
+    "keyboard_control_tile_arrow_up_tip": "サムネイルモードでは矢印キーの上で上に移動できます",
+    "keyboard_control_tile_arrow_down_tip": "サムネイルモードでは矢印キーの下で下に移動できます",
+    "keyboard_control_tile_arrow_left_tip": "サムネイルモードでは矢印キーの左で左に移動できます",
+    "keyboard_control_tile_arrow_right_tip": "サムネイルモードでは矢印キーの右で右に移動できます",
+    "keyboard_control_delete_tip": "サムネイルモードや Deep zoom モードでは Delete キーで画像を削除できます",
 }

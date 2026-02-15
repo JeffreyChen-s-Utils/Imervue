@@ -16,4 +16,18 @@ chinese_word_dict = {
     "language_menu_bar_chinese": "简体中文",
     "language_menu_bar_koren": "韩语",
     "language_menu_bar_japanese": "日语",
+    # Tip menu
+    "main_window_tip_menu": "使用说明",
+    "main_window_mouse_tip_menu": "鼠标操作",
+    "main_window_keyboard_tip_menu": "键盘操作",
+    "mouse_control_middle_tip": "可以使用鼠标中键移动",
+    "mouse_control_left_tip": "鼠标左键点击图片可以进入 Deep zoom 模式",
+    "mouse_control_left_move_tip": "鼠标左键按住可以在缩略图模式下多选图片",
+    "keyboard_control_esc_tip": "Deep zoom 模式下可以按 ESC 退出",
+    "keyboard_control_tile_arrow_up_tip": "缩略图模式下可以使用方向键的上来向上移动",
+    "keyboard_control_tile_arrow_down_tip": "缩略图模式下可以使用方向键的下来向下移动",
+    "keyboard_control_tile_arrow_left_tip": "缩略图模式下可以使用方向键的左来向左移动",
+    "keyboard_control_tile_arrow_right_tip": "缩略图模式下可以使用方向键的右来向右移动",
+    "keyboard_control_delete_tip": "缩略图或 Deep zoom 模式都可以使用 Delete 来删除图片",
+
 }

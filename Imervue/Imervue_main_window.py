@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import load_image
 from Imervue.menu.language_menu import build_language_menu
+from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import write_user_setting, read_user_setting, user_setting_dict
 
@@ -143,6 +144,7 @@ class ImervueMainWindow(QMainWindow):
 
         # ===== 語言選單 =====
         build_language_menu(self)
+        build_tip_menu(self)
 
     def change_tile_size(self, size):
         if size != "None":
