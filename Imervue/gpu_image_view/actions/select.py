@@ -46,3 +46,14 @@ def select_tiles_in_rect(start_pos, end_pos, main_gui: GPUImageView):
         tile_rect = QRectF(tx0, ty0, tx1 - tx0, ty1 - ty0)
         if rect.intersects(tile_rect):
             main_gui.selected_tiles.add(path)
+
+def start_tile_selection(main_gui: GPUImageView):
+    if not main_gui.press_pos:
+        return
+
+    main_gui.tile_selection_mode = True
+    main_gui._drag_selecting = True
+    main_gui._drag_start_pos = main_gui.press_pos
+    main_gui._drag_end_pos = main_gui.press_pos
+
+    main_gui.update()

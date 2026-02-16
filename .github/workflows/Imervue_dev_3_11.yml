@@ -25,5 +25,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel
         pip install -r dev_requirements.txt
-    - name: Start Imervue
-      run: python -m Imervue
+    - name: Build Imervue
+      run: pyinstaller --noconfirm --onedir --windowed --icon "Imervue.ico" --name "Imervue" --add-data "Imervue.ico;." --paths ".venv" --hidden-import "imageio" --copy-metadata "imageio" --distpath output "Imervue/__main__.py"
+    - name: Debug run Imervue
+      run: output/Imervue/Imervue.exe --debug

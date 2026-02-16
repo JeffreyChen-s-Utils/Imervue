@@ -22,7 +22,7 @@ japanese_word_dict = {
     "main_window_mouse_tip_menu": "マウス操作",
     "main_window_keyboard_tip_menu": "キーボード操作",
     "mouse_control_left_tip": "マウス左ボタンで画像をクリックすると Deep zoom モードに入ります",
-    "mouse_control_left_move_tip": "マウス左ボタンを押しながらでサムネイルモードで複数選択ができます",
+    "mouse_control_right_move_tip": "マウスの右ボタンを押したままにすると、サムネイルモードで複数の画像を選択できます",
     "keyboard_control_esc_tip": "Deep zoom モードでは ESC キーで終了できます",
     "keyboard_control_tile_arrow_up_tip": "サムネイルモードでは矢印キーの上で上に移動できます",
     "keyboard_control_tile_arrow_down_tip": "サムネイルモードでは矢印キーの下で下に移動できます",

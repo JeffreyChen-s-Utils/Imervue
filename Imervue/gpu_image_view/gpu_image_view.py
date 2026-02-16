@@ -4,8 +4,9 @@ import os
 from typing import TYPE_CHECKING
 
 from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
-from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image
-from Imervue.gpu_image_view.images.image_loader import load_image_file, switch_back_to_grid
+from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image, select_tiles_in_rect, \
+    start_tile_selection
+from Imervue.gpu_image_view.images.image_loader import load_image_file
 from Imervue.gpu_image_view.images.image_model import ImageModel
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 from OpenGL.GL import *
-from PySide6.QtCore import QThreadPool, QMutex, QTimer, QRectF, Qt
+from PySide6.QtCore import QThreadPool, QMutex, QTimer, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from Imervue.image_type.pyramid import DeepZoomImage
@@ -61,8 +62,6 @@ class GPUImageView(QOpenGLWidget):
         self.model = ImageModel()
         self.model.images = []  # 所有圖片路徑
         self.current_index = 0
-        self.switch_threshold = 120  # 水平拖動超過多少 px 切換
-        self.drag_accumulator = 0
         self.on_filename_changed = None
         self.deep_zoom_tile_size = 512
         self.thumbnail_size = 512
@@ -78,7 +77,7 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== Mouse =====
         self._middle_dragging = None
-        self._press_pos = None
+        self.press_pos = None
 
         # ===== Thread =====
         self.thread_pool = QThreadPool.globalInstance()
@@ -406,12 +405,20 @@ class GPUImageView(QOpenGLWidget):
 
     def mousePressEvent(self, event):
         self.last_pos = event.position()
-        self.drag_accumulator = 0
 
         # ===== 中鍵 → 進入拖動模式 =====
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = True
             return
+        elif event.button() == Qt.MouseButton.RightButton:
+            if self.tile_grid_mode:
+                self.press_pos = event.position()
+
+                self._press_timer = QTimer(self)
+                self._press_timer.setSingleShot(True)
+                self._press_timer.timeout.connect(lambda: start_tile_selection(self))
+                self._press_timer.start(self.long_press_threshold)
+
 
         # ===== 左鍵 =====
         if event.button() == Qt.MouseButton.LeftButton:
@@ -431,7 +438,7 @@ class GPUImageView(QOpenGLWidget):
                         self.load_deep_zoom_image(path)
                         self.update()
                         return
-        super().mouseReleaseEvent(event)
+        super().mousePressEvent(event)
 
 
     def mouseMoveEvent(self, event):
@@ -464,14 +471,14 @@ class GPUImageView(QOpenGLWidget):
             self._press_timer.stop()
             self._press_timer = None
 
-        self._press_pos = None
+        self.press_pos = None
 
         if self.tile_grid_mode:
             mx, my = event.position().x(), event.position().y()
 
             if self._drag_selecting:
                 # 拖曳框選完成
-                self.select_tiles_in_rect(self._drag_start_pos, self._drag_end_pos)
+                select_tiles_in_rect(self._drag_start_pos, self._drag_end_pos, self)
                 self._drag_selecting = False
                 self._drag_start_pos = None
                 self._drag_end_pos = None
@@ -501,31 +508,6 @@ class GPUImageView(QOpenGLWidget):
                 self.tile_selection_mode = False
                 self.selected_tiles.clear()
                 self.update()
-
-    def start_tile_selection(self):
-        if not self._press_pos:
-            return
-
-        self.tile_selection_mode = True
-        self._drag_selecting = True
-
-        self._drag_start_pos = self._press_pos
-        self._drag_end_pos = self._press_pos
-
-        self.update()
-
-    def select_tiles_in_rect(self, start_pos, end_pos):
-        if start_pos is None or end_pos is None:
-            return
-
-        x0, y0 = start_pos.x(), start_pos.y()
-        x1, y1 = end_pos.x(), end_pos.y()
-        rect = QRectF(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
-
-        for tx0, ty0, tx1, ty1, path in self.tile_rects:
-            tile_rect = QRectF(tx0, ty0, tx1 - tx0, ty1 - ty0)
-            if rect.intersects(tile_rect):
-                self.selected_tiles.add(path)
 
     def keyPressEvent(self, event):
         key = event.key()

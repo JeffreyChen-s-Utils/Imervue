@@ -22,7 +22,7 @@ traditional_chinese_word_dict = {
     "main_window_keyboard_tip_menu": "鍵盤操作",
     "mouse_control_middle_tip": "可以使用滑鼠中鍵移動",
     "mouse_control_left_tip": "滑鼠左鍵點擊圖片可以進入 Deep zoom 模式",
-    "mouse_control_left_move_tip": "滑鼠左鍵按住可以在梭略圖模式下複選圖片",
+    "mouse_control_right_move_tip": "滑鼠右鍵按住可以在縮圖模式下複選圖片",
     "keyboard_control_esc_tip": "Deep zoom 模式下可以按 ESC 退出",
     "keyboard_control_tile_arrow_up_tip": "縮圖模式下可以使用方向鍵的上來往上移動",
     "keyboard_control_tile_arrow_down_tip": "縮圖模式下可以使用方向鍵的下來往下移動",
