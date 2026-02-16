@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 
 from PySide6.QtWidgets import QApplication
@@ -13,6 +14,11 @@ def parse_args():
         action="store_true",
         help="Enable debug mode"
     )
+    parser.add_argument(
+        "--software_opengl",
+        action="store_true",
+        help="Enable software opengl"
+    )
 
     return parser.parse_args()
 
@@ -24,6 +30,9 @@ if __name__ == "__main__":
         debug = True
     else:
         debug = False
+
+    if args.software_opengl:
+        os.environ["QT_OPENGL"] = "software"
 
     app = QApplication(sys.argv)
     window = ImervueMainWindow(debug=debug)
