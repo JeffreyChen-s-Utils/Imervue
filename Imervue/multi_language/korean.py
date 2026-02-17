@@ -29,4 +29,5 @@ korean_word_dict = {
     "keyboard_control_tile_arrow_left_tip": "썸네일 모드에서는 방향키 왼쪽으로 왼쪽으로 이동할 수 있습니다",
     "keyboard_control_tile_arrow_right_tip": "썸네일 모드에서는 방향키 오른쪽으로 오른쪽으로 이동할 수 있습니다",
     "keyboard_control_delete_tip": "썸네일 모드와 Deep zoom 모드 모두에서 Delete 키로 이미지를 삭제할 수 있습니다",
+    "keyboard_r_tip": "키보드의 R 키를 누르면 좌표를 초기화할 수 있습니다",
 }

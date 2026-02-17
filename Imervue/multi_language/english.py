@@ -30,4 +30,5 @@ english_word_dict = {
     "keyboard_control_tile_arrow_left_tip": "In thumbnail mode, use the Left arrow key to move left",
     "keyboard_control_tile_arrow_right_tip": "In thumbnail mode, use the Right arrow key to move right",
     "keyboard_control_delete_tip": "You can use Delete to remove images in both thumbnail and Deep zoom modes",
+    "keyboard_r_tip": "Press the R key on the keyboard to reset the coordinates",
 }

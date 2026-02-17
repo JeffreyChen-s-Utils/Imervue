@@ -31,6 +31,7 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
         text = language_wrapper.language_word_dict.get(key)
         action = mouse_menu.addAction(text)
         action.setEnabled(False)
+        mouse_menu.addSeparator()
 
     # 主選單分隔線
     tip_menu.addSeparator()
@@ -49,13 +50,11 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
         "keyboard_control_tile_arrow_left_tip",
         "keyboard_control_tile_arrow_right_tip",
         "keyboard_control_delete_tip",
+        "keyboard_r_tip"
     ]
 
     for i, key in enumerate(keyboard_keys):
         text = language_wrapper.language_word_dict.get(key)
         action = keyboard_menu.addAction(text)
         action.setEnabled(False)
-
-        # 在 ESC 和方向鍵之間加分隔線（可選）
-        if key == "keyboard_control_esc_tip":
-            keyboard_menu.addSeparator()
+        keyboard_menu.addSeparator()

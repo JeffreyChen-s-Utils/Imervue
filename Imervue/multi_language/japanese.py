@@ -29,4 +29,5 @@ japanese_word_dict = {
     "keyboard_control_tile_arrow_left_tip": "サムネイルモードでは矢印キーの左で左に移動できます",
     "keyboard_control_tile_arrow_right_tip": "サムネイルモードでは矢印キーの右で右に移動できます",
     "keyboard_control_delete_tip": "サムネイルモードや Deep zoom モードでは Delete キーで画像を削除できます",
+    "keyboard_r_tip": "キーボードの R キーを押すと、座標をリセットできます",
 }

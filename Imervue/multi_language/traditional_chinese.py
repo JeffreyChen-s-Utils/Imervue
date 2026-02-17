@@ -29,4 +29,5 @@ traditional_chinese_word_dict = {
     "keyboard_control_tile_arrow_left_tip": "縮圖模式下可以使用方向鍵的左來往左移動",
     "keyboard_control_tile_arrow_right_tip": "縮圖模式下可以使用方向鍵的右來往右移動",
     "keyboard_control_delete_tip": "縮圖或 Deep zoom 模式都可以使用 Delete 來刪除圖片",
+    "keyboard_r_tip": "可以按鍵盤上的 R 鍵，來重置座標",
 }

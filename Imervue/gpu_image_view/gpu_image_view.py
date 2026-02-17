@@ -28,16 +28,12 @@ class GPUImageView(QOpenGLWidget):
 
         self.main_window = main_window
 
-        # ===== 模式 =====
-        self.tile_grid_mode = False
-        self.deep_zoom_mode = False
-        self.selected_image_path = None
-
         # ===== Undo =====
         self.undo_stack = []
 
         # ===== Tile Grid =====
-
+        self.tile_grid_mode = False
+        self.selected_image_path = None
         self.tile_rects = []  # 用來存每個 tile 的 rectangle
         self.grid_offset_x = 0
         self.grid_offset_y = 0
@@ -54,9 +50,6 @@ class GPUImageView(QOpenGLWidget):
         self.deep_zoom = None
         self._saved_tile_state = None
 
-        # ===== offset =====
-        self.offset_x = None
-        self.offset_y = None
 
         # ===== 圖片切換控制 =====
         self.model = ImageModel()
@@ -517,6 +510,16 @@ class GPUImageView(QOpenGLWidget):
             if key == Qt.Key.Key_Z:
                 undo_delete(main_gui=self)
                 return
+
+        if key == Qt.Key.Key_R:
+            if self.deep_zoom:
+                self.dz_offset_x = 0
+                self.dz_offset_y = 0
+            elif self.tile_grid_mode:
+                self.grid_offset_x = 0
+                self.grid_offset_y = 0
+            self.update()
+            return
 
         step = self.thumbnail_size  # 每次偏移量，可根據需求調整
         if step is None:
