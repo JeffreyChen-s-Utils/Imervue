@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from Imervue.image_type.pyramid import DeepZoomImage
-from Imervue.image_type.tile_manager import TileManager
+from Imervue.image.pyramid import DeepZoomImage
+from Imervue.image.tile_manager import TileManager
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -22,7 +23,7 @@ def load_image_file(path, thumbnail=False):
     thumbnail=True 時會優先使用 RAW embedded preview 或 half_size
     回傳 numpy RGBA
     """
-    ext = os.path.splitext(path)[1].lower()
+    ext = Path(path).suffix.lower()
 
     raw_exts = [".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"]
 
@@ -71,6 +72,7 @@ def load_image_file(path, thumbnail=False):
     return img_data
 
 def load_image(path: str, main_gui: GPUImageView):
+    main_gui.tile_grid_mode = False
     img = Image.open(path).convert("RGBA")
     img_data = np.array(img)
     main_gui.deep_zoom = DeepZoomImage(img_data)
@@ -83,7 +85,7 @@ def load_image(path: str, main_gui: GPUImageView):
 
 def switch_back_to_grid(main_gui: GPUImageView):
 
-    # 1️⃣ 停止 DeepZoom tile manager
+    # 停止 DeepZoom tile manager
     if main_gui.tile_manager:
         main_gui.clear_tile_grid()
         main_gui.tile_manager = None
@@ -98,4 +100,44 @@ def switch_back_to_grid(main_gui: GPUImageView):
     main_gui.dz_offset_y = 0
 
     main_gui.update()
+
+def open_path(main_gui: GPUImageView, path: str):
+
+    path_obj = Path(path)
+
+    supported_exts = (".png", ".jpg", ".jpeg", ".bmp", ".tiff")
+
+    if path_obj.is_dir():
+
+        images = [
+            str(p)
+            for p in sorted(path_obj.iterdir())
+            if p.suffix.lower() in supported_exts
+        ]
+
+        if not images:
+            return
+
+        main_gui.current_index = 0
+        main_gui.load_tile_grid_async(images)
+
+    elif path_obj.is_file() and path_obj.suffix.lower() in supported_exts:
+
+        dir_path = path_obj.parent
+
+        images = [
+            str(p)
+            for p in sorted(dir_path.iterdir())
+            if p.suffix.lower() in supported_exts
+        ]
+
+        if not images:
+            return
+
+        main_gui.model.set_images(images)
+        main_gui.current_index = images.index(str(path_obj))
+
+        main_gui.tile_grid_mode = False
+        main_gui.load_deep_zoom_image(str(path_obj))
+
 

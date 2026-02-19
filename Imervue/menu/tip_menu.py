@@ -58,3 +58,5 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
         action = keyboard_menu.addAction(text)
         action.setEnabled(False)
         keyboard_menu.addSeparator()
+
+    return tip_menu

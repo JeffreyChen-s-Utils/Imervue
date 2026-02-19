@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 
-def build_language_menu(ui_we_want_to_set: ImervueMainWindow) -> None:
+def build_language_menu(ui_we_want_to_set: ImervueMainWindow):
     """
     建立語言選單
     Build the language menu for the main UI
@@ -36,6 +36,8 @@ def build_language_menu(ui_we_want_to_set: ImervueMainWindow) -> None:
         action = QAction(language_wrapper.language_word_dict.get(label_key), language_menu)
         action.triggered.connect(lambda _, code=lang_code: set_language(code, ui_we_want_to_set))
         language_menu.addAction(action)
+
+    return language_menu
 
 
 def set_language(language: str, ui_we_want_to_set: ImervueMainWindow) -> None:

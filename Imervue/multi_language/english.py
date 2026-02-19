@@ -1,7 +1,8 @@
 english_word_dict = {
-    # Main window
-    "main_window_current_filename": "Current Filename:",
     "main_window_current_filename_format": "Current Filename: {name}",
+    # File menu
+    "main_window_open_image": "Open File",
+    "main_window_current_filename": "Current Filename:",
     "main_window_current_file": "File",
     "main_window_open_folder": "Open Folder",
     "main_window_exit": "Exit",
@@ -37,4 +38,23 @@ english_word_dict = {
     "right_click_menu_previous_image": "Previous Image",
     "right_click_menu_delete_current": "Delete Current Image",
     "right_click_menu_delete_selected": "Delete Selected Images",
+    "right_click_menu_image_info": "Image Info",
+    # Image info
+    "image_info_filename": "Filename: {info}\n",
+    "image_info_fullpath": "Full Path: {full_path}\n",
+    "image_info_image_size": "Size: {width} x {height}\n",
+    "image_info_file_size": "File Size: {file_size_mb} MB\n",
+    "image_info_file_created_time": "Created Time: {created_time}\n",
+    "image_info_file_modified_time": "Modified Time: {modified_time}\n",
+    "image_info_messagebox_title": "Image Info",
+    # Image info exif
+    "image_info_exif_datatime_original": "Taken Time: {DateTimeOriginal}\n",
+    "image_info_exif_camera_model": "Camera: {Make} {Model}\n",
+    "image_info_exif_camera_lens_model": "Lens: {LensModel}\n",
+    "image_info_exif_camera_focal_length": "Focal Length: {FocalLength}\n",
+    "image_info_exif_camera_fnumber": "Aperture: {FNumber}\n",
+    "image_info_exif_exposure_time": "Shutter: {ExposureTime}\n",
+    "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
+    # Recent menu
+    "recent_menu_title": "Recently Opened Menu",
 }

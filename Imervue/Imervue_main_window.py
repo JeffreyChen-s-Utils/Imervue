@@ -1,17 +1,16 @@
-import os
 import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QActionGroup, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog,
-    QTreeView, QFileSystemModel, QSplitter, QSizePolicy
+    QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy
 )
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
-from Imervue.gpu_image_view.images.image_loader import load_image
+from Imervue.gpu_image_view.images.image_loader import load_image, open_path
+from Imervue.menu.file_menu import build_file_menu
 from Imervue.menu.language_menu import build_language_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -31,13 +30,20 @@ class ImervueMainWindow(QMainWindow):
         windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
 
         read_user_setting()
+        last_folder = user_setting_dict.get("user_last_folder", "")
+
+        if last_folder and Path(last_folder).is_dir():
+            QTimer.singleShot(
+                0,
+                lambda: self._open_startup_folder(last_folder)
+            )
 
         # 語言支援
         # Language support
         self.language_wrapper = language_wrapper
         self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
 
-        self.icon_path = Path(os.getcwd()) / "Imervue.ico"
+        self.icon_path = Path.cwd() / "Imervue.ico"
         self.icon = QIcon(str(self.icon_path))
         self.setWindowIcon(self.icon)
 
@@ -103,46 +109,7 @@ class ImervueMainWindow(QMainWindow):
     # 選單
     # ==========================
     def create_menu(self):
-        menubar = self.menuBar()
-
-        # ===== 檔案 =====
-        file_menu = menubar.addMenu(language_wrapper.language_word_dict.get("main_window_current_file"))
-
-        open_folder_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_open_folder"))
-        open_folder_action.triggered.connect(self.open_folder)
-
-        # 新增刪除動作
-        delete_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_remove_undo_stack"))
-        delete_action.triggered.connect(lambda: commit_pending_deletions(self.viewer))
-
-        exit_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_exit"))
-        exit_action.triggered.connect(self.close)
-
-        # ===== Tile Size 選單 =====
-        view_menu = menubar.addMenu(language_wrapper.language_word_dict.get("main_window_tile_size"))
-
-        tile_group = QActionGroup(self)
-        tile_group.setExclusive(True)
-
-        thumbnail_size = [128, 256, 512, 1024, "None"]
-
-        for size in thumbnail_size:
-            if size != "None":
-                action = view_menu.addAction(f"{size} x {size}")
-            else:
-                action = view_menu.addAction(size)
-            action.setCheckable(True)
-
-            if size == self.viewer.thumbnail_size:
-                action.setChecked(True)
-
-            tile_group.addAction(action)
-
-            action.triggered.connect(
-                lambda checked, s=size: self.change_tile_size(s)
-            )
-
-        # ===== 語言選單 =====
+        build_file_menu(self)
         build_language_menu(self)
         build_tip_menu(self)
 
@@ -161,42 +128,25 @@ class ImervueMainWindow(QMainWindow):
                 load_image(self.viewer.model.images[0], self.viewer)
 
     # ==========================
-    # 開啟資料夾
-    # ==========================
-    def open_folder(self):
-        folder = QFileDialog.getExistingDirectory(
-            self, language_wrapper.language_word_dict.get("main_window_select_folder"))
-
-        if folder:
-            self.tree.setRootIndex(self.model.index(folder))
-
-    # ==========================
     # 點擊檔案
     # ==========================
     def on_file_clicked(self, index):
         path = self.model.filePath(index)
 
-        # 切換資料夾前先清空
         self.viewer.clear_tile_grid()
+        open_path(main_gui=self.viewer, path=path)
 
-        if os.path.isdir(path):
-            images = [
-                os.path.join(path, f)
-                for f in os.listdir(path)
-                if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff"))
-            ]
-            if images:
-                self.viewer.load_tile_grid_async(image_paths=images)
-                self.filename_label.setText(
-                    language_wrapper.language_word_dict.get("main_window_current_folder_format").format(path=path))
-        elif os.path.isfile(path):
-            if path.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".tiff")):
-                load_image(path, self.viewer)
-                self.viewer.current_index = 0
-                self.viewer.image_list = [path]
-                self.filename_label.setText(
-                    language_wrapper.language_word_dict.get(
-                        "main_window_current_filename_format").format(name=os.path.basename(path)))
+        if Path(path).is_dir():
+            self.filename_label.setText(
+                language_wrapper.language_word_dict.get(
+                    "main_window_current_folder_format"
+                ).format(path=path)
+            )
+
+    def _open_startup_folder(self, folder: str):
+
+        self.tree.setRootIndex(self.model.index(folder))
+        open_path(main_gui=self.viewer, path=folder)
 
     def closeEvent(self, event):
         commit_pending_deletions(self.viewer)

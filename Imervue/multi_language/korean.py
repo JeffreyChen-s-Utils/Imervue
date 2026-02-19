@@ -1,6 +1,8 @@
 korean_word_dict = {
-    "main_window_current_filename": "현재 파일 이름:",
     "main_window_current_filename_format": "현재 파일 이름: {name}",
+    # File menu
+    "main_window_open_image": "파일 열기",
+    "main_window_current_filename": "현재 파일 이름:",
     "main_window_current_file": "파일",
     "main_window_open_folder": "폴더 열기",
     "main_window_exit": "종료",
@@ -36,4 +38,23 @@ korean_word_dict = {
     "right_click_menu_previous_image": "이전 이미지",
     "right_click_menu_delete_current": "현재 이미지 삭제",
     "right_click_menu_delete_selected": "선택한 이미지 삭제",
+    "right_click_menu_image_info": "이미지 정보",
+    # Image info
+    "image_info_filename": "파일명: {info}\n",
+    "image_info_fullpath": "전체 경로: {full_path}\n",
+    "image_info_image_size": "크기: {width} x {height}\n",
+    "image_info_file_size": "파일 크기: {file_size_mb} MB\n",
+    "image_info_file_created_time": "생성 시간: {created_time}\n",
+    "image_info_file_modified_time": "수정 시간: {modified_time}\n",
+    "image_info_messagebox_title": "이미지 정보",
+    # Image info exif
+    "image_info_exif_datatime_original": "촬영 시간: {DateTimeOriginal}\n",
+    "image_info_exif_camera_model": "카메라: {Make} {Model}\n",
+    "image_info_exif_camera_lens_model": "렌즈: {LensModel}\n",
+    "image_info_exif_camera_focal_length": "초점 거리: {FocalLength}\n",
+    "image_info_exif_camera_fnumber": "조리개: {FNumber}\n",
+    "image_info_exif_exposure_time": "셔터: {ExposureTime}\n",
+    "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
+    # Recent menu
+    "recent_menu_title": "최근 열린 메뉴",
 }
