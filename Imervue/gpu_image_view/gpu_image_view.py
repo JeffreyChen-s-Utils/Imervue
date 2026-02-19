@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import math
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
@@ -16,12 +16,15 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 import numpy as np
+import os
 from OpenGL.GL import *
 from PySide6.QtCore import QThreadPool, QMutex, QTimer, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
+from pathlib import Path
+from Imervue.gpu_image_view.images.visible_update import compute_visible_range
 
-from Imervue.image_type.pyramid import DeepZoomImage
-from Imervue.image_type.tile_manager import TileManager
+from Imervue.image.pyramid import DeepZoomImage
+from Imervue.image.tile_manager import TileManager
 
 
 class GPUImageView(QOpenGLWidget):
@@ -76,7 +79,7 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== Thread =====
         self.thread_pool = QThreadPool.globalInstance()
-        self.thread_pool.setMaxThreadCount(4)
+        self.thread_pool.setMaxThreadCount((os.cpu_count() * 3))
         self.grid_mutex = QMutex()  # 保護 tile_grid 併發更新
         self.active_tile_workers = []  # 用來追蹤 Tile Grid 載入 worker
         self.active_deep_zoom_worker = None
@@ -136,7 +139,7 @@ class GPUImageView(QOpenGLWidget):
             base_tile = 256
 
         scaled_tile = base_tile * self.tile_scale
-        cols = max(1, int(self.width() // scaled_tile))
+        cols = max(1, math.ceil(self.width() / scaled_tile))
         self.tile_rects = []
 
         for i, path in enumerate(images):
@@ -362,7 +365,7 @@ class GPUImageView(QOpenGLWidget):
         self.update()
 
         if self.on_filename_changed:
-            self.on_filename_changed(os.path.basename(path))
+            self.on_filename_changed(Path(path).name)
 
     def clear_tile_grid(self):
         self.tile_grid_mode = False
@@ -385,34 +388,8 @@ class GPUImageView(QOpenGLWidget):
         self.tile_cache[path] = img_data
         self.update()
 
-    def compute_visible_range(self):
-        if not self.tile_grid_mode:
-            return 0, 0
-
-        base_tile = self.thumbnail_size or 256
-        scaled_tile = base_tile * self.tile_scale
-        cols = max(1, int(self.width() // scaled_tile))
-
-        row_height = scaled_tile
-
-        visible_top = -self.grid_offset_y
-        visible_bottom = visible_top + self.height()
-
-        first_row = max(0, int(visible_top // row_height))
-        last_row = int(visible_bottom // row_height) + 1
-
-        # 加 buffer
-        buffer_rows = 2
-        first_row = max(0, first_row - buffer_rows)
-        last_row += buffer_rows
-
-        start_index = first_row * cols
-        end_index = (last_row + 1) * cols
-
-        return start_index, min(end_index, len(self.model.images))
-
     def update_visible_tiles(self):
-        start, end = self.compute_visible_range()
+        start, end = compute_visible_range(self)
         visible_paths = set(self.model.images[start:end])
 
         # 啟動需要的 worker
@@ -470,7 +447,11 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== 右鍵 → 顯示選單 =====
         if event.button() == Qt.MouseButton.RightButton:
-            right_click_context_menu(self, event.globalPosition().toPoint())
+            right_click_context_menu(
+                main_gui=self,
+                global_pos=event.globalPosition().toPoint(),
+                local_pos=event.position()
+            )
             return
 
         # ===== 左鍵 =====

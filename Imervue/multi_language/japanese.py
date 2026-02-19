@@ -1,6 +1,8 @@
 japanese_word_dict = {
-    "main_window_current_filename": "現在のファイル名:",
     "main_window_current_filename_format": "現在のファイル名: {name}",
+    # File menu
+    "main_window_open_image": "ファイルを開く",
+    "main_window_current_filename": "現在のファイル名:",
     "main_window_current_file": "ファイル",
     "main_window_open_folder": "フォルダーを開く",
     "main_window_exit": "終了",
@@ -36,4 +38,23 @@ japanese_word_dict = {
     "right_click_menu_previous_image": "前の画像",
     "right_click_menu_delete_current": "現在の画像を削除",
     "right_click_menu_delete_selected": "選択した画像を削除",
+    "right_click_menu_image_info": "画像情報",
+    # Image info
+    "image_info_filename": "ファイル名: {info}\n",
+    "image_info_fullpath": "フルパス: {full_path}\n",
+    "image_info_image_size": "サイズ: {width} x {height}\n",
+    "image_info_file_size": "ファイルサイズ: {file_size_mb} MB\n",
+    "image_info_file_created_time": "作成日時: {created_time}\n",
+    "image_info_file_modified_time": "更新日時: {modified_time}\n",
+    "image_info_messagebox_title": "画像情報",
+    # Image info exif
+    "image_info_exif_datatime_original": "撮影日時: {DateTimeOriginal}\n",
+    "image_info_exif_camera_model": "カメラ: {Make} {Model}\n",
+    "image_info_exif_camera_lens_model": "レンズ: {LensModel}\n",
+    "image_info_exif_camera_focal_length": "焦点距離: {FocalLength}\n",
+    "image_info_exif_camera_fnumber": "絞り値: {FNumber}\n",
+    "image_info_exif_exposure_time": "シャッター速度: {ExposureTime}\n",
+    "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
+    # Recent menu
+    "recent_menu_title": "最近開いたメニュー",
 }

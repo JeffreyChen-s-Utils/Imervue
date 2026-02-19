@@ -8,6 +8,9 @@ from typing import Dict, Any, Optional, Union
 # Global dictionary for user settings
 user_setting_dict: Dict[str, Any] = {
     "language": "English",
+    "user_recent_folders": [],
+    "user_recent_images": [],
+    "user_last_folder": ""
 }
 
 _lock = Lock()

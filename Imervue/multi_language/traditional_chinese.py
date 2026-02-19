@@ -1,6 +1,8 @@
 traditional_chinese_word_dict = {
-    "main_window_current_filename": "目前檔名：",
     "main_window_current_filename_format": "目前檔名： {name}",
+    # File menu
+    "main_window_open_image": "開啟檔案",
+    "main_window_current_filename": "目前檔名：",
     "main_window_current_file": "檔案",
     "main_window_open_folder": "開啟資料夾",
     "main_window_exit": "離開",
@@ -36,4 +38,23 @@ traditional_chinese_word_dict = {
     "right_click_menu_previous_image": "上一張圖",
     "right_click_menu_delete_current": "刪除目前的圖",
     "right_click_menu_delete_selected": "刪除選取的圖",
+    "right_click_menu_image_info": "圖片資訊",
+    # Image info
+    "image_info_filename": "檔名: {info}\n",
+    "image_info_fullpath": "完整路徑: {full_path}\n",
+    "image_info_image_size": "尺寸: {width} x {height}\n",
+    "image_info_file_size": "檔案大小: {file_size_mb} MB\n",
+    "image_info_file_created_time": "建立時間: {created_time}\n",
+    "image_info_file_modified_time": "修改時間: {modified_time}\n",
+    "image_info_messagebox_title": "圖片資訊",
+    # Image info exif
+    "image_info_exif_datatime_original": "拍攝時間: {DateTimeOriginal}\n",
+    "image_info_exif_camera_model": "相機: {Make} {Model}\n",
+    "image_info_exif_camera_lens_model": "鏡頭: {LensModel}\n",
+    "image_info_exif_camera_focal_length": "焦段: {FocalLength}\n",
+    "image_info_exif_camera_fnumber": "光圈: {'FNumber'}\n",
+    "image_info_exif_exposure_time": "快門: {ExposureTime}\n",
+    "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
+    # Recent menu
+    "recent_menu_title": "近期開啟選單",
 }

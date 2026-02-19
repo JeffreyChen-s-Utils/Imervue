@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from OpenGL.GL import glDeleteTextures
@@ -125,8 +126,8 @@ def commit_pending_deletions(main_gui: GPUImageView):
     for action in main_gui.undo_stack:
         for path in action.get("deleted_paths", []):
             try:
-                if os.path.exists(path):
-                    os.remove(path)
+                if Path(path).exists():
+                    Path(path).unlink()
                     print(f"Permanent delete: {path}")
             except Exception as e:
                 print(f"Failed to permanently delete {path}: {e}")

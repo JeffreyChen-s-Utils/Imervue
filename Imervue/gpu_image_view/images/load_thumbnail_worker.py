@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtCore import QRunnable, Signal, QObject
 import numpy as np
 import os
@@ -27,7 +29,7 @@ class LoadThumbnailWorker(QRunnable):
             return
 
         try:
-            ext = os.path.splitext(self.path)[1].lower()
+            ext = Path(self.path).suffix.lower()
             raw_exts = [".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"]
 
             # RAW 圖片
