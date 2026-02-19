@@ -3,12 +3,14 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
+from PySide6.QtWidgets import QApplication
+
 from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
-from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image, select_tiles_in_rect, \
-    start_tile_selection
+from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image, select_tiles_in_rect
 from Imervue.gpu_image_view.images.image_loader import load_image_file
 from Imervue.gpu_image_view.images.image_model import ImageModel
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
+from Imervue.menu.right_click_menu import right_click_context_menu
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -74,9 +76,13 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== Thread =====
         self.thread_pool = QThreadPool.globalInstance()
+        self.thread_pool.setMaxThreadCount(4)
         self.grid_mutex = QMutex()  # 保護 tile_grid 併發更新
         self.active_tile_workers = []  # 用來追蹤 Tile Grid 載入 worker
         self.active_deep_zoom_worker = None
+        self._visible_update_timer = QTimer()
+        self._visible_update_timer.setSingleShot(True)
+        self._visible_update_timer.timeout.connect(self.update_visible_tiles)
 
         # ===== Focus ======
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -95,6 +101,9 @@ class GPUImageView(QOpenGLWidget):
         glLoadIdentity()
         glOrtho(0, w, h, 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
+
+        if self.tile_grid_mode:
+            self._visible_update_timer.start(16) 
 
     # ===========================
     # 繪製
@@ -338,6 +347,7 @@ class GPUImageView(QOpenGLWidget):
             worker.signals.finished.connect(self.add_thumbnail)
             self.thread_pool.start(worker)
 
+        self._visible_update_timer.start(16) 
         self.update()
 
     def load_deep_zoom_image(self, path):
@@ -366,12 +376,65 @@ class GPUImageView(QOpenGLWidget):
 
     def add_thumbnail(self, img_data, path):
 
-        # 如果已被刪除，不加入
         if path not in self.model.images:
             return
 
+        if path in self.active_tile_workers:
+            self.active_tile_workers.remove(path)
+
         self.tile_cache[path] = img_data
         self.update()
+
+    def compute_visible_range(self):
+        if not self.tile_grid_mode:
+            return 0, 0
+
+        base_tile = self.thumbnail_size or 256
+        scaled_tile = base_tile * self.tile_scale
+        cols = max(1, int(self.width() // scaled_tile))
+
+        row_height = scaled_tile
+
+        visible_top = -self.grid_offset_y
+        visible_bottom = visible_top + self.height()
+
+        first_row = max(0, int(visible_top // row_height))
+        last_row = int(visible_bottom // row_height) + 1
+
+        # 加 buffer
+        buffer_rows = 2
+        first_row = max(0, first_row - buffer_rows)
+        last_row += buffer_rows
+
+        start_index = first_row * cols
+        end_index = (last_row + 1) * cols
+
+        return start_index, min(end_index, len(self.model.images))
+
+    def update_visible_tiles(self):
+        start, end = self.compute_visible_range()
+        visible_paths = set(self.model.images[start:end])
+
+        # 啟動需要的 worker
+        for path in visible_paths:
+            if path not in self.tile_cache and path not in self.active_tile_workers:
+                worker = LoadThumbnailWorker(path, self.thumbnail_size)
+                worker.signals.finished.connect(self.add_thumbnail)
+                self.active_tile_workers.append(path)
+                self.thread_pool.start(worker)
+
+        # 釋放不可見 cache（可選，但建議）
+        remove_paths = []
+        for path in self.tile_cache.keys():
+            if path not in visible_paths:
+                remove_paths.append(path)
+
+        for path in remove_paths:
+            tex = self.tile_textures.get(path)
+            if tex:
+                glDeleteTextures([tex])
+                del self.tile_textures[path]
+            del self.tile_cache[path]
 
     # ===========================
     # Event
@@ -383,6 +446,7 @@ class GPUImageView(QOpenGLWidget):
         if self.tile_grid_mode:
             self.tile_scale *= factor
             self.tile_scale = max(0.1, min(5.0, self.tile_scale))
+            self._visible_update_timer.start(16) 
             self.update()
 
         elif self.deep_zoom:
@@ -399,40 +463,25 @@ class GPUImageView(QOpenGLWidget):
     def mousePressEvent(self, event):
         self.last_pos = event.position()
 
-        # ===== 中鍵 → 進入拖動模式 =====
+        # ===== 中鍵拖動 =====
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = True
             return
-        elif event.button() == Qt.MouseButton.RightButton:
-            if self.tile_grid_mode:
-                self.press_pos = event.position()
 
-                self._press_timer = QTimer(self)
-                self._press_timer.setSingleShot(True)
-                self._press_timer.timeout.connect(lambda: start_tile_selection(self))
-                self._press_timer.start(self.long_press_threshold)
-
+        # ===== 右鍵 → 顯示選單 =====
+        if event.button() == Qt.MouseButton.RightButton:
+            right_click_context_menu(self, event.globalPosition().toPoint())
+            return
 
         # ===== 左鍵 =====
         if event.button() == Qt.MouseButton.LeftButton:
             if self.tile_grid_mode:
-                mx, my = event.position().x(), event.position().y()
-                for x0, y0, x1, y1, path in self.tile_rects:
-                    if x0 <= mx <= x1 and y0 <= my <= y1:
-                        # 先存 Tile Grid 狀態
-                        self._saved_tile_state = {
-                            "grid_offset_x": self.grid_offset_x,
-                            "grid_offset_y": self.grid_offset_y,
-                            "tile_scale": self.tile_scale,
-                        }
+                self._drag_start_pos = event.position()
+                self._drag_end_pos = event.position()
+                self._drag_selecting = False  # 先不啟動，等拖動才算框選
+            return
 
-                        self.current_index = self.model.images.index(path)
-                        self.tile_grid_mode = False
-                        self.load_deep_zoom_image(path)
-                        self.update()
-                        return
         super().mousePressEvent(event)
-
 
     def mouseMoveEvent(self, event):
         delta = event.position() - self.last_pos
@@ -447,30 +496,41 @@ class GPUImageView(QOpenGLWidget):
                 self.dz_offset_x += delta.x()
                 self.dz_offset_y += delta.y()
 
+            self._visible_update_timer.start(16) 
             self.update()
             return
 
-        # ===== 左鍵框選 =====
-        if self.tile_grid_mode and self._drag_selecting:
-            self._drag_end_pos = event.position()
-            self.update()
+        # ===== 左鍵拖曳框選 =====
+        if self.tile_grid_mode and event.buttons() & Qt.MouseButton.LeftButton:
+            if self._drag_start_pos:
+
+                move_delta = event.position() - self._drag_start_pos
+                threshold = QApplication.startDragDistance()
+
+                # 還沒超過系統拖曳門檻
+                if not self._drag_selecting:
+                    if move_delta.manhattanLength() < threshold:
+                        return
+
+                    # 超過門檻才真正開始框選
+                    self.tile_selection_mode = True
+                    self.selected_tiles.clear()
+                    self._drag_selecting = True
+
+                self._drag_end_pos = event.position()
+                self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
             return
 
-        if self._press_timer:
-            self._press_timer.stop()
-            self._press_timer = None
+        if self.tile_grid_mode and event.button() == Qt.MouseButton.LeftButton:
 
-        self.press_pos = None
-
-        if self.tile_grid_mode:
             mx, my = event.position().x(), event.position().y()
 
+            # ===== 拖曳框選完成 =====
             if self._drag_selecting:
-                # 拖曳框選完成
                 select_tiles_in_rect(self._drag_start_pos, self._drag_end_pos, self)
                 self._drag_selecting = False
                 self._drag_start_pos = None
@@ -478,11 +538,11 @@ class GPUImageView(QOpenGLWidget):
                 self.update()
                 return
 
-            clicked_any_tile = False
-
-            # 單點選擇
+            # ===== 單擊 =====
             for x0, y0, x1, y1, path in self.tile_rects:
                 if x0 <= mx <= x1 and y0 <= my <= y1:
+
+                    # 選取模式 → 切換選取
                     if self.tile_selection_mode:
                         if path in self.selected_tiles:
                             self.selected_tiles.remove(path)
@@ -490,17 +550,28 @@ class GPUImageView(QOpenGLWidget):
                             self.selected_tiles.add(path)
                         self.update()
                         return
-                    else:
-                        self.current_index = self.model.images.index(path)
-                        self.tile_grid_mode = False
-                        self.load_deep_zoom_image(path)
-                        self.update()
-                        return
-            # 如果在選取模式，且點擊空白 → 退出選取模式
-            if self.tile_selection_mode and not clicked_any_tile:
-                self.tile_selection_mode = False
-                self.selected_tiles.clear()
-                self.update()
+
+                    # 正常開圖
+                    self._saved_tile_state = {
+                        "grid_offset_x": self.grid_offset_x,
+                        "grid_offset_y": self.grid_offset_y,
+                        "tile_scale": self.tile_scale,
+                    }
+
+                    self.current_index = self.model.images.index(path)
+                    self.tile_grid_mode = False
+                    self.load_deep_zoom_image(path)
+                    self.update()
+                    return
+
+                # ===== 點擊空白 → 取消選取模式 =====
+                if self.tile_selection_mode:
+                    self.tile_selection_mode = False
+                    self.selected_tiles.clear()
+                    self.update()
+                    return
+
+        super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -536,22 +607,32 @@ class GPUImageView(QOpenGLWidget):
         if self.tile_grid_mode:
             if key == Qt.Key.Key_Up:
                 self.grid_offset_y += move_step
+                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Down:
                 self.grid_offset_y -= move_step
+                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Left:
                 self.grid_offset_x += move_step
+                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Right:
                 self.grid_offset_x -= move_step
+                self._visible_update_timer.start(16) 
                 self.update()
                 return
 
         if key == Qt.Key.Key_Escape:
+            if self.tile_grid_mode and self.selected_tiles:
+                self.tile_selection_mode = False
+                self.selected_tiles.clear()
+                self.update()
+                return
+
             if self.deep_zoom:
                 # 回到原本 Tile Grid
                 self.deep_zoom = None

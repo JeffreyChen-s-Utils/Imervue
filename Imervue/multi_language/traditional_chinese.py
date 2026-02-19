@@ -30,4 +30,10 @@ traditional_chinese_word_dict = {
     "keyboard_control_tile_arrow_right_tip": "縮圖模式下可以使用方向鍵的右來往右移動",
     "keyboard_control_delete_tip": "縮圖或 Deep zoom 模式都可以使用 Delete 來刪除圖片",
     "keyboard_r_tip": "可以按鍵盤上的 R 鍵，來重置座標",
+    # Right click menu
+    "right_click_menu_go_to_parent_folder": "前往父資料夾",
+    "right_click_menu_next_image": "下一張圖",
+    "right_click_menu_previous_image": "上一張圖",
+    "right_click_menu_delete_current": "刪除目前的圖",
+    "right_click_menu_delete_selected": "刪除選取的圖",
 }

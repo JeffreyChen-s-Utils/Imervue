@@ -30,4 +30,10 @@ japanese_word_dict = {
     "keyboard_control_tile_arrow_right_tip": "サムネイルモードでは矢印キーの右で右に移動できます",
     "keyboard_control_delete_tip": "サムネイルモードや Deep zoom モードでは Delete キーで画像を削除できます",
     "keyboard_r_tip": "キーボードの R キーを押すと、座標をリセットできます",
+    # Right click menu
+    "right_click_menu_go_to_parent_folder": "親フォルダへ移動",
+    "right_click_menu_next_image": "次の画像",
+    "right_click_menu_previous_image": "前の画像",
+    "right_click_menu_delete_current": "現在の画像を削除",
+    "right_click_menu_delete_selected": "選択した画像を削除",
 }

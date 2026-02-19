@@ -30,4 +30,10 @@ korean_word_dict = {
     "keyboard_control_tile_arrow_right_tip": "썸네일 모드에서는 방향키 오른쪽으로 오른쪽으로 이동할 수 있습니다",
     "keyboard_control_delete_tip": "썸네일 모드와 Deep zoom 모드 모두에서 Delete 키로 이미지를 삭제할 수 있습니다",
     "keyboard_r_tip": "키보드의 R 키를 누르면 좌표를 초기화할 수 있습니다",
+    # Right click menu
+    "right_click_menu_go_to_parent_folder": "상위 폴더로 이동",
+    "right_click_menu_next_image": "다음 이미지",
+    "right_click_menu_previous_image": "이전 이미지",
+    "right_click_menu_delete_current": "현재 이미지 삭제",
+    "right_click_menu_delete_selected": "선택한 이미지 삭제",
 }
