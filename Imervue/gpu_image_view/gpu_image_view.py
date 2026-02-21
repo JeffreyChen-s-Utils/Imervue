@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
@@ -18,10 +17,9 @@ if TYPE_CHECKING:
 import numpy as np
 import os
 from OpenGL.GL import *
-from PySide6.QtCore import QThreadPool, QMutex, QTimer, Qt
+from PySide6.QtCore import QThreadPool, QMutex, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
-from Imervue.gpu_image_view.images.visible_update import compute_visible_range
 
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.tile_manager import TileManager
@@ -83,9 +81,6 @@ class GPUImageView(QOpenGLWidget):
         self.grid_mutex = QMutex()  # 保護 tile_grid 併發更新
         self.active_tile_workers = []  # 用來追蹤 Tile Grid 載入 worker
         self.active_deep_zoom_worker = None
-        self._visible_update_timer = QTimer()
-        self._visible_update_timer.setSingleShot(True)
-        self._visible_update_timer.timeout.connect(self.update_visible_tiles)
 
         # ===== Focus ======
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -104,9 +99,6 @@ class GPUImageView(QOpenGLWidget):
         glLoadIdentity()
         glOrtho(0, w, h, 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
-
-        if self.tile_grid_mode:
-            self._visible_update_timer.start(16) 
 
     # ===========================
     # 繪製
@@ -139,7 +131,7 @@ class GPUImageView(QOpenGLWidget):
             base_tile = 256
 
         scaled_tile = base_tile * self.tile_scale
-        cols = max(1, math.ceil(self.width() / scaled_tile))
+        cols = max(1, int(self.width() // scaled_tile))
         self.tile_rects = []
 
         for i, path in enumerate(images):
@@ -350,7 +342,6 @@ class GPUImageView(QOpenGLWidget):
             worker.signals.finished.connect(self.add_thumbnail)
             self.thread_pool.start(worker)
 
-        self._visible_update_timer.start(16) 
         self.update()
 
     def load_deep_zoom_image(self, path):
@@ -388,31 +379,6 @@ class GPUImageView(QOpenGLWidget):
         self.tile_cache[path] = img_data
         self.update()
 
-    def update_visible_tiles(self):
-        start, end = compute_visible_range(self)
-        visible_paths = set(self.model.images[start:end])
-
-        # 啟動需要的 worker
-        for path in visible_paths:
-            if path not in self.tile_cache and path not in self.active_tile_workers:
-                worker = LoadThumbnailWorker(path, self.thumbnail_size)
-                worker.signals.finished.connect(self.add_thumbnail)
-                self.active_tile_workers.append(path)
-                self.thread_pool.start(worker)
-
-        # 釋放不可見 cache（可選，但建議）
-        remove_paths = []
-        for path in self.tile_cache.keys():
-            if path not in visible_paths:
-                remove_paths.append(path)
-
-        for path in remove_paths:
-            tex = self.tile_textures.get(path)
-            if tex:
-                glDeleteTextures([tex])
-                del self.tile_textures[path]
-            del self.tile_cache[path]
-
     # ===========================
     # Event
     # ===========================
@@ -423,7 +389,6 @@ class GPUImageView(QOpenGLWidget):
         if self.tile_grid_mode:
             self.tile_scale *= factor
             self.tile_scale = max(0.1, min(5.0, self.tile_scale))
-            self._visible_update_timer.start(16) 
             self.update()
 
         elif self.deep_zoom:
@@ -477,7 +442,6 @@ class GPUImageView(QOpenGLWidget):
                 self.dz_offset_x += delta.x()
                 self.dz_offset_y += delta.y()
 
-            self._visible_update_timer.start(16) 
             self.update()
             return
 
@@ -495,7 +459,6 @@ class GPUImageView(QOpenGLWidget):
 
                     # 超過門檻才真正開始框選
                     self.tile_selection_mode = True
-                    self.selected_tiles.clear()
                     self._drag_selecting = True
 
                 self._drag_end_pos = event.position()
@@ -519,38 +482,21 @@ class GPUImageView(QOpenGLWidget):
                 self.update()
                 return
 
-            # ===== 單擊 =====
+            # ===== 單擊圖片切換選取 =====
+            clicked_tile = None
             for x0, y0, x1, y1, path in self.tile_rects:
                 if x0 <= mx <= x1 and y0 <= my <= y1:
+                    clicked_tile = path
+                    break
 
-                    # 選取模式 → 切換選取
-                    if self.tile_selection_mode:
-                        if path in self.selected_tiles:
-                            self.selected_tiles.remove(path)
-                        else:
-                            self.selected_tiles.add(path)
-                        self.update()
-                        return
-
-                    # 正常開圖
-                    self._saved_tile_state = {
-                        "grid_offset_x": self.grid_offset_x,
-                        "grid_offset_y": self.grid_offset_y,
-                        "tile_scale": self.tile_scale,
-                    }
-
-                    self.current_index = self.model.images.index(path)
-                    self.tile_grid_mode = False
-                    self.load_deep_zoom_image(path)
-                    self.update()
-                    return
-
-                # ===== 點擊空白 → 取消選取模式 =====
-                if self.tile_selection_mode:
-                    self.tile_selection_mode = False
-                    self.selected_tiles.clear()
-                    self.update()
-                    return
+            if clicked_tile:
+                self.tile_selection_mode = True
+                if clicked_tile in self.selected_tiles:
+                    self.selected_tiles.remove(clicked_tile)
+                else:
+                    self.selected_tiles.add(clicked_tile)
+                self.update()
+                return
 
         super().mouseReleaseEvent(event)
 
@@ -588,22 +534,18 @@ class GPUImageView(QOpenGLWidget):
         if self.tile_grid_mode:
             if key == Qt.Key.Key_Up:
                 self.grid_offset_y += move_step
-                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Down:
                 self.grid_offset_y -= move_step
-                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Left:
                 self.grid_offset_x += move_step
-                self._visible_update_timer.start(16) 
                 self.update()
                 return
             elif key == Qt.Key.Key_Right:
                 self.grid_offset_x -= move_step
-                self._visible_update_timer.start(16) 
                 self.update()
                 return
 
