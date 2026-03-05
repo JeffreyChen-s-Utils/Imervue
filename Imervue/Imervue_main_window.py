@@ -144,7 +144,6 @@ class ImervueMainWindow(QMainWindow):
             )
 
     def _open_startup_folder(self, folder: str):
-
         self.tree.setRootIndex(self.model.index(folder))
         open_path(main_gui=self.viewer, path=folder)
 

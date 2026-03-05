@@ -490,14 +490,26 @@ class GPUImageView(QOpenGLWidget):
                     break
 
             if clicked_tile:
-                self.tile_selection_mode = True
+
+                if not self.tile_selection_mode:
+                    # 正常模式 → 進入 DeepZoom
+                    self._saved_tile_state = {
+                        "grid_offset_x": self.grid_offset_x,
+                        "grid_offset_y": self.grid_offset_y,
+                        "tile_scale": self.tile_scale,
+                    }
+                    self.tile_grid_mode = False
+                    self.load_deep_zoom_image(clicked_tile)
+                    return
+
+                # 已在選取模式 → 才做多選
                 if clicked_tile in self.selected_tiles:
                     self.selected_tiles.remove(clicked_tile)
                 else:
                     self.selected_tiles.add(clicked_tile)
+
                 self.update()
                 return
-
         super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
