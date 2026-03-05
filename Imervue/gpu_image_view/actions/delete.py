@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -29,6 +28,7 @@ def delete_current_image(main_gui: GPUImageView):
         "mode": "delete",
         "deleted_paths": [path_to_delete],
         "indices": [deleted_index],
+        "restored": False,
     })
 
     # ===== 清 GPU texture =====
@@ -69,6 +69,7 @@ def delete_selected_tiles(main_gui):
         "mode": "delete",
         "deleted_paths": deleted_paths,
         "indices": deleted_indices,
+        "restored": False,
     })
 
     # GPU
@@ -113,17 +114,18 @@ def undo_delete(main_gui: GPUImageView):
         current_path = main_gui.model.images[main_gui.current_index]
         main_gui.load_deep_zoom_image(current_path)
 
+    # ===== 標記這個 action 已被還原 =====
+    action["restored"] = True
+
     main_gui.update()
-
-
-def clear_thumbnail_cache(main_gui: GPUImageView):
-    for tex in main_gui.tile_textures.values():
-        glDeleteTextures([tex])
-    main_gui.tile_textures.clear()
 
 
 def commit_pending_deletions(main_gui: GPUImageView):
     for action in main_gui.undo_stack:
+        # 跳過已還原的動作
+        if action.get("restored", False):
+            continue
+
         for path in action.get("deleted_paths", []):
             try:
                 if Path(path).exists():
@@ -132,4 +134,5 @@ def commit_pending_deletions(main_gui: GPUImageView):
             except Exception as e:
                 print(f"Failed to permanently delete {path}: {e}")
 
-    main_gui.undo_stack.clear()
+    # 清理已處理的 action
+    main_gui.undo_stack = [a for a in main_gui.undo_stack if a.get("restored", False) is False]
