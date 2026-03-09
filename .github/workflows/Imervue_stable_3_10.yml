@@ -29,4 +29,4 @@ jobs:
     - name: Build Imervue
       run: pyinstaller --noconfirm --onedir --windowed --icon "Imervue.ico" --name "Imervue" --add-data "Imervue.ico;." --paths ".venv" --hidden-import "imageio" --copy-metadata "imageio" --distpath output "Imervue/__main__.py"
     - name: Debug run Imervue
-      run: xvfb-run -s "-screen 0 1280x1024x24" output/Imervue/Imervue.exe --debug --software_opengl
+      run: output/Imervue/Imervue.exe --debug --software_opengl
