@@ -24,7 +24,7 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
     mouse_keys = [
         "mouse_control_middle_tip",
         "mouse_control_left_tip",
-        "mouse_control_right_move_tip",
+        "mouse_control_multi_select_tip",
     ]
 
     for key in mouse_keys:

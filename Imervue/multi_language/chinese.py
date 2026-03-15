@@ -24,7 +24,7 @@ chinese_word_dict = {
     "main_window_keyboard_tip_menu": "键盘操作",
     "mouse_control_middle_tip": "可以使用鼠标中键移动",
     "mouse_control_left_tip": "鼠标左键点击图片可以进入 Deep zoom 模式",
-    "mouse_control_right_move_tip": "按住鼠标右键可以在缩略图模式下多选图片",
+    "mouse_control_multi_select_tip": "按住鼠标左键可以在缩略图模式下多选图片",
     "keyboard_control_esc_tip": "Deep zoom 模式下可以按 ESC 退出",
     "keyboard_control_tile_arrow_up_tip": "缩略图模式下可以使用方向键的上来向上移动",
     "keyboard_control_tile_arrow_down_tip": "缩略图模式下可以使用方向键的下来向下移动",

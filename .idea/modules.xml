@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Imervue.iml" filepath="$PROJECT_DIR$/.idea/Imervue.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Imervue_dev.iml" filepath="$PROJECT_DIR$/.idea/Imervue_dev.iml" />
     </modules>
   </component>
 </project>
