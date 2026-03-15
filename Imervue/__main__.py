@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import time
 
 from PySide6.QtWidgets import QApplication
 
@@ -33,6 +34,9 @@ if __name__ == "__main__":
 
     if args.software_opengl:
         os.environ["QT_OPENGL"] = "software"
+        os.environ["QT_ANGLE_PLATFORM"] = "warp"
+
+    time.sleep(3)
 
     app = QApplication(sys.argv)
     window = ImervueMainWindow(debug=debug)

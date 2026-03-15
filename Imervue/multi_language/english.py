@@ -24,7 +24,7 @@ english_word_dict = {
     "main_window_keyboard_tip_menu": "Keyboard Control",
     "mouse_control_middle_tip": "You can move using the mouse middle button",
     "mouse_control_left_tip": "Clicking an image with the left mouse button enters Deep zoom mode",
-    "mouse_control_right_move_tip": "Hold down the right mouse button to multi-select images in thumbnail mode",
+    "mouse_control_multi_select_tip": "Hold down the left mouse button to multi-select images in thumbnail mode",
     "keyboard_control_esc_tip": "Press ESC to exit Deep zoom mode",
     "keyboard_control_tile_arrow_up_tip": "In thumbnail mode, use the Up arrow key to move upward",
     "keyboard_control_tile_arrow_down_tip": "In thumbnail mode, use the Down arrow key to move downward",
