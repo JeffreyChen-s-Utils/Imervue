@@ -57,4 +57,14 @@ japanese_word_dict = {
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
     "recent_menu_title": "最近開いたメニュー",
+    # Plugin
+    "plugin_menu_title": "プラグイン",
+    "plugin_menu_loaded": "読み込み済みプラグイン",
+    "plugin_menu_no_plugins": "プラグインが読み込まれていません",
+    "plugin_menu_reload": "プラグインを再読み込み",
+    "plugin_menu_open_folder": "プラグインフォルダーを開く",
+    "plugin_info_name": "名前：{name}",
+    "plugin_info_version": "バージョン：{version}",
+    "plugin_info_author": "作者：{author}",
+    "plugin_info_description": "説明：{description}",
 }

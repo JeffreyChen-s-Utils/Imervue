@@ -22,8 +22,8 @@ def build_language_menu(ui_we_want_to_set: ImervueMainWindow):
     )
     ui_we_want_to_set.language_menu = language_menu
 
-    # 語言清單 (label_key, 語言代碼)
-    languages = [
+    # 內建語言清單 (label_key, 語言代碼)
+    builtin_languages = [
         ("language_menu_bar_english", "English"),
         ("language_menu_bar_traditional_chinese", "Traditional_Chinese"),
         ("language_menu_bar_chinese", "Chinese"),
@@ -31,8 +31,8 @@ def build_language_menu(ui_we_want_to_set: ImervueMainWindow):
         ("language_menu_bar_japanese", "Japanese"),
     ]
 
-    # 動態建立 QAction
-    for label_key, lang_code in languages:
+    # 動態建立內建語言 QAction
+    for label_key, lang_code in builtin_languages:
         action = QAction(language_wrapper.language_word_dict.get(label_key), language_menu)
         action.triggered.connect(lambda _, code=lang_code: set_language(code, ui_we_want_to_set))
         language_menu.addAction(action)

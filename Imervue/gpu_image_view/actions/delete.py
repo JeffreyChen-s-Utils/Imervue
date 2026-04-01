@@ -31,6 +31,10 @@ def delete_current_image(main_gui: GPUImageView):
         "restored": False,
     })
 
+    # Plugin hook: image deleted
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_image_deleted([path_to_delete], main_gui)
+
     # ===== 清 GPU texture =====
     tex = main_gui.tile_textures.pop(path_to_delete, None)
     if tex is not None:
@@ -71,6 +75,10 @@ def delete_selected_tiles(main_gui):
         "indices": deleted_indices,
         "restored": False,
     })
+
+    # Plugin hook: image deleted
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_image_deleted(deleted_paths, main_gui)
 
     # GPU
     for path in deleted_paths:

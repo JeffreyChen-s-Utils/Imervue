@@ -57,4 +57,14 @@ english_word_dict = {
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
     "recent_menu_title": "Recently Opened Menu",
+    # Plugin
+    "plugin_menu_title": "Plugins",
+    "plugin_menu_loaded": "Loaded Plugins",
+    "plugin_menu_no_plugins": "No plugins loaded",
+    "plugin_menu_reload": "Reload Plugins",
+    "plugin_menu_open_folder": "Open Plugin Folder",
+    "plugin_info_name": "Name: {name}",
+    "plugin_info_version": "Version: {version}",
+    "plugin_info_author": "Author: {author}",
+    "plugin_info_description": "Description: {description}",
 }

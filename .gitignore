@@ -182,3 +182,4 @@ cython_debug/
 .idea/discord.xml
 .idea/vcs.xml
 /output/
+/.claude/

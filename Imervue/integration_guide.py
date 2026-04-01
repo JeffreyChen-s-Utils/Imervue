@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Imervue.Imervue_main_window import ImervueMainWindow
+
+from Imervue.menu.plugin_menu import build_plugin_menu
+from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.plugin_manager import PluginManager
+
+
+def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
+    """Initialize the plugin system and load all discovered plugins.
+
+    Called from ImervueMainWindow.__init__() after the UI is fully built.
+    """
+    manager = PluginManager(main_window)
+    manager.discover_and_load()
+
+    # Store on main_window so other parts of the app can access it
+    main_window.plugin_manager = manager
+
+    # If plugins registered new languages, append them to the existing language menu
+    if language_wrapper.plugin_languages and hasattr(main_window, "language_menu"):
+        from Imervue.menu.language_menu import set_language
+        from PySide6.QtGui import QAction
+        main_window.language_menu.addSeparator()
+        for lang_code, display_name in language_wrapper.plugin_languages.items():
+            action = QAction(display_name, main_window.language_menu)
+            action.triggered.connect(
+                lambda _, code=lang_code: set_language(code, main_window)
+            )
+            main_window.language_menu.addAction(action)
+
+    # Let plugins add their own menus
+    manager.dispatch_build_menu_bar(main_window.menuBar())
+
+    # Build the plugin management menu (after plugins are loaded so it can list them)
+    build_plugin_menu(main_window)

@@ -515,6 +515,11 @@ class GPUImageView(QOpenGLWidget):
     def keyPressEvent(self, event):
         key = event.key()
         modifiers = event.modifiers()
+
+        # Plugin hook: key press
+        if hasattr(self.main_window, "plugin_manager"):
+            if self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self):
+                return
         # Undo
         if modifiers & Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_Z:

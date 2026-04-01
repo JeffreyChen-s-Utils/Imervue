@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import load_image, open_path
+from Imervue.integration_guide import _init_plugin_system_example
 from Imervue.menu.file_menu import build_file_menu
 from Imervue.menu.language_menu import build_language_menu
 from Imervue.menu.tip_menu import build_tip_menu
@@ -96,6 +97,8 @@ class ImervueMainWindow(QMainWindow):
         # ===== 選單列 =====
         self.create_menu()
 
+        _init_plugin_system_example(self)
+
         # ===== Debug =====
         # Debug 模式下自動關閉
         # Auto close in debug mode
@@ -111,6 +114,7 @@ class ImervueMainWindow(QMainWindow):
     def create_menu(self):
         build_file_menu(self)
         build_language_menu(self)
+        # Plugin menu is built after plugin system init (in integration_guide.py)
         build_tip_menu(self)
 
     def change_tile_size(self, size):
@@ -149,6 +153,12 @@ class ImervueMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         commit_pending_deletions(self.viewer)
+
+        # Plugin hook: app closing
+        if hasattr(self, "plugin_manager"):
+            self.plugin_manager.dispatch_app_closing(self)
+            self.plugin_manager.unload_all()
+
         event.accept()
         write_user_setting()
         super().closeEvent(event)

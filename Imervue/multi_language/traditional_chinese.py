@@ -57,4 +57,14 @@ traditional_chinese_word_dict = {
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
     "recent_menu_title": "近期開啟選單",
+    # Plugin
+    "plugin_menu_title": "插件",
+    "plugin_menu_loaded": "已載入的插件",
+    "plugin_menu_no_plugins": "沒有載入任何插件",
+    "plugin_menu_reload": "重新載入插件",
+    "plugin_menu_open_folder": "開啟插件資料夾",
+    "plugin_info_name": "名稱：{name}",
+    "plugin_info_version": "版本：{version}",
+    "plugin_info_author": "作者：{author}",
+    "plugin_info_description": "說明：{description}",
 }

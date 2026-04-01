@@ -26,6 +26,10 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     image_info_action(main_gui=main_gui, local_pos=local_pos, menu=build_right_click_menu)
     build_recent_menu(main_gui.main_window, build_right_click_menu)
 
+    # Plugin hook: context menu
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_build_context_menu(build_right_click_menu, main_gui)
+
     if build_right_click_menu.actions():
         build_right_click_menu.exec(global_pos)
 

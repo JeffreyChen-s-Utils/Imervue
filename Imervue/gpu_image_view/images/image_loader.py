@@ -101,6 +101,10 @@ def open_path(main_gui: GPUImageView, path: str):
         main_gui.current_index = 0
         main_gui.load_tile_grid_async(images)
 
+        # Plugin hook: folder opened
+        if hasattr(main_gui.main_window, "plugin_manager"):
+            main_gui.main_window.plugin_manager.dispatch_folder_opened(str(path_obj), images, main_gui)
+
     elif path_obj.is_file() and path_obj.suffix.lower() in supported_exts:
 
         dir_path = path_obj.parent
@@ -119,5 +123,9 @@ def open_path(main_gui: GPUImageView, path: str):
 
         main_gui.tile_grid_mode = False
         main_gui.load_deep_zoom_image(str(path_obj))
+
+        # Plugin hook: image loaded
+        if hasattr(main_gui.main_window, "plugin_manager"):
+            main_gui.main_window.plugin_manager.dispatch_image_loaded(str(path_obj), main_gui)
 
 

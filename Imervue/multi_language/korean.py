@@ -57,4 +57,14 @@ korean_word_dict = {
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
     "recent_menu_title": "최근 열린 메뉴",
+    # Plugin
+    "plugin_menu_title": "플러그인",
+    "plugin_menu_loaded": "로드된 플러그인",
+    "plugin_menu_no_plugins": "로드된 플러그인이 없습니다",
+    "plugin_menu_reload": "플러그인 다시 로드",
+    "plugin_menu_open_folder": "플러그인 폴더 열기",
+    "plugin_info_name": "이름: {name}",
+    "plugin_info_version": "버전: {version}",
+    "plugin_info_author": "작성자: {author}",
+    "plugin_info_description": "설명: {description}",
 }
