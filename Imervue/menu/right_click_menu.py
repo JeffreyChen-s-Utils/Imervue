@@ -52,11 +52,11 @@ def switch_actions(main_gui: GPUImageView, menu: QMenu):
 def delete_action(main_gui: GPUImageView, menu: QMenu):
     if main_gui.tile_grid_mode and main_gui.tile_selection_mode:
         delete_selected_action = menu.addAction(
-            language_wrapper.language_word_dict.get("right_click_menu_delete_current"))
+            language_wrapper.language_word_dict.get("right_click_menu_delete_selected"))
         delete_selected_action.triggered.connect(lambda: delete_selected_tiles(main_gui=main_gui))
     if main_gui.deep_zoom:
         delete_current_action = menu.addAction(
-            language_wrapper.language_word_dict.get("right_click_menu_delete_selected"))
+            language_wrapper.language_word_dict.get("right_click_menu_delete_current"))
         delete_current_action.triggered.connect(lambda: delete_current_image(main_gui=main_gui))
 
 

@@ -27,8 +27,11 @@ class ImervueMainWindow(QMainWindow):
         # Windows 平台設定 AppUserModelID
         # Set AppUserModelID for Windows platform
         self.id = "Imervue"
-        from ctypes import windll
-        windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
+        try:
+            from ctypes import windll
+            windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
+        except (ImportError, AttributeError):
+            pass
 
         read_user_setting()
         last_folder = user_setting_dict.get("user_last_folder", "")

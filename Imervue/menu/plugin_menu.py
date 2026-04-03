@@ -34,6 +34,10 @@ def build_plugin_menu(ui: ImervueMainWindow):
 
     plugin_menu.addSeparator()
 
+    # ===== Download Plugins =====
+    download_action = plugin_menu.addAction(lang.get("plugin_menu_download", "Download Plugins"))
+    download_action.triggered.connect(lambda: _open_download_dialog(ui))
+
     # ===== Open Plugin Folder =====
     open_folder_action = plugin_menu.addAction(lang.get("plugin_menu_open_folder", "Open Plugin Folder"))
     open_folder_action.triggered.connect(lambda: _open_plugin_folder())
@@ -52,6 +56,12 @@ def _show_plugin_info(ui: ImervueMainWindow, plugin):
         ),
     ]
     QMessageBox.information(ui, plugin.plugin_name, "\n".join(info_lines))
+
+
+def _open_download_dialog(ui: ImervueMainWindow):
+    from Imervue.plugin.plugin_downloader import PluginDownloaderDialog
+    dialog = PluginDownloaderDialog(ui)
+    dialog.exec()
 
 
 def _open_plugin_folder():

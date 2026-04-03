@@ -62,12 +62,18 @@ def delete_selected_tiles(main_gui):
     deleted_paths = []
     deleted_indices = []
 
+    # 先收集所有要刪除的 index，再從後往前刪除以保持 index 正確
+    items_to_delete = []
     for path in paths:
         if path in images:
             idx = images.index(path)
-            images.remove(path)
-            deleted_paths.append(path)
-            deleted_indices.append(idx)
+            items_to_delete.append((path, idx))
+
+    # 按 index 從大到小排序後刪除
+    for path, idx in sorted(items_to_delete, key=lambda x: x[1], reverse=True):
+        images.pop(idx)
+        deleted_paths.append(path)
+        deleted_indices.append(idx)
 
     main_gui.undo_stack.append({
         "mode": "delete",
@@ -142,5 +148,5 @@ def commit_pending_deletions(main_gui: GPUImageView):
             except Exception as e:
                 print(f"Failed to permanently delete {path}: {e}")
 
-    # 清理已處理的 action
-    main_gui.undo_stack = [a for a in main_gui.undo_stack if a.get("restored", False) is False]
+    # 清理已處理的 action（保留已還原的，移除已永久刪除的）
+    main_gui.undo_stack.clear()

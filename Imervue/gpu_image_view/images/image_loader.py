@@ -77,8 +77,8 @@ def load_image(path: str, main_gui: GPUImageView):
     main_gui.tile_manager = TileManager(main_gui.deep_zoom)
     main_gui.zoom = 1.0
     # 居中
-    main_gui.offset_x = (main_gui.width() - img_data.shape[1]) / 2
-    main_gui.offset_y = (main_gui.height() - img_data.shape[0]) / 2
+    main_gui.dz_offset_x = (main_gui.width() - img_data.shape[1]) / 2
+    main_gui.dz_offset_y = (main_gui.height() - img_data.shape[0]) / 2
     main_gui.update()
 
 def open_path(main_gui: GPUImageView, path: str):
