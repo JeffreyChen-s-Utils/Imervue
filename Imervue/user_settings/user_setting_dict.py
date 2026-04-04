@@ -10,7 +10,8 @@ user_setting_dict: Dict[str, Any] = {
     "language": "English",
     "user_recent_folders": [],
     "user_recent_images": [],
-    "user_last_folder": ""
+    "user_last_folder": "",
+    "bookmarks": [],
 }
 
 _lock = Lock()
@@ -36,7 +37,9 @@ def read_user_setting() -> Path:
     """
     user_setting_file = Path(getcwd()) / "user_setting.json"
     if user_setting_file.exists() and user_setting_file.is_file():
-        user_setting_dict.update(read_json(str(user_setting_file)))
+        data = read_json(str(user_setting_file))
+        if isinstance(data, dict):
+            user_setting_dict.update(data)
     return user_setting_file
 
 def read_json(json_file_path: str) -> Optional[Any]:

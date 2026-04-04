@@ -31,6 +31,10 @@ def delete_current_image(main_gui: GPUImageView):
         "restored": False,
     })
 
+    # Plugin hook: image deleted
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_image_deleted([path_to_delete], main_gui)
+
     # ===== 清 GPU texture =====
     tex = main_gui.tile_textures.pop(path_to_delete, None)
     if tex is not None:
@@ -58,12 +62,18 @@ def delete_selected_tiles(main_gui):
     deleted_paths = []
     deleted_indices = []
 
+    # 先收集所有要刪除的 index，再從後往前刪除以保持 index 正確
+    items_to_delete = []
     for path in paths:
         if path in images:
             idx = images.index(path)
-            images.remove(path)
-            deleted_paths.append(path)
-            deleted_indices.append(idx)
+            items_to_delete.append((path, idx))
+
+    # 按 index 從大到小排序後刪除
+    for path, idx in sorted(items_to_delete, key=lambda x: x[1], reverse=True):
+        images.pop(idx)
+        deleted_paths.append(path)
+        deleted_indices.append(idx)
 
     main_gui.undo_stack.append({
         "mode": "delete",
@@ -71,6 +81,10 @@ def delete_selected_tiles(main_gui):
         "indices": deleted_indices,
         "restored": False,
     })
+
+    # Plugin hook: image deleted
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_image_deleted(deleted_paths, main_gui)
 
     # GPU
     for path in deleted_paths:
@@ -105,12 +119,13 @@ def undo_delete(main_gui: GPUImageView):
         main_gui.model.images.insert(idx, path)
 
         # ===== 重新載入 thumbnail（tile grid 用）=====
-        worker = LoadThumbnailWorker(path, main_gui.thumbnail_size)
+        worker = LoadThumbnailWorker(path, main_gui.thumbnail_size, main_gui._load_generation)
         worker.signals.finished.connect(main_gui.add_thumbnail)
         main_gui.thread_pool.start(worker)
 
     # ===== 如果在 deep zoom 模式，重新載入當前圖 =====
     if main_gui.deep_zoom and main_gui.model.images:
+        main_gui.current_index = min(main_gui.current_index, len(main_gui.model.images) - 1)
         current_path = main_gui.model.images[main_gui.current_index]
         main_gui.load_deep_zoom_image(current_path)
 
@@ -134,5 +149,5 @@ def commit_pending_deletions(main_gui: GPUImageView):
             except Exception as e:
                 print(f"Failed to permanently delete {path}: {e}")
 
-    # 清理已處理的 action
-    main_gui.undo_stack = [a for a in main_gui.undo_stack if a.get("restored", False) is False]
+    # 程式即將關閉，清除所有 undo 記錄
+    main_gui.undo_stack.clear()

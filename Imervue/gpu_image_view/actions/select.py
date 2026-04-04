@@ -17,6 +17,12 @@ def switch_to_next_image(main_gui: GPUImageView) -> None:
         main_gui.current_index += 1
         main_gui.load_deep_zoom_image(images[main_gui.current_index])
 
+        # Plugin hook: image switched
+        if hasattr(main_gui.main_window, "plugin_manager"):
+            main_gui.main_window.plugin_manager.dispatch_image_switched(
+                images[main_gui.current_index], main_gui
+            )
+
     main_gui.update()
 
 
@@ -30,6 +36,12 @@ def switch_to_previous_image(main_gui: GPUImageView) -> None:
     if main_gui.current_index > 0:
         main_gui.current_index -= 1
         main_gui.load_deep_zoom_image(images[main_gui.current_index])
+
+        # Plugin hook: image switched
+        if hasattr(main_gui.main_window, "plugin_manager"):
+            main_gui.main_window.plugin_manager.dispatch_image_switched(
+                images[main_gui.current_index], main_gui
+            )
 
     main_gui.update()
 
