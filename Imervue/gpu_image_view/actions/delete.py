@@ -119,12 +119,13 @@ def undo_delete(main_gui: GPUImageView):
         main_gui.model.images.insert(idx, path)
 
         # ===== 重新載入 thumbnail（tile grid 用）=====
-        worker = LoadThumbnailWorker(path, main_gui.thumbnail_size)
+        worker = LoadThumbnailWorker(path, main_gui.thumbnail_size, main_gui._load_generation)
         worker.signals.finished.connect(main_gui.add_thumbnail)
         main_gui.thread_pool.start(worker)
 
     # ===== 如果在 deep zoom 模式，重新載入當前圖 =====
     if main_gui.deep_zoom and main_gui.model.images:
+        main_gui.current_index = min(main_gui.current_index, len(main_gui.model.images) - 1)
         current_path = main_gui.model.images[main_gui.current_index]
         main_gui.load_deep_zoom_image(current_path)
 
@@ -148,5 +149,5 @@ def commit_pending_deletions(main_gui: GPUImageView):
             except Exception as e:
                 print(f"Failed to permanently delete {path}: {e}")
 
-    # 清理已處理的 action（保留已還原的，移除已永久刪除的）
+    # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()

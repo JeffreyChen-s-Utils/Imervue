@@ -2,22 +2,24 @@ from pathlib import Path
 
 from PySide6.QtCore import QRunnable, Signal, QObject
 import numpy as np
-import os
 import rawpy
 import imageio
 from PIL import Image
 
+from Imervue.image.thumbnail_disk_cache import thumbnail_disk_cache
+
 
 class WorkerSignals(QObject):
-    finished = Signal(object, str)
+    finished = Signal(object, str, int)  # img_data, path, generation
 
 
 class LoadThumbnailWorker(QRunnable):
 
-    def __init__(self, path, size=None):
+    def __init__(self, path, size=None, generation=0):
         super().__init__()
         self.path = path
         self.size = size      # None = 使用原圖尺寸
+        self.generation = generation
         self.signals = WorkerSignals()
         self._abort = False
 
@@ -29,81 +31,96 @@ class LoadThumbnailWorker(QRunnable):
             return
 
         try:
-            ext = Path(self.path).suffix.lower()
-            raw_exts = [".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"]
+            img_data = None
 
-            # RAW 圖片
-            if ext in raw_exts:
-                with rawpy.imread(self.path) as raw:
-                    try:
-                        thumb = raw.extract_thumb()
+            # ===== 嘗試磁碟快取 =====
+            if self.size is not None:
+                img_data = thumbnail_disk_cache.get(self.path, self.size)
 
-                        if thumb.format == rawpy.ThumbFormat.JPEG:
-                            img = imageio.imread(thumb.data)
+            # ===== 快取未命中，從原始檔案載入 =====
+            if img_data is None:
+                ext = Path(self.path).suffix.lower()
+                raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
 
-                        elif thumb.format == rawpy.ThumbFormat.BITMAP:
-                            img = thumb.data
+                if ext in raw_exts:
+                    img_data = self._load_raw()
+                elif ext == ".svg":
+                    img_data = self._load_svg()
+                else:
+                    img_data = self._load_standard()
 
-                        else:
-                            raise Exception
+                if self._abort:
+                    return
 
-                    except Exception:
-                        # fallback: 用 half_size 比較安全
-                        img = raw.postprocess(
-                            half_size=(self.size is not None),
-                            use_camera_wb=True,
-                            output_bps=8
-                        )
+                # 灰階 → RGB
+                if img_data.ndim == 2:
+                    img_data = np.stack([img_data, img_data, img_data], axis=2)
 
-                img_data = img
+                # 保證有 Alpha
+                if img_data.shape[2] == 3:
+                    alpha = np.full((*img_data.shape[:2], 1), 255, dtype=np.uint8)
+                    img_data = np.concatenate([img_data, alpha], axis=2)
 
-                # 自動限制最大尺寸（避免爆 VRAM）
-                if self.size is None:  # 只有使用原圖模式才限制
-                    MAX_DIM = 2048
-
-                    h, w = img_data.shape[:2]
-                    max_current = max(w, h)
-
-                    if max_current > MAX_DIM:
-                        scale = MAX_DIM / max_current
-                        new_w = int(w * scale)
-                        new_h = int(h * scale)
-
-                        img_pil = Image.fromarray(img_data)
-                        img_pil = img_pil.resize(
-                            (new_w, new_h),
-                            Image.Resampling.LANCZOS
-                        )
-                        img_data = np.array(img_pil)
-
-                # 如果有指定 size，縮放
+                # 寫入磁碟快取
                 if self.size is not None:
-                    img_pil = Image.fromarray(img_data).convert("RGBA")
-                    img_pil = img_pil.resize(
-                        (self.size, self.size),
-                        Image.Resampling.LANCZOS
-                    )
-                    img_data = np.array(img_pil)
-
-            # 一般圖片
-            else:
-                img = Image.open(self.path).convert("RGBA")
-
-                if self.size is not None:
-                    img = img.resize(
-                        (self.size, self.size),
-                        Image.Resampling.LANCZOS
-                    )
-
-                img_data = np.array(img)
-
-            # 保證有 Alpha
-            if img_data.shape[2] == 3:
-                alpha = np.ones((*img_data.shape[:2], 1), dtype=np.uint8) * 255
-                img_data = np.concatenate([img_data, alpha], axis=2)
+                    thumbnail_disk_cache.put(self.path, self.size, img_data)
 
             if not self._abort:
-                self.signals.finished.emit(img_data, self.path)
+                self.signals.finished.emit(img_data, self.path, self.generation)
 
         except Exception as e:
             print(f"Thumbnail load failed: {self.path} - {e}")
+
+    def _load_standard(self) -> np.ndarray:
+        """載入一般圖片，使用 thumbnail() 減少記憶體峰值"""
+        img = Image.open(self.path)
+
+        if self.size is not None:
+            # thumbnail() 會用 draft() 跳過不需要的解碼，大幅降低記憶體
+            img.thumbnail((self.size, self.size), Image.Resampling.LANCZOS)
+
+        img = img.convert("RGBA")
+        return np.array(img)
+
+    def _load_svg(self) -> np.ndarray:
+        """載入 SVG 圖片"""
+        from Imervue.gpu_image_view.images.image_loader import _load_svg
+        return _load_svg(self.path, thumbnail=(self.size is not None))
+
+    def _load_raw(self) -> np.ndarray:
+        """載入 RAW 圖片"""
+        with rawpy.imread(self.path) as raw:
+            try:
+                thumb = raw.extract_thumb()
+
+                if thumb.format == rawpy.ThumbFormat.JPEG:
+                    img_data = imageio.v3.imread(thumb.data)
+                elif thumb.format == rawpy.ThumbFormat.BITMAP:
+                    img_data = thumb.data
+                else:
+                    raise Exception("No valid embedded preview")
+
+            except Exception:
+                # fallback: 用 half_size 降低記憶體
+                img_data = raw.postprocess(
+                    half_size=(self.size is not None),
+                    use_camera_wb=True,
+                    output_bps=8
+                )
+
+        # 自動限制最大尺寸（避免爆 VRAM）
+        if self.size is None:
+            MAX_DIM = 2048
+            h, w = img_data.shape[:2]
+            if max(w, h) > MAX_DIM:
+                scale = MAX_DIM / max(w, h)
+                img_pil = Image.fromarray(img_data)
+                img_pil.thumbnail((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
+                img_data = np.array(img_pil)
+        else:
+            # 使用 thumbnail 保持比例並降低記憶體
+            img_pil = Image.fromarray(img_data).convert("RGBA")
+            img_pil.thumbnail((self.size, self.size), Image.Resampling.LANCZOS)
+            img_data = np.array(img_pil)
+
+        return img_data

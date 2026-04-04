@@ -7,9 +7,9 @@ from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QFileDialog
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
-from Imervue.gpu_image_view.images.image_loader import load_image
+from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.menu.recent_menu import rebuild_recent_menu, build_recent_menu
-from Imervue.user_settings.recent_image import add_to_recent, add_recent_folder, add_recent_image
+from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 if TYPE_CHECKING:
@@ -19,26 +19,50 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 
 def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
+    lang = language_wrapper.language_word_dict
     # ===== 檔案 =====
-    file_menu = ui_we_want_to_set.menuBar().addMenu(language_wrapper.language_word_dict.get("main_window_current_file"))
+    file_menu = ui_we_want_to_set.menuBar().addMenu(lang.get("main_window_current_file"))
 
-    open_image_action = file_menu.addAction(
-        language_wrapper.language_word_dict.get("main_window_open_image")
-    )
+    # 新視窗
+    new_window_action = file_menu.addAction(lang.get("menu_new_window", "New Window"))
+    new_window_action.triggered.connect(lambda: _open_new_window(ui_we_want_to_set))
+
+    file_menu.addSeparator()
+
+    open_image_action = file_menu.addAction(lang.get("main_window_open_image"))
     open_image_action.triggered.connect(
         lambda: open_image(ui_we_want_to_set)
     )
 
-    open_folder_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_open_folder"))
+    open_folder_action = file_menu.addAction(lang.get("main_window_open_folder"))
     open_folder_action.triggered.connect(lambda: open_folder(ui_we_want_to_set))
 
     build_recent_menu(ui_we_want_to_set=ui_we_want_to_set, menu=file_menu)
 
+    # 書籤管理
+    bookmark_action = file_menu.addAction(lang.get("bookmark_title", "Bookmarks"))
+    bookmark_action.triggered.connect(lambda: _open_bookmarks(ui_we_want_to_set))
+
+    file_menu.addSeparator()
+
     # 新增刪除動作
-    delete_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_remove_undo_stack"))
+    delete_action = file_menu.addAction(lang.get("main_window_remove_undo_stack"))
     delete_action.triggered.connect(lambda: commit_pending_deletions(ui_we_want_to_set.viewer))
 
-    exit_action = file_menu.addAction(language_wrapper.language_word_dict.get("main_window_exit"))
+    file_menu.addSeparator()
+
+    # 檔案關聯（僅 Windows）
+    import sys
+    if sys.platform == "win32":
+        assoc_menu = file_menu.addMenu(lang.get("file_assoc_menu", "File Association"))
+        reg_action = assoc_menu.addAction(lang.get("file_assoc_register", "Register 'Open with Imervue'"))
+        reg_action.triggered.connect(lambda: _register_assoc(ui_we_want_to_set))
+        unreg_action = assoc_menu.addAction(lang.get("file_assoc_unregister", "Remove file association"))
+        unreg_action.triggered.connect(lambda: _unregister_assoc(ui_we_want_to_set))
+
+    file_menu.addSeparator()
+
+    exit_action = file_menu.addAction(lang.get("main_window_exit"))
     exit_action.triggered.connect(ui_we_want_to_set.close)
 
     # ===== Tile Size 選單 =====
@@ -75,7 +99,17 @@ def open_folder(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set, language_wrapper.language_word_dict.get("main_window_select_folder"))
 
     if folder:
+        ui_we_want_to_set.model.setRootPath(folder)
         ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(folder))
+        ui_we_want_to_set.viewer.clear_tile_grid()
+        open_path(main_gui=ui_we_want_to_set.viewer, path=folder)
+
+        ui_we_want_to_set.filename_label.setText(
+            language_wrapper.language_word_dict.get(
+                "main_window_current_folder_format"
+            ).format(path=folder)
+        )
+
         add_recent_folder(folder)
         rebuild_recent_menu(ui_we_want_to_set)
         user_setting_dict["user_last_folder"] = folder
@@ -88,29 +122,73 @@ def open_image(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set,
         language_wrapper.language_word_dict.get("main_window_select_image"),
         "",
-        "Images (*.png *.jpg *.jpeg *.bmp *.tiff)"
+        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg *.cr2 *.nef *.arw *.dng *.raf *.orf)"
     )
 
     if not file_path:
         return
 
-    # 清除 tile grid 狀態
+    # 使用統一路徑開啟流程（非同步載入）
     ui_we_want_to_set.viewer.clear_tile_grid()
-
-    # 呼叫你提供的函式
-    load_image(file_path, ui_we_want_to_set.viewer)
-
-    # 設定 viewer 狀態
-    ui_we_want_to_set.viewer.tile_grid_mode = False
-    ui_we_want_to_set.viewer.current_index = 0
-    ui_we_want_to_set.viewer.model.set_images([file_path])
-
-    # 更新檔名 label
-    ui_we_want_to_set.filename_label.setText(
-        language_wrapper.language_word_dict.get(
-            "main_window_current_filename_format"
-        ).format(name=Path(file_path).name))
+    open_path(main_gui=ui_we_want_to_set.viewer, path=file_path)
 
     add_recent_image(file_path)
     rebuild_recent_menu(ui_we_want_to_set)
+    user_setting_dict["user_last_folder"] = str(Path(file_path).parent)
+
+
+# ==========================
+# 新視窗
+# ==========================
+# 保持全域引用防止被 GC 回收
+_extra_windows: list = []
+
+
+def _open_new_window(parent: ImervueMainWindow):
+    from Imervue.Imervue_main_window import ImervueMainWindow as MW
+    win = MW()
+    win.showMaximized()
+    _extra_windows.append(win)
+    # 視窗關閉時從列表移除
+    win.destroyed.connect(lambda: _extra_windows.remove(win) if win in _extra_windows else None)
+
+
+# ==========================
+# 檔案關聯
+# ==========================
+def _register_assoc(ui: ImervueMainWindow):
+    from Imervue.system.file_association import register_file_association
+    lang = language_wrapper.language_word_dict
+    ok, msg = register_file_association()
+    if ok:
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_done", "File association registered!"))
+    else:
+        if msg == "need_admin":
+            if hasattr(ui, "toast"):
+                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+        else:
+            if hasattr(ui, "toast"):
+                ui.toast.info(f"Error: {msg}")
+
+
+def _open_bookmarks(ui: ImervueMainWindow):
+    from Imervue.gui.bookmark_dialog import open_bookmark_dialog
+    open_bookmark_dialog(ui.viewer)
+
+
+def _unregister_assoc(ui: ImervueMainWindow):
+    from Imervue.system.file_association import unregister_file_association
+    lang = language_wrapper.language_word_dict
+    ok, msg = unregister_file_association()
+    if ok:
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_removed", "File association removed!"))
+    else:
+        if msg == "need_admin":
+            if hasattr(ui, "toast"):
+                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+        else:
+            if hasattr(ui, "toast"):
+                ui.toast.info(f"Error: {msg}")
 

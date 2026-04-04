@@ -1,20 +1,27 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QDir, QFileSystemWatcher
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy
+    QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy,
+    QStatusBar, QProgressBar, QHeaderView,
 )
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
-from Imervue.gpu_image_view.images.image_loader import load_image, open_path
+from Imervue.gpu_image_view.images.image_loader import open_path
+from Imervue.gui.exif_sidebar import ExifSidebar
+from Imervue.gui.toast import ToastManager
 from Imervue.integration_guide import _init_plugin_system_example
 from Imervue.menu.file_menu import build_file_menu
+from Imervue.menu.filter_menu import build_filter_menu
 from Imervue.menu.language_menu import build_language_menu
+from Imervue.menu.recent_menu import rebuild_recent_menu
+from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
 from Imervue.user_settings.user_setting_dict import write_user_setting, read_user_setting, user_setting_dict
 
 
@@ -57,17 +64,32 @@ class ImervueMainWindow(QMainWindow):
 
         # ===== 左側檔案樹 =====
         self.model = QFileSystemModel()
-        self.model.setRootPath("")
+        # 只篩選圖片格式 + 資料夾，隱藏不符合的檔案
+        self.model.setNameFilters([
+            "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.webp",
+            "*.gif", "*.apng", "*.svg",
+            "*.cr2", "*.nef", "*.arw", "*.dng", "*.raf", "*.orf",
+        ])
+        self.model.setNameFilterDisables(False)
+
+        # 設定起始路徑：有上次資料夾就用，否則從根開始
+        start_path = last_folder if last_folder and Path(last_folder).is_dir() else ""
+        self.model.setRootPath(start_path)
 
         self.tree = QTreeView()
         self.tree.setModel(self.model)
-        self.tree.setRootIndex(self.model.index(""))
-        self.model.setNameFilters(["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff"])
-        self.model.setNameFilterDisables(False)
-        self.tree.clicked.connect(self.on_file_clicked)
-        self.tree.resizeColumnToContents(0)
-        self.tree.setColumnWidth(0, 400)
+        self.tree.setRootIndex(self.model.index(start_path))
+        # 只顯示「名稱」欄，隱藏大小/類型/日期（省掉大量 stat() 呼叫）
+        for col in (1, 2, 3):
+            self.tree.hideColumn(col)
         self.tree.header().setStretchLastSection(True)
+        self.tree.setColumnWidth(0, 400)
+        self.tree.setUniformRowHeights(True)
+        self.tree.setAnimated(False)
+        self.tree.clicked.connect(self.on_file_clicked)
+
+        # 目錄載入完成後確保樹狀圖更新
+        self.model.directoryLoaded.connect(self._on_directory_loaded)
 
         # ===== 右側 GPU Viewer + Label =====
         right_widget = QWidget()
@@ -84,23 +106,56 @@ class ImervueMainWindow(QMainWindow):
         self.filename_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         right_layout.addWidget(self.filename_label, stretch=0)
 
-        # GPU Viewer 佔滿剩餘空間
+        # GPU Viewer + EXIF Sidebar 水平排列
         from Imervue.gpu_image_view.gpu_image_view import GPUImageView
         self.viewer = GPUImageView(main_window=self)
-        right_layout.addWidget(self.viewer, stretch=1)
 
-        self.viewer.on_filename_changed = lambda name: self.filename_label.setText(
-            language_wrapper.language_word_dict.get("main_window_current_filename_format").format(name=name))
+        self.exif_sidebar = ExifSidebar(self)
+
+        viewer_row = QSplitter(Qt.Orientation.Horizontal)
+        viewer_row.addWidget(self.viewer)
+        viewer_row.addWidget(self.exif_sidebar)
+        viewer_row.setStretchFactor(0, 1)
+        viewer_row.setStretchFactor(1, 0)
+        right_layout.addWidget(viewer_row, stretch=1)
+
+        def _on_name_changed(name):
+            self.filename_label.setText(
+                language_wrapper.language_word_dict.get("main_window_current_filename_format").format(name=name))
+            self.exif_sidebar.update_info()
+
+        self.viewer.on_filename_changed = _on_name_changed
 
         splitter.addWidget(self.tree)
         splitter.addWidget(right_widget)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([400, 1000])
 
+        # ===== 狀態列 =====
+        self._status_bar = QStatusBar()
+        self.setStatusBar(self._status_bar)
+        self._status_label = QLabel("")
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setFixedWidth(180)
+        self._progress_bar.setVisible(False)
+        self._status_bar.addWidget(self._status_label, stretch=1)
+        self._status_bar.addPermanentWidget(self._progress_bar)
+
+        # ===== Toast 通知 =====
+        self.toast = ToastManager(self.viewer)
+
         # ===== 選單列 =====
         self.create_menu()
 
         _init_plugin_system_example(self)
+
+        # ===== 資料夾監控 =====
+        self._folder_watcher = QFileSystemWatcher(self)
+        self._folder_watcher.directoryChanged.connect(self._on_watched_folder_changed)
+        self._folder_refresh_timer = QTimer(self)
+        self._folder_refresh_timer.setSingleShot(True)
+        self._folder_refresh_timer.setInterval(500)  # 去抖動 500ms
+        self._folder_refresh_timer.timeout.connect(self._do_folder_refresh)
 
         # ===== Debug =====
         # Debug 模式下自動關閉
@@ -116,9 +171,35 @@ class ImervueMainWindow(QMainWindow):
     # ==========================
     def create_menu(self):
         build_file_menu(self)
+        build_sort_menu(self)
+        build_filter_menu(self)
         build_language_menu(self)
         # Plugin menu is built after plugin system init (in integration_guide.py)
         build_tip_menu(self)
+
+    # ==========================
+    # 狀態列
+    # ==========================
+    def set_status(self, text: str):
+        self._status_label.setText(text)
+
+    def show_progress(self, current: int, total: int):
+        self._progress_bar.setVisible(True)
+        self._progress_bar.setMaximum(total)
+        self._progress_bar.setValue(current)
+        self._status_label.setText(
+            language_wrapper.language_word_dict.get(
+                "status_loading_progress", "Loading {current}/{total}..."
+            ).format(current=current, total=total)
+        )
+        if current >= total:
+            QTimer.singleShot(800, self._hide_progress)
+
+    def _hide_progress(self):
+        self._progress_bar.setVisible(False)
+        self._status_label.setText(
+            language_wrapper.language_word_dict.get("status_ready", "Ready")
+        )
 
     def change_tile_size(self, size):
         if size != "None":
@@ -132,7 +213,44 @@ class ImervueMainWindow(QMainWindow):
                 self.viewer.clear_tile_grid()
                 self.viewer.load_tile_grid_async(image_paths=self.viewer.model.images)
             else:
-                load_image(self.viewer.model.images[0], self.viewer)
+                self.viewer.tile_grid_mode = False
+                self.viewer.load_deep_zoom_image(self.viewer.model.images[0])
+
+    # ==========================
+    # 資料夾監控
+    # ==========================
+    def watch_folder(self, folder: str):
+        """監控指定資料夾，發生變更時自動刷新"""
+        dirs = self._folder_watcher.directories()
+        if dirs:
+            self._folder_watcher.removePaths(dirs)
+        if folder:
+            self._folder_watcher.addPath(folder)
+
+    def _on_watched_folder_changed(self, _path: str):
+        """資料夾內容變更 → 啟動去抖動計時器"""
+        self._folder_refresh_timer.start()
+
+    def _do_folder_refresh(self):
+        """去抖動後重新掃描資料夾並更新 tile grid"""
+        viewer = self.viewer
+        if not viewer.model.images:
+            return
+        # 取得目前資料夾
+        first = viewer.model.images[0]
+        folder = str(Path(first).parent)
+        if not Path(folder).is_dir():
+            return
+
+        from Imervue.gpu_image_view.images.image_loader import _scan_images
+        new_images = _scan_images(folder)
+
+        if set(new_images) != set(viewer.model.images):
+            viewer.model.images = new_images
+            if viewer.tile_grid_mode:
+                viewer.clear_tile_grid()
+                viewer.load_tile_grid_async(image_paths=new_images)
+            viewer.update()
 
     # ==========================
     # 點擊檔案
@@ -140,19 +258,44 @@ class ImervueMainWindow(QMainWindow):
     def on_file_clicked(self, index):
         path = self.model.filePath(index)
 
-        self.viewer.clear_tile_grid()
-        open_path(main_gui=self.viewer, path=path)
-
         if Path(path).is_dir():
+            # 點擊資料夾 → 導航進入並載入圖片
+            self.model.setRootPath(path)
+            self.tree.setRootIndex(self.model.index(path))
+            self.viewer.clear_tile_grid()
+            open_path(main_gui=self.viewer, path=path)
             self.filename_label.setText(
                 language_wrapper.language_word_dict.get(
                     "main_window_current_folder_format"
                 ).format(path=path)
             )
+            add_recent_folder(path)
+            user_setting_dict["user_last_folder"] = path
+            self.watch_folder(path)
+        elif Path(path).is_file():
+            self.viewer.clear_tile_grid()
+            open_path(main_gui=self.viewer, path=path)
+            add_recent_image(path)
+            user_setting_dict["user_last_folder"] = str(Path(path).parent)
+
+        rebuild_recent_menu(self)
+
+    def _on_directory_loaded(self, directory: str):
+        """QFileSystemModel 目錄載入完成回調，確保樹狀圖正確顯示"""
+        idx = self.model.index(directory)
+        if idx.isValid():
+            self.tree.update(idx)
 
     def _open_startup_folder(self, folder: str):
+        self.model.setRootPath(folder)
         self.tree.setRootIndex(self.model.index(folder))
         open_path(main_gui=self.viewer, path=folder)
+        self.filename_label.setText(
+            language_wrapper.language_word_dict.get(
+                "main_window_current_folder_format"
+            ).format(path=folder)
+        )
+        self.watch_folder(folder)
 
     def closeEvent(self, event):
         commit_pending_deletions(self.viewer)
@@ -173,6 +316,10 @@ class ImervueMainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    # HiDPI 支援
+    QApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
     app = QApplication(sys.argv)
     window = ImervueMainWindow()
     window.showMaximized()

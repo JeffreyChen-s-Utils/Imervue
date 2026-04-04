@@ -86,6 +86,16 @@ def open_recent(ui_we_want_to_set, path: str):
     if not Path(path).exists():
         return
 
+    # 更新檔案樹定位
+    if Path(path).is_dir():
+        ui_we_want_to_set.model.setRootPath(path)
+        ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(path))
+    else:
+        parent = str(Path(path).parent)
+        ui_we_want_to_set.model.setRootPath(parent)
+        ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(parent))
+
+    ui_we_want_to_set.viewer.clear_tile_grid()
     open_path(main_gui=ui_we_want_to_set.viewer, path=path)
 
     if Path(path).is_dir():
@@ -93,5 +103,6 @@ def open_recent(ui_we_want_to_set, path: str):
         user_setting_dict["user_last_folder"] = path
     else:
         add_recent_image(path)
+        user_setting_dict["user_last_folder"] = str(Path(path).parent)
 
     rebuild_recent_menu(ui_we_want_to_set)

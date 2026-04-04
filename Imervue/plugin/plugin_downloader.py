@@ -185,6 +185,18 @@ class PluginDownloaderDialog(QDialog):
         self._fetch_list()
 
     # ========================
+    # Cleanup
+    # ========================
+
+    def closeEvent(self, event):
+        for w in self._workers:
+            if w.isRunning():
+                w.quit()
+                w.wait(3000)
+        self._workers.clear()
+        super().closeEvent(event)
+
+    # ========================
     # Fetch plugin list
     # ========================
 
@@ -196,6 +208,7 @@ class PluginDownloaderDialog(QDialog):
         self.status_label.setText(lang.get("plugin_dl_status_fetching", "Fetching plugin list..."))
         self.tree.clear()
 
+        self._cleanup_finished_workers()
         worker = FetchPluginListWorker(self)
         worker.finished.connect(self._on_list_fetched)
         worker.error.connect(self._on_list_error)
@@ -303,6 +316,7 @@ class PluginDownloaderDialog(QDialog):
             lang.get("plugin_dl_status_downloading", "Downloading {name}...").format(name=plugin_name)
         )
 
+        self._cleanup_finished_workers()
         worker = DownloadPluginWorker(plugin_name, file_infos, self)
         worker.progress.connect(self._on_download_progress)
         worker.finished.connect(self._on_download_finished)
@@ -337,7 +351,7 @@ class PluginDownloaderDialog(QDialog):
         lang = language_wrapper.language_word_dict
         self.progress_bar.setVisible(False)
         self.refresh_btn.setEnabled(True)
-        self.download_btn.setEnabled(True)
+        self._on_selection_changed()
         self.status_label.setText(
             lang.get("plugin_dl_status_error", "Error: {error}").format(error=error_msg)
         )
@@ -382,6 +396,9 @@ class PluginDownloaderDialog(QDialog):
     # ========================
     # Helpers
     # ========================
+
+    def _cleanup_finished_workers(self):
+        self._workers = [w for w in self._workers if w.isRunning()]
 
     @staticmethod
     def _get_installed_plugins() -> set[str]:

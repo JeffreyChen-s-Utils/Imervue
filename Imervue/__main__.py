@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-import time
 
 from PySide6.QtWidgets import QApplication
 
@@ -20,6 +19,12 @@ def parse_args():
         action="store_true",
         help="Enable software opengl"
     )
+    parser.add_argument(
+        "file",
+        nargs="?",
+        default=None,
+        help="Image file or folder to open"
+    )
 
     return parser.parse_args()
 
@@ -27,18 +32,19 @@ if __name__ == "__main__":
     # 解析參數
     args = parse_args()
 
-    if args.debug:
-        debug = True
-    else:
-        debug = False
-
     if args.software_opengl:
         os.environ["QT_OPENGL"] = "software"
         os.environ["QT_ANGLE_PLATFORM"] = "warp"
 
-    time.sleep(3)
-
     app = QApplication(sys.argv)
-    window = ImervueMainWindow(debug=debug)
+    window = ImervueMainWindow(debug=args.debug)
     window.showMaximized()
+
+    # 從命令列開啟指定檔案/資料夾
+    if args.file and os.path.exists(args.file):
+        from PySide6.QtCore import QTimer
+        from Imervue.gpu_image_view.images.image_loader import open_path
+        path = os.path.abspath(args.file)
+        QTimer.singleShot(100, lambda: open_path(main_gui=window.viewer, path=path))
+
     sys.exit(app.exec())

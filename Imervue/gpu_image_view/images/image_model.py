@@ -7,12 +7,16 @@ class ImageModel:
         self.images = paths.copy()
 
     def delete_images(self, paths: list[str]):
-        deleted = []
+        items_to_delete = []
         for p in paths:
             if p in self.images:
-                index = self.images.index(p)
-                self.images.remove(p)
-                deleted.append((p, index))
+                idx = self.images.index(p)
+                items_to_delete.append((p, idx))
+        # 從後往前刪除以保持 index 正確
+        deleted = []
+        for p, idx in sorted(items_to_delete, key=lambda x: x[1], reverse=True):
+            self.images.pop(idx)
+            deleted.append((p, idx))
         return deleted
 
     def restore_images(self, deleted_items):
