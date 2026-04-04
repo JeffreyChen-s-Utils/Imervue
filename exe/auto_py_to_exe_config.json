@@ -7,7 +7,7 @@
   },
   {
    "optionDest": "filenames",
-   "value": "C:/CodeWorkspace/Python/Imervue/Imervue/__main__.py"
+   "value": "D:/Codes/Imervue/Imervue/__main__.py"
   },
   {
    "optionDest": "onefile",
@@ -19,7 +19,7 @@
   },
   {
    "optionDest": "icon_file",
-   "value": "C:/CodeWorkspace/Python/Imervue/exe/Imervue.ico"
+   "value": "D:/Codes/Imervue/exe/Imervue.ico"
   },
   {
    "optionDest": "name",
@@ -58,19 +58,11 @@
    "value": false
   },
   {
-   "optionDest": "datas",
-   "value": "C:/CodeWorkspace/Python/Imervue/exe/Imervue.ico;."
-  },
-  {
    "optionDest": "pathex",
-   "value": "C:/CodeWorkspace/Python/Imervue/.venv"
+   "value": "D:\\Codes\\Imervue\\.venv"
   },
   {
-   "optionDest": "hiddenimports",
-   "value": "imageio"
-  },
-  {
-   "optionDest": "copy_metadata",
+   "optionDest": "collect_all",
    "value": "imageio"
   }
  ],
