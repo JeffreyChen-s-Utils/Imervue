@@ -26,7 +26,7 @@ logger = logging.getLogger("Imervue.gif_video")
 
 class _CreateWorker(QThread):
     progress = Signal(int, int)
-    finished = Signal(bool, str)  # success, message
+    result_ready = Signal(bool, str)  # success, message
 
     def __init__(self, paths, output_path, fmt, fps, width, height, loop):
         super().__init__()
@@ -44,10 +44,10 @@ class _CreateWorker(QThread):
                 self._create_gif()
             else:
                 self._create_video()
-            self.finished.emit(True, self._output)
+            self.result_ready.emit(True, self._output)
         except Exception as exc:
             logger.error(f"Create {self._fmt} failed: {exc}")
-            self.finished.emit(False, str(exc))
+            self.result_ready.emit(False, str(exc))
 
     def _load_and_resize(self, path: str) -> Image.Image:
         if Path(path).suffix.lower() == ".svg":
@@ -104,7 +104,7 @@ class _CreateWorker(QThread):
         # Check ffmpeg
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
-            self.finished.emit(False, "ffmpeg not found in PATH")
+            self.result_ready.emit(False, "ffmpeg not found in PATH")
             return
 
         total = len(self._paths)
@@ -142,7 +142,7 @@ class _CreateWorker(QThread):
                 kw["creationflags"] = subprocess.CREATE_NO_WINDOW
             result = subprocess.run(cmd, **kw)
             if result.returncode != 0:
-                self.finished.emit(False, f"ffmpeg error: {result.stderr[:200]}")
+                self.result_ready.emit(False, f"ffmpeg error: {result.stderr[:200]}")
                 return
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
@@ -327,17 +327,20 @@ class GifVideoDialog(QDialog):
             self._loop_check.isChecked(),
         )
         self._worker.progress.connect(self._on_progress)
-        self._worker.finished.connect(self._on_finished)
+        self._worker.result_ready.connect(self._on_finished)
+        self._worker.finished.connect(self._cleanup_worker)
         self._worker.start()
 
     def _on_progress(self, current, total):
         self._progress.setValue(current)
         self._status_label.setText(f"{current}/{total}")
 
+    def _cleanup_worker(self):
+        self._worker = None
+
     def _on_finished(self, success, message):
         self._progress.setVisible(False)
         self._create_btn.setEnabled(True)
-        self._worker = None
 
         if success:
             msg = self._lang.get("gif_video_done", "Created: {path}").format(path=message)

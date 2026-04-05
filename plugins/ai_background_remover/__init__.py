@@ -1,3 +1,0 @@
-from ai_background_remover.ai_background_remover import AIBackgroundRemoverPlugin
-
-plugin_class = AIBackgroundRemoverPlugin

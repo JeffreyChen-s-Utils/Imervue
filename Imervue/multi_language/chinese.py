@@ -132,6 +132,11 @@ chinese_word_dict = {
     "right_click_compare": "比较图片",
     "right_click_slideshow": "幻灯片播放",
     "right_click_slideshow_stop": "停止幻灯片",
+    # 树状菜单右键
+    "tree_open_in_explorer": "在文件资源管理器中打开",
+    "tree_open_folder": "打开所在文件夹",
+    "tree_delete": "删除",
+    "tree_deleted": "已移至回收站：{name}",
     # 排序菜单
     "sort_menu_title": "排序",
     "sort_by_name": "按文件名",

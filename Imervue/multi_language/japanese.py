@@ -132,6 +132,11 @@ japanese_word_dict = {
     "right_click_compare": "画像を比較",
     "right_click_slideshow": "スライドショー",
     "right_click_slideshow_stop": "スライドショーを停止",
+    # ツリービュー右クリック
+    "tree_open_in_explorer": "エクスプローラーで開く",
+    "tree_open_folder": "フォルダーを開く",
+    "tree_delete": "削除",
+    "tree_deleted": "ゴミ箱に移動しました：{name}",
     # 並べ替えメニュー
     "sort_menu_title": "並べ替え",
     "sort_by_name": "名前順",

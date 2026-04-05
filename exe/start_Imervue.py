@@ -25,7 +25,6 @@ from Imervue.Imervue_main_window import ImervueMainWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
     window = ImervueMainWindow()
     window.showMaximized()
     sys.exit(app.exec())

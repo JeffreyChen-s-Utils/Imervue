@@ -27,7 +27,7 @@ def add_tag(tag_name: str, path: str) -> bool:
 
 def remove_tag(tag_name: str, path: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    tags = user_setting_dict.get("image_tags", {})
+    tags = user_setting_dict.setdefault("image_tags", {})
     paths = tags.get(tag_name, [])
     if path in paths:
         paths.remove(path)
@@ -48,7 +48,7 @@ def create_tag(tag_name: str) -> bool:
 
 def delete_tag(tag_name: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    tags = user_setting_dict.get("image_tags", {})
+    tags = user_setting_dict.setdefault("image_tags", {})
     if tag_name in tags:
         del tags[tag_name]
         return True
@@ -57,7 +57,7 @@ def delete_tag(tag_name: str) -> bool:
 
 def rename_tag(old_name: str, new_name: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    tags = user_setting_dict.get("image_tags", {})
+    tags = user_setting_dict.setdefault("image_tags", {})
     if old_name not in tags or new_name in tags:
         return False
     tags[new_name] = tags.pop(old_name)
@@ -81,7 +81,7 @@ def create_album(album_name: str) -> bool:
 
 def delete_album(album_name: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    albums = user_setting_dict.get("albums", {})
+    albums = user_setting_dict.setdefault("albums", {})
     if album_name in albums:
         del albums[album_name]
         return True
@@ -90,7 +90,7 @@ def delete_album(album_name: str) -> bool:
 
 def rename_album(old_name: str, new_name: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    albums = user_setting_dict.get("albums", {})
+    albums = user_setting_dict.setdefault("albums", {})
     if old_name not in albums or new_name in albums:
         return False
     albums[new_name] = albums.pop(old_name)
@@ -109,7 +109,7 @@ def add_to_album(album_name: str, path: str) -> bool:
 
 def remove_from_album(album_name: str, path: str) -> bool:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    albums = user_setting_dict.get("albums", {})
+    albums = user_setting_dict.setdefault("albums", {})
     paths = albums.get(album_name, [])
     if path in paths:
         paths.remove(path)

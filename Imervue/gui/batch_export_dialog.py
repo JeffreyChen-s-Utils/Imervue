@@ -33,7 +33,7 @@ QUALITY_FORMATS = {"JPEG", "WebP"}
 
 class _ExportWorker(QThread):
     progress = Signal(int, int)  # current, total
-    finished = Signal(int, int)  # success, failed
+    result_ready = Signal(int, int)  # success, failed
 
     def __init__(self, paths, output_dir, fmt, quality, resize_enabled, max_w, max_h):
         super().__init__()
@@ -91,7 +91,7 @@ class _ExportWorker(QThread):
 
             self.progress.emit(i + 1, total)
 
-        self.finished.emit(success, failed)
+        self.result_ready.emit(success, failed)
 
 
 class BatchExportDialog(QDialog):
@@ -219,17 +219,20 @@ class BatchExportDialog(QDialog):
             self._max_h.value(),
         )
         self._worker.progress.connect(self._on_progress)
-        self._worker.finished.connect(self._on_finished)
+        self._worker.result_ready.connect(self._on_finished)
+        self._worker.finished.connect(self._cleanup_worker)
         self._worker.start()
 
     def _on_progress(self, current, total):
         self._progress.setValue(current)
         self._status_label.setText(f"{current}/{total}")
 
+    def _cleanup_worker(self):
+        self._worker = None
+
     def _on_finished(self, success, failed):
         self._progress.setVisible(False)
         self._export_btn.setEnabled(True)
-        self._worker = None
 
         msg = self._lang.get(
             "batch_export_done", "Exported {success}/{total} image(s)"

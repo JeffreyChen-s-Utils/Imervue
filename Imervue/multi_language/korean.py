@@ -132,6 +132,11 @@ korean_word_dict = {
     "right_click_compare": "이미지 비교",
     "right_click_slideshow": "슬라이드쇼",
     "right_click_slideshow_stop": "슬라이드쇼 중지",
+    # 트리 뷰 우클릭
+    "tree_open_in_explorer": "탐색기에서 열기",
+    "tree_open_folder": "폴더 열기",
+    "tree_delete": "삭제",
+    "tree_deleted": "휴지통으로 이동됨: {name}",
     # 정렬 메뉴
     "sort_menu_title": "정렬",
     "sort_by_name": "이름순",

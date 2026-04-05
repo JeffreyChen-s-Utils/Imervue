@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -5,7 +7,7 @@ from PySide6.QtCore import Qt, QTimer, QDir, QFileSystemWatcher
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy,
-    QStatusBar, QProgressBar, QHeaderView,
+    QStatusBar, QProgressBar, QHeaderView, QMenu,
 )
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -23,6 +25,116 @@ from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import write_user_setting, read_user_setting, user_setting_dict
+
+
+class _FileTreeView(QTreeView):
+    """QTreeView with Delete key and right-click context menu."""
+
+    def __init__(self, main_window: "ImervueMainWindow"):
+        super().__init__()
+        self._main_window = main_window
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+
+    # ---------- Delete key ----------
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Delete:
+            self._delete_selected()
+        else:
+            super().keyPressEvent(event)
+
+    def _delete_selected(self):
+        indexes = self.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        model: QFileSystemModel = self.model()
+        path = model.filePath(indexes[0])
+        if not path or not Path(path).exists():
+            return
+        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
+        if _send_to_trash(path):
+            if hasattr(self._main_window, "toast"):
+                lang = language_wrapper.language_word_dict
+                self._main_window.toast.info(
+                    lang.get("tree_deleted", "Moved to trash: {name}").format(
+                        name=Path(path).name
+                    )
+                )
+
+    # ---------- Right-click menu ----------
+
+    def _show_context_menu(self, pos):
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return
+        model: QFileSystemModel = self.model()
+        path = model.filePath(index)
+        if not path:
+            return
+
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+
+        # Show in Explorer
+        action_explorer = menu.addAction(
+            lang.get("tree_open_in_explorer", "Open in Explorer")
+        )
+        action_explorer.triggered.connect(lambda: self._open_in_explorer(path))
+
+        # Open containing folder
+        if Path(path).is_file():
+            action_folder = menu.addAction(
+                lang.get("tree_open_folder", "Open Containing Folder")
+            )
+            action_folder.triggered.connect(
+                lambda: self._open_in_explorer(str(Path(path).parent), select=False)
+            )
+
+        menu.addSeparator()
+
+        # Copy path
+        action_copy = menu.addAction(lang.get("right_click_copy_path", "Copy Path"))
+        action_copy.triggered.connect(
+            lambda: QApplication.clipboard().setText(path)
+        )
+
+        menu.addSeparator()
+
+        # Delete
+        action_del = menu.addAction(lang.get("tree_delete", "Delete"))
+        action_del.triggered.connect(lambda: self._delete_path(path))
+
+        menu.exec(self.viewport().mapToGlobal(pos))
+
+    @staticmethod
+    def _open_in_explorer(path: str, select: bool = True):
+        try:
+            if sys.platform == "win32":
+                if select and Path(path).is_file():
+                    subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+                else:
+                    subprocess.Popen(["explorer", os.path.normpath(path)])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", "-R" if select else "", path])
+            else:
+                target = path if Path(path).is_dir() else str(Path(path).parent)
+                subprocess.Popen(["xdg-open", target])
+        except Exception:
+            pass
+
+    def _delete_path(self, path: str):
+        if not Path(path).exists():
+            return
+        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
+        if _send_to_trash(path):
+            if hasattr(self._main_window, "toast"):
+                lang = language_wrapper.language_word_dict
+                self._main_window.toast.info(
+                    lang.get("tree_deleted", "Moved to trash: {name}").format(
+                        name=Path(path).name
+                    )
+                )
 
 
 class ImervueMainWindow(QMainWindow):
@@ -76,7 +188,7 @@ class ImervueMainWindow(QMainWindow):
         start_path = last_folder if last_folder and Path(last_folder).is_dir() else ""
         self.model.setRootPath(start_path)
 
-        self.tree = QTreeView()
+        self.tree = _FileTreeView(self)
         self.tree.setModel(self.model)
         self.tree.setRootIndex(self.model.index(start_path))
         # 只顯示「名稱」欄，隱藏大小/類型/日期（省掉大量 stat() 呼叫）
@@ -294,6 +406,9 @@ class ImervueMainWindow(QMainWindow):
         self.watch_folder(folder)
 
     def closeEvent(self, event):
+        import logging
+        logging.getLogger("Imervue").info("closeEvent triggered")
+
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
         try:
             write_user_setting()

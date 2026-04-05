@@ -90,14 +90,26 @@ def apply_sort(main_window: ImervueMainWindow, sort_by: str, ascending: bool):
     user_setting_dict["sort_by"] = sort_by
     user_setting_dict["sort_ascending"] = ascending
 
+    # 同步更新 _unfiltered_images 使篩選保持排序順序
+    if hasattr(viewer, '_unfiltered_images') and viewer._unfiltered_images:
+        viewer._unfiltered_images.sort(key=key_fn, reverse=not ascending)
+
+    # 記住當前圖片，排序後修正 index
+    current_path = None
+    if 0 <= viewer.current_index < len(viewer.model.images):
+        current_path = viewer.model.images[viewer.current_index]
+
     # 更新 model 並重新載入顯示
     viewer.model.set_images(images)
+
+    # 修正 current_index 指向同一張圖片
+    if current_path and current_path in images:
+        viewer.current_index = images.index(current_path)
 
     if viewer.tile_grid_mode:
         viewer.clear_tile_grid()
         viewer.load_tile_grid_async(images)
-    elif viewer.deep_zoom and 0 <= viewer.current_index < len(images):
-        # deep zoom 模式下保持當前圖片，更新列表順序
+    else:
         viewer.update()
 
 

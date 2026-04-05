@@ -98,7 +98,7 @@ def _embedded_python_exe() -> Path | None:
 class _DownloadPythonWorker(QThread):
     """背景下載並安裝 Python embeddable package"""
     log = Signal(str)
-    finished = Signal(bool, str)  # success, python_exe_path or error
+    result_ready = Signal(bool, str)  # success, python_exe_path or error
 
     def run(self):
         try:
@@ -112,7 +112,7 @@ class _DownloadPythonWorker(QThread):
                 resp = urlopen(req, timeout=120)
                 data = resp.read()
             except (URLError, OSError) as e:
-                self.finished.emit(False, f"Download failed: {e}")
+                self.result_ready.emit(False, f"Download failed: {e}")
                 return
 
             # 2) 解壓到目標資料夾
@@ -122,7 +122,7 @@ class _DownloadPythonWorker(QThread):
 
             python_exe = dest_dir / "python.exe"
             if not python_exe.is_file():
-                self.finished.emit(False, "python.exe not found after extraction")
+                self.result_ready.emit(False, "python.exe not found after extraction")
                 return
 
             # 3) 修改 ._pth 檔案：取消註解 import site（pip 需要它）
@@ -139,7 +139,7 @@ class _DownloadPythonWorker(QThread):
                 resp = urlopen(req, timeout=120)
                 get_pip_data = resp.read()
             except (URLError, OSError) as e:
-                self.finished.emit(False, f"Failed to download get-pip.py: {e}")
+                self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
                 return
 
             get_pip_path = dest_dir / "get-pip.py"
@@ -152,7 +152,7 @@ class _DownloadPythonWorker(QThread):
                 timeout=300,
             )
             if returncode != 0:
-                self.finished.emit(False, f"get-pip.py failed (exit code {returncode})")
+                self.result_ready.emit(False, f"get-pip.py failed (exit code {returncode})")
                 return
 
             get_pip_path.unlink(missing_ok=True)
@@ -160,15 +160,15 @@ class _DownloadPythonWorker(QThread):
             # 5) 驗證 pip 可用
             self.log.emit("Verifying pip ...")
             if not _verify_python(str(python_exe)):
-                self.finished.emit(False, "pip verification failed after bootstrap")
+                self.result_ready.emit(False, "pip verification failed after bootstrap")
                 return
 
             self.log.emit("Python embeddable installed successfully!")
-            self.finished.emit(True, str(python_exe))
+            self.result_ready.emit(True, str(python_exe))
 
         except Exception as exc:
             logger.error(f"Download Python failed: {exc}")
-            self.finished.emit(False, str(exc))
+            self.result_ready.emit(False, str(exc))
 
     def _run_with_live_output(
         self, cmd: list[str], cwd: str | None = None, timeout: int = 600,
@@ -202,11 +202,11 @@ class _DownloadPythonWorker(QThread):
 
 class _FindPythonWorker(QThread):
     """在背景執行緒搜尋可用的 Python 直譯器，避免阻塞 UI。"""
-    finished = Signal(object)  # str | None
+    result_ready = Signal(object)  # str | None
 
     def run(self):
         result = _find_python()
-        self.finished.emit(result)
+        self.result_ready.emit(result)
 
 
 def _find_python() -> str | None:
@@ -398,7 +398,7 @@ class _CheckDepsWorker(QThread):
 
 class _ImportWorker(QThread):
     """在背景執行緒 import 剛安裝好的套件（避免阻塞 UI）。"""
-    finished = Signal()
+    result_ready = Signal()
 
     def __init__(self, import_names: list[str]):
         super().__init__()
@@ -410,7 +410,7 @@ class _ImportWorker(QThread):
                 importlib.import_module(name)
             except Exception:
                 pass
-        self.finished.emit()
+        self.result_ready.emit()
 
 
 # ===========================
@@ -420,7 +420,7 @@ class _ImportWorker(QThread):
 class _InstallWorker(QThread):
     """背景安裝缺少的 pip 套件（即時輸出每行 log）"""
     log = Signal(str)
-    finished = Signal(bool, str)  # success, message
+    result_ready = Signal(bool, str)  # success, message
 
     def __init__(self, pip_names: list[str], python_path: str):
         super().__init__()
@@ -449,19 +449,19 @@ class _InstallWorker(QThread):
 
                 returncode = self._run_with_live_output(cmd, timeout=600)
                 if returncode != 0:
-                    self.finished.emit(
+                    self.result_ready.emit(
                         False,
                         f"Failed to install {name} (exit code {returncode})",
                     )
                     return
             except FileNotFoundError:
-                self.finished.emit(False, f"Python not found: {self._python}")
+                self.result_ready.emit(False, f"Python not found: {self._python}")
                 return
             except Exception as exc:
-                self.finished.emit(False, str(exc))
+                self.result_ready.emit(False, str(exc))
                 return
 
-        self.finished.emit(True, "All packages installed successfully!")
+        self.result_ready.emit(True, "All packages installed successfully!")
 
     def _run_with_live_output(self, cmd: list[str], timeout: int = 600) -> int:
         """執行子程序並即時 emit 每一行輸出"""
@@ -567,11 +567,11 @@ class InstallDependenciesDialog(QDialog):
         ))
 
         self._find_worker = _FindPythonWorker()
-        self._find_worker.finished.connect(self._on_python_found)
+        self._find_worker.result_ready.connect(self._on_python_found)
+        self._find_worker.finished.connect(lambda: setattr(self, '_find_worker', None))
         self._find_worker.start()
 
     def _on_python_found(self, python: str | None):
-        self._find_worker = None
 
         if python is not None:
             self._start_package_install(python)
@@ -608,11 +608,11 @@ class InstallDependenciesDialog(QDialog):
 
         self._dl_worker = _DownloadPythonWorker()
         self._dl_worker.log.connect(self._on_log)
-        self._dl_worker.finished.connect(self._on_python_downloaded)
+        self._dl_worker.result_ready.connect(self._on_python_downloaded)
+        self._dl_worker.finished.connect(lambda: setattr(self, '_dl_worker', None))
         self._dl_worker.start()
 
     def _on_python_downloaded(self, success: bool, result: str):
-        self._dl_worker = None
         if success:
             self._log.append(f"Portable Python ready: {result}")
             self._start_package_install(result)
@@ -630,7 +630,8 @@ class InstallDependenciesDialog(QDialog):
         pip_names = [pip for _, pip in self._missing]
         self._worker = _InstallWorker(pip_names, python)
         self._worker.log.connect(self._on_log)
-        self._worker.finished.connect(self._on_finished)
+        self._worker.result_ready.connect(self._on_finished)
+        self._worker.finished.connect(lambda: setattr(self, '_worker', None))
         self._worker.start()
 
     def _on_log(self, text: str):
@@ -638,7 +639,6 @@ class InstallDependenciesDialog(QDialog):
         self._status.setText(text.split("\n")[0][:80])
 
     def _on_finished(self, success: bool, message: str):
-        self._worker = None
 
         if success:
             lang = language_wrapper.language_word_dict
@@ -655,7 +655,9 @@ class InstallDependenciesDialog(QDialog):
                 # 開發環境：在背景執行緒 import 剛安裝的套件（避免阻塞 UI）
                 names = [imp for imp, _ in self._missing]
                 self._import_worker = _ImportWorker(names)
-                self._import_worker.finished.connect(self._on_import_done)
+                self._import_worker.result_ready.connect(self._on_import_done)
+                self._import_worker.finished.connect(
+                    lambda: setattr(self, '_import_worker', None))
                 self._import_worker.start()
         else:
             self._progress.setVisible(False)
@@ -664,7 +666,6 @@ class InstallDependenciesDialog(QDialog):
             self._log.append(f"\nError: {message}")
 
     def _on_import_done(self):
-        self._import_worker = None
         self._progress.setVisible(False)
         self._install_btn.setEnabled(True)
 

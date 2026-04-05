@@ -192,6 +192,14 @@ def open_path(main_gui: GPUImageView, path: str):
         if not images:
             return
 
+        # 套用使用者的排序設定
+        sort_by = user_setting_dict.get("sort_by", "name")
+        sort_asc = user_setting_dict.get("sort_ascending", True)
+        if sort_by != "name" or not sort_asc:
+            from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
+            key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
+            images.sort(key=key_fn, reverse=not sort_asc)
+
         main_gui.current_index = 0
         main_gui._unfiltered_images = list(images)
         main_gui.load_tile_grid_async(images)
@@ -213,6 +221,15 @@ def open_path(main_gui: GPUImageView, path: str):
         if not images:
             return
 
+        # 套用使用者的排序設定
+        sort_by = user_setting_dict.get("sort_by", "name")
+        sort_asc = user_setting_dict.get("sort_ascending", True)
+        if sort_by != "name" or not sort_asc:
+            from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
+            key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
+            images.sort(key=key_fn, reverse=not sort_asc)
+
+        main_gui._unfiltered_images = list(images)
         main_gui.model.set_images(images)
         try:
             main_gui.current_index = images.index(str(path_obj))

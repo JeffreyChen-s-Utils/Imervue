@@ -132,6 +132,11 @@ traditional_chinese_word_dict = {
     "right_click_compare": "比較圖片",
     "right_click_slideshow": "幻燈片播放",
     "right_click_slideshow_stop": "停止幻燈片",
+    # 樹狀選單右鍵
+    "tree_open_in_explorer": "在檔案總管中開啟",
+    "tree_open_folder": "開啟所在資料夾",
+    "tree_delete": "刪除",
+    "tree_deleted": "已移至垃圾桶：{name}",
     # 排序選單
     "sort_menu_title": "排序",
     "sort_by_name": "依檔名",

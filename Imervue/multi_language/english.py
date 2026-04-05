@@ -132,6 +132,11 @@ english_word_dict = {
     "right_click_compare": "Compare Images",
     "right_click_slideshow": "Slideshow",
     "right_click_slideshow_stop": "Stop Slideshow",
+    # Tree view context menu
+    "tree_open_in_explorer": "Open in Explorer",
+    "tree_open_folder": "Open Containing Folder",
+    "tree_delete": "Delete",
+    "tree_deleted": "Moved to trash: {name}",
     # Sort menu
     "sort_menu_title": "Sort",
     "sort_by_name": "By Name",
