@@ -52,15 +52,7 @@ class _FileTreeView(QTreeView):
         path = model.filePath(indexes[0])
         if not path or not Path(path).exists():
             return
-        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-        if _send_to_trash(path):
-            if hasattr(self._main_window, "toast"):
-                lang = language_wrapper.language_word_dict
-                self._main_window.toast.info(
-                    lang.get("tree_deleted", "Moved to trash: {name}").format(
-                        name=Path(path).name
-                    )
-                )
+        self._delete_path(path)
 
     # ---------- Right-click menu ----------
 
@@ -126,15 +118,60 @@ class _FileTreeView(QTreeView):
     def _delete_path(self, path: str):
         if not Path(path).exists():
             return
-        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-        if _send_to_trash(path):
+
+        viewer = self._main_window.viewer
+        images = viewer.model.images
+        lang = language_wrapper.language_word_dict
+
+        if Path(path).is_file() and path in images:
+            # 圖片在目前列表中 → 走 viewer undo stack（延遲刪除，可 Ctrl+Z）
+            idx = images.index(path)
+            images.pop(idx)
+
+            viewer.undo_stack.append({
+                "mode": "delete",
+                "deleted_paths": [path],
+                "indices": [idx],
+                "restored": False,
+            })
+
+            # 清 GPU texture / tile cache
+            tex = viewer.tile_textures.pop(path, None)
+            if tex is not None:
+                from OpenGL.GL import glDeleteTextures
+                glDeleteTextures([tex])
+            viewer.tile_cache.pop(path, None)
+
+            # 更新顯示
+            if viewer.tile_grid_mode:
+                viewer.tile_rects.clear()
+                viewer.update()
+            elif viewer.deep_zoom:
+                if images:
+                    viewer.current_index = min(idx, len(images) - 1)
+                    viewer.load_deep_zoom_image(images[viewer.current_index])
+                else:
+                    viewer.deep_zoom = None
+                    viewer.current_index = 0
+                    viewer.tile_grid_mode = True
+                    viewer.update()
+
             if hasattr(self._main_window, "toast"):
-                lang = language_wrapper.language_word_dict
                 self._main_window.toast.info(
                     lang.get("tree_deleted", "Moved to trash: {name}").format(
                         name=Path(path).name
                     )
                 )
+        else:
+            # 不在圖片列表中（資料夾或非圖片檔案）→ 直接移至垃圾桶
+            from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
+            if _send_to_trash(path):
+                if hasattr(self._main_window, "toast"):
+                    self._main_window.toast.info(
+                        lang.get("tree_deleted", "Moved to trash: {name}").format(
+                            name=Path(path).name
+                        )
+                    )
 
 
 class ImervueMainWindow(QMainWindow):
