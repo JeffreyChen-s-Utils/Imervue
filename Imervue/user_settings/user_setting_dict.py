@@ -1,8 +1,9 @@
 import json
-from os import getcwd
 from pathlib import Path
 from threading import Lock
 from typing import Dict, Any, Optional, Union
+
+from Imervue.system.app_paths import user_settings_path as _user_settings_path
 
 # 使用者設定的全域字典
 # Global dictionary for user settings
@@ -23,7 +24,7 @@ def write_user_setting() -> Path:
 
     :return: 設定檔路徑 (Path to the settings file)
     """
-    user_setting_file = Path(getcwd()) / "user_setting.json"
+    user_setting_file = _user_settings_path()
     write_json(str(user_setting_file), user_setting_dict)
     return user_setting_file
 
@@ -35,7 +36,7 @@ def read_user_setting() -> Path:
 
     :return: 設定檔路徑 (Path to the settings file)
     """
-    user_setting_file = Path(getcwd()) / "user_setting.json"
+    user_setting_file = _user_settings_path()
     if user_setting_file.exists() and user_setting_file.is_file():
         data = read_json(str(user_setting_file))
         if isinstance(data, dict):
@@ -51,8 +52,10 @@ def read_json(json_file_path: str) -> Optional[Any]:
     try:
         file_path = Path(json_file_path)
         if file_path.exists() and file_path.is_file():
-            with open(json_file_path) as read_file:
+            with open(json_file_path, encoding="utf-8") as read_file:
                 return json.loads(read_file.read())
+    except Exception:
+        pass
     finally:
         _lock.release()
 
@@ -65,7 +68,12 @@ def write_json(json_save_path: str, data_to_output: Union[dict, list]) -> None:
     """
     _lock.acquire()
     try:
-        with open(json_save_path, "w+") as file_to_write:
-            file_to_write.write(json.dumps(data_to_output, indent=4))
+        # 確保父目錄存在
+        Path(json_save_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(json_save_path, "w", encoding="utf-8") as file_to_write:
+            file_to_write.write(json.dumps(data_to_output, indent=4, ensure_ascii=False))
+    except Exception as e:
+        import logging
+        logging.getLogger("Imervue.settings").error(f"Failed to write {json_save_path}: {e}")
     finally:
         _lock.release()

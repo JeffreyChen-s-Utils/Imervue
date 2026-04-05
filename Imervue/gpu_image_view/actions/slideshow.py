@@ -6,10 +6,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QTimer, QPropertyAnimation, QEasingCurve, Qt
+from PySide6.QtCore import QTimer, QVariantAnimation, QEasingCurve
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox,
-    QCheckBox, QPushButton, QGraphicsOpacityEffect,
+    QCheckBox, QPushButton,
 )
 
 if TYPE_CHECKING:
@@ -26,10 +26,7 @@ class SlideshowController:
         self._timer.timeout.connect(self._advance)
         self._fade = fade
         self._running = False
-
-        # 淡入淡出效果
-        self._opacity_effect = QGraphicsOpacityEffect(main_gui)
-        self._opacity_effect.setOpacity(1.0)
+        self._anim = None
 
     @property
     def running(self) -> bool:
@@ -52,8 +49,12 @@ class SlideshowController:
     def stop(self):
         self._timer.stop()
         self._running = False
+        if self._anim:
+            self._anim.stop()
+            self._anim = None
         # 確保恢復不透明
-        self._gui.setGraphicsEffect(None)
+        self._gui._slideshow_opacity = 1.0
+        self._gui.update()
 
     def set_interval(self, ms: int):
         self._timer.setInterval(ms)
@@ -77,31 +78,36 @@ class SlideshowController:
         gui = self._gui
         images = gui.model.images
 
-        gui.setGraphicsEffect(self._opacity_effect)
-        self._opacity_effect.setOpacity(1.0)
-
         # 淡出
-        self._fade_out = QPropertyAnimation(self._opacity_effect, b"opacity")
-        self._fade_out.setDuration(300)
-        self._fade_out.setStartValue(1.0)
-        self._fade_out.setEndValue(0.0)
-        self._fade_out.setEasingCurve(QEasingCurve.Type.InQuad)
+        fade_out = QVariantAnimation()
+        fade_out.setDuration(300)
+        fade_out.setStartValue(1.0)
+        fade_out.setEndValue(0.0)
+        fade_out.setEasingCurve(QEasingCurve.Type.InQuad)
+        fade_out.valueChanged.connect(self._on_opacity_changed)
 
         def on_fade_out_done():
             gui.current_index = next_idx
             gui.load_deep_zoom_image(images[next_idx])
 
             # 淡入
-            self._fade_in = QPropertyAnimation(self._opacity_effect, b"opacity")
-            self._fade_in.setDuration(300)
-            self._fade_in.setStartValue(0.0)
-            self._fade_in.setEndValue(1.0)
-            self._fade_in.setEasingCurve(QEasingCurve.Type.OutQuad)
-            self._fade_in.finished.connect(lambda: gui.setGraphicsEffect(None))
-            self._fade_in.start()
+            fade_in = QVariantAnimation()
+            fade_in.setDuration(300)
+            fade_in.setStartValue(0.0)
+            fade_in.setEndValue(1.0)
+            fade_in.setEasingCurve(QEasingCurve.Type.OutQuad)
+            fade_in.valueChanged.connect(self._on_opacity_changed)
+            fade_in.finished.connect(lambda: setattr(gui, '_slideshow_opacity', 1.0))
+            self._anim = fade_in
+            fade_in.start()
 
-        self._fade_out.finished.connect(on_fade_out_done)
-        self._fade_out.start()
+        fade_out.finished.connect(on_fade_out_done)
+        self._anim = fade_out
+        fade_out.start()
+
+    def _on_opacity_changed(self, value):
+        self._gui._slideshow_opacity = value
+        self._gui.update()
 
 
 class SlideshowDialog(QDialog):

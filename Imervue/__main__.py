@@ -2,6 +2,18 @@ import argparse
 import os
 import sys
 
+# 確保 Windows 上所有 I/O 使用 UTF-8，避免 CJK 文字顯示為 ?
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    os.environ.setdefault("PYTHONUTF8", "1")
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
 from PySide6.QtWidgets import QApplication
 
 from Imervue.Imervue_main_window import ImervueMainWindow
@@ -37,6 +49,7 @@ if __name__ == "__main__":
         os.environ["QT_ANGLE_PLATFORM"] = "warp"
 
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     window = ImervueMainWindow(debug=args.debug)
     window.showMaximized()
 

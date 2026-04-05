@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -26,7 +27,7 @@ RAW_BASE_URL = "https://raw.githubusercontent.com/Jeffrey-Plugin-Repos/Imervue_P
 
 
 def _get_plugin_dir() -> Path:
-    return Path(__file__).resolve().parent.parent.parent / "plugins"
+    return _plugins_dir()
 
 
 def _github_get(url: str) -> list | dict:
@@ -40,7 +41,7 @@ def _github_get(url: str) -> list | dict:
 # ================================================================
 
 class FetchPluginListWorker(QThread):
-    finished = Signal(list)  # [(category, plugin_name, [file_info, ...])]
+    result_ready = Signal(list)  # [(category, plugin_name, [file_info, ...])]
     error = Signal(str)
 
     def run(self):
@@ -75,7 +76,7 @@ class FetchPluginListWorker(QThread):
                     ]
                     results.append((cat_name, plugin_name, file_infos))
 
-            self.finished.emit(results)
+            self.result_ready.emit(results)
         except Exception as e:
             self.error.emit(str(e))
 
@@ -86,7 +87,7 @@ class FetchPluginListWorker(QThread):
 
 class DownloadPluginWorker(QThread):
     progress = Signal(int, int)  # (current, total)
-    finished = Signal(str)       # plugin_name
+    result_ready = Signal(str)       # plugin_name
     error = Signal(str)
 
     def __init__(self, plugin_name: str, file_infos: list[dict], parent=None):
@@ -108,7 +109,7 @@ class DownloadPluginWorker(QThread):
                     dest.write_bytes(resp.read())
                 self.progress.emit(i + 1, total)
 
-            self.finished.emit(self.plugin_name)
+            self.result_ready.emit(self.plugin_name)
         except Exception as e:
             self.error.emit(str(e))
 
@@ -191,8 +192,7 @@ class PluginDownloaderDialog(QDialog):
     def closeEvent(self, event):
         for w in self._workers:
             if w.isRunning():
-                w.quit()
-                w.wait(3000)
+                w.wait(5000)
         self._workers.clear()
         super().closeEvent(event)
 
@@ -210,7 +210,7 @@ class PluginDownloaderDialog(QDialog):
 
         self._cleanup_finished_workers()
         worker = FetchPluginListWorker(self)
-        worker.finished.connect(self._on_list_fetched)
+        worker.result_ready.connect(self._on_list_fetched)
         worker.error.connect(self._on_list_error)
         self._workers.append(worker)
         worker.start()
@@ -319,7 +319,7 @@ class PluginDownloaderDialog(QDialog):
         self._cleanup_finished_workers()
         worker = DownloadPluginWorker(plugin_name, file_infos, self)
         worker.progress.connect(self._on_download_progress)
-        worker.finished.connect(self._on_download_finished)
+        worker.result_ready.connect(self._on_download_finished)
         worker.error.connect(self._on_download_error)
         self._workers.append(worker)
         worker.start()
@@ -346,6 +346,7 @@ class PluginDownloaderDialog(QDialog):
                 name=plugin_name
             ),
         )
+        self.accept()
 
     def _on_download_error(self, error_msg: str):
         lang = language_wrapper.language_word_dict

@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 
+from Imervue.system.app_paths import is_frozen, app_dir, icon_path as _app_icon_path
+
 logger = logging.getLogger("Imervue.file_assoc")
 
 # 支援關聯的副檔名
@@ -22,19 +24,21 @@ _APP_ID = "Imervue.ImageViewer"
 _SHELL_LABEL = "Open with Imervue"
 
 
-def _find_python() -> str:
-    """取得目前 Python 直譯器路徑"""
-    return sys.executable
+def _build_command() -> str:
+    """建立用於檔案關聯的啟動命令。
 
+    * 凍結環境：直接用 exe 路徑。
+    * 開發環境：用 python + 入口腳本 / -m Imervue。
+    """
+    if is_frozen():
+        return f'"{sys.executable}" "%1"'
 
-def _find_entry_script() -> str:
-    """取得 Imervue 入口模組路徑"""
-    # 專案根目錄（__main__.py 所在位置的上層）
-    pkg_dir = Path(__file__).resolve().parent.parent
+    python_exe = sys.executable
+    pkg_dir = app_dir() / "Imervue"
     main_file = pkg_dir / "__main__.py"
     if main_file.exists():
-        return str(main_file)
-    return f"-m Imervue"
+        return f'"{python_exe}" "{main_file}" "%1"'
+    return f'"{python_exe}" -m Imervue "%1"'
 
 
 def register_file_association() -> tuple[bool, str]:
@@ -51,14 +55,7 @@ def register_file_association() -> tuple[bool, str]:
     except ImportError:
         return False, "winreg not available"
 
-    python_exe = _find_python()
-    entry = _find_entry_script()
-
-    # 如果是 -m 形式
-    if entry.startswith("-m"):
-        command = f'"{python_exe}" {entry} "%1"'
-    else:
-        command = f'"{python_exe}" "{entry}" "%1"'
+    command = _build_command()
 
     try:
         # 1. 建立 Application 登錄
@@ -92,10 +89,10 @@ def _register_ext_context_menu(ext: str, command: str):
     shell_path = rf"Software\Classes\SystemFileAssociations\{ext}\shell\Imervue"
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, shell_path) as key:
         winreg.SetValueEx(key, "", 0, winreg.REG_SZ, _SHELL_LABEL)
-        # Icon（使用 Python 的圖示作為替代）
-        icon_path = str(Path(__file__).resolve().parent.parent.parent / "Imervue.ico")
-        if Path(icon_path).exists():
-            winreg.SetValueEx(key, "Icon", 0, winreg.REG_SZ, icon_path)
+        # Icon
+        ico = _app_icon_path()
+        if ico.exists():
+            winreg.SetValueEx(key, "Icon", 0, winreg.REG_SZ, str(ico))
 
     cmd_path = rf"{shell_path}\command"
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, cmd_path) as key:

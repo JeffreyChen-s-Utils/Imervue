@@ -76,6 +76,7 @@ class GPUImageView(QOpenGLWidget):
         self.on_filename_changed = None
         self.deep_zoom_tile_size = 512
         self.thumbnail_size = 512
+        self._slideshow_opacity = 1.0
 
         # ===== 篩選前完整圖片列表 =====
         self._unfiltered_images: list[str] = []
@@ -132,7 +133,7 @@ class GPUImageView(QOpenGLWidget):
         self._ui_hidden = False
         self._idle_timer = QTimer(self)
         self._idle_timer.setSingleShot(True)
-        self._idle_timer.setInterval(2000)  # 2 秒不動就隱藏
+        self._idle_timer.setInterval(5000)  # 5 秒不動就隱藏
         self._idle_timer.timeout.connect(self._on_idle_timeout)
         self.setMouseTracking(True)
 
@@ -159,8 +160,8 @@ class GPUImageView(QOpenGLWidget):
         mw.tree.hide()
         mw.exif_sidebar.hide()
 
-    def _show_ui(self):
-        """滑鼠移動 → 顯示所有 UI 並重置計時"""
+    def _show_ui(self, restart_timer: bool = True):
+        """顯示所有 UI 並可選擇性重置隱藏倒數"""
         if self._ui_hidden:
             self._ui_hidden = False
             self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -170,6 +171,8 @@ class GPUImageView(QOpenGLWidget):
             mw.filename_label.show()
             mw.tree.show()
             mw.exif_sidebar.show()
+        if not restart_timer:
+            return
         # 只在 deep zoom 模式下啟動 idle 計時
         if self.deep_zoom:
             self._idle_timer.start()
@@ -387,6 +390,10 @@ class GPUImageView(QOpenGLWidget):
         if not self.deep_zoom:
             return
 
+        if self._slideshow_opacity < 1.0:
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
         level, _ = self.deep_zoom.get_level(self.zoom)
         level_image = self.deep_zoom.levels[level]
         base_image = self.deep_zoom.levels[0]
@@ -437,7 +444,8 @@ class GPUImageView(QOpenGLWidget):
                     tile_h = min(tile_size, h - ty * tile_size)
                     x = tx * tile_size
                     y = ty * tile_size
-                    self.renderer.draw_textured_quad(x, y, x + tile_w, y + tile_h, tex)
+                    self.renderer.draw_textured_quad(x, y, x + tile_w, y + tile_h, tex,
+                                                      self._slideshow_opacity)
 
         # 恢復 ortho MVP for other rendering
         if self.renderer.use_shaders:
@@ -965,6 +973,8 @@ class GPUImageView(QOpenGLWidget):
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
+            if not self._idle_timer.isActive():
+                self._idle_timer.start()
             self.update()
             return
 
@@ -1006,6 +1016,10 @@ class GPUImageView(QOpenGLWidget):
         self._init_animation(path)
 
         self._prefetch_neighbors()
+
+        # 進入 deep zoom 後啟動 UI 隱藏倒數
+        if not self._idle_timer.isActive():
+            self._idle_timer.start()
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -1172,7 +1186,9 @@ class GPUImageView(QOpenGLWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        self._show_ui()
+        # 滑鼠移動只恢復 UI，不重置隱藏倒數
+        if self._ui_hidden:
+            self._show_ui(restart_timer=False)
 
         if self.last_pos is None:
             self.last_pos = event.position()
@@ -1313,6 +1329,12 @@ class GPUImageView(QOpenGLWidget):
         # ===== S — 幻燈片 =====
         if key == Qt.Key.Key_S:
             open_slideshow_dialog(self)
+            return
+
+        # ===== T — 標籤與相簿 =====
+        if key == Qt.Key.Key_T:
+            from Imervue.gui.tag_album_dialog import open_tag_album_dialog
+            open_tag_album_dialog(self)
             return
 
         # ===== H — RGB 直方圖 =====

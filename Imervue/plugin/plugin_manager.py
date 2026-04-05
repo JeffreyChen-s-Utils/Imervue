@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 logger = logging.getLogger("Imervue.plugin")
 
@@ -55,10 +56,7 @@ class PluginManager:
                 default ``plugins/`` directory next to the Imervue package.
         """
         if plugin_dirs is None:
-            # Default: <project_root>/plugins/
-            project_root = Path(__file__).resolve().parent.parent.parent
-            default_dir = project_root / "plugins"
-            plugin_dirs = [default_dir]
+            plugin_dirs = [_plugins_dir()]
 
         self._plugin_dirs = plugin_dirs
 
@@ -82,10 +80,12 @@ class PluginManager:
         """Load a plugin from a package directory."""
         module_name = package_dir.name
         try:
+            logger.info("Importing plugin package '%s' from %s", module_name, package_dir)
             module = importlib.import_module(module_name)
+            logger.info("Successfully imported '%s', registering...", module_name)
             self._register_from_module(module, package_dir)
         except Exception as e:
-            logger.error(f"Failed to load plugin package '{module_name}': {e}")
+            logger.error("Failed to load plugin package '%s': %s", module_name, e, exc_info=True)
 
     def _load_plugin_file(self, file_path: Path) -> None:
         """Load a plugin from a single .py file."""
@@ -151,10 +151,10 @@ class PluginManager:
     # Hook Dispatch
     # ===========================
 
-    def dispatch_build_menu_bar(self, menu_bar: QMenuBar) -> None:
+    def dispatch_build_menu_bar(self, plugin_menu) -> None:
         for plugin in self._plugins:
             try:
-                plugin.on_build_menu_bar(menu_bar)
+                plugin.on_build_menu_bar(plugin_menu)
             except Exception as e:
                 logger.error(f"[{plugin.plugin_name}] on_build_menu_bar error: {e}")
 
