@@ -151,10 +151,10 @@ class PluginManager:
     # Hook Dispatch
     # ===========================
 
-    def dispatch_build_menu_bar(self, menu_bar: QMenuBar) -> None:
+    def dispatch_build_menu_bar(self, plugin_menu) -> None:
         for plugin in self._plugins:
             try:
-                plugin.on_build_menu_bar(menu_bar)
+                plugin.on_build_menu_bar(plugin_menu)
             except Exception as e:
                 logger.error(f"[{plugin.plugin_name}] on_build_menu_bar error: {e}")
 

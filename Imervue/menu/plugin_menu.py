@@ -68,6 +68,9 @@ def build_plugin_menu(ui: ImervueMainWindow):
     )
     reload_action.triggered.connect(lambda: _reload_plugins(ui))
 
+    # 儲存參照，供 reload 和 plugin hook 使用
+    ui._plugin_menu = plugin_menu
+
     return plugin_menu
 
 
@@ -234,8 +237,9 @@ def _reload_plugins(ui: ImervueMainWindow):
     manager.unload_all()
     manager.discover_and_load()
 
-    # 重新讓插件加選單
-    manager.dispatch_build_menu_bar(ui.menuBar())
+    # 重新讓插件加到 Plugin 選單
+    if hasattr(ui, '_plugin_menu'):
+        manager.dispatch_build_menu_bar(ui._plugin_menu)
 
     loaded = len(manager.plugins)
     if hasattr(ui, "toast"):

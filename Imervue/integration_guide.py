@@ -43,8 +43,6 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
             )
             main_window.language_menu.addAction(action)
 
-    # Let plugins add their own menus
-    manager.dispatch_build_menu_bar(main_window.menuBar())
-
-    # Build the plugin management menu (after plugins are loaded so it can list them)
-    build_plugin_menu(main_window)
+    # Build the plugin management menu first, then let plugins add items into it
+    plugin_menu = build_plugin_menu(main_window)
+    manager.dispatch_build_menu_bar(plugin_menu)

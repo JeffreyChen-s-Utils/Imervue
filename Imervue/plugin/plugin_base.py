@@ -54,14 +54,14 @@ class ImervuePlugin:
     # Menu Hooks
     # ===========================
 
-    def on_build_menu_bar(self, menu_bar: QMenuBar) -> None:
-        """Called after the default menu bar is built.
+    def on_build_menu_bar(self, plugin_menu: QMenu) -> None:
+        """Called after the Plugin menu is built.
 
-        Add your own menus or menu items here.
+        Add your own submenus or actions into the shared Plugin menu.
 
         Example::
 
-            my_menu = menu_bar.addMenu("My Plugin")
+            my_menu = plugin_menu.addMenu("My Plugin")
             action = my_menu.addAction("Do Something")
             action.triggered.connect(self.do_something)
         """
