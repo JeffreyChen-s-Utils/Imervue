@@ -1,8 +1,9 @@
 import json
-from os import getcwd
 from pathlib import Path
 from threading import Lock
 from typing import Dict, Any, Optional, Union
+
+from Imervue.system.app_paths import user_settings_path as _user_settings_path
 
 # 使用者設定的全域字典
 # Global dictionary for user settings
@@ -23,7 +24,7 @@ def write_user_setting() -> Path:
 
     :return: 設定檔路徑 (Path to the settings file)
     """
-    user_setting_file = Path(getcwd()) / "user_setting.json"
+    user_setting_file = _user_settings_path()
     write_json(str(user_setting_file), user_setting_dict)
     return user_setting_file
 
@@ -35,7 +36,7 @@ def read_user_setting() -> Path:
 
     :return: 設定檔路徑 (Path to the settings file)
     """
-    user_setting_file = Path(getcwd()) / "user_setting.json"
+    user_setting_file = _user_settings_path()
     if user_setting_file.exists() and user_setting_file.is_file():
         data = read_json(str(user_setting_file))
         if isinstance(data, dict):

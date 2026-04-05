@@ -24,13 +24,14 @@ from typing import TYPE_CHECKING
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.app_paths import is_frozen as _is_frozen, app_dir as _app_dir, embedded_python_dir as _embedded_python_dir_path
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -63,15 +64,10 @@ def _subprocess_kwargs() -> dict:
 # 環境偵測
 # ===========================
 
-def _is_frozen() -> bool:
-    """是否在 PyInstaller 打包環境中執行"""
-    return getattr(sys, "frozen", False)
-
-
 # 啟動時：若為凍結環境，將 lib/site-packages 加入 sys.path
 # 這樣上次安裝的套件在下次啟動時就能被 import
 if _is_frozen():
-    _frozen_lib = str(Path(sys.executable).parent / "lib" / "site-packages")
+    _frozen_lib = str(_app_dir() / "lib" / "site-packages")
     if Path(_frozen_lib).is_dir() and _frozen_lib not in sys.path:
         sys.path.insert(0, _frozen_lib)
 
@@ -90,9 +86,7 @@ _GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
 
 def _embedded_python_dir() -> Path:
     """內嵌 Python 的安裝路徑"""
-    if _is_frozen():
-        return Path(sys.executable).parent / "python_embedded"
-    return Path(__file__).resolve().parent.parent.parent / "python_embedded"
+    return _embedded_python_dir_path()
 
 
 def _embedded_python_exe() -> Path | None:
@@ -350,6 +344,35 @@ def check_missing_packages(
     return missing
 
 
+class _CheckDepsWorker(QThread):
+    """在背景執行緒檢查套件是否已安裝（import 大型套件如 onnxruntime 很慢）。"""
+    finished = Signal(list)  # list[tuple[str, str]]  missing packages
+
+    def __init__(self, packages: list[tuple[str, str]]):
+        super().__init__()
+        self._packages = packages
+
+    def run(self):
+        self.finished.emit(check_missing_packages(self._packages))
+
+
+class _ImportWorker(QThread):
+    """在背景執行緒 import 剛安裝好的套件（避免阻塞 UI）。"""
+    finished = Signal()
+
+    def __init__(self, import_names: list[str]):
+        super().__init__()
+        self._names = import_names
+
+    def run(self):
+        for name in self._names:
+            try:
+                importlib.import_module(name)
+            except Exception:
+                pass
+        self.finished.emit()
+
+
 # ===========================
 # 安裝 Worker
 # ===========================
@@ -367,7 +390,7 @@ class _InstallWorker(QThread):
     def run(self):
         extra_args: list[str] = []
         if _is_frozen():
-            target_dir = str(Path(sys.executable).parent / "lib" / "site-packages")
+            target_dir = str(_app_dir() / "lib" / "site-packages")
             extra_args = ["--target", target_dir]
             self.log.emit(f"Frozen mode: installing to {target_dir}")
             Path(target_dir).mkdir(parents=True, exist_ok=True)
@@ -575,8 +598,6 @@ class InstallDependenciesDialog(QDialog):
         self._status.setText(text.split("\n")[0][:80])
 
     def _on_finished(self, success: bool, message: str):
-        self._progress.setVisible(False)
-        self._install_btn.setEnabled(True)
         self._worker = None
 
         if success:
@@ -586,19 +607,25 @@ class InstallDependenciesDialog(QDialog):
             )
             self._log.append(f"\n{message}")
 
-            # 重新載入模組
-            for import_name, _ in self._missing:
-                try:
-                    importlib.import_module(import_name)
-                except Exception:
-                    pass
-
-            if self._on_success:
-                self._on_success()
-            self.accept()
+            # 在背景執行緒 import 剛安裝的套件（避免阻塞 UI）
+            names = [imp for imp, _ in self._missing]
+            self._import_worker = _ImportWorker(names)
+            self._import_worker.finished.connect(self._on_import_done)
+            self._import_worker.start()
         else:
+            self._progress.setVisible(False)
+            self._install_btn.setEnabled(True)
             self._status.setText(f"Error: {message[:100]}")
             self._log.append(f"\nError: {message}")
+
+    def _on_import_done(self):
+        self._import_worker = None
+        self._progress.setVisible(False)
+        self._install_btn.setEnabled(True)
+
+        if self._on_success:
+            self._on_success()
+        self.accept()
 
 
 # ===========================
@@ -609,25 +636,33 @@ def ensure_dependencies(
     parent: QWidget,
     packages: list[tuple[str, str]],
     on_ready,
-) -> bool:
-    """檢查依賴，若缺少則彈出安裝對話框。
+) -> None:
+    """檢查依賴，若缺少則彈出安裝對話框（完全非阻塞）。
+
+    整個流程在背景執行：
+    1. 背景執行緒執行 import 檢查（避免 onnxruntime 等大套件的 import 卡 UI）
+    2. 若全部已安裝 → 直接呼叫 on_ready
+    3. 若有缺少 → 彈出非阻塞安裝對話框，安裝完成後呼叫 on_ready
 
     Args:
         parent: Parent widget for the dialog.
         packages: [(import_name, pip_name), ...]
         on_ready: Callback invoked when all packages are available.
-
-    Returns:
-        True if already satisfied (on_ready called immediately).
     """
-    missing = check_missing_packages(packages)
-    if not missing:
-        on_ready()
-        return True
+    worker = _CheckDepsWorker(packages)
 
-    dlg = InstallDependenciesDialog(parent, missing, on_success=on_ready)
-    dlg.exec()
-    return False
+    def _on_check_done(missing: list[tuple[str, str]]):
+        # worker ref 由 closure 持有，確保不被 GC
+        _ = worker
+        if not missing:
+            on_ready()
+            return
+        dlg = InstallDependenciesDialog(parent, missing, on_success=on_ready)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dlg.open()  # 非阻塞 window-modal
+
+    worker.finished.connect(_on_check_done)
+    worker.start()
 
 
 # ===========================

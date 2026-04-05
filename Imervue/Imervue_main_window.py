@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from Imervue.system.app_paths import icon_path as _app_icon_path
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.exif_sidebar import ExifSidebar
@@ -54,7 +55,7 @@ class ImervueMainWindow(QMainWindow):
         self.language_wrapper = language_wrapper
         self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
 
-        self.icon_path = Path.cwd() / "Imervue.ico"
+        self.icon_path = _app_icon_path()
         self.icon = QIcon(str(self.icon_path))
         self.setWindowIcon(self.icon)
 
@@ -308,6 +309,7 @@ class ImervueMainWindow(QMainWindow):
         event.accept()
         write_user_setting()
         super().closeEvent(event)
+        QApplication.instance().quit()
 
     @classmethod
     def debug_close(cls) -> None:
@@ -321,6 +323,7 @@ if __name__ == "__main__":
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     window = ImervueMainWindow()
     window.showMaximized()
     sys.exit(app.exec())

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def _get_plugin_dir() -> Path:
-    return Path(__file__).resolve().parent.parent.parent / "plugins"
+    return _plugins_dir()
 
 
 # ===========================

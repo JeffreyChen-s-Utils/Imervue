@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 logger = logging.getLogger("Imervue.plugin")
 
@@ -55,10 +56,7 @@ class PluginManager:
                 default ``plugins/`` directory next to the Imervue package.
         """
         if plugin_dirs is None:
-            # Default: <project_root>/plugins/
-            project_root = Path(__file__).resolve().parent.parent.parent
-            default_dir = project_root / "plugins"
-            plugin_dirs = [default_dir]
+            plugin_dirs = [_plugins_dir()]
 
         self._plugin_dirs = plugin_dirs
 
