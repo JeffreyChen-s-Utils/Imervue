@@ -52,8 +52,10 @@ def read_json(json_file_path: str) -> Optional[Any]:
     try:
         file_path = Path(json_file_path)
         if file_path.exists() and file_path.is_file():
-            with open(json_file_path) as read_file:
+            with open(json_file_path, encoding="utf-8") as read_file:
                 return json.loads(read_file.read())
+    except Exception:
+        pass
     finally:
         _lock.release()
 
@@ -66,7 +68,9 @@ def write_json(json_save_path: str, data_to_output: Union[dict, list]) -> None:
     """
     _lock.acquire()
     try:
-        with open(json_save_path, "w+") as file_to_write:
-            file_to_write.write(json.dumps(data_to_output, indent=4))
+        with open(json_save_path, "w", encoding="utf-8") as file_to_write:
+            file_to_write.write(json.dumps(data_to_output, indent=4, ensure_ascii=False))
+    except Exception:
+        pass
     finally:
         _lock.release()

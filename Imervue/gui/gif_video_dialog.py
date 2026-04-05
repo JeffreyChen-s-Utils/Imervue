@@ -97,6 +97,7 @@ class _CreateWorker(QThread):
 
     def _create_video(self):
         import subprocess
+        import sys
         import tempfile
         import shutil
 
@@ -130,7 +131,16 @@ class _CreateWorker(QThread):
                 "-preset", "fast",
                 self._output,
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            kw = {
+                "capture_output": True,
+                "encoding": "utf-8",
+                "errors": "replace",
+                "timeout": 300,
+                "stdin": subprocess.DEVNULL,
+            }
+            if sys.platform == "win32":
+                kw["creationflags"] = subprocess.CREATE_NO_WINDOW
+            result = subprocess.run(cmd, **kw)
             if result.returncode != 0:
                 self.finished.emit(False, f"ffmpeg error: {result.stderr[:200]}")
                 return

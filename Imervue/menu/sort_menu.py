@@ -80,7 +80,7 @@ _SORT_LANG_KEYS = {
 
 def apply_sort(main_window: ImervueMainWindow, sort_by: str, ascending: bool):
     viewer = main_window.viewer
-    images = viewer.model.images
+    images = list(viewer.model.images)
     if not images:
         return
 
@@ -90,10 +90,15 @@ def apply_sort(main_window: ImervueMainWindow, sort_by: str, ascending: bool):
     user_setting_dict["sort_by"] = sort_by
     user_setting_dict["sort_ascending"] = ascending
 
-    # 重新載入 tile grid
+    # 更新 model 並重新載入顯示
+    viewer.model.set_images(images)
+
     if viewer.tile_grid_mode:
         viewer.clear_tile_grid()
         viewer.load_tile_grid_async(images)
+    elif viewer.deep_zoom and 0 <= viewer.current_index < len(images):
+        # deep zoom 模式下保持當前圖片，更新列表順序
+        viewer.update()
 
 
 # ===========================
