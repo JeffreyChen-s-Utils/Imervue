@@ -347,6 +347,7 @@ class PluginDownloaderDialog(QDialog):
                 name=plugin_name
             ),
         )
+        self.accept()
 
     def _on_download_error(self, error_msg: str):
         lang = language_wrapper.language_word_dict
