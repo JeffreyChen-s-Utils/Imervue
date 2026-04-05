@@ -22,7 +22,6 @@ from Imervue.menu.recent_menu import rebuild_recent_menu
 from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
 from Imervue.user_settings.user_setting_dict import write_user_setting, read_user_setting, user_setting_dict
 
 
@@ -270,14 +269,10 @@ class ImervueMainWindow(QMainWindow):
                     "main_window_current_folder_format"
                 ).format(path=path)
             )
-            add_recent_folder(path)
-            user_setting_dict["user_last_folder"] = path
             self.watch_folder(path)
         elif Path(path).is_file():
             self.viewer.clear_tile_grid()
             open_path(main_gui=self.viewer, path=path)
-            add_recent_image(path)
-            user_setting_dict["user_last_folder"] = str(Path(path).parent)
 
         rebuild_recent_menu(self)
 
@@ -299,15 +294,26 @@ class ImervueMainWindow(QMainWindow):
         self.watch_folder(folder)
 
     def closeEvent(self, event):
-        commit_pending_deletions(self.viewer)
+        # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
+        try:
+            write_user_setting()
+        except Exception:
+            pass
+
+        try:
+            commit_pending_deletions(self.viewer)
+        except Exception:
+            pass
 
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):
-            self.plugin_manager.dispatch_app_closing(self)
-            self.plugin_manager.unload_all()
+            try:
+                self.plugin_manager.dispatch_app_closing(self)
+                self.plugin_manager.unload_all()
+            except Exception:
+                pass
 
         event.accept()
-        write_user_setting()
         super().closeEvent(event)
         QApplication.instance().quit()
 
@@ -318,6 +324,9 @@ class ImervueMainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    from Imervue.system.log_setup import setup_logging
+    setup_logging()
+
     # HiDPI 支援
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough

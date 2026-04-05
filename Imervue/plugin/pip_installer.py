@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit,
@@ -335,25 +335,65 @@ def check_missing_packages(
     Returns:
         Still-missing subset of *packages*.
     """
+    # 凍結環境下，在背景執行緒 import 含 native DLL 的套件（如 onnxruntime）
+    # 會導致 segfault。改用檔案系統檢查是否已安裝。
+    if _is_frozen():
+        return _check_missing_frozen(packages)
+
     missing = []
     for import_name, pip_name in packages:
         try:
+            logger.info("check_missing_packages: trying import '%s'", import_name)
             importlib.import_module(import_name)
-        except ImportError:
+            logger.info("check_missing_packages: '%s' OK", import_name)
+        except Exception as e:
+            logger.info("check_missing_packages: '%s' missing (%s: %s)", import_name, type(e).__name__, e)
+            missing.append((import_name, pip_name))
+    return missing
+
+
+def _check_missing_frozen(
+    packages: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """凍結環境：透過檔案系統檢查套件是否存在（不 import，避免 DLL 崩潰）。"""
+    from pathlib import Path as _Path
+    target_dir = _Path(str(_app_dir() / "lib" / "site-packages"))
+    logger.info("_check_missing_frozen: checking in %s (exists=%s)", target_dir, target_dir.is_dir())
+
+    missing = []
+    for import_name, pip_name in packages:
+        # 套件可能是目錄（package）或單一 .py 檔
+        pkg_dir = target_dir / import_name
+        pkg_file = target_dir / (import_name + ".py")
+        # 也檢查 .dist-info 目錄（pip 安裝後一定會有）
+        found = pkg_dir.is_dir() or pkg_file.is_file()
+        logger.info("_check_missing_frozen: '%s' → dir=%s, file=%s, found=%s",
+                     import_name, pkg_dir.is_dir(), pkg_file.is_file(), found)
+        if not found:
             missing.append((import_name, pip_name))
     return missing
 
 
 class _CheckDepsWorker(QThread):
     """在背景執行緒檢查套件是否已安裝（import 大型套件如 onnxruntime 很慢）。"""
-    finished = Signal(list)  # list[tuple[str, str]]  missing packages
+    result_ready = Signal(list)  # list[tuple[str, str]]  missing packages
 
-    def __init__(self, packages: list[tuple[str, str]]):
-        super().__init__()
+    def __init__(self, packages: list[tuple[str, str]], parent=None):
+        super().__init__(parent)
         self._packages = packages
+        logger.info("_CheckDepsWorker created for packages: %s", packages)
 
     def run(self):
-        self.finished.emit(check_missing_packages(self._packages))
+        logger.info("_CheckDepsWorker.run() started")
+        try:
+            result = check_missing_packages(self._packages)
+            logger.info("_CheckDepsWorker.run() check done, missing=%s", result)
+        except Exception:
+            logger.error("_CheckDepsWorker.run() exception", exc_info=True)
+            result = list(self._packages)
+        logger.info("_CheckDepsWorker.run() emitting result_ready")
+        self.result_ready.emit(result)
+        logger.info("_CheckDepsWorker.run() done")
 
 
 class _ImportWorker(QThread):
@@ -607,11 +647,16 @@ class InstallDependenciesDialog(QDialog):
             )
             self._log.append(f"\n{message}")
 
-            # 在背景執行緒 import 剛安裝的套件（避免阻塞 UI）
-            names = [imp for imp, _ in self._missing]
-            self._import_worker = _ImportWorker(names)
-            self._import_worker.finished.connect(self._on_import_done)
-            self._import_worker.start()
+            if _is_frozen():
+                # 凍結環境：不在背景執行緒 import（native DLL 會 segfault）。
+                # 套件的 on_ready callback 會在主執行緒完成 import。
+                self._on_import_done()
+            else:
+                # 開發環境：在背景執行緒 import 剛安裝的套件（避免阻塞 UI）
+                names = [imp for imp, _ in self._missing]
+                self._import_worker = _ImportWorker(names)
+                self._import_worker.finished.connect(self._on_import_done)
+                self._import_worker.start()
         else:
             self._progress.setVisible(False)
             self._install_btn.setEnabled(True)
@@ -632,6 +677,58 @@ class InstallDependenciesDialog(QDialog):
 # 公開 API
 # ===========================
 
+class _EnsureDepsHelper(QObject):
+    """協調 ensure_dependencies 的背景檢查流程。
+
+    用 QObject 包裝，讓所有 signal-slot 連接都在 QObject 之間進行，
+    Qt 的 AutoConnection 會自動根據執行緒使用 QueuedConnection。
+    parent widget 持有此物件，確保不被 GC 回收。
+    """
+    _relay = Signal(list)
+
+    def __init__(self, parent: QWidget, packages, on_ready):
+        super().__init__(parent)
+        self._parent_widget = parent
+        self._on_ready = on_ready
+
+        logger.info("_EnsureDepsHelper.__init__: parent=%s, packages=%s", parent, packages)
+
+        # _relay 是 QObject-to-QObject 的 signal，AutoConnection 安全跨執行緒
+        self._relay.connect(self._handle_result)
+
+        self._worker = _CheckDepsWorker(packages, parent=self)
+        self._worker.result_ready.connect(self._relay)
+        self._worker.finished.connect(self._cleanup)
+
+        logger.info("_EnsureDepsHelper: starting worker")
+        self._worker.start()
+        logger.info("_EnsureDepsHelper: worker started")
+
+    def _handle_result(self, missing: list[tuple[str, str]]):
+        logger.info("_EnsureDepsHelper._handle_result: missing=%s (thread=%s)",
+                     missing, QThread.currentThread())
+        try:
+            if not missing:
+                logger.info("_EnsureDepsHelper: no missing deps, calling on_ready")
+                self._on_ready()
+                logger.info("_EnsureDepsHelper: on_ready returned")
+                return
+            logger.info("_EnsureDepsHelper: missing deps found, opening install dialog")
+            dlg = InstallDependenciesDialog(
+                self._parent_widget, missing, on_success=self._on_ready,
+            )
+            dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            dlg.open()
+            logger.info("_EnsureDepsHelper: install dialog opened")
+        except Exception:
+            logger.error("_EnsureDepsHelper._handle_result failed", exc_info=True)
+
+    def _cleanup(self):
+        logger.info("_EnsureDepsHelper._cleanup: worker finished")
+        self._worker = None
+        self.deleteLater()
+
+
 def ensure_dependencies(
     parent: QWidget,
     packages: list[tuple[str, str]],
@@ -639,30 +736,12 @@ def ensure_dependencies(
 ) -> None:
     """檢查依賴，若缺少則彈出安裝對話框（完全非阻塞）。
 
-    整個流程在背景執行：
-    1. 背景執行緒執行 import 檢查（避免 onnxruntime 等大套件的 import 卡 UI）
-    2. 若全部已安裝 → 直接呼叫 on_ready
-    3. 若有缺少 → 彈出非阻塞安裝對話框，安裝完成後呼叫 on_ready
-
     Args:
         parent: Parent widget for the dialog.
         packages: [(import_name, pip_name), ...]
         on_ready: Callback invoked when all packages are available.
     """
-    worker = _CheckDepsWorker(packages)
-
-    def _on_check_done(missing: list[tuple[str, str]]):
-        # worker ref 由 closure 持有，確保不被 GC
-        _ = worker
-        if not missing:
-            on_ready()
-            return
-        dlg = InstallDependenciesDialog(parent, missing, on_success=on_ready)
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dlg.open()  # 非阻塞 window-modal
-
-    worker.finished.connect(_on_check_done)
-    worker.start()
+    _EnsureDepsHelper(parent, packages, on_ready)
 
 
 # ===========================

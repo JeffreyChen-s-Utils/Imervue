@@ -551,7 +551,7 @@ class TestEnsureDependencies:
         from Imervue.plugin.pip_installer import _CheckDepsWorker
         worker = _CheckDepsWorker([("os", "os"), ("sys", "sys")])
         results = []
-        worker.finished.connect(results.append)
+        worker.result_ready.connect(results.append)
         worker.run()  # run directly (not start) for synchronous test
         assert results == [[]]
 
@@ -560,7 +560,7 @@ class TestEnsureDependencies:
         from Imervue.plugin.pip_installer import _CheckDepsWorker
         worker = _CheckDepsWorker([("os", "os"), ("nonexistent_xyz_pkg", "nonexistent-xyz")])
         results = []
-        worker.finished.connect(results.append)
+        worker.result_ready.connect(results.append)
         worker.run()
         assert len(results) == 1
         assert results[0] == [("nonexistent_xyz_pkg", "nonexistent-xyz")]

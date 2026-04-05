@@ -180,6 +180,9 @@ def _scan_images(directory: str) -> list[str]:
 
 def open_path(main_gui: GPUImageView, path: str):
 
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
+
     path_obj = Path(path)
 
     if path_obj.is_dir():
@@ -192,6 +195,10 @@ def open_path(main_gui: GPUImageView, path: str):
         main_gui.current_index = 0
         main_gui._unfiltered_images = list(images)
         main_gui.load_tile_grid_async(images)
+
+        # 記錄最近開啟的資料夾
+        add_recent_folder(str(path_obj))
+        user_setting_dict["user_last_folder"] = str(path_obj)
 
         # Plugin hook: folder opened
         if hasattr(main_gui.main_window, "plugin_manager"):
@@ -222,6 +229,10 @@ def open_path(main_gui: GPUImageView, path: str):
 
         main_gui.tile_grid_mode = False
         main_gui.load_deep_zoom_image(str(path_obj))
+
+        # 記錄最近開啟的檔案
+        add_recent_image(str(path_obj))
+        user_setting_dict["user_last_folder"] = str(dir_path)
 
         # Plugin hook: image loaded
         if hasattr(main_gui.main_window, "plugin_manager"):
