@@ -17,6 +17,11 @@ from Imervue.gui.image_editor import open_image_editor
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
 from Imervue.gui.export_dialog import open_export_dialog
+from Imervue.gui.batch_export_dialog import open_batch_export
+from Imervue.gui.gif_video_dialog import open_gif_video_dialog
+from Imervue.gui.tag_album_dialog import (
+    build_tag_submenu, build_album_submenu, build_batch_tag_album_submenu,
+)
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     trash_current_image, trash_selected_tiles,
     rotate_current_image, copy_image_to_clipboard,
@@ -64,6 +69,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     build_right_click_menu.addSeparator()
 
     _bookmark_action(main_gui, build_right_click_menu)
+    _tag_album_actions(main_gui, build_right_click_menu)
 
     build_right_click_menu.addSeparator()
 
@@ -187,6 +193,16 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
 
     rot_ccw = batch_menu.addAction(lang.get("batch_rotate_ccw", "Rotate All CCW"))
     rot_ccw.triggered.connect(lambda: batch_rotate(main_gui, list(main_gui.selected_tiles), -90))
+
+    batch_menu.addSeparator()
+
+    export_action = batch_menu.addAction(lang.get("batch_export_title", "Batch Export"))
+    export_action.triggered.connect(lambda: open_batch_export(main_gui))
+
+    gif_action = batch_menu.addAction(lang.get("gif_video_title", "Create GIF / Video"))
+    gif_action.triggered.connect(lambda: open_gif_video_dialog(main_gui))
+
+    build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
 
 
 def _edit_action(main_gui: GPUImageView, menu: QMenu):
@@ -380,6 +396,14 @@ def _bookmark_action(main_gui: GPUImageView, menu: QMenu):
     else:
         action = menu.addAction(lang.get("bookmark_add_current", "Add Bookmark"))
     action.triggered.connect(lambda: main_gui._toggle_bookmark())
+
+
+def _tag_album_actions(main_gui: GPUImageView, menu: QMenu):
+    path = _current_image_path(main_gui)
+    if not path:
+        return
+    build_tag_submenu(main_gui, path, menu)
+    build_album_submenu(main_gui, path, menu)
 
 
 def _do_lossless_rotate(main_gui: GPUImageView, path: str, clockwise: bool):

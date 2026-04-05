@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 from Imervue.menu.plugin_menu import build_plugin_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.pip_installer import register_translations as _register_pip_translations
 from Imervue.plugin.plugin_manager import PluginManager
 
 
@@ -15,6 +16,9 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
 
     Called from ImervueMainWindow.__init__() after the UI is fully built.
     """
+    # 註冊 pip 安裝對話框的翻譯（供所有插件共用）
+    _register_pip_translations()
+
     manager = PluginManager(main_window)
     manager.discover_and_load()
 

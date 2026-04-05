@@ -128,10 +128,10 @@ class GLRenderer:
         glBindTexture(GL_TEXTURE_2D, tex_id)
         glTexParameterf(GL_TEXTURE_2D, 0x84FE, self._max_anisotropy)  # GL_TEXTURE_MAX_ANISOTROPY
 
-    def draw_textured_quad(self, x0, y0, x1, y1, tex_id):
+    def draw_textured_quad(self, x0, y0, x1, y1, tex_id, opacity=1.0):
         """用 shader 繪製貼圖四邊形"""
         if not self.use_shaders:
-            return self._draw_textured_quad_legacy(x0, y0, x1, y1, tex_id)
+            return self._draw_textured_quad_legacy(x0, y0, x1, y1, tex_id, opacity)
 
         prog = self._tex_prog
         glUseProgram(prog)
@@ -142,7 +142,7 @@ class GLRenderer:
 
         # Color
         col_loc = glGetUniformLocation(prog, "u_color")
-        glUniform4f(col_loc, 1, 1, 1, 1)
+        glUniform4f(col_loc, 1, 1, 1, opacity)
 
         # Texture
         tex_loc = glGetUniformLocation(prog, "u_texture")
@@ -213,9 +213,9 @@ class GLRenderer:
     # ===========================
 
     @staticmethod
-    def _draw_textured_quad_legacy(x0, y0, x1, y1, tex_id):
+    def _draw_textured_quad_legacy(x0, y0, x1, y1, tex_id, opacity=1.0):
         glBindTexture(GL_TEXTURE_2D, tex_id)
-        glColor4f(1, 1, 1, 1)
+        glColor4f(1, 1, 1, opacity)
         glBegin(GL_QUADS)
         glTexCoord2f(0, 1); glVertex2f(x0, y1)
         glTexCoord2f(1, 1); glVertex2f(x1, y1)

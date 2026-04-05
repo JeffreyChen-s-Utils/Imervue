@@ -43,6 +43,10 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     bookmark_action = file_menu.addAction(lang.get("bookmark_title", "Bookmarks"))
     bookmark_action.triggered.connect(lambda: _open_bookmarks(ui_we_want_to_set))
 
+    # 標籤與相簿管理
+    tag_album_action = file_menu.addAction(lang.get("tag_album_title", "Tags & Albums"))
+    tag_album_action.triggered.connect(lambda: _open_tag_album(ui_we_want_to_set))
+
     file_menu.addSeparator()
 
     # 新增刪除動作
@@ -175,6 +179,11 @@ def _register_assoc(ui: ImervueMainWindow):
 def _open_bookmarks(ui: ImervueMainWindow):
     from Imervue.gui.bookmark_dialog import open_bookmark_dialog
     open_bookmark_dialog(ui.viewer)
+
+
+def _open_tag_album(ui: ImervueMainWindow):
+    from Imervue.gui.tag_album_dialog import open_tag_album_dialog
+    open_tag_album_dialog(ui.viewer)
 
 
 def _unregister_assoc(ui: ImervueMainWindow):

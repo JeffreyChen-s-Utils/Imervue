@@ -42,6 +42,7 @@ def _keyboard_shortcuts() -> list[tuple[str, str]]:
         ("Home", "keyboard_home_tip"),
         ("E", "keyboard_e_tip"),
         ("S", "keyboard_slideshow_tip"),
+        ("T", "keyboard_t_tip"),
         ("H", "keyboard_h_tip"),
         ("W / Shift+W", "keyboard_w_tip"),
         ("B", "keyboard_b_tip"),
