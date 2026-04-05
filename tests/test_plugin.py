@@ -570,7 +570,7 @@ class TestEnsureDependencies:
         from Imervue.plugin.pip_installer import _ImportWorker
         worker = _ImportWorker(["os", "sys"])
         done = []
-        worker.finished.connect(lambda: done.append(True))
+        worker.result_ready.connect(lambda: done.append(True))
         worker.run()
         assert done == [True]
 
@@ -670,7 +670,7 @@ class TestFetchPluginListWorker:
 
         worker = FetchPluginListWorker()
         results = []
-        worker.finished.connect(results.append)
+        worker.result_ready.connect(results.append)
 
         with patch("Imervue.plugin.plugin_downloader._github_get", side_effect=fake_get):
             worker.run()
@@ -699,7 +699,7 @@ class TestDownloadPluginWorker:
 
         worker = DownloadPluginWorker("test_plugin", file_infos)
         finished_names = []
-        worker.finished.connect(finished_names.append)
+        worker.result_ready.connect(finished_names.append)
         progress_log = []
         worker.progress.connect(lambda c, t: progress_log.append((c, t)))
 
