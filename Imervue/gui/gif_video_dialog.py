@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSpinBox, QPushButton, QFileDialog, QLineEdit, QProgressBar,
@@ -347,7 +347,7 @@ class GifVideoDialog(QDialog):
             self._status_label.setText(msg)
             if hasattr(self._gui.main_window, "toast"):
                 self._gui.main_window.toast.success(msg)
-            self.accept()
+            QTimer.singleShot(0, self.accept)
         else:
             self._status_label.setText(f"Error: {message}")
             if hasattr(self._gui.main_window, "toast"):

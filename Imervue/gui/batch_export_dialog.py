@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
@@ -245,7 +245,7 @@ class BatchExportDialog(QDialog):
             else:
                 self._gui.main_window.toast.success(msg)
 
-        self.accept()
+        QTimer.singleShot(0, self.accept)
 
 
 def _open_for_export(path: str) -> Image.Image:

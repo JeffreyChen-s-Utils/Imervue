@@ -114,8 +114,11 @@ class GPUImageView(QOpenGLWidget):
         self.renderer = GLRenderer()
 
         # ===== VRAM 管理 =====
+        # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
+        # 抓到的話會覆寫成實體 VRAM 的 ~40%，在顯卡強的機器上可大幅放寬 tile cache。
         self._vram_usage = 0  # 目前 tile grid 紋理佔用 bytes
-        self._vram_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB
+        self._vram_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB fallback
+        self._vram_limit_default = self._vram_limit
         self._tile_tex_sizes: dict[str, int] = {}  # path → texture bytes
 
         # ===== 直方圖 =====
@@ -186,6 +189,69 @@ class GPUImageView(QOpenGLWidget):
         glEnable(GL_TEXTURE_2D)
         glClearColor(0.1, 0.1, 0.1, 1)
         self.renderer.init()
+        self._detect_vram_limit()
+
+    def _detect_vram_limit(self) -> None:
+        """Query the GL driver for real VRAM and size the tile cache to it.
+
+        * NVIDIA: ``GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX`` (0x9048), KB.
+        * AMD:    ``TEXTURE_FREE_MEMORY_ATI`` (0x87FC), KB, 4-int vector (we
+          take the first — total free pool).
+
+        Fall back to the conservative 1.5 GB default on Intel / software GL
+        or any driver that doesn't expose either extension. The detected
+        limit is clamped to ``[256 MB, 8 GB]`` so a bad query can't blow up
+        memory or accidentally disable the cache.
+        """
+        import logging as _logging
+        _log = _logging.getLogger("Imervue.vram")
+
+        total_kb = 0
+        try:
+            # NVX_gpu_memory_info — NVIDIA cards
+            val = glGetIntegerv(0x9048)
+            if isinstance(val, (list, tuple)) and val:
+                total_kb = int(val[0])
+            elif val is not None:
+                total_kb = int(val)
+        except Exception:
+            total_kb = 0
+
+        if total_kb <= 0:
+            try:
+                # ATI_meminfo — AMD cards (returns 4 ints; first is total free)
+                val = glGetIntegerv(0x87FC)
+                if isinstance(val, (list, tuple)) and val:
+                    total_kb = int(val[0])
+            except Exception:
+                total_kb = 0
+
+        # Clear any GL error left by the probes above — neither extension is
+        # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
+        # into the next real draw call.
+        try:
+            while glGetError() != GL_NO_ERROR:
+                pass
+        except Exception:
+            pass
+
+        if total_kb <= 0:
+            _log.info(
+                f"VRAM detection not supported on this driver, using default "
+                f"{self._vram_limit_default // (1024 * 1024)} MB"
+            )
+            return
+
+        total_bytes = total_kb * 1024
+        detected = int(total_bytes * 0.4)
+        min_bytes = 256 * 1024 * 1024        # 256 MB floor
+        max_bytes = 8 * 1024 * 1024 * 1024   # 8 GB ceiling
+        detected = max(min_bytes, min(max_bytes, detected))
+        self._vram_limit = detected
+        _log.info(
+            f"Detected VRAM {total_bytes // (1024 * 1024)} MB → tile cache "
+            f"limit set to {detected // (1024 * 1024)} MB"
+        )
 
     def resizeGL(self, w, h):
         dpr = self.devicePixelRatio()

@@ -185,3 +185,10 @@ cython_debug/
 /.claude/
 exe/user_setting.json
 /.idea
+plugins/object_splitter/models/u2net.onnx
+plugins/object_splitter/models/u2net_human_seg.onnx
+plugins/object_splitter/models/isnet-general-use.onnx
+plugins/ai_background_remover/models/u2net.onnx
+plugins/ai_background_remover/models/isnet-general-use.onnx
+plugins/object_splitter/models/isnet-anime.onnx
+plugins/ai_background_remover/models/u2net_human_seg.onnx

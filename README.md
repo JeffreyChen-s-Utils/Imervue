@@ -79,7 +79,7 @@ Key design principles:
 
 ### Organization
 
-- Bookmark system (up to 500 bookmarks)
+- Bookmark system (up to 5000 bookmarks)
 - Rating system (1–5 stars) and favorites
 - Sort by name, modified date, created date, file size, or resolution
 - Filter by file extension or rating
@@ -426,7 +426,7 @@ Settings are stored in `user_setting.json` in the working directory.
 | `user_recent_folders` | list | Recently opened folders |
 | `user_recent_images` | list | Recently opened images |
 | `user_last_folder` | string | Last opened folder (auto-restored on startup) |
-| `bookmarks` | list | Bookmarked image paths (max 500) |
+| `bookmarks` | list | Bookmarked image paths (max 5000) |
 | `sort_by` | string | Sort method (name/modified/created/size/resolution) |
 | `sort_ascending` | bool | Sort order |
 | `image_ratings` | dict | Image path → rating (1–5) mapping |

@@ -275,7 +275,7 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
 
     path = images[main_gui.current_index]
 
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
     ratings = user_setting_dict.get("image_ratings", {})
 
     current = ratings.get(path)
@@ -286,6 +286,7 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
         ratings[path] = rating
 
     user_setting_dict["image_ratings"] = ratings
+    schedule_save()
 
     # 通知 UI 更新
     from Imervue.multi_language.language_wrapper import language_wrapper
@@ -311,7 +312,7 @@ def toggle_favorite(main_gui: GPUImageView):
 
     path = images[main_gui.current_index]
 
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
     favorites = set(user_setting_dict.get("image_favorites", []))
 
     if path in favorites:
@@ -320,6 +321,7 @@ def toggle_favorite(main_gui: GPUImageView):
         favorites.add(path)
 
     user_setting_dict["image_favorites"] = list(favorites)
+    schedule_save()
 
     from Imervue.multi_language.language_wrapper import language_wrapper
     lang = language_wrapper.language_word_dict

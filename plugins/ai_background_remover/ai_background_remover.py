@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QPushButton, QFileDialog, QLineEdit, QProgressBar,
@@ -25,7 +25,10 @@ from PySide6.QtWidgets import (
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.app_paths import is_frozen as _is_frozen
+from Imervue.system.app_paths import (
+    is_frozen as _is_frozen,
+    frozen_site_packages as _frozen_site_packages,
+)
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QMenuBar
@@ -59,8 +62,7 @@ logger.info("AI BG Remover: U2NET_HOME = %s", _MODELS_DIR)
 if _is_frozen():
     logger.info("AI BG Remover: frozen env detected")
     try:
-        from Imervue.system.app_paths import app_dir as _app_dir
-        _site_packages = _app_dir() / "lib" / "site-packages"
+        _site_packages = _frozen_site_packages()
         logger.info("AI BG Remover: site-packages = %s, exists=%s",
                      _site_packages, _site_packages.is_dir())
     except Exception:
@@ -474,7 +476,7 @@ class RemoveBackgroundDialog(QDialog):
                 self._gui.main_window.toast.success(
                     self._lang.get("bg_remove_done_short", "Background removed!")
                 )
-            self.accept()
+            QTimer.singleShot(0, self.accept)
         else:
             self._status_label.setText(f"Error: {result}")
             if hasattr(self._gui.main_window, "toast"):
@@ -604,7 +606,7 @@ class BatchRemoveBackgroundDialog(QDialog):
                 self._gui.main_window.toast.info(msg)
             else:
                 self._gui.main_window.toast.success(msg)
-        self.accept()
+        QTimer.singleShot(0, self.accept)
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
@@ -673,8 +675,7 @@ class AIBackgroundRemoverPlugin(ImervuePlugin):
         if not python:
             logger.error("No external Python found for subprocess")
             return None
-        from Imervue.system.app_paths import app_dir
-        site_pkgs = str(app_dir() / "lib" / "site-packages")
+        site_pkgs = str(_frozen_site_packages())
         logger.info("Frozen env: python=%s, site_packages=%s", python, site_pkgs)
         return python, site_pkgs
 

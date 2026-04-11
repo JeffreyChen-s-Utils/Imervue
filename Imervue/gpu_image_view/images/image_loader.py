@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,6 +16,8 @@ import imageio
 import numpy as np
 import rawpy
 from PIL import Image
+
+logger = logging.getLogger("Imervue.image_loader")
 
 
 def load_image_file(path, thumbnail=False):
@@ -65,7 +68,12 @@ def load_image_file(path, thumbnail=False):
 
     # ===== 一般圖片 =====
     else:
-        img = Image.open(path).convert("RGBA")
+        img = Image.open(path)
+        # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理，
+        # 省掉一次全圖的記憶體複製。對於 60 MP+ 的 JPEG 來說差距顯著（記憶體峰值約少 25%）。
+        # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤。
+        if img.mode not in ("RGB", "RGBA", "L"):
+            img = img.convert("RGBA")
         img_data = np.array(img)
 
     # ===== 灰階 → RGB =====
@@ -112,7 +120,7 @@ class LoadDeepZoomWorker(QRunnable):
             if not self._abort:
                 self.signals.finished.emit(dzi, self.path)
         except Exception as e:
-            print(f"DeepZoom load failed: {self.path} - {e}")
+            logger.error(f"DeepZoom load failed: {self.path} - {e}")
 
 
 # ================================================================
@@ -161,8 +169,13 @@ def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
     return arr
 
 
-def _scan_images(directory: str) -> list[str]:
-    """快速掃描資料夾中的圖片，先篩選再排序，使用 os.scandir 提升效能"""
+def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) -> list[str]:
+    """
+    快速掃描資料夾中的圖片，直接用使用者選定的排序方式一次排完（不再先 sort by name 再 re-sort）。
+    Default arguments preserve the historical behaviour (alphabetical ascending)
+    so external callers that don't care about user settings — the main window's
+    folder refresh and the unit tests — keep getting the same result.
+    """
     import os
     result = []
     try:
@@ -174,8 +187,25 @@ def _scan_images(directory: str) -> list[str]:
                         result.append(entry.path)
     except OSError:
         return []
-    result.sort(key=lambda p: os.path.basename(p).lower())
+
+    if sort_by == "name":
+        # Fast default path — avoid the import of sort_menu for the common case.
+        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+    else:
+        from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
+        key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
+        result.sort(key=key_fn, reverse=not ascending)
     return result
+
+
+def _scan_images_for_user(directory: str) -> list[str]:
+    """Scan + sort a folder using the user's current sort settings (single pass)."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    return _scan_images(
+        directory,
+        sort_by=user_setting_dict.get("sort_by", "name"),
+        ascending=user_setting_dict.get("sort_ascending", True),
+    )
 
 
 def open_path(main_gui: GPUImageView, path: str):
@@ -187,18 +217,10 @@ def open_path(main_gui: GPUImageView, path: str):
 
     if path_obj.is_dir():
 
-        images = _scan_images(str(path_obj))
+        images = _scan_images_for_user(str(path_obj))
 
         if not images:
             return
-
-        # 套用使用者的排序設定
-        sort_by = user_setting_dict.get("sort_by", "name")
-        sort_asc = user_setting_dict.get("sort_ascending", True)
-        if sort_by != "name" or not sort_asc:
-            from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
-            key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
-            images.sort(key=key_fn, reverse=not sort_asc)
 
         main_gui.current_index = 0
         main_gui._unfiltered_images = list(images)
@@ -216,18 +238,10 @@ def open_path(main_gui: GPUImageView, path: str):
 
         dir_path = path_obj.parent
 
-        images = _scan_images(str(dir_path))
+        images = _scan_images_for_user(str(dir_path))
 
         if not images:
             return
-
-        # 套用使用者的排序設定
-        sort_by = user_setting_dict.get("sort_by", "name")
-        sort_asc = user_setting_dict.get("sort_ascending", True)
-        if sort_by != "name" or not sort_asc:
-            from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
-            key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
-            images.sort(key=key_fn, reverse=not sort_asc)
 
         main_gui._unfiltered_images = list(images)
         main_gui.model.set_images(images)

@@ -507,6 +507,34 @@ class TestIsFrozen:
         with patch.object(sys, "frozen", True, create=True):
             assert _is_frozen() is True
 
+    def test_frozen_nuitka_compiled(self):
+        """Nuitka injects __compiled__ into every compiled module's globals.
+
+        Simulate that by poking the attribute onto app_paths' module dict
+        and asserting ``is_frozen()`` reports True — otherwise the frozen
+        ``lib/site-packages`` path never gets added to ``sys.path`` under
+        Nuitka builds and plugin pip-installs silently fail.
+        """
+        from Imervue.system import app_paths
+        sentinel = object()
+        had_attr = "__compiled__" in app_paths.__dict__
+        original = app_paths.__dict__.get("__compiled__")
+        app_paths.__dict__["__compiled__"] = sentinel
+        try:
+            assert app_paths.is_frozen() is True
+        finally:
+            if had_attr:
+                app_paths.__dict__["__compiled__"] = original
+            else:
+                app_paths.__dict__.pop("__compiled__", None)
+
+    def test_ensure_frozen_site_packages_noop_when_not_frozen(self, tmp_path):
+        """In dev mode the helper must be a no-op — must not mess with sys.path."""
+        from Imervue.system.app_paths import ensure_frozen_site_packages_on_path
+        before = list(sys.path)
+        ensure_frozen_site_packages_on_path()
+        assert sys.path == before
+
 
 # ===========================
 # pip_installer: _subprocess_kwargs
@@ -770,3 +798,61 @@ class TestMultiplePluginDirs:
 
         names = {p.plugin_name for p in pm.plugins}
         assert names == {"Plugin1", "Plugin2"}
+
+
+# ===========================
+# Real shipped plugins (smoke test)
+# ===========================
+
+class TestShippedPlugins:
+    """Smoke tests that verify the actual plugins in <repo>/plugins/ discover
+    and load via PluginManager.
+
+    These guard against regressions in the plugin system itself — e.g. an
+    `is_frozen()` signature change or an `app_paths` helper rename that would
+    silently break plugin imports without any fake-plugin test catching it.
+    """
+
+    def _real_plugins_dir(self) -> Path:
+        # tests/test_plugin.py → repo root → plugins/
+        return Path(__file__).resolve().parent.parent / "plugins"
+
+    def test_shipped_plugin_dir_exists(self):
+        d = self._real_plugins_dir()
+        assert d.is_dir(), f"plugins dir missing at {d}"
+
+    def test_shipped_plugins_load(self):
+        plugins_dir = self._real_plugins_dir()
+        if not plugins_dir.is_dir():
+            pytest.skip("no plugins dir")
+
+        from Imervue.plugin.plugin_manager import PluginManager
+
+        mw = _make_mock_main_window()
+        pm = PluginManager(mw)
+        pm.discover_and_load([plugins_dir])
+
+        # Every sub-directory with __init__.py should have produced a plugin.
+        expected_plugin_dirs = {
+            p.name for p in plugins_dir.iterdir()
+            if p.is_dir() and (p / "__init__.py").exists()
+        }
+        assert len(pm.plugins) == len(expected_plugin_dirs), (
+            f"expected {len(expected_plugin_dirs)} plugins "
+            f"({expected_plugin_dirs}), got {len(pm.plugins)} "
+            f"({[p.plugin_name for p in pm.plugins]})"
+        )
+
+        # Each loaded plugin must satisfy the ImervuePlugin contract.
+        from Imervue.plugin.plugin_base import ImervuePlugin
+        for plugin in pm.plugins:
+            assert isinstance(plugin, ImervuePlugin)
+            assert plugin.plugin_name and plugin.plugin_name != "Unnamed Plugin"
+            assert plugin.plugin_version
+            # Each shipped plugin should also return a dict from get_translations
+            # (even if empty) — a TypeError here means the plugin broke the API.
+            tr = plugin.get_translations()
+            assert isinstance(tr, dict)
+
+        pm.unload_all()
+        assert pm.plugins == []

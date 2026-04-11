@@ -31,7 +31,12 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.app_paths import is_frozen as _is_frozen, app_dir as _app_dir, embedded_python_dir as _embedded_python_dir_path
+from Imervue.system.app_paths import (
+    is_frozen as _is_frozen,
+    app_dir as _app_dir,
+    embedded_python_dir as _embedded_python_dir_path,
+    ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
+)
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -64,12 +69,11 @@ def _subprocess_kwargs() -> dict:
 # 環境偵測
 # ===========================
 
-# 啟動時：若為凍結環境，將 lib/site-packages 加入 sys.path
-# 這樣上次安裝的套件在下次啟動時就能被 import
-if _is_frozen():
-    _frozen_lib = str(_app_dir() / "lib" / "site-packages")
-    if Path(_frozen_lib).is_dir() and _frozen_lib not in sys.path:
-        sys.path.insert(0, _frozen_lib)
+# 啟動時：若為凍結環境，確保 lib/site-packages 在 sys.path 上。
+# 這個函式已在 app_paths 模組被載入時就跑過一次，這裡再呼叫只是保險 —
+# 若使用者透過其他路徑（例如先於 app_paths 被載入的自訂 entry point）進來，
+# 仍然能保證安裝過的套件可以被 import。
+_ensure_frozen_site_packages_on_path()
 
 
 # ===========================
@@ -356,8 +360,8 @@ def _check_missing_frozen(
     packages: list[tuple[str, str]],
 ) -> list[tuple[str, str]]:
     """凍結環境：透過檔案系統檢查套件是否存在（不 import，避免 DLL 崩潰）。"""
-    from pathlib import Path as _Path
-    target_dir = _Path(str(_app_dir() / "lib" / "site-packages"))
+    from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
+    target_dir = _frozen_site_packages()
     logger.info("_check_missing_frozen: checking in %s (exists=%s)", target_dir, target_dir.is_dir())
 
     missing = []
@@ -430,7 +434,8 @@ class _InstallWorker(QThread):
     def run(self):
         extra_args: list[str] = []
         if _is_frozen():
-            target_dir = str(_app_dir() / "lib" / "site-packages")
+            from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
+            target_dir = str(_frozen_site_packages())
             extra_args = ["--target", target_dir]
             self.log.emit(f"Frozen mode: installing to {target_dir}")
             Path(target_dir).mkdir(parents=True, exist_ok=True)

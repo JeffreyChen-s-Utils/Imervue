@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton, QFileDialog, QLineEdit,
@@ -32,6 +32,29 @@ FORMAT_EXTENSIONS: dict[str, str] = {
 QUALITY_FORMATS: set[str] = {"JPEG", "WebP"}
 
 
+class _SizeEstimateWorker(QThread):
+    """Compute the in-memory output size for the chosen format off the UI thread."""
+    result_ready = Signal(int, str)  # (size_bytes, error_message)
+
+    def __init__(self, source_path: str, fmt: str, save_kwargs: dict):
+        super().__init__()
+        self._source_path = source_path
+        self._fmt = fmt
+        self._save_kwargs = save_kwargs
+
+    def run(self):
+        try:
+            import io
+            img = _open_image_for_export(self._source_path)
+            buf = io.BytesIO()
+            if self._fmt == "JPEG" and img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            img.save(buf, format=self._fmt, **self._save_kwargs)
+            self.result_ready.emit(buf.tell(), "")
+        except Exception as exc:
+            self.result_ready.emit(0, str(exc))
+
+
 class ExportDialog(QDialog):
     """Dialog for exporting/converting images to different formats."""
 
@@ -39,6 +62,7 @@ class ExportDialog(QDialog):
         super().__init__(parent)
         self.source_path = source_path
         self._lang = language_wrapper.language_word_dict
+        self._size_worker: _SizeEstimateWorker | None = None
 
         self.setWindowTitle(self._lang.get("export_title", "Export Image"))
         self.setMinimumWidth(420)
@@ -48,6 +72,11 @@ class ExportDialog(QDialog):
         self._update_quality_visibility()
         self._update_default_output_path()
         self._update_size_estimate()
+
+    def closeEvent(self, event):
+        if self._size_worker and self._size_worker.isRunning():
+            self._size_worker.wait(5000)
+        super().closeEvent(event)
 
     # ------------------------------------------------------------------ UI
     def _build_ui(self) -> None:
@@ -127,27 +156,35 @@ class ExportDialog(QDialog):
         self.path_edit.setText(str(default_path))
 
     def _update_size_estimate(self) -> None:
-        """Show a rough file-size estimate by doing an in-memory save."""
-        try:
-            import io
-            img = _open_image_for_export(self.source_path)
-            buf = io.BytesIO()
-            fmt = self._selected_format()
-            save_kwargs = self._build_save_kwargs(fmt)
-            # Convert mode if needed for formats that don't support alpha
-            if fmt == "JPEG" and img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            img.save(buf, format=fmt, **save_kwargs)
-            size_bytes = buf.tell()
-            if size_bytes < 1024:
-                size_str = f"{size_bytes} B"
-            elif size_bytes < 1024 * 1024:
-                size_str = f"{size_bytes / 1024:.1f} KB"
-            else:
-                size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
-            self.size_label.setText(f"~{size_str}")
-        except Exception:
+        """Kick off an async in-memory save to estimate output file size."""
+        # Discard any in-flight worker — its result is now stale.
+        if self._size_worker and self._size_worker.isRunning():
+            try:
+                self._size_worker.result_ready.disconnect(self._on_size_ready)
+            except (TypeError, RuntimeError):
+                pass
+
+        self.size_label.setText(self._lang.get("export_size_calculating", "Calculating..."))
+
+        fmt = self._selected_format()
+        save_kwargs = self._build_save_kwargs(fmt)
+        worker = _SizeEstimateWorker(self.source_path, fmt, save_kwargs)
+        worker.result_ready.connect(self._on_size_ready)
+        worker.finished.connect(lambda w=worker: w.deleteLater())
+        self._size_worker = worker
+        worker.start()
+
+    def _on_size_ready(self, size_bytes: int, error: str) -> None:
+        if error:
             self.size_label.setText("")
+            return
+        if size_bytes < 1024:
+            size_str = f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            size_str = f"{size_bytes / 1024:.1f} KB"
+        else:
+            size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
+        self.size_label.setText(f"~{size_str}")
 
     def _build_save_kwargs(self, fmt: str) -> dict:
         kwargs: dict = {}
