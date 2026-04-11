@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from PySide6.QtCore import QRunnable, Signal, QObject
@@ -7,6 +8,8 @@ import imageio
 from PIL import Image
 
 from Imervue.image.thumbnail_disk_cache import thumbnail_disk_cache
+
+logger = logging.getLogger("Imervue.thumbnail_worker")
 
 
 class WorkerSignals(QObject):
@@ -69,7 +72,7 @@ class LoadThumbnailWorker(QRunnable):
                 self.signals.finished.emit(img_data, self.path, self.generation)
 
         except Exception as e:
-            print(f"Thumbnail load failed: {self.path} - {e}")
+            logger.error(f"Thumbnail load failed: {self.path} - {e}")
 
     def _load_standard(self) -> np.ndarray:
         """載入一般圖片，使用 thumbnail() 減少記憶體峰值"""

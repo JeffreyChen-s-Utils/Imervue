@@ -24,7 +24,9 @@ from Imervue.menu.recent_menu import rebuild_recent_menu
 from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.user_settings.user_setting_dict import write_user_setting, read_user_setting, user_setting_dict
+from Imervue.user_settings.user_setting_dict import (
+    write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
+)
 
 
 class _FileTreeView(QTreeView):
@@ -447,6 +449,11 @@ class ImervueMainWindow(QMainWindow):
         logging.getLogger("Imervue").info("closeEvent triggered")
 
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
+        # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中與我們的 flush 競爭寫同一個檔案
+        try:
+            cancel_pending_save()
+        except Exception:
+            pass
         try:
             write_user_setting()
         except Exception:

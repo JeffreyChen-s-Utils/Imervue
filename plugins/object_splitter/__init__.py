@@ -1,0 +1,3 @@
+from object_splitter.object_splitter import ObjectSplitterPlugin
+
+plugin_class = ObjectSplitterPlugin

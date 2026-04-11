@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image, ImageEnhance
-from PySide6.QtCore import Qt, QRect
+from PySide6.QtCore import Qt, QRect, QThread, Signal
 from PySide6.QtGui import QPixmap, QImage, QPainter, QPen
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider,
     QPushButton, QFileDialog, QWidget, QSizePolicy, QGroupBox,
+    QProgressBar,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -100,18 +101,35 @@ class _CropLabel(QLabel):
         self._update_display()
 
 
+class _ImageLoadWorker(QThread):
+    """Load a PIL Image off the UI thread."""
+    result_ready = Signal(object, str)  # (PIL.Image | None, error_message)
+
+    def __init__(self, path: str):
+        super().__init__()
+        self._path = path
+
+    def run(self):
+        try:
+            if Path(self._path).suffix.lower() == ".svg":
+                from Imervue.gpu_image_view.images.image_loader import _load_svg
+                img = Image.fromarray(_load_svg(self._path, thumbnail=False))
+            else:
+                img = Image.open(self._path).convert("RGBA")
+            self.result_ready.emit(img, "")
+        except Exception as exc:
+            self.result_ready.emit(None, str(exc))
+
+
 class ImageEditorDialog(QDialog):
 
     def __init__(self, main_gui: GPUImageView, path: str):
         super().__init__(main_gui.main_window)
         self._main_gui = main_gui
         self._path = path
-        if Path(path).suffix.lower() == ".svg":
-            from Imervue.gpu_image_view.images.image_loader import _load_svg
-            self._original_img = Image.fromarray(_load_svg(path, thumbnail=False))
-        else:
-            self._original_img = Image.open(path).convert("RGBA")
-        self._edited_img = self._original_img.copy()
+        self._original_img: Image.Image | None = None
+        self._edited_img: Image.Image | None = None
+        self._loader: _ImageLoadWorker | None = None
 
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("editor_title", "Image Editor"))
@@ -119,13 +137,23 @@ class ImageEditorDialog(QDialog):
 
         main_layout = QHBoxLayout(self)
 
-        # ===== 左側預覽 =====
+        # ===== 左側預覽 + 載入指示 =====
+        left_col = QVBoxLayout()
         self._preview = _CropLabel()
-        self._update_preview()
-        main_layout.addWidget(self._preview, stretch=3)
+        left_col.addWidget(self._preview, stretch=1)
+
+        self._loading_label = QLabel(lang.get("editor_loading", "Loading image..."))
+        self._loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._loading_bar = QProgressBar()
+        self._loading_bar.setRange(0, 0)  # indeterminate
+        left_col.addWidget(self._loading_label)
+        left_col.addWidget(self._loading_bar)
+        main_layout.addLayout(left_col, stretch=3)
 
         # ===== 右側控制面板 =====
-        ctrl = QVBoxLayout()
+        self._ctrl_container = QWidget()
+        ctrl = QVBoxLayout(self._ctrl_container)
+        self._ctrl_container.setEnabled(False)
 
         # 亮度
         bright_grp = QGroupBox(lang.get("editor_brightness", "Brightness"))
@@ -189,9 +217,42 @@ class ImageEditorDialog(QDialog):
         save_btn.clicked.connect(self._save)
         ctrl.addWidget(save_btn)
 
-        main_layout.addLayout(ctrl, stretch=1)
+        main_layout.addWidget(self._ctrl_container, stretch=1)
+
+        # ===== 啟動背景載入 =====
+        self._loader = _ImageLoadWorker(path)
+        self._loader.result_ready.connect(self._on_image_loaded)
+        self._loader.finished.connect(self._on_loader_finished)
+        self._loader.start()
+
+    def _on_image_loaded(self, img, error: str):
+        lang = language_wrapper.language_word_dict
+        if img is None:
+            self._loading_label.setText(
+                lang.get("editor_load_failed", "Failed to load image: {error}").format(error=error)
+            )
+            self._loading_bar.setRange(0, 1)
+            self._loading_bar.setValue(0)
+            return
+
+        self._original_img = img
+        self._edited_img = img.copy()
+        self._loading_label.hide()
+        self._loading_bar.hide()
+        self._ctrl_container.setEnabled(True)
+        self._update_preview()
+
+    def _on_loader_finished(self):
+        self._loader = None
+
+    def closeEvent(self, event):
+        if self._loader and self._loader.isRunning():
+            self._loader.wait(5000)
+        super().closeEvent(event)
 
     def _on_adjust(self):
+        if self._edited_img is None:
+            return
         img = self._edited_img.copy()
 
         b_val = self._brightness.value()
@@ -215,6 +276,8 @@ class ImageEditorDialog(QDialog):
     def _update_preview(self, img=None):
         if img is None:
             img = self._edited_img
+        if img is None:
+            return
         data = np.array(img)
         h, w = data.shape[:2]
         qimg = QImage(data.data, w, h, w * 4, QImage.Format.Format_RGBA8888)

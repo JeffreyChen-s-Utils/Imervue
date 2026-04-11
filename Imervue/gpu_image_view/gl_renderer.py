@@ -6,9 +6,12 @@ Falls back to immediate mode if shader compilation fails.
 from __future__ import annotations
 
 import ctypes
+import logging
 import numpy as np
 from OpenGL.GL import *
 from OpenGL.GL import shaders as gl_shaders
+
+logger = logging.getLogger("Imervue.gl_renderer")
 
 # ===========================
 # Shader 源碼
@@ -112,7 +115,7 @@ class GLRenderer:
                 self._max_anisotropy = 0
 
         except Exception as e:
-            print(f"[GLRenderer] Shader init failed, using immediate mode: {e}")
+            logger.warning(f"Shader init failed, using immediate mode: {e}")
             self.use_shaders = False
 
     def set_ortho(self, w: float, h: float):

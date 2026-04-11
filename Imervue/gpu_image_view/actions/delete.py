@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,8 @@ from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWor
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.delete")
 
 
 def delete_current_image(main_gui: GPUImageView):
@@ -145,9 +148,9 @@ def commit_pending_deletions(main_gui: GPUImageView):
             try:
                 if Path(path).exists():
                     Path(path).unlink()
-                    print(f"Permanent delete: {path}")
+                    logger.info(f"Permanent delete: {path}")
             except Exception as e:
-                print(f"Failed to permanently delete {path}: {e}")
+                logger.error(f"Failed to permanently delete {path}: {e}")
 
     # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()
