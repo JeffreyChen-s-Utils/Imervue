@@ -9,6 +9,11 @@ from Imervue.user_settings.bookmark import (
 class TestBookmark:
     def setup_method(self):
         user_setting_dict["bookmarks"] = []
+        # Reset module-level cache so stale set data from prior tests
+        # (or id() collisions on the new list) don't cause false lookups.
+        import Imervue.user_settings.bookmark as _bm
+        _bm._bookmark_set = set()
+        _bm._cached_list_id = 0
 
     def test_add_bookmark(self):
         assert add_bookmark("/img/a.png")

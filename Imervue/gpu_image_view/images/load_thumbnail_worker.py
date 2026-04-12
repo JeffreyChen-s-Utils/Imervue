@@ -7,6 +7,7 @@ import rawpy
 import imageio
 from PIL import Image
 
+from Imervue.image.recipe_store import recipe_store
 from Imervue.image.thumbnail_disk_cache import thumbnail_disk_cache
 
 logger = logging.getLogger("Imervue.thumbnail_worker")
@@ -36,9 +37,15 @@ class LoadThumbnailWorker(QRunnable):
         try:
             img_data = None
 
+            # ===== Recipe（非破壞性編輯）=====
+            # 先查一次 store，取 hash 作為快取 key 的一部分，這樣 develop panel
+            # 一改 recipe 相同路徑的縮圖就會自動 miss 並重新 bake。
+            recipe = recipe_store.get_for_path(self.path)
+            r_hash = recipe.recipe_hash() if recipe is not None else ""
+
             # ===== 嘗試磁碟快取 =====
             if self.size is not None:
-                img_data = thumbnail_disk_cache.get(self.path, self.size)
+                img_data = thumbnail_disk_cache.get(self.path, self.size, r_hash)
 
             # ===== 快取未命中，從原始檔案載入 =====
             if img_data is None:
@@ -64,9 +71,17 @@ class LoadThumbnailWorker(QRunnable):
                     alpha = np.full((*img_data.shape[:2], 1), 255, dtype=np.uint8)
                     img_data = np.concatenate([img_data, alpha], axis=2)
 
+                # 套用 recipe（非破壞性）後再進快取 — 這樣 develop panel
+                # 預覽能立刻反映在 tile grid 裡
+                if recipe is not None and not recipe.is_identity():
+                    try:
+                        img_data = recipe.apply(img_data)
+                    except Exception as e:
+                        logger.warning(f"Recipe apply failed for thumbnail {self.path}: {e}")
+
                 # 寫入磁碟快取
                 if self.size is not None:
-                    thumbnail_disk_cache.put(self.path, self.size, img_data)
+                    thumbnail_disk_cache.put(self.path, self.size, img_data, r_hash)
 
             if not self._abort:
                 self.signals.finished.emit(img_data, self.path, self.generation)

@@ -8,7 +8,11 @@ ballooned past 10 GB. PNG with compress_level=1 typically gets 3–5× smaller
 with negligible decode overhead (PIL's PNG fast path), and is a standard
 format anyone can inspect if they peek into the cache folder.
 
-Cache key = md5(absolute_path | mtime_ns | file_size | thumbnail_size).
+Cache key = md5(absolute_path | mtime_ns | file_size | thumbnail_size | recipe_hash).
+
+``recipe_hash`` is the Develop panel's non-destructive edit fingerprint
+(empty string for untouched images). When it changes, the thumbnail
+automatically falls out of cache and gets rebaked with the new recipe.
 
 Legacy ``.npy`` files left over from older Imervue builds are deleted on
 startup during ``_scan_existing()`` so they don't count against the quota.
@@ -122,10 +126,10 @@ class ThumbnailDiskCache:
             self._files.pop(name, None)
 
     @staticmethod
-    def _key(path: str, size: int) -> str:
+    def _key(path: str, size: int, recipe_hash: str = "") -> str:
         try:
             st = Path(path).stat()
-            raw = f"{path}|{st.st_mtime_ns}|{st.st_size}|{size}"
+            raw = f"{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
         except OSError:
             return ""
         return hashlib.md5(raw.encode()).hexdigest()
@@ -134,9 +138,9 @@ class ThumbnailDiskCache:
     # Public API
     # --------------------------------------------------
 
-    def get(self, path: str, size: int) -> np.ndarray | None:
+    def get(self, path: str, size: int, recipe_hash: str = "") -> np.ndarray | None:
         """嘗試從磁碟讀取快取的縮圖，失效或不存在時回傳 None"""
-        key = self._key(path, size)
+        key = self._key(path, size, recipe_hash)
         if not key:
             return None
         name = f"{key}{_CACHE_EXT}"
@@ -170,9 +174,9 @@ class ThumbnailDiskCache:
                 self._files[name] = (entry[0], time.time())
         return arr
 
-    def put(self, path: str, size: int, img_data: np.ndarray) -> None:
+    def put(self, path: str, size: int, img_data: np.ndarray, recipe_hash: str = "") -> None:
         """將縮圖寫入磁碟快取，必要時 evict 舊項目"""
-        key = self._key(path, size)
+        key = self._key(path, size, recipe_hash)
         if not key:
             return
         # Normalise to RGBA uint8 so PIL can always save as PNG without guessing.

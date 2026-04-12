@@ -2,6 +2,17 @@ import argparse
 import os
 import sys
 
+# Nuitka 打包後 OpenGL_accelerate 的 Cython 擴展無法正常運作，
+# 需在 import OpenGL 之前禁用 accelerate
+if "__compiled__" in dir() or getattr(sys, "frozen", False):
+    os.environ["PYOPENGL_ERROR_ON_COPY"] = "0"
+    os.environ.setdefault("PYOPENGL_PLATFORM", "nt")
+    try:
+        import OpenGL
+        OpenGL.USE_ACCELERATE = False
+    except ImportError:
+        pass
+
 # 確保 Windows 上所有 I/O 使用 UTF-8，避免 CJK 文字顯示為 ?
 if sys.platform == "win32":
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
@@ -51,7 +62,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     window = ImervueMainWindow(debug=args.debug)
-    window.showMaximized()
+    # 視窗位置由 _restore_window_geometry() 在 __init__ 中自動還原
+    # 首次啟動時會 showMaximized()，之後記住上次的位置/大小/螢幕
 
     # 從命令列開啟指定檔案/資料夾
     if args.file and os.path.exists(args.file):

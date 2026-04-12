@@ -206,25 +206,31 @@ def _send_to_trash(path: str) -> bool:
 # ===========================
 
 def rotate_current_image(main_gui: GPUImageView, clockwise: bool = True):
-    """旋轉目前 DeepZoom 金字塔（記憶體內旋轉，不修改原始檔案）"""
-    import numpy as np
-    dz = main_gui.deep_zoom
-    if dz is None:
+    """Rotate the current image via the non-destructive recipe system.
+
+    Previously this walked the DeepZoom pyramid and rotated every level in
+    place — fast, but lost the rotation as soon as the user navigated away.
+    Now it pushes a rotate onto the image's Recipe so the rotation persists
+    across sessions, and reloads the image so the new pixels show up.
+    Use the "Lossless Rotate" submenu if you want to actually modify the
+    file on disk (truly lossless EXIF rotation for JPEGs).
+    """
+    images = main_gui.model.images
+    if not images or main_gui.current_index >= len(images):
         return
+    path = images[main_gui.current_index]
 
-    k = 3 if clockwise else 1  # np.rot90 逆時針，k=3 = 順時針 90°
-    for i in range(len(dz.levels)):
-        dz.levels[i] = np.rot90(dz.levels[i], k=k)
+    from Imervue.image.recipe import Recipe
+    from Imervue.image.recipe_store import recipe_store
+    from Imervue.gpu_image_view.actions.recipe_commands import EditRecipeCommand
 
-    # 重建 TileManager（清除舊的 GPU tile cache）
-    from Imervue.image.tile_manager import TileManager
-    if main_gui.tile_manager is not None:
-        main_gui.tile_manager.clear()
-    main_gui.tile_manager = TileManager(dz)
+    old = recipe_store.get_for_path(path) or Recipe()
+    new = Recipe.from_dict(old.to_dict())
+    delta = 1 if clockwise else -1
+    new.rotate_steps = (new.rotate_steps + delta) % 4
 
-    # 重新 fit-to-window（旋轉後尺寸可能改變）
-    main_gui._fit_to_window()
-    main_gui.update()
+    cmd = EditRecipeCommand(main_gui, path, old, new, text="Rotate")
+    main_gui.undo_manager.push(cmd)
 
 
 # ===========================

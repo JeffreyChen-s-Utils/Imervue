@@ -12,7 +12,7 @@ from Imervue.gpu_image_view.actions.keyboard_actions import (
 )
 from Imervue.gpu_image_view.actions.search_dialog import open_search_dialog
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog, stop_slideshow
-from Imervue.gui.image_editor import open_image_editor
+from Imervue.gui.annotation_dialog import open_annotation_for_path
 from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image, select_tiles_in_rect
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
 from Imervue.gpu_image_view.images.image_model import ImageModel
@@ -132,12 +132,9 @@ class GPUImageView(QOpenGLWidget):
         self._minimap_tex = None  # GL texture id
         self._minimap_dzi = None  # 對應的 DeepZoomImage，用來偵測是否需要重建
 
-        # ===== Auto-hide UI =====
-        self._ui_hidden = False
-        self._idle_timer = QTimer(self)
-        self._idle_timer.setSingleShot(True)
-        self._idle_timer.setInterval(5000)  # 5 秒不動就隱藏
-        self._idle_timer.timeout.connect(self._on_idle_timeout)
+        # 原本 deep zoom 模式下 5 秒不動就會自動藏起 menu/status/tree/exif — 使用者
+        # 反映會擋到檢視流程，移除此行為。保留 mouseTracking 讓 cursor 位置更新
+        # 等其他仰賴 mouse move 事件的功能繼續運作。
         self.setMouseTracking(True)
 
         # ===== Focus ======
@@ -148,39 +145,61 @@ class GPUImageView(QOpenGLWidget):
         self.setAcceptDrops(True)
 
     # ===========================
-    # Auto-hide UI
+    # Modify panel (non-destructive editing)
     # ===========================
-    def _on_idle_timeout(self):
-        """滑鼠閒置超時 → 隱藏所有 UI，只留圖片"""
-        if not self.deep_zoom:
-            return
-        self._ui_hidden = True
-        self.setCursor(Qt.CursorShape.BlankCursor)
-        mw = self.main_window
-        mw.menuBar().hide()
-        mw._status_bar.hide()
-        mw.filename_label.hide()
-        mw.tree.hide()
-        mw.exif_sidebar.hide()
 
-    def _show_ui(self, restart_timer: bool = True):
-        """顯示所有 UI 並可選擇性重置隱藏倒數"""
-        if self._ui_hidden:
-            self._ui_hidden = False
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            mw = self.main_window
-            mw.menuBar().show()
-            mw._status_bar.show()
-            mw.filename_label.show()
-            mw.tree.show()
-            mw.exif_sidebar.show()
-        if not restart_timer:
+    @property
+    def _develop_panel(self):
+        """Access the modify panel from the main window (may be None in tests)."""
+        return getattr(self.main_window, "modify_panel", None)
+
+    def open_develop_panel(self):
+        """Switch to the Modify tab in the main QTabWidget and bind."""
+        panel = self._develop_panel
+        if panel is None:
             return
-        # 只在 deep zoom 模式下啟動 idle 計時
-        if self.deep_zoom:
-            self._idle_timer.start()
-        else:
-            self._idle_timer.stop()
+        images = self.model.images
+        path = None
+        if images and 0 <= self.current_index < len(images):
+            path = images[self.current_index]
+        panel.bind_to_path(path)
+        # Switch to the Modify tab (index 1) in the main QTabWidget.
+        main_tabs = getattr(self.main_window, "_main_tabs", None)
+        if main_tabs is not None and main_tabs.count() > 1:
+            main_tabs.setCurrentIndex(1)
+
+    def _on_recipe_committed(self, path, old_recipe, new_recipe):
+        """Panel committed a new recipe — push undo command + reload."""
+        from Imervue.gpu_image_view.actions.recipe_commands import EditRecipeCommand
+        cmd = EditRecipeCommand(self, path, old_recipe, new_recipe)
+        self.undo_manager.push(cmd)
+
+    def reload_current_image_with_recipe(self, path: str | None = None):
+        """Drop any cached baked pixels for ``path`` and reload it fresh.
+
+        Called by EditRecipeCommand after it updates the recipe in the
+        store. If ``path`` is None, reloads whatever's currently showing.
+        """
+        if path is None:
+            images = self.model.images
+            if not images or self.current_index >= len(images):
+                return
+            path = images[self.current_index]
+        # Any prefetched baked tiles for this path are stale — drop them.
+        try:
+            self._prefetch_cache.pop(path, None)
+        except Exception:
+            pass
+        # Force a fresh load — _clear_deep_zoom + load_deep_zoom_image will
+        # ask recipe_store for the new recipe and apply it.
+        if self.model.images and 0 <= self.current_index < len(self.model.images) \
+                and self.model.images[self.current_index] == path:
+            self._cancel_deep_zoom_worker()
+            self._clear_deep_zoom()
+            self.load_deep_zoom_image(path)
+            # Re-bind the develop panel so slider labels reflect the new recipe.
+            if self._develop_panel is not None and self._develop_panel.isVisible():
+                self._develop_panel.bind_to_path(path)
 
     # ===========================
     # OpenGL 初始化
@@ -913,9 +932,22 @@ class GPUImageView(QOpenGLWidget):
             glDeleteTextures([self._minimap_tex])
             self._minimap_tex = None
             self._minimap_dzi = None
-        # 確保退出 deep zoom 時還原 UI
-        self._show_ui()
-        self._idle_timer.stop()
+        # 離開 deep zoom → 收起「修改」選單（若主視窗還在）。
+        self._set_modify_menu_visible(False)
+
+    def _set_modify_menu_visible(self, visible: bool) -> None:
+        """Toggle the Deep-Zoom-only Modify menu on the main window's menubar.
+
+        Guarded against stub main windows used in tests and against the case
+        where menu construction has not completed yet.
+        """
+        action = getattr(self.main_window, "_modify_menu_action", None)
+        if action is None:
+            return
+        try:
+            action.setVisible(bool(visible))
+        except Exception:
+            pass
 
     # ---------------------------
     # Worker 取消
@@ -1027,6 +1059,9 @@ class GPUImageView(QOpenGLWidget):
 
         self._restore_view_state(path)
 
+        # 進入 deep zoom 模式 → 顯示「修改」選單。
+        self._set_modify_menu_visible(True)
+
         if self.on_filename_changed:
             self.on_filename_changed(Path(path).name)
 
@@ -1039,8 +1074,6 @@ class GPUImageView(QOpenGLWidget):
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
-            if not self._idle_timer.isActive():
-                self._idle_timer.start()
             self.update()
             return
 
@@ -1049,7 +1082,9 @@ class GPUImageView(QOpenGLWidget):
             self.update()
             return
 
-        worker = LoadDeepZoomWorker(path)
+        from Imervue.image.recipe_store import recipe_store
+        recipe = recipe_store.get_for_path(path)
+        worker = LoadDeepZoomWorker(path, recipe=recipe)
         worker.signals.finished.connect(self._on_deep_zoom_loaded)
         self.active_deep_zoom_worker = worker
         self.thread_pool.start(worker)
@@ -1082,10 +1117,6 @@ class GPUImageView(QOpenGLWidget):
         self._init_animation(path)
 
         self._prefetch_neighbors()
-
-        # 進入 deep zoom 後啟動 UI 隱藏倒數
-        if not self._idle_timer.isActive():
-            self._idle_timer.start()
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -1140,10 +1171,11 @@ class GPUImageView(QOpenGLWidget):
                 del self._prefetch_cache[path]
 
         # 對需要且尚未載入/正在載入的路徑啟動 worker
+        from Imervue.image.recipe_store import recipe_store
         for path in needed:
             if path in self._prefetch_cache or path in self._prefetch_workers:
                 continue
-            worker = LoadDeepZoomWorker(path)
+            worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
             worker.signals.finished.connect(self._on_prefetch_loaded)
             self._prefetch_workers[path] = worker
             self.thread_pool.start(worker)
@@ -1252,10 +1284,6 @@ class GPUImageView(QOpenGLWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # 滑鼠移動只恢復 UI，不重置隱藏倒數
-        if self._ui_hidden:
-            self._show_ui(restart_timer=False)
-
         if self.last_pos is None:
             self.last_pos = event.position()
             return
@@ -1386,10 +1414,12 @@ class GPUImageView(QOpenGLWidget):
             toggle_fullscreen(self)
             return
 
-        # ===== E — 編輯 =====
+        # ===== E — 編輯 / 註解 =====
         if key == Qt.Key.Key_E:
             if self.deep_zoom:
-                open_image_editor(self)
+                images = self.model.images
+                if images and 0 <= self.current_index < len(images):
+                    open_annotation_for_path(self, images[self.current_index])
             return
 
         # ===== S — 幻燈片 =====

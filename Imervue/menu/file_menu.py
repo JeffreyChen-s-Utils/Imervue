@@ -55,6 +55,25 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
 
     file_menu.addSeparator()
 
+    # 剪貼簿 → 註解
+    paste_action = file_menu.addAction(
+        lang.get("file_menu_paste_clipboard", "Paste from Clipboard")
+    )
+    paste_action.triggered.connect(lambda: _paste_from_clipboard(ui_we_want_to_set))
+
+    monitor_action = file_menu.addAction(
+        lang.get("file_menu_clipboard_monitor", "Auto-annotate Clipboard Images")
+    )
+    monitor_action.setCheckable(True)
+    if hasattr(ui_we_want_to_set, "clipboard_monitor") \
+            and ui_we_want_to_set.clipboard_monitor is not None:
+        monitor_action.setChecked(ui_we_want_to_set.clipboard_monitor.is_enabled())
+    monitor_action.toggled.connect(
+        lambda checked: _toggle_clipboard_monitor(ui_we_want_to_set, checked)
+    )
+
+    file_menu.addSeparator()
+
     # 檔案關聯（僅 Windows）
     import sys
     if sys.platform == "win32":
@@ -151,7 +170,16 @@ _extra_windows: list = []
 def _open_new_window(parent: ImervueMainWindow):
     from Imervue.Imervue_main_window import ImervueMainWindow as MW
     win = MW()
-    win.showMaximized()
+    # 新視窗在跟 parent 同一個螢幕上開啟，稍微偏移避免完全重疊
+    screen = parent.screen()
+    if screen is not None:
+        avail = screen.availableGeometry()
+        w = int(avail.width() * 0.85)
+        h = int(avail.height() * 0.85)
+        x = avail.x() + (avail.width() - w) // 2 + 30
+        y = avail.y() + (avail.height() - h) // 2 + 30
+        win.setGeometry(x, y, w, h)
+    win.show()
     _extra_windows.append(win)
     # 視窗關閉時從列表移除
     win.destroyed.connect(lambda: _extra_windows.remove(win) if win in _extra_windows else None)
@@ -174,6 +202,39 @@ def _register_assoc(ui: ImervueMainWindow):
         else:
             if hasattr(ui, "toast"):
                 ui.toast.info(f"Error: {msg}")
+
+
+def _paste_from_clipboard(ui: ImervueMainWindow) -> None:
+    """Open the annotation dialog on the current clipboard image, if any."""
+    from Imervue.gui.annotation_dialog import open_annotation_for_clipboard_image
+    lang = language_wrapper.language_word_dict
+    monitor = getattr(ui, "clipboard_monitor", None)
+    img = monitor.grab_current_image() if monitor is not None else None
+    if img is None:
+        if hasattr(ui, "toast"):
+            ui.toast.info(
+                lang.get(
+                    "file_menu_paste_clipboard_empty",
+                    "Clipboard does not contain an image",
+                )
+            )
+        return
+    open_annotation_for_clipboard_image(ui, img)
+
+
+def _toggle_clipboard_monitor(ui: ImervueMainWindow, enabled: bool) -> None:
+    monitor = getattr(ui, "clipboard_monitor", None)
+    if monitor is None:
+        return
+    monitor.set_enabled(enabled)
+    lang = language_wrapper.language_word_dict
+    if hasattr(ui, "toast"):
+        msg_key = (
+            "file_menu_clipboard_monitor_on" if enabled
+            else "file_menu_clipboard_monitor_off"
+        )
+        default = "Clipboard auto-annotate ON" if enabled else "Clipboard auto-annotate OFF"
+        ui.toast.info(lang.get(msg_key, default))
 
 
 def _open_bookmarks(ui: ImervueMainWindow):

@@ -1,4 +1,10 @@
-"""Tests for user settings and recent images."""
+"""Tests for user settings and recent images.
+
+Isolation is handled by the ``_isolate_user_settings`` autouse fixture
+in ``conftest.py`` — it redirects the settings file to a per-test tmp
+path and cancels pending debounced saves on teardown so timers can't
+clobber the real file from a later test.
+"""
 import json
 from pathlib import Path
 
@@ -6,10 +12,8 @@ import pytest
 
 
 class TestUserSettingDict:
-    def test_write_and_read(self, tmp_path, monkeypatch):
+    def test_write_and_read(self):
         """Settings should round-trip through JSON."""
-        monkeypatch.chdir(tmp_path)
-
         from Imervue.user_settings.user_setting_dict import (
             user_setting_dict, write_user_setting, read_user_setting,
         )
@@ -34,13 +38,8 @@ class TestUserSettingDict:
         assert user_setting_dict["language"] == "Japanese"
         assert user_setting_dict["user_last_folder"] == "/test/folder"
 
-        # Cleanup: restore defaults
-        user_setting_dict["language"] = "English"
-        user_setting_dict["user_last_folder"] = ""
-
-    def test_read_missing_file(self, tmp_path, monkeypatch):
+    def test_read_missing_file(self):
         """Reading when no settings file exists should not crash."""
-        monkeypatch.chdir(tmp_path)
         from Imervue.user_settings.user_setting_dict import read_user_setting
         path = read_user_setting()
         # Should return path even if file doesn't exist
