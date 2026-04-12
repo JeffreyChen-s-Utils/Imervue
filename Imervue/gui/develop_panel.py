@@ -494,17 +494,9 @@ class DevelopPanel(QWidget):
         destruction.  This is the single place that tears down a canvas."""
         self._canvas_undo_stack.clear()
         if self._canvas is not None:
-            # Disconnect all signals to prevent callbacks during/after deletion
+            # Disconnect signals we connected to prevent callbacks during/after deletion
             try:
-                self._canvas.navigate_image.disconnect()
-            except (RuntimeError, TypeError):
-                pass
-            try:
-                self._canvas.annotation_changed.disconnect()
-            except (RuntimeError, TypeError):
-                pass
-            try:
-                self._canvas.tool_changed.disconnect()
+                self._canvas.navigate_image.disconnect(self._on_navigate_image)
             except (RuntimeError, TypeError):
                 pass
             self._canvas.hide()
