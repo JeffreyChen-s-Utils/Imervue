@@ -111,6 +111,9 @@ pyinstaller ^
   --collect-data qt_material ^
   --add-data "Imervue\multi_language;Imervue\multi_language" ^
   --add-data "plugins;plugins" ^
+  --add-data "exe;exe" ^
+  --add-data "THIRD_PARTY_LICENSES.md;." ^
+  --add-data "LICENSE;." ^
   Imervue\__main__.py
 ```
 
@@ -129,13 +132,16 @@ pyinstaller `
   --collect-data qt_material `
   --add-data "Imervue\multi_language;Imervue\multi_language" `
   --add-data "plugins;plugins" `
+  --add-data "exe;exe" `
+  --add-data "THIRD_PARTY_LICENSES.md;." `
+  --add-data "LICENSE;." `
   Imervue\__main__.py
 ```
 
 **一行版**（任何 shell 都能用）：
 
 ```
-pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" Imervue\__main__.py
+pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" --add-data "exe;exe" --add-data "THIRD_PARTY_LICENSES.md;." --add-data "LICENSE;." Imervue\__main__.py
 ```
 
 產物：`dist\Imervue\Imervue.exe`。
@@ -155,6 +161,9 @@ pyinstaller \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
+  --add-data "exe:exe" \
+  --add-data "THIRD_PARTY_LICENSES.md:." \
+  --add-data "LICENSE:." \
   Imervue/__main__.py
 ```
 
@@ -188,6 +197,9 @@ pyinstaller \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
+  --add-data "exe:exe" \
+  --add-data "THIRD_PARTY_LICENSES.md:." \
+  --add-data "LICENSE:." \
   Imervue/__main__.py
 ```
 
@@ -263,6 +275,7 @@ auto-py-to-exe 只支援 Windows；Linux / macOS 請直接用命令列或 `.spec
 | `.app` 按兩下沒反應 | macOS | 少了 `--windowed`；或者先用 `dist/Imervue.app/Contents/MacOS/Imervue` 從 terminal 跑看看錯誤 |
 | Gatekeeper 跳「無法驗證開發者」 | macOS | 需要 codesign + notarize（見 §2.3） |
 | `ModuleNotFoundError: onnxruntime` 啟動後執行 plugin 才噴 | 全平台 | plugin 的執行期 pip 安裝走 `<app_dir>/lib/site-packages`，PyInstaller 自動處理；若未處理先看 plugin 日誌 |
+| `KeyError: '__reduce_cython__'`（OpenGL_accelerate） | 全平台 | `PyOpenGL_accelerate` 的 Cython 擴展在打包後可能無法正常初始化。`__main__.py` 已在偵測到打包環境（`sys.frozen` / `__compiled__`）時自動設定 `OpenGL.USE_ACCELERATE = False`，改用純 Python 的 PyOpenGL。效能影響極小 |
 
 ## 5. 從 .spec 檔打包（進階）
 
@@ -280,6 +293,9 @@ datas = [
     (os.path.join('Imervue', 'multi_language'),
      os.path.join('Imervue', 'multi_language')),
     ('plugins', 'plugins'),
+    ('exe', 'exe'),
+    ('THIRD_PARTY_LICENSES.md', '.'),
+    ('LICENSE', '.'),
 ]
 ```
 

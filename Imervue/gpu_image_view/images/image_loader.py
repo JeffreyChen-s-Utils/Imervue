@@ -20,11 +20,15 @@ from PIL import Image
 logger = logging.getLogger("Imervue.image_loader")
 
 
-def load_image_file(path, thumbnail=False):
+def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
     thumbnail=True 時會優先使用 RAW embedded preview 或 half_size
     回傳 numpy RGBA
+
+    ``recipe`` 是可選的 :class:`Imervue.image.recipe.Recipe`：若提供，非 identity
+    的部分會在回傳前套到 RGBA 陣列上。呼叫端也可以先自行查 recipe_store 再決定
+    要不要傳進來，這個函式不強制依賴 store。
     """
     ext = Path(path).suffix.lower()
 
@@ -85,6 +89,15 @@ def load_image_file(path, thumbnail=False):
         alpha = np.ones((*img_data.shape[:2], 1), dtype=np.uint8) * 255
         img_data = np.concatenate([img_data, alpha], axis=2)
 
+    # ===== 套用 recipe（非破壞性編輯）=====
+    if recipe is not None and not recipe.is_identity():
+        try:
+            img_data = recipe.apply(img_data)
+        except Exception as exc:
+            # 一張圖片的 recipe 壞掉不應該害整個載入流程炸掉；log 一下繼續用
+            # 原始像素。使用者下一次打開 Develop panel 會看到 reset 過的值。
+            logger.warning(f"Recipe apply failed for {path}: {exc}")
+
     return img_data
 
 
@@ -99,9 +112,10 @@ class _DeepZoomWorkerSignals(QObject):
 class LoadDeepZoomWorker(QRunnable):
     """在背景執行緒載入全解析度圖片並建立金字塔，避免凍結 UI"""
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, recipe=None):
         super().__init__()
         self.path = path
+        self.recipe = recipe
         self.signals = _DeepZoomWorkerSignals()
         self._abort = False
 
@@ -112,7 +126,7 @@ class LoadDeepZoomWorker(QRunnable):
         if self._abort:
             return
         try:
-            img_data = load_image_file(self.path, thumbnail=False)
+            img_data = load_image_file(self.path, thumbnail=False, recipe=self.recipe)
             if self._abort:
                 return
             dzi = DeepZoomImage(img_data)

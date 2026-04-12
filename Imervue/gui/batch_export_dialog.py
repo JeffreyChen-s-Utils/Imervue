@@ -14,8 +14,10 @@ from PySide6.QtWidgets import (
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
     QCheckBox, QProgressBar, QGroupBox,
 )
+import numpy as np
 from PIL import Image
 
+from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -54,6 +56,14 @@ class _ExportWorker(QThread):
         for i, src in enumerate(self._paths):
             try:
                 img = _open_for_export(src)
+
+                # 套用非破壞性 recipe — batch export 會把 develop panel 的調整烘進去。
+                recipe = recipe_store.get_for_path(src)
+                if recipe is not None and not recipe.is_identity():
+                    if img.mode != "RGBA":
+                        img = img.convert("RGBA")
+                    arr = recipe.apply(np.array(img))
+                    img = Image.fromarray(arr)
 
                 # Resize
                 if self._resize and (self._max_w > 0 or self._max_h > 0):

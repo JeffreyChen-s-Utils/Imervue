@@ -192,3 +192,4 @@ plugins/ai_background_remover/models/u2net.onnx
 plugins/ai_background_remover/models/isnet-general-use.onnx
 plugins/object_splitter/models/isnet-anime.onnx
 plugins/ai_background_remover/models/u2net_human_seg.onnx
+/user_setting.json

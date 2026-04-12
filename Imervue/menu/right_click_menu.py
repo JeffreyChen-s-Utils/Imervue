@@ -7,13 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QClipboard
-from PySide6.QtWidgets import QMenu, QApplication
+from PySide6.QtWidgets import QMenu, QApplication, QWidgetAction
 
 from Imervue.gpu_image_view.actions.batch_ops import (
     open_batch_rename, open_batch_move, batch_rotate,
 )
 from Imervue.gpu_image_view.actions.compare_dialog import open_compare_dialog
-from Imervue.gui.image_editor import open_image_editor
+from Imervue.gui.modify_actions_widget import ModifyActionsWidget
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
 from Imervue.gui.export_dialog import open_export_dialog
@@ -24,7 +24,7 @@ from Imervue.gui.tag_album_dialog import (
 )
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     trash_current_image, trash_selected_tiles,
-    rotate_current_image, copy_image_to_clipboard,
+    copy_image_to_clipboard,
 )
 from Imervue.gpu_image_view.actions.select import switch_to_previous_image, switch_to_next_image
 from Imervue.image.info import get_image_info_at_pos, show_image_info_dialog
@@ -50,8 +50,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     build_right_click_menu.addSeparator()
 
-    _rotate_actions(main_gui, build_right_click_menu)
-    _edit_action(main_gui, build_right_click_menu)
+    _modify_submenu(main_gui, build_right_click_menu)
     _batch_actions(main_gui, build_right_click_menu)
     _delete_action(main_gui, build_right_click_menu)
     _set_wallpaper_action(main_gui, build_right_click_menu)
@@ -156,20 +155,27 @@ def _copy_image_action(main_gui: GPUImageView, menu: QMenu):
 
 
 # ===========================
-# 旋轉
+# 修改 — 與主選單 Modify 共用 ModifyActionsWidget
 # ===========================
 
-def _rotate_actions(main_gui: GPUImageView, menu: QMenu):
+def _modify_submenu(main_gui: GPUImageView, menu: QMenu):
+    """Add a "Modify" submenu whose single item is the shared
+    :class:`ModifyActionsWidget` — same buttons (Develop / Annotate /
+    Rotate CW/CCW / Flip H/V / Reset) as the menu-bar Modify menu.
+    """
     if not main_gui.deep_zoom:
         return
 
     lang = language_wrapper.language_word_dict
-
-    cw_action = menu.addAction(lang.get("right_click_rotate_cw", "Rotate Clockwise"))
-    cw_action.triggered.connect(lambda: rotate_current_image(main_gui, clockwise=True))
-
-    ccw_action = menu.addAction(lang.get("right_click_rotate_ccw", "Rotate Counter-clockwise"))
-    ccw_action.triggered.connect(lambda: rotate_current_image(main_gui, clockwise=False))
+    submenu = menu.addMenu(lang.get("modify_menu_title", "Modify"))
+    widget_action = QWidgetAction(submenu)
+    widget = ModifyActionsWidget(
+        main_gui=main_gui,
+        parent=submenu,
+        on_triggered=menu.close,
+    )
+    widget_action.setDefaultWidget(widget)
+    submenu.addAction(widget_action)
 
 
 # ===========================
@@ -203,15 +209,6 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
     gif_action.triggered.connect(lambda: open_gif_video_dialog(main_gui))
 
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
-
-
-def _edit_action(main_gui: GPUImageView, menu: QMenu):
-    path = _current_image_path(main_gui)
-    if not path:
-        return
-    lang = language_wrapper.language_word_dict
-    action = menu.addAction(lang.get("right_click_edit_image", "Edit Image"))
-    action.triggered.connect(lambda: open_image_editor(main_gui))
 
 
 def _delete_action(main_gui: GPUImageView, menu: QMenu):

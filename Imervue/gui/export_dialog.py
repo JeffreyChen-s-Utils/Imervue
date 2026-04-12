@@ -229,13 +229,29 @@ class ExportDialog(QDialog):
 
 
 def _open_image_for_export(path: str) -> Image.Image:
-    """Open an image file for export, handling SVG via QSvgRenderer."""
+    """Open an image file for export, handling SVG via QSvgRenderer.
+
+    Also applies the non-destructive Develop recipe (if any) so exports
+    include any adjustments the user has made — the whole point of a
+    recipe system is that the pixels follow the file regardless of which
+    code path is rendering them.
+    """
+    import numpy as np
+    from Imervue.image.recipe_store import recipe_store
+
     if Path(path).suffix.lower() == ".svg":
         from Imervue.gpu_image_view.images.image_loader import _load_svg
-        import numpy as np
         arr = _load_svg(path, thumbnail=False)
-        return Image.fromarray(arr)
-    return Image.open(path)
+        img = Image.fromarray(arr)
+    else:
+        img = Image.open(path)
+
+    recipe = recipe_store.get_for_path(path)
+    if recipe is not None and not recipe.is_identity():
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+        img = Image.fromarray(recipe.apply(np.array(img)))
+    return img
 
 
 def open_export_dialog(main_gui: GPUImageView) -> None:

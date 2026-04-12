@@ -93,6 +93,9 @@ python -m nuitka ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
   --include-data-dir=plugins=plugins ^
+  --include-data-dir=exe=exe ^
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
+  --include-data-files=LICENSE=LICENSE ^
   --windows-icon-from-ico=exe\Imervue.ico ^
   --output-filename=Imervue.exe ^
   --output-dir=build_nuitka ^
@@ -116,6 +119,9 @@ python -m nuitka `
   --include-package-data=imageio `
   --include-package-data=rawpy `
   --include-data-dir=plugins=plugins `
+  --include-data-dir=exe=exe `
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md `
+  --include-data-files=LICENSE=LICENSE `
   --windows-icon-from-ico=exe\Imervue.ico `
   --output-filename=Imervue.exe `
   --output-dir=build_nuitka `
@@ -127,7 +133,7 @@ python -m nuitka `
 **一行版（任何 shell 都能用，最保險）**：
 
 ```
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
 ```
 
 產物：`build_nuitka\Imervue.dist\Imervue.exe`（standalone）或 `build_nuitka\Imervue.exe`（onefile）。
@@ -161,6 +167,9 @@ python -m nuitka \
   --include-package-data=imageio \
   --include-package-data=rawpy \
   --include-data-dir=plugins=plugins \
+  --include-data-dir=exe=exe \
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
+  --include-data-files=LICENSE=LICENSE \
   --linux-icon=exe/Imervue.png \
   --output-filename=Imervue \
   --output-dir=build_nuitka \
@@ -192,6 +201,9 @@ python -m nuitka \
   --include-package-data=imageio \
   --include-package-data=rawpy \
   --include-data-dir=plugins=plugins \
+  --include-data-dir=exe=exe \
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
+  --include-data-files=LICENSE=LICENSE \
   --macos-app-icon=exe/Imervue.icns \
   --macos-app-name=Imervue \
   --macos-app-version=1.0.0 \
@@ -261,6 +273,9 @@ python -m nuitka ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
   --include-data-dir=plugins=plugins ^
+  --include-data-dir=exe=exe ^
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
+  --include-data-files=LICENSE=LICENSE ^
   --windows-icon-from-ico=exe\Imervue.ico ^
   --output-filename=Imervue.exe ^
   --output-dir=build_nuitka ^
@@ -288,6 +303,9 @@ COMMON_ARGS=(
   --include-package-data=imageio
   --include-package-data=rawpy
   --include-data-dir=plugins=plugins
+  --include-data-dir=exe=exe
+  --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md
+  --include-data-files=LICENSE=LICENSE
   --output-dir=build_nuitka
   --remove-output
   --assume-yes-for-downloads
@@ -330,6 +348,7 @@ esac
 | RAW 檔解碼失敗（rawpy） | 全平台 | Nuitka 預設不會帶 rawpy 的原生函式庫，必須 `--include-package-data=rawpy` |
 | GIF / WEBP 讀不到（imageio） | 全平台 | `--include-package=imageio` 加 `--include-package-data=imageio` |
 | OpenGL 初始化失敗 | 全平台 | 用軟體 OpenGL 測試：`Imervue --software_opengl`；檢查 `PyOpenGL` / `PyOpenGL_accelerate` 被 Nuitka 收集到；可加 `--include-package=OpenGL` |
+| `KeyError: '__reduce_cython__'`（OpenGL_accelerate） | 全平台 | `PyOpenGL_accelerate` 的 Cython 擴展（`.pyx`）在 Nuitka 打包後無法正常初始化。`__main__.py` 已在偵測到打包環境（`__compiled__` / `sys.frozen`）時自動設定 `OpenGL.USE_ACCELERATE = False`，改用純 Python 的 PyOpenGL。效能影響極小。若未來 Nuitka 或 PyOpenGL_accelerate 修復此相容性問題，可移除該段程式碼以重新啟用 accelerate |
 | 打包非常慢 | 全平台 | 正常現象。第一次冷編 10+ 分鐘；`--jobs=<N>` 增加平行度、`ccache`（Linux / macOS）可以讓重編快很多；`--lto=yes` 會更慢但產物更小 |
 | 執行檔超大 | 全平台 | `--standalone` 產物 300MB+ 是正常的（Qt + numpy + rawpy）。`--onefile` + `zstandard` 可再壓一些 |
 | `FATAL: Error, file '^' is not found.` | Windows | `^` 是 cmd / `.bat` 專用行續字元，你在 PowerShell / Git Bash 跑就會這樣。用 §2.1 的 PowerShell 版（反引號）、一行版，或存成 `.bat` 檔跑 |

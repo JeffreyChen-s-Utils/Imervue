@@ -63,8 +63,8 @@ def plugins_dir() -> Path:
 
 
 def icon_path() -> Path:
-    """``<app_dir>/Imervue.ico``"""
-    return app_dir() / "Imervue.ico"
+    """``<app_dir>/exe/Imervue.ico``"""
+    return app_dir() / "exe" / "Imervue.ico"
 
 
 def embedded_python_dir() -> Path:
