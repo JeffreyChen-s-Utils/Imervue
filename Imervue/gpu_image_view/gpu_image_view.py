@@ -330,6 +330,10 @@ class GPUImageView(QOpenGLWidget):
         cols = max(1, int(self.width() // scaled_tile))
         self.tile_rects = []
 
+        # 在迴圈外設定一次 GL 狀態，避免每張 tile 都重複呼叫
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        vw, vh = self.width(), self.height()
+
         for i, path in enumerate(images):
 
             # 沒載入完成就跳過
@@ -347,7 +351,7 @@ class GPUImageView(QOpenGLWidget):
             y1 = y0 + img_data.shape[0] * self.tile_scale
 
             # Viewport 裁切
-            if x1 < 0 or x0 > self.width() or y1 < 0 or y0 > self.height():
+            if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
                 continue
 
             self.tile_rects.append((x0, y0, x1, y1, path))
@@ -360,7 +364,6 @@ class GPUImageView(QOpenGLWidget):
 
                 tex = glGenTextures(1)
                 glBindTexture(GL_TEXTURE_2D, tex)
-                glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                              img_data.shape[1], img_data.shape[0], 0,
@@ -954,17 +957,29 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     def _cancel_tile_workers(self):
         for worker in self.active_tile_workers:
+            try:
+                worker.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             worker.abort()
         self.active_tile_workers.clear()
 
     def _cancel_deep_zoom_worker(self):
         if self.active_deep_zoom_worker is not None:
+            try:
+                self.active_deep_zoom_worker.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             self.active_deep_zoom_worker.abort()
             self.active_deep_zoom_worker = None
 
     def _cancel_all_prefetch(self):
         """取消所有預載 worker 並清空快取"""
         for w in self._prefetch_workers.values():
+            try:
+                w.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             w.abort()
         self._prefetch_workers.clear()
         self._prefetch_cache.clear()
@@ -1160,25 +1175,26 @@ class GPUImageView(QOpenGLWidget):
             if 0 <= idx < len(images):
                 needed.add(images[idx])
 
-        # 取消不再需要的 worker
-        for path in list(self._prefetch_workers):
-            if path not in needed:
-                self._prefetch_workers.pop(path).abort()
+        with QMutexLocker(self._prefetch_mutex):
+            # 取消不再需要的 worker
+            for path in list(self._prefetch_workers):
+                if path not in needed:
+                    self._prefetch_workers.pop(path).abort()
 
-        # 淘汰不在範圍內的快取
-        for path in list(self._prefetch_cache):
-            if path not in needed:
-                del self._prefetch_cache[path]
+            # 淘汰不在範圍內的快取
+            for path in list(self._prefetch_cache):
+                if path not in needed:
+                    del self._prefetch_cache[path]
 
-        # 對需要且尚未載入/正在載入的路徑啟動 worker
-        from Imervue.image.recipe_store import recipe_store
-        for path in needed:
-            if path in self._prefetch_cache or path in self._prefetch_workers:
-                continue
-            worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
-            worker.signals.finished.connect(self._on_prefetch_loaded)
-            self._prefetch_workers[path] = worker
-            self.thread_pool.start(worker)
+            # 對需要且尚未載入/正在載入的路徑啟動 worker
+            from Imervue.image.recipe_store import recipe_store
+            for path in needed:
+                if path in self._prefetch_cache or path in self._prefetch_workers:
+                    continue
+                worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
+                worker.signals.finished.connect(self._on_prefetch_loaded)
+                self._prefetch_workers[path] = worker
+                self.thread_pool.start(worker)
 
     def _on_prefetch_loaded(self, dzi, path):
         """預載 worker 完成回調"""

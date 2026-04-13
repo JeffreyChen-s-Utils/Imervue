@@ -762,9 +762,13 @@ class ImervueMainWindow(QMainWindow):
             pass
 
         # --- 安全關閉修改面板 ---
-        # 停止 timer、斷開信號、銷毀 canvas（在 Qt 銷毀 widget tree 之前）
         try:
-            self.modify_panel._debounce.stop()
+            # 若有待處理的 recipe 變更，先 flush 再停止
+            if self.modify_panel._debounce.isActive():
+                self.modify_panel._debounce.stop()
+                self.modify_panel._commit_now()
+            else:
+                self.modify_panel._debounce.stop()
             self.modify_panel.recipe_committed.disconnect()
         except Exception:
             pass
@@ -772,9 +776,8 @@ class ImervueMainWindow(QMainWindow):
             self.modify_panel._destroy_canvas()
         except Exception:
             pass
-        # 立即處理 deleteLater，確保 canvas 在 widget tree 銷毀前已經消失
         try:
-            QApplication.processEvents()
+            self.modify_panel._undo_stack.clear()
         except Exception:
             pass
 
@@ -819,7 +822,14 @@ class ImervueMainWindow(QMainWindow):
 
         event.accept()
         super().closeEvent(event)
-        QApplication.instance().quit()
+        # 用 os._exit 直接結束行程，跳過 Python 解釋器關閉階段的 GC。
+        # PySide6 在 Windows 上的已知問題：Python shutdown 時 GC 以
+        # 不確定順序銷毀 QApplication 與 QWidget，shiboken 和 Qt 對物件
+        # 所有權認知不一致 → double-free → heap corruption (0xC0000374)。
+        # 所有重要資料（設定、刪除佇列、外掛）都已在上面儲存完畢，
+        # 此處不再需要 Python 的正常清理流程。
+        import os as _os
+        _os._exit(0)
 
     @classmethod
     def debug_close(cls) -> None:

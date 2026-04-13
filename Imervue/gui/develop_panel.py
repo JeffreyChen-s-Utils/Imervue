@@ -489,25 +489,46 @@ class DevelopPanel(QWidget):
             splitter.setStretchFactor(1, 1)
 
     def _cleanup_old_canvas(self) -> None:
-        """Disconnect signals, clear undo stack, and synchronously delete the
-        old canvas so no dangling references survive into Qt's widget-tree
-        destruction.  This is the single place that tears down a canvas."""
+        """Disconnect signals, clear undo stack, and detach the old canvas.
+
+        Avoids both ``shiboken_delete`` and ``deleteLater`` — both of them
+        race with Qt's widget-tree teardown on Windows and cause heap
+        corruption (0xC0000374).  Instead we:
+
+        1. Clear shiboken-managed Python attrs on the canvas so their C++
+           counterparts are freed NOW (while Qt is still alive), rather than
+           during Python-shutdown GC when Qt is half-destroyed.
+        2. Detach from the splitter (``setParent(None)``).
+        3. Drop the Python reference — CPython's refcount immediately frees
+           the wrapper; shiboken sees no parent → deletes the C++ QWidget
+           deterministically, all within normal execution.
+        """
         self._canvas_undo_stack.clear()
         if self._canvas is not None:
-            # Disconnect signals we connected to prevent callbacks during/after deletion
+            # Disconnect signals we connected
             try:
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
             except (RuntimeError, TypeError):
                 pass
+            # Cancel any in-flight text editor (its deleteLater would
+            # otherwise outlive the canvas).
+            try:
+                self._canvas._cancel_text_edit()
+            except Exception:
+                pass
+            # Release shiboken-tracked objects held by the canvas so they
+            # are freed deterministically right now.
+            try:
+                self._canvas._base_qimg = None
+                self._canvas._preview_qimg = None
+            except Exception:
+                pass
             self._canvas.hide()
             self._canvas.setParent(None)
-            # Synchronous delete — avoid deleteLater which races with
-            # Qt's widget-tree teardown and causes heap corruption.
-            from shiboken6 import delete as shiboken_delete  # type: ignore[import-untyped]
-            shiboken_delete(self._canvas)
             self._canvas = None
 
     def _destroy_canvas(self) -> None:
+        self._debounce.stop()
         self._cleanup_old_canvas()
         self._canvas_source_path = None
 
