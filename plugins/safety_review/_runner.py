@@ -1,8 +1,8 @@
 """Subprocess runner for safety review plugin.
 
 Usage (frozen env):
-    python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct>]
+    python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories>]
 
 Protocol — stdout lines:
     PROGRESS:<message>
@@ -35,6 +35,62 @@ _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"
 
 MIN_CONFIDENCE = 0.25
 
+# -----------------------------------------------------------------------
+# Censoring styles
+# -----------------------------------------------------------------------
+STYLE_MOSAIC = "mosaic"
+STYLE_BLUR = "blur"
+STYLE_BLACK = "black"
+
+# -----------------------------------------------------------------------
+# Abstract categories → per-mode labels / class IDs
+# -----------------------------------------------------------------------
+CAT_GENITALIA = "genitalia"
+CAT_ANUS = "anus"
+CAT_NIPPLE = "nipple"
+CAT_SEXUAL_ACT = "sexual_act"
+
+DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
+
+_CAT_TO_REAL_LABELS = {
+    CAT_GENITALIA: frozenset({"FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED"}),
+    CAT_ANUS: frozenset({"ANUS_EXPOSED"}),
+    CAT_NIPPLE: frozenset({"FEMALE_BREAST_EXPOSED"}),
+    CAT_SEXUAL_ACT: frozenset(),
+}
+
+_CAT_TO_ANIME_CLASSES = {
+    CAT_GENITALIA: frozenset({3, 4}),
+    CAT_ANUS: frozenset({0}),
+    CAT_NIPPLE: frozenset({2}),
+    CAT_SEXUAL_ACT: frozenset({1}),
+}
+
+
+def _categories_to_real_labels(categories):
+    if categories is None:
+        categories = DEFAULT_CATEGORIES
+    labels = set()
+    for cat in categories:
+        labels |= _CAT_TO_REAL_LABELS.get(cat, frozenset())
+    return frozenset(labels)
+
+
+def _categories_to_anime_classes(categories):
+    if categories is None:
+        categories = DEFAULT_CATEGORIES
+    classes = set()
+    for cat in categories:
+        classes |= _CAT_TO_ANIME_CLASSES.get(cat, frozenset())
+    return frozenset(classes)
+
+
+def _parse_categories(cats_str):
+    """Parse comma-separated categories string → frozenset or None."""
+    if not cats_str:
+        return None
+    return frozenset(c.strip() for c in cats_str.split(",") if c.strip())
+
 
 def _bootstrap_site_packages(site_packages: str) -> None:
     if site_packages and site_packages not in sys.path:
@@ -53,21 +109,43 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
-def _mosaic_region(img, x1, y1, x2, y2, block_size):
+def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC):
     from PIL import Image
 
     w = x2 - x1
     h = y2 - y1
     if w <= 0 or h <= 0:
         return
-    region = img.crop((x1, y1, x2, y2))
-    bs = max(2, block_size)
-    small = region.resize(
-        (max(1, w // bs), max(1, h // bs)),
-        resample=Image.Resampling.BILINEAR,
-    )
-    mosaic = small.resize((w, h), resample=Image.Resampling.NEAREST)
-    img.paste(mosaic, (x1, y1))
+    if style == STYLE_BLACK:
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(img)
+        draw.rectangle((x1, y1, x2, y2), fill=(0, 0, 0))
+    elif style == STYLE_BLUR:
+        from PIL import ImageFilter
+        region = img.crop((x1, y1, x2, y2))
+        radius = max(max(w, h) // 5, 10)
+        blurred = region.filter(ImageFilter.GaussianBlur(radius=radius))
+        img.paste(blurred, (x1, y1))
+    else:  # mosaic
+        region = img.crop((x1, y1, x2, y2))
+        bs = max(2, block_size)
+        small = region.resize(
+            (max(1, w // bs), max(1, h // bs)),
+            resample=Image.Resampling.BILINEAR,
+        )
+        mosaic = small.resize((w, h), resample=Image.Resampling.NEAREST)
+        img.paste(mosaic, (x1, y1))
+
+
+def _detect_image_mode(src):
+    """Heuristic: anime images have fewer unique quantized colors."""
+    from PIL import Image
+    img = Image.open(src).convert("RGB")
+    img = img.resize((128, 128), Image.Resampling.BILINEAR)
+    quantized = set()
+    for r, g, b in img.getdata():
+        quantized.add((r >> 3, g >> 3, b >> 3))
+    return "anime" if len(quantized) < 1500 else "real"
 
 
 def _detect_boxes_real(detector, src, confidence, labels):
@@ -92,15 +170,21 @@ def _detect_boxes_anime(model, src, confidence, classes):
 
 
 def _process_one(detector, src, dst, block_size, padding,
-                  confidence=MIN_CONFIDENCE, labels=MOSAIC_LABELS,
-                  expand_pct=0, det_mode="real", anime_model=None):
-    """Detect + mosaic one image.  Returns number of regions mosaiced."""
+                  confidence=MIN_CONFIDENCE,
+                  expand_pct=0, det_mode="real", anime_model=None,
+                  style=STYLE_MOSAIC, categories=None):
+    """Detect + censor one image.  Returns number of regions processed."""
     from PIL import Image
 
-    if det_mode == "anime":
-        boxes = _detect_boxes_anime(anime_model, src, confidence,
-                                     ANIME_MOSAIC_CLASSES)
+    actual_mode = det_mode
+    if det_mode == "auto":
+        actual_mode = _detect_image_mode(src)
+
+    if actual_mode == "anime":
+        classes = _categories_to_anime_classes(categories)
+        boxes = _detect_boxes_anime(anime_model, src, confidence, classes)
     else:
+        labels = _categories_to_real_labels(categories)
         boxes = _detect_boxes_real(detector, src, confidence, labels)
 
     if not boxes:
@@ -117,7 +201,7 @@ def _process_one(detector, src, dst, block_size, padding,
     for x1, y1, x2, y2 in boxes:
         x1, y1, x2, y2 = _expand_box(x1, y1, x2, y2, padding, expand_pct,
                                        iw, ih)
-        _mosaic_region(img, x1, y1, x2, y2, block_size)
+        _censor_region(img, x1, y1, x2, y2, block_size, style=style)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
@@ -160,10 +244,18 @@ def main() -> None:
         det_mode = args[6] if len(args) > 6 else "real"
         confidence = float(args[7]) if len(args) > 7 else MIN_CONFIDENCE
         expand_pct = int(args[8]) if len(args) > 8 else 0
+        style = args[9] if len(args) > 9 else STYLE_MOSAIC
+        categories = _parse_categories(args[10]) if len(args) > 10 else None
         try:
             detector = None
             anime_model = None
-            if det_mode == "anime":
+            if det_mode == "auto":
+                print("PROGRESS:Loading both detectors (auto mode)...",
+                      flush=True)
+                from nudenet import NudeDetector
+                detector = NudeDetector()
+                anime_model = _load_anime_model()
+            elif det_mode == "anime":
                 print("PROGRESS:Loading EraX anime detector...", flush=True)
                 anime_model = _load_anime_model()
             else:
@@ -175,14 +267,15 @@ def main() -> None:
             count = _process_one(detector, input_path, output_path,
                                  block_size, padding,
                                  confidence=confidence,
-                                 labels=MOSAIC_LABELS,
                                  expand_pct=expand_pct,
                                  det_mode=det_mode,
-                                 anime_model=anime_model)
+                                 anime_model=anime_model,
+                                 style=style,
+                                 categories=categories)
             if count == 0:
                 print("PROGRESS:No genitalia detected", flush=True)
             else:
-                print(f"PROGRESS:Mosaiced {count} region(s)", flush=True)
+                print(f"PROGRESS:Censored {count} region(s)", flush=True)
             print(f"OK:{output_path}", flush=True)
         except Exception as exc:
             print(f"ERROR:{exc}", flush=True)
@@ -201,13 +294,20 @@ def main() -> None:
         det_mode = args[7] if len(args) > 7 else "real"
         confidence = float(args[8]) if len(args) > 8 else MIN_CONFIDENCE
         expand_pct = int(args[9]) if len(args) > 9 else 0
+        style = args[10] if len(args) > 10 else STYLE_MOSAIC
+        categories = _parse_categories(args[11]) if len(args) > 11 else None
 
         with open(json_paths, encoding="utf-8") as f:
             paths = json.load(f)
 
         detector = None
         anime_model = None
-        if det_mode == "anime":
+        if det_mode == "auto":
+            print("PROGRESS:Loading both detectors (auto mode)...", flush=True)
+            from nudenet import NudeDetector
+            detector = NudeDetector()
+            anime_model = _load_anime_model()
+        elif det_mode == "anime":
             print("PROGRESS:Loading EraX anime detector...", flush=True)
             anime_model = _load_anime_model()
         else:
@@ -237,9 +337,10 @@ def main() -> None:
                         )
                         counter += 1
                 _process_one(detector, src, dst, block_size, padding,
-                             confidence=confidence, labels=MOSAIC_LABELS,
+                             confidence=confidence,
                              expand_pct=expand_pct, det_mode=det_mode,
-                             anime_model=anime_model)
+                             anime_model=anime_model,
+                             style=style, categories=categories)
                 success += 1
             except Exception as exc:
                 print(f"PROGRESS:Error on {name}: {exc}", flush=True)

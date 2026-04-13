@@ -64,6 +64,8 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     _export_action(main_gui, build_right_click_menu)
     _lossless_rotate_actions(main_gui, build_right_click_menu)
+    _batch_convert_action(main_gui, build_right_click_menu)
+    _ai_upscale_action(main_gui, build_right_click_menu)
 
     build_right_click_menu.addSeparator()
 
@@ -420,3 +422,54 @@ def _do_lossless_rotate(main_gui: GPUImageView, path: str, clockwise: bool):
             main_gui.main_window.toast.info(
                 lang.get("lossless_rotate_fail", "Lossless rotation failed")
             )
+
+
+# ===========================
+# 批次格式轉換
+# ===========================
+
+def _batch_convert_action(main_gui: GPUImageView, menu: QMenu):
+    if not main_gui.model.images:
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(
+        lang.get("batch_convert_title", "Batch Format Conversion"))
+    action.triggered.connect(lambda: _do_batch_convert(main_gui))
+
+
+def _do_batch_convert(main_gui: GPUImageView):
+    from Imervue.gui.batch_convert_dialog import open_batch_convert
+    open_batch_convert(main_gui)
+
+
+# ===========================
+# AI 圖片放大
+# ===========================
+
+def _ai_upscale_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    # Single image in deep zoom
+    if main_gui.deep_zoom:
+        images = main_gui.model.images
+        if images and 0 <= main_gui.current_index < len(images):
+            path = images[main_gui.current_index]
+            action = menu.addAction(
+                lang.get("upscale_quick", "AI Upscale — Current Image"))
+            action.triggered.connect(
+                lambda: _do_upscale_single(main_gui, path))
+    # Batch in tile selection
+    if (main_gui.tile_grid_mode and main_gui.tile_selection_mode
+            and main_gui.selected_tiles):
+        action = menu.addAction(
+            lang.get("upscale_batch", "AI Upscale — Selected Images"))
+        action.triggered.connect(lambda: _do_upscale_batch(main_gui))
+
+
+def _do_upscale_single(main_gui: GPUImageView, path: str):
+    from Imervue.gui.ai_upscale_dialog import open_ai_upscale_single
+    open_ai_upscale_single(main_gui, path)
+
+
+def _do_upscale_batch(main_gui: GPUImageView):
+    from Imervue.gui.ai_upscale_dialog import open_ai_upscale_batch
+    open_ai_upscale_batch(main_gui)
