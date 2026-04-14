@@ -102,6 +102,16 @@ Key design principles:
 - EXIF editor dialog
 - Image info dialog (dimensions, file size, dates)
 
+### Extra Tools
+
+- **Image Sanitizer** — Re-render images from raw pixels to strip ALL hidden data (EXIF, metadata, steganographic content, trailing bytes); rename with date + random string; optionally AI-upscale to common resolutions (1080p / 2K / 4K / 5K / 8K) while preserving aspect ratio
+- **Batch Format Conversion** — Convert images between PNG, JPEG, WebP, BMP, TIFF with quality control
+- **AI Image Upscale** — Super-resolution via Real-ESRGAN (x2 / x4 general, x4 anime); ONNX Runtime with CUDA/DML/CPU
+- **Duplicate Detection** — Find duplicate images by exact hash or perceptual similarity
+- **Image Organizer** — Sort images into subfolders by date, resolution, type, size, or fixed count
+- **Batch EXIF Strip** — Remove EXIF, GPS, and metadata from all images in a folder
+- **Crop Tool** — Interactive crop with aspect ratio presets (Free / 1:1 / 4:3 / 3:2 / 16:9 / 9:16), rule-of-thirds overlay, and drag handles
+
 ### System Integration
 
 - Windows right-click "Open with Imervue" context menu (file association via registry)
@@ -314,8 +324,18 @@ When opening a single image or double-clicking a thumbnail:
 - Recent (submenu: recent folders and images)
 - Bookmarks (manage bookmarked images)
 - Commit Pending Deletions (finalize undo stack)
+- Keyboard Shortcuts (customizable key bindings)
 - File Association (Windows only — register/unregister right-click context menu)
 - Exit
+
+### Extra Tools
+
+- Batch Format Conversion
+- AI Image Upscale
+- Find Duplicate Images
+- Image Organizer
+- Batch EXIF Strip
+- Image Sanitizer
 
 ### View
 
@@ -357,6 +377,7 @@ When opening a single image or double-clicking a thumbnail:
 - Compare / Slideshow
 - Export (Save As with format selection)
 - Lossless JPEG rotate
+- Extra Tools (batch convert, AI upscale, duplicate detection, image organizer, EXIF strip, image sanitizer)
 - Bookmarks (add/remove)
 - Image info
 - Recent menu
@@ -448,11 +469,20 @@ Imervue/
 │   ├── actions/             # Viewer actions (zoom, pan, rotate, etc.)
 │   └── images/              # Image loading, pyramid, tile management
 ├── gui/                     # UI components
+│   ├── ai_upscale_dialog.py # AI super-resolution (Real-ESRGAN)
+│   ├── annotation_dialog.py # Annotation canvas + crop tool
+│   ├── batch_convert_dialog.py # Batch format conversion
 │   ├── bookmark_dialog.py   # Bookmark manager dialog
+│   ├── develop_panel.py     # Edit/develop panel
+│   ├── duplicate_detection_dialog.py # Duplicate image finder
 │   ├── exif_editor.py       # EXIF metadata editor
 │   ├── exif_sidebar.py      # Collapsible EXIF sidebar
+│   ├── exif_strip_dialog.py # Batch EXIF strip
 │   ├── export_dialog.py     # Export/Save As dialog
 │   ├── image_editor.py      # Image editor (crop, adjust, rotate)
+│   ├── image_organizer_dialog.py # Image sorter/organizer
+│   ├── image_sanitize_dialog.py  # Image sanitizer + AI upscale
+│   ├── shortcut_settings_dialog.py # Custom keyboard shortcuts
 │   └── toast.py             # Toast notification system
 ├── image/                   # Image utilities
 │   ├── info.py              # Image info extraction
@@ -460,6 +490,7 @@ Imervue/
 │   ├── thumbnail_disk_cache.py  # Thumbnail cache (MD5 + .npy)
 │   └── tile_manager.py      # Tile grid management
 ├── menu/                    # Menu definitions
+│   ├── extra_tools_menu.py  # Extra Tools menu
 │   ├── file_menu.py         # File menu
 │   ├── filter_menu.py       # Filter menu
 │   ├── language_menu.py     # Language menu
