@@ -471,6 +471,12 @@ def _extra_tools_submenu(main_gui: GPUImageView, menu: QMenu):
             lang.get("exif_strip_title", "Batch EXIF Strip"))
         action.triggered.connect(lambda: _do_exif_strip(main_gui))
 
+    # 圖片淨化重繪
+    if main_gui.model.images:
+        action = extra_menu.addAction(
+            lang.get("sanitize_title", "Image Sanitizer"))
+        action.triggered.connect(lambda: _do_image_sanitize(main_gui))
+
 
 def _do_batch_convert(main_gui: GPUImageView):
     from Imervue.gui.batch_convert_dialog import open_batch_convert
@@ -500,3 +506,8 @@ def _do_image_organizer(main_gui: GPUImageView):
 def _do_exif_strip(main_gui: GPUImageView):
     from Imervue.gui.exif_strip_dialog import open_exif_strip
     open_exif_strip(main_gui)
+
+
+def _do_image_sanitize(main_gui: GPUImageView):
+    from Imervue.gui.image_sanitize_dialog import open_image_sanitize
+    open_image_sanitize(main_gui)

@@ -37,6 +37,11 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
         lang.get("exif_strip_title", "Batch EXIF Strip"))
     strip_action.triggered.connect(lambda: _open_exif_strip(ui))
 
+    # 圖片淨化重繪
+    sanitize_action = menu.addAction(
+        lang.get("sanitize_title", "Image Sanitizer"))
+    sanitize_action.triggered.connect(lambda: _open_image_sanitize(ui))
+
 
 def _open_batch_convert(ui: ImervueMainWindow):
     from Imervue.gui.batch_convert_dialog import open_batch_convert
@@ -61,3 +66,8 @@ def _open_image_organizer(ui: ImervueMainWindow):
 def _open_exif_strip(ui: ImervueMainWindow):
     from Imervue.gui.exif_strip_dialog import open_exif_strip
     open_exif_strip(ui.viewer)
+
+
+def _open_image_sanitize(ui: ImervueMainWindow):
+    from Imervue.gui.image_sanitize_dialog import open_image_sanitize
+    open_image_sanitize(ui.viewer)
