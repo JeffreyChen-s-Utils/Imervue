@@ -145,66 +145,53 @@ class TestSliderMapping:
 
 
 # ======================================================================
-# Commit semantics
+# Preview semantics (no commit until save)
 # ======================================================================
 
-class TestCommitSemantics:
-    def test_no_commit_when_recipe_unchanged(self, panel, sample_file):
+class TestPreviewSemantics:
+    """Slider/rotate/flip changes are preview-only — they update
+    ``_current`` but never emit ``recipe_committed``."""
+
+    def test_slider_does_not_commit(self, panel, sample_file):
         p, _ = panel
         p.bind_to_path(str(sample_file))
         committed = []
         p.recipe_committed.connect(lambda *args: committed.append(args))
-        p._commit_now()
+        p._brightness.setValue(50)
         assert committed == []
+        assert p._current.brightness == pytest.approx(0.5)
 
-    def test_rotate_commits_immediately(self, panel, sample_file):
-        p, _ = panel
-        p.bind_to_path(str(sample_file))
-        committed = []
-        p.recipe_committed.connect(lambda path, old, new: committed.append((path, old, new)))
-        p._rotate(1)
-        assert len(committed) == 1
-        path, old, new = committed[0]
-        assert path == str(sample_file)
-        assert old.rotate_steps == 0
-        assert new.rotate_steps == 1
-
-    def test_rotate_four_times_commits_each(self, panel, sample_file):
+    def test_rotate_does_not_commit(self, panel, sample_file):
         p, _ = panel
         p.bind_to_path(str(sample_file))
         committed = []
         p.recipe_committed.connect(lambda *args: committed.append(args))
-        for _ in range(4):
-            p._rotate(1)
-        assert len(committed) == 4
+        p._rotate(1)
+        assert committed == []
+        assert p._current.rotate_steps == 1
 
-    def test_flip_commits(self, panel, sample_file):
+    def test_flip_does_not_commit(self, panel, sample_file):
         p, _ = panel
         p.bind_to_path(str(sample_file))
         committed = []
         p.recipe_committed.connect(lambda *args: committed.append(args))
         p._flip_h()
-        assert len(committed) == 1
-        assert committed[0][2].flip_h is True
+        assert committed == []
+        assert p._current.flip_h is True
 
-    def test_reset_commits(self, panel, sample_file):
+    def test_reset_clears_recipe(self, panel, sample_file):
         p, store = panel
         store.set_for_path(str(sample_file), Recipe(brightness=0.5))
         p.bind_to_path(str(sample_file))
-        committed = []
-        p.recipe_committed.connect(lambda *args: committed.append(args))
         p._reset()
-        assert len(committed) == 1
-        _path, old, new = committed[0]
-        assert old.brightness == pytest.approx(0.5)
-        assert new.is_identity()
+        assert p._current.is_identity()
 
     def test_reset_on_identity_is_noop(self, panel, sample_file):
         p, _ = panel
         p.bind_to_path(str(sample_file))
         committed = []
         p.recipe_committed.connect(lambda *args: committed.append(args))
-        p._reset()  # already identity → no commit
+        p._reset()  # already identity
         assert committed == []
 
 
@@ -230,3 +217,82 @@ class TestLabels:
         p.bind_to_path(str(sample_file))
         p._brightness.setValue(-40)
         assert "-40" in p._brightness_label.text()
+
+
+# ======================================================================
+# Canvas ↔ recipe integration
+# ======================================================================
+
+@pytest.fixture
+def real_image(tmp_path):
+    """A real 100x80 white PNG for canvas tests."""
+    import numpy as np
+    from PIL import Image
+
+    arr = np.full((80, 100, 4), 200, dtype=np.uint8)
+    img = Image.fromarray(arr, "RGBA")
+    path = tmp_path / "real.png"
+    img.save(str(path), format="PNG")
+    from Imervue.image.recipe import clear_identity_cache
+    clear_identity_cache()
+    return path
+
+
+class TestCanvasRecipeSync:
+    """Verify that develop slider changes are reflected on the canvas image."""
+
+    def test_canvas_created_with_recipe_applied(self, panel, real_image):
+        """When binding with a non-identity recipe, the canvas base should
+        differ from the raw file pixels."""
+        p, store = panel
+        store.set_for_path(str(real_image), Recipe(brightness=0.8))
+        p.bind_to_path(str(real_image))
+        assert p._canvas is not None
+        import numpy as np
+        from PIL import Image
+        raw = Image.open(str(real_image)).convert("RGBA")
+        raw_arr = np.array(raw)
+        canvas_arr = np.array(p._canvas.get_base_pil())
+        # Brightness 0.8 should make pixels brighter — arrays must differ
+        assert not np.array_equal(raw_arr, canvas_arr)
+
+    def test_refresh_updates_canvas_on_recipe_change(self, panel, real_image):
+        """Calling bind_to_path again (same path, new recipe) must update
+        the canvas base image."""
+        p, store = panel
+        p.bind_to_path(str(real_image))
+        import numpy as np
+        before = np.array(p._canvas.get_base_pil()).copy()
+        store.set_for_path(str(real_image), Recipe(brightness=0.5))
+        p._current = Recipe(brightness=0.5)
+        p._committed = Recipe(brightness=0.5)
+        p._refresh_canvas_base()
+        after = np.array(p._canvas.get_base_pil())
+        assert not np.array_equal(before, after)
+
+    def test_identity_recipe_shows_raw_pixels(self, panel, real_image):
+        """With an identity recipe, the canvas base should match the raw file."""
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        import numpy as np
+        from PIL import Image
+        raw = Image.open(str(real_image)).convert("RGBA")
+        raw_arr = np.array(raw)
+        canvas_arr = np.array(p._canvas.get_base_pil())
+        assert np.array_equal(raw_arr, canvas_arr)
+
+    def test_geometry_change_clears_annotations(self, panel, real_image):
+        """Rotation changes dimensions — annotations must be cleared."""
+        p, store = panel
+        p.bind_to_path(str(real_image))
+        assert p._canvas is not None
+        # Add a dummy annotation
+        from Imervue.gui.annotation_models import Annotation
+        ann = Annotation(kind="rect", points=[(10, 10), (50, 50)])
+        p._canvas.set_annotations([ann])
+        assert len(p._canvas.get_annotations()) == 1
+        # Simulate a 90° rotation recipe refresh
+        p._current = Recipe(rotate_steps=1)
+        p._refresh_canvas_base()
+        # Image is now 80x100 (was 100x80) → annotations cleared
+        assert len(p._canvas.get_annotations()) == 0

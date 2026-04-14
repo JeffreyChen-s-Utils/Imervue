@@ -765,12 +765,8 @@ class ImervueMainWindow(QMainWindow):
 
         # --- 安全關閉修改面板 ---
         try:
-            # 若有待處理的 recipe 變更，先 flush 再停止
-            if self.modify_panel._debounce.isActive():
-                self.modify_panel._debounce.stop()
-                self.modify_panel._commit_now()
-            else:
-                self.modify_panel._debounce.stop()
+            # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
+            self.modify_panel._debounce.stop()
             self.modify_panel.recipe_committed.disconnect()
         except Exception:
             pass

@@ -340,7 +340,7 @@ class TestSanitizeImage:
         assert img.size == (1500, 2000)
 
     def test_no_upscale_without_session(self, tmp_path):
-        """target_long_edge set but no ort_session → skip upscale."""
+        """target_long_edge set but no ort_session and no trad → skip upscale."""
         src = str(tmp_path / "small.png")
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
@@ -350,6 +350,63 @@ class TestSanitizeImage:
                              target_long_edge=1920, ort_session=None)
         img = Image.open(out)
         assert img.size == (80, 100)  # unchanged
+
+    def test_traditional_lanczos_upscale(self, tmp_path):
+        """Traditional Lanczos upscale should resize to target long edge."""
+        src = str(tmp_path / "small.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        _make_image(src, "PNG", size=(100, 80))  # numpy (h, w) → PIL (80, 100)
+
+        out = sanitize_image(src, out_dir, "same",
+                             target_long_edge=200,
+                             trad_resampling=Image.Resampling.LANCZOS)
+        img = Image.open(out)
+        # numpy (100,80) → PIL (w=80, h=100), long edge=100→200
+        assert img.size == (160, 200)
+
+    def test_traditional_nearest_upscale(self, tmp_path):
+        """Nearest-neighbor upscale preserves exact pixel colors."""
+        src = str(tmp_path / "pixel.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        arr = np.full((4, 4, 3), 42, dtype=np.uint8)
+        Image.fromarray(arr).save(src, format="PNG")
+
+        out = sanitize_image(src, out_dir, "same",
+                             target_long_edge=8,
+                             trad_resampling=Image.Resampling.NEAREST)
+        img = Image.open(out)
+        assert img.size == (8, 8)
+        pixels = list(img.getdata())
+        assert all(p[:3] == (42, 42, 42) for p in pixels)
+
+    def test_traditional_no_upscale_when_large_enough(self, tmp_path):
+        """Traditional upscale should skip when image already meets target."""
+        src = str(tmp_path / "big.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        _make_image(src, "PNG", size=(200, 300))
+
+        out = sanitize_image(src, out_dir, "same",
+                             target_long_edge=200,
+                             trad_resampling=Image.Resampling.LANCZOS)
+        img = Image.open(out)
+        assert img.size == (300, 200)  # unchanged
+
+    def test_traditional_removes_metadata(self, tmp_path):
+        """Traditional upscale should still strip EXIF."""
+        src = str(tmp_path / "photo.jpg")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        _make_image(src, "JPEG", size=(50, 40), with_exif=True)
+
+        out = sanitize_image(src, out_dir, ".png",
+                             target_long_edge=100,
+                             trad_resampling=Image.Resampling.LANCZOS)
+        img = Image.open(out)
+        assert len(img.getexif()) == 0
+        assert img.size[0] == 100 or img.size[1] == 100
 
     def test_jpeg_quality_parameter(self, tmp_path):
         """Different JPEG quality should produce different file sizes."""
@@ -573,6 +630,46 @@ class TestSanitizeWorker:
         files = os.listdir(out_dir)
         assert len(files) == 1
         assert files[0].endswith(".png")
+
+    def test_traditional_upscale_in_worker(self, tmp_path):
+        """Worker with trad:lanczos should upscale without ONNX."""
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        p = str(tmp_path / "small.png")
+        _make_image(p, "PNG", size=(50, 40))
+
+        worker = _SanitizeWorker(
+            [p], out_dir, "same", 8, 95, 6,
+            target_long_edge=100, model_key="trad:lanczos")
+        results = []
+        worker.result_ready.connect(lambda s, f: results.append((s, f)))
+        worker.run()
+
+        assert results == [(1, 0)]
+        files = os.listdir(out_dir)
+        assert len(files) == 1
+        img = Image.open(os.path.join(out_dir, files[0]))
+        # Long edge should be 100
+        assert max(img.size) == 100
+
+    def test_traditional_nearest_in_worker(self, tmp_path):
+        """Worker with trad:nearest should upscale using nearest neighbor."""
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        p = str(tmp_path / "small.png")
+        _make_image(p, "PNG", size=(10, 10))
+
+        worker = _SanitizeWorker(
+            [p], out_dir, "same", 8, 95, 6,
+            target_long_edge=20, model_key="trad:nearest")
+        results = []
+        worker.result_ready.connect(lambda s, f: results.append((s, f)))
+        worker.run()
+
+        assert results == [(1, 0)]
+        files = os.listdir(out_dir)
+        img = Image.open(os.path.join(out_dir, files[0]))
+        assert img.size == (20, 20)
 
     def test_handles_corrupt_file_gracefully(self, tmp_path):
         out_dir = str(tmp_path / "out")

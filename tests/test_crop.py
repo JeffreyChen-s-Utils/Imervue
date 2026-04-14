@@ -138,3 +138,40 @@ class TestImageCrop:
         reloaded = Image.open(str(path))
         assert reloaded.mode == "RGB"
         assert reloaded.size == (50, 50)
+
+
+# ---------------------------------------------------------------------------
+# Crop UI placement (right panel)
+# ---------------------------------------------------------------------------
+
+class TestCropWidgetPlacement:
+    """Verify the crop controls are built in the right panel with adequate width."""
+
+    @pytest.fixture
+    def develop_panel(self, qapp, white_image):
+        from unittest.mock import MagicMock
+        from PySide6.QtWidgets import QSplitter
+        main_gui = MagicMock()
+        from Imervue.gui.develop_panel import DevelopPanel
+        dp = DevelopPanel(main_gui)
+        splitter = QSplitter()
+        dp.build_left_panel(splitter)
+        dp.build_right_panel(splitter)
+        dp._test_splitter = splitter  # prevent GC
+        return dp
+
+    def test_crop_widget_exists(self, develop_panel):
+        assert hasattr(develop_panel, '_crop_widget')
+        assert hasattr(develop_panel, '_crop_ratio_combo')
+        assert hasattr(develop_panel, '_crop_apply_btn')
+        assert hasattr(develop_panel, '_crop_cancel_btn')
+
+    def test_crop_widget_hidden_by_default(self, develop_panel):
+        assert not develop_panel._crop_widget.isVisible()
+
+    def test_crop_widget_in_right_panel(self, develop_panel):
+        """Crop widget should be parented under the right panel, not the left."""
+        parent = develop_panel._crop_widget.parentWidget()
+        # The right panel inner widget has the color button, sliders, etc.
+        # Verify the crop widget shares a parent with the color button.
+        assert parent is develop_panel._color_btn.parentWidget()

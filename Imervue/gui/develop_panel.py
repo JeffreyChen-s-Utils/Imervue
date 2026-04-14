@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional
 
+import numpy as np
 from PIL import Image
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QUndoStack
@@ -107,7 +108,7 @@ class DevelopPanel(QWidget):
         self._debounce = QTimer(self)
         self._debounce.setSingleShot(True)
         self._debounce.setInterval(self._DEBOUNCE_MS)
-        self._debounce.timeout.connect(self._commit_debounced)
+        self._debounce.timeout.connect(self._preview_debounced)
 
         self._interactive_widgets: list[QWidget] = []
 
@@ -151,27 +152,8 @@ class DevelopPanel(QWidget):
         if "select" in self._tool_buttons:
             self._tool_buttons["select"].setChecked(True)
 
-        # --- Crop controls (hidden until crop tool selected) ---
-        self._crop_widget = QWidget()
-        crop_layout = QVBoxLayout(self._crop_widget)
-        crop_layout.setContentsMargins(2, 2, 2, 2)
-        crop_layout.setSpacing(2)
-        self._crop_ratio_combo = QComboBox()
-        for label_key, fallback, rw, rh in self._CROP_RATIOS:
-            self._crop_ratio_combo.addItem(
-                lang.get(label_key, fallback), (rw, rh))
-        self._crop_ratio_combo.currentIndexChanged.connect(self._on_crop_ratio_changed)
-        crop_layout.addWidget(self._crop_ratio_combo)
-        crop_btn_row = QHBoxLayout()
-        self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
-        self._crop_apply_btn.clicked.connect(self._apply_crop)
-        self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
-        self._crop_cancel_btn.clicked.connect(self._cancel_crop)
-        crop_btn_row.addWidget(self._crop_apply_btn)
-        crop_btn_row.addWidget(self._crop_cancel_btn)
-        crop_layout.addLayout(crop_btn_row)
-        layout.addWidget(self._crop_widget)
-        self._crop_widget.hide()
+        # Crop controls are built in build_right_panel() where there is
+        # enough width for the combo box and buttons.
 
         # --- Separator ---
         layout.addSpacing(4)
@@ -211,6 +193,39 @@ class DevelopPanel(QWidget):
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
+
+        # ============================================================
+        # Crop controls (hidden until crop tool selected)
+        # ============================================================
+        self._crop_widget = QWidget()
+        crop_layout = QVBoxLayout(self._crop_widget)
+        crop_layout.setContentsMargins(0, 0, 0, 0)
+        crop_layout.setSpacing(4)
+
+        crop_title = QLabel(lang.get("annotation_tool_crop", "Crop"))
+        crop_title_font = QFont(crop_title.font())
+        crop_title_font.setBold(True)
+        crop_title.setFont(crop_title_font)
+        crop_layout.addWidget(crop_title)
+
+        self._crop_ratio_combo = QComboBox()
+        for label_key, fallback, rw, rh in self._CROP_RATIOS:
+            self._crop_ratio_combo.addItem(
+                lang.get(label_key, fallback), (rw, rh))
+        self._crop_ratio_combo.currentIndexChanged.connect(self._on_crop_ratio_changed)
+        crop_layout.addWidget(self._crop_ratio_combo)
+
+        crop_btn_row = QHBoxLayout()
+        self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
+        self._crop_apply_btn.clicked.connect(self._apply_crop)
+        self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
+        self._crop_cancel_btn.clicked.connect(self._cancel_crop)
+        crop_btn_row.addWidget(self._crop_apply_btn)
+        crop_btn_row.addWidget(self._crop_cancel_btn)
+        crop_layout.addLayout(crop_btn_row)
+
+        layout.addWidget(self._crop_widget)
+        self._crop_widget.hide()
 
         # ============================================================
         # Drawing properties
@@ -458,7 +473,9 @@ class DevelopPanel(QWidget):
         """Load the recipe for ``path`` (or clear if None) and refresh the UI.
 
         Also creates / updates the inline AnnotationCanvas with the
-        image at *path*.
+        image at *path*.  When re-binding to the *same* path (e.g. after a
+        tab switch) the working recipe (``_current``) is preserved so unsaved
+        slider/rotate/flip changes are not lost.
         """
         self._path = path
         if path is None:
@@ -469,14 +486,16 @@ class DevelopPanel(QWidget):
             self._destroy_canvas()
             return
 
-        self._current = recipe_store.get_for_path(path) or Recipe()
-        self._committed = Recipe.from_dict(self._current.to_dict())
-        self._set_enabled(True)
-        self._sync_sliders()
-
-        # Create / reload the canvas only when the path changes.
         if self._canvas_source_path != path:
+            # New image — load the saved recipe from the store.
+            self._current = recipe_store.get_for_path(path) or Recipe()
+            self._committed = Recipe.from_dict(self._current.to_dict())
+            self._set_enabled(True)
+            self._sync_sliders()
             self._create_canvas(path)
+        else:
+            # Same path — keep the working recipe to preserve unsaved edits.
+            self._set_enabled(True)
 
     def current_recipe(self) -> Recipe:
         return Recipe.from_dict(self._current.to_dict())
@@ -488,10 +507,11 @@ class DevelopPanel(QWidget):
     # Inline AnnotationCanvas management
     # ------------------------------------------------------------------
 
-    def _create_canvas(self, path: str) -> None:
-        """Load *path* as PIL and create a fresh AnnotationCanvas."""
-        from Imervue.gui.annotation_dialog import AnnotationCanvas
+    def _load_image_with_recipe(self, path: str) -> Image.Image | None:
+        """Load *path* from disk and apply the current recipe.
 
+        Returns an RGBA PIL image or None on failure.
+        """
         try:
             img = Image.open(path)
             if img.mode not in ("RGB", "RGBA", "L"):
@@ -499,7 +519,23 @@ class DevelopPanel(QWidget):
             else:
                 img.load()
         except Exception:
-            logger.exception("Failed to load image for annotation: %s", path)
+            logger.exception("Failed to load image: %s", path)
+            return None
+
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+
+        if not self._current.is_identity():
+            arr = self._current.apply(np.array(img))
+            img = Image.fromarray(arr, "RGBA")
+        return img
+
+    def _create_canvas(self, path: str) -> None:
+        """Load *path* as PIL and create a fresh AnnotationCanvas."""
+        from Imervue.gui.annotation_dialog import AnnotationCanvas
+
+        img = self._load_image_with_recipe(path)
+        if img is None:
             self._destroy_canvas()
             return
 
@@ -567,6 +603,27 @@ class DevelopPanel(QWidget):
         self._cleanup_old_canvas()
         self._canvas_source_path = None
 
+    def _refresh_canvas_base(self) -> None:
+        """Re-apply the current recipe to the raw image and update the canvas.
+
+        Called when recipe sliders change without a path change.  If the
+        image geometry (dimensions) changed — e.g. after a rotation — any
+        existing annotations are cleared because their coordinates would be
+        invalid in the new coordinate space.
+        """
+        if self._canvas is None or self._canvas_source_path is None:
+            return
+        img = self._load_image_with_recipe(self._canvas_source_path)
+        if img is None:
+            return
+
+        old_w, old_h = self._canvas._base.width, self._canvas._base.height
+        if (img.width, img.height) != (old_w, old_h):
+            self._canvas.set_annotations([])
+            self._canvas.clear_crop()
+
+        self._canvas._set_base_image(img)
+
     # ------------------------------------------------------------------
     # Left-panel tool selection
     # ------------------------------------------------------------------
@@ -623,6 +680,13 @@ class DevelopPanel(QWidget):
             if tmp.exists():
                 tmp.unlink(missing_ok=True)
             return
+        # The recipe adjustments are now baked into the saved file — reset
+        # the recipe so they won't be applied again by the viewer.
+        self._current = Recipe()
+        self._committed = Recipe()
+        recipe_store.set_for_path(path, Recipe())
+        self._sync_sliders()
+
         # Reload
         self._canvas.clear_crop()
         self._create_canvas(path)
@@ -759,6 +823,13 @@ class DevelopPanel(QWidget):
                 tmp.unlink(missing_ok=True)
             return
 
+        # The recipe adjustments are now baked into the saved file — reset
+        # the recipe so they won't be applied again by the viewer.
+        self._current = Recipe()
+        self._committed = Recipe()
+        recipe_store.set_for_path(path, Recipe())
+        self._sync_sliders()
+
         # Reload the image in both the canvas and the main viewer
         self._create_canvas(path)
         try:
@@ -808,74 +879,66 @@ class DevelopPanel(QWidget):
             return
         self._current.exposure = v / 100.0
         self._refresh_labels()
-        self._schedule_commit()
+        self._schedule_preview()
 
     def _on_brightness(self, v: int) -> None:
         if self._suppress_signals:
             return
         self._current.brightness = v / 100.0
         self._refresh_labels()
-        self._schedule_commit()
+        self._schedule_preview()
 
     def _on_contrast(self, v: int) -> None:
         if self._suppress_signals:
             return
         self._current.contrast = v / 100.0
         self._refresh_labels()
-        self._schedule_commit()
+        self._schedule_preview()
 
     def _on_saturation(self, v: int) -> None:
         if self._suppress_signals:
             return
         self._current.saturation = v / 100.0
         self._refresh_labels()
-        self._schedule_commit()
+        self._schedule_preview()
 
     # ------------------------------------------------------------------
-    # Rotate / flip — these commit immediately (no debounce)
+    # Rotate / flip — preview only (no commit until save)
     # ------------------------------------------------------------------
 
     def _rotate(self, delta: int) -> None:
         if self._path is None:
             return
         self._current.rotate_steps = (self._current.rotate_steps + delta) % 4
-        self._commit_now()
+        self._refresh_canvas_base()
 
     def _flip_h(self) -> None:
         if self._path is None:
             return
         self._current.flip_h = not self._current.flip_h
-        self._commit_now()
+        self._refresh_canvas_base()
 
     def _flip_v(self) -> None:
         if self._path is None:
             return
         self._current.flip_v = not self._current.flip_v
-        self._commit_now()
+        self._refresh_canvas_base()
 
     def _reset(self) -> None:
         if self._path is None:
             return
         self._current = Recipe()
         self._sync_sliders()
-        self._commit_now()
+        self._refresh_canvas_base()
 
     # ------------------------------------------------------------------
-    # Commit logic (recipe)
+    # Preview logic — debounced canvas refresh, no commit to recipe_store
     # ------------------------------------------------------------------
 
-    def _schedule_commit(self) -> None:
+    def _schedule_preview(self) -> None:
+        """Debounce canvas refresh so rapid slider drags don't reload on
+        every tick."""
         self._debounce.start()
 
-    def _commit_debounced(self) -> None:
-        self._commit_now()
-
-    def _commit_now(self) -> None:
-        if self._path is None:
-            return
-        if self._current.to_dict() == self._committed.to_dict():
-            return
-        old = Recipe.from_dict(self._committed.to_dict())
-        new = Recipe.from_dict(self._current.to_dict())
-        self._committed = Recipe.from_dict(new.to_dict())
-        self.recipe_committed.emit(self._path, old, new)
+    def _preview_debounced(self) -> None:
+        self._refresh_canvas_base()

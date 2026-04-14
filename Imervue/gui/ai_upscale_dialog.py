@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -62,6 +63,31 @@ UPSCALE_MODELS = {
     },
 }
 
+# Traditional (non-AI) resampling methods — no dependencies, lossless.
+# Keys use "trad:" prefix to distinguish from AI model keys.
+TRADITIONAL_METHODS = {
+    "trad:lanczos": {
+        "desc_key": "upscale_method_lanczos",
+        "desc_default": "Lanczos (high quality, lossless)",
+    },
+    "trad:bicubic": {
+        "desc_key": "upscale_method_bicubic",
+        "desc_default": "Bicubic (fast, good quality)",
+    },
+    "trad:nearest": {
+        "desc_key": "upscale_method_nearest",
+        "desc_default": "Nearest Neighbor (pixel art)",
+    },
+}
+
+# Map traditional key → PIL Resampling enum (resolved at runtime to avoid
+# importing PIL at module level).
+_TRAD_RESAMPLING = {
+    "trad:lanczos": "LANCZOS",
+    "trad:bicubic": "BICUBIC",
+    "trad:nearest": "NEAREST",
+}
+
 REQUIRED_PACKAGES = [
     ("onnxruntime", "onnxruntime"),
     ("huggingface_hub", "huggingface_hub"),
@@ -70,6 +96,25 @@ REQUIRED_PACKAGES = [
 _IMAGE_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
 })
+
+
+def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
+    """Collect image paths from *folder*, sorted by name."""
+    result: list[str] = []
+    if recursive:
+        for root, _dirs, files in os.walk(folder):
+            for f in files:
+                if Path(f).suffix.lower() in _IMAGE_EXTS:
+                    result.append(os.path.join(root, f))
+    else:
+        try:
+            for entry in os.scandir(folder):
+                if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
+                    result.append(entry.path)
+        except OSError:
+            pass
+    result.sort(key=lambda p: os.path.basename(p).lower())
+    return result
 
 # Tile size for tiled inference (prevents OOM on large images)
 _TILE_SIZE = 512
@@ -164,14 +209,79 @@ class _UpscaleWorker(QThread):
     result_ready = Signal(int, int)   # success, failed
 
     def __init__(self, paths: list[str], output_dir: str,
-                 model_key: str, overwrite: bool):
+                 model_key: str, overwrite: bool,
+                 scale_override: int = 0):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
         self._model_key = model_key
         self._overwrite = overwrite
+        # For traditional methods the caller supplies the scale explicitly.
+        self._scale_override = scale_override
+
+    # -- helpers -------------------------------------------------------------
+
+    @staticmethod
+    def _output_path(src: str, output_dir: str, scale: int,
+                     overwrite: bool) -> str:
+        if overwrite:
+            return src
+        stem = Path(src).stem
+        suffix = Path(src).suffix or ".png"
+        dst = str(Path(output_dir) / f"{stem}_x{scale}{suffix}")
+        counter = 1
+        while os.path.exists(dst):
+            dst = str(Path(output_dir)
+                      / f"{stem}_x{scale}_{counter}{suffix}")
+            counter += 1
+        return dst
+
+    @staticmethod
+    def _save(img, dst: str) -> None:
+        fmt_map = {
+            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
+            ".webp": "WEBP", ".bmp": "BMP",
+            ".tif": "TIFF", ".tiff": "TIFF",
+        }
+        ext = Path(dst).suffix.lower()
+        fmt = fmt_map.get(ext, "PNG")
+        if fmt == "JPEG" and img.mode == "RGBA":
+            img = img.convert("RGB")
+        img.save(dst, format=fmt)
+
+    # -- run -----------------------------------------------------------------
 
     def run(self):
+        if self._model_key.startswith("trad:"):
+            self._run_traditional()
+        else:
+            self._run_ai()
+
+    def _run_traditional(self):
+        from PIL import Image
+        resample_name = _TRAD_RESAMPLING[self._model_key]
+        resample = getattr(Image.Resampling, resample_name)
+        scale = self._scale_override or 2
+        total = len(self._paths)
+        success = failed = 0
+
+        for i, src in enumerate(self._paths):
+            self.progress.emit(i, total, Path(src).name)
+            try:
+                img = Image.open(src)
+                new_size = (img.width * scale, img.height * scale)
+                out_img = img.resize(new_size, resample)
+                dst = self._output_path(
+                    src, self._output_dir, scale, self._overwrite)
+                self._save(out_img, dst)
+                success += 1
+            except Exception as exc:
+                logger.error("Upscale failed for %s: %s", src, exc,
+                             exc_info=True)
+                failed += 1
+        self.result_ready.emit(success, failed)
+
+    def _run_ai(self):
         import numpy as np
         from PIL import Image
         import onnxruntime as ort
@@ -185,7 +295,6 @@ class _UpscaleWorker(QThread):
         self.progress.emit(0, len(self._paths), "Loading model...")
 
         providers = ort.get_available_providers()
-        # Prefer GPU if available
         preferred = []
         if "CUDAExecutionProvider" in providers:
             preferred.append("CUDAExecutionProvider")
@@ -194,8 +303,7 @@ class _UpscaleWorker(QThread):
         preferred.append("CPUExecutionProvider")
         session = ort.InferenceSession(model_path, providers=preferred)
 
-        success = 0
-        failed = 0
+        success = failed = 0
         total = len(self._paths)
 
         for i, src in enumerate(self._paths):
@@ -221,35 +329,13 @@ class _UpscaleWorker(QThread):
                 )
                 out_img = Image.fromarray(out_arr)
 
-                # Upscale alpha if present
                 if alpha is not None:
                     alpha_up = alpha.resize(out_img.size, Image.Resampling.LANCZOS)
                     out_img.putalpha(alpha_up)
 
-                # Output path
-                if self._overwrite:
-                    dst = src
-                else:
-                    stem = Path(src).stem
-                    suffix = Path(src).suffix or ".png"
-                    dst = str(Path(self._output_dir) / f"{stem}_x{scale}{suffix}")
-                    counter = 1
-                    while os.path.exists(dst):
-                        dst = str(Path(self._output_dir)
-                                  / f"{stem}_x{scale}_{counter}{suffix}")
-                        counter += 1
-
-                # Save
-                fmt_map = {
-                    ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-                    ".webp": "WEBP", ".bmp": "BMP",
-                    ".tif": "TIFF", ".tiff": "TIFF",
-                }
-                ext = Path(dst).suffix.lower()
-                fmt = fmt_map.get(ext, "PNG")
-                if fmt == "JPEG" and out_img.mode == "RGBA":
-                    out_img = out_img.convert("RGB")
-                out_img.save(dst, format=fmt)
+                dst = self._output_path(
+                    src, self._output_dir, scale, self._overwrite)
+                self._save(out_img, dst)
                 success += 1
             except Exception as exc:
                 logger.error("Upscale failed for %s: %s", src, exc,
@@ -265,20 +351,27 @@ class _UpscaleWorker(QThread):
 
 class AIUpscaleDialog(QDialog):
     def __init__(self, main_gui: GPUImageView,
-                 paths: list[str] | None = None):
+                 paths: list[str] | None = None,
+                 folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._paths: list[str] = paths or []
         self._lang = language_wrapper.language_word_dict
         self._worker = None
+        # True when paths were supplied externally (single/batch/all);
+        # False when the user should pick a source folder themselves.
+        self._has_preset_paths = bool(self._paths)
 
         self.setWindowTitle(
             self._lang.get("upscale_title", "AI Image Upscale"))
         self.setMinimumWidth(520)
         self._build_ui()
 
-        if self._paths:
+        if self._has_preset_paths:
             self._update_count()
+        elif folder and os.path.isdir(folder):
+            self._src_edit.setText(folder)
+            self._rescan_folder()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -291,21 +384,69 @@ class AIUpscaleDialog(QDialog):
         info.setWordWrap(True)
         layout.addWidget(info)
 
+        # --- Source folder (shown only when no preset paths) ---
+        self._src_row_widget = QWidget()
+        src_layout = QVBoxLayout(self._src_row_widget)
+        src_layout.setContentsMargins(0, 0, 0, 0)
+        src_layout.setSpacing(4)
+
+        src_row = QHBoxLayout()
+        src_row.addWidget(QLabel(
+            self._lang.get("exif_strip_source", "Source folder:")))
+        self._src_edit = QLineEdit()
+        self._src_edit.textChanged.connect(self._rescan_folder)
+        src_row.addWidget(self._src_edit, 1)
+        src_browse = QPushButton(
+            self._lang.get("export_browse", "Browse..."))
+        src_browse.clicked.connect(self._browse_src)
+        src_row.addWidget(src_browse)
+        src_layout.addLayout(src_row)
+
+        self._recursive_check = QCheckBox(
+            self._lang.get("sanitize_recursive", "Include subfolders"))
+        self._recursive_check.toggled.connect(
+            lambda _: self._rescan_folder())
+        src_layout.addWidget(self._recursive_check)
+
+        layout.addWidget(self._src_row_widget)
+        if self._has_preset_paths:
+            self._src_row_widget.hide()
+
         # Image count
         self._count_label = QLabel("")
         layout.addWidget(self._count_label)
 
-        # Model selection
+        # Method / model selection
         model_row = QHBoxLayout()
         model_row.addWidget(QLabel(
             self._lang.get("upscale_model", "Model:")))
         self._model_combo = QComboBox()
+        # Traditional (lossless) methods first
+        for key, info_dict in TRADITIONAL_METHODS.items():
+            label = self._lang.get(info_dict["desc_key"],
+                                   info_dict["desc_default"])
+            self._model_combo.addItem(label, key)
+        # AI models
         for key, info_dict in UPSCALE_MODELS.items():
             label = self._lang.get(info_dict["desc_key"],
                                    info_dict["desc_default"])
             self._model_combo.addItem(label, key)
+        self._model_combo.currentIndexChanged.connect(
+            self._on_method_changed)
         model_row.addWidget(self._model_combo, 1)
         layout.addLayout(model_row)
+
+        # Scale factor (only for traditional methods)
+        self._scale_row = QHBoxLayout()
+        self._scale_label = QLabel(
+            self._lang.get("upscale_scale", "Scale factor:"))
+        self._scale_row.addWidget(self._scale_label)
+        self._scale_spin = QSpinBox()
+        self._scale_spin.setRange(2, 8)
+        self._scale_spin.setValue(2)
+        self._scale_row.addWidget(self._scale_spin)
+        self._scale_row.addStretch()
+        layout.addLayout(self._scale_row)
 
         # Overwrite
         self._overwrite_check = QCheckBox(
@@ -366,6 +507,37 @@ class AIUpscaleDialog(QDialog):
                            "{count} image(s)").format(count=count))
         self._start_btn.setEnabled(count > 0)
 
+    def _browse_src(self):
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            self._lang.get("main_window_select_folder", "Select Folder"))
+        if folder:
+            self._src_edit.setText(folder)
+
+    def _rescan_folder(self):
+        """Re-scan the source folder and update the paths list."""
+        if self._has_preset_paths:
+            return
+        folder = self._src_edit.text().strip()
+        if folder and os.path.isdir(folder):
+            recursive = self._recursive_check.isChecked()
+            self._paths = _scan_folder(folder, recursive=recursive)
+            # Default output dir to source folder
+            if not self._out_edit.text().strip():
+                self._out_edit.setText(folder)
+        else:
+            self._paths = []
+        self._update_count()
+
+    def _is_traditional(self) -> bool:
+        key = self._model_combo.currentData()
+        return key is not None and key.startswith("trad:")
+
+    def _on_method_changed(self, _index: int):
+        trad = self._is_traditional()
+        self._scale_label.setVisible(trad)
+        self._scale_spin.setVisible(trad)
+
     def _on_overwrite_toggled(self, checked):
         self._out_label.setVisible(not checked)
         self._out_edit.setVisible(not checked)
@@ -392,31 +564,40 @@ class AIUpscaleDialog(QDialog):
         self._start_btn.setEnabled(False)
         self._model_combo.setEnabled(False)
         self._overwrite_check.setEnabled(False)
-        self._status_label.setText(
-            self._lang.get("upscale_installing",
-                           "Installing dependencies..."))
 
-        def _on_deps_ready():
+        def _launch_worker():
             self._progress.setMaximum(len(self._paths))
             self._progress.setValue(0)
             self._progress.setVisible(True)
-            self._tile_progress.setVisible(True)
             self._status_label.setText("")
 
+            scale_override = (self._scale_spin.value()
+                              if model_key.startswith("trad:") else 0)
+            # Tile progress is only relevant for AI models
+            self._tile_progress.setVisible(not model_key.startswith("trad:"))
+
             self._worker = _UpscaleWorker(
-                self._paths, output_dir, model_key, overwrite)
+                self._paths, output_dir, model_key, overwrite,
+                scale_override=scale_override)
             self._worker.progress.connect(self._on_progress)
             self._worker.tile_progress.connect(self._on_tile_progress)
             self._worker.result_ready.connect(self._on_finished)
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        try:
-            ensure_dependencies(
-                self._gui.main_window, REQUIRED_PACKAGES, _on_deps_ready)
-        except Exception:
-            logger.error("ensure_dependencies raised", exc_info=True)
-            self._start_btn.setEnabled(True)
+        if model_key.startswith("trad:"):
+            # Traditional methods need no extra dependencies.
+            _launch_worker()
+        else:
+            self._status_label.setText(
+                self._lang.get("upscale_installing",
+                               "Installing dependencies..."))
+            try:
+                ensure_dependencies(
+                    self._gui.main_window, REQUIRED_PACKAGES, _launch_worker)
+            except Exception:
+                logger.error("ensure_dependencies raised", exc_info=True)
+                self._start_btn.setEnabled(True)
 
     def _on_progress(self, current, total, status):
         self._progress.setValue(current)
@@ -478,9 +659,11 @@ class AIUpscaleDialog(QDialog):
 # ---------------------------------------------------------------------------
 
 def open_ai_upscale(main_gui: GPUImageView):
-    """Open upscale dialog with all images in current folder."""
-    paths = list(main_gui.model.images) if main_gui.model.images else []
-    dlg = AIUpscaleDialog(main_gui, paths=paths)
+    """Open upscale dialog with folder selection (pre-fills current folder)."""
+    folder = None
+    if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):
+        folder = main_gui.model.folder_path
+    dlg = AIUpscaleDialog(main_gui, folder=folder)
     dlg.exec()
 
 

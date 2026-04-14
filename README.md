@@ -89,7 +89,7 @@ Key design principles:
 
 ### Editing & Export
 
-- Built-in image editor (crop, brightness, contrast, saturation, rotation)
+- Built-in image editor (crop, brightness, contrast, saturation, exposure, rotation, flip) with non-destructive preview — edits are previewed live on canvas and only written to disk on explicit Save
 - Export/Save As with format conversion (PNG, JPEG, WebP, BMP, TIFF)
 - Quality slider for lossy formats (JPEG, WebP)
 - Batch operations (rename, move/copy, rotate selected images)
@@ -104,9 +104,9 @@ Key design principles:
 
 ### Extra Tools
 
-- **Image Sanitizer** — Re-render images from raw pixels to strip ALL hidden data (EXIF, metadata, steganographic content, trailing bytes); rename with date + random string; optionally AI-upscale to common resolutions (1080p / 2K / 4K / 5K / 8K) while preserving aspect ratio
+- **Image Sanitizer** — Re-render images from raw pixels to strip ALL hidden data (EXIF, metadata, steganographic content, trailing bytes); rename with date + random string; optionally upscale to common resolutions (1080p / 2K / 4K / 5K / 8K) using traditional methods (Lanczos, Bicubic, Nearest Neighbor) or AI (Real-ESRGAN) while preserving aspect ratio
 - **Batch Format Conversion** — Convert images between PNG, JPEG, WebP, BMP, TIFF with quality control
-- **AI Image Upscale** — Super-resolution via Real-ESRGAN (x2 / x4 general, x4 anime); ONNX Runtime with CUDA/DML/CPU
+- **AI Image Upscale** — Super-resolution via Real-ESRGAN (x2 / x4 general, x4 anime) with ONNX Runtime (CUDA/DML/CPU), plus traditional lossless methods (Lanczos, Bicubic, Nearest Neighbor); supports folder selection with recursive scanning
 - **Duplicate Detection** — Find duplicate images by exact hash or perceptual similarity
 - **Image Organizer** — Sort images into subfolders by date, resolution, type, size, or fixed count
 - **Batch EXIF Strip** — Remove EXIF, GPS, and metadata from all images in a folder

@@ -4,8 +4,9 @@ Image Sanitizer — losslessly re-render images from raw pixel data,
 stripping ALL hidden data (metadata, EXIF, steganography, trailing
 bytes, alternate streams) and renaming with date + random string.
 
-Optionally upscale to a common target resolution using the built-in
-Imervue AI upscale engine (Real-ESRGAN) while keeping aspect ratio.
+Optionally upscale to a common target resolution using AI (Real-ESRGAN)
+or traditional resampling methods (Lanczos, Bicubic, Nearest) while
+keeping aspect ratio.
 """
 from __future__ import annotations
 
@@ -162,12 +163,14 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
                    target_long_edge: int = 0,
                    ort_session=None,
                    ort_scale: int = 0,
-                   tile_progress_cb=None) -> str:
+                   tile_progress_cb=None,
+                   trad_resampling=None) -> str:
     """Re-render an image from raw pixels, removing ALL hidden data.
 
     If *target_long_edge* > 0 and the image is smaller, it is upscaled
-    with the provided *ort_session* (ONNX Real-ESRGAN) then resized to
-    exactly fit the target while keeping aspect ratio.
+    using either *trad_resampling* (a PIL Resampling enum) or the
+    provided *ort_session* (ONNX Real-ESRGAN), then resized to exactly
+    fit the target while keeping aspect ratio.
 
     Returns the output path on success.  Raises on failure.
     """
@@ -192,41 +195,47 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     elif fmt == "JPEG" and clean.mode != "RGB":
         clean = clean.convert("RGB")
 
-    # --- Optional AI upscale ---
-    if target_long_edge > 0 and ort_session is not None and ort_scale > 0:
+    # --- Optional upscale ---
+    if target_long_edge > 0:
         w, h = clean.size
         long = max(w, h)
         if long < target_long_edge:
-            import numpy as np
-            from Imervue.gui.ai_upscale_dialog import _upscale_image
-
-            # Prepare RGB array for ONNX
-            if clean.mode == "RGBA":
-                alpha = clean.split()[-1]
-                rgb = clean.convert("RGB")
-            else:
-                alpha = None
-                rgb = clean
-
-            arr = np.array(rgb)
-            upscaled_arr = _upscale_image(
-                ort_session, arr, ort_scale, progress_cb=tile_progress_cb)
-            upscaled = Image.fromarray(upscaled_arr)
-
-            if alpha is not None:
-                alpha_up = alpha.resize(upscaled.size,
-                                        Image.Resampling.LANCZOS)
-                upscaled.putalpha(alpha_up)
-
-            # Downscale to exact target (LANCZOS keeps quality)
+            # Compute final dimensions preserving aspect ratio
             if w >= h:
                 final_w = target_long_edge
                 final_h = max(1, round(h * target_long_edge / w))
             else:
                 final_h = target_long_edge
                 final_w = max(1, round(w * target_long_edge / h))
-            clean = upscaled.resize((final_w, final_h),
-                                    Image.Resampling.LANCZOS)
+
+            if trad_resampling is not None:
+                # Traditional resize — single step, no ONNX needed
+                clean = clean.resize((final_w, final_h), trad_resampling)
+            elif ort_session is not None and ort_scale > 0:
+                # AI upscale via ONNX
+                import numpy as np
+                from Imervue.gui.ai_upscale_dialog import _upscale_image
+
+                if clean.mode == "RGBA":
+                    alpha = clean.split()[-1]
+                    rgb = clean.convert("RGB")
+                else:
+                    alpha = None
+                    rgb = clean
+
+                arr = np.array(rgb)
+                upscaled_arr = _upscale_image(
+                    ort_session, arr, ort_scale,
+                    progress_cb=tile_progress_cb)
+                upscaled = Image.fromarray(upscaled_arr)
+
+                if alpha is not None:
+                    alpha_up = alpha.resize(upscaled.size,
+                                            Image.Resampling.LANCZOS)
+                    upscaled.putalpha(alpha_up)
+
+                clean = upscaled.resize((final_w, final_h),
+                                        Image.Resampling.LANCZOS)
 
     # Generate new filename
     dt = _get_image_date(path)
@@ -282,33 +291,44 @@ class _SanitizeWorker(QThread):
         success = 0
         failed = 0
 
-        # Prepare ONNX session once if AI upscale is requested
+        # Determine upscale mode
+        is_traditional = self._model_key.startswith("trad:")
+        trad_resampling = None
         session = None
         scale = 0
+
         if self._target_long_edge > 0 and self._model_key:
-            try:
-                from Imervue.gui.ai_upscale_dialog import (
-                    _download_model, UPSCALE_MODELS,
-                )
-                import onnxruntime as ort
+            if is_traditional:
+                from Imervue.gui.ai_upscale_dialog import _TRAD_RESAMPLING
+                resampling_name = _TRAD_RESAMPLING.get(self._model_key)
+                if resampling_name:
+                    trad_resampling = getattr(Image.Resampling,
+                                              resampling_name)
+            else:
+                # AI model — prepare ONNX session
+                try:
+                    from Imervue.gui.ai_upscale_dialog import (
+                        _download_model, UPSCALE_MODELS,
+                    )
+                    import onnxruntime as ort
 
-                self.progress.emit(0, total, "Downloading AI model...")
-                model_path = _download_model(self._model_key)
-                self.progress.emit(0, total, "Loading AI model...")
+                    self.progress.emit(0, total, "Downloading AI model...")
+                    model_path = _download_model(self._model_key)
+                    self.progress.emit(0, total, "Loading AI model...")
 
-                providers = ort.get_available_providers()
-                preferred = []
-                if "CUDAExecutionProvider" in providers:
-                    preferred.append("CUDAExecutionProvider")
-                if "DmlExecutionProvider" in providers:
-                    preferred.append("DmlExecutionProvider")
-                preferred.append("CPUExecutionProvider")
-                session = ort.InferenceSession(model_path,
-                                               providers=preferred)
-                scale = UPSCALE_MODELS[self._model_key]["scale"]
-            except Exception:
-                logger.exception("Failed to load AI upscale model")
-                # Continue without upscale
+                    providers = ort.get_available_providers()
+                    preferred = []
+                    if "CUDAExecutionProvider" in providers:
+                        preferred.append("CUDAExecutionProvider")
+                    if "DmlExecutionProvider" in providers:
+                        preferred.append("DmlExecutionProvider")
+                    preferred.append("CPUExecutionProvider")
+                    session = ort.InferenceSession(model_path,
+                                                   providers=preferred)
+                    scale = UPSCALE_MODELS[self._model_key]["scale"]
+                except Exception:
+                    logger.exception("Failed to load AI upscale model")
+                    # Continue without upscale
 
         for i, path in enumerate(self._paths):
             if self._abort:
@@ -325,6 +345,7 @@ class _SanitizeWorker(QThread):
                     tile_progress_cb=(
                         lambda d, t: self.tile_progress.emit(d, t)
                     ) if session else None,
+                    trad_resampling=trad_resampling,
                 )
                 success += 1
             except Exception:
@@ -431,15 +452,16 @@ class ImageSanitizeDialog(QDialog):
 
         # --- AI Upscale group ---
         upscale_group = QGroupBox(
-            lang.get("sanitize_upscale_group", "AI Upscale (optional)"))
+            lang.get("sanitize_upscale_group", "Upscale (optional)"))
         upscale_layout = QVBoxLayout(upscale_group)
         upscale_layout.setContentsMargins(6, 6, 6, 6)
         upscale_layout.setSpacing(4)
 
         upscale_info = QLabel(lang.get(
             "sanitize_upscale_info",
-            "Upscale images smaller than the target to a common resolution "
-            "using Real-ESRGAN AI. Aspect ratio is preserved."))
+            "Upscale images smaller than the target to a common resolution. "
+            "Traditional methods are lossless and fast; AI methods use "
+            "Real-ESRGAN. Aspect ratio is preserved."))
         upscale_info.setWordWrap(True)
         upscale_layout.addWidget(upscale_info)
 
@@ -456,7 +478,14 @@ class ImageSanitizeDialog(QDialog):
         model_row.addWidget(QLabel(
             lang.get("upscale_model", "Model:")))
         self._model_combo = QComboBox()
-        from Imervue.gui.ai_upscale_dialog import UPSCALE_MODELS
+        from Imervue.gui.ai_upscale_dialog import (
+            UPSCALE_MODELS, TRADITIONAL_METHODS,
+        )
+        # Traditional methods first (no dependencies needed)
+        for mkey, minfo in TRADITIONAL_METHODS.items():
+            label = lang.get(minfo["desc_key"], minfo["desc_default"])
+            self._model_combo.addItem(label, mkey)
+        # AI models
         for mkey, minfo in UPSCALE_MODELS.items():
             label = lang.get(minfo["desc_key"], minfo["desc_default"])
             self._model_combo.addItem(label, mkey)
@@ -507,7 +536,7 @@ class ImageSanitizeDialog(QDialog):
             self._model_hint.setText(
                 self._lang.get(
                     "sanitize_upscale_hint",
-                    "Images with long edge < {px} px will be AI-upscaled.")
+                    "Images with long edge < {px} px will be upscaled.")
                 .replace("{px}", str(px)))
         else:
             self._model_combo.setEnabled(False)
@@ -553,8 +582,9 @@ class ImageSanitizeDialog(QDialog):
         target_long_edge = self._res_combo.currentData() or 0
         model_key = self._model_combo.currentData() or ""
 
-        # If upscale requested, install deps first
-        if target_long_edge > 0:
+        # If upscale requested with AI model, install deps first
+        is_traditional = model_key.startswith("trad:")
+        if target_long_edge > 0 and not is_traditional:
             from Imervue.gui.ai_upscale_dialog import REQUIRED_PACKAGES
             from Imervue.plugin.pip_installer import ensure_dependencies
             self._start_btn.setEnabled(False)
@@ -573,7 +603,8 @@ class ImageSanitizeDialog(QDialog):
             return
 
         self._launch_worker(paths, out, output_ext, rand_len, jpeg_quality,
-                            0, "")
+                            target_long_edge if is_traditional else 0,
+                            model_key if is_traditional else "")
 
     def _launch_worker(self, paths, out, output_ext, rand_len, jpeg_quality,
                        target_long_edge, model_key):
