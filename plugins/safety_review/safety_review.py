@@ -69,6 +69,7 @@ _RUNNER_SCRIPT = _PLUGIN_DIR / "_runner.py"
 # ---------------------------------------------------------------------------
 MODE_REAL = "real"
 MODE_ANIME = "anime"
+MODE_AUTO = "auto"
 
 # ---------------------------------------------------------------------------
 # NudeNet labels (real-photo mode)
@@ -121,11 +122,6 @@ MIN_CONFIDENCE = 0.25
 STYLE_MOSAIC = "mosaic"
 STYLE_BLUR = "blur"
 STYLE_BLACK = "black"
-
-# ---------------------------------------------------------------------------
-# Auto-detect mode
-# ---------------------------------------------------------------------------
-MODE_AUTO = "auto"
 
 # ---------------------------------------------------------------------------
 # Abstract detection categories → per-mode labels / class IDs
