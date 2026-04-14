@@ -38,23 +38,24 @@ logger = logging.getLogger("Imervue.ai_upscale")
 # ---------------------------------------------------------------------------
 # Model registry — HuggingFace repo + filename for each variant
 # ---------------------------------------------------------------------------
-_HF_REPO = "facefool/Real-ESRGAN-ONNX"
-
 UPSCALE_MODELS = {
     "realesrgan-x4plus": {
-        "file": "RealESRGAN_x4plus.onnx",
+        "repo": "OwlMaster/AllFilesRope",
+        "file": "RealESRGAN_x4plus.fp16.onnx",
         "scale": 4,
         "desc_key": "upscale_model_x4",
         "desc_default": "Real-ESRGAN x4 (general, best quality)",
     },
     "realesrgan-x4plus-anime": {
-        "file": "RealESRGAN_x4plus_anime_6B.onnx",
+        "repo": "xiongjie/lightweight-real-ESRGAN-anime",
+        "file": "RealESRGAN_x4plus_anime_4B32F.onnx",
         "scale": 4,
         "desc_key": "upscale_model_x4_anime",
         "desc_default": "Real-ESRGAN x4 Anime (optimized for illustrations)",
     },
     "realesrgan-x2plus": {
-        "file": "RealESRGAN_x2plus.onnx",
+        "repo": "OwlMaster/AllFilesRope",
+        "file": "RealESRGAN_x2plus.fp16.onnx",
         "scale": 2,
         "desc_key": "upscale_model_x2",
         "desc_default": "Real-ESRGAN x2 (general, 2x upscale)",
@@ -83,7 +84,7 @@ def _download_model(model_key: str) -> str:
     """Download model from HF and return local path."""
     from huggingface_hub import hf_hub_download
     info = UPSCALE_MODELS[model_key]
-    return hf_hub_download(repo_id=_HF_REPO, filename=info["file"])
+    return hf_hub_download(repo_id=info["repo"], filename=info["file"])
 
 
 def _upscale_tile(session, tile_arr):
