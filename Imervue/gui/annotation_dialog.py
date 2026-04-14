@@ -251,6 +251,14 @@ class AnnotationCanvas(QWidget):
         self._drag_start_image: Optional[tuple[int, int]] = None
         self._drag_orig_points: Optional[list[tuple[int, int]]] = None
 
+        # Crop tool state
+        self._crop_rect: Optional[tuple[int, int, int, int]] = None  # (x, y, w, h) in image coords
+        self._crop_ratio: tuple[int, int] = (0, 0)  # (0,0) = free
+        self._crop_dragging: bool = False
+        self._crop_drag_start: Optional[tuple[int, int]] = None
+        self._crop_drag_handle: Optional[str] = None  # None = new, "move", "nw"..."w"
+        self._crop_drag_orig: Optional[tuple[int, int, int, int]] = None
+
         # Inline text editor
         self._text_edit: Optional[QLineEdit] = None
         self._text_anchor_image: Optional[tuple[int, int]] = None
@@ -330,6 +338,45 @@ class AnnotationCanvas(QWidget):
 
     def current_font_size(self) -> int:
         return self._font_size
+
+    # ---------- Crop API ----------
+
+    def set_crop_ratio(self, rw: int, rh: int) -> None:
+        self._crop_ratio = (rw, rh)
+        if self._crop_rect is not None and rw > 0 and rh > 0:
+            self._enforce_crop_ratio()
+            self.update()
+
+    def get_crop_rect(self) -> Optional[tuple[int, int, int, int]]:
+        return self._crop_rect
+
+    def clear_crop(self) -> None:
+        self._crop_rect = None
+        self._crop_dragging = False
+        self._crop_drag_handle = None
+        self.update()
+
+    def _enforce_crop_ratio(self) -> None:
+        """Adjust crop rect to match the current aspect ratio, anchored at center."""
+        if self._crop_rect is None:
+            return
+        rw, rh = self._crop_ratio
+        if rw <= 0 or rh <= 0:
+            return
+        x, y, w, h = self._crop_rect
+        cx, cy = x + w / 2, y + h / 2
+        target = rw / rh
+        current = w / max(1, h)
+        if current > target:
+            # too wide → shrink width
+            new_w = int(h * target)
+            new_h = h
+        else:
+            new_w = w
+            new_h = int(w / target)
+        nx = max(0, min(self._base.width - new_w, int(cx - new_w / 2)))
+        ny = max(0, min(self._base.height - new_h, int(cy - new_h / 2)))
+        self._crop_rect = (nx, ny, new_w, new_h)
 
     def current_brush_type(self) -> str:
         return self._brush_type
@@ -423,6 +470,62 @@ class AnnotationCanvas(QWidget):
             sel = self._find(self._selected_id)
             if sel is not None:
                 self._draw_selection(painter, sel)
+
+        # Crop overlay: dim outside, dashed border, handles
+        if self._tool == "crop" and self._crop_rect is not None and rect.width() > 0:
+            cx, cy, cw, ch = self._crop_rect
+            tl = self._image_to_screen(cx, cy)
+            br = self._image_to_screen(cx + cw, cy + ch)
+            crop_screen = QRectF(tl, br).normalized()
+            # Dim outside region
+            dim = QColor(0, 0, 0, 140)
+            # Top
+            painter.fillRect(QRectF(rect.left(), rect.top(), rect.width(),
+                                    crop_screen.top() - rect.top()), dim)
+            # Bottom
+            painter.fillRect(QRectF(rect.left(), crop_screen.bottom(),
+                                    rect.width(), rect.bottom() - crop_screen.bottom()), dim)
+            # Left
+            painter.fillRect(QRectF(rect.left(), crop_screen.top(),
+                                    crop_screen.left() - rect.left(),
+                                    crop_screen.height()), dim)
+            # Right
+            painter.fillRect(QRectF(crop_screen.right(), crop_screen.top(),
+                                    rect.right() - crop_screen.right(),
+                                    crop_screen.height()), dim)
+            # Dashed border
+            crop_pen = QPen(QColor(255, 255, 255))
+            crop_pen.setWidthF(1.5)
+            crop_pen.setStyle(Qt.PenStyle.DashLine)
+            painter.setPen(crop_pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(crop_screen)
+            # Rule of thirds guidelines
+            thirds_pen = QPen(QColor(255, 255, 255, 80))
+            thirds_pen.setWidthF(0.5)
+            painter.setPen(thirds_pen)
+            for i in range(1, 3):
+                tx = crop_screen.left() + crop_screen.width() * i / 3
+                ty = crop_screen.top() + crop_screen.height() * i / 3
+                painter.drawLine(QPointF(tx, crop_screen.top()),
+                                 QPointF(tx, crop_screen.bottom()))
+                painter.drawLine(QPointF(crop_screen.left(), ty),
+                                 QPointF(crop_screen.right(), ty))
+            # Resize handles
+            painter.setBrush(QBrush(QColor(255, 255, 255)))
+            painter.setPen(QPen(QColor(0, 120, 215), 1))
+            h = _HANDLE_SIZE
+            for hx, hy in self._handle_positions(crop_screen):
+                painter.drawRect(QRectF(hx - h / 2, hy - h / 2, h, h))
+            # Size label
+            size_text = f"{cw} x {ch}"
+            painter.setPen(QPen(QColor(255, 255, 255)))
+            label_font = QFont()
+            label_font.setPixelSize(12)
+            painter.setFont(label_font)
+            painter.drawText(
+                QPointF(crop_screen.left() + 4, crop_screen.top() - 4),
+                size_text)
 
         painter.end()
 
@@ -814,11 +917,49 @@ class AnnotationCanvas(QWidget):
 
     # ---------- Mouse events ----------
 
+    def _crop_hit_handle(self, pt: QPointF) -> Optional[str]:
+        """Check if pt hits a handle on the current crop rect."""
+        if self._crop_rect is None:
+            return None
+        cx, cy, cw, ch = self._crop_rect
+        crop_screen = QRectF(
+            self._image_to_screen(cx, cy),
+            self._image_to_screen(cx + cw, cy + ch),
+        ).normalized()
+        h = _HANDLE_SIZE
+        for name, (hx, hy) in zip(
+            self._HANDLE_NAMES, self._handle_positions(crop_screen)
+        ):
+            box = QRectF(hx - h, hy - h, h * 2, h * 2)
+            if box.contains(pt):
+                return name
+        # Inside crop rect = move
+        if crop_screen.contains(pt):
+            return "move"
+        return None
+
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         pt = event.position()
         ix, iy = self._screen_to_image(pt.x(), pt.y())
+
+        # --- Crop tool ---
+        if self._tool == "crop":
+            handle = self._crop_hit_handle(pt) if self._crop_rect else None
+            if handle is not None:
+                self._crop_dragging = True
+                self._crop_drag_start = (ix, iy)
+                self._crop_drag_handle = handle
+                self._crop_drag_orig = self._crop_rect
+                return
+            # Start new crop
+            self._crop_rect = (ix, iy, 0, 0)
+            self._crop_dragging = True
+            self._crop_drag_start = (ix, iy)
+            self._crop_drag_handle = None  # new crop
+            self._crop_drag_orig = None
+            return
 
         if self._tool == "select":
             handle = self._hit_handle(pt)
@@ -871,6 +1012,71 @@ class AnnotationCanvas(QWidget):
         ix, iy = self._screen_to_image(pt.x(), pt.y())
         self.cursor_image_pos.emit(ix, iy)
 
+        # --- Crop tool ---
+        if self._tool == "crop":
+            if self._crop_dragging and self._crop_drag_start is not None:
+                sx, sy = self._crop_drag_start
+                if self._crop_drag_handle is None:
+                    # Drawing new crop rect
+                    x1, y1 = min(sx, ix), min(sy, iy)
+                    x2, y2 = max(sx, ix), max(sy, iy)
+                    # Clamp to image bounds
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+                    x2 = min(self._base.width, x2)
+                    y2 = min(self._base.height, y2)
+                    self._crop_rect = (x1, y1, x2 - x1, y2 - y1)
+                    rw, rh = self._crop_ratio
+                    if rw > 0 and rh > 0:
+                        self._enforce_crop_ratio()
+                elif self._crop_drag_handle == "move" and self._crop_drag_orig:
+                    ox, oy, ow, oh = self._crop_drag_orig
+                    dx, dy = ix - sx, iy - sy
+                    nx = max(0, min(self._base.width - ow, ox + dx))
+                    ny = max(0, min(self._base.height - oh, oy + dy))
+                    self._crop_rect = (nx, ny, ow, oh)
+                elif self._crop_drag_orig:
+                    # Resize via handle
+                    ox, oy, ow, oh = self._crop_drag_orig
+                    dx, dy = ix - sx, iy - sy
+                    h = self._crop_drag_handle
+                    nx, ny, nw, nh = ox, oy, ow, oh
+                    if "w" in h:
+                        nx = ox + dx
+                        nw = ow - dx
+                    if "e" in h:
+                        nw = ow + dx
+                    if "n" in h:
+                        ny = oy + dy
+                        nh = oh - dy
+                    if "s" in h:
+                        nh = oh + dy
+                    # Ensure positive size
+                    if nw < 1:
+                        nw = 1
+                    if nh < 1:
+                        nh = 1
+                    # Clamp to image
+                    nx = max(0, nx)
+                    ny = max(0, ny)
+                    nw = min(self._base.width - nx, nw)
+                    nh = min(self._base.height - ny, nh)
+                    self._crop_rect = (int(nx), int(ny), int(nw), int(nh))
+                    rw, rh = self._crop_ratio
+                    if rw > 0 and rh > 0:
+                        self._enforce_crop_ratio()
+                self.update()
+                return
+            # Cursor feedback
+            handle = self._crop_hit_handle(pt) if self._crop_rect else None
+            if handle is not None and handle != "move":
+                self.setCursor(_handle_cursor(handle))
+            elif handle == "move":
+                self.setCursor(Qt.CursorShape.SizeAllCursor)
+            else:
+                self.setCursor(Qt.CursorShape.CrossCursor)
+            return
+
         # Cursor feedback for the select tool
         if self._tool == "select" and self._drag_mode is None:
             handle = self._hit_handle(pt)
@@ -908,6 +1114,20 @@ class AnnotationCanvas(QWidget):
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() != Qt.MouseButton.LeftButton:
+            return
+
+        # --- Crop tool ---
+        if self._tool == "crop" and self._crop_dragging:
+            self._crop_dragging = False
+            self._crop_drag_start = None
+            self._crop_drag_handle = None
+            self._crop_drag_orig = None
+            # Discard degenerate crop
+            if self._crop_rect is not None:
+                _, _, cw, ch = self._crop_rect
+                if cw < 2 or ch < 2:
+                    self._crop_rect = None
+            self.update()
             return
 
         if self._drag_mode is not None and self._drag_orig_points is not None:

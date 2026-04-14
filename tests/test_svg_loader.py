@@ -2,6 +2,9 @@
 import numpy as np
 import pytest
 
+pytest.importorskip("imageio")
+pytest.importorskip("rawpy")
+
 
 class TestSVGLoader:
     def test_svg_in_supported_exts(self):

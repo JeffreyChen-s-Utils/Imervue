@@ -330,6 +330,10 @@ class GPUImageView(QOpenGLWidget):
         cols = max(1, int(self.width() // scaled_tile))
         self.tile_rects = []
 
+        # 在迴圈外設定一次 GL 狀態，避免每張 tile 都重複呼叫
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        vw, vh = self.width(), self.height()
+
         for i, path in enumerate(images):
 
             # 沒載入完成就跳過
@@ -347,7 +351,7 @@ class GPUImageView(QOpenGLWidget):
             y1 = y0 + img_data.shape[0] * self.tile_scale
 
             # Viewport 裁切
-            if x1 < 0 or x0 > self.width() or y1 < 0 or y0 > self.height():
+            if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
                 continue
 
             self.tile_rects.append((x0, y0, x1, y1, path))
@@ -360,7 +364,6 @@ class GPUImageView(QOpenGLWidget):
 
                 tex = glGenTextures(1)
                 glBindTexture(GL_TEXTURE_2D, tex)
-                glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                              img_data.shape[1], img_data.shape[0], 0,
@@ -954,17 +957,29 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     def _cancel_tile_workers(self):
         for worker in self.active_tile_workers:
+            try:
+                worker.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             worker.abort()
         self.active_tile_workers.clear()
 
     def _cancel_deep_zoom_worker(self):
         if self.active_deep_zoom_worker is not None:
+            try:
+                self.active_deep_zoom_worker.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             self.active_deep_zoom_worker.abort()
             self.active_deep_zoom_worker = None
 
     def _cancel_all_prefetch(self):
         """取消所有預載 worker 並清空快取"""
         for w in self._prefetch_workers.values():
+            try:
+                w.signals.finished.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             w.abort()
         self._prefetch_workers.clear()
         self._prefetch_cache.clear()
@@ -1160,25 +1175,26 @@ class GPUImageView(QOpenGLWidget):
             if 0 <= idx < len(images):
                 needed.add(images[idx])
 
-        # 取消不再需要的 worker
-        for path in list(self._prefetch_workers):
-            if path not in needed:
-                self._prefetch_workers.pop(path).abort()
+        with QMutexLocker(self._prefetch_mutex):
+            # 取消不再需要的 worker
+            for path in list(self._prefetch_workers):
+                if path not in needed:
+                    self._prefetch_workers.pop(path).abort()
 
-        # 淘汰不在範圍內的快取
-        for path in list(self._prefetch_cache):
-            if path not in needed:
-                del self._prefetch_cache[path]
+            # 淘汰不在範圍內的快取
+            for path in list(self._prefetch_cache):
+                if path not in needed:
+                    del self._prefetch_cache[path]
 
-        # 對需要且尚未載入/正在載入的路徑啟動 worker
-        from Imervue.image.recipe_store import recipe_store
-        for path in needed:
-            if path in self._prefetch_cache or path in self._prefetch_workers:
-                continue
-            worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
-            worker.signals.finished.connect(self._on_prefetch_loaded)
-            self._prefetch_workers[path] = worker
-            self.thread_pool.start(worker)
+            # 對需要且尚未載入/正在載入的路徑啟動 worker
+            from Imervue.image.recipe_store import recipe_store
+            for path in needed:
+                if path in self._prefetch_cache or path in self._prefetch_workers:
+                    continue
+                worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
+                worker.signals.finished.connect(self._on_prefetch_loaded)
+                self._prefetch_workers[path] = worker
+                self.thread_pool.start(worker)
 
     def _on_prefetch_loaded(self, dzi, path):
         """預載 worker 完成回調"""
@@ -1373,6 +1389,8 @@ class GPUImageView(QOpenGLWidget):
         super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
+        from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+
         key = event.key()
         modifiers = event.modifiers()
 
@@ -1381,125 +1399,21 @@ class GPUImageView(QOpenGLWidget):
             if self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self):
                 return
 
-        ctrl = modifiers & Qt.KeyboardModifier.ControlModifier
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
 
-        # ===== Ctrl 組合鍵 =====
-        if ctrl:
-            if key == Qt.Key.Key_Z:
-                if shift:
-                    self.undo_manager.redo()
-                else:
-                    # 先嘗試 QUndoStack，如果沒有可撤銷的就回退到 legacy delete undo
-                    if self.undo_manager.canUndo():
-                        self.undo_manager.undo()
-                    else:
-                        undo_delete(main_gui=self)
-                return
-            if key == Qt.Key.Key_Y:
-                self.undo_manager.redo()
-                return
-            if key == Qt.Key.Key_C:
-                copy_image_to_clipboard(self)
-                return
-            if key == Qt.Key.Key_V:
-                self._paste_image_from_clipboard()
-                return
-            if key == Qt.Key.Key_F:
-                open_search_dialog(self)
-                return
-
-        # ===== F — 全螢幕 =====
-        if key == Qt.Key.Key_F:
-            toggle_fullscreen(self)
-            return
-
-        # ===== E — 編輯 / 註解 =====
-        if key == Qt.Key.Key_E:
-            if self.deep_zoom:
-                images = self.model.images
-                if images and 0 <= self.current_index < len(images):
-                    open_annotation_for_path(self, images[self.current_index])
-            return
-
-        # ===== S — 幻燈片 =====
-        if key == Qt.Key.Key_S:
-            open_slideshow_dialog(self)
-            return
-
-        # ===== T — 標籤與相簿 =====
-        if key == Qt.Key.Key_T:
-            from Imervue.gui.tag_album_dialog import open_tag_album_dialog
-            open_tag_album_dialog(self)
-            return
-
-        # ===== H — RGB 直方圖 =====
-        if key == Qt.Key.Key_H:
-            if self.deep_zoom:
-                self._show_histogram = not self._show_histogram
-                self.update()
-            return
-
-        # ===== W — 適應寬度 / Shift+W — 適應高度 =====
-        if key == Qt.Key.Key_W:
-            if self.deep_zoom:
-                lang = self.main_window.language_wrapper.language_word_dict
-                if shift:
-                    self._fit_to_height()
-                    msg = lang.get("fit_height", "Fit Height")
-                else:
-                    self._fit_to_width()
-                    msg = lang.get("fit_width", "Fit Width")
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(msg)
-            return
-
-        # ===== B — 書籤切換（僅 DeepZoom）=====
-        if key == Qt.Key.Key_B:
-            if self.deep_zoom:
-                self._toggle_bookmark()
-            return
-
-        # ===== 動畫控制 =====
-        if self._animation and self._animation.is_animated:
-            if key == Qt.Key.Key_Space:
-                self._animation.toggle()
-                return
-            if key == Qt.Key.Key_Comma:  # < 上一幀
-                self._animation.prev_frame()
-                return
-            if key == Qt.Key.Key_Period:  # > 下一幀
-                self._animation.next_frame()
-                return
-            if key == Qt.Key.Key_BracketLeft:  # [ 減速
-                self._animation.set_speed(self._animation.speed / 1.5)
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
-                return
-            if key == Qt.Key.Key_BracketRight:  # ] 加速
-                self._animation.set_speed(self._animation.speed * 1.5)
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
-                return
-
-        # ===== Escape =====
+        # ===== Escape — always hardcoded (not remappable) =====
         if key == Qt.Key.Key_Escape:
-            # 停止幻燈片
             if hasattr(self, '_slideshow') and self._slideshow and self._slideshow.running:
                 stop_slideshow(self)
                 return
-
-            # 全螢幕 → 退出全螢幕
             if self.main_window.isFullScreen():
                 toggle_fullscreen(self)
                 return
-
             if self.tile_grid_mode and self.selected_tiles:
                 self.tile_selection_mode = False
                 self.selected_tiles.clear()
                 self.update()
                 return
-
             if self.deep_zoom or self.active_deep_zoom_worker:
                 self._cancel_deep_zoom_worker()
                 self._cancel_all_prefetch()
@@ -1513,16 +1427,127 @@ class GPUImageView(QOpenGLWidget):
                 self.update()
                 return
 
-        # ===== R / Shift+R — 旋轉（僅 DeepZoom）=====
-        if key == Qt.Key.Key_R:
+        # ===== Arrow keys — always hardcoded (not remappable) =====
+        if key in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right):
+            step = self.thumbnail_size or 1024
+            fine_step = int(step / 2)
+            move_step = fine_step if shift else step
+            if self.tile_grid_mode:
+                if key == Qt.Key.Key_Up:
+                    self.grid_offset_y += move_step
+                elif key == Qt.Key.Key_Down:
+                    self.grid_offset_y -= move_step
+                elif key == Qt.Key.Key_Left:
+                    self.grid_offset_x += move_step
+                elif key == Qt.Key.Key_Right:
+                    self.grid_offset_x -= move_step
+                self.update()
+                return
             if self.deep_zoom:
-                from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-                cmd = RotateCommand(self, clockwise=not shift)
-                self.undo_manager.push(cmd)
+                if key == Qt.Key.Key_Right:
+                    switch_to_next_image(main_gui=self)
+                    return
+                elif key == Qt.Key.Key_Left:
+                    switch_to_previous_image(main_gui=self)
+                    return
+
+        # ===== Remappable shortcuts via ShortcutManager =====
+        mods_int = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        action = shortcut_manager.get_action(key, mods_int)
+        if action is None:
             return
 
-        # ===== Home — 重置座標 =====
-        if key == Qt.Key.Key_Home:
+        # --- Undo / Redo ---
+        if action == "undo":
+            if self.undo_manager.canUndo():
+                self.undo_manager.undo()
+            else:
+                undo_delete(main_gui=self)
+            return
+        if action in ("redo", "redo_alt"):
+            self.undo_manager.redo()
+            return
+
+        # --- Clipboard ---
+        if action == "copy":
+            copy_image_to_clipboard(self)
+            return
+        if action == "paste":
+            self._paste_image_from_clipboard()
+            return
+
+        # --- Search ---
+        if action in ("search", "search_alt"):
+            open_search_dialog(self)
+            return
+
+        # --- Fullscreen ---
+        if action == "fullscreen":
+            toggle_fullscreen(self)
+            return
+
+        # --- Edit / Annotate ---
+        if action == "edit":
+            if self.deep_zoom:
+                images = self.model.images
+                if images and 0 <= self.current_index < len(images):
+                    open_annotation_for_path(self, images[self.current_index])
+            return
+
+        # --- Slideshow ---
+        if action == "slideshow":
+            open_slideshow_dialog(self)
+            return
+
+        # --- Tags & Albums ---
+        if action == "tags":
+            from Imervue.gui.tag_album_dialog import open_tag_album_dialog
+            open_tag_album_dialog(self)
+            return
+
+        # --- Histogram ---
+        if action == "histogram":
+            if self.deep_zoom:
+                self._show_histogram = not self._show_histogram
+                self.update()
+            return
+
+        # --- Fit width / height ---
+        if action == "fit_width":
+            if self.deep_zoom:
+                self._fit_to_width()
+                lang = self.main_window.language_wrapper.language_word_dict
+                if hasattr(self.main_window, 'toast'):
+                    self.main_window.toast.info(lang.get("fit_width", "Fit Width"))
+            return
+        if action == "fit_height":
+            if self.deep_zoom:
+                self._fit_to_height()
+                lang = self.main_window.language_wrapper.language_word_dict
+                if hasattr(self.main_window, 'toast'):
+                    self.main_window.toast.info(lang.get("fit_height", "Fit Height"))
+            return
+
+        # --- Bookmark ---
+        if action == "bookmark":
+            if self.deep_zoom:
+                self._toggle_bookmark()
+            return
+
+        # --- Rotate ---
+        if action == "rotate_cw":
+            if self.deep_zoom:
+                from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
+                self.undo_manager.push(RotateCommand(self, clockwise=True))
+            return
+        if action == "rotate_ccw":
+            if self.deep_zoom:
+                from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
+                self.undo_manager.push(RotateCommand(self, clockwise=False))
+            return
+
+        # --- Reset view ---
+        if action == "reset_view":
             if self.deep_zoom:
                 self.zoom = 1.0
                 self.dz_offset_x = 0
@@ -1533,61 +1558,45 @@ class GPUImageView(QOpenGLWidget):
             self.update()
             return
 
-        # ===== / — 搜尋 =====
-        if key == Qt.Key.Key_Slash:
-            open_search_dialog(self)
-            return
-
-        # ===== 0 — 愛心收藏 =====
-        if key == Qt.Key.Key_0:
+        # --- Favorite ---
+        if action == "favorite":
             toggle_favorite(self)
             return
 
-        # ===== 1~5 — 快速評分 =====
-        if key in (Qt.Key.Key_1, Qt.Key.Key_2, Qt.Key.Key_3,
-                   Qt.Key.Key_4, Qt.Key.Key_5):
-            rating = key - Qt.Key.Key_0
+        # --- Quick rating 1-5 ---
+        if action in ("rate_1", "rate_2", "rate_3", "rate_4", "rate_5"):
+            rating = int(action[-1])
             rate_current_image(self, rating)
             return
 
-        # ===== Delete — 移至垃圾桶 =====
-        if key == Qt.Key.Key_Delete:
+        # --- Delete ---
+        if action == "delete":
             if self.tile_grid_mode and self.tile_selection_mode:
                 trash_selected_tiles(self)
             elif self.deep_zoom:
                 trash_current_image(self)
             return
 
-        # ===== 方向鍵移動 =====
-        step = self.thumbnail_size or 1024
-        fine_step = int(step / 2)
-        move_step = fine_step if shift else step
-
-        if self.tile_grid_mode:
-            if key == Qt.Key.Key_Up:
-                self.grid_offset_y += move_step
-                self.update()
+        # --- Animation controls ---
+        if self._animation and self._animation.is_animated:
+            if action == "anim_toggle":
+                self._animation.toggle()
                 return
-            elif key == Qt.Key.Key_Down:
-                self.grid_offset_y -= move_step
-                self.update()
+            if action == "anim_prev":
+                self._animation.prev_frame()
                 return
-            elif key == Qt.Key.Key_Left:
-                self.grid_offset_x += move_step
-                self.update()
+            if action == "anim_next":
+                self._animation.next_frame()
                 return
-            elif key == Qt.Key.Key_Right:
-                self.grid_offset_x -= move_step
-                self.update()
+            if action == "anim_slower":
+                self._animation.set_speed(self._animation.speed / 1.5)
+                if hasattr(self.main_window, 'toast'):
+                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
                 return
-
-        # DeepZoom 左右切換
-        if self.deep_zoom:
-            if key == Qt.Key.Key_Right:
-                switch_to_next_image(main_gui=self)
-                return
-            elif key == Qt.Key.Key_Left:
-                switch_to_previous_image(main_gui=self)
+            if action == "anim_faster":
+                self._animation.set_speed(self._animation.speed * 1.5)
+                if hasattr(self.main_window, 'toast'):
+                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
                 return
 
     # ===========================

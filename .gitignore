@@ -194,3 +194,4 @@ plugins/object_splitter/models/isnet-anime.onnx
 plugins/ai_background_remover/models/u2net_human_seg.onnx
 /user_setting.json
 /build_nuitka/
+/plugins/

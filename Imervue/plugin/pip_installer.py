@@ -149,17 +149,18 @@ class _DownloadPythonWorker(QThread):
             get_pip_path = dest_dir / "get-pip.py"
             get_pip_path.write_bytes(get_pip_data)
 
-            self.log.emit("Installing pip ...")
-            returncode = self._run_with_live_output(
-                [str(python_exe), str(get_pip_path)],
-                cwd=str(dest_dir),
-                timeout=300,
-            )
-            if returncode != 0:
-                self.result_ready.emit(False, f"get-pip.py failed (exit code {returncode})")
-                return
-
-            get_pip_path.unlink(missing_ok=True)
+            try:
+                self.log.emit("Installing pip ...")
+                returncode = self._run_with_live_output(
+                    [str(python_exe), str(get_pip_path)],
+                    cwd=str(dest_dir),
+                    timeout=300,
+                )
+                if returncode != 0:
+                    self.result_ready.emit(False, f"get-pip.py failed (exit code {returncode})")
+                    return
+            finally:
+                get_pip_path.unlink(missing_ok=True)
 
             # 5) 驗證 pip 可用
             self.log.emit("Verifying pip ...")

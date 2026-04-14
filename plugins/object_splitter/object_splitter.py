@@ -109,7 +109,11 @@ class _SubprocessWorker(QThread):
                 if line.startswith("STEP:"):
                     parts = line[5:].split(":", 2)
                     if len(parts) == 3:
-                        self.step.emit(int(parts[0]), int(parts[1]), parts[2])
+                        try:
+                            self.step.emit(
+                                int(parts[0]), int(parts[1]), parts[2])
+                        except (ValueError, RuntimeError):
+                            pass
                 elif line.startswith("OK:"):
                     self.result_ready.emit(True, line[3:])
                     proc.wait()
@@ -403,6 +407,10 @@ class ObjectSplitterDialog(QDialog):
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
+            try:
+                self._worker.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)

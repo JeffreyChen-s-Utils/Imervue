@@ -4,6 +4,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
+pytest.importorskip("imageio")
+pytest.importorskip("rawpy")
+
 from Imervue.gpu_image_view.images.image_loader import load_image_file, _scan_images
 
 

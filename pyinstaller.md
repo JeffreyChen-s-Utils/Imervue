@@ -314,3 +314,6 @@ datas = [
 5. 載入至少一個 plugin（例如 `plugins/object_splitter`）——驗證 plugin 目錄與 `models/` 子目錄
 6. 新增 / 列出書籤——驗證 `user_setting.json` 讀寫路徑
 7. 執行期 pip 安裝：跑一個帶依賴的 plugin（如 AI 背景移除），安裝成功後 **關閉 app → 重開 → 不用再安裝就能用** ⇒ 代表 `lib/site-packages` 有正確被加進 `sys.path`
+8. 修改面板（Develop）：調整曝光 / 亮度滑桿——畫布即時預覽，不修改原檔；儲存後才寫入磁碟
+9. AI 圖片放大：選擇傳統方法（Lanczos / Bicubic / Nearest）放大，不需安裝 ONNX 依賴即可運作
+10. 圖片淨化重繪：選擇傳統放大方法搭配目標解析度，確認輸出圖片尺寸正確且 EXIF 已清除

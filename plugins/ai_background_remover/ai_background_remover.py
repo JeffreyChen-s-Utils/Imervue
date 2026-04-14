@@ -193,18 +193,20 @@ class _SubprocessBatchWorker(QThread):
         self._alpha_matting = alpha_matting
 
     def run(self):
+        tmp_path = None
         try:
             # Write paths to temp file
             tmp = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False, encoding="utf-8",
             )
+            tmp_path = tmp.name
             json.dump(self._paths, tmp)
             tmp.close()
 
             cmd = [
                 self._python, str(_RUNNER_SCRIPT),
                 self._site_packages, "batch",
-                tmp.name, self._output_dir, self._model,
+                tmp_path, self._output_dir, self._model,
                 str(self._alpha_matting), str(_MODELS_DIR),
             ]
             kw = _subprocess_kwargs()
@@ -218,25 +220,35 @@ class _SubprocessBatchWorker(QThread):
                 if line.startswith("BATCH_PROGRESS:"):
                     parts = line[15:].split(":", 2)
                     if len(parts) == 3:
-                        self.progress.emit(int(parts[0]), int(parts[1]), parts[2])
+                        try:
+                            self.progress.emit(
+                                int(parts[0]), int(parts[1]), parts[2])
+                        except (ValueError, RuntimeError):
+                            pass
                 elif line.startswith("BATCH_OK:"):
-                    parts = line[9:].split(":")
-                    self.result_ready.emit(int(parts[0]), int(parts[1]))
+                    parts = line[9:].split(":", 1)
+                    try:
+                        self.result_ready.emit(int(parts[0]), int(parts[1]))
+                    except (ValueError, IndexError):
+                        self.result_ready.emit(0, len(self._paths))
                     proc.wait()
-                    os.unlink(tmp.name)
                     return
                 elif line.startswith("ERROR:"):
                     self.result_ready.emit(0, len(self._paths))
                     proc.wait()
-                    os.unlink(tmp.name)
                     return
 
             proc.wait()
-            os.unlink(tmp.name)
             self.result_ready.emit(0, len(self._paths))
         except Exception as exc:
             logger.error("_SubprocessBatchWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(0, len(self._paths))
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
 
 # ===========================
@@ -286,12 +298,17 @@ class _RemoveBackgroundWorker(QThread):
 
     @staticmethod
     def _load_image(path: str):
-        from PIL import Image
-        if Path(path).suffix.lower() == ".svg":
-            from Imervue.gpu_image_view.images.image_loader import _load_svg
-            arr = _load_svg(path, thumbnail=False)
-            return Image.fromarray(arr)
-        return Image.open(path)
+        return _load_image_for_rembg(path)
+
+
+def _load_image_for_rembg(path: str):
+    """Load image for rembg, handling SVG via the app's SVG loader."""
+    from PIL import Image
+    if Path(path).suffix.lower() == ".svg":
+        from Imervue.gpu_image_view.images.image_loader import _load_svg
+        arr = _load_svg(path, thumbnail=False)
+        return Image.fromarray(arr)
+    return Image.open(path)
 
 
 class _BatchRemoveWorker(QThread):
@@ -309,7 +326,6 @@ class _BatchRemoveWorker(QThread):
     def run(self):
         _MODELS_DIR.mkdir(parents=True, exist_ok=True)
         from rembg import remove, new_session
-        from PIL import Image
 
         session = new_session(self._model)
         success = 0
@@ -320,12 +336,7 @@ class _BatchRemoveWorker(QThread):
             try:
                 self.progress.emit(i, total, Path(src).name)
 
-                if Path(src).suffix.lower() == ".svg":
-                    from Imervue.gpu_image_view.images.image_loader import _load_svg
-                    arr = _load_svg(src, thumbnail=False)
-                    input_img = Image.fromarray(arr)
-                else:
-                    input_img = Image.open(src)
+                input_img = _load_image_for_rembg(src)
 
                 output_img = remove(
                     input_img,
@@ -484,6 +495,10 @@ class RemoveBackgroundDialog(QDialog):
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
+            try:
+                self._worker.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
@@ -610,6 +625,10 @@ class BatchRemoveBackgroundDialog(QDialog):
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
+            try:
+                self._worker.disconnect()
+            except (RuntimeError, TypeError):
+                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)

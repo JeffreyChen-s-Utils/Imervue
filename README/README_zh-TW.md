@@ -88,7 +88,7 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 
 ### 編輯與匯出
 
-- 內建圖片編輯器（裁切、亮度、對比、飽和度、旋轉）
+- 內建圖片編輯器（裁切、亮度、對比、飽和度、曝光、旋轉、翻轉），支援非破壞性預覽 — 編輯即時顯示在畫布上，僅在明確儲存時才寫入磁碟
 - 匯出/另存新檔，支援格式轉換（PNG、JPEG、WebP、BMP、TIFF）
 - 有損格式品質滑桿（JPEG、WebP）
 - 批次操作（重新命名、移動/複製、旋轉選取的圖片）
@@ -100,6 +100,16 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 - EXIF 資料顯示於可摺疊側邊欄
 - EXIF 編輯器對話框
 - 圖片資訊對話框（尺寸、檔案大小、日期）
+
+### 額外功能
+
+- **圖片淨化重繪** — 從原始像素重新繪製圖片，徹底移除所有隱藏資料（EXIF、中繼資料、隱寫內容、尾部位元組），以日期 + 隨機字串重新命名，可選使用傳統方法（Lanczos、Bicubic、Nearest Neighbor）或 AI（Real-ESRGAN）放大至常用解析度（1080p / 2K / 4K / 5K / 8K），保持比例
+- **批次格式轉換** — 批次轉換圖片格式（PNG、JPEG、WebP、BMP、TIFF），支援品質控制
+- **AI 圖片放大** — 使用 Real-ESRGAN 超解析度放大（x2 / x4 一般、x4 動漫），支援 CUDA / DML / CPU；另有傳統無損方法（Lanczos、Bicubic、Nearest Neighbor）；支援資料夾選擇與遞迴掃描
+- **重複圖片偵測** — 使用精確雜湊或感知比對找出重複圖片
+- **圖片整理工具** — 依日期、解析度、類型、大小或數量自動分類到子資料夾
+- **EXIF 批次清除** — 移除資料夾中所有圖片的 EXIF、GPS 及其他中繼資料
+- **裁剪工具** — 互動式裁剪，支援比例預設（自由 / 1:1 / 4:3 / 3:2 / 16:9 / 9:16）與三分法參考線
 
 ### 系統整合
 
@@ -313,8 +323,18 @@ python -m Imervue /path/to/folder
 - 最近（子選單：最近資料夾和圖片）
 - 書籤（管理已加入書籤的圖片）
 - 確認待處理的刪除（確認復原堆疊）
+- 快捷鍵設定（自訂鍵盤快捷鍵）
 - 檔案關聯（僅限 Windows — 註冊/取消註冊右鍵內容選單）
 - 結束
+
+### 額外功能
+
+- 批次格式轉換
+- AI 圖片放大
+- 重複圖片偵測
+- 圖片整理工具
+- EXIF 批次清除
+- 圖片淨化重繪
 
 ### 檢視
 
@@ -356,6 +376,7 @@ python -m Imervue /path/to/folder
 - 比較 / 幻燈片
 - 匯出（另存新檔，可選擇格式）
 - 無損 JPEG 旋轉
+- 額外功能（批次轉換、AI 放大、重複偵測、圖片整理、EXIF 清除、圖片淨化重繪）
 - 書籤（新增/移除書籤）
 - 圖片資訊
 - 最近選單
@@ -447,11 +468,20 @@ Imervue/
 │   ├── actions/             # 檢視器操作（縮放、平移、旋轉等）
 │   └── images/              # 圖片載入、金字塔、磁磚管理
 ├── gui/                     # UI 元件
+│   ├── ai_upscale_dialog.py # AI 圖片放大對話框
+│   ├── annotation_dialog.py # 裁剪工具對話框
+│   ├── batch_convert_dialog.py # 批次格式轉換對話框
 │   ├── bookmark_dialog.py   # 書籤管理對話框
+│   ├── develop_panel.py     # 開發面板
+│   ├── duplicate_detection_dialog.py # 重複圖片偵測對話框
 │   ├── exif_editor.py       # EXIF 中繼資料編輯器
 │   ├── exif_sidebar.py      # 可摺疊 EXIF 側邊欄
+│   ├── exif_strip_dialog.py # EXIF 批次清除對話框
 │   ├── export_dialog.py     # 匯出/另存新檔對話框
 │   ├── image_editor.py      # 圖片編輯器（裁切、調整、旋轉）
+│   ├── image_organizer_dialog.py # 圖片整理工具對話框
+│   ├── image_sanitize_dialog.py  # 圖片淨化重繪對話框
+│   ├── shortcut_settings_dialog.py # 自訂快捷鍵設定
 │   └── toast.py             # Toast 通知系統
 ├── image/                   # 圖片工具
 │   ├── info.py              # 圖片資訊擷取
@@ -459,6 +489,7 @@ Imervue/
 │   ├── thumbnail_disk_cache.py  # 縮圖快取（MD5 + .npy）
 │   └── tile_manager.py      # 磁磚網格管理
 ├── menu/                    # 選單定義
+│   ├── extra_tools_menu.py  # 額外功能選單
 │   ├── file_menu.py         # 檔案選單
 │   ├── filter_menu.py       # 篩選選單
 │   ├── language_menu.py     # 語言選單
