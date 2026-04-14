@@ -1452,7 +1452,8 @@ class GPUImageView(QOpenGLWidget):
                     return
 
         # ===== Remappable shortcuts via ShortcutManager =====
-        action = shortcut_manager.get_action(key, int(modifiers))
+        mods_int = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        action = shortcut_manager.get_action(key, mods_int)
         if action is None:
             return
 

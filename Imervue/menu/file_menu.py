@@ -85,18 +85,6 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
 
     file_menu.addSeparator()
 
-    # 批次格式轉換
-    convert_action = file_menu.addAction(
-        lang.get("batch_convert_title", "Batch Format Conversion"))
-    convert_action.triggered.connect(lambda: _open_batch_convert(ui_we_want_to_set))
-
-    # AI 圖片放大
-    upscale_action = file_menu.addAction(
-        lang.get("upscale_title", "AI Image Upscale"))
-    upscale_action.triggered.connect(lambda: _open_ai_upscale(ui_we_want_to_set))
-
-    file_menu.addSeparator()
-
     # 自訂快捷鍵
     shortcut_action = file_menu.addAction(
         lang.get("shortcut_title", "Keyboard Shortcuts"))
@@ -280,16 +268,6 @@ def _unregister_assoc(ui: ImervueMainWindow):
         else:
             if hasattr(ui, "toast"):
                 ui.toast.info(f"Error: {msg}")
-
-
-def _open_batch_convert(ui: ImervueMainWindow):
-    from Imervue.gui.batch_convert_dialog import open_batch_convert
-    open_batch_convert(ui.viewer)
-
-
-def _open_ai_upscale(ui: ImervueMainWindow):
-    from Imervue.gui.ai_upscale_dialog import open_ai_upscale
-    open_ai_upscale(ui.viewer)
 
 
 def _open_shortcut_settings(ui: ImervueMainWindow):

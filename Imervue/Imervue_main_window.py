@@ -17,6 +17,7 @@ from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.toast import ToastManager
 from Imervue.integration_guide import _init_plugin_system_example
+from Imervue.menu.extra_tools_menu import build_extra_tools_menu
 from Imervue.menu.file_menu import build_file_menu
 from Imervue.menu.filter_menu import build_filter_menu
 from Imervue.menu.language_menu import build_language_menu
@@ -437,6 +438,7 @@ class ImervueMainWindow(QMainWindow):
     # ==========================
     def create_menu(self):
         build_file_menu(self)
+        build_extra_tools_menu(self)
         build_sort_menu(self)
         build_filter_menu(self)
         build_language_menu(self)

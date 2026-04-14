@@ -27,6 +27,7 @@ from PySide6.QtGui import QColor, QFont, QUndoStack
 from PySide6.QtWidgets import (
     QButtonGroup,
     QColorDialog,
+    QComboBox,
     QFontComboBox,
     QGridLayout,
     QGroupBox,
@@ -68,6 +69,7 @@ class DevelopPanel(QWidget):
     # Annotation tool definitions: (tool_key, glyph, i18n_key, fallback)
     _ANNOTATION_TOOLS = [
         ("select",   "⬚", "annotation_tool_select",   "Select"),
+        ("crop",     "✂", "annotation_tool_crop",      "Crop"),
         ("rect",     "▢", "annotation_tool_rect",      "Rectangle"),
         ("ellipse",  "◯", "annotation_tool_ellipse",   "Ellipse"),
         ("line",     "╱", "annotation_tool_line",       "Line"),
@@ -76,6 +78,17 @@ class DevelopPanel(QWidget):
         ("text",     "T", "annotation_tool_text",       "Text"),
         ("mosaic",   "▦", "annotation_tool_mosaic",     "Mosaic"),
         ("blur",     "◌", "annotation_tool_blur",       "Blur"),
+    ]
+
+    # Crop aspect ratio presets: (label_key, fallback, ratio_w, ratio_h)
+    # ratio 0,0 = free
+    _CROP_RATIOS = [
+        ("crop_ratio_free",  "Free",     0, 0),
+        ("crop_ratio_1_1",   "1 : 1",    1, 1),
+        ("crop_ratio_4_3",   "4 : 3",    4, 3),
+        ("crop_ratio_3_2",   "3 : 2",    3, 2),
+        ("crop_ratio_16_9",  "16 : 9",  16, 9),
+        ("crop_ratio_9_16",  "9 : 16",   9, 16),
     ]
 
     # Size of each tool button in the vertical strip.
@@ -137,6 +150,28 @@ class DevelopPanel(QWidget):
         # Default: select tool checked
         if "select" in self._tool_buttons:
             self._tool_buttons["select"].setChecked(True)
+
+        # --- Crop controls (hidden until crop tool selected) ---
+        self._crop_widget = QWidget()
+        crop_layout = QVBoxLayout(self._crop_widget)
+        crop_layout.setContentsMargins(2, 2, 2, 2)
+        crop_layout.setSpacing(2)
+        self._crop_ratio_combo = QComboBox()
+        for label_key, fallback, rw, rh in self._CROP_RATIOS:
+            self._crop_ratio_combo.addItem(
+                lang.get(label_key, fallback), (rw, rh))
+        self._crop_ratio_combo.currentIndexChanged.connect(self._on_crop_ratio_changed)
+        crop_layout.addWidget(self._crop_ratio_combo)
+        crop_btn_row = QHBoxLayout()
+        self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
+        self._crop_apply_btn.clicked.connect(self._apply_crop)
+        self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
+        self._crop_cancel_btn.clicked.connect(self._cancel_crop)
+        crop_btn_row.addWidget(self._crop_apply_btn)
+        crop_btn_row.addWidget(self._crop_cancel_btn)
+        crop_layout.addLayout(crop_btn_row)
+        layout.addWidget(self._crop_widget)
+        self._crop_widget.hide()
 
         # --- Separator ---
         layout.addSpacing(4)
@@ -540,8 +575,68 @@ class DevelopPanel(QWidget):
         # Update button checked state
         for key, btn in self._tool_buttons.items():
             btn.setChecked(key == tool)
+        # Show/hide crop controls
+        self._crop_widget.setVisible(tool == "crop")
+        if tool != "crop" and self._canvas is not None:
+            self._canvas.clear_crop()
         if self._canvas is not None:
             self._canvas.set_tool(tool)
+            if tool == "crop":
+                rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
+                self._canvas.set_crop_ratio(rw, rh)
+
+    def _on_crop_ratio_changed(self, _index: int) -> None:
+        rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
+        if self._canvas is not None:
+            self._canvas.set_crop_ratio(rw, rh)
+
+    def _apply_crop(self) -> None:
+        if self._canvas is None or self._canvas_source_path is None:
+            return
+        crop_rect = self._canvas.get_crop_rect()
+        if crop_rect is None:
+            return
+        x, y, w, h = crop_rect
+        if w < 2 or h < 2:
+            return
+        base = self._canvas.get_base_pil()
+        cropped = base.crop((x, y, x + w, y + h))
+        # Save atomically
+        path = self._canvas_source_path
+        target = Path(path)
+        tmp = target.with_name(target.name + ".tmp")
+        ext = target.suffix.lower()
+        fmt_map = {
+            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
+            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
+            ".webp": "WEBP",
+        }
+        fmt = fmt_map.get(ext, "PNG")
+        try:
+            save_img = cropped
+            if fmt == "JPEG" and save_img.mode == "RGBA":
+                save_img = save_img.convert("RGB")
+            save_img.save(str(tmp), format=fmt)
+            os.replace(tmp, target)
+        except Exception:
+            logger.exception("Failed to save crop to %s", path)
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+            return
+        # Reload
+        self._canvas.clear_crop()
+        self._create_canvas(path)
+        try:
+            from Imervue.gpu_image_view.images.image_loader import open_path
+            self._main_gui._clear_deep_zoom()
+            open_path(main_gui=self._main_gui, path=path)
+        except Exception:
+            logger.exception("Viewer reload after crop failed")
+
+    def _cancel_crop(self) -> None:
+        if self._canvas is not None:
+            self._canvas.clear_crop()
+        self._set_tool("select")
 
     # ------------------------------------------------------------------
     # Right-panel drawing controls

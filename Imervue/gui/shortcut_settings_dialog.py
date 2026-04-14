@@ -41,6 +41,7 @@ logger = logging.getLogger("Imervue.shortcut_settings")
 
 _CTRL = Qt.KeyboardModifier.ControlModifier.value
 _SHIFT = Qt.KeyboardModifier.ShiftModifier.value
+_ALT = Qt.KeyboardModifier.AltModifier.value
 _CTRL_SHIFT = _CTRL | _SHIFT
 _NONE = 0
 
@@ -168,11 +169,7 @@ class ShortcutManager:
     def get_action(self, key: int, modifiers: int) -> str | None:
         """Look up which action_id a key combo maps to."""
         # Mask out KeypadModifier and other noise
-        mods = int(modifiers) & (
-            int(Qt.KeyboardModifier.ControlModifier)
-            | int(Qt.KeyboardModifier.ShiftModifier)
-            | int(Qt.KeyboardModifier.AltModifier)
-        )
+        mods = (modifiers.value if hasattr(modifiers, "value") else int(modifiers)) & (_CTRL | _SHIFT | _ALT)
         return self._key_to_action.get((key, mods))
 
     def get_key(self, action_id: str) -> tuple[int, int]:
@@ -200,7 +197,8 @@ class ShortcutManager:
         """Human-readable string for a key combo."""
         if key == 0:
             return ""
-        seq = QKeySequence(int(modifiers) | key)
+        m = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        seq = QKeySequence(m | key)
         return seq.toString(QKeySequence.SequenceFormat.NativeText)
 
 
@@ -234,11 +232,8 @@ class _KeyCaptureEdit(QLineEdit):
         if key in (Qt.Key.Key_Control, Qt.Key.Key_Shift, Qt.Key.Key_Alt,
                    Qt.Key.Key_Meta):
             return
-        mods = int(event.modifiers()) & (
-            int(Qt.KeyboardModifier.ControlModifier)
-            | int(Qt.KeyboardModifier.ShiftModifier)
-            | int(Qt.KeyboardModifier.AltModifier)
-        )
+        raw = event.modifiers()
+        mods = (raw.value if hasattr(raw, "value") else int(raw)) & (_CTRL | _SHIFT | _ALT)
         self._key = key
         self._mods = mods
         self.setText(ShortcutManager.key_to_string(key, mods))
