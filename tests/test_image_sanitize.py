@@ -241,7 +241,8 @@ class TestSanitizeImage:
 
         out = sanitize_image(src, out_dir, "same")
         result = np.array(Image.open(out))
-        assert np.all(result[:, :, :3] == 200)
+        # LSB is scrambled to defeat stealth steganography — allow ±1.
+        assert np.all(np.abs(result[:, :, :3].astype(int) - 200) <= 1)
 
     def test_preserves_dimensions(self, tmp_path):
         src = str(tmp_path / "img.png")
@@ -379,7 +380,8 @@ class TestSanitizeImage:
         img = Image.open(out)
         assert img.size == (8, 8)
         arr = np.asarray(img)
-        assert np.all(arr[..., :3] == 42)
+        # LSB is scrambled to defeat stealth steganography — allow ±1.
+        assert np.all(np.abs(arr[..., :3].astype(int) - 42) <= 1)
 
     def test_traditional_no_upscale_when_large_enough(self, tmp_path):
         """Traditional upscale should skip when image already meets target."""
@@ -730,6 +732,43 @@ class TestSanitizeWorker:
         entries = os.listdir(out_dir)
         assert len(entries) == 2
         assert all(os.path.isfile(os.path.join(out_dir, e)) for e in entries)
+
+    def test_lsb_steganography_is_disrupted(self, tmp_path):
+        """Fake stealth-pnginfo LSB payload must not survive sanitize."""
+        src = str(tmp_path / "stego.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+
+        # Build a 64×64 RGBA canvas and hide a bit pattern in channel LSBs.
+        arr = np.full((64, 64, 4), 128, dtype=np.uint8)
+        # Alpha channel is fully opaque
+        arr[..., 3] = 255
+        # Hidden message bits, encoded as alternating 0/1 pattern in all
+        # four channel LSBs — a stand-in for NovelAI's stealth pnginfo.
+        payload = np.zeros((64, 64, 4), dtype=np.uint8)
+        flat = payload.reshape(-1)
+        flat[::2] = 1  # alternating LSB pattern
+        arr = (arr & np.uint8(0xFE)) | payload
+        Image.fromarray(arr, "RGBA").save(src, format="PNG")
+
+        out = sanitize_image(src, out_dir, "same")
+        result = np.array(Image.open(out))
+
+        # Visual content preserved within ±1 per channel.
+        assert result.shape == arr.shape
+        assert np.all(np.abs(result.astype(int) - arr.astype(int)) <= 1)
+
+        # The deterministic payload pattern should be gone — compare the
+        # recovered LSB stream against the planted one; equality would
+        # mean LSBs passed through unchanged.
+        recovered = result & np.uint8(0x01)
+        matches = np.sum(recovered == payload)
+        total = payload.size
+        # Random LSB noise should match ~50% of the time; leave generous
+        # slack but clearly rule out full pass-through (would be 100%).
+        assert matches < total * 0.75, (
+            f"LSB payload appears to have survived — {matches}/{total} "
+            f"bits match ({matches / total:.1%}).")
 
     def test_escaping_path_falls_back_to_flat(self, tmp_path):
         """Paths outside src_root must not escape output_dir via '..'."""

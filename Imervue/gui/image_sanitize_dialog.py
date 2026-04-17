@@ -236,6 +236,14 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
                 clean = upscaled.resize((final_w, final_h),
                                         Image.Resampling.LANCZOS)
 
+    # Disrupt LSB steganography (e.g. NovelAI stealth pnginfo embeds
+    # prompt/seed/parameters in the least-significant bit of RGB/alpha
+    # channels — tEXt-chunk stripping alone leaves that payload intact
+    # because the bits live in the pixel data). Randomising each 8-bit
+    # channel's LSB destroys the payload; the visual impact is ±1/255
+    # per channel (well below the JND for any display).
+    clean = _scramble_lsb(clean)
+
     # Generate new filename
     dt = _get_image_date(path)
     name = _generate_name(dt, rand_len, ext)
@@ -256,6 +264,27 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
 
     clean.save(out_path, **save_kwargs)
     return out_path
+
+
+def _scramble_lsb(img: "Image.Image") -> "Image.Image":
+    """Randomise the least-significant bit of every 8-bit channel.
+
+    Breaks LSB-steganography schemes such as NovelAI's stealth pnginfo
+    without leaving a deterministic signature (zeroing LSBs is itself
+    detectable — randomising isn't). Non 8-bit modes are converted to a
+    compatible one first so palette/1-bit images are covered too.
+    """
+    import numpy as np
+    # Convert exotic modes to a form with 8-bit channels so the LSB
+    # operation is well-defined (palette indices, for example, would be
+    # corrupted by masking).
+    if img.mode not in ("L", "LA", "RGB", "RGBA"):
+        img = img.convert("RGBA" if "A" in img.mode else "RGB")
+    arr = np.array(img, copy=True)
+    rng = np.random.default_rng()
+    noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
+    arr = (arr & np.uint8(0xFE)) | noise
+    return Image.fromarray(arr, mode=img.mode)
 
 
 # ---------------------------------------------------------------------------
