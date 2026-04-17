@@ -266,13 +266,23 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     return out_path
 
 
-def _scramble_lsb(img: "Image.Image") -> "Image.Image":
-    """Randomise the least-significant bit of every 8-bit channel.
+# Fraction of channel-elements whose LSB is randomised. At 0.5 the net
+# per-pixel change rate is 12.5% (halved from dense scrambling) while the
+# probability any 120-bit magic header survives intact drops to 0.75^120
+# ≈ 1.2e-15 — still comprehensive destruction, with half the visual
+# perturbation in flat regions that synthetic AI art tends to produce.
+_LSB_SCRAMBLE_RATE = 0.5
 
-    Breaks LSB-steganography schemes such as NovelAI's stealth pnginfo
-    without leaving a deterministic signature (zeroing LSBs is itself
-    detectable — randomising isn't). Non 8-bit modes are converted to a
-    compatible one first so palette/1-bit images are covered too.
+
+def _scramble_lsb(img: "Image.Image") -> "Image.Image":
+    """Sparsely randomise the LSB of every 8-bit channel.
+
+    Breaks LSB-steganography schemes such as NovelAI's stealth pnginfo.
+    Only a fraction of LSBs (``_LSB_SCRAMBLE_RATE``) are touched — enough
+    to obliterate any bit-sequential payload statistically, while keeping
+    perceptual impact minimal in the flat regions common to synthetic
+    imagery. Non 8-bit modes are converted first so palette/1-bit images
+    are also covered.
     """
     import numpy as np
     # Convert exotic modes to a form with 8-bit channels so the LSB
@@ -282,8 +292,11 @@ def _scramble_lsb(img: "Image.Image") -> "Image.Image":
         img = img.convert("RGBA" if "A" in img.mode else "RGB")
     arr = np.array(img, copy=True)
     rng = np.random.default_rng()
+    scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
-    arr = (arr & np.uint8(0xFE)) | noise
+    # Where mask is True use random LSB, otherwise keep the original LSB.
+    new_lsb = np.where(scramble_mask, noise, arr & np.uint8(0x01))
+    arr = (arr & np.uint8(0xFE)) | new_lsb.astype(arr.dtype)
     return Image.fromarray(arr, mode=img.mode)
 
 

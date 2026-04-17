@@ -734,22 +734,35 @@ class TestSanitizeWorker:
         assert all(os.path.isfile(os.path.join(out_dir, e)) for e in entries)
 
     def test_lsb_steganography_is_disrupted(self, tmp_path):
-        """Fake stealth-pnginfo LSB payload must not survive sanitize."""
+        """A stealth-pnginfo style payload must not survive sanitize.
+
+        Plants a NovelAI-flavoured ``stealth_pngcomp`` magic header plus
+        a gzipped JSON body in the LSB bit-stream of a 128×128 RGBA
+        canvas. After sanitise the magic bytes must be corrupted and the
+        visual image must still be ±1 per channel.
+        """
+        import gzip
         src = str(tmp_path / "stego.png")
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
 
-        # Build a 64×64 RGBA canvas and hide a bit pattern in channel LSBs.
-        arr = np.full((64, 64, 4), 128, dtype=np.uint8)
-        # Alpha channel is fully opaque
-        arr[..., 3] = 255
-        # Hidden message bits, encoded as alternating 0/1 pattern in all
-        # four channel LSBs — a stand-in for NovelAI's stealth pnginfo.
-        payload = np.zeros((64, 64, 4), dtype=np.uint8)
-        flat = payload.reshape(-1)
-        flat[::2] = 1  # alternating LSB pattern
-        arr = (arr & np.uint8(0xFE)) | payload
+        magic = b"stealth_pngcomp"
+        body = gzip.compress(
+            b'{"prompt":"secret","seed":42,"model":"nai-v3"}')
+        bitstream = magic + len(body).to_bytes(4, "big") + body
+        bits = np.unpackbits(np.frombuffer(bitstream, dtype=np.uint8))
+
+        arr = np.full((128, 128, 4), 128, dtype=np.uint8)
+        arr[..., 3] = 255  # fully opaque
+        # Plant the bit-stream into the LSBs of the flattened pixel buffer.
+        flat = arr.reshape(-1)
+        flat[:len(bits)] = (flat[:len(bits)] & np.uint8(0xFE)) | bits
         Image.fromarray(arr, "RGBA").save(src, format="PNG")
+
+        # Sanity: extractor can read the payload from the source.
+        before = np.array(Image.open(src)).reshape(-1)
+        recovered_before = np.packbits(before[:len(bits)] & 0x01).tobytes()
+        assert recovered_before.startswith(magic)
 
         out = sanitize_image(src, out_dir, "same")
         result = np.array(Image.open(out))
@@ -758,17 +771,38 @@ class TestSanitizeWorker:
         assert result.shape == arr.shape
         assert np.all(np.abs(result.astype(int) - arr.astype(int)) <= 1)
 
-        # The deterministic payload pattern should be gone — compare the
-        # recovered LSB stream against the planted one; equality would
-        # mean LSBs passed through unchanged.
-        recovered = result & np.uint8(0x01)
-        matches = np.sum(recovered == payload)
-        total = payload.size
-        # Random LSB noise should match ~50% of the time; leave generous
-        # slack but clearly rule out full pass-through (would be 100%).
-        assert matches < total * 0.75, (
-            f"LSB payload appears to have survived — {matches}/{total} "
-            f"bits match ({matches / total:.1%}).")
+        # Magic bytes must be broken — extractor no longer recognises it.
+        after_flat = result.reshape(-1)
+        recovered_after = np.packbits(after_flat[:len(bits)] & 0x01).tobytes()
+        assert not recovered_after.startswith(magic), (
+            "stealth magic survived sanitize — payload still recoverable")
+        # And the gzipped body must fail to decompress.
+        body_start = len(magic) + 4
+        with pytest.raises(Exception):
+            gzip.decompress(recovered_after[body_start:body_start + len(body)])
+
+    def test_lsb_scramble_visual_impact_minimal(self, tmp_path):
+        """Average per-channel change should stay well below one level.
+
+        Documents the perceptual budget: sparse LSB scrambling produces
+        a mean absolute diff of roughly 0.125/255 per channel. The test
+        allows generous slack but guards against regressions that would
+        re-introduce dense (±0.5/255) scrambling.
+        """
+        src = str(tmp_path / "flat.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        arr = np.full((64, 64, 3), 127, dtype=np.uint8)
+        Image.fromarray(arr).save(src, format="PNG")
+
+        out = sanitize_image(src, out_dir, "same")
+        result = np.array(Image.open(out))
+        mean_diff = float(np.abs(result.astype(int) - 127).mean())
+        # Dense scramble averages ≈ 0.5; sparse ≈ 0.125. Cap at 0.3 to
+        # catch a regression to dense without being flaky on RNG variance.
+        assert mean_diff < 0.3, (
+            f"mean per-channel diff {mean_diff:.3f} suggests dense LSB "
+            f"scrambling — visual impact is not minimised")
 
     def test_escaping_path_falls_back_to_flat(self, tmp_path):
         """Paths outside src_root must not escape output_dir via '..'."""
