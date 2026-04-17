@@ -244,5 +244,5 @@ class TestTraditionalMethods:
         out_img = Image.open(str(results[0]))
         assert out_img.size == (8, 8)
         # Every pixel should be exactly the same color
-        pixels = list(out_img.getdata())
-        assert all(p == (42, 99, 200) for p in pixels)
+        arr = np.asarray(out_img)
+        assert np.all(arr == np.array([42, 99, 200], dtype=arr.dtype))

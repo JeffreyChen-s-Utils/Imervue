@@ -185,9 +185,8 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
         ext = output_ext
     fmt = _PIL_FORMAT_MAP.get(ext, "PNG")
 
-    # Re-create image from raw pixel data — no metadata survives
-    clean = Image.new(img.mode, img.size)
-    clean.putdata(list(img.getdata()))
+    # Re-create image from raw bytes — no metadata survives, no list copy
+    clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # JPEG does not support alpha
     if fmt == "JPEG" and clean.mode in ("RGBA", "LA", "PA"):

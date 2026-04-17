@@ -378,8 +378,8 @@ class TestSanitizeImage:
                              trad_resampling=Image.Resampling.NEAREST)
         img = Image.open(out)
         assert img.size == (8, 8)
-        pixels = list(img.getdata())
-        assert all(p[:3] == (42, 42, 42) for p in pixels)
+        arr = np.asarray(img)
+        assert np.all(arr[..., :3] == 42)
 
     def test_traditional_no_upscale_when_large_enough(self, tmp_path):
         """Traditional upscale should skip when image already meets target."""

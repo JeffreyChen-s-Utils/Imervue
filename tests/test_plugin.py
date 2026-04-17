@@ -466,8 +466,10 @@ class TestCheckMissingPackages:
 
 class TestVerifyPython:
     def test_verify_current_python(self):
+        import importlib.util
+        if importlib.util.find_spec("pip") is None:
+            pytest.skip("pip not available in the current interpreter")
         from Imervue.plugin.pip_installer import _verify_python
-        # Current interpreter should have pip
         assert _verify_python(sys.executable) is True
 
     def test_verify_nonexistent_path(self):

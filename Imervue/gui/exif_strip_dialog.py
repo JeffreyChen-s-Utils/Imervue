@@ -69,9 +69,8 @@ def strip_exif(path: str, *, remove_gps: bool = True, remove_all: bool = True,
     # Preserve ICC profile if user only wants GPS removed
     icc = img.info.get("icc_profile") if not remove_all else None
 
-    # Build clean image without metadata
-    clean = Image.new(img.mode, img.size)
-    clean.putdata(list(img.getdata()))
+    # Re-create image from raw bytes — no metadata survives, no list copy
+    clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # Determine save path
     if overwrite:
