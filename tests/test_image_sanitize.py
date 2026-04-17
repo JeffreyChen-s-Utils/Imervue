@@ -685,3 +685,68 @@ class TestSanitizeWorker:
         worker.run()
 
         assert results == [(1, 1)]  # 1 success, 1 failed
+
+    def test_recursive_mirrors_subfolders(self, tmp_path):
+        """With src_root set, output preserves the source subfolder layout."""
+        src = tmp_path / "src"
+        (src / "a" / "b").mkdir(parents=True)
+        (src / "c").mkdir(parents=True)
+        p_root = str(src / "root.png")
+        p_a = str(src / "a" / "inner.png")
+        p_ab = str(src / "a" / "b" / "deep.png")
+        p_c = str(src / "c" / "sibling.png")
+        for p in (p_root, p_a, p_ab, p_c):
+            _make_image(p, "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker(
+            [p_root, p_a, p_ab, p_c],
+            out_dir, "same", 8, 95, 6,
+            src_root=str(src))
+        worker.run()
+
+        assert len(os.listdir(out_dir)) == 3  # root.png flat + 'a' + 'c'
+        assert any(f.endswith(".png") for f in os.listdir(out_dir))
+        assert len(os.listdir(os.path.join(out_dir, "a"))) == 2  # inner + b/
+        assert len(os.listdir(os.path.join(out_dir, "a", "b"))) == 1
+        assert len(os.listdir(os.path.join(out_dir, "c"))) == 1
+
+    def test_no_src_root_is_flat(self, tmp_path):
+        """Without src_root all outputs land flat in output_dir (backcompat)."""
+        src = tmp_path / "src"
+        (src / "sub").mkdir(parents=True)
+        p1 = str(src / "a.png")
+        p2 = str(src / "sub" / "b.png")
+        _make_image(p1, "PNG")
+        _make_image(p2, "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker([p1, p2], out_dir, "same", 8, 95, 6)
+        worker.run()
+
+        # Both files land directly under out_dir — no subfolders created.
+        entries = os.listdir(out_dir)
+        assert len(entries) == 2
+        assert all(os.path.isfile(os.path.join(out_dir, e)) for e in entries)
+
+    def test_escaping_path_falls_back_to_flat(self, tmp_path):
+        """Paths outside src_root must not escape output_dir via '..'."""
+        src = tmp_path / "src"
+        src.mkdir()
+        outside = tmp_path / "outside.png"
+        _make_image(str(outside), "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker(
+            [str(outside)], out_dir, "same", 8, 95, 6,
+            src_root=str(src))
+        worker.run()
+
+        # File is written flat under out_dir; no '..' directory created.
+        assert os.listdir(out_dir)  # one output file
+        # Nothing should have been created as a sibling of out_dir.
+        siblings = {p.name for p in tmp_path.iterdir()}
+        assert siblings == {"src", "outside.png", "out"}

@@ -270,6 +270,7 @@ class _SanitizeWorker(QThread):
     def __init__(self, paths: list[str], output_dir: str, output_ext: str,
                  rand_len: int, jpeg_quality: int, png_compress: int,
                  target_long_edge: int = 0, model_key: str = "",
+                 src_root: str | None = None,
                  parent=None):
         super().__init__(parent)
         self._paths = paths
@@ -280,7 +281,28 @@ class _SanitizeWorker(QThread):
         self._png_compress = png_compress
         self._target_long_edge = target_long_edge
         self._model_key = model_key
+        self._src_root = src_root
         self._abort = False
+
+    def _target_dir_for(self, path: str) -> str:
+        """Mirror the source's subfolder structure under *output_dir*.
+
+        If *src_root* is set, compute the file's directory relative to the
+        source root and append it to *output_dir*. Paths that escape the
+        source root (``..`` segments) fall back to the flat output dir so
+        a crafted path can never write outside it.
+        """
+        if not self._src_root:
+            return self._output_dir
+        try:
+            rel = os.path.relpath(os.path.dirname(path), self._src_root)
+        except ValueError:
+            return self._output_dir
+        if rel in ("", ".") or rel.startswith(".."):
+            return self._output_dir
+        target = os.path.join(self._output_dir, rel)
+        os.makedirs(target, exist_ok=True)
+        return target
 
     def abort(self):
         self._abort = True
@@ -335,8 +357,9 @@ class _SanitizeWorker(QThread):
             name = os.path.basename(path)
             self.progress.emit(i + 1, total, name)
             try:
+                target_dir = self._target_dir_for(path)
                 sanitize_image(
-                    path, self._output_dir, self._output_ext,
+                    path, target_dir, self._output_ext,
                     self._rand_len, self._jpeg_quality, self._png_compress,
                     target_long_edge=self._target_long_edge,
                     ort_session=session,
@@ -581,6 +604,10 @@ class ImageSanitizeDialog(QDialog):
         target_long_edge = self._res_combo.currentData() or 0
         model_key = self._model_combo.currentData() or ""
 
+        # Preserve the source's subfolder layout under the output dir when
+        # recursive scanning was used.
+        src_root = src if recursive else None
+
         # If upscale requested with AI model, install deps first
         is_traditional = model_key.startswith("trad:")
         if target_long_edge > 0 and not is_traditional:
@@ -595,7 +622,7 @@ class ImageSanitizeDialog(QDialog):
                     self._gui.main_window, REQUIRED_PACKAGES,
                     lambda: self._launch_worker(
                         paths, out, output_ext, rand_len, jpeg_quality,
-                        target_long_edge, model_key))
+                        target_long_edge, model_key, src_root))
             except Exception:
                 logger.exception("ensure_dependencies failed")
                 self._start_btn.setEnabled(True)
@@ -603,10 +630,11 @@ class ImageSanitizeDialog(QDialog):
 
         self._launch_worker(paths, out, output_ext, rand_len, jpeg_quality,
                             target_long_edge if is_traditional else 0,
-                            model_key if is_traditional else "")
+                            model_key if is_traditional else "",
+                            src_root)
 
     def _launch_worker(self, paths, out, output_ext, rand_len, jpeg_quality,
-                       target_long_edge, model_key):
+                       target_long_edge, model_key, src_root=None):
         self._start_btn.setEnabled(False)
         self._progress.setValue(0)
         self._progress.show()
@@ -616,7 +644,7 @@ class ImageSanitizeDialog(QDialog):
 
         self._worker = _SanitizeWorker(
             paths, out, output_ext, rand_len, jpeg_quality, 6,
-            target_long_edge, model_key, self)
+            target_long_edge, model_key, src_root, self)
         self._worker.progress.connect(self._on_progress)
         self._worker.tile_progress.connect(self._on_tile_progress)
         self._worker.result_ready.connect(self._on_result)
