@@ -118,6 +118,53 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         action.triggered.connect(
             lambda checked, s=size: ui_we_want_to_set.change_tile_size(s)
         )
+
+    # ===== Grid / List 檢視切換 =====
+    view_menu.addSeparator()
+    mode_menu = view_menu.addMenu(lang.get("view_browse_mode", "Browse Mode"))
+    mode_group = QActionGroup(ui_we_want_to_set)
+    mode_group.setExclusive(True)
+
+    action_grid = mode_menu.addAction(lang.get("view_mode_grid", "Grid"))
+    action_grid.setCheckable(True)
+    action_grid.setChecked(True)
+    mode_group.addAction(action_grid)
+    action_grid.triggered.connect(
+        lambda: ui_we_want_to_set.set_browse_mode("grid")
+    )
+
+    action_list = mode_menu.addAction(lang.get("view_mode_list", "List"))
+    action_list.setCheckable(True)
+    mode_group.addAction(action_list)
+    action_list.triggered.connect(
+        lambda: ui_we_want_to_set.set_browse_mode("list")
+    )
+    ui_we_want_to_set._mode_action_grid = action_grid
+    ui_we_want_to_set._mode_action_list = action_list
+
+    # ===== 縮圖排列密度 =====
+    view_menu.addSeparator()
+    density_menu = view_menu.addMenu(
+        lang.get("view_tile_density", "Thumbnail Density")
+    )
+    density_group = QActionGroup(ui_we_want_to_set)
+    density_group.setExclusive(True)
+    density_presets = [
+        (0, "view_density_compact", "Compact"),
+        (8, "view_density_standard", "Standard"),
+        (16, "view_density_relaxed", "Relaxed"),
+    ]
+    current_padding = ui_we_want_to_set.viewer.tile_padding
+    for pad, key, fallback in density_presets:
+        a = density_menu.addAction(lang.get(key, fallback))
+        a.setCheckable(True)
+        if pad == current_padding:
+            a.setChecked(True)
+        density_group.addAction(a)
+        a.triggered.connect(
+            lambda checked, p=pad: ui_we_want_to_set.change_tile_padding(p)
+        )
+
     return file_menu
 
 
@@ -139,6 +186,8 @@ def open_folder(ui_we_want_to_set: ImervueMainWindow):
                 "main_window_current_folder_format"
             ).format(path=folder)
         )
+        if hasattr(ui_we_want_to_set, "breadcrumb"):
+            ui_we_want_to_set.breadcrumb.set_path(folder)
 
         add_recent_folder(folder)
         rebuild_recent_menu(ui_we_want_to_set)

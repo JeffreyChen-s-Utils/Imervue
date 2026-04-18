@@ -69,23 +69,42 @@ Key design principles:
 ### Navigation & Viewing
 
 - Folder-based browsing and single image viewing
-- Fullscreen mode with auto-hiding UI (hides after 2s of inactivity)
+- **Grid / List (detail) browse modes** — toggle with Ctrl+L
+- **Breadcrumb path bar** — clickable segments above the viewer
+- Fullscreen + **Theater mode** (Shift+Tab hides all chrome)
 - Minimap overlay in deep zoom mode
 - RGB histogram overlay
+- **F8 OSD** (file info overlay) / **Ctrl+F8 Debug HUD** (VRAM / cache / threads)
+- **Pixel view** (Shift+P) — zoom ≥ 400% shows grid + per-pixel RGB/HEX
+- **Color modes** (Shift+M) — Normal / Grayscale / Invert / Sepia via GLSL
 - Image rotation (including lossless JPEG rotation via piexif)
 - Animated GIF/APNG playback with frame-by-frame controls
 - Slideshow mode with configurable interval
-- Side-by-side image comparison
-- Search/filter images by filename
+- **Enhanced compare dialog** — Side-by-side / Overlay (alpha slider) / Difference (gain slider)
+- **Split view** (Shift+S) / **Dual-page reading** (Shift+D, Ctrl+Shift+D for RTL/manga)
+- **Multi-monitor window** (Ctrl+Shift+M) mirrors current image on secondary display
+- **Hover preview popup** — larger preview on tile hover (500 ms delay)
+- **Touchpad gestures** — pinch-to-zoom, horizontal swipe to navigate
+- **Browsing history** (Alt+←/→) + **Random image** (X)
+- **Cross-folder navigation** (Ctrl+Shift+←/→) — jump to next/prev sibling folder
+- Fuzzy search with substring highlighting (Ctrl+F / `/`)
+- **Go to image** dialog (Ctrl+G) — jump by index
+- Auto-loop at folder ends
 
 ### Organization
 
 - Bookmark system (up to 5000 bookmarks)
 - Rating system (1–5 stars) and favorites
+- **Color labels** (F1–F5 → red/yellow/green/blue/purple) — Lightroom-style flags independent of star rating
+- Tags & Albums with **multi-tag filter** (AND/OR boolean logic)
 - Sort by name, modified date, created date, file size, or resolution
-- Filter by file extension or rating
+- Filter by file extension, rating, color label, or tag/album
+- **Advanced filter** — resolution / file size / orientation / modified date range
 - Recent folders and recent images tracking
 - Automatic restore of last opened folder on startup
+- **Thumbnail status badges** — left-edge colour strip, favorite heart, bookmark star, rating stars
+- **Thumbnail density** — Compact / Standard / Relaxed padding
+- **File tree extras** — F5 refresh, New Folder, Expand/Collapse All
 
 ### Editing & Export
 
@@ -245,8 +264,32 @@ When opening a single image or double-clicking a thumbnail:
 - **Smooth pan and zoom** — GPU-accelerated with anisotropic filtering (up to 8x)
 - **Minimap overlay** — Shows current viewport position
 - **RGB histogram** — Toggle with `H` key
+- **Pixel view** (Shift+P) — at ≥ 400 % zoom shows pixel grid and per-pixel RGB / HEX under the cursor
+- **Color modes** (Shift+M) — Normal / Grayscale / Invert / Sepia (GLSL, non-destructive)
 - **Centered on load** — Fit-to-window by default
 - **Adjacent image prefetch** — Preloads ±3 neighboring images
+
+### List Mode (Detail)
+
+Toggle with **Ctrl+L**. Replaces the tile grid with a sortable table:
+
+- Columns: Preview · Label · Name · Resolution · Size · Type · Modified
+- Sortable by any column (including colour label)
+- Double-click a row to open deep zoom; Esc returns to the list
+- Thumbnail / metadata loaded lazily off the UI thread
+
+### Split View & Dual-Page Reading
+
+- **Split View** (Shift+S) — displays two images side by side in the main window
+- **Dual Page** (Shift+D) — shows consecutive images as facing pages; arrow keys advance by 2
+- **Manga (RTL)** (Ctrl+Shift+D) — dual-page with right-to-left reading order
+- Esc returns to the previous mode (Grid or List)
+
+### Multi-Monitor Window
+
+**Ctrl+Shift+M** opens a frameless second top-level window that maximizes onto your
+secondary screen and mirrors whichever image the main viewer is showing. The main
+window keeps browsing independently.
 
 ---
 
@@ -258,8 +301,12 @@ When opening a single image or double-clicking a thumbnail:
 |----------|--------|
 | Arrow Keys | Scroll grid / Switch images (Left/Right in deep zoom) |
 | Shift + Arrow | Fine-grained scrolling (half step) |
+| Ctrl+Shift+←/→ | Jump to previous / next sibling folder with images |
+| Alt+← / Alt+→ | History back / forward (browser-style) |
+| Ctrl+G | Go to image by index |
+| X | Jump to a random image |
 | Home | Reset zoom and pan to origin |
-| Ctrl+F or / | Open search dialog |
+| Ctrl+F or / | Open fuzzy search dialog |
 | S | Open slideshow dialog |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
@@ -269,19 +316,29 @@ When opening a single image or double-clicking a thumbnail:
 | Shortcut | Action |
 |----------|--------|
 | F | Toggle fullscreen |
+| Shift+Tab | Toggle **theater mode** (hide all chrome) |
 | R | Rotate clockwise |
 | Shift+R | Rotate counter-clockwise |
 | E | Open image editor |
 | W | Fit to width |
 | Shift+W | Fit to height |
 | H | Toggle RGB histogram overlay |
+| F8 | Toggle OSD info overlay (filename / size / type) |
+| Ctrl+F8 | Toggle debug HUD (VRAM / cache / threads) |
+| Shift+P | Toggle pixel view (≥ 400 % zoom shows grid + RGB) |
+| Shift+M | Cycle color modes (Normal / Grayscale / Invert / Sepia) |
 | B | Toggle bookmark for current image |
 | Ctrl+C | Copy image to clipboard |
 | Ctrl+V | Paste image from clipboard |
 | 0 | Toggle favorite (heart) |
 | 1–5 | Quick rating (1–5 stars) |
+| F1–F5 | Quick **color label** (red / yellow / green / blue / purple) |
+| Shift+S | Open split view (two images side-by-side) |
+| Shift+D | Open dual-page reading (manga/comic) |
+| Ctrl+Shift+D | Open dual-page reading in right-to-left order |
+| Ctrl+Shift+M | Toggle secondary-display mirror window |
 | Delete | Move current image to trash (undoable) |
-| Escape | Exit deep zoom / Exit fullscreen |
+| Escape | Exit deep zoom / Exit fullscreen / Close dual/list mode |
 
 ### Animation Playback (GIF / APNG)
 
@@ -298,6 +355,8 @@ When opening a single image or double-clicking a thumbnail:
 | Shortcut | Action |
 |----------|--------|
 | Arrow Keys | Scroll grid |
+| Ctrl+L | Toggle Grid ↔ List (detail) browse mode |
+| Hover (500 ms) | Show larger hover preview popup |
 | Delete | Delete selected tiles |
 | Escape | Deselect all |
 
@@ -311,6 +370,13 @@ When opening a single image or double-clicking a thumbnail:
 | Middle Mouse Drag | Pan/scroll in deep zoom |
 | Scroll Wheel | Zoom in/out or scroll |
 | Right Click | Open context menu |
+
+### Touchpad Gestures
+
+| Gesture | Action |
+|---------|--------|
+| Pinch | Zoom in / out in deep zoom (anchored at pinch centre) |
+| Horizontal Swipe | Previous / next image |
 
 ---
 
@@ -340,6 +406,8 @@ When opening a single image or double-clicking a thumbnail:
 ### View
 
 - Tile Size: 128×128 / 256×256 / 512×512 / 1024×1024 / Auto
+- **Browse Mode**: Grid / List (toggle with Ctrl+L)
+- **Thumbnail Density**: Compact / Standard / Relaxed
 
 ### Sort
 
@@ -349,7 +417,11 @@ When opening a single image or double-clicking a thumbnail:
 ### Filter
 
 - By Extension: All, JPG, PNG, BMP, TIFF, SVG, RAW
+- **By Color Label**: All / Any label / No label / Red / Yellow / Green / Blue / Purple
 - By Rating: All, Favorited, 1–5 stars
+- By Tag (single) / By Album (single)
+- **Multi-Tag Filter…** — multi-select tags or albums with AND / OR boolean logic
+- **Advanced Filter…** — resolution / file size / orientation / modified-date range
 - Clear Filter
 
 ### Language
@@ -453,7 +525,14 @@ Settings are stored in `user_setting.json` in the working directory.
 | `sort_ascending` | bool | Sort order |
 | `image_ratings` | dict | Image path → rating (1–5) mapping |
 | `image_favorites` | set | Favorited image paths |
+| `image_color_labels` | dict | Image path → color name (`red`/`yellow`/`green`/`blue`/`purple`) |
 | `thumbnail_size` | int/null | Grid thumbnail size (128/256/512/1024/null for auto) |
+| `tile_padding` | int | Thumbnail grid padding in px (0 compact / 8 standard / 16 relaxed) |
+| `navigation_auto_loop` | bool | Wrap around when pressing Right/Left at folder ends (default `true`) |
+| `keyboard_shortcuts` | dict | Custom `action_id → [key, modifiers]` overrides |
+| `window_geometry` | string | Base64-encoded window geometry (saved on close) |
+| `window_state` | string | Base64-encoded window state (dock / toolbar layout) |
+| `window_maximized` | bool | Whether the window was maximized on last close |
 
 ---
 

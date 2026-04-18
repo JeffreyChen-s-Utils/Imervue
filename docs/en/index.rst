@@ -78,10 +78,26 @@ After opening a folder, all images are displayed as thumbnails.
      - Left-click any thumbnail
    * - Change thumbnail size
      - Menu ``Thumbnail Size`` > choose 128 / 256 / 512 / 1024
+   * - Thumbnail density
+     - ``Thumbnail Size`` > ``Thumbnail Density`` > Compact / Standard / Relaxed
+   * - Hover preview popup
+     - Rest the cursor on a thumbnail for 500 ms to see a larger preview
    * - Select multiple images
      - Left-click and drag to draw a selection rectangle
    * - Pan with keyboard
      - Arrow keys; hold ``Shift`` for fine movement
+
+Each thumbnail shows status badges: a coloured strip on the left edge (colour label),
+a heart at the top-left (favourite), a star at the top-right (bookmark), and rating stars
+at the bottom-left. A spinner placeholder is drawn for thumbnails that are still loading.
+
+List (Detail) Mode
+^^^^^^^^^^^^^^^^^^
+
+Press ``Ctrl + L`` to toggle between thumbnail grid and a sortable list view with these columns:
+Preview · Label · Name · Resolution · Size · Type · Modified. Double-click a row (or press ``Enter``) to enter
+Deep Zoom; press ``Esc`` to return to the list. Thumbnails and metadata are loaded lazily on a worker thread
+so very large folders stay responsive.
 
 Deep Zoom Mode
 ^^^^^^^^^^^^^^
@@ -95,13 +111,21 @@ Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
    * - Action
      - Method
    * - Zoom in/out
-     - Mouse wheel
+     - Mouse wheel or touchpad pinch
    * - Pan
      - Hold middle mouse button
    * - Previous image
-     - ``Left Arrow``
+     - ``Left Arrow`` (or swipe right on touchpad)
    * - Next image
-     - ``Right Arrow``
+     - ``Right Arrow`` (or swipe left on touchpad)
+   * - Cross-folder jump
+     - ``Ctrl + Shift + Left`` / ``Right`` to previous/next sibling folder with images
+   * - History back / forward
+     - ``Alt + Left`` / ``Alt + Right`` (browser-style)
+   * - Jump to image by number
+     - ``Ctrl + G``
+   * - Random image
+     - ``X``
    * - Fit to width
      - ``W``
    * - Fit to height
@@ -112,6 +136,45 @@ Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
      - ``Esc``
    * - Fullscreen
      - ``F`` (press again to exit)
+   * - Theater mode
+     - ``Shift + Tab`` hides menu / status / tree / tabs for distraction-free viewing
+   * - OSD info overlay
+     - ``F8`` shows filename / size / type; ``Ctrl + F8`` shows a debug HUD (VRAM / cache / threads)
+   * - Pixel view
+     - ``Shift + P`` — at ≥ 400 % zoom overlays a pixel grid and shows RGB / HEX under the cursor
+   * - Colour modes
+     - ``Shift + M`` cycles Normal / Grayscale / Invert / Sepia (GLSL, non-destructive)
+
+Split View & Dual-Page Reading
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Display two images side by side directly in the main window without opening the Compare dialog:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Action
+     - Shortcut
+   * - Split view (two images)
+     - ``Shift + S``
+   * - Dual page (current + next)
+     - ``Shift + D``
+   * - Dual page, right-to-left (manga)
+     - ``Ctrl + Shift + D``
+   * - Return to previous mode
+     - ``Esc``
+
+In dual-page mode, arrow keys advance by two images at a time. The RTL variant swaps the two panels
+so page 1 appears on the right.
+
+Multi-Monitor Window
+^^^^^^^^^^^^^^^^^^^^
+
+Press ``Ctrl + Shift + M`` to open a frameless second window on your secondary display that mirrors
+the image currently shown in the main viewer. The main window keeps browsing independently — useful
+for exhibitions, dual-screen editing workflows, or client presentations. Press ``Ctrl + Shift + M`` again
+to close, or use ``Esc`` inside the second window.
 
 ----
 
@@ -133,6 +196,28 @@ In Deep Zoom mode you can quickly rate images:
      - ``0``
    * - Rate 1 -- 5 stars
      - ``1`` ``2`` ``3`` ``4`` ``5`` (press again to clear)
+
+Colour Labels (F1 -- F5)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Independent Lightroom-style colour flags, stored separately from the 1 -- 5 star rating. Useful for
+quick categorisation (e.g. red = reject candidates, green = selects, blue = to retouch).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Action
+     - Key
+   * - Red / Yellow / Green / Blue / Purple
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (press the same key again to clear)
+   * - Batch apply to selection
+     - Select multiple thumbnails, then press the corresponding F key
+   * - Filter by colour
+     - ``Filter`` > ``By Color Label`` > pick a colour / Any label / No label
+
+The status bar shows a coloured chip for the current image. Thumbnails display a coloured strip on
+the left edge. The List view has a dedicated Label column you can sort by.
 
 Bookmarks
 ^^^^^^^^^
@@ -167,10 +252,10 @@ Categorise your images with tags and albums.
      - Right-click image > ``Add to Tag``
    * - Add to album
      - Right-click image > ``Add to Album``
-   * - Filter by tag
-     - ``Filter`` > ``By Tag``
-   * - Filter by album
-     - ``Filter`` > ``By Album``
+   * - Filter by a single tag / album
+     - ``Filter`` > ``By Tag`` / ``By Album``
+   * - Multi-tag filter (AND / OR)
+     - ``Filter`` > ``Multi-Tag Filter…`` — check multiple tags or albums, choose Any (OR) or All (AND)
 
 Sorting & Filtering
 ^^^^^^^^^^^^^^^^^^^
@@ -195,8 +280,21 @@ Sorting & Filtering
      - ``Filter`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filter by rating
      - ``Filter`` > ``By Rating``
+   * - Filter by colour label
+     - ``Filter`` > ``By Color Label`` (All / Any label / No label / Red / Yellow / Green / Blue / Purple)
+   * - Advanced filter
+     - ``Filter`` > ``Advanced Filter…`` — resolution range, file size range, orientation (landscape / portrait / square), modified-date range
    * - Clear filters
      - ``Filter`` > ``Clear Filter``
+
+Browse Mode (Grid / List)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Switch the image browser between the tile grid and a sortable detail list:
+
+- ``Ctrl + L`` — toggle Grid ↔ List
+- Menu: ``Thumbnail Size`` > ``Browse Mode`` > Grid / List
+- In List mode, any column (including Label) is sortable; double-click a row or press ``Enter`` to open Deep Zoom.
 
 ----
 
@@ -445,7 +543,27 @@ Image Comparison
 
 In thumbnail mode, select 2 -- 4 images, then right-click > ``Compare Images``.
 
-A side-by-side window opens so you can compare composition and colour differences.
+The dialog has three tabs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Tab
+     - Purpose
+   * - **Side-by-side**
+     - Display 2 or 4 images simultaneously; each auto-scales in its pane.
+   * - **Overlay**
+     - Blend two images with an alpha slider (0 → A only, 100 → B only). Requires exactly 2 selected.
+   * - **Difference**
+     - Per-pixel ``|A − B|`` visualisation with a gain slider (0.10× – 20×) to amplify subtle changes.
+
+When the two images have different sizes, ``B`` is resampled to ``A``'s dimensions with Lanczos. Very large
+images are capped at 2048 px on the long edge internally so overlay / difference stay interactive.
+
+.. seealso::
+   For inline comparison without opening a dialog, use **Split View** (``Shift + S``) or
+   **Dual-Page Reading** (``Shift + D`` / ``Ctrl + Shift + D``) described in the Browsing section.
 
 ----
 
@@ -464,7 +582,10 @@ Search
 
 Press ``Ctrl + F`` or ``/`` and type a keyword to search images in the current folder by filename.
 
-Results update in real time. Double-click a result to jump straight to that image.
+Search uses **fuzzy matching** with a three-tier rank (prefix > substring > subsequence) and
+**substring highlighting** in the results. Press ``Enter`` or double-click to jump to an image.
+
+To jump by **image index** rather than name, press ``Ctrl + G`` for the Go-to dialog.
 
 ----
 
@@ -554,6 +675,20 @@ Multi-Window
 
 ``File`` > ``New Window`` opens another independent Imervue window. Each window can browse a different folder.
 
+Touchpad Gestures
+-----------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Gesture
+     - Action
+   * - Pinch
+     - Zoom in / out in Deep Zoom (anchored at pinch centre)
+   * - Horizontal swipe
+     - Previous / next image
+
 ----
 
 File Association (Windows)
@@ -624,14 +759,34 @@ Browsing
      - Pan in thumbnail mode
    * - ``Shift + Arrow``
      - Fine pan
-   * - Mouse wheel
+   * - ``Ctrl + Shift + Left`` / ``Right``
+     - Jump to previous / next sibling folder with images
+   * - ``Alt + Left`` / ``Alt + Right``
+     - History back / forward (browser-style)
+   * - ``Ctrl + G``
+     - Jump to image by number
+   * - ``X``
+     - Jump to a random image
+   * - Mouse wheel / Pinch
      - Zoom in / out
+   * - Horizontal swipe
+     - Previous / next image
    * - Middle-click drag
      - Pan
    * - ``F``
      - Fullscreen
+   * - ``Shift + Tab``
+     - Theater mode (hide all chrome)
+   * - ``Ctrl + L``
+     - Toggle Grid ↔ List (detail) browse mode
+   * - ``Shift + S``
+     - Split view (two images side by side)
+   * - ``Shift + D`` / ``Ctrl + Shift + D``
+     - Dual-page reading / RTL (manga)
+   * - ``Ctrl + Shift + M``
+     - Mirror current image on a second monitor
    * - ``Esc``
-     - Return to thumbnails / exit fullscreen
+     - Return to thumbnails / exit fullscreen / close dual or list mode
    * - ``W``
      - Fit to width
    * - ``Shift + W``
@@ -674,13 +829,15 @@ Organising
      - Toggle favourite
    * - ``1`` -- ``5``
      - Rate (press again to clear)
+   * - ``F1`` -- ``F5``
+     - Colour label: red / yellow / green / blue / purple (press same key to clear)
    * - ``B``
      - Toggle bookmark
    * - ``T``
      - Tags & Albums manager
 
-Tools
-^^^^^
+Tools & Overlays
+^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -689,13 +846,19 @@ Tools
    * - Key
      - Action
    * - ``Ctrl + F`` / ``/``
-     - Search images
+     - Fuzzy search with substring highlighting
    * - ``Ctrl + C``
      - Copy image to clipboard
    * - ``Ctrl + V``
      - Paste from clipboard
    * - ``H``
      - RGB histogram
+   * - ``F8`` / ``Ctrl + F8``
+     - OSD info overlay / Debug HUD (VRAM, cache, threads)
+   * - ``Shift + P``
+     - Pixel view (≥ 400 % shows pixel grid and RGB value under cursor)
+   * - ``Shift + M``
+     - Cycle colour modes (Normal / Grayscale / Invert / Sepia)
    * - ``S``
      - Slideshow
 

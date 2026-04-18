@@ -35,7 +35,11 @@ def _mouse_shortcuts() -> list[tuple[str, str]]:
 
 
 def _keyboard_shortcuts() -> list[tuple[str, str]]:
+    # Ordered so related shortcuts cluster: core → rating/label → navigation
+    # → view modes → advanced → animation. Keep this in sync with
+    # DEFAULT_SHORTCUTS in shortcut_settings_dialog.py.
     return [
+        # --- Core ---
         ("Esc", "keyboard_control_esc_tip"),
         ("F", "keyboard_f_tip"),
         ("R / Shift+R", "keyboard_r_tip"),
@@ -52,10 +56,28 @@ def _keyboard_shortcuts() -> list[tuple[str, str]]:
         ("Ctrl+Z", "keyboard_undo_tip"),
         ("Ctrl+Shift+Z", "keyboard_redo_tip"),
         ("Ctrl+F  /  /", "keyboard_search_tip"),
+        # --- Rating + colour labels ---
         ("1 ~ 5", "keyboard_rating_tip"),
         ("0", "keyboard_favorite_tip"),
+        ("F1 ~ F5", "keyboard_color_label_tip"),
+        # --- Navigation ---
         ("\u2190 \u2192", "keyboard_arrow_lr_tip"),
         ("\u2191 \u2193 \u2190 \u2192", "keyboard_arrow_tile_tip"),
+        ("Ctrl+Shift+\u2190 / \u2192", "keyboard_cross_folder_tip"),
+        ("Alt+\u2190 / \u2192", "keyboard_history_tip"),
+        ("Ctrl+G", "keyboard_goto_tip"),
+        ("X", "keyboard_random_tip"),
+        # --- View modes ---
+        ("Shift+Tab", "keyboard_theater_tip"),
+        ("Ctrl+L", "keyboard_list_mode_tip"),
+        ("Shift+S", "keyboard_split_view_tip"),
+        ("Shift+D  /  Ctrl+Shift+D", "keyboard_dual_page_tip"),
+        ("Ctrl+Shift+M", "keyboard_multi_monitor_tip"),
+        # --- Advanced overlays ---
+        ("F8  /  Ctrl+F8", "keyboard_osd_tip"),
+        ("Shift+P", "keyboard_pixel_view_tip"),
+        ("Shift+M", "keyboard_color_mode_tip"),
+        # --- Animation ---
         ("Space", "keyboard_anim_play_tip"),
         (",  /  .", "keyboard_anim_frame_tip"),
         ("[  /  ]", "keyboard_anim_speed_tip"),

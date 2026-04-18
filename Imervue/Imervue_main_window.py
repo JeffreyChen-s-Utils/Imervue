@@ -8,6 +8,7 @@ from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy,
     QStatusBar, QProgressBar, QHeaderView, QMenu, QTabBar, QTabWidget,
+    QStackedWidget,
 )
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
@@ -40,13 +41,34 @@ class _FileTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
 
-    # ---------- Delete key ----------
+    # ---------- Keyboard shortcuts ----------
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Delete:
+        key = event.key()
+        if key == Qt.Key.Key_Delete:
             self._delete_selected()
-        else:
-            super().keyPressEvent(event)
+            return
+        if key == Qt.Key.Key_F5:
+            self._refresh_tree()
+            return
+        super().keyPressEvent(event)
+
+    def _refresh_tree(self) -> None:
+        """Force QFileSystemModel to re-scan the current root.
+
+        Useful when external tools have changed the folder contents and
+        Qt's native watcher hasn't picked it up yet.
+        """
+        model: QFileSystemModel = self.model()
+        root = self.rootIndex()
+        if not root.isValid():
+            return
+        path = model.filePath(root)
+        if path:
+            # setRootPath() re-stats the directory even if the value is the same
+            model.setRootPath("")
+            model.setRootPath(path)
+            self.setRootIndex(model.index(path))
 
     def _delete_selected(self):
         indexes = self.selectionModel().selectedIndexes()
@@ -97,11 +119,55 @@ class _FileTreeView(QTreeView):
 
         menu.addSeparator()
 
+        # New Folder (inside the clicked folder, or the clicked file's parent)
+        action_new = menu.addAction(lang.get("tree_new_folder", "New Folder"))
+        target_dir = path if Path(path).is_dir() else str(Path(path).parent)
+        action_new.triggered.connect(lambda: self._create_new_folder(target_dir))
+
+        # Refresh
+        action_refresh = menu.addAction(lang.get("tree_refresh", "Refresh"))
+        action_refresh.triggered.connect(self._refresh_tree)
+
+        # Expand / collapse all children
+        if Path(path).is_dir():
+            action_expand = menu.addAction(lang.get("tree_expand_all", "Expand All"))
+            action_expand.triggered.connect(lambda: self.expandRecursively(index))
+            action_collapse = menu.addAction(lang.get("tree_collapse_all", "Collapse All"))
+            action_collapse.triggered.connect(lambda: self.collapse(index))
+
+        menu.addSeparator()
+
         # Delete
         action_del = menu.addAction(lang.get("tree_delete", "Delete"))
         action_del.triggered.connect(lambda: self._delete_path(path))
 
         menu.exec(self.viewport().mapToGlobal(pos))
+
+    def _create_new_folder(self, parent_dir: str) -> None:
+        """Prompt for a folder name and create it under ``parent_dir``."""
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        name, ok = QInputDialog.getText(
+            self,
+            lang.get("tree_new_folder", "New Folder"),
+            lang.get("tree_new_folder_prompt", "Folder name:"),
+        )
+        if not ok or not name.strip():
+            return
+        try:
+            target = Path(parent_dir) / name.strip()
+            target.mkdir(parents=False, exist_ok=False)
+            self._refresh_tree()
+        except FileExistsError:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.warning(
+                    lang.get("tree_folder_exists", "Folder already exists")
+                )
+        except OSError as exc:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.error(
+                    f"{lang.get('tree_new_folder_failed', 'Create failed')}: {exc}"
+                )
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
@@ -285,6 +351,11 @@ class ImervueMainWindow(QMainWindow):
         self._tab_bar.tabMoved.connect(self._on_tab_moved)
         right_layout.addWidget(self._tab_bar)
 
+        # ===== 麵包屑路徑列 =====
+        from Imervue.gui.breadcrumb_bar import BreadcrumbBar
+        self.breadcrumb = BreadcrumbBar(self)
+        right_layout.addWidget(self.breadcrumb)
+
         self.filename_label = QLabel(language_wrapper.language_word_dict.get("main_window_current_filename"))
         self.filename_label.setMinimumHeight(16)  # 保證有高度
         self.filename_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -299,8 +370,26 @@ class ImervueMainWindow(QMainWindow):
 
         self.exif_sidebar = ExifSidebar(self)
 
+        # ===== 檢視模式堆疊 (Grid/List/Dual) =====
+        # viewer 在 index 0，ImageListView 在 index 1，DualImageView 在 index 2。
+        from Imervue.gui.image_list_view import ImageListView
+        from Imervue.gui.dual_image_view import DualImageView
+        self.image_list_view = ImageListView(self)
+        self.image_list_view.image_activated.connect(self._on_list_activated)
+
+        self.dual_view = DualImageView(self)
+        self.dual_view.closed.connect(self._on_dual_closed)
+
+        self._view_stack = QStackedWidget()
+        self._view_stack.addWidget(self.viewer)          # 0: viewer
+        self._view_stack.addWidget(self.image_list_view)   # 1: list
+        self._view_stack.addWidget(self.dual_view)         # 2: dual
+        self._browse_mode: str = "grid"  # "grid" | "list"
+        self._dual_active: bool = False
+        self._pre_dual_mode: str = "grid"
+
         viewer_row = QSplitter(Qt.Orientation.Horizontal)
-        viewer_row.addWidget(self.viewer)
+        viewer_row.addWidget(self._view_stack)
         viewer_row.addWidget(self.exif_sidebar)
         viewer_row.setStretchFactor(0, 1)
         viewer_row.setStretchFactor(1, 0)
@@ -373,7 +462,31 @@ class ImervueMainWindow(QMainWindow):
         self._progress_bar = QProgressBar()
         self._progress_bar.setFixedWidth(180)
         self._progress_bar.setVisible(False)
+        # Permanent-side info slots: index · resolution · size · zoom · cursor
+        # These are only populated by the viewer; empty strings keep the
+        # separators from showing up when nothing is loaded yet.
+        self._status_info_index = QLabel("")
+        self._status_info_resolution = QLabel("")
+        self._status_info_size = QLabel("")
+        self._status_info_zoom = QLabel("")
+        self._status_info_cursor = QLabel("")
+        self._status_info_label = QLabel("")  # Colour-label chip
+        for lbl in (
+                self._status_info_index, self._status_info_resolution,
+                self._status_info_size, self._status_info_zoom,
+                self._status_info_cursor,
+        ):
+            lbl.setStyleSheet("color: #aaa; padding: 0 6px;")
+        self._status_info_label.setStyleSheet(
+            "padding: 0 8px; border-radius: 3px;"
+        )
         self._status_bar.addWidget(self._status_label, stretch=1)
+        self._status_bar.addPermanentWidget(self._status_info_label)
+        self._status_bar.addPermanentWidget(self._status_info_index)
+        self._status_bar.addPermanentWidget(self._status_info_resolution)
+        self._status_bar.addPermanentWidget(self._status_info_size)
+        self._status_bar.addPermanentWidget(self._status_info_zoom)
+        self._status_bar.addPermanentWidget(self._status_info_cursor)
         self._status_bar.addPermanentWidget(self._progress_bar)
 
         # ===== Toast 通知 =====
@@ -396,6 +509,7 @@ class ImervueMainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+W"), self, activated=self._close_current_tab)
         QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self._next_tab)
         QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self._prev_tab)
+        QShortcut(QKeySequence("Ctrl+L"), self, activated=self.toggle_browse_mode)
 
         # ===== 資料夾監控 =====
         self._folder_watcher = QFileSystemWatcher(self)
@@ -471,6 +585,242 @@ class ImervueMainWindow(QMainWindow):
             language_wrapper.language_word_dict.get("status_ready", "Ready")
         )
 
+    # ---------- Status bar info slots ----------
+    def update_status_info(
+            self,
+            *,
+            index: str | None = None,
+            resolution: str | None = None,
+            size: str | None = None,
+            zoom: str | None = None,
+            cursor: str | None = None,
+            label: str | None = None,
+    ) -> None:
+        """Update any subset of the permanent info slots in the status bar.
+
+        Called by the viewer whenever the shown image, zoom level, or mouse
+        position changes. Passing ``None`` leaves a slot untouched; passing
+        an empty string clears it.
+        """
+        if index is not None:
+            self._status_info_index.setText(index)
+        if resolution is not None:
+            self._status_info_resolution.setText(resolution)
+        if size is not None:
+            self._status_info_size.setText(size)
+        if zoom is not None:
+            self._status_info_zoom.setText(zoom)
+        if cursor is not None:
+            self._status_info_cursor.setText(cursor)
+        if label is not None:
+            self._apply_status_label(label)
+
+    def _apply_status_label(self, color: str) -> None:
+        """Render the colour-label chip as a coloured pill, or hide when empty."""
+        from Imervue.user_settings.color_labels import COLOR_RGB
+        if not color:
+            self._status_info_label.setText("")
+            self._status_info_label.setStyleSheet(
+                "padding: 0 8px; border-radius: 3px;"
+            )
+            return
+        rgb = COLOR_RGB.get(color)
+        if rgb is None:
+            self._status_info_label.setText("")
+            return
+        r, g, b = rgb
+        display = language_wrapper.language_word_dict.get(
+            f"color_label_{color}", color.title()
+        )
+        self._status_info_label.setText(display)
+        self._status_info_label.setStyleSheet(
+            f"background-color: rgb({r},{g},{b}); color: white;"
+            " padding: 0 8px; border-radius: 3px; font-weight: bold;"
+        )
+
+    def clear_status_info(self) -> None:
+        """Wipe all permanent info slots — used when leaving an image."""
+        self.update_status_info(
+            index="", resolution="", size="", zoom="", cursor="", label="",
+        )
+
+    # ==========================
+    # 檢視模式 (Grid / List)
+    # ==========================
+    def is_list_mode(self) -> bool:
+        return self._browse_mode == "list"
+
+    def set_browse_mode(self, mode: str) -> None:
+        """Switch between tile grid (mode='grid') and the QTableView list."""
+        if mode not in ("grid", "list"):
+            return
+        if mode == self._browse_mode:
+            return
+        self._browse_mode = mode
+        if mode == "list":
+            # Sync list view with whatever the viewer currently knows about
+            self.refresh_list_view()
+            self._view_stack.setCurrentIndex(1)
+        else:
+            self._view_stack.setCurrentIndex(0)
+            # If viewer was sitting on tile grid, re-render it fresh
+            if self.viewer.model.images and not self.viewer.deep_zoom:
+                self.viewer.tile_grid_mode = True
+                self.viewer.update()
+
+        # Sync View menu radio buttons with the current mode
+        grid_action = getattr(self, "_mode_action_grid", None)
+        list_action = getattr(self, "_mode_action_list", None)
+        if grid_action is not None:
+            grid_action.setChecked(mode == "grid")
+        if list_action is not None:
+            list_action.setChecked(mode == "list")
+
+    def toggle_browse_mode(self) -> None:
+        self.set_browse_mode("list" if self._browse_mode == "grid" else "grid")
+
+    def refresh_list_view(self) -> None:
+        """Populate the list view from the viewer's current image list."""
+        self.image_list_view.set_paths(list(self.viewer.model.images))
+
+    def _on_list_activated(self, path: str) -> None:
+        """Double-clicking a row opens that image in the deep-zoom viewer.
+
+        We swap the stack back to the viewer so deep zoom is visible; Esc
+        from deep zoom takes the user back to the list because
+        ``_browse_mode`` is still ``"list"``.
+        """
+        if not path:
+            return
+        images = self.viewer.model.images
+        if path in images:
+            self.viewer.current_index = images.index(path)
+        self._view_stack.setCurrentIndex(0)
+        self.viewer.tile_grid_mode = False
+        self.viewer.load_deep_zoom_image(path)
+
+    def after_deep_zoom_escape(self) -> None:
+        """Called by the viewer after Esc leaves deep zoom.
+
+        If the user was browsing in list mode, restore the list view instead
+        of the tile grid.
+        """
+        if self._browse_mode == "list":
+            self._view_stack.setCurrentIndex(1)
+
+    # ==========================
+    # 雙圖顯示 (Split / Manga)
+    # ==========================
+    def activate_dual_view(self, mode: str = "split") -> None:
+        """Swap to the dual-image view.
+
+        ``mode`` is one of ``"split"``, ``"manga"``, ``"manga_rtl"``. The
+        pair is derived from ``viewer.current_index``: for split we pair it
+        with the NEXT image; for manga we do the same but step by 2 on arrows.
+        """
+        images = self.viewer.model.images
+        if not images:
+            return
+
+        idx = self.viewer.current_index
+        if idx < 0 or idx >= len(images):
+            idx = 0
+            self.viewer.current_index = 0
+
+        right_idx = idx + 1 if idx + 1 < len(images) else None
+        self.dual_view.set_mode(mode)
+        self.dual_view.set_pair(
+            images[idx],
+            images[right_idx] if right_idx is not None else None,
+        )
+
+        if not self._dual_active:
+            self._pre_dual_mode = self._browse_mode
+            self._dual_active = True
+        self._view_stack.setCurrentIndex(2)
+        self.dual_view.setFocus()
+
+    def deactivate_dual_view(self) -> None:
+        if not self._dual_active:
+            return
+        self._dual_active = False
+        # Restore to whichever browse mode was active before dual
+        if self._pre_dual_mode == "list":
+            self._view_stack.setCurrentIndex(1)
+        else:
+            self._view_stack.setCurrentIndex(0)
+
+    def _on_dual_closed(self) -> None:
+        self.deactivate_dual_view()
+
+    # ==========================
+    # 多螢幕視窗
+    # ==========================
+    def _ensure_multi_monitor(self):
+        ctrl = getattr(self, "_multi_monitor", None)
+        if ctrl is None:
+            from Imervue.gui.multi_monitor_window import MultiMonitorController
+            ctrl = MultiMonitorController(self)
+            self._multi_monitor = ctrl
+        return ctrl
+
+    def toggle_multi_monitor_window(self) -> None:
+        self._ensure_multi_monitor().toggle()
+
+    # ==========================
+    # 劇場模式 (Theater mode)
+    # ==========================
+    def is_theater_mode(self) -> bool:
+        return bool(getattr(self, "_theater_mode", False))
+
+    def toggle_theater_mode(self) -> None:
+        """Hide all chrome (menu / status / tree / tabs / sidebar) to focus on the image.
+
+        Unlike fullscreen, the window stays in its current decoration — theater
+        just collapses the surrounding UI. Toggling again restores everything
+        to its prior state.
+        """
+        now_theater = not self.is_theater_mode()
+        self._theater_mode = now_theater
+
+        widgets_to_hide = [
+            self.menuBar(),
+            self.statusBar(),
+            self.tree,
+            self._tab_bar,
+            self.filename_label,
+        ]
+        sidebar = getattr(self, "exif_sidebar", None)
+        if sidebar is not None:
+            widgets_to_hide.append(sidebar)
+        main_tab_bar = self._main_tabs.tabBar()
+        if main_tab_bar is not None:
+            widgets_to_hide.append(main_tab_bar)
+
+        if now_theater:
+            # Save visibility, then hide
+            self._theater_prev_visibility = [w.isVisible() for w in widgets_to_hide]
+            self._theater_widgets = widgets_to_hide
+            for w in widgets_to_hide:
+                w.setVisible(False)
+            if hasattr(self, "toast"):
+                lang = language_wrapper.language_word_dict
+                self.toast.info(lang.get("theater_on", "Theater mode — Shift+Tab to exit"))
+        else:
+            prev = getattr(self, "_theater_prev_visibility", None)
+            widgets = getattr(self, "_theater_widgets", widgets_to_hide)
+            if prev and len(prev) == len(widgets):
+                for w, vis in zip(widgets, prev):
+                    w.setVisible(vis)
+            else:
+                for w in widgets:
+                    w.setVisible(True)
+            self._theater_prev_visibility = None
+            self._theater_widgets = None
+            if hasattr(self, "toast"):
+                lang = language_wrapper.language_word_dict
+                self.toast.info(lang.get("theater_off", "Theater mode off"))
+
     def change_tile_size(self, size):
         if size != "None":
             self.viewer.thumbnail_size = size
@@ -485,6 +835,14 @@ class ImervueMainWindow(QMainWindow):
             else:
                 self.viewer.tile_grid_mode = False
                 self.viewer.load_deep_zoom_image(self.viewer.model.images[0])
+
+    def change_tile_padding(self, padding: int) -> None:
+        """Set thumbnail-grid padding and persist — 0 compact, 8 standard, 16 relaxed."""
+        padding = int(max(0, min(64, padding)))
+        self.viewer.tile_padding = padding
+        user_setting_dict["tile_padding"] = padding
+        if self.viewer.tile_grid_mode:
+            self.viewer.update()
 
     # ==========================
     # 資料夾監控
@@ -539,10 +897,12 @@ class ImervueMainWindow(QMainWindow):
                     "main_window_current_folder_format"
                 ).format(path=path)
             )
+            self.breadcrumb.set_path(path)
             self.watch_folder(path)
         elif Path(path).is_file():
             self.viewer.clear_tile_grid()
             open_path(main_gui=self.viewer, path=path)
+            self.breadcrumb.set_path(str(Path(path).parent))
 
         rebuild_recent_menu(self)
 
@@ -570,6 +930,8 @@ class ImervueMainWindow(QMainWindow):
                 "main_window_current_folder_format"
             ).format(path=folder)
         )
+        if hasattr(self, "breadcrumb"):
+            self.breadcrumb.set_path(folder)
         self.watch_folder(folder)
 
     # ==========================
