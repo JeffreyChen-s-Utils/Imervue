@@ -165,8 +165,6 @@ traditional_chinese_word_dict = {
     "favorite_removed": "已取消收藏",
     # 比較
     "compare_title": "比較圖片",
-    "compare_2": "比較 2 張",
-    "compare_4": "比較 4 張",
     # EXIF 側邊欄
     "exif_filename": "檔案",
     "exif_filesize": "大小",

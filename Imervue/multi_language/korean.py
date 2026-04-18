@@ -165,8 +165,6 @@ korean_word_dict = {
     "favorite_removed": "즐겨찾기 해제됨",
     # 비교
     "compare_title": "이미지 비교",
-    "compare_2": "2장 비교",
-    "compare_4": "4장 비교",
     # EXIF 사이드바
     "exif_filename": "파일",
     "exif_filesize": "크기",

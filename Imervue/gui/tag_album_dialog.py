@@ -323,7 +323,8 @@ class TagAlbumDialog(QDialog):
         reply = QMessageBox.question(
             self,
             self._lang.get("album_delete_confirm_title", "Delete Album"),
-            self._lang.get("album_delete_confirm", "Delete album '{name}'?").format(name=album_name),
+            self._lang.get("album_delete_confirm", "Delete album '{name}'?")
+                .format(name=album_name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:

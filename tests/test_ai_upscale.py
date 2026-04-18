@@ -195,7 +195,7 @@ class TestTraditionalMethods:
 
     def test_all_methods_have_desc(self):
         from Imervue.gui.ai_upscale_dialog import TRADITIONAL_METHODS
-        for key, info in TRADITIONAL_METHODS.items():
+        for _key, info in TRADITIONAL_METHODS.items():
             assert "desc_key" in info
             assert "desc_default" in info
 

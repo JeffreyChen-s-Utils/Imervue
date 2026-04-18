@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRectF
 
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -24,10 +25,8 @@ def _notify_switch(main_gui: GPUImageView, path: str) -> None:
     """Dispatch plugin hook for image switch (shared by prev/next)."""
     pm = getattr(main_gui.main_window, "plugin_manager", None)
     if pm is not None:
-        try:
+        with contextlib.suppress(Exception):
             pm.dispatch_image_switched(path, main_gui)
-        except Exception:
-            pass
 
 
 def switch_to_next_image(main_gui: GPUImageView) -> None:
@@ -78,10 +77,8 @@ def _toast_loop(main_gui: GPUImageView, forward: bool) -> None:
     lang = mw.language_wrapper.language_word_dict
     key = "nav_loop_next" if forward else "nav_loop_prev"
     fallback = "Looped to first image" if forward else "Looped to last image"
-    try:
+    with contextlib.suppress(Exception):
         mw.toast.info(lang.get(key, fallback))
-    except Exception:
-        pass
 
 
 def switch_to_next_folder(main_gui: GPUImageView) -> None:

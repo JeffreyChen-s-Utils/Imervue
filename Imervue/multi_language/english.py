@@ -165,8 +165,6 @@ english_word_dict = {
     "favorite_removed": "Favorite removed",
     # Compare
     "compare_title": "Compare Images",
-    "compare_2": "Compare 2",
-    "compare_4": "Compare 4",
     # EXIF sidebar
     "exif_filename": "File",
     "exif_filesize": "Size",

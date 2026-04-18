@@ -13,9 +13,8 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QRadioButton, QScrollArea, QVBoxLayout,
-    QWidget,
+    QButtonGroup, QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
+    QListWidget, QListWidgetItem, QRadioButton, QVBoxLayout,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -43,7 +42,7 @@ def combine_sets(groups: list[set[str]], mode: str) -> set[str]:
 class TagFilterDialog(QDialog):
     """Dialog that collects (tags + albums + mode) → applied to the grid."""
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__(main_window)
         self._main_window = main_window
         lang = language_wrapper.language_word_dict
@@ -168,5 +167,5 @@ class TagFilterDialog(QDialog):
         return out
 
 
-def open_tag_filter_dialog(main_window: "ImervueMainWindow") -> None:
+def open_tag_filter_dialog(main_window: ImervueMainWindow) -> None:
     TagFilterDialog(main_window).exec()

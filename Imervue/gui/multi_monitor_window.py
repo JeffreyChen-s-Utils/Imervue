@@ -17,6 +17,7 @@ from PySide6.QtGui import QGuiApplication, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -70,7 +71,7 @@ class MultiMonitorWindow(QWidget):
 
     closed = Signal()
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
         self._main_window = main_window
         self.setWindowTitle(
@@ -125,7 +126,7 @@ class MultiMonitorWindow(QWidget):
 class MultiMonitorController:
     """Owns the secondary window and wires it to the main viewer's image changes."""
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         self._main_window = main_window
         self._window: MultiMonitorWindow | None = None
 
@@ -163,19 +164,15 @@ class MultiMonitorController:
     def _on_closed(self) -> None:
         # Restore the original filename hook
         mw = self._main_window
-        try:
+        with contextlib.suppress(AttributeError):
             mw.viewer.on_filename_changed = self._prev_on_filename
-        except AttributeError:
-            pass
         self._window = None
 
     def _wrap_filename_change(self, name: str) -> None:
         # Forward to the main window's original handler first, then mirror
-        try:
+        with contextlib.suppress(Exception):
             if self._prev_on_filename is not None:
                 self._prev_on_filename(name)
-        except Exception:
-            pass
         if self._window is None:
             return
         images = self._main_window.viewer.model.images

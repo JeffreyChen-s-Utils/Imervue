@@ -269,7 +269,7 @@ class BookmarkDialog(QDialog):
         if not path:
             return
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Bookmark import failed: {e}")

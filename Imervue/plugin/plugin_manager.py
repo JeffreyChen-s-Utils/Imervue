@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PySide6.QtWidgets import QMenu, QMenuBar
+    from PySide6.QtWidgets import QMenu
     from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
@@ -73,7 +73,11 @@ class PluginManager:
             for candidate in sorted(plugin_dir.iterdir()):
                 if candidate.is_dir() and (candidate / "__init__.py").exists():
                     self._load_plugin_package(candidate)
-                elif candidate.is_file() and candidate.suffix == ".py" and candidate.stem != "__init__":
+                elif (
+                    candidate.is_file()
+                    and candidate.suffix == ".py"
+                    and candidate.stem != "__init__"
+                ):
                     self._load_plugin_file(candidate)
 
     def _load_plugin_package(self, package_dir: Path) -> None:
@@ -127,7 +131,9 @@ class PluginManager:
         # Check for duplicates
         for existing in self._plugins:
             if type(existing).__name__ == plugin_class.__name__:
-                logger.warning(f"Plugin '{plugin_class.__name__}' already loaded, skipping duplicate.")
+                logger.warning(
+                    f"Plugin '{plugin_class.__name__}' already loaded, skipping duplicate."
+                )
                 return
 
         try:
@@ -172,7 +178,9 @@ class PluginManager:
             except Exception as e:
                 logger.error(f"[{plugin.plugin_name}] on_image_loaded error: {e}")
 
-    def dispatch_folder_opened(self, folder_path: str, image_paths: list[str], viewer: GPUImageView) -> None:
+    def dispatch_folder_opened(
+        self, folder_path: str, image_paths: list[str], viewer: GPUImageView,
+    ) -> None:
         for plugin in self._plugins:
             try:
                 plugin.on_folder_opened(folder_path, image_paths, viewer)

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QClipboard
 from PySide6.QtWidgets import QMenu, QApplication, QWidgetAction
 
 from Imervue.gpu_image_view.actions.batch_ops import (
@@ -78,7 +78,9 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     # Plugin hook: context menu
     if hasattr(main_gui.main_window, "plugin_manager"):
-        main_gui.main_window.plugin_manager.dispatch_build_context_menu(build_right_click_menu, main_gui)
+        main_gui.main_window.plugin_manager.dispatch_build_context_menu(
+            build_right_click_menu, main_gui
+        )
 
     if build_right_click_menu.actions():
         build_right_click_menu.exec(global_pos)
@@ -112,15 +114,13 @@ def _show_in_explorer_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _open_in_explorer(path: str):
-    try:
+    with contextlib.suppress(Exception):
         if sys.platform == "win32":
             subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
         elif sys.platform == "darwin":
             subprocess.Popen(["open", "-R", path])
         else:
             subprocess.Popen(["xdg-open", str(Path(path).parent)])
-    except Exception:
-        pass
 
 
 # ===========================
@@ -239,7 +239,7 @@ def _set_wallpaper_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _set_wallpaper(path: str):
-    try:
+    with contextlib.suppress(Exception):
         if sys.platform == "win32":
             import ctypes
             SPI_SETDESKWALLPAPER = 0x0014
@@ -262,8 +262,6 @@ def _set_wallpaper(path: str):
                 "gsettings", "set", "org.gnome.desktop.background",
                 "picture-uri", f"file://{path}"
             ])
-    except Exception:
-        pass
 
 
 # ===========================
@@ -416,11 +414,10 @@ def _do_lossless_rotate(main_gui: GPUImageView, path: str, clockwise: bool):
         from Imervue.gpu_image_view.images.image_loader import open_path
         main_gui._clear_deep_zoom()
         open_path(main_gui=main_gui, path=path)
-    else:
-        if hasattr(main_gui.main_window, "toast"):
-            main_gui.main_window.toast.info(
-                lang.get("lossless_rotate_fail", "Lossless rotation failed")
-            )
+    elif hasattr(main_gui.main_window, "toast"):
+        main_gui.main_window.toast.info(
+            lang.get("lossless_rotate_fail", "Lossless rotation failed")
+        )
 
 
 # ===========================

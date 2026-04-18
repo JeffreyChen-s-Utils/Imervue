@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QMenu, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
+    QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTreeWidget, QTreeWidgetItem,
     QHeaderView, QTextEdit,
 )
@@ -165,7 +165,8 @@ class _PluginManageDialog(QDialog):
 
         lines = [
             lang.get("plugin_info_name", "Name: {name}").format(name=plugin.plugin_name),
-            lang.get("plugin_info_version", "Version: {version}").format(version=plugin.plugin_version),
+            lang.get("plugin_info_version", "Version: {version}")
+                .format(version=plugin.plugin_version),
             lang.get("plugin_info_author", "Author: {author}").format(author=plugin.plugin_author),
             lang.get("plugin_info_description", "Description: {description}").format(
                 description=plugin.plugin_description

@@ -37,9 +37,7 @@ def is_frozen() -> bool:
     # Nuitka sets __compiled__ in every compiled module's globals.
     # Because this very file gets compiled by Nuitka when building a
     # standalone bundle, its own module globals will carry the attribute.
-    if "__compiled__" in globals():
-        return True
-    return False
+    return "__compiled__" in globals()
 
 
 @lru_cache(maxsize=1)

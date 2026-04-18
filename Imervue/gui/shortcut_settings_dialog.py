@@ -11,7 +11,6 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -29,7 +28,7 @@ from Imervue.user_settings.user_setting_dict import (
 )
 
 if TYPE_CHECKING:
-    from Imervue.Imervue_main_window import ImervueMainWindow
+    pass
 
 logger = logging.getLogger("Imervue.shortcut_settings")
 
@@ -199,7 +198,8 @@ class ShortcutManager:
     def get_action(self, key: int, modifiers: int) -> str | None:
         """Look up which action_id a key combo maps to."""
         # Mask out KeypadModifier and other noise
-        mods = (modifiers.value if hasattr(modifiers, "value") else int(modifiers)) & (_CTRL | _SHIFT | _ALT)
+        raw = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        mods = raw & (_CTRL | _SHIFT | _ALT)
         return self._key_to_action.get((key, mods))
 
     def get_key(self, action_id: str) -> tuple[int, int]:

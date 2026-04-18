@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -325,7 +326,7 @@ class _UpscaleWorker(QThread):
                 arr = np.array(rgb)
                 out_arr = _upscale_image(
                     session, arr, scale,
-                    progress_cb=lambda d, t: self.tile_progress.emit(d, t),
+                    progress_cb=self.tile_progress.emit,
                 )
                 out_img = Image.fromarray(out_arr)
 
@@ -631,7 +632,7 @@ class AIUpscaleDialog(QDialog):
 
         # Reload viewer if overwritten
         if self._overwrite_check.isChecked():
-            try:
+            with contextlib.suppress(Exception):
                 if self._gui.tile_grid_mode:
                     self._gui.load_tile_grid_async(list(self._gui.model.images))
                 elif self._gui.deep_zoom:
@@ -640,15 +641,11 @@ class AIUpscaleDialog(QDialog):
                         self._gui._clear_deep_zoom()
                         self._gui.load_deep_zoom_image(
                             images[self._gui.current_index])
-            except Exception:
-                pass
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)

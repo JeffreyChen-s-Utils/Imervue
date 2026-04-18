@@ -1,8 +1,6 @@
 """Tests for DeepZoomImage pyramid."""
-import math
 
 import numpy as np
-import pytest
 
 from Imervue.image.pyramid import DeepZoomImage
 

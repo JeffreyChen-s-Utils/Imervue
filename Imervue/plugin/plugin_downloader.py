@@ -313,7 +313,8 @@ class PluginDownloaderDialog(QDialog):
         self.progress_bar.setValue(0)
         self.progress_bar.setMaximum(len(file_infos))
         self.status_label.setText(
-            lang.get("plugin_dl_status_downloading", "Downloading {name}...").format(name=plugin_name)
+            lang.get("plugin_dl_status_downloading", "Downloading {name}...")
+                .format(name=plugin_name)
         )
 
         self._cleanup_finished_workers()
@@ -333,7 +334,8 @@ class PluginDownloaderDialog(QDialog):
         self.progress_bar.setVisible(False)
         self.refresh_btn.setEnabled(True)
         self.status_label.setText(
-            lang.get("plugin_dl_status_done", "Downloaded {name} successfully!").format(name=plugin_name)
+            lang.get("plugin_dl_status_done", "Downloaded {name} successfully!")
+                .format(name=plugin_name)
         )
 
         # Refresh tree status
@@ -342,9 +344,10 @@ class PluginDownloaderDialog(QDialog):
         QMessageBox.information(
             self,
             lang.get("plugin_dl_title", "Download Plugins"),
-            lang.get("plugin_dl_restart_hint", "Plugin '{name}' downloaded. Restart Imervue to activate it.").format(
-                name=plugin_name
-            ),
+            lang.get(
+                "plugin_dl_restart_hint",
+                "Plugin '{name}' downloaded. Restart Imervue to activate it.",
+            ).format(name=plugin_name),
         )
         self.accept()
 
@@ -376,7 +379,8 @@ class PluginDownloaderDialog(QDialog):
         reply = QMessageBox.question(
             self,
             lang.get("plugin_dl_delete_confirm_title", "Delete Plugin"),
-            lang.get("plugin_dl_delete_confirm", "Delete plugin '{name}'?").format(name=plugin_name),
+            lang.get("plugin_dl_delete_confirm", "Delete plugin '{name}'?")
+                .format(name=plugin_name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

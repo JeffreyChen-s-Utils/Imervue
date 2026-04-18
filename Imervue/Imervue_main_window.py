@@ -3,11 +3,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, Qt, QTimer, QDir, QFileSystemWatcher
+from PySide6.QtCore import QByteArray, Qt, QTimer, QFileSystemWatcher
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTreeView, QFileSystemModel, QSplitter, QSizePolicy,
-    QStatusBar, QProgressBar, QHeaderView, QMenu, QTabBar, QTabWidget,
+    QStatusBar, QProgressBar, QMenu, QTabBar, QTabWidget,
     QStackedWidget,
 )
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
@@ -30,6 +30,7 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import (
     write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
 )
+import contextlib
 
 
 class _FileTreeView(QTreeView):
@@ -171,7 +172,7 @@ class _FileTreeView(QTreeView):
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
-        try:
+        with contextlib.suppress(Exception):
             if sys.platform == "win32":
                 if select and Path(path).is_file():
                     subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
@@ -182,8 +183,6 @@ class _FileTreeView(QTreeView):
             else:
                 target = path if Path(path).is_dir() else str(Path(path).parent)
                 subprocess.Popen(["xdg-open", target])
-        except Exception:
-            pass
 
     def _delete_path(self, path: str):
         if not Path(path).exists():
@@ -235,13 +234,12 @@ class _FileTreeView(QTreeView):
         else:
             # 不在圖片列表中（資料夾或非圖片檔案）→ 直接移至垃圾桶
             from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-            if _send_to_trash(path):
-                if hasattr(self._main_window, "toast"):
-                    self._main_window.toast.info(
-                        lang.get("tree_deleted", "Moved to trash: {name}").format(
-                            name=Path(path).name
-                        )
+            if _send_to_trash(path) and hasattr(self._main_window, "toast"):
+                self._main_window.toast.info(
+                    lang.get("tree_deleted", "Moved to trash: {name}").format(
+                        name=Path(path).name
                     )
+                )
 
 
 class ImervueMainWindow(QMainWindow):
@@ -356,7 +354,9 @@ class ImervueMainWindow(QMainWindow):
         self.breadcrumb = BreadcrumbBar(self)
         right_layout.addWidget(self.breadcrumb)
 
-        self.filename_label = QLabel(language_wrapper.language_word_dict.get("main_window_current_filename"))
+        self.filename_label = QLabel(
+            language_wrapper.language_word_dict.get("main_window_current_filename")
+        )
         self.filename_label.setMinimumHeight(16)  # 保證有高度
         self.filename_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -402,13 +402,11 @@ class ImervueMainWindow(QMainWindow):
             # Keep the tab bar in lockstep with whatever image the viewer
             # now shows. Only sync in deep-zoom mode — tile grid / folder
             # browsing intentionally doesn't create tabs.
-            try:
+            with contextlib.suppress(Exception):
                 images = self.viewer.model.images
                 idx = self.viewer.current_index
                 if self.viewer.deep_zoom and 0 <= idx < len(images):
                     self._sync_current_tab_with_path(images[idx])
-            except Exception:
-                pass
 
         self.viewer.on_filename_changed = _on_name_changed
 
@@ -810,7 +808,7 @@ class ImervueMainWindow(QMainWindow):
             prev = getattr(self, "_theater_prev_visibility", None)
             widgets = getattr(self, "_theater_widgets", widgets_to_hide)
             if prev and len(prev) == len(widgets):
-                for w, vis in zip(widgets, prev):
+                for w, vis in zip(widgets, prev, strict=False):
                     w.setVisible(vis)
             else:
                 for w in widgets:
@@ -1061,7 +1059,7 @@ class ImervueMainWindow(QMainWindow):
     def _save_window_geometry(self) -> None:
         """Save window geometry + state into user_setting_dict."""
         import base64
-        try:
+        with contextlib.suppress(Exception):
             user_setting_dict["window_geometry"] = base64.b64encode(
                 bytes(self.saveGeometry())
             ).decode("ascii")
@@ -1069,8 +1067,6 @@ class ImervueMainWindow(QMainWindow):
                 bytes(self.saveState())
             ).decode("ascii")
             user_setting_dict["window_maximized"] = self.isMaximized()
-        except Exception:
-            pass
 
     def _restore_window_geometry(self) -> None:
         """Restore saved geometry if it lands on a visible screen, else showMaximized."""
@@ -1090,10 +1086,8 @@ class ImervueMainWindow(QMainWindow):
         # 還原 state（工具列、dock 等）
         state_b64 = user_setting_dict.get("window_state", "")
         if state_b64:
-            try:
+            with contextlib.suppress(Exception):
                 self.restoreState(QByteArray(base64.b64decode(state_b64)))
-            except Exception:
-                pass
 
         # 檢查還原的位置是否在某個可用螢幕上
         # 若螢幕已拔除，視窗可能落在不可見區域
@@ -1110,75 +1104,56 @@ class ImervueMainWindow(QMainWindow):
     def _geometry_on_visible_screen(self) -> bool:
         """Check if the window's center point lands on any available screen."""
         center = self.frameGeometry().center()
-        for screen in QApplication.screens():
-            if screen.availableGeometry().contains(center):
-                return True
-        return False
+        return any(
+            screen.availableGeometry().contains(center)
+            for screen in QApplication.screens()
+        )
 
     def closeEvent(self, event):
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
 
         # --- 斷開分頁切換信號，避免銷毀過程中觸發 ---
-        try:
+        with contextlib.suppress(Exception):
             self._main_tabs.currentChanged.disconnect(self._on_main_tab_changed)
-        except Exception:
-            pass
 
         # --- 安全關閉修改面板 ---
-        try:
-            # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
+        # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
+        with contextlib.suppress(Exception):
             self.modify_panel._debounce.stop()
             self.modify_panel.recipe_committed.disconnect()
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             self.modify_panel._destroy_canvas()
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             self.modify_panel._undo_stack.clear()
-        except Exception:
-            pass
 
         # --- 安全關閉 OpenGL viewer ---
-        try:
+        with contextlib.suppress(Exception):
             self.viewer.makeCurrent()
             self.viewer._delete_all_tile_textures()
             self.viewer._clear_deep_zoom()
             self.viewer.doneCurrent()
-        except Exception:
-            pass
 
         # 儲存視窗位置與大小（在寫入設定之前）
-        try:
+        with contextlib.suppress(Exception):
             self._save_window_geometry()
-        except Exception:
-            pass
 
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
-        # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中與我們的 flush 競爭寫同一個檔案
-        try:
+        # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中
+        # 與我們的 flush 競爭寫同一個檔案
+        with contextlib.suppress(Exception):
             cancel_pending_save()
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             write_user_setting()
-        except Exception:
-            pass
 
-        try:
+        with contextlib.suppress(Exception):
             commit_pending_deletions(self.viewer)
-        except Exception:
-            pass
 
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):
-            try:
+            with contextlib.suppress(Exception):
                 self.plugin_manager.dispatch_app_closing(self)
                 self.plugin_manager.unload_all()
-            except Exception:
-                pass
 
         event.accept()
         super().closeEvent(event)

@@ -118,7 +118,7 @@ def undo_delete(main_gui: GPUImageView):
     indices = action["indices"]
 
     # ===== 依 index 排序插回 =====
-    for path, idx in sorted(zip(paths, indices), key=lambda x: x[1]):
+    for path, idx in sorted(zip(paths, indices, strict=False), key=lambda x: x[1]):
         main_gui.model.images.insert(idx, path)
 
         # ===== 重新載入 thumbnail（tile grid 用）=====

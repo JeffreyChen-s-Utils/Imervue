@@ -19,7 +19,8 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 import numpy as np
 from PIL import Image
@@ -31,7 +32,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFontComboBox,
     QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -47,9 +47,11 @@ from PySide6.QtWidgets import (
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+    from Imervue.gui.annotation_dialog import AnnotationCanvas
 
 logger = logging.getLogger("Imervue.develop_panel")
 
@@ -95,7 +97,7 @@ class DevelopPanel(QWidget):
     # Size of each tool button in the vertical strip.
     _TOOL_BTN_SIZE = QSize(86, 66)
 
-    def __init__(self, main_gui: "GPUImageView"):
+    def __init__(self, main_gui: GPUImageView):
         super().__init__()
         self._main_gui = main_gui
         self._path: str | None = None
@@ -113,7 +115,7 @@ class DevelopPanel(QWidget):
         self._interactive_widgets: list[QWidget] = []
 
         # Inline annotation canvas — created lazily when an image is bound.
-        self._canvas: Optional["AnnotationCanvas"] = None
+        self._canvas: AnnotationCanvas | None = None
         self._canvas_undo_stack = QUndoStack(self)
         self._canvas_source_path: str | None = None
 
@@ -267,7 +269,6 @@ class DevelopPanel(QWidget):
         self._width_spin.valueChanged.connect(self._on_stroke_spin)
 
         # --- Brush type ---
-        from Imervue.gui.annotation_models import ALL_BRUSHES
         brush_label = QLabel(lang.get("annotation_brush_section", "Brush"))
         layout.addWidget(brush_label)
         brush_grid = QGridLayout()
@@ -465,7 +466,7 @@ class DevelopPanel(QWidget):
     # Public API — called by GPUImageView / ImervueMainWindow
     # ------------------------------------------------------------------
 
-    def canvas(self) -> Optional["AnnotationCanvas"]:
+    def canvas(self) -> AnnotationCanvas | None:
         """Return the current inline AnnotationCanvas, or None."""
         return self._canvas
 
@@ -577,23 +578,17 @@ class DevelopPanel(QWidget):
         self._canvas_undo_stack.clear()
         if self._canvas is not None:
             # Disconnect signals we connected
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
-            except (RuntimeError, TypeError):
-                pass
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
-            try:
+            with contextlib.suppress(Exception):
                 self._canvas._cancel_text_edit()
-            except Exception:
-                pass
             # Release shiboken-tracked objects held by the canvas so they
             # are freed deterministically right now.
-            try:
+            with contextlib.suppress(Exception):
                 self._canvas._base_qimg = None
                 self._canvas._preview_qimg = None
-            except Exception:
-                pass
             self._canvas.hide()
             self._canvas.setParent(None)
             self._canvas = None
@@ -864,14 +859,17 @@ class DevelopPanel(QWidget):
         self._exposure_label.setText(
             f"{lang.get('develop_exposure', 'Exposure')}: {self._current.exposure:+.2f}"
         )
+        bri = int(self._current.brightness * 100)
+        con = int(self._current.contrast * 100)
+        sat = int(self._current.saturation * 100)
         self._brightness_label.setText(
-            f"{lang.get('develop_brightness', 'Brightness')}: {int(self._current.brightness * 100):+d}"
+            f"{lang.get('develop_brightness', 'Brightness')}: {bri:+d}"
         )
         self._contrast_label.setText(
-            f"{lang.get('develop_contrast', 'Contrast')}: {int(self._current.contrast * 100):+d}"
+            f"{lang.get('develop_contrast', 'Contrast')}: {con:+d}"
         )
         self._saturation_label.setText(
-            f"{lang.get('develop_saturation', 'Saturation')}: {int(self._current.saturation * 100):+d}"
+            f"{lang.get('develop_saturation', 'Saturation')}: {sat:+d}"
         )
 
     def _on_exposure(self, v: int) -> None:

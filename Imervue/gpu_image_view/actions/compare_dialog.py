@@ -76,8 +76,8 @@ def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
     than ~1000 px on screen anyway.
     """
     try:
-        with Image.open(path) as im:
-            im = im.convert("RGBA")
+        with Image.open(path) as src:
+            im = src.convert("RGBA")
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:
@@ -140,7 +140,7 @@ def _ndarray_to_qimage(arr: np.ndarray) -> QImage:
 
 class CompareDialog(QDialog):
 
-    def __init__(self, main_gui: "GPUImageView"):
+    def __init__(self, main_gui: GPUImageView):
         super().__init__(main_gui.main_window)
         self._main_gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -296,7 +296,8 @@ class CompareDialog(QDialog):
             self._refresh_overlay()
 
     def _refresh_overlay(self) -> None:
-        assert self._overlay_arrs is not None
+        if self._overlay_arrs is None:
+            return
         alpha = self._overlay_slider.value() / 100.0
         a, b = self._overlay_arrs
         blended = compute_overlay(a, b, alpha)
@@ -317,13 +318,14 @@ class CompareDialog(QDialog):
             self._refresh_difference()
 
     def _refresh_difference(self) -> None:
-        assert self._diff_arrs is not None
+        if self._diff_arrs is None:
+            return
         gain = self._diff_slider.value() / 100.0
         a, b = self._diff_arrs
         diff = compute_difference(a, b, gain)
         self._diff_label.set_qimage(_ndarray_to_qimage(diff))
 
 
-def open_compare_dialog(main_gui: "GPUImageView") -> None:
+def open_compare_dialog(main_gui: GPUImageView) -> None:
     dlg = CompareDialog(main_gui)
     dlg.exec()

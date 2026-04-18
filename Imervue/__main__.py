@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import contextlib
 
 # Nuitka 打包後 OpenGL_accelerate 的 Cython 擴展無法正常運作，
 # 需在 import OpenGL 之前禁用 accelerate
@@ -20,10 +21,8 @@ if sys.platform == "win32":
     for stream_name in ("stdout", "stderr"):
         stream = getattr(sys, stream_name, None)
         if stream and hasattr(stream, "reconfigure"):
-            try:
+            with contextlib.suppress(Exception):
                 stream.reconfigure(encoding="utf-8", errors="replace")
-            except Exception:
-                pass
 
 from PySide6.QtWidgets import QApplication
 

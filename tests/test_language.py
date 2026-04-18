@@ -1,5 +1,4 @@
 """Tests for multi-language support."""
-import pytest
 
 from Imervue.multi_language.language_wrapper import LanguageWrapper, BUILTIN_LANGUAGES
 from Imervue.multi_language.english import english_word_dict

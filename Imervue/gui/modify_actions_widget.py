@@ -12,7 +12,8 @@ panel, toolbar, hotkey palette, etc.).
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -47,9 +48,9 @@ class ModifyActionsWidget(QWidget):
 
     def __init__(
         self,
-        main_gui: "GPUImageView",
+        main_gui: GPUImageView,
         parent: QWidget | None = None,
-        on_triggered: Optional[Callable[[], None]] = None,
+        on_triggered: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self._main_gui = main_gui

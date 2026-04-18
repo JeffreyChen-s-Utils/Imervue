@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
-from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
+from Imervue.gpu_image_view.actions.delete import undo_delete
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     toggle_fullscreen, trash_current_image, trash_selected_tiles,
-    rotate_current_image, copy_image_to_clipboard, rate_current_image,
+    copy_image_to_clipboard, rate_current_image,
     toggle_favorite,
 )
 from Imervue.gpu_image_view.actions.search_dialog import open_search_dialog
@@ -30,13 +30,14 @@ import numpy as np
 import os
 from collections import OrderedDict
 from OpenGL.GL import *
-from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt, QTimer
-from PySide6.QtGui import QUndoStack, QCursor, QPainter, QColor, QPen, QFont, QPainterPath, QImage
+from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
+from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
 from Imervue.image.tile_manager import TileManager
+import contextlib
 
 # DeepZoom 預載範圍（±N 張）
 _PREFETCH_RANGE = 3
@@ -223,10 +224,8 @@ class GPUImageView(QOpenGLWidget):
                 return
             path = images[self.current_index]
         # Any prefetched baked tiles for this path are stale — drop them.
-        try:
+        with contextlib.suppress(Exception):
             self._prefetch_cache.pop(path, None)
-        except Exception:
-            pass
         # Force a fresh load — _clear_deep_zoom + load_deep_zoom_image will
         # ask recipe_store for the new recipe and apply it.
         if self.model.images and 0 <= self.current_index < len(self.model.images) \
@@ -285,11 +284,9 @@ class GPUImageView(QOpenGLWidget):
         # Clear any GL error left by the probes above — neither extension is
         # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
         # into the next real draw call.
-        try:
+        with contextlib.suppress(Exception):
             while glGetError() != GL_NO_ERROR:
                 pass
-        except Exception:
-            pass
 
         if total_kb <= 0:
             _log.info(
@@ -732,7 +729,7 @@ class GPUImageView(QOpenGLWidget):
         painter.setFont(font)
         fm = painter.fontMetrics()
 
-        for x0, y0, x1, y1, path in self.tile_rects:
+        for x0, _y0, x1, y1, path in self.tile_rects:
             name = Path(path).stem
             tw = x1 - x0
             elided = fm.elidedText(name, Qt.TextElideMode.ElideRight, int(tw))
@@ -936,7 +933,10 @@ class GPUImageView(QOpenGLWidget):
         frame_text = lang.get("anim_frame_indicator", "Frame {current}/{total}").format(
             current=anim.current_frame + 1, total=anim.total_frames
         )
-        status = lang.get("anim_play", "Play") if not anim.playing else lang.get("anim_pause", "Pause")
+        status = (
+            lang.get("anim_play", "Play") if not anim.playing
+            else lang.get("anim_pause", "Pause")
+        )
         speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
         text = f"{status}  |  {frame_text}  |  {speed_text}"
 
@@ -1111,7 +1111,7 @@ class GPUImageView(QOpenGLWidget):
                 ]
                 pad_x, pad_y = 6, 4
                 line_h = fm.height()
-                box_w = max(fm.horizontalAdvance(l) for l in lines) + pad_x * 2
+                box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
                 box_h = line_h * len(lines) + pad_y * 2
 
                 # Highlight the target pixel square
@@ -1131,8 +1131,7 @@ class GPUImageView(QOpenGLWidget):
                     hx = int(sx) - box_w - 12
                 if hy + box_h > self.height():
                     hy = self.height() - box_h - 4
-                if hy < 0:
-                    hy = 0
+                hy = max(hy, 0)
 
                 painter.fillRect(hx, hy, box_w, box_h, QColor(0, 0, 0, 190))
                 painter.setPen(QColor(240, 240, 240))
@@ -1366,10 +1365,8 @@ class GPUImageView(QOpenGLWidget):
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
         self._hover_image_xy = None
         if hasattr(self.main_window, "clear_status_info"):
-            try:
+            with contextlib.suppress(Exception):
                 self.main_window.clear_status_info()
-            except Exception:
-                pass
 
     def _set_modify_menu_visible(self, visible: bool) -> None:
         """Toggle the Deep-Zoom-only Modify menu on the main window's menubar.
@@ -1380,39 +1377,31 @@ class GPUImageView(QOpenGLWidget):
         action = getattr(self.main_window, "_modify_menu_action", None)
         if action is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             action.setVisible(bool(visible))
-        except Exception:
-            pass
 
     # ---------------------------
     # Worker 取消
     # ---------------------------
     def _cancel_tile_workers(self):
         for worker in self.active_tile_workers:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 worker.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             worker.abort()
         self.active_tile_workers.clear()
 
     def _cancel_deep_zoom_worker(self):
         if self.active_deep_zoom_worker is not None:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self.active_deep_zoom_worker.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self.active_deep_zoom_worker.abort()
             self.active_deep_zoom_worker = None
 
     def _cancel_all_prefetch(self):
         """取消所有預載 worker 並清空快取"""
         for w in self._prefetch_workers.values():
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 w.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             w.abort()
         self._prefetch_workers.clear()
         self._prefetch_cache.clear()
@@ -1448,10 +1437,8 @@ class GPUImageView(QOpenGLWidget):
 
         # 同步 list view（若處於 list 模式或之後會切換）
         if hasattr(self.main_window, "refresh_list_view"):
-            try:
+            with contextlib.suppress(Exception):
                 self.main_window.refresh_list_view()
-            except Exception:
-                pass
 
         self.update()
 
@@ -1539,9 +1526,12 @@ class GPUImageView(QOpenGLWidget):
         if self._history_navigating or not path:
             return
         # Deduplicate adjacent entries (reloads shouldn't double-push)
-        if self._history and self._history_pos >= 0:
-            if self._history[self._history_pos] == path:
-                return
+        if (
+            self._history
+            and self._history_pos >= 0
+            and self._history[self._history_pos] == path
+        ):
+            return
         # Drop forward history when branching
         if self._history_pos < len(self._history) - 1:
             del self._history[self._history_pos + 1:]
@@ -1572,9 +1562,8 @@ class GPUImageView(QOpenGLWidget):
 
     def _navigate_to_history(self) -> None:
         """Load the image at ``_history_pos`` without re-pushing to stack."""
-        from pathlib import Path as _P
         path = self._history[self._history_pos]
-        if not _P(path).is_file():
+        if not Path(path).is_file():
             return
         images = self.model.images
         if path in images:
@@ -1965,23 +1954,25 @@ class GPUImageView(QOpenGLWidget):
             return
 
         # ===== 左鍵拖曳框選 =====
-        if self.tile_grid_mode and event.buttons() & Qt.MouseButton.LeftButton:
-            if self._drag_start_pos:
+        if (
+            self.tile_grid_mode
+            and event.buttons() & Qt.MouseButton.LeftButton
+            and self._drag_start_pos
+        ):
+            move_delta = event.position() - self._drag_start_pos
+            threshold = QApplication.startDragDistance()
 
-                move_delta = event.position() - self._drag_start_pos
-                threshold = QApplication.startDragDistance()
+            # 還沒超過系統拖曳門檻
+            if not self._drag_selecting:
+                if move_delta.manhattanLength() < threshold:
+                    return
 
-                # 還沒超過系統拖曳門檻
-                if not self._drag_selecting:
-                    if move_delta.manhattanLength() < threshold:
-                        return
+                # 超過門檻才真正開始框選
+                self.tile_selection_mode = True
+                self._drag_selecting = True
 
-                    # 超過門檻才真正開始框選
-                    self.tile_selection_mode = True
-                    self._drag_selecting = True
-
-                self._drag_end_pos = event.position()
-                self.update()
+            self._drag_end_pos = event.position()
+            self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -2040,9 +2031,11 @@ class GPUImageView(QOpenGLWidget):
         modifiers = event.modifiers()
 
         # Plugin hook: key press
-        if hasattr(self.main_window, "plugin_manager"):
-            if self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self):
-                return
+        if (
+            hasattr(self.main_window, "plugin_manager")
+            and self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self)
+        ):
+            return
 
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
 
@@ -2404,11 +2397,9 @@ class GPUImageView(QOpenGLWidget):
         cx = center.x() if center is not None else self.width() / 2
         cy = center.y() if center is not None else self.height() / 2
         # QPinchGesture reports global coords — convert to local
-        try:
+        with contextlib.suppress(Exception):
             local = self.mapFromGlobal(center.toPoint())
             cx, cy = local.x(), local.y()
-        except Exception:
-            pass
         ratio = new_zoom / old_zoom
         self.zoom = new_zoom
         self.dz_offset_x = cx - (cx - self.dz_offset_x) * ratio
@@ -2464,7 +2455,8 @@ class GPUImageView(QOpenGLWidget):
             mw.tree.setRootIndex(mw.model.index(first))
             open_path(main_gui=self, path=first)
             mw.filename_label.setText(
-                lang.get("main_window_current_folder_format", "Current Folder: {path}").format(path=first)
+                lang.get("main_window_current_folder_format", "Current Folder: {path}")
+                .format(path=first)
             )
             if hasattr(mw, "breadcrumb"):
                 mw.breadcrumb.set_path(first)

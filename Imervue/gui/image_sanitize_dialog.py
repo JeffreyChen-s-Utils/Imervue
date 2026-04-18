@@ -11,7 +11,6 @@ keeping aspect ratio.
 from __future__ import annotations
 
 import logging
-import math
 import os
 import secrets
 import string
@@ -20,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -37,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -99,7 +99,7 @@ def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
 
 def _get_image_date(path: str) -> datetime:
     """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
-    try:
+    with contextlib.suppress(Exception):
         img = Image.open(path)
         exif = img.getexif()
         # 36867 = DateTimeOriginal, 306 = DateTime
@@ -111,8 +111,6 @@ def _get_image_date(path: str) -> datetime:
                         return datetime.strptime(val, fmt)
                     except (ValueError, TypeError):
                         continue
-    except Exception:
-        pass
     # Fallback to file modification time
     try:
         mtime = os.path.getmtime(path)
@@ -142,10 +140,7 @@ def _compute_upscale_params(width: int, height: int,
     ratio = target_long_edge / long
     # Pick the smallest model that gets us past the target so we only
     # need to downscale afterward (higher quality than up-then-up).
-    if ratio <= 2.0:
-        model_key = "realesrgan-x2plus"
-    else:
-        model_key = "realesrgan-x4plus"
+    model_key = "realesrgan-x2plus" if ratio <= 2.0 else "realesrgan-x4plus"
 
     # Final size preserving aspect ratio
     if width >= height:
@@ -189,9 +184,7 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # JPEG does not support alpha
-    if fmt == "JPEG" and clean.mode in ("RGBA", "LA", "PA"):
-        clean = clean.convert("RGB")
-    elif fmt == "JPEG" and clean.mode != "RGB":
+    if fmt == "JPEG" and clean.mode != "RGB":
         clean = clean.convert("RGB")
 
     # --- Optional upscale ---
@@ -274,7 +267,7 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
 _LSB_SCRAMBLE_RATE = 0.5
 
 
-def _scramble_lsb(img: "Image.Image") -> "Image.Image":
+def _scramble_lsb(img: Image.Image) -> Image.Image:
     """Sparsely randomise the LSB of every 8-bit channel.
 
     Breaks LSB-steganography schemes such as NovelAI's stealth pnginfo.
@@ -406,9 +399,7 @@ class _SanitizeWorker(QThread):
                     target_long_edge=self._target_long_edge,
                     ort_session=session,
                     ort_scale=scale,
-                    tile_progress_cb=(
-                        lambda d, t: self.tile_progress.emit(d, t)
-                    ) if session else None,
+                    tile_progress_cb=self.tile_progress.emit if session else None,
                     trad_resampling=trad_resampling,
                 )
                 success += 1
@@ -423,7 +414,7 @@ class _SanitizeWorker(QThread):
 # ---------------------------------------------------------------------------
 
 class ImageSanitizeDialog(QDialog):
-    def __init__(self, main_gui: "GPUImageView", folder: str | None = None):
+    def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -720,16 +711,14 @@ class ImageSanitizeDialog(QDialog):
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
             self._worker.abort()
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
 
 
-def open_image_sanitize(main_gui: "GPUImageView") -> None:
+def open_image_sanitize(main_gui: GPUImageView) -> None:
     folder = None
     if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):
         folder = main_gui.model.folder_path

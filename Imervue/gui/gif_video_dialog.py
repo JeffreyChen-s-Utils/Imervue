@@ -140,7 +140,7 @@ class _CreateWorker(QThread):
             }
             if sys.platform == "win32":
                 kw["creationflags"] = subprocess.CREATE_NO_WINDOW
-            result = subprocess.run(cmd, **kw)
+            result = subprocess.run(cmd, check=False, **kw)
             if result.returncode != 0:
                 self.result_ready.emit(False, f"ffmpeg error: {result.stderr[:200]}")
                 return

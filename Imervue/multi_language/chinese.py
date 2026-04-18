@@ -165,8 +165,6 @@ chinese_word_dict = {
     "favorite_removed": "已取消收藏",
     # 比较
     "compare_title": "比较图片",
-    "compare_2": "比较 2 张",
-    "compare_4": "比较 4 张",
     # EXIF 侧边栏
     "exif_filename": "文件",
     "exif_filesize": "大小",

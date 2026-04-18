@@ -66,10 +66,10 @@ class _ThumbWorker(QRunnable):
             return
 
         try:
-            with Image.open(self.path) as im:
-                w, h = im.size
-                im.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = im.convert("RGBA")
+            with Image.open(self.path) as src:
+                w, h = src.size
+                src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
+                im = src.convert("RGBA")
                 data = im.tobytes("raw", "RGBA")
                 from PySide6.QtGui import QImage
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
@@ -106,10 +106,14 @@ class ImageListModel(QAbstractTableModel):
         self._in_flight: set[str] = set()
 
     # --- QAbstractItemModel API ---
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | None = None) -> int:
+        if parent is None:
+            parent = QModelIndex()
         return 0 if parent.isValid() else len(self._rows)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: QModelIndex | None = None) -> int:
+        if parent is None:
+            parent = QModelIndex()
         return 0 if parent.isValid() else self.COL_COUNT
 
     def headerData(self, section: int, orientation, role: int = Qt.ItemDataRole.DisplayRole):
@@ -128,6 +132,41 @@ class ImageListModel(QAbstractTableModel):
         key, fallback = keys[section]
         return lang.get(key, fallback)
 
+    def _display_value(self, row, col: int):
+        if col == self.COL_LABEL:
+            from Imervue.user_settings.color_labels import get_color_label
+            return (get_color_label(row.path) or "").title()
+        if col == self.COL_NAME:
+            return Path(row.path).name
+        if col == self.COL_RES:
+            self._ensure_fetched(row)
+            if row.width and row.height:
+                return f"{row.width}\u00d7{row.height}"
+            return ""
+        if col == self.COL_SIZE:
+            self._ensure_fetched(row)
+            if row.size_kb is None:
+                return ""
+            return _fmt_size(row.size_kb)
+        if col == self.COL_TYPE:
+            return Path(row.path).suffix.lstrip(".").upper() or ""
+        if col == self.COL_MTIME:
+            self._ensure_fetched(row)
+            if row.mtime is None:
+                return ""
+            return datetime.fromtimestamp(row.mtime).strftime("%Y-%m-%d %H:%M")
+        return ""
+
+    def _background_value(self, row, col: int):
+        if col != self.COL_LABEL:
+            return None
+        from Imervue.user_settings.color_labels import get_color_label, COLOR_RGB
+        color = get_color_label(row.path)
+        if color and color in COLOR_RGB:
+            r, g, b = COLOR_RGB[color]
+            return QColor(r, g, b, 200)
+        return None
+
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
@@ -136,50 +175,20 @@ class ImageListModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.UserRole:
             return row.path
-
         if role == Qt.ItemDataRole.DecorationRole and col == self.COL_THUMB:
             self._ensure_fetched(row)
             return row.icon
-
-        if role == Qt.ItemDataRole.BackgroundRole and col == self.COL_LABEL:
-            from Imervue.user_settings.color_labels import get_color_label, COLOR_RGB
-            color = get_color_label(row.path)
-            if color and color in COLOR_RGB:
-                r, g, b = COLOR_RGB[color]
-                return QColor(r, g, b, 200)
-
+        if role == Qt.ItemDataRole.BackgroundRole:
+            return self._background_value(row, col)
         if role == Qt.ItemDataRole.DisplayRole:
-            if col == self.COL_LABEL:
-                from Imervue.user_settings.color_labels import get_color_label
-                return (get_color_label(row.path) or "").title()
-            if col == self.COL_NAME:
-                return Path(row.path).name
-            if col == self.COL_RES:
-                self._ensure_fetched(row)
-                if row.width and row.height:
-                    return f"{row.width}\u00d7{row.height}"
-                return ""
-            if col == self.COL_SIZE:
-                self._ensure_fetched(row)
-                if row.size_kb is None:
-                    return ""
-                return _fmt_size(row.size_kb)
-            if col == self.COL_TYPE:
-                return Path(row.path).suffix.lstrip(".").upper() or ""
-            if col == self.COL_MTIME:
-                self._ensure_fetched(row)
-                if row.mtime is None:
-                    return ""
-                return datetime.fromtimestamp(row.mtime).strftime("%Y-%m-%d %H:%M")
-            return ""
-
-        if role == Qt.ItemDataRole.TextAlignmentRole:
-            if col in (self.COL_RES, self.COL_SIZE):
-                return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
+            return self._display_value(row, col)
+        if (
+            role == Qt.ItemDataRole.TextAlignmentRole
+            and col in (self.COL_RES, self.COL_SIZE)
+        ):
+            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ToolTipRole:
             return row.path
-
         return None
 
     def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
@@ -275,7 +284,7 @@ class ImageListView(QTableView):
 
     image_activated = Signal(str)  # emitted on double-click / Enter
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
         self._main_window = main_window
 

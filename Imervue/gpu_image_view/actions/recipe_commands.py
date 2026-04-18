@@ -29,7 +29,7 @@ class EditRecipeCommand(QUndoCommand):
 
     def __init__(
         self,
-        main_gui: "GPUImageView",
+        main_gui: GPUImageView,
         path: str,
         old_recipe: Recipe,
         new_recipe: Recipe,

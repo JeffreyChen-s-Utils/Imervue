@@ -165,8 +165,6 @@ japanese_word_dict = {
     "favorite_removed": "お気に入りを解除",
     # 比較
     "compare_title": "画像を比較",
-    "compare_2": "2枚で比較",
-    "compare_4": "4枚で比較",
     # EXIF サイドバー
     "exif_filename": "ファイル",
     "exif_filesize": "サイズ",

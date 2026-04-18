@@ -25,7 +25,8 @@ import logging
 import math
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 import numpy as np
 from PIL import Image, ImageFilter
@@ -37,7 +38,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication, QButtonGroup, QColorDialog, QDialog, QDialogButtonBox,
     QFileDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMenu, QMenuBar, QMessageBox, QPushButton, QSizePolicy, QSlider, QSpinBox,
+    QMenuBar, QMessageBox, QSizePolicy, QSlider, QSpinBox,
     QStatusBar, QToolButton, QVBoxLayout, QWidget, QWidgetAction,
 )
 
@@ -45,6 +46,7 @@ from Imervue.gui.annotation_models import (
     ALL_BRUSHES, Annotation, AnnotationKind, AnnotationProject, bake,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 logger = logging.getLogger("Imervue.annotation")
 
@@ -82,7 +84,7 @@ def qimage_to_pil(qimg: QImage) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 class _AddAnnotationCommand(QUndoCommand):
-    def __init__(self, canvas: "AnnotationCanvas", annotation: Annotation):
+    def __init__(self, canvas: AnnotationCanvas, annotation: Annotation):
         super().__init__("Add annotation")
         self._canvas = canvas
         self._ann = annotation
@@ -102,7 +104,7 @@ class _AddAnnotationCommand(QUndoCommand):
 
 
 class _DeleteAnnotationCommand(QUndoCommand):
-    def __init__(self, canvas: "AnnotationCanvas", annotation: Annotation):
+    def __init__(self, canvas: AnnotationCanvas, annotation: Annotation):
         super().__init__("Delete annotation")
         self._canvas = canvas
         self._ann = annotation
@@ -139,7 +141,7 @@ class _BakeDestructiveCommand(QUndoCommand):
 
     def __init__(
         self,
-        canvas: "AnnotationCanvas",
+        canvas: AnnotationCanvas,
         old_img: Image.Image,
         new_img: Image.Image,
         text: str = "Apply mosaic/blur",
@@ -159,7 +161,7 @@ class _BakeDestructiveCommand(QUndoCommand):
 class _ModifyAnnotationCommand(QUndoCommand):
     def __init__(
         self,
-        canvas: "AnnotationCanvas",
+        canvas: AnnotationCanvas,
         annotation_id: str,
         old_points: list[tuple[int, int]],
         new_points: list[tuple[int, int]],
@@ -241,27 +243,27 @@ class AnnotationCanvas(QWidget):
         # 馬賽克/模糊強度對話框的 live preview — 把實際套用後的那一小塊
         # 畫到 base image 上面，所以使用者調 slider 的時候可以即時看到
         # 效果。None 表示沒有預覽。
-        self._preview_qimg: Optional[QImage] = None
-        self._preview_rect_image: Optional[tuple[int, int, int, int]] = None
+        self._preview_qimg: QImage | None = None
+        self._preview_rect_image: tuple[int, int, int, int] | None = None
 
         # Drawing / drag state
-        self._drawing: Optional[Annotation] = None
-        self._selected_id: Optional[str] = None
-        self._drag_mode: Optional[str] = None  # "move" or "resize_<handle>"
-        self._drag_start_image: Optional[tuple[int, int]] = None
-        self._drag_orig_points: Optional[list[tuple[int, int]]] = None
+        self._drawing: Annotation | None = None
+        self._selected_id: str | None = None
+        self._drag_mode: str | None = None  # "move" or "resize_<handle>"
+        self._drag_start_image: tuple[int, int] | None = None
+        self._drag_orig_points: list[tuple[int, int]] | None = None
 
         # Crop tool state
-        self._crop_rect: Optional[tuple[int, int, int, int]] = None  # (x, y, w, h) in image coords
+        self._crop_rect: tuple[int, int, int, int] | None = None  # (x, y, w, h) in image coords
         self._crop_ratio: tuple[int, int] = (0, 0)  # (0,0) = free
         self._crop_dragging: bool = False
-        self._crop_drag_start: Optional[tuple[int, int]] = None
-        self._crop_drag_handle: Optional[str] = None  # None = new, "move", "nw"..."w"
-        self._crop_drag_orig: Optional[tuple[int, int, int, int]] = None
+        self._crop_drag_start: tuple[int, int] | None = None
+        self._crop_drag_handle: str | None = None  # None = new, "move", "nw"..."w"
+        self._crop_drag_orig: tuple[int, int, int, int] | None = None
 
         # Inline text editor
-        self._text_edit: Optional[QLineEdit] = None
-        self._text_anchor_image: Optional[tuple[int, int]] = None
+        self._text_edit: QLineEdit | None = None
+        self._text_anchor_image: tuple[int, int] | None = None
 
     # ---------- Public API ----------
 
@@ -347,7 +349,7 @@ class AnnotationCanvas(QWidget):
             self._enforce_crop_ratio()
             self.update()
 
-    def get_crop_rect(self) -> Optional[tuple[int, int, int, int]]:
+    def get_crop_rect(self) -> tuple[int, int, int, int] | None:
         return self._crop_rect
 
     def clear_crop(self) -> None:
@@ -707,7 +709,7 @@ class AnnotationCanvas(QWidget):
             (float(pts[0][0]), float(pts[0][1]))
         ]
         accumulated = 0.0
-        for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+        for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
             seg_len = math.hypot(x2 - x1, y2 - y1)
             if seg_len <= 0:
                 continue
@@ -747,7 +749,7 @@ class AnnotationCanvas(QWidget):
         cos_a, sin_a = math.cos(nib_angle), math.sin(nib_angle)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         pts = ann.points
-        for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+        for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
             dx, dy = x2 - x1, y2 - y1
             seg_len = math.hypot(dx, dy)
             if seg_len < 0.5:
@@ -835,13 +837,13 @@ class AnnotationCanvas(QWidget):
 
     # ---------- Hit testing ----------
 
-    def _find(self, ann_id: str) -> Optional[Annotation]:
+    def _find(self, ann_id: str) -> Annotation | None:
         for a in self._annotations:
             if a.id == ann_id:
                 return a
         return None
 
-    def _hit_handle(self, pt: QPointF) -> Optional[str]:
+    def _hit_handle(self, pt: QPointF) -> str | None:
         if self._selected_id is None:
             return None
         sel = self._find(self._selected_id)
@@ -857,7 +859,7 @@ class AnnotationCanvas(QWidget):
         )
         h = _HANDLE_SIZE
         for name, (hx, hy) in zip(
-            self._HANDLE_NAMES, self._handle_positions(sel_rect)
+            self._HANDLE_NAMES, self._handle_positions(sel_rect), strict=False,
         ):
             box = QRectF(hx - h, hy - h, h * 2, h * 2)
             if box.contains(pt):
@@ -881,7 +883,7 @@ class AnnotationCanvas(QWidget):
         y2 = y1 + rect.height()
         return (x1, y1, x2, y2)
 
-    def _hit_annotation(self, pt: QPointF) -> Optional[Annotation]:
+    def _hit_annotation(self, pt: QPointF) -> Annotation | None:
         """Find the topmost annotation under ``pt`` (widget coords).
 
         Uses bounding-box hit for shape annotations and segment-distance
@@ -900,7 +902,7 @@ class AnnotationCanvas(QWidget):
                 continue
             if a.kind == "freehand" and len(a.points) >= 2:
                 hit = False
-                for p, q in zip(a.points, a.points[1:]):
+                for p, q in zip(a.points, a.points[1:], strict=False):
                     if _point_segment_distance(ix, iy, p, q) <= tol:
                         hit = True
                         break
@@ -917,7 +919,7 @@ class AnnotationCanvas(QWidget):
 
     # ---------- Mouse events ----------
 
-    def _crop_hit_handle(self, pt: QPointF) -> Optional[str]:
+    def _crop_hit_handle(self, pt: QPointF) -> str | None:
         """Check if pt hits a handle on the current crop rect."""
         if self._crop_rect is None:
             return None
@@ -928,7 +930,7 @@ class AnnotationCanvas(QWidget):
         ).normalized()
         h = _HANDLE_SIZE
         for name, (hx, hy) in zip(
-            self._HANDLE_NAMES, self._handle_positions(crop_screen)
+            self._HANDLE_NAMES, self._handle_positions(crop_screen), strict=False,
         ):
             box = QRectF(hx - h, hy - h, h * 2, h * 2)
             if box.contains(pt):
@@ -1052,10 +1054,8 @@ class AnnotationCanvas(QWidget):
                     if "s" in h:
                         nh = oh + dy
                     # Ensure positive size
-                    if nw < 1:
-                        nw = 1
-                    if nh < 1:
-                        nh = 1
+                    nw = max(nw, 1)
+                    nh = max(nh, 1)
                     # Clamp to image
                     nx = max(0, nx)
                     ny = max(0, ny)
@@ -1461,14 +1461,12 @@ class AnnotationCanvas(QWidget):
             self._cancel_text_edit()
             self.update()
             return
-        elif key == Qt.Key.Key_Left:
-            if self._text_edit is None:
-                self.navigate_image.emit(-1)
-                return
-        elif key == Qt.Key.Key_Right:
-            if self._text_edit is None:
-                self.navigate_image.emit(1)
-                return
+        elif key == Qt.Key.Key_Left and self._text_edit is None:
+            self.navigate_image.emit(-1)
+            return
+        elif key == Qt.Key.Key_Right and self._text_edit is None:
+            self.navigate_image.emit(1)
+            return
         super().keyPressEvent(event)
 
 
@@ -1545,13 +1543,12 @@ class AnnotationEditorWidget(QWidget):
         self,
         base: Image.Image,
         source_path: str = "",
-        on_saved: Optional[Callable[[str], None]] = None,
-        modify_target: "GPUImageView | None" = None,
+        on_saved: Callable[[str], None] | None = None,
+        modify_target: GPUImageView | None = None,
         parent=None,
         default_tool: str = "",
     ):
         super().__init__(parent)
-        lang = language_wrapper.language_word_dict
         self._source_path = source_path
         self._default_tool = default_tool
         # Optional callback fired after a successful destructive save —
@@ -2284,7 +2281,9 @@ class AnnotationEditorWidget(QWidget):
         start_dir = str(Path(self._source_path).parent) if self._source_path else ""
         suggested = ""
         if self._source_path:
-            suggested = str(Path(start_dir) / (Path(self._source_path).stem + ".imervue_annot.json"))
+            suggested = str(
+                Path(start_dir) / (Path(self._source_path).stem + ".imervue_annot.json")
+            )
         path, _ = QFileDialog.getSaveFileName(
             self,
             lang.get("annotation_save_project", "Save Project..."),
@@ -2329,8 +2328,7 @@ class AnnotationEditorWidget(QWidget):
             return
 
         base = self._canvas.get_base_pil()
-        if (project.source_size != (0, 0)
-                and project.source_size != (base.width, base.height)):
+        if project.source_size not in {(0, 0), (base.width, base.height)}:
             warning = lang.get(
                 "annotation_project_size_mismatch",
                 "Project was saved against a {pw}x{ph} image; current image "
@@ -2374,8 +2372,8 @@ class AnnotationDialog(QDialog):
         base: Image.Image,
         source_path: str = "",
         parent=None,
-        on_saved: Optional[Callable[[str], None]] = None,
-        modify_target: "GPUImageView | None" = None,
+        on_saved: Callable[[str], None] | None = None,
+        modify_target: GPUImageView | None = None,
         default_tool: str = "",
     ):
         super().__init__(parent)
@@ -2427,7 +2425,7 @@ class AnnotationDialog(QDialog):
 # ---------------------------------------------------------------------------
 
 def open_annotation_for_path(
-    main_gui: "GPUImageView", path: str, default_tool: str = "",
+    main_gui: GPUImageView, path: str, default_tool: str = "",
 ) -> None:
     """Load ``path`` with PIL and open the annotation dialog on it.
 
@@ -2451,10 +2449,8 @@ def open_annotation_for_path(
         # Lazy import to avoid a top-level dependency on the viewer module
         # for the offline-testable parts of this file.
         from Imervue.gpu_image_view.images.image_loader import open_path
-        try:
+        with contextlib.suppress(Exception):
             main_gui._clear_deep_zoom()
-        except Exception:
-            pass
         try:
             open_path(main_gui=main_gui, path=saved_path)
         except Exception:

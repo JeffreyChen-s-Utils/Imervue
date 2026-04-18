@@ -8,7 +8,6 @@ clobber the real file from a later test.
 import json
 from pathlib import Path
 
-import pytest
 
 
 class TestUserSettingDict:

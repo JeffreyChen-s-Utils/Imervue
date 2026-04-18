@@ -78,9 +78,13 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     import sys
     if sys.platform == "win32":
         assoc_menu = file_menu.addMenu(lang.get("file_assoc_menu", "File Association"))
-        reg_action = assoc_menu.addAction(lang.get("file_assoc_register", "Register 'Open with Imervue'"))
+        reg_action = assoc_menu.addAction(
+            lang.get("file_assoc_register", "Register 'Open with Imervue'")
+        )
         reg_action.triggered.connect(lambda: _register_assoc(ui_we_want_to_set))
-        unreg_action = assoc_menu.addAction(lang.get("file_assoc_unregister", "Remove file association"))
+        unreg_action = assoc_menu.addAction(
+            lang.get("file_assoc_unregister", "Remove file association")
+        )
         unreg_action.triggered.connect(lambda: _unregister_assoc(ui_we_want_to_set))
 
     file_menu.addSeparator()
@@ -96,7 +100,9 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     exit_action.triggered.connect(ui_we_want_to_set.close)
 
     # ===== Tile Size 選單 =====
-    view_menu = ui_we_want_to_set.menuBar().addMenu(language_wrapper.language_word_dict.get("main_window_tile_size"))
+    view_menu = ui_we_want_to_set.menuBar().addMenu(
+        language_wrapper.language_word_dict.get("main_window_tile_size")
+    )
 
     tile_group = QActionGroup(ui_we_want_to_set)
     tile_group.setExclusive(True)
@@ -201,7 +207,8 @@ def open_image(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set,
         language_wrapper.language_word_dict.get("main_window_select_image"),
         "",
-        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg *.cr2 *.nef *.arw *.dng *.raf *.orf)"
+        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg "
+        "*.cr2 *.nef *.arw *.dng *.raf *.orf)"
     )
 
     if not file_path:
@@ -224,8 +231,8 @@ _extra_windows: list = []
 
 
 def _open_new_window(parent: ImervueMainWindow):
-    from Imervue.Imervue_main_window import ImervueMainWindow as MW
-    win = MW()
+    from Imervue.Imervue_main_window import ImervueMainWindow as _MainWindow
+    win = _MainWindow()
     # 新視窗在跟 parent 同一個螢幕上開啟，稍微偏移避免完全重疊
     screen = parent.screen()
     if screen is not None:
@@ -251,13 +258,11 @@ def _register_assoc(ui: ImervueMainWindow):
     if ok:
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_done", "File association registered!"))
-    else:
-        if msg == "need_admin":
-            if hasattr(ui, "toast"):
-                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
-        else:
-            if hasattr(ui, "toast"):
-                ui.toast.info(f"Error: {msg}")
+    elif msg == "need_admin":
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+    elif hasattr(ui, "toast"):
+        ui.toast.info(f"Error: {msg}")
 
 
 def _paste_from_clipboard(ui: ImervueMainWindow) -> None:
@@ -310,13 +315,11 @@ def _unregister_assoc(ui: ImervueMainWindow):
     if ok:
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_removed", "File association removed!"))
-    else:
-        if msg == "need_admin":
-            if hasattr(ui, "toast"):
-                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
-        else:
-            if hasattr(ui, "toast"):
-                ui.toast.info(f"Error: {msg}")
+    elif msg == "need_admin":
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+    elif hasattr(ui, "toast"):
+        ui.toast.info(f"Error: {msg}")
 
 
 def _open_shortcut_settings(ui: ImervueMainWindow):

@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -163,7 +164,8 @@ class _ScanWorker(QThread):
 
     @staticmethod
     def _file_hash(path: str) -> str:
-        h = hashlib.md5()
+        # MD5 used purely for de-duplication, not security.
+        h = hashlib.md5(usedforsecurity=False)
         with open(path, "rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
                 h.update(chunk)
@@ -243,7 +245,7 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
 class DuplicateDetectionDialog(QDialog):
     """Scan a folder for duplicate images."""
 
-    def __init__(self, main_gui: "GPUImageView", folder: str | None = None):
+    def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -467,16 +469,14 @@ class DuplicateDetectionDialog(QDialog):
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
             self._worker.abort()
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
 
 
-def open_duplicate_detection(main_gui: "GPUImageView") -> None:
+def open_duplicate_detection(main_gui: GPUImageView) -> None:
     """Open the duplicate detection dialog."""
     folder = None
     if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):

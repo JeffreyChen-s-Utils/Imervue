@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSplitter, QSizePolicy,
+    QWidget, QVBoxLayout, QLabel, QSplitter, QSizePolicy,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -81,7 +81,7 @@ class DualImageView(QWidget):
     MODE_MANGA = "manga"
     MODE_MANGA_RTL = "manga_rtl"
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
         self._main_window = main_window
         self._mode: str = self.MODE_SPLIT

@@ -33,10 +33,10 @@ from PySide6.QtWidgets import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import (
     is_frozen as _is_frozen,
-    app_dir as _app_dir,
     embedded_python_dir as _embedded_python_dir_path,
     ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
 )
+import contextlib
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -214,6 +214,38 @@ class _FindPythonWorker(QThread):
         self.result_ready.emit(result)
 
 
+def _find_python_windows_install_paths() -> str | None:
+    """Scan common Windows Python install locations for a working interpreter."""
+    import shutil
+    import os
+    localappdata = os.environ.get("LOCALAPPDATA", "")
+    appdata_programs = os.environ.get("PROGRAMFILES", "C:\\Program Files")
+    candidates: list[str] = []
+    py_launcher = shutil.which("py")
+    if py_launcher:
+        candidates.append(py_launcher)
+    for base in [localappdata + "\\Programs\\Python",
+                  appdata_programs + "\\Python"]:
+        if Path(base).is_dir():
+            for d in sorted(Path(base).iterdir(), reverse=True):
+                exe = d / "python.exe"
+                if exe.is_file():
+                    candidates.append(str(exe))
+    for c in candidates:
+        if _verify_python(c):
+            return c
+    return None
+
+
+def _find_python_unix_paths() -> str | None:
+    """Scan conventional Unix Python locations for a working interpreter."""
+    for p in ("/usr/bin/python3", "/usr/local/bin/python3",
+              "/usr/bin/python", "/usr/local/bin/python"):
+        if Path(p).is_file() and _verify_python(p):
+            return p
+    return None
+
+
 def _find_python() -> str | None:
     """找到可用的 Python 直譯器路徑。
 
@@ -224,11 +256,8 @@ def _find_python() -> str | None:
     """
     import shutil
 
-    # 非凍結環境 → 直接用
     if not _is_frozen():
         return sys.executable
-
-    # --- 凍結環境：嘗試各種方式找 Python ---
 
     # 1) PATH 搜尋
     for name in ("python", "python3", "py"):
@@ -241,35 +270,15 @@ def _find_python() -> str | None:
         reg_python = _find_python_from_registry()
         if reg_python:
             return reg_python
+        win_install = _find_python_windows_install_paths()
+        if win_install:
+            return win_install
+    else:
+        unix = _find_python_unix_paths()
+        if unix:
+            return unix
 
-    # 3) Windows：常見安裝路徑
-    if sys.platform == "win32":
-        import os
-        localappdata = os.environ.get("LOCALAPPDATA", "")
-        appdata_programs = os.environ.get("ProgramFiles", "C:\\Program Files")
-        candidates = []
-        py_launcher = shutil.which("py")
-        if py_launcher:
-            candidates.append(py_launcher)
-        for base in [localappdata + "\\Programs\\Python",
-                      appdata_programs + "\\Python"]:
-            if Path(base).is_dir():
-                for d in sorted(Path(base).iterdir(), reverse=True):
-                    exe = d / "python.exe"
-                    if exe.is_file():
-                        candidates.append(str(exe))
-        for c in candidates:
-            if _verify_python(c):
-                return c
-
-    # 4) Unix：常見路徑
-    if sys.platform != "win32":
-        for p in ["/usr/bin/python3", "/usr/local/bin/python3",
-                   "/usr/bin/python", "/usr/local/bin/python"]:
-            if Path(p).is_file() and _verify_python(p):
-                return p
-
-    # 5) 內嵌 Python（之前自動下載的）
+    # 3) 內嵌 Python（之前自動下載的）
     embed_exe = _embedded_python_exe()
     if embed_exe and _verify_python(str(embed_exe)):
         return str(embed_exe)
@@ -315,9 +324,9 @@ def _verify_python(path: str) -> bool:
         kw = _subprocess_kwargs()
         result = subprocess.run(
             [path, "-m", "pip", "--version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             timeout=10,
+            check=False,
             **kw,
         )
         return result.returncode == 0
@@ -352,7 +361,10 @@ def check_missing_packages(
             importlib.import_module(import_name)
             logger.info("check_missing_packages: '%s' OK", import_name)
         except Exception as e:
-            logger.info("check_missing_packages: '%s' missing (%s: %s)", import_name, type(e).__name__, e)
+            logger.info(
+                "check_missing_packages: '%s' missing (%s: %s)",
+                import_name, type(e).__name__, e,
+            )
             missing.append((import_name, pip_name))
     return missing
 
@@ -363,7 +375,10 @@ def _check_missing_frozen(
     """凍結環境：透過檔案系統檢查套件是否存在（不 import，避免 DLL 崩潰）。"""
     from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
     target_dir = _frozen_site_packages()
-    logger.info("_check_missing_frozen: checking in %s (exists=%s)", target_dir, target_dir.is_dir())
+    logger.info(
+        "_check_missing_frozen: checking in %s (exists=%s)",
+        target_dir, target_dir.is_dir(),
+    )
 
     missing = []
     for import_name, pip_name in packages:
@@ -411,10 +426,8 @@ class _ImportWorker(QThread):
 
     def run(self):
         for name in self._names:
-            try:
+            with contextlib.suppress(Exception):
                 importlib.import_module(name)
-            except Exception:
-                pass
         self.result_ready.emit()
 
 
@@ -642,7 +655,7 @@ class InstallDependenciesDialog(QDialog):
 
     def _on_log(self, text: str):
         self._log.append(text)
-        self._status.setText(text.split("\n")[0][:80])
+        self._status.setText(text.split("\n", maxsplit=1)[0][:80])
 
     def _on_finished(self, success: bool, message: str):
 

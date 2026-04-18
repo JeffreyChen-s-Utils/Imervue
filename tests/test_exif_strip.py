@@ -9,7 +9,6 @@ from __future__ import annotations
 import os
 
 import numpy as np
-import pytest
 from PIL import Image
 
 from Imervue.gui.exif_strip_dialog import (

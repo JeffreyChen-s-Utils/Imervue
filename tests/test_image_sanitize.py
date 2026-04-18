@@ -519,7 +519,7 @@ class TestTargetResolutions:
         assert TARGET_RESOLUTIONS[0][2] == 0
 
     def test_all_have_positive_or_zero_px(self):
-        for key, label, px in TARGET_RESOLUTIONS:
+        for _key, _label, px in TARGET_RESOLUTIONS:
             assert px >= 0
 
     def test_sorted_ascending(self):
@@ -778,7 +778,7 @@ class TestSanitizeWorker:
             "stealth magic survived sanitize — payload still recoverable")
         # And the gzipped body must fail to decompress.
         body_start = len(magic) + 4
-        with pytest.raises(Exception):
+        with pytest.raises((OSError, EOFError, gzip.BadGzipFile)):
             gzip.decompress(recovered_after[body_start:body_start + len(body)])
 
     def test_lsb_scramble_visual_impact_minimal(self, tmp_path):

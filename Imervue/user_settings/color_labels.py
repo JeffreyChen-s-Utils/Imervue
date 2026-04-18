@@ -9,7 +9,7 @@ so it serialises cleanly to JSON alongside the other settings.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 # Canonical colour names — single source of truth. Order matches F1-F5.
 COLORS = ("red", "yellow", "green", "blue", "purple")

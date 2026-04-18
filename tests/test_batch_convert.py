@@ -9,10 +9,9 @@ from __future__ import annotations
 import os
 
 import numpy as np
-import pytest
 from PIL import Image
 
-from Imervue.gui.batch_convert_dialog import _scan_folder, _ConvertWorker, FORMAT_EXTENSIONS
+from Imervue.gui.batch_convert_dialog import _scan_folder, _ConvertWorker
 
 
 # ---------------------------------------------------------------------------

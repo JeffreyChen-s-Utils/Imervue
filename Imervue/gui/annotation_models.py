@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+import contextlib
 
 AnnotationKind = Literal[
     "rect",
@@ -93,7 +94,7 @@ class Annotation:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Annotation":
+    def from_dict(cls, d: dict[str, Any]) -> Annotation:
         return cls(
             kind=d["kind"],
             points=[tuple(p) for p in d.get("points", [])],
@@ -147,7 +148,7 @@ class AnnotationProject:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "AnnotationProject":
+    def from_dict(cls, d: dict[str, Any]) -> AnnotationProject:
         return cls(
             version=int(d.get("version", 1)),
             source_path=d.get("source_path", ""),
@@ -162,7 +163,7 @@ class AnnotationProject:
         )
 
     @classmethod
-    def load(cls, path: str | Path) -> "AnnotationProject":
+    def load(cls, path: str | Path) -> AnnotationProject:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         return cls.from_dict(data)
 
@@ -238,17 +239,15 @@ def _get_font(size: int, family: str = "") -> ImageFont.ImageFont:
     if family:
         resolved = _resolve_font_path(family)
         if resolved:
-            try:
+            with contextlib.suppress(OSError):
                 font = ImageFont.truetype(resolved, size)
-            except (OSError, IOError):
-                pass
     # Fallback to system defaults
     if font is None:
         for cand in _system_font_candidates():
             try:
                 font = ImageFont.truetype(cand, size)
                 break
-            except (OSError, IOError):
+            except OSError:
                 continue
     if font is None:
         font = ImageFont.load_default()
@@ -269,10 +268,7 @@ def bake(base: Image.Image, annotations: list[Annotation]) -> Image.Image:
 
     The input image is not modified.
     """
-    if base.mode != "RGBA":
-        working = base.convert("RGBA")
-    else:
-        working = base.copy()
+    working = base.convert("RGBA") if base.mode != "RGBA" else base.copy()
 
     # Pass 1 — destructive, in-place on the working copy
     for ann in annotations:
@@ -462,7 +458,7 @@ def _draw_freehand_spray(draw: ImageDraw.ImageDraw, ann: Annotation) -> None:
     samples: list[tuple[float, float]] = []
     accumulated = 0.0
     samples.append((float(pts[0][0]), float(pts[0][1])))
-    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
         seg_len = math.hypot(x2 - x1, y2 - y1)
         if seg_len <= 0:
             continue
@@ -502,7 +498,7 @@ def _draw_freehand_calligraphy(draw: ImageDraw.ImageDraw, ann: Annotation) -> No
     base_w = max(1, ann.stroke_width)
     nib_angle = math.pi / 4  # 45-degree nib
     cos_a, sin_a = math.cos(nib_angle), math.sin(nib_angle)
-    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
         dx, dy = x2 - x1, y2 - y1
         seg_len = math.hypot(dx, dy)
         if seg_len < 0.5:

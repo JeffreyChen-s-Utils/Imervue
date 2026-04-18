@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Optional
 
 import numpy as np
 from PIL import Image
@@ -60,12 +59,12 @@ class ClipboardMonitor(QObject):
 
     image_captured = Signal(object)  # emits a PIL.Image.Image
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._enabled: bool = bool(
             user_setting_dict.get(SETTING_KEY, False)
         )
-        self._last_hash: Optional[str] = None
+        self._last_hash: str | None = None
         clipboard = QApplication.clipboard()
         if clipboard is not None:
             clipboard.dataChanged.connect(self._on_clipboard_changed)
@@ -93,7 +92,7 @@ class ClipboardMonitor(QObject):
 
     # ---------- manual paste (used by "Paste from clipboard" menu) ----------
 
-    def grab_current_image(self) -> Optional[Image.Image]:
+    def grab_current_image(self) -> Image.Image | None:
         """Return the current clipboard image as PIL, or None if not an image.
 
         Bypasses the enabled-check and the dedup hash — this is the explicit
@@ -131,7 +130,7 @@ class ClipboardMonitor(QObject):
             logger.exception("clipboard image conversion failed")
             return
 
-        digest = hashlib.md5(pil.tobytes()).hexdigest()
+        digest = hashlib.md5(pil.tobytes(), usedforsecurity=False).hexdigest()
         if digest == self._last_hash:
             return
         self._last_hash = digest

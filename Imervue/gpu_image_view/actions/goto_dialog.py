@@ -6,11 +6,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QDialogButtonBox,
+    QDialogButtonBox,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 class GotoIndexDialog(QDialog):
     """Tiny modal for jumping to a 1-based image index."""
 
-    def __init__(self, main_gui: "GPUImageView"):
+    def __init__(self, main_gui: GPUImageView):
         super().__init__(main_gui.main_window)
         self._main_gui = main_gui
 
@@ -94,7 +93,7 @@ class GotoIndexDialog(QDialog):
         self.accept()
 
 
-def open_goto_dialog(main_gui: "GPUImageView") -> None:
+def open_goto_dialog(main_gui: GPUImageView) -> None:
     if not main_gui.model.images:
         return
     dlg = GotoIndexDialog(main_gui)

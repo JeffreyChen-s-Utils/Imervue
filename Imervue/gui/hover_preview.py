@@ -11,12 +11,11 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QTimer, QPoint, QSize, Signal
+from PySide6.QtCore import Qt, QTimer, QPoint, QSize
 from PySide6.QtGui import QPixmap, QImage, QGuiApplication, QFont
-from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QApplication
+from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout
 
 HOVER_DELAY_MS = 500
 PREVIEW_MAX_EDGE = 512
@@ -102,8 +101,8 @@ def _load_preview(path: str, max_edge: int = PREVIEW_MAX_EDGE) -> QPixmap | None
     popup stays hidden rather than showing a broken preview.
     """
     try:
-        with Image.open(path) as im:
-            im = im.convert("RGBA")
+        with Image.open(path) as src:
+            im = src.convert("RGBA")
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:
@@ -132,10 +131,8 @@ def _clamp_to_screen(pos: QPoint, size: QSize) -> QPoint:
         x = avail.right() - size.width()
     if y + size.height() > avail.bottom():
         y = avail.bottom() - size.height()
-    if x < avail.left():
-        x = avail.left()
-    if y < avail.top():
-        y = avail.top()
+    x = max(x, avail.left())
+    y = max(y, avail.top())
     return QPoint(x, y)
 
 

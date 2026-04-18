@@ -34,7 +34,7 @@ _SEP_STYLE = "color: #666; padding: 0 2px;"
 class BreadcrumbBar(QScrollArea):
     """Horizontal clickable breadcrumb — scrolls when path is very long."""
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
         self._main_window = main_window
 

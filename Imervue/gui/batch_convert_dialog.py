@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from PIL import Image
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -93,9 +94,11 @@ class _ConvertWorker(QThread):
 
                 img = Image.open(src)
                 # Mode conversion
-                if self._fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"):
-                    img = img.convert("RGB")
-                elif self._fmt == "BMP" and img.mode == "RGBA":
+                needs_rgb = (
+                    (self._fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"))
+                    or (self._fmt == "BMP" and img.mode == "RGBA")
+                )
+                if needs_rgb:
                     img = img.convert("RGB")
                 elif img.mode not in ("RGB", "RGBA", "L"):
                     img = img.convert("RGBA")
@@ -118,11 +121,10 @@ class _ConvertWorker(QThread):
                 success += 1
 
                 # Delete original if requested and output is different file
-                if self._delete_originals and os.path.normpath(str(out_path)) != os.path.normpath(src):
-                    try:
+                out_norm = os.path.normpath(str(out_path))
+                if self._delete_originals and out_norm != os.path.normpath(src):
+                    with contextlib.suppress(OSError):
                         os.remove(src)
-                    except OSError:
-                        pass
 
             except Exception as exc:
                 logger.error("Batch convert failed for %s: %s", src, exc)
@@ -340,18 +342,14 @@ class BatchConvertDialog(QDialog):
 
         # Reload viewer if converted in-place
         if self._same_dir_check.isChecked():
-            try:
+            with contextlib.suppress(Exception):
                 if self._gui.tile_grid_mode:
                     self._gui.load_tile_grid_async(list(self._gui.model.images))
-            except Exception:
-                pass
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)

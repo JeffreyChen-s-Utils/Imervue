@@ -10,11 +10,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
+from collections.abc import Iterable
 
 from PIL import Image
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QDialog, QDialogButtonBox, QFormLayout,
     QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout,
@@ -67,12 +67,11 @@ def matches(path: str, criteria: FilterCriteria) -> bool:
     if criteria.max_size_kb is not None and size_kb > criteria.max_size_kb:
         return False
 
-    if criteria.after_date is not None:
-        if datetime.fromtimestamp(stat.st_mtime) < criteria.after_date:
-            return False
-    if criteria.before_date is not None:
-        if datetime.fromtimestamp(stat.st_mtime) > criteria.before_date:
-            return False
+    mtime_dt = datetime.fromtimestamp(stat.st_mtime)
+    if criteria.after_date is not None and mtime_dt < criteria.after_date:
+        return False
+    if criteria.before_date is not None and mtime_dt > criteria.before_date:
+        return False
 
     needs_dims = (
         criteria.min_width is not None or criteria.max_width is not None
@@ -101,10 +100,7 @@ def matches(path: str, criteria: FilterCriteria) -> bool:
         return False
     if criteria.orientation == "portrait" and h <= w:
         return False
-    if criteria.orientation == "square" and w != h:
-        return False
-
-    return True
+    return not (criteria.orientation == "square" and w != h)
 
 
 def apply_filter(paths: Iterable[str], criteria: FilterCriteria) -> list[str]:
@@ -114,7 +110,7 @@ def apply_filter(paths: Iterable[str], criteria: FilterCriteria) -> list[str]:
 class AdvancedFilterDialog(QDialog):
     """Collect filter criteria from the user; ``result()`` holds the choice."""
 
-    def __init__(self, main_window: "ImervueMainWindow"):
+    def __init__(self, main_window: ImervueMainWindow):
         super().__init__(main_window)
         self._main_window = main_window
         self._criteria: FilterCriteria | None = None
@@ -152,7 +148,9 @@ class AdvancedFilterDialog(QDialog):
         orient_row.addWidget(QLabel(lang.get("adv_filter_orientation", "Orientation")))
         self._orient_combo = QComboBox()
         self._orient_combo.addItem(lang.get("adv_filter_orient_any", "Any"), None)
-        self._orient_combo.addItem(lang.get("adv_filter_orient_landscape", "Landscape"), "landscape")
+        self._orient_combo.addItem(
+            lang.get("adv_filter_orient_landscape", "Landscape"), "landscape"
+        )
         self._orient_combo.addItem(lang.get("adv_filter_orient_portrait", "Portrait"), "portrait")
         self._orient_combo.addItem(lang.get("adv_filter_orient_square", "Square"), "square")
         orient_row.addWidget(self._orient_combo)
@@ -241,7 +239,7 @@ def _wrap(layout):
     return w
 
 
-def open_advanced_filter(main_window: "ImervueMainWindow") -> None:
+def open_advanced_filter(main_window: ImervueMainWindow) -> None:
     """Show the dialog, apply the filter, and reload the grid on accept."""
     viewer = main_window.viewer
     if not viewer.model.images:

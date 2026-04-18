@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -75,16 +76,13 @@ def _get_image_date(path: str, year_only: bool) -> str:
     """Return a date-based subfolder name for *path*."""
     fmt = "%Y" if year_only else "%Y-%m"
     # Try EXIF DateTimeOriginal (tag 36867)
-    try:
-        with Image.open(path) as img:
-            exif = img.getexif()
-            if exif:
-                raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime
-                if raw:
-                    dt = datetime.strptime(raw, "%Y:%m:%d %H:%M:%S")
-                    return dt.strftime(fmt)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception), Image.open(path) as img:
+        exif = img.getexif()
+        if exif:
+            raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime
+            if raw:
+                dt = datetime.strptime(raw, "%Y:%m:%d %H:%M:%S")
+                return dt.strftime(fmt)
     # Fallback: file modification time
     try:
         mtime = os.path.getmtime(path)
@@ -225,7 +223,7 @@ class _OrganizerWorker(QThread):
 # ---------------------------------------------------------------------------
 
 class ImageOrganizerDialog(QDialog):
-    def __init__(self, main_gui: "GPUImageView", folder: str | None = None):
+    def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -259,7 +257,9 @@ class ImageOrganizerDialog(QDialog):
         rule_row.addWidget(QLabel(lang.get("organizer_rule", "Organize by:")))
         self._rule_combo = QComboBox()
         self._rule_combo.addItem(lang.get("organizer_rule_date", "Date"), RULE_DATE)
-        self._rule_combo.addItem(lang.get("organizer_rule_resolution", "Resolution"), RULE_RESOLUTION)
+        self._rule_combo.addItem(
+            lang.get("organizer_rule_resolution", "Resolution"), RULE_RESOLUTION
+        )
         self._rule_combo.addItem(lang.get("organizer_rule_type", "File Type"), RULE_TYPE)
         self._rule_combo.addItem(lang.get("organizer_rule_size", "File Size"), RULE_SIZE)
         self._rule_combo.addItem(lang.get("organizer_rule_count", "Fixed Count"), RULE_COUNT)
@@ -494,10 +494,8 @@ class ImageOrganizerDialog(QDialog):
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
             self._worker.abort()
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
@@ -507,7 +505,7 @@ class ImageOrganizerDialog(QDialog):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def open_image_organizer(main_gui: "GPUImageView") -> None:
+def open_image_organizer(main_gui: GPUImageView) -> None:
     folder = None
     if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):
         folder = main_gui.model.folder_path

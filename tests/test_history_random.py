@@ -6,10 +6,7 @@ logic is pure-Python so there's no Qt dependency.
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
-import pytest
 
 
 class _HistoryStub:
@@ -27,9 +24,12 @@ class _HistoryStub:
     def _push_history(self, path):
         if self._history_navigating or not path:
             return
-        if self._history and self._history_pos >= 0:
-            if self._history[self._history_pos] == path:
-                return
+        if (
+            self._history
+            and self._history_pos >= 0
+            and self._history[self._history_pos] == path
+        ):
+            return
         if self._history_pos < len(self._history) - 1:
             del self._history[self._history_pos + 1:]
         self._history.append(path)

@@ -1,10 +1,6 @@
 """
 Pytest configuration and shared fixtures for Imervue tests.
 """
-import os
-import sys
-import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest

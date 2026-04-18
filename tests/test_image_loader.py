@@ -28,7 +28,7 @@ class TestLoadImageFile:
         assert result.shape[2] == 4
 
     def test_load_nonexistent_raises(self, tmp_path):
-        with pytest.raises(Exception):
+        with pytest.raises((FileNotFoundError, OSError)):
             load_image_file(str(tmp_path / "nonexistent.png"))
 
 

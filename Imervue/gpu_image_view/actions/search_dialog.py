@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QFont, QTextDocument, QPainter, QAbstractTextDocumentLayout
+from PySide6.QtGui import QTextDocument, QPainter, QAbstractTextDocumentLayout
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QListWidget,
     QListWidgetItem, QLabel, QPushButton, QStyledItemDelegate, QStyle,

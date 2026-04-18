@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from PIL import Image
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -159,10 +160,8 @@ class ExportDialog(QDialog):
         """Kick off an async in-memory save to estimate output file size."""
         # Discard any in-flight worker — its result is now stale.
         if self._size_worker and self._size_worker.isRunning():
-            try:
+            with contextlib.suppress(TypeError, RuntimeError):
                 self._size_worker.result_ready.disconnect(self._on_size_ready)
-            except (TypeError, RuntimeError):
-                pass
 
         self.size_label.setText(self._lang.get("export_size_calculating", "Calculating..."))
 
