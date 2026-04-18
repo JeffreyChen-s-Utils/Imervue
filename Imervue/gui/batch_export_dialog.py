@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
-    QCheckBox, QProgressBar, QGroupBox,
+    QProgressBar, QGroupBox,
 )
 import numpy as np
 from PIL import Image
@@ -261,7 +261,6 @@ class BatchExportDialog(QDialog):
 def _open_for_export(path: str) -> Image.Image:
     if Path(path).suffix.lower() == ".svg":
         from Imervue.gpu_image_view.images.image_loader import _load_svg
-        import numpy as np
         arr = _load_svg(path, thumbnail=False)
         return Image.fromarray(arr)
     return Image.open(path)

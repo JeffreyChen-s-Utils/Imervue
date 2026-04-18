@@ -163,8 +163,10 @@ class TestClipboardMonitorDedup:
         captured: list = []
         m.image_captured.connect(captured.append)
 
-        a = np.full((8, 8, 4), 50, dtype=np.uint8); a[..., 3] = 255
-        b = np.full((8, 8, 4), 150, dtype=np.uint8); b[..., 3] = 255
+        a = np.full((8, 8, 4), 50, dtype=np.uint8)
+        a[..., 3] = 255
+        b = np.full((8, 8, 4), 150, dtype=np.uint8)
+        b[..., 3] = 255
         fresh_clipboard.setImage(_pil_to_qimage(Image.fromarray(a, "RGBA")))
         qapp.processEvents()
         fresh_clipboard.setImage(_pil_to_qimage(Image.fromarray(b, "RGBA")))
@@ -183,7 +185,8 @@ class TestClipboardMonitorDedup:
         captured: list = []
         m.image_captured.connect(captured.append)
 
-        arr = np.full((8, 8, 4), 90, dtype=np.uint8); arr[..., 3] = 255
+        arr = np.full((8, 8, 4), 90, dtype=np.uint8)
+        arr[..., 3] = 255
         img = _pil_to_qimage(Image.fromarray(arr, "RGBA"))
         fresh_clipboard.setImage(img)
         qapp.processEvents()
@@ -224,7 +227,8 @@ class TestGrabCurrentImage:
         self, qapp, fresh_clipboard, reset_setting
     ):
         m = ClipboardMonitor()
-        arr = np.full((6, 6, 4), 77, dtype=np.uint8); arr[..., 3] = 255
+        arr = np.full((6, 6, 4), 77, dtype=np.uint8)
+        arr[..., 3] = 255
         fresh_clipboard.setImage(_pil_to_qimage(Image.fromarray(arr, "RGBA")))
         qapp.processEvents()
 
@@ -240,7 +244,8 @@ class TestGrabCurrentImage:
         regardless of the auto-monitor toggle."""
         m = ClipboardMonitor()
         assert m.is_enabled() is False
-        arr = np.full((4, 4, 4), 33, dtype=np.uint8); arr[..., 3] = 255
+        arr = np.full((4, 4, 4), 33, dtype=np.uint8)
+        arr[..., 3] = 255
         fresh_clipboard.setImage(_pil_to_qimage(Image.fromarray(arr, "RGBA")))
         qapp.processEvents()
 

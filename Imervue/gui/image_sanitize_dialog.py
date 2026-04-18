@@ -11,7 +11,6 @@ keeping aspect ratio.
 from __future__ import annotations
 
 import logging
-import math
 import os
 import secrets
 import string
@@ -20,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -37,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -99,7 +99,7 @@ def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
 
 def _get_image_date(path: str) -> datetime:
     """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
-    try:
+    with contextlib.suppress(Exception):
         img = Image.open(path)
         exif = img.getexif()
         # 36867 = DateTimeOriginal, 306 = DateTime
@@ -111,8 +111,6 @@ def _get_image_date(path: str) -> datetime:
                         return datetime.strptime(val, fmt)
                     except (ValueError, TypeError):
                         continue
-    except Exception:
-        pass
     # Fallback to file modification time
     try:
         mtime = os.path.getmtime(path)
@@ -142,10 +140,7 @@ def _compute_upscale_params(width: int, height: int,
     ratio = target_long_edge / long
     # Pick the smallest model that gets us past the target so we only
     # need to downscale afterward (higher quality than up-then-up).
-    if ratio <= 2.0:
-        model_key = "realesrgan-x2plus"
-    else:
-        model_key = "realesrgan-x4plus"
+    model_key = "realesrgan-x2plus" if ratio <= 2.0 else "realesrgan-x4plus"
 
     # Final size preserving aspect ratio
     if width >= height:
@@ -185,14 +180,11 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
         ext = output_ext
     fmt = _PIL_FORMAT_MAP.get(ext, "PNG")
 
-    # Re-create image from raw pixel data — no metadata survives
-    clean = Image.new(img.mode, img.size)
-    clean.putdata(list(img.getdata()))
+    # Re-create image from raw bytes — no metadata survives, no list copy
+    clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # JPEG does not support alpha
-    if fmt == "JPEG" and clean.mode in ("RGBA", "LA", "PA"):
-        clean = clean.convert("RGB")
-    elif fmt == "JPEG" and clean.mode != "RGB":
+    if fmt == "JPEG" and clean.mode != "RGB":
         clean = clean.convert("RGB")
 
     # --- Optional upscale ---
@@ -237,6 +229,14 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
                 clean = upscaled.resize((final_w, final_h),
                                         Image.Resampling.LANCZOS)
 
+    # Disrupt LSB steganography (e.g. NovelAI stealth pnginfo embeds
+    # prompt/seed/parameters in the least-significant bit of RGB/alpha
+    # channels — tEXt-chunk stripping alone leaves that payload intact
+    # because the bits live in the pixel data). Randomising each 8-bit
+    # channel's LSB destroys the payload; the visual impact is ±1/255
+    # per channel (well below the JND for any display).
+    clean = _scramble_lsb(clean)
+
     # Generate new filename
     dt = _get_image_date(path)
     name = _generate_name(dt, rand_len, ext)
@@ -259,6 +259,40 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     return out_path
 
 
+# Fraction of channel-elements whose LSB is randomised. At 0.5 the net
+# per-pixel change rate is 12.5% (halved from dense scrambling) while the
+# probability any 120-bit magic header survives intact drops to 0.75^120
+# ≈ 1.2e-15 — still comprehensive destruction, with half the visual
+# perturbation in flat regions that synthetic AI art tends to produce.
+_LSB_SCRAMBLE_RATE = 0.5
+
+
+def _scramble_lsb(img: Image.Image) -> Image.Image:
+    """Sparsely randomise the LSB of every 8-bit channel.
+
+    Breaks LSB-steganography schemes such as NovelAI's stealth pnginfo.
+    Only a fraction of LSBs (``_LSB_SCRAMBLE_RATE``) are touched — enough
+    to obliterate any bit-sequential payload statistically, while keeping
+    perceptual impact minimal in the flat regions common to synthetic
+    imagery. Non 8-bit modes are converted first so palette/1-bit images
+    are also covered.
+    """
+    import numpy as np
+    # Convert exotic modes to a form with 8-bit channels so the LSB
+    # operation is well-defined (palette indices, for example, would be
+    # corrupted by masking).
+    if img.mode not in ("L", "LA", "RGB", "RGBA"):
+        img = img.convert("RGBA" if "A" in img.mode else "RGB")
+    arr = np.array(img, copy=True)
+    rng = np.random.default_rng()
+    scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
+    noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
+    # Where mask is True use random LSB, otherwise keep the original LSB.
+    new_lsb = np.where(scramble_mask, noise, arr & np.uint8(0x01))
+    arr = (arr & np.uint8(0xFE)) | new_lsb.astype(arr.dtype)
+    return Image.fromarray(arr, mode=img.mode)
+
+
 # ---------------------------------------------------------------------------
 # Worker thread
 # ---------------------------------------------------------------------------
@@ -271,6 +305,7 @@ class _SanitizeWorker(QThread):
     def __init__(self, paths: list[str], output_dir: str, output_ext: str,
                  rand_len: int, jpeg_quality: int, png_compress: int,
                  target_long_edge: int = 0, model_key: str = "",
+                 src_root: str | None = None,
                  parent=None):
         super().__init__(parent)
         self._paths = paths
@@ -281,7 +316,28 @@ class _SanitizeWorker(QThread):
         self._png_compress = png_compress
         self._target_long_edge = target_long_edge
         self._model_key = model_key
+        self._src_root = src_root
         self._abort = False
+
+    def _target_dir_for(self, path: str) -> str:
+        """Mirror the source's subfolder structure under *output_dir*.
+
+        If *src_root* is set, compute the file's directory relative to the
+        source root and append it to *output_dir*. Paths that escape the
+        source root (``..`` segments) fall back to the flat output dir so
+        a crafted path can never write outside it.
+        """
+        if not self._src_root:
+            return self._output_dir
+        try:
+            rel = os.path.relpath(os.path.dirname(path), self._src_root)
+        except ValueError:
+            return self._output_dir
+        if rel in ("", ".") or rel.startswith(".."):
+            return self._output_dir
+        target = os.path.join(self._output_dir, rel)
+        os.makedirs(target, exist_ok=True)
+        return target
 
     def abort(self):
         self._abort = True
@@ -336,15 +392,14 @@ class _SanitizeWorker(QThread):
             name = os.path.basename(path)
             self.progress.emit(i + 1, total, name)
             try:
+                target_dir = self._target_dir_for(path)
                 sanitize_image(
-                    path, self._output_dir, self._output_ext,
+                    path, target_dir, self._output_ext,
                     self._rand_len, self._jpeg_quality, self._png_compress,
                     target_long_edge=self._target_long_edge,
                     ort_session=session,
                     ort_scale=scale,
-                    tile_progress_cb=(
-                        lambda d, t: self.tile_progress.emit(d, t)
-                    ) if session else None,
+                    tile_progress_cb=self.tile_progress.emit if session else None,
                     trad_resampling=trad_resampling,
                 )
                 success += 1
@@ -359,7 +414,7 @@ class _SanitizeWorker(QThread):
 # ---------------------------------------------------------------------------
 
 class ImageSanitizeDialog(QDialog):
-    def __init__(self, main_gui: "GPUImageView", folder: str | None = None):
+    def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -582,6 +637,10 @@ class ImageSanitizeDialog(QDialog):
         target_long_edge = self._res_combo.currentData() or 0
         model_key = self._model_combo.currentData() or ""
 
+        # Preserve the source's subfolder layout under the output dir when
+        # recursive scanning was used.
+        src_root = src if recursive else None
+
         # If upscale requested with AI model, install deps first
         is_traditional = model_key.startswith("trad:")
         if target_long_edge > 0 and not is_traditional:
@@ -596,7 +655,7 @@ class ImageSanitizeDialog(QDialog):
                     self._gui.main_window, REQUIRED_PACKAGES,
                     lambda: self._launch_worker(
                         paths, out, output_ext, rand_len, jpeg_quality,
-                        target_long_edge, model_key))
+                        target_long_edge, model_key, src_root))
             except Exception:
                 logger.exception("ensure_dependencies failed")
                 self._start_btn.setEnabled(True)
@@ -604,10 +663,11 @@ class ImageSanitizeDialog(QDialog):
 
         self._launch_worker(paths, out, output_ext, rand_len, jpeg_quality,
                             target_long_edge if is_traditional else 0,
-                            model_key if is_traditional else "")
+                            model_key if is_traditional else "",
+                            src_root)
 
     def _launch_worker(self, paths, out, output_ext, rand_len, jpeg_quality,
-                       target_long_edge, model_key):
+                       target_long_edge, model_key, src_root=None):
         self._start_btn.setEnabled(False)
         self._progress.setValue(0)
         self._progress.show()
@@ -617,7 +677,7 @@ class ImageSanitizeDialog(QDialog):
 
         self._worker = _SanitizeWorker(
             paths, out, output_ext, rand_len, jpeg_quality, 6,
-            target_long_edge, model_key, self)
+            target_long_edge, model_key, src_root, self)
         self._worker.progress.connect(self._on_progress)
         self._worker.tile_progress.connect(self._on_tile_progress)
         self._worker.result_ready.connect(self._on_result)
@@ -651,16 +711,14 @@ class ImageSanitizeDialog(QDialog):
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
             self._worker.abort()
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
 
 
-def open_image_sanitize(main_gui: "GPUImageView") -> None:
+def open_image_sanitize(main_gui: GPUImageView) -> None:
     folder = None
     if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):
         folder = main_gui.model.folder_path

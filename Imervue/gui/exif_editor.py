@@ -5,13 +5,11 @@ Falls back gracefully if piexif is not installed.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
-    QPushButton, QLabel, QGroupBox, QScrollArea, QWidget,
+    QPushButton, QLabel, QGroupBox,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -54,8 +52,11 @@ class ExifEditorDialog(QDialog):
         self._piexif = _try_import_piexif()
         if not self._piexif:
             layout.addWidget(QLabel(
-                lang.get("exif_editor_no_piexif",
-                          "piexif package is required for EXIF editing.\nInstall with: pip install piexif")
+                lang.get(
+                    "exif_editor_no_piexif",
+                    "piexif package is required for EXIF editing.\n"
+                    "Install with: pip install piexif",
+                )
             ))
             close_btn = QPushButton(lang.get("exif_editor_close", "Close"))
             close_btn.clicked.connect(self.reject)

@@ -35,9 +35,26 @@ _FRAGMENT_SHADER = """
 varying vec2 v_texcoord;
 uniform sampler2D u_texture;
 uniform vec4 u_color;
+uniform int u_color_mode;  // 0=normal 1=grayscale 2=invert 3=sepia
 
 void main() {
-    gl_FragColor = texture2D(u_texture, v_texcoord) * u_color;
+    vec4 sampled = texture2D(u_texture, v_texcoord);
+    vec3 c = sampled.rgb;
+    if (u_color_mode == 1) {
+        // Grayscale using Rec. 709 luma coefficients
+        float y = dot(c, vec3(0.2126, 0.7152, 0.0722));
+        c = vec3(y, y, y);
+    } else if (u_color_mode == 2) {
+        // Invert (keep alpha)
+        c = vec3(1.0) - c;
+    } else if (u_color_mode == 3) {
+        // Sepia — classic filter matrix
+        float r = dot(c, vec3(0.393, 0.769, 0.189));
+        float g = dot(c, vec3(0.349, 0.686, 0.168));
+        float b = dot(c, vec3(0.272, 0.534, 0.131));
+        c = clamp(vec3(r, g, b), 0.0, 1.0);
+    }
+    gl_FragColor = vec4(c, sampled.a) * u_color;
 }
 """
 
@@ -87,6 +104,8 @@ class GLRenderer:
         self._col_prog = None
         self._vbo = None
         self._mvp = np.eye(4, dtype=np.float32)
+        # 0=normal 1=grayscale 2=invert 3=sepia
+        self.color_mode: int = 0
 
     def init(self):
         """在有效的 GL context 中呼叫"""
@@ -146,6 +165,11 @@ class GLRenderer:
         # Color
         col_loc = glGetUniformLocation(prog, "u_color")
         glUniform4f(col_loc, 1, 1, 1, opacity)
+
+        # Color mode (grayscale/invert/sepia)
+        mode_loc = glGetUniformLocation(prog, "u_color_mode")
+        if mode_loc != -1:
+            glUniform1i(mode_loc, int(self.color_mode))
 
         # Texture
         tex_loc = glGetUniformLocation(prog, "u_texture")

@@ -6,7 +6,6 @@ No Qt dependency for core logic tests; dialog tests require ``qapp``.
 from __future__ import annotations
 
 import os
-import shutil
 
 import numpy as np
 import pytest

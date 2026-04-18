@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolButton,
-    QPushButton, QSizePolicy, QFrame,
+    QPushButton, QSizePolicy,
 )
 
 from Imervue.image.info import get_exif_data, get_file_times

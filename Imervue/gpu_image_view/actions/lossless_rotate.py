@@ -123,10 +123,9 @@ def lossless_rotate(file_path: str, clockwise: bool = True) -> bool:
         logger.error(f"File not found: {file_path}")
         return False
 
-    # Attempt lossless EXIF rotation for JPEG files
-    if _is_jpeg(file_path):
-        if _rotate_via_exif(file_path, clockwise):
-            return True
-        # piexif unavailable or failed; fall through to PIL
+    # Attempt lossless EXIF rotation for JPEG files first; fall through to PIL
+    # if piexif is unavailable or the EXIF-only rotation fails.
+    if _is_jpeg(file_path) and _rotate_via_exif(file_path, clockwise):
+        return True
 
     return _rotate_via_pil(file_path, clockwise)

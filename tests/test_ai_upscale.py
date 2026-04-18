@@ -195,7 +195,7 @@ class TestTraditionalMethods:
 
     def test_all_methods_have_desc(self):
         from Imervue.gui.ai_upscale_dialog import TRADITIONAL_METHODS
-        for key, info in TRADITIONAL_METHODS.items():
+        for _key, info in TRADITIONAL_METHODS.items():
             assert "desc_key" in info
             assert "desc_default" in info
 
@@ -244,5 +244,5 @@ class TestTraditionalMethods:
         out_img = Image.open(str(results[0]))
         assert out_img.size == (8, 8)
         # Every pixel should be exactly the same color
-        pixels = list(out_img.getdata())
-        assert all(p == (42, 99, 200) for p in pixels)
+        arr = np.asarray(out_img)
+        assert np.all(arr == np.array([42, 99, 200], dtype=arr.dtype))

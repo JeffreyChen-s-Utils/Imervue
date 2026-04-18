@@ -29,10 +29,9 @@ def get_image_info_at_pos(main_gui: GPUImageView, position):
                 return build_image_info(main_gui, Path(path))
 
     # ===== DeepZoom 模式 =====
-    if main_gui.deep_zoom:
-        if 0 <= main_gui.current_index < len(main_gui.model.images):
-            path = Path(main_gui.model.images[main_gui.current_index])
-            return build_image_info(main_gui, path)
+    if main_gui.deep_zoom and 0 <= main_gui.current_index < len(main_gui.model.images):
+        path = Path(main_gui.model.images[main_gui.current_index])
+        return build_image_info(main_gui, path)
 
     return None
 
@@ -90,22 +89,25 @@ def show_image_info_dialog(main_gui: GPUImageView, info: dict[str, Any]):
         QMessageBox.warning(main_gui, "Image Info Error", info["error"])
         return
 
+    lang = language_wrapper.language_word_dict
     text = (
-            language_wrapper.language_word_dict.get("image_info_filename").format(info=info["filename"]) +
-            language_wrapper.language_word_dict.get("image_info_fullpath").format(full_path=info["full_path"]) +
-            language_wrapper.language_word_dict.get(
-                "image_info_image_size").format(width=info["width"], height=info["height"]) +
-            language_wrapper.language_word_dict.get(
-                "image_info_file_size").format(file_size_mb=info["file_size_mb"]) +
-            language_wrapper.language_word_dict.get(
-                "image_info_file_created_time").format(created_time=info["created_time"]) +
-            language_wrapper.language_word_dict.get(
-                "image_info_file_modified_time").format(modified_time=info["modified_time"]) +
+            lang.get("image_info_filename").format(info=info["filename"]) +
+            lang.get("image_info_fullpath").format(full_path=info["full_path"]) +
+            lang.get("image_info_image_size").format(
+                width=info["width"], height=info["height"]) +
+            lang.get("image_info_file_size").format(
+                file_size_mb=info["file_size_mb"]) +
+            lang.get("image_info_file_created_time").format(
+                created_time=info["created_time"]) +
+            lang.get("image_info_file_modified_time").format(
+                modified_time=info["modified_time"]) +
             "\n====== EXIF ======\n"
             f"{info['exif_text']}"
     )
 
-    QMessageBox.information(main_gui, language_wrapper.language_word_dict.get("image_info_messagebox_title"), text)
+    QMessageBox.information(
+        main_gui, lang.get("image_info_messagebox_title"), text
+    )
 
 
 # ==========================================================

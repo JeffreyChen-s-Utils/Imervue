@@ -20,7 +20,7 @@ BUILTIN_LANGUAGES: list[str] = [
 ]
 
 
-class LanguageWrapper(object):
+class LanguageWrapper:
 
     def __init__(
             self

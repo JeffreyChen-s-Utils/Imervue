@@ -1,5 +1,4 @@
 """Tests for SVG loading support."""
-import numpy as np
 import pytest
 
 pytest.importorskip("imageio")

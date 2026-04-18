@@ -10,9 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from PIL import Image
-from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QImage, QUndoStack
-from PySide6.QtWidgets import QWidget
 
 from Imervue.gui.annotation_dialog import (
     AnnotationCanvas, AnnotationDialog, _AddAnnotationCommand,

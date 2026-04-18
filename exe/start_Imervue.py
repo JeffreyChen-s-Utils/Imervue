@@ -19,9 +19,10 @@ def _global_exception_hook(exc_type, exc_value, exc_tb):
 
 sys.excepthook = _global_exception_hook
 
-from PySide6.QtWidgets import QApplication
-
-from Imervue.Imervue_main_window import ImervueMainWindow
+# Logging must be configured before PySide6/main-window imports so startup
+# failures surface through the log handler.
+from PySide6.QtWidgets import QApplication  # noqa: E402
+from Imervue.Imervue_main_window import ImervueMainWindow  # noqa: E402
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

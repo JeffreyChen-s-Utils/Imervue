@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pathlib import Path
-    from PySide6.QtWidgets import QMenu, QMenuBar
+    from PySide6.QtWidgets import QMenu
     from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
@@ -93,7 +92,9 @@ class ImervuePlugin:
         """
         pass
 
-    def on_folder_opened(self, folder_path: str, image_paths: list[str], viewer: GPUImageView) -> None:
+    def on_folder_opened(
+        self, folder_path: str, image_paths: list[str], viewer: GPUImageView,
+    ) -> None:
         """Called after a folder is opened and images are listed.
 
         Args:

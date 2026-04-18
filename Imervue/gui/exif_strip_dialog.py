@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -69,9 +70,8 @@ def strip_exif(path: str, *, remove_gps: bool = True, remove_all: bool = True,
     # Preserve ICC profile if user only wants GPS removed
     icc = img.info.get("icc_profile") if not remove_all else None
 
-    # Build clean image without metadata
-    clean = Image.new(img.mode, img.size)
-    clean.putdata(list(img.getdata()))
+    # Re-create image from raw bytes — no metadata survives, no list copy
+    clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # Determine save path
     if overwrite:
@@ -152,7 +152,7 @@ class _StripWorker(QThread):
 # ---------------------------------------------------------------------------
 
 class ExifStripDialog(QDialog):
-    def __init__(self, main_gui: "GPUImageView", folder: str | None = None):
+    def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
@@ -298,16 +298,14 @@ class ExifStripDialog(QDialog):
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
             self._worker.abort()
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
 
 
-def open_exif_strip(main_gui: "GPUImageView") -> None:
+def open_exif_strip(main_gui: GPUImageView) -> None:
     folder = None
     if hasattr(main_gui, "model") and hasattr(main_gui.model, "folder_path"):
         folder = main_gui.model.folder_path

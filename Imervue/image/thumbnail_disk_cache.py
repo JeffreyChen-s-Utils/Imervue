@@ -38,6 +38,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+import contextlib
 
 logger = logging.getLogger("Imervue.thumbnail_cache")
 
@@ -83,10 +84,8 @@ class ThumbnailDiskCache:
                         # Old .npy thumbnails from before the PNG migration —
                         # their cache keys don't match the new format anyway, so
                         # drop them instead of letting them squat on disk.
-                        try:
+                        with contextlib.suppress(OSError):
                             (self._dir / name).unlink(missing_ok=True)
-                        except OSError:
-                            pass
                         continue
                     if not name.endswith(_CACHE_EXT):
                         continue
@@ -132,7 +131,7 @@ class ThumbnailDiskCache:
             raw = f"{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
         except OSError:
             return ""
-        return hashlib.md5(raw.encode()).hexdigest()
+        return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()
 
     # --------------------------------------------------
     # Public API
@@ -148,18 +147,15 @@ class ThumbnailDiskCache:
         if not cache_file.exists():
             return None
         try:
-            with Image.open(cache_file) as img:
+            with Image.open(cache_file) as src:
                 # PNG round-trip through PIL; ensure RGBA so callers get a
                 # uniform 4-channel array regardless of how it was stored.
-                if img.mode != "RGBA":
-                    img = img.convert("RGBA")
+                img = src.convert("RGBA") if src.mode != "RGBA" else src
                 arr = np.array(img)
         except Exception as e:
             logger.debug(f"Thumbnail cache read failed for {name}: {e}")
-            try:
+            with contextlib.suppress(OSError):
                 cache_file.unlink(missing_ok=True)
-            except OSError:
-                pass
             with self._lock:
                 old = self._files.pop(name, None)
                 if old is not None:
@@ -191,7 +187,8 @@ class ThumbnailDiskCache:
             else:
                 img = Image.fromarray(arr, mode="RGBA")
         except Exception as e:
-            logger.debug(f"Thumbnail cache: cannot interpret array shape={getattr(img_data, 'shape', None)}: {e}")
+            shape = getattr(img_data, "shape", None)
+            logger.debug(f"Thumbnail cache: cannot interpret array shape={shape}: {e}")
             return
 
         name = f"{key}{_CACHE_EXT}"
@@ -223,10 +220,8 @@ class ThumbnailDiskCache:
         """Delete every cached thumbnail. Used by 'Clear cache' in the UI."""
         with self._lock:
             for name in list(self._files.keys()):
-                try:
+                with contextlib.suppress(OSError):
                     (self._dir / name).unlink(missing_ok=True)
-                except OSError:
-                    pass
             self._files.clear()
             self._total_bytes = 0
 

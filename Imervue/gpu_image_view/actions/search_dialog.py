@@ -7,13 +7,106 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QTextDocument, QPainter, QAbstractTextDocumentLayout
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QListWidget,
-    QListWidgetItem, QLabel, QPushButton,
+    QListWidgetItem, QLabel, QPushButton, QStyledItemDelegate, QStyle,
+    QStyleOptionViewItem,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+
+
+class _HighlightDelegate(QStyledItemDelegate):
+    """Renders list items as rich text so we can <b>-highlight query hits."""
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index):
+        options = QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+
+        doc = QTextDocument()
+        doc.setDefaultFont(options.font)
+        doc.setHtml(options.text)
+        # Clear the text so the default style paints only background+selection.
+        options.text = ""
+
+        style = options.widget.style() if options.widget else None
+        if style is None:
+            from PySide6.QtWidgets import QApplication
+            style = QApplication.style()
+
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, options, painter)
+
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+        text_rect = style.subElementRect(
+            QStyle.SubElement.SE_ItemViewItemText, options, options.widget
+        )
+        painter.save()
+        painter.translate(text_rect.topLeft())
+        painter.setClipRect(text_rect.translated(-text_rect.topLeft()))
+        doc.documentLayout().draw(painter, ctx)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        options = QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        doc = QTextDocument()
+        doc.setDefaultFont(options.font)
+        doc.setHtml(options.text)
+        doc.setTextWidth(options.rect.width())
+        return QSize(int(doc.idealWidth()), int(doc.size().height()))
+
+
+def _fuzzy_score(haystack: str, needle: str) -> tuple[int, int]:
+    """Simple fuzzy match score.
+
+    Returns ``(rank, first_idx)`` where lower rank = better match. ``rank``:
+    0 — exact start, 1 — substring, 2 — all characters appear in order,
+    3 — no match (caller should skip).
+    """
+    if not needle:
+        return 1, 0
+    if haystack.startswith(needle):
+        return 0, 0
+    idx = haystack.find(needle)
+    if idx >= 0:
+        return 1, idx
+
+    # Subsequence match: every char of needle appears in order in haystack
+    i = 0
+    first_idx = -1
+    for j, ch in enumerate(haystack):
+        if i < len(needle) and ch == needle[i]:
+            if first_idx < 0:
+                first_idx = j
+            i += 1
+    if i == len(needle):
+        return 2, max(first_idx, 0)
+    return 3, 0
+
+
+def _highlight_html(name: str, keyword: str) -> str:
+    """Wrap substring hits in <b> for rich-text display."""
+    if not keyword:
+        return _escape(name)
+    lower_name = name.lower()
+    lower_key = keyword.lower()
+    idx = lower_name.find(lower_key)
+    if idx < 0:
+        return _escape(name)
+    pre = _escape(name[:idx])
+    hit = _escape(name[idx:idx + len(keyword)])
+    post = _escape(name[idx + len(keyword):])
+    return f"{pre}<b style='color:#ffcc66'>{hit}</b>{post}"
+
+
+def _escape(s: str) -> str:
+    return (
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+    )
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -50,6 +143,7 @@ class ImageSearchDialog(QDialog):
         # ===== 結果列表 =====
         self._list = QListWidget()
         self._list.setAlternatingRowColors(True)
+        self._list.setItemDelegate(_HighlightDelegate(self._list))
         layout.addWidget(self._list, stretch=1)
 
         # ===== 按鈕列 =====
@@ -80,29 +174,43 @@ class ImageSearchDialog(QDialog):
         self._input.setFocus()
 
     # ===========================
-    # 即時篩選
+    # 即時篩選（模糊 + 排序 + 高亮）
     # ===========================
     def _on_text_changed(self, text: str):
         self._list.clear()
         keyword = text.strip().lower()
         self._filtered.clear()
 
+        scored: list[tuple[int, int, str, str]] = []  # (rank, idx, path, name)
         for path in self._all_paths:
             name = Path(path).name
-            if not keyword or keyword in name.lower():
-                self._filtered.append(path)
-                # 顯示檔名 + 淡色父資料夾
-                parent = Path(path).parent.name
-                display = f"{name}    ({parent})" if parent else name
-                item = QListWidgetItem(display)
-                item.setData(Qt.ItemDataRole.UserRole, path)
-                self._list.addItem(item)
+            rank, first_idx = _fuzzy_score(name.lower(), keyword)
+            if rank >= 3:
+                continue
+            scored.append((rank, first_idx, path, name))
+
+        # Sort: better rank first, then earlier hit position, then filename
+        scored.sort(key=lambda t: (t[0], t[1], t[3].lower()))
+
+        for _rank, _idx, path, name in scored:
+            self._filtered.append(path)
+            parent = Path(path).parent.name
+            name_html = _highlight_html(name, keyword)
+            if parent:
+                display_html = (
+                    f"{name_html} <span style='color:#777'>"
+                    f"({_escape(parent)})</span>"
+                )
+            else:
+                display_html = name_html
+            item = QListWidgetItem(display_html)
+            item.setData(Qt.ItemDataRole.UserRole, path)
+            self._list.addItem(item)
 
         total = len(self._all_paths)
         matched = len(self._filtered)
         self._count_label.setText(f"{matched}/{total}")
 
-        # 自動選中第一個結果
         if self._list.count() > 0:
             self._list.setCurrentRow(0)
 
@@ -137,10 +245,11 @@ class ImageSearchDialog(QDialog):
 
         base_tile = gui.thumbnail_size or 256
         scaled_tile = base_tile * gui.tile_scale
-        cols = max(1, int(gui.width() // scaled_tile))
+        cell = scaled_tile + gui.tile_padding
+        cols = max(1, int(gui.width() // cell))
 
         row = index // cols
-        target_y = -(row * scaled_tile) + gui.height() / 3
+        target_y = -(row * cell) + gui.height() / 3
 
         gui.grid_offset_y = target_y
         gui.selected_tiles = {gui.model.images[index]}

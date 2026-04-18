@@ -78,7 +78,7 @@ class Recipe:
             and self.exposure == 0.0
         )
 
-    def normalized(self) -> "Recipe":
+    def normalized(self) -> Recipe:
         """Return a copy with rotate_steps in [0, 3] and crop clamped to ints."""
         crop = self.crop
         if crop is not None:
@@ -110,7 +110,7 @@ class Recipe:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Recipe":
+    def from_dict(cls, data: dict[str, Any]) -> Recipe:
         known = {f.name for f in fields(cls)}
         kwargs: dict[str, Any] = {}
         extra: dict[str, Any] = dict(data.get("extra") or {})
@@ -145,7 +145,7 @@ class Recipe:
             sort_keys=True,
             separators=(",", ":"),
         )
-        return hashlib.md5(payload.encode()).hexdigest()[:16]
+        return hashlib.md5(payload.encode(), usedforsecurity=False).hexdigest()[:16]
 
     # ------------------------------------------------------------------
     # Apply
@@ -251,7 +251,9 @@ def file_identity(path: str | Path) -> str:
             head = f.read(_IDENTITY_HEAD_BYTES)
     except OSError:
         return ""
-    digest = hashlib.md5(head + st.st_size.to_bytes(8, "big")).hexdigest()
+    digest = hashlib.md5(
+        head + st.st_size.to_bytes(8, "big"), usedforsecurity=False
+    ).hexdigest()
     _IDENTITY_CACHE[key] = (st.st_mtime_ns, st.st_size, digest)
     return digest
 

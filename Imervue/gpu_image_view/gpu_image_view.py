@@ -4,16 +4,20 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
-from Imervue.gpu_image_view.actions.delete import delete_current_image, delete_selected_tiles, undo_delete
+from Imervue.gpu_image_view.actions.delete import undo_delete
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     toggle_fullscreen, trash_current_image, trash_selected_tiles,
-    rotate_current_image, copy_image_to_clipboard, rate_current_image,
+    copy_image_to_clipboard, rate_current_image,
     toggle_favorite,
 )
 from Imervue.gpu_image_view.actions.search_dialog import open_search_dialog
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog, stop_slideshow
+from Imervue.gpu_image_view.actions.goto_dialog import open_goto_dialog
 from Imervue.gui.annotation_dialog import open_annotation_for_path
-from Imervue.gpu_image_view.actions.select import switch_to_next_image, switch_to_previous_image, select_tiles_in_rect
+from Imervue.gpu_image_view.actions.select import (
+    switch_to_next_image, switch_to_previous_image, select_tiles_in_rect,
+    switch_to_next_folder, switch_to_previous_folder,
+)
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
 from Imervue.gpu_image_view.images.image_model import ImageModel
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
@@ -26,13 +30,14 @@ import numpy as np
 import os
 from collections import OrderedDict
 from OpenGL.GL import *
-from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt, QTimer
-from PySide6.QtGui import QUndoStack, QCursor, QPainter, QColor, QPen, QFont, QPainterPath, QImage
+from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
+from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
 from Imervue.image.tile_manager import TileManager
+import contextlib
 
 # DeepZoom 預載範圍（±N 張）
 _PREFETCH_RANGE = 3
@@ -81,6 +86,24 @@ class GPUImageView(QOpenGLWidget):
         # ===== 篩選前完整圖片列表 =====
         self._unfiltered_images: list[str] = []
 
+        # ===== 縮圖排列密度 =====
+        # 0 (compact) / 8 (standard) / 16 (relaxed) — 縮圖間額外 padding 像素
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        self.tile_padding = int(user_setting_dict.get("tile_padding", 8))
+
+        # ===== Hover 預覽 =====
+        # Lazy-init 避免在沒有 QApplication 時匯入失敗
+        self._hover_controller = None
+        self._hover_last_path: str | None = None
+
+        # ===== 瀏覽歷史 =====
+        # 每次進入 deep zoom 的圖片會被 push 到 _history。
+        # _history_pos 指向目前位置；前進/後退移動指標，不重寫 stack
+        # (除非使用者跳到新圖，這時會 truncate forward history).
+        self._history: list[str] = []
+        self._history_pos: int = -1
+        self._history_navigating: bool = False  # True → 抑制 push 進 history
+
         # ===== Tile Grid 選取模式 =====
         self.tile_selection_mode = False  # 是否在選取模式
         self.selected_tiles = set()  # 已選取的 tile path
@@ -125,6 +148,16 @@ class GPUImageView(QOpenGLWidget):
         self._show_histogram = False
         self._histogram_cache: tuple | None = None  # (path, hist_r, hist_g, hist_b)
 
+        # ===== OSD (On-Screen Display) =====
+        # F3 — 切換右上角顯示檔名 / 尺寸 / 格式 / 檔案大小
+        self._show_osd = False
+        # Ctrl+F3 — Debug HUD：VRAM、tile cache、執行緒池等技術資訊
+        self._show_debug_hud = False
+        # 目前滑鼠在圖片上的像素座標（update_status 用，paint_pixel_view 用）
+        self._hover_image_xy: tuple[int, int] | None = None
+        # Shift+P — 像素檢視模式：zoom >= 4x 時顯示像素網格 + RGB 值
+        self._pixel_view = False
+
         # ===== 動畫播放 =====
         self._animation: object | None = None  # AnimationPlayer instance
 
@@ -143,6 +176,11 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== Drag & Drop =====
         self.setAcceptDrops(True)
+
+        # ===== 觸控板手勢 =====
+        # Pinch → deep zoom 縮放；Swipe 左右 → 切換圖片
+        self.grabGesture(Qt.GestureType.PinchGesture)
+        self.grabGesture(Qt.GestureType.SwipeGesture)
 
     # ===========================
     # Modify panel (non-destructive editing)
@@ -186,10 +224,8 @@ class GPUImageView(QOpenGLWidget):
                 return
             path = images[self.current_index]
         # Any prefetched baked tiles for this path are stale — drop them.
-        try:
+        with contextlib.suppress(Exception):
             self._prefetch_cache.pop(path, None)
-        except Exception:
-            pass
         # Force a fresh load — _clear_deep_zoom + load_deep_zoom_image will
         # ask recipe_store for the new recipe and apply it.
         if self.model.images and 0 <= self.current_index < len(self.model.images) \
@@ -248,11 +284,9 @@ class GPUImageView(QOpenGLWidget):
         # Clear any GL error left by the probes above — neither extension is
         # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
         # into the next real draw call.
-        try:
+        with contextlib.suppress(Exception):
             while glGetError() != GL_NO_ERROR:
                 pass
-        except Exception:
-            pass
 
         if total_kb <= 0:
             _log.info(
@@ -327,8 +361,14 @@ class GPUImageView(QOpenGLWidget):
             base_tile = 256
 
         scaled_tile = base_tile * self.tile_scale
-        cols = max(1, int(self.width() // scaled_tile))
+        pad = self.tile_padding
+        cell = scaled_tile + pad
+        cols = max(1, int(self.width() // cell))
         self.tile_rects = []
+        # Placeholders for tiles whose thumbnail hasn't arrived yet — rendered
+        # as dark squares so the grid layout is visible immediately. Stored
+        # in screen coords; consumed by ``_draw_tile_placeholders`` overlay.
+        self.placeholder_rects: list[tuple[float, float, float, float]] = []
 
         # 在迴圈外設定一次 GL 狀態，避免每張 tile 都重複呼叫
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
@@ -336,8 +376,23 @@ class GPUImageView(QOpenGLWidget):
 
         for i, path in enumerate(images):
 
-            # 沒載入完成就跳過
+            # 沒載入完成 → 畫預留格子佔位
             if path not in self.tile_cache:
+                row = i // cols
+                col = i % cols
+                x0 = col * cell + self.grid_offset_x
+                y0 = row * cell + self.grid_offset_y
+                x1 = x0 + scaled_tile
+                y1 = y0 + scaled_tile
+                if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
+                    # Dark placeholder via renderer (kept visually subtle)
+                    self.renderer.draw_colored_rect(
+                        x0, y0, x1, y1, 0.14, 0.14, 0.14, 1.0, filled=True
+                    )
+                    self.renderer.draw_colored_rect(
+                        x0, y0, x1, y1, 0.28, 0.28, 0.28, 1.0, filled=False
+                    )
+                    self.placeholder_rects.append((x0, y0, x1, y1))
                 continue
 
             img_data = self.tile_cache[path]
@@ -345,8 +400,8 @@ class GPUImageView(QOpenGLWidget):
             row = i // cols
             col = i % cols
 
-            x0 = col * scaled_tile + self.grid_offset_x
-            y0 = row * scaled_tile + self.grid_offset_y
+            x0 = col * cell + self.grid_offset_x
+            y0 = row * cell + self.grid_offset_y
             x1 = x0 + img_data.shape[1] * self.tile_scale
             y1 = y0 + img_data.shape[0] * self.tile_scale
 
@@ -629,7 +684,11 @@ class GPUImageView(QOpenGLWidget):
         need_zoom = (not self.tile_grid_mode) and self.deep_zoom
         need_hist = need_zoom and self._show_histogram
         need_anim = self._animation and self._animation.is_animated
-        if not (need_labels or need_zoom or need_hist or need_anim):
+        need_osd = need_zoom and self._show_osd
+        need_hud = self._show_debug_hud
+        need_pixel = need_zoom and self._pixel_view and self.zoom >= 4.0
+        if not (need_labels or need_zoom or need_hist or need_anim
+                or need_osd or need_hud or need_pixel):
             return
 
         # 在獨立 QImage 上以裝置解析度繪製，避免 QOpenGLWidget FBO 模糊
@@ -645,12 +704,20 @@ class GPUImageView(QOpenGLWidget):
 
         if need_labels:
             self._draw_tile_labels(p)
+            self._draw_tile_badges(p)
+            self._draw_tile_placeholders(p)
         if need_zoom:
             self._draw_zoom_indicator(p)
         if need_hist:
             self._draw_histogram(p)
         if need_anim:
             self._draw_anim_indicator(p)
+        if need_osd:
+            self._draw_osd(p)
+        if need_hud:
+            self._draw_debug_hud(p)
+        if need_pixel:
+            self._draw_pixel_view(p)
 
         p.end()
         painter.drawImage(0, 0, img)
@@ -662,7 +729,7 @@ class GPUImageView(QOpenGLWidget):
         painter.setFont(font)
         fm = painter.fontMetrics()
 
-        for x0, y0, x1, y1, path in self.tile_rects:
+        for x0, _y0, x1, y1, path in self.tile_rects:
             name = Path(path).stem
             tw = x1 - x0
             elided = fm.elidedText(name, Qt.TextElideMode.ElideRight, int(tw))
@@ -675,6 +742,118 @@ class GPUImageView(QOpenGLWidget):
                 # 文字
                 painter.setPen(QColor(220, 220, 220))
                 painter.drawText(tx, ty, elided)
+
+    def _draw_tile_badges(self, painter: QPainter):
+        """在每個縮圖角落繪製評分/收藏/書籤/色彩標籤徽章."""
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        from Imervue.user_settings.bookmark import is_bookmarked
+        from Imervue.user_settings.color_labels import COLOR_RGB, _store as _color_store
+
+        ratings = user_setting_dict.get("image_ratings", {}) or {}
+        favs = user_setting_dict.get("image_favorites", set())
+        if not isinstance(favs, set):
+            # settings may have been serialized as list
+            try:
+                favs = set(favs)
+            except TypeError:
+                favs = set()
+        color_store = _color_store()
+
+        font = QFont("Segoe UI")
+        font.setPixelSize(11)
+        font.setWeight(QFont.Weight.Bold)
+        painter.setFont(font)
+
+        for x0, y0, x1, y1, path in self.tile_rects:
+            # Left edge: colour label strip (6 px wide)
+            color_name = color_store.get(path)
+            if color_name and color_name in COLOR_RGB:
+                r, g, b = COLOR_RGB[color_name]
+                painter.fillRect(
+                    int(x0), int(y0), 6, int(y1 - y0),
+                    QColor(r, g, b, 230),
+                )
+
+            # Top-left: favorite heart — nudged right to dodge the colour strip
+            if path in favs:
+                offset = 10 if color_name else 4
+                painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18,
+                                 QColor(0, 0, 0, 140))
+                painter.setPen(QColor(255, 90, 120))
+                painter.drawText(int(x0 + offset + 2), int(y0 + 18), "\u2665")
+
+            # Top-right: bookmark
+            if is_bookmarked(path):
+                painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18,
+                                 QColor(0, 0, 0, 140))
+                painter.setPen(QColor(255, 210, 80))
+                painter.drawText(int(x1 - 20), int(y0 + 18), "\u2605")
+
+            # Bottom-left: star rating
+            rating = ratings.get(path, 0)
+            if rating and rating > 0:
+                badge_text = "\u2605" * int(rating)
+                fm = painter.fontMetrics()
+                tw = fm.horizontalAdvance(badge_text)
+                painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18,
+                                 QColor(0, 0, 0, 140))
+                painter.setPen(QColor(255, 210, 80))
+                painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
+
+    def _draw_tile_placeholders(self, painter: QPainter):
+        """Draw a subtle spinner-like dot pattern on unloaded tile slots.
+
+        The dots rotate via the animation frame counter so the user sees
+        activity while thumbnails stream in, reinforcing that something is
+        happening beyond the bottom progress bar.
+        """
+        rects = getattr(self, "placeholder_rects", None)
+        if not rects:
+            return
+
+        import time
+        phase = (time.monotonic() % 1.0) * 2 * 3.14159
+        painter.setPen(QColor(140, 140, 140, 200))
+        font = QFont("Segoe UI")
+        font.setPixelSize(11)
+        painter.setFont(font)
+
+        for x0, y0, x1, y1 in rects:
+            cx = (x0 + x1) / 2
+            cy = (y0 + y1) / 2
+            # Four dots spinning around centre; size proportional to tile
+            radius = min(x1 - x0, y1 - y0) * 0.12
+            for i in range(4):
+                angle = phase + i * (3.14159 / 2)
+                dot_x = cx + radius * 1.6 * np.cos(angle)
+                dot_y = cy + radius * 1.6 * np.sin(angle)
+                alpha = 80 + int(120 * (i / 3))
+                painter.setBrush(QColor(200, 200, 200, alpha))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(
+                    int(dot_x - radius / 3), int(dot_y - radius / 3),
+                    int(radius * 2 / 3), int(radius * 2 / 3),
+                )
+
+        # Trigger another paint on next frame while placeholders exist — cheap
+        # because only the overlay layer is repainted.
+        if not getattr(self, "_placeholder_timer", None):
+            from PySide6.QtCore import QTimer
+            t = QTimer(self)
+            t.setInterval(80)
+            t.timeout.connect(self._tick_placeholder)
+            self._placeholder_timer = t
+        if not self._placeholder_timer.isActive():
+            self._placeholder_timer.start()
+
+    def _tick_placeholder(self) -> None:
+        if self.tile_grid_mode and getattr(self, "placeholder_rects", None):
+            self.update()
+        else:
+            # No placeholders left — stop the spinner timer
+            timer = getattr(self, "_placeholder_timer", None)
+            if timer and timer.isActive():
+                timer.stop()
 
     def _draw_zoom_indicator(self, painter: QPainter):
         """在右下角小地圖上方顯示縮放百分比"""
@@ -754,7 +933,10 @@ class GPUImageView(QOpenGLWidget):
         frame_text = lang.get("anim_frame_indicator", "Frame {current}/{total}").format(
             current=anim.current_frame + 1, total=anim.total_frames
         )
-        status = lang.get("anim_play", "Play") if not anim.playing else lang.get("anim_pause", "Pause")
+        status = (
+            lang.get("anim_play", "Play") if not anim.playing
+            else lang.get("anim_pause", "Pause")
+        )
         speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
         text = f"{status}  |  {frame_text}  |  {speed_text}"
 
@@ -773,6 +955,247 @@ class GPUImageView(QOpenGLWidget):
         # 文字
         painter.setPen(QColor(230, 230, 230))
         painter.drawText(x, y, text)
+
+    # ---------------------------
+    # OSD + Debug HUD
+    # ---------------------------
+    def _current_path(self) -> str | None:
+        imgs = self.model.images
+        if imgs and 0 <= self.current_index < len(imgs):
+            return imgs[self.current_index]
+        return None
+
+    def _draw_osd(self, painter: QPainter):
+        """F3 OSD — 右上角顯示檔名 / 尺寸 / 格式 / 檔案大小."""
+        path = self._current_path()
+        if not path or not self.deep_zoom:
+            return
+
+        base = self.deep_zoom.levels[0]
+        h, w = base.shape[:2]
+
+        try:
+            size_bytes = os.path.getsize(path)
+            if size_bytes >= 1024 * 1024:
+                size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
+            else:
+                size_str = f"{size_bytes / 1024:.1f} KB"
+        except OSError:
+            size_str = "—"
+
+        lines = [
+            Path(path).name,
+            f"{w} × {h}",
+            f"{Path(path).suffix.lstrip('.').upper() or '—'}   {size_str}",
+        ]
+
+        font = QFont("Segoe UI")
+        font.setPixelSize(13)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+
+        pad_x, pad_y = 10, 6
+        line_h = fm.height()
+        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
+        box_h = line_h * len(lines) + pad_y * 2
+
+        # 右上角，避開 histogram(左上) 與 minimap(右下)
+        x = self.width() - box_w - 12
+        y = 12
+
+        painter.fillRect(x, y, box_w, box_h, QColor(0, 0, 0, 170))
+        painter.setPen(QColor(230, 230, 230))
+        for i, line in enumerate(lines):
+            painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
+
+    def _draw_debug_hud(self, painter: QPainter):
+        """Ctrl+F3 Debug HUD — 顯示 VRAM / cache / 執行緒池."""
+        vram_mb = self._vram_usage / (1024 * 1024)
+        limit_mb = self._vram_limit / (1024 * 1024)
+        pct = (self._vram_usage / self._vram_limit * 100) if self._vram_limit else 0
+        tile_count = len(self.tile_textures)
+        cache_count = len(self.tile_cache)
+        prefetch_count = len(self._prefetch_cache)
+        active_threads = self.thread_pool.activeThreadCount()
+        max_threads = self.thread_pool.maxThreadCount()
+
+        lines = [
+            f"VRAM  {vram_mb:6.1f} / {limit_mb:6.1f} MB  ({pct:4.1f}%)",
+            f"Tile tex   {tile_count:4d}   cache {cache_count:4d}",
+            f"Prefetch   {prefetch_count:4d}   workers {len(self._prefetch_workers)}",
+            f"Threads    {active_threads:4d} / {max_threads}",
+            f"Gen {self._load_generation}   Zoom {self.zoom * 100:.1f}%",
+        ]
+
+        font = QFont("Consolas")
+        font.setPixelSize(12)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+
+        pad_x, pad_y = 8, 5
+        line_h = fm.height()
+        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
+        box_h = line_h * len(lines) + pad_y * 2
+
+        # 左下角 — 不擋直方圖 / minimap / OSD
+        x = 12
+        y = self.height() - box_h - 12
+
+        painter.fillRect(x, y, box_w, box_h, QColor(0, 0, 0, 180))
+        painter.setPen(QColor(120, 220, 120))
+        for i, line in enumerate(lines):
+            painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
+
+    def _draw_pixel_view(self, painter: QPainter):
+        """Shift+P — 在 zoom ≥ 4x 時繪製像素網格 + hover pixel RGB.
+
+        Only active when the per-pixel square is big enough (>= 4 screen
+        pixels) so the grid doesn't drown in moiré. Hovered pixel value is
+        shown in a small HUD near the cursor.
+        """
+        if not self.deep_zoom or self.zoom < 4.0:
+            return
+
+        base = self.deep_zoom.levels[0]
+        h, w = base.shape[:2]
+
+        # Viewport 在原圖座標
+        left = -self.dz_offset_x / self.zoom
+        top = -self.dz_offset_y / self.zoom
+        right = left + self.width() / self.zoom
+        bottom = top + self.height() / self.zoom
+
+        x0 = max(0, int(left))
+        y0 = max(0, int(top))
+        x1 = min(w, int(right) + 1)
+        y1 = min(h, int(bottom) + 1)
+
+        # 整張圖 zoom 很大時，格子線反而會變太密；限制繪製格子數量
+        if (x1 - x0) * (y1 - y0) > 40000:
+            pass  # 只畫 hover 的 RGB，不畫整張網格
+        else:
+            pen = QPen(QColor(128, 128, 128, 120))
+            pen.setWidth(0)
+            painter.setPen(pen)
+            # 垂直線
+            for gx in range(x0, x1 + 1):
+                sx = gx * self.zoom + self.dz_offset_x
+                painter.drawLine(int(sx), int(y0 * self.zoom + self.dz_offset_y),
+                                 int(sx), int(y1 * self.zoom + self.dz_offset_y))
+            # 水平線
+            for gy in range(y0, y1 + 1):
+                sy = gy * self.zoom + self.dz_offset_y
+                painter.drawLine(int(x0 * self.zoom + self.dz_offset_x), int(sy),
+                                 int(x1 * self.zoom + self.dz_offset_x), int(sy))
+
+        # Hover pixel HUD
+        if self._hover_image_xy is not None:
+            cx, cy = self._hover_image_xy
+            if 0 <= cx < w and 0 <= cy < h:
+                pixel = base[cy, cx]
+                r = int(pixel[0])
+                g = int(pixel[1])
+                b = int(pixel[2])
+                a = int(pixel[3]) if base.shape[2] >= 4 else 255
+                hex_str = f"#{r:02X}{g:02X}{b:02X}"
+
+                font = QFont("Consolas")
+                font.setPixelSize(12)
+                painter.setFont(font)
+                fm = painter.fontMetrics()
+
+                lines = [
+                    f"({cx}, {cy})",
+                    f"RGB {r:3d} {g:3d} {b:3d}",
+                    f"A   {a:3d}    {hex_str}",
+                ]
+                pad_x, pad_y = 6, 4
+                line_h = fm.height()
+                box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
+                box_h = line_h * len(lines) + pad_y * 2
+
+                # Highlight the target pixel square
+                sx = cx * self.zoom + self.dz_offset_x
+                sy = cy * self.zoom + self.dz_offset_y
+                size = self.zoom
+                pen = QPen(QColor(255, 220, 0, 230))
+                pen.setWidth(2)
+                painter.setPen(pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawRect(int(sx), int(sy), int(size), int(size))
+
+                # Place HUD offset from cursor, clamped to viewport
+                hx = int(sx) + int(size) + 12
+                hy = int(sy)
+                if hx + box_w > self.width():
+                    hx = int(sx) - box_w - 12
+                if hy + box_h > self.height():
+                    hy = self.height() - box_h - 4
+                hy = max(hy, 0)
+
+                painter.fillRect(hx, hy, box_w, box_h, QColor(0, 0, 0, 190))
+                painter.setPen(QColor(240, 240, 240))
+                for i, line in enumerate(lines):
+                    painter.drawText(hx + pad_x, hy + pad_y + fm.ascent() + i * line_h, line)
+
+                # Colour swatch
+                painter.fillRect(
+                    hx + box_w - 20, hy + pad_y, 14, 14, QColor(r, g, b)
+                )
+
+    # ---------------------------
+    # Status bar sync
+    # ---------------------------
+    def _update_status_info(self):
+        """Push current image / zoom / cursor info to the main-window status bar."""
+        mw = self.main_window
+        if not hasattr(mw, "update_status_info"):
+            return
+        images = self.model.images
+        idx = self.current_index
+
+        if not self.deep_zoom or not images or idx >= len(images):
+            # Tile grid / no image — only index text is meaningful
+            if images:
+                mw.update_status_info(
+                    index=f"{idx + 1 if self.deep_zoom else len(images)}/{len(images)}"
+                    if self.deep_zoom else f"— / {len(images)}",
+                    resolution="", size="", zoom="", cursor="",
+                )
+            else:
+                mw.clear_status_info()
+            return
+
+        path = images[idx]
+        base = self.deep_zoom.levels[0]
+        h, w = base.shape[:2]
+
+        try:
+            size_bytes = os.path.getsize(path)
+            if size_bytes >= 1024 * 1024:
+                size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
+            else:
+                size_str = f"{size_bytes / 1024:.1f} KB"
+        except OSError:
+            size_str = ""
+
+        cursor_str = ""
+        if self._hover_image_xy is not None:
+            cx, cy = self._hover_image_xy
+            if 0 <= cx < w and 0 <= cy < h:
+                cursor_str = f"x={cx}, y={cy}"
+
+        from Imervue.user_settings.color_labels import get_color_label
+        color_label = get_color_label(path) or ""
+
+        mw.update_status_info(
+            index=f"{idx + 1}/{len(images)}",
+            resolution=f"{w}×{h}",
+            size=size_str,
+            zoom=f"{self.zoom * 100:.0f}%",
+            cursor=cursor_str,
+            label=color_label,
+        )
 
     # ---------------------------
     # Fit to Window
@@ -895,14 +1318,16 @@ class GPUImageView(QOpenGLWidget):
         else:
             base_tile = 256
         scaled_tile = base_tile * self.tile_scale
-        cols = max(1, int(self.width() // scaled_tile))
+        pad = self.tile_padding
+        cell = scaled_tile + pad
+        cols = max(1, int(self.width() // cell))
         for i, p in enumerate(images):
             if p not in self.tile_cache:
                 continue
             row = i // cols
             col = i % cols
-            x0 = col * scaled_tile + self.grid_offset_x
-            y0 = row * scaled_tile + self.grid_offset_y
+            x0 = col * cell + self.grid_offset_x
+            y0 = row * cell + self.grid_offset_y
             img = self.tile_cache[p]
             x1 = x0 + img.shape[1] * self.tile_scale
             y1 = y0 + img.shape[0] * self.tile_scale
@@ -937,6 +1362,11 @@ class GPUImageView(QOpenGLWidget):
             self._minimap_dzi = None
         # 離開 deep zoom → 收起「修改」選單（若主視窗還在）。
         self._set_modify_menu_visible(False)
+        # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
+        self._hover_image_xy = None
+        if hasattr(self.main_window, "clear_status_info"):
+            with contextlib.suppress(Exception):
+                self.main_window.clear_status_info()
 
     def _set_modify_menu_visible(self, visible: bool) -> None:
         """Toggle the Deep-Zoom-only Modify menu on the main window's menubar.
@@ -947,39 +1377,31 @@ class GPUImageView(QOpenGLWidget):
         action = getattr(self.main_window, "_modify_menu_action", None)
         if action is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             action.setVisible(bool(visible))
-        except Exception:
-            pass
 
     # ---------------------------
     # Worker 取消
     # ---------------------------
     def _cancel_tile_workers(self):
         for worker in self.active_tile_workers:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 worker.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             worker.abort()
         self.active_tile_workers.clear()
 
     def _cancel_deep_zoom_worker(self):
         if self.active_deep_zoom_worker is not None:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self.active_deep_zoom_worker.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self.active_deep_zoom_worker.abort()
             self.active_deep_zoom_worker = None
 
     def _cancel_all_prefetch(self):
         """取消所有預載 worker 並清空快取"""
         for w in self._prefetch_workers.values():
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 w.signals.finished.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             w.abort()
         self._prefetch_workers.clear()
         self._prefetch_cache.clear()
@@ -1013,6 +1435,11 @@ class GPUImageView(QOpenGLWidget):
         if hasattr(self.main_window, 'show_progress'):
             self.main_window.show_progress(0, self._tile_load_total)
 
+        # 同步 list view（若處於 list 模式或之後會切換）
+        if hasattr(self.main_window, "refresh_list_view"):
+            with contextlib.suppress(Exception):
+                self.main_window.refresh_list_view()
+
         self.update()
 
     def _on_thumbnail_loaded(self, img_data, path, generation):
@@ -1042,6 +1469,196 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # DeepZoom 非同步載入 + 預載
     # ---------------------------
+    # ---------------------------
+    # Hover preview
+    # ---------------------------
+    def _ensure_hover_controller(self):
+        if self._hover_controller is None:
+            from Imervue.gui.hover_preview import HoverPreviewController
+            self._hover_controller = HoverPreviewController()
+        return self._hover_controller
+
+    def _update_hover_preview(self, event) -> None:
+        """Detect which tile (if any) sits under the cursor and arm the popup."""
+        # Skip while the user is actively dragging or selecting — popup would
+        # get in the way of the drag-select rectangle
+        if self._drag_selecting or self._middle_dragging or self._drag_start_pos:
+            self._cancel_hover_preview()
+            return
+
+        mx, my = event.position().x(), event.position().y()
+        hovered_path: str | None = None
+        for x0, y0, x1, y1, path in self.tile_rects:
+            if x0 <= mx <= x1 and y0 <= my <= y1:
+                hovered_path = path
+                break
+
+        if hovered_path is None:
+            self._cancel_hover_preview()
+            return
+
+        if hovered_path != self._hover_last_path:
+            self._hover_last_path = hovered_path
+            ctrl = self._ensure_hover_controller()
+            ctrl.arm(hovered_path, event.globalPosition().toPoint())
+
+    def _cancel_hover_preview(self) -> None:
+        self._hover_last_path = None
+        if self._hover_controller is not None:
+            self._hover_controller.disarm()
+
+    def leaveEvent(self, event):
+        self._cancel_hover_preview()
+        super().leaveEvent(event)
+
+    # ---------------------------
+    # 瀏覽歷史 (Alt+←/→)
+    # ---------------------------
+    _HISTORY_MAX = 200
+
+    def _push_history(self, path: str) -> None:
+        """Append a new image to the history unless we're navigating.
+
+        If the user is in the middle of history (has gone back) and picks a
+        new image manually, that truncates the forward entries — matches
+        browser behaviour and avoids a broken forward button.
+        """
+        if self._history_navigating or not path:
+            return
+        # Deduplicate adjacent entries (reloads shouldn't double-push)
+        if (
+            self._history
+            and self._history_pos >= 0
+            and self._history[self._history_pos] == path
+        ):
+            return
+        # Drop forward history when branching
+        if self._history_pos < len(self._history) - 1:
+            del self._history[self._history_pos + 1:]
+        self._history.append(path)
+        # Cap size
+        if len(self._history) > self._HISTORY_MAX:
+            overflow = len(self._history) - self._HISTORY_MAX
+            del self._history[:overflow]
+            self._history_pos = len(self._history) - 1
+        else:
+            self._history_pos = len(self._history) - 1
+
+    def history_back(self) -> bool:
+        """Jump to the previous image in history. Returns True on success."""
+        if self._history_pos <= 0:
+            return False
+        self._history_pos -= 1
+        self._navigate_to_history()
+        return True
+
+    def history_forward(self) -> bool:
+        """Jump to the next image in history. Returns True on success."""
+        if self._history_pos >= len(self._history) - 1:
+            return False
+        self._history_pos += 1
+        self._navigate_to_history()
+        return True
+
+    def _navigate_to_history(self) -> None:
+        """Load the image at ``_history_pos`` without re-pushing to stack."""
+        path = self._history[self._history_pos]
+        if not Path(path).is_file():
+            return
+        images = self.model.images
+        if path in images:
+            self.current_index = images.index(path)
+        self._history_navigating = True
+        try:
+            self._clear_deep_zoom()
+            self.tile_grid_mode = False
+            self.load_deep_zoom_image(path)
+        finally:
+            self._history_navigating = False
+
+    # ---------------------------
+    # 顏色標籤 (F1-F5)
+    # ---------------------------
+    def _apply_color_label(self, color: str) -> None:
+        """Toggle ``color`` on the currently-active target(s).
+
+        Priority:
+          1. Tile selection mode (multiple tiles selected) → apply to all.
+          2. Deep zoom → apply to the visible image.
+          3. Tile grid with no selection → apply to the image under cursor,
+             or no-op if no tile is hovered.
+        """
+        from Imervue.user_settings.color_labels import toggle_color_label, set_color_label
+
+        targets: list[str] = []
+        if self.tile_grid_mode and self.tile_selection_mode and self.selected_tiles:
+            targets = list(self.selected_tiles)
+        elif self.deep_zoom:
+            images = self.model.images
+            if images and 0 <= self.current_index < len(images):
+                targets = [images[self.current_index]]
+        elif self.tile_grid_mode and self._hover_last_path:
+            targets = [self._hover_last_path]
+
+        if not targets:
+            return
+
+        # Single-target behaves as toggle; multi-target applies uniformly.
+        if len(targets) == 1:
+            new_color = toggle_color_label(targets[0], color)
+            self._toast_color_change(targets[0], new_color)
+        else:
+            for p in targets:
+                set_color_label(p, color)
+            self._toast_color_batch(color, len(targets))
+        # Status bar should reflect the new label for the deep-zoomed image
+        if self.deep_zoom:
+            self._update_status_info()
+        self.update()
+
+    def _toast_color_change(self, path: str, new_color: str | None) -> None:
+        if not hasattr(self.main_window, "toast"):
+            return
+        lang = self.main_window.language_wrapper.language_word_dict
+        if new_color is None:
+            self.main_window.toast.info(
+                lang.get("color_label_cleared", "Colour label cleared")
+            )
+            return
+        label = lang.get(f"color_label_{new_color}", new_color.title())
+        self.main_window.toast.info(
+            lang.get("color_label_set", "Colour: {color}").format(color=label)
+        )
+
+    def _toast_color_batch(self, color: str, count: int) -> None:
+        if not hasattr(self.main_window, "toast"):
+            return
+        lang = self.main_window.language_wrapper.language_word_dict
+        label = lang.get(f"color_label_{color}", color.title())
+        self.main_window.toast.info(
+            lang.get("color_label_batch", "{count} images → {color}")
+                .format(count=count, color=label)
+        )
+
+    # ---------------------------
+    # 隨機圖片 (X)
+    # ---------------------------
+    def jump_to_random_image(self) -> None:
+        """Jump to a random image in the current list, avoiding re-pick if possible."""
+        import random
+        images = self.model.images
+        if not images:
+            return
+        if len(images) == 1:
+            self.current_index = 0
+            self.load_deep_zoom_image(images[0])
+            return
+        choices = [i for i in range(len(images)) if i != self.current_index]
+        idx = random.choice(choices)
+        self.current_index = idx
+        self.tile_grid_mode = False
+        self.load_deep_zoom_image(images[idx])
+
     def _save_view_state(self):
         """儲存當前圖片的縮放與位置"""
         images = self.model.images
@@ -1072,6 +1689,7 @@ class GPUImageView(QOpenGLWidget):
         self._cancel_deep_zoom_worker()
         self._clear_deep_zoom()
 
+        self._push_history(path)
         self._restore_view_state(path)
 
         # 進入 deep zoom 模式 → 顯示「修改」選單。
@@ -1089,6 +1707,7 @@ class GPUImageView(QOpenGLWidget):
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
+            self._update_status_info()
             self.update()
             return
 
@@ -1140,6 +1759,7 @@ class GPUImageView(QOpenGLWidget):
                 )
             )
 
+        self._update_status_info()
         self.update()
 
     def _init_animation(self, path: str):
@@ -1270,10 +1890,12 @@ class GPUImageView(QOpenGLWidget):
             self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
             self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
 
+            self._update_status_info()
             self.update()
 
     def mousePressEvent(self, event):
         self.last_pos = event.position()
+        self._cancel_hover_preview()
 
         # ===== 中鍵拖動 =====
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -1300,6 +1922,18 @@ class GPUImageView(QOpenGLWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        # ===== 更新 hover 圖片像素座標（status bar 用）=====
+        if self.deep_zoom and not self.tile_grid_mode:
+            mx, my = event.position().x(), event.position().y()
+            img_x = int((mx - self.dz_offset_x) / max(self.zoom, 1e-9))
+            img_y = int((my - self.dz_offset_y) / max(self.zoom, 1e-9))
+            self._hover_image_xy = (img_x, img_y)
+            self._update_status_info()
+
+        # ===== Hover preview (tile grid only) =====
+        if self.tile_grid_mode:
+            self._update_hover_preview(event)
+
         if self.last_pos is None:
             self.last_pos = event.position()
             return
@@ -1320,23 +1954,25 @@ class GPUImageView(QOpenGLWidget):
             return
 
         # ===== 左鍵拖曳框選 =====
-        if self.tile_grid_mode and event.buttons() & Qt.MouseButton.LeftButton:
-            if self._drag_start_pos:
+        if (
+            self.tile_grid_mode
+            and event.buttons() & Qt.MouseButton.LeftButton
+            and self._drag_start_pos
+        ):
+            move_delta = event.position() - self._drag_start_pos
+            threshold = QApplication.startDragDistance()
 
-                move_delta = event.position() - self._drag_start_pos
-                threshold = QApplication.startDragDistance()
+            # 還沒超過系統拖曳門檻
+            if not self._drag_selecting:
+                if move_delta.manhattanLength() < threshold:
+                    return
 
-                # 還沒超過系統拖曳門檻
-                if not self._drag_selecting:
-                    if move_delta.manhattanLength() < threshold:
-                        return
+                # 超過門檻才真正開始框選
+                self.tile_selection_mode = True
+                self._drag_selecting = True
 
-                    # 超過門檻才真正開始框選
-                    self.tile_selection_mode = True
-                    self._drag_selecting = True
-
-                self._drag_end_pos = event.position()
-                self.update()
+            self._drag_end_pos = event.position()
+            self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -1395,11 +2031,38 @@ class GPUImageView(QOpenGLWidget):
         modifiers = event.modifiers()
 
         # Plugin hook: key press
-        if hasattr(self.main_window, "plugin_manager"):
-            if self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self):
-                return
+        if (
+            hasattr(self.main_window, "plugin_manager")
+            and self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self)
+        ):
+            return
 
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
+
+        # ===== F8 — OSD / Debug HUD =====
+        # Moved from F3 to free up F1-F5 for colour labels (Lightroom-style).
+        if key == Qt.Key.Key_F8:
+            if modifiers & Qt.KeyboardModifier.ControlModifier:
+                self._show_debug_hud = not self._show_debug_hud
+            else:
+                self._show_osd = not self._show_osd
+            self.update()
+            return
+
+        # ===== F1-F5 — colour labels (red/yellow/green/blue/purple) =====
+        # Toggles: pressing the same F-key again clears the flag.
+        _COLOR_KEYS = {
+            Qt.Key.Key_F1: "red",
+            Qt.Key.Key_F2: "yellow",
+            Qt.Key.Key_F3: "green",
+            Qt.Key.Key_F4: "blue",
+            Qt.Key.Key_F5: "purple",
+        }
+        if key in _COLOR_KEYS and not (modifiers & (
+                Qt.KeyboardModifier.ControlModifier
+                | Qt.KeyboardModifier.AltModifier)):
+            self._apply_color_label(_COLOR_KEYS[key])
+            return
 
         # ===== Escape — always hardcoded (not remappable) =====
         if key == Qt.Key.Key_Escape:
@@ -1424,11 +2087,23 @@ class GPUImageView(QOpenGLWidget):
                     self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
                     self.tile_scale = self._saved_tile_state["tile_scale"]
                     self._saved_tile_state = None
+                # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
+                if hasattr(self.main_window, "after_deep_zoom_escape"):
+                    self.main_window.after_deep_zoom_escape()
                 self.update()
                 return
 
         # ===== Arrow keys — always hardcoded (not remappable) =====
         if key in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right):
+            ctrl = modifiers & Qt.KeyboardModifier.ControlModifier
+            # Ctrl+Shift+←/→ → 跨資料夾導航（無論 deep zoom 或 tile grid）
+            if ctrl and shift and key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+                if key == Qt.Key.Key_Right:
+                    switch_to_next_folder(main_gui=self)
+                else:
+                    switch_to_previous_folder(main_gui=self)
+                return
+
             step = self.thumbnail_size or 1024
             fine_step = int(step / 2)
             move_step = fine_step if shift else step
@@ -1481,9 +2156,90 @@ class GPUImageView(QOpenGLWidget):
             open_search_dialog(self)
             return
 
+        # --- Go to index (Ctrl+G) ---
+        if action == "goto":
+            open_goto_dialog(self)
+            return
+
         # --- Fullscreen ---
         if action == "fullscreen":
             toggle_fullscreen(self)
+            return
+
+        # --- Theater mode (Shift+Tab) ---
+        if action == "theater":
+            if hasattr(self.main_window, "toggle_theater_mode"):
+                self.main_window.toggle_theater_mode()
+            return
+
+        # --- Pixel view (Shift+P) ---
+        if action == "pixel_view":
+            if self.deep_zoom:
+                self._pixel_view = not self._pixel_view
+                if self._pixel_view and hasattr(self.main_window, "toast"):
+                    lang = self.main_window.language_wrapper.language_word_dict
+                    self.main_window.toast.info(
+                        lang.get("pixel_view_hint",
+                                 "Pixel view — zoom in to ≥400% to see grid")
+                    )
+                self.update()
+            return
+
+        # --- History navigation (Alt+←/→) ---
+        if action == "history_back":
+            if not self.history_back():
+                lang = self.main_window.language_wrapper.language_word_dict
+                if hasattr(self.main_window, "toast"):
+                    self.main_window.toast.info(
+                        lang.get("history_at_start", "At start of history")
+                    )
+            return
+        if action == "history_forward":
+            if not self.history_forward():
+                lang = self.main_window.language_wrapper.language_word_dict
+                if hasattr(self.main_window, "toast"):
+                    self.main_window.toast.info(
+                        lang.get("history_at_end", "At end of history")
+                    )
+            return
+
+        # --- Random image (X) ---
+        if action == "random_image":
+            self.jump_to_random_image()
+            return
+
+        # --- Split view (Shift+S) ---
+        if action == "split_view":
+            if hasattr(self.main_window, "activate_dual_view"):
+                self.main_window.activate_dual_view("split")
+            return
+
+        # --- Dual page manga (Shift+D) ---
+        if action == "dual_page":
+            if hasattr(self.main_window, "activate_dual_view"):
+                # Toggle between LTR and RTL with Ctrl
+                mode = "manga_rtl" if modifiers & Qt.KeyboardModifier.ControlModifier else "manga"
+                self.main_window.activate_dual_view(mode)
+            return
+
+        # --- Multi-monitor window (Ctrl+Shift+M) ---
+        if action == "multi_monitor":
+            if hasattr(self.main_window, "toggle_multi_monitor_window"):
+                self.main_window.toggle_multi_monitor_window()
+            return
+
+        # --- Color mode cycle (Shift+M) ---
+        if action == "color_mode_cycle":
+            self.renderer.color_mode = (self.renderer.color_mode + 1) % 4
+            names = ["Normal", "Grayscale", "Invert", "Sepia"]
+            keys = ["color_mode_normal", "color_mode_grayscale",
+                    "color_mode_invert", "color_mode_sepia"]
+            if hasattr(self.main_window, "toast"):
+                lang = self.main_window.language_wrapper.language_word_dict
+                label = lang.get(keys[self.renderer.color_mode],
+                                 names[self.renderer.color_mode])
+                self.main_window.toast.info(label)
+            self.update()
             return
 
         # --- Edit / Annotate ---
@@ -1600,6 +2356,71 @@ class GPUImageView(QOpenGLWidget):
                 return
 
     # ===========================
+    # Touchpad / Touch gestures
+    # ===========================
+    def event(self, ev):
+        from PySide6.QtCore import QEvent
+        if ev.type() == QEvent.Type.Gesture:
+            self._handle_gesture_event(ev)
+            return True
+        return super().event(ev)
+
+    def _handle_gesture_event(self, event) -> None:
+        from PySide6.QtWidgets import QPinchGesture, QSwipeGesture
+
+        pinch = event.gesture(Qt.GestureType.PinchGesture)
+        if isinstance(pinch, QPinchGesture):
+            self._apply_pinch(pinch)
+
+        swipe = event.gesture(Qt.GestureType.SwipeGesture)
+        if isinstance(swipe, QSwipeGesture):
+            self._apply_swipe(swipe)
+
+    def _apply_pinch(self, pinch) -> None:
+        """Two-finger pinch → deep-zoom scale anchored at pinch center."""
+        if not self.deep_zoom:
+            return
+        from PySide6.QtWidgets import QPinchGesture
+        change = pinch.changeFlags()
+        if not (change & QPinchGesture.ChangeFlag.ScaleFactorChanged):
+            return
+        scale_factor = pinch.scaleFactor()
+        if scale_factor <= 0:
+            return
+        _ZOOM_MIN, _ZOOM_MAX = 0.05, 50.0
+        old_zoom = self.zoom
+        new_zoom = max(_ZOOM_MIN, min(_ZOOM_MAX, old_zoom * scale_factor))
+        if new_zoom == old_zoom:
+            return
+        # Anchor to center-of-pinch if Qt reported one, else widget center
+        center = pinch.centerPoint()
+        cx = center.x() if center is not None else self.width() / 2
+        cy = center.y() if center is not None else self.height() / 2
+        # QPinchGesture reports global coords — convert to local
+        with contextlib.suppress(Exception):
+            local = self.mapFromGlobal(center.toPoint())
+            cx, cy = local.x(), local.y()
+        ratio = new_zoom / old_zoom
+        self.zoom = new_zoom
+        self.dz_offset_x = cx - (cx - self.dz_offset_x) * ratio
+        self.dz_offset_y = cy - (cy - self.dz_offset_y) * ratio
+        self._update_status_info()
+        self.update()
+
+    def _apply_swipe(self, swipe) -> None:
+        """Horizontal swipe → previous / next image in deep zoom."""
+        if not self.deep_zoom:
+            return
+        from PySide6.QtWidgets import QSwipeGesture
+        if swipe.state() != Qt.GestureState.GestureFinished:
+            return
+        direction = swipe.horizontalDirection()
+        if direction == QSwipeGesture.SwipeDirection.Left:
+            switch_to_next_image(main_gui=self)
+        elif direction == QSwipeGesture.SwipeDirection.Right:
+            switch_to_previous_image(main_gui=self)
+
+    # ===========================
     # Drag & Drop
     # ===========================
     def dragEnterEvent(self, event):
@@ -1634,8 +2455,11 @@ class GPUImageView(QOpenGLWidget):
             mw.tree.setRootIndex(mw.model.index(first))
             open_path(main_gui=self, path=first)
             mw.filename_label.setText(
-                lang.get("main_window_current_folder_format", "Current Folder: {path}").format(path=first)
+                lang.get("main_window_current_folder_format", "Current Folder: {path}")
+                .format(path=first)
             )
+            if hasattr(mw, "breadcrumb"):
+                mw.breadcrumb.set_path(first)
             add_recent_folder(first)
             user_setting_dict["user_last_folder"] = first
             mw.watch_folder(first)
@@ -1644,6 +2468,8 @@ class GPUImageView(QOpenGLWidget):
             mw.model.setRootPath(folder)
             mw.tree.setRootIndex(mw.model.index(folder))
             open_path(main_gui=self, path=first)
+            if hasattr(mw, "breadcrumb"):
+                mw.breadcrumb.set_path(folder)
             add_recent_image(first)
             user_setting_dict["user_last_folder"] = folder
             mw.watch_folder(folder)

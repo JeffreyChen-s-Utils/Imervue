@@ -41,3 +41,61 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["build", "dist", ".venv", "venv", "docs/_build"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",   # pycodestyle / pyflakes
+    "B",             # flake8-bugbear
+    "SIM",           # flake8-simplify
+    "UP",            # pyupgrade
+    "PL",            # pylint
+    "S",             # flake8-bandit (security)
+    "C90",           # mccabe complexity
+    "N",             # pep8-naming
+]
+ignore = [
+    # Qt override methods must be camelCase (mousePressEvent, paintEvent, ...)
+    "N802", "N803", "N806", "N815",
+    # Module/package name is the project brand "Imervue" — cannot be renamed
+    "N999",
+    # Local imports are often needed to break Qt circular imports
+    "PLC0415",
+    # Magic values are acceptable in UI constants (pixel sizes, timings)
+    "PLR2004",
+    # Non-crypto random is used for UI features (random image, annotation colours, IDs)
+    "S311",
+    # Lambdas wrapping signal slots are intentional — they drop the bool
+    # ``checked`` argument that Qt ``triggered``/``toggled`` signals pass.
+    "PLW0108",
+    # Module-level caches (save-timer, bookmark set) genuinely need ``global``
+    # for lazy init / invalidation.
+    "PLW0602", "PLW0603",
+    # subprocess is only used with static argument lists for trusted OS tools
+    # (explorer, xdg-open, osascript, gsettings, pip inside frozen venv)
+    "S603", "S607",
+    # Plugin downloader only hits https:// URLs from a hard-coded allowlist
+    "S310",
+    # os.startfile / Popen without shell is intentional for "reveal in folder"
+    "S606",
+    # Function-shape complexity limits — Qt GUI setup naturally has many
+    # statements / args; enforce cognitive complexity (C901) instead.
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+# McCabe ≤ 16 matches SonarQube's default cognitive-complexity threshold, and
+# keeps paint_tile_grid / _draw_freehand_qt (both 16) within budget while
+# still flagging runaway functions like mouseMoveEvent (23) and
+# keyPressEvent (87) that are suppressed per-file below.
+mccabe.max-complexity = 16
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "PLR2004", "PLR0913", "PLR0915", "E501"]
+"Imervue/multi_language/*.py" = ["E501"]
+"Imervue/gpu_image_view/gl_renderer.py" = ["E501", "F403", "F405", "E702"]  # OpenGL.GL wildcard + GLSL strings + glTexCoord/glVertex pairs
+"Imervue/gpu_image_view/gpu_image_view.py" = ["F403", "F405", "C901"]  # OpenGL.GL wildcard + Qt keyPressEvent dispatcher
+"Imervue/gui/annotation_dialog.py" = ["C901"]        # mouseMoveEvent Qt event state machine
+"Imervue/menu/tip_menu.py" = ["E501"]                # translated help strings

@@ -9,10 +9,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QFileDialog, QComboBox, QGroupBox, QRadioButton,
+    QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper

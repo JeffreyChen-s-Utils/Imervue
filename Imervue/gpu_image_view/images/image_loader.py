@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRunnable, Signal, QObject
 
 from Imervue.image.pyramid import DeepZoomImage
-from Imervue.image.tile_manager import TileManager
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -246,7 +245,9 @@ def open_path(main_gui: GPUImageView, path: str):
 
         # Plugin hook: folder opened
         if hasattr(main_gui.main_window, "plugin_manager"):
-            main_gui.main_window.plugin_manager.dispatch_folder_opened(str(path_obj), images, main_gui)
+            main_gui.main_window.plugin_manager.dispatch_folder_opened(
+                str(path_obj), images, main_gui
+            )
 
     elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:
 

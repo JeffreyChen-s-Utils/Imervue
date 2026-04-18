@@ -1,11 +1,7 @@
 """Tests for batch_ops helper functions (non-GUI parts)."""
-import os
 import shutil
 from pathlib import Path
 
-import pytest
-from PIL import Image
-import numpy as np
 
 
 class TestBatchRename:

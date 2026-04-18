@@ -5,7 +5,6 @@ Imports PySide6 for AnnotationCanvas; requires the ``qapp`` fixture.
 """
 from __future__ import annotations
 
-import os
 
 import numpy as np
 import pytest

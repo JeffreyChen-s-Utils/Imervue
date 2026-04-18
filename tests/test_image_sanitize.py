@@ -241,7 +241,8 @@ class TestSanitizeImage:
 
         out = sanitize_image(src, out_dir, "same")
         result = np.array(Image.open(out))
-        assert np.all(result[:, :, :3] == 200)
+        # LSB is scrambled to defeat stealth steganography — allow ±1.
+        assert np.all(np.abs(result[:, :, :3].astype(int) - 200) <= 1)
 
     def test_preserves_dimensions(self, tmp_path):
         src = str(tmp_path / "img.png")
@@ -378,8 +379,9 @@ class TestSanitizeImage:
                              trad_resampling=Image.Resampling.NEAREST)
         img = Image.open(out)
         assert img.size == (8, 8)
-        pixels = list(img.getdata())
-        assert all(p[:3] == (42, 42, 42) for p in pixels)
+        arr = np.asarray(img)
+        # LSB is scrambled to defeat stealth steganography — allow ±1.
+        assert np.all(np.abs(arr[..., :3].astype(int) - 42) <= 1)
 
     def test_traditional_no_upscale_when_large_enough(self, tmp_path):
         """Traditional upscale should skip when image already meets target."""
@@ -517,7 +519,7 @@ class TestTargetResolutions:
         assert TARGET_RESOLUTIONS[0][2] == 0
 
     def test_all_have_positive_or_zero_px(self):
-        for key, label, px in TARGET_RESOLUTIONS:
+        for _key, _label, px in TARGET_RESOLUTIONS:
             assert px >= 0
 
     def test_sorted_ascending(self):
@@ -685,3 +687,139 @@ class TestSanitizeWorker:
         worker.run()
 
         assert results == [(1, 1)]  # 1 success, 1 failed
+
+    def test_recursive_mirrors_subfolders(self, tmp_path):
+        """With src_root set, output preserves the source subfolder layout."""
+        src = tmp_path / "src"
+        (src / "a" / "b").mkdir(parents=True)
+        (src / "c").mkdir(parents=True)
+        p_root = str(src / "root.png")
+        p_a = str(src / "a" / "inner.png")
+        p_ab = str(src / "a" / "b" / "deep.png")
+        p_c = str(src / "c" / "sibling.png")
+        for p in (p_root, p_a, p_ab, p_c):
+            _make_image(p, "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker(
+            [p_root, p_a, p_ab, p_c],
+            out_dir, "same", 8, 95, 6,
+            src_root=str(src))
+        worker.run()
+
+        assert len(os.listdir(out_dir)) == 3  # root.png flat + 'a' + 'c'
+        assert any(f.endswith(".png") for f in os.listdir(out_dir))
+        assert len(os.listdir(os.path.join(out_dir, "a"))) == 2  # inner + b/
+        assert len(os.listdir(os.path.join(out_dir, "a", "b"))) == 1
+        assert len(os.listdir(os.path.join(out_dir, "c"))) == 1
+
+    def test_no_src_root_is_flat(self, tmp_path):
+        """Without src_root all outputs land flat in output_dir (backcompat)."""
+        src = tmp_path / "src"
+        (src / "sub").mkdir(parents=True)
+        p1 = str(src / "a.png")
+        p2 = str(src / "sub" / "b.png")
+        _make_image(p1, "PNG")
+        _make_image(p2, "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker([p1, p2], out_dir, "same", 8, 95, 6)
+        worker.run()
+
+        # Both files land directly under out_dir — no subfolders created.
+        entries = os.listdir(out_dir)
+        assert len(entries) == 2
+        assert all(os.path.isfile(os.path.join(out_dir, e)) for e in entries)
+
+    def test_lsb_steganography_is_disrupted(self, tmp_path):
+        """A stealth-pnginfo style payload must not survive sanitize.
+
+        Plants a NovelAI-flavoured ``stealth_pngcomp`` magic header plus
+        a gzipped JSON body in the LSB bit-stream of a 128×128 RGBA
+        canvas. After sanitise the magic bytes must be corrupted and the
+        visual image must still be ±1 per channel.
+        """
+        import gzip
+        src = str(tmp_path / "stego.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+
+        magic = b"stealth_pngcomp"
+        body = gzip.compress(
+            b'{"prompt":"secret","seed":42,"model":"nai-v3"}')
+        bitstream = magic + len(body).to_bytes(4, "big") + body
+        bits = np.unpackbits(np.frombuffer(bitstream, dtype=np.uint8))
+
+        arr = np.full((128, 128, 4), 128, dtype=np.uint8)
+        arr[..., 3] = 255  # fully opaque
+        # Plant the bit-stream into the LSBs of the flattened pixel buffer.
+        flat = arr.reshape(-1)
+        flat[:len(bits)] = (flat[:len(bits)] & np.uint8(0xFE)) | bits
+        Image.fromarray(arr, "RGBA").save(src, format="PNG")
+
+        # Sanity: extractor can read the payload from the source.
+        before = np.array(Image.open(src)).reshape(-1)
+        recovered_before = np.packbits(before[:len(bits)] & 0x01).tobytes()
+        assert recovered_before.startswith(magic)
+
+        out = sanitize_image(src, out_dir, "same")
+        result = np.array(Image.open(out))
+
+        # Visual content preserved within ±1 per channel.
+        assert result.shape == arr.shape
+        assert np.all(np.abs(result.astype(int) - arr.astype(int)) <= 1)
+
+        # Magic bytes must be broken — extractor no longer recognises it.
+        after_flat = result.reshape(-1)
+        recovered_after = np.packbits(after_flat[:len(bits)] & 0x01).tobytes()
+        assert not recovered_after.startswith(magic), (
+            "stealth magic survived sanitize — payload still recoverable")
+        # And the gzipped body must fail to decompress.
+        body_start = len(magic) + 4
+        with pytest.raises((OSError, EOFError, gzip.BadGzipFile)):
+            gzip.decompress(recovered_after[body_start:body_start + len(body)])
+
+    def test_lsb_scramble_visual_impact_minimal(self, tmp_path):
+        """Average per-channel change should stay well below one level.
+
+        Documents the perceptual budget: sparse LSB scrambling produces
+        a mean absolute diff of roughly 0.125/255 per channel. The test
+        allows generous slack but guards against regressions that would
+        re-introduce dense (±0.5/255) scrambling.
+        """
+        src = str(tmp_path / "flat.png")
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        arr = np.full((64, 64, 3), 127, dtype=np.uint8)
+        Image.fromarray(arr).save(src, format="PNG")
+
+        out = sanitize_image(src, out_dir, "same")
+        result = np.array(Image.open(out))
+        mean_diff = float(np.abs(result.astype(int) - 127).mean())
+        # Dense scramble averages ≈ 0.5; sparse ≈ 0.125. Cap at 0.3 to
+        # catch a regression to dense without being flaky on RNG variance.
+        assert mean_diff < 0.3, (
+            f"mean per-channel diff {mean_diff:.3f} suggests dense LSB "
+            f"scrambling — visual impact is not minimised")
+
+    def test_escaping_path_falls_back_to_flat(self, tmp_path):
+        """Paths outside src_root must not escape output_dir via '..'."""
+        src = tmp_path / "src"
+        src.mkdir()
+        outside = tmp_path / "outside.png"
+        _make_image(str(outside), "PNG")
+
+        out_dir = str(tmp_path / "out")
+        os.makedirs(out_dir)
+        worker = _SanitizeWorker(
+            [str(outside)], out_dir, "same", 8, 95, 6,
+            src_root=str(src))
+        worker.run()
+
+        # File is written flat under out_dir; no '..' directory created.
+        assert os.listdir(out_dir)  # one output file
+        # Nothing should have been created as a sibling of out_dir.
+        siblings = {p.name for p in tmp_path.iterdir()}
+        assert siblings == {"src", "outside.png", "out"}

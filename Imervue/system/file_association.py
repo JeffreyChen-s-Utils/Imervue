@@ -5,9 +5,7 @@ Windows file association — "Open with Imervue" context menu.
 from __future__ import annotations
 
 import logging
-import os
 import sys
-from pathlib import Path
 
 from Imervue.system.app_paths import is_frozen, app_dir, icon_path as _app_icon_path
 

@@ -4,11 +4,11 @@ Keyboard shortcut actions for GPUImageView.
 """
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QClipboard
+from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
 if TYPE_CHECKING:
@@ -167,8 +167,8 @@ def _send_to_trash(path: str) -> bool:
             return True
         else:
             # Linux: freedesktop.org Trash spec
-            import shutil, time, os as _os
-            uid = _os.getuid()
+            import shutil
+            import time
             # 判斷是否在同一個 mount point
             home_trash = Path.home() / ".local" / "share" / "Trash"
             files_dir = home_trash / "files"
@@ -244,7 +244,7 @@ def copy_image_to_clipboard(main_gui: GPUImageView):
         return
 
     path = images[main_gui.current_index]
-    try:
+    with contextlib.suppress(Exception):
         qimg = QImage(path)
         if qimg.isNull() and main_gui.deep_zoom is not None:
             # QImage 無法直接載入（例如 SVG），從 deep zoom 金字塔取得
@@ -265,8 +265,6 @@ def copy_image_to_clipboard(main_gui: GPUImageView):
         if not qimg.isNull():
             clipboard = QApplication.clipboard()
             clipboard.setImage(qimg)
-    except Exception:
-        pass
 
 
 # ===========================

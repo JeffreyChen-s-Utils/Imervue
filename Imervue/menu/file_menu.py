@@ -78,9 +78,13 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     import sys
     if sys.platform == "win32":
         assoc_menu = file_menu.addMenu(lang.get("file_assoc_menu", "File Association"))
-        reg_action = assoc_menu.addAction(lang.get("file_assoc_register", "Register 'Open with Imervue'"))
+        reg_action = assoc_menu.addAction(
+            lang.get("file_assoc_register", "Register 'Open with Imervue'")
+        )
         reg_action.triggered.connect(lambda: _register_assoc(ui_we_want_to_set))
-        unreg_action = assoc_menu.addAction(lang.get("file_assoc_unregister", "Remove file association"))
+        unreg_action = assoc_menu.addAction(
+            lang.get("file_assoc_unregister", "Remove file association")
+        )
         unreg_action.triggered.connect(lambda: _unregister_assoc(ui_we_want_to_set))
 
     file_menu.addSeparator()
@@ -96,7 +100,9 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     exit_action.triggered.connect(ui_we_want_to_set.close)
 
     # ===== Tile Size 選單 =====
-    view_menu = ui_we_want_to_set.menuBar().addMenu(language_wrapper.language_word_dict.get("main_window_tile_size"))
+    view_menu = ui_we_want_to_set.menuBar().addMenu(
+        language_wrapper.language_word_dict.get("main_window_tile_size")
+    )
 
     tile_group = QActionGroup(ui_we_want_to_set)
     tile_group.setExclusive(True)
@@ -118,6 +124,53 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         action.triggered.connect(
             lambda checked, s=size: ui_we_want_to_set.change_tile_size(s)
         )
+
+    # ===== Grid / List 檢視切換 =====
+    view_menu.addSeparator()
+    mode_menu = view_menu.addMenu(lang.get("view_browse_mode", "Browse Mode"))
+    mode_group = QActionGroup(ui_we_want_to_set)
+    mode_group.setExclusive(True)
+
+    action_grid = mode_menu.addAction(lang.get("view_mode_grid", "Grid"))
+    action_grid.setCheckable(True)
+    action_grid.setChecked(True)
+    mode_group.addAction(action_grid)
+    action_grid.triggered.connect(
+        lambda: ui_we_want_to_set.set_browse_mode("grid")
+    )
+
+    action_list = mode_menu.addAction(lang.get("view_mode_list", "List"))
+    action_list.setCheckable(True)
+    mode_group.addAction(action_list)
+    action_list.triggered.connect(
+        lambda: ui_we_want_to_set.set_browse_mode("list")
+    )
+    ui_we_want_to_set._mode_action_grid = action_grid
+    ui_we_want_to_set._mode_action_list = action_list
+
+    # ===== 縮圖排列密度 =====
+    view_menu.addSeparator()
+    density_menu = view_menu.addMenu(
+        lang.get("view_tile_density", "Thumbnail Density")
+    )
+    density_group = QActionGroup(ui_we_want_to_set)
+    density_group.setExclusive(True)
+    density_presets = [
+        (0, "view_density_compact", "Compact"),
+        (8, "view_density_standard", "Standard"),
+        (16, "view_density_relaxed", "Relaxed"),
+    ]
+    current_padding = ui_we_want_to_set.viewer.tile_padding
+    for pad, key, fallback in density_presets:
+        a = density_menu.addAction(lang.get(key, fallback))
+        a.setCheckable(True)
+        if pad == current_padding:
+            a.setChecked(True)
+        density_group.addAction(a)
+        a.triggered.connect(
+            lambda checked, p=pad: ui_we_want_to_set.change_tile_padding(p)
+        )
+
     return file_menu
 
 
@@ -139,6 +192,8 @@ def open_folder(ui_we_want_to_set: ImervueMainWindow):
                 "main_window_current_folder_format"
             ).format(path=folder)
         )
+        if hasattr(ui_we_want_to_set, "breadcrumb"):
+            ui_we_want_to_set.breadcrumb.set_path(folder)
 
         add_recent_folder(folder)
         rebuild_recent_menu(ui_we_want_to_set)
@@ -152,7 +207,8 @@ def open_image(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set,
         language_wrapper.language_word_dict.get("main_window_select_image"),
         "",
-        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg *.cr2 *.nef *.arw *.dng *.raf *.orf)"
+        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg "
+        "*.cr2 *.nef *.arw *.dng *.raf *.orf)"
     )
 
     if not file_path:
@@ -175,8 +231,8 @@ _extra_windows: list = []
 
 
 def _open_new_window(parent: ImervueMainWindow):
-    from Imervue.Imervue_main_window import ImervueMainWindow as MW
-    win = MW()
+    from Imervue.Imervue_main_window import ImervueMainWindow as _MainWindow
+    win = _MainWindow()
     # 新視窗在跟 parent 同一個螢幕上開啟，稍微偏移避免完全重疊
     screen = parent.screen()
     if screen is not None:
@@ -202,13 +258,11 @@ def _register_assoc(ui: ImervueMainWindow):
     if ok:
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_done", "File association registered!"))
-    else:
-        if msg == "need_admin":
-            if hasattr(ui, "toast"):
-                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
-        else:
-            if hasattr(ui, "toast"):
-                ui.toast.info(f"Error: {msg}")
+    elif msg == "need_admin":
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+    elif hasattr(ui, "toast"):
+        ui.toast.info(f"Error: {msg}")
 
 
 def _paste_from_clipboard(ui: ImervueMainWindow) -> None:
@@ -261,13 +315,11 @@ def _unregister_assoc(ui: ImervueMainWindow):
     if ok:
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_removed", "File association removed!"))
-    else:
-        if msg == "need_admin":
-            if hasattr(ui, "toast"):
-                ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
-        else:
-            if hasattr(ui, "toast"):
-                ui.toast.info(f"Error: {msg}")
+    elif msg == "need_admin":
+        if hasattr(ui, "toast"):
+            ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
+    elif hasattr(ui, "toast"):
+        ui.toast.info(f"Error: {msg}")
 
 
 def _open_shortcut_settings(ui: ImervueMainWindow):

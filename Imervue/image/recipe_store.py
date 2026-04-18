@@ -82,7 +82,7 @@ class RecipeStore:
             if not self._path.exists():
                 self._loaded = True
                 return
-            with open(self._path, "r", encoding="utf-8") as f:
+            with open(self._path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
             logger.warning(f"Recipe store read failed ({self._path}): {exc}")

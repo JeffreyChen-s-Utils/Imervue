@@ -7,7 +7,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QMenu
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -39,6 +38,19 @@ def build_filter_menu(ui: ImervueMainWindow):
         action = ext_menu.addAction(label)
         action.triggered.connect(lambda checked, k=key: _apply_ext_filter(ui, k))
 
+    # ===== 依色彩標籤 =====
+    color_menu = filter_menu.addMenu(lang.get("filter_by_color", "By Color Label"))
+    color_all = color_menu.addAction(lang.get("filter_color_all", "All"))
+    color_all.triggered.connect(lambda: _apply_color_filter(ui, None))
+    color_any = color_menu.addAction(lang.get("filter_color_any", "Any label"))
+    color_any.triggered.connect(lambda: _apply_color_filter(ui, "any"))
+    color_none = color_menu.addAction(lang.get("filter_color_none", "No label"))
+    color_none.triggered.connect(lambda: _apply_color_filter(ui, "none"))
+    color_menu.addSeparator()
+    for c in ("red", "yellow", "green", "blue", "purple"):
+        a = color_menu.addAction(lang.get(f"color_label_{c}", c.title()))
+        a.triggered.connect(lambda checked, cc=c: _apply_color_filter(ui, cc))
+
     # ===== 依評分 =====
     rating_menu = filter_menu.addMenu(lang.get("filter_by_rating", "By Rating"))
     action_all = rating_menu.addAction(lang.get("filter_rating_all", "All"))
@@ -62,12 +74,40 @@ def build_filter_menu(ui: ImervueMainWindow):
 
     filter_menu.addSeparator()
 
+    # ===== 多標籤過濾 (AND/OR) =====
+    multi_tag_action = filter_menu.addAction(
+        lang.get("filter_multi_tag", "Multi-Tag Filter…")
+    )
+    multi_tag_action.triggered.connect(lambda: _open_multi_tag(ui))
+
+    # ===== 進階過濾 =====
+    adv_action = filter_menu.addAction(
+        lang.get("filter_advanced", "Advanced Filter…")
+    )
+    adv_action.triggered.connect(lambda: _open_advanced(ui))
+
+    filter_menu.addSeparator()
+
     # ===== 清除篩選 =====
     clear_action = filter_menu.addAction(lang.get("filter_clear", "Clear Filter"))
     clear_action.triggered.connect(lambda: _clear_filter(ui))
 
     ui._filter_menu = filter_menu
     return filter_menu
+
+
+def _apply_color_filter(ui: ImervueMainWindow, color: str | None):
+    """Filter the tile grid to images matching ``color`` (or clear if None)."""
+    from Imervue.user_settings.color_labels import filter_by_color
+    viewer = ui.viewer
+    all_images = _get_full_image_list(viewer)
+    if not all_images:
+        return
+    filtered = filter_by_color(all_images, color)
+    if not filtered:
+        return
+    viewer.clear_tile_grid()
+    viewer.load_tile_grid_async(filtered)
 
 
 def _apply_ext_filter(ui: ImervueMainWindow, ext_key: str):
@@ -111,6 +151,16 @@ def _apply_rating_filter(ui: ImervueMainWindow, min_rating: int):
 
     viewer.clear_tile_grid()
     viewer.load_tile_grid_async(filtered)
+
+
+def _open_advanced(ui: ImervueMainWindow):
+    from Imervue.gui.advanced_filter_dialog import open_advanced_filter
+    open_advanced_filter(ui)
+
+
+def _open_multi_tag(ui: ImervueMainWindow):
+    from Imervue.gui.tag_filter_dialog import open_tag_filter_dialog
+    open_tag_filter_dialog(ui)
 
 
 def _clear_filter(ui: ImervueMainWindow):

@@ -11,7 +11,6 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -29,7 +28,7 @@ from Imervue.user_settings.user_setting_dict import (
 )
 
 if TYPE_CHECKING:
-    from Imervue.Imervue_main_window import ImervueMainWindow
+    pass
 
 logger = logging.getLogger("Imervue.shortcut_settings")
 
@@ -82,6 +81,16 @@ DEFAULT_SHORTCUTS: dict[str, tuple[int, int]] = {
     "anim_next":        (_k(Qt.Key.Key_Period), _NONE),
     "anim_slower":      (_k(Qt.Key.Key_BracketLeft), _NONE),
     "anim_faster":      (_k(Qt.Key.Key_BracketRight), _NONE),
+    "goto":             (_k(Qt.Key.Key_G), _CTRL),
+    "theater":          (_k(Qt.Key.Key_Tab), _SHIFT),
+    "pixel_view":       (_k(Qt.Key.Key_P), _SHIFT),
+    "color_mode_cycle": (_k(Qt.Key.Key_M), _SHIFT),
+    "history_back":     (_k(Qt.Key.Key_Left), _ALT),
+    "history_forward":  (_k(Qt.Key.Key_Right), _ALT),
+    "random_image":     (_k(Qt.Key.Key_X), _NONE),
+    "split_view":       (_k(Qt.Key.Key_S), _SHIFT),
+    "dual_page":        (_k(Qt.Key.Key_D), _SHIFT),
+    "multi_monitor":    (_k(Qt.Key.Key_M), _CTRL_SHIFT),
 }
 
 # Translation key for each action (displayed in the dialog)
@@ -116,6 +125,16 @@ ACTION_DISPLAY_KEYS: dict[str, str] = {
     "anim_next":        "shortcut_action_anim_next",
     "anim_slower":      "shortcut_action_anim_slower",
     "anim_faster":      "shortcut_action_anim_faster",
+    "goto":             "shortcut_action_goto",
+    "theater":          "shortcut_action_theater",
+    "pixel_view":       "shortcut_action_pixel_view",
+    "color_mode_cycle": "shortcut_action_color_mode_cycle",
+    "history_back":     "shortcut_action_history_back",
+    "history_forward":  "shortcut_action_history_forward",
+    "random_image":     "shortcut_action_random_image",
+    "split_view":       "shortcut_action_split_view",
+    "dual_page":        "shortcut_action_dual_page",
+    "multi_monitor":    "shortcut_action_multi_monitor",
 }
 
 # English fallback names
@@ -135,6 +154,16 @@ ACTION_FALLBACKS: dict[str, str] = {
     "anim_toggle": "Animation Play/Pause", "anim_prev": "Animation Prev Frame",
     "anim_next": "Animation Next Frame",
     "anim_slower": "Animation Slower", "anim_faster": "Animation Faster",
+    "goto": "Go to Image",
+    "theater": "Theater Mode",
+    "pixel_view": "Pixel View",
+    "color_mode_cycle": "Cycle Color Mode",
+    "history_back": "History Back",
+    "history_forward": "History Forward",
+    "random_image": "Random Image",
+    "split_view": "Split View",
+    "dual_page": "Dual Page",
+    "multi_monitor": "Multi-Monitor Window",
 }
 
 
@@ -169,14 +198,26 @@ class ShortcutManager:
     def get_action(self, key: int, modifiers: int) -> str | None:
         """Look up which action_id a key combo maps to."""
         # Mask out KeypadModifier and other noise
-        mods = (modifiers.value if hasattr(modifiers, "value") else int(modifiers)) & (_CTRL | _SHIFT | _ALT)
+        raw = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        mods = raw & (_CTRL | _SHIFT | _ALT)
         return self._key_to_action.get((key, mods))
 
     def get_key(self, action_id: str) -> tuple[int, int]:
         return self._action_to_key.get(action_id, (0, 0))
 
     def set_key(self, action_id: str, key: int, modifiers: int):
-        self._action_to_key[action_id] = (key, modifiers)
+        """Bind ``action_id`` to (key, modifiers), unbinding any conflicting action.
+
+        If another action was already claiming this combo, its binding is
+        cleared to ``(0, 0)`` so the new mapping wins cleanly — otherwise
+        ``_rebuild_reverse`` would resolve the conflict by dict-insertion
+        order, which is invisible to callers and confusing in tests.
+        """
+        combo = (key, modifiers)
+        for other_id, existing in list(self._action_to_key.items()):
+            if other_id != action_id and existing == combo:
+                self._action_to_key[other_id] = (0, 0)
+        self._action_to_key[action_id] = combo
         self._rebuild_reverse()
 
     def save(self):

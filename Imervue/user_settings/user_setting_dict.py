@@ -4,13 +4,13 @@ import os
 import threading
 from pathlib import Path
 from threading import Lock
-from typing import Dict, Any, Optional, Union
+from typing import Any
 
 from Imervue.system.app_paths import user_settings_path as _user_settings_path
 
 # 使用者設定的全域字典
 # Global dictionary for user settings
-user_setting_dict: Dict[str, Any] = {
+user_setting_dict: dict[str, Any] = {
     "language": "English",
     "user_recent_folders": [],
     "user_recent_images": [],
@@ -28,7 +28,7 @@ _lock = Lock()
 # 真正落地時會用 atomic write（tmp + os.replace），避免寫到一半斷電留下殘缺 JSON。
 
 _SAVE_DEBOUNCE_SEC = 2.0
-_save_timer: Optional[threading.Timer] = None
+_save_timer: threading.Timer | None = None
 _save_timer_lock = threading.Lock()
 _settings_logger = logging.getLogger("Imervue.settings")
 
@@ -88,7 +88,7 @@ def read_user_setting() -> Path:
     return user_setting_file
 
 
-def read_json(json_file_path: str) -> Optional[Any]:
+def read_json(json_file_path: str) -> Any | None:
     """
     use to read action file
     :param json_file_path JSON file's path to read
@@ -105,7 +105,7 @@ def read_json(json_file_path: str) -> Optional[Any]:
         _lock.release()
 
 
-def write_json(json_save_path: str, data_to_output: Union[dict, list]) -> None:
+def write_json(json_save_path: str, data_to_output: dict | list) -> None:
     """
     Atomic JSON writer — writes to a .tmp sibling then os.replace() so a crash
     mid-write never leaves a half-written settings file.
@@ -114,7 +114,7 @@ def write_json(json_save_path: str, data_to_output: Union[dict, list]) -> None:
     :param data_to_output JSON data to output
     """
     _lock.acquire()
-    tmp_path: Optional[Path] = None
+    tmp_path: Path | None = None
     try:
         path = Path(json_save_path)
         path.parent.mkdir(parents=True, exist_ok=True)

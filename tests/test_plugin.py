@@ -1,11 +1,10 @@
 """Tests for plugin system: plugin_base, plugin_manager, pip_installer, plugin_downloader."""
 from __future__ import annotations
 
-import importlib
 import sys
 import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -466,8 +465,10 @@ class TestCheckMissingPackages:
 
 class TestVerifyPython:
     def test_verify_current_python(self):
+        import importlib.util
+        if importlib.util.find_spec("pip") is None:
+            pytest.skip("pip not available in the current interpreter")
         from Imervue.plugin.pip_installer import _verify_python
-        # Current interpreter should have pip
         assert _verify_python(sys.executable) is True
 
     def test_verify_nonexistent_path(self):
@@ -737,9 +738,11 @@ class TestDownloadPluginWorker:
             cm.__exit__ = MagicMock(return_value=False)
             return cm
 
-        with patch("Imervue.plugin.plugin_downloader._get_plugin_dir", return_value=tmp_path):
-            with patch("Imervue.plugin.plugin_downloader.urllib.request.urlopen", fake_urlopen):
-                worker.run()
+        with (
+            patch("Imervue.plugin.plugin_downloader._get_plugin_dir", return_value=tmp_path),
+            patch("Imervue.plugin.plugin_downloader.urllib.request.urlopen", fake_urlopen),
+        ):
+            worker.run()
 
         assert finished_names == ["test_plugin"]
         assert (tmp_path / "test_plugin" / "__init__.py").exists()
@@ -757,9 +760,14 @@ class TestDownloadPluginWorker:
         errors = []
         worker.error.connect(errors.append)
 
-        with patch("Imervue.plugin.plugin_downloader._get_plugin_dir", return_value=tmp_path):
-            with patch("Imervue.plugin.plugin_downloader.urllib.request.urlopen", side_effect=Exception("timeout")):
-                worker.run()
+        with (
+            patch("Imervue.plugin.plugin_downloader._get_plugin_dir", return_value=tmp_path),
+            patch(
+                "Imervue.plugin.plugin_downloader.urllib.request.urlopen",
+                side_effect=Exception("timeout"),
+            ),
+        ):
+            worker.run()
 
         assert len(errors) == 1
         assert "timeout" in errors[0]
