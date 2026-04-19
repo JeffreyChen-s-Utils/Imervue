@@ -176,6 +176,83 @@ def _compute_upscale_params(width: int, height: int,
     return (model_key, final_w, final_h)
 
 
+def _resolve_output_ext(path: str, output_ext: str) -> tuple[str, str]:
+    if output_ext == "same":
+        ext = Path(path).suffix.lower()
+        if ext not in _PIL_FORMAT_MAP:
+            ext = _EXT_PNG
+    else:
+        ext = output_ext
+    return ext, _PIL_FORMAT_MAP.get(ext, _FMT_PNG)
+
+
+def _final_dims(w: int, h: int, target_long_edge: int) -> tuple[int, int]:
+    if w >= h:
+        return target_long_edge, max(1, round(h * target_long_edge / w))
+    return max(1, round(w * target_long_edge / h)), target_long_edge
+
+
+def _ai_upscale(clean: Image.Image, final_w: int, final_h: int,
+                ort_session, ort_scale: int,
+                tile_progress_cb) -> Image.Image:
+    import numpy as np
+    from Imervue.gui.ai_upscale_dialog import _upscale_image
+
+    if clean.mode == _MODE_RGBA:
+        alpha = clean.split()[-1]
+        rgb = clean.convert(_MODE_RGB)
+    else:
+        alpha = None
+        rgb = clean
+
+    upscaled_arr = _upscale_image(
+        ort_session, np.array(rgb), ort_scale,
+        progress_cb=tile_progress_cb)
+    upscaled = Image.fromarray(upscaled_arr)
+
+    if alpha is not None:
+        alpha_up = alpha.resize(upscaled.size, Image.Resampling.LANCZOS)
+        upscaled.putalpha(alpha_up)
+
+    return upscaled.resize((final_w, final_h), Image.Resampling.LANCZOS)
+
+
+def _maybe_upscale(clean: Image.Image, target_long_edge: int,
+                   trad_resampling, ort_session, ort_scale: int,
+                   tile_progress_cb) -> Image.Image:
+    if target_long_edge <= 0:
+        return clean
+    w, h = clean.size
+    if max(w, h) >= target_long_edge:
+        return clean
+    final_w, final_h = _final_dims(w, h, target_long_edge)
+    if trad_resampling is not None:
+        return clean.resize((final_w, final_h), trad_resampling)
+    if ort_session is not None and ort_scale > 0:
+        return _ai_upscale(clean, final_w, final_h, ort_session, ort_scale,
+                           tile_progress_cb)
+    return clean
+
+
+def _allocate_output_path(output_dir: str, dt: datetime, rand_len: int,
+                          ext: str) -> str:
+    out_path = os.path.join(output_dir, _generate_name(dt, rand_len, ext))
+    while os.path.exists(out_path):
+        out_path = os.path.join(output_dir, _generate_name(dt, rand_len, ext))
+    return out_path
+
+
+def _save_kwargs_for(fmt: str, jpeg_quality: int,
+                     png_compress: int) -> dict:
+    kwargs: dict = {"format": fmt}
+    if fmt == _FMT_JPEG:
+        kwargs["quality"] = jpeg_quality
+        kwargs["subsampling"] = 0
+    elif fmt == _FMT_PNG:
+        kwargs["compress_level"] = png_compress
+    return kwargs
+
+
 def sanitize_image(path: str, output_dir: str, output_ext: str,
                    rand_len: int = 8, jpeg_quality: int = 95,
                    png_compress: int = 6,
@@ -191,18 +268,10 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     provided *ort_session* (ONNX Real-ESRGAN), then resized to exactly
     fit the target while keeping aspect ratio.
 
-    Returns the output path on success.  Raises on failure.
+    Returns the output path on success. Raises on failure.
     """
     img = Image.open(path)
-
-    # Determine output format
-    if output_ext == "same":
-        ext = Path(path).suffix.lower()
-        if ext not in _PIL_FORMAT_MAP:
-            ext = _EXT_PNG
-    else:
-        ext = output_ext
-    fmt = _PIL_FORMAT_MAP.get(ext, _FMT_PNG)
+    ext, fmt = _resolve_output_ext(path, output_ext)
 
     # Re-create image from raw bytes — no metadata survives, no list copy
     clean = Image.frombytes(img.mode, img.size, img.tobytes())
@@ -211,75 +280,17 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     if fmt == _FMT_JPEG and clean.mode != _MODE_RGB:
         clean = clean.convert(_MODE_RGB)
 
-    # --- Optional upscale ---
-    if target_long_edge > 0:
-        w, h = clean.size
-        long = max(w, h)
-        if long < target_long_edge:
-            # Compute final dimensions preserving aspect ratio
-            if w >= h:
-                final_w = target_long_edge
-                final_h = max(1, round(h * target_long_edge / w))
-            else:
-                final_h = target_long_edge
-                final_w = max(1, round(w * target_long_edge / h))
-
-            if trad_resampling is not None:
-                # Traditional resize — single step, no ONNX needed
-                clean = clean.resize((final_w, final_h), trad_resampling)
-            elif ort_session is not None and ort_scale > 0:
-                # AI upscale via ONNX
-                import numpy as np
-                from Imervue.gui.ai_upscale_dialog import _upscale_image
-
-                if clean.mode == _MODE_RGBA:
-                    alpha = clean.split()[-1]
-                    rgb = clean.convert(_MODE_RGB)
-                else:
-                    alpha = None
-                    rgb = clean
-
-                arr = np.array(rgb)
-                upscaled_arr = _upscale_image(
-                    ort_session, arr, ort_scale,
-                    progress_cb=tile_progress_cb)
-                upscaled = Image.fromarray(upscaled_arr)
-
-                if alpha is not None:
-                    alpha_up = alpha.resize(upscaled.size,
-                                            Image.Resampling.LANCZOS)
-                    upscaled.putalpha(alpha_up)
-
-                clean = upscaled.resize((final_w, final_h),
-                                        Image.Resampling.LANCZOS)
+    clean = _maybe_upscale(clean, target_long_edge, trad_resampling,
+                           ort_session, ort_scale, tile_progress_cb)
 
     # Disrupt LSB steganography (e.g. NovelAI stealth pnginfo embeds
     # prompt/seed/parameters in the least-significant bit of RGB/alpha
-    # channels — tEXt-chunk stripping alone leaves that payload intact
-    # because the bits live in the pixel data). Randomising each 8-bit
-    # channel's LSB destroys the payload; the visual impact is ±1/255
-    # per channel (well below the JND for any display).
+    # channels — tEXt-chunk stripping alone leaves that payload intact).
     clean = _scramble_lsb(clean)
 
-    # Generate new filename
-    dt = _get_image_date(path)
-    name = _generate_name(dt, rand_len, ext)
-    out_path = os.path.join(output_dir, name)
-
-    # Avoid collision
-    while os.path.exists(out_path):
-        name = _generate_name(dt, rand_len, ext)
-        out_path = os.path.join(output_dir, name)
-
-    # Save with minimal kwargs — no metadata passed
-    save_kwargs: dict = {"format": fmt}
-    if fmt == _FMT_JPEG:
-        save_kwargs["quality"] = jpeg_quality
-        save_kwargs["subsampling"] = 0  # 4:4:4 best quality
-    elif fmt == _FMT_PNG:
-        save_kwargs["compress_level"] = png_compress
-
-    clean.save(out_path, **save_kwargs)
+    out_path = _allocate_output_path(output_dir, _get_image_date(path),
+                                      rand_len, ext)
+    clean.save(out_path, **_save_kwargs_for(fmt, jpeg_quality, png_compress))
     return out_path
 
 

@@ -88,6 +88,7 @@ _GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
 _USER_AGENT = "Imervue/1.0"
 _UA_HEADERS = {"User-Agent": _USER_AGENT}
 _PROCESS_TIMEOUT_MSG = "Process timed out"
+_PYTHON_EXE_NAME = "python.exe"
 
 
 def _embedded_python_dir() -> Path:
@@ -97,7 +98,7 @@ def _embedded_python_dir() -> Path:
 
 def _embedded_python_exe() -> Path | None:
     """回傳內嵌 Python 的 python.exe 路徑（若已安裝）"""
-    exe = _embedded_python_dir() / "python.exe"
+    exe = _embedded_python_dir() / _PYTHON_EXE_NAME
     return exe if exe.is_file() else None
 
 
@@ -117,9 +118,9 @@ class _DownloadPythonWorker(QThread):
             if not self._extract_safely(data, dest_dir):
                 return
 
-            python_exe = dest_dir / "python.exe"
+            python_exe = dest_dir / _PYTHON_EXE_NAME
             if not python_exe.is_file():
-                self.result_ready.emit(False, "python.exe not found after extraction")
+                self.result_ready.emit(False, f"{_PYTHON_EXE_NAME} not found after extraction")
                 return
 
             self._patch_pth_files(dest_dir)
@@ -258,7 +259,7 @@ def _find_python_windows_install_paths() -> str | None:
                   appdata_programs + "\\Python"]:
         if Path(base).is_dir():
             for d in sorted(Path(base).iterdir(), reverse=True):
-                exe = d / "python.exe"
+                exe = d / _PYTHON_EXE_NAME
                 if exe.is_file():
                     candidates.append(str(exe))
     for c in candidates:
