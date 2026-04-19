@@ -13,6 +13,8 @@ from PIL import Image
 
 from Imervue.gui.batch_convert_dialog import _scan_folder, _ConvertWorker
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 # ---------------------------------------------------------------------------
 # Folder scanning
@@ -75,7 +77,7 @@ class TestConvertWorker:
         worker.run()
 
         assert len(results) == 1
-        success, failed, skipped = results[0]
+        success, failed, _ = results[0]
         assert success == 1
         assert failed == 0
         # Output file exists
@@ -105,7 +107,8 @@ class TestConvertWorker:
         worker.result_ready.connect(lambda s, f, sk: results.append((s, f, sk)))
         worker.run()
 
-        success, failed, skipped = results[0]
+        assert results
+        _, _, skipped = results[0]
         assert skipped == 1
 
     def test_delete_originals(self, tmp_path):
@@ -136,7 +139,7 @@ class TestConvertWorker:
         paths = []
         for i in range(5):
             p = src / f"img{i}.png"
-            arr = np.random.randint(0, 256, (16, 16, 3), dtype=np.uint8)
+            arr = _rng.integers(0, 256, (16, 16, 3), dtype=np.uint8)
             Image.fromarray(arr).save(str(p), format="PNG")
             paths.append(str(p))
 
@@ -155,7 +158,7 @@ class TestConvertWorker:
         worker.result_ready.connect(lambda s, f, sk: results.append((s, f, sk)))
         worker.run()
 
-        success, failed, skipped = results[0]
+        success, _, _ = results[0]
         assert success == 5
         out_files = list(out.iterdir())
         assert len(out_files) == 5

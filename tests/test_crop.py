@@ -56,13 +56,13 @@ class TestCropState:
     def test_set_crop_ratio_1_1(self, canvas):
         canvas._crop_rect = (10, 10, 100, 50)
         canvas.set_crop_ratio(1, 1)
-        x, y, w, h = canvas.get_crop_rect()
+        _, _, w, h = canvas.get_crop_rect()
         assert w == h, f"Expected square, got {w}x{h}"
 
     def test_set_crop_ratio_16_9(self, canvas):
         canvas._crop_rect = (0, 0, 160, 90)
         canvas.set_crop_ratio(16, 9)
-        x, y, w, h = canvas.get_crop_rect()
+        _, _, w, h = canvas.get_crop_rect()
         ratio = w / h
         assert abs(ratio - 16 / 9) < 0.1
 

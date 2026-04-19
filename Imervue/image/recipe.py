@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,15 @@ logger = logging.getLogger("Imervue.recipe")
 
 _IDENTITY_HEAD_BYTES = 4096
 _IDENTITY_CACHE: dict[str, tuple[float, int, str]] = {}
+
+# Tolerance for treating slider adjustments as a no-op. Values below this are
+# below the visible quantisation threshold on a single 8-bit channel.
+_ADJUST_EPS = 1e-6
+
+
+def _is_zero(value: float) -> bool:
+    """Return True if *value* is effectively zero within adjust tolerance."""
+    return math.isclose(value, 0.0, abs_tol=_ADJUST_EPS)
 
 
 @dataclass
@@ -72,10 +82,10 @@ class Recipe:
             and not self.flip_h
             and not self.flip_v
             and self.crop is None
-            and self.brightness == 0.0
-            and self.contrast == 0.0
-            and self.saturation == 0.0
-            and self.exposure == 0.0
+            and _is_zero(self.brightness)
+            and _is_zero(self.contrast)
+            and _is_zero(self.saturation)
+            and _is_zero(self.exposure)
         )
 
     def normalized(self) -> Recipe:
@@ -168,54 +178,58 @@ class Recipe:
             arr = arr.astype(np.uint8, copy=False)
 
         recipe = self.normalized()
-
-        # 1. Rotate — np.rot90 is O(1) for views but we want a contiguous copy
-        # so downstream code (DeepZoomImage, GL uploads) gets predictable strides.
-        if recipe.rotate_steps:
-            arr = np.ascontiguousarray(np.rot90(arr, k=-recipe.rotate_steps))
-
-        # 2-3. Flip
-        if recipe.flip_h:
-            arr = np.ascontiguousarray(arr[:, ::-1])
-        if recipe.flip_v:
-            arr = np.ascontiguousarray(arr[::-1, :])
-
-        # 4. Crop — clamp to image bounds so bad recipes degrade instead of crash.
-        if recipe.crop is not None:
-            h, w = arr.shape[:2]
-            cx, cy, cw, ch = recipe.crop
-            x0 = max(0, min(cx, w))
-            y0 = max(0, min(cy, h))
-            x1 = max(x0, min(cx + cw, w))
-            y1 = max(y0, min(cy + ch, h))
-            if x1 > x0 and y1 > y0:
-                arr = np.ascontiguousarray(arr[y0:y1, x0:x1])
-
-        # 5. Exposure — multiplicative in linear-ish space. We approximate by
-        # multiplying in sRGB since the old image_editor did the same and users
-        # expect the same feel. Stops: factor = 2**exposure.
-        if recipe.exposure != 0.0:
-            factor = 2.0 ** recipe.exposure
-            rgb = arr[..., :3].astype(np.float32) * factor
-            np.clip(rgb, 0.0, 255.0, out=rgb)
-            arr = arr.copy()
-            arr[..., :3] = rgb.astype(np.uint8)
-
-        # 6-8. PIL enhancements — operate on RGBA so alpha is preserved.
-        # Short-circuit when every value is 0 to skip the PIL round-trip.
-        if (recipe.brightness != 0.0
-                or recipe.contrast != 0.0
-                or recipe.saturation != 0.0):
-            img = Image.fromarray(arr, mode="RGBA")
-            if recipe.brightness != 0.0:
-                img = ImageEnhance.Brightness(img).enhance(1.0 + recipe.brightness)
-            if recipe.contrast != 0.0:
-                img = ImageEnhance.Contrast(img).enhance(1.0 + recipe.contrast)
-            if recipe.saturation != 0.0:
-                img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
-            arr = np.array(img)
-
+        arr = _apply_geometry(arr, recipe)
+        arr = _apply_exposure(arr, recipe)
+        arr = _apply_enhancements(arr, recipe)
         return arr
+
+
+def _apply_geometry(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Rotate / flip / crop — steps 1-4 of the pipeline."""
+    if recipe.rotate_steps:
+        arr = np.ascontiguousarray(np.rot90(arr, k=-recipe.rotate_steps))
+    if recipe.flip_h:
+        arr = np.ascontiguousarray(arr[:, ::-1])
+    if recipe.flip_v:
+        arr = np.ascontiguousarray(arr[::-1, :])
+    if recipe.crop is not None:
+        h, w = arr.shape[:2]
+        cx, cy, cw, ch = recipe.crop
+        x0 = max(0, min(cx, w))
+        y0 = max(0, min(cy, h))
+        x1 = max(x0, min(cx + cw, w))
+        y1 = max(y0, min(cy + ch, h))
+        if x1 > x0 and y1 > y0:
+            arr = np.ascontiguousarray(arr[y0:y1, x0:x1])
+    return arr
+
+
+def _apply_exposure(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Step 5 — exposure in stops (2**exposure)."""
+    if _is_zero(recipe.exposure):
+        return arr
+    factor = 2.0 ** recipe.exposure
+    rgb = arr[..., :3].astype(np.float32) * factor
+    np.clip(rgb, 0.0, 255.0, out=rgb)
+    arr = arr.copy()
+    arr[..., :3] = rgb.astype(np.uint8)
+    return arr
+
+
+def _apply_enhancements(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Steps 6-8 — brightness, contrast, saturation via PIL."""
+    if (_is_zero(recipe.brightness)
+            and _is_zero(recipe.contrast)
+            and _is_zero(recipe.saturation)):
+        return arr
+    img = Image.fromarray(arr, mode="RGBA")
+    if not _is_zero(recipe.brightness):
+        img = ImageEnhance.Brightness(img).enhance(1.0 + recipe.brightness)
+    if not _is_zero(recipe.contrast):
+        img = ImageEnhance.Contrast(img).enhance(1.0 + recipe.contrast)
+    if not _is_zero(recipe.saturation):
+        img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
+    return np.array(img)
 
 
 # ----------------------------------------------------------------------

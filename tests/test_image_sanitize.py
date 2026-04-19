@@ -27,6 +27,8 @@ from Imervue.gui.image_sanitize_dialog import (
     _SanitizeWorker,
 )
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -170,7 +172,7 @@ class TestGenerateName:
         name = _generate_name(dt, 8, ".png")
         assert name.startswith("20260414_")
         assert name.endswith(".png")
-        # date(8) + underscore(1) + rand(8) + ext(4) = 21
+        # Breakdown: 8 date chars, 1 underscore, 8 random chars, 4 ext chars; total 21.
         assert len(name) == 21
 
     def test_rand_length(self):
@@ -414,8 +416,8 @@ class TestSanitizeImage:
         """Different JPEG quality should produce different file sizes."""
         src = str(tmp_path / "photo.jpg")
         # Use random noise so JPEG compression has something to work with
-        rng = np.random.RandomState(42)
-        arr = rng.randint(0, 256, (200, 200, 3), dtype=np.uint8)
+        rng = np.random.default_rng(seed=42)
+        arr = rng.integers(0, 256, (200, 200, 3), dtype=np.uint8)
         Image.fromarray(arr).save(src, format="JPEG")
 
         out_hi = str(tmp_path / "out_hi")
@@ -452,7 +454,7 @@ class TestComputeUpscaleParams:
         assert (fw, fh) == (800, 600)
 
     def test_no_upscale_when_negative(self):
-        model, fw, fh = _compute_upscale_params(800, 600, -100)
+        model, _, _ = _compute_upscale_params(800, 600, -100)
         assert model == ""
 
     def test_no_upscale_when_large_enough(self):
@@ -461,7 +463,7 @@ class TestComputeUpscaleParams:
         assert (fw, fh) == (1920, 1080)
 
     def test_no_upscale_when_larger_than_target(self):
-        model, fw, fh = _compute_upscale_params(4000, 3000, 1920)
+        model, _, _ = _compute_upscale_params(4000, 3000, 1920)
         assert model == ""
 
     def test_selects_x2_for_small_ratio(self):
@@ -472,7 +474,7 @@ class TestComputeUpscaleParams:
 
     def test_selects_x2_at_boundary(self):
         # ratio = 2.0 exactly → x2
-        model, fw, fh = _compute_upscale_params(960, 540, 1920)
+        model, _, _ = _compute_upscale_params(960, 540, 1920)
         assert model == "realesrgan-x2plus"
 
     def test_selects_x4_for_large_ratio(self):
@@ -483,7 +485,7 @@ class TestComputeUpscaleParams:
 
     def test_selects_x4_when_ratio_above_2(self):
         # 800 → 1920 = 2.4x, needs x4
-        model, fw, fh = _compute_upscale_params(800, 600, 1920)
+        model, _, _ = _compute_upscale_params(800, 600, 1920)
         assert model == "realesrgan-x4plus"
 
     def test_portrait_aspect_ratio(self):
@@ -493,12 +495,12 @@ class TestComputeUpscaleParams:
         assert fw == 1080
 
     def test_square(self):
-        model, fw, fh = _compute_upscale_params(500, 500, 1920)
+        _, fw, fh = _compute_upscale_params(500, 500, 1920)
         assert fw == 1920
         assert fh == 1920
 
     def test_extreme_portrait(self):
-        model, fw, fh = _compute_upscale_params(100, 1000, 1920)
+        _, fw, fh = _compute_upscale_params(100, 1000, 1920)
         assert fh == 1920
         assert fw == 192  # 100 * 1920 / 1000
 

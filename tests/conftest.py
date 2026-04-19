@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 # ===========================
 # User-settings isolation (autouse)
@@ -85,26 +87,26 @@ def tmp_dir(tmp_path):
 @pytest.fixture
 def sample_rgb_array():
     """Create a simple 100x80 RGB numpy array."""
-    return np.random.randint(0, 256, (80, 100, 3), dtype=np.uint8)
+    return _rng.integers(0, 256, (80, 100, 3), dtype=np.uint8)
 
 
 @pytest.fixture
 def sample_rgba_array():
     """Create a simple 100x80 RGBA numpy array."""
-    return np.random.randint(0, 256, (80, 100, 4), dtype=np.uint8)
+    return _rng.integers(0, 256, (80, 100, 4), dtype=np.uint8)
 
 
 @pytest.fixture
 def sample_grayscale_array():
     """Create a simple 100x80 grayscale numpy array."""
-    return np.random.randint(0, 256, (80, 100), dtype=np.uint8)
+    return _rng.integers(0, 256, (80, 100), dtype=np.uint8)
 
 
 @pytest.fixture
 def sample_png(tmp_path):
     """Create a temporary PNG image file."""
     path = tmp_path / "test_image.png"
-    img = Image.fromarray(np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8))
+    img = Image.fromarray(_rng.integers(0, 256, (64, 64, 3), dtype=np.uint8))
     img.save(str(path))
     return str(path)
 
@@ -113,7 +115,7 @@ def sample_png(tmp_path):
 def sample_jpeg(tmp_path):
     """Create a temporary JPEG image file."""
     path = tmp_path / "test_image.jpg"
-    img = Image.fromarray(np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8))
+    img = Image.fromarray(_rng.integers(0, 256, (64, 64, 3), dtype=np.uint8))
     img.save(str(path))
     return str(path)
 
@@ -122,7 +124,7 @@ def sample_jpeg(tmp_path):
 def sample_grayscale_png(tmp_path):
     """Create a temporary grayscale PNG image file."""
     path = tmp_path / "gray_image.png"
-    arr = np.random.randint(0, 256, (64, 64), dtype=np.uint8)
+    arr = _rng.integers(0, 256, (64, 64), dtype=np.uint8)
     img = Image.fromarray(arr, mode="L")
     img.save(str(path))
     return str(path)
@@ -143,15 +145,23 @@ def sample_gif(tmp_path):
     return str(path)
 
 
+def _format_for_name(name: str) -> str:
+    if name.endswith(".png"):
+        return "PNG"
+    if name.endswith(".jpg"):
+        return "JPEG"
+    return "BMP"
+
+
 @pytest.fixture
 def image_folder(tmp_path):
     """Create a temporary folder with several test images."""
     names = ["alpha.png", "beta.jpg", "gamma.png", "delta.bmp"]
     for name in names:
         p = tmp_path / name
-        arr = np.random.randint(0, 256, (32, 32, 3), dtype=np.uint8)
+        arr = _rng.integers(0, 256, (32, 32, 3), dtype=np.uint8)
         img = Image.fromarray(arr)
-        fmt = "PNG" if name.endswith(".png") else ("JPEG" if name.endswith(".jpg") else "BMP")
+        fmt = _format_for_name(name)
         if fmt == "JPEG":
             img = img.convert("RGB")
         img.save(str(p), format=fmt)

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 import numpy as np
 import os
 from collections import OrderedDict
-from OpenGL.GL import *
+from OpenGL.GL import *  # noqa: F401, F403 — OpenGL uses hundreds of constants; explicit list impractical
 from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
 from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -285,8 +285,10 @@ class GPUImageView(QOpenGLWidget):
         # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
         # into the next real draw call.
         with contextlib.suppress(Exception):
-            while glGetError() != GL_NO_ERROR:
-                pass
+            # Drain the GL error queue — body intentionally empty since
+            # glGetError has the side-effect of clearing the flag.
+            while glGetError() != GL_NO_ERROR:  # noqa: S108
+                continue
 
         if total_kb <= 0:
             _log.info(
@@ -546,7 +548,6 @@ class GPUImageView(QOpenGLWidget):
         if self.renderer.use_shaders:
             # 建立 scale+translate MVP
             import numpy as _np
-            mvp = _np.eye(4, dtype=_np.float32)
             from Imervue.gpu_image_view.gl_renderer import _ortho
             base_ortho = _ortho(0, self.width(), self.height(), 0, -1, 1)
             # 先 translate 再 scale
@@ -1156,14 +1157,17 @@ class GPUImageView(QOpenGLWidget):
 
         if not self.deep_zoom or not images or idx >= len(images):
             # Tile grid / no image — only index text is meaningful
-            if images:
-                mw.update_status_info(
-                    index=f"{idx + 1 if self.deep_zoom else len(images)}/{len(images)}"
-                    if self.deep_zoom else f"— / {len(images)}",
-                    resolution="", size="", zoom="", cursor="",
-                )
-            else:
+            if not images:
                 mw.clear_status_info()
+                return
+            index_text = (
+                f"{idx + 1}/{len(images)}" if self.deep_zoom
+                else f"— / {len(images)}"
+            )
+            mw.update_status_info(
+                index=index_text,
+                resolution="", size="", zoom="", cursor="",
+            )
             return
 
         path = images[idx]
@@ -2503,13 +2507,16 @@ class GPUImageView(QOpenGLWidget):
     # ===========================
     # Drag & Drop
     # ===========================
-    def dragEnterEvent(self, event):
+    def _accept_url_drag(self, event) -> None:
+        """Shared handler for both dragEnterEvent and dragMoveEvent."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
+    def dragEnterEvent(self, event):
+        self._accept_url_drag(event)
+
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+        self._accept_url_drag(event)
 
     def dropEvent(self, event):
         from Imervue.gpu_image_view.images.image_loader import open_path

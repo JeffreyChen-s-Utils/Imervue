@@ -81,7 +81,7 @@ class TestStorePersistence:
         data = json.loads(store.path.read_text(encoding="utf-8"))
         assert "abc123" in data
         assert "recipe" in data["abc123"]
-        assert data["abc123"]["recipe"]["brightness"] == 0.3
+        assert data["abc123"]["recipe"]["brightness"] == pytest.approx(0.3)
 
     def test_survives_reload(self, tmp_path):
         path = tmp_path / "r.json"

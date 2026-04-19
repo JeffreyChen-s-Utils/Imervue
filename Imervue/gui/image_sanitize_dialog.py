@@ -97,24 +97,31 @@ def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
 # Core sanitize logic (pure, testable)
 # ---------------------------------------------------------------------------
 
+_EXIF_TAG_DATETIME_ORIGINAL = 36867
+_EXIF_TAG_DATETIME = 306
+_EXIF_DATE_FORMATS = ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S")
+
+
+def _parse_exif_date(val: str) -> datetime | None:
+    for fmt in _EXIF_DATE_FORMATS:
+        try:
+            return datetime.strptime(val, fmt)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
 def _get_image_date(path: str) -> datetime:
     """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
     with contextlib.suppress(Exception):
-        img = Image.open(path)
-        exif = img.getexif()
-        # 36867 = DateTimeOriginal, 306 = DateTime
-        for tag in (36867, 306):
+        exif = Image.open(path).getexif()
+        for tag in (_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME):
             val = exif.get(tag)
-            if val:
-                for fmt in ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
-                    try:
-                        return datetime.strptime(val, fmt)
-                    except (ValueError, TypeError):
-                        continue
-    # Fallback to file modification time
+            parsed = _parse_exif_date(val) if val else None
+            if parsed is not None:
+                return parsed
     try:
-        mtime = os.path.getmtime(path)
-        return datetime.fromtimestamp(mtime)
+        return datetime.fromtimestamp(os.path.getmtime(path))
     except OSError:
         return datetime.now()
 
