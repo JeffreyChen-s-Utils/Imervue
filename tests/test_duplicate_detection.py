@@ -17,6 +17,8 @@ from Imervue.gui.duplicate_detection_dialog import (
     _ScanWorker,
 )
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 # ---------------------------------------------------------------------------
 # dHash (perceptual hash)
@@ -24,7 +26,7 @@ from Imervue.gui.duplicate_detection_dialog import (
 
 class TestDHash:
     def test_identical_images_same_hash(self):
-        arr = np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8)
+        arr = _rng.integers(0, 256, (64, 64, 3), dtype=np.uint8)
         img1 = Image.fromarray(arr)
         img2 = Image.fromarray(arr.copy())
         assert _dhash(img1) == _dhash(img2)
@@ -41,7 +43,7 @@ class TestDHash:
         assert _dhash(img1) != _dhash(img2)
 
     def test_hash_is_integer(self):
-        img = Image.fromarray(np.random.randint(0, 256, (64, 64, 3), dtype=np.uint8))
+        img = Image.fromarray(_rng.integers(0, 256, (64, 64, 3), dtype=np.uint8))
         h = _dhash(img)
         assert isinstance(h, int)
 
@@ -64,7 +66,7 @@ class TestDHash:
 
     def test_resized_image_close_hash(self):
         """Resized version of same image should have similar hash."""
-        arr = np.random.randint(0, 256, (128, 128, 3), dtype=np.uint8)
+        arr = _rng.integers(0, 256, (128, 128, 3), dtype=np.uint8)
         img_large = Image.fromarray(arr)
         img_small = img_large.resize((64, 64))
         dist = _hamming_distance(_dhash(img_large), _dhash(img_small))
@@ -72,7 +74,7 @@ class TestDHash:
 
     def test_grayscale_input(self):
         """dHash should handle grayscale images."""
-        arr = np.random.randint(0, 256, (64, 64), dtype=np.uint8)
+        arr = _rng.integers(0, 256, (64, 64), dtype=np.uint8)
         img = Image.fromarray(arr, mode="L")
         h = _dhash(img)
         assert isinstance(h, int)
@@ -114,7 +116,7 @@ def dup_folder(tmp_path):
     img_a.save(str(tmp_path / "dup2.png"), format="PNG")
 
     # One unique image
-    arr_b = np.random.randint(0, 256, (32, 32, 3), dtype=np.uint8)
+    arr_b = _rng.integers(0, 256, (32, 32, 3), dtype=np.uint8)
     img_b = Image.fromarray(arr_b)
     img_b.save(str(tmp_path / "unique.png"), format="PNG")
 

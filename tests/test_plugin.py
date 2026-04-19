@@ -415,7 +415,7 @@ class TestPluginManagerDispatch:
         plugin.on_app_closing.assert_called_once_with(mw)
 
     def test_dispatch_build_menu_bar(self):
-        pm, mw, plugin = self._make_pm_with_mock_plugin()
+        pm, _, plugin = self._make_pm_with_mock_plugin()
         menu_bar = MagicMock()
         pm.dispatch_build_menu_bar(menu_bar)
         plugin.on_build_menu_bar.assert_called_once_with(menu_bar)

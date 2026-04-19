@@ -22,7 +22,6 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.request import urlopen, Request
-from urllib.error import URLError
 
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -86,6 +85,10 @@ _EMBED_PYTHON_URL = (
     f"python-{_EMBED_PYTHON_VERSION}-embed-amd64.zip"
 )
 _GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
+_USER_AGENT = "Imervue/1.0"
+_UA_HEADERS = {"User-Agent": _USER_AGENT}
+_PROCESS_TIMEOUT_MSG = "Process timed out"
+_PYTHON_EXE_NAME = "python.exe"
 
 
 def _embedded_python_dir() -> Path:
@@ -95,7 +98,7 @@ def _embedded_python_dir() -> Path:
 
 def _embedded_python_exe() -> Path | None:
     """回傳內嵌 Python 的 python.exe 路徑（若已安裝）"""
-    exe = _embedded_python_dir() / "python.exe"
+    exe = _embedded_python_dir() / _PYTHON_EXE_NAME
     return exe if exe.is_file() else None
 
 
@@ -109,60 +112,22 @@ class _DownloadPythonWorker(QThread):
             dest_dir = _embedded_python_dir()
             dest_dir.mkdir(parents=True, exist_ok=True)
 
-            # 1) 下載 Python embeddable zip
-            self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
-            try:
-                req = Request(_EMBED_PYTHON_URL, headers={"User-Agent": "Imervue/1.0"})
-                resp = urlopen(req, timeout=120)
-                data = resp.read()
-            except (URLError, OSError) as e:
-                self.result_ready.emit(False, f"Download failed: {e}")
+            data = self._download_embed_zip()
+            if data is None:
+                return
+            if not self._extract_safely(data, dest_dir):
                 return
 
-            # 2) 解壓到目標資料夾
-            self.log.emit("Extracting Python embeddable ...")
-            with zipfile.ZipFile(io.BytesIO(data)) as zf:
-                zf.extractall(dest_dir)
-
-            python_exe = dest_dir / "python.exe"
+            python_exe = dest_dir / _PYTHON_EXE_NAME
             if not python_exe.is_file():
-                self.result_ready.emit(False, "python.exe not found after extraction")
+                self.result_ready.emit(False, f"{_PYTHON_EXE_NAME} not found after extraction")
                 return
 
-            # 3) 修改 ._pth 檔案：取消註解 import site（pip 需要它）
-            for pth_file in dest_dir.glob("python*._pth"):
-                self.log.emit(f"Patching {pth_file.name} to enable 'import site' ...")
-                content = pth_file.read_text(encoding="utf-8")
-                content = content.replace("#import site", "import site")
-                pth_file.write_text(content, encoding="utf-8")
+            self._patch_pth_files(dest_dir)
 
-            # 4) 下載並執行 get-pip.py（即時輸出）
-            self.log.emit("Downloading get-pip.py ...")
-            try:
-                req = Request(_GET_PIP_URL, headers={"User-Agent": "Imervue/1.0"})
-                resp = urlopen(req, timeout=120)
-                get_pip_data = resp.read()
-            except (URLError, OSError) as e:
-                self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
+            if not self._bootstrap_pip(dest_dir, python_exe):
                 return
 
-            get_pip_path = dest_dir / "get-pip.py"
-            get_pip_path.write_bytes(get_pip_data)
-
-            try:
-                self.log.emit("Installing pip ...")
-                returncode = self._run_with_live_output(
-                    [str(python_exe), str(get_pip_path)],
-                    cwd=str(dest_dir),
-                    timeout=300,
-                )
-                if returncode != 0:
-                    self.result_ready.emit(False, f"get-pip.py failed (exit code {returncode})")
-                    return
-            finally:
-                get_pip_path.unlink(missing_ok=True)
-
-            # 5) 驗證 pip 可用
             self.log.emit("Verifying pip ...")
             if not _verify_python(str(python_exe)):
                 self.result_ready.emit(False, "pip verification failed after bootstrap")
@@ -174,6 +139,72 @@ class _DownloadPythonWorker(QThread):
         except Exception as exc:
             logger.error(f"Download Python failed: {exc}")
             self.result_ready.emit(False, str(exc))
+
+    def _download_embed_zip(self) -> bytes | None:
+        self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
+        try:
+            req = Request(_EMBED_PYTHON_URL, headers=_UA_HEADERS)
+            resp = urlopen(req, timeout=120)
+            return resp.read()
+        except OSError as e:
+            self.result_ready.emit(False, f"Download failed: {e}")
+            return None
+
+    def _extract_safely(self, data: bytes, dest_dir: Path) -> bool:
+        """Extract the embeddable zip to *dest_dir*, rejecting zip-slip entries."""
+        self.log.emit("Extracting Python embeddable ...")
+        dest_resolved = dest_dir.resolve()
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            for member in zf.namelist():
+                target = (dest_resolved / member).resolve()
+                if not target.is_relative_to(dest_resolved):
+                    self.result_ready.emit(
+                        False, f"Refusing unsafe zip entry: {member}")
+                    return False
+            zf.extractall(dest_dir)
+        return True
+
+    def _patch_pth_files(self, dest_dir: Path) -> None:
+        """Uncomment ``import site`` in python*._pth so pip can work."""
+        dest_resolved = dest_dir.resolve()
+        for pth_file in dest_dir.glob("python*._pth"):
+            resolved = pth_file.resolve()
+            if not resolved.is_relative_to(dest_resolved):
+                continue
+            self.log.emit(f"Patching {resolved.name} to enable 'import site' ...")
+            content = resolved.read_text(encoding="utf-8")
+            resolved.write_text(
+                content.replace("#import site", "import site"),
+                encoding="utf-8",
+            )
+
+    def _bootstrap_pip(self, dest_dir: Path, python_exe: Path) -> bool:
+        """Download get-pip.py, run it, return True on success."""
+        self.log.emit("Downloading get-pip.py ...")
+        try:
+            req = Request(_GET_PIP_URL, headers=_UA_HEADERS)
+            resp = urlopen(req, timeout=120)
+            get_pip_data = resp.read()
+        except OSError as e:
+            self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
+            return False
+
+        get_pip_path = dest_dir / "get-pip.py"
+        get_pip_path.write_bytes(get_pip_data)
+        try:
+            self.log.emit("Installing pip ...")
+            returncode = self._run_with_live_output(
+                [str(python_exe), str(get_pip_path)],
+                cwd=str(dest_dir),
+                timeout=300,
+            )
+            if returncode != 0:
+                self.result_ready.emit(
+                    False, f"get-pip.py failed (exit code {returncode})")
+                return False
+        finally:
+            get_pip_path.unlink(missing_ok=True)
+        return True
 
     def _run_with_live_output(
         self, cmd: list[str], cwd: str | None = None, timeout: int = 600,
@@ -196,7 +227,7 @@ class _DownloadPythonWorker(QThread):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-            self.log.emit("Process timed out")
+            self.log.emit(_PROCESS_TIMEOUT_MSG)
             return -1
         return proc.returncode
 
@@ -228,7 +259,7 @@ def _find_python_windows_install_paths() -> str | None:
                   appdata_programs + "\\Python"]:
         if Path(base).is_dir():
             for d in sorted(Path(base).iterdir(), reverse=True):
-                exe = d / "python.exe"
+                exe = d / _PYTHON_EXE_NAME
                 if exe.is_file():
                     candidates.append(str(exe))
     for c in candidates:
@@ -500,7 +531,7 @@ class _InstallWorker(QThread):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-            self.log.emit("Process timed out")
+            self.log.emit(_PROCESS_TIMEOUT_MSG)
             return -1
         return proc.returncode
 

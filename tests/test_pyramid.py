@@ -4,6 +4,8 @@ import numpy as np
 
 from Imervue.image.pyramid import DeepZoomImage
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 class TestDeepZoomImage:
     def test_single_level_small_image(self):
@@ -26,7 +28,7 @@ class TestDeepZoomImage:
 
     def test_levels_decreasing_size(self):
         """Each level should be smaller than the previous."""
-        img = np.random.randint(0, 256, (4096, 4096, 3), dtype=np.uint8)
+        img = _rng.integers(0, 256, (4096, 4096, 3), dtype=np.uint8)
         dzi = DeepZoomImage(img)
         for i in range(1, len(dzi.levels)):
             assert dzi.levels[i].shape[0] < dzi.levels[i - 1].shape[0]
@@ -36,7 +38,7 @@ class TestDeepZoomImage:
         """Zoom 1.0 should return level 0 (full resolution)."""
         img = np.zeros((2048, 2048, 4), dtype=np.uint8)
         dzi = DeepZoomImage(img)
-        level, data = dzi.get_level(1.0)
+        level, _ = dzi.get_level(1.0)
         assert level == 0
 
     def test_get_level_zoom_out(self):
@@ -51,7 +53,7 @@ class TestDeepZoomImage:
         """Level should never exceed the last level index."""
         img = np.zeros((2048, 2048, 4), dtype=np.uint8)
         dzi = DeepZoomImage(img)
-        level, data = dzi.get_level(0.001)
+        level, _ = dzi.get_level(0.001)
         assert level == len(dzi.levels) - 1
 
     def test_rgb_input(self):

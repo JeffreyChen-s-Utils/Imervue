@@ -831,6 +831,12 @@ Organising
      - Rate (press again to clear)
    * - ``F1`` -- ``F5``
      - Colour label: red / yellow / green / blue / purple (press same key to clear)
+   * - ``P``
+     - Cull: Pick (flag for keep)
+   * - ``Shift + X``
+     - Cull: Reject
+   * - ``U``
+     - Cull: Unflag
    * - ``B``
      - Toggle bookmark
    * - ``T``
@@ -881,6 +887,122 @@ Animation
      - Slow down
    * - ``]``
      - Speed up
+
+----
+
+Library & Metadata Management
+-----------------------------
+
+Imervue keeps a SQLite-backed index at ``%LOCALAPPDATA%/Imervue/library.db``
+(Windows) or ``~/.cache/imervue/library.db`` (POSIX) for cross-folder search,
+hierarchical tags, smart albums, perceptual hashes, notes, and cull flags.
+Everything below lives under ``Extra Tools`` unless noted.
+
+Library Search
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Library Search`` lets you add one or more **root folders**
+to a global index that is crawled in a background thread. Once a root is
+indexed you can query it by extension, min width/height, size range, or name
+substring and drop the results into the viewer as a virtual album.
+
+Smart Albums
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Smart Albums`` persists filter rules (extensions, minimum
+dimensions, colour labels, rating, favourites, cull state, hierarchical tags,
+name substring) under a friendly name. Reapplying an album filters the active
+folder by the saved rules.
+
+Similar-Image Search
+^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Find Similar Images`` runs a 64-bit DCT pHash on the
+current deep-zoom image (or the first selected tile) and lists near matches
+from the index sorted by Hamming distance. Adjust the ``Max distance`` spin to
+widen or tighten the net.
+
+Auto-Tag
+^^^^^^^^
+
+``Extra Tools`` > ``Auto-Tag Images`` applies heuristic tags under
+``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+``portrait``). If ``onnxruntime`` and a CLIP model at
+``models/clip_vit_b32.onnx`` are available, it also adds CLIP-based content
+labels. Runs on a worker thread with a live progress bar.
+
+Hierarchical Tags
+^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Hierarchical Tags`` manages tree-structured tags such as
+``animal/cat/british``. Select a tag to see every image beneath that branch
+(descendants included). Tag or untag the current selection with one click.
+Hierarchical tags live in the library index and are complementary to the flat
+tag system in the right-click menu.
+
+Token Batch Rename
+^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Token Batch Rename`` opens a live-preview table where you
+type a template like ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` and see
+exactly what every file will be renamed to. Conflicts are highlighted so
+nothing is overwritten. Supported tokens: ``{name} {ext} {counter[:NN]}
+{date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
+{hour} {minute}``.
+
+Metadata Export
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Export Metadata (CSV / JSON)`` writes a row per image in
+the current view covering EXIF, dimensions, color label, rating, favourite,
+hierarchical tags, cull state, and notes. Useful for feeding cull decisions
+into a spreadsheet or external workflow.
+
+Culling (Pick / Reject)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Lightroom-style three-state cull flag. Press ``P`` to pick the current image
+or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
+``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
+``Culling`` applies the filter via a dialog and also exposes a **Delete all
+rejects** button that permanently removes the flagged files from disk.
+
+Staging Tray
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Staging Tray`` is a cross-folder basket. Add any set of
+tiles to the tray (the list survives restarts), then move or copy the entire
+tray into a destination folder in one click. Useful for gathering picks from
+many shoots before export.
+
+Dual-Pane File Manager
+^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Dual-Pane File Manager`` opens a Total Commander-style
+two-tree view. Choose a folder in each pane and move/copy the selection
+between them without leaving Imervue.
+
+Timeline View
+^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Timeline View`` groups the current image set by day,
+month, or year (Google Photos style). Date is taken from EXIF
+``DateTimeOriginal`` when present, otherwise from the file modification time.
+Double-click any image to open it in Deep Zoom.
+
+Drag-out to External Apps
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Press and drag from a **selected** tile to drop the file into Explorer,
+Chrome, Discord, or any app that accepts file URLs. The drag preview is the
+tile thumbnail.
+
+Per-Image Notes
+^^^^^^^^^^^^^^^
+
+The EXIF sidebar includes a free-text **Notes** box. Typing auto-saves to the
+library index after a short debounce. Notes travel with the image path, so
+they survive folder re-scans.
 
 ----
 

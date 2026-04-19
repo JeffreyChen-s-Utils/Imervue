@@ -283,7 +283,7 @@ class TestCanvasRecipeSync:
 
     def test_geometry_change_clears_annotations(self, panel, real_image):
         """Rotation changes dimensions — annotations must be cleared."""
-        p, store = panel
+        p, _ = panel
         p.bind_to_path(str(real_image))
         assert p._canvas is not None
         # Add a dummy annotation

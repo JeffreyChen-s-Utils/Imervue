@@ -78,6 +78,10 @@ def _hamming_distance(a: int, b: int) -> int:
     return bin(a ^ b).count("1")
 
 
+_METHOD_EXACT = "exact"
+_COUNT_PLACEHOLDER = "{count}"
+
+
 # ---------------------------------------------------------------------------
 # Worker thread
 # ---------------------------------------------------------------------------
@@ -113,35 +117,44 @@ class _ScanWorker(QThread):
                 self.result_ready.emit([])
                 return
 
-            total = len(paths)
-            hash_map: dict[str, list[tuple[str, int]]] = {}  # hash_key → [(path, size)]
+            hash_map = self._build_hash_map(paths)
+            if self._abort:
+                return
 
-            for i, path in enumerate(paths):
-                if self._abort:
-                    return
-                self.progress.emit(i + 1, total, os.path.basename(path))
-                try:
-                    fsize = os.path.getsize(path)
-                    if self._method == "exact":
-                        h = self._file_hash(path)
-                    else:
-                        h = self._perceptual_hash(path)
-                    hash_map.setdefault(h, []).append((path, fsize))
-                except Exception:
-                    logger.debug("Skipping %s", path, exc_info=True)
-                    continue
-
-            if self._method == "exact":
-                # Group by identical hash
+            if self._method == _METHOD_EXACT:
                 groups = [g for g in hash_map.values() if len(g) > 1]
             else:
-                # Group by hamming distance
                 groups = self._cluster_perceptual(hash_map)
 
             self.result_ready.emit(groups)
         except Exception as e:
             logger.exception("Duplicate scan failed")
             self.error.emit(str(e))
+
+    def _build_hash_map(
+        self, paths: list[str],
+    ) -> dict[str, list[tuple[str, int]]]:
+        total = len(paths)
+        hash_map: dict[str, list[tuple[str, int]]] = {}
+        for i, path in enumerate(paths):
+            if self._abort:
+                return hash_map
+            self.progress.emit(i + 1, total, os.path.basename(path))
+            entry = self._hash_one(path)
+            if entry is not None:
+                key, size = entry
+                hash_map.setdefault(key, []).append((path, size))
+        return hash_map
+
+    def _hash_one(self, path: str) -> tuple[str, int] | None:
+        try:
+            size = os.path.getsize(path)
+            key = (self._file_hash(path) if self._method == _METHOD_EXACT
+                   else self._perceptual_hash(path))
+            return key, size
+        except Exception:
+            logger.debug("Skipping %s", path, exc_info=True)
+            return None
 
     def _collect_paths(self) -> list[str]:
         result = []
@@ -280,7 +293,7 @@ class DuplicateDetectionDialog(QDialog):
         opts_row.addWidget(QLabel(lang.get("duplicate_method", "Method:")))
         self._method_combo = QComboBox()
         self._method_combo.addItem(
-            lang.get("duplicate_exact", "Exact Match (File Hash)"), "exact")
+            lang.get("duplicate_exact", "Exact Match (File Hash)"), _METHOD_EXACT)
         self._method_combo.addItem(
             lang.get("duplicate_perceptual", "Perceptual (Similarity)"), "perceptual")
         self._method_combo.currentIndexChanged.connect(self._on_method_changed)
@@ -367,7 +380,7 @@ class DuplicateDetectionDialog(QDialog):
         self._progress.setValue(0)
         self._progress.show()
 
-        method = self._method_combo.currentData() or "exact"
+        method = self._method_combo.currentData() or _METHOD_EXACT
         threshold = self._threshold_spin.value()
         recursive = self._recursive_check.isChecked()
 
@@ -395,7 +408,7 @@ class DuplicateDetectionDialog(QDialog):
             return
         self._status_label.setText(
             self._lang.get("duplicate_found", "{count} group(s) of duplicates found").replace(
-                "{count}", str(len(groups))
+                _COUNT_PLACEHOLDER, str(len(groups))
             ))
         for gi, group in enumerate(groups):
             group_item = QTreeWidgetItem(self._tree)
@@ -437,7 +450,7 @@ class DuplicateDetectionDialog(QDialog):
             self._lang.get(
                 "duplicate_confirm_msg",
                 "Move {count} file(s) to trash?"
-            ).replace("{count}", str(len(paths))),
+            ).replace(_COUNT_PLACEHOLDER, str(len(paths))),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
@@ -455,7 +468,7 @@ class DuplicateDetectionDialog(QDialog):
                 logger.exception("Failed to delete %s", path)
         self._status_label.setText(
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
-                "{count}", str(deleted)
+                _COUNT_PLACEHOLDER, str(deleted)
             ))
 
     @staticmethod

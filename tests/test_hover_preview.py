@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
 
 @pytest.fixture
 def hover_mod(qapp):
@@ -15,7 +17,7 @@ def hover_mod(qapp):
 @pytest.fixture
 def sample_png(tmp_path):
     p = tmp_path / "sample.png"
-    Image.fromarray(np.random.randint(0, 256, (200, 300, 3), dtype=np.uint8)).save(str(p))
+    Image.fromarray(_rng.integers(0, 256, (200, 300, 3), dtype=np.uint8)).save(str(p))
     return str(p)
 
 

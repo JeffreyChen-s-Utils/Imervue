@@ -57,14 +57,31 @@ TARGET_RESOLUTIONS = [
     ("sanitize_res_8k",     "8K UHD   (7680 px)",   7680),
 ]
 
+# Format / mode names used across the sanitize pipeline.
+_MODE_RGB = "RGB"
+_MODE_RGBA = "RGBA"
+_FMT_PNG = "PNG"
+_FMT_JPEG = "JPEG"
+_FMT_TIFF = "TIFF"
+_FMT_WEBP = "WebP"
+_FMT_BMP = "BMP"
+
+_EXT_PNG = ".png"
+_EXT_JPG = ".jpg"
+_EXT_JPEG = ".jpeg"
+_EXT_TIFF = ".tiff"
+_EXT_TIF = ".tif"
+_EXT_WEBP = ".webp"
+_EXT_BMP = ".bmp"
+
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".webp", ".bmp",
+    _EXT_PNG, _EXT_JPG, _EXT_JPEG, _EXT_TIFF, _EXT_TIF, _EXT_WEBP, _EXT_BMP,
 })
 
 _PIL_FORMAT_MAP = {
-    ".jpg": "JPEG", ".jpeg": "JPEG",
-    ".png": "PNG", ".tiff": "TIFF", ".tif": "TIFF",
-    ".webp": "WebP", ".bmp": "BMP",
+    _EXT_JPG: _FMT_JPEG, _EXT_JPEG: _FMT_JPEG,
+    _EXT_PNG: _FMT_PNG, _EXT_TIFF: _FMT_TIFF, _EXT_TIF: _FMT_TIFF,
+    _EXT_WEBP: _FMT_WEBP, _EXT_BMP: _FMT_BMP,
 }
 
 _RANDOM_CHARS = string.ascii_lowercase + string.digits
@@ -97,24 +114,31 @@ def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
 # Core sanitize logic (pure, testable)
 # ---------------------------------------------------------------------------
 
+_EXIF_TAG_DATETIME_ORIGINAL = 36867
+_EXIF_TAG_DATETIME = 306
+_EXIF_DATE_FORMATS = ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S")
+
+
+def _parse_exif_date(val: str) -> datetime | None:
+    for fmt in _EXIF_DATE_FORMATS:
+        try:
+            return datetime.strptime(val, fmt)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
 def _get_image_date(path: str) -> datetime:
     """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
     with contextlib.suppress(Exception):
-        img = Image.open(path)
-        exif = img.getexif()
-        # 36867 = DateTimeOriginal, 306 = DateTime
-        for tag in (36867, 306):
+        exif = Image.open(path).getexif()
+        for tag in (_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME):
             val = exif.get(tag)
-            if val:
-                for fmt in ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
-                    try:
-                        return datetime.strptime(val, fmt)
-                    except (ValueError, TypeError):
-                        continue
-    # Fallback to file modification time
+            parsed = _parse_exif_date(val) if val else None
+            if parsed is not None:
+                return parsed
     try:
-        mtime = os.path.getmtime(path)
-        return datetime.fromtimestamp(mtime)
+        return datetime.fromtimestamp(os.path.getmtime(path))
     except OSError:
         return datetime.now()
 
@@ -152,6 +176,83 @@ def _compute_upscale_params(width: int, height: int,
     return (model_key, final_w, final_h)
 
 
+def _resolve_output_ext(path: str, output_ext: str) -> tuple[str, str]:
+    if output_ext == "same":
+        ext = Path(path).suffix.lower()
+        if ext not in _PIL_FORMAT_MAP:
+            ext = _EXT_PNG
+    else:
+        ext = output_ext
+    return ext, _PIL_FORMAT_MAP.get(ext, _FMT_PNG)
+
+
+def _final_dims(w: int, h: int, target_long_edge: int) -> tuple[int, int]:
+    if w >= h:
+        return target_long_edge, max(1, round(h * target_long_edge / w))
+    return max(1, round(w * target_long_edge / h)), target_long_edge
+
+
+def _ai_upscale(clean: Image.Image, final_w: int, final_h: int,
+                ort_session, ort_scale: int,
+                tile_progress_cb) -> Image.Image:
+    import numpy as np
+    from Imervue.gui.ai_upscale_dialog import _upscale_image
+
+    if clean.mode == _MODE_RGBA:
+        alpha = clean.split()[-1]
+        rgb = clean.convert(_MODE_RGB)
+    else:
+        alpha = None
+        rgb = clean
+
+    upscaled_arr = _upscale_image(
+        ort_session, np.array(rgb), ort_scale,
+        progress_cb=tile_progress_cb)
+    upscaled = Image.fromarray(upscaled_arr)
+
+    if alpha is not None:
+        alpha_up = alpha.resize(upscaled.size, Image.Resampling.LANCZOS)
+        upscaled.putalpha(alpha_up)
+
+    return upscaled.resize((final_w, final_h), Image.Resampling.LANCZOS)
+
+
+def _maybe_upscale(clean: Image.Image, target_long_edge: int,
+                   trad_resampling, ort_session, ort_scale: int,
+                   tile_progress_cb) -> Image.Image:
+    if target_long_edge <= 0:
+        return clean
+    w, h = clean.size
+    if max(w, h) >= target_long_edge:
+        return clean
+    final_w, final_h = _final_dims(w, h, target_long_edge)
+    if trad_resampling is not None:
+        return clean.resize((final_w, final_h), trad_resampling)
+    if ort_session is not None and ort_scale > 0:
+        return _ai_upscale(clean, final_w, final_h, ort_session, ort_scale,
+                           tile_progress_cb)
+    return clean
+
+
+def _allocate_output_path(output_dir: str, dt: datetime, rand_len: int,
+                          ext: str) -> str:
+    out_path = os.path.join(output_dir, _generate_name(dt, rand_len, ext))
+    while os.path.exists(out_path):
+        out_path = os.path.join(output_dir, _generate_name(dt, rand_len, ext))
+    return out_path
+
+
+def _save_kwargs_for(fmt: str, jpeg_quality: int,
+                     png_compress: int) -> dict:
+    kwargs: dict = {"format": fmt}
+    if fmt == _FMT_JPEG:
+        kwargs["quality"] = jpeg_quality
+        kwargs["subsampling"] = 0
+    elif fmt == _FMT_PNG:
+        kwargs["compress_level"] = png_compress
+    return kwargs
+
+
 def sanitize_image(path: str, output_dir: str, output_ext: str,
                    rand_len: int = 8, jpeg_quality: int = 95,
                    png_compress: int = 6,
@@ -167,95 +268,29 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     provided *ort_session* (ONNX Real-ESRGAN), then resized to exactly
     fit the target while keeping aspect ratio.
 
-    Returns the output path on success.  Raises on failure.
+    Returns the output path on success. Raises on failure.
     """
     img = Image.open(path)
-
-    # Determine output format
-    if output_ext == "same":
-        ext = Path(path).suffix.lower()
-        if ext not in _PIL_FORMAT_MAP:
-            ext = ".png"
-    else:
-        ext = output_ext
-    fmt = _PIL_FORMAT_MAP.get(ext, "PNG")
+    ext, fmt = _resolve_output_ext(path, output_ext)
 
     # Re-create image from raw bytes — no metadata survives, no list copy
     clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # JPEG does not support alpha
-    if fmt == "JPEG" and clean.mode != "RGB":
-        clean = clean.convert("RGB")
+    if fmt == _FMT_JPEG and clean.mode != _MODE_RGB:
+        clean = clean.convert(_MODE_RGB)
 
-    # --- Optional upscale ---
-    if target_long_edge > 0:
-        w, h = clean.size
-        long = max(w, h)
-        if long < target_long_edge:
-            # Compute final dimensions preserving aspect ratio
-            if w >= h:
-                final_w = target_long_edge
-                final_h = max(1, round(h * target_long_edge / w))
-            else:
-                final_h = target_long_edge
-                final_w = max(1, round(w * target_long_edge / h))
-
-            if trad_resampling is not None:
-                # Traditional resize — single step, no ONNX needed
-                clean = clean.resize((final_w, final_h), trad_resampling)
-            elif ort_session is not None and ort_scale > 0:
-                # AI upscale via ONNX
-                import numpy as np
-                from Imervue.gui.ai_upscale_dialog import _upscale_image
-
-                if clean.mode == "RGBA":
-                    alpha = clean.split()[-1]
-                    rgb = clean.convert("RGB")
-                else:
-                    alpha = None
-                    rgb = clean
-
-                arr = np.array(rgb)
-                upscaled_arr = _upscale_image(
-                    ort_session, arr, ort_scale,
-                    progress_cb=tile_progress_cb)
-                upscaled = Image.fromarray(upscaled_arr)
-
-                if alpha is not None:
-                    alpha_up = alpha.resize(upscaled.size,
-                                            Image.Resampling.LANCZOS)
-                    upscaled.putalpha(alpha_up)
-
-                clean = upscaled.resize((final_w, final_h),
-                                        Image.Resampling.LANCZOS)
+    clean = _maybe_upscale(clean, target_long_edge, trad_resampling,
+                           ort_session, ort_scale, tile_progress_cb)
 
     # Disrupt LSB steganography (e.g. NovelAI stealth pnginfo embeds
     # prompt/seed/parameters in the least-significant bit of RGB/alpha
-    # channels — tEXt-chunk stripping alone leaves that payload intact
-    # because the bits live in the pixel data). Randomising each 8-bit
-    # channel's LSB destroys the payload; the visual impact is ±1/255
-    # per channel (well below the JND for any display).
+    # channels — tEXt-chunk stripping alone leaves that payload intact).
     clean = _scramble_lsb(clean)
 
-    # Generate new filename
-    dt = _get_image_date(path)
-    name = _generate_name(dt, rand_len, ext)
-    out_path = os.path.join(output_dir, name)
-
-    # Avoid collision
-    while os.path.exists(out_path):
-        name = _generate_name(dt, rand_len, ext)
-        out_path = os.path.join(output_dir, name)
-
-    # Save with minimal kwargs — no metadata passed
-    save_kwargs: dict = {"format": fmt}
-    if fmt == "JPEG":
-        save_kwargs["quality"] = jpeg_quality
-        save_kwargs["subsampling"] = 0  # 4:4:4 best quality
-    elif fmt == "PNG":
-        save_kwargs["compress_level"] = png_compress
-
-    clean.save(out_path, **save_kwargs)
+    out_path = _allocate_output_path(output_dir, _get_image_date(path),
+                                      rand_len, ext)
+    clean.save(out_path, **_save_kwargs_for(fmt, jpeg_quality, png_compress))
     return out_path
 
 
@@ -281,10 +316,12 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
     # Convert exotic modes to a form with 8-bit channels so the LSB
     # operation is well-defined (palette indices, for example, would be
     # corrupted by masking).
-    if img.mode not in ("L", "LA", "RGB", "RGBA"):
-        img = img.convert("RGBA" if "A" in img.mode else "RGB")
+    if img.mode not in ("L", "LA", _MODE_RGB, _MODE_RGBA):
+        img = img.convert(_MODE_RGBA if "A" in img.mode else _MODE_RGB)
     arr = np.array(img, copy=True)
-    rng = np.random.default_rng()
+    # Unseeded on purpose: if an attacker can predict the scramble pattern
+    # they can recover the hidden payload, which defeats the entire feature.
+    rng = np.random.default_rng()  # noqa: NPY002
     scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
     # Where mask is True use random LSB, otherwise keep the original LSB.
@@ -475,11 +512,11 @@ class ImageSanitizeDialog(QDialog):
         self._fmt_combo = QComboBox()
         self._fmt_combo.addItem(
             lang.get("sanitize_fmt_same", "Same as source"), "same")
-        self._fmt_combo.addItem("PNG (.png)", ".png")
-        self._fmt_combo.addItem("JPEG (.jpg)", ".jpg")
-        self._fmt_combo.addItem("WebP (.webp)", ".webp")
-        self._fmt_combo.addItem("BMP (.bmp)", ".bmp")
-        self._fmt_combo.addItem("TIFF (.tiff)", ".tiff")
+        self._fmt_combo.addItem("PNG (.png)", _EXT_PNG)
+        self._fmt_combo.addItem("JPEG (.jpg)", _EXT_JPG)
+        self._fmt_combo.addItem("WebP (.webp)", _EXT_WEBP)
+        self._fmt_combo.addItem("BMP (.bmp)", _EXT_BMP)
+        self._fmt_combo.addItem("TIFF (.tiff)", _EXT_TIFF)
         fmt_row.addWidget(self._fmt_combo, 1)
         layout.addLayout(fmt_row)
 

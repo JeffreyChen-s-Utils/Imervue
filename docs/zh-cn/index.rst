@@ -814,6 +814,12 @@ Imervue 支持插件扩展功能。
      - 评分（再按取消）
    * - ``F1`` ～ ``F5``
      - 颜色标签：红／黄／绿／蓝／紫（再按清除）
+   * - ``P``
+     - 分拣：Pick（标为保留）
+   * - ``Shift + X``
+     - 分拣：Reject（标为淘汰）
+   * - ``U``
+     - 分拣：取消标记
    * - ``B``
      - 加入／取消书签
    * - ``T``
@@ -864,6 +870,106 @@ Imervue 支持插件扩展功能。
      - 减速
    * - ``]``
      - 加速
+
+图库与元数据管理
+----------------
+
+Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
+``~/.cache/imervue/library.db``（POSIX）维护 SQLite 索引，用于跨文件夹搜索、
+分层标签、智能相册、感知哈希、笔记与分拣旗标。以下功能多数位于
+``Extra Tools``（额外工具）菜单。
+
+图库搜索
+^^^^^^^^
+
+``Extra Tools`` > ``Library Search`` 支持添加多个**根目录**并在后台建立索引，
+之后可按扩展名、最小宽高、文件大小或文件名片段查询，并将结果作为虚拟
+相册载入查看器。
+
+智能相册
+^^^^^^^^
+
+``Extra Tools`` > ``Smart Albums`` 以友好名称保存一组过滤规则（扩展名、最小
+尺寸、颜色标签、评分、收藏、分拣状态、分层标签、文件名片段），再次应用
+时会按规则过滤当前文件夹。
+
+相似图片搜索
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Find Similar Images`` 会对当前深度缩放（或第一张选中）
+的图片计算 64 位 DCT pHash，并按汉明距离由近到远列出索引中的近似图，可
+通过 Max distance 调节宽严。
+
+自动标记
+^^^^^^^^
+
+``Extra Tools`` > ``Auto-Tag Images`` 将启发式标签归入 ``auto/...``
+（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+``portrait``）；若安装了 ``onnxruntime`` 且 ``models/clip_vit_b32.onnx``
+存在，则额外添加 CLIP 内容标签。在工作线程中运行，带实时进度条。
+
+分层标签
+^^^^^^^^
+
+``Extra Tools`` > ``Hierarchical Tags`` 管理树状标签（如
+``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
+键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
+
+Token 批量重命名
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Token Batch Rename`` 提供实时预览，输入
+``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 等模板后立即显示每个文件的
+新名称；冲突会被高亮。支持 tokens：``{name} {ext} {counter[:NN]}
+{date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
+{hour} {minute}``。
+
+元数据导出
+^^^^^^^^^^
+
+``Extra Tools`` > ``Export Metadata (CSV / JSON)`` 会为当前视图中的每张图
+片输出一行，包含 EXIF、尺寸、颜色标签、评分、收藏、分层标签、分拣状态
+与笔记。方便接入电子表格或外部流程。
+
+分拣（Pick / Reject）
+^^^^^^^^^^^^^^^^^^^^^
+
+Lightroom 风格的三态旗标。``P`` 将当前或选中的所有 tile 标为 Pick；
+``Shift + X`` 标为 Reject；``U`` 取消。``Filter`` > ``By Cull State`` 可只
+显示某种状态；``Extra Tools`` > ``Culling`` 提供对话框并带有
+**Delete all rejects** 按钮，可从磁盘永久删除被淘汰文件。
+
+暂存篮
+^^^^^^
+
+``Extra Tools`` > ``Staging Tray`` 是跨文件夹的暂存篮。任意 tile 可加入篮中
+（重启后保留），再一键将整篮移动或复制到目标文件夹。适合从多次拍摄中
+汇总出精选再导出。
+
+双窗格文件管理
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Dual-Pane File Manager`` 提供 Total Commander 风格的双
+树视图，可在两侧文件夹之间直接移动或复制选中项。
+
+时间轴视图
+^^^^^^^^^^
+
+``Extra Tools`` > ``Timeline View`` 按「日／月／年」分组当前图片集（Google
+Photos 风格）。日期优先取 EXIF ``DateTimeOriginal``，否则使用文件修改时间。
+双击图片可进入深度缩放。
+
+拖拽至外部应用
+^^^^^^^^^^^^^^
+
+从**已选中** tile 按住拖拽，即可将文件丢入资源管理器、Chrome、Discord 等
+支持 file URL 的应用；拖拽预览为 tile 缩略图。
+
+单张图片笔记
+^^^^^^^^^^^^
+
+EXIF 侧栏包含 **Notes** 文本框，输入内容会经短暂去抖后自动写入索引；笔记
+按图片路径保存，重新扫描也能保留。
 
 ----
 

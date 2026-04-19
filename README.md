@@ -89,6 +89,7 @@ Key design principles:
 - **Cross-folder navigation** (Ctrl+Shift+←/→) — jump to next/prev sibling folder
 - Fuzzy search with substring highlighting (Ctrl+F / `/`)
 - **Go to image** dialog (Ctrl+G) — jump by index
+- **Command Palette** (Ctrl+Shift+P) — fuzzy-search every menu action in one dialog
 - Auto-loop at folder ends
 
 ### Organization
@@ -96,15 +97,27 @@ Key design principles:
 - Bookmark system (up to 5000 bookmarks)
 - Rating system (1–5 stars) and favorites
 - **Color labels** (F1–F5 → red/yellow/green/blue/purple) — Lightroom-style flags independent of star rating
+- **Culling workflow** (P / Shift+X / U → Pick / Reject / Unflag) — Lightroom-style 3-state flag with Filter > By Cull State and bulk delete-rejects
+- **Hierarchical tags** — tree-structured paths like `animal/cat/british`, descendants searched automatically
 - Tags & Albums with **multi-tag filter** (AND/OR boolean logic)
+- **Smart Albums** — save rule-based filter queries (extensions, min resolution, rating, color, cull, tags…) and reapply them in one click
+- **Timeline view** — Google-Photos-style grouping by day / month / year (EXIF DateTimeOriginal falling back to mtime)
+- **Similar-image search** via 64-bit DCT pHash with Hamming distance threshold
+- **Per-image notes** in the EXIF sidebar — free-text, debounced save, persisted across sessions
+- **Staging tray** — cross-folder basket that survives restarts; bulk move/copy/export
+- **Dual-pane file manager** — Total Commander-style two-tree view with move/copy between panes
 - Sort by name, modified date, created date, file size, or resolution
-- Filter by file extension, rating, color label, or tag/album
+- Filter by file extension, rating, color label, cull state, or tag/album
 - **Advanced filter** — resolution / file size / orientation / modified date range
+- **Stack RAW+JPEG pairs** — collapse shoot-in-RAW+JPEG captures into one tile; the preview is shown while the RAW stays accessible as a sibling
+- **Session / Workspace save & restore** — snapshot current tabs, active image, selection, and filter state to a `.imervue-session.json` file and reload later
+- **Macro record / replay** — capture rating / favorite / color / tag actions and reapply them to any selection (Alt+M replays the last macro)
 - Recent folders and recent images tracking
 - Automatic restore of last opened folder on startup
 - **Thumbnail status badges** — left-edge colour strip, favorite heart, bookmark star, rating stars
 - **Thumbnail density** — Compact / Standard / Relaxed padding
 - **File tree extras** — F5 refresh, New Folder, Expand/Collapse All
+- **Drag-out to external apps** — press and drag a selected tile into Explorer / Chrome / Discord
 
 ### Editing & Export
 
@@ -112,6 +125,10 @@ Key design principles:
 - Export/Save As with format conversion (PNG, JPEG, WebP, BMP, TIFF)
 - Quality slider for lossy formats (JPEG, WebP)
 - Batch operations (rename, move/copy, rotate selected images)
+- **Contact Sheet PDF** — grid of thumbnails with captions, configurable rows/columns and page size (A4 / A3 / Letter / Legal)
+- **Web Gallery HTML** — self-contained folder with `index.html`, JPEG thumbnails, inline lightbox; optional copy-originals for portability
+- **Slideshow MP4** — render image sequences to H.264 video with configurable FPS, hold-per-image, and fade transitions (requires `imageio-ffmpeg`)
+- **External editor integration** — register programs (e.g. GIMP, Photoshop) and launch them on the current image from File > Open in External Editor
 - Set image as desktop wallpaper
 - Copy image / image path to clipboard
 
@@ -130,6 +147,21 @@ Key design principles:
 - **Image Organizer** — Sort images into subfolders by date, resolution, type, size, or fixed count
 - **Batch EXIF Strip** — Remove EXIF, GPS, and metadata from all images in a folder
 - **Crop Tool** — Interactive crop with aspect ratio presets (Free / 1:1 / 4:3 / 3:2 / 16:9 / 9:16), rule-of-thirds overlay, and drag handles
+- **Library Search** — SQLite index with multi-root scanning; query by extension, size, dimensions, filename
+- **Smart Albums** — save & reapply rule-based filter queries
+- **Find Similar Images** — pHash-based search with adjustable Hamming distance
+- **Auto-Tag Images** — heuristic (photo / document / screenshot / landscape / portrait) with optional CLIP ONNX upgrade
+- **Hierarchical Tags** manager — tree-structured tag paths with bulk assign/untag
+- **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
+- **Export Metadata (CSV / JSON)** — one row per image with EXIF, cull, rating, tags, notes
+- **Culling** dialog — filter by Pick / Reject / Unflagged, bulk delete all rejects
+- **Staging Tray** — cross-folder basket for batch move/copy/export
+- **Dual-Pane File Manager** — Total Commander-style two-tree view
+- **Timeline View** — day / month / year groupings of the current image set
+- **Macros** — record/replay batches of rating / favorite / color-label / tag actions across selections
+- **Contact Sheet PDF** — multi-page PDF with grid layout and filename captions
+- **Web Gallery** — static HTML gallery with thumbnails + lightbox
+- **Slideshow Video** — MP4 export with fade transitions
 
 ### System Integration
 
@@ -209,6 +241,7 @@ pip install .
 | numpy | Array operations and thumbnail cache |
 | rawpy | RAW image decoding |
 | imageio | Image I/O |
+| imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
 
 ---
 
@@ -307,6 +340,8 @@ window keeps browsing independently.
 | X | Jump to a random image |
 | Home | Reset zoom and pan to origin |
 | Ctrl+F or / | Open fuzzy search dialog |
+| Ctrl+Shift+P | Open **Command Palette** (fuzzy-search menu actions) |
+| Alt+M | Replay last macro on current selection |
 | S | Open slideshow dialog |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
@@ -333,6 +368,9 @@ window keeps browsing independently.
 | 0 | Toggle favorite (heart) |
 | 1–5 | Quick rating (1–5 stars) |
 | F1–F5 | Quick **color label** (red / yellow / green / blue / purple) |
+| P | **Cull: Pick** (flag for keep) |
+| Shift+X | **Cull: Reject** |
+| U | **Cull: Unflag** |
 | Shift+S | Open split view (two images side-by-side) |
 | Shift+D | Open dual-page reading (manga/comic) |
 | Ctrl+Shift+D | Open dual-page reading in right-to-left order |
@@ -389,9 +427,14 @@ window keeps browsing independently.
 - Open Folder
 - Recent (submenu: recent folders and images)
 - Bookmarks (manage bookmarked images)
+- Tags & Albums
 - Commit Pending Deletions (finalize undo stack)
-- Keyboard Shortcuts (customizable key bindings)
+- Paste from Clipboard / Auto-annotate Clipboard Images
 - File Association (Windows only — register/unregister right-click context menu)
+- **Session** (submenu: Save Session… / Load Session…)
+- **External Editors…** — configure executables (name, path, arguments)
+- **Open in External Editor** — submenu listing configured editors
+- Keyboard Shortcuts (customizable key bindings)
 - Exit
 
 ### Extra Tools
@@ -402,6 +445,21 @@ window keeps browsing independently.
 - Image Organizer
 - Batch EXIF Strip
 - Image Sanitizer
+- **Library Search** (SQLite multi-root index)
+- **Smart Albums** (save / apply / delete rule-based filters)
+- **Find Similar Images** (pHash Hamming distance)
+- **Auto-Tag Images** (heuristic + optional CLIP ONNX)
+- **Hierarchical Tags** (tree-structured tag paths)
+- **Token Batch Rename** (live-preview templates)
+- **Export Metadata (CSV / JSON)**
+- **Culling** (filter / bulk delete rejects)
+- **Staging Tray** (cross-folder basket)
+- **Dual-Pane File Manager**
+- **Macros** — record / replay batches of user actions
+- **Contact Sheet PDF** — multi-page PDF thumbnail sheet
+- **Web Gallery** — static HTML gallery with lightbox
+- **Slideshow Video** — MP4 export via ffmpeg
+- **Timeline View** (by day / month / year)
 
 ### View
 
@@ -422,6 +480,8 @@ window keeps browsing independently.
 - By Tag (single) / By Album (single)
 - **Multi-Tag Filter…** — multi-select tags or albums with AND / OR boolean logic
 - **Advanced Filter…** — resolution / file size / orientation / modified-date range
+- **By Cull State**: All / Picks only / Rejects only / Unflagged only
+- **Stack RAW+JPEG pairs** (toggle) — collapse same-stem RAW/preview captures into one tile
 - Clear Filter
 
 ### Language
@@ -533,6 +593,10 @@ Settings are stored in `user_setting.json` in the working directory.
 | `window_geometry` | string | Base64-encoded window geometry (saved on close) |
 | `window_state` | string | Base64-encoded window state (dock / toolbar layout) |
 | `window_maximized` | bool | Whether the window was maximized on last close |
+| `stack_raw_jpeg_pairs` | bool | Collapse RAW+JPEG pairs sharing a filename stem into one tile |
+| `external_editors` | list | Configured editors (`[{name, executable, arguments}]`) |
+| `macros` | list | Saved macros (`[{name, steps[], created_at}]`) |
+| `macro_last_name` | string | Name of the most recently saved macro (used by Alt+M) |
 
 ---
 
@@ -552,17 +616,35 @@ Imervue/
 │   ├── annotation_dialog.py # Annotation canvas + crop tool
 │   ├── batch_convert_dialog.py # Batch format conversion
 │   ├── bookmark_dialog.py   # Bookmark manager dialog
+│   ├── command_palette.py   # Ctrl+Shift+P fuzzy action finder
+│   ├── contact_sheet_dialog.py # Contact sheet PDF export dialog
 │   ├── develop_panel.py     # Edit/develop panel
 │   ├── duplicate_detection_dialog.py # Duplicate image finder
 │   ├── exif_editor.py       # EXIF metadata editor
 │   ├── exif_sidebar.py      # Collapsible EXIF sidebar
 │   ├── exif_strip_dialog.py # Batch EXIF strip
 │   ├── export_dialog.py     # Export/Save As dialog
+│   ├── external_editors_settings.py # External editor config dialog
 │   ├── image_editor.py      # Image editor (crop, adjust, rotate)
 │   ├── image_organizer_dialog.py # Image sorter/organizer
 │   ├── image_sanitize_dialog.py  # Image sanitizer + AI upscale
+│   ├── macro_manager_dialog.py # Macro record/compose/replay dialog
 │   ├── shortcut_settings_dialog.py # Custom keyboard shortcuts
+│   ├── slideshow_mp4_dialog.py # Slideshow MP4 export dialog
+│   ├── web_gallery_dialog.py # Web gallery HTML export dialog
 │   └── toast.py             # Toast notification system
+├── external/                # External tool integration
+│   └── editors.py           # Editor config + subprocess launcher
+├── export/                  # Export generators (non-Qt logic)
+│   ├── contact_sheet.py     # PDF contact sheet (QPdfWriter + QPainter)
+│   ├── web_gallery.py       # Static HTML gallery + thumbnails
+│   └── slideshow_mp4.py     # MP4 slideshow via imageio-ffmpeg
+├── macros/                  # Macro record / replay
+│   └── macro_manager.py     # Singleton manager + action registry
+├── sessions/                # Workspace serialization
+│   └── session_manager.py   # Capture / save / restore session snapshot
+├── library/                 # Library helpers
+│   └── stacks.py            # RAW+JPEG stack grouping
 ├── image/                   # Image utilities
 │   ├── info.py              # Image info extraction
 │   ├── pyramid.py           # Deep zoom image pyramid

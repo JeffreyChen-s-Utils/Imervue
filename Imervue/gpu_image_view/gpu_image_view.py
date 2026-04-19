@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 import numpy as np
 import os
 from collections import OrderedDict
-from OpenGL.GL import *
+from OpenGL.GL import *  # noqa: F401, F403 — OpenGL uses hundreds of constants; explicit list impractical
 from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
 from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -42,6 +42,9 @@ import contextlib
 # DeepZoom 預載範圍（±N 張）
 _PREFETCH_RANGE = 3
 _PREFETCH_MAX = _PREFETCH_RANGE * 2 + 1
+
+_FONT_SEGOE_UI = "Segoe UI"
+_FONT_CONSOLAS = "Consolas"
 
 
 class GPUImageView(QOpenGLWidget):
@@ -285,8 +288,10 @@ class GPUImageView(QOpenGLWidget):
         # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
         # into the next real draw call.
         with contextlib.suppress(Exception):
-            while glGetError() != GL_NO_ERROR:
-                pass
+            # Drain the GL error queue — body intentionally empty since
+            # glGetError has the side-effect of clearing the flag.
+            while glGetError() != GL_NO_ERROR:  # noqa: S108
+                continue
 
         if total_kb <= 0:
             _log.info(
@@ -343,26 +348,156 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Tile Grid Lazy Render
     # ---------------------------
-    def paint_tile_grid(self):
+    def _tile_base_size(self) -> int:
+        if self.thumbnail_size is not None:
+            return self.thumbnail_size
+        if self.tile_cache:
+            # 用第一張圖實際寬度當排版基準
+            return next(iter(self.tile_cache.values())).shape[1]
+        return 256
 
+    def _draw_tile_placeholder(self, x0: float, y0: float,
+                               scaled_tile: float, vw: int, vh: int) -> None:
+        x1, y1 = x0 + scaled_tile, y0 + scaled_tile
+        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+            return
+        self.renderer.draw_colored_rect(x0, y0, x1, y1,
+                                        0.14, 0.14, 0.14, 1.0, filled=True)
+        self.renderer.draw_colored_rect(x0, y0, x1, y1,
+                                        0.28, 0.28, 0.28, 1.0, filled=False)
+        self.placeholder_rects.append((x0, y0, x1, y1))
+
+    def _ensure_tile_texture(self, path: str, img_data) -> bool:
+        """Allocate a GPU texture for *path* if needed. Returns False when
+        over the VRAM budget so the caller can skip drawing."""
+        if path in self.tile_textures:
+            return True
+        tex_bytes = img_data.shape[1] * img_data.shape[0] * 4
+        if self._vram_usage + tex_bytes > self._vram_limit:
+            return False
+        tex = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, tex)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                     img_data.shape[1], img_data.shape[0], 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        self.tile_textures[path] = tex
+        self._tile_tex_sizes[path] = tex_bytes
+        self._vram_usage += tex_bytes
+        return True
+
+    def _draw_single_tile(self, i: int, path: str, cols: int, cell: float,
+                          scaled_tile: float, vw: int, vh: int) -> None:
+        row, col = divmod(i, cols)
+        x0 = col * cell + self.grid_offset_x
+        y0 = row * cell + self.grid_offset_y
+        if path not in self.tile_cache:
+            self._draw_tile_placeholder(x0, y0, scaled_tile, vw, vh)
+            return
+        img_data = self.tile_cache[path]
+        x1 = x0 + img_data.shape[1] * self.tile_scale
+        y1 = y0 + img_data.shape[0] * self.tile_scale
+        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+            return
+        self.tile_rects.append((x0, y0, x1, y1, path))
+        if not self._ensure_tile_texture(path, img_data):
+            return
+        self.renderer.draw_textured_quad(x0, y0, x1, y1,
+                                         self.tile_textures[path])
+
+    def _draw_tile_grid_borders(self) -> None:
+        if not self.tile_rects:
+            return
+        glDisable(GL_TEXTURE_2D)
+        glLineWidth(1)
+        for x0, y0, x1, y1, _path in self.tile_rects:
+            self.renderer.draw_colored_rect(x0, y0, x1, y1,
+                                            0.3, 0.3, 0.3, 1.0, filled=False)
+        glEnable(GL_TEXTURE_2D)
+
+    def _draw_tile_selection_marker(self, x0, y0, x1, y1) -> None:
+        # 藍色粗邊框
+        glColor4f(0.18, 0.5, 1.0, 1.0)
+        glBegin(GL_LINE_LOOP)
+        for (vx, vy) in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            glVertex2f(vx, vy)
+        glEnd()
+        # 右上藍色圓 + 勾
+        circle_radius = 9
+        cx, cy = x1 - 12, y0 + 12
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex2f(cx, cy)
+        for i in range(33):
+            angle = i * 2.0 * 3.1415926 / 32
+            glVertex2f(cx + circle_radius * np.cos(angle),
+                       cy + circle_radius * np.sin(angle))
+        glEnd()
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glLineWidth(2.5)
+        glBegin(GL_LINES)
+        glVertex2f(cx - 4, cy)
+        glVertex2f(cx - 1, cy + 3)
+        glVertex2f(cx - 1, cy + 3)
+        glVertex2f(cx + 5, cy - 4)
+        glEnd()
+        glLineWidth(4)
+
+    def _draw_tile_selection_overlay(self) -> None:
+        if not self.tile_selection_mode:
+            return
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glLineWidth(4)
+        for x0, y0, x1, y1, path in self.tile_rects:
+            if path in self.selected_tiles:
+                self._draw_tile_selection_marker(x0, y0, x1, y1)
+        glDisable(GL_BLEND)
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1, 1, 1, 1)
+        glLineWidth(1)
+
+    def _draw_drag_select_rect(self) -> None:
+        if not (self._drag_selecting and self._drag_start_pos
+                and self._drag_end_pos):
+            return
+        x0, y0 = self._drag_start_pos.x(), self._drag_start_pos.y()
+        x1, y1 = self._drag_end_pos.x(), self._drag_end_pos.y()
+        left, right = min(x0, x1), max(x0, x1)
+        top, bottom = min(y0, y1), max(y0, y1)
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        # 淡藍填充
+        glColor4f(0.18, 0.5, 1.0, 0.08)
+        glBegin(GL_QUADS)
+        for (vx, vy) in ((left, top), (right, top), (right, bottom), (left, bottom)):
+            glVertex2f(vx, vy)
+        glEnd()
+        # 藍色粗框
+        glColor4f(0.18, 0.5, 1.0, 1.0)
+        glLineWidth(3)
+        glBegin(GL_LINE_LOOP)
+        for (vx, vy) in ((left, top), (right, top), (right, bottom), (left, bottom)):
+            glVertex2f(vx, vy)
+        glEnd()
+        glDisable(GL_BLEND)
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1, 1, 1, 1)
+
+    def paint_tile_grid(self):
         glLoadIdentity()
 
         # 預先淘汰超出 VRAM 上限的紋理（不在逐 tile 迴圈中做）
         self._evict_tile_textures_if_needed()
 
         images = self.model.images
-        if self.thumbnail_size is not None:
-            base_tile = self.thumbnail_size
-        elif self.tile_cache:
-            # 用第一張圖實際寬度當排版基準
-            first_img = next(iter(self.tile_cache.values()))
-            base_tile = first_img.shape[1]
-        else:
-            base_tile = 256
-
+        base_tile = self._tile_base_size()
         scaled_tile = base_tile * self.tile_scale
-        pad = self.tile_padding
-        cell = scaled_tile + pad
+        cell = scaled_tile + self.tile_padding
         cols = max(1, int(self.width() // cell))
         self.tile_rects = []
         # Placeholders for tiles whose thumbnail hasn't arrived yet — rendered
@@ -375,156 +510,11 @@ class GPUImageView(QOpenGLWidget):
         vw, vh = self.width(), self.height()
 
         for i, path in enumerate(images):
+            self._draw_single_tile(i, path, cols, cell, scaled_tile, vw, vh)
 
-            # 沒載入完成 → 畫預留格子佔位
-            if path not in self.tile_cache:
-                row = i // cols
-                col = i % cols
-                x0 = col * cell + self.grid_offset_x
-                y0 = row * cell + self.grid_offset_y
-                x1 = x0 + scaled_tile
-                y1 = y0 + scaled_tile
-                if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
-                    # Dark placeholder via renderer (kept visually subtle)
-                    self.renderer.draw_colored_rect(
-                        x0, y0, x1, y1, 0.14, 0.14, 0.14, 1.0, filled=True
-                    )
-                    self.renderer.draw_colored_rect(
-                        x0, y0, x1, y1, 0.28, 0.28, 0.28, 1.0, filled=False
-                    )
-                    self.placeholder_rects.append((x0, y0, x1, y1))
-                continue
-
-            img_data = self.tile_cache[path]
-
-            row = i // cols
-            col = i % cols
-
-            x0 = col * cell + self.grid_offset_x
-            y0 = row * cell + self.grid_offset_y
-            x1 = x0 + img_data.shape[1] * self.tile_scale
-            y1 = y0 + img_data.shape[0] * self.tile_scale
-
-            # Viewport 裁切
-            if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
-                continue
-
-            self.tile_rects.append((x0, y0, x1, y1, path))
-
-            # ===== GPU texture =====
-            if path not in self.tile_textures:
-                tex_bytes = img_data.shape[1] * img_data.shape[0] * 4
-                if self._vram_usage + tex_bytes > self._vram_limit:
-                    continue  # 已在 evict 階段清理過，仍超出則跳過
-
-                tex = glGenTextures(1)
-                glBindTexture(GL_TEXTURE_2D, tex)
-
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                             img_data.shape[1], img_data.shape[0], 0,
-                             GL_RGBA, GL_UNSIGNED_BYTE, img_data)
-
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-
-                self.tile_textures[path] = tex
-                self._tile_tex_sizes[path] = tex_bytes
-                self._vram_usage += tex_bytes
-
-            self.renderer.draw_textured_quad(x0, y0, x1, y1, self.tile_textures[path])
-
-        # Tile grid border
-        if self.tile_rects:
-            glDisable(GL_TEXTURE_2D)
-            glLineWidth(1)
-            for x0, y0, x1, y1, _path in self.tile_rects:
-                self.renderer.draw_colored_rect(x0, y0, x1, y1, 0.3, 0.3, 0.3, 1.0, filled=False)
-            glEnable(GL_TEXTURE_2D)
-
-        # Tile selection overlay
-        if self.tile_selection_mode:
-            glDisable(GL_TEXTURE_2D)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-            glLineWidth(4)
-
-            for x0, y0, x1, y1, path in self.tile_rects:
-                if path in self.selected_tiles:
-                    # 藍色粗邊框
-                    glColor4f(0.18, 0.5, 1.0, 1.0)
-                    glBegin(GL_LINE_LOOP)
-                    glVertex2f(x0, y0)
-                    glVertex2f(x1, y0)
-                    glVertex2f(x1, y1)
-                    glVertex2f(x0, y1)
-                    glEnd()
-
-                    # 右上藍色圓 + 勾
-                    circle_radius = 9
-                    cx = x1 - 12
-                    cy = y0 + 12
-                    glBegin(GL_TRIANGLE_FAN)
-                    glVertex2f(cx, cy)
-                    for i in range(33):
-                        angle = i * 2.0 * 3.1415926 / 32
-                        glVertex2f(cx + circle_radius * np.cos(angle),
-                                   cy + circle_radius * np.sin(angle))
-                    glEnd()
-                    glColor4f(1.0, 1.0, 1.0, 1.0)
-                    glLineWidth(2.5)
-                    glBegin(GL_LINES)
-                    glVertex2f(cx - 4, cy)
-                    glVertex2f(cx - 1, cy + 3)
-                    glVertex2f(cx - 1, cy + 3)
-                    glVertex2f(cx + 5, cy - 4)
-                    glEnd()
-                    glLineWidth(4)
-
-            glDisable(GL_BLEND)
-            glEnable(GL_TEXTURE_2D)
-            glColor4f(1, 1, 1, 1)
-            glLineWidth(1)
-
-        if self._drag_selecting and self._drag_start_pos and self._drag_end_pos:
-            x0, y0 = self._drag_start_pos.x(), self._drag_start_pos.y()
-            x1, y1 = self._drag_end_pos.x(), self._drag_end_pos.y()
-
-            left = min(x0, x1)
-            right = max(x0, x1)
-            top = min(y0, y1)
-            bottom = max(y0, y1)
-
-            # ===== 明確設定狀態（不要 push/pop）=====
-            glDisable(GL_TEXTURE_2D)
-
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
-            # 淡藍填充
-            glColor4f(0.18, 0.5, 1.0, 0.08)
-            glBegin(GL_QUADS)
-            glVertex2f(left, top)
-            glVertex2f(right, top)
-            glVertex2f(right, bottom)
-            glVertex2f(left, bottom)
-            glEnd()
-
-            # 藍色粗框
-            glColor4f(0.18, 0.5, 1.0, 1.0)
-            glLineWidth(3)
-            glBegin(GL_LINE_LOOP)
-            glVertex2f(left, top)
-            glVertex2f(right, top)
-            glVertex2f(right, bottom)
-            glVertex2f(left, bottom)
-            glEnd()
-
-            # ===== 恢復狀態 =====
-            glDisable(GL_BLEND)
-            glEnable(GL_TEXTURE_2D)
-            glColor4f(1, 1, 1, 1)
+        self._draw_tile_grid_borders()
+        self._draw_tile_selection_overlay()
+        self._draw_drag_select_rect()
 
     # ---------------------------
     # DeepZoom Lazy Render
@@ -546,7 +536,6 @@ class GPUImageView(QOpenGLWidget):
         if self.renderer.use_shaders:
             # 建立 scale+translate MVP
             import numpy as _np
-            mvp = _np.eye(4, dtype=_np.float32)
             from Imervue.gpu_image_view.gl_renderer import _ortho
             base_ortho = _ortho(0, self.width(), self.height(), 0, -1, 1)
             # 先 translate 再 scale
@@ -679,52 +668,54 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # QPainter 覆蓋層
     # ---------------------------
+    def _collect_overlay_layers(self) -> list:
+        """Return active overlay layers in draw order. Each entry is a
+        callable painter -> None or a list of such callables."""
+        zoom_active = (not self.tile_grid_mode) and self.deep_zoom
+        anim_active = self._animation and self._animation.is_animated
+        pixel_active = zoom_active and self._pixel_view and self.zoom >= 4.0
+        candidates: list = []
+        if self.tile_grid_mode and self.tile_rects:
+            candidates += [self._draw_tile_labels, self._draw_tile_badges,
+                           self._draw_tile_placeholders]
+        if zoom_active:
+            candidates.append(self._draw_zoom_indicator)
+        if zoom_active and self._show_histogram:
+            candidates.append(self._draw_histogram)
+        if anim_active:
+            candidates.append(self._draw_anim_indicator)
+        if zoom_active and self._show_osd:
+            candidates.append(self._draw_osd)
+        if self._show_debug_hud:
+            candidates.append(self._draw_debug_hud)
+        if pixel_active:
+            candidates.append(self._draw_pixel_view)
+        return candidates
+
     def _paint_overlay(self, painter: QPainter):
-        need_labels = self.tile_grid_mode and self.tile_rects
-        need_zoom = (not self.tile_grid_mode) and self.deep_zoom
-        need_hist = need_zoom and self._show_histogram
-        need_anim = self._animation and self._animation.is_animated
-        need_osd = need_zoom and self._show_osd
-        need_hud = self._show_debug_hud
-        need_pixel = need_zoom and self._pixel_view and self.zoom >= 4.0
-        if not (need_labels or need_zoom or need_hist or need_anim
-                or need_osd or need_hud or need_pixel):
+        layers = self._collect_overlay_layers()
+        if not layers:
             return
 
         # 在獨立 QImage 上以裝置解析度繪製，避免 QOpenGLWidget FBO 模糊
         dpr = self.devicePixelRatio()
         w, h = self.width(), self.height()
-        img = QImage(int(w * dpr), int(h * dpr), QImage.Format.Format_ARGB32_Premultiplied)
+        img = QImage(int(w * dpr), int(h * dpr),
+                     QImage.Format.Format_ARGB32_Premultiplied)
         img.setDevicePixelRatio(dpr)
         img.fill(Qt.GlobalColor.transparent)
 
         p = QPainter(img)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-
-        if need_labels:
-            self._draw_tile_labels(p)
-            self._draw_tile_badges(p)
-            self._draw_tile_placeholders(p)
-        if need_zoom:
-            self._draw_zoom_indicator(p)
-        if need_hist:
-            self._draw_histogram(p)
-        if need_anim:
-            self._draw_anim_indicator(p)
-        if need_osd:
-            self._draw_osd(p)
-        if need_hud:
-            self._draw_debug_hud(p)
-        if need_pixel:
-            self._draw_pixel_view(p)
-
+        for layer in layers:
+            layer(p)
         p.end()
         painter.drawImage(0, 0, img)
 
     def _draw_tile_labels(self, painter: QPainter):
         """在每個縮圖下方繪製檔名"""
-        font = QFont("Segoe UI")
+        font = QFont(_FONT_SEGOE_UI)
         font.setPixelSize(13)
         painter.setFont(font)
         fm = painter.fontMetrics()
@@ -759,7 +750,7 @@ class GPUImageView(QOpenGLWidget):
                 favs = set()
         color_store = _color_store()
 
-        font = QFont("Segoe UI")
+        font = QFont(_FONT_SEGOE_UI)
         font.setPixelSize(11)
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
@@ -814,7 +805,7 @@ class GPUImageView(QOpenGLWidget):
         import time
         phase = (time.monotonic() % 1.0) * 2 * 3.14159
         painter.setPen(QColor(140, 140, 140, 200))
-        font = QFont("Segoe UI")
+        font = QFont(_FONT_SEGOE_UI)
         font.setPixelSize(11)
         painter.setFont(font)
 
@@ -858,7 +849,7 @@ class GPUImageView(QOpenGLWidget):
     def _draw_zoom_indicator(self, painter: QPainter):
         """在右下角小地圖上方顯示縮放百分比"""
         pct = f"{self.zoom * 100:.0f}%"
-        font = QFont("Consolas")
+        font = QFont(_FONT_CONSOLAS)
         font.setPixelSize(15)
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
@@ -940,7 +931,7 @@ class GPUImageView(QOpenGLWidget):
         speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
         text = f"{status}  |  {frame_text}  |  {speed_text}"
 
-        font = QFont("Consolas")
+        font = QFont(_FONT_CONSOLAS)
         font.setPixelSize(13)
         painter.setFont(font)
         fm = painter.fontMetrics()
@@ -989,7 +980,7 @@ class GPUImageView(QOpenGLWidget):
             f"{Path(path).suffix.lstrip('.').upper() or '—'}   {size_str}",
         ]
 
-        font = QFont("Segoe UI")
+        font = QFont(_FONT_SEGOE_UI)
         font.setPixelSize(13)
         painter.setFont(font)
         fm = painter.fontMetrics()
@@ -1027,7 +1018,7 @@ class GPUImageView(QOpenGLWidget):
             f"Gen {self._load_generation}   Zoom {self.zoom * 100:.1f}%",
         ]
 
-        font = QFont("Consolas")
+        font = QFont(_FONT_CONSOLAS)
         font.setPixelSize(12)
         painter.setFont(font)
         fm = painter.fontMetrics()
@@ -1099,7 +1090,7 @@ class GPUImageView(QOpenGLWidget):
                 a = int(pixel[3]) if base.shape[2] >= 4 else 255
                 hex_str = f"#{r:02X}{g:02X}{b:02X}"
 
-                font = QFont("Consolas")
+                font = QFont(_FONT_CONSOLAS)
                 font.setPixelSize(12)
                 painter.setFont(font)
                 fm = painter.fontMetrics()
@@ -1156,14 +1147,17 @@ class GPUImageView(QOpenGLWidget):
 
         if not self.deep_zoom or not images or idx >= len(images):
             # Tile grid / no image — only index text is meaningful
-            if images:
-                mw.update_status_info(
-                    index=f"{idx + 1 if self.deep_zoom else len(images)}/{len(images)}"
-                    if self.deep_zoom else f"— / {len(images)}",
-                    resolution="", size="", zoom="", cursor="",
-                )
-            else:
+            if not images:
                 mw.clear_status_info()
+                return
+            index_text = (
+                f"{idx + 1}/{len(images)}" if self.deep_zoom
+                else f"— / {len(images)}"
+            )
+            mw.update_status_info(
+                index=index_text,
+                resolution="", size="", zoom="", cursor="",
+            )
             return
 
         path = images[idx]
@@ -1333,8 +1327,8 @@ class GPUImageView(QOpenGLWidget):
             y1 = y0 + img.shape[0] * self.tile_scale
             if x1 >= 0 and x0 <= self.width() and y1 >= 0 and y0 <= self.height():
                 visible.add(p)
-        # 淘汰不可見的紋理
-        for p in list(self.tile_textures):
+        # 淘汰不可見的紋理 — list() required because we mutate the dict inside the loop.
+        for p in list(self.tile_textures):  # noqa: S7504
             if self._vram_usage <= self._vram_limit:
                 break
             if p not in visible:
@@ -1590,16 +1584,7 @@ class GPUImageView(QOpenGLWidget):
         """
         from Imervue.user_settings.color_labels import toggle_color_label, set_color_label
 
-        targets: list[str] = []
-        if self.tile_grid_mode and self.tile_selection_mode and self.selected_tiles:
-            targets = list(self.selected_tiles)
-        elif self.deep_zoom:
-            images = self.model.images
-            if images and 0 <= self.current_index < len(images):
-                targets = [images[self.current_index]]
-        elif self.tile_grid_mode and self._hover_last_path:
-            targets = [self._hover_last_path]
-
+        targets = self._resolve_cull_targets()
         if not targets:
             return
 
@@ -1613,6 +1598,51 @@ class GPUImageView(QOpenGLWidget):
             self._toast_color_batch(color, len(targets))
         # Status bar should reflect the new label for the deep-zoomed image
         if self.deep_zoom:
+            self._update_status_info()
+        self.update()
+
+    # ---------------------------
+    # 分揀 (Culling: Pick / Reject / Unflag)
+    # ---------------------------
+    _CULL_FALLBACKS = {
+        "pick": "Picked {n} image(s)",
+        "reject": "Rejected {n} image(s)",
+        "unflagged": "Unflagged {n} image(s)",
+    }
+
+    def _resolve_cull_targets(self) -> list[str]:
+        if (self.tile_grid_mode and self.tile_selection_mode
+                and self.selected_tiles):
+            return list(self.selected_tiles)
+        if self.deep_zoom:
+            images = self.model.images
+            if images and 0 <= self.current_index < len(images):
+                return [images[self.current_index]]
+        if self.tile_grid_mode and self._hover_last_path:
+            return [self._hover_last_path]
+        return []
+
+    def _apply_cull_state(self, state: str) -> None:
+        """Apply a cull state to the currently-active target(s).
+
+        Mirrors ``_apply_color_label`` resolution order: multi-selected tiles
+        → deep-zoom image → hovered tile.
+        """
+        from Imervue.library import image_index
+
+        targets = self._resolve_cull_targets()
+        if not targets:
+            return
+
+        for p in targets:
+            image_index.set_cull_state(p, state)
+
+        if hasattr(self.main_window, "toast"):
+            lang = self.main_window.language_wrapper.language_word_dict
+            fallback = self._CULL_FALLBACKS[state]
+            msg = lang.get(f"cull_toast_{state}", fallback).format(n=len(targets))
+            self.main_window.toast.info(msg)
+        if self.deep_zoom and hasattr(self, "_update_status_info"):
             self._update_status_info()
         self.update()
 
@@ -1796,13 +1826,13 @@ class GPUImageView(QOpenGLWidget):
                 needed.add(images[idx])
 
         with QMutexLocker(self._prefetch_mutex):
-            # 取消不再需要的 worker
-            for path in list(self._prefetch_workers):
+            # 取消不再需要的 worker — list() required: we mutate _prefetch_workers in-loop.
+            for path in list(self._prefetch_workers):  # noqa: S7504
                 if path not in needed:
                     self._prefetch_workers.pop(path).abort()
 
-            # 淘汰不在範圍內的快取
-            for path in list(self._prefetch_cache):
+            # 淘汰不在範圍內的快取 — list() required: we del from _prefetch_cache in-loop.
+            for path in list(self._prefetch_cache):  # noqa: S7504
                 if path not in needed:
                     del self._prefetch_cache[path]
 
@@ -1922,17 +1952,7 @@ class GPUImageView(QOpenGLWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ===== 更新 hover 圖片像素座標（status bar 用）=====
-        if self.deep_zoom and not self.tile_grid_mode:
-            mx, my = event.position().x(), event.position().y()
-            img_x = int((mx - self.dz_offset_x) / max(self.zoom, 1e-9))
-            img_y = int((my - self.dz_offset_y) / max(self.zoom, 1e-9))
-            self._hover_image_xy = (img_x, img_y)
-            self._update_status_info()
-
-        # ===== Hover preview (tile grid only) =====
-        if self.tile_grid_mode:
-            self._update_hover_preview(event)
+        self._update_hover_state(event)
 
         if self.last_pos is None:
             self.last_pos = event.position()
@@ -1941,38 +1961,64 @@ class GPUImageView(QOpenGLWidget):
         delta = event.position() - self.last_pos
         self.last_pos = event.position()
 
-        # ===== 中鍵拖動 =====
         if self._middle_dragging:
-            if self.tile_grid_mode:
-                self.grid_offset_x += delta.x()
-                self.grid_offset_y += delta.y()
-            elif self.deep_zoom:
-                self.dz_offset_x += delta.x()
-                self.dz_offset_y += delta.y()
-
-            self.update()
+            self._handle_middle_drag(delta)
             return
 
-        # ===== 左鍵拖曳框選 =====
-        if (
+        self._handle_left_drag_select(event)
+
+    def _update_hover_state(self, event) -> None:
+        # hover 圖片像素座標（status bar 用）
+        if self.deep_zoom and not self.tile_grid_mode:
+            mx, my = event.position().x(), event.position().y()
+            img_x = int((mx - self.dz_offset_x) / max(self.zoom, 1e-9))
+            img_y = int((my - self.dz_offset_y) / max(self.zoom, 1e-9))
+            self._hover_image_xy = (img_x, img_y)
+            self._update_status_info()
+        if self.tile_grid_mode:
+            self._update_hover_preview(event)
+
+    def _handle_middle_drag(self, delta) -> None:
+        if self.tile_grid_mode:
+            self.grid_offset_x += delta.x()
+            self.grid_offset_y += delta.y()
+        elif self.deep_zoom:
+            self.dz_offset_x += delta.x()
+            self.dz_offset_y += delta.y()
+        self.update()
+
+    def _handle_left_drag_select(self, event) -> None:
+        if not (
             self.tile_grid_mode
             and event.buttons() & Qt.MouseButton.LeftButton
             and self._drag_start_pos
         ):
-            move_delta = event.position() - self._drag_start_pos
-            threshold = QApplication.startDragDistance()
+            return
 
-            # 還沒超過系統拖曳門檻
-            if not self._drag_selecting:
-                if move_delta.manhattanLength() < threshold:
-                    return
+        if not self._drag_selecting and not self._try_begin_drag_select(event):
+            return
 
-                # 超過門檻才真正開始框選
-                self.tile_selection_mode = True
-                self._drag_selecting = True
+        self._drag_end_pos = event.position()
+        self.update()
 
-            self._drag_end_pos = event.position()
-            self.update()
+    def _try_begin_drag_select(self, event) -> bool:
+        """Return True once the drag threshold has been exceeded and a frame-
+        selection has started. Returns False while still below threshold or
+        when the gesture was consumed by drag-out.
+        """
+        move_delta = event.position() - self._drag_start_pos
+        if move_delta.manhattanLength() < QApplication.startDragDistance():
+            return False
+
+        from Imervue.gpu_image_view.actions.drag_out import try_start_drag_out
+        if try_start_drag_out(self, self._drag_start_pos):
+            self._drag_start_pos = None
+            self._drag_end_pos = None
+            return False
+
+        self.tile_selection_mode = True
+        self._drag_selecting = True
+        return True
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -2024,336 +2070,328 @@ class GPUImageView(QOpenGLWidget):
                 return
         super().mouseReleaseEvent(event)
 
+    # F1-F5 → colour labels (red/yellow/green/blue/purple). Lightroom-style.
+    _COLOR_LABEL_KEYS = {
+        Qt.Key.Key_F1: "red",
+        Qt.Key.Key_F2: "yellow",
+        Qt.Key.Key_F3: "green",
+        Qt.Key.Key_F4: "blue",
+        Qt.Key.Key_F5: "purple",
+    }
+
+    def _handle_f8(self, modifiers) -> None:
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            self._show_debug_hud = not self._show_debug_hud
+        else:
+            self._show_osd = not self._show_osd
+        self.update()
+
+    def _handle_escape(self) -> bool:
+        """Returns True if Escape was handled."""
+        if hasattr(self, '_slideshow') and self._slideshow and self._slideshow.running:
+            stop_slideshow(self)
+            return True
+        if self.main_window.isFullScreen():
+            toggle_fullscreen(self)
+            return True
+        if self.tile_grid_mode and self.selected_tiles:
+            self.tile_selection_mode = False
+            self.selected_tiles.clear()
+            self.update()
+            return True
+        if self.deep_zoom or self.active_deep_zoom_worker:
+            self._exit_deep_zoom_to_grid()
+            return True
+        return False
+
+    def _exit_deep_zoom_to_grid(self) -> None:
+        self._cancel_deep_zoom_worker()
+        self._cancel_all_prefetch()
+        self._clear_deep_zoom()
+        self.tile_grid_mode = True
+        if self._saved_tile_state:
+            self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
+            self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
+            self.tile_scale = self._saved_tile_state["tile_scale"]
+            self._saved_tile_state = None
+        # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
+        if hasattr(self.main_window, "after_deep_zoom_escape"):
+            self.main_window.after_deep_zoom_escape()
+        self.update()
+
+    def _handle_arrow_keys(self, key, modifiers, shift) -> bool:
+        ctrl = modifiers & Qt.KeyboardModifier.ControlModifier
+        if ctrl and shift and key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            if key == Qt.Key.Key_Right:
+                switch_to_next_folder(main_gui=self)
+            else:
+                switch_to_previous_folder(main_gui=self)
+            return True
+
+        step = self.thumbnail_size or 1024
+        move_step = int(step / 2) if shift else step
+        if self.tile_grid_mode:
+            if key == Qt.Key.Key_Up:
+                self.grid_offset_y += move_step
+            elif key == Qt.Key.Key_Down:
+                self.grid_offset_y -= move_step
+            elif key == Qt.Key.Key_Left:
+                self.grid_offset_x += move_step
+            elif key == Qt.Key.Key_Right:
+                self.grid_offset_x -= move_step
+            self.update()
+            return True
+        if self.deep_zoom:
+            if key == Qt.Key.Key_Right:
+                switch_to_next_image(main_gui=self)
+                return True
+            if key == Qt.Key.Key_Left:
+                switch_to_previous_image(main_gui=self)
+                return True
+        return False
+
     def keyPressEvent(self, event):
         from Imervue.gui.shortcut_settings_dialog import shortcut_manager
 
         key = event.key()
         modifiers = event.modifiers()
 
-        # Plugin hook: key press
-        if (
-            hasattr(self.main_window, "plugin_manager")
-            and self.main_window.plugin_manager.dispatch_key_press(key, modifiers, self)
-        ):
+        if (hasattr(self.main_window, "plugin_manager")
+                and self.main_window.plugin_manager.dispatch_key_press(
+                    key, modifiers, self)):
             return
 
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
 
-        # ===== F8 — OSD / Debug HUD =====
-        # Moved from F3 to free up F1-F5 for colour labels (Lightroom-style).
         if key == Qt.Key.Key_F8:
-            if modifiers & Qt.KeyboardModifier.ControlModifier:
-                self._show_debug_hud = not self._show_debug_hud
-            else:
-                self._show_osd = not self._show_osd
-            self.update()
+            self._handle_f8(modifiers)
             return
 
-        # ===== F1-F5 — colour labels (red/yellow/green/blue/purple) =====
-        # Toggles: pressing the same F-key again clears the flag.
-        _COLOR_KEYS = {
-            Qt.Key.Key_F1: "red",
-            Qt.Key.Key_F2: "yellow",
-            Qt.Key.Key_F3: "green",
-            Qt.Key.Key_F4: "blue",
-            Qt.Key.Key_F5: "purple",
-        }
-        if key in _COLOR_KEYS and not (modifiers & (
-                Qt.KeyboardModifier.ControlModifier
-                | Qt.KeyboardModifier.AltModifier)):
-            self._apply_color_label(_COLOR_KEYS[key])
+        no_ctrl_alt = not (modifiers & (
+            Qt.KeyboardModifier.ControlModifier
+            | Qt.KeyboardModifier.AltModifier))
+        if key in self._COLOR_LABEL_KEYS and no_ctrl_alt:
+            self._apply_color_label(self._COLOR_LABEL_KEYS[key])
             return
 
-        # ===== Escape — always hardcoded (not remappable) =====
-        if key == Qt.Key.Key_Escape:
-            if hasattr(self, '_slideshow') and self._slideshow and self._slideshow.running:
-                stop_slideshow(self)
-                return
-            if self.main_window.isFullScreen():
-                toggle_fullscreen(self)
-                return
-            if self.tile_grid_mode and self.selected_tiles:
-                self.tile_selection_mode = False
-                self.selected_tiles.clear()
-                self.update()
-                return
-            if self.deep_zoom or self.active_deep_zoom_worker:
-                self._cancel_deep_zoom_worker()
-                self._cancel_all_prefetch()
-                self._clear_deep_zoom()
-                self.tile_grid_mode = True
-                if self._saved_tile_state:
-                    self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
-                    self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
-                    self.tile_scale = self._saved_tile_state["tile_scale"]
-                    self._saved_tile_state = None
-                # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
-                if hasattr(self.main_window, "after_deep_zoom_escape"):
-                    self.main_window.after_deep_zoom_escape()
-                self.update()
-                return
+        if key == Qt.Key.Key_Escape and self._handle_escape():
+            return
 
-        # ===== Arrow keys — always hardcoded (not remappable) =====
-        if key in (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right):
-            ctrl = modifiers & Qt.KeyboardModifier.ControlModifier
-            # Ctrl+Shift+←/→ → 跨資料夾導航（無論 deep zoom 或 tile grid）
-            if ctrl and shift and key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
-                if key == Qt.Key.Key_Right:
-                    switch_to_next_folder(main_gui=self)
-                else:
-                    switch_to_previous_folder(main_gui=self)
-                return
+        arrow = (Qt.Key.Key_Up, Qt.Key.Key_Down,
+                 Qt.Key.Key_Left, Qt.Key.Key_Right)
+        if key in arrow and self._handle_arrow_keys(key, modifiers, shift):
+            return
 
-            step = self.thumbnail_size or 1024
-            fine_step = int(step / 2)
-            move_step = fine_step if shift else step
-            if self.tile_grid_mode:
-                if key == Qt.Key.Key_Up:
-                    self.grid_offset_y += move_step
-                elif key == Qt.Key.Key_Down:
-                    self.grid_offset_y -= move_step
-                elif key == Qt.Key.Key_Left:
-                    self.grid_offset_x += move_step
-                elif key == Qt.Key.Key_Right:
-                    self.grid_offset_x -= move_step
-                self.update()
-                return
-            if self.deep_zoom:
-                if key == Qt.Key.Key_Right:
-                    switch_to_next_image(main_gui=self)
-                    return
-                elif key == Qt.Key.Key_Left:
-                    switch_to_previous_image(main_gui=self)
-                    return
-
-        # ===== Remappable shortcuts via ShortcutManager =====
         mods_int = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
         action = shortcut_manager.get_action(key, mods_int)
         if action is None:
             return
+        self._dispatch_action(action, modifiers)
 
-        # --- Undo / Redo ---
-        if action == "undo":
-            if self.undo_manager.canUndo():
-                self.undo_manager.undo()
-            else:
-                undo_delete(main_gui=self)
+    def _dispatch_action(self, action: str, modifiers) -> None:
+        if self._dispatch_simple_action(action):
             return
-        if action in ("redo", "redo_alt"):
-            self.undo_manager.redo()
+        if self._dispatch_toggle_action(action, modifiers):
             return
+        if self._dispatch_culling_action(action):
+            return
+        if self._dispatch_image_action(action):
+            return
+        if self._animation and self._animation.is_animated:
+            self._dispatch_anim_action(action)
 
-        # --- Clipboard ---
-        if action == "copy":
-            copy_image_to_clipboard(self)
-            return
-        if action == "paste":
-            self._paste_image_from_clipboard()
-            return
+    _COLOR_MODE_NAMES = ["Normal", "Grayscale", "Invert", "Sepia"]
+    _COLOR_MODE_KEYS = [
+        "color_mode_normal", "color_mode_grayscale",
+        "color_mode_invert", "color_mode_sepia",
+    ]
+    _RATING_ACTIONS = {"rate_1", "rate_2", "rate_3", "rate_4", "rate_5"}
 
-        # --- Search ---
-        if action in ("search", "search_alt"):
-            open_search_dialog(self)
-            return
+    def _toast(self, key: str, fallback: str) -> None:
+        if hasattr(self.main_window, 'toast'):
+            lang = self.main_window.language_wrapper.language_word_dict
+            self.main_window.toast.info(lang.get(key, fallback))
 
-        # --- Go to index (Ctrl+G) ---
-        if action == "goto":
-            open_goto_dialog(self)
-            return
+    def _do_undo(self) -> None:
+        if self.undo_manager.canUndo():
+            self.undo_manager.undo()
+        else:
+            undo_delete(main_gui=self)
 
-        # --- Fullscreen ---
-        if action == "fullscreen":
-            toggle_fullscreen(self)
-            return
+    def _open_command_palette(self) -> None:
+        from Imervue.gui.command_palette import open_command_palette
+        open_command_palette(self.main_window)
 
-        # --- Theater mode (Shift+Tab) ---
+    def _replay_macro(self) -> None:
+        from Imervue.macros.macro_manager import replay_last_macro
+        replay_last_macro(self.main_window)
+
+    def _open_tag_album(self) -> None:
+        from Imervue.gui.tag_album_dialog import open_tag_album_dialog
+        open_tag_album_dialog(self)
+
+    def _history_back_toast(self) -> None:
+        if not self.history_back():
+            self._toast("history_at_start", "At start of history")
+
+    def _history_forward_toast(self) -> None:
+        if not self.history_forward():
+            self._toast("history_at_end", "At end of history")
+
+    def _dispatch_simple_action(self, action: str) -> bool:
+        """Actions that map 1:1 to a function call with no condition."""
+        if action in self._RATING_ACTIONS:
+            rate_current_image(self, int(action[-1]))
+            return True
+        handler = {
+            "undo": self._do_undo,
+            "redo": self.undo_manager.redo,
+            "redo_alt": self.undo_manager.redo,
+            "copy": lambda: copy_image_to_clipboard(self),
+            "paste": self._paste_image_from_clipboard,
+            "search": lambda: open_search_dialog(self),
+            "search_alt": lambda: open_search_dialog(self),
+            "goto": lambda: open_goto_dialog(self),
+            "fullscreen": lambda: toggle_fullscreen(self),
+            "random_image": self.jump_to_random_image,
+            "command_palette": self._open_command_palette,
+            "macro_replay": self._replay_macro,
+            "slideshow": lambda: open_slideshow_dialog(self),
+            "tags": self._open_tag_album,
+            "favorite": lambda: toggle_favorite(self),
+            "history_back": self._history_back_toast,
+            "history_forward": self._history_forward_toast,
+        }.get(action)
+        if handler is None:
+            return False
+        handler()
+        return True
+
+    def _dispatch_toggle_action(self, action: str, modifiers) -> bool:
+        """View-mode toggles: theater, pixel_view, split, dual, multi-monitor, color."""
         if action == "theater":
             if hasattr(self.main_window, "toggle_theater_mode"):
                 self.main_window.toggle_theater_mode()
-            return
-
-        # --- Pixel view (Shift+P) ---
+            return True
         if action == "pixel_view":
             if self.deep_zoom:
                 self._pixel_view = not self._pixel_view
-                if self._pixel_view and hasattr(self.main_window, "toast"):
-                    lang = self.main_window.language_wrapper.language_word_dict
-                    self.main_window.toast.info(
-                        lang.get("pixel_view_hint",
-                                 "Pixel view — zoom in to ≥400% to see grid")
-                    )
+                if self._pixel_view:
+                    self._toast("pixel_view_hint",
+                                "Pixel view — zoom in to ≥400% to see grid")
                 self.update()
-            return
-
-        # --- History navigation (Alt+←/→) ---
-        if action == "history_back":
-            if not self.history_back():
-                lang = self.main_window.language_wrapper.language_word_dict
-                if hasattr(self.main_window, "toast"):
-                    self.main_window.toast.info(
-                        lang.get("history_at_start", "At start of history")
-                    )
-            return
-        if action == "history_forward":
-            if not self.history_forward():
-                lang = self.main_window.language_wrapper.language_word_dict
-                if hasattr(self.main_window, "toast"):
-                    self.main_window.toast.info(
-                        lang.get("history_at_end", "At end of history")
-                    )
-            return
-
-        # --- Random image (X) ---
-        if action == "random_image":
-            self.jump_to_random_image()
-            return
-
-        # --- Split view (Shift+S) ---
+            return True
         if action == "split_view":
             if hasattr(self.main_window, "activate_dual_view"):
                 self.main_window.activate_dual_view("split")
-            return
-
-        # --- Dual page manga (Shift+D) ---
+            return True
         if action == "dual_page":
             if hasattr(self.main_window, "activate_dual_view"):
-                # Toggle between LTR and RTL with Ctrl
-                mode = "manga_rtl" if modifiers & Qt.KeyboardModifier.ControlModifier else "manga"
+                mode = ("manga_rtl"
+                        if modifiers & Qt.KeyboardModifier.ControlModifier
+                        else "manga")
                 self.main_window.activate_dual_view(mode)
-            return
-
-        # --- Multi-monitor window (Ctrl+Shift+M) ---
+            return True
         if action == "multi_monitor":
             if hasattr(self.main_window, "toggle_multi_monitor_window"):
                 self.main_window.toggle_multi_monitor_window()
-            return
-
-        # --- Color mode cycle (Shift+M) ---
+            return True
         if action == "color_mode_cycle":
             self.renderer.color_mode = (self.renderer.color_mode + 1) % 4
-            names = ["Normal", "Grayscale", "Invert", "Sepia"]
-            keys = ["color_mode_normal", "color_mode_grayscale",
-                    "color_mode_invert", "color_mode_sepia"]
-            if hasattr(self.main_window, "toast"):
-                lang = self.main_window.language_wrapper.language_word_dict
-                label = lang.get(keys[self.renderer.color_mode],
-                                 names[self.renderer.color_mode])
-                self.main_window.toast.info(label)
+            idx = self.renderer.color_mode
+            self._toast(self._COLOR_MODE_KEYS[idx], self._COLOR_MODE_NAMES[idx])
             self.update()
-            return
+            return True
+        return False
 
-        # --- Edit / Annotate ---
-        if action == "edit":
-            if self.deep_zoom:
-                images = self.model.images
-                if images and 0 <= self.current_index < len(images):
-                    open_annotation_for_path(self, images[self.current_index])
-            return
+    def _dispatch_culling_action(self, action: str) -> bool:
+        mapping = {"cull_pick": "pick", "cull_reject": "reject",
+                   "cull_unflag": "unflagged"}
+        state = mapping.get(action)
+        if state is None:
+            return False
+        self._apply_cull_state(state)
+        return True
 
-        # --- Slideshow ---
-        if action == "slideshow":
-            open_slideshow_dialog(self)
+    def _push_rotate(self, clockwise: bool) -> None:
+        if not self.deep_zoom:
             return
+        from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
+        self.undo_manager.push(RotateCommand(self, clockwise=clockwise))
 
-        # --- Tags & Albums ---
-        if action == "tags":
-            from Imervue.gui.tag_album_dialog import open_tag_album_dialog
-            open_tag_album_dialog(self)
-            return
+    def _reset_view(self) -> None:
+        if self.deep_zoom:
+            self.zoom = 1.0
+            self.dz_offset_x = 0
+            self.dz_offset_y = 0
+        elif self.tile_grid_mode:
+            self.grid_offset_x = 0
+            self.grid_offset_y = 0
+        self.update()
 
-        # --- Histogram ---
-        if action == "histogram":
-            if self.deep_zoom:
-                self._show_histogram = not self._show_histogram
-                self.update()
+    def _edit_current_image(self) -> None:
+        if not self.deep_zoom:
             return
+        images = self.model.images
+        if images and 0 <= self.current_index < len(images):
+            open_annotation_for_path(self, images[self.current_index])
 
-        # --- Fit width / height ---
-        if action == "fit_width":
-            if self.deep_zoom:
-                self._fit_to_width()
-                lang = self.main_window.language_wrapper.language_word_dict
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(lang.get("fit_width", "Fit Width"))
-            return
-        if action == "fit_height":
-            if self.deep_zoom:
-                self._fit_to_height()
-                lang = self.main_window.language_wrapper.language_word_dict
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(lang.get("fit_height", "Fit Height"))
-            return
-
-        # --- Bookmark ---
-        if action == "bookmark":
-            if self.deep_zoom:
-                self._toggle_bookmark()
-            return
-
-        # --- Rotate ---
-        if action == "rotate_cw":
-            if self.deep_zoom:
-                from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-                self.undo_manager.push(RotateCommand(self, clockwise=True))
-            return
-        if action == "rotate_ccw":
-            if self.deep_zoom:
-                from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-                self.undo_manager.push(RotateCommand(self, clockwise=False))
-            return
-
-        # --- Reset view ---
-        if action == "reset_view":
-            if self.deep_zoom:
-                self.zoom = 1.0
-                self.dz_offset_x = 0
-                self.dz_offset_y = 0
-            elif self.tile_grid_mode:
-                self.grid_offset_x = 0
-                self.grid_offset_y = 0
+    def _toggle_histogram(self) -> None:
+        if self.deep_zoom:
+            self._show_histogram = not self._show_histogram
             self.update()
-            return
 
-        # --- Favorite ---
-        if action == "favorite":
-            toggle_favorite(self)
-            return
+    def _fit_width_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_width()
+            self._toast("fit_width", "Fit Width")
 
-        # --- Quick rating 1-5 ---
-        if action in ("rate_1", "rate_2", "rate_3", "rate_4", "rate_5"):
-            rating = int(action[-1])
-            rate_current_image(self, rating)
-            return
+    def _fit_height_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_height()
+            self._toast("fit_height", "Fit Height")
 
-        # --- Delete ---
-        if action == "delete":
-            if self.tile_grid_mode and self.tile_selection_mode:
-                trash_selected_tiles(self)
-            elif self.deep_zoom:
-                trash_current_image(self)
-            return
+    def _bookmark_if_deep_zoom(self) -> None:
+        if self.deep_zoom:
+            self._toggle_bookmark()
 
-        # --- Animation controls ---
-        if self._animation and self._animation.is_animated:
-            if action == "anim_toggle":
-                self._animation.toggle()
-                return
-            if action == "anim_prev":
-                self._animation.prev_frame()
-                return
-            if action == "anim_next":
-                self._animation.next_frame()
-                return
-            if action == "anim_slower":
-                self._animation.set_speed(self._animation.speed / 1.5)
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
-                return
-            if action == "anim_faster":
-                self._animation.set_speed(self._animation.speed * 1.5)
-                if hasattr(self.main_window, 'toast'):
-                    self.main_window.toast.info(f"Speed: {self._animation.speed:.2f}x")
-                return
+    def _delete_current(self) -> None:
+        if self.tile_grid_mode and self.tile_selection_mode:
+            trash_selected_tiles(self)
+        elif self.deep_zoom:
+            trash_current_image(self)
+
+    def _dispatch_image_action(self, action: str) -> bool:
+        """Current-image operations: edit, histogram, fit, bookmark, rotate, reset, delete."""
+        handler = {
+            "edit": self._edit_current_image,
+            "histogram": self._toggle_histogram,
+            "fit_width": self._fit_width_with_toast,
+            "fit_height": self._fit_height_with_toast,
+            "bookmark": self._bookmark_if_deep_zoom,
+            "rotate_cw": lambda: self._push_rotate(True),
+            "rotate_ccw": lambda: self._push_rotate(False),
+            "reset_view": self._reset_view,
+            "delete": self._delete_current,
+        }.get(action)
+        if handler is None:
+            return False
+        handler()
+        return True
+
+    def _dispatch_anim_action(self, action: str) -> None:
+        if action == "anim_toggle":
+            self._animation.toggle()
+        elif action == "anim_prev":
+            self._animation.prev_frame()
+        elif action == "anim_next":
+            self._animation.next_frame()
+        elif action in ("anim_slower", "anim_faster"):
+            factor = 1 / 1.5 if action == "anim_slower" else 1.5
+            self._animation.set_speed(self._animation.speed * factor)
+            if hasattr(self.main_window, 'toast'):
+                self.main_window.toast.info(
+                    f"Speed: {self._animation.speed:.2f}x")
 
     # ===========================
     # Touchpad / Touch gestures
@@ -2423,13 +2461,16 @@ class GPUImageView(QOpenGLWidget):
     # ===========================
     # Drag & Drop
     # ===========================
-    def dragEnterEvent(self, event):
+    def _accept_url_drag(self, event) -> None:
+        """Shared handler for both dragEnterEvent and dragMoveEvent."""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
+    def dragEnterEvent(self, event):
+        self._accept_url_drag(event)
+
     def dragMoveEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
+        self._accept_url_drag(event)
 
     def dropEvent(self, event):
         from Imervue.gpu_image_view.images.image_loader import open_path

@@ -54,14 +54,33 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
+# Annotation kind discriminators — centralised so SonarQube S1192 is satisfied
+# and subtle typos surface as NameError rather than silently mis-compare.
+_KIND_FREEHAND = "freehand"
+_KIND_TEXT = "text"
+_KIND_MOSAIC = "mosaic"
+_KIND_BLUR = "blur"
+_KIND_LINE = "line"
+_KIND_ARROW = "arrow"
+_KIND_PEN = "pen"
+_KIND_CROP = "crop"
+_KIND_SELECT = "select"
+_KIND_MOVE = "move"
+
+_MODE_RGBA = "RGBA"
+_QSS_PANEL_SECTION = "panelSection"
+
+_LOAD_PROJECT_FALLBACK = "Load Project..."
+
+
 # ---------------------------------------------------------------------------
 # PIL <-> QImage helpers
 # ---------------------------------------------------------------------------
 
 def pil_to_qimage(img: Image.Image) -> QImage:
     """Convert a PIL Image to an owned QImage (RGBA8888)."""
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
+    if img.mode != _MODE_RGBA:
+        img = img.convert(_MODE_RGBA)
     arr = np.array(img)
     h, w = arr.shape[:2]
     qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888)
@@ -299,7 +318,7 @@ class AnnotationCanvas(QWidget):
         self._brush_type = brush
         if self._selected_id is not None:
             for a in self._annotations:
-                if a.id == self._selected_id and a.kind == "freehand":
+                if a.id == self._selected_id and a.kind == _KIND_FREEHAND:
                     a.brush_type = brush  # type: ignore[assignment]
             self.update()
 
@@ -307,7 +326,7 @@ class AnnotationCanvas(QWidget):
         self._brush_opacity = max(0, min(100, int(opacity)))
         if self._selected_id is not None:
             for a in self._annotations:
-                if a.id == self._selected_id and a.kind == "freehand":
+                if a.id == self._selected_id and a.kind == _KIND_FREEHAND:
                     a.opacity = self._brush_opacity
             self.update()
 
@@ -315,7 +334,7 @@ class AnnotationCanvas(QWidget):
         self._brush_spacing = max(1, int(spacing))
         if self._selected_id is not None:
             for a in self._annotations:
-                if a.id == self._selected_id and a.kind == "freehand":
+                if a.id == self._selected_id and a.kind == _KIND_FREEHAND:
                     a.spacing = self._brush_spacing
             self.update()
 
@@ -323,7 +342,7 @@ class AnnotationCanvas(QWidget):
         self._font_family = family
         if self._selected_id is not None:
             for a in self._annotations:
-                if a.id == self._selected_id and a.kind == "text":
+                if a.id == self._selected_id and a.kind == _KIND_TEXT:
                     a.font_family = family
             self.update()
 
@@ -331,7 +350,7 @@ class AnnotationCanvas(QWidget):
         self._font_size = max(6, size)
         if self._selected_id is not None:
             for a in self._annotations:
-                if a.id == self._selected_id and a.kind == "text":
+                if a.id == self._selected_id and a.kind == _KIND_TEXT:
                     a.font_size = self._font_size
             self.update()
 
@@ -397,7 +416,7 @@ class AnnotationCanvas(QWidget):
         for undo/redo of mosaic/blur bakes). Callers must own ``img`` —
         we don't copy it here.
         """
-        self._base = img if img.mode == "RGBA" else img.convert("RGBA")
+        self._base = img if img.mode == "RGBA" else img.convert(_MODE_RGBA)
         self._base_qimg = pil_to_qimage(self._base)
         self.update()
 
@@ -474,7 +493,7 @@ class AnnotationCanvas(QWidget):
                 self._draw_selection(painter, sel)
 
         # Crop overlay: dim outside, dashed border, handles
-        if self._tool == "crop" and self._crop_rect is not None and rect.width() > 0:
+        if self._tool == _KIND_CROP and self._crop_rect is not None and rect.width() > 0:
             cx, cy, cw, ch = self._crop_rect
             tl = self._image_to_screen(cx, cy)
             br = self._image_to_screen(cx + cw, cy + ch)
@@ -546,23 +565,23 @@ class AnnotationCanvas(QWidget):
         elif ann.kind == "ellipse":
             x1, y1, x2, y2 = ann.bounding_box()
             painter.drawEllipse(QRectF(x1, y1, x2 - x1, y2 - y1))
-        elif ann.kind == "line":
+        elif ann.kind == _KIND_LINE:
             if len(ann.points) >= 2:
                 painter.drawLine(QPointF(*ann.points[0]),
                                  QPointF(*ann.points[-1]))
-        elif ann.kind == "arrow":
+        elif ann.kind == _KIND_ARROW:
             self._draw_arrow_qt(painter, ann)
-        elif ann.kind == "freehand":
+        elif ann.kind == _KIND_FREEHAND:
             if len(ann.points) >= 2:
                 self._draw_freehand_qt(painter, ann)
-        elif ann.kind == "text":
+        elif ann.kind == _KIND_TEXT:
             if ann.text and ann.points:
                 font = QFont(ann.font_family) if ann.font_family else QFont()
                 font.setPixelSize(max(6, ann.font_size))
                 painter.setFont(font)
                 painter.setPen(QPen(color))
                 painter.drawText(QPointF(*ann.points[0]), ann.text)
-        elif ann.kind in ("mosaic", "blur"):
+        elif ann.kind in (_KIND_MOSAIC, _KIND_BLUR):
             # Preview: dashed outline + translucent fill so the user sees the
             # region they're about to pixelate/blur. The destructive effect
             # only happens at bake() time.
@@ -604,43 +623,41 @@ class AnnotationCanvas(QWidget):
         painter.setBrush(QBrush(QColor(*ann.color)))
         painter.drawPolygon(poly)
 
+    # (alpha_scale, width_factor) — multiplier applied to stroke_width.
+    _BRUSH_PRESETS = {
+        "marker":      (0.7, 1.8),
+        "pencil":      (0.85, 0.5),
+        "highlighter": (0.35, 3.0),
+        "watercolor":  (0.2, 2.5),
+        "crayon":      (0.8, 1.5),
+        "pen":         (1.0, 1.0),
+    }
+
     def _draw_freehand_qt(self, painter: QPainter, ann: Annotation) -> None:
         """Live-preview counterpart to PIL ``_draw_freehand`` — mirrors the
-        5 brush styles so what the user sees while dragging matches what
+        brush styles so what the user sees while dragging matches what
         ``bake()`` will produce on save.
         """
         brush = getattr(ann, "brush_type", "pen")
         opacity = max(0, min(100, int(getattr(ann, "opacity", 100))))
-        r, g, b, a = ann.color
-        # Per-brush alpha tweak — must match the PIL side in annotation_models.
-        if brush == "marker":
-            alpha_scale = 0.7
-            width = max(1, int(ann.stroke_width * 1.8))
-        elif brush == "pencil":
-            alpha_scale = 0.85
-            width = max(1, ann.stroke_width // 2)
-        elif brush == "highlighter":
-            alpha_scale = 0.35
-            width = max(1, int(ann.stroke_width * 3))
-        elif brush == "spray":
+
+        # Brush styles that have their own dedicated renderer.
+        if brush == "spray":
             self._draw_freehand_spray_qt(painter, ann, opacity)
             return
-        elif brush == "calligraphy":
+        if brush == "calligraphy":
             self._draw_freehand_calligraphy_qt(painter, ann, opacity)
             return
-        elif brush == "watercolor":
-            alpha_scale = 0.2
-            width = max(1, int(ann.stroke_width * 2.5))
-        elif brush == "charcoal":
+        if brush == "charcoal":
             self._draw_freehand_charcoal_qt(painter, ann, opacity)
             return
-        elif brush == "crayon":
-            alpha_scale = 0.8
-            width = max(1, int(ann.stroke_width * 1.5))
-        else:  # pen
-            alpha_scale = 1.0
-            width = ann.stroke_width
 
+        alpha_scale, width_factor = self._BRUSH_PRESETS.get(
+            brush, self._BRUSH_PRESETS["pen"]
+        )
+        width = max(1, int(ann.stroke_width * width_factor))
+
+        r, g, b, a = ann.color
         final_alpha = int(a * alpha_scale * opacity / 100)
         color = QColor(r, g, b, final_alpha)
         pen = QPen(color)
@@ -797,7 +814,7 @@ class AnnotationCanvas(QWidget):
                 painter.drawEllipse(QRectF(x + ox - r2, y + oy - r2, r2 * 2, r2 * 2))
 
     def _draw_selection(self, painter: QPainter, ann: Annotation) -> None:
-        if ann.kind == "text":
+        if ann.kind == _KIND_TEXT:
             x1, y1, x2, y2 = self._text_bounding_box(ann)
         else:
             x1, y1, x2, y2 = ann.bounding_box()
@@ -849,7 +866,7 @@ class AnnotationCanvas(QWidget):
         sel = self._find(self._selected_id)
         if sel is None:
             return None
-        if sel.kind == "text":
+        if sel.kind == _KIND_TEXT:
             x1, y1, x2, y2 = self._text_bounding_box(sel)
         else:
             x1, y1, x2, y2 = sel.bounding_box()
@@ -900,7 +917,7 @@ class AnnotationCanvas(QWidget):
                 ) <= tol:
                     return a
                 continue
-            if a.kind == "freehand" and len(a.points) >= 2:
+            if a.kind == _KIND_FREEHAND and len(a.points) >= 2:
                 hit = False
                 for p, q in zip(a.points, a.points[1:], strict=False):
                     if _point_segment_distance(ix, iy, p, q) <= tol:
@@ -909,7 +926,7 @@ class AnnotationCanvas(QWidget):
                 if hit:
                     return a
                 continue
-            if a.kind == "text":
+            if a.kind == _KIND_TEXT:
                 x1, y1, x2, y2 = self._text_bounding_box(a)
             else:
                 x1, y1, x2, y2 = a.bounding_box()
@@ -937,7 +954,7 @@ class AnnotationCanvas(QWidget):
                 return name
         # Inside crop rect = move
         if crop_screen.contains(pt):
-            return "move"
+            return _KIND_MOVE
         return None
 
     def mousePressEvent(self, event: QMouseEvent):
@@ -947,7 +964,7 @@ class AnnotationCanvas(QWidget):
         ix, iy = self._screen_to_image(pt.x(), pt.y())
 
         # --- Crop tool ---
-        if self._tool == "crop":
+        if self._tool == _KIND_CROP:
             handle = self._crop_hit_handle(pt) if self._crop_rect else None
             if handle is not None:
                 self._crop_dragging = True
@@ -963,7 +980,7 @@ class AnnotationCanvas(QWidget):
             self._crop_drag_orig = None
             return
 
-        if self._tool == "select":
+        if self._tool == _KIND_SELECT:
             handle = self._hit_handle(pt)
             if handle is not None:
                 sel = self._find(self._selected_id)
@@ -975,7 +992,7 @@ class AnnotationCanvas(QWidget):
             hit = self._hit_annotation(pt)
             if hit is not None:
                 self._selected_id = hit.id
-                self._drag_mode = "move"
+                self._drag_mode = _KIND_MOVE
                 self._drag_start_image = (ix, iy)
                 self._drag_orig_points = list(hit.points)
                 self.update()
@@ -984,7 +1001,7 @@ class AnnotationCanvas(QWidget):
             self.update()
             return
 
-        if self._tool == "text":
+        if self._tool == _KIND_TEXT:
             self._begin_text_edit(ix, iy)
             return
 
@@ -992,7 +1009,7 @@ class AnnotationCanvas(QWidget):
         kind: AnnotationKind = self._tool  # type: ignore[assignment]
         if kind == "freehand":
             self._drawing = Annotation(
-                kind="freehand",
+                kind=_KIND_FREEHAND,
                 points=[(ix, iy)],
                 color=self._color,
                 stroke_width=self._stroke_width,
@@ -1009,170 +1026,173 @@ class AnnotationCanvas(QWidget):
             )
         self.update()
 
+    def _crop_drag_new_rect(self, sx: int, sy: int, ix: int, iy: int) -> None:
+        x1, y1 = max(0, min(sx, ix)), max(0, min(sy, iy))
+        x2 = min(self._base.width, max(sx, ix))
+        y2 = min(self._base.height, max(sy, iy))
+        self._crop_rect = (x1, y1, x2 - x1, y2 - y1)
+        rw, rh = self._crop_ratio
+        if rw > 0 and rh > 0:
+            self._enforce_crop_ratio()
+
+    def _crop_drag_move(self, sx: int, sy: int, ix: int, iy: int) -> None:
+        ox, oy, ow, oh = self._crop_drag_orig
+        dx, dy = ix - sx, iy - sy
+        nx = max(0, min(self._base.width - ow, ox + dx))
+        ny = max(0, min(self._base.height - oh, oy + dy))
+        self._crop_rect = (nx, ny, ow, oh)
+
+    def _crop_drag_resize(self, sx: int, sy: int, ix: int, iy: int) -> None:
+        ox, oy, ow, oh = self._crop_drag_orig
+        dx, dy = ix - sx, iy - sy
+        h = self._crop_drag_handle
+        nx, ny, nw, nh = ox, oy, ow, oh
+        if "w" in h:
+            nx, nw = ox + dx, ow - dx
+        if "e" in h:
+            nw = ow + dx
+        if "n" in h:
+            ny, nh = oy + dy, oh - dy
+        if "s" in h:
+            nh = oh + dy
+        nw, nh = max(nw, 1), max(nh, 1)
+        nx, ny = max(0, nx), max(0, ny)
+        nw = min(self._base.width - nx, nw)
+        nh = min(self._base.height - ny, nh)
+        self._crop_rect = (int(nx), int(ny), int(nw), int(nh))
+        rw, rh = self._crop_ratio
+        if rw > 0 and rh > 0:
+            self._enforce_crop_ratio()
+
+    def _handle_crop_move(self, pt, ix: int, iy: int) -> None:
+        if self._crop_dragging and self._crop_drag_start is not None:
+            sx, sy = self._crop_drag_start
+            if self._crop_drag_handle is None:
+                self._crop_drag_new_rect(sx, sy, ix, iy)
+            elif self._crop_drag_handle == _KIND_MOVE and self._crop_drag_orig:
+                self._crop_drag_move(sx, sy, ix, iy)
+            elif self._crop_drag_orig:
+                self._crop_drag_resize(sx, sy, ix, iy)
+            self.update()
+            return
+        handle = self._crop_hit_handle(pt) if self._crop_rect else None
+        if handle is not None and handle != _KIND_MOVE:
+            self.setCursor(_handle_cursor(handle))
+        elif handle == _KIND_MOVE:
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+        else:
+            self.setCursor(Qt.CursorShape.CrossCursor)
+
+    def _update_select_cursor(self, pt) -> None:
+        handle = self._hit_handle(pt)
+        if handle is not None:
+            self.setCursor(_handle_cursor(handle))
+        elif self._hit_annotation(pt) is not None:
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def _drag_selected_annotation(self, ix: int, iy: int) -> None:
+        sel = self._find(self._selected_id or "")
+        if sel is None:
+            return
+        sx, sy = self._drag_start_image  # type: ignore[misc]
+        dx, dy = ix - sx, iy - sy
+        if self._drag_mode == _KIND_MOVE:
+            sel.points = [(p[0] + dx, p[1] + dy) for p in self._drag_orig_points]
+        elif self._drag_mode.startswith("resize_"):
+            handle = self._drag_mode.split("_", 1)[1]
+            sel.points = self._resize_points(
+                self._drag_orig_points, handle, dx, dy
+            )
+        self.update()
+
     def mouseMoveEvent(self, event: QMouseEvent):
         pt = event.position()
         ix, iy = self._screen_to_image(pt.x(), pt.y())
         self.cursor_image_pos.emit(ix, iy)
 
-        # --- Crop tool ---
-        if self._tool == "crop":
-            if self._crop_dragging and self._crop_drag_start is not None:
-                sx, sy = self._crop_drag_start
-                if self._crop_drag_handle is None:
-                    # Drawing new crop rect
-                    x1, y1 = min(sx, ix), min(sy, iy)
-                    x2, y2 = max(sx, ix), max(sy, iy)
-                    # Clamp to image bounds
-                    x1 = max(0, x1)
-                    y1 = max(0, y1)
-                    x2 = min(self._base.width, x2)
-                    y2 = min(self._base.height, y2)
-                    self._crop_rect = (x1, y1, x2 - x1, y2 - y1)
-                    rw, rh = self._crop_ratio
-                    if rw > 0 and rh > 0:
-                        self._enforce_crop_ratio()
-                elif self._crop_drag_handle == "move" and self._crop_drag_orig:
-                    ox, oy, ow, oh = self._crop_drag_orig
-                    dx, dy = ix - sx, iy - sy
-                    nx = max(0, min(self._base.width - ow, ox + dx))
-                    ny = max(0, min(self._base.height - oh, oy + dy))
-                    self._crop_rect = (nx, ny, ow, oh)
-                elif self._crop_drag_orig:
-                    # Resize via handle
-                    ox, oy, ow, oh = self._crop_drag_orig
-                    dx, dy = ix - sx, iy - sy
-                    h = self._crop_drag_handle
-                    nx, ny, nw, nh = ox, oy, ow, oh
-                    if "w" in h:
-                        nx = ox + dx
-                        nw = ow - dx
-                    if "e" in h:
-                        nw = ow + dx
-                    if "n" in h:
-                        ny = oy + dy
-                        nh = oh - dy
-                    if "s" in h:
-                        nh = oh + dy
-                    # Ensure positive size
-                    nw = max(nw, 1)
-                    nh = max(nh, 1)
-                    # Clamp to image
-                    nx = max(0, nx)
-                    ny = max(0, ny)
-                    nw = min(self._base.width - nx, nw)
-                    nh = min(self._base.height - ny, nh)
-                    self._crop_rect = (int(nx), int(ny), int(nw), int(nh))
-                    rw, rh = self._crop_ratio
-                    if rw > 0 and rh > 0:
-                        self._enforce_crop_ratio()
-                self.update()
-                return
-            # Cursor feedback
-            handle = self._crop_hit_handle(pt) if self._crop_rect else None
-            if handle is not None and handle != "move":
-                self.setCursor(_handle_cursor(handle))
-            elif handle == "move":
-                self.setCursor(Qt.CursorShape.SizeAllCursor)
-            else:
-                self.setCursor(Qt.CursorShape.CrossCursor)
+        if self._tool == _KIND_CROP:
+            self._handle_crop_move(pt, ix, iy)
             return
 
-        # Cursor feedback for the select tool
-        if self._tool == "select" and self._drag_mode is None:
-            handle = self._hit_handle(pt)
-            if handle is not None:
-                self.setCursor(_handle_cursor(handle))
-            elif self._hit_annotation(pt) is not None:
-                self.setCursor(Qt.CursorShape.SizeAllCursor)
-            else:
-                self.setCursor(Qt.CursorShape.ArrowCursor)
+        if self._tool == _KIND_SELECT and self._drag_mode is None:
+            self._update_select_cursor(pt)
 
-        # Drag existing annotation
         if self._drag_mode is not None and self._drag_orig_points is not None:
-            sel = self._find(self._selected_id or "")
-            if sel is None:
-                return
-            sx, sy = self._drag_start_image  # type: ignore[misc]
-            dx, dy = ix - sx, iy - sy
-            if self._drag_mode == "move":
-                sel.points = [(p[0] + dx, p[1] + dy) for p in self._drag_orig_points]
-            elif self._drag_mode.startswith("resize_"):
-                handle = self._drag_mode.split("_", 1)[1]
-                sel.points = self._resize_points(
-                    self._drag_orig_points, handle, dx, dy
-                )
-            self.update()
+            self._drag_selected_annotation(ix, iy)
             return
 
-        # Draw new annotation
         if self._drawing is not None:
-            if self._drawing.kind == "freehand":
+            if self._drawing.kind == _KIND_FREEHAND:
                 self._drawing.points.append((ix, iy))
             else:
                 self._drawing.points[-1] = (ix, iy)
             self.update()
 
+    def _finish_crop_drag(self) -> None:
+        self._crop_dragging = False
+        self._crop_drag_start = None
+        self._crop_drag_handle = None
+        self._crop_drag_orig = None
+        if self._crop_rect is not None:
+            _, _, cw, ch = self._crop_rect
+            if cw < 2 or ch < 2:
+                self._crop_rect = None
+        self.update()
+
+    def _finish_annotation_drag(self) -> None:
+        sel = self._find(self._selected_id or "")
+        if sel is not None:
+            new_points = list(sel.points)
+            if new_points != self._drag_orig_points:
+                # Revert then push command so redo/undo both go through it
+                sel.points = [tuple(p) for p in self._drag_orig_points]
+                cmd = _ModifyAnnotationCommand(
+                    self, sel.id, self._drag_orig_points, new_points
+                )
+                self._undo_stack.push(cmd)
+        self._drag_mode = None
+        self._drag_orig_points = None
+        self._drag_start_image = None
+        self.annotation_changed.emit()
+
+    def _is_degenerate(self, drawing: Annotation) -> bool:
+        if drawing.kind == _KIND_FREEHAND:
+            return len(drawing.points) < 2
+        x1, y1 = drawing.points[0]
+        x2, y2 = drawing.points[-1]
+        return abs(x2 - x1) < 2 and abs(y2 - y1) < 2
+
+    def _finish_drawing(self) -> None:
+        drawing = self._drawing
+        self._drawing = None
+        if self._is_degenerate(drawing):
+            self.update()
+            return
+        # 馬賽克/模糊：框選完立刻問使用者要多強，確認後把像素烤進 base
+        # image（不存檔）。取消就什麼事也不做。
+        if drawing.kind in (_KIND_MOSAIC, _KIND_BLUR):
+            if self._prompt_destructive_strength(drawing):
+                self.annotation_changed.emit()
+            else:
+                self.update()
+            return
+        cmd = _AddAnnotationCommand(self, drawing)
+        self._undo_stack.push(cmd)
+        self.annotation_changed.emit()
+
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() != Qt.MouseButton.LeftButton:
             return
-
-        # --- Crop tool ---
-        if self._tool == "crop" and self._crop_dragging:
-            self._crop_dragging = False
-            self._crop_drag_start = None
-            self._crop_drag_handle = None
-            self._crop_drag_orig = None
-            # Discard degenerate crop
-            if self._crop_rect is not None:
-                _, _, cw, ch = self._crop_rect
-                if cw < 2 or ch < 2:
-                    self._crop_rect = None
-            self.update()
+        if self._tool == _KIND_CROP and self._crop_dragging:
+            self._finish_crop_drag()
             return
-
         if self._drag_mode is not None and self._drag_orig_points is not None:
-            sel = self._find(self._selected_id or "")
-            if sel is not None:
-                new_points = list(sel.points)
-                if new_points != self._drag_orig_points:
-                    # Revert then push command so redo/undo both go through it
-                    sel.points = [tuple(p) for p in self._drag_orig_points]
-                    cmd = _ModifyAnnotationCommand(
-                        self, sel.id, self._drag_orig_points, new_points
-                    )
-                    self._undo_stack.push(cmd)
-            self._drag_mode = None
-            self._drag_orig_points = None
-            self._drag_start_image = None
-            self.annotation_changed.emit()
+            self._finish_annotation_drag()
             return
-
         if self._drawing is not None:
-            drawing = self._drawing
-            self._drawing = None
-            # Discard degenerate zero-size shapes (click without drag)
-            if drawing.kind == "freehand":
-                if len(drawing.points) < 2:
-                    self.update()
-                    return
-            else:
-                x1, y1 = drawing.points[0]
-                x2, y2 = drawing.points[-1]
-                if abs(x2 - x1) < 2 and abs(y2 - y1) < 2:
-                    self.update()
-                    return
-            # 馬賽克 / 模糊：框選完立刻問使用者要多強。確認後直接把像素
-            # 烤進 base image（不存檔，使用者還要自己按 Save）。取消就
-            # 什麼事也不做。
-            if drawing.kind in ("mosaic", "blur"):
-                if self._prompt_destructive_strength(drawing):
-                    self.annotation_changed.emit()
-                else:
-                    self.update()
-                return
-            cmd = _AddAnnotationCommand(self, drawing)
-            self._undo_stack.push(cmd)
-            self.annotation_changed.emit()
+            self._finish_drawing()
 
     def _prompt_destructive_strength(self, ann: Annotation) -> bool:
         """Ask the user for mosaic block size / blur radius with a live
@@ -1184,7 +1204,7 @@ class AnnotationCanvas(QWidget):
         then discard the annotation).
         """
         lang = language_wrapper.language_word_dict
-        if ann.kind == "mosaic":
+        if ann.kind == _KIND_MOSAIC:
             title = lang.get("annotation_mosaic_prompt_title", "Mosaic strength")
             label_text = lang.get(
                 "annotation_mosaic_prompt_label",
@@ -1192,7 +1212,7 @@ class AnnotationCanvas(QWidget):
             )
             initial = self._last_block_size
             minv, maxv = 2, 200
-        elif ann.kind == "blur":
+        elif ann.kind == _KIND_BLUR:
             title = lang.get("annotation_blur_prompt_title", "Blur strength")
             label_text = lang.get(
                 "annotation_blur_prompt_label",
@@ -1232,7 +1252,7 @@ class AnnotationCanvas(QWidget):
         layout.addWidget(bbox)
 
         def apply_value(val: int) -> None:
-            if ann.kind == "mosaic":
+            if ann.kind == _KIND_MOSAIC:
                 ann.block_size = int(val)
             else:
                 ann.blur_radius = int(val)
@@ -1269,7 +1289,7 @@ class AnnotationCanvas(QWidget):
 
         if result != QDialog.DialogCode.Accepted:
             return False
-        if ann.kind == "mosaic":
+        if ann.kind == _KIND_MOSAIC:
             self._last_block_size = ann.block_size
         else:
             self._last_blur_radius = ann.blur_radius
@@ -1299,14 +1319,14 @@ class AnnotationCanvas(QWidget):
             self.update()
             return
         region = self._base.crop((x, y, x + w, y + h))
-        if ann.kind == "mosaic":
+        if ann.kind == _KIND_MOSAIC:
             block = max(2, ann.block_size)
             small = region.resize(
                 (max(1, w // block), max(1, h // block)),
                 resample=Image.Resampling.BILINEAR,
             )
             out = small.resize((w, h), resample=Image.Resampling.NEAREST)
-        elif ann.kind == "blur":
+        elif ann.kind == _KIND_BLUR:
             out = region.filter(
                 ImageFilter.GaussianBlur(radius=max(1, ann.blur_radius))
             )
@@ -1425,7 +1445,7 @@ class AnnotationCanvas(QWidget):
         if text:
             ix, iy = anchor
             ann = Annotation(
-                kind="text",
+                kind=_KIND_TEXT,
                 points=[(ix, iy)],
                 color=self._color,
                 stroke_width=self._stroke_width,
@@ -1744,7 +1764,7 @@ class AnnotationEditorWidget(QWidget):
         file_menu.addAction(act_save_proj)
 
         act_load_proj = QAction(
-            lang.get("annotation_load_project", "Load Project..."), self
+            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK), self
         )
         act_load_proj.triggered.connect(self._load_project)
         file_menu.addAction(act_load_proj)
@@ -1819,7 +1839,7 @@ class AnnotationEditorWidget(QWidget):
 
         lang = language_wrapper.language_word_dict
         header = QLabel(lang.get("annotation_tools_section", "Tools"), frame)
-        header.setObjectName("panelSection")
+        header.setObjectName(_QSS_PANEL_SECTION)
         header.setStyleSheet(
             "color: #9cdcfe; font-weight: bold; padding-bottom: 4px;"
         )
@@ -1873,7 +1893,7 @@ class AnnotationEditorWidget(QWidget):
         color_section = QLabel(
             lang.get("annotation_color", "Color"), frame
         )
-        color_section.setObjectName("panelSection")
+        color_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(color_section)
 
         self._color = (255, 0, 0, 255)
@@ -1894,7 +1914,7 @@ class AnnotationEditorWidget(QWidget):
         sw_section = QLabel(
             lang.get("annotation_stroke_width_label", "Stroke Width"), frame
         )
-        sw_section.setObjectName("panelSection")
+        sw_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(sw_section)
 
         sw_row = QHBoxLayout()
@@ -1938,7 +1958,7 @@ class AnnotationEditorWidget(QWidget):
         hist_section = QLabel(
             lang.get("annotation_history_section", "History"), frame
         )
-        hist_section.setObjectName("panelSection")
+        hist_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(hist_section)
 
         hist_row = QHBoxLayout()
@@ -1971,7 +1991,7 @@ class AnnotationEditorWidget(QWidget):
         brush_section = QLabel(
             lang.get("annotation_brush_section", "Brush"), frame
         )
-        brush_section.setObjectName("panelSection")
+        brush_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(brush_section)
 
         brush_grid = QGridLayout()
@@ -2010,7 +2030,7 @@ class AnnotationEditorWidget(QWidget):
         op_section = QLabel(
             lang.get("annotation_opacity", "Opacity"), frame
         )
-        op_section.setObjectName("panelSection")
+        op_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(op_section)
 
         op_row = QHBoxLayout()
@@ -2049,7 +2069,7 @@ class AnnotationEditorWidget(QWidget):
         sp_section = QLabel(
             lang.get("annotation_spacing", "Spacing"), frame
         )
-        sp_section.setObjectName("panelSection")
+        sp_section.setObjectName(_QSS_PANEL_SECTION)
         lay.addWidget(sp_section)
 
         sp_row = QHBoxLayout()
@@ -2314,7 +2334,7 @@ class AnnotationEditorWidget(QWidget):
         start_dir = str(Path(self._source_path).parent) if self._source_path else ""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang.get("annotation_load_project", "Load Project..."),
+            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
             start_dir,
             "Imervue Annotation Project (*.json)",
         )
@@ -2339,7 +2359,7 @@ class AnnotationEditorWidget(QWidget):
             )
             QMessageBox.warning(
                 self,
-                lang.get("annotation_load_project", "Load Project..."),
+                lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
                 warning,
             )
         self._canvas.set_annotations(project.annotations)
@@ -2436,7 +2456,7 @@ def open_annotation_for_path(
     try:
         img = Image.open(path)
         if img.mode not in ("RGB", "RGBA", "L"):
-            img = img.convert("RGBA")
+            img = img.convert(_MODE_RGBA)
         else:
             img.load()  # force decode now so errors surface before the dialog
     except Exception as exc:

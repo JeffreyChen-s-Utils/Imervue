@@ -292,6 +292,10 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
     user_setting_dict["image_ratings"] = ratings
     schedule_save()
 
+    # Macro recording — capture the resulting rating (0 means "cleared").
+    from Imervue.macros.macro_manager import manager as _macro_manager
+    _macro_manager.record("set_rating", rating=ratings.get(path, 0))
+
     # 通知 UI 更新
     from Imervue.multi_language.language_wrapper import language_wrapper
     lang = language_wrapper.language_word_dict
@@ -326,6 +330,10 @@ def toggle_favorite(main_gui: GPUImageView):
 
     user_setting_dict["image_favorites"] = list(favorites)
     schedule_save()
+
+    # Macro recording — record the resulting favorite state.
+    from Imervue.macros.macro_manager import manager as _macro_manager
+    _macro_manager.record("toggle_favorite", value=path in favorites)
 
     from Imervue.multi_language.language_wrapper import language_wrapper
     lang = language_wrapper.language_word_dict
