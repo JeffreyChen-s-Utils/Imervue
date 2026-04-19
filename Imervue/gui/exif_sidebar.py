@@ -7,10 +7,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolButton,
-    QPushButton, QSizePolicy,
+    QPushButton, QSizePolicy, QPlainTextEdit,
 )
 
 from Imervue.image.info import get_exif_data, get_file_times
@@ -70,11 +70,39 @@ class ExifSidebar(QWidget):
         self._edit_btn.setStyleSheet("QPushButton { margin: 4px; }")
         self._edit_btn.clicked.connect(self._open_editor)
 
+        # 備註區 — 儲存到 library SQLite index
+        self._notes_label = QLabel(
+            language_wrapper.language_word_dict.get("notes_title", "Notes")
+        )
+        self._notes_label.setStyleSheet(
+            "QLabel { color: #ddd; padding: 8px 8px 2px 8px;"
+            " font-weight: bold; background: #1e1e1e; }"
+        )
+        self._notes_edit = QPlainTextEdit()
+        self._notes_edit.setPlaceholderText(
+            language_wrapper.language_word_dict.get(
+                "notes_placeholder", "Write notes for this image…"
+            )
+        )
+        self._notes_edit.setFixedHeight(120)
+        self._notes_edit.setStyleSheet(
+            "QPlainTextEdit { background: #262626; color: #ddd; border: none;"
+            " padding: 6px; font-size: 12px; }"
+        )
+        self._notes_current_path: str | None = None
+        self._notes_save_timer = QTimer(self)
+        self._notes_save_timer.setSingleShot(True)
+        self._notes_save_timer.setInterval(500)
+        self._notes_save_timer.timeout.connect(self._flush_note)
+        self._notes_edit.textChanged.connect(self._notes_save_timer.start)
+
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addWidget(self._info_label)
         content_layout.addWidget(self._edit_btn)
+        content_layout.addWidget(self._notes_label)
+        content_layout.addWidget(self._notes_edit)
         content_layout.addStretch()
         self._content.setWidget(content_widget)
 
@@ -117,8 +145,10 @@ class ExifSidebar(QWidget):
 
         if not path:
             self._info_label.setText("")
+            self._load_note_for(None)
             return
 
+        self._load_note_for(path)
         lang = language_wrapper.language_word_dict
         p = Path(path)
         lines = []
@@ -171,3 +201,34 @@ class ExifSidebar(QWidget):
             lines.append(f"<i>{lang.get('exif_no_data', 'No EXIF data')}</i>")
 
         self._info_label.setText("<br>".join(lines))
+
+    def _load_note_for(self, path: str | None) -> None:
+        """Swap the notes text area to the given path, flushing any pending save first."""
+        if self._notes_save_timer.isActive():
+            self._notes_save_timer.stop()
+            self._flush_note()
+        self._notes_current_path = path
+        if not path:
+            self._notes_edit.blockSignals(True)
+            self._notes_edit.setPlainText("")
+            self._notes_edit.blockSignals(False)
+            return
+        try:
+            from Imervue.library import image_index
+            existing = image_index.get_note(path)
+        except Exception:  # noqa: BLE001
+            existing = ""
+        self._notes_edit.blockSignals(True)
+        self._notes_edit.setPlainText(existing)
+        self._notes_edit.blockSignals(False)
+
+    def _flush_note(self) -> None:
+        """Debounced write-back of the notes field to the library index."""
+        path = self._notes_current_path
+        if not path:
+            return
+        try:
+            from Imervue.library import image_index
+            image_index.set_note(path, self._notes_edit.toPlainText())
+        except Exception:  # noqa: BLE001
+            pass

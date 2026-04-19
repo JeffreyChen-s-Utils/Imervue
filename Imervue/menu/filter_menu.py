@@ -88,6 +88,18 @@ def build_filter_menu(ui: ImervueMainWindow):
 
     filter_menu.addSeparator()
 
+    # ===== 分揀 (Pick / Reject / Unflagged) =====
+    cull_menu = filter_menu.addMenu(lang.get("filter_by_cull", "By Cull State"))
+    cull_all = cull_menu.addAction(lang.get("filter_cull_all", "All"))
+    cull_all.triggered.connect(lambda: _apply_cull_filter(ui, None))
+    for state_key, fallback in (
+        ("pick", "Picks only"),
+        ("reject", "Rejects only"),
+        ("unflagged", "Unflagged only"),
+    ):
+        a = cull_menu.addAction(lang.get(f"filter_cull_{state_key}", fallback))
+        a.triggered.connect(lambda checked, s=state_key: _apply_cull_filter(ui, s))
+
     # ===== 清除篩選 =====
     clear_action = filter_menu.addAction(lang.get("filter_clear", "Clear Filter"))
     clear_action.triggered.connect(lambda: _clear_filter(ui))
@@ -149,6 +161,20 @@ def _apply_rating_filter(ui: ImervueMainWindow, min_rating: int):
     if not filtered:
         return
 
+    viewer.clear_tile_grid()
+    viewer.load_tile_grid_async(filtered)
+
+
+def _apply_cull_filter(ui: ImervueMainWindow, state: str | None):
+    from Imervue.library import image_index
+    viewer = ui.viewer
+    all_images = _get_full_image_list(viewer)
+    if not all_images:
+        return
+    filtered = image_index.filter_by_cull(all_images, state) if state else all_images
+    if not filtered:
+        return
+    viewer._unfiltered_images = list(all_images)
     viewer.clear_tile_grid()
     viewer.load_tile_grid_async(filtered)
 

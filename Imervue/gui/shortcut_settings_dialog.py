@@ -91,6 +91,9 @@ DEFAULT_SHORTCUTS: dict[str, tuple[int, int]] = {
     "split_view":       (_k(Qt.Key.Key_S), _SHIFT),
     "dual_page":        (_k(Qt.Key.Key_D), _SHIFT),
     "multi_monitor":    (_k(Qt.Key.Key_M), _CTRL_SHIFT),
+    "cull_pick":        (_k(Qt.Key.Key_P), _NONE),
+    "cull_reject":      (_k(Qt.Key.Key_X), _SHIFT),
+    "cull_unflag":      (_k(Qt.Key.Key_U), _NONE),
 }
 
 # Translation key for each action (displayed in the dialog)
@@ -135,6 +138,9 @@ ACTION_DISPLAY_KEYS: dict[str, str] = {
     "split_view":       "shortcut_action_split_view",
     "dual_page":        "shortcut_action_dual_page",
     "multi_monitor":    "shortcut_action_multi_monitor",
+    "cull_pick":        "shortcut_action_cull_pick",
+    "cull_reject":      "shortcut_action_cull_reject",
+    "cull_unflag":      "shortcut_action_cull_unflag",
 }
 
 # English fallback names
@@ -164,6 +170,9 @@ ACTION_FALLBACKS: dict[str, str] = {
     "split_view": "Split View",
     "dual_page": "Dual Page",
     "multi_monitor": "Multi-Monitor Window",
+    "cull_pick": "Cull: Pick",
+    "cull_reject": "Cull: Reject",
+    "cull_unflag": "Cull: Unflag",
 }
 
 

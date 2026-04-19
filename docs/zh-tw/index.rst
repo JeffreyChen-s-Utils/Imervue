@@ -814,6 +814,12 @@ Imervue 支援外掛擴充功能。
      - 評分（再按取消）
    * - ``F1`` ～ ``F5``
      - 色彩標籤：紅／黃／綠／藍／紫（再按清除）
+   * - ``P``
+     - 分揀：Pick（標為保留）
+   * - ``Shift + X``
+     - 分揀：Reject（標為淘汰）
+   * - ``U``
+     - 分揀：取消旗標
    * - ``B``
      - 加入／取消書籤
    * - ``T``
@@ -864,6 +870,107 @@ Imervue 支援外掛擴充功能。
      - 減速
    * - ``]``
      - 加速
+
+圖庫與中繼資料管理
+------------------
+
+Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
+``~/.cache/imervue/library.db``（POSIX）維護一個 SQLite 索引，用於跨資料夾
+搜尋、階層式標籤、智慧相簿、感知雜湊、筆記與分揀旗標。下列功能多半位於
+``Extra Tools``（額外工具）選單下。
+
+圖庫搜尋
+^^^^^^^^
+
+``Extra Tools`` > ``Library Search`` 允許新增多個**根目錄**並在背景建立索引，
+之後可依副檔名、最小寬高、檔案大小或檔名片段查詢，並把結果當作虛擬相簿
+載入檢視器。
+
+智慧相簿
+^^^^^^^^
+
+``Extra Tools`` > ``Smart Albums`` 以友善名稱儲存一組過濾規則（副檔名、最小
+尺寸、色彩標籤、評分、最愛、分揀狀態、階層式標籤、檔名片段）。再次套用時，
+會依規則篩選目前資料夾。
+
+相似圖片搜尋
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Find Similar Images`` 會對當前深度縮放的圖片（或第一張選
+取圖）計算 64 位元 DCT pHash，並依 Hamming 距離遞增列出索引中的近似圖。
+可藉由「Max distance」調整寬鬆度。
+
+自動標記
+^^^^^^^^
+
+``Extra Tools`` > ``Auto-Tag Images`` 會將經驗式標籤套用於 ``auto/...``
+（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+``portrait``）。若系統已安裝 ``onnxruntime`` 並於 ``models/clip_vit_b32.onnx``
+放置 CLIP 模型，還會加入 CLIP 內容標籤。執行時以工作執行緒處理，具即時進
+度列。
+
+階層式標籤
+^^^^^^^^^^
+
+``Extra Tools`` > ``Hierarchical Tags`` 管理樹狀結構標籤（如
+``animal/cat/british``）。選取節點即可列出該節點與所有子節點下的圖片；可
+一鍵為目前選取的圖片加上或移除標籤。此系統與右鍵選單的扁平標籤並行。
+
+Token 批次重新命名
+^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Token Batch Rename`` 提供即時預覽，輸入如
+``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 的樣板，即可看到每個檔案的新
+名稱；衝突會被標示。支援 tokens：``{name} {ext} {counter[:NN]} {date[:fmt]}
+{width} {height} {wxh} {size_kb} {camera} {year} {month} {day} {hour}
+{minute}``。
+
+中繼資料匯出
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Export Metadata (CSV / JSON)`` 會為目前檢視的每張圖片
+輸出一列，包含 EXIF、尺寸、色彩標籤、評分、最愛、階層式標籤、分揀狀態與
+筆記。適合用於試算表或外部流程。
+
+分揀（Pick / Reject）
+^^^^^^^^^^^^^^^^^^^^^
+
+Lightroom 風格的三態旗標。``P`` 將當前圖片或所有選取 tile 標為 Pick；
+``Shift + X`` 標為 Reject；``U`` 取消旗標。``Filter`` > ``By Cull State`` 可
+只顯示某一種狀態；``Extra Tools`` > ``Culling`` 提供對話框介面並附有
+**Delete all rejects** 按鈕，可從磁碟永久刪除被淘汰的檔案。
+
+暫存籃
+^^^^^^
+
+``Extra Tools`` > ``Staging Tray`` 是跨資料夾的暫存籃。可將任意 tile 加入
+籃中（重啟後保留），再一鍵把整個籃移動或複製至目的資料夾。適合從多次
+拍攝中彙整出精選再匯出。
+
+雙窗格檔案管理
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Dual-Pane File Manager`` 提供 Total Commander 風格的雙樹
+檢視，可在兩個資料夾之間直接移動或複製選取項目。
+
+時間軸檢視
+^^^^^^^^^^
+
+``Extra Tools`` > ``Timeline View`` 以「日／月／年」方式分組目前圖片集
+（Google Photos 樣式）。日期優先使用 EXIF ``DateTimeOriginal``，否則退回檔
+案修改時間。雙擊圖片即可進入深度縮放。
+
+拖放至外部應用程式
+^^^^^^^^^^^^^^^^^^
+
+由**已選取** tile 按住拖曳，可將檔案直接丟到檔案總管、Chrome、Discord 等
+支援檔案 URL 的應用程式；拖曳預覽為 tile 縮圖。
+
+單張圖片筆記
+^^^^^^^^^^^^
+
+EXIF 側邊欄包含自由文字 **Notes** 區塊，輸入內容會經短暫去抖後自動寫入
+索引；筆記依圖片路徑儲存，重新掃描資料夾也能保留。
 
 ----
 

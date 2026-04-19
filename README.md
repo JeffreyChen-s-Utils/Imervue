@@ -96,15 +96,24 @@ Key design principles:
 - Bookmark system (up to 5000 bookmarks)
 - Rating system (1–5 stars) and favorites
 - **Color labels** (F1–F5 → red/yellow/green/blue/purple) — Lightroom-style flags independent of star rating
+- **Culling workflow** (P / Shift+X / U → Pick / Reject / Unflag) — Lightroom-style 3-state flag with Filter > By Cull State and bulk delete-rejects
+- **Hierarchical tags** — tree-structured paths like `animal/cat/british`, descendants searched automatically
 - Tags & Albums with **multi-tag filter** (AND/OR boolean logic)
+- **Smart Albums** — save rule-based filter queries (extensions, min resolution, rating, color, cull, tags…) and reapply them in one click
+- **Timeline view** — Google-Photos-style grouping by day / month / year (EXIF DateTimeOriginal falling back to mtime)
+- **Similar-image search** via 64-bit DCT pHash with Hamming distance threshold
+- **Per-image notes** in the EXIF sidebar — free-text, debounced save, persisted across sessions
+- **Staging tray** — cross-folder basket that survives restarts; bulk move/copy/export
+- **Dual-pane file manager** — Total Commander-style two-tree view with move/copy between panes
 - Sort by name, modified date, created date, file size, or resolution
-- Filter by file extension, rating, color label, or tag/album
+- Filter by file extension, rating, color label, cull state, or tag/album
 - **Advanced filter** — resolution / file size / orientation / modified date range
 - Recent folders and recent images tracking
 - Automatic restore of last opened folder on startup
 - **Thumbnail status badges** — left-edge colour strip, favorite heart, bookmark star, rating stars
 - **Thumbnail density** — Compact / Standard / Relaxed padding
 - **File tree extras** — F5 refresh, New Folder, Expand/Collapse All
+- **Drag-out to external apps** — press and drag a selected tile into Explorer / Chrome / Discord
 
 ### Editing & Export
 
@@ -130,6 +139,17 @@ Key design principles:
 - **Image Organizer** — Sort images into subfolders by date, resolution, type, size, or fixed count
 - **Batch EXIF Strip** — Remove EXIF, GPS, and metadata from all images in a folder
 - **Crop Tool** — Interactive crop with aspect ratio presets (Free / 1:1 / 4:3 / 3:2 / 16:9 / 9:16), rule-of-thirds overlay, and drag handles
+- **Library Search** — SQLite index with multi-root scanning; query by extension, size, dimensions, filename
+- **Smart Albums** — save & reapply rule-based filter queries
+- **Find Similar Images** — pHash-based search with adjustable Hamming distance
+- **Auto-Tag Images** — heuristic (photo / document / screenshot / landscape / portrait) with optional CLIP ONNX upgrade
+- **Hierarchical Tags** manager — tree-structured tag paths with bulk assign/untag
+- **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
+- **Export Metadata (CSV / JSON)** — one row per image with EXIF, cull, rating, tags, notes
+- **Culling** dialog — filter by Pick / Reject / Unflagged, bulk delete all rejects
+- **Staging Tray** — cross-folder basket for batch move/copy/export
+- **Dual-Pane File Manager** — Total Commander-style two-tree view
+- **Timeline View** — day / month / year groupings of the current image set
 
 ### System Integration
 
@@ -333,6 +353,9 @@ window keeps browsing independently.
 | 0 | Toggle favorite (heart) |
 | 1–5 | Quick rating (1–5 stars) |
 | F1–F5 | Quick **color label** (red / yellow / green / blue / purple) |
+| P | **Cull: Pick** (flag for keep) |
+| Shift+X | **Cull: Reject** |
+| U | **Cull: Unflag** |
 | Shift+S | Open split view (two images side-by-side) |
 | Shift+D | Open dual-page reading (manga/comic) |
 | Ctrl+Shift+D | Open dual-page reading in right-to-left order |
@@ -402,6 +425,17 @@ window keeps browsing independently.
 - Image Organizer
 - Batch EXIF Strip
 - Image Sanitizer
+- **Library Search** (SQLite multi-root index)
+- **Smart Albums** (save / apply / delete rule-based filters)
+- **Find Similar Images** (pHash Hamming distance)
+- **Auto-Tag Images** (heuristic + optional CLIP ONNX)
+- **Hierarchical Tags** (tree-structured tag paths)
+- **Token Batch Rename** (live-preview templates)
+- **Export Metadata (CSV / JSON)**
+- **Culling** (filter / bulk delete rejects)
+- **Staging Tray** (cross-folder basket)
+- **Dual-Pane File Manager**
+- **Timeline View** (by day / month / year)
 
 ### View
 
@@ -422,6 +456,7 @@ window keeps browsing independently.
 - By Tag (single) / By Album (single)
 - **Multi-Tag Filter…** — multi-select tags or albums with AND / OR boolean logic
 - **Advanced Filter…** — resolution / file size / orientation / modified-date range
+- **By Cull State**: All / Picks only / Rejects only / Unflagged only
 - Clear Filter
 
 ### Language

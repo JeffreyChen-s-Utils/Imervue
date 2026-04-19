@@ -1616,6 +1616,47 @@ class GPUImageView(QOpenGLWidget):
             self._update_status_info()
         self.update()
 
+    # ---------------------------
+    # 分揀 (Culling: Pick / Reject / Unflag)
+    # ---------------------------
+    def _apply_cull_state(self, state: str) -> None:
+        """Apply a cull state to the currently-active target(s).
+
+        Mirrors ``_apply_color_label`` resolution order: multi-selected tiles
+        → deep-zoom image → hovered tile.
+        """
+        from Imervue.library import image_index
+
+        targets: list[str] = []
+        if self.tile_grid_mode and self.tile_selection_mode and self.selected_tiles:
+            targets = list(self.selected_tiles)
+        elif self.deep_zoom:
+            images = self.model.images
+            if images and 0 <= self.current_index < len(images):
+                targets = [images[self.current_index]]
+        elif self.tile_grid_mode and self._hover_last_path:
+            targets = [self._hover_last_path]
+
+        if not targets:
+            return
+
+        for p in targets:
+            image_index.set_cull_state(p, state)
+
+        if hasattr(self.main_window, "toast"):
+            lang = self.main_window.language_wrapper.language_word_dict
+            label_key = f"cull_toast_{state}"
+            fallback = {
+                "pick": "Picked {n} image(s)",
+                "reject": "Rejected {n} image(s)",
+                "unflagged": "Unflagged {n} image(s)",
+            }[state]
+            msg = lang.get(label_key, fallback).format(n=len(targets))
+            self.main_window.toast.info(msg)
+        if self.deep_zoom and hasattr(self, "_update_status_info"):
+            self._update_status_info()
+        self.update()
+
     def _toast_color_change(self, path: str, new_color: str | None) -> None:
         if not hasattr(self.main_window, "toast"):
             return
@@ -1967,6 +2008,13 @@ class GPUImageView(QOpenGLWidget):
                 if move_delta.manhattanLength() < threshold:
                     return
 
+                # 若拖曳起點在已選取的 tile 上 → 嘗試拖出到外部 App
+                from Imervue.gpu_image_view.actions.drag_out import try_start_drag_out
+                if try_start_drag_out(self, self._drag_start_pos):
+                    self._drag_start_pos = None
+                    self._drag_end_pos = None
+                    return
+
                 # 超過門檻才真正開始框選
                 self.tile_selection_mode = True
                 self._drag_selecting = True
@@ -2206,6 +2254,17 @@ class GPUImageView(QOpenGLWidget):
         # --- Random image (X) ---
         if action == "random_image":
             self.jump_to_random_image()
+            return
+
+        # --- Culling (P / Shift+X / U) ---
+        if action == "cull_pick":
+            self._apply_cull_state("pick")
+            return
+        if action == "cull_reject":
+            self._apply_cull_state("reject")
+            return
+        if action == "cull_unflag":
+            self._apply_cull_state("unflagged")
             return
 
         # --- Split view (Shift+S) ---
