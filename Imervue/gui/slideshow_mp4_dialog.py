@@ -19,6 +19,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.slideshow_mp4_dialog")
 
+_DEFAULT_TITLE = "Slideshow Video"
+
+
+def _title() -> str:
+    return language_wrapper.language_word_dict.get("slideshow_mp4_title", _DEFAULT_TITLE)
+
 
 def open_slideshow_mp4_dialog(ui: ImervueMainWindow) -> None:
     dlg = SlideshowMp4Dialog(ui)
@@ -51,7 +57,7 @@ class SlideshowMp4Dialog(QDialog):
         super().__init__(ui)
         self.ui = ui
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("slideshow_mp4_title", "Slideshow Video"))
+        self.setWindowTitle(_title())
         self.setMinimumSize(440, 320)
 
         layout = QVBoxLayout(self)
@@ -123,7 +129,7 @@ class SlideshowMp4Dialog(QDialog):
         if not images:
             QMessageBox.information(
                 self,
-                lang.get("slideshow_mp4_title", "Slideshow Video"),
+                _title(),
                 lang.get("slideshow_no_images", "No images to export."),
             )
             return
@@ -156,7 +162,7 @@ class SlideshowMp4Dialog(QDialog):
         if error:
             QMessageBox.warning(
                 self,
-                lang.get("slideshow_mp4_title", "Slideshow Video"),
+                _title(),
                 lang.get("slideshow_error", "Export failed: {err}").format(err=error),
             )
             return

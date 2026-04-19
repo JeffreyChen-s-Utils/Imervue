@@ -1,3 +1,6 @@
+_NO_EXPORT_IMAGES = '書き出せる画像がありません。'
+_EXPORT_FAILED = '書き出しに失敗：{err}'
+
 japanese_word_dict = {
     "tab_new": "新しいタブ",
     "main_window_current_filename_format": "現在のファイル名: {name}",
@@ -894,8 +897,8 @@ japanese_word_dict = {
     "contact_sheet_export": "PDF を書き出し\u2026",
     "contact_sheet_close": "閉じる",
     "contact_sheet_save_title": "コンタクトシートを保存",
-    "contact_sheet_no_images": "書き出せる画像がありません。",
-    "contact_sheet_error": "書き出しに失敗：{err}",
+    "contact_sheet_no_images": _NO_EXPORT_IMAGES,
+    "contact_sheet_error": _EXPORT_FAILED,
     "contact_sheet_done": "コンタクトシートを書き出しました：{path}",
     # Web ギャラリー
     "web_gallery_title": "Web ギャラリー",
@@ -907,8 +910,8 @@ japanese_word_dict = {
     "web_gallery_export": "書き出し\u2026",
     "web_gallery_close": "閉じる",
     "web_gallery_pick_dir": "出力フォルダを選択",
-    "web_gallery_no_images": "書き出せる画像がありません。",
-    "web_gallery_error": "書き出しに失敗：{err}",
+    "web_gallery_no_images": _NO_EXPORT_IMAGES,
+    "web_gallery_error": _EXPORT_FAILED,
     "web_gallery_done": "ギャラリーを書き出しました：{path}",
     # スライドショー MP4
     "slideshow_mp4_title": "スライドショー動画",
@@ -922,7 +925,7 @@ japanese_word_dict = {
     "slideshow_export": "MP4 を書き出し\u2026",
     "slideshow_close": "閉じる",
     "slideshow_save_title": "スライドショーを保存",
-    "slideshow_no_images": "書き出せる画像がありません。",
-    "slideshow_error": "書き出しに失敗：{err}",
+    "slideshow_no_images": _NO_EXPORT_IMAGES,
+    "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "スライドショーを書き出しました：{path}",
 }

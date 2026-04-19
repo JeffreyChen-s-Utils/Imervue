@@ -29,7 +29,7 @@ class _FakeTabBar:
     def __init__(self, idx=0):
         self._idx = idx
 
-    def currentIndex(self):
+    def currentIndex(self):  # NOSONAR:python:S100 - fakes Qt QTabBar.currentIndex camelCase API
         return self._idx
 
 

@@ -55,7 +55,7 @@ def _do_drag(main_gui: GPUImageView, paths: list[str]) -> bool:
     return True
 
 
-def _build_preview_pixmap(main_gui: GPUImageView, path: str) -> QPixmap | None:
+def _build_preview_pixmap(_main_gui: GPUImageView, path: str) -> QPixmap | None:
     """Reuse the cached thumbnail if available; fall back to a plain rect."""
     from PIL import Image
     from PySide6.QtGui import QImage

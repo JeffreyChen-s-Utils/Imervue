@@ -21,6 +21,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.contact_sheet_dialog")
 
+_DEFAULT_TITLE = "Contact Sheet PDF"
+
+
+def _title() -> str:
+    return language_wrapper.language_word_dict.get("contact_sheet_title", _DEFAULT_TITLE)
+
 
 def open_contact_sheet_dialog(ui: ImervueMainWindow) -> None:
     dlg = ContactSheetDialog(ui)
@@ -53,7 +59,7 @@ class ContactSheetDialog(QDialog):
         super().__init__(ui)
         self.ui = ui
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("contact_sheet_title", "Contact Sheet PDF"))
+        self.setWindowTitle(_title())
         self.setMinimumSize(420, 300)
 
         layout = QVBoxLayout(self)
@@ -127,7 +133,7 @@ class ContactSheetDialog(QDialog):
         if not images:
             QMessageBox.information(
                 self,
-                lang.get("contact_sheet_title", "Contact Sheet PDF"),
+                _title(),
                 lang.get("contact_sheet_no_images", "No images to export."),
             )
             return
@@ -160,7 +166,7 @@ class ContactSheetDialog(QDialog):
         if error:
             QMessageBox.warning(
                 self,
-                lang.get("contact_sheet_title", "Contact Sheet PDF"),
+                _title(),
                 lang.get("contact_sheet_error", "Export failed: {err}").format(err=error),
             )
             return

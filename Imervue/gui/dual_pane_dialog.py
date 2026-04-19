@@ -148,7 +148,7 @@ class DualPaneDialog(QDialog):
                 else:
                     shutil.copy2(p, str(target))
                 ok += 1
-            except (OSError, shutil.Error):
+            except OSError:
                 failed += 1
         self._left.refresh()
         self._right.refresh()

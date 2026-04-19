@@ -33,6 +33,25 @@ def is_raw(path: str) -> bool:
     return Path(path).suffix.lower() in RAW_EXTENSIONS
 
 
+def _preview_rank(path: str) -> tuple[int, str]:
+    """Rank order for picking the best preview; higher index wins."""
+    ext = Path(path).suffix.lower()
+    idx = PREVIEW_PRIORITY.index(ext) if ext in PREVIEW_PRIORITY else -1
+    return (idx, path)
+
+
+def _choose_stack_preview(members: list[str]) -> str | None:
+    """Return the chosen preview if ``members`` form a genuine RAW+preview stack."""
+    if len(members) < 2:
+        return None
+    raws = [m for m in members if is_raw(m)]
+    previews = [m for m in members if not is_raw(m)]
+    if not raws or not previews:
+        return None
+    previews.sort(key=_preview_rank)
+    return previews[-1]
+
+
 def collapse_stacks(paths: list[str]) -> tuple[list[str], dict[str, list[str]]]:
     """Group RAW+preview pairs sharing the same stem within a folder.
 
@@ -47,37 +66,24 @@ def collapse_stacks(paths: list[str]) -> tuple[list[str], dict[str, list[str]]]:
     for p in paths:
         buckets.setdefault(_stem_key(p), []).append(p)
 
-    # Identify which bucket keys are genuine stacks (>= 2 members AND at
-    # least one RAW + one non-RAW member). Single-file buckets pass through.
     stacks: dict[str, list[str]] = {}
     visible_for_key: dict[tuple[str, str], str] = {}
     for key, members in buckets.items():
-        if len(members) < 2:
+        chosen = _choose_stack_preview(members)
+        if chosen is None:
             continue
-        raws = [m for m in members if is_raw(m)]
-        previews = [m for m in members if not is_raw(m)]
-        if not raws or not previews:
-            continue
-        # Pick the best preview by PREVIEW_PRIORITY (later wins); tie-break by path.
-        def preview_rank(path: str) -> tuple[int, str]:
-            ext = Path(path).suffix.lower()
-            idx = PREVIEW_PRIORITY.index(ext) if ext in PREVIEW_PRIORITY else -1
-            return (idx, path)
-        previews.sort(key=preview_rank)
-        chosen = previews[-1]
-        ordered = [chosen] + [m for m in members if m != chosen]
-        stacks[chosen] = ordered
+        stacks[chosen] = [chosen] + [m for m in members if m != chosen]
         visible_for_key[key] = chosen
 
     out: list[str] = []
     seen_keys: set[tuple[str, str]] = set()
     for p in paths:
         key = _stem_key(p)
-        if key in visible_for_key:
-            if key in seen_keys:
-                continue
-            seen_keys.add(key)
-            out.append(visible_for_key[key])
-        else:
+        if key not in visible_for_key:
             out.append(p)
+            continue
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        out.append(visible_for_key[key])
     return out, stacks

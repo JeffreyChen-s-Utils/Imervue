@@ -1,3 +1,6 @@
+_NO_EXPORT_IMAGES = 'No images to export.'
+_EXPORT_FAILED = 'Export failed: {err}'
+
 english_word_dict = {
     "tab_new": "New Tab",
     "main_window_current_filename_format": "Current Filename: {name}",
@@ -894,8 +897,8 @@ english_word_dict = {
     "contact_sheet_export": "Export PDF\u2026",
     "contact_sheet_close": "Close",
     "contact_sheet_save_title": "Save Contact Sheet",
-    "contact_sheet_no_images": "No images to export.",
-    "contact_sheet_error": "Export failed: {err}",
+    "contact_sheet_no_images": _NO_EXPORT_IMAGES,
+    "contact_sheet_error": _EXPORT_FAILED,
     "contact_sheet_done": "Contact sheet written: {path}",
     # Web gallery
     "web_gallery_title": "Web Gallery",
@@ -907,8 +910,8 @@ english_word_dict = {
     "web_gallery_export": "Export\u2026",
     "web_gallery_close": "Close",
     "web_gallery_pick_dir": "Pick output folder",
-    "web_gallery_no_images": "No images to export.",
-    "web_gallery_error": "Export failed: {err}",
+    "web_gallery_no_images": _NO_EXPORT_IMAGES,
+    "web_gallery_error": _EXPORT_FAILED,
     "web_gallery_done": "Gallery written: {path}",
     # Slideshow MP4
     "slideshow_mp4_title": "Slideshow Video",
@@ -922,7 +925,7 @@ english_word_dict = {
     "slideshow_export": "Export MP4\u2026",
     "slideshow_close": "Close",
     "slideshow_save_title": "Save Slideshow",
-    "slideshow_no_images": "No images to export.",
-    "slideshow_error": "Export failed: {err}",
+    "slideshow_no_images": _NO_EXPORT_IMAGES,
+    "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "Slideshow written: {path}",
 }

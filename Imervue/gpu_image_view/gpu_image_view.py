@@ -1963,17 +1963,7 @@ class GPUImageView(QOpenGLWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # ===== 更新 hover 圖片像素座標（status bar 用）=====
-        if self.deep_zoom and not self.tile_grid_mode:
-            mx, my = event.position().x(), event.position().y()
-            img_x = int((mx - self.dz_offset_x) / max(self.zoom, 1e-9))
-            img_y = int((my - self.dz_offset_y) / max(self.zoom, 1e-9))
-            self._hover_image_xy = (img_x, img_y)
-            self._update_status_info()
-
-        # ===== Hover preview (tile grid only) =====
-        if self.tile_grid_mode:
-            self._update_hover_preview(event)
+        self._update_hover_state(event)
 
         if self.last_pos is None:
             self.last_pos = event.position()
@@ -1982,45 +1972,64 @@ class GPUImageView(QOpenGLWidget):
         delta = event.position() - self.last_pos
         self.last_pos = event.position()
 
-        # ===== 中鍵拖動 =====
         if self._middle_dragging:
-            if self.tile_grid_mode:
-                self.grid_offset_x += delta.x()
-                self.grid_offset_y += delta.y()
-            elif self.deep_zoom:
-                self.dz_offset_x += delta.x()
-                self.dz_offset_y += delta.y()
-
-            self.update()
+            self._handle_middle_drag(delta)
             return
 
-        # ===== 左鍵拖曳框選 =====
-        if (
+        self._handle_left_drag_select(event)
+
+    def _update_hover_state(self, event) -> None:
+        # hover 圖片像素座標（status bar 用）
+        if self.deep_zoom and not self.tile_grid_mode:
+            mx, my = event.position().x(), event.position().y()
+            img_x = int((mx - self.dz_offset_x) / max(self.zoom, 1e-9))
+            img_y = int((my - self.dz_offset_y) / max(self.zoom, 1e-9))
+            self._hover_image_xy = (img_x, img_y)
+            self._update_status_info()
+        if self.tile_grid_mode:
+            self._update_hover_preview(event)
+
+    def _handle_middle_drag(self, delta) -> None:
+        if self.tile_grid_mode:
+            self.grid_offset_x += delta.x()
+            self.grid_offset_y += delta.y()
+        elif self.deep_zoom:
+            self.dz_offset_x += delta.x()
+            self.dz_offset_y += delta.y()
+        self.update()
+
+    def _handle_left_drag_select(self, event) -> None:
+        if not (
             self.tile_grid_mode
             and event.buttons() & Qt.MouseButton.LeftButton
             and self._drag_start_pos
         ):
-            move_delta = event.position() - self._drag_start_pos
-            threshold = QApplication.startDragDistance()
+            return
 
-            # 還沒超過系統拖曳門檻
-            if not self._drag_selecting:
-                if move_delta.manhattanLength() < threshold:
-                    return
+        if not self._drag_selecting and not self._try_begin_drag_select(event):
+            return
 
-                # 若拖曳起點在已選取的 tile 上 → 嘗試拖出到外部 App
-                from Imervue.gpu_image_view.actions.drag_out import try_start_drag_out
-                if try_start_drag_out(self, self._drag_start_pos):
-                    self._drag_start_pos = None
-                    self._drag_end_pos = None
-                    return
+        self._drag_end_pos = event.position()
+        self.update()
 
-                # 超過門檻才真正開始框選
-                self.tile_selection_mode = True
-                self._drag_selecting = True
+    def _try_begin_drag_select(self, event) -> bool:
+        """Return True once the drag threshold has been exceeded and a frame-
+        selection has started. Returns False while still below threshold or
+        when the gesture was consumed by drag-out.
+        """
+        move_delta = event.position() - self._drag_start_pos
+        if move_delta.manhattanLength() < QApplication.startDragDistance():
+            return False
 
-            self._drag_end_pos = event.position()
-            self.update()
+        from Imervue.gpu_image_view.actions.drag_out import try_start_drag_out
+        if try_start_drag_out(self, self._drag_start_pos):
+            self._drag_start_pos = None
+            self._drag_end_pos = None
+            return False
+
+        self.tile_selection_mode = True
+        self._drag_selecting = True
+        return True
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:

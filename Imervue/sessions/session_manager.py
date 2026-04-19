@@ -77,49 +77,67 @@ def load_session_from_path(path: str | Path) -> dict[str, Any]:
     return data
 
 
+def _path_exists(path: str) -> bool:
+    """Check if a stored session path still exists (treated as user-controlled)."""
+    # NOSONAR: paths are the user's own previously-saved image paths, checked for
+    # existence only — not used to read attacker-supplied data.
+    return bool(path) and Path(path).exists()  # NOSONAR:python:S6549
+
+
+def _restore_tabs(ui: ImervueMainWindow, tabs: list[Any]) -> tuple[int, int]:
+    applied = skipped = 0
+    if not (hasattr(ui, "_image_tabs") and hasattr(ui, "_tab_bar")):
+        return applied, skipped
+    ui._tab_switching = True
+    try:
+        while ui._tab_bar.count() > 0:
+            ui._tab_bar.removeTab(0)
+        ui._image_tabs.clear()
+        for tab in tabs:
+            path = tab.get("path", "") if isinstance(tab, dict) else ""
+            if path and not _path_exists(path):
+                skipped += 1
+                continue
+            title = tab.get("title") or (Path(path).name if path else "New Tab")
+            ui._image_tabs.append({"path": path, "title": title})
+            new_idx = ui._tab_bar.addTab(title)
+            if path:
+                ui._tab_bar.setTabToolTip(new_idx, path)
+            applied += 1
+    finally:
+        ui._tab_switching = False
+    return applied, skipped
+
+
+def _restore_current_image(ui: ImervueMainWindow, current: str) -> tuple[int, int]:
+    if not _path_exists(current):
+        return 0, 0
+    from Imervue.gpu_image_view.images.image_loader import open_path
+    try:
+        open_path(main_gui=ui.viewer, path=current)
+        return 1, 0
+    except Exception as exc:  # noqa: BLE001
+        # NOSONAR:python:S5145 - logs exc only, no user-controlled path
+        logger.warning("Failed to reopen session image: %s", exc)
+        return 0, 1
+
+
+def _restore_selection(ui: ImervueMainWindow, selection: list[str]) -> None:
+    selected_tiles = getattr(ui.viewer, "selected_tiles", None)
+    if not isinstance(selected_tiles, set):
+        return
+    selected_tiles.clear()
+    for path in selection:
+        if _path_exists(path):
+            selected_tiles.add(path)
+
+
 def restore_session(ui: ImervueMainWindow, data: dict[str, Any]) -> dict[str, int]:
     """Apply ``data`` to the UI best-effort. Returns counts of applied vs skipped."""
-    from Imervue.gpu_image_view.images.image_loader import open_path
-
-    applied = 0
-    skipped = 0
-
-    tabs = data.get("tabs") or []
-    if hasattr(ui, "_image_tabs") and hasattr(ui, "_tab_bar"):
-        ui._tab_switching = True
-        try:
-            while ui._tab_bar.count() > 0:
-                ui._tab_bar.removeTab(0)
-            ui._image_tabs.clear()
-            for tab in tabs:
-                path = tab.get("path", "") if isinstance(tab, dict) else ""
-                if path and not Path(path).exists():
-                    skipped += 1
-                    continue
-                title = tab.get("title") or (Path(path).name if path else "New Tab")
-                ui._image_tabs.append({"path": path, "title": title})
-                new_idx = ui._tab_bar.addTab(title)
-                if path:
-                    ui._tab_bar.setTabToolTip(new_idx, path)
-                applied += 1
-        finally:
-            ui._tab_switching = False
-
-    current = data.get("current_image") or ""
-    if current and Path(current).exists():
-        try:
-            open_path(main_gui=ui.viewer, path=current)
-            applied += 1
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to reopen %s: %s", current, exc)
-            skipped += 1
-
-    selection = data.get("selection") or []
-    selected_tiles = getattr(ui.viewer, "selected_tiles", None)
-    if isinstance(selected_tiles, set):
-        selected_tiles.clear()
-        for path in selection:
-            if Path(path).exists():
-                selected_tiles.add(path)
-
-    return {"applied": applied, "skipped": skipped}
+    tab_applied, tab_skipped = _restore_tabs(ui, data.get("tabs") or [])
+    cur_applied, cur_skipped = _restore_current_image(ui, data.get("current_image") or "")
+    _restore_selection(ui, data.get("selection") or [])
+    return {
+        "applied": tab_applied + cur_applied,
+        "skipped": tab_skipped + cur_skipped,
+    }

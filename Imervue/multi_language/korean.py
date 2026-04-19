@@ -1,3 +1,6 @@
+_NO_EXPORT_IMAGES = '내보낼 이미지가 없습니다.'
+_EXPORT_FAILED = '내보내기 실패: {err}'
+
 korean_word_dict = {
     "tab_new": "새 탭",
     "main_window_current_filename_format": "현재 파일 이름: {name}",
@@ -894,8 +897,8 @@ korean_word_dict = {
     "contact_sheet_export": "PDF 내보내기\u2026",
     "contact_sheet_close": "닫기",
     "contact_sheet_save_title": "컨택트 시트 저장",
-    "contact_sheet_no_images": "내보낼 이미지가 없습니다.",
-    "contact_sheet_error": "내보내기 실패: {err}",
+    "contact_sheet_no_images": _NO_EXPORT_IMAGES,
+    "contact_sheet_error": _EXPORT_FAILED,
     "contact_sheet_done": "컨택트 시트 저장됨: {path}",
     # 웹 갤러리
     "web_gallery_title": "웹 갤러리",
@@ -907,8 +910,8 @@ korean_word_dict = {
     "web_gallery_export": "내보내기\u2026",
     "web_gallery_close": "닫기",
     "web_gallery_pick_dir": "출력 폴더 선택",
-    "web_gallery_no_images": "내보낼 이미지가 없습니다.",
-    "web_gallery_error": "내보내기 실패: {err}",
+    "web_gallery_no_images": _NO_EXPORT_IMAGES,
+    "web_gallery_error": _EXPORT_FAILED,
     "web_gallery_done": "갤러리 저장됨: {path}",
     # 슬라이드쇼 MP4
     "slideshow_mp4_title": "슬라이드쇼 비디오",
@@ -922,7 +925,7 @@ korean_word_dict = {
     "slideshow_export": "MP4 내보내기\u2026",
     "slideshow_close": "닫기",
     "slideshow_save_title": "슬라이드쇼 저장",
-    "slideshow_no_images": "내보낼 이미지가 없습니다.",
-    "slideshow_error": "내보내기 실패: {err}",
+    "slideshow_no_images": _NO_EXPORT_IMAGES,
+    "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "슬라이드쇼 저장됨: {path}",
 }

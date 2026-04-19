@@ -19,6 +19,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.web_gallery_dialog")
 
+_DEFAULT_TITLE = "Web Gallery"
+
+
+def _title() -> str:
+    return language_wrapper.language_word_dict.get("web_gallery_title", _DEFAULT_TITLE)
+
 
 def open_web_gallery_dialog(ui: ImervueMainWindow) -> None:
     dlg = WebGalleryDialog(ui)
@@ -51,7 +57,7 @@ class WebGalleryDialog(QDialog):
         super().__init__(ui)
         self.ui = ui
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("web_gallery_title", "Web Gallery"))
+        self.setWindowTitle(_title())
         self.setMinimumSize(440, 280)
 
         layout = QVBoxLayout(self)
@@ -112,7 +118,7 @@ class WebGalleryDialog(QDialog):
         if not images:
             QMessageBox.information(
                 self,
-                lang.get("web_gallery_title", "Web Gallery"),
+                _title(),
                 lang.get("web_gallery_no_images", "No images to export."),
             )
             return
@@ -139,7 +145,7 @@ class WebGalleryDialog(QDialog):
         if error:
             QMessageBox.warning(
                 self,
-                lang.get("web_gallery_title", "Web Gallery"),
+                _title(),
                 lang.get("web_gallery_error", "Export failed: {err}").format(err=error),
             )
             return

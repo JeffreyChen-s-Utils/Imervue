@@ -69,7 +69,7 @@ def classify_heuristic(path: str | Path) -> list[str]:
     return tags
 
 
-def try_clip_labels(path: str | Path, prompts: list[str] | None = None) -> list[str]:
+def try_clip_labels(_path: str | Path, _prompts: list[str] | None = None) -> list[str]:
     """Attempt zero-shot labelling via a local CLIP ONNX model.
 
     Returns an empty list if onnxruntime or the model file isn't present —

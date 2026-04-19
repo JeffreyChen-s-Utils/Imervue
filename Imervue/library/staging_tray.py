@@ -87,7 +87,7 @@ def _apply_file_op(dest: str, *, move: bool) -> tuple[int, int]:
         raise NotADirectoryError(dest)
     ok = failed = 0
     moved_paths: list[str] = []
-    for src in list(_tray()):
+    for src in _tray():
         target = dest_path / Path(src).name
         try:
             if move:

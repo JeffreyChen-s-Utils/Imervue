@@ -38,7 +38,7 @@ class TestCollapseStacks:
 
     def test_case_insensitive_stem_match(self, stacks):
         paths = ["/a/IMG_0001.cr2", "/a/img_0001.JPG"]
-        out, s = stacks.collapse_stacks(paths)
+        out, _ = stacks.collapse_stacks(paths)
         assert len(out) == 1
         # The preview (jpg) wins — not the raw
         assert any(".JPG" in p or ".jpg" in p for p in out)

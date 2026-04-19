@@ -1,3 +1,6 @@
+_NO_EXPORT_IMAGES = '没有可导出的图片。'
+_EXPORT_FAILED = '导出失败：{err}'
+
 chinese_word_dict = {
     "tab_new": "新标签页",
     "main_window_current_filename_format": "当前文件名：{name}",
@@ -894,8 +897,8 @@ chinese_word_dict = {
     "contact_sheet_export": "导出 PDF\u2026",
     "contact_sheet_close": "关闭",
     "contact_sheet_save_title": "保存索引表",
-    "contact_sheet_no_images": "没有可导出的图片。",
-    "contact_sheet_error": "导出失败：{err}",
+    "contact_sheet_no_images": _NO_EXPORT_IMAGES,
+    "contact_sheet_error": _EXPORT_FAILED,
     "contact_sheet_done": "索引表已写入：{path}",
     # 网页相册
     "web_gallery_title": "网页相册",
@@ -907,8 +910,8 @@ chinese_word_dict = {
     "web_gallery_export": "导出\u2026",
     "web_gallery_close": "关闭",
     "web_gallery_pick_dir": "选择输出文件夹",
-    "web_gallery_no_images": "没有可导出的图片。",
-    "web_gallery_error": "导出失败：{err}",
+    "web_gallery_no_images": _NO_EXPORT_IMAGES,
+    "web_gallery_error": _EXPORT_FAILED,
     "web_gallery_done": "相册已写入：{path}",
     # 幻灯片 MP4
     "slideshow_mp4_title": "幻灯片视频",
@@ -922,7 +925,7 @@ chinese_word_dict = {
     "slideshow_export": "导出 MP4\u2026",
     "slideshow_close": "关闭",
     "slideshow_save_title": "保存幻灯片",
-    "slideshow_no_images": "没有可导出的图片。",
-    "slideshow_error": "导出失败：{err}",
+    "slideshow_no_images": _NO_EXPORT_IMAGES,
+    "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "幻灯片已写入：{path}",
 }

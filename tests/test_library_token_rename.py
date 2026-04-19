@@ -13,8 +13,11 @@ from PIL import Image
 from Imervue.library.token_rename import apply_plan, preview
 
 
+_rng = np.random.default_rng(seed=0xC0FFEE)
+
+
 def _make_image(path: Path, w: int = 16, h: int = 16) -> None:
-    arr = np.random.randint(0, 256, (h, w, 3), dtype=np.uint8)
+    arr = _rng.integers(0, 256, (h, w, 3), dtype=np.uint8)
     Image.fromarray(arr).save(str(path))
 
 

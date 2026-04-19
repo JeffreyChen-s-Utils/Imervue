@@ -103,7 +103,7 @@ class StagingTrayDialog(QDialog):
     # ---------- Actions ----------
 
     def _add_selected(self) -> None:
-        paths = [p for p in self._ui.viewer.selected_tiles]
+        paths = list(self._ui.viewer.selected_tiles)
         if not paths:
             return
         staging_tray.add_many(paths)
