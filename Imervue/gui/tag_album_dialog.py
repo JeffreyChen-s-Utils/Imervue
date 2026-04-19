@@ -24,6 +24,18 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
+# Translation keys and fallbacks — centralised so each literal appears once.
+_K_TAG_CREATE = "tag_create"
+_K_TAG_CREATE_PROMPT = "tag_create_prompt"
+_K_ALBUM_CREATE = "album_create"
+_K_ALBUM_CREATE_PROMPT = "album_create_prompt"
+_K_RENAME_FALLBACK = "Rename"
+_K_TAG_CREATE_FALLBACK = "New Tag"
+_K_ALBUM_CREATE_FALLBACK = "New Album"
+_K_TAG_NAME_FALLBACK = "Tag name:"
+_K_ALBUM_NAME_FALLBACK = "Album name:"
+
+
 def open_tag_album_dialog(main_gui: GPUImageView):
     dlg = TagAlbumDialog(main_gui)
     dlg.exec()
@@ -76,11 +88,11 @@ class TagAlbumDialog(QDialog):
         left.addWidget(self._tag_list)
 
         tag_btn_row = QHBoxLayout()
-        add_btn = QPushButton(self._lang.get("tag_create", "New Tag"))
+        add_btn = QPushButton(self._lang.get(_K_TAG_CREATE, _K_TAG_CREATE_FALLBACK))
         add_btn.clicked.connect(self._create_tag)
         tag_btn_row.addWidget(add_btn)
 
-        rename_btn = QPushButton(self._lang.get("tag_rename", "Rename"))
+        rename_btn = QPushButton(self._lang.get("tag_rename", _K_RENAME_FALLBACK))
         rename_btn.clicked.connect(self._rename_tag)
         tag_btn_row.addWidget(rename_btn)
 
@@ -143,8 +155,8 @@ class TagAlbumDialog(QDialog):
 
     def _create_tag(self):
         name, ok = QInputDialog.getText(
-            self, self._lang.get("tag_create", "New Tag"),
-            self._lang.get("tag_create_prompt", "Tag name:"))
+            self, self._lang.get(_K_TAG_CREATE, _K_TAG_CREATE_FALLBACK),
+            self._lang.get(_K_TAG_CREATE_PROMPT, _K_TAG_NAME_FALLBACK))
         if ok and name.strip():
             create_tag(name.strip())
             self._refresh_tags()
@@ -155,7 +167,7 @@ class TagAlbumDialog(QDialog):
             return
         old = item.data(Qt.ItemDataRole.UserRole)
         new_name, ok = QInputDialog.getText(
-            self, self._lang.get("tag_rename", "Rename"),
+            self, self._lang.get("tag_rename", _K_RENAME_FALLBACK),
             self._lang.get("tag_rename_prompt", "New name:"), text=old)
         if ok and new_name.strip() and new_name.strip() != old:
             rename_tag(old, new_name.strip())
@@ -231,11 +243,11 @@ class TagAlbumDialog(QDialog):
         left.addWidget(self._album_list)
 
         album_btn_row = QHBoxLayout()
-        add_btn = QPushButton(self._lang.get("album_create", "New Album"))
+        add_btn = QPushButton(self._lang.get(_K_ALBUM_CREATE, _K_ALBUM_CREATE_FALLBACK))
         add_btn.clicked.connect(self._create_album)
         album_btn_row.addWidget(add_btn)
 
-        rename_btn = QPushButton(self._lang.get("album_rename", "Rename"))
+        rename_btn = QPushButton(self._lang.get("album_rename", _K_RENAME_FALLBACK))
         rename_btn.clicked.connect(self._rename_album)
         album_btn_row.addWidget(rename_btn)
 
@@ -297,8 +309,8 @@ class TagAlbumDialog(QDialog):
 
     def _create_album(self):
         name, ok = QInputDialog.getText(
-            self, self._lang.get("album_create", "New Album"),
-            self._lang.get("album_create_prompt", "Album name:"))
+            self, self._lang.get(_K_ALBUM_CREATE, _K_ALBUM_CREATE_FALLBACK),
+            self._lang.get(_K_ALBUM_CREATE_PROMPT, _K_ALBUM_NAME_FALLBACK))
         if ok and name.strip():
             create_album(name.strip())
             self._refresh_albums()
@@ -309,7 +321,7 @@ class TagAlbumDialog(QDialog):
             return
         old = item.data(Qt.ItemDataRole.UserRole)
         new_name, ok = QInputDialog.getText(
-            self, self._lang.get("album_rename", "Rename"),
+            self, self._lang.get("album_rename", _K_RENAME_FALLBACK),
             self._lang.get("album_rename_prompt", "New name:"), text=old)
         if ok and new_name.strip() and new_name.strip() != old:
             rename_album(old, new_name.strip())
@@ -459,8 +471,8 @@ def _toggle_tag(main_gui: GPUImageView, tag_name: str, path: str):
 def _create_and_add_tag(main_gui: GPUImageView, path: str):
     lang = language_wrapper.language_word_dict
     name, ok = QInputDialog.getText(
-        main_gui, lang.get("tag_create", "New Tag"),
-        lang.get("tag_create_prompt", "Tag name:"))
+        main_gui, lang.get(_K_TAG_CREATE, _K_TAG_CREATE_FALLBACK),
+        lang.get(_K_TAG_CREATE_PROMPT, _K_TAG_NAME_FALLBACK))
     if ok and name.strip():
         create_tag(name.strip())
         add_tag(name.strip(), path)
@@ -479,8 +491,8 @@ def _toggle_album(main_gui: GPUImageView, album_name: str, path: str):
 def _create_and_add_album(main_gui: GPUImageView, path: str):
     lang = language_wrapper.language_word_dict
     name, ok = QInputDialog.getText(
-        main_gui, lang.get("album_create", "New Album"),
-        lang.get("album_create_prompt", "Album name:"))
+        main_gui, lang.get(_K_ALBUM_CREATE, _K_ALBUM_CREATE_FALLBACK),
+        lang.get(_K_ALBUM_CREATE_PROMPT, _K_ALBUM_NAME_FALLBACK))
     if ok and name.strip():
         create_album(name.strip())
         add_to_album(name.strip(), path)
@@ -495,8 +507,8 @@ def _batch_add_tag(main_gui: GPUImageView, tag_name: str, paths: list[str]):
 def _batch_create_and_add_tag(main_gui: GPUImageView, paths: list[str]):
     lang = language_wrapper.language_word_dict
     name, ok = QInputDialog.getText(
-        main_gui, lang.get("tag_create", "New Tag"),
-        lang.get("tag_create_prompt", "Tag name:"))
+        main_gui, lang.get(_K_TAG_CREATE, _K_TAG_CREATE_FALLBACK),
+        lang.get(_K_TAG_CREATE_PROMPT, _K_TAG_NAME_FALLBACK))
     if ok and name.strip():
         create_tag(name.strip())
         count = sum(1 for p in paths if add_tag(name.strip(), p))
@@ -511,8 +523,8 @@ def _batch_add_album(main_gui: GPUImageView, album_name: str, paths: list[str]):
 def _batch_create_and_add_album(main_gui: GPUImageView, paths: list[str]):
     lang = language_wrapper.language_word_dict
     name, ok = QInputDialog.getText(
-        main_gui, lang.get("album_create", "New Album"),
-        lang.get("album_create_prompt", "Album name:"))
+        main_gui, lang.get(_K_ALBUM_CREATE, _K_ALBUM_CREATE_FALLBACK),
+        lang.get(_K_ALBUM_CREATE_PROMPT, _K_ALBUM_NAME_FALLBACK))
     if ok and name.strip():
         create_album(name.strip())
         count = sum(1 for p in paths if add_to_album(name.strip(), p))

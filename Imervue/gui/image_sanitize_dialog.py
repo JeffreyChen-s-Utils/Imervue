@@ -57,14 +57,31 @@ TARGET_RESOLUTIONS = [
     ("sanitize_res_8k",     "8K UHD   (7680 px)",   7680),
 ]
 
+# Format / mode names used across the sanitize pipeline.
+_MODE_RGB = "RGB"
+_MODE_RGBA = "RGBA"
+_FMT_PNG = "PNG"
+_FMT_JPEG = "JPEG"
+_FMT_TIFF = "TIFF"
+_FMT_WEBP = "WebP"
+_FMT_BMP = "BMP"
+
+_EXT_PNG = ".png"
+_EXT_JPG = ".jpg"
+_EXT_JPEG = ".jpeg"
+_EXT_TIFF = ".tiff"
+_EXT_TIF = ".tif"
+_EXT_WEBP = ".webp"
+_EXT_BMP = ".bmp"
+
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".webp", ".bmp",
+    _EXT_PNG, _EXT_JPG, _EXT_JPEG, _EXT_TIFF, _EXT_TIF, _EXT_WEBP, _EXT_BMP,
 })
 
 _PIL_FORMAT_MAP = {
-    ".jpg": "JPEG", ".jpeg": "JPEG",
-    ".png": "PNG", ".tiff": "TIFF", ".tif": "TIFF",
-    ".webp": "WebP", ".bmp": "BMP",
+    _EXT_JPG: _FMT_JPEG, _EXT_JPEG: _FMT_JPEG,
+    _EXT_PNG: _FMT_PNG, _EXT_TIFF: _FMT_TIFF, _EXT_TIF: _FMT_TIFF,
+    _EXT_WEBP: _FMT_WEBP, _EXT_BMP: _FMT_BMP,
 }
 
 _RANDOM_CHARS = string.ascii_lowercase + string.digits
@@ -182,17 +199,17 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     if output_ext == "same":
         ext = Path(path).suffix.lower()
         if ext not in _PIL_FORMAT_MAP:
-            ext = ".png"
+            ext = _EXT_PNG
     else:
         ext = output_ext
-    fmt = _PIL_FORMAT_MAP.get(ext, "PNG")
+    fmt = _PIL_FORMAT_MAP.get(ext, _FMT_PNG)
 
     # Re-create image from raw bytes — no metadata survives, no list copy
     clean = Image.frombytes(img.mode, img.size, img.tobytes())
 
     # JPEG does not support alpha
-    if fmt == "JPEG" and clean.mode != "RGB":
-        clean = clean.convert("RGB")
+    if fmt == _FMT_JPEG and clean.mode != _MODE_RGB:
+        clean = clean.convert(_MODE_RGB)
 
     # --- Optional upscale ---
     if target_long_edge > 0:
@@ -215,9 +232,9 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
                 import numpy as np
                 from Imervue.gui.ai_upscale_dialog import _upscale_image
 
-                if clean.mode == "RGBA":
+                if clean.mode == _MODE_RGBA:
                     alpha = clean.split()[-1]
-                    rgb = clean.convert("RGB")
+                    rgb = clean.convert(_MODE_RGB)
                 else:
                     alpha = None
                     rgb = clean
@@ -256,10 +273,10 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
 
     # Save with minimal kwargs — no metadata passed
     save_kwargs: dict = {"format": fmt}
-    if fmt == "JPEG":
+    if fmt == _FMT_JPEG:
         save_kwargs["quality"] = jpeg_quality
         save_kwargs["subsampling"] = 0  # 4:4:4 best quality
-    elif fmt == "PNG":
+    elif fmt == _FMT_PNG:
         save_kwargs["compress_level"] = png_compress
 
     clean.save(out_path, **save_kwargs)
@@ -288,10 +305,12 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
     # Convert exotic modes to a form with 8-bit channels so the LSB
     # operation is well-defined (palette indices, for example, would be
     # corrupted by masking).
-    if img.mode not in ("L", "LA", "RGB", "RGBA"):
-        img = img.convert("RGBA" if "A" in img.mode else "RGB")
+    if img.mode not in ("L", "LA", _MODE_RGB, _MODE_RGBA):
+        img = img.convert(_MODE_RGBA if "A" in img.mode else _MODE_RGB)
     arr = np.array(img, copy=True)
-    rng = np.random.default_rng()
+    # Unseeded on purpose: if an attacker can predict the scramble pattern
+    # they can recover the hidden payload, which defeats the entire feature.
+    rng = np.random.default_rng()  # noqa: NPY002
     scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
     # Where mask is True use random LSB, otherwise keep the original LSB.
@@ -482,11 +501,11 @@ class ImageSanitizeDialog(QDialog):
         self._fmt_combo = QComboBox()
         self._fmt_combo.addItem(
             lang.get("sanitize_fmt_same", "Same as source"), "same")
-        self._fmt_combo.addItem("PNG (.png)", ".png")
-        self._fmt_combo.addItem("JPEG (.jpg)", ".jpg")
-        self._fmt_combo.addItem("WebP (.webp)", ".webp")
-        self._fmt_combo.addItem("BMP (.bmp)", ".bmp")
-        self._fmt_combo.addItem("TIFF (.tiff)", ".tiff")
+        self._fmt_combo.addItem("PNG (.png)", _EXT_PNG)
+        self._fmt_combo.addItem("JPEG (.jpg)", _EXT_JPG)
+        self._fmt_combo.addItem("WebP (.webp)", _EXT_WEBP)
+        self._fmt_combo.addItem("BMP (.bmp)", _EXT_BMP)
+        self._fmt_combo.addItem("TIFF (.tiff)", _EXT_TIFF)
         fmt_row.addWidget(self._fmt_combo, 1)
         layout.addLayout(fmt_row)
 
