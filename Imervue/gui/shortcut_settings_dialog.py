@@ -94,6 +94,8 @@ DEFAULT_SHORTCUTS: dict[str, tuple[int, int]] = {
     "cull_pick":        (_k(Qt.Key.Key_P), _NONE),
     "cull_reject":      (_k(Qt.Key.Key_X), _SHIFT),
     "cull_unflag":      (_k(Qt.Key.Key_U), _NONE),
+    "command_palette":  (_k(Qt.Key.Key_P), _CTRL_SHIFT),
+    "macro_replay":     (_k(Qt.Key.Key_M), _ALT),
 }
 
 # Translation key for each action (displayed in the dialog)
@@ -141,6 +143,8 @@ ACTION_DISPLAY_KEYS: dict[str, str] = {
     "cull_pick":        "shortcut_action_cull_pick",
     "cull_reject":      "shortcut_action_cull_reject",
     "cull_unflag":      "shortcut_action_cull_unflag",
+    "command_palette":  "shortcut_action_command_palette",
+    "macro_replay":     "shortcut_action_macro_replay",
 }
 
 # English fallback names
@@ -173,6 +177,8 @@ ACTION_FALLBACKS: dict[str, str] = {
     "cull_pick": "Cull: Pick",
     "cull_reject": "Cull: Reject",
     "cull_unflag": "Cull: Unflag",
+    "command_palette": "Command Palette",
+    "macro_replay": "Replay Last Macro",
 }
 
 

@@ -96,6 +96,27 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
 
     menu.addSeparator()
 
+    # 巨集管理（錄製 / 重播）
+    macros_action = menu.addAction(lang.get("macro_title", "Macros"))
+    macros_action.triggered.connect(lambda: _open_macro_manager(ui))
+
+    # Contact sheet PDF
+    contact_action = menu.addAction(
+        lang.get("contact_sheet_title", "Contact Sheet PDF"))
+    contact_action.triggered.connect(lambda: _open_contact_sheet(ui))
+
+    # Web gallery HTML
+    web_gallery_action = menu.addAction(
+        lang.get("web_gallery_title", "Web Gallery"))
+    web_gallery_action.triggered.connect(lambda: _open_web_gallery(ui))
+
+    # Slideshow MP4
+    slideshow_action = menu.addAction(
+        lang.get("slideshow_mp4_title", "Slideshow Video"))
+    slideshow_action.triggered.connect(lambda: _open_slideshow_mp4(ui))
+
+    menu.addSeparator()
+
     # 時間軸檢視 (Google Photos 樣式)
     timeline_menu = menu.addMenu(lang.get("timeline_title", "Timeline View"))
     for gran_key, fallback in (
@@ -188,3 +209,23 @@ def _open_dual_pane(ui: ImervueMainWindow):
 def _open_timeline(ui: ImervueMainWindow, granularity: str):
     from Imervue.gui.timeline_view import open_timeline
     open_timeline(ui, granularity)
+
+
+def _open_macro_manager(ui: ImervueMainWindow):
+    from Imervue.gui.macro_manager_dialog import open_macro_manager_dialog
+    open_macro_manager_dialog(ui)
+
+
+def _open_contact_sheet(ui: ImervueMainWindow):
+    from Imervue.gui.contact_sheet_dialog import open_contact_sheet_dialog
+    open_contact_sheet_dialog(ui)
+
+
+def _open_web_gallery(ui: ImervueMainWindow):
+    from Imervue.gui.web_gallery_dialog import open_web_gallery_dialog
+    open_web_gallery_dialog(ui)
+
+
+def _open_slideshow_mp4(ui: ImervueMainWindow):
+    from Imervue.gui.slideshow_mp4_dialog import open_slideshow_mp4_dialog
+    open_slideshow_mp4_dialog(ui)

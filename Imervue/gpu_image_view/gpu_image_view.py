@@ -2256,6 +2256,18 @@ class GPUImageView(QOpenGLWidget):
             self.jump_to_random_image()
             return
 
+        # --- Command Palette (Ctrl+Shift+P) ---
+        if action == "command_palette":
+            from Imervue.gui.command_palette import open_command_palette
+            open_command_palette(self.main_window)
+            return
+
+        # --- Macro replay (Alt+M) ---
+        if action == "macro_replay":
+            from Imervue.macros.macro_manager import replay_last_macro
+            replay_last_macro(self.main_window)
+            return
+
         # --- Culling (P / Shift+X / U) ---
         if action == "cull_pick":
             self._apply_cull_state("pick")

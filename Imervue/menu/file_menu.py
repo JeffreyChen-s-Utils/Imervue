@@ -89,6 +89,30 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
 
     file_menu.addSeparator()
 
+    # Session / Workspace
+    session_menu = file_menu.addMenu(lang.get("session_menu", "Session"))
+    save_session_action = session_menu.addAction(
+        lang.get("session_save", "Save Session\u2026"))
+    save_session_action.triggered.connect(
+        lambda: _save_session(ui_we_want_to_set))
+    load_session_action = session_menu.addAction(
+        lang.get("session_load", "Load Session\u2026"))
+    load_session_action.triggered.connect(
+        lambda: _load_session(ui_we_want_to_set))
+
+    # 外部編輯器
+    editors_action = file_menu.addAction(
+        lang.get("ext_editor_menu", "External Editors\u2026"))
+    editors_action.triggered.connect(
+        lambda: _open_external_editors_settings(ui_we_want_to_set))
+
+    # Launch current image in a configured external editor
+    open_in_menu = file_menu.addMenu(
+        lang.get("ext_editor_open_in", "Open in External Editor"))
+    _populate_open_in_editor_menu(ui_we_want_to_set, open_in_menu)
+
+    file_menu.addSeparator()
+
     # 自訂快捷鍵
     shortcut_action = file_menu.addAction(
         lang.get("shortcut_title", "Keyboard Shortcuts"))
@@ -325,4 +349,91 @@ def _unregister_assoc(ui: ImervueMainWindow):
 def _open_shortcut_settings(ui: ImervueMainWindow):
     from Imervue.gui.shortcut_settings_dialog import open_shortcut_settings
     open_shortcut_settings(ui)
+
+
+def _save_session(ui: ImervueMainWindow) -> None:
+    from Imervue.sessions.session_manager import save_session_to_path, SESSION_EXT
+    lang = language_wrapper.language_word_dict
+    start = user_setting_dict.get("user_last_folder") or ""
+    file_path, _ = QFileDialog.getSaveFileName(
+        ui,
+        lang.get("session_save", "Save Session"),
+        start,
+        f"Imervue session (*{SESSION_EXT})",
+    )
+    if not file_path:
+        return
+    out = save_session_to_path(ui, file_path)
+    if hasattr(ui, "toast"):
+        ui.toast.info(
+            lang.get("session_saved", "Session saved to {path}").format(path=out)
+        )
+
+
+def _load_session(ui: ImervueMainWindow) -> None:
+    from Imervue.sessions.session_manager import (
+        load_session_from_path, restore_session, SESSION_EXT,
+    )
+    lang = language_wrapper.language_word_dict
+    start = user_setting_dict.get("user_last_folder") or ""
+    file_path, _ = QFileDialog.getOpenFileName(
+        ui,
+        lang.get("session_load", "Load Session"),
+        start,
+        f"Imervue session (*{SESSION_EXT})",
+    )
+    if not file_path:
+        return
+    try:
+        data = load_session_from_path(file_path)
+    except (OSError, ValueError) as exc:
+        if hasattr(ui, "toast"):
+            ui.toast.info(f"Session load failed: {exc}")
+        return
+    counts = restore_session(ui, data)
+    if hasattr(ui, "toast"):
+        ui.toast.info(
+            lang.get(
+                "session_restored",
+                "Restored {ok} items (skipped {skip})",
+            ).format(ok=counts["applied"], skip=counts["skipped"])
+        )
+
+
+def _open_external_editors_settings(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.external_editors_settings import open_external_editors_settings
+    open_external_editors_settings(ui)
+
+
+def _populate_open_in_editor_menu(ui: ImervueMainWindow, menu) -> None:
+    """Fill ``menu`` with one entry per configured external editor."""
+    from Imervue.external.editors import load_editors
+    lang = language_wrapper.language_word_dict
+    menu.clear()
+    editors = load_editors()
+    if not editors:
+        placeholder = menu.addAction(
+            lang.get("ext_editor_none_configured", "(None configured)"))
+        placeholder.setEnabled(False)
+        return
+    for entry in editors:
+        action = menu.addAction(entry.name)
+        action.triggered.connect(
+            lambda checked=False, e=entry: _launch_editor_on_current(ui, e))
+
+
+def _launch_editor_on_current(ui: ImervueMainWindow, entry) -> None:
+    from Imervue.external.editors import launch_editor
+    viewer = ui.viewer
+    images = getattr(viewer.model, "images", [])
+    idx = getattr(viewer, "current_index", -1)
+    if not (0 <= idx < len(images)):
+        return
+    path = images[idx]
+    ok = launch_editor(entry, path)
+    if hasattr(ui, "toast"):
+        lang = language_wrapper.language_word_dict
+        msg_key = "ext_editor_launched" if ok else "ext_editor_launch_failed"
+        fallback = "Launched {name}" if ok else "Failed to launch {name}"
+        ui.toast.info(lang.get(msg_key, fallback).format(name=entry.name))
 

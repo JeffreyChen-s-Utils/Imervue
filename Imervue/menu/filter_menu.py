@@ -100,6 +100,13 @@ def build_filter_menu(ui: ImervueMainWindow):
         a = cull_menu.addAction(lang.get(f"filter_cull_{state_key}", fallback))
         a.triggered.connect(lambda checked, s=state_key: _apply_cull_filter(ui, s))
 
+    # ===== Stack RAW+JPEG =====
+    stack_action = filter_menu.addAction(
+        lang.get("filter_stack_raw_jpeg", "Stack RAW+JPEG pairs"))
+    stack_action.setCheckable(True)
+    stack_action.setChecked(bool(user_setting_dict.get("stack_raw_jpeg_pairs")))
+    stack_action.toggled.connect(lambda checked: _toggle_stack_mode(ui, checked))
+
     # ===== 清除篩選 =====
     clear_action = filter_menu.addAction(lang.get("filter_clear", "Clear Filter"))
     clear_action.triggered.connect(lambda: _clear_filter(ui))
@@ -195,6 +202,17 @@ def _clear_filter(ui: ImervueMainWindow):
     if all_images:
         viewer.clear_tile_grid()
         viewer.load_tile_grid_async(all_images)
+
+
+def _toggle_stack_mode(ui: ImervueMainWindow, enabled: bool) -> None:
+    """Persist stack setting and reload current folder so collapse applies."""
+    from Imervue.user_settings.user_setting_dict import schedule_save
+    user_setting_dict["stack_raw_jpeg_pairs"] = bool(enabled)
+    schedule_save()
+    folder = user_setting_dict.get("user_last_folder")
+    if folder and Path(folder).is_dir():
+        from Imervue.gpu_image_view.images.image_loader import open_path
+        open_path(main_gui=ui.viewer, path=str(folder))
 
 
 def _get_full_image_list(viewer) -> list[str]:

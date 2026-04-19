@@ -93,6 +93,12 @@ python -m nuitka ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
   --include-data-dir=plugins=plugins ^
+  --noinclude-data-files=plugins/*/models/* ^
+  --noinclude-data-files=*.onnx ^
+  --noinclude-data-files=*.pt ^
+  --noinclude-data-files=*.pth ^
+  --noinclude-data-files=*.safetensors ^
+  --noinclude-data-files=*.gguf ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
@@ -119,6 +125,12 @@ python -m nuitka `
   --include-package-data=imageio `
   --include-package-data=rawpy `
   --include-data-dir=plugins=plugins `
+  --noinclude-data-files=plugins/*/models/* `
+  --noinclude-data-files=*.onnx `
+  --noinclude-data-files=*.pt `
+  --noinclude-data-files=*.pth `
+  --noinclude-data-files=*.safetensors `
+  --noinclude-data-files=*.gguf `
   --include-data-dir=exe=exe `
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md `
   --include-data-files=LICENSE=LICENSE `
@@ -133,7 +145,7 @@ python -m nuitka `
 **一行版（任何 shell 都能用，最保險）**：
 
 ```
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --noinclude-data-files=plugins/*/models/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
 ```
 
 產物：`build_nuitka\Imervue.dist\Imervue.exe`（standalone）或 `build_nuitka\Imervue.exe`（onefile）。
@@ -167,6 +179,12 @@ python -m nuitka \
   --include-package-data=imageio \
   --include-package-data=rawpy \
   --include-data-dir=plugins=plugins \
+  --noinclude-data-files=plugins/*/models/* \
+  --noinclude-data-files=*.onnx \
+  --noinclude-data-files=*.pt \
+  --noinclude-data-files=*.pth \
+  --noinclude-data-files=*.safetensors \
+  --noinclude-data-files=*.gguf \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
@@ -201,6 +219,12 @@ python -m nuitka \
   --include-package-data=imageio \
   --include-package-data=rawpy \
   --include-data-dir=plugins=plugins \
+  --noinclude-data-files=plugins/*/models/* \
+  --noinclude-data-files=*.onnx \
+  --noinclude-data-files=*.pt \
+  --noinclude-data-files=*.pth \
+  --noinclude-data-files=*.safetensors \
+  --noinclude-data-files=*.gguf \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
@@ -252,6 +276,11 @@ xcrun stapler staple build_nuitka/Imervue.app
 - `--python-flag=-m` + 結尾的 `Imervue`（套件目錄）：對含有 `__main__.py` 的套件，這是 Nuitka 官方推薦寫法，等同於 `python -m Imervue`。直接寫 `Imervue/__main__.py` 會跳警告。
 - 為什麼**沒有** `--include-data-dir=Imervue/multi_language=...`：那個目錄底下全是 `.py`（沒有 JSON / qm / po 之類的資料檔），是個正常的 Python 子套件，已經被 `--include-package=Imervue` 透過靜態 import 分析帶進去了。硬加 `--include-data-dir` 會跳「No data files in directory」警告，而且毫無作用。
 - 若想要單一檔案發佈，把 `--standalone` 換成 `--onefile`（啟動時會先解壓到 temp dir，啟動較慢；Linux / macOS 的 onefile 支援也比較新，發佈前請充分測試）。
+- `--noinclude-data-files=plugins/*/models/*` 與各 ML 副檔名（`.onnx` / `.pt` / `.pth` / `.safetensors` / `.gguf`）：把 **ML 權重徹底排除在產物之外**。
+  - `plugins/object_splitter/models/isnet-*.onnx` 兩顆加起來 ~340 MB，打包進去會讓安裝檔異常肥大。
+  - 走 `rembg.new_session()` 時會用 `U2NET_HOME` 環境變數指向的目錄自動下載缺失的模型；`object_splitter` 把這變數設成 `<plugin>/models/`，所以第一次用會下載、之後快取。
+  - `Imervue.library.auto_tag.try_clip_labels` 沒找到 `<app_dir>/models/clip_vit_b32.onnx` 就 silently fallback 到 heuristic classifier，不會 crash。
+  - 驗證：打包完跑 `find build_nuitka -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'`（Windows 用 `dir /s build_nuitka\*.onnx`）應該**零筆輸出**。
 
 ## 3. 推薦的一鍵腳本
 
@@ -273,6 +302,12 @@ python -m nuitka ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
   --include-data-dir=plugins=plugins ^
+  --noinclude-data-files=plugins/*/models/* ^
+  --noinclude-data-files=*.onnx ^
+  --noinclude-data-files=*.pt ^
+  --noinclude-data-files=*.pth ^
+  --noinclude-data-files=*.safetensors ^
+  --noinclude-data-files=*.gguf ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
@@ -303,6 +338,12 @@ COMMON_ARGS=(
   --include-package-data=imageio
   --include-package-data=rawpy
   --include-data-dir=plugins=plugins
+  --noinclude-data-files=plugins/*/models/*
+  --noinclude-data-files=*.onnx
+  --noinclude-data-files=*.pt
+  --noinclude-data-files=*.pth
+  --noinclude-data-files=*.safetensors
+  --noinclude-data-files=*.gguf
   --include-data-dir=exe=exe
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md
   --include-data-files=LICENSE=LICENSE

@@ -19,6 +19,15 @@ from PIL import Image
 logger = logging.getLogger("Imervue.image_loader")
 
 
+def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list[str]]]:
+    """Collapse RAW+JPEG pairs when the user has the setting enabled."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    if not user_setting_dict.get("stack_raw_jpeg_pairs"):
+        return list(images), {}
+    from Imervue.library.stacks import collapse_stacks
+    return collapse_stacks(list(images))
+
+
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
@@ -237,6 +246,8 @@ def open_path(main_gui: GPUImageView, path: str):
 
         main_gui.current_index = 0
         main_gui._unfiltered_images = list(images)
+        images, stacks = _maybe_collapse_stacks(images)
+        main_gui._stack_members = stacks
         main_gui.load_tile_grid_async(images)
 
         # 記錄最近開啟的資料夾
@@ -259,6 +270,8 @@ def open_path(main_gui: GPUImageView, path: str):
             return
 
         main_gui._unfiltered_images = list(images)
+        images, stacks = _maybe_collapse_stacks(images)
+        main_gui._stack_members = stacks
         main_gui.model.set_images(images)
         try:
             main_gui.current_index = images.index(str(path_obj))

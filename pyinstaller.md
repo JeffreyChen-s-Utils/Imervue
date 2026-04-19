@@ -299,6 +299,44 @@ datas = [
 ]
 ```
 
+### 5.1 排除模型權重（必做）
+
+`plugins/object_splitter/models/*.onnx`（~340 MB）、`models/clip_vit_b32.onnx` 之類的
+ML 權重**不該**塞進安裝檔。它們是 plugin 執行期才需要的資源——`rembg` 的 `new_session()`
+會自動透過 `U2NET_HOME` 下載缺失的 `.onnx`；`Imervue.library.auto_tag.try_clip_labels`
+沒模型就自動 fallback 到 heuristic classifier。
+
+`Imervue.spec` 已經在 `Analysis` 後面加了這段 post-filter：
+
+```python
+_MODEL_EXTENSIONS = (
+    '.onnx', '.pt', '.pth', '.safetensors', '.gguf',
+    '.h5', '.pb', '.tflite', '.ckpt',
+)
+
+def _is_model_asset(dest: str) -> bool:
+    norm = dest.replace('\\', '/').lower()
+    if norm.endswith(_MODEL_EXTENSIONS):
+        return True
+    return '/models/' in norm
+
+a.datas = [e for e in a.datas if not _is_model_asset(e[0])]
+a.binaries = [e for e in a.binaries if not _is_model_asset(e[0])]
+```
+
+如果是走 CLI 不用 spec，改成 `--add-data "plugins;plugins"` 之後手動把
+`dist/Imervue/_internal/plugins/object_splitter/models/*.onnx` 刪掉，或先移走 `models/`
+子目錄再打包。驗證方式：
+
+```bash
+# Windows
+dir /s dist\Imervue\*.onnx
+# Linux / macOS
+find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
+```
+
+應該**完全沒有輸出**。若有，代表 `_is_model_asset` 漏掉副檔名或路徑樣式，補進 `_MODEL_EXTENSIONS`。
+
 ## 6. 驗證產物
 
 - **Windows**：`dist\Imervue\Imervue.exe --debug`
