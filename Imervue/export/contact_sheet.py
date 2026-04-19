@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QMarginsF, QSizeF, QRect
+from PySide6.QtCore import Qt, QMarginsF, QRect
 from PySide6.QtGui import QPdfWriter, QPainter, QImage, QPageSize, QPageLayout, QFont
 
 logger = logging.getLogger("Imervue.export.contact_sheet")

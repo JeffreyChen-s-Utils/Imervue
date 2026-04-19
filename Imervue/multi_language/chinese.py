@@ -917,7 +917,7 @@ chinese_word_dict = {
     "slideshow_height": "高度",
     "slideshow_fps": "FPS",
     "slideshow_hold": "每张持续时间",
-    "slideshow_fade": "淡入淡出时间",
+    "slideshow_fade_seconds": "淡入淡出时间",
     "slideshow_quality": "质量",
     "slideshow_export": "导出 MP4\u2026",
     "slideshow_close": "关闭",

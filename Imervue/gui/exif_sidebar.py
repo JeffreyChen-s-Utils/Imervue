@@ -230,5 +230,5 @@ class ExifSidebar(QWidget):
         try:
             from Imervue.library import image_index
             image_index.set_note(path, self._notes_edit.toPlainText())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110 - notes are a convenience; DB errors shouldn't block UI
             pass

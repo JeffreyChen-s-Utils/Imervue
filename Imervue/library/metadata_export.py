@@ -89,7 +89,7 @@ def _populate_image_fields(path: str, rec: dict[str, Any]) -> None:
                     tag = TAGS.get(tag_id, str(tag_id))
                     if tag in _EXIF_FIELDS:
                         rec[f"exif_{tag}"] = _coerce_value(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - export should continue when a single file can't be probed
         pass
 
 
@@ -102,7 +102,7 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
         rec["rating"] = int(ratings.get(path, 0))
         favs = user_setting_dict.get("image_favorites", [])
         rec["favorite"] = bool(path in favs) if isinstance(favs, (list, set, tuple)) else False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - user fields are optional; skip on any lookup failure
         pass
     try:
         from Imervue.library import image_index
@@ -113,7 +113,7 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
         cs = image_index.get_cull_state(path)
         if cs != image_index.CULL_UNFLAGGED:
             rec["cull"] = cs
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - library index is optional; export continues without it
         pass
 
 

@@ -45,7 +45,7 @@ def _index_one(path: Path, *, with_phash: bool) -> None:
             from PIL import Image
             with Image.open(path) as im:
                 width, height = im.size
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110 - size is a nice-to-have; skip on any PIL failure
             pass
     phash = compute_phash(path) if with_phash else None
     image_index.upsert_image(

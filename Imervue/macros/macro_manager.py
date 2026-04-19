@@ -19,7 +19,8 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, TYPE_CHECKING
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING
 
 from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
 
@@ -105,9 +106,7 @@ def _replay_toggle_favorite(_ui, paths, kwargs) -> None:
     for path in paths:
         if desired is True:
             favorites.add(path)
-        elif desired is False:
-            favorites.discard(path)
-        elif path in favorites:
+        elif desired is False or path in favorites:
             favorites.discard(path)
         else:
             favorites.add(path)

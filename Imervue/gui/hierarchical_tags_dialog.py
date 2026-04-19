@@ -7,13 +7,12 @@ keep those working.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QTreeWidget, QTreeWidgetItem, QListWidget, QInputDialog, QMessageBox,
+    QTreeWidget, QTreeWidgetItem, QListWidget, QMessageBox,
 )
 
 from Imervue.library import image_index
@@ -88,12 +87,12 @@ class HierarchicalTagsDialog(QDialog):
         for p in paths:
             parts = p.split("/")
             parent_item: QTreeWidgetItem | None = None
-            for i, _part in enumerate(parts):
+            for i, part in enumerate(parts):
                 key = "/".join(parts[: i + 1])
                 if key in nodes:
                     parent_item = nodes[key]
                     continue
-                item = QTreeWidgetItem([parts[i]])
+                item = QTreeWidgetItem([part])
                 item.setData(0, Qt.ItemDataRole.UserRole, key)
                 if parent_item is None:
                     self._tree.addTopLevelItem(item)

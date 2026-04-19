@@ -132,7 +132,7 @@ def _gather_metadata(path: str, counter: int) -> dict[str, str]:
                 make = (exif.get(271) or "").strip()  # Make
                 model = (exif.get(272) or "").strip()  # Model
                 camera = (f"{make} {model}").strip() or ""
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - EXIF is optional; rename uses mtime fallback
         pass
 
     dt = datetime.fromtimestamp(mtime) if mtime else datetime.fromtimestamp(0)

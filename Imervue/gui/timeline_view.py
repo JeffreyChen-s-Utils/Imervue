@@ -73,7 +73,7 @@ def _extract_date(path: str) -> datetime:
                         return datetime.strptime(str(raw), "%Y:%m:%d %H:%M:%S")
                     except ValueError:
                         pass
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110 - any EXIF parse failure falls back to mtime below
         pass
     try:
         mtime = Path(path).stat().st_mtime

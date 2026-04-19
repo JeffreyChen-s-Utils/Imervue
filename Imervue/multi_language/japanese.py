@@ -917,7 +917,7 @@ japanese_word_dict = {
     "slideshow_height": "高さ",
     "slideshow_fps": "FPS",
     "slideshow_hold": "表示時間",
-    "slideshow_fade": "フェード時間",
+    "slideshow_fade_seconds": "フェード時間",
     "slideshow_quality": "品質",
     "slideshow_export": "MP4 を書き出し\u2026",
     "slideshow_close": "閉じる",

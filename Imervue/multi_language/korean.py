@@ -917,7 +917,7 @@ korean_word_dict = {
     "slideshow_height": "높이",
     "slideshow_fps": "FPS",
     "slideshow_hold": "이미지당 표시 시간",
-    "slideshow_fade": "페이드 지속 시간",
+    "slideshow_fade_seconds": "페이드 지속 시간",
     "slideshow_quality": "품질",
     "slideshow_export": "MP4 내보내기\u2026",
     "slideshow_close": "닫기",

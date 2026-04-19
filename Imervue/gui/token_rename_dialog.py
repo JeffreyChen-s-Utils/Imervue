@@ -85,10 +85,10 @@ class TokenRenameDialog(QDialog):
             start=self._start_spin.value(),
         )
         self._table.setRowCount(len(self._plans))
-        from pathlib import Path as _P
+        from pathlib import Path
         for i, plan in enumerate(self._plans):
-            self._table.setItem(i, 0, QTableWidgetItem(_P(plan.src).name))
-            self._table.setItem(i, 1, QTableWidgetItem(_P(plan.dst).name))
+            self._table.setItem(i, 0, QTableWidgetItem(Path(plan.src).name))
+            self._table.setItem(i, 1, QTableWidgetItem(Path(plan.dst).name))
             status = "CONFLICT" if plan.conflict else "OK"
             self._table.setItem(i, 2, QTableWidgetItem(status))
 

@@ -63,12 +63,16 @@ class SimilarSearchDialog(QDialog):
 
     def _run(self) -> None:
         row = image_index.get_image(self._query_path)
-        phash = row["phash"] if row and row["phash"] is not None else compute_phash(self._query_path)
+        phash = (
+            row["phash"] if row and row["phash"] is not None
+            else compute_phash(self._query_path)
+        )
         if phash is None:
             return
         if row is None or row.get("phash") is None:
             image_index.upsert_image(self._query_path, phash=phash)
-        results = image_index.similar_by_phash(int(phash), max_distance=self._dist.value(), limit=500)
+        results = image_index.similar_by_phash(
+            int(phash), max_distance=self._dist.value(), limit=500)
         self._results.clear()
         for path, dist in results:
             item = QListWidgetItem(f"[{dist:02d}] {path}")

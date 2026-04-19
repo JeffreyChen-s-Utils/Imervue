@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QDir
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTreeView,
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QTreeView,
     QLineEdit, QFileDialog, QFileSystemModel, QMessageBox, QWidget,
 )
 
@@ -110,13 +110,17 @@ class DualPaneDialog(QDialog):
 
         btn_row = QHBoxLayout()
         copy_l2r = QPushButton(lang.get("dual_pane_copy_right", "Copy →"))
-        copy_l2r.clicked.connect(lambda: self._transfer(src=self._left, dst=self._right, move=False))
+        copy_l2r.clicked.connect(
+            lambda: self._transfer(src=self._left, dst=self._right, move=False))
         move_l2r = QPushButton(lang.get("dual_pane_move_right", "Move →"))
-        move_l2r.clicked.connect(lambda: self._transfer(src=self._left, dst=self._right, move=True))
+        move_l2r.clicked.connect(
+            lambda: self._transfer(src=self._left, dst=self._right, move=True))
         move_r2l = QPushButton(lang.get("dual_pane_move_left", "← Move"))
-        move_r2l.clicked.connect(lambda: self._transfer(src=self._right, dst=self._left, move=True))
+        move_r2l.clicked.connect(
+            lambda: self._transfer(src=self._right, dst=self._left, move=True))
         copy_r2l = QPushButton(lang.get("dual_pane_copy_left", "← Copy"))
-        copy_r2l.clicked.connect(lambda: self._transfer(src=self._right, dst=self._left, move=False))
+        copy_r2l.clicked.connect(
+            lambda: self._transfer(src=self._right, dst=self._left, move=False))
         open_btn = QPushButton(lang.get("dual_pane_open_in_viewer", "Open in viewer"))
         open_btn.clicked.connect(self._open_in_viewer)
         close_btn = QPushButton(lang.get("common_close", "Close"))

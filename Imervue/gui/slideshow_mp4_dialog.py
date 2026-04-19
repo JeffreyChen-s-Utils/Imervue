@@ -89,7 +89,7 @@ class SlideshowMp4Dialog(QDialog):
         self._fade_spin.setValue(0.5)
         self._fade_spin.setSingleStep(0.1)
         self._fade_spin.setSuffix(" s")
-        form.addRow(lang.get("slideshow_fade", "Fade duration"), self._fade_spin)
+        form.addRow(lang.get("slideshow_fade_seconds", "Fade duration"), self._fade_spin)
 
         self._quality_spin = QSpinBox()
         self._quality_spin.setRange(1, 10)

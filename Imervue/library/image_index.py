@@ -353,11 +353,11 @@ def delete_tag_path(tag_path: str) -> bool:
         descendant_ids.append(tid)
         placeholders = ",".join("?" * len(descendant_ids))
         c.execute(
-            f"DELETE FROM image_tags WHERE tag_id IN ({placeholders})",
+            f"DELETE FROM image_tags WHERE tag_id IN ({placeholders})",  # noqa: S608 - placeholders are literal `?` tokens
             descendant_ids,
         )
         c.execute(
-            f"DELETE FROM tag_nodes WHERE id IN ({placeholders})",
+            f"DELETE FROM tag_nodes WHERE id IN ({placeholders})",  # noqa: S608 - placeholders are literal `?` tokens
             descendant_ids,
         )
         return True
@@ -370,7 +370,7 @@ def _descendants_of(tag_id: int) -> list[int]:
     while frontier:
         placeholders = ",".join("?" * len(frontier))
         rows = c.execute(
-            f"SELECT id FROM tag_nodes WHERE parent_id IN ({placeholders})",
+            f"SELECT id FROM tag_nodes WHERE parent_id IN ({placeholders})",  # noqa: S608 - placeholders are literal `?` tokens
             frontier,
         ).fetchall()
         next_frontier = [r["id"] for r in rows]
@@ -443,7 +443,7 @@ def images_with_tag(tag_path: str, *, include_descendants: bool = True) -> list[
     ids = [tid] + (_descendants_of(tid) if include_descendants else [])
     placeholders = ",".join("?" * len(ids))
     rows = conn().execute(
-        f"SELECT DISTINCT path FROM image_tags WHERE tag_id IN ({placeholders})",
+        f"SELECT DISTINCT path FROM image_tags WHERE tag_id IN ({placeholders})",  # noqa: S608 - placeholders are literal `?` tokens
         ids,
     ).fetchall()
     return sorted(r["path"] for r in rows)

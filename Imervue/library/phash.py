@@ -32,10 +32,10 @@ def compute_phash(path: str | Path) -> int | None:
     """Return a 64-bit perceptual hash of ``path`` or None on failure."""
     try:
         with Image.open(path) as im:
-            im = im.convert("L").resize(
+            sampled = im.convert("L").resize(
                 (_SAMPLE_SIZE, _SAMPLE_SIZE), Image.Resampling.LANCZOS
             )
-            arr = np.asarray(im, dtype=np.float32)
+            arr = np.asarray(sampled, dtype=np.float32)
     except Exception as exc:  # noqa: BLE001 — pillow throws a zoo of types here
         logger.debug("phash failed for %s: %s", path, exc)
         return None

@@ -917,7 +917,7 @@ english_word_dict = {
     "slideshow_height": "Height",
     "slideshow_fps": "FPS",
     "slideshow_hold": "Hold per image",
-    "slideshow_fade": "Fade duration",
+    "slideshow_fade_seconds": "Fade duration",
     "slideshow_quality": "Quality",
     "slideshow_export": "Export MP4\u2026",
     "slideshow_close": "Close",

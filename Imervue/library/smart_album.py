@@ -122,7 +122,9 @@ def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
     return paths
 
 
-def _apply_date_filter(paths: list[str], date_from: float | None, date_to: float | None) -> list[str]:
+def _apply_date_filter(
+    paths: list[str], date_from: float | None, date_to: float | None,
+) -> list[str]:
     out: list[str] = []
     for p in paths:
         try:

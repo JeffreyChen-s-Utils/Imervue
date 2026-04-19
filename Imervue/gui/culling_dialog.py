@@ -83,10 +83,7 @@ class CullingDialog(QDialog):
         state = self._selected_state()
         viewer = self._ui.viewer
         base = getattr(viewer, "_unfiltered_images", None) or list(viewer.model.images)
-        if state == "all":
-            filtered = list(base)
-        else:
-            filtered = image_index.filter_by_cull(base, state)
+        filtered = list(base) if state == "all" else image_index.filter_by_cull(base, state)
         if not filtered:
             if hasattr(self._ui, "toast"):
                 self._ui.toast.info(

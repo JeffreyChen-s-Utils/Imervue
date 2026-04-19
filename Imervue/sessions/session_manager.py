@@ -44,10 +44,11 @@ def capture_session(ui: ImervueMainWindow) -> dict[str, Any]:
         if isinstance(path, str):
             selection.append(path)
 
+    active_tab = ui._tab_bar.currentIndex() if hasattr(ui, "_tab_bar") else 0
     return {
         "version": SESSION_VERSION,
         "tabs": tabs,
-        "active_tab": getattr(ui, "_tab_bar", None).currentIndex() if hasattr(ui, "_tab_bar") else 0,
+        "active_tab": active_tab,
         "current_image": current_path,
         "selection": selection,
         "tile_grid_mode": bool(getattr(viewer, "tile_grid_mode", False)),
