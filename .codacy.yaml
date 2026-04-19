@@ -1,0 +1,10 @@
+---
+# Codacy per-engine configuration. We exclude the tests/ tree from the
+# bandit engine because pytest-style tests rely on the `assert` statement
+# (bandit B101) and on narrow try/except/pass blocks to opportunistically
+# skip optional imports — both are expected in test code.
+engines:
+  bandit:
+    enabled: true
+    exclude_paths:
+      - 'tests/**'

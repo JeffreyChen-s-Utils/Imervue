@@ -201,7 +201,6 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
     import os
     result = []
     try:
-        # NOSONAR:python:S6549 - directory is the user's own chosen folder
         with os.scandir(directory) as it:
             for entry in it:
                 if entry.is_file(follow_symlinks=False):
@@ -238,7 +237,7 @@ def open_path(main_gui: GPUImageView, path: str):
 
     path_obj = Path(path)
 
-    if path_obj.is_dir():  # NOSONAR:python:S6549 - path is the user's own chosen folder/file
+    if path_obj.is_dir():
 
         images = _scan_images_for_user(str(path_obj))
 
@@ -261,7 +260,6 @@ def open_path(main_gui: GPUImageView, path: str):
                 str(path_obj), images, main_gui
             )
 
-    # NOSONAR:python:S6549 - path is the user's own chosen image
     elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:
 
         dir_path = path_obj.parent

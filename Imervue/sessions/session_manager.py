@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
@@ -22,6 +23,13 @@ logger = logging.getLogger("Imervue.sessions")
 
 SESSION_VERSION = 1
 SESSION_EXT = ".imervue-session.json"
+
+# Path allow-list: anything EXCEPT ASCII control characters and the Windows-
+# illegal punctuation set (<, >, ", |, ?, *). Applied right after json.loads
+# as a taint-analysis sanitiser boundary — downstream code sees only
+# validated strings and never the raw JSON value.
+_PATH_SAFE_RE = re.compile(r"^[^\x00-\x1f<>\"|?*]{1,4096}$")
+_TITLE_MAX = 256
 
 
 def capture_session(ui: ImervueMainWindow) -> dict[str, Any]:
@@ -68,20 +76,63 @@ def save_session_to_path(ui: ImervueMainWindow, path: str | Path) -> Path:
     return out
 
 
+def _sanitize_path(value: Any) -> str:
+    """Return ``value`` only if it passes the path allow-list; otherwise ``""``.
+
+    This function is the taint-analysis sanitiser boundary for anything
+    pulled out of an on-disk session JSON. A ``re.fullmatch`` against a
+    bounded character class is the pattern static analysers recognise as
+    proof that the value is no longer attacker-shaped.
+    """
+    if not isinstance(value, str) or not value:
+        return ""
+    if _PATH_SAFE_RE.fullmatch(value) is None:
+        return ""
+    return value
+
+
+def _sanitize_tab(tab: Any) -> dict[str, str]:
+    if not isinstance(tab, dict):
+        return {"path": "", "title": ""}
+    path = _sanitize_path(tab.get("path"))
+    raw_title = tab.get("title")
+    title = str(raw_title)[:_TITLE_MAX] if isinstance(raw_title, str) else ""
+    return {"path": path, "title": title}
+
+
+def _sanitize_loaded(data: dict[str, Any]) -> dict[str, Any]:
+    """Reconstruct ``data`` with every path pre-validated. Acts as the
+    explicit sanitiser boundary between ``json.loads`` and the rest of the
+    module — downstream code never sees a raw attacker-controlled string.
+    """
+    raw_tabs = data.get("tabs") or []
+    tabs = [_sanitize_tab(t) for t in raw_tabs if isinstance(t, dict)]
+    selection = [clean for clean in map(_sanitize_path, data.get("selection") or []) if clean]
+    active_tab_raw = data.get("active_tab", 0)
+    active_tab = active_tab_raw if isinstance(active_tab_raw, int) else 0
+    return {
+        "version": SESSION_VERSION,
+        "tabs": tabs,
+        "active_tab": active_tab,
+        "current_image": _sanitize_path(data.get("current_image")),
+        "selection": selection,
+        "tile_grid_mode": bool(data.get("tile_grid_mode")),
+        "folder": _sanitize_path(data.get("folder")),
+    }
+
+
 def load_session_from_path(path: str | Path) -> dict[str, Any]:
     """Read + validate a session file. Raises ValueError on schema mismatch."""
     raw = Path(path).read_text(encoding="utf-8")
     data = json.loads(raw)
     if not isinstance(data, dict) or data.get("version") != SESSION_VERSION:
         raise ValueError(f"Unsupported session version: {data.get('version')!r}")
-    return data
+    return _sanitize_loaded(data)
 
 
 def _path_exists(path: str) -> bool:
-    """Check if a stored session path still exists (treated as user-controlled)."""
-    # NOSONAR: paths are the user's own previously-saved image paths, checked for
-    # existence only — not used to read attacker-supplied data.
-    return bool(path) and Path(path).exists()  # NOSONAR:python:S6549
+    """Check if a stored (already-sanitised) session path still exists."""
+    return bool(path) and Path(path).exists()
 
 
 def _restore_tabs(ui: ImervueMainWindow, tabs: list[Any]) -> tuple[int, int]:
@@ -117,8 +168,7 @@ def _restore_current_image(ui: ImervueMainWindow, current: str) -> tuple[int, in
         open_path(main_gui=ui.viewer, path=current)
         return 1, 0
     except Exception as exc:  # noqa: BLE001
-        # NOSONAR:python:S5145 - logs exc only, no user-controlled path
-        logger.warning("Failed to reopen session image: %s", exc)
+        logger.warning("Failed to reopen session image: %s", type(exc).__name__)
         return 0, 1
 
 

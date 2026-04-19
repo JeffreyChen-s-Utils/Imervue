@@ -84,3 +84,40 @@ class TestSaveLoad:
         bad.write_text(json.dumps({"version": 999}))
         with pytest.raises(ValueError):
             sm.load_session_from_path(bad)
+
+
+class TestSanitize:
+    def test_strips_control_chars_from_paths(self, sm, tmp_path):
+        payload = {
+            "version": sm.SESSION_VERSION,
+            "current_image": "/a/b\x00c.jpg",
+            "selection": ["/ok.jpg", "bad\nname.jpg"],
+            "tabs": [{"path": "/ok.jpg", "title": "hi"}],
+        }
+        f = tmp_path / "s.json"
+        f.write_text(json.dumps(payload))
+        data = sm.load_session_from_path(f)
+        assert data["current_image"] == ""
+        assert data["selection"] == ["/ok.jpg"]
+
+    def test_rejects_non_string_paths(self, sm, tmp_path):
+        payload = {
+            "version": sm.SESSION_VERSION,
+            "current_image": 42,
+            "selection": [None, "/good.jpg"],
+        }
+        f = tmp_path / "s.json"
+        f.write_text(json.dumps(payload))
+        data = sm.load_session_from_path(f)
+        assert data["current_image"] == ""
+        assert data["selection"] == ["/good.jpg"]
+
+    def test_title_is_clamped(self, sm, tmp_path):
+        payload = {
+            "version": sm.SESSION_VERSION,
+            "tabs": [{"path": "/x.jpg", "title": "t" * 10000}],
+        }
+        f = tmp_path / "s.json"
+        f.write_text(json.dumps(payload))
+        data = sm.load_session_from_path(f)
+        assert len(data["tabs"][0]["title"]) <= 256
