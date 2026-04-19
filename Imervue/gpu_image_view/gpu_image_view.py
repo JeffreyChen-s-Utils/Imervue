@@ -1584,16 +1584,7 @@ class GPUImageView(QOpenGLWidget):
         """
         from Imervue.user_settings.color_labels import toggle_color_label, set_color_label
 
-        targets: list[str] = []
-        if self.tile_grid_mode and self.tile_selection_mode and self.selected_tiles:
-            targets = list(self.selected_tiles)
-        elif self.deep_zoom:
-            images = self.model.images
-            if images and 0 <= self.current_index < len(images):
-                targets = [images[self.current_index]]
-        elif self.tile_grid_mode and self._hover_last_path:
-            targets = [self._hover_last_path]
-
+        targets = self._resolve_cull_targets()
         if not targets:
             return
 
@@ -1613,6 +1604,24 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # 分揀 (Culling: Pick / Reject / Unflag)
     # ---------------------------
+    _CULL_FALLBACKS = {
+        "pick": "Picked {n} image(s)",
+        "reject": "Rejected {n} image(s)",
+        "unflagged": "Unflagged {n} image(s)",
+    }
+
+    def _resolve_cull_targets(self) -> list[str]:
+        if (self.tile_grid_mode and self.tile_selection_mode
+                and self.selected_tiles):
+            return list(self.selected_tiles)
+        if self.deep_zoom:
+            images = self.model.images
+            if images and 0 <= self.current_index < len(images):
+                return [images[self.current_index]]
+        if self.tile_grid_mode and self._hover_last_path:
+            return [self._hover_last_path]
+        return []
+
     def _apply_cull_state(self, state: str) -> None:
         """Apply a cull state to the currently-active target(s).
 
@@ -1621,16 +1630,7 @@ class GPUImageView(QOpenGLWidget):
         """
         from Imervue.library import image_index
 
-        targets: list[str] = []
-        if self.tile_grid_mode and self.tile_selection_mode and self.selected_tiles:
-            targets = list(self.selected_tiles)
-        elif self.deep_zoom:
-            images = self.model.images
-            if images and 0 <= self.current_index < len(images):
-                targets = [images[self.current_index]]
-        elif self.tile_grid_mode and self._hover_last_path:
-            targets = [self._hover_last_path]
-
+        targets = self._resolve_cull_targets()
         if not targets:
             return
 
@@ -1639,13 +1639,8 @@ class GPUImageView(QOpenGLWidget):
 
         if hasattr(self.main_window, "toast"):
             lang = self.main_window.language_wrapper.language_word_dict
-            label_key = f"cull_toast_{state}"
-            fallback = {
-                "pick": "Picked {n} image(s)",
-                "reject": "Rejected {n} image(s)",
-                "unflagged": "Unflagged {n} image(s)",
-            }[state]
-            msg = lang.get(label_key, fallback).format(n=len(targets))
+            fallback = self._CULL_FALLBACKS[state]
+            msg = lang.get(f"cull_toast_{state}", fallback).format(n=len(targets))
             self.main_window.toast.info(msg)
         if self.deep_zoom and hasattr(self, "_update_status_info"):
             self._update_status_info()
@@ -2182,10 +2177,10 @@ class GPUImageView(QOpenGLWidget):
         if key == Qt.Key.Key_Escape and self._handle_escape():
             return
 
-        if key in (Qt.Key.Key_Up, Qt.Key.Key_Down,
-                   Qt.Key.Key_Left, Qt.Key.Key_Right):
-            if self._handle_arrow_keys(key, modifiers, shift):
-                return
+        arrow = (Qt.Key.Key_Up, Qt.Key.Key_Down,
+                 Qt.Key.Key_Left, Qt.Key.Key_Right)
+        if key in arrow and self._handle_arrow_keys(key, modifiers, shift):
+            return
 
         mods_int = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
         action = shortcut_manager.get_action(key, mods_int)
@@ -2217,65 +2212,60 @@ class GPUImageView(QOpenGLWidget):
             lang = self.main_window.language_wrapper.language_word_dict
             self.main_window.toast.info(lang.get(key, fallback))
 
+    def _do_undo(self) -> None:
+        if self.undo_manager.canUndo():
+            self.undo_manager.undo()
+        else:
+            undo_delete(main_gui=self)
+
+    def _open_command_palette(self) -> None:
+        from Imervue.gui.command_palette import open_command_palette
+        open_command_palette(self.main_window)
+
+    def _replay_macro(self) -> None:
+        from Imervue.macros.macro_manager import replay_last_macro
+        replay_last_macro(self.main_window)
+
+    def _open_tag_album(self) -> None:
+        from Imervue.gui.tag_album_dialog import open_tag_album_dialog
+        open_tag_album_dialog(self)
+
+    def _history_back_toast(self) -> None:
+        if not self.history_back():
+            self._toast("history_at_start", "At start of history")
+
+    def _history_forward_toast(self) -> None:
+        if not self.history_forward():
+            self._toast("history_at_end", "At end of history")
+
     def _dispatch_simple_action(self, action: str) -> bool:
         """Actions that map 1:1 to a function call with no condition."""
-        if action == "undo":
-            if self.undo_manager.canUndo():
-                self.undo_manager.undo()
-            else:
-                undo_delete(main_gui=self)
-            return True
-        if action in ("redo", "redo_alt"):
-            self.undo_manager.redo()
-            return True
-        if action == "copy":
-            copy_image_to_clipboard(self)
-            return True
-        if action == "paste":
-            self._paste_image_from_clipboard()
-            return True
-        if action in ("search", "search_alt"):
-            open_search_dialog(self)
-            return True
-        if action == "goto":
-            open_goto_dialog(self)
-            return True
-        if action == "fullscreen":
-            toggle_fullscreen(self)
-            return True
-        if action == "random_image":
-            self.jump_to_random_image()
-            return True
-        if action == "command_palette":
-            from Imervue.gui.command_palette import open_command_palette
-            open_command_palette(self.main_window)
-            return True
-        if action == "macro_replay":
-            from Imervue.macros.macro_manager import replay_last_macro
-            replay_last_macro(self.main_window)
-            return True
-        if action == "slideshow":
-            open_slideshow_dialog(self)
-            return True
-        if action == "tags":
-            from Imervue.gui.tag_album_dialog import open_tag_album_dialog
-            open_tag_album_dialog(self)
-            return True
-        if action == "favorite":
-            toggle_favorite(self)
-            return True
         if action in self._RATING_ACTIONS:
             rate_current_image(self, int(action[-1]))
             return True
-        if action == "history_back":
-            if not self.history_back():
-                self._toast("history_at_start", "At start of history")
-            return True
-        if action == "history_forward":
-            if not self.history_forward():
-                self._toast("history_at_end", "At end of history")
-            return True
-        return False
+        handler = {
+            "undo": self._do_undo,
+            "redo": self.undo_manager.redo,
+            "redo_alt": self.undo_manager.redo,
+            "copy": lambda: copy_image_to_clipboard(self),
+            "paste": self._paste_image_from_clipboard,
+            "search": lambda: open_search_dialog(self),
+            "search_alt": lambda: open_search_dialog(self),
+            "goto": lambda: open_goto_dialog(self),
+            "fullscreen": lambda: toggle_fullscreen(self),
+            "random_image": self.jump_to_random_image,
+            "command_palette": self._open_command_palette,
+            "macro_replay": self._replay_macro,
+            "slideshow": lambda: open_slideshow_dialog(self),
+            "tags": self._open_tag_album,
+            "favorite": lambda: toggle_favorite(self),
+            "history_back": self._history_back_toast,
+            "history_forward": self._history_forward_toast,
+        }.get(action)
+        if handler is None:
+            return False
+        handler()
+        return True
 
     def _dispatch_toggle_action(self, action: str, modifiers) -> bool:
         """View-mode toggles: theater, pixel_view, split, dual, multi-monitor, color."""
@@ -2339,49 +2329,55 @@ class GPUImageView(QOpenGLWidget):
             self.grid_offset_y = 0
         self.update()
 
+    def _edit_current_image(self) -> None:
+        if not self.deep_zoom:
+            return
+        images = self.model.images
+        if images and 0 <= self.current_index < len(images):
+            open_annotation_for_path(self, images[self.current_index])
+
+    def _toggle_histogram(self) -> None:
+        if self.deep_zoom:
+            self._show_histogram = not self._show_histogram
+            self.update()
+
+    def _fit_width_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_width()
+            self._toast("fit_width", "Fit Width")
+
+    def _fit_height_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_height()
+            self._toast("fit_height", "Fit Height")
+
+    def _bookmark_if_deep_zoom(self) -> None:
+        if self.deep_zoom:
+            self._toggle_bookmark()
+
+    def _delete_current(self) -> None:
+        if self.tile_grid_mode and self.tile_selection_mode:
+            trash_selected_tiles(self)
+        elif self.deep_zoom:
+            trash_current_image(self)
+
     def _dispatch_image_action(self, action: str) -> bool:
         """Current-image operations: edit, histogram, fit, bookmark, rotate, reset, delete."""
-        if action == "edit":
-            if self.deep_zoom:
-                images = self.model.images
-                if images and 0 <= self.current_index < len(images):
-                    open_annotation_for_path(self, images[self.current_index])
-            return True
-        if action == "histogram":
-            if self.deep_zoom:
-                self._show_histogram = not self._show_histogram
-                self.update()
-            return True
-        if action == "fit_width":
-            if self.deep_zoom:
-                self._fit_to_width()
-                self._toast("fit_width", "Fit Width")
-            return True
-        if action == "fit_height":
-            if self.deep_zoom:
-                self._fit_to_height()
-                self._toast("fit_height", "Fit Height")
-            return True
-        if action == "bookmark":
-            if self.deep_zoom:
-                self._toggle_bookmark()
-            return True
-        if action == "rotate_cw":
-            self._push_rotate(True)
-            return True
-        if action == "rotate_ccw":
-            self._push_rotate(False)
-            return True
-        if action == "reset_view":
-            self._reset_view()
-            return True
-        if action == "delete":
-            if self.tile_grid_mode and self.tile_selection_mode:
-                trash_selected_tiles(self)
-            elif self.deep_zoom:
-                trash_current_image(self)
-            return True
-        return False
+        handler = {
+            "edit": self._edit_current_image,
+            "histogram": self._toggle_histogram,
+            "fit_width": self._fit_width_with_toast,
+            "fit_height": self._fit_height_with_toast,
+            "bookmark": self._bookmark_if_deep_zoom,
+            "rotate_cw": lambda: self._push_rotate(True),
+            "rotate_ccw": lambda: self._push_rotate(False),
+            "reset_view": self._reset_view,
+            "delete": self._delete_current,
+        }.get(action)
+        if handler is None:
+            return False
+        handler()
+        return True
 
     def _dispatch_anim_action(self, action: str) -> None:
         if action == "anim_toggle":
