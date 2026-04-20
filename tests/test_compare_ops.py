@@ -90,22 +90,22 @@ class TestDifference:
 class TestSplitLabel:
     def test_defaults_to_half(self, ops, qapp):
         widget = ops._SplitLabel()
-        assert widget.split() == 0.5
+        assert widget.split() == pytest.approx(0.5)
 
     def test_set_split_clamps_below_zero(self, ops, qapp):
         widget = ops._SplitLabel()
         widget.set_split(-0.5)
-        assert widget.split() == 0.0
+        assert widget.split() == pytest.approx(0.0)
 
     def test_set_split_clamps_above_one(self, ops, qapp):
         widget = ops._SplitLabel()
         widget.set_split(2.0)
-        assert widget.split() == 1.0
+        assert widget.split() == pytest.approx(1.0)
 
     def test_set_split_updates_value(self, ops, qapp):
         widget = ops._SplitLabel()
         widget.set_split(0.75)
-        assert widget.split() == 0.75
+        assert widget.split() == pytest.approx(0.75)
 
     def test_split_changed_emits_on_change(self, ops, qapp):
         widget = ops._SplitLabel()

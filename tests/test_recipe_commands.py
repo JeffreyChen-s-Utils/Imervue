@@ -42,7 +42,7 @@ class TestEditRecipeCommand:
             gui, image_path, Recipe(), Recipe(brightness=0.5),
         )
         cmd.redo()
-        assert store.get_for_path(image_path).brightness == 0.5
+        assert store.get_for_path(image_path).brightness == pytest.approx(0.5)
 
     def test_undo_restores_old_recipe(self, store, image_path):
         gui = _FakeGui()
@@ -52,7 +52,7 @@ class TestEditRecipeCommand:
         )
         cmd.redo()
         cmd.undo()
-        assert store.get_for_path(image_path).brightness == 0.1
+        assert store.get_for_path(image_path).brightness == pytest.approx(0.1)
 
     def test_redo_triggers_view_reload(self, store, image_path):
         gui = _FakeGui()
@@ -93,4 +93,4 @@ class TestEditRecipeCommand:
         new.brightness = 0.99  # mutate the caller's copy
         cmd.redo()
         # The stored recipe must reflect the snapshot, not the later mutation.
-        assert store.get_for_path(image_path).brightness == 0.5
+        assert store.get_for_path(image_path).brightness == pytest.approx(0.5)

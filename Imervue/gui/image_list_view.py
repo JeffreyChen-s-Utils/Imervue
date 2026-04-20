@@ -134,32 +134,41 @@ class ImageListModel(QAbstractTableModel):
         key, fallback = keys[section]
         return lang.get(key, fallback)
 
-    def _display_value(self, row, col: int):
-        if col == self.COL_LABEL:
-            from Imervue.user_settings.color_labels import get_color_label
-            return (get_color_label(row.path) or "").title()
-        if col == self.COL_RATING:
-            return _format_rating(_rating_for(row.path))
-        if col == self.COL_NAME:
-            return Path(row.path).name
-        if col == self.COL_RES:
-            self._ensure_fetched(row)
-            if row.width and row.height:
-                return f"{row.width}\u00d7{row.height}"
-            return ""
-        if col == self.COL_SIZE:
-            self._ensure_fetched(row)
-            if row.size_kb is None:
-                return ""
-            return _fmt_size(row.size_kb)
-        if col == self.COL_TYPE:
-            return Path(row.path).suffix.lstrip(".").upper() or ""
-        if col == self.COL_MTIME:
-            self._ensure_fetched(row)
-            if row.mtime is None:
-                return ""
-            return datetime.fromtimestamp(row.mtime).strftime("%Y-%m-%d %H:%M")
+    @staticmethod
+    def _label_value(row) -> str:
+        from Imervue.user_settings.color_labels import get_color_label
+        return (get_color_label(row.path) or "").title()
+
+    def _resolution_value(self, row) -> str:
+        self._ensure_fetched(row)
+        if row.width and row.height:
+            return f"{row.width}\u00d7{row.height}"
         return ""
+
+    def _size_value(self, row) -> str:
+        self._ensure_fetched(row)
+        if row.size_kb is None:
+            return ""
+        return _fmt_size(row.size_kb)
+
+    def _mtime_value(self, row) -> str:
+        self._ensure_fetched(row)
+        if row.mtime is None:
+            return ""
+        return datetime.fromtimestamp(row.mtime).strftime("%Y-%m-%d %H:%M")
+
+    def _display_value(self, row, col: int):
+        handlers = {
+            self.COL_LABEL: self._label_value,
+            self.COL_RATING: lambda r: _format_rating(_rating_for(r.path)),
+            self.COL_NAME: lambda r: Path(r.path).name,
+            self.COL_RES: self._resolution_value,
+            self.COL_SIZE: self._size_value,
+            self.COL_TYPE: lambda r: Path(r.path).suffix.lstrip(".").upper() or "",
+            self.COL_MTIME: self._mtime_value,
+        }
+        handler = handlers.get(col)
+        return handler(row) if handler else ""
 
     def _background_value(self, row, col: int):
         if col != self.COL_LABEL:

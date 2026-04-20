@@ -18,8 +18,8 @@ class TestSlideshowOptions:
         assert opts.width == 1920
         assert opts.height == 1080
         assert opts.fps == 24
-        assert opts.hold_seconds == 3.0
-        assert opts.fade_seconds == 0.5
+        assert opts.hold_seconds == pytest.approx(3.0)
+        assert opts.fade_seconds == pytest.approx(0.5)
         assert opts.quality == 8
 
     def test_is_frozen(self):

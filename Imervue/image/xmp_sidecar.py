@@ -32,12 +32,19 @@ from pathlib import Path
 
 from defusedxml import ElementTree as DefusedET
 
+# NOTE: the values below are XML *namespace identifiers*, not network URLs.
+# XML namespaces (W3C REC-xml-names) are opaque strings that uniquely identify
+# a vocabulary; by convention they look like http(s) URIs but are never
+# dereferenced. The specific strings below are defined by the W3C and Adobe
+# XMP specifications and MUST be reproduced verbatim for sidecars to be
+# readable by Lightroom / Capture One. Flagging them as insecure HTTP is a
+# false positive for SonarQube python:S5332 / bandit B113.
 _NS = {
     "x": "adobe:ns:meta/",
-    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "xmp": "http://ns.adobe.com/xap/1.0/",
-    "dc": "http://purl.org/dc/elements/1.1/",
-    "xml": "http://www.w3.org/XML/1998/namespace",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",  # NOSONAR: XML namespace identifier, not a URL
+    "xmp": "http://ns.adobe.com/xap/1.0/",  # NOSONAR: XML namespace identifier, not a URL
+    "dc": "http://purl.org/dc/elements/1.1/",  # NOSONAR: XML namespace identifier, not a URL
+    "xml": "http://www.w3.org/XML/1998/namespace",  # NOSONAR: XML namespace identifier, not a URL
 }
 _RATING_MIN = -1
 _RATING_MAX = 5

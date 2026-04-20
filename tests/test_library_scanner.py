@@ -96,10 +96,11 @@ class TestLibraryScanner:
 
     def test_error_signal_on_exception(self, tree, qapp, monkeypatch):
         root, _ = tree
-        monkeypatch.setattr(
-            scanner, "_iter_images",
-            lambda _root: (_ for _ in ()).throw(RuntimeError("boom")),
-        )
+
+        def _boom(_root):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(scanner, "_iter_images", _boom)
         s = scanner.LibraryScanner([str(root)], with_phash=False)
         errors: list[str] = []
         s.error.connect(errors.append)

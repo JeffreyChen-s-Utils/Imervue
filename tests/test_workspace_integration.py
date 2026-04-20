@@ -9,6 +9,8 @@ needing a live QMainWindow.
 """
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 from PySide6.QtCore import QByteArray
 
@@ -34,7 +36,7 @@ class _FakeSplitter:
     def sizes(self):
         return list(self._sizes)
 
-    def setSizes(self, sizes):  # NOSONAR:python:S100 - mirrors Qt QSplitter API
+    def setSizes(self, sizes):  # noqa: N802  # NOSONAR mirrors Qt QSplitter API
         self.set_calls.append(list(sizes))
         self._sizes = list(sizes)
 
@@ -44,7 +46,7 @@ class _FakeIndex:
         self._path = path
         self._valid = valid
 
-    def isValid(self):  # NOSONAR:python:S100 - mirrors Qt QModelIndex API
+    def isValid(self):  # noqa: N802  # NOSONAR mirrors Qt QModelIndex API
         return self._valid
 
 
@@ -53,10 +55,10 @@ class _FakeModel:
         self._root = initial_root
         self.set_root_calls: list[str] = []
 
-    def filePath(self, index):  # NOSONAR:python:S100 - mirrors Qt QFileSystemModel API
+    def filePath(self, index):  # noqa: N802  # NOSONAR mirrors Qt QFileSystemModel API
         return getattr(index, "_path", "") if index is not None else ""
 
-    def setRootPath(self, root):  # NOSONAR:python:S100 - mirrors Qt API
+    def setRootPath(self, root):  # noqa: N802  # NOSONAR mirrors Qt API
         self.set_root_calls.append(root)
         self._root = root
 
@@ -73,10 +75,10 @@ class _FakeTree:
     def model(self):
         return self._model
 
-    def rootIndex(self):  # NOSONAR:python:S100 - mirrors Qt QTreeView API
+    def rootIndex(self):  # noqa: N802  # NOSONAR mirrors Qt QTreeView API
         return self._root_index
 
-    def setRootIndex(self, index):  # NOSONAR:python:S100 - mirrors Qt API
+    def setRootIndex(self, index):  # noqa: N802  # NOSONAR mirrors Qt API
         self.set_root_index_calls.append(index)
         self._root_index = index
 
@@ -104,25 +106,25 @@ class _FakeMainWindow:
         self.restored_geometry: bytes | None = None
         self.restored_state: bytes | None = None
 
-    def saveGeometry(self):  # NOSONAR:python:S100 - mirrors Qt QMainWindow API
+    def saveGeometry(self):  # noqa: N802  # NOSONAR mirrors Qt QMainWindow API
         return bytes(self._geometry)
 
-    def saveState(self):  # NOSONAR:python:S100 - mirrors Qt API
+    def saveState(self):  # noqa: N802  # NOSONAR mirrors Qt API
         return bytes(self._state)
 
-    def isMaximized(self):  # NOSONAR:python:S100 - mirrors Qt API
+    def isMaximized(self):  # noqa: N802  # NOSONAR mirrors Qt API
         return self._maximized
 
-    def restoreGeometry(self, qba):  # NOSONAR:python:S100 - mirrors Qt API
+    def restoreGeometry(self, qba):  # noqa: N802  # NOSONAR mirrors Qt API
         self.restored_geometry = bytes(qba.data() if hasattr(qba, "data") else qba)
 
-    def restoreState(self, qba):  # NOSONAR:python:S100 - mirrors Qt API
+    def restoreState(self, qba):  # noqa: N802  # NOSONAR mirrors Qt API
         self.restored_state = bytes(qba.data() if hasattr(qba, "data") else qba)
 
-    def showMaximized(self):  # NOSONAR:python:S100 - mirrors Qt API
+    def showMaximized(self):  # noqa: N802  # NOSONAR mirrors Qt API
         self.show_maximized_count += 1
 
-    def showNormal(self):  # NOSONAR:python:S100 - mirrors Qt API
+    def showNormal(self):  # noqa: N802  # NOSONAR mirrors Qt API
         self.show_normal_count += 1
 
 
@@ -153,7 +155,7 @@ class TestCaptureSaveLoadApplyRoundtrip:
         )
         manager = WorkspaceManager()
 
-        captured = capture_current_workspace(ui, "Develop")
+        captured = capture_current_workspace(cast(Any, ui), "Develop")
         manager.save(captured)
 
         # Fresh manager reads settings back from disk-equivalent (the dict).
@@ -175,7 +177,7 @@ class TestCaptureSaveLoadApplyRoundtrip:
             maximized=True, splitter_sizes=[1, 1, 1],
             root_folder="/somewhere/else",
         )
-        apply_workspace(target, preset)
+        apply_workspace(cast(Any, target), preset)
 
         assert target.restored_geometry == b"G-SESSION-01"
         assert target.restored_state == b"S-DOCKSTATE-01"
@@ -187,10 +189,10 @@ class TestCaptureSaveLoadApplyRoundtrip:
     def test_roundtrip_preserves_maximized_flag(self, fresh_store):
         ui = _FakeMainWindow(maximized=True)
         manager = WorkspaceManager()
-        manager.save(capture_current_workspace(ui, "Browse"))
+        manager.save(capture_current_workspace(cast(Any, ui), "Browse"))
 
         target = _FakeMainWindow(maximized=False)
-        apply_workspace(target, WorkspaceManager().get("Browse"))
+        apply_workspace(cast(Any, target), WorkspaceManager().get("Browse"))
         assert target.show_maximized_count == 1
         assert target.show_normal_count == 0
 
@@ -206,7 +208,7 @@ class TestCaptureSaveLoadApplyRoundtrip:
         ))
 
         target = _FakeMainWindow(splitter_sizes=[10, 20, 30])
-        apply_workspace(target, manager.get("NoSplit"))
+        apply_workspace(cast(Any, target), manager.get("NoSplit"))
         # Nothing should have reached the splitter — only original value stands.
         assert target._main_splitter.set_calls == []
 
@@ -215,7 +217,7 @@ class TestCaptureSaveLoadApplyRoundtrip:
         manager.save(Workspace(name="NoRoot", root_folder=""))
 
         target = _FakeMainWindow(root_folder="/already/here")
-        apply_workspace(target, manager.get("NoRoot"))
+        apply_workspace(cast(Any, target), manager.get("NoRoot"))
         assert target.tree.model().set_root_calls == []
         assert target.tree.set_root_index_calls == []
 
@@ -231,7 +233,7 @@ class TestCaptureSaveLoadApplyRoundtrip:
         ))
 
         target = _FakeMainWindow()
-        apply_workspace(target, manager.get("Bytes"))
+        apply_workspace(cast(Any, target), manager.get("Bytes"))
         assert target.restored_geometry == raw
         assert target.restored_state == raw[::-1]
 
@@ -290,11 +292,11 @@ class TestCaptureOmittedAttributes:
     def test_capture_without_splitter(self, fresh_store):
         ui = _FakeMainWindow()
         del ui._main_splitter
-        captured = capture_current_workspace(ui, "Minimal")
+        captured = capture_current_workspace(cast(Any, ui), "Minimal")
         assert captured.splitter_sizes == []
 
     def test_capture_with_invalid_root_index(self, fresh_store):
         ui = _FakeMainWindow(root_folder="/photos")
         ui.tree._root_index = _FakeIndex("/photos", valid=False)
-        captured = capture_current_workspace(ui, "NoRoot")
+        captured = capture_current_workspace(cast(Any, ui), "NoRoot")
         assert captured.root_folder == ""

@@ -35,7 +35,7 @@ FORMAT_EXTENSIONS = {
 QUALITY_FORMATS = {"JPEG", "WebP"}
 
 
-def _WATERMARK_CORNERS(lang):  # noqa: N802 (helper used by dialog init)
+def _watermark_corners(lang):
     """Return (key, label) tuples for the watermark corner dropdown."""
     return [
         ("top-left", lang.get("watermark_tl", "Top-left")),
@@ -238,7 +238,7 @@ class BatchExportDialog(QDialog):
         wm_opts_row = QHBoxLayout()
         wm_opts_row.addWidget(QLabel(self._lang.get("watermark_position", "Position:")))
         self._wm_corner = QComboBox()
-        for corner_key, corner_label in _WATERMARK_CORNERS(self._lang):
+        for corner_key, corner_label in _watermark_corners(self._lang):
             self._wm_corner.addItem(corner_label, corner_key)
         self._wm_corner.setCurrentIndex(3)  # bottom-right
         wm_opts_row.addWidget(self._wm_corner)

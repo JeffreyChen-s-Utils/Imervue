@@ -27,7 +27,7 @@ class TestContactSheetOptions:
         assert opts.rows == 5
         assert opts.cols == 4
         assert opts.page_size == "A4"
-        assert opts.margin_mm == 10.0
+        assert opts.margin_mm == pytest.approx(10.0)
         assert opts.caption is True
         assert opts.dpi == 300
 

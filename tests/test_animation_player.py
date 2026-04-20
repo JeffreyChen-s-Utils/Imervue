@@ -137,17 +137,17 @@ class TestSpeedClamping:
     def test_speed_clamped_low(self, tmp_path, qapp):
         pl = ap.AnimationPlayer(_FakeGui(), str(tmp_path / "x.gif"))
         pl.set_speed(0.01)
-        assert pl.speed == 0.25
+        assert pl.speed == pytest.approx(0.25)
 
     def test_speed_clamped_high(self, tmp_path, qapp):
         pl = ap.AnimationPlayer(_FakeGui(), str(tmp_path / "x.gif"))
         pl.set_speed(100.0)
-        assert pl.speed == 4.0
+        assert pl.speed == pytest.approx(4.0)
 
     def test_speed_in_range_preserved(self, tmp_path, qapp):
         pl = ap.AnimationPlayer(_FakeGui(), str(tmp_path / "x.gif"))
         pl.set_speed(2.0)
-        assert pl.speed == 2.0
+        assert pl.speed == pytest.approx(2.0)
 
 
 class TestFrameData:

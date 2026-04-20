@@ -196,7 +196,7 @@ class TestCorruptionRecovery:
                 try:
                     with Image.open(path) as im:
                         im.load()
-                except (OSError, FileNotFoundError):
+                except OSError:
                     return None
                 return _l2_normalise(np.ones(self.dim, dtype=np.float32))
 
