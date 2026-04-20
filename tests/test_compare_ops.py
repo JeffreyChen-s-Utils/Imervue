@@ -85,3 +85,39 @@ class TestDifference:
         b = _rgba(2, 2, (0, 0, 0))
         out = ops.compute_difference(a, b, 1.0)
         assert np.all(out[..., 3] == 255)
+
+
+class TestSplitLabel:
+    def test_defaults_to_half(self, ops, qapp):
+        widget = ops._SplitLabel()
+        assert widget.split() == 0.5
+
+    def test_set_split_clamps_below_zero(self, ops, qapp):
+        widget = ops._SplitLabel()
+        widget.set_split(-0.5)
+        assert widget.split() == 0.0
+
+    def test_set_split_clamps_above_one(self, ops, qapp):
+        widget = ops._SplitLabel()
+        widget.set_split(2.0)
+        assert widget.split() == 1.0
+
+    def test_set_split_updates_value(self, ops, qapp):
+        widget = ops._SplitLabel()
+        widget.set_split(0.75)
+        assert widget.split() == 0.75
+
+    def test_split_changed_emits_on_change(self, ops, qapp):
+        widget = ops._SplitLabel()
+        seen: list[float] = []
+        widget.split_changed.connect(seen.append)
+        widget.set_split(0.3)
+        assert seen == [0.3]
+
+    def test_split_changed_silent_on_noop(self, ops, qapp):
+        widget = ops._SplitLabel()
+        widget.set_split(0.4)
+        seen: list[float] = []
+        widget.split_changed.connect(seen.append)
+        widget.set_split(0.4)
+        assert seen == []

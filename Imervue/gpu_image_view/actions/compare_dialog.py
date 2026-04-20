@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QPushButton, QListWidget, QListWidgetItem, QWidget,
@@ -62,6 +62,114 @@ class _ImageLabel(QLabel):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_scaled()
+
+
+class _SplitLabel(QWidget):
+    """A/B split viewer: left half is image A, right half is image B.
+
+    The vertical divider is draggable — click or drag anywhere on the widget
+    to move it. Both images are rendered scaled-to-fit using A's aspect
+    ratio so the two halves always align on the same pixel grid.
+    """
+
+    split_changed = Signal(float)
+
+    def __init__(self):
+        super().__init__()
+        self._pm_a: QPixmap | None = None
+        self._pm_b: QPixmap | None = None
+        self._split: float = 0.5
+        self._dragging = False
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
+        )
+        self.setMinimumSize(200, 200)
+        self.setAutoFillBackground(True)
+        self.setCursor(Qt.CursorShape.SplitHCursor)
+        self.setMouseTracking(True)
+
+    # --- Public API ---
+    def set_pair(self, a_path: str, b_path: str) -> None:
+        self._pm_a = QPixmap(a_path)
+        self._pm_b = QPixmap(b_path)
+        self.update()
+
+    def set_split(self, fraction: float) -> None:
+        new_value = max(0.0, min(1.0, float(fraction)))
+        if new_value == self._split:
+            return
+        self._split = new_value
+        self.update()
+        self.split_changed.emit(new_value)
+
+    def split(self) -> float:
+        return self._split
+
+    # --- Paint ---
+    def paintEvent(self, _event) -> None:  # noqa: N802 (Qt override)
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(26, 26, 26))
+        if self._pm_a is None or self._pm_b is None:
+            return
+        if self._pm_a.isNull() or self._pm_b.isNull():
+            return
+
+        scaled_a = self._pm_a.scaled(
+            self.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        scaled_b = self._pm_b.scaled(
+            scaled_a.size(),
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        x_off = (self.width() - scaled_a.width()) // 2
+        y_off = (self.height() - scaled_a.height()) // 2
+        split_x = int(self.width() * self._split)
+
+        painter.setClipRect(0, 0, split_x, self.height())
+        painter.drawPixmap(x_off, y_off, scaled_a)
+        painter.setClipRect(split_x, 0, self.width() - split_x, self.height())
+        painter.drawPixmap(x_off, y_off, scaled_b)
+        painter.setClipping(False)
+        _draw_split_handle(painter, split_x, self.height())
+
+    # --- Mouse ---
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._dragging = True
+            self._set_from_event(event)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if self._dragging:
+            self._set_from_event(event)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton and self._dragging:
+            self._dragging = False
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def _set_from_event(self, event: QMouseEvent) -> None:
+        self.set_split(event.position().x() / max(1, self.width()))
+
+
+def _draw_split_handle(painter: QPainter, split_x: int, height: int) -> None:
+    """Paint the divider line plus a pill-shaped grab handle at its midpoint."""
+    painter.setPen(QPen(QColor(255, 255, 255, 220), 2))
+    painter.drawLine(split_x, 0, split_x, height)
+    painter.setPen(QPen(QColor(0, 0, 0, 180), 1))
+    painter.setBrush(QColor(255, 255, 255, 220))
+    cy = height / 2.0
+    painter.drawEllipse(QPointF(split_x, cy), 10.0, 10.0)
 
 
 # ===========================
@@ -180,6 +288,10 @@ class CompareDialog(QDialog):
         btn_diff.clicked.connect(self._run_difference)
         left.addWidget(btn_diff)
 
+        btn_split = QPushButton(self._lang.get("compare_split", "A|B Split (2)"))
+        btn_split.clicked.connect(self._run_split)
+        left.addWidget(btn_split)
+
         root.addLayout(left, stretch=1)
 
         # ===== Right — tabbed display =====
@@ -226,6 +338,26 @@ class CompareDialog(QDialog):
         diff_layout.addLayout(gain_row)
         self._tabs.addTab(self._diff_widget, self._lang.get("compare_tab_difference", "Difference"))
         self._diff_arrs: tuple[np.ndarray, np.ndarray] | None = None
+
+        # Split tab — Before/After divider
+        self._split_widget = QWidget()
+        split_layout = QVBoxLayout(self._split_widget)
+        self._split_label = _SplitLabel()
+        split_layout.addWidget(self._split_label, stretch=1)
+        self._split_slider = QSlider(Qt.Orientation.Horizontal)
+        self._split_slider.setRange(0, 100)
+        self._split_slider.setValue(50)
+        self._split_slider.valueChanged.connect(self._on_split_slider)
+        self._split_label.split_changed.connect(self._on_split_widget_changed)
+        split_slider_row = QHBoxLayout()
+        split_slider_row.addWidget(QLabel("A"))
+        split_slider_row.addWidget(self._split_slider, stretch=1)
+        split_slider_row.addWidget(QLabel("B"))
+        split_layout.addLayout(split_slider_row)
+        self._tabs.addTab(
+            self._split_widget,
+            self._lang.get("compare_tab_split", "A|B Split"),
+        )
 
     # -----------------------------------------------------------------
     # Helpers
@@ -324,6 +456,25 @@ class CompareDialog(QDialog):
         a, b = self._diff_arrs
         diff = compute_difference(a, b, gain)
         self._diff_label.set_qimage(_ndarray_to_qimage(diff))
+
+    def _run_split(self) -> None:
+        paths = self._selected_paths()
+        if len(paths) != 2:
+            self._warn("compare_need_two", "Select exactly 2 images.")
+            return
+        self._split_label.set_pair(paths[0], paths[1])
+        self._split_slider.blockSignals(True)
+        self._split_slider.setValue(int(self._split_label.split() * 100))
+        self._split_slider.blockSignals(False)
+        self._tabs.setCurrentWidget(self._split_widget)
+
+    def _on_split_slider(self, val: int) -> None:
+        self._split_label.set_split(val / 100.0)
+
+    def _on_split_widget_changed(self, fraction: float) -> None:
+        self._split_slider.blockSignals(True)
+        self._split_slider.setValue(int(round(fraction * 100)))
+        self._split_slider.blockSignals(False)
 
 
 def open_compare_dialog(main_gui: GPUImageView) -> None:
