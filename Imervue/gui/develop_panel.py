@@ -69,6 +69,17 @@ class DevelopPanel(QWidget):
     _EXPOSURE_RANGE = 200
     _DEBOUNCE_MS = 200
 
+    # Advanced develop sliders: (recipe_field, i18n_key, fallback_label)
+    _ADVANCED_SLIDERS = [
+        ("temperature", "develop_temperature", "Temperature"),
+        ("tint",        "develop_tint",        "Tint"),
+        ("highlights",  "develop_highlights",  "Highlights"),
+        ("shadows",     "develop_shadows",     "Shadows"),
+        ("whites",      "develop_whites",      "Whites"),
+        ("blacks",      "develop_blacks",      "Blacks"),
+        ("vibrance",    "develop_vibrance",    "Vibrance"),
+    ]
+
     # Annotation tool definitions: (tool_key, glyph, i18n_key, fallback)
     _ANNOTATION_TOOLS = [
         ("select",   "⬚", "annotation_tool_select",   "Select"),
@@ -408,6 +419,20 @@ class DevelopPanel(QWidget):
         )
         layout.addLayout(self._label_over_slider(sat_label, self._saturation))
         self._saturation_label = sat_label
+
+        # --- Advanced sliders (white balance, tonal regions, vibrance) ---
+        self._adv_sliders: dict[str, QSlider] = {}
+        self._adv_labels: dict[str, QLabel] = {}
+        for field_name, i18n_key, fallback in self._ADVANCED_SLIDERS:
+            title = lang.get(i18n_key, fallback)
+            slider, label = self._make_slider(
+                title,
+                self._COLOR_RANGE,
+                self._make_advanced_handler(field_name),
+            )
+            layout.addLayout(self._label_over_slider(label, slider))
+            self._adv_sliders[field_name] = slider
+            self._adv_labels[field_name] = label
 
         # --- Recipe Reset / Undo / Redo ---
         btn_row = QHBoxLayout()
@@ -850,6 +875,9 @@ class DevelopPanel(QWidget):
             self._brightness.setValue(int(round(self._current.brightness * 100)))
             self._contrast.setValue(int(round(self._current.contrast * 100)))
             self._saturation.setValue(int(round(self._current.saturation * 100)))
+            for field_name, slider in self._adv_sliders.items():
+                value = getattr(self._current, field_name)
+                slider.setValue(int(round(value * 100)))
         finally:
             self._suppress_signals = False
         self._refresh_labels()
@@ -871,6 +899,20 @@ class DevelopPanel(QWidget):
         self._saturation_label.setText(
             f"{lang.get('develop_saturation', 'Saturation')}: {sat:+d}"
         )
+        for field_name, i18n_key, fallback in self._ADVANCED_SLIDERS:
+            value_pct = int(round(getattr(self._current, field_name) * 100))
+            title = lang.get(i18n_key, fallback)
+            self._adv_labels[field_name].setText(f"{title}: {value_pct:+d}")
+
+    def _make_advanced_handler(self, field_name: str) -> Callable[[int], None]:
+        """Return a slider handler that writes to ``self._current.<field_name>``."""
+        def handler(v: int) -> None:
+            if self._suppress_signals:
+                return
+            setattr(self._current, field_name, v / 100.0)
+            self._refresh_labels()
+            self._schedule_preview()
+        return handler
 
     def _on_exposure(self, v: int) -> None:
         if self._suppress_signals:
