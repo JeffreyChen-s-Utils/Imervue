@@ -355,3 +355,13 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 8. 修改面板（Develop）：調整曝光 / 亮度滑桿——畫布即時預覽，不修改原檔；儲存後才寫入磁碟
 9. AI 圖片放大：選擇傳統方法（Lanczos / Bicubic / Nearest）放大，不需安裝 ONNX 依賴即可運作
 10. 圖片淨化重繪：選擇傳統放大方法搭配目標解析度，確認輸出圖片尺寸正確且 EXIF 已清除
+11. 命令面板（`Ctrl+Shift+P`）：鍵入動作名稱、模糊匹配並執行——驗證快捷鍵對照表與動作註冊表在 frozen 環境載入完整
+12. 巨集錄製／回放、Session 儲存／還原：錄一段巨集並存檔、開幾張圖存 session → 關 app → 重開後回放／載入——驗證使用者設定目錄下 JSON 的讀寫路徑
+13. 外部編輯器：設定系統上的 Photoshop／GIMP／Krita → 右鍵「在外部編輯器開啟」——驗證 `subprocess` 在 frozen 環境下能 spawn 外部程式
+14. 匯出 Contact sheet（PNG／PDF）／ HTML gallery／MP4 投影片——驗證 `imageio-ffmpeg` 的 ffmpeg binary 能被找到，且 PIL 字型資源被完整收集
+15. Library 索引與智慧相簿：重建索引、建一個規則式相簿（例如「ISO ≥ 800」）——驗證 sqlite 檔寫入使用者設定目錄、EXIF 讀取正常
+16. Culling 標記（`P` / `X` / `U`）、色彩標籤（`F1`-`F5`）、重複圖片偵測、EXIF 剝除——驗證 sidecar（`.imervue.json`）讀寫與 `imagehash` / `piexif` 被打包
+17. Timeline 時間軸檢視與模糊搜尋（`Ctrl+F`）——驗證 EXIF 日期解析與搜尋索引建置
+18. Compare overlay：選兩張圖 → 開啟疊合比對，切換融合／差異模式——驗證 GPU shader 在 frozen 下編譯成功
+19. 分頁（`,` / `.`）／雙頁（`Tab`）／列表（`L`）三種檢視切換，並在列表中 hover 預覽——驗證 OpenGL 替代佈局貼圖建置與 hover 視窗渲染
+20. 歷史返回／前進（`Alt+←` / `Alt+→`）、裁切工具、非破壞性 develop：裁切＋調整後關閉並重開，狀態保留——驗證 `.imervue.json` recipe 寫回
