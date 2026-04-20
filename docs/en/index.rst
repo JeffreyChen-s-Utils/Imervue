@@ -1219,6 +1219,84 @@ are written into the recipe's ``extra['face_tags']`` blob. Detection is a
 classical technique — accuracy is adequate for "show me the faces" but
 not a replacement for modern CNN-based recognition.
 
+Local Adjustment Masks
+^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Local Adjustment Masks`` layers brush, radial, or
+linear gradient masks over the image. Each mask carries its own exposure,
+brightness, contrast, saturation, temperature, tint deltas plus a feather
+slider. Masks are saved on ``recipe.extra['masks']`` and applied
+non-destructively at load time, so the underlying file is never touched.
+
+Split Toning
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Split Toning`` applies distinct hues to shadows and
+highlights with per-region saturation and a balance pivot. Stored on
+``recipe.extra['split_toning']`` and applied after the tone curve in the
+develop pipeline.
+
+Clone Stamp
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Clone Stamp`` copies a feathered source patch onto a
+destination — the hard-edge complement to the healing brush. Shift+click
+sets the source, a normal click stamps, right-click undoes. The result is
+written to a new file so the original stays intact.
+
+Crop / Straighten
+^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Crop / Straighten`` combines a normalised (0..1)
+crop rectangle with an arbitrary straighten angle. The output is
+auto-cropped to the largest inner rectangle so rotated photos have no
+black corners.
+
+Auto-Straighten
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Auto-Straighten`` detects the dominant horizon or
+vertical lines via Hough line detection and proposes a rotation. One
+click applies the straighten; you can tweak the angle first if the
+auto-detection picks the wrong reference.
+
+Noise Reduction / Sharpening
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Noise Reduction / Sharpening`` applies a bilateral
+(edge-preserving) denoise followed by an unsharp-mask sharpen.
+"Luminance only" keeps colour noise intact but flattens grain without
+smearing chroma edges.
+
+Sky / Background
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Sky / Background`` replaces detected sky with a
+gradient or removes the background to transparent / white. When
+``rembg`` (U²-Net) is installed, the foreground mask comes from the
+segmentation network; otherwise the heuristic HSV rule is used.
+
+Soft Proof
+^^^^^^^^^^
+
+``Extra Tools`` > ``Soft Proof`` loads an ICC profile, converts the
+image through it and back, and highlights pixels that clipped during
+the round-trip in magenta — a quick out-of-gamut check before printing.
+
+GPS Geotag
+^^^^^^^^^^
+
+``Extra Tools`` > ``GPS Geotag`` reads any existing EXIF GPS tags and
+lets you edit or set new decimal-degree coordinates. Requires ``piexif``
+to be installed; writes to JPEG in place.
+
+Print Layout
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Print Layout`` composes multiple images onto a
+multi-page PDF with configurable page size, orientation, grid, margins,
+gutter, and crop marks. Requires ``reportlab``.
+
 ----
 
 Command-Line Usage

@@ -1088,4 +1088,96 @@ chinese_word_dict = {
     "face_list": "检测到的脸（双击以命名）：",
     "face_found": "共 {n} 张脸。",
     "face_save": "保存",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "局部调整蒙版",
+    "masks_list": "蒙版：",
+    "masks_add_brush": "+ 画笔",
+    "masks_add_radial": "+ 放射",
+    "masks_add_linear": "+ 线性",
+    "masks_remove": "移除",
+    "masks_adjustments": "调整",
+    "masks_exposure": "曝光：",
+    "masks_brightness": "亮度：",
+    "masks_contrast": "对比度：",
+    "masks_saturation": "饱和度：",
+    "masks_temperature": "色温：",
+    "masks_tint": "色调：",
+    "masks_feather": "羽化：",
+
+    # --- Split Toning ---
+    "split_title": "色调分离",
+    "split_shadow_hue": "阴影色相：",
+    "split_shadow_sat": "阴影饱和度：",
+    "split_highlight_hue": "高光色相：",
+    "split_highlight_sat": "高光饱和度：",
+    "split_balance": "平衡：",
+
+    # --- Clone Stamp ---
+    "stamp_title": "仿制图章",
+    "stamp_radius": "半径（像素）：",
+    "stamp_hint": "Shift+点击设定源 \u2022 点击盖章 \u2022 右键撤销",
+    "stamp_output": "输出：",
+    "stamp_run": "应用",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "裁剪 / 拉直",
+    "crop_angle": "拉直角度：",
+    "crop_x": "裁剪 X（0..1）：",
+    "crop_y": "裁剪 Y（0..1）：",
+    "crop_w": "裁剪宽度（0..1）：",
+    "crop_h": "裁剪高度（0..1）：",
+    "crop_output": "输出：",
+    "crop_run": "应用",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "降噪 / 锐化",
+    "nr_strength": "降噪强度：",
+    "nr_luma_only": "仅亮度通道",
+    "nr_sharpen_amount": "锐化量：",
+    "nr_sharpen_radius": "锐化半径（像素）：",
+    "nr_output": "输出：",
+    "nr_run": "应用",
+
+    # --- Sky / Background ---
+    "sky_title": "天空 / 背景",
+    "sky_mode": "操作：",
+    "sky_mode_sky": "以渐变替换天空",
+    "sky_mode_trans": "移除背景（透明）",
+    "sky_mode_white": "移除背景（白底）",
+    "sky_output": "输出：",
+    "sky_run": "应用",
+
+    # --- Soft Proofing ---
+    "proof_title": "屏幕校样",
+    "proof_profile": "ICC 色彩描述文件：",
+    "proof_preview": "预览",
+    "proof_pick": "请选择 ICC 描述文件。",
+    "proof_failed": "描述文件加载失败。",
+    "proof_oog": "超出色域像素：",
+
+    # --- Print Layout ---
+    "print_title": "打印排版",
+    "print_add": "添加文件...",
+    "print_clear": "清除",
+    "print_page_size": "页面大小：",
+    "print_landscape": "横向",
+    "print_rows": "行数：",
+    "print_cols": "列数：",
+    "print_crop_marks": "裁切标记",
+    "print_output": "输出 PDF：",
+    "print_export": "导出 PDF",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS 地理标记",
+    "geotag_lat": "纬度（\u00b0）：",
+    "geotag_lon": "经度（\u00b0）：",
+    "geotag_failed": "GPS 标签写入失败。",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "自动拉直",
+    "autostr_detect": "检测角度",
+    "autostr_angle": "旋转（\u00b0）：",
+    "autostr_output": "输出：",
+    "autostr_apply": "应用",
 }

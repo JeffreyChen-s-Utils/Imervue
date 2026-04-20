@@ -278,7 +278,51 @@ class Recipe:
             g_points=recipe.tone_curve_g,
             b_points=recipe.tone_curve_b,
         )
+        arr = _apply_split_toning(arr, recipe)
         arr = _apply_lut(arr, recipe)
+        arr = _apply_masks(arr, recipe)
+        return arr
+
+
+def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply split toning from recipe.extra['split_toning'] if present."""
+    cfg = recipe.extra.get("split_toning") if recipe.extra else None
+    if not isinstance(cfg, dict):
+        return arr
+    try:
+        from Imervue.image.split_toning import apply_split_toning
+    except ImportError:
+        return arr
+    try:
+        return apply_split_toning(
+            arr,
+            shadow_hue=float(cfg.get("shadow_hue", 210.0)),
+            shadow_saturation=float(cfg.get("shadow_sat", 0.0)),
+            highlight_hue=float(cfg.get("highlight_hue", 45.0)),
+            highlight_saturation=float(cfg.get("highlight_sat", 0.0)),
+            balance=float(cfg.get("balance", 0.0)),
+        )
+    except (ValueError, TypeError) as err:
+        logger.warning("Split toning apply failed: %s", err)
+        return arr
+
+
+def _apply_masks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply local adjustment masks from recipe.extra['masks'] if present."""
+    raw = recipe.extra.get("masks") if recipe.extra else None
+    if not raw:
+        return arr
+    try:
+        from Imervue.image.masks import apply_masks, masks_from_dict_list
+    except ImportError:
+        return arr
+    masks = masks_from_dict_list(raw)
+    if not masks:
+        return arr
+    try:
+        return apply_masks(arr, masks)
+    except (ValueError, TypeError) as err:
+        logger.warning("Mask apply failed: %s", err)
         return arr
 
 

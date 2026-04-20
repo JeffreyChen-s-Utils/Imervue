@@ -1092,4 +1092,96 @@ korean_word_dict = {
     "face_list": "검출된 얼굴 (이름 붙이려면 더블클릭):",
     "face_found": "총 {n}개 얼굴.",
     "face_save": "저장",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "로컬 조정 마스크",
+    "masks_list": "마스크:",
+    "masks_add_brush": "+ 브러시",
+    "masks_add_radial": "+ 방사형",
+    "masks_add_linear": "+ 선형",
+    "masks_remove": "제거",
+    "masks_adjustments": "조정",
+    "masks_exposure": "노출:",
+    "masks_brightness": "밝기:",
+    "masks_contrast": "대비:",
+    "masks_saturation": "채도:",
+    "masks_temperature": "색온도:",
+    "masks_tint": "틴트:",
+    "masks_feather": "페더:",
+
+    # --- Split Toning ---
+    "split_title": "스플릿 토닝",
+    "split_shadow_hue": "섀도 색조:",
+    "split_shadow_sat": "섀도 채도:",
+    "split_highlight_hue": "하이라이트 색조:",
+    "split_highlight_sat": "하이라이트 채도:",
+    "split_balance": "밸런스:",
+
+    # --- Clone Stamp ---
+    "stamp_title": "복제 도장",
+    "stamp_radius": "반경 (픽셀):",
+    "stamp_hint": "Shift+클릭으로 원본 지정 \u2022 클릭으로 스탬프 \u2022 우클릭으로 취소",
+    "stamp_output": "출력:",
+    "stamp_run": "적용",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "자르기 / 수평 맞춤",
+    "crop_angle": "수평 각도:",
+    "crop_x": "자르기 X (0..1):",
+    "crop_y": "자르기 Y (0..1):",
+    "crop_w": "자르기 너비 (0..1):",
+    "crop_h": "자르기 높이 (0..1):",
+    "crop_output": "출력:",
+    "crop_run": "적용",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "노이즈 감소 / 선명도",
+    "nr_strength": "노이즈 감소 강도:",
+    "nr_luma_only": "휘도만",
+    "nr_sharpen_amount": "선명도 양:",
+    "nr_sharpen_radius": "선명도 반경 (픽셀):",
+    "nr_output": "출력:",
+    "nr_run": "적용",
+
+    # --- Sky / Background ---
+    "sky_title": "하늘 / 배경",
+    "sky_mode": "작업:",
+    "sky_mode_sky": "그라디언트로 하늘 교체",
+    "sky_mode_trans": "배경 제거 (투명)",
+    "sky_mode_white": "배경 제거 (흰색)",
+    "sky_output": "출력:",
+    "sky_run": "적용",
+
+    # --- Soft Proofing ---
+    "proof_title": "소프트 프루핑",
+    "proof_profile": "ICC 프로파일:",
+    "proof_preview": "미리보기",
+    "proof_pick": "ICC 프로파일을 선택하세요.",
+    "proof_failed": "프로파일 로드 실패.",
+    "proof_oog": "색 영역 초과 픽셀:",
+
+    # --- Print Layout ---
+    "print_title": "인쇄 레이아웃",
+    "print_add": "파일 추가...",
+    "print_clear": "지우기",
+    "print_page_size": "페이지 크기:",
+    "print_landscape": "가로 방향",
+    "print_rows": "행:",
+    "print_cols": "열:",
+    "print_crop_marks": "재단 표시",
+    "print_output": "출력 PDF:",
+    "print_export": "PDF 내보내기",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS 지오태그",
+    "geotag_lat": "위도 (\u00b0):",
+    "geotag_lon": "경도 (\u00b0):",
+    "geotag_failed": "GPS 태그 쓰기 실패.",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "자동 수평 맞춤",
+    "autostr_detect": "각도 검출",
+    "autostr_angle": "회전 (\u00b0):",
+    "autostr_output": "출력:",
+    "autostr_apply": "적용",
 }

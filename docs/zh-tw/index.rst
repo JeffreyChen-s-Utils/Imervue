@@ -1120,6 +1120,75 @@ HDR 合成
 ``extra['face_tags']``。此為經典技術，適合「找出臉的位置」，但非
 現代 CNN 辨識的替代品。
 
+局部調整遮罩
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Local Adjustment Masks`` 讓使用者堆疊筆刷 / 放射
+/ 線性漸層遮罩。每個遮罩有各自的曝光、亮度、對比、飽和度、色溫、
+色調 delta 與羽化滑桿，儲存在 ``recipe.extra['masks']`` 並以非破壞
+方式於載入時混入原圖。
+
+色調分離
+^^^^^^^^
+
+``Extra Tools`` > ``Split Toning`` 對陰影與高光分別套用不同色相與
+飽和度，並以平衡樞紐決定交界位置。儲存於 ``recipe.extra`` 並在
+develop pipeline 的 tone curve 之後套用。
+
+複製印章
+^^^^^^^^
+
+``Extra Tools`` > ``Clone Stamp`` 以羽化方式複製來源區塊到目的地，
+為硬邊版本的修復筆刷。Shift+點擊設定來源，一般點擊蓋章，右鍵復原。
+結果輸出為新檔，不會動到原圖。
+
+裁切 / 拉直
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Crop / Straighten`` 結合 0..1 正規化裁切矩形與
+任意角度拉直。輸出會自動裁切到最大內接矩形，旋轉後的照片不會有
+黑邊。
+
+自動拉直
+^^^^^^^^
+
+``Extra Tools`` > ``Auto-Straighten`` 以 Hough line 偵測主要的地平
+線或垂直線，提出建議的旋轉角度。可以在套用前微調角度。
+
+降噪 / 銳化
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Noise Reduction / Sharpening`` 先以邊緣保留的
+bilateral 降噪，再以 unsharp mask 銳化。「僅亮度通道」會保留色噪，
+但能壓平明度雜訊而不糊掉色彩邊緣。
+
+天空 / 背景
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Sky / Background`` 將偵測到的天空以漸層取代，
+或直接把背景做成透明 / 白底。安裝 ``rembg`` (U²-Net) 時會自動啟用
+神經網路前景分割。
+
+螢幕校樣
+^^^^^^^^
+
+``Extra Tools`` > ``Soft Proof`` 載入 ICC 描述檔，將圖片轉進目的色
+域再轉回，並以洋紅顯示往返過程中被裁切的像素 — 列印前快速檢查
+色域的工具。
+
+GPS 地理標記
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``GPS Geotag`` 讀取現有 EXIF GPS 座標並允許編輯
+或設定新的十進位度數。需要安裝 ``piexif``；會直接寫入 JPEG 檔。
+
+列印排版
+^^^^^^^^
+
+``Extra Tools`` > ``Print Layout`` 把多張圖片排版成多頁 PDF，可設
+定頁面大小、方向、格線、邊界、內距與裁切標記。需要安裝
+``reportlab``。
+
 ----
 
 命令列啟動

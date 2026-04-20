@@ -1118,6 +1118,73 @@ WebEngine 时降级为坐标列表。
 ``extra['face_tags']``。此为经典算法，适合「找出脸的位置」，并
 非现代 CNN 识别的替代。
 
+局部调整蒙版
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Local Adjustment Masks`` 支持画笔 / 放射 / 线性
+渐变三种蒙版。每个蒙版都有独立的曝光、亮度、对比、饱和度、色温、
+色调 delta 和羽化滑块，保存到 ``recipe.extra['masks']``，以非破坏
+方式在加载时混合到原图。
+
+色调分离
+^^^^^^^^
+
+``Extra Tools`` > ``Split Toning`` 对阴影和高光分别应用不同色相与
+饱和度，并通过平衡枢纽决定边界。保存在 ``recipe.extra`` 中，并在
+develop pipeline 的 tone curve 之后应用。
+
+仿制图章
+^^^^^^^^
+
+``Extra Tools`` > ``Clone Stamp`` 以羽化方式把源区块复制到目标，
+是修复画笔的硬边版本。Shift+点击设定源点，单击盖章，右键撤销。
+结果输出为新文件，不会影响原图。
+
+裁剪 / 拉直
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Crop / Straighten`` 结合 0..1 归一化裁剪矩形和
+任意角度拉直。输出会自动裁剪到最大内接矩形，旋转后不会产生黑边。
+
+自动拉直
+^^^^^^^^
+
+``Extra Tools`` > ``Auto-Straighten`` 通过 Hough line 检测主要的地
+平线或垂直线，给出建议旋转角度。应用前可以手动微调。
+
+降噪 / 锐化
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Noise Reduction / Sharpening`` 先用边缘保留的
+bilateral 降噪，再用 unsharp mask 锐化。「仅亮度通道」会保留色噪，
+但能压平明度噪声而不糊掉色彩边缘。
+
+天空 / 背景
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Sky / Background`` 把检测到的天空替换成渐变，
+或直接把背景去除成透明 / 白底。安装 ``rembg`` (U²-Net) 时会自动
+启用神经网络前景分割。
+
+屏幕校样
+^^^^^^^^
+
+``Extra Tools`` > ``Soft Proof`` 加载 ICC 描述文件，将图像转入目标
+色域再转回，并用洋红显示往返过程中被裁切的像素 — 打印前的快速
+色域检查。
+
+GPS 地理标记
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``GPS Geotag`` 读取已有的 EXIF GPS 坐标并允许
+编辑或设定新的十进制度数。需要安装 ``piexif``；直接写入 JPEG 文件。
+
+打印排版
+^^^^^^^^
+
+``Extra Tools`` > ``Print Layout`` 把多张图片排版为多页 PDF，可设
+定页面大小、方向、网格、边距、间隔与裁切标记。需要 ``reportlab``。
+
 ----
 
 命令行启动

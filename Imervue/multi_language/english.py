@@ -1110,4 +1110,96 @@ english_word_dict = {
     "face_list": "Detected faces (double-click to rename):",
     "face_found": "{n} face(s) total.",
     "face_save": "Save",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "Local Adjustment Masks",
+    "masks_list": "Masks:",
+    "masks_add_brush": "+ Brush",
+    "masks_add_radial": "+ Radial",
+    "masks_add_linear": "+ Linear",
+    "masks_remove": "Remove",
+    "masks_adjustments": "Adjustments",
+    "masks_exposure": "Exposure:",
+    "masks_brightness": "Brightness:",
+    "masks_contrast": "Contrast:",
+    "masks_saturation": "Saturation:",
+    "masks_temperature": "Temperature:",
+    "masks_tint": "Tint:",
+    "masks_feather": "Feather:",
+
+    # --- Split Toning ---
+    "split_title": "Split Toning",
+    "split_shadow_hue": "Shadow hue:",
+    "split_shadow_sat": "Shadow saturation:",
+    "split_highlight_hue": "Highlight hue:",
+    "split_highlight_sat": "Highlight saturation:",
+    "split_balance": "Balance:",
+
+    # --- Clone Stamp ---
+    "stamp_title": "Clone Stamp",
+    "stamp_radius": "Radius (px):",
+    "stamp_hint": "Shift+click to set source \u2022 click to stamp \u2022 right-click to undo",
+    "stamp_output": "Output:",
+    "stamp_run": "Apply",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "Crop / Straighten",
+    "crop_angle": "Straighten angle:",
+    "crop_x": "Crop X (0..1):",
+    "crop_y": "Crop Y (0..1):",
+    "crop_w": "Crop width (0..1):",
+    "crop_h": "Crop height (0..1):",
+    "crop_output": "Output:",
+    "crop_run": "Apply",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "Noise Reduction / Sharpening",
+    "nr_strength": "NR strength:",
+    "nr_luma_only": "Luminance only",
+    "nr_sharpen_amount": "Sharpen amount:",
+    "nr_sharpen_radius": "Sharpen radius (px):",
+    "nr_output": "Output:",
+    "nr_run": "Apply",
+
+    # --- Sky / Background ---
+    "sky_title": "Sky / Background",
+    "sky_mode": "Operation:",
+    "sky_mode_sky": "Replace sky with gradient",
+    "sky_mode_trans": "Remove background (transparent)",
+    "sky_mode_white": "Remove background (white)",
+    "sky_output": "Output:",
+    "sky_run": "Apply",
+
+    # --- Soft Proofing ---
+    "proof_title": "Soft Proof",
+    "proof_profile": "ICC profile:",
+    "proof_preview": "Preview",
+    "proof_pick": "Select an ICC profile.",
+    "proof_failed": "Profile load failed.",
+    "proof_oog": "Out-of-gamut pixels:",
+
+    # --- Print Layout ---
+    "print_title": "Print Layout",
+    "print_add": "Add files...",
+    "print_clear": "Clear",
+    "print_page_size": "Page size:",
+    "print_landscape": "Landscape",
+    "print_rows": "Rows:",
+    "print_cols": "Columns:",
+    "print_crop_marks": "Crop marks",
+    "print_output": "Output PDF:",
+    "print_export": "Export PDF",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS Geotag",
+    "geotag_lat": "Latitude (\u00b0):",
+    "geotag_lon": "Longitude (\u00b0):",
+    "geotag_failed": "Failed to write GPS tags.",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "Auto-Straighten",
+    "autostr_detect": "Detect angle",
+    "autostr_angle": "Rotation (\u00b0):",
+    "autostr_output": "Output:",
+    "autostr_apply": "Apply",
 }

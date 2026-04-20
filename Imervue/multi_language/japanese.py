@@ -1097,4 +1097,96 @@ japanese_word_dict = {
     "face_list": "検出された顔（ダブルクリックで名前入力）：",
     "face_found": "合計 {n} 顔。",
     "face_save": "保存",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "ローカル調整マスク",
+    "masks_list": "マスク：",
+    "masks_add_brush": "+ ブラシ",
+    "masks_add_radial": "+ 放射",
+    "masks_add_linear": "+ リニア",
+    "masks_remove": "削除",
+    "masks_adjustments": "調整",
+    "masks_exposure": "露出：",
+    "masks_brightness": "明るさ：",
+    "masks_contrast": "コントラスト：",
+    "masks_saturation": "彩度：",
+    "masks_temperature": "色温度：",
+    "masks_tint": "色合い：",
+    "masks_feather": "ぼかし：",
+
+    # --- Split Toning ---
+    "split_title": "スプリットトーン",
+    "split_shadow_hue": "シャドウ色相：",
+    "split_shadow_sat": "シャドウ彩度：",
+    "split_highlight_hue": "ハイライト色相：",
+    "split_highlight_sat": "ハイライト彩度：",
+    "split_balance": "バランス：",
+
+    # --- Clone Stamp ---
+    "stamp_title": "コピースタンプ",
+    "stamp_radius": "半径（ピクセル）：",
+    "stamp_hint": "Shift+クリックで元を設定 \u2022 クリックでスタンプ \u2022 右クリックで取り消し",
+    "stamp_output": "出力：",
+    "stamp_run": "適用",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "トリミング / 水平補正",
+    "crop_angle": "水平補正角度：",
+    "crop_x": "トリミング X（0..1）：",
+    "crop_y": "トリミング Y（0..1）：",
+    "crop_w": "トリミング幅（0..1）：",
+    "crop_h": "トリミング高さ（0..1）：",
+    "crop_output": "出力：",
+    "crop_run": "適用",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "ノイズ軽減 / シャープ",
+    "nr_strength": "ノイズ軽減強度：",
+    "nr_luma_only": "輝度チャンネルのみ",
+    "nr_sharpen_amount": "シャープ量：",
+    "nr_sharpen_radius": "シャープ半径（ピクセル）：",
+    "nr_output": "出力：",
+    "nr_run": "適用",
+
+    # --- Sky / Background ---
+    "sky_title": "空 / 背景",
+    "sky_mode": "操作：",
+    "sky_mode_sky": "空をグラデーションに置換",
+    "sky_mode_trans": "背景を削除（透明）",
+    "sky_mode_white": "背景を削除（白）",
+    "sky_output": "出力：",
+    "sky_run": "適用",
+
+    # --- Soft Proofing ---
+    "proof_title": "ソフトプルーフ",
+    "proof_profile": "ICC プロファイル：",
+    "proof_preview": "プレビュー",
+    "proof_pick": "ICC プロファイルを選択してください。",
+    "proof_failed": "プロファイル読み込み失敗。",
+    "proof_oog": "色域外ピクセル：",
+
+    # --- Print Layout ---
+    "print_title": "印刷レイアウト",
+    "print_add": "ファイルを追加...",
+    "print_clear": "クリア",
+    "print_page_size": "ページサイズ：",
+    "print_landscape": "横向き",
+    "print_rows": "行数：",
+    "print_cols": "列数：",
+    "print_crop_marks": "トンボ",
+    "print_output": "出力 PDF：",
+    "print_export": "PDF を書き出し",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS ジオタグ",
+    "geotag_lat": "緯度（\u00b0）：",
+    "geotag_lon": "経度（\u00b0）：",
+    "geotag_failed": "GPS タグの書き込みに失敗しました。",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "自動水平補正",
+    "autostr_detect": "角度を検出",
+    "autostr_angle": "回転（\u00b0）：",
+    "autostr_output": "出力：",
+    "autostr_apply": "適用",
 }
