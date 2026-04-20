@@ -82,7 +82,7 @@ def export_print_pdf(layout: PrintLayout, output_path: str | Path) -> Path:
     rows = max(1, layout.rows)
     cols = max(1, layout.cols)
     per_page = rows * cols
-    x0, y0, cell_w, cell_h = _cell_geometry(layout, page_w, page_h)
+    x0, _y0, cell_w, cell_h = _cell_geometry(layout, page_w, page_h)
 
     for page_idx in range(0, max(1, len(layout.image_paths)), per_page):
         batch = layout.image_paths[page_idx:page_idx + per_page]

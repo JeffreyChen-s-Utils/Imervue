@@ -27,7 +27,7 @@ class TestDetectHorizonAngle:
         arr = np.full((60, 60, 4), 100, dtype=np.uint8)
         arr[..., 3] = 255
         angle = auto_straighten.detect_horizon_angle(arr)
-        assert angle == 0.0
+        assert angle == pytest.approx(0.0)
 
     def test_tilted_line_detected(self):
         import cv2

@@ -12,6 +12,9 @@ _JAPANESE_TR5143306B623B3059 = '元に戻す'
 _JAPANESE_TR3084308A76F43057 = 'やり直し'
 _JAPANESE_TR30BD30FC30B930D5 = 'ソースフォルダ：'
 _JAPANESE_TR51FA529B30D530A9 = '出力フォルダ：'
+_JAPANESE_NEW_NAME = '新しい名前：'
+_JAPANESE_PREVIEW = 'プレビュー'
+_JAPANESE_ADD_IMAGES = '画像を追加\u2026'
 _NO_EXPORT_IMAGES = '書き出せる画像がありません。'
 _EXPORT_FAILED = '書き出しに失敗：{err}'
 
@@ -328,7 +331,7 @@ japanese_word_dict = {
     "tag_remove_image": "タグから削除",
     "tag_filter": "ビューアーで表示",
     "tag_create_prompt": "タグ名：",
-    "tag_rename_prompt": "新しい名前：",
+    "tag_rename_prompt": _JAPANESE_NEW_NAME,
     "tag_delete_confirm_title": "タグを削除",
     "tag_delete_confirm": "タグ「{name}」を削除しますか？",
     "tag_menu_title": "タグ",
@@ -341,7 +344,7 @@ japanese_word_dict = {
     "album_remove_image": "アルバムから削除",
     "album_view": "アルバムを表示",
     "album_create_prompt": "アルバム名：",
-    "album_rename_prompt": "新しい名前：",
+    "album_rename_prompt": _JAPANESE_NEW_NAME,
     "album_delete_confirm_title": "アルバムを削除",
     "album_delete_confirm": "アルバム「{name}」を削除しますか？",
     "album_menu_title": _JAPANESE_TR30A230EB30D030E0,
@@ -596,7 +599,7 @@ japanese_word_dict = {
     "organizer_output": _JAPANESE_TR51FA529B30D530A9,
     "organizer_mode_copy": "ファイルをコピー",
     "organizer_mode_move": "ファイルを移動",
-    "organizer_preview": "プレビュー",
+    "organizer_preview": _JAPANESE_PREVIEW,
     "organizer_preview_summary": "{count} 枚の画像を {folders} 個のサブフォルダに分類",
     "organizer_start": "開始",
     "organizer_no_images": "ソースフォルダに画像が見つかりません。",
@@ -678,7 +681,7 @@ japanese_word_dict = {
     "view_browse_mode": "表示モード",
     "view_mode_grid": "グリッド",
     "view_mode_list": "リスト",
-    "list_col_thumb": "プレビュー",
+    "list_col_thumb": _JAPANESE_PREVIEW,
     "list_col_name": "名前",
     "list_col_resolution": _JAPANESE_TR89E350CF5EA6,
     "list_col_size": _JAPANESE_TR30B530A430BA,
@@ -1023,12 +1026,12 @@ japanese_word_dict = {
     "vcopies_snap_prompt": "名前：",
     "vcopies_exists": "同名のスナップショットが既に存在します。",
     "vcopies_rename_title": "スナップショット名変更",
-    "vcopies_new_name": "新しい名前：",
+    "vcopies_new_name": _JAPANESE_NEW_NAME,
     "vcopies_rename_fail": "名前変更失敗 — 名前が既に存在する可能性があります。",
 
     # --- HDR Merge ---
     "hdr_title": "HDR マージ",
-    "hdr_add": "画像を追加\u2026",
+    "hdr_add": _JAPANESE_ADD_IMAGES,
     "hdr_clear": "クリア",
     "hdr_align": "露出を位置合わせ",
     "hdr_method": "方式：",
@@ -1040,7 +1043,7 @@ japanese_word_dict = {
 
     # --- Panorama ---
     "pano_title": "パノラマ合成",
-    "pano_add": "画像を追加\u2026",
+    "pano_add": _JAPANESE_ADD_IMAGES,
     "pano_clear": "クリア",
     "pano_mode": "モード：",
     "pano_mode_panorama": "パノラマ",
@@ -1052,7 +1055,7 @@ japanese_word_dict = {
 
     # --- Focus Stacking ---
     "fstack_title": "フォーカススタッキング",
-    "fstack_add": "画像を追加\u2026",
+    "fstack_add": _JAPANESE_ADD_IMAGES,
     "fstack_clear": "クリア",
     "fstack_align": "画像を位置合わせ",
     "fstack_output": "出力：",
@@ -1160,7 +1163,7 @@ japanese_word_dict = {
     # --- Soft Proofing ---
     "proof_title": "ソフトプルーフ",
     "proof_profile": "ICC プロファイル：",
-    "proof_preview": "プレビュー",
+    "proof_preview": _JAPANESE_PREVIEW,
     "proof_pick": "ICC プロファイルを選択してください。",
     "proof_failed": "プロファイル読み込み失敗。",
     "proof_oog": "色域外ピクセル：",

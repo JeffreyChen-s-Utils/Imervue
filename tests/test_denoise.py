@@ -11,7 +11,8 @@ from Imervue.image import denoise
 
 class TestReduceNoise:
     def test_zero_strength_passes_through(self):
-        arr = np.random.randint(0, 256, (16, 16, 4), dtype=np.uint8)
+        rng = np.random.default_rng(0)
+        arr = rng.integers(0, 256, (16, 16, 4), dtype=np.uint8)
         out = denoise.reduce_noise(arr, strength=0.0)
         assert out is arr
 
@@ -30,7 +31,8 @@ class TestReduceNoise:
         assert out[..., :3].std() < arr[..., :3].std()
 
     def test_luminance_only_mode(self):
-        arr = np.random.randint(0, 256, (32, 32, 4), dtype=np.uint8)
+        rng = np.random.default_rng(1)
+        arr = rng.integers(0, 256, (32, 32, 4), dtype=np.uint8)
         arr[..., 3] = 255
         out = denoise.reduce_noise(arr, strength=0.5, preserve_color=False)
         assert out.shape == arr.shape

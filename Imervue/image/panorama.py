@@ -44,8 +44,8 @@ def _load_bgr(path: str | Path) -> np.ndarray:
 def _crop_black(bgr: np.ndarray) -> np.ndarray:
     """Trim rows/cols that are entirely black from the stitched output."""
     gray = bgr.max(axis=2)
-    rows = np.where(gray.max(axis=1) > 0)[0]
-    cols = np.where(gray.max(axis=0) > 0)[0]
+    rows = np.nonzero(gray.max(axis=1) > 0)[0]
+    cols = np.nonzero(gray.max(axis=0) > 0)[0]
     if len(rows) == 0 or len(cols) == 0:
         return bgr
     r0, r1 = rows[0], rows[-1] + 1

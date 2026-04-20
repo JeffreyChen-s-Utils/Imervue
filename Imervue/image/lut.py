@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
@@ -37,57 +37,79 @@ class CubeLut:
     is_3d: bool = True
 
 
+@dataclass
+class _CubeHeader:
+    size: int = 0
+    is_3d: bool = True
+    domain_min: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    domain_max: list[float] = field(default_factory=lambda: [1.0, 1.0, 1.0])
+
+
+def _apply_header_directive(line: str, upper: str, header: _CubeHeader) -> bool:
+    """Apply a header directive to *header*; return True if the line was handled."""
+    if upper.startswith("TITLE"):
+        return True
+    if upper.startswith("LUT_3D_SIZE"):
+        header.size = int(line.split()[1])
+        header.is_3d = True
+        return True
+    if upper.startswith("LUT_1D_SIZE"):
+        header.size = int(line.split()[1])
+        header.is_3d = False
+        return True
+    if upper.startswith("DOMAIN_MIN"):
+        header.domain_min = [float(x) for x in line.split()[1:4]]
+        return True
+    if upper.startswith("DOMAIN_MAX"):
+        header.domain_max = [float(x) for x in line.split()[1:4]]
+        return True
+    return False
+
+
+def _parse_cube_row(line: str) -> tuple[float, float, float] | None:
+    parts = line.split()
+    if len(parts) != 3:
+        return None
+    try:
+        return (float(parts[0]), float(parts[1]), float(parts[2]))
+    except ValueError as err:
+        raise ValueError(f"bad LUT row: {line!r}") from err
+
+
 def parse_cube(path: str | Path) -> CubeLut:
     """Parse a ``.cube`` LUT file. Raises ``ValueError`` on bad syntax."""
     p = Path(path)
-    size = 0
-    is_3d = True
-    domain_min = [0.0, 0.0, 0.0]
-    domain_max = [1.0, 1.0, 1.0]
+    header = _CubeHeader()
     values: list[tuple[float, float, float]] = []
     with p.open("r", encoding="utf-8", errors="replace") as fh:
         for raw in fh:
             line = raw.split("#", 1)[0].strip()
             if not line:
                 continue
-            upper = line.upper()
-            if upper.startswith("TITLE"):
+            if _apply_header_directive(line, line.upper(), header):
                 continue
-            if upper.startswith("LUT_3D_SIZE"):
-                size = int(line.split()[1])
-                is_3d = True
-            elif upper.startswith("LUT_1D_SIZE"):
-                size = int(line.split()[1])
-                is_3d = False
-            elif upper.startswith("DOMAIN_MIN"):
-                domain_min = [float(x) for x in line.split()[1:4]]
-            elif upper.startswith("DOMAIN_MAX"):
-                domain_max = [float(x) for x in line.split()[1:4]]
-            else:
-                parts = line.split()
-                if len(parts) != 3:
-                    continue
-                try:
-                    values.append(tuple(float(p) for p in parts))  # type: ignore[misc]
-                except ValueError as err:
-                    raise ValueError(f"bad LUT row: {line!r}") from err
+            row = _parse_cube_row(line)
+            if row is not None:
+                values.append(row)
+    size = header.size
     if size <= 0:
         raise ValueError("missing LUT_1D_SIZE / LUT_3D_SIZE header")
     if size > _MAX_CUBE_SIZE:
         raise ValueError(f"LUT size {size} exceeds maximum {_MAX_CUBE_SIZE}")
-    expected = size ** 3 if is_3d else size
+    expected = size ** 3 if header.is_3d else size
     if len(values) != expected:
         raise ValueError(
-            f"expected {expected} rows, got {len(values)} (size={size}, 3D={is_3d})"
+            f"expected {expected} rows, got {len(values)} (size={size}, 3D={header.is_3d})"
         )
     arr = np.asarray(values, dtype=np.float32)
-    table = arr.reshape((size, size, size, 3)) if is_3d else arr.reshape((size, 3))
+    table = (arr.reshape((size, size, size, 3)) if header.is_3d
+             else arr.reshape((size, 3)))
     return CubeLut(
         size=size,
         table=table,
-        domain_min=tuple(domain_min),  # type: ignore[arg-type]
-        domain_max=tuple(domain_max),  # type: ignore[arg-type]
-        is_3d=is_3d,
+        domain_min=tuple(header.domain_min),  # type: ignore[arg-type]
+        domain_max=tuple(header.domain_max),  # type: ignore[arg-type]
+        is_3d=header.is_3d,
     )
 
 

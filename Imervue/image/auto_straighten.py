@@ -29,6 +29,44 @@ def _line_angle_deg(x1: int, y1: int, x2: int, y2: int) -> float:
     return math.degrees(math.atan2(y2 - y1, x2 - x1))
 
 
+def _normalise_angle(angle: float) -> float:
+    """Normalise an angle to (-90, 90]."""
+    while angle > 90.0:
+        angle -= 180.0
+    while angle <= -90.0:
+        angle += 180.0
+    return angle
+
+
+def _bucket_line_angles(
+    lines: np.ndarray,
+) -> tuple[list[float], list[float]]:
+    horiz_devs: list[float] = []
+    vert_devs: list[float] = []
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        angle = _normalise_angle(_line_angle_deg(x1, y1, x2, y2))
+        if abs(angle) <= _HORIZ_THRESHOLD_DEG:
+            horiz_devs.append(angle)
+        else:
+            vert_devs.append(angle - 90.0 if angle > 0 else angle + 90.0)
+    return horiz_devs, vert_devs
+
+
+def _detect_lines(arr: np.ndarray):
+    try:
+        import cv2
+    except ImportError:
+        return None
+    gray = cv2.cvtColor(arr[..., :3], cv2.COLOR_RGB2GRAY)
+    edges = cv2.Canny(gray, 60, 180, apertureSize=3)
+    min_len = max(30, min(arr.shape[:2]) // 10)
+    return cv2.HoughLinesP(
+        edges, rho=1.0, theta=np.pi / 360.0, threshold=80,
+        minLineLength=min_len, maxLineGap=10,
+    )
+
+
 def detect_horizon_angle(arr: np.ndarray) -> float:
     """Return the rotation angle (degrees) that would level the image.
 
@@ -37,36 +75,12 @@ def detect_horizon_angle(arr: np.ndarray) -> float:
     """
     if arr.ndim != 3 or arr.shape[2] != 4:
         raise ValueError("detect_horizon_angle expects HxWx4 RGBA uint8")
-    try:
-        import cv2
-    except ImportError:
-        return 0.0
 
-    gray = cv2.cvtColor(arr[..., :3], cv2.COLOR_RGB2GRAY)
-    edges = cv2.Canny(gray, 60, 180, apertureSize=3)
-    min_len = max(30, min(arr.shape[:2]) // 10)
-    lines = cv2.HoughLinesP(
-        edges, rho=1.0, theta=np.pi / 360.0, threshold=80,
-        minLineLength=min_len, maxLineGap=10,
-    )
+    lines = _detect_lines(arr)
     if lines is None or len(lines) < _MIN_LINES:
         return 0.0
 
-    horiz_devs: list[float] = []
-    vert_devs: list[float] = []
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        angle = _line_angle_deg(x1, y1, x2, y2)
-        # Normalise to (-90, 90].
-        while angle > 90.0:
-            angle -= 180.0
-        while angle <= -90.0:
-            angle += 180.0
-        if abs(angle) <= _HORIZ_THRESHOLD_DEG:
-            horiz_devs.append(angle)
-        else:
-            vert_devs.append(angle - 90.0 if angle > 0 else angle + 90.0)
-
+    horiz_devs, vert_devs = _bucket_line_angles(lines)
     # Prefer the larger bucket so portraits of buildings pick verticals,
     # landscape horizons pick horizontals.
     bucket = horiz_devs if len(horiz_devs) >= len(vert_devs) else vert_devs

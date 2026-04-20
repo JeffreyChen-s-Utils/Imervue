@@ -3,6 +3,7 @@ _TRADITIONAL_CHINESE_TR9006664291DD65CB = '逆時針旋轉'
 _TRADITIONAL_CHINESE_TR91CD65B0547D540D = '重新命名'
 _TRADITIONAL_CHINESE_TR4F866E908CC76599 = '來源資料夾：'
 _TRADITIONAL_CHINESE_TR8F3851FA8CC76599 = '輸出資料夾：'
+_TRADITIONAL_CHINESE_ADD_IMAGES = '加入圖片\u2026'
 _NO_EXPORT_IMAGES = '沒有可匯出的圖片。'
 _EXPORT_FAILED = '匯出失敗：{err}'
 
@@ -1018,7 +1019,7 @@ traditional_chinese_word_dict = {
 
     # --- HDR Merge ---
     "hdr_title": "HDR 合成",
-    "hdr_add": "加入圖片\u2026",
+    "hdr_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
     "hdr_clear": "清除",
     "hdr_align": "對齊曝光",
     "hdr_method": "方法：",
@@ -1030,7 +1031,7 @@ traditional_chinese_word_dict = {
 
     # --- Panorama ---
     "pano_title": "全景接圖",
-    "pano_add": "加入圖片\u2026",
+    "pano_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
     "pano_clear": "清除",
     "pano_mode": "模式：",
     "pano_mode_panorama": "全景",
@@ -1042,7 +1043,7 @@ traditional_chinese_word_dict = {
 
     # --- Focus Stacking ---
     "fstack_title": "景深合成",
-    "fstack_add": "加入圖片\u2026",
+    "fstack_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
     "fstack_clear": "清除",
     "fstack_align": "對齊影像",
     "fstack_output": "輸出：",

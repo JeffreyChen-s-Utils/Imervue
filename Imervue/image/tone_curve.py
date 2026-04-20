@@ -72,7 +72,7 @@ def _monotone_cubic_tangents(xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     # Enforce monotonicity.
     for i in range(n - 1):
         d = deltas[i]
-        if d == 0.0:
+        if abs(d) < 1e-12:
             tangents[i] = 0.0
             tangents[i + 1] = 0.0
             continue

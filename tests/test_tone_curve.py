@@ -46,7 +46,8 @@ class TestBuildLut:
 
 class TestApplyToneCurve:
     def test_identity_leaves_array_unchanged(self):
-        arr = np.random.randint(0, 256, (4, 5, 4), dtype=np.uint8)
+        rng = np.random.default_rng(0)
+        arr = rng.integers(0, 256, (4, 5, 4), dtype=np.uint8)
         out = tc.apply_tone_curve(arr, [])
         assert out is arr
 

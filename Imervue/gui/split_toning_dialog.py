@@ -54,11 +54,11 @@ class SplitToningDialog(QDialog):
 
         form = QFormLayout()
         form.addRow(lang.get("split_shadow_hue", "Shadow hue:"),
-                    self._row_with_label(self._shadow_hue, self._on_hue_change))
+                    self._row_with_label(self._shadow_hue))
         form.addRow(lang.get("split_shadow_sat", "Shadow saturation:"),
                     self._shadow_sat)
         form.addRow(lang.get("split_highlight_hue", "Highlight hue:"),
-                    self._row_with_label(self._highlight_hue, self._on_hue_change))
+                    self._row_with_label(self._highlight_hue))
         form.addRow(lang.get("split_highlight_sat", "Highlight saturation:"),
                     self._highlight_sat)
         form.addRow(lang.get("split_balance", "Balance:"), self._balance)
@@ -80,16 +80,13 @@ class SplitToningDialog(QDialog):
         s.setValue(max(minimum, min(maximum, value)))
         return s
 
-    def _row_with_label(self, s: QSlider, _handler) -> QHBoxLayout:
+    def _row_with_label(self, s: QSlider) -> QHBoxLayout:
         row = QHBoxLayout()
         row.addWidget(s, 1)
         lbl = QLabel(f"{s.value()}°")
         s.valueChanged.connect(lambda v, l=lbl: l.setText(f"{v}°"))
         row.addWidget(lbl)
         return row
-
-    def _on_hue_change(self, _v: int) -> None:
-        pass
 
     def _save(self) -> None:
         existing = get_for_path(self._path) or Recipe()

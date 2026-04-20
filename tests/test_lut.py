@@ -89,7 +89,8 @@ class TestParse:
 class TestApply:
     def test_identity_lut_leaves_pixels_unchanged(self, tmp_path):
         path = _write(tmp_path, "id.cube", _identity_3d_cube(5))
-        arr = np.random.randint(0, 256, (4, 6, 4), dtype=np.uint8)
+        rng = np.random.default_rng(0)
+        arr = rng.integers(0, 256, (4, 6, 4), dtype=np.uint8)
         out = lut_mod.apply_cube_lut(arr, path, intensity=1.0)
         np.testing.assert_array_equal(out[..., 3], arr[..., 3])
         # Identity LUT should be within 1 step of the input (rounding).

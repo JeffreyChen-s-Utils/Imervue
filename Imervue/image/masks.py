@@ -257,7 +257,7 @@ def apply_masks(arr: np.ndarray, masks: list[Mask]) -> np.ndarray:
 
 def _apply_local_adjustments(
     arr: np.ndarray, adj: MaskAdjustments,
-    apply_wb, Image, ImageEnhance,
+    apply_wb, pil_image, pil_enhance,
 ) -> np.ndarray:
     """Apply the mask's deltas to the whole frame (the blend will localize)."""
     out = apply_wb(arr, adj.temperature, adj.tint)
@@ -268,13 +268,13 @@ def _apply_local_adjustments(
         out = out.copy()
         out[..., :3] = rgb.astype(np.uint8)
     if abs(adj.brightness) > 1e-6 or abs(adj.contrast) > 1e-6:
-        img = Image.fromarray(out, mode="RGBA")
+        img = pil_image.fromarray(out, mode="RGBA")
         if abs(adj.brightness) > 1e-6:
-            img = ImageEnhance.Brightness(img).enhance(1.0 + adj.brightness)
+            img = pil_enhance.Brightness(img).enhance(1.0 + adj.brightness)
         if abs(adj.contrast) > 1e-6:
-            img = ImageEnhance.Contrast(img).enhance(1.0 + adj.contrast)
+            img = pil_enhance.Contrast(img).enhance(1.0 + adj.contrast)
         out = np.array(img)
     if abs(adj.saturation) > 1e-6:
-        img = Image.fromarray(out, mode="RGBA")
-        out = np.array(ImageEnhance.Color(img).enhance(1.0 + adj.saturation))
+        img = pil_image.fromarray(out, mode="RGBA")
+        out = np.array(pil_enhance.Color(img).enhance(1.0 + adj.saturation))
     return out

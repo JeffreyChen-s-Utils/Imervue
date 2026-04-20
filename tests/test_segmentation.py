@@ -16,7 +16,8 @@ class TestForegroundMask:
             segmentation.foreground_mask(arr)
 
     def test_returns_hxw_float_mask_in_unit_range(self):
-        arr = np.random.randint(0, 256, (32, 32, 4), dtype=np.uint8)
+        rng = np.random.default_rng(0)
+        arr = rng.integers(0, 256, (32, 32, 4), dtype=np.uint8)
         mask = segmentation.foreground_mask(arr)
         assert mask.shape == (32, 32)
         assert mask.dtype == np.float32

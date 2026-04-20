@@ -33,7 +33,8 @@ class TestHealingSpot:
 
 class TestApplyHealing:
     def test_no_spots_passes_through(self):
-        arr = np.random.randint(0, 256, (16, 16, 4), dtype=np.uint8)
+        rng = np.random.default_rng(0)
+        arr = rng.integers(0, 256, (16, 16, 4), dtype=np.uint8)
         out = healing.apply_healing(arr, [])
         assert out is arr
 

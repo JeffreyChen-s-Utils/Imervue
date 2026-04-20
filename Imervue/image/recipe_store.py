@@ -76,54 +76,65 @@ class RecipeStore:
                 return
             self._load_locked()
 
-    def _load_locked(self) -> None:
-        self._entries = {}
+    def _read_store_file(self) -> dict | None:
+        """Return the parsed on-disk store, or None on any read / format error."""
         try:
             if not self._path.exists():
-                self._loaded = True
-                return
+                return None
             with open(self._path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
             logger.warning(f"Recipe store read failed ({self._path}): {exc}")
-            self._loaded = True
-            return
-
+            return None
         if not isinstance(data, dict):
             logger.warning(f"Recipe store at {self._path} is not a dict; ignoring")
+            return None
+        return data
+
+    @staticmethod
+    def _parse_variants(variants_raw: Any) -> dict[str, dict[str, Any]]:
+        variants: dict[str, dict[str, Any]] = {}
+        if not isinstance(variants_raw, dict):
+            return variants
+        for name, v in variants_raw.items():
+            if not isinstance(v, dict):
+                continue
+            try:
+                Recipe.from_dict(v)
+            except Exception:
+                continue
+            variants[str(name)] = v
+        return variants
+
+    @classmethod
+    def _parse_entry(cls, entry: Any) -> dict[str, Any] | None:
+        if not isinstance(entry, dict):
+            return None
+        recipe_data = entry.get("recipe")
+        if not isinstance(recipe_data, dict):
+            return None
+        try:
+            Recipe.from_dict(recipe_data)
+        except Exception:
+            return None
+        return {
+            "recipe": recipe_data,
+            "last_path": entry.get("last_path", ""),
+            "variants": cls._parse_variants(entry.get("variants")),
+        }
+
+    def _load_locked(self) -> None:
+        self._entries = {}
+        data = self._read_store_file()
+        if data is None:
             self._loaded = True
             return
-
         for identity, entry in data.items():
-            if not isinstance(entry, dict):
-                continue
-            recipe_data = entry.get("recipe")
-            if not isinstance(recipe_data, dict):
-                continue
-            # Validate by round-tripping through Recipe — drops entries that
-            # can't be reconstructed (e.g. field type changes across versions)
-            # instead of exploding on lookup later.
-            try:
-                Recipe.from_dict(recipe_data)
-            except Exception:
+            parsed = self._parse_entry(entry)
+            if parsed is None:
                 logger.debug(f"Dropping unreadable recipe entry for {identity}")
                 continue
-            variants_raw = entry.get("variants")
-            variants: dict[str, dict[str, Any]] = {}
-            if isinstance(variants_raw, dict):
-                for name, v in variants_raw.items():
-                    if not isinstance(v, dict):
-                        continue
-                    try:
-                        Recipe.from_dict(v)
-                    except Exception:
-                        continue
-                    variants[str(name)] = v
-            self._entries[identity] = {
-                "recipe": recipe_data,
-                "last_path": entry.get("last_path", ""),
-                "variants": variants,
-            }
+            self._entries[identity] = parsed
         self._loaded = True
 
     def _save_locked(self) -> None:

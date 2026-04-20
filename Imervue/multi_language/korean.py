@@ -7,6 +7,8 @@ _KOREAN_TRC2E4D58920CDE8C1 = '실행 취소'
 _KOREAN_TRB2E4C2DC20C2E4D5 = '다시 실행'
 _KOREAN_TRC18CC2A420D3F4B3 = '소스 폴더:'
 _KOREAN_TRCD9CB82520D3F4B3 = '출력 폴더:'
+_KOREAN_NEW_NAME = '새 이름:'
+_KOREAN_ADD_IMAGES = '이미지 추가\u2026'
 _NO_EXPORT_IMAGES = '내보낼 이미지가 없습니다.'
 _EXPORT_FAILED = '내보내기 실패: {err}'
 
@@ -323,7 +325,7 @@ korean_word_dict = {
     "tag_remove_image": "태그에서 제거",
     "tag_filter": "뷰어에서 보기",
     "tag_create_prompt": "태그 이름:",
-    "tag_rename_prompt": "새 이름:",
+    "tag_rename_prompt": _KOREAN_NEW_NAME,
     "tag_delete_confirm_title": "태그 삭제",
     "tag_delete_confirm": "태그 '{name}'을(를) 삭제하시겠습니까?",
     "tag_menu_title": "태그",
@@ -336,7 +338,7 @@ korean_word_dict = {
     "album_remove_image": "앨범에서 제거",
     "album_view": "앨범 보기",
     "album_create_prompt": "앨범 이름:",
-    "album_rename_prompt": "새 이름:",
+    "album_rename_prompt": _KOREAN_NEW_NAME,
     "album_delete_confirm_title": "앨범 삭제",
     "album_delete_confirm": "앨범 '{name}'을(를) 삭제하시겠습니까?",
     "album_menu_title": "앨범",
@@ -1018,12 +1020,12 @@ korean_word_dict = {
     "vcopies_snap_prompt": "이름:",
     "vcopies_exists": "같은 이름의 스냅샷이 이미 존재합니다.",
     "vcopies_rename_title": "스냅샷 이름 변경",
-    "vcopies_new_name": "새 이름:",
+    "vcopies_new_name": _KOREAN_NEW_NAME,
     "vcopies_rename_fail": "이름 변경 실패 — 이름이 이미 존재할 수 있습니다.",
 
     # --- HDR Merge ---
     "hdr_title": "HDR 병합",
-    "hdr_add": "이미지 추가\u2026",
+    "hdr_add": _KOREAN_ADD_IMAGES,
     "hdr_clear": "지우기",
     "hdr_align": "노출 정렬",
     "hdr_method": "방법:",
@@ -1035,7 +1037,7 @@ korean_word_dict = {
 
     # --- Panorama ---
     "pano_title": "파노라마 스티치",
-    "pano_add": "이미지 추가\u2026",
+    "pano_add": _KOREAN_ADD_IMAGES,
     "pano_clear": "지우기",
     "pano_mode": "모드:",
     "pano_mode_panorama": "파노라마",
@@ -1047,7 +1049,7 @@ korean_word_dict = {
 
     # --- Focus Stacking ---
     "fstack_title": "포커스 스태킹",
-    "fstack_add": "이미지 추가\u2026",
+    "fstack_add": _KOREAN_ADD_IMAGES,
     "fstack_clear": "지우기",
     "fstack_align": "이미지 정렬",
     "fstack_output": "출력:",

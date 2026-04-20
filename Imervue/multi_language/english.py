@@ -18,6 +18,11 @@ _ENGLISH_UNDO = 'Undo'
 _ENGLISH_REDO = 'Redo'
 _ENGLISH_SOURCE_FOLDER = 'Source folder:'
 _ENGLISH_OUTPUT_FOLDER = 'Output folder:'
+_ENGLISH_OUTPUT_LABEL = 'Output:'
+_ENGLISH_NEW_NAME = 'New name:'
+_ENGLISH_METHOD_LABEL = 'Method:'
+_ENGLISH_NAME_LABEL = 'Name:'
+_ENGLISH_ADD_IMAGES = 'Add images\u2026'
 _NO_EXPORT_IMAGES = 'No images to export.'
 _EXPORT_FAILED = 'Export failed: {err}'
 
@@ -334,7 +339,7 @@ english_word_dict = {
     "tag_remove_image": "Remove from Tag",
     "tag_filter": "Show in Viewer",
     "tag_create_prompt": "Tag name:",
-    "tag_rename_prompt": "New name:",
+    "tag_rename_prompt": _ENGLISH_NEW_NAME,
     "tag_delete_confirm_title": "Delete Tag",
     "tag_delete_confirm": "Delete tag '{name}'?",
     "tag_menu_title": _ENGLISH_TAGS,
@@ -347,7 +352,7 @@ english_word_dict = {
     "album_remove_image": "Remove from Album",
     "album_view": "View Album",
     "album_create_prompt": "Album name:",
-    "album_rename_prompt": "New name:",
+    "album_rename_prompt": _ENGLISH_NEW_NAME,
     "album_delete_confirm_title": "Delete Album",
     "album_delete_confirm": "Delete album '{name}'?",
     "album_menu_title": _ENGLISH_ALBUMS,
@@ -567,7 +572,7 @@ english_word_dict = {
     # Duplicate detection
     "duplicate_title": "Find Duplicate Images",
     "duplicate_source": _ENGLISH_SOURCE_FOLDER,
-    "duplicate_method": "Method:",
+    "duplicate_method": _ENGLISH_METHOD_LABEL,
     "duplicate_exact": "Exact Match (File Hash)",
     "duplicate_perceptual": "Perceptual (Similarity)",
     "duplicate_threshold": "Sensitivity:",
@@ -906,7 +911,7 @@ english_word_dict = {
     "workspace_load": "Load",
     "workspace_rename": "Rename",
     "workspace_delete": "Delete",
-    "workspace_name_label": "Name:",
+    "workspace_name_label": _ENGLISH_NAME_LABEL,
     "workspace_overwrite_title": "Overwrite workspace?",
     "workspace_overwrite_msg": (
         "A workspace named '{name}' already exists. Overwrite it?"
@@ -941,7 +946,7 @@ english_word_dict = {
     "macro_steps_heading": "Steps",
     "macro_new": "New\u2026",
     "macro_new_title": "New Macro",
-    "macro_new_prompt": "Name:",
+    "macro_new_prompt": _ENGLISH_NAME_LABEL,
     "macro_delete": _ENGLISH_DELETE,
     "macro_delete_title": "Delete Macro",
     "macro_delete_confirm": "Delete macro '{name}'?",
@@ -1033,42 +1038,42 @@ english_word_dict = {
     "vcopies_rename": "Rename",
     "vcopies_delete": "Delete",
     "vcopies_snap_title": "Snapshot name",
-    "vcopies_snap_prompt": "Name:",
+    "vcopies_snap_prompt": _ENGLISH_NAME_LABEL,
     "vcopies_exists": "A snapshot with that name already exists.",
     "vcopies_rename_title": "Rename snapshot",
-    "vcopies_new_name": "New name:",
+    "vcopies_new_name": _ENGLISH_NEW_NAME,
     "vcopies_rename_fail": "Rename failed \u2014 name may already exist.",
 
     # --- HDR Merge ---
     "hdr_title": "HDR Merge",
-    "hdr_add": "Add images\u2026",
+    "hdr_add": _ENGLISH_ADD_IMAGES,
     "hdr_clear": "Clear",
     "hdr_align": "Align exposures",
-    "hdr_method": "Method:",
+    "hdr_method": _ENGLISH_METHOD_LABEL,
     "hdr_mertens": "Mertens (fusion)",
     "hdr_debevec": "Debevec + Reinhard",
-    "hdr_output": "Output:",
+    "hdr_output": _ENGLISH_OUTPUT_LABEL,
     "hdr_run": "Merge",
     "hdr_hint": "Pick 2+ differently-exposed shots (Mertens exposure fusion).",
 
     # --- Panorama ---
     "pano_title": "Panorama Stitch",
-    "pano_add": "Add images\u2026",
+    "pano_add": _ENGLISH_ADD_IMAGES,
     "pano_clear": "Clear",
     "pano_mode": "Mode:",
     "pano_mode_panorama": "Panorama",
     "pano_mode_scans": "Scans (flat documents)",
     "pano_crop": "Crop black borders",
-    "pano_output": "Output:",
+    "pano_output": _ENGLISH_OUTPUT_LABEL,
     "pano_run": "Stitch",
     "pano_hint": "Pick overlapping shots in order. Requires 2+ images with 20\u201340% overlap.",
 
     # --- Focus Stacking ---
     "fstack_title": "Focus Stacking",
-    "fstack_add": "Add images\u2026",
+    "fstack_add": _ENGLISH_ADD_IMAGES,
     "fstack_clear": "Clear",
     "fstack_align": "Align images",
-    "fstack_output": "Output:",
+    "fstack_output": _ENGLISH_OUTPUT_LABEL,
     "fstack_run": "Stack",
     "fstack_hint": "Pick a bracket of shots with different focus distances \u2014 macro / product shooters.",
 
@@ -1076,10 +1081,10 @@ english_word_dict = {
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",
     "heal_radius": "Radius:",
-    "heal_method": "Method:",
+    "heal_method": _ENGLISH_METHOD_LABEL,
     "heal_telea": "Telea (fast)",
     "heal_ns": "Navier-Stokes (smooth)",
-    "heal_output": "Output:",
+    "heal_output": _ENGLISH_OUTPUT_LABEL,
     "heal_run": "Apply & Save",
     "heal_count": "{n} spot(s)",
 
@@ -1089,7 +1094,7 @@ english_word_dict = {
     "lens_vignette": "Vignette correction:",
     "lens_ca_red": "Chromatic aberration (red):",
     "lens_ca_blue": "Chromatic aberration (blue):",
-    "lens_output": "Output:",
+    "lens_output": _ENGLISH_OUTPUT_LABEL,
     "lens_run": "Apply",
 
     # --- Map View ---
@@ -1139,7 +1144,7 @@ english_word_dict = {
     "stamp_title": "Clone Stamp",
     "stamp_radius": "Radius (px):",
     "stamp_hint": "Shift+click to set source \u2022 click to stamp \u2022 right-click to undo",
-    "stamp_output": "Output:",
+    "stamp_output": _ENGLISH_OUTPUT_LABEL,
     "stamp_run": "Apply",
 
     # --- Crop / Straighten / Perspective ---
@@ -1149,7 +1154,7 @@ english_word_dict = {
     "crop_y": "Crop Y (0..1):",
     "crop_w": "Crop width (0..1):",
     "crop_h": "Crop height (0..1):",
-    "crop_output": "Output:",
+    "crop_output": _ENGLISH_OUTPUT_LABEL,
     "crop_run": "Apply",
 
     # --- Noise Reduction / Sharpening ---
@@ -1158,7 +1163,7 @@ english_word_dict = {
     "nr_luma_only": "Luminance only",
     "nr_sharpen_amount": "Sharpen amount:",
     "nr_sharpen_radius": "Sharpen radius (px):",
-    "nr_output": "Output:",
+    "nr_output": _ENGLISH_OUTPUT_LABEL,
     "nr_run": "Apply",
 
     # --- Sky / Background ---
@@ -1167,7 +1172,7 @@ english_word_dict = {
     "sky_mode_sky": "Replace sky with gradient",
     "sky_mode_trans": "Remove background (transparent)",
     "sky_mode_white": "Remove background (white)",
-    "sky_output": "Output:",
+    "sky_output": _ENGLISH_OUTPUT_LABEL,
     "sky_run": "Apply",
 
     # --- Soft Proofing ---
@@ -1200,6 +1205,6 @@ english_word_dict = {
     "autostr_title": "Auto-Straighten",
     "autostr_detect": "Detect angle",
     "autostr_angle": "Rotation (\u00b0):",
-    "autostr_output": "Output:",
+    "autostr_output": _ENGLISH_OUTPUT_LABEL,
     "autostr_apply": "Apply",
 }

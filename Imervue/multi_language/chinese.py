@@ -3,6 +3,7 @@ _CHINESE_TR900665F6948865CB = '逆时针旋转'
 _CHINESE_TR91CD547D540D = '重命名'
 _CHINESE_TR6E9065874EF65939 = '源文件夹：'
 _CHINESE_TR8F9351FA65874EF6 = '输出文件夹：'
+_CHINESE_ADD_IMAGES = '添加图片\u2026'
 _NO_EXPORT_IMAGES = '没有可导出的图片。'
 _EXPORT_FAILED = '导出失败：{err}'
 
@@ -1019,7 +1020,7 @@ chinese_word_dict = {
 
     # --- HDR Merge ---
     "hdr_title": "HDR 合成",
-    "hdr_add": "添加图片\u2026",
+    "hdr_add": _CHINESE_ADD_IMAGES,
     "hdr_clear": "清除",
     "hdr_align": "对齐曝光",
     "hdr_method": "方法：",
@@ -1031,7 +1032,7 @@ chinese_word_dict = {
 
     # --- Panorama ---
     "pano_title": "全景拼接",
-    "pano_add": "添加图片\u2026",
+    "pano_add": _CHINESE_ADD_IMAGES,
     "pano_clear": "清除",
     "pano_mode": "模式：",
     "pano_mode_panorama": "全景",
@@ -1043,7 +1044,7 @@ chinese_word_dict = {
 
     # --- Focus Stacking ---
     "fstack_title": "景深合成",
-    "fstack_add": "添加图片\u2026",
+    "fstack_add": _CHINESE_ADD_IMAGES,
     "fstack_clear": "清除",
     "fstack_align": "对齐图像",
     "fstack_output": "输出：",
