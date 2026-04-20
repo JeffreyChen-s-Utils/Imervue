@@ -802,6 +802,18 @@ japanese_word_dict = {
     "metadata_export_count": "ファイル数：{n}",
     "metadata_export_done": "{n} 行を {path} に書き出しました",
     "metadata_export_save_title": "メタデータを保存",
+    # XMP サイドカー
+    "xmp_title": "XMP サイドカー",
+    "xmp_explain": (
+        "Lightroom 互換の .xmp サイドカーを読み書きし、評価 / タイトル / "
+        "説明 / キーワード（タグ）/ カラーラベルを Lightroom / Bridge / "
+        "Capture One と相互交換します。"
+    ),
+    "xmp_count": "現在のビューに {n} 枚。",
+    "xmp_export": "サイドカー書き出し",
+    "xmp_import": "サイドカー読み込み",
+    "xmp_export_done": "書き出し {ok}、スキップ {skip}、失敗 {f}。",
+    "xmp_import_done": "読み込み {ok}、見つからない {miss}、失敗 {f}。",
     # 選別（Culling）
     "culling_title": "選別",
     "culling_explain": "現在のフォルダを選別状態でフィルタ、またはリジェクト済みの画像をディスクから完全削除します。",

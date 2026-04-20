@@ -79,6 +79,10 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
         lang.get("metadata_export_title", "Export Metadata (CSV / JSON)"))
     meta_action.triggered.connect(lambda: _open_metadata_export(ui))
 
+    # XMP sidecar 匯入 / 匯出（Lightroom / Capture One 相容）
+    xmp_action = menu.addAction(lang.get("xmp_title", "XMP Sidecars"))
+    xmp_action.triggered.connect(lambda: _open_xmp_sidecar(ui))
+
     # 分揀 (Pick / Reject)
     cull_action = menu.addAction(
         lang.get("culling_title", "Culling"))
@@ -189,6 +193,11 @@ def _open_token_rename(ui: ImervueMainWindow):
 def _open_metadata_export(ui: ImervueMainWindow):
     from Imervue.gui.metadata_export_dialog import open_metadata_export
     open_metadata_export(ui)
+
+
+def _open_xmp_sidecar(ui: ImervueMainWindow):
+    from Imervue.gui.xmp_sidecar_dialog import open_xmp_sidecar
+    open_xmp_sidecar(ui)
 
 
 def _open_culling(ui: ImervueMainWindow):

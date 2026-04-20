@@ -793,6 +793,18 @@ chinese_word_dict = {
     "metadata_export_count": "文件数：{n}",
     "metadata_export_done": "已导出 {n} 条数据至 {path}",
     "metadata_export_save_title": "保存 metadata",
+    # XMP 伴随文件
+    "xmp_title": "XMP 伴随文件",
+    "xmp_explain": (
+        "读取或写入与 Lightroom 兼容的 .xmp 伴随文件，保存评分、标题、"
+        "描述、关键字（标签）与颜色标签，可与 Lightroom / Bridge / "
+        "Capture One 互通。"
+    ),
+    "xmp_count": "当前视图中有 {n} 张图片。",
+    "xmp_export": "导出伴随文件",
+    "xmp_import": "导入伴随文件",
+    "xmp_export_done": "导出 {ok}，跳过 {skip}，失败 {f}。",
+    "xmp_import_done": "导入 {ok}，缺失 {miss}，失败 {f}。",
     # 分拣（Culling）
     "culling_title": "分拣",
     "culling_explain": "按分拣状态筛选当前文件夹，或将所有标记为剔除的图片永久删除到磁盘。",

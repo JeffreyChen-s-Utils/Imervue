@@ -797,6 +797,18 @@ korean_word_dict = {
     "metadata_export_count": "파일 수: {n}",
     "metadata_export_done": "{n}개 행을 {path}로 내보냈습니다",
     "metadata_export_save_title": "메타데이터 저장",
+    # XMP 사이드카
+    "xmp_title": "XMP 사이드카",
+    "xmp_explain": (
+        "Lightroom 호환 .xmp 사이드카를 이미지 옆에 읽고 쓰며, 별점 / 제목 / "
+        "설명 / 키워드(태그) / 색상 라벨을 Lightroom / Bridge / Capture One "
+        "과 상호 교환합니다."
+    ),
+    "xmp_count": "현재 보기에 {n} 장.",
+    "xmp_export": "사이드카 내보내기",
+    "xmp_import": "사이드카 가져오기",
+    "xmp_export_done": "내보냄 {ok}, 건너뜀 {skip}, 실패 {f}.",
+    "xmp_import_done": "가져옴 {ok}, 없음 {miss}, 실패 {f}.",
     # 선별 (Culling)
     "culling_title": "선별",
     "culling_explain": "현재 폴더를 선별 상태로 필터링하거나 거부된 모든 이미지를 디스크에서 영구 삭제합니다.",

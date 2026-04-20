@@ -793,6 +793,17 @@ traditional_chinese_word_dict = {
     "metadata_export_count": "檔案數：{n}",
     "metadata_export_done": "已匯出 {n} 筆資料至 {path}",
     "metadata_export_save_title": "儲存 metadata",
+    # XMP 伴隨檔
+    "xmp_title": "XMP 伴隨檔",
+    "xmp_explain": (
+        "讀寫與 Lightroom 相容的 .xmp 伴隨檔，保存評分、標題、描述、"
+        "關鍵字（標籤）與顏色標籤，可與 Lightroom / Bridge / Capture One 互通。"
+    ),
+    "xmp_count": "目前檢視共 {n} 張圖片。",
+    "xmp_export": "匯出伴隨檔",
+    "xmp_import": "匯入伴隨檔",
+    "xmp_export_done": "匯出 {ok}，略過 {skip}，失敗 {f}。",
+    "xmp_import_done": "匯入 {ok}，缺少 {miss}，失敗 {f}。",
     # 分揀（Culling）
     "culling_title": "分揀",
     "culling_explain": "依分揀狀態篩選目前資料夾，或將所有標記為剔除的圖片永久刪除到磁碟。",

@@ -808,6 +808,18 @@ english_word_dict = {
     "metadata_export_count": "Files: {n}",
     "metadata_export_done": "Exported {n} rows to {path}",
     "metadata_export_save_title": "Save metadata",
+    # XMP sidecar
+    "xmp_title": "XMP Sidecars",
+    "xmp_explain": (
+        "Read or write Lightroom-compatible .xmp sidecar files alongside each "
+        "image. Stores rating, title, description, keywords (tags) and colour "
+        "label so edits round-trip with Lightroom, Bridge, Capture One."
+    ),
+    "xmp_count": "{n} image(s) in this view.",
+    "xmp_export": "Export sidecars",
+    "xmp_import": "Import sidecars",
+    "xmp_export_done": "Exported {ok}, skipped {skip}, failed {f}.",
+    "xmp_import_done": "Imported {ok}, missing {miss}, failed {f}.",
     # Culling
     "culling_title": "Culling",
     "culling_explain": "Filter the current folder by cull state, or permanently delete all rejected images to disk.",
