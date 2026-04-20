@@ -241,6 +241,7 @@ xcrun stapler staple dist/Imervue.app
 - `--collect-submodules PySide6`：避免少數 Qt 子模組漏掉。
 - `--collect-data qt_material`：qt-material 的 QSS / 資源。
 - `--add-data`：語言檔和 plugins 目錄。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。
+- `defusedxml`：`Imervue/image/xmp_sidecar.py` 會用 `defusedxml` 做 XMP sidecar 的安全 XML 解析（bandit `B405`–`B411`）。PyInstaller 的靜態 import 分析會自動把它收進來，不需要額外 `--collect-all defusedxml`。但**務必確認 venv 已 `pip install defusedxml`**——沒裝的話 XMP 讀寫功能在 frozen 產物中會拋 `ModuleNotFoundError: defusedxml` 而非 silent fallback。
 
 ## 3. 使用 auto-py-to-exe（僅 Windows，GUI 方式）
 
@@ -352,7 +353,7 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 5. 載入至少一個 plugin（例如 `plugins/object_splitter`）——驗證 plugin 目錄與 `models/` 子目錄
 6. 新增 / 列出書籤——驗證 `user_setting.json` 讀寫路徑
 7. 執行期 pip 安裝：跑一個帶依賴的 plugin（如 AI 背景移除），安裝成功後 **關閉 app → 重開 → 不用再安裝就能用** ⇒ 代表 `lib/site-packages` 有正確被加進 `sys.path`
-8. 修改面板（Develop）：調整曝光 / 亮度滑桿——畫布即時預覽，不修改原檔；儲存後才寫入磁碟
+8. 修改面板（Develop）：調整曝光 / 亮度 / **白平衡（色溫、色調）/ 色調分區（Shadows、Midtones、Highlights）/ Vibrance** 滑桿——畫布即時預覽，不修改原檔；儲存後才寫入磁碟
 9. AI 圖片放大：選擇傳統方法（Lanczos / Bicubic / Nearest）放大，不需安裝 ONNX 依賴即可運作
 10. 圖片淨化重繪：選擇傳統放大方法搭配目標解析度，確認輸出圖片尺寸正確且 EXIF 已清除
 11. 命令面板（`Ctrl+Shift+P`）：鍵入動作名稱、模糊匹配並執行——驗證快捷鍵對照表與動作註冊表在 frozen 環境載入完整
@@ -360,8 +361,11 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 13. 外部編輯器：設定系統上的 Photoshop／GIMP／Krita → 右鍵「在外部編輯器開啟」——驗證 `subprocess` 在 frozen 環境下能 spawn 外部程式
 14. 匯出 Contact sheet（PNG／PDF）／ HTML gallery／MP4 投影片——驗證 `imageio-ffmpeg` 的 ffmpeg binary 能被找到，且 PIL 字型資源被完整收集
 15. Library 索引與智慧相簿：重建索引、建一個規則式相簿（例如「ISO ≥ 800」）——驗證 sqlite 檔寫入使用者設定目錄、EXIF 讀取正常
-16. Culling 標記（`P` / `X` / `U`）、色彩標籤（`F1`-`F5`）、重複圖片偵測、EXIF 剝除——驗證 sidecar（`.imervue.json`）讀寫與 `imagehash` / `piexif` 被打包
+16. Culling 標記（`P` / `X` / `U`）、色彩標籤（`F1`-`F5`）、**星等評分（`1`-`5` 在 list view 欄位與 EXIF 側欄星條顯示）**、重複圖片偵測、EXIF 剝除——驗證 sidecar（`.imervue.json`）讀寫與 `imagehash` / `piexif` 被打包
 17. Timeline 時間軸檢視與模糊搜尋（`Ctrl+F`）——驗證 EXIF 日期解析與搜尋索引建置
-18. Compare overlay：選兩張圖 → 開啟疊合比對，切換融合／差異模式——驗證 GPU shader 在 frozen 下編譯成功
+18. Compare overlay：選兩張圖 → 開啟疊合比對，切換融合／差異模式，**切到 A|B split 分頁驗證前後對比拖曳條**——驗證 GPU shader 在 frozen 下編譯成功
 19. 分頁（`,` / `.`）／雙頁（`Tab`）／列表（`L`）三種檢視切換，並在列表中 hover 預覽——驗證 OpenGL 替代佈局貼圖建置與 hover 視窗渲染
 20. 歷史返回／前進（`Alt+←` / `Alt+→`）、裁切工具、非破壞性 develop：裁切＋調整後關閉並重開，狀態保留——驗證 `.imervue.json` recipe 寫回
+21. **浮水印疊加**：開啟浮水印對話框，套用文字 / 圖片浮水印於輸出——驗證 PIL 的 `ImageDraw` / `ImageFont` 在 frozen 下能載入字型資源
+22. **Export presets**：用 Web 1600px / Print 300dpi / Instagram 1080×1080 三種預設匯出——驗證 PIL 的 resample / DPI metadata 寫入正常
+23. **XMP sidecar**：載入含 Lightroom／Capture One 產生的 `.xmp` 圖片，確認星等 / 色彩標籤 / 開發參數被讀取；編輯後存檔再用 LR/C1 開啟，確認 sidecar 能被對方讀回——驗證 `defusedxml` 被打包進產物
