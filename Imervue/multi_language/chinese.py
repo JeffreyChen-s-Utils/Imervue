@@ -984,4 +984,108 @@ chinese_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "幻灯片已写入：{path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "色调曲线",
+    "tone_curve_channel_label": "通道：",
+    "tone_curve_reset": "重置该通道",
+    "tone_curve_hint": "左键空白处新增控制点；拖拽移动；右键删除。",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "红",
+    "curve_channel_g": "绿",
+    "curve_channel_b": "蓝",
+
+    # --- LUT ---
+    "lut_title": "应用 .cube LUT",
+    "lut_file": ".cube 文件：",
+    "lut_clear": "清除",
+    "lut_intensity": "强度：",
+    "lut_pick": "选择 .cube LUT",
+    "lut_hint": "可载入任意 Adobe .cube LUT（最高 64\u00b3）。强度滑块与原图混合。",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "虚拟副本",
+    "vcopies_hint": "为这张图的 recipe 保存命名快照，随时切换。",
+    "vcopies_snap": "快照当前 →",
+    "vcopies_apply": "应用",
+    "vcopies_rename": "重命名",
+    "vcopies_delete": "删除",
+    "vcopies_snap_title": "快照名称",
+    "vcopies_snap_prompt": "名称：",
+    "vcopies_exists": "已存在同名快照。",
+    "vcopies_rename_title": "重命名快照",
+    "vcopies_new_name": "新名称：",
+    "vcopies_rename_fail": "重命名失败 — 名称可能已存在。",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR 合成",
+    "hdr_add": "添加图片\u2026",
+    "hdr_clear": "清除",
+    "hdr_align": "对齐曝光",
+    "hdr_method": "方法：",
+    "hdr_mertens": "Mertens（融合）",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "输出：",
+    "hdr_run": "合成",
+    "hdr_hint": "选择 2 张以上不同曝光（使用 Mertens 曝光融合）。",
+
+    # --- Panorama ---
+    "pano_title": "全景拼接",
+    "pano_add": "添加图片\u2026",
+    "pano_clear": "清除",
+    "pano_mode": "模式：",
+    "pano_mode_panorama": "全景",
+    "pano_mode_scans": "扫描（平面文档）",
+    "pano_crop": "裁去黑边",
+    "pano_output": "输出：",
+    "pano_run": "拼接",
+    "pano_hint": "按顺序选择重叠照片。至少 2 张，20\u201340% 重叠。",
+
+    # --- Focus Stacking ---
+    "fstack_title": "景深合成",
+    "fstack_add": "添加图片\u2026",
+    "fstack_clear": "清除",
+    "fstack_align": "对齐图像",
+    "fstack_output": "输出：",
+    "fstack_run": "合成",
+    "fstack_hint": "选择不同对焦距离的多张图像（微距 / 产品）。",
+
+    # --- Healing Brush ---
+    "heal_title": "修复画笔",
+    "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",
+    "heal_radius": "半径：",
+    "heal_method": "方法：",
+    "heal_telea": "Telea（快速）",
+    "heal_ns": "Navier-Stokes（平滑）",
+    "heal_output": "输出：",
+    "heal_run": "应用并保存",
+    "heal_count": "{n} 个修复点",
+
+    # --- Lens Correction ---
+    "lens_title": "镜头校正",
+    "lens_k1": "畸变（桶形 / 枕形）：",
+    "lens_vignette": "暗角补偿：",
+    "lens_ca_red": "色差（红）：",
+    "lens_ca_blue": "色差（蓝）：",
+    "lens_output": "输出：",
+    "lens_run": "应用",
+
+    # --- Map View ---
+    "map_title": "地图视图",
+    "map_count": "扫描 {total} 张，其中 {n} 张带 GPS。",
+    "map_fallback": "未安装 QtWebEngine — 以坐标列表显示。",
+
+    # --- Calendar View ---
+    "calendar_title": "日历视图",
+    "calendar_summary": "{days} 天有照片，共 {total} 张。",
+
+    # --- Face Detection ---
+    "face_title": "人脸检测",
+    "face_hint": "使用 OpenCV Haar 分类器。名称将随 recipe 保存。",
+    "face_detect": "检测人脸",
+    "face_clear": "清除",
+    "face_remove": "移除所选",
+    "face_list": "检测到的脸（双击以命名）：",
+    "face_found": "共 {n} 张脸。",
+    "face_save": "保存",
 }

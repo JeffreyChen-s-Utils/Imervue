@@ -1006,4 +1006,108 @@ english_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "Slideshow written: {path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "Tone Curve",
+    "tone_curve_channel_label": "Channel:",
+    "tone_curve_reset": "Reset Channel",
+    "tone_curve_hint": "Left-click empty area to add a point; drag to move; right-click to delete.",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "Red",
+    "curve_channel_g": "Green",
+    "curve_channel_b": "Blue",
+
+    # --- LUT ---
+    "lut_title": "Apply .cube LUT",
+    "lut_file": ".cube file:",
+    "lut_clear": "Clear",
+    "lut_intensity": "Intensity:",
+    "lut_pick": "Select .cube LUT",
+    "lut_hint": "Pick any Adobe .cube LUT (up to 64\u00b3). Intensity blends with the original.",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "Virtual Copies",
+    "vcopies_hint": "Named snapshots of this image's recipe \u2014 swap any time.",
+    "vcopies_snap": "Snap current \u2192",
+    "vcopies_apply": "Apply",
+    "vcopies_rename": "Rename",
+    "vcopies_delete": "Delete",
+    "vcopies_snap_title": "Snapshot name",
+    "vcopies_snap_prompt": "Name:",
+    "vcopies_exists": "A snapshot with that name already exists.",
+    "vcopies_rename_title": "Rename snapshot",
+    "vcopies_new_name": "New name:",
+    "vcopies_rename_fail": "Rename failed \u2014 name may already exist.",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR Merge",
+    "hdr_add": "Add images\u2026",
+    "hdr_clear": "Clear",
+    "hdr_align": "Align exposures",
+    "hdr_method": "Method:",
+    "hdr_mertens": "Mertens (fusion)",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "Output:",
+    "hdr_run": "Merge",
+    "hdr_hint": "Pick 2+ differently-exposed shots (Mertens exposure fusion).",
+
+    # --- Panorama ---
+    "pano_title": "Panorama Stitch",
+    "pano_add": "Add images\u2026",
+    "pano_clear": "Clear",
+    "pano_mode": "Mode:",
+    "pano_mode_panorama": "Panorama",
+    "pano_mode_scans": "Scans (flat documents)",
+    "pano_crop": "Crop black borders",
+    "pano_output": "Output:",
+    "pano_run": "Stitch",
+    "pano_hint": "Pick overlapping shots in order. Requires 2+ images with 20\u201340% overlap.",
+
+    # --- Focus Stacking ---
+    "fstack_title": "Focus Stacking",
+    "fstack_add": "Add images\u2026",
+    "fstack_clear": "Clear",
+    "fstack_align": "Align images",
+    "fstack_output": "Output:",
+    "fstack_run": "Stack",
+    "fstack_hint": "Pick a bracket of shots with different focus distances \u2014 macro / product shooters.",
+
+    # --- Healing Brush ---
+    "heal_title": "Healing Brush",
+    "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",
+    "heal_radius": "Radius:",
+    "heal_method": "Method:",
+    "heal_telea": "Telea (fast)",
+    "heal_ns": "Navier-Stokes (smooth)",
+    "heal_output": "Output:",
+    "heal_run": "Apply & Save",
+    "heal_count": "{n} spot(s)",
+
+    # --- Lens Correction ---
+    "lens_title": "Lens Correction",
+    "lens_k1": "Distortion (barrel / pincushion):",
+    "lens_vignette": "Vignette correction:",
+    "lens_ca_red": "Chromatic aberration (red):",
+    "lens_ca_blue": "Chromatic aberration (blue):",
+    "lens_output": "Output:",
+    "lens_run": "Apply",
+
+    # --- Map View ---
+    "map_title": "Map View",
+    "map_count": "Plotting {n} geotagged image(s) of {total} scanned.",
+    "map_fallback": "QtWebEngine is not installed \u2014 showing coordinates as a list.",
+
+    # --- Calendar View ---
+    "calendar_title": "Calendar View",
+    "calendar_summary": "{days} day(s) with photos; {total} image(s) total.",
+
+    # --- Face Detection ---
+    "face_title": "Face Detection",
+    "face_hint": "Runs OpenCV's Haar cascade. Names are saved with the recipe.",
+    "face_detect": "Detect Faces",
+    "face_clear": "Clear",
+    "face_remove": "Remove selected",
+    "face_list": "Detected faces (double-click to rename):",
+    "face_found": "{n} face(s) total.",
+    "face_save": "Save",
 }

@@ -129,6 +129,51 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
         a = timeline_menu.addAction(lang.get(f"timeline_by_{gran_key}", fallback))
         a.triggered.connect(lambda checked, g=gran_key: _open_timeline(ui, g))
 
+    # 行事曆檢視（依拍攝日期）
+    calendar_action = menu.addAction(
+        lang.get("calendar_title", "Calendar View"))
+    calendar_action.triggered.connect(lambda: _open_calendar_view(ui))
+
+    # 地圖檢視（GPS）
+    map_action = menu.addAction(lang.get("map_title", "Map View"))
+    map_action.triggered.connect(lambda: _open_map_view(ui))
+
+    menu.addSeparator()
+
+    # --- Non-destructive develop editors (per-image) ---
+    tone_action = menu.addAction(lang.get("tone_curve_title", "Tone Curve"))
+    tone_action.triggered.connect(lambda: _open_tone_curve(ui))
+
+    lut_action = menu.addAction(lang.get("lut_title", "Apply .cube LUT"))
+    lut_action.triggered.connect(lambda: _open_lut(ui))
+
+    vcopies_action = menu.addAction(
+        lang.get("vcopies_title", "Virtual Copies"))
+    vcopies_action.triggered.connect(lambda: _open_virtual_copies(ui))
+
+    face_action = menu.addAction(lang.get("face_title", "Face Detection"))
+    face_action.triggered.connect(lambda: _open_face_detection(ui))
+
+    menu.addSeparator()
+
+    # --- Destructive transforms (output a new file) ---
+    lens_action = menu.addAction(
+        lang.get("lens_title", "Lens Correction"))
+    lens_action.triggered.connect(lambda: _open_lens_correction(ui))
+
+    heal_action = menu.addAction(lang.get("heal_title", "Healing Brush"))
+    heal_action.triggered.connect(lambda: _open_healing_brush(ui))
+
+    hdr_action = menu.addAction(lang.get("hdr_title", "HDR Merge"))
+    hdr_action.triggered.connect(lambda: _open_hdr_merge(ui))
+
+    pano_action = menu.addAction(lang.get("pano_title", "Panorama Stitch"))
+    pano_action.triggered.connect(lambda: _open_panorama(ui))
+
+    fstack_action = menu.addAction(
+        lang.get("fstack_title", "Focus Stacking"))
+    fstack_action.triggered.connect(lambda: _open_focus_stack(ui))
+
 
 def _open_batch_convert(ui: ImervueMainWindow):
     from Imervue.gui.batch_convert_dialog import open_batch_convert
@@ -238,3 +283,58 @@ def _open_web_gallery(ui: ImervueMainWindow):
 def _open_slideshow_mp4(ui: ImervueMainWindow):
     from Imervue.gui.slideshow_mp4_dialog import open_slideshow_mp4_dialog
     open_slideshow_mp4_dialog(ui)
+
+
+def _open_calendar_view(ui: ImervueMainWindow):
+    from Imervue.gui.calendar_view_dialog import open_calendar_view
+    open_calendar_view(ui)
+
+
+def _open_map_view(ui: ImervueMainWindow):
+    from Imervue.gui.map_view_dialog import open_map_view
+    open_map_view(ui)
+
+
+def _open_tone_curve(ui: ImervueMainWindow):
+    from Imervue.gui.tone_curve_dialog import open_tone_curve
+    open_tone_curve(ui.viewer)
+
+
+def _open_lut(ui: ImervueMainWindow):
+    from Imervue.gui.lut_dialog import open_lut
+    open_lut(ui.viewer)
+
+
+def _open_virtual_copies(ui: ImervueMainWindow):
+    from Imervue.gui.virtual_copies_dialog import open_virtual_copies
+    open_virtual_copies(ui.viewer)
+
+
+def _open_face_detection(ui: ImervueMainWindow):
+    from Imervue.gui.face_detection_dialog import open_face_detection
+    open_face_detection(ui.viewer)
+
+
+def _open_lens_correction(ui: ImervueMainWindow):
+    from Imervue.gui.lens_correction_dialog import open_lens_correction
+    open_lens_correction(ui.viewer)
+
+
+def _open_healing_brush(ui: ImervueMainWindow):
+    from Imervue.gui.healing_brush_dialog import open_healing_brush
+    open_healing_brush(ui.viewer)
+
+
+def _open_hdr_merge(ui: ImervueMainWindow):
+    from Imervue.gui.hdr_merge_dialog import open_hdr_merge
+    open_hdr_merge(ui.viewer)
+
+
+def _open_panorama(ui: ImervueMainWindow):
+    from Imervue.gui.panorama_dialog import open_panorama
+    open_panorama(ui.viewer)
+
+
+def _open_focus_stack(ui: ImervueMainWindow):
+    from Imervue.gui.focus_stack_dialog import open_focus_stack
+    open_focus_stack(ui.viewer)

@@ -108,9 +108,21 @@ class RecipeStore:
             except Exception:
                 logger.debug(f"Dropping unreadable recipe entry for {identity}")
                 continue
+            variants_raw = entry.get("variants")
+            variants: dict[str, dict[str, Any]] = {}
+            if isinstance(variants_raw, dict):
+                for name, v in variants_raw.items():
+                    if not isinstance(v, dict):
+                        continue
+                    try:
+                        Recipe.from_dict(v)
+                    except Exception:
+                        continue
+                    variants[str(name)] = v
             self._entries[identity] = {
                 "recipe": recipe_data,
                 "last_path": entry.get("last_path", ""),
+                "variants": variants,
             }
         self._loaded = True
 
@@ -164,15 +176,27 @@ class RecipeStore:
         self._ensure_loaded()
         with self._lock:
             if recipe.is_identity():
-                # No-op recipe — drop the entry entirely so we don't accumulate
-                # junk for images the user fiddled with and then reset.
-                if identity in self._entries:
-                    del self._entries[identity]
-                    self._save_locked()
+                # No-op recipe — drop only the active recipe, but keep any
+                # saved variants so the user can still swap back to them.
+                existing = self._entries.get(identity)
+                variants = (existing or {}).get("variants") or {}
+                if not variants:
+                    if identity in self._entries:
+                        del self._entries[identity]
+                        self._save_locked()
+                    return
+                self._entries[identity] = {
+                    "recipe": Recipe().to_dict(),
+                    "last_path": last_path,
+                    "variants": variants,
+                }
+                self._save_locked()
                 return
+            existing = self._entries.get(identity) or {}
             self._entries[identity] = {
                 "recipe": recipe.normalized().to_dict(),
                 "last_path": last_path,
+                "variants": existing.get("variants") or {},
             }
             self._save_locked()
 
@@ -184,6 +208,111 @@ class RecipeStore:
             if identity in self._entries:
                 del self._entries[identity]
                 self._save_locked()
+
+    # ------------------------------------------------------------------
+    # Virtual copies — named recipe variants stored alongside the master.
+    # ------------------------------------------------------------------
+
+    def list_variants(self, identity: str) -> list[str]:
+        """Return the names of saved variants (excluding the active master)."""
+        if not identity:
+            return []
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(identity)
+            if not entry:
+                return []
+            return sorted((entry.get("variants") or {}).keys())
+
+    def get_variant(self, identity: str, name: str) -> Recipe | None:
+        if not identity or not name:
+            return None
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(identity)
+            if not entry:
+                return None
+            variants = entry.get("variants") or {}
+            data = variants.get(name)
+            if not isinstance(data, dict):
+                return None
+            try:
+                return Recipe.from_dict(data)
+            except Exception:
+                return None
+
+    def save_variant(
+        self, identity: str, name: str, recipe: Recipe, last_path: str = "",
+    ) -> None:
+        name = name.strip()
+        if not identity or not name:
+            return
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(identity) or {
+                "recipe": Recipe().to_dict(),
+                "last_path": last_path,
+                "variants": {},
+            }
+            variants = dict(entry.get("variants") or {})
+            variants[name] = recipe.normalized().to_dict()
+            entry["variants"] = variants
+            if last_path:
+                entry["last_path"] = last_path
+            self._entries[identity] = entry
+            self._save_locked()
+
+    def delete_variant(self, identity: str, name: str) -> None:
+        if not identity or not name:
+            return
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(identity)
+            if not entry:
+                return
+            variants = dict(entry.get("variants") or {})
+            if name in variants:
+                del variants[name]
+                entry["variants"] = variants
+                self._save_locked()
+
+    def rename_variant(self, identity: str, old_name: str, new_name: str) -> bool:
+        new_name = new_name.strip()
+        if not identity or not old_name or not new_name or old_name == new_name:
+            return False
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(identity)
+            if not entry:
+                return False
+            variants = dict(entry.get("variants") or {})
+            if old_name not in variants or new_name in variants:
+                return False
+            variants[new_name] = variants.pop(old_name)
+            entry["variants"] = variants
+            self._save_locked()
+            return True
+
+    def list_variants_for_path(self, path: str) -> list[str]:
+        return self.list_variants(file_identity(path))
+
+    def get_variant_for_path(self, path: str, name: str) -> Recipe | None:
+        return self.get_variant(file_identity(path), name)
+
+    def save_variant_for_path(
+        self, path: str, name: str, recipe: Recipe,
+    ) -> None:
+        identity = file_identity(path)
+        if identity:
+            self.save_variant(identity, name, recipe, last_path=str(path))
+
+    def delete_variant_for_path(self, path: str, name: str) -> None:
+        self.delete_variant(file_identity(path), name)
+
+    def rename_variant_for_path(
+        self, path: str, old_name: str, new_name: str,
+    ) -> bool:
+        return self.rename_variant(file_identity(path), old_name, new_name)
 
     # ------------------------------------------------------------------
     # Public API — path-based convenience wrappers

@@ -988,4 +988,108 @@ korean_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "슬라이드쇼 저장됨: {path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "톤 커브",
+    "tone_curve_channel_label": "채널:",
+    "tone_curve_reset": "이 채널 리셋",
+    "tone_curve_hint": "빈 곳 좌클릭으로 포인트 추가, 드래그로 이동, 우클릭으로 삭제.",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "빨강",
+    "curve_channel_g": "녹색",
+    "curve_channel_b": "파랑",
+
+    # --- LUT ---
+    "lut_title": ".cube LUT 적용",
+    "lut_file": ".cube 파일:",
+    "lut_clear": "지우기",
+    "lut_intensity": "강도:",
+    "lut_pick": ".cube LUT 선택",
+    "lut_hint": "임의의 Adobe .cube LUT 가능(최대 64\u00b3). 강도로 원본과 블렌딩.",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "가상 복사본",
+    "vcopies_hint": "이 이미지 recipe 의 이름이 붙은 스냅샷 — 언제든 전환.",
+    "vcopies_snap": "현재 스냅 →",
+    "vcopies_apply": "적용",
+    "vcopies_rename": "이름 변경",
+    "vcopies_delete": "삭제",
+    "vcopies_snap_title": "스냅샷 이름",
+    "vcopies_snap_prompt": "이름:",
+    "vcopies_exists": "같은 이름의 스냅샷이 이미 존재합니다.",
+    "vcopies_rename_title": "스냅샷 이름 변경",
+    "vcopies_new_name": "새 이름:",
+    "vcopies_rename_fail": "이름 변경 실패 — 이름이 이미 존재할 수 있습니다.",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR 병합",
+    "hdr_add": "이미지 추가\u2026",
+    "hdr_clear": "지우기",
+    "hdr_align": "노출 정렬",
+    "hdr_method": "방법:",
+    "hdr_mertens": "Mertens (융합)",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "출력:",
+    "hdr_run": "병합",
+    "hdr_hint": "서로 다른 노출 2장 이상 선택(Mertens 노출 융합).",
+
+    # --- Panorama ---
+    "pano_title": "파노라마 스티치",
+    "pano_add": "이미지 추가\u2026",
+    "pano_clear": "지우기",
+    "pano_mode": "모드:",
+    "pano_mode_panorama": "파노라마",
+    "pano_mode_scans": "스캔(평면 문서)",
+    "pano_crop": "검은 테두리 자르기",
+    "pano_output": "출력:",
+    "pano_run": "스티치",
+    "pano_hint": "겹치는 사진을 순서대로. 2장 이상, 20\u201340% 겹침 필요.",
+
+    # --- Focus Stacking ---
+    "fstack_title": "포커스 스태킹",
+    "fstack_add": "이미지 추가\u2026",
+    "fstack_clear": "지우기",
+    "fstack_align": "이미지 정렬",
+    "fstack_output": "출력:",
+    "fstack_run": "스택",
+    "fstack_hint": "초점 거리가 다른 브라케트 선택(매크로 / 제품).",
+
+    # --- Healing Brush ---
+    "heal_title": "복원 브러시",
+    "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",
+    "heal_radius": "반경:",
+    "heal_method": "방법:",
+    "heal_telea": "Telea (빠름)",
+    "heal_ns": "Navier-Stokes (부드러움)",
+    "heal_output": "출력:",
+    "heal_run": "적용 및 저장",
+    "heal_count": "{n} 스팟",
+
+    # --- Lens Correction ---
+    "lens_title": "렌즈 보정",
+    "lens_k1": "왜곡 (배럴 / 핀쿠션):",
+    "lens_vignette": "비네트 보정:",
+    "lens_ca_red": "색수차 (빨강):",
+    "lens_ca_blue": "색수차 (파랑):",
+    "lens_output": "출력:",
+    "lens_run": "적용",
+
+    # --- Map View ---
+    "map_title": "지도 보기",
+    "map_count": "{total}장 중 {n}장에 GPS 태그.",
+    "map_fallback": "QtWebEngine 미설치 — 좌표 목록으로 대체.",
+
+    # --- Calendar View ---
+    "calendar_title": "달력 보기",
+    "calendar_summary": "사진이 있는 {days}일, 총 {total}장.",
+
+    # --- Face Detection ---
+    "face_title": "얼굴 검출",
+    "face_hint": "OpenCV Haar 분류기 사용. 이름은 recipe 에 저장됨.",
+    "face_detect": "얼굴 검출",
+    "face_clear": "지우기",
+    "face_remove": "선택 제거",
+    "face_list": "검출된 얼굴 (이름 붙이려면 더블클릭):",
+    "face_found": "총 {n}개 얼굴.",
+    "face_save": "저장",
 }

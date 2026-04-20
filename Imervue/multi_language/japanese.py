@@ -993,4 +993,108 @@ japanese_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "スライドショーを書き出しました：{path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "トーンカーブ",
+    "tone_curve_channel_label": "チャンネル：",
+    "tone_curve_reset": "このチャンネルをリセット",
+    "tone_curve_hint": "空白部分を左クリックでポイント追加、ドラッグで移動、右クリックで削除。",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "赤",
+    "curve_channel_g": "緑",
+    "curve_channel_b": "青",
+
+    # --- LUT ---
+    "lut_title": ".cube LUT を適用",
+    "lut_file": ".cube ファイル：",
+    "lut_clear": "クリア",
+    "lut_intensity": "強度：",
+    "lut_pick": ".cube LUT を選択",
+    "lut_hint": "任意の Adobe .cube LUT を読み込めます（最大 64\u00b3）。強度で原画とブレンド。",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "バーチャルコピー",
+    "vcopies_hint": "この画像の recipe の名前付きスナップショット。いつでも切替可能。",
+    "vcopies_snap": "現在をスナップ →",
+    "vcopies_apply": "適用",
+    "vcopies_rename": "名前変更",
+    "vcopies_delete": "削除",
+    "vcopies_snap_title": "スナップショット名",
+    "vcopies_snap_prompt": "名前：",
+    "vcopies_exists": "同名のスナップショットが既に存在します。",
+    "vcopies_rename_title": "スナップショット名変更",
+    "vcopies_new_name": "新しい名前：",
+    "vcopies_rename_fail": "名前変更失敗 — 名前が既に存在する可能性があります。",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR マージ",
+    "hdr_add": "画像を追加\u2026",
+    "hdr_clear": "クリア",
+    "hdr_align": "露出を位置合わせ",
+    "hdr_method": "方式：",
+    "hdr_mertens": "Mertens（融合）",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "出力：",
+    "hdr_run": "マージ",
+    "hdr_hint": "露出の異なる 2 枚以上を選択（Mertens 露出融合）。",
+
+    # --- Panorama ---
+    "pano_title": "パノラマ合成",
+    "pano_add": "画像を追加\u2026",
+    "pano_clear": "クリア",
+    "pano_mode": "モード：",
+    "pano_mode_panorama": "パノラマ",
+    "pano_mode_scans": "スキャン（フラット文書）",
+    "pano_crop": "黒枠をトリミング",
+    "pano_output": "出力：",
+    "pano_run": "合成",
+    "pano_hint": "重なる写真を順番に選択。2 枚以上、20\u201340% の重なりが必要。",
+
+    # --- Focus Stacking ---
+    "fstack_title": "フォーカススタッキング",
+    "fstack_add": "画像を追加\u2026",
+    "fstack_clear": "クリア",
+    "fstack_align": "画像を位置合わせ",
+    "fstack_output": "出力：",
+    "fstack_run": "合成",
+    "fstack_hint": "ピント距離違いのブラケットを選択（マクロ / 商品撮影）。",
+
+    # --- Healing Brush ---
+    "heal_title": "ヒーリングブラシ",
+    "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
+    "heal_radius": "半径：",
+    "heal_method": "方式：",
+    "heal_telea": "Telea（高速）",
+    "heal_ns": "Navier-Stokes（滑らか）",
+    "heal_output": "出力：",
+    "heal_run": "適用して保存",
+    "heal_count": "{n} スポット",
+
+    # --- Lens Correction ---
+    "lens_title": "レンズ補正",
+    "lens_k1": "歪み（樽 / 糸巻）：",
+    "lens_vignette": "周辺光量補正：",
+    "lens_ca_red": "色収差（赤）：",
+    "lens_ca_blue": "色収差（青）：",
+    "lens_output": "出力：",
+    "lens_run": "適用",
+
+    # --- Map View ---
+    "map_title": "マップビュー",
+    "map_count": "スキャン済み {total} 枚のうち {n} 枚が GPS 付き。",
+    "map_fallback": "QtWebEngine 未インストール — 座標リスト表示。",
+
+    # --- Calendar View ---
+    "calendar_title": "カレンダービュー",
+    "calendar_summary": "写真のある日 {days} 日、合計 {total} 枚。",
+
+    # --- Face Detection ---
+    "face_title": "顔検出",
+    "face_hint": "OpenCV Haar 分類器を使用。名前は recipe に保存されます。",
+    "face_detect": "顔を検出",
+    "face_clear": "クリア",
+    "face_remove": "選択を削除",
+    "face_list": "検出された顔（ダブルクリックで名前入力）：",
+    "face_found": "合計 {n} 顔。",
+    "face_save": "保存",
 }

@@ -141,6 +141,17 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 - **圖片整理工具** — 依日期、解析度、類型、大小或數量自動分類到子資料夾
 - **EXIF 批次清除** — 移除資料夾中所有圖片的 EXIF、GPS 及其他中繼資料
 - **裁剪工具** — 互動式裁剪，支援比例預設（自由 / 1:1 / 4:3 / 3:2 / 16:9 / 9:16）與三分法參考線
+- **色調曲線編輯器** — 可拖曳控制點的 RGB 與 R/G/B 個別通道曲線（monotone cubic 內插），存在 recipe 裡非破壞性套用
+- **.cube LUT 套用** — 匯入任何 Adobe 3D LUT（最高 64³），三線性插值並可用強度滑桿混合
+- **Virtual Copies（虛擬副本）** — 為同一張圖儲存多組命名 recipe 快照，隨時切換；副本與主 recipe 同儲存
+- **HDR 合成** — 透過 OpenCV Mertens 曝光融合（可選 AlignMTB 對齊）合併多張不同曝光
+- **全景接圖** — 以 OpenCV `Stitcher` 接合重疊影像（Panorama / Scans 兩種模式），可自動裁去黑邊
+- **Focus Stacking（景深合成）** — 融合不同對焦距離的多張影像（Laplacian 清晰度圖 + Gaussian 混合），可選 ECC 對齊
+- **修復筆刷 / 斑點移除** — 點擊新增圓形修復區，使用 OpenCV inpainting（Telea / Navier-Stokes）輸出清理後的圖片
+- **鏡頭校正** — 純 numpy 的徑向失真（桶型 / 枕型）、暗角補光、紅 / 藍色差校正，附 4 個滑桿
+- **地圖檢視** — 用 Leaflet + OpenStreetMap（需 QtWebEngine）顯示具 GPS 的照片；未安裝時降級為座標列表
+- **行事曆檢視** — 以拍攝日期瀏覽圖庫，`QCalendarWidget` 會標示有照片的日期
+- **人臉偵測** — OpenCV Haar 正面臉部分類器偵測臉部區域，名稱保存到 recipe 的 `extra`
 
 ### 系統整合
 

@@ -168,6 +168,17 @@ Key design principles:
 - **Contact Sheet PDF** — multi-page PDF with grid layout and filename captions
 - **Web Gallery** — static HTML gallery with thumbnails + lightbox
 - **Slideshow Video** — MP4 export with fade transitions
+- **Tone Curve editor** — draggable-points RGB and per-channel (R/G/B) curves with monotone cubic interpolation; stored on the recipe so curves apply non-destructively
+- **Apply .cube LUT** — pick any Adobe 3D LUT (up to 64³), trilinear-interpolate, and blend with an intensity slider; results persist on the recipe
+- **Virtual Copies** — named recipe snapshots per image. Try a look, snap it, continue editing, and swap back any time — all variants live in the recipe store alongside the master
+- **HDR Merge** — combine 2+ bracketed exposures via OpenCV's Mertens exposure fusion (with optional AlignMTB pre-alignment); writes a single merged image
+- **Panorama Stitch** — stitch overlapping frames via OpenCV's `Stitcher` in panorama or scans mode, with black-border auto-crop
+- **Focus Stacking** — fuse shots at different focus distances (Laplacian-variance focus map + Gaussian blending) for macro / product work, with optional ECC alignment
+- **Healing Brush** — click-to-add circular spots over the image; applies OpenCV inpainting (Telea or Navier-Stokes) and saves a cleaned copy
+- **Lens Correction** — pure-numpy radial distortion (barrel / pincushion), vignette lift, and per-channel chromatic-aberration correction with a 4-slider preview
+- **Map View** — plot geotagged images on an interactive Leaflet + OpenStreetMap map (QtWebEngine); falls back to a coordinate list when WebEngine is absent
+- **Calendar View** — browse the library by capture date; days with photos are highlighted on a `QCalendarWidget`, selecting a day lists its shots
+- **Face Detection** — OpenCV Haar frontal-face cascade surfaces faces in the current image; naming each face persists into the recipe's `extra` blob
 
 ### System Integration
 
