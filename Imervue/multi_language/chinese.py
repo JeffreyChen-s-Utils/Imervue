@@ -474,6 +474,15 @@ chinese_word_dict = {
     "modify_menu_reset": "重置所有修改",
     # 额外功能
     "extra_tools_menu": "额外功能",
+    # 额外功能子菜单（按功能分组）
+    "batch_submenu": "批量",
+    "library_submenu": "图库与元数据",
+    "views_submenu": "视图",
+    "workflow_submenu": "工作流程",
+    "export_submenu": "导出",
+    "develop_submenu": "调整（非破坏性）",
+    "retouch_submenu": "修复与变形",
+    "multi_image_submenu": "多张合成",
     # 批量格式转换
     "batch_convert_title": "批量格式转换",
     "batch_convert_source": _CHINESE_TR6E9065874EF65939,

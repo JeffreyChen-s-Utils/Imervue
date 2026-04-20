@@ -479,6 +479,15 @@ korean_word_dict = {
     "modify_menu_reset": "모든 수정 재설정",
     # 추가 도구
     "extra_tools_menu": "추가 도구",
+    # 추가 도구 하위 메뉴(기능별)
+    "batch_submenu": "일괄 처리",
+    "library_submenu": "라이브러리 및 메타데이터",
+    "views_submenu": "보기",
+    "workflow_submenu": "워크플로",
+    "export_submenu": "내보내기",
+    "develop_submenu": "현상(비파괴)",
+    "retouch_submenu": "리터치 및 변형",
+    "multi_image_submenu": "다중 이미지",
     # 일괄 형식 변환
     "batch_convert_title": "일괄 형식 변환",
     "batch_convert_source": _KOREAN_TRC18CC2A420D3F4B3,

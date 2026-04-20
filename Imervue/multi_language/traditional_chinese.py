@@ -474,6 +474,15 @@ traditional_chinese_word_dict = {
     "modify_menu_reset": "重設所有修改",
     # 額外功能
     "extra_tools_menu": "額外功能",
+    # 額外功能子選單（依功能分組）
+    "batch_submenu": "批次",
+    "library_submenu": "圖庫與中繼資料",
+    "views_submenu": "檢視",
+    "workflow_submenu": "工作流程",
+    "export_submenu": "匯出",
+    "develop_submenu": "調整（非破壞性）",
+    "retouch_submenu": "修復與變形",
+    "multi_image_submenu": "多張合成",
     # 批次格式轉換
     "batch_convert_title": "批次格式轉換",
     "batch_convert_source": _TRADITIONAL_CHINESE_TR4F866E908CC76599,

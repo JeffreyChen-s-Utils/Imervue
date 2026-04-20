@@ -474,28 +474,16 @@ window keeps browsing independently.
 
 ### Extra Tools
 
-- Batch Format Conversion
-- AI Image Upscale
-- Find Duplicate Images
-- Image Organizer
-- Batch EXIF Strip
-- Image Sanitizer
-- **Library Search** (SQLite multi-root index)
-- **Smart Albums** (save / apply / delete rule-based filters)
-- **Find Similar Images** (pHash Hamming distance)
-- **Semantic Search (CLIP)** — natural-language queries over an embedding index (optional dependency)
-- **Auto-Tag Images** (heuristic + optional CLIP ONNX)
-- **Hierarchical Tags** (tree-structured tag paths)
-- **Token Batch Rename** (live-preview templates)
-- **Export Metadata (CSV / JSON)**
-- **Culling** (filter / bulk delete rejects)
-- **Staging Tray** (cross-folder basket)
-- **Dual-Pane File Manager**
-- **Macros** — record / replay batches of user actions
-- **Contact Sheet PDF** — multi-page PDF thumbnail sheet
-- **Web Gallery** — static HTML gallery with lightbox
-- **Slideshow Video** — MP4 export via ffmpeg
-- **Timeline View** (by day / month / year)
+Organised into 8 function-grouped submenus:
+
+- **Batch** — Batch Format Conversion · Batch EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
+- **Library & Metadata** — Library Search (SQLite multi-root index) · Smart Albums · Find Similar Images (pHash) · Find Duplicate Images · Auto-Tag Images (heuristic + optional CLIP ONNX) · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag
+- **Views** — Timeline View ▸ (by day / month / year) · Calendar View · Map View
+- **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
+- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
+- **Develop (Non-Destructive)** — Tone Curve · Apply .cube LUT · Split Toning · Local Adjustment Masks · Soft Proof
+- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
+- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
 
 ### View
 
