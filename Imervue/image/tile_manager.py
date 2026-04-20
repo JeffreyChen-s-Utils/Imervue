@@ -37,14 +37,10 @@ class TileManager:
 
         # LRU 淘汰：優先淘汰不同 level 的 tile，再淘汰同 level 最舊的
         while len(self.cache) >= _MAX_TILE_CACHE:
-            # 嘗試找不同 level 的最舊 tile
-            evicted = False
-            for k in list(self.cache):
-                if k[0] != level:
-                    glDeleteTextures([self.cache.pop(k)])
-                    evicted = True
-                    break
-            if not evicted:
+            victim = next((k for k in self.cache if k[0] != level), None)
+            if victim is not None:
+                glDeleteTextures([self.cache.pop(victim)])
+            else:
                 _, tex = self.cache.popitem(last=False)
                 glDeleteTextures([tex])
 

@@ -18,6 +18,11 @@ _ENGLISH_UNDO = 'Undo'
 _ENGLISH_REDO = 'Redo'
 _ENGLISH_SOURCE_FOLDER = 'Source folder:'
 _ENGLISH_OUTPUT_FOLDER = 'Output folder:'
+_ENGLISH_OUTPUT_LABEL = 'Output:'
+_ENGLISH_NEW_NAME = 'New name:'
+_ENGLISH_METHOD_LABEL = 'Method:'
+_ENGLISH_NAME_LABEL = 'Name:'
+_ENGLISH_ADD_IMAGES = 'Add images\u2026'
 _NO_EXPORT_IMAGES = 'No images to export.'
 _EXPORT_FAILED = 'Export failed: {err}'
 
@@ -334,7 +339,7 @@ english_word_dict = {
     "tag_remove_image": "Remove from Tag",
     "tag_filter": "Show in Viewer",
     "tag_create_prompt": "Tag name:",
-    "tag_rename_prompt": "New name:",
+    "tag_rename_prompt": _ENGLISH_NEW_NAME,
     "tag_delete_confirm_title": "Delete Tag",
     "tag_delete_confirm": "Delete tag '{name}'?",
     "tag_menu_title": _ENGLISH_TAGS,
@@ -347,7 +352,7 @@ english_word_dict = {
     "album_remove_image": "Remove from Album",
     "album_view": "View Album",
     "album_create_prompt": "Album name:",
-    "album_rename_prompt": "New name:",
+    "album_rename_prompt": _ENGLISH_NEW_NAME,
     "album_delete_confirm_title": "Delete Album",
     "album_delete_confirm": "Delete album '{name}'?",
     "album_menu_title": _ENGLISH_ALBUMS,
@@ -567,7 +572,7 @@ english_word_dict = {
     # Duplicate detection
     "duplicate_title": "Find Duplicate Images",
     "duplicate_source": _ENGLISH_SOURCE_FOLDER,
-    "duplicate_method": "Method:",
+    "duplicate_method": _ENGLISH_METHOD_LABEL,
     "duplicate_exact": "Exact Match (File Hash)",
     "duplicate_perceptual": "Perceptual (Similarity)",
     "duplicate_threshold": "Sensitivity:",
@@ -906,7 +911,7 @@ english_word_dict = {
     "workspace_load": "Load",
     "workspace_rename": "Rename",
     "workspace_delete": "Delete",
-    "workspace_name_label": "Name:",
+    "workspace_name_label": _ENGLISH_NAME_LABEL,
     "workspace_overwrite_title": "Overwrite workspace?",
     "workspace_overwrite_msg": (
         "A workspace named '{name}' already exists. Overwrite it?"
@@ -941,7 +946,7 @@ english_word_dict = {
     "macro_steps_heading": "Steps",
     "macro_new": "New\u2026",
     "macro_new_title": "New Macro",
-    "macro_new_prompt": "Name:",
+    "macro_new_prompt": _ENGLISH_NAME_LABEL,
     "macro_delete": _ENGLISH_DELETE,
     "macro_delete_title": "Delete Macro",
     "macro_delete_confirm": "Delete macro '{name}'?",
@@ -1006,4 +1011,200 @@ english_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "Slideshow written: {path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "Tone Curve",
+    "tone_curve_channel_label": "Channel:",
+    "tone_curve_reset": "Reset Channel",
+    "tone_curve_hint": "Left-click empty area to add a point; drag to move; right-click to delete.",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "Red",
+    "curve_channel_g": "Green",
+    "curve_channel_b": "Blue",
+
+    # --- LUT ---
+    "lut_title": "Apply .cube LUT",
+    "lut_file": ".cube file:",
+    "lut_clear": "Clear",
+    "lut_intensity": "Intensity:",
+    "lut_pick": "Select .cube LUT",
+    "lut_hint": "Pick any Adobe .cube LUT (up to 64\u00b3). Intensity blends with the original.",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "Virtual Copies",
+    "vcopies_hint": "Named snapshots of this image's recipe \u2014 swap any time.",
+    "vcopies_snap": "Snap current \u2192",
+    "vcopies_apply": "Apply",
+    "vcopies_rename": "Rename",
+    "vcopies_delete": "Delete",
+    "vcopies_snap_title": "Snapshot name",
+    "vcopies_snap_prompt": _ENGLISH_NAME_LABEL,
+    "vcopies_exists": "A snapshot with that name already exists.",
+    "vcopies_rename_title": "Rename snapshot",
+    "vcopies_new_name": _ENGLISH_NEW_NAME,
+    "vcopies_rename_fail": "Rename failed \u2014 name may already exist.",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR Merge",
+    "hdr_add": _ENGLISH_ADD_IMAGES,
+    "hdr_clear": "Clear",
+    "hdr_align": "Align exposures",
+    "hdr_method": _ENGLISH_METHOD_LABEL,
+    "hdr_mertens": "Mertens (fusion)",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": _ENGLISH_OUTPUT_LABEL,
+    "hdr_run": "Merge",
+    "hdr_hint": "Pick 2+ differently-exposed shots (Mertens exposure fusion).",
+
+    # --- Panorama ---
+    "pano_title": "Panorama Stitch",
+    "pano_add": _ENGLISH_ADD_IMAGES,
+    "pano_clear": "Clear",
+    "pano_mode": "Mode:",
+    "pano_mode_panorama": "Panorama",
+    "pano_mode_scans": "Scans (flat documents)",
+    "pano_crop": "Crop black borders",
+    "pano_output": _ENGLISH_OUTPUT_LABEL,
+    "pano_run": "Stitch",
+    "pano_hint": "Pick overlapping shots in order. Requires 2+ images with 20\u201340% overlap.",
+
+    # --- Focus Stacking ---
+    "fstack_title": "Focus Stacking",
+    "fstack_add": _ENGLISH_ADD_IMAGES,
+    "fstack_clear": "Clear",
+    "fstack_align": "Align images",
+    "fstack_output": _ENGLISH_OUTPUT_LABEL,
+    "fstack_run": "Stack",
+    "fstack_hint": "Pick a bracket of shots with different focus distances \u2014 macro / product shooters.",
+
+    # --- Healing Brush ---
+    "heal_title": "Healing Brush",
+    "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",
+    "heal_radius": "Radius:",
+    "heal_method": _ENGLISH_METHOD_LABEL,
+    "heal_telea": "Telea (fast)",
+    "heal_ns": "Navier-Stokes (smooth)",
+    "heal_output": _ENGLISH_OUTPUT_LABEL,
+    "heal_run": "Apply & Save",
+    "heal_count": "{n} spot(s)",
+
+    # --- Lens Correction ---
+    "lens_title": "Lens Correction",
+    "lens_k1": "Distortion (barrel / pincushion):",
+    "lens_vignette": "Vignette correction:",
+    "lens_ca_red": "Chromatic aberration (red):",
+    "lens_ca_blue": "Chromatic aberration (blue):",
+    "lens_output": _ENGLISH_OUTPUT_LABEL,
+    "lens_run": "Apply",
+
+    # --- Map View ---
+    "map_title": "Map View",
+    "map_count": "Plotting {n} geotagged image(s) of {total} scanned.",
+    "map_fallback": "QtWebEngine is not installed \u2014 showing coordinates as a list.",
+
+    # --- Calendar View ---
+    "calendar_title": "Calendar View",
+    "calendar_summary": "{days} day(s) with photos; {total} image(s) total.",
+
+    # --- Face Detection ---
+    "face_title": "Face Detection",
+    "face_hint": "Runs OpenCV's Haar cascade. Names are saved with the recipe.",
+    "face_detect": "Detect Faces",
+    "face_clear": "Clear",
+    "face_remove": "Remove selected",
+    "face_list": "Detected faces (double-click to rename):",
+    "face_found": "{n} face(s) total.",
+    "face_save": "Save",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "Local Adjustment Masks",
+    "masks_list": "Masks:",
+    "masks_add_brush": "+ Brush",
+    "masks_add_radial": "+ Radial",
+    "masks_add_linear": "+ Linear",
+    "masks_remove": "Remove",
+    "masks_adjustments": "Adjustments",
+    "masks_exposure": "Exposure:",
+    "masks_brightness": "Brightness:",
+    "masks_contrast": "Contrast:",
+    "masks_saturation": "Saturation:",
+    "masks_temperature": "Temperature:",
+    "masks_tint": "Tint:",
+    "masks_feather": "Feather:",
+
+    # --- Split Toning ---
+    "split_title": "Split Toning",
+    "split_shadow_hue": "Shadow hue:",
+    "split_shadow_sat": "Shadow saturation:",
+    "split_highlight_hue": "Highlight hue:",
+    "split_highlight_sat": "Highlight saturation:",
+    "split_balance": "Balance:",
+
+    # --- Clone Stamp ---
+    "stamp_title": "Clone Stamp",
+    "stamp_radius": "Radius (px):",
+    "stamp_hint": "Shift+click to set source \u2022 click to stamp \u2022 right-click to undo",
+    "stamp_output": _ENGLISH_OUTPUT_LABEL,
+    "stamp_run": "Apply",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "Crop / Straighten",
+    "crop_angle": "Straighten angle:",
+    "crop_x": "Crop X (0..1):",
+    "crop_y": "Crop Y (0..1):",
+    "crop_w": "Crop width (0..1):",
+    "crop_h": "Crop height (0..1):",
+    "crop_output": _ENGLISH_OUTPUT_LABEL,
+    "crop_run": "Apply",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "Noise Reduction / Sharpening",
+    "nr_strength": "NR strength:",
+    "nr_luma_only": "Luminance only",
+    "nr_sharpen_amount": "Sharpen amount:",
+    "nr_sharpen_radius": "Sharpen radius (px):",
+    "nr_output": _ENGLISH_OUTPUT_LABEL,
+    "nr_run": "Apply",
+
+    # --- Sky / Background ---
+    "sky_title": "Sky / Background",
+    "sky_mode": "Operation:",
+    "sky_mode_sky": "Replace sky with gradient",
+    "sky_mode_trans": "Remove background (transparent)",
+    "sky_mode_white": "Remove background (white)",
+    "sky_output": _ENGLISH_OUTPUT_LABEL,
+    "sky_run": "Apply",
+
+    # --- Soft Proofing ---
+    "proof_title": "Soft Proof",
+    "proof_profile": "ICC profile:",
+    "proof_preview": "Preview",
+    "proof_pick": "Select an ICC profile.",
+    "proof_failed": "Profile load failed.",
+    "proof_oog": "Out-of-gamut pixels:",
+
+    # --- Print Layout ---
+    "print_title": "Print Layout",
+    "print_add": "Add files...",
+    "print_clear": "Clear",
+    "print_page_size": "Page size:",
+    "print_landscape": "Landscape",
+    "print_rows": "Rows:",
+    "print_cols": "Columns:",
+    "print_crop_marks": "Crop marks",
+    "print_output": "Output PDF:",
+    "print_export": "Export PDF",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS Geotag",
+    "geotag_lat": "Latitude (\u00b0):",
+    "geotag_lon": "Longitude (\u00b0):",
+    "geotag_failed": "Failed to write GPS tags.",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "Auto-Straighten",
+    "autostr_detect": "Detect angle",
+    "autostr_angle": "Rotation (\u00b0):",
+    "autostr_output": _ENGLISH_OUTPUT_LABEL,
+    "autostr_apply": "Apply",
 }

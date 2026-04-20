@@ -8,3 +8,6 @@ engines:
     enabled: true
     exclude_paths:
       - 'tests/**'
+      # Translator dictionaries contain localised strings like "Enter password:"
+      # and "API key" that trip B105 hardcoded_password_string.
+      - 'Imervue/multi_language/**'

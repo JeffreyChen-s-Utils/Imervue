@@ -94,47 +94,48 @@ class BatchRenameDialog(QDialog):
             start = int(self._start_num.text())
         except ValueError:
             start = 1
+        renamed, failed = self._rename_all(start)
+        if renamed:
+            self._apply_renames_to_model(renamed)
+        self._show_batch_toast("Renamed", len(renamed), failed)
+        if renamed:
+            self._gui.selected_tiles.clear()
+            self._gui.tile_selection_mode = False
+            self._gui.clear_tile_grid()
+            self._gui.load_tile_grid_async(self._gui.model.images)
+        self.accept()
 
-        renamed = []
+    def _rename_all(self, start: int) -> tuple[list[tuple[str, str]], int]:
+        renamed: list[tuple[str, str]] = []
         failed = 0
         for i, old_path in enumerate(self._paths):
             p = Path(old_path)
-            new_name = self._build_name(old_path, start + i)
-            new_path = p.parent / new_name
+            new_path = p.parent / self._build_name(old_path, start + i)
             try:
                 if new_path != p and not new_path.exists():
                     p.rename(new_path)
                     renamed.append((old_path, str(new_path)))
                 else:
                     failed += 1
-            except Exception:
+            except OSError:
                 failed += 1
+        return renamed, failed
 
-        # 更新 model
-        if renamed:
-            images = self._gui.model.images
-            for old, new in renamed:
-                if old in images:
-                    idx = images.index(old)
-                    images[idx] = new
-                self._gui.tile_cache.pop(old, None)
-                self._gui.tile_textures.pop(old, None)
-                self._gui.selected_tiles.discard(old)
+    def _apply_renames_to_model(self, renamed: list[tuple[str, str]]) -> None:
+        images = self._gui.model.images
+        for old, new in renamed:
+            if old in images:
+                images[images.index(old)] = new
+            self._gui.tile_cache.pop(old, None)
+            self._gui.tile_textures.pop(old, None)
+            self._gui.selected_tiles.discard(old)
 
-        if hasattr(self._gui.main_window, "toast"):
-            msg = f"Renamed {len(renamed)}/{len(renamed) + failed} file(s)"
-            if failed:
-                self._gui.main_window.toast.info(msg)
-            else:
-                self._gui.main_window.toast.success(msg)
-
-        if renamed:
-            self._gui.selected_tiles.clear()
-            self._gui.tile_selection_mode = False
-            self._gui.clear_tile_grid()
-            self._gui.load_tile_grid_async(images)
-
-        self.accept()
+    def _show_batch_toast(self, op: str, succeeded: int, failed: int) -> None:
+        if not hasattr(self._gui.main_window, "toast"):
+            return
+        msg = f"{op} {succeeded}/{succeeded + failed} file(s)"
+        toast = self._gui.main_window.toast
+        (toast.info if failed else toast.success)(msg)
 
 
 # ===========================
@@ -194,8 +195,14 @@ class BatchMoveDialog(QDialog):
         dest = self._dest.text().strip()
         if not dest or not Path(dest).is_dir():
             return
-
         is_move = self._move_radio.isChecked()
+        count, failed = self._transfer_files(dest, is_move)
+        if is_move and count:
+            self._remove_moved_from_model()
+        self._toast_transfer_result("Moved" if is_move else "Copied", count, failed)
+        self.accept()
+
+    def _transfer_files(self, dest: str, is_move: bool) -> tuple[int, int]:
         count = 0
         failed = 0
         for src in self._paths:
@@ -206,31 +213,28 @@ class BatchMoveDialog(QDialog):
                 else:
                     shutil.copy2(src, str(target))
                 count += 1
-            except Exception:
+            except (OSError, shutil.Error):
                 failed += 1
+        return count, failed
 
-        if is_move and count:
-            images = self._gui.model.images
-            for src in self._paths:
-                if src in images:
-                    images.remove(src)
-                self._gui.tile_cache.pop(src, None)
-                self._gui.tile_textures.pop(src, None)
+    def _remove_moved_from_model(self) -> None:
+        images = self._gui.model.images
+        for src in self._paths:
+            if src in images:
+                images.remove(src)
+            self._gui.tile_cache.pop(src, None)
+            self._gui.tile_textures.pop(src, None)
+        self._gui.selected_tiles.clear()
+        self._gui.tile_selection_mode = False
+        self._gui.clear_tile_grid()
+        self._gui.load_tile_grid_async(images)
 
-            self._gui.selected_tiles.clear()
-            self._gui.tile_selection_mode = False
-            self._gui.clear_tile_grid()
-            self._gui.load_tile_grid_async(images)
-
-        if hasattr(self._gui.main_window, "toast"):
-            op = "Moved" if is_move else "Copied"
-            msg = f"{op} {count}/{count + failed} file(s)"
-            if failed:
-                self._gui.main_window.toast.info(msg)
-            else:
-                self._gui.main_window.toast.success(msg)
-
-        self.accept()
+    def _toast_transfer_result(self, op: str, count: int, failed: int) -> None:
+        if not hasattr(self._gui.main_window, "toast"):
+            return
+        msg = f"{op} {count}/{count + failed} file(s)"
+        toast = self._gui.main_window.toast
+        (toast.info if failed else toast.success)(msg)
 
 
 # ===========================

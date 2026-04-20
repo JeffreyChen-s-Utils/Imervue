@@ -183,39 +183,55 @@ class _OrganizerWorker(QThread):
 
     def run(self):
         total = sum(len(v) for v in self._plan.values())
-        done = 0
-        success = 0
-        failed = 0
+        state = {"done": 0, "success": 0, "failed": 0}
         for subfolder, paths in self._plan.items():
             dest_dir = os.path.join(self._output_dir, subfolder)
             os.makedirs(dest_dir, exist_ok=True)
-            for src in paths:
-                if self._abort:
-                    self.result_ready.emit(success, failed)
-                    return
-                done += 1
-                name = os.path.basename(src)
-                self.progress.emit(done, total, name)
-                dest = os.path.join(dest_dir, name)
-                # Handle name collision
-                if os.path.exists(dest):
-                    stem = Path(name).stem
-                    ext = Path(name).suffix
-                    counter = 1
-                    while os.path.exists(dest):
-                        dest = os.path.join(dest_dir, f"{stem}_{counter}{ext}")
-                        counter += 1
-                try:
-                    if self._move:
-                        shutil.move(src, dest)
-                    else:
-                        shutil.copy2(src, dest)
-                    success += 1
-                except Exception:
-                    logger.exception("Failed to %s %s",
-                                     "move" if self._move else "copy", src)
-                    failed += 1
-        self.result_ready.emit(success, failed)
+            if self._process_group(paths, dest_dir, total, state):
+                self.result_ready.emit(state["success"], state["failed"])
+                return
+        self.result_ready.emit(state["success"], state["failed"])
+
+    def _process_group(self, paths, dest_dir: str, total: int, state: dict) -> bool:
+        """Return True if we aborted mid-way."""
+        for src in paths:
+            if self._abort:
+                return True
+            state["done"] += 1
+            name = os.path.basename(src)
+            self.progress.emit(state["done"], total, name)
+            dest = self._resolve_collision(os.path.join(dest_dir, name))
+            if self._transfer(src, dest):
+                state["success"] += 1
+            else:
+                state["failed"] += 1
+        return False
+
+    @staticmethod
+    def _resolve_collision(dest: str) -> str:
+        if not os.path.exists(dest):
+            return dest
+        dir_name = os.path.dirname(dest)
+        name = os.path.basename(dest)
+        stem = Path(name).stem
+        ext = Path(name).suffix
+        counter = 1
+        candidate = dest
+        while os.path.exists(candidate):
+            candidate = os.path.join(dir_name, f"{stem}_{counter}{ext}")
+            counter += 1
+        return candidate
+
+    def _transfer(self, src: str, dest: str) -> bool:
+        try:
+            if self._move:
+                shutil.move(src, dest)
+            else:
+                shutil.copy2(src, dest)
+            return True
+        except (OSError, shutil.Error):
+            logger.exception("Failed to %s %s", "move" if self._move else "copy", src)
+            return False
 
 
 # ---------------------------------------------------------------------------
@@ -406,13 +422,13 @@ class ImageOrganizerDialog(QDialog):
 
     def _current_plan_kwargs(self) -> dict:
         rule = self._rule_combo.currentData() or RULE_DATE
-        return dict(
-            rule=rule,
-            year_only=self._date_combo.currentData() if rule == RULE_DATE else False,
-            large_mb=self._size_large_spin.value(),
-            small_mb=self._size_small_spin.value(),
-            count_per_folder=self._count_spin.value(),
-        )
+        return {
+            "rule": rule,
+            "year_only": self._date_combo.currentData() if rule == RULE_DATE else False,
+            "large_mb": self._size_large_spin.value(),
+            "small_mb": self._size_small_spin.value(),
+            "count_per_folder": self._count_spin.value(),
+        }
 
     def _do_preview(self):
         src = self._src_edit.text().strip()

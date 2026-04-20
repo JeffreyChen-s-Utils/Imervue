@@ -137,6 +137,7 @@ class ImervuePlugin:
             modifiers: Qt keyboard modifiers (e.g. Qt.KeyboardModifier.ControlModifier).
             viewer: The GPUImageView instance.
         """
+        del key, modifiers, viewer
         return False
 
     # ===========================

@@ -168,6 +168,27 @@ Key design principles:
 - **Contact Sheet PDF** — multi-page PDF with grid layout and filename captions
 - **Web Gallery** — static HTML gallery with thumbnails + lightbox
 - **Slideshow Video** — MP4 export with fade transitions
+- **Tone Curve editor** — draggable-points RGB and per-channel (R/G/B) curves with monotone cubic interpolation; stored on the recipe so curves apply non-destructively
+- **Apply .cube LUT** — pick any Adobe 3D LUT (up to 64³), trilinear-interpolate, and blend with an intensity slider; results persist on the recipe
+- **Virtual Copies** — named recipe snapshots per image. Try a look, snap it, continue editing, and swap back any time — all variants live in the recipe store alongside the master
+- **HDR Merge** — combine 2+ bracketed exposures via OpenCV's Mertens exposure fusion (with optional AlignMTB pre-alignment); writes a single merged image
+- **Panorama Stitch** — stitch overlapping frames via OpenCV's `Stitcher` in panorama or scans mode, with black-border auto-crop
+- **Focus Stacking** — fuse shots at different focus distances (Laplacian-variance focus map + Gaussian blending) for macro / product work, with optional ECC alignment
+- **Healing Brush** — click-to-add circular spots over the image; applies OpenCV inpainting (Telea or Navier-Stokes) and saves a cleaned copy
+- **Lens Correction** — pure-numpy radial distortion (barrel / pincushion), vignette lift, and per-channel chromatic-aberration correction with a 4-slider preview
+- **Map View** — plot geotagged images on an interactive Leaflet + OpenStreetMap map (QtWebEngine); falls back to a coordinate list when WebEngine is absent
+- **Calendar View** — browse the library by capture date; days with photos are highlighted on a `QCalendarWidget`, selecting a day lists its shots
+- **Face Detection** — OpenCV Haar frontal-face cascade surfaces faces in the current image; naming each face persists into the recipe's `extra` blob
+- **Local Adjustment Masks** — brush / radial / linear gradient masks with per-mask exposure, brightness, contrast, saturation, white-balance deltas and a feather slider; stored on the recipe and blended non-destructively
+- **Split Toning** — Lightroom-style shadow/highlight hue + saturation with a balance pivot; writes to recipe.extra and applies in the develop pipeline
+- **Clone Stamp** — shift+click source, click destination with a feathered source-to-destination blit (complements the healing brush)
+- **Crop / Straighten** — normalised crop rectangle plus arbitrary-angle straighten that auto-crops to the largest inner rect (no black corners)
+- **Auto-Straighten** — Hough-line horizon/vertical detection computes the rotation to level tilted horizons or buildings, with one click to apply
+- **Noise Reduction / Sharpening** — edge-preserving bilateral denoise (optionally luminance-only) plus unsharp-mask sharpening with amount/radius/threshold
+- **Sky / Background** — replace detected sky with a gradient or remove the background (transparent or white fill); optional rembg/U²-Net when installed
+- **Soft Proof** — load an ICC profile, simulate the destination gamut, and highlight out-of-gamut pixels in magenta
+- **GPS Geotag editor** — read existing EXIF GPS coordinates and write new lat/lon back via piexif (JPEG)
+- **Print Layout** — compose multiple images onto a multi-page PDF sheet with configurable page size (A4/A3/Letter/Legal), orientation, grid, margins, gutter, and crop marks
 
 ### System Integration
 

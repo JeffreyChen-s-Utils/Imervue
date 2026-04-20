@@ -8,7 +8,7 @@ from __future__ import annotations
 import ctypes
 import logging
 import numpy as np
-from OpenGL.GL import *  # noqa: F401, F403 — OpenGL uses hundreds of constants; explicit list impractical
+from OpenGL.GL import *  # noqa: F401, F403  NOSONAR  OpenGL uses hundreds of constants
 from OpenGL.GL import shaders as gl_shaders
 
 logger = logging.getLogger("Imervue.gl_renderer")

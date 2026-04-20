@@ -58,7 +58,7 @@ def _scan_folder(folder: str) -> list[str]:
 # Core strip logic (pure, testable)
 # ---------------------------------------------------------------------------
 
-def strip_exif(path: str, *, remove_gps: bool = True, remove_all: bool = True,
+def strip_exif(path: str, *, remove_all: bool = True,
                overwrite: bool = True, output_dir: str | None = None) -> str:
     """Strip metadata from an image file.
 

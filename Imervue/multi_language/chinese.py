@@ -3,6 +3,7 @@ _CHINESE_TR900665F6948865CB = '逆时针旋转'
 _CHINESE_TR91CD547D540D = '重命名'
 _CHINESE_TR6E9065874EF65939 = '源文件夹：'
 _CHINESE_TR8F9351FA65874EF6 = '输出文件夹：'
+_CHINESE_ADD_IMAGES = '添加图片\u2026'
 _NO_EXPORT_IMAGES = '没有可导出的图片。'
 _EXPORT_FAILED = '导出失败：{err}'
 
@@ -984,4 +985,200 @@ chinese_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "幻灯片已写入：{path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "色调曲线",
+    "tone_curve_channel_label": "通道：",
+    "tone_curve_reset": "重置该通道",
+    "tone_curve_hint": "左键空白处新增控制点；拖拽移动；右键删除。",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "红",
+    "curve_channel_g": "绿",
+    "curve_channel_b": "蓝",
+
+    # --- LUT ---
+    "lut_title": "应用 .cube LUT",
+    "lut_file": ".cube 文件：",
+    "lut_clear": "清除",
+    "lut_intensity": "强度：",
+    "lut_pick": "选择 .cube LUT",
+    "lut_hint": "可载入任意 Adobe .cube LUT（最高 64\u00b3）。强度滑块与原图混合。",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "虚拟副本",
+    "vcopies_hint": "为这张图的 recipe 保存命名快照，随时切换。",
+    "vcopies_snap": "快照当前 →",
+    "vcopies_apply": "应用",
+    "vcopies_rename": "重命名",
+    "vcopies_delete": "删除",
+    "vcopies_snap_title": "快照名称",
+    "vcopies_snap_prompt": "名称：",
+    "vcopies_exists": "已存在同名快照。",
+    "vcopies_rename_title": "重命名快照",
+    "vcopies_new_name": "新名称：",
+    "vcopies_rename_fail": "重命名失败 — 名称可能已存在。",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR 合成",
+    "hdr_add": _CHINESE_ADD_IMAGES,
+    "hdr_clear": "清除",
+    "hdr_align": "对齐曝光",
+    "hdr_method": "方法：",
+    "hdr_mertens": "Mertens（融合）",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "输出：",
+    "hdr_run": "合成",
+    "hdr_hint": "选择 2 张以上不同曝光（使用 Mertens 曝光融合）。",
+
+    # --- Panorama ---
+    "pano_title": "全景拼接",
+    "pano_add": _CHINESE_ADD_IMAGES,
+    "pano_clear": "清除",
+    "pano_mode": "模式：",
+    "pano_mode_panorama": "全景",
+    "pano_mode_scans": "扫描（平面文档）",
+    "pano_crop": "裁去黑边",
+    "pano_output": "输出：",
+    "pano_run": "拼接",
+    "pano_hint": "按顺序选择重叠照片。至少 2 张，20\u201340% 重叠。",
+
+    # --- Focus Stacking ---
+    "fstack_title": "景深合成",
+    "fstack_add": _CHINESE_ADD_IMAGES,
+    "fstack_clear": "清除",
+    "fstack_align": "对齐图像",
+    "fstack_output": "输出：",
+    "fstack_run": "合成",
+    "fstack_hint": "选择不同对焦距离的多张图像（微距 / 产品）。",
+
+    # --- Healing Brush ---
+    "heal_title": "修复画笔",
+    "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",
+    "heal_radius": "半径：",
+    "heal_method": "方法：",
+    "heal_telea": "Telea（快速）",
+    "heal_ns": "Navier-Stokes（平滑）",
+    "heal_output": "输出：",
+    "heal_run": "应用并保存",
+    "heal_count": "{n} 个修复点",
+
+    # --- Lens Correction ---
+    "lens_title": "镜头校正",
+    "lens_k1": "畸变（桶形 / 枕形）：",
+    "lens_vignette": "暗角补偿：",
+    "lens_ca_red": "色差（红）：",
+    "lens_ca_blue": "色差（蓝）：",
+    "lens_output": "输出：",
+    "lens_run": "应用",
+
+    # --- Map View ---
+    "map_title": "地图视图",
+    "map_count": "扫描 {total} 张，其中 {n} 张带 GPS。",
+    "map_fallback": "未安装 QtWebEngine — 以坐标列表显示。",
+
+    # --- Calendar View ---
+    "calendar_title": "日历视图",
+    "calendar_summary": "{days} 天有照片，共 {total} 张。",
+
+    # --- Face Detection ---
+    "face_title": "人脸检测",
+    "face_hint": "使用 OpenCV Haar 分类器。名称将随 recipe 保存。",
+    "face_detect": "检测人脸",
+    "face_clear": "清除",
+    "face_remove": "移除所选",
+    "face_list": "检测到的脸（双击以命名）：",
+    "face_found": "共 {n} 张脸。",
+    "face_save": "保存",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "局部调整蒙版",
+    "masks_list": "蒙版：",
+    "masks_add_brush": "+ 画笔",
+    "masks_add_radial": "+ 放射",
+    "masks_add_linear": "+ 线性",
+    "masks_remove": "移除",
+    "masks_adjustments": "调整",
+    "masks_exposure": "曝光：",
+    "masks_brightness": "亮度：",
+    "masks_contrast": "对比度：",
+    "masks_saturation": "饱和度：",
+    "masks_temperature": "色温：",
+    "masks_tint": "色调：",
+    "masks_feather": "羽化：",
+
+    # --- Split Toning ---
+    "split_title": "色调分离",
+    "split_shadow_hue": "阴影色相：",
+    "split_shadow_sat": "阴影饱和度：",
+    "split_highlight_hue": "高光色相：",
+    "split_highlight_sat": "高光饱和度：",
+    "split_balance": "平衡：",
+
+    # --- Clone Stamp ---
+    "stamp_title": "仿制图章",
+    "stamp_radius": "半径（像素）：",
+    "stamp_hint": "Shift+点击设定源 \u2022 点击盖章 \u2022 右键撤销",
+    "stamp_output": "输出：",
+    "stamp_run": "应用",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "裁剪 / 拉直",
+    "crop_angle": "拉直角度：",
+    "crop_x": "裁剪 X（0..1）：",
+    "crop_y": "裁剪 Y（0..1）：",
+    "crop_w": "裁剪宽度（0..1）：",
+    "crop_h": "裁剪高度（0..1）：",
+    "crop_output": "输出：",
+    "crop_run": "应用",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "降噪 / 锐化",
+    "nr_strength": "降噪强度：",
+    "nr_luma_only": "仅亮度通道",
+    "nr_sharpen_amount": "锐化量：",
+    "nr_sharpen_radius": "锐化半径（像素）：",
+    "nr_output": "输出：",
+    "nr_run": "应用",
+
+    # --- Sky / Background ---
+    "sky_title": "天空 / 背景",
+    "sky_mode": "操作：",
+    "sky_mode_sky": "以渐变替换天空",
+    "sky_mode_trans": "移除背景（透明）",
+    "sky_mode_white": "移除背景（白底）",
+    "sky_output": "输出：",
+    "sky_run": "应用",
+
+    # --- Soft Proofing ---
+    "proof_title": "屏幕校样",
+    "proof_profile": "ICC 色彩描述文件：",
+    "proof_preview": "预览",
+    "proof_pick": "请选择 ICC 描述文件。",
+    "proof_failed": "描述文件加载失败。",
+    "proof_oog": "超出色域像素：",
+
+    # --- Print Layout ---
+    "print_title": "打印排版",
+    "print_add": "添加文件...",
+    "print_clear": "清除",
+    "print_page_size": "页面大小：",
+    "print_landscape": "横向",
+    "print_rows": "行数：",
+    "print_cols": "列数：",
+    "print_crop_marks": "裁切标记",
+    "print_output": "输出 PDF：",
+    "print_export": "导出 PDF",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS 地理标记",
+    "geotag_lat": "纬度（\u00b0）：",
+    "geotag_lon": "经度（\u00b0）：",
+    "geotag_failed": "GPS 标签写入失败。",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "自动拉直",
+    "autostr_detect": "检测角度",
+    "autostr_angle": "旋转（\u00b0）：",
+    "autostr_output": "输出：",
+    "autostr_apply": "应用",
 }

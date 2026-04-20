@@ -129,6 +129,84 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
         a = timeline_menu.addAction(lang.get(f"timeline_by_{gran_key}", fallback))
         a.triggered.connect(lambda checked, g=gran_key: _open_timeline(ui, g))
 
+    # 行事曆檢視（依拍攝日期）
+    calendar_action = menu.addAction(
+        lang.get("calendar_title", "Calendar View"))
+    calendar_action.triggered.connect(lambda: _open_calendar_view(ui))
+
+    # 地圖檢視（GPS）
+    map_action = menu.addAction(lang.get("map_title", "Map View"))
+    map_action.triggered.connect(lambda: _open_map_view(ui))
+
+    menu.addSeparator()
+
+    # --- Non-destructive develop editors (per-image) ---
+    tone_action = menu.addAction(lang.get("tone_curve_title", "Tone Curve"))
+    tone_action.triggered.connect(lambda: _open_tone_curve(ui))
+
+    lut_action = menu.addAction(lang.get("lut_title", "Apply .cube LUT"))
+    lut_action.triggered.connect(lambda: _open_lut(ui))
+
+    vcopies_action = menu.addAction(
+        lang.get("vcopies_title", "Virtual Copies"))
+    vcopies_action.triggered.connect(lambda: _open_virtual_copies(ui))
+
+    face_action = menu.addAction(lang.get("face_title", "Face Detection"))
+    face_action.triggered.connect(lambda: _open_face_detection(ui))
+
+    masks_action = menu.addAction(
+        lang.get("masks_title", "Local Adjustment Masks"))
+    masks_action.triggered.connect(lambda: _open_masks(ui))
+
+    split_action = menu.addAction(lang.get("split_title", "Split Toning"))
+    split_action.triggered.connect(lambda: _open_split_toning(ui))
+
+    menu.addSeparator()
+
+    # --- Destructive transforms (output a new file) ---
+    lens_action = menu.addAction(
+        lang.get("lens_title", "Lens Correction"))
+    lens_action.triggered.connect(lambda: _open_lens_correction(ui))
+
+    heal_action = menu.addAction(lang.get("heal_title", "Healing Brush"))
+    heal_action.triggered.connect(lambda: _open_healing_brush(ui))
+
+    stamp_action = menu.addAction(lang.get("stamp_title", "Clone Stamp"))
+    stamp_action.triggered.connect(lambda: _open_clone_stamp(ui))
+
+    crop_action = menu.addAction(lang.get("crop_title", "Crop / Straighten"))
+    crop_action.triggered.connect(lambda: _open_crop_straighten(ui))
+
+    autostr_action = menu.addAction(
+        lang.get("autostr_title", "Auto-Straighten"))
+    autostr_action.triggered.connect(lambda: _open_auto_straighten(ui))
+
+    nr_action = menu.addAction(
+        lang.get("nr_title", "Noise Reduction / Sharpening"))
+    nr_action.triggered.connect(lambda: _open_noise_sharpen(ui))
+
+    sky_action = menu.addAction(lang.get("sky_title", "Sky / Background"))
+    sky_action.triggered.connect(lambda: _open_sky_replace(ui))
+
+    proof_action = menu.addAction(lang.get("proof_title", "Soft Proof"))
+    proof_action.triggered.connect(lambda: _open_soft_proof(ui))
+
+    geotag_action = menu.addAction(lang.get("geotag_title", "GPS Geotag"))
+    geotag_action.triggered.connect(lambda: _open_gps_geotag(ui))
+
+    hdr_action = menu.addAction(lang.get("hdr_title", "HDR Merge"))
+    hdr_action.triggered.connect(lambda: _open_hdr_merge(ui))
+
+    pano_action = menu.addAction(lang.get("pano_title", "Panorama Stitch"))
+    pano_action.triggered.connect(lambda: _open_panorama(ui))
+
+    fstack_action = menu.addAction(
+        lang.get("fstack_title", "Focus Stacking"))
+    fstack_action.triggered.connect(lambda: _open_focus_stack(ui))
+
+    print_action = menu.addAction(lang.get("print_title", "Print Layout"))
+    print_action.triggered.connect(lambda: _open_print_layout(ui))
+
 
 def _open_batch_convert(ui: ImervueMainWindow):
     from Imervue.gui.batch_convert_dialog import open_batch_convert
@@ -238,3 +316,108 @@ def _open_web_gallery(ui: ImervueMainWindow):
 def _open_slideshow_mp4(ui: ImervueMainWindow):
     from Imervue.gui.slideshow_mp4_dialog import open_slideshow_mp4_dialog
     open_slideshow_mp4_dialog(ui)
+
+
+def _open_calendar_view(ui: ImervueMainWindow):
+    from Imervue.gui.calendar_view_dialog import open_calendar_view
+    open_calendar_view(ui)
+
+
+def _open_map_view(ui: ImervueMainWindow):
+    from Imervue.gui.map_view_dialog import open_map_view
+    open_map_view(ui)
+
+
+def _open_tone_curve(ui: ImervueMainWindow):
+    from Imervue.gui.tone_curve_dialog import open_tone_curve
+    open_tone_curve(ui.viewer)
+
+
+def _open_lut(ui: ImervueMainWindow):
+    from Imervue.gui.lut_dialog import open_lut
+    open_lut(ui.viewer)
+
+
+def _open_virtual_copies(ui: ImervueMainWindow):
+    from Imervue.gui.virtual_copies_dialog import open_virtual_copies
+    open_virtual_copies(ui.viewer)
+
+
+def _open_face_detection(ui: ImervueMainWindow):
+    from Imervue.gui.face_detection_dialog import open_face_detection
+    open_face_detection(ui.viewer)
+
+
+def _open_lens_correction(ui: ImervueMainWindow):
+    from Imervue.gui.lens_correction_dialog import open_lens_correction
+    open_lens_correction(ui.viewer)
+
+
+def _open_healing_brush(ui: ImervueMainWindow):
+    from Imervue.gui.healing_brush_dialog import open_healing_brush
+    open_healing_brush(ui.viewer)
+
+
+def _open_hdr_merge(ui: ImervueMainWindow):
+    from Imervue.gui.hdr_merge_dialog import open_hdr_merge
+    open_hdr_merge(ui.viewer)
+
+
+def _open_panorama(ui: ImervueMainWindow):
+    from Imervue.gui.panorama_dialog import open_panorama
+    open_panorama(ui.viewer)
+
+
+def _open_focus_stack(ui: ImervueMainWindow):
+    from Imervue.gui.focus_stack_dialog import open_focus_stack
+    open_focus_stack(ui.viewer)
+
+
+def _open_masks(ui: ImervueMainWindow):
+    from Imervue.gui.masks_dialog import open_masks
+    open_masks(ui.viewer)
+
+
+def _open_split_toning(ui: ImervueMainWindow):
+    from Imervue.gui.split_toning_dialog import open_split_toning
+    open_split_toning(ui.viewer)
+
+
+def _open_clone_stamp(ui: ImervueMainWindow):
+    from Imervue.gui.clone_stamp_dialog import open_clone_stamp
+    open_clone_stamp(ui.viewer)
+
+
+def _open_crop_straighten(ui: ImervueMainWindow):
+    from Imervue.gui.crop_straighten_dialog import open_crop_straighten
+    open_crop_straighten(ui.viewer)
+
+
+def _open_auto_straighten(ui: ImervueMainWindow):
+    from Imervue.gui.auto_straighten_dialog import open_auto_straighten
+    open_auto_straighten(ui.viewer)
+
+
+def _open_noise_sharpen(ui: ImervueMainWindow):
+    from Imervue.gui.noise_sharpen_dialog import open_noise_sharpen
+    open_noise_sharpen(ui.viewer)
+
+
+def _open_sky_replace(ui: ImervueMainWindow):
+    from Imervue.gui.sky_replace_dialog import open_sky_replace
+    open_sky_replace(ui.viewer)
+
+
+def _open_soft_proof(ui: ImervueMainWindow):
+    from Imervue.gui.soft_proof_dialog import open_soft_proof
+    open_soft_proof(ui.viewer)
+
+
+def _open_gps_geotag(ui: ImervueMainWindow):
+    from Imervue.gui.gps_geotag_dialog import open_gps_geotag
+    open_gps_geotag(ui.viewer)
+
+
+def _open_print_layout(ui: ImervueMainWindow):
+    from Imervue.gui.print_layout_dialog import open_print_layout
+    open_print_layout(ui)

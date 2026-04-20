@@ -7,6 +7,8 @@ _KOREAN_TRC2E4D58920CDE8C1 = '실행 취소'
 _KOREAN_TRB2E4C2DC20C2E4D5 = '다시 실행'
 _KOREAN_TRC18CC2A420D3F4B3 = '소스 폴더:'
 _KOREAN_TRCD9CB82520D3F4B3 = '출력 폴더:'
+_KOREAN_NEW_NAME = '새 이름:'
+_KOREAN_ADD_IMAGES = '이미지 추가\u2026'
 _NO_EXPORT_IMAGES = '내보낼 이미지가 없습니다.'
 _EXPORT_FAILED = '내보내기 실패: {err}'
 
@@ -323,7 +325,7 @@ korean_word_dict = {
     "tag_remove_image": "태그에서 제거",
     "tag_filter": "뷰어에서 보기",
     "tag_create_prompt": "태그 이름:",
-    "tag_rename_prompt": "새 이름:",
+    "tag_rename_prompt": _KOREAN_NEW_NAME,
     "tag_delete_confirm_title": "태그 삭제",
     "tag_delete_confirm": "태그 '{name}'을(를) 삭제하시겠습니까?",
     "tag_menu_title": "태그",
@@ -336,7 +338,7 @@ korean_word_dict = {
     "album_remove_image": "앨범에서 제거",
     "album_view": "앨범 보기",
     "album_create_prompt": "앨범 이름:",
-    "album_rename_prompt": "새 이름:",
+    "album_rename_prompt": _KOREAN_NEW_NAME,
     "album_delete_confirm_title": "앨범 삭제",
     "album_delete_confirm": "앨범 '{name}'을(를) 삭제하시겠습니까?",
     "album_menu_title": "앨범",
@@ -988,4 +990,200 @@ korean_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "슬라이드쇼 저장됨: {path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "톤 커브",
+    "tone_curve_channel_label": "채널:",
+    "tone_curve_reset": "이 채널 리셋",
+    "tone_curve_hint": "빈 곳 좌클릭으로 포인트 추가, 드래그로 이동, 우클릭으로 삭제.",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "빨강",
+    "curve_channel_g": "녹색",
+    "curve_channel_b": "파랑",
+
+    # --- LUT ---
+    "lut_title": ".cube LUT 적용",
+    "lut_file": ".cube 파일:",
+    "lut_clear": "지우기",
+    "lut_intensity": "강도:",
+    "lut_pick": ".cube LUT 선택",
+    "lut_hint": "임의의 Adobe .cube LUT 가능(최대 64\u00b3). 강도로 원본과 블렌딩.",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "가상 복사본",
+    "vcopies_hint": "이 이미지 recipe 의 이름이 붙은 스냅샷 — 언제든 전환.",
+    "vcopies_snap": "현재 스냅 →",
+    "vcopies_apply": "적용",
+    "vcopies_rename": "이름 변경",
+    "vcopies_delete": "삭제",
+    "vcopies_snap_title": "스냅샷 이름",
+    "vcopies_snap_prompt": "이름:",
+    "vcopies_exists": "같은 이름의 스냅샷이 이미 존재합니다.",
+    "vcopies_rename_title": "스냅샷 이름 변경",
+    "vcopies_new_name": _KOREAN_NEW_NAME,
+    "vcopies_rename_fail": "이름 변경 실패 — 이름이 이미 존재할 수 있습니다.",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR 병합",
+    "hdr_add": _KOREAN_ADD_IMAGES,
+    "hdr_clear": "지우기",
+    "hdr_align": "노출 정렬",
+    "hdr_method": "방법:",
+    "hdr_mertens": "Mertens (융합)",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "출력:",
+    "hdr_run": "병합",
+    "hdr_hint": "서로 다른 노출 2장 이상 선택(Mertens 노출 융합).",
+
+    # --- Panorama ---
+    "pano_title": "파노라마 스티치",
+    "pano_add": _KOREAN_ADD_IMAGES,
+    "pano_clear": "지우기",
+    "pano_mode": "모드:",
+    "pano_mode_panorama": "파노라마",
+    "pano_mode_scans": "스캔(평면 문서)",
+    "pano_crop": "검은 테두리 자르기",
+    "pano_output": "출력:",
+    "pano_run": "스티치",
+    "pano_hint": "겹치는 사진을 순서대로. 2장 이상, 20\u201340% 겹침 필요.",
+
+    # --- Focus Stacking ---
+    "fstack_title": "포커스 스태킹",
+    "fstack_add": _KOREAN_ADD_IMAGES,
+    "fstack_clear": "지우기",
+    "fstack_align": "이미지 정렬",
+    "fstack_output": "출력:",
+    "fstack_run": "스택",
+    "fstack_hint": "초점 거리가 다른 브라케트 선택(매크로 / 제품).",
+
+    # --- Healing Brush ---
+    "heal_title": "복원 브러시",
+    "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",
+    "heal_radius": "반경:",
+    "heal_method": "방법:",
+    "heal_telea": "Telea (빠름)",
+    "heal_ns": "Navier-Stokes (부드러움)",
+    "heal_output": "출력:",
+    "heal_run": "적용 및 저장",
+    "heal_count": "{n} 스팟",
+
+    # --- Lens Correction ---
+    "lens_title": "렌즈 보정",
+    "lens_k1": "왜곡 (배럴 / 핀쿠션):",
+    "lens_vignette": "비네트 보정:",
+    "lens_ca_red": "색수차 (빨강):",
+    "lens_ca_blue": "색수차 (파랑):",
+    "lens_output": "출력:",
+    "lens_run": "적용",
+
+    # --- Map View ---
+    "map_title": "지도 보기",
+    "map_count": "{total}장 중 {n}장에 GPS 태그.",
+    "map_fallback": "QtWebEngine 미설치 — 좌표 목록으로 대체.",
+
+    # --- Calendar View ---
+    "calendar_title": "달력 보기",
+    "calendar_summary": "사진이 있는 {days}일, 총 {total}장.",
+
+    # --- Face Detection ---
+    "face_title": "얼굴 검출",
+    "face_hint": "OpenCV Haar 분류기 사용. 이름은 recipe 에 저장됨.",
+    "face_detect": "얼굴 검출",
+    "face_clear": "지우기",
+    "face_remove": "선택 제거",
+    "face_list": "검출된 얼굴 (이름 붙이려면 더블클릭):",
+    "face_found": "총 {n}개 얼굴.",
+    "face_save": "저장",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "로컬 조정 마스크",
+    "masks_list": "마스크:",
+    "masks_add_brush": "+ 브러시",
+    "masks_add_radial": "+ 방사형",
+    "masks_add_linear": "+ 선형",
+    "masks_remove": "제거",
+    "masks_adjustments": "조정",
+    "masks_exposure": "노출:",
+    "masks_brightness": "밝기:",
+    "masks_contrast": "대비:",
+    "masks_saturation": "채도:",
+    "masks_temperature": "색온도:",
+    "masks_tint": "틴트:",
+    "masks_feather": "페더:",
+
+    # --- Split Toning ---
+    "split_title": "스플릿 토닝",
+    "split_shadow_hue": "섀도 색조:",
+    "split_shadow_sat": "섀도 채도:",
+    "split_highlight_hue": "하이라이트 색조:",
+    "split_highlight_sat": "하이라이트 채도:",
+    "split_balance": "밸런스:",
+
+    # --- Clone Stamp ---
+    "stamp_title": "복제 도장",
+    "stamp_radius": "반경 (픽셀):",
+    "stamp_hint": "Shift+클릭으로 원본 지정 \u2022 클릭으로 스탬프 \u2022 우클릭으로 취소",
+    "stamp_output": "출력:",
+    "stamp_run": "적용",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "자르기 / 수평 맞춤",
+    "crop_angle": "수평 각도:",
+    "crop_x": "자르기 X (0..1):",
+    "crop_y": "자르기 Y (0..1):",
+    "crop_w": "자르기 너비 (0..1):",
+    "crop_h": "자르기 높이 (0..1):",
+    "crop_output": "출력:",
+    "crop_run": "적용",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "노이즈 감소 / 선명도",
+    "nr_strength": "노이즈 감소 강도:",
+    "nr_luma_only": "휘도만",
+    "nr_sharpen_amount": "선명도 양:",
+    "nr_sharpen_radius": "선명도 반경 (픽셀):",
+    "nr_output": "출력:",
+    "nr_run": "적용",
+
+    # --- Sky / Background ---
+    "sky_title": "하늘 / 배경",
+    "sky_mode": "작업:",
+    "sky_mode_sky": "그라디언트로 하늘 교체",
+    "sky_mode_trans": "배경 제거 (투명)",
+    "sky_mode_white": "배경 제거 (흰색)",
+    "sky_output": "출력:",
+    "sky_run": "적용",
+
+    # --- Soft Proofing ---
+    "proof_title": "소프트 프루핑",
+    "proof_profile": "ICC 프로파일:",
+    "proof_preview": "미리보기",
+    "proof_pick": "ICC 프로파일을 선택하세요.",
+    "proof_failed": "프로파일 로드 실패.",
+    "proof_oog": "색 영역 초과 픽셀:",
+
+    # --- Print Layout ---
+    "print_title": "인쇄 레이아웃",
+    "print_add": "파일 추가...",
+    "print_clear": "지우기",
+    "print_page_size": "페이지 크기:",
+    "print_landscape": "가로 방향",
+    "print_rows": "행:",
+    "print_cols": "열:",
+    "print_crop_marks": "재단 표시",
+    "print_output": "출력 PDF:",
+    "print_export": "PDF 내보내기",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS 지오태그",
+    "geotag_lat": "위도 (\u00b0):",
+    "geotag_lon": "경도 (\u00b0):",
+    "geotag_failed": "GPS 태그 쓰기 실패.",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "자동 수평 맞춤",
+    "autostr_detect": "각도 검출",
+    "autostr_angle": "회전 (\u00b0):",
+    "autostr_output": "출력:",
+    "autostr_apply": "적용",
 }

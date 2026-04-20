@@ -5,7 +5,6 @@ Custom Keyboard Shortcuts — let users remap keyboard shortcuts.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence
@@ -26,9 +25,6 @@ from Imervue.user_settings.user_setting_dict import (
     user_setting_dict,
     schedule_save,
 )
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.shortcut_settings")
 
@@ -229,7 +225,7 @@ class ShortcutManager:
         order, which is invisible to callers and confusing in tests.
         """
         combo = (key, modifiers)
-        for other_id, existing in list(self._action_to_key.items()):
+        for other_id, existing in self._action_to_key.items():
             if other_id != action_id and existing == combo:
                 self._action_to_key[other_id] = (0, 0)
         self._action_to_key[action_id] = combo

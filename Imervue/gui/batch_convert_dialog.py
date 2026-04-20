@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.batch_convert")
 
+_JPEG_EXT = ".jpeg"
+
 FORMAT_OPTIONS = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
 FORMAT_EXTENSIONS = {
     "PNG": ".png", "JPEG": ".jpg", "WebP": ".webp",
@@ -40,9 +42,10 @@ FORMAT_EXTENSIONS = {
 }
 QUALITY_FORMATS = {"JPEG", "WebP"}
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
+    ".png", ".jpg", _JPEG_EXT, ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng",
 })
+_JPEG_EXTS = (".jpg", _JPEG_EXT)
 
 
 def _scan_folder(folder: str) -> list[str]:
@@ -77,60 +80,63 @@ class _ConvertWorker(QThread):
         failed = 0
         skipped = 0
         total = len(self._paths)
-
         for i, src in enumerate(self._paths):
-            name = Path(src).name
-            self.progress.emit(i, total, name)
+            self.progress.emit(i, total, Path(src).name)
             try:
-                src_ext = Path(src).suffix.lower()
-                # Skip if already in target format
-                if self._skip_same_fmt:
-                    same = (src_ext == target_ext) or (
-                        src_ext in (".jpg", ".jpeg") and target_ext in (".jpg", ".jpeg")
-                    )
-                    if same:
-                        skipped += 1
-                        continue
-
-                img = Image.open(src)
-                # Mode conversion
-                needs_rgb = (
-                    (self._fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"))
-                    or (self._fmt == "BMP" and img.mode == "RGBA")
-                )
-                if needs_rgb:
-                    img = img.convert("RGB")
-                elif img.mode not in ("RGB", "RGBA", "L"):
-                    img = img.convert("RGBA")
-
-                out_name = Path(src).stem + target_ext
-                out_path = Path(self._output_dir) / out_name
-                # Avoid overwrite (unless deleting originals in-place)
-                if out_path.exists() and str(out_path) != src:
-                    counter = 1
-                    while out_path.exists():
-                        out_name = f"{Path(src).stem}_{counter}{target_ext}"
-                        out_path = Path(self._output_dir) / out_name
-                        counter += 1
-
-                kwargs = {}
-                if self._fmt in QUALITY_FORMATS:
-                    kwargs["quality"] = self._quality
-
-                img.save(str(out_path), format=self._fmt, **kwargs)
+                if self._should_skip(src, target_ext):
+                    skipped += 1
+                    continue
+                self._convert_one(src, target_ext)
                 success += 1
-
-                # Delete original if requested and output is different file
-                out_norm = os.path.normpath(str(out_path))
-                if self._delete_originals and out_norm != os.path.normpath(src):
-                    with contextlib.suppress(OSError):
-                        os.remove(src)
-
-            except Exception as exc:
+            except (OSError, ValueError) as exc:
                 logger.error("Batch convert failed for %s: %s", src, exc)
                 failed += 1
-
         self.result_ready.emit(success, failed, skipped)
+
+    def _should_skip(self, src: str, target_ext: str) -> bool:
+        if not self._skip_same_fmt:
+            return False
+        src_ext = Path(src).suffix.lower()
+        if src_ext == target_ext:
+            return True
+        return src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
+
+    def _convert_one(self, src: str, target_ext: str) -> None:
+        img = self._prepare_image(src)
+        out_path = self._resolve_output_path(src, target_ext)
+        kwargs = {"quality": self._quality} if self._fmt in QUALITY_FORMATS else {}
+        img.save(str(out_path), format=self._fmt, **kwargs)
+        self._maybe_delete_original(src, str(out_path))
+
+    def _prepare_image(self, src: str) -> Image.Image:
+        img = Image.open(src)
+        needs_rgb = (
+            (self._fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"))
+            or (self._fmt == "BMP" and img.mode == "RGBA")
+        )
+        if needs_rgb:
+            return img.convert("RGB")
+        if img.mode not in ("RGB", "RGBA", "L"):
+            return img.convert("RGBA")
+        return img
+
+    def _resolve_output_path(self, src: str, target_ext: str) -> Path:
+        out_path = Path(self._output_dir) / (Path(src).stem + target_ext)
+        if not (out_path.exists() and str(out_path) != src):
+            return out_path
+        counter = 1
+        while out_path.exists():
+            out_path = Path(self._output_dir) / f"{Path(src).stem}_{counter}{target_ext}"
+            counter += 1
+        return out_path
+
+    def _maybe_delete_original(self, src: str, out_path: str) -> None:
+        if not self._delete_originals:
+            return
+        if os.path.normpath(out_path) == os.path.normpath(src):
+            return
+        with contextlib.suppress(OSError):
+            os.remove(src)
 
 
 class BatchConvertDialog(QDialog):

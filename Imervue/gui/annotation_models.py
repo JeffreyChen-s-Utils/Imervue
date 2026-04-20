@@ -199,35 +199,43 @@ def _system_font_candidates() -> list[str]:
 
 def _resolve_font_path(family: str) -> str | None:
     """Try to find a .ttf/.ttc file for a given font family name on Windows."""
-    if not family:
+    if not family or sys.platform != "win32":
         return None
-    if sys.platform == "win32":
-        import winreg
-        try:
-            key = winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE,
-                r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts",
-            )
-            # Iterate all registered fonts looking for a name match
-            i = 0
-            family_lower = family.lower()
-            while True:
-                try:
-                    name, value, _ = winreg.EnumValue(key, i)
-                    if family_lower in name.lower():
-                        # value may be just a filename — resolve relative to Fonts dir
-                        p = Path(value)
-                        if not p.is_absolute():
-                            p = Path(r"C:\Windows\Fonts") / p
-                        if p.exists():
-                            return str(p)
-                    i += 1
-                except OSError:
-                    break
+    import winreg
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts",
+        )
+    except OSError:
+        return None
+    try:
+        return _scan_font_registry(winreg, key, family.lower())
+    finally:
+        with contextlib.suppress(OSError):
             winreg.CloseKey(key)
+
+
+def _scan_font_registry(winreg, key, family_lower: str) -> str | None:
+    i = 0
+    while True:
+        try:
+            name, value, _ = winreg.EnumValue(key, i)
         except OSError:
-            pass
-    return None
+            return None
+        i += 1
+        if family_lower not in name.lower():
+            continue
+        resolved = _resolve_font_value(value)
+        if resolved:
+            return resolved
+
+
+def _resolve_font_value(value: str) -> str | None:
+    p = Path(value)
+    if not p.is_absolute():
+        p = Path(r"C:\Windows\Fonts") / p
+    return str(p) if p.exists() else None
 
 
 def _get_font(size: int, family: str = "") -> ImageFont.ImageFont:

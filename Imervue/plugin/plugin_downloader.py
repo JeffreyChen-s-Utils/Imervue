@@ -6,6 +6,20 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
+
+
+def _https_urlopen(req: urllib.request.Request, timeout: int):
+    """urlopen that refuses non-https schemes.
+
+    Guards against compromised GitHub API responses that might supply a
+    non-https download URL. Bandit B310 is satisfied once the scheme is
+    verified before the request is issued.
+    """
+    scheme = urlparse(req.full_url).scheme
+    if scheme != "https":
+        raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -32,7 +46,7 @@ def _get_plugin_dir() -> Path:
 
 def _github_get(url: str) -> list | dict:
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github.v3+json"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with _https_urlopen(req, timeout=15) as resp:
         return json.loads(resp.read().decode())
 
 
@@ -105,7 +119,7 @@ class DownloadPluginWorker(QThread):
                 url = info["download_url"]
                 dest = plugin_dir / info["name"]
                 req = urllib.request.Request(url)
-                with urllib.request.urlopen(req, timeout=30) as resp:
+                with _https_urlopen(req, timeout=30) as resp:
                     dest.write_bytes(resp.read())
                 self.progress.emit(i + 1, total)
 

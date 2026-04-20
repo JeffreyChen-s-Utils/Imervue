@@ -28,82 +28,81 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
     return collapse_stacks(list(images))
 
 
+_RAW_EXTS = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
+
+
+def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
+    with rawpy.imread(path) as raw:
+        if thumbnail:
+            return _load_raw_thumbnail(raw)
+        return raw.postprocess(
+            use_camera_wb=True,
+            no_auto_bright=False,
+            output_bps=8,
+        )
+
+
+def _load_raw_thumbnail(raw) -> np.ndarray:
+    try:
+        thumb = raw.extract_thumb()
+        if thumb.format == rawpy.ThumbFormat.JPEG:
+            return imageio.v3.imread(thumb.data)
+        if thumb.format == rawpy.ThumbFormat.BITMAP:
+            return thumb.data
+        raise ValueError("No valid embedded preview")
+    except (ValueError, OSError, RuntimeError):
+        return raw.postprocess(
+            half_size=True,
+            use_camera_wb=True,
+            output_bps=8,
+        )
+
+
+def _load_raster(path: str) -> np.ndarray:
+    img = Image.open(path)
+    # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
+    # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
+    # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
+    if img.mode not in ("RGB", "RGBA", "L"):
+        img = img.convert("RGBA")
+    return np.array(img)
+
+
+def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
+    if img_data.ndim == 2:
+        img_data = np.stack([img_data, img_data, img_data], axis=2)
+    if img_data.shape[2] == 3:
+        alpha = np.ones((*img_data.shape[:2], 1), dtype=np.uint8) * 255
+        img_data = np.concatenate([img_data, alpha], axis=2)
+    return img_data
+
+
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
     thumbnail=True 時會優先使用 RAW embedded preview 或 half_size
     回傳 numpy RGBA
 
-    ``recipe`` 是可選的 :class:`Imervue.image.recipe.Recipe`：若提供，非 identity
-    的部分會在回傳前套到 RGBA 陣列上。呼叫端也可以先自行查 recipe_store 再決定
-    要不要傳進來，這個函式不強制依賴 store。
+    ``recipe`` 是可選的 :class:`Imervue.image.recipe.Recipe`: 若提供, 非 identity
+    的部分會在回傳前套到 RGBA 陣列上. 呼叫端也可以先自行查 recipe_store 再決定
+    要不要傳進來, 這個函式不強制依賴 store.
     """
     ext = Path(path).suffix.lower()
-
-    raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
-
-    # ===== RAW 檔案 =====
-    if ext in raw_exts:
-        with rawpy.imread(path) as raw:
-
-            # ---- Thumbnail 模式 ----
-            if thumbnail:
-                # 優先讀 embedded preview
-                try:
-                    thumb = raw.extract_thumb()
-                    if thumb.format == rawpy.ThumbFormat.JPEG:
-                        img = imageio.v3.imread(thumb.data)
-                    elif thumb.format == rawpy.ThumbFormat.BITMAP:
-                        img = thumb.data
-                    else:
-                        raise Exception("No valid embedded preview")
-                except Exception:
-                    # fallback 用 half_size
-                    img = raw.postprocess(
-                        half_size=True,
-                        use_camera_wb=True,
-                        output_bps=8
-                    )
-            else:
-                # ---- 全解析 ----
-                img = raw.postprocess(
-                    use_camera_wb=True,
-                    no_auto_bright=False,
-                    output_bps=8
-                )
-
-        img_data = img
-
-    # ===== SVG 向量圖 =====
+    if ext in _RAW_EXTS:
+        img_data = _load_raw(path, thumbnail)
     elif ext == ".svg":
         img_data = _load_svg(path, thumbnail=thumbnail)
-
-    # ===== 一般圖片 =====
     else:
-        img = Image.open(path)
-        # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理，
-        # 省掉一次全圖的記憶體複製。對於 60 MP+ 的 JPEG 來說差距顯著（記憶體峰值約少 25%）。
-        # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤。
-        if img.mode not in ("RGB", "RGBA", "L"):
-            img = img.convert("RGBA")
-        img_data = np.array(img)
+        img_data = _load_raster(path)
 
-    # ===== 灰階 → RGB =====
-    if img_data.ndim == 2:
-        img_data = np.stack([img_data, img_data, img_data], axis=2)
+    img_data = _ensure_rgba(img_data)
 
-    # ===== 補 alpha =====
-    if img_data.shape[2] == 3:
-        alpha = np.ones((*img_data.shape[:2], 1), dtype=np.uint8) * 255
-        img_data = np.concatenate([img_data, alpha], axis=2)
-
-    # ===== 套用 recipe（非破壞性編輯）=====
     if recipe is not None and not recipe.is_identity():
         try:
             img_data = recipe.apply(img_data)
-        except Exception as exc:
-            # 一張圖片的 recipe 壞掉不應該害整個載入流程炸掉；log 一下繼續用
-            # 原始像素。使用者下一次打開 Develop panel 會看到 reset 過的值。
+        except Exception as exc:  # noqa: BLE001
+            # 一張圖片的 recipe 壞掉不該害整個載入流程炸掉; log 一下繼續用
+            # 原始像素. 使用者下一次打開 Develop panel 會看到 reset 過的值.
             logger.warning(f"Recipe apply failed for {path}: {exc}")
 
     return img_data
@@ -231,68 +230,59 @@ def _scan_images_for_user(directory: str) -> list[str]:
 
 
 def open_path(main_gui: GPUImageView, path: str):
-
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
-    from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
-
     path_obj = Path(path)
-
     if path_obj.is_dir():
-
-        images = _scan_images_for_user(str(path_obj))
-
-        if not images:
-            return
-
-        main_gui.current_index = 0
-        main_gui._unfiltered_images = list(images)
-        images, stacks = _maybe_collapse_stacks(images)
-        main_gui._stack_members = stacks
-        main_gui.load_tile_grid_async(images)
-
-        # 記錄最近開啟的資料夾
-        add_recent_folder(str(path_obj))
-        user_setting_dict["user_last_folder"] = str(path_obj)
-
-        # Plugin hook: folder opened
-        if hasattr(main_gui.main_window, "plugin_manager"):
-            main_gui.main_window.plugin_manager.dispatch_folder_opened(
-                str(path_obj), images, main_gui
-            )
-
+        _open_folder(main_gui, path_obj)
     elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:
+        _open_file(main_gui, path_obj)
 
-        dir_path = path_obj.parent
 
-        images = _scan_images_for_user(str(dir_path))
+def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    from Imervue.user_settings.recent_image import add_recent_folder
+    images = _scan_images_for_user(str(path_obj))
+    if not images:
+        return
+    main_gui.current_index = 0
+    main_gui._unfiltered_images = list(images)
+    images, stacks = _maybe_collapse_stacks(images)
+    main_gui._stack_members = stacks
+    main_gui.load_tile_grid_async(images)
+    add_recent_folder(str(path_obj))
+    user_setting_dict["user_last_folder"] = str(path_obj)
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_folder_opened(
+            str(path_obj), images, main_gui,
+        )
 
-        if not images:
-            return
 
-        main_gui._unfiltered_images = list(images)
-        images, stacks = _maybe_collapse_stacks(images)
-        main_gui._stack_members = stacks
-        main_gui.model.set_images(images)
-        try:
-            main_gui.current_index = images.index(str(path_obj))
-        except ValueError:
-            # 路徑格式可能不同（正斜線/反斜線），用 normpath 比對
-            import os
-            norm = os.path.normpath(str(path_obj))
-            for i, p in enumerate(images):
-                if os.path.normpath(p) == norm:
-                    main_gui.current_index = i
-                    break
-            else:
-                main_gui.current_index = 0
+def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    from Imervue.user_settings.recent_image import add_recent_image
+    dir_path = path_obj.parent
+    images = _scan_images_for_user(str(dir_path))
+    if not images:
+        return
+    main_gui._unfiltered_images = list(images)
+    images, stacks = _maybe_collapse_stacks(images)
+    main_gui._stack_members = stacks
+    main_gui.model.set_images(images)
+    main_gui.current_index = _locate_current_index(images, str(path_obj))
+    main_gui.tile_grid_mode = False
+    main_gui.load_deep_zoom_image(str(path_obj))
+    add_recent_image(str(path_obj))
+    user_setting_dict["user_last_folder"] = str(dir_path)
+    if hasattr(main_gui.main_window, "plugin_manager"):
+        main_gui.main_window.plugin_manager.dispatch_image_loaded(str(path_obj), main_gui)
 
-        main_gui.tile_grid_mode = False
-        main_gui.load_deep_zoom_image(str(path_obj))
 
-        # 記錄最近開啟的檔案
-        add_recent_image(str(path_obj))
-        user_setting_dict["user_last_folder"] = str(dir_path)
-
-        # Plugin hook: image loaded
-        if hasattr(main_gui.main_window, "plugin_manager"):
-            main_gui.main_window.plugin_manager.dispatch_image_loaded(str(path_obj), main_gui)
+def _locate_current_index(images: list[str], target: str) -> int:
+    try:
+        return images.index(target)
+    except ValueError:
+        import os
+        norm = os.path.normpath(target)
+        for i, p in enumerate(images):
+            if os.path.normpath(p) == norm:
+                return i
+        return 0

@@ -3,6 +3,7 @@ _TRADITIONAL_CHINESE_TR9006664291DD65CB = '逆時針旋轉'
 _TRADITIONAL_CHINESE_TR91CD65B0547D540D = '重新命名'
 _TRADITIONAL_CHINESE_TR4F866E908CC76599 = '來源資料夾：'
 _TRADITIONAL_CHINESE_TR8F3851FA8CC76599 = '輸出資料夾：'
+_TRADITIONAL_CHINESE_ADD_IMAGES = '加入圖片\u2026'
 _NO_EXPORT_IMAGES = '沒有可匯出的圖片。'
 _EXPORT_FAILED = '匯出失敗：{err}'
 
@@ -983,4 +984,200 @@ traditional_chinese_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": "匯出失敗:{err}",
     "slideshow_done": "幻燈片已寫入：{path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "色調曲線",
+    "tone_curve_channel_label": "通道：",
+    "tone_curve_reset": "重設此通道",
+    "tone_curve_hint": "左鍵空白處新增控制點；拖曳移動；右鍵刪除。",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "紅",
+    "curve_channel_g": "綠",
+    "curve_channel_b": "藍",
+
+    # --- LUT ---
+    "lut_title": "套用 .cube LUT",
+    "lut_file": ".cube 檔案：",
+    "lut_clear": "清除",
+    "lut_intensity": "強度：",
+    "lut_pick": "選擇 .cube LUT",
+    "lut_hint": "可載入任何 Adobe .cube LUT（最大 64\u00b3）。強度滑桿可與原圖混合。",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "虛擬副本",
+    "vcopies_hint": "為這張圖的 recipe 儲存命名快照，可隨時切換。",
+    "vcopies_snap": "快照目前 →",
+    "vcopies_apply": "套用",
+    "vcopies_rename": "重新命名",
+    "vcopies_delete": "刪除",
+    "vcopies_snap_title": "快照名稱",
+    "vcopies_snap_prompt": "名稱：",
+    "vcopies_exists": "同名的快照已存在。",
+    "vcopies_rename_title": "重新命名快照",
+    "vcopies_new_name": "新名稱：",
+    "vcopies_rename_fail": "重新命名失敗 — 名稱可能已存在。",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR 合成",
+    "hdr_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
+    "hdr_clear": "清除",
+    "hdr_align": "對齊曝光",
+    "hdr_method": "方法：",
+    "hdr_mertens": "Mertens（融合）",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "輸出：",
+    "hdr_run": "合成",
+    "hdr_hint": "選擇 2 張以上不同曝光（使用 Mertens 曝光融合）。",
+
+    # --- Panorama ---
+    "pano_title": "全景接圖",
+    "pano_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
+    "pano_clear": "清除",
+    "pano_mode": "模式：",
+    "pano_mode_panorama": "全景",
+    "pano_mode_scans": "掃描（平面文件）",
+    "pano_crop": "裁掉黑邊",
+    "pano_output": "輸出：",
+    "pano_run": "接合",
+    "pano_hint": "依序選擇重疊的照片。需要 2 張以上且有 20\u201340% 重疊。",
+
+    # --- Focus Stacking ---
+    "fstack_title": "景深合成",
+    "fstack_add": _TRADITIONAL_CHINESE_ADD_IMAGES,
+    "fstack_clear": "清除",
+    "fstack_align": "對齊影像",
+    "fstack_output": "輸出：",
+    "fstack_run": "合成",
+    "fstack_hint": "選擇不同對焦距離的多張影像（微距 / 商品攝影）。",
+
+    # --- Healing Brush ---
+    "heal_title": "修復筆刷",
+    "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",
+    "heal_radius": "半徑：",
+    "heal_method": "方法：",
+    "heal_telea": "Telea（快速）",
+    "heal_ns": "Navier-Stokes（平滑）",
+    "heal_output": "輸出：",
+    "heal_run": "套用並儲存",
+    "heal_count": "{n} 個修復點",
+
+    # --- Lens Correction ---
+    "lens_title": "鏡頭校正",
+    "lens_k1": "失真（桶型 / 枕型）：",
+    "lens_vignette": "暗角校正：",
+    "lens_ca_red": "色差（紅）：",
+    "lens_ca_blue": "色差（藍）：",
+    "lens_output": "輸出：",
+    "lens_run": "套用",
+
+    # --- Map View ---
+    "map_title": "地圖檢視",
+    "map_count": "掃描 {total} 張，其中 {n} 張含 GPS 資訊。",
+    "map_fallback": "未安裝 QtWebEngine — 以座標清單顯示。",
+
+    # --- Calendar View ---
+    "calendar_title": "行事曆檢視",
+    "calendar_summary": "{days} 天有照片，共 {total} 張。",
+
+    # --- Face Detection ---
+    "face_title": "人臉偵測",
+    "face_hint": "使用 OpenCV Haar 分類器。名稱將隨 recipe 保存。",
+    "face_detect": "偵測人臉",
+    "face_clear": "清除",
+    "face_remove": "移除選取",
+    "face_list": "偵測到的臉（雙擊以命名）：",
+    "face_found": "共 {n} 張臉。",
+    "face_save": "儲存",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "局部調整遮罩",
+    "masks_list": "遮罩：",
+    "masks_add_brush": "+ 筆刷",
+    "masks_add_radial": "+ 放射",
+    "masks_add_linear": "+ 線性",
+    "masks_remove": "移除",
+    "masks_adjustments": "調整",
+    "masks_exposure": "曝光：",
+    "masks_brightness": "亮度：",
+    "masks_contrast": "對比：",
+    "masks_saturation": "飽和度：",
+    "masks_temperature": "色溫：",
+    "masks_tint": "色調：",
+    "masks_feather": "羽化：",
+
+    # --- Split Toning ---
+    "split_title": "色調分離",
+    "split_shadow_hue": "陰影色相：",
+    "split_shadow_sat": "陰影飽和度：",
+    "split_highlight_hue": "高光色相：",
+    "split_highlight_sat": "高光飽和度：",
+    "split_balance": "平衡：",
+
+    # --- Clone Stamp ---
+    "stamp_title": "複製印章",
+    "stamp_radius": "半徑（像素）：",
+    "stamp_hint": "Shift+點擊設定來源 \u2022 點擊蓋章 \u2022 右鍵復原",
+    "stamp_output": "輸出：",
+    "stamp_run": "套用",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "裁切 / 拉直",
+    "crop_angle": "拉直角度：",
+    "crop_x": "裁切 X（0..1）：",
+    "crop_y": "裁切 Y（0..1）：",
+    "crop_w": "裁切寬度（0..1）：",
+    "crop_h": "裁切高度（0..1）：",
+    "crop_output": "輸出：",
+    "crop_run": "套用",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "降噪 / 銳化",
+    "nr_strength": "降噪強度：",
+    "nr_luma_only": "僅亮度通道",
+    "nr_sharpen_amount": "銳化量：",
+    "nr_sharpen_radius": "銳化半徑（像素）：",
+    "nr_output": "輸出：",
+    "nr_run": "套用",
+
+    # --- Sky / Background ---
+    "sky_title": "天空 / 背景",
+    "sky_mode": "操作：",
+    "sky_mode_sky": "以漸層替換天空",
+    "sky_mode_trans": "移除背景（透明）",
+    "sky_mode_white": "移除背景（白底）",
+    "sky_output": "輸出：",
+    "sky_run": "套用",
+
+    # --- Soft Proofing ---
+    "proof_title": "螢幕校樣",
+    "proof_profile": "ICC 色彩描述檔：",
+    "proof_preview": "預覽",
+    "proof_pick": "請選擇 ICC 描述檔。",
+    "proof_failed": "描述檔載入失敗。",
+    "proof_oog": "超出色域像素：",
+
+    # --- Print Layout ---
+    "print_title": "列印排版",
+    "print_add": "加入檔案...",
+    "print_clear": "清除",
+    "print_page_size": "頁面大小：",
+    "print_landscape": "橫向",
+    "print_rows": "列數：",
+    "print_cols": "欄數：",
+    "print_crop_marks": "裁切標記",
+    "print_output": "輸出 PDF：",
+    "print_export": "匯出 PDF",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS 地理標記",
+    "geotag_lat": "緯度（\u00b0）：",
+    "geotag_lon": "經度（\u00b0）：",
+    "geotag_failed": "GPS 標籤寫入失敗。",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "自動拉直",
+    "autostr_detect": "偵測角度",
+    "autostr_angle": "旋轉（\u00b0）：",
+    "autostr_output": "輸出：",
+    "autostr_apply": "套用",
 }

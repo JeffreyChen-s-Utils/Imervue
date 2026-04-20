@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.bookmark_dialog")
 
+_EXPORT_TITLE = "Export Bookmarks"
+_IMPORT_TITLE = "Import Bookmarks"
+
 
 def open_bookmark_dialog(main_gui: GPUImageView):
     dlg = BookmarkDialog(main_gui)
@@ -227,7 +230,7 @@ class BookmarkDialog(QDialog):
         lang = language_wrapper.language_word_dict
         path, _ = QFileDialog.getSaveFileName(
             self,
-            lang.get("bookmark_export_title", "Export Bookmarks"),
+            lang.get("bookmark_export_title", _EXPORT_TITLE),
             "imervue_bookmarks.json",
             "JSON (*.json)",
         )
@@ -245,13 +248,13 @@ class BookmarkDialog(QDialog):
             logger.error(f"Bookmark export failed: {e}")
             QMessageBox.warning(
                 self,
-                lang.get("bookmark_export_title", "Export Bookmarks"),
+                lang.get("bookmark_export_title", _EXPORT_TITLE),
                 str(e),
             )
             return
         QMessageBox.information(
             self,
-            lang.get("bookmark_export_title", "Export Bookmarks"),
+            lang.get("bookmark_export_title", _EXPORT_TITLE),
             lang.get(
                 "bookmark_export_done",
                 "Exported {count} bookmark(s).",
@@ -262,7 +265,7 @@ class BookmarkDialog(QDialog):
         lang = language_wrapper.language_word_dict
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang.get("bookmark_import_title", "Import Bookmarks"),
+            lang.get("bookmark_import_title", _IMPORT_TITLE),
             "",
             "JSON (*.json)",
         )
@@ -275,7 +278,7 @@ class BookmarkDialog(QDialog):
             logger.error(f"Bookmark import failed: {e}")
             QMessageBox.warning(
                 self,
-                lang.get("bookmark_import_title", "Import Bookmarks"),
+                lang.get("bookmark_import_title", _IMPORT_TITLE),
                 str(e),
             )
             return
@@ -294,7 +297,7 @@ class BookmarkDialog(QDialog):
         self._refresh()
         QMessageBox.information(
             self,
-            lang.get("bookmark_import_title", "Import Bookmarks"),
+            lang.get("bookmark_import_title", _IMPORT_TITLE),
             lang.get(
                 "bookmark_import_done",
                 "Imported {added} new bookmark(s).",

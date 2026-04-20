@@ -16,12 +16,27 @@ from __future__ import annotations
 import importlib
 import io
 import logging
+import re
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 from urllib.request import urlopen, Request
+
+
+def _https_urlopen(req: Request, timeout: int):
+    """urlopen that refuses any scheme other than https.
+
+    The URLs used by this module are hardcoded https:// endpoints (python.org,
+    pypa.io), but this guard makes the scheme explicit so bandit B310 and
+    future maintainers both see that non-https is rejected.
+    """
+    scheme = urlparse(req.full_url).scheme
+    if scheme != "https":
+        raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
+    return urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
 
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -89,6 +104,7 @@ _USER_AGENT = "Imervue/1.0"
 _UA_HEADERS = {"User-Agent": _USER_AGENT}
 _PROCESS_TIMEOUT_MSG = "Process timed out"
 _PYTHON_EXE_NAME = "python.exe"
+_PTH_NAME_RE = re.compile(r"python[0-9._]*\._pth")
 
 
 def _embedded_python_dir() -> Path:
@@ -144,7 +160,7 @@ class _DownloadPythonWorker(QThread):
         self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
         try:
             req = Request(_EMBED_PYTHON_URL, headers=_UA_HEADERS)
-            resp = urlopen(req, timeout=120)
+            resp = _https_urlopen(req, timeout=120)
             return resp.read()
         except OSError as e:
             self.result_ready.emit(False, f"Download failed: {e}")
@@ -168,12 +184,18 @@ class _DownloadPythonWorker(QThread):
         """Uncomment ``import site`` in python*._pth so pip can work."""
         dest_resolved = dest_dir.resolve()
         for pth_file in dest_dir.glob("python*._pth"):
+            # glob("python*._pth") can only return names matching that literal
+            # pattern, and the parent is dest_dir itself — still reject anything
+            # that resolves outside dest_dir (e.g. a symlinked entry).
             resolved = pth_file.resolve()
             if not resolved.is_relative_to(dest_resolved):
                 continue
-            self.log.emit(f"Patching {resolved.name} to enable 'import site' ...")
-            content = resolved.read_text(encoding="utf-8")
-            resolved.write_text(
+            if pth_file.parent != dest_dir or not _PTH_NAME_RE.fullmatch(pth_file.name):
+                continue
+            safe_path = dest_dir / pth_file.name
+            self.log.emit(f"Patching {safe_path.name} to enable 'import site' ...")
+            content = safe_path.read_text(encoding="utf-8")
+            safe_path.write_text(
                 content.replace("#import site", "import site"),
                 encoding="utf-8",
             )
@@ -183,7 +205,7 @@ class _DownloadPythonWorker(QThread):
         self.log.emit("Downloading get-pip.py ...")
         try:
             req = Request(_GET_PIP_URL, headers=_UA_HEADERS)
-            resp = urlopen(req, timeout=120)
+            resp = _https_urlopen(req, timeout=120)
             get_pip_data = resp.read()
         except OSError as e:
             self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
@@ -317,35 +339,59 @@ def _find_python() -> str | None:
     return None
 
 
+_REG_SUBKEYS = (
+    r"Software\Python\PythonCore",
+    r"Software\WOW6432Node\Python\PythonCore",
+)
+
+
 def _find_python_from_registry() -> str | None:
     """Windows：從 registry 搜尋已安裝的 Python"""
     try:
         import winreg
-        for hive in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
-            for sub in [r"Software\Python\PythonCore",
-                        r"Software\WOW6432Node\Python\PythonCore"]:
-                try:
-                    key = winreg.OpenKey(hive, sub)
-                except OSError:
-                    continue
-                try:
-                    i = 0
-                    while True:
-                        ver = winreg.EnumKey(key, i)
-                        i += 1
-                        try:
-                            install_key = winreg.OpenKey(
-                                key, ver + r"\InstallPath")
-                            path, _ = winreg.QueryValueEx(
-                                install_key, "ExecutablePath")
-                            if Path(path).is_file() and _verify_python(path):
-                                return path
-                        except OSError:
-                            continue
-                except OSError:
-                    pass
     except ImportError:
-        pass
+        return None
+    hives = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
+    for hive in hives:
+        for sub in _REG_SUBKEYS:
+            path = _scan_registry_branch(winreg, hive, sub)
+            if path:
+                return path
+    return None
+
+
+def _scan_registry_branch(winreg, hive, sub: str) -> str | None:
+    try:
+        key = winreg.OpenKey(hive, sub)
+    except OSError:
+        return None
+    try:
+        return _enumerate_python_versions(winreg, key)
+    except OSError:
+        return None
+
+
+def _enumerate_python_versions(winreg, key) -> str | None:
+    i = 0
+    while True:
+        try:
+            ver = winreg.EnumKey(key, i)
+        except OSError:
+            return None
+        i += 1
+        path = _read_install_path(winreg, key, ver)
+        if path:
+            return path
+
+
+def _read_install_path(winreg, key, ver: str) -> str | None:
+    try:
+        install_key = winreg.OpenKey(key, ver + r"\InstallPath")
+        path, _ = winreg.QueryValueEx(install_key, "ExecutablePath")
+    except OSError:
+        return None
+    if Path(path).is_file() and _verify_python(path):
+        return path
     return None
 
 

@@ -93,21 +93,29 @@ _RANDOM_CHARS = string.ascii_lowercase + string.digits
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
     """Return image paths sorted by name."""
-    result: list[str] = []
-    if recursive:
-        for root, _dirs, files in os.walk(folder):
-            for f in files:
-                if Path(f).suffix.lower() in _IMAGE_EXTS:
-                    result.append(os.path.join(root, f))
-    else:
-        try:
-            for entry in os.scandir(folder):
-                if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
-                    result.append(entry.path)
-        except OSError:
-            pass
+    result = _walk_images(folder) if recursive else _scandir_images(folder)
     result.sort(key=lambda p: os.path.basename(p).lower())
     return result
+
+
+def _walk_images(folder: str) -> list[str]:
+    return [
+        os.path.join(root, f)
+        for root, _dirs, files in os.walk(folder)
+        for f in files
+        if Path(f).suffix.lower() in _IMAGE_EXTS
+    ]
+
+
+def _scandir_images(folder: str) -> list[str]:
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return []
+    return [
+        e.path for e in entries
+        if e.is_file() and Path(e.name).suffix.lower() in _IMAGE_EXTS
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +329,7 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
     arr = np.array(img, copy=True)
     # Unseeded on purpose: if an attacker can predict the scramble pattern
     # they can recover the hidden payload, which defeats the entire feature.
-    rng = np.random.default_rng()  # noqa: NPY002
+    rng = np.random.default_rng()  # noqa: NPY002  NOSONAR  unpredictability is the feature
     scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
     # Where mask is True use random LSB, otherwise keep the original LSB.
@@ -381,57 +389,62 @@ class _SanitizeWorker(QThread):
 
     def run(self):
         total = len(self._paths)
+        trad_resampling, session, scale = self._prepare_upscale(total)
+        success, failed = self._sanitize_all(total, trad_resampling, session, scale)
+        self.result_ready.emit(success, failed)
+
+    def _prepare_upscale(self, total: int):
+        if self._target_long_edge <= 0 or not self._model_key:
+            return None, None, 0
+        if self._model_key.startswith("trad:"):
+            return self._resolve_trad_resampling(), None, 0
+        return None, *self._load_ai_session(total)
+
+    def _resolve_trad_resampling(self):
+        from Imervue.gui.ai_upscale_dialog import _TRAD_RESAMPLING
+        resampling_name = _TRAD_RESAMPLING.get(self._model_key)
+        if not resampling_name:
+            return None
+        return getattr(Image.Resampling, resampling_name)
+
+    def _load_ai_session(self, total: int):
+        try:
+            from Imervue.gui.ai_upscale_dialog import (
+                _download_model, UPSCALE_MODELS,
+            )
+            import onnxruntime as ort
+            self.progress.emit(0, total, "Downloading AI model...")
+            model_path = _download_model(self._model_key)
+            self.progress.emit(0, total, "Loading AI model...")
+            providers = self._preferred_ort_providers(ort)
+            session = ort.InferenceSession(model_path, providers=providers)
+            scale = UPSCALE_MODELS[self._model_key]["scale"]
+            return session, scale
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to load AI upscale model")
+            return None, 0
+
+    @staticmethod
+    def _preferred_ort_providers(ort) -> list[str]:
+        available = ort.get_available_providers()
+        preferred: list[str] = []
+        if "CUDAExecutionProvider" in available:
+            preferred.append("CUDAExecutionProvider")
+        if "DmlExecutionProvider" in available:
+            preferred.append("DmlExecutionProvider")
+        preferred.append("CPUExecutionProvider")
+        return preferred
+
+    def _sanitize_all(self, total: int, trad_resampling, session, scale) -> tuple[int, int]:
         success = 0
         failed = 0
-
-        # Determine upscale mode
-        is_traditional = self._model_key.startswith("trad:")
-        trad_resampling = None
-        session = None
-        scale = 0
-
-        if self._target_long_edge > 0 and self._model_key:
-            if is_traditional:
-                from Imervue.gui.ai_upscale_dialog import _TRAD_RESAMPLING
-                resampling_name = _TRAD_RESAMPLING.get(self._model_key)
-                if resampling_name:
-                    trad_resampling = getattr(Image.Resampling,
-                                              resampling_name)
-            else:
-                # AI model — prepare ONNX session
-                try:
-                    from Imervue.gui.ai_upscale_dialog import (
-                        _download_model, UPSCALE_MODELS,
-                    )
-                    import onnxruntime as ort
-
-                    self.progress.emit(0, total, "Downloading AI model...")
-                    model_path = _download_model(self._model_key)
-                    self.progress.emit(0, total, "Loading AI model...")
-
-                    providers = ort.get_available_providers()
-                    preferred = []
-                    if "CUDAExecutionProvider" in providers:
-                        preferred.append("CUDAExecutionProvider")
-                    if "DmlExecutionProvider" in providers:
-                        preferred.append("DmlExecutionProvider")
-                    preferred.append("CPUExecutionProvider")
-                    session = ort.InferenceSession(model_path,
-                                                   providers=preferred)
-                    scale = UPSCALE_MODELS[self._model_key]["scale"]
-                except Exception:
-                    logger.exception("Failed to load AI upscale model")
-                    # Continue without upscale
-
         for i, path in enumerate(self._paths):
             if self._abort:
                 break
-            name = os.path.basename(path)
-            self.progress.emit(i + 1, total, name)
+            self.progress.emit(i + 1, total, os.path.basename(path))
             try:
-                target_dir = self._target_dir_for(path)
                 sanitize_image(
-                    path, target_dir, self._output_ext,
+                    path, self._target_dir_for(path), self._output_ext,
                     self._rand_len, self._jpeg_quality, self._png_compress,
                     target_long_edge=self._target_long_edge,
                     ort_session=session,
@@ -440,10 +453,10 @@ class _SanitizeWorker(QThread):
                     trad_resampling=trad_resampling,
                 )
                 success += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Failed to sanitize %s", path)
                 failed += 1
-        self.result_ready.emit(success, failed)
+        return success, failed
 
 
 # ---------------------------------------------------------------------------

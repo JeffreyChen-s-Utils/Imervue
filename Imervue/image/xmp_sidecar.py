@@ -41,10 +41,10 @@ from defusedxml import ElementTree as DefusedET
 # false positive for SonarQube python:S5332 / bandit B113.
 _NS = {
     "x": "adobe:ns:meta/",
-    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",  # NOSONAR: XML namespace identifier, not a URL
-    "xmp": "http://ns.adobe.com/xap/1.0/",  # NOSONAR: XML namespace identifier, not a URL
-    "dc": "http://purl.org/dc/elements/1.1/",  # NOSONAR: XML namespace identifier, not a URL
-    "xml": "http://www.w3.org/XML/1998/namespace",  # NOSONAR: XML namespace identifier, not a URL
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",  # NOSONAR
+    "xmp": "http://ns.adobe.com/xap/1.0/",  # NOSONAR
+    "dc": "http://purl.org/dc/elements/1.1/",  # NOSONAR
+    "xml": "http://www.w3.org/XML/1998/namespace",  # NOSONAR
 }
 _RATING_MIN = -1
 _RATING_MAX = 5

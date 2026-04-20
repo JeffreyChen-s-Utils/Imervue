@@ -1118,6 +1118,187 @@ they survive folder re-scans.
 
 ----
 
+Advanced Develop & Compositing
+------------------------------
+
+Tone Curve
+^^^^^^^^^^
+
+``Extra Tools`` > ``Tone Curve`` opens a draggable-points curve editor with
+four channels (RGB, R, G, B). Left-click on empty canvas to add a point;
+drag to move; right-click to delete. Points are interpolated with a
+monotone cubic spline and stored on the image's recipe, so the curve applies
+non-destructively at render time.
+
+Apply .cube LUT
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Apply .cube LUT`` lets you pick any Adobe ``.cube`` file
+(1D or 3D, up to 64³). The LUT is parsed with an ``lru_cache`` keyed by
+path + mtime, evaluated with trilinear interpolation, and blended against
+the original via an intensity slider. The LUT path and intensity live on
+the recipe.
+
+Virtual Copies
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Virtual Copies`` gives each image named recipe
+snapshots. Snap the current edit, continue experimenting, and swap back to
+any earlier variant later. Variants sit alongside the master recipe in the
+recipe store and survive resetting the master to identity.
+
+HDR Merge
+^^^^^^^^^
+
+``Extra Tools`` > ``HDR Merge`` combines two or more bracketed exposures
+into a single image via OpenCV's Mertens exposure fusion. The optional
+"Align exposures" checkbox runs ``cv2.AlignMTB`` first to compensate for
+hand-held shake. Output is saved to a user-chosen file — it does not touch
+any source image.
+
+Panorama Stitch
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Panorama Stitch`` wraps OpenCV's high-level
+``Stitcher`` API. Choose **Panorama** mode for landscapes / cityscapes or
+**Scans** mode for flat documents and artwork. Black edges produced by the
+warp can be auto-cropped.
+
+Focus Stacking
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Focus Stacking`` fuses multiple shots taken at
+different focus distances. For each pixel the algorithm picks whichever
+input frame has the highest local sharpness (Laplacian variance), then
+smooths the selection mask with a gaussian blend to avoid seams. ECC
+alignment is on by default for slight hand-held offsets.
+
+Healing Brush
+^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Healing Brush`` shows the current image at up to
+720 px longest side. Left-click adds a circular spot; right-click on an
+existing spot removes it; the radius slider sets new-spot size. On apply,
+OpenCV inpainting (Telea for speed, Navier-Stokes for smoother blending)
+fills each masked region from surrounding pixels and the result is saved
+to a new file.
+
+Lens Correction
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Lens Correction`` exposes four pure-numpy sliders:
+radial distortion ``k1`` (barrel / pincushion), vignette lift, and
+per-channel chromatic-aberration radial scale for red and blue. The
+corrected image is saved as a new file — lens correction is not part of
+the recipe because the output shape can change.
+
+Map View
+^^^^^^^^
+
+``Extra Tools`` > ``Map View`` plots every geotagged image in the current
+library on an interactive Leaflet + OpenStreetMap map (requires
+``PySide6.QtWebEngineWidgets``). Without WebEngine, the dialog falls back
+to a plain list of ``(path, lat, lon)`` entries so the feature remains
+usable on minimal installs.
+
+Calendar View
+^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Calendar View`` shows a ``QCalendarWidget`` with days
+highlighted when photos were taken that day (EXIF ``DateTimeOriginal`` →
+``DateTimeDigitized`` → file mtime). Selecting a date lists its images;
+double-click to open one in the main viewer.
+
+Face Detection
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Face Detection`` runs OpenCV's Haar frontal-face
+cascade on the current image and draws each detection as a rectangle.
+Double-click a row in the list to type a person name; on Save, the tags
+are written into the recipe's ``extra['face_tags']`` blob. Detection is a
+classical technique — accuracy is adequate for "show me the faces" but
+not a replacement for modern CNN-based recognition.
+
+Local Adjustment Masks
+^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Local Adjustment Masks`` layers brush, radial, or
+linear gradient masks over the image. Each mask carries its own exposure,
+brightness, contrast, saturation, temperature, tint deltas plus a feather
+slider. Masks are saved on ``recipe.extra['masks']`` and applied
+non-destructively at load time, so the underlying file is never touched.
+
+Split Toning
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Split Toning`` applies distinct hues to shadows and
+highlights with per-region saturation and a balance pivot. Stored on
+``recipe.extra['split_toning']`` and applied after the tone curve in the
+develop pipeline.
+
+Clone Stamp
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Clone Stamp`` copies a feathered source patch onto a
+destination — the hard-edge complement to the healing brush. Shift+click
+sets the source, a normal click stamps, right-click undoes. The result is
+written to a new file so the original stays intact.
+
+Crop / Straighten
+^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Crop / Straighten`` combines a normalised (0..1)
+crop rectangle with an arbitrary straighten angle. The output is
+auto-cropped to the largest inner rectangle so rotated photos have no
+black corners.
+
+Auto-Straighten
+^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Auto-Straighten`` detects the dominant horizon or
+vertical lines via Hough line detection and proposes a rotation. One
+click applies the straighten; you can tweak the angle first if the
+auto-detection picks the wrong reference.
+
+Noise Reduction / Sharpening
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Noise Reduction / Sharpening`` applies a bilateral
+(edge-preserving) denoise followed by an unsharp-mask sharpen.
+"Luminance only" keeps colour noise intact but flattens grain without
+smearing chroma edges.
+
+Sky / Background
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Sky / Background`` replaces detected sky with a
+gradient or removes the background to transparent / white. When
+``rembg`` (U²-Net) is installed, the foreground mask comes from the
+segmentation network; otherwise the heuristic HSV rule is used.
+
+Soft Proof
+^^^^^^^^^^
+
+``Extra Tools`` > ``Soft Proof`` loads an ICC profile, converts the
+image through it and back, and highlights pixels that clipped during
+the round-trip in magenta — a quick out-of-gamut check before printing.
+
+GPS Geotag
+^^^^^^^^^^
+
+``Extra Tools`` > ``GPS Geotag`` reads any existing EXIF GPS tags and
+lets you edit or set new decimal-degree coordinates. Requires ``piexif``
+to be installed; writes to JPEG in place.
+
+Print Layout
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Print Layout`` composes multiple images onto a
+multi-page PDF with configurable page size, orientation, grid, margins,
+gutter, and crop marks. Requires ``reportlab``.
+
+----
+
 Command-Line Usage
 ------------------
 

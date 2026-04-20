@@ -43,6 +43,7 @@ from Imervue.image.recipe_adjustments import (
     apply_white_balance,
     apply_whites_blacks,
 )
+from Imervue.image.tone_curve import apply_tone_curve, is_identity_points
 
 logger = logging.getLogger("Imervue.recipe")
 
@@ -87,6 +88,16 @@ class Recipe:
     blacks: float = 0.0            # endpoint crush on the dark side
     vibrance: float = 0.0          # saturation-protected colour boost
 
+    # Tone curves — lists of (input, output) points in [0, 1]. Empty = identity.
+    tone_curve_rgb: list[tuple[float, float]] = field(default_factory=list)
+    tone_curve_r: list[tuple[float, float]] = field(default_factory=list)
+    tone_curve_g: list[tuple[float, float]] = field(default_factory=list)
+    tone_curve_b: list[tuple[float, float]] = field(default_factory=list)
+
+    # .cube LUT path — applied after tone curves. Empty = disabled.
+    lut_path: str = ""
+    lut_intensity: float = 1.0     # 0..1 blend between original and LUT
+
     # Freeform metadata for forward-compat — callers may stuff additional
     # fields here (e.g. develop panel version) and they round-trip through
     # save/load without the core code having to know about them.
@@ -101,6 +112,16 @@ class Recipe:
             self._geometry_is_identity()
             and self._classic_sliders_are_zero()
             and self._advanced_sliders_are_zero()
+            and self._curves_are_identity()
+            and not self.lut_path
+        )
+
+    def _curves_are_identity(self) -> bool:
+        return (
+            is_identity_points(self.tone_curve_rgb)
+            and is_identity_points(self.tone_curve_r)
+            and is_identity_points(self.tone_curve_g)
+            and is_identity_points(self.tone_curve_b)
         )
 
     def _geometry_is_identity(self) -> bool:
@@ -153,6 +174,12 @@ class Recipe:
             whites=float(self.whites),
             blacks=float(self.blacks),
             vibrance=float(self.vibrance),
+            tone_curve_rgb=[(float(x), float(y)) for x, y in self.tone_curve_rgb],
+            tone_curve_r=[(float(x), float(y)) for x, y in self.tone_curve_r],
+            tone_curve_g=[(float(x), float(y)) for x, y in self.tone_curve_g],
+            tone_curve_b=[(float(x), float(y)) for x, y in self.tone_curve_b],
+            lut_path=str(self.lut_path or ""),
+            lut_intensity=max(0.0, min(1.0, float(self.lut_intensity))),
             extra=dict(self.extra),
         )
 
@@ -166,6 +193,8 @@ class Recipe:
         # so that a round-trip is idempotent.
         if d.get("crop") is not None:
             d["crop"] = list(d["crop"])
+        for key in ("tone_curve_rgb", "tone_curve_r", "tone_curve_g", "tone_curve_b"):
+            d[key] = [list(pt) for pt in d.get(key, [])]
         return d
 
     @classmethod
@@ -184,6 +213,13 @@ class Recipe:
         if "crop" in kwargs and kwargs["crop"] is not None:
             c = kwargs["crop"]
             kwargs["crop"] = tuple(int(v) for v in c)
+        for curve_key in (
+            "tone_curve_rgb", "tone_curve_r", "tone_curve_g", "tone_curve_b",
+        ):
+            if curve_key in kwargs and kwargs[curve_key]:
+                kwargs[curve_key] = [
+                    (float(p[0]), float(p[1])) for p in kwargs[curve_key]
+                ]
         kwargs["extra"] = extra
         return cls(**kwargs)
 
@@ -235,6 +271,73 @@ class Recipe:
         arr = _apply_brightness_contrast(arr, recipe)
         arr = apply_vibrance(arr, recipe.vibrance)
         arr = _apply_saturation(arr, recipe)
+        arr = apply_tone_curve(
+            arr,
+            recipe.tone_curve_rgb,
+            r_points=recipe.tone_curve_r,
+            g_points=recipe.tone_curve_g,
+            b_points=recipe.tone_curve_b,
+        )
+        arr = _apply_split_toning(arr, recipe)
+        arr = _apply_lut(arr, recipe)
+        arr = _apply_masks(arr, recipe)
+        return arr
+
+
+def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply split toning from recipe.extra['split_toning'] if present."""
+    cfg = recipe.extra.get("split_toning") if recipe.extra else None
+    if not isinstance(cfg, dict):
+        return arr
+    try:
+        from Imervue.image.split_toning import apply_split_toning
+    except ImportError:
+        return arr
+    try:
+        return apply_split_toning(
+            arr,
+            shadow_hue=float(cfg.get("shadow_hue", 210.0)),
+            shadow_saturation=float(cfg.get("shadow_sat", 0.0)),
+            highlight_hue=float(cfg.get("highlight_hue", 45.0)),
+            highlight_saturation=float(cfg.get("highlight_sat", 0.0)),
+            balance=float(cfg.get("balance", 0.0)),
+        )
+    except (ValueError, TypeError) as err:
+        logger.warning("Split toning apply failed: %s", err)
+        return arr
+
+
+def _apply_masks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply local adjustment masks from recipe.extra['masks'] if present."""
+    raw = recipe.extra.get("masks") if recipe.extra else None
+    if not raw:
+        return arr
+    try:
+        from Imervue.image.masks import apply_masks, masks_from_dict_list
+    except ImportError:
+        return arr
+    masks = masks_from_dict_list(raw)
+    if not masks:
+        return arr
+    try:
+        return apply_masks(arr, masks)
+    except (ValueError, TypeError) as err:
+        logger.warning("Mask apply failed: %s", err)
+        return arr
+
+
+def _apply_lut(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply a .cube LUT if one is configured; otherwise pass-through."""
+    if not recipe.lut_path:
+        return arr
+    try:
+        from Imervue.image.lut import apply_cube_lut
+    except ImportError:
+        return arr
+    try:
+        return apply_cube_lut(arr, recipe.lut_path, intensity=recipe.lut_intensity)
+    except (OSError, ValueError) as err:
+        logger.warning("LUT apply failed (%s): %s", recipe.lut_path, err)
         return arr
 
 

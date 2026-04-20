@@ -12,6 +12,9 @@ _JAPANESE_TR5143306B623B3059 = '元に戻す'
 _JAPANESE_TR3084308A76F43057 = 'やり直し'
 _JAPANESE_TR30BD30FC30B930D5 = 'ソースフォルダ：'
 _JAPANESE_TR51FA529B30D530A9 = '出力フォルダ：'
+_JAPANESE_NEW_NAME = '新しい名前：'
+_JAPANESE_PREVIEW = 'プレビュー'
+_JAPANESE_ADD_IMAGES = '画像を追加\u2026'
 _NO_EXPORT_IMAGES = '書き出せる画像がありません。'
 _EXPORT_FAILED = '書き出しに失敗：{err}'
 
@@ -328,7 +331,7 @@ japanese_word_dict = {
     "tag_remove_image": "タグから削除",
     "tag_filter": "ビューアーで表示",
     "tag_create_prompt": "タグ名：",
-    "tag_rename_prompt": "新しい名前：",
+    "tag_rename_prompt": _JAPANESE_NEW_NAME,
     "tag_delete_confirm_title": "タグを削除",
     "tag_delete_confirm": "タグ「{name}」を削除しますか？",
     "tag_menu_title": "タグ",
@@ -341,7 +344,7 @@ japanese_word_dict = {
     "album_remove_image": "アルバムから削除",
     "album_view": "アルバムを表示",
     "album_create_prompt": "アルバム名：",
-    "album_rename_prompt": "新しい名前：",
+    "album_rename_prompt": _JAPANESE_NEW_NAME,
     "album_delete_confirm_title": "アルバムを削除",
     "album_delete_confirm": "アルバム「{name}」を削除しますか？",
     "album_menu_title": _JAPANESE_TR30A230EB30D030E0,
@@ -596,7 +599,7 @@ japanese_word_dict = {
     "organizer_output": _JAPANESE_TR51FA529B30D530A9,
     "organizer_mode_copy": "ファイルをコピー",
     "organizer_mode_move": "ファイルを移動",
-    "organizer_preview": "プレビュー",
+    "organizer_preview": _JAPANESE_PREVIEW,
     "organizer_preview_summary": "{count} 枚の画像を {folders} 個のサブフォルダに分類",
     "organizer_start": "開始",
     "organizer_no_images": "ソースフォルダに画像が見つかりません。",
@@ -678,7 +681,7 @@ japanese_word_dict = {
     "view_browse_mode": "表示モード",
     "view_mode_grid": "グリッド",
     "view_mode_list": "リスト",
-    "list_col_thumb": "プレビュー",
+    "list_col_thumb": _JAPANESE_PREVIEW,
     "list_col_name": "名前",
     "list_col_resolution": _JAPANESE_TR89E350CF5EA6,
     "list_col_size": _JAPANESE_TR30B530A430BA,
@@ -993,4 +996,200 @@ japanese_word_dict = {
     "slideshow_no_images": _NO_EXPORT_IMAGES,
     "slideshow_error": _EXPORT_FAILED,
     "slideshow_done": "スライドショーを書き出しました：{path}",
+
+    # --- Tone Curve ---
+    "tone_curve_title": "トーンカーブ",
+    "tone_curve_channel_label": "チャンネル：",
+    "tone_curve_reset": "このチャンネルをリセット",
+    "tone_curve_hint": "空白部分を左クリックでポイント追加、ドラッグで移動、右クリックで削除。",
+    "curve_channel_rgb": "RGB",
+    "curve_channel_r": "赤",
+    "curve_channel_g": "緑",
+    "curve_channel_b": "青",
+
+    # --- LUT ---
+    "lut_title": ".cube LUT を適用",
+    "lut_file": ".cube ファイル：",
+    "lut_clear": "クリア",
+    "lut_intensity": "強度：",
+    "lut_pick": ".cube LUT を選択",
+    "lut_hint": "任意の Adobe .cube LUT を読み込めます（最大 64\u00b3）。強度で原画とブレンド。",
+
+    # --- Virtual Copies ---
+    "vcopies_title": "バーチャルコピー",
+    "vcopies_hint": "この画像の recipe の名前付きスナップショット。いつでも切替可能。",
+    "vcopies_snap": "現在をスナップ →",
+    "vcopies_apply": "適用",
+    "vcopies_rename": "名前変更",
+    "vcopies_delete": "削除",
+    "vcopies_snap_title": "スナップショット名",
+    "vcopies_snap_prompt": "名前：",
+    "vcopies_exists": "同名のスナップショットが既に存在します。",
+    "vcopies_rename_title": "スナップショット名変更",
+    "vcopies_new_name": _JAPANESE_NEW_NAME,
+    "vcopies_rename_fail": "名前変更失敗 — 名前が既に存在する可能性があります。",
+
+    # --- HDR Merge ---
+    "hdr_title": "HDR マージ",
+    "hdr_add": _JAPANESE_ADD_IMAGES,
+    "hdr_clear": "クリア",
+    "hdr_align": "露出を位置合わせ",
+    "hdr_method": "方式：",
+    "hdr_mertens": "Mertens（融合）",
+    "hdr_debevec": "Debevec + Reinhard",
+    "hdr_output": "出力：",
+    "hdr_run": "マージ",
+    "hdr_hint": "露出の異なる 2 枚以上を選択（Mertens 露出融合）。",
+
+    # --- Panorama ---
+    "pano_title": "パノラマ合成",
+    "pano_add": _JAPANESE_ADD_IMAGES,
+    "pano_clear": "クリア",
+    "pano_mode": "モード：",
+    "pano_mode_panorama": "パノラマ",
+    "pano_mode_scans": "スキャン（フラット文書）",
+    "pano_crop": "黒枠をトリミング",
+    "pano_output": "出力：",
+    "pano_run": "合成",
+    "pano_hint": "重なる写真を順番に選択。2 枚以上、20\u201340% の重なりが必要。",
+
+    # --- Focus Stacking ---
+    "fstack_title": "フォーカススタッキング",
+    "fstack_add": _JAPANESE_ADD_IMAGES,
+    "fstack_clear": "クリア",
+    "fstack_align": "画像を位置合わせ",
+    "fstack_output": "出力：",
+    "fstack_run": "合成",
+    "fstack_hint": "ピント距離違いのブラケットを選択（マクロ / 商品撮影）。",
+
+    # --- Healing Brush ---
+    "heal_title": "ヒーリングブラシ",
+    "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
+    "heal_radius": "半径：",
+    "heal_method": "方式：",
+    "heal_telea": "Telea（高速）",
+    "heal_ns": "Navier-Stokes（滑らか）",
+    "heal_output": "出力：",
+    "heal_run": "適用して保存",
+    "heal_count": "{n} スポット",
+
+    # --- Lens Correction ---
+    "lens_title": "レンズ補正",
+    "lens_k1": "歪み（樽 / 糸巻）：",
+    "lens_vignette": "周辺光量補正：",
+    "lens_ca_red": "色収差（赤）：",
+    "lens_ca_blue": "色収差（青）：",
+    "lens_output": "出力：",
+    "lens_run": "適用",
+
+    # --- Map View ---
+    "map_title": "マップビュー",
+    "map_count": "スキャン済み {total} 枚のうち {n} 枚が GPS 付き。",
+    "map_fallback": "QtWebEngine 未インストール — 座標リスト表示。",
+
+    # --- Calendar View ---
+    "calendar_title": "カレンダービュー",
+    "calendar_summary": "写真のある日 {days} 日、合計 {total} 枚。",
+
+    # --- Face Detection ---
+    "face_title": "顔検出",
+    "face_hint": "OpenCV Haar 分類器を使用。名前は recipe に保存されます。",
+    "face_detect": "顔を検出",
+    "face_clear": "クリア",
+    "face_remove": "選択を削除",
+    "face_list": "検出された顔（ダブルクリックで名前入力）：",
+    "face_found": "合計 {n} 顔。",
+    "face_save": "保存",
+
+    # --- Local Adjustment Masks ---
+    "masks_title": "ローカル調整マスク",
+    "masks_list": "マスク：",
+    "masks_add_brush": "+ ブラシ",
+    "masks_add_radial": "+ 放射",
+    "masks_add_linear": "+ リニア",
+    "masks_remove": "削除",
+    "masks_adjustments": "調整",
+    "masks_exposure": "露出：",
+    "masks_brightness": "明るさ：",
+    "masks_contrast": "コントラスト：",
+    "masks_saturation": "彩度：",
+    "masks_temperature": "色温度：",
+    "masks_tint": "色合い：",
+    "masks_feather": "ぼかし：",
+
+    # --- Split Toning ---
+    "split_title": "スプリットトーン",
+    "split_shadow_hue": "シャドウ色相：",
+    "split_shadow_sat": "シャドウ彩度：",
+    "split_highlight_hue": "ハイライト色相：",
+    "split_highlight_sat": "ハイライト彩度：",
+    "split_balance": "バランス：",
+
+    # --- Clone Stamp ---
+    "stamp_title": "コピースタンプ",
+    "stamp_radius": "半径（ピクセル）：",
+    "stamp_hint": "Shift+クリックで元を設定 \u2022 クリックでスタンプ \u2022 右クリックで取り消し",
+    "stamp_output": "出力：",
+    "stamp_run": "適用",
+
+    # --- Crop / Straighten / Perspective ---
+    "crop_title": "トリミング / 水平補正",
+    "crop_angle": "水平補正角度：",
+    "crop_x": "トリミング X（0..1）：",
+    "crop_y": "トリミング Y（0..1）：",
+    "crop_w": "トリミング幅（0..1）：",
+    "crop_h": "トリミング高さ（0..1）：",
+    "crop_output": "出力：",
+    "crop_run": "適用",
+
+    # --- Noise Reduction / Sharpening ---
+    "nr_title": "ノイズ軽減 / シャープ",
+    "nr_strength": "ノイズ軽減強度：",
+    "nr_luma_only": "輝度チャンネルのみ",
+    "nr_sharpen_amount": "シャープ量：",
+    "nr_sharpen_radius": "シャープ半径（ピクセル）：",
+    "nr_output": "出力：",
+    "nr_run": "適用",
+
+    # --- Sky / Background ---
+    "sky_title": "空 / 背景",
+    "sky_mode": "操作：",
+    "sky_mode_sky": "空をグラデーションに置換",
+    "sky_mode_trans": "背景を削除（透明）",
+    "sky_mode_white": "背景を削除（白）",
+    "sky_output": "出力：",
+    "sky_run": "適用",
+
+    # --- Soft Proofing ---
+    "proof_title": "ソフトプルーフ",
+    "proof_profile": "ICC プロファイル：",
+    "proof_preview": _JAPANESE_PREVIEW,
+    "proof_pick": "ICC プロファイルを選択してください。",
+    "proof_failed": "プロファイル読み込み失敗。",
+    "proof_oog": "色域外ピクセル：",
+
+    # --- Print Layout ---
+    "print_title": "印刷レイアウト",
+    "print_add": "ファイルを追加...",
+    "print_clear": "クリア",
+    "print_page_size": "ページサイズ：",
+    "print_landscape": "横向き",
+    "print_rows": "行数：",
+    "print_cols": "列数：",
+    "print_crop_marks": "トンボ",
+    "print_output": "出力 PDF：",
+    "print_export": "PDF を書き出し",
+
+    # --- GPS Geotag ---
+    "geotag_title": "GPS ジオタグ",
+    "geotag_lat": "緯度（\u00b0）：",
+    "geotag_lon": "経度（\u00b0）：",
+    "geotag_failed": "GPS タグの書き込みに失敗しました。",
+
+    # --- Auto-Straighten ---
+    "autostr_title": "自動水平補正",
+    "autostr_detect": "角度を検出",
+    "autostr_angle": "回転（\u00b0）：",
+    "autostr_output": "出力：",
+    "autostr_apply": "適用",
 }
