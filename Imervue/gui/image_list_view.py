@@ -92,12 +92,13 @@ class ImageListModel(QAbstractTableModel):
 
     COL_THUMB = 0
     COL_LABEL = 1
-    COL_NAME = 2
-    COL_RES = 3
-    COL_SIZE = 4
-    COL_TYPE = 5
-    COL_MTIME = 6
-    COL_COUNT = 7
+    COL_RATING = 2
+    COL_NAME = 3
+    COL_RES = 4
+    COL_SIZE = 5
+    COL_TYPE = 6
+    COL_MTIME = 7
+    COL_COUNT = 8
 
     def __init__(self, paths: list[str] | None = None):
         super().__init__()
@@ -123,6 +124,7 @@ class ImageListModel(QAbstractTableModel):
         keys = {
             self.COL_THUMB: ("list_col_thumb", "Preview"),
             self.COL_LABEL: ("list_col_label", "Label"),
+            self.COL_RATING: ("list_col_rating", "Rating"),
             self.COL_NAME: ("list_col_name", "Name"),
             self.COL_RES: ("list_col_resolution", "Resolution"),
             self.COL_SIZE: ("list_col_size", "Size"),
@@ -136,6 +138,8 @@ class ImageListModel(QAbstractTableModel):
         if col == self.COL_LABEL:
             from Imervue.user_settings.color_labels import get_color_label
             return (get_color_label(row.path) or "").title()
+        if col == self.COL_RATING:
+            return _format_rating(_rating_for(row.path))
         if col == self.COL_NAME:
             return Path(row.path).name
         if col == self.COL_RES:
@@ -187,6 +191,11 @@ class ImageListModel(QAbstractTableModel):
             and col in (self.COL_RES, self.COL_SIZE)
         ):
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        if (
+            role == Qt.ItemDataRole.TextAlignmentRole
+            and col == self.COL_RATING
+        ):
+            return int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ToolTipRole:
             return row.path
         return None
@@ -215,6 +224,7 @@ class ImageListModel(QAbstractTableModel):
             self.COL_MTIME: lambda r: (r.mtime or 0),
             self.COL_THUMB: lambda r: Path(r.path).name.lower(),
             self.COL_LABEL: _color_key,
+            self.COL_RATING: lambda r: _rating_for(r.path),
         }
         key = key_funcs.get(column, key_funcs[self.COL_NAME])
         reverse = order == Qt.SortOrder.DescendingOrder
@@ -265,6 +275,27 @@ class ImageListModel(QAbstractTableModel):
             break
 
 
+_STAR_FILLED = "\u2605"
+_STAR_EMPTY = "\u2606"
+_RATING_MAX = 5
+
+
+def _rating_for(path: str) -> int:
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    ratings = user_setting_dict.get("image_ratings") or {}
+    try:
+        return int(ratings.get(path, 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _format_rating(rating: int) -> str:
+    if rating <= 0:
+        return ""
+    rating = min(max(int(rating), 0), _RATING_MAX)
+    return _STAR_FILLED * rating + _STAR_EMPTY * (_RATING_MAX - rating)
+
+
 def _fmt_size(kb: float) -> str:
     if kb >= 1024:
         return f"{kb / 1024:.2f} MB"
@@ -306,6 +337,7 @@ class ImageListView(QTableView):
         h.setStretchLastSection(True)
         self.setColumnWidth(ImageListModel.COL_THUMB, 64)
         self.setColumnWidth(ImageListModel.COL_LABEL, 70)
+        self.setColumnWidth(ImageListModel.COL_RATING, 86)
         self.setColumnWidth(ImageListModel.COL_NAME, 320)
         self.setColumnWidth(ImageListModel.COL_RES, 110)
         self.setColumnWidth(ImageListModel.COL_SIZE, 100)

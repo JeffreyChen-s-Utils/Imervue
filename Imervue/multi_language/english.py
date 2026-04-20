@@ -726,6 +726,7 @@ english_word_dict = {
     "color_label_cleared": "Colour label cleared",
     "color_label_batch": "{count} images \u2192 {color}",
     "list_col_label": "Label",
+    "list_col_rating": "Rating",
     "filter_by_color": "By Color Label",
     "filter_color_all": _ENGLISH_ALL,
     "filter_color_any": "Any label",

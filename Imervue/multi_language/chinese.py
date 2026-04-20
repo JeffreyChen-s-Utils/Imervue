@@ -711,6 +711,7 @@ chinese_word_dict = {
     "color_label_cleared": "已清除颜色标签",
     "color_label_batch": "{count} 张图片 \u2192 {color}",
     "list_col_label": "标签",
+    "list_col_rating": "评分",
     "filter_by_color": "按颜色标签",
     "filter_color_all": "全部",
     "filter_color_any": "任一色",

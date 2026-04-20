@@ -711,6 +711,7 @@ traditional_chinese_word_dict = {
     "color_label_cleared": "已清除色彩標籤",
     "color_label_batch": "{count} 張圖片 \u2192 {color}",
     "list_col_label": "標籤",
+    "list_col_rating": "評分",
     "filter_by_color": "依色彩標籤",
     "filter_color_all": "全部",
     "filter_color_any": "任一色",

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolButton,
     QPushButton, QSizePolicy, QPlainTextEdit,
@@ -70,6 +71,9 @@ class ExifSidebar(QWidget):
         self._edit_btn.setStyleSheet("QPushButton { margin: 4px; }")
         self._edit_btn.clicked.connect(self._open_editor)
 
+        # 星等評分 — 5 顆可點擊的星，點同一顆會清除
+        self._rating_widget = _RatingStars(self._on_rating_clicked)
+
         # 備註區 — 儲存到 library SQLite index
         self._notes_label = QLabel(
             language_wrapper.language_word_dict.get("notes_title", "Notes")
@@ -101,6 +105,7 @@ class ExifSidebar(QWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addWidget(self._info_label)
         content_layout.addWidget(self._edit_btn)
+        content_layout.addWidget(self._rating_widget)
         content_layout.addWidget(self._notes_label)
         content_layout.addWidget(self._notes_edit)
         content_layout.addStretch()
@@ -146,9 +151,11 @@ class ExifSidebar(QWidget):
         if not path:
             self._info_label.setText("")
             self._load_note_for(None)
+            self._rating_widget.bind_path(None)
             return
 
         self._load_note_for(path)
+        self._rating_widget.bind_path(path)
         lang = language_wrapper.language_word_dict
         p = Path(path)
         lines = []
@@ -232,3 +239,98 @@ class ExifSidebar(QWidget):
             image_index.set_note(path, self._notes_edit.toPlainText())
         except Exception:  # noqa: BLE001, S110  # nosec B110 - notes optional; swallow DB errors
             pass
+
+    def _on_rating_clicked(self, path: str, rating: int) -> None:
+        """Persist a rating from the star strip and refresh viewer badges."""
+        from Imervue.user_settings.user_setting_dict import (
+            user_setting_dict, schedule_save,
+        )
+        ratings = user_setting_dict.get("image_ratings") or {}
+        current = int(ratings.get(path, 0) or 0)
+        if current == rating:
+            ratings.pop(path, None)
+        else:
+            ratings[path] = rating
+        user_setting_dict["image_ratings"] = ratings
+        schedule_save()
+        self._rating_widget.set_value(int(ratings.get(path, 0) or 0))
+        viewer = getattr(self._main_window, "viewer", None)
+        if viewer is not None:
+            viewer.update()
+
+
+_STAR_FILLED = "\u2605"
+_STAR_EMPTY = "\u2606"
+_RATING_MAX = 5
+
+
+class _RatingStars(QWidget):
+    """Row of five clickable star glyphs bound to the current image path."""
+
+    def __init__(self, on_rate):
+        super().__init__()
+        self._on_rate = on_rate
+        self._path: str | None = None
+        self._value = 0
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(8, 2, 8, 2)
+        row.setSpacing(2)
+        self._labels: list[QLabel] = []
+        for i in range(_RATING_MAX):
+            lbl = _StarLabel(i + 1, self._clicked)
+            self._labels.append(lbl)
+            row.addWidget(lbl)
+        row.addStretch()
+        self._render()
+
+    def bind_path(self, path: str | None) -> None:
+        self._path = path
+        if path is None:
+            self._value = 0
+        else:
+            from Imervue.user_settings.user_setting_dict import user_setting_dict
+            ratings = user_setting_dict.get("image_ratings") or {}
+            try:
+                self._value = int(ratings.get(path, 0) or 0)
+            except (TypeError, ValueError):
+                self._value = 0
+        self._render()
+
+    def set_value(self, value: int) -> None:
+        self._value = max(0, min(int(value), _RATING_MAX))
+        self._render()
+
+    def _clicked(self, rating: int) -> None:
+        if not self._path:
+            return
+        self._on_rate(self._path, rating)
+
+    def _render(self) -> None:
+        for idx, lbl in enumerate(self._labels):
+            filled = (idx + 1) <= self._value
+            lbl.setText(_STAR_FILLED if filled else _STAR_EMPTY)
+            colour = "#ffd450" if filled else "#555"
+            lbl.setStyleSheet(
+                f"QLabel {{ color: {colour}; font-size: 18px; padding: 0 1px; }}"
+            )
+            lbl.setEnabled(self._path is not None)
+
+
+class _StarLabel(QLabel):
+    """Clickable star glyph that emits its 1-based rating on left click."""
+
+    def __init__(self, rating: int, on_click):
+        super().__init__()
+        self._rating = rating
+        self._on_click = on_click
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setMinimumWidth(20)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 (Qt override)
+        if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():
+            self._on_click(self._rating)
+            event.accept()
+            return
+        super().mousePressEvent(event)

@@ -715,6 +715,7 @@ korean_word_dict = {
     "color_label_cleared": "색상 라벨을 지웠습니다",
     "color_label_batch": "{count} 개 \u2192 {color}",
     "list_col_label": "라벨",
+    "list_col_rating": "평점",
     "filter_by_color": "색상 라벨로 필터",
     "filter_color_all": "모두",
     "filter_color_any": "라벨 있음",

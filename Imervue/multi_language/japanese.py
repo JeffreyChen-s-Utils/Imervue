@@ -720,6 +720,7 @@ japanese_word_dict = {
     "color_label_cleared": "カラーラベルをクリアしました",
     "color_label_batch": "{count} 枚 \u2192 {color}",
     "list_col_label": "ラベル",
+    "list_col_rating": "評価",
     "filter_by_color": "カラーラベルで絞り込み",
     "filter_color_all": _JAPANESE_TR305930793066,
     "filter_color_any": "ラベル付き",

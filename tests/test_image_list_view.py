@@ -61,6 +61,43 @@ class TestImageListModel:
         idx = m.index(0, 0)
         assert m.data(idx, Qt.ItemDataRole.UserRole) == p
 
+    def test_rating_display_is_empty_when_unrated(self, list_mod, tmp_path):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        model_cls, _ = list_mod
+        p = str(tmp_path / "unrated.png")
+        user_setting_dict.pop("image_ratings", None)
+        m = model_cls([p])
+        idx = m.index(0, model_cls.COL_RATING)
+        assert m.data(idx, Qt.ItemDataRole.DisplayRole) == ""
+
+    def test_rating_display_uses_filled_and_empty_stars(self, list_mod, tmp_path):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        model_cls, _ = list_mod
+        p = str(tmp_path / "rated.png")
+        user_setting_dict["image_ratings"] = {p: 3}
+        try:
+            m = model_cls([p])
+            idx = m.index(0, model_cls.COL_RATING)
+            value = m.data(idx, Qt.ItemDataRole.DisplayRole)
+            assert value == "\u2605\u2605\u2605\u2606\u2606"
+        finally:
+            user_setting_dict.pop("image_ratings", None)
+
+    def test_sort_by_rating_is_numeric(self, list_mod, tmp_path):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        model_cls, _ = list_mod
+        low = str(tmp_path / "low.png")
+        mid = str(tmp_path / "mid.png")
+        high = str(tmp_path / "high.png")
+        user_setting_dict["image_ratings"] = {low: 1, mid: 3, high: 5}
+        try:
+            m = model_cls([mid, low, high])
+            m.sort(model_cls.COL_RATING, Qt.SortOrder.DescendingOrder)
+            order = [Path(m.path_at(i)).name for i in range(m.rowCount())]
+            assert order == ["high.png", "mid.png", "low.png"]
+        finally:
+            user_setting_dict.pop("image_ratings", None)
+
 
 class TestImageListViewBasics:
     def test_view_builds_with_empty_model(self, list_mod, qapp):
