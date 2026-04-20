@@ -101,7 +101,8 @@ class RecipeStore:
                 continue
             try:
                 Recipe.from_dict(v)
-            except Exception:
+            except Exception as exc:  # noqa: BLE001 - tolerate any decode error
+                logger.debug(f"Dropping unreadable variant '{name}': {exc}")
                 continue
             variants[str(name)] = v
         return variants

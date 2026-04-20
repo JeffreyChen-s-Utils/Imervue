@@ -11,7 +11,7 @@ import datetime as _dt
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate
 from PySide6.QtGui import QBrush, QColor, QTextCharFormat
 from PySide6.QtWidgets import (
     QCalendarWidget,

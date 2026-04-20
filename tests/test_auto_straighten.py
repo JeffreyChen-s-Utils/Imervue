@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("cv2")
 
-from Imervue.image import auto_straighten, geometry
+from Imervue.image import auto_straighten
 
 
 class TestDetectHorizonAngle:
