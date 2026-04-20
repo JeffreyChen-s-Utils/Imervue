@@ -13,19 +13,23 @@ from urllib.request import Request
 from Imervue.plugin import pip_installer, plugin_downloader
 
 
+# The non-https URLs below are intentional test inputs — the whole point of
+# the test suite is to prove the guard rejects them. NOSONAR markers keep
+# SonarCloud's python:S5332 ("clear-text protocol") from flagging them.
+
 class TestPipInstallerHttpsGuard(unittest.TestCase):
     def test_rejects_http_scheme(self):
-        req = Request("http://example.com/evil.zip")
+        req = Request("http://example.com/evil.zip")  # NOSONAR
         with self.assertRaises(ValueError):
             pip_installer._https_urlopen(req, timeout=1)
 
     def test_rejects_file_scheme(self):
-        req = Request("file:///etc/passwd")
+        req = Request("file:///etc/passwd")  # NOSONAR
         with self.assertRaises(ValueError):
             pip_installer._https_urlopen(req, timeout=1)
 
     def test_rejects_ftp_scheme(self):
-        req = Request("ftp://example.com/file")
+        req = Request("ftp://example.com/file")  # NOSONAR
         with self.assertRaises(ValueError):
             pip_installer._https_urlopen(req, timeout=1)
 
@@ -40,12 +44,12 @@ class TestPipInstallerHttpsGuard(unittest.TestCase):
 
 class TestPluginDownloaderHttpsGuard(unittest.TestCase):
     def test_rejects_http_scheme(self):
-        req = Request("http://example.com/evil.py")
+        req = Request("http://example.com/evil.py")  # NOSONAR
         with self.assertRaises(ValueError):
             plugin_downloader._https_urlopen(req, timeout=1)
 
     def test_rejects_file_scheme(self):
-        req = Request("file:///tmp/evil.py")
+        req = Request("file:///tmp/evil.py")  # NOSONAR
         with self.assertRaises(ValueError):
             plugin_downloader._https_urlopen(req, timeout=1)
 
