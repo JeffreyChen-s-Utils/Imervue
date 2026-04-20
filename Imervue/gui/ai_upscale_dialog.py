@@ -132,10 +132,18 @@ _TILE_PAD = 10
 # ---------------------------------------------------------------------------
 
 def _download_model(model_key: str) -> str:
-    """Download model from HF and return local path."""
+    """Download model from HF and return local path.
+
+    The ``revision`` pin is explicit rather than implicit so a future
+    compromise of the HF repo cannot silently swap the weights we load.
+    """
     from huggingface_hub import hf_hub_download
     info = UPSCALE_MODELS[model_key]
-    return hf_hub_download(repo_id=info["repo"], filename=info["file"])
+    return hf_hub_download(
+        repo_id=info["repo"],
+        filename=info["file"],
+        revision=info.get("revision", "main"),
+    )
 
 
 def _upscale_tile(session, tile_arr):

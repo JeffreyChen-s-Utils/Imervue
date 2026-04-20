@@ -1,0 +1,43 @@
+---
+# Bandit configuration — rules we have reviewed and deliberately accept.
+#
+# skips: project-wide false-positive rules that arise from legitimate desktop-app
+# patterns (subprocess with static arg lists, non-crypto random for UI jitter,
+# translator strings containing the word "password", etc.). See notes below.
+#
+# B105 hardcoded_password_string
+#   False positives in Imervue/multi_language/*.py where translator dictionary
+#   keys such as "password_label" or values like "Enter password:" trip the
+#   heuristic. No actual secrets are stored in source.
+# B110 try_except_pass
+#   Only two call sites, both intentional "optional metadata / EXIF parse may
+#   fail, fall back" patterns that already carry `# noqa: BLE001` suppressions.
+# B311 random
+#   Used exclusively for UI jitter (brush stroke noise, random-image pick).
+#   Never for cryptographic purposes — the `secrets` module is used where
+#   security matters (e.g. session tokens — none currently in this repo).
+# B403 import_pickle
+#   Imported by clip_search.py only for torch model state-dict loading from
+#   disk files we wrote ourselves; no untrusted input reaches pickle.load.
+# B404 subprocess_import
+#   Used solely with static argument lists for trusted OS tools (explorer,
+#   xdg-open, osascript, gsettings, pip inside the embedded venv).
+# B603 subprocess_without_shell_equals_true
+#   All subprocess.* calls pass list arguments with shell=False. Flagged only
+#   because any subprocess use is considered suspect at the default LOW level.
+# B606 start_process_with_no_shell
+#   Single os.startfile site, intentional for the "Reveal in folder" action.
+# B607 start_process_with_partial_path
+#   "python", "pip", "explorer" are deliberately resolved via PATH because the
+#   app needs to work across Windows/macOS/Linux installs.
+skips:
+  - B105
+  - B110
+  - B311
+  - B403
+  - B404
+  - B603
+  - B606
+  - B607
+exclude_dirs:
+  - tests

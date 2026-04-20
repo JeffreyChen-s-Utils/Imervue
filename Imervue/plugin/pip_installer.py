@@ -22,7 +22,21 @@ import sys
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 from urllib.request import urlopen, Request
+
+
+def _https_urlopen(req: Request, timeout: int):
+    """urlopen that refuses any scheme other than https.
+
+    The URLs used by this module are hardcoded https:// endpoints (python.org,
+    pypa.io), but this guard makes the scheme explicit so bandit B310 and
+    future maintainers both see that non-https is rejected.
+    """
+    scheme = urlparse(req.full_url).scheme
+    if scheme != "https":
+        raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
+    return urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
 
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -146,7 +160,7 @@ class _DownloadPythonWorker(QThread):
         self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
         try:
             req = Request(_EMBED_PYTHON_URL, headers=_UA_HEADERS)
-            resp = urlopen(req, timeout=120)
+            resp = _https_urlopen(req, timeout=120)
             return resp.read()
         except OSError as e:
             self.result_ready.emit(False, f"Download failed: {e}")
@@ -191,7 +205,7 @@ class _DownloadPythonWorker(QThread):
         self.log.emit("Downloading get-pip.py ...")
         try:
             req = Request(_GET_PIP_URL, headers=_UA_HEADERS)
-            resp = urlopen(req, timeout=120)
+            resp = _https_urlopen(req, timeout=120)
             get_pip_data = resp.read()
         except OSError as e:
             self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
