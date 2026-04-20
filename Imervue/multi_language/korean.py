@@ -755,6 +755,11 @@ korean_word_dict = {
     "keyboard_osd_tip": "F8 오른쪽 상단 OSD (파일명/크기/형식); Ctrl+F8 디버그 HUD (VRAM/캐시/스레드)",
     "keyboard_pixel_view_tip": "Shift+P 픽셀 뷰 \u2014 \u2265400% 줌 시 격자 및 커서 아래 RGB 값 표시",
     "keyboard_color_mode_tip": "Shift+M 일반 / 그레이스케일 / 반전 / 세피아 색상 순환 (비파괴)",
+    "keyboard_cull_pick_tip": "P 현재 이미지 (또는 선택된 모든 타일)를 Pick 으로 표시 — Lightroom 스타일 킵 플래그",
+    "keyboard_cull_reject_tip": "Shift+X 현재 이미지 (또는 선택된 모든 타일)를 Reject 로 표시; 이후 Extra Tools > Culling 에서 모든 Reject 를 한 번에 삭제할 수 있습니다",
+    "keyboard_cull_unflag_tip": "U 현재 이미지 또는 선택 항목에서 Pick / Reject 컬링 플래그를 해제",
+    "keyboard_command_palette_tip": "Ctrl+Shift+P 커맨드 팔레트 열기 — 모든 메뉴 동작을 단일 대화상자에서 퍼지 검색",
+    "keyboard_macro_replay_tip": "Alt+M 마지막 녹화된 매크로 (평점 / 즐겨찾기 / 색상 / 태그) 를 현재 선택에 재생",
     # ===== 브라우징 & 라이브러리 기능 =====
     "common_close": "닫기",
     "common_cancel": "취소",

@@ -766,6 +766,11 @@ english_word_dict = {
     "keyboard_osd_tip": "F8 toggles an on-screen overlay with file info; Ctrl+F8 shows a debug HUD with GPU / cache stats",
     "keyboard_pixel_view_tip": "Shift+P enables pixel view \u2014 at \u2265400% zoom, shows a grid and the RGB value of each pixel under the cursor",
     "keyboard_color_mode_tip": "Shift+M cycles Normal / Grayscale / Invert / Sepia color rendering (non-destructive)",
+    "keyboard_cull_pick_tip": "P flags the current image (or all selected tiles) as a Pick \u2014 Lightroom-style keeper flag",
+    "keyboard_cull_reject_tip": "Shift+X flags the current image (or all selected tiles) as Reject \u2014 then Extra Tools > Culling can delete every reject at once",
+    "keyboard_cull_unflag_tip": "U clears any Pick / Reject cull flag from the current image or selection",
+    "keyboard_command_palette_tip": "Ctrl+Shift+P opens the Command Palette \u2014 fuzzy-search every menu action in one dialog",
+    "keyboard_macro_replay_tip": "Alt+M replays the last recorded macro (rating / favorite / color / tag actions) on the current selection",
     # ===== Browsing & Library Features =====
     "common_close": _ENGLISH_CLOSE,
     "common_cancel": _ENGLISH_CANCEL,

@@ -217,7 +217,8 @@ quick categorisation (e.g. red = reject candidates, green = selects, blue = to r
      - ``Filter`` > ``By Color Label`` > pick a colour / Any label / No label
 
 The status bar shows a coloured chip for the current image. Thumbnails display a coloured strip on
-the left edge. The List view has a dedicated Label column you can sort by.
+the left edge. The **List view** has dedicated **Label** and **Star Rating** columns that you can
+sort by — click any cell in the star column to set the rating without leaving the list.
 
 Bookmarks
 ^^^^^^^^^
@@ -427,8 +428,23 @@ Image Adjustments (Right Panel, Lower)
      - Adjust the difference between lights and darks
    * - Saturation
      - Adjust colour vividness
+   * - White Balance — Temperature
+     - Warm / cool shift (blue → yellow); useful for mixed-light or indoor shots
+   * - White Balance — Tint
+     - Magenta / green shift; corrects fluorescent casts
+   * - Shadows
+     - Lift or crush detail in dark tonal regions
+   * - Midtones
+     - Adjust the middle tonal range without affecting blacks and whites
+   * - Highlights
+     - Recover blown highlights or push bright areas further
+   * - Vibrance
+     - Saturation-aware boost — protects skin tones and already-saturated colours
 
-These adjustments are **non-destructive**. Press ``Reset`` at any time to restore the original.
+These adjustments are **non-destructive**. Every slider writes into an edit recipe stored
+per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` to step
+backwards through individual changes. Recipes survive restarts and can be exported / synced
+via the XMP sidecar flow described in the Metadata section.
 
 Save & Undo
 ^^^^^^^^^^^^
@@ -491,6 +507,41 @@ Right-click an image > ``Export / Save As``.
 - Preview estimated file size
 - Pick a save location
 
+Export Presets
+^^^^^^^^^^^^^^
+
+For the common delivery targets you don't want to retune every time, use
+``File`` > ``Export with Preset``. One click applies the right resize, format,
+and quality pipeline:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Preset
+     - Pipeline
+   * - **Web 1600**
+     - Fit long edge to 1600 px, JPEG quality 85, sRGB; for blog / forum uploads where visual quality matters more than pixel count.
+   * - **Print 300 dpi**
+     - Full-resolution TIFF / high-quality JPEG with 300 dpi metadata, color-managed output for labs and print shops.
+   * - **Instagram 1080**
+     - Square (1080 × 1080) or portrait (1080 × 1350) crop with the original aspect ratio preserved inside, quality 90 JPEG.
+
+Presets compose with the watermark overlay (below) — enable the watermark once and
+every preset output carries it.
+
+Watermark Overlay
+^^^^^^^^^^^^^^^^^
+
+``File`` > ``Watermark…`` opens a non-destructive overlay configurator. Settings
+apply on export only — the original pixels on disk are never touched.
+
+- **Mode**: text or image. Image watermarks support PNG with alpha.
+- **Position**: 9-anchor grid (corners, edges, centre).
+- **Opacity**: 0 – 100 %.
+- **Scale**: percent of the exported long edge; the watermark rescales automatically
+  as you resize for different presets.
+
 Batch Export
 ^^^^^^^^^^^^
 
@@ -543,7 +594,7 @@ Image Comparison
 
 In thumbnail mode, select 2 -- 4 images, then right-click > ``Compare Images``.
 
-The dialog has three tabs:
+The dialog has four tabs:
 
 .. list-table::
    :header-rows: 1
@@ -557,6 +608,9 @@ The dialog has three tabs:
      - Blend two images with an alpha slider (0 → A only, 100 → B only). Requires exactly 2 selected.
    * - **Difference**
      - Per-pixel ``|A − B|`` visualisation with a gain slider (0.10× – 20×) to amplify subtle changes.
+   * - **A | B Split**
+     - Before / after split view with a draggable vertical divider. Drag the handle to sweep between the two
+       images; ideal for showing develop-recipe adjustments or comparing exports. Requires exactly 2 selected.
 
 When the two images have different sizes, ``B`` is resampled to ``A``'s dimensions with Lanczos. Very large
 images are capped at 2048 px on the long edge internally so overlay / difference stay interactive.
@@ -993,6 +1047,28 @@ Metadata Export
 the current view covering EXIF, dimensions, color label, rating, favourite,
 hierarchical tags, cull state, and notes. Useful for feeding cull decisions
 into a spreadsheet or external workflow.
+
+XMP Sidecar (Lightroom / Capture One Interop)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
+``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
+labels round-trip cleanly with Lightroom, Capture One, Bridge, and other
+XMP-aware tools.
+
+- **Import XMP for current image** — pulls rating / title / keywords /
+  color label from the sidecar into the internal database.
+- **Export XMP for current image** — writes the current rating / title /
+  keywords / color label into a sidecar next to the image.
+- **Batch import / export** — applies the same operation to the active
+  selection or the whole folder.
+
+XML parsing uses ``defusedxml`` so malformed or malicious sidecars cannot
+trigger XXE / billion-laughs attacks. If ``defusedxml`` is not installed
+the XMP menu entries are hidden and no sidecars are written.
+
+The **EXIF sidebar** also exposes a clickable **star-rating strip** — the
+rating it sets is what XMP export will write.
 
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^

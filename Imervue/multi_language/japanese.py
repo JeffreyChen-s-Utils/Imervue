@@ -760,6 +760,11 @@ japanese_word_dict = {
     "keyboard_osd_tip": "F8 で右上に情報オーバーレイ（ファイル名/サイズ/形式）; Ctrl+F8 は Debug HUD（VRAM/キャッシュ/スレッド）",
     "keyboard_pixel_view_tip": "Shift+P でピクセル表示 \u2014 400% 以上でグリッドとカーソル下の RGB 値を表示",
     "keyboard_color_mode_tip": "Shift+M で ノーマル / グレースケール / 反転 / セピア を循環（非破壊）",
+    "keyboard_cull_pick_tip": "P で現在の画像（または選択中の全タイル）を Pick に — Lightroom 風のキープフラグ",
+    "keyboard_cull_reject_tip": "Shift+X で現在の画像（または選択中の全タイル）を Reject に；その後 Extra Tools > Culling からまとめて削除できます",
+    "keyboard_cull_unflag_tip": "U で現在の画像または選択の Pick / Reject セレクトフラグを解除",
+    "keyboard_command_palette_tip": "Ctrl+Shift+P でコマンドパレットを開き、あらゆるメニュー操作を 1 つのダイアログで曖昧検索",
+    "keyboard_macro_replay_tip": "Alt+M で最後に記録したマクロ（評価 / お気に入り / カラー / タグ）を現在の選択に再生",
     # ===== ブラウジング＆ライブラリ機能 =====
     "common_close": _JAPANESE_TR95893058308B,
     "common_cancel": _JAPANESE_TR30AD30E330F330BB,

@@ -751,6 +751,11 @@ traditional_chinese_word_dict = {
     "keyboard_osd_tip": "F8 切換右上角 OSD 疊加層（檔名/尺寸/大小）；Ctrl+F8 顯示 Debug HUD（VRAM/快取/執行緒）",
     "keyboard_pixel_view_tip": "Shift+P 啟用像素檢視，在 \u2265400% 縮放下顯示像素網格與游標下的 RGB 值",
     "keyboard_color_mode_tip": "Shift+M 循環 正常 / 灰階 / 反相 / 懷舊 色彩渲染（非破壞性）",
+    "keyboard_cull_pick_tip": "P 將目前圖片（或所有已選取的 tile）標為 Pick — Lightroom 風格的保留旗標",
+    "keyboard_cull_reject_tip": "Shift+X 將目前圖片（或所有已選取的 tile）標為 Reject；之後在 Extra Tools > Culling 可一鍵刪除所有 Reject",
+    "keyboard_cull_unflag_tip": "U 清除目前圖片或選取項目的 Pick / Reject 分揀旗標",
+    "keyboard_command_palette_tip": "Ctrl+Shift+P 開啟命令面板 — 在單一對話框中模糊搜尋並執行任何選單動作",
+    "keyboard_macro_replay_tip": "Alt+M 對目前選取項目重播上次錄製的巨集（評分 / 最愛 / 色彩 / 標籤）",
     # ===== 瀏覽與圖庫功能 =====
     "common_close": "關閉",
     "common_cancel": "取消",
