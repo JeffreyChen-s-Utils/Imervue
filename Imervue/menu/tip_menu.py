@@ -77,6 +77,13 @@ def _keyboard_shortcuts() -> list[tuple[str, str]]:
         ("F8  /  Ctrl+F8", "keyboard_osd_tip"),
         ("Shift+P", "keyboard_pixel_view_tip"),
         ("Shift+M", "keyboard_color_mode_tip"),
+        # --- Culling (Pick / Reject / Unflag) ---
+        ("P", "keyboard_cull_pick_tip"),
+        ("Shift+X", "keyboard_cull_reject_tip"),
+        ("U", "keyboard_cull_unflag_tip"),
+        # --- Productivity ---
+        ("Ctrl+Shift+P", "keyboard_command_palette_tip"),
+        ("Alt+M", "keyboard_macro_replay_tip"),
         # --- Animation ---
         ("Space", "keyboard_anim_play_tip"),
         (",  /  .", "keyboard_anim_frame_tip"),

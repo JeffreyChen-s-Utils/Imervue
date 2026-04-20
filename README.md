@@ -62,14 +62,14 @@ Key design principles:
 - Deep zoom image viewing with multi-level image pyramid (512×512 tiles)
 - Virtualized tile-based thumbnail grid with lazy loading
 - Asynchronous multi-threaded image loading
-- Thumbnail disk cache system (NumPy `.npy` format with MD5-based cache keys)
+- Thumbnail disk cache system (compressed PNG with MD5-based cache keys)
 - Prefetching of ±3 adjacent images for smooth browsing
 - Undo/Redo system (QUndoStack for edits, legacy stack for deletions)
 
 ### Navigation & Viewing
 
 - Folder-based browsing and single image viewing
-- **Grid / List (detail) browse modes** — toggle with Ctrl+L
+- **Grid / List (detail) browse modes** — toggle with Ctrl+L; the list view shows name, size, modified date, dimensions, and a dedicated star-rating column
 - **Breadcrumb path bar** — clickable segments above the viewer
 - Fullscreen + **Theater mode** (Shift+Tab hides all chrome)
 - Minimap overlay in deep zoom mode
@@ -80,7 +80,7 @@ Key design principles:
 - Image rotation (including lossless JPEG rotation via piexif)
 - Animated GIF/APNG playback with frame-by-frame controls
 - Slideshow mode with configurable interval
-- **Enhanced compare dialog** — Side-by-side / Overlay (alpha slider) / Difference (gain slider)
+- **Enhanced compare dialog** — Side-by-side / Overlay (alpha slider) / Difference (gain slider) / **A|B Split** before/after tab with a draggable divider
 - **Split view** (Shift+S) / **Dual-page reading** (Shift+D, Ctrl+Shift+D for RTL/manga)
 - **Multi-monitor window** (Ctrl+Shift+M) mirrors current image on secondary display
 - **Hover preview popup** — larger preview on tile hover (500 ms delay)
@@ -111,6 +111,7 @@ Key design principles:
 - **Advanced filter** — resolution / file size / orientation / modified date range
 - **Stack RAW+JPEG pairs** — collapse shoot-in-RAW+JPEG captures into one tile; the preview is shown while the RAW stays accessible as a sibling
 - **Session / Workspace save & restore** — snapshot current tabs, active image, selection, and filter state to a `.imervue-session.json` file and reload later
+- **Workspace layout presets** — save named window layouts (geometry, dock / toolbar state, splitter sizes, active folder) via File > Workspaces… and flip between Browse / Develop / Export arrangements without rearranging panels every time
 - **Macro record / replay** — capture rating / favorite / color / tag actions and reapply them to any selection (Alt+M replays the last macro)
 - Recent folders and recent images tracking
 - Automatic restore of last opened folder on startup
@@ -122,6 +123,9 @@ Key design principles:
 ### Editing & Export
 
 - Built-in image editor (crop, brightness, contrast, saturation, exposure, rotation, flip) with non-destructive preview — edits are previewed live on canvas and only written to disk on explicit Save
+- **Develop panel sliders** — white balance (temperature / tint), tonal regions (shadows / midtones / highlights), and vibrance in addition to the classic exposure / contrast / saturation controls; every edit remains non-destructive via per-image recipes
+- **Watermark overlay** — place a text or image watermark with configurable position (9 anchors), opacity, and scale; applied on export without touching the original pixels
+- **Export presets** — one-click pipelines for common targets: Web 1600 (long-edge 1600 px JPEG), Print 300 dpi (full-resolution, color-managed), Instagram 1080 (square / portrait crop at 1080 px)
 - Export/Save As with format conversion (PNG, JPEG, WebP, BMP, TIFF)
 - Quality slider for lossy formats (JPEG, WebP)
 - Batch operations (rename, move/copy, rotate selected images)
@@ -134,9 +138,10 @@ Key design principles:
 
 ### Metadata
 
-- EXIF data display in collapsible sidebar
+- EXIF data display in collapsible sidebar, including a **star-rating strip** that edits the image's 0–5 rating in place
 - EXIF editor dialog
 - Image info dialog (dimensions, file size, dates)
+- **XMP sidecar** (`.xmp` companion files) — import / export ratings, title, description, keywords, and color labels for round-trip interop with Adobe Lightroom and Capture One (safe XML parsing via `defusedxml`)
 
 ### Extra Tools
 
@@ -150,6 +155,7 @@ Key design principles:
 - **Library Search** — SQLite index with multi-root scanning; query by extension, size, dimensions, filename
 - **Smart Albums** — save & reapply rule-based filter queries
 - **Find Similar Images** — pHash-based search with adjustable Hamming distance
+- **Semantic Search (CLIP)** — query the library with natural language ("golden retriever in snow", "neon street at night") via a CLIP text/image embedding index; embeddings are cached to an `.npz` archive and queried with an O(N) cosine scan. Requires optional dependencies `open_clip_torch` + `torch`; the feature degrades gracefully when they are absent.
 - **Auto-Tag Images** — heuristic (photo / document / screenshot / landscape / portrait) with optional CLIP ONNX upgrade
 - **Hierarchical Tags** manager — tree-structured tag paths with bulk assign/untag
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
@@ -242,6 +248,13 @@ pip install .
 | rawpy | RAW image decoding |
 | imageio | Image I/O |
 | imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
+
+Optional (feature-gated; omit to disable the feature cleanly):
+
+| Package | Purpose |
+|---------|---------|
+| open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
+| onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
 
 ---
 
@@ -432,6 +445,7 @@ window keeps browsing independently.
 - Paste from Clipboard / Auto-annotate Clipboard Images
 - File Association (Windows only — register/unregister right-click context menu)
 - **Session** (submenu: Save Session… / Load Session…)
+- **Workspaces…** — save / load / rename / delete named window layouts
 - **External Editors…** — configure executables (name, path, arguments)
 - **Open in External Editor** — submenu listing configured editors
 - Keyboard Shortcuts (customizable key bindings)
@@ -448,6 +462,7 @@ window keeps browsing independently.
 - **Library Search** (SQLite multi-root index)
 - **Smart Albums** (save / apply / delete rule-based filters)
 - **Find Similar Images** (pHash Hamming distance)
+- **Semantic Search (CLIP)** — natural-language queries over an embedding index (optional dependency)
 - **Auto-Tag Images** (heuristic + optional CLIP ONNX)
 - **Hierarchical Tags** (tree-structured tag paths)
 - **Token Batch Rename** (live-preview templates)
@@ -691,7 +706,7 @@ Imervue/
 ### Thumbnail Cache
 
 - **Key**: MD5 hash of `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`
-- **Format**: NumPy `.npy` binary (fast I/O, no compression overhead)
+- **Format**: Compressed PNG (`compress_level=1` — fast write, small footprint, migrated from legacy `.npy` which is cleaned up on first access)
 - **Location**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Windows) or `~/.cache/imervue/thumbnails` (Linux/macOS)
 - **Invalidation**: Automatic when file metadata changes
 

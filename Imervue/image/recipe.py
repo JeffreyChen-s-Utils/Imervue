@@ -7,14 +7,18 @@ invalidate it, but any actual pixel change does.
 
 Edit order matters and is fixed:
 
-    1. Rotate (quarter turns)
-    2. Flip horizontal
-    3. Flip vertical
-    4. Crop (in post-rotate/flip coordinates)
-    5. Exposure (multiplicative)
-    6. Brightness
-    7. Contrast
-    8. Saturation
+    1.  Rotate (quarter turns)
+    2.  Flip horizontal
+    3.  Flip vertical
+    4.  Crop (in post-rotate/flip coordinates)
+    5.  White balance (temperature + tint)
+    6.  Exposure (multiplicative)
+    7.  Highlights / Shadows (luminance-weighted gain)
+    8.  Whites / Blacks (endpoint remap)
+    9.  Brightness
+    10. Contrast
+    11. Vibrance (saturation-protected colour boost)
+    12. Saturation
 
 This order is baked into ``apply()`` and callers must not reorder without
 also updating the hash scheme — otherwise two recipes that produce the same
@@ -32,6 +36,13 @@ from typing import Any
 
 import numpy as np
 from PIL import Image, ImageEnhance
+
+from Imervue.image.recipe_adjustments import (
+    apply_highlights_shadows,
+    apply_vibrance,
+    apply_white_balance,
+    apply_whites_blacks,
+)
 
 logger = logging.getLogger("Imervue.recipe")
 
@@ -66,6 +77,15 @@ class Recipe:
     contrast: float = 0.0          # -1..+1
     saturation: float = 0.0        # -1..+1
     exposure: float = 0.0          # -2..+2 (stops)
+    # Advanced develop sliders (Lightroom-style). All -1..+1 and default to
+    # zero so existing recipes deserialise unchanged (see `from_dict`).
+    temperature: float = 0.0       # warm (+) / cool (-) white balance
+    tint: float = 0.0              # magenta (+) / green (-)
+    highlights: float = 0.0        # recover bright areas (negative darkens)
+    shadows: float = 0.0           # lift dark areas (positive brightens)
+    whites: float = 0.0            # endpoint stretch on the bright side
+    blacks: float = 0.0            # endpoint crush on the dark side
+    vibrance: float = 0.0          # saturation-protected colour boost
 
     # Freeform metadata for forward-compat — callers may stuff additional
     # fields here (e.g. develop panel version) and they round-trip through
@@ -78,14 +98,36 @@ class Recipe:
 
     def is_identity(self) -> bool:
         return (
+            self._geometry_is_identity()
+            and self._classic_sliders_are_zero()
+            and self._advanced_sliders_are_zero()
+        )
+
+    def _geometry_is_identity(self) -> bool:
+        return (
             self.rotate_steps % 4 == 0
             and not self.flip_h
             and not self.flip_v
             and self.crop is None
-            and _is_zero(self.brightness)
+        )
+
+    def _classic_sliders_are_zero(self) -> bool:
+        return (
+            _is_zero(self.brightness)
             and _is_zero(self.contrast)
             and _is_zero(self.saturation)
             and _is_zero(self.exposure)
+        )
+
+    def _advanced_sliders_are_zero(self) -> bool:
+        return (
+            _is_zero(self.temperature)
+            and _is_zero(self.tint)
+            and _is_zero(self.highlights)
+            and _is_zero(self.shadows)
+            and _is_zero(self.whites)
+            and _is_zero(self.blacks)
+            and _is_zero(self.vibrance)
         )
 
     def normalized(self) -> Recipe:
@@ -104,6 +146,13 @@ class Recipe:
             contrast=float(self.contrast),
             saturation=float(self.saturation),
             exposure=float(self.exposure),
+            temperature=float(self.temperature),
+            tint=float(self.tint),
+            highlights=float(self.highlights),
+            shadows=float(self.shadows),
+            whites=float(self.whites),
+            blacks=float(self.blacks),
+            vibrance=float(self.vibrance),
             extra=dict(self.extra),
         )
 
@@ -179,8 +228,13 @@ class Recipe:
 
         recipe = self.normalized()
         arr = _apply_geometry(arr, recipe)
+        arr = apply_white_balance(arr, recipe.temperature, recipe.tint)
         arr = _apply_exposure(arr, recipe)
-        arr = _apply_enhancements(arr, recipe)
+        arr = apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
+        arr = apply_whites_blacks(arr, recipe.whites, recipe.blacks)
+        arr = _apply_brightness_contrast(arr, recipe)
+        arr = apply_vibrance(arr, recipe.vibrance)
+        arr = _apply_saturation(arr, recipe)
         return arr
 
 
@@ -216,19 +270,24 @@ def _apply_exposure(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     return arr
 
 
-def _apply_enhancements(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Steps 6-8 — brightness, contrast, saturation via PIL."""
-    if (_is_zero(recipe.brightness)
-            and _is_zero(recipe.contrast)
-            and _is_zero(recipe.saturation)):
+def _apply_brightness_contrast(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Brightness / contrast via PIL enhancements."""
+    if _is_zero(recipe.brightness) and _is_zero(recipe.contrast):
         return arr
     img = Image.fromarray(arr, mode="RGBA")
     if not _is_zero(recipe.brightness):
         img = ImageEnhance.Brightness(img).enhance(1.0 + recipe.brightness)
     if not _is_zero(recipe.contrast):
         img = ImageEnhance.Contrast(img).enhance(1.0 + recipe.contrast)
-    if not _is_zero(recipe.saturation):
-        img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
+    return np.array(img)
+
+
+def _apply_saturation(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Final saturation pass — runs after vibrance."""
+    if _is_zero(recipe.saturation):
+        return arr
+    img = Image.fromarray(arr, mode="RGBA")
+    img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
     return np.array(img)
 
 

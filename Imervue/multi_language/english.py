@@ -367,6 +367,18 @@ english_word_dict = {
     "batch_export_max_height": "Max Height:",
     "batch_export_start": "Export",
     "batch_export_done": "Exported {success}/{total} image(s)",
+    "batch_export_preset": "Preset:",
+    "batch_export_preset_custom": "Custom",
+    # Watermark
+    "watermark_title": "Watermark",
+    "watermark_text": "Text:",
+    "watermark_position": "Position:",
+    "watermark_opacity": "Opacity:",
+    "watermark_tl": "Top-left",
+    "watermark_tr": "Top-right",
+    "watermark_bl": "Bottom-left",
+    "watermark_br": "Bottom-right",
+    "watermark_center": "Center",
     # GIF / Video
     "gif_video_title": "Create GIF / Video",
     "gif_video_order": "Drag to reorder (top = first frame):",
@@ -455,6 +467,13 @@ english_word_dict = {
     "develop_brightness": "Brightness",
     "develop_contrast": "Contrast",
     "develop_saturation": "Saturation",
+    "develop_temperature": "Temperature",
+    "develop_tint": "Tint",
+    "develop_highlights": "Highlights",
+    "develop_shadows": "Shadows",
+    "develop_whites": "Whites",
+    "develop_blacks": "Blacks",
+    "develop_vibrance": "Vibrance",
     "develop_reset": "Reset",
     "develop_undo": _ENGLISH_UNDO,
     "develop_redo": _ENGLISH_REDO,
@@ -676,9 +695,11 @@ english_word_dict = {
     "compare_4": "Side-by-side (4)",
     "compare_overlay": "Overlay (2)",
     "compare_difference": "Difference (2)",
+    "compare_split": "A|B Split (2)",
     "compare_tab_sbs": "Side-by-side",
     "compare_tab_overlay": "Overlay",
     "compare_tab_difference": "Difference",
+    "compare_tab_split": "A|B Split",
     "compare_gain": "Gain",
     "compare_need_two": "Select exactly 2 images.",
     "compare_need_n": "Select at least {n} images.",
@@ -726,6 +747,7 @@ english_word_dict = {
     "color_label_cleared": "Colour label cleared",
     "color_label_batch": "{count} images \u2192 {color}",
     "list_col_label": "Label",
+    "list_col_rating": "Rating",
     "filter_by_color": "By Color Label",
     "filter_color_all": _ENGLISH_ALL,
     "filter_color_any": "Any label",
@@ -744,6 +766,11 @@ english_word_dict = {
     "keyboard_osd_tip": "F8 toggles an on-screen overlay with file info; Ctrl+F8 shows a debug HUD with GPU / cache stats",
     "keyboard_pixel_view_tip": "Shift+P enables pixel view \u2014 at \u2265400% zoom, shows a grid and the RGB value of each pixel under the cursor",
     "keyboard_color_mode_tip": "Shift+M cycles Normal / Grayscale / Invert / Sepia color rendering (non-destructive)",
+    "keyboard_cull_pick_tip": "P flags the current image (or all selected tiles) as a Pick \u2014 Lightroom-style keeper flag",
+    "keyboard_cull_reject_tip": "Shift+X flags the current image (or all selected tiles) as Reject \u2014 then Extra Tools > Culling can delete every reject at once",
+    "keyboard_cull_unflag_tip": "U clears any Pick / Reject cull flag from the current image or selection",
+    "keyboard_command_palette_tip": "Ctrl+Shift+P opens the Command Palette \u2014 fuzzy-search every menu action in one dialog",
+    "keyboard_macro_replay_tip": "Alt+M replays the last recorded macro (rating / favorite / color / tag actions) on the current selection",
     # ===== Browsing & Library Features =====
     "common_close": _ENGLISH_CLOSE,
     "common_cancel": _ENGLISH_CANCEL,
@@ -805,6 +832,18 @@ english_word_dict = {
     "metadata_export_count": "Files: {n}",
     "metadata_export_done": "Exported {n} rows to {path}",
     "metadata_export_save_title": "Save metadata",
+    # XMP sidecar
+    "xmp_title": "XMP Sidecars",
+    "xmp_explain": (
+        "Read or write Lightroom-compatible .xmp sidecar files alongside each "
+        "image. Stores rating, title, description, keywords (tags) and colour "
+        "label so edits round-trip with Lightroom, Bridge, Capture One."
+    ),
+    "xmp_count": "{n} image(s) in this view.",
+    "xmp_export": "Export sidecars",
+    "xmp_import": "Import sidecars",
+    "xmp_export_done": "Exported {ok}, skipped {skip}, failed {f}.",
+    "xmp_import_done": "Imported {ok}, missing {miss}, failed {f}.",
     # Culling
     "culling_title": "Culling",
     "culling_explain": "Filter the current folder by cull state, or permanently delete all rejected images to disk.",
@@ -857,6 +896,25 @@ english_word_dict = {
     "session_load": "Load Session\u2026",
     "session_saved": "Session saved to {path}",
     "session_restored": "Restored {ok} items (skipped {skip})",
+    "workspace_menu": "Workspaces\u2026",
+    "workspace_title": "Workspaces",
+    "workspace_explain": (
+        "Save the current window layout as a named preset and jump "
+        "between layouts without rearranging panels."
+    ),
+    "workspace_save": "Save Current",
+    "workspace_load": "Load",
+    "workspace_rename": "Rename",
+    "workspace_delete": "Delete",
+    "workspace_name_label": "Name:",
+    "workspace_overwrite_title": "Overwrite workspace?",
+    "workspace_overwrite_msg": (
+        "A workspace named '{name}' already exists. Overwrite it?"
+    ),
+    "workspace_rename_conflict": (
+        "Cannot rename \u2014 a workspace named '{name}' already exists."
+    ),
+    "workspace_delete_confirm": "Delete workspace '{name}'?",
     # External editors
     "ext_editor_menu": "External Editors\u2026",
     "ext_editor_open_in": "Open in External Editor",
