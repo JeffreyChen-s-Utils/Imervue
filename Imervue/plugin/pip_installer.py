@@ -325,35 +325,59 @@ def _find_python() -> str | None:
     return None
 
 
+_REG_SUBKEYS = (
+    r"Software\Python\PythonCore",
+    r"Software\WOW6432Node\Python\PythonCore",
+)
+
+
 def _find_python_from_registry() -> str | None:
     """Windows：從 registry 搜尋已安裝的 Python"""
     try:
         import winreg
-        for hive in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
-            for sub in [r"Software\Python\PythonCore",
-                        r"Software\WOW6432Node\Python\PythonCore"]:
-                try:
-                    key = winreg.OpenKey(hive, sub)
-                except OSError:
-                    continue
-                try:
-                    i = 0
-                    while True:
-                        ver = winreg.EnumKey(key, i)
-                        i += 1
-                        try:
-                            install_key = winreg.OpenKey(
-                                key, ver + r"\InstallPath")
-                            path, _ = winreg.QueryValueEx(
-                                install_key, "ExecutablePath")
-                            if Path(path).is_file() and _verify_python(path):
-                                return path
-                        except OSError:
-                            continue
-                except OSError:
-                    pass
     except ImportError:
-        pass
+        return None
+    hives = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
+    for hive in hives:
+        for sub in _REG_SUBKEYS:
+            path = _scan_registry_branch(winreg, hive, sub)
+            if path:
+                return path
+    return None
+
+
+def _scan_registry_branch(winreg, hive, sub: str) -> str | None:
+    try:
+        key = winreg.OpenKey(hive, sub)
+    except OSError:
+        return None
+    try:
+        return _enumerate_python_versions(winreg, key)
+    except OSError:
+        return None
+
+
+def _enumerate_python_versions(winreg, key) -> str | None:
+    i = 0
+    while True:
+        try:
+            ver = winreg.EnumKey(key, i)
+        except OSError:
+            return None
+        i += 1
+        path = _read_install_path(winreg, key, ver)
+        if path:
+            return path
+
+
+def _read_install_path(winreg, key, ver: str) -> str | None:
+    try:
+        install_key = winreg.OpenKey(key, ver + r"\InstallPath")
+        path, _ = winreg.QueryValueEx(install_key, "ExecutablePath")
+    except OSError:
+        return None
+    if Path(path).is_file() and _verify_python(path):
+        return path
     return None
 
 

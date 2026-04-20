@@ -33,61 +33,60 @@ class LoadThumbnailWorker(QRunnable):
     def run(self):
         if self._abort:
             return
-
         try:
-            img_data = None
-
-            # ===== Recipe（非破壞性編輯）=====
-            # 先查一次 store，取 hash 作為快取 key 的一部分，這樣 develop panel
-            # 一改 recipe 相同路徑的縮圖就會自動 miss 並重新 bake。
             recipe = recipe_store.get_for_path(self.path)
             r_hash = recipe.recipe_hash() if recipe is not None else ""
-
-            # ===== 嘗試磁碟快取 =====
-            if self.size is not None:
-                img_data = thumbnail_disk_cache.get(self.path, self.size, r_hash)
-
-            # ===== 快取未命中，從原始檔案載入 =====
+            img_data = self._try_cache_lookup(r_hash)
             if img_data is None:
-                ext = Path(self.path).suffix.lower()
-                raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
-
-                if ext in raw_exts:
-                    img_data = self._load_raw()
-                elif ext == ".svg":
-                    img_data = self._load_svg()
-                else:
-                    img_data = self._load_standard()
-
-                if self._abort:
+                img_data = self._bake_fresh(recipe, r_hash)
+                if img_data is None:
                     return
-
-                # 灰階 → RGB
-                if img_data.ndim == 2:
-                    img_data = np.stack([img_data, img_data, img_data], axis=2)
-
-                # 保證有 Alpha
-                if img_data.shape[2] == 3:
-                    alpha = np.full((*img_data.shape[:2], 1), 255, dtype=np.uint8)
-                    img_data = np.concatenate([img_data, alpha], axis=2)
-
-                # 套用 recipe（非破壞性）後再進快取 — 這樣 develop panel
-                # 預覽能立刻反映在 tile grid 裡
-                if recipe is not None and not recipe.is_identity():
-                    try:
-                        img_data = recipe.apply(img_data)
-                    except Exception as e:
-                        logger.warning(f"Recipe apply failed for thumbnail {self.path}: {e}")
-
-                # 寫入磁碟快取
-                if self.size is not None:
-                    thumbnail_disk_cache.put(self.path, self.size, img_data, r_hash)
-
             if not self._abort:
                 self.signals.finished.emit(img_data, self.path, self.generation)
-
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Thumbnail load failed: {self.path} - {e}")
+
+    def _try_cache_lookup(self, r_hash: str):
+        if self.size is None:
+            return None
+        return thumbnail_disk_cache.get(self.path, self.size, r_hash)
+
+    def _bake_fresh(self, recipe, r_hash: str):
+        img_data = self._load_by_extension()
+        if self._abort:
+            return None
+        img_data = self._ensure_rgba(img_data)
+        img_data = self._apply_recipe(img_data, recipe)
+        if self.size is not None:
+            thumbnail_disk_cache.put(self.path, self.size, img_data, r_hash)
+        return img_data
+
+    def _load_by_extension(self):
+        ext = Path(self.path).suffix.lower()
+        raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
+        if ext in raw_exts:
+            return self._load_raw()
+        if ext == ".svg":
+            return self._load_svg()
+        return self._load_standard()
+
+    @staticmethod
+    def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
+        if img_data.ndim == 2:
+            img_data = np.stack([img_data, img_data, img_data], axis=2)
+        if img_data.shape[2] == 3:
+            alpha = np.full((*img_data.shape[:2], 1), 255, dtype=np.uint8)
+            img_data = np.concatenate([img_data, alpha], axis=2)
+        return img_data
+
+    def _apply_recipe(self, img_data, recipe):
+        if recipe is None or recipe.is_identity():
+            return img_data
+        try:
+            return recipe.apply(img_data)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Recipe apply failed for thumbnail {self.path}: {e}")
+            return img_data
 
     def _load_standard(self) -> np.ndarray:
         """載入一般圖片，使用 thumbnail() 減少記憶體峰值"""

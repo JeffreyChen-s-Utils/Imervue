@@ -54,39 +54,50 @@ def matches(path: str, criteria: FilterCriteria) -> bool:
     """Return True if ``path`` passes every active criterion."""
     if not criteria.any_active():
         return True
-
-    # Size / date checks are cheap — do those first
     try:
         stat = os.stat(path)
     except OSError:
         return False
+    if not _matches_stat(stat, criteria):
+        return False
+    if not _needs_dimensions(criteria):
+        return True
+    dims = _read_dimensions(path)
+    if dims is None:
+        return False
+    return _matches_dimensions(dims, criteria)
 
+
+def _matches_stat(stat, criteria: FilterCriteria) -> bool:
     size_kb = stat.st_size / 1024
     if criteria.min_size_kb is not None and size_kb < criteria.min_size_kb:
         return False
     if criteria.max_size_kb is not None and size_kb > criteria.max_size_kb:
         return False
-
     mtime_dt = datetime.fromtimestamp(stat.st_mtime)
     if criteria.after_date is not None and mtime_dt < criteria.after_date:
         return False
-    if criteria.before_date is not None and mtime_dt > criteria.before_date:
-        return False
+    return not (criteria.before_date is not None and mtime_dt > criteria.before_date)
 
-    needs_dims = (
+
+def _needs_dimensions(criteria: FilterCriteria) -> bool:
+    return (
         criteria.min_width is not None or criteria.max_width is not None
         or criteria.min_height is not None or criteria.max_height is not None
         or criteria.orientation is not None
     )
-    if not needs_dims:
-        return True
 
+
+def _read_dimensions(path: str) -> tuple[int, int] | None:
     try:
         with Image.open(path) as img:
-            w, h = img.size
-    except Exception:
-        return False
+            return img.size
+    except (OSError, ValueError):
+        return None
 
+
+def _matches_dimensions(dims: tuple[int, int], criteria: FilterCriteria) -> bool:
+    w, h = dims
     if criteria.min_width is not None and w < criteria.min_width:
         return False
     if criteria.max_width is not None and w > criteria.max_width:
@@ -95,12 +106,17 @@ def matches(path: str, criteria: FilterCriteria) -> bool:
         return False
     if criteria.max_height is not None and h > criteria.max_height:
         return False
+    return _matches_orientation(w, h, criteria.orientation)
 
-    if criteria.orientation == "landscape" and w <= h:
-        return False
-    if criteria.orientation == "portrait" and h <= w:
-        return False
-    return not (criteria.orientation == "square" and w != h)
+
+def _matches_orientation(w: int, h: int, orientation: str | None) -> bool:
+    if orientation == "landscape":
+        return w > h
+    if orientation == "portrait":
+        return h > w
+    if orientation == "square":
+        return w == h
+    return True
 
 
 def apply_filter(paths: Iterable[str], criteria: FilterCriteria) -> list[str]:

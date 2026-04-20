@@ -212,6 +212,19 @@ class _ModifyAnnotationCommand(QUndoCommand):
 _HANDLE_SIZE = 8  # pixels (screen space)
 
 
+def _apply_alpha(rgba: tuple[int, int, int, int], multiplier: float) -> QColor:
+    r, g, b, a = rgba
+    return QColor(r, g, b, int(a * multiplier))
+
+
+def _draw_simple_path(painter: QPainter, points: list[tuple[float, float]]) -> None:
+    path = QPainterPath()
+    path.moveTo(*points[0])
+    for p in points[1:]:
+        path.lineTo(*p)
+    painter.drawPath(path)
+
+
 class AnnotationCanvas(QWidget):
     """Interactive canvas that renders a PIL base image + annotation overlay.
 
@@ -462,96 +475,120 @@ class AnnotationCanvas(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.fillRect(self.rect(), QColor(30, 30, 30))
-
         rect = self._display_rect()
         if rect.width() > 0:
-            painter.drawImage(rect, self._base_qimg)
-
-            # Render annotations in image coordinates via transform
-            painter.save()
-            painter.translate(rect.x(), rect.y())
-            painter.scale(
-                rect.width() / self._base.width,
-                rect.height() / self._base.height,
-            )
-            # Live preview for mosaic/blur strength dialog — paint the
-            # baked region directly over the base so the user can see the
-            # effect as they drag the slider.
-            if (self._preview_qimg is not None
-                    and self._preview_rect_image is not None):
-                px, py, pw, ph = self._preview_rect_image
-                painter.drawImage(QRectF(px, py, pw, ph), self._preview_qimg)
-            for ann in self._annotations:
-                self._draw_annotation_qt(painter, ann)
-            if self._drawing is not None:
-                self._draw_annotation_qt(painter, self._drawing)
-            painter.restore()
-
+            self._paint_image_and_annotations(painter, rect)
         if self._selected_id is not None:
             sel = self._find(self._selected_id)
             if sel is not None:
                 self._draw_selection(painter, sel)
-
-        # Crop overlay: dim outside, dashed border, handles
-        if self._tool == _KIND_CROP and self._crop_rect is not None and rect.width() > 0:
-            cx, cy, cw, ch = self._crop_rect
-            tl = self._image_to_screen(cx, cy)
-            br = self._image_to_screen(cx + cw, cy + ch)
-            crop_screen = QRectF(tl, br).normalized()
-            # Dim outside region
-            dim = QColor(0, 0, 0, 140)
-            # Top
-            painter.fillRect(QRectF(rect.left(), rect.top(), rect.width(),
-                                    crop_screen.top() - rect.top()), dim)
-            # Bottom
-            painter.fillRect(QRectF(rect.left(), crop_screen.bottom(),
-                                    rect.width(), rect.bottom() - crop_screen.bottom()), dim)
-            # Left
-            painter.fillRect(QRectF(rect.left(), crop_screen.top(),
-                                    crop_screen.left() - rect.left(),
-                                    crop_screen.height()), dim)
-            # Right
-            painter.fillRect(QRectF(crop_screen.right(), crop_screen.top(),
-                                    rect.right() - crop_screen.right(),
-                                    crop_screen.height()), dim)
-            # Dashed border
-            crop_pen = QPen(QColor(255, 255, 255))
-            crop_pen.setWidthF(1.5)
-            crop_pen.setStyle(Qt.PenStyle.DashLine)
-            painter.setPen(crop_pen)
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawRect(crop_screen)
-            # Rule of thirds guidelines
-            thirds_pen = QPen(QColor(255, 255, 255, 80))
-            thirds_pen.setWidthF(0.5)
-            painter.setPen(thirds_pen)
-            for i in range(1, 3):
-                tx = crop_screen.left() + crop_screen.width() * i / 3
-                ty = crop_screen.top() + crop_screen.height() * i / 3
-                painter.drawLine(QPointF(tx, crop_screen.top()),
-                                 QPointF(tx, crop_screen.bottom()))
-                painter.drawLine(QPointF(crop_screen.left(), ty),
-                                 QPointF(crop_screen.right(), ty))
-            # Resize handles
-            painter.setBrush(QBrush(QColor(255, 255, 255)))
-            painter.setPen(QPen(QColor(0, 120, 215), 1))
-            h = _HANDLE_SIZE
-            for hx, hy in self._handle_positions(crop_screen):
-                painter.drawRect(QRectF(hx - h / 2, hy - h / 2, h, h))
-            # Size label
-            size_text = f"{cw} x {ch}"
-            painter.setPen(QPen(QColor(255, 255, 255)))
-            label_font = QFont()
-            label_font.setPixelSize(12)
-            painter.setFont(label_font)
-            painter.drawText(
-                QPointF(crop_screen.left() + 4, crop_screen.top() - 4),
-                size_text)
-
+        if (self._tool == _KIND_CROP and self._crop_rect is not None
+                and rect.width() > 0):
+            self._paint_crop_overlay(painter, rect)
         painter.end()
+
+    def _paint_image_and_annotations(self, painter: QPainter, rect: QRectF) -> None:
+        painter.drawImage(rect, self._base_qimg)
+        painter.save()
+        painter.translate(rect.x(), rect.y())
+        painter.scale(
+            rect.width() / self._base.width,
+            rect.height() / self._base.height,
+        )
+        if (self._preview_qimg is not None
+                and self._preview_rect_image is not None):
+            px, py, pw, ph = self._preview_rect_image
+            painter.drawImage(QRectF(px, py, pw, ph), self._preview_qimg)
+        for ann in self._annotations:
+            self._draw_annotation_qt(painter, ann)
+        if self._drawing is not None:
+            self._draw_annotation_qt(painter, self._drawing)
+        painter.restore()
+
+    def _paint_crop_overlay(self, painter: QPainter, rect: QRectF) -> None:
+        cx, cy, cw, ch = self._crop_rect
+        tl = self._image_to_screen(cx, cy)
+        br = self._image_to_screen(cx + cw, cy + ch)
+        crop_screen = QRectF(tl, br).normalized()
+        self._paint_crop_dimming(painter, rect, crop_screen)
+        self._paint_crop_border(painter, crop_screen)
+        self._paint_crop_thirds(painter, crop_screen)
+        self._paint_crop_handles(painter, crop_screen)
+        self._paint_crop_size_label(painter, crop_screen, cw, ch)
+
+    @staticmethod
+    def _paint_crop_dimming(painter: QPainter, rect: QRectF, crop_screen: QRectF) -> None:
+        dim = QColor(0, 0, 0, 140)
+        painter.fillRect(QRectF(rect.left(), rect.top(), rect.width(),
+                                crop_screen.top() - rect.top()), dim)
+        painter.fillRect(QRectF(rect.left(), crop_screen.bottom(),
+                                rect.width(), rect.bottom() - crop_screen.bottom()), dim)
+        painter.fillRect(QRectF(rect.left(), crop_screen.top(),
+                                crop_screen.left() - rect.left(),
+                                crop_screen.height()), dim)
+        painter.fillRect(QRectF(crop_screen.right(), crop_screen.top(),
+                                rect.right() - crop_screen.right(),
+                                crop_screen.height()), dim)
+
+    @staticmethod
+    def _paint_crop_border(painter: QPainter, crop_screen: QRectF) -> None:
+        crop_pen = QPen(QColor(255, 255, 255))
+        crop_pen.setWidthF(1.5)
+        crop_pen.setStyle(Qt.PenStyle.DashLine)
+        painter.setPen(crop_pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(crop_screen)
+
+    @staticmethod
+    def _paint_crop_thirds(painter: QPainter, crop_screen: QRectF) -> None:
+        thirds_pen = QPen(QColor(255, 255, 255, 80))
+        thirds_pen.setWidthF(0.5)
+        painter.setPen(thirds_pen)
+        for i in range(1, 3):
+            tx = crop_screen.left() + crop_screen.width() * i / 3
+            ty = crop_screen.top() + crop_screen.height() * i / 3
+            painter.drawLine(QPointF(tx, crop_screen.top()),
+                             QPointF(tx, crop_screen.bottom()))
+            painter.drawLine(QPointF(crop_screen.left(), ty),
+                             QPointF(crop_screen.right(), ty))
+
+    def _paint_crop_handles(self, painter: QPainter, crop_screen: QRectF) -> None:
+        painter.setBrush(QBrush(QColor(255, 255, 255)))
+        painter.setPen(QPen(QColor(0, 120, 215), 1))
+        h = _HANDLE_SIZE
+        for hx, hy in self._handle_positions(crop_screen):
+            painter.drawRect(QRectF(hx - h / 2, hy - h / 2, h, h))
+
+    @staticmethod
+    def _paint_crop_size_label(painter: QPainter, crop_screen: QRectF,
+                               cw: int, ch: int) -> None:
+        painter.setPen(QPen(QColor(255, 255, 255)))
+        label_font = QFont()
+        label_font.setPixelSize(12)
+        painter.setFont(label_font)
+        painter.drawText(
+            QPointF(crop_screen.left() + 4, crop_screen.top() - 4),
+            f"{cw} x {ch}")
 
     def _draw_annotation_qt(self, painter: QPainter, ann: Annotation) -> None:
         color = QColor(*ann.color)
+        self._prepare_annotation_pen(painter, ann, color)
+        dispatch = {
+            "rect": self._draw_rect_qt,
+            "ellipse": self._draw_ellipse_qt,
+            _KIND_LINE: self._draw_line_qt,
+            _KIND_ARROW: self._draw_arrow_qt,
+            _KIND_FREEHAND: self._draw_freehand_if_valid,
+            _KIND_TEXT: self._draw_text_qt,
+        }
+        handler = dispatch.get(ann.kind)
+        if handler is not None:
+            handler(painter, ann)
+        elif ann.kind in (_KIND_MOSAIC, _KIND_BLUR):
+            self._draw_pixel_effect_preview(painter, ann, color)
+
+    @staticmethod
+    def _prepare_annotation_pen(painter: QPainter, ann: Annotation, color: QColor) -> None:
         pen = QPen(color)
         pen.setWidthF(ann.stroke_width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -559,45 +596,50 @@ class AnnotationCanvas(QWidget):
         painter.setPen(pen)
         painter.setBrush(QBrush(color) if ann.filled else Qt.BrushStyle.NoBrush)
 
-        if ann.kind == "rect":
-            x1, y1, x2, y2 = ann.bounding_box()
-            painter.drawRect(QRectF(x1, y1, x2 - x1, y2 - y1))
-        elif ann.kind == "ellipse":
-            x1, y1, x2, y2 = ann.bounding_box()
-            painter.drawEllipse(QRectF(x1, y1, x2 - x1, y2 - y1))
-        elif ann.kind == _KIND_LINE:
-            if len(ann.points) >= 2:
-                painter.drawLine(QPointF(*ann.points[0]),
-                                 QPointF(*ann.points[-1]))
-        elif ann.kind == _KIND_ARROW:
-            self._draw_arrow_qt(painter, ann)
-        elif ann.kind == _KIND_FREEHAND:
-            if len(ann.points) >= 2:
-                self._draw_freehand_qt(painter, ann)
-        elif ann.kind == _KIND_TEXT:
-            if ann.text and ann.points:
-                font = QFont(ann.font_family) if ann.font_family else QFont()
-                font.setPixelSize(max(6, ann.font_size))
-                painter.setFont(font)
-                painter.setPen(QPen(color))
-                painter.drawText(QPointF(*ann.points[0]), ann.text)
-        elif ann.kind in (_KIND_MOSAIC, _KIND_BLUR):
-            # Preview: dashed outline + translucent fill so the user sees the
-            # region they're about to pixelate/blur. The destructive effect
-            # only happens at bake() time.
-            preview_pen = QPen(color)
-            preview_pen.setWidthF(2)
-            preview_pen.setStyle(Qt.PenStyle.DashLine)
-            painter.setPen(preview_pen)
-            painter.setBrush(QBrush(QColor(255, 255, 255, 40)))
-            x1, y1, x2, y2 = ann.bounding_box()
-            region = QRectF(x1, y1, x2 - x1, y2 - y1)
-            painter.drawRect(region)
-            label = ann.kind
-            label_font = QFont()
-            label_font.setPixelSize(max(12, int(min(region.width(), region.height()) / 8)))
-            painter.setFont(label_font)
-            painter.drawText(region, Qt.AlignmentFlag.AlignCenter, label)
+    @staticmethod
+    def _draw_rect_qt(painter: QPainter, ann: Annotation) -> None:
+        x1, y1, x2, y2 = ann.bounding_box()
+        painter.drawRect(QRectF(x1, y1, x2 - x1, y2 - y1))
+
+    @staticmethod
+    def _draw_ellipse_qt(painter: QPainter, ann: Annotation) -> None:
+        x1, y1, x2, y2 = ann.bounding_box()
+        painter.drawEllipse(QRectF(x1, y1, x2 - x1, y2 - y1))
+
+    @staticmethod
+    def _draw_line_qt(painter: QPainter, ann: Annotation) -> None:
+        if len(ann.points) >= 2:
+            painter.drawLine(QPointF(*ann.points[0]),
+                             QPointF(*ann.points[-1]))
+
+    def _draw_freehand_if_valid(self, painter: QPainter, ann: Annotation) -> None:
+        if len(ann.points) >= 2:
+            self._draw_freehand_qt(painter, ann)
+
+    @staticmethod
+    def _draw_text_qt(painter: QPainter, ann: Annotation) -> None:
+        if not (ann.text and ann.points):
+            return
+        font = QFont(ann.font_family) if ann.font_family else QFont()
+        font.setPixelSize(max(6, ann.font_size))
+        painter.setFont(font)
+        painter.setPen(QPen(QColor(*ann.color)))
+        painter.drawText(QPointF(*ann.points[0]), ann.text)
+
+    @staticmethod
+    def _draw_pixel_effect_preview(painter: QPainter, ann: Annotation, color: QColor) -> None:
+        preview_pen = QPen(color)
+        preview_pen.setWidthF(2)
+        preview_pen.setStyle(Qt.PenStyle.DashLine)
+        painter.setPen(preview_pen)
+        painter.setBrush(QBrush(QColor(255, 255, 255, 40)))
+        x1, y1, x2, y2 = ann.bounding_box()
+        region = QRectF(x1, y1, x2 - x1, y2 - y1)
+        painter.drawRect(region)
+        label_font = QFont()
+        label_font.setPixelSize(max(12, int(min(region.width(), region.height()) / 8)))
+        painter.setFont(label_font)
+        painter.drawText(region, Qt.AlignmentFlag.AlignCenter, ann.kind)
 
     def _draw_arrow_qt(self, painter: QPainter, ann: Annotation) -> None:
         if len(ann.points) < 2:
@@ -640,26 +682,36 @@ class AnnotationCanvas(QWidget):
         """
         brush = getattr(ann, "brush_type", "pen")
         opacity = max(0, min(100, int(getattr(ann, "opacity", 100))))
-
-        # Brush styles that have their own dedicated renderer.
-        if brush == "spray":
-            self._draw_freehand_spray_qt(painter, ann, opacity)
-            return
-        if brush == "calligraphy":
-            self._draw_freehand_calligraphy_qt(painter, ann, opacity)
-            return
-        if brush == "charcoal":
-            self._draw_freehand_charcoal_qt(painter, ann, opacity)
+        if self._dispatch_dedicated_brush(painter, ann, brush, opacity):
             return
 
         alpha_scale, width_factor = self._BRUSH_PRESETS.get(
             brush, self._BRUSH_PRESETS["pen"]
         )
         width = max(1, int(ann.stroke_width * width_factor))
+        color = _apply_alpha(ann.color, alpha_scale * opacity / 100)
+        self._apply_simple_brush_pen(painter, color, width)
 
-        r, g, b, a = ann.color
-        final_alpha = int(a * alpha_scale * opacity / 100)
-        color = QColor(r, g, b, final_alpha)
+        if brush == "watercolor":
+            self._draw_watercolor_qt(painter, ann, width)
+        elif brush == "crayon":
+            self._draw_crayon_qt(painter, ann, color, width)
+        else:
+            _draw_simple_path(painter, ann.points)
+
+    def _dispatch_dedicated_brush(
+        self, painter: QPainter, ann: Annotation, brush: str, opacity: int
+    ) -> bool:
+        if brush == "spray":
+            self._draw_freehand_spray_qt(painter, ann, opacity); return True
+        if brush == "calligraphy":
+            self._draw_freehand_calligraphy_qt(painter, ann, opacity); return True
+        if brush == "charcoal":
+            self._draw_freehand_charcoal_qt(painter, ann, opacity); return True
+        return False
+
+    @staticmethod
+    def _apply_simple_brush_pen(painter: QPainter, color: QColor, width: int) -> None:
         pen = QPen(color)
         pen.setWidthF(width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -667,44 +719,40 @@ class AnnotationCanvas(QWidget):
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
-        if brush == "watercolor":
-            # Draw 3 passes with slight random offset for wet-edge look
-            import random as _random
-            rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
-            for _ in range(3):
-                path = QPainterPath()
-                pts = ann.points
-                x0, y0 = pts[0]
-                path.moveTo(x0 + rng.gauss(0, width * 0.15),
-                            y0 + rng.gauss(0, width * 0.15))
-                for px, py in pts[1:]:
-                    path.lineTo(px + rng.gauss(0, width * 0.15),
-                                py + rng.gauss(0, width * 0.15))
-                painter.drawPath(path)
-        elif brush == "crayon":
-            # Draw 3 thin jittered lines for waxy texture
-            import random as _random
-            rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
-            for offset in range(3):
-                w = max(1, width - offset)
-                pen2 = QPen(color)
-                pen2.setWidthF(w)
-                pen2.setCapStyle(Qt.PenCapStyle.RoundCap)
-                pen2.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-                painter.setPen(pen2)
-                path = QPainterPath()
-                pts = ann.points
-                path.moveTo(pts[0][0] + rng.uniform(-1, 1),
-                            pts[0][1] + rng.uniform(-1, 1))
-                for px, py in pts[1:]:
-                    path.lineTo(px + rng.uniform(-1, 1),
-                                py + rng.uniform(-1, 1))
-                painter.drawPath(path)
-        else:
+    @staticmethod
+    def _draw_watercolor_qt(painter: QPainter, ann: Annotation, width: int) -> None:
+        import random as _random
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        jitter = width * 0.15
+        for _ in range(3):
             path = QPainterPath()
-            path.moveTo(*ann.points[0])
-            for p in ann.points[1:]:
-                path.lineTo(*p)
+            pts = ann.points
+            path.moveTo(pts[0][0] + rng.gauss(0, jitter),
+                        pts[0][1] + rng.gauss(0, jitter))
+            for px, py in pts[1:]:
+                path.lineTo(px + rng.gauss(0, jitter),
+                            py + rng.gauss(0, jitter))
+            painter.drawPath(path)
+
+    @staticmethod
+    def _draw_crayon_qt(painter: QPainter, ann: Annotation,
+                        color: QColor, width: int) -> None:
+        import random as _random
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        for offset in range(3):
+            w = max(1, width - offset)
+            pen2 = QPen(color)
+            pen2.setWidthF(w)
+            pen2.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen2.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen2)
+            path = QPainterPath()
+            pts = ann.points
+            path.moveTo(pts[0][0] + rng.uniform(-1, 1),
+                        pts[0][1] + rng.uniform(-1, 1))
+            for px, py in pts[1:]:
+                path.lineTo(px + rng.uniform(-1, 1),
+                            py + rng.uniform(-1, 1))
             painter.drawPath(path)
 
     def _draw_freehand_spray_qt(
@@ -963,49 +1011,49 @@ class AnnotationCanvas(QWidget):
         pt = event.position()
         ix, iy = self._screen_to_image(pt.x(), pt.y())
 
-        # --- Crop tool ---
         if self._tool == _KIND_CROP:
-            handle = self._crop_hit_handle(pt) if self._crop_rect else None
-            if handle is not None:
-                self._crop_dragging = True
-                self._crop_drag_start = (ix, iy)
-                self._crop_drag_handle = handle
-                self._crop_drag_orig = self._crop_rect
-                return
-            # Start new crop
-            self._crop_rect = (ix, iy, 0, 0)
+            self._press_crop(pt, ix, iy); return
+        if self._tool == _KIND_SELECT:
+            self._press_select(pt, ix, iy); return
+        if self._tool == _KIND_TEXT:
+            self._begin_text_edit(ix, iy); return
+        self._begin_shape(ix, iy)
+
+    def _press_crop(self, pt, ix: int, iy: int) -> None:
+        handle = self._crop_hit_handle(pt) if self._crop_rect else None
+        if handle is not None:
             self._crop_dragging = True
             self._crop_drag_start = (ix, iy)
-            self._crop_drag_handle = None  # new crop
-            self._crop_drag_orig = None
+            self._crop_drag_handle = handle
+            self._crop_drag_orig = self._crop_rect
             return
+        self._crop_rect = (ix, iy, 0, 0)
+        self._crop_dragging = True
+        self._crop_drag_start = (ix, iy)
+        self._crop_drag_handle = None
+        self._crop_drag_orig = None
 
-        if self._tool == _KIND_SELECT:
-            handle = self._hit_handle(pt)
-            if handle is not None:
-                sel = self._find(self._selected_id)
-                if sel is not None:
-                    self._drag_mode = f"resize_{handle}"
-                    self._drag_start_image = (ix, iy)
-                    self._drag_orig_points = list(sel.points)
-                    return
-            hit = self._hit_annotation(pt)
-            if hit is not None:
-                self._selected_id = hit.id
-                self._drag_mode = _KIND_MOVE
+    def _press_select(self, pt, ix: int, iy: int) -> None:
+        handle = self._hit_handle(pt)
+        if handle is not None:
+            sel = self._find(self._selected_id)
+            if sel is not None:
+                self._drag_mode = f"resize_{handle}"
                 self._drag_start_image = (ix, iy)
-                self._drag_orig_points = list(hit.points)
-                self.update()
+                self._drag_orig_points = list(sel.points)
                 return
-            self._selected_id = None
+        hit = self._hit_annotation(pt)
+        if hit is not None:
+            self._selected_id = hit.id
+            self._drag_mode = _KIND_MOVE
+            self._drag_start_image = (ix, iy)
+            self._drag_orig_points = list(hit.points)
             self.update()
             return
+        self._selected_id = None
+        self.update()
 
-        if self._tool == _KIND_TEXT:
-            self._begin_text_edit(ix, iy)
-            return
-
-        # Shape / freehand tools
+    def _begin_shape(self, ix: int, iy: int) -> None:
         kind: AnnotationKind = self._tool  # type: ignore[assignment]
         if kind == "freehand":
             self._drawing = Annotation(
@@ -1197,41 +1245,56 @@ class AnnotationCanvas(QWidget):
     def _prompt_destructive_strength(self, ann: Annotation) -> bool:
         """Ask the user for mosaic block size / blur radius with a live
         preview of the effect painted on the canvas.
-
-        The dialog is positioned away from the annotation's screen rect so
-        it doesn't cover the region the user is previewing. Returns True
-        if the user confirmed, False if they cancelled (the caller should
-        then discard the annotation).
         """
+        cfg = self._destructive_prompt_config(ann)
+        if cfg is None:
+            return True
+        title, label_text, minv, maxv = cfg
+        initial = (self._last_block_size if ann.kind == _KIND_MOSAIC
+                   else self._last_blur_radius)
+        self._drawing = ann  # keep dashed-outline preview visible during dialog
+        dlg, slider, spin = self._build_strength_dialog(title, label_text, minv, maxv, initial)
+        self._wire_strength_signals(dlg, slider, spin, ann, initial)
+        dlg.adjustSize()
+        self._position_dialog_away_from_ann(dlg, ann)
+        try:
+            result = dlg.exec()
+        finally:
+            self._drawing = None
+            self._preview_qimg = None
+            self._preview_rect_image = None
+            self.update()
+        if result != QDialog.DialogCode.Accepted:
+            return False
+        self._commit_destructive(ann)
+        return True
+
+    @staticmethod
+    def _destructive_prompt_config(
+        ann: Annotation,
+    ) -> tuple[str, str, int, int] | None:
         lang = language_wrapper.language_word_dict
         if ann.kind == _KIND_MOSAIC:
-            title = lang.get("annotation_mosaic_prompt_title", "Mosaic strength")
-            label_text = lang.get(
-                "annotation_mosaic_prompt_label",
-                "Block size (pixels):",
+            return (
+                lang.get("annotation_mosaic_prompt_title", "Mosaic strength"),
+                lang.get("annotation_mosaic_prompt_label", "Block size (pixels):"),
+                2, 200,
             )
-            initial = self._last_block_size
-            minv, maxv = 2, 200
-        elif ann.kind == _KIND_BLUR:
-            title = lang.get("annotation_blur_prompt_title", "Blur strength")
-            label_text = lang.get(
-                "annotation_blur_prompt_label",
-                "Gaussian radius (pixels):",
+        if ann.kind == _KIND_BLUR:
+            return (
+                lang.get("annotation_blur_prompt_title", "Blur strength"),
+                lang.get("annotation_blur_prompt_label", "Gaussian radius (pixels):"),
+                1, 200,
             )
-            initial = self._last_blur_radius
-            minv, maxv = 1, 200
-        else:
-            return True
+        return None
 
-        # Keep the dashed-outline preview visible during the dialog —
-        # _drawing was nulled in mouseReleaseEvent, restore it.
-        self._drawing = ann
-
+    def _build_strength_dialog(
+        self, title: str, label_text: str, minv: int, maxv: int, initial: int
+    ) -> tuple[QDialog, QSlider, QSpinBox]:
         dlg = QDialog(self)
         dlg.setWindowTitle(title)
         layout = QVBoxLayout(dlg)
         layout.addWidget(QLabel(label_text))
-
         row = QHBoxLayout()
         slider = QSlider(Qt.Orientation.Horizontal, dlg)
         slider.setRange(minv, maxv)
@@ -1242,7 +1305,6 @@ class AnnotationCanvas(QWidget):
         row.addWidget(slider, 1)
         row.addWidget(spin)
         layout.addLayout(row)
-
         bbox = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             parent=dlg,
@@ -1250,7 +1312,12 @@ class AnnotationCanvas(QWidget):
         bbox.accepted.connect(dlg.accept)
         bbox.rejected.connect(dlg.reject)
         layout.addWidget(bbox)
+        return dlg, slider, spin
 
+    def _wire_strength_signals(
+        self, dlg: QDialog, slider: QSlider, spin: QSpinBox,
+        ann: Annotation, initial: int,
+    ) -> None:
         def apply_value(val: int) -> None:
             if ann.kind == _KIND_MOSAIC:
                 ann.block_size = int(val)
@@ -1259,48 +1326,26 @@ class AnnotationCanvas(QWidget):
             self._update_destructive_preview(ann)
 
         def on_slider(v: int) -> None:
-            spin.blockSignals(True)
-            spin.setValue(v)
-            spin.blockSignals(False)
+            spin.blockSignals(True); spin.setValue(v); spin.blockSignals(False)
             apply_value(v)
 
         def on_spin(v: int) -> None:
-            slider.blockSignals(True)
-            slider.setValue(v)
-            slider.blockSignals(False)
+            slider.blockSignals(True); slider.setValue(v); slider.blockSignals(False)
             apply_value(v)
 
         slider.valueChanged.connect(on_slider)
         spin.valueChanged.connect(on_spin)
-
-        # Initial preview at the remembered strength
         apply_value(initial)
 
-        dlg.adjustSize()
-        self._position_dialog_away_from_ann(dlg, ann)
-
-        try:
-            result = dlg.exec()
-        finally:
-            self._drawing = None
-            self._preview_qimg = None
-            self._preview_rect_image = None
-            self.update()
-
-        if result != QDialog.DialogCode.Accepted:
-            return False
+    def _commit_destructive(self, ann: Annotation) -> None:
         if ann.kind == _KIND_MOSAIC:
             self._last_block_size = ann.block_size
         else:
             self._last_blur_radius = ann.blur_radius
-        # Bake the effect into the base image via an undoable command —
-        # the pixels are now "committed" in memory but the file on disk
-        # is untouched until the user explicitly hits Save.
         old_img = self._base
         new_img = bake(self._base, [ann])
         cmd = _BakeDestructiveCommand(self, old_img, new_img, text=ann.kind)
         self._undo_stack.push(cmd)
-        return True
 
     def _update_destructive_preview(self, ann: Annotation) -> None:
         """Bake mosaic/blur on the annotation's region and store it as a

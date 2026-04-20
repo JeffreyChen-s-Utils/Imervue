@@ -141,12 +141,8 @@ class ExifSidebar(QWidget):
         if self._collapsed:
             return
 
-        viewer = self._main_window.viewer
-
         if path is None:
-            images = viewer.model.images
-            if images and 0 <= viewer.current_index < len(images):
-                path = images[viewer.current_index]
+            path = self._current_viewer_path()
 
         if not path:
             self._info_label.setText("")
@@ -158,56 +154,65 @@ class ExifSidebar(QWidget):
         self._rating_widget.bind_path(path)
         lang = language_wrapper.language_word_dict
         p = Path(path)
-        lines = []
+        lines: list[str] = [
+            f"<b>{lang.get('exif_filename', 'File')}:</b> {p.name}",
+            *self._file_stat_lines(p, lang),
+            "<hr>",
+            *self._exif_lines(p, lang),
+        ]
+        self._info_label.setText("<br>".join(lines))
 
-        # 基本資訊
-        lines.append(f"<b>{lang.get('exif_filename', 'File')}:</b> {p.name}")
+    def _current_viewer_path(self) -> str | None:
+        viewer = self._main_window.viewer
+        images = viewer.model.images
+        if images and 0 <= viewer.current_index < len(images):
+            return images[viewer.current_index]
+        return None
 
+    @staticmethod
+    def _file_stat_lines(p: Path, lang) -> list[str]:
+        lines: list[str] = []
         try:
             stat = p.stat()
-            size_mb = round(stat.st_size / (1024 * 1024), 2)
-            lines.append(f"<b>{lang.get('exif_filesize', 'Size')}:</b> {size_mb} MB")
-
-            ctime, mtime = get_file_times(p)
-            if ctime:
-                lines.append(f"<b>{lang.get('exif_created', 'Created')}:</b> {ctime}")
-            if mtime:
-                lines.append(f"<b>{lang.get('exif_modified', 'Modified')}:</b> {mtime}")
         except OSError:
-            pass
+            return lines
+        size_mb = round(stat.st_size / (1024 * 1024), 2)
+        lines.append(f"<b>{lang.get('exif_filesize', 'Size')}:</b> {size_mb} MB")
+        ctime, mtime = get_file_times(p)
+        if ctime:
+            lines.append(f"<b>{lang.get('exif_created', 'Created')}:</b> {ctime}")
+        if mtime:
+            lines.append(f"<b>{lang.get('exif_modified', 'Modified')}:</b> {mtime}")
+        return lines
 
-        lines.append("<hr>")
-
-        # EXIF 資料
+    @staticmethod
+    def _exif_lines(p: Path, lang) -> list[str]:
         exif = get_exif_data(p)
-        if exif:
-            _exif_fields = [
-                ("DateTimeOriginal", lang.get("exif_taken", "Taken")),
-                ("Make", lang.get("exif_make", "Make")),
-                ("Model", lang.get("exif_model", "Model")),
-                ("LensModel", lang.get("exif_lens", "Lens")),
-                ("FocalLength", lang.get("exif_focal", "Focal Length")),
-                ("FNumber", lang.get("exif_aperture", "Aperture")),
-                ("ExposureTime", lang.get("exif_shutter", "Shutter")),
-                ("ISOSpeedRatings", lang.get("exif_iso", "ISO")),
-                ("ExposureBiasValue", lang.get("exif_ev", "EV")),
-                ("WhiteBalance", lang.get("exif_wb", "White Balance")),
-                ("Flash", lang.get("exif_flash", "Flash")),
-            ]
-            for key, label in _exif_fields:
-                val = exif.get(key)
-                if val is not None and val != "N/A":
-                    lines.append(f"<b>{label}:</b> {val}")
-
-            # 圖片尺寸
-            w = exif.get("ExifImageWidth") or exif.get("ImageWidth")
-            h = exif.get("ExifImageHeight") or exif.get("ImageLength")
-            if w and h:
-                lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
-        else:
-            lines.append(f"<i>{lang.get('exif_no_data', 'No EXIF data')}</i>")
-
-        self._info_label.setText("<br>".join(lines))
+        if not exif:
+            return [f"<i>{lang.get('exif_no_data', 'No EXIF data')}</i>"]
+        fields = [
+            ("DateTimeOriginal", lang.get("exif_taken", "Taken")),
+            ("Make", lang.get("exif_make", "Make")),
+            ("Model", lang.get("exif_model", "Model")),
+            ("LensModel", lang.get("exif_lens", "Lens")),
+            ("FocalLength", lang.get("exif_focal", "Focal Length")),
+            ("FNumber", lang.get("exif_aperture", "Aperture")),
+            ("ExposureTime", lang.get("exif_shutter", "Shutter")),
+            ("ISOSpeedRatings", lang.get("exif_iso", "ISO")),
+            ("ExposureBiasValue", lang.get("exif_ev", "EV")),
+            ("WhiteBalance", lang.get("exif_wb", "White Balance")),
+            ("Flash", lang.get("exif_flash", "Flash")),
+        ]
+        lines = [
+            f"<b>{label}:</b> {exif[key]}"
+            for key, label in fields
+            if exif.get(key) not in (None, "N/A")
+        ]
+        w = exif.get("ExifImageWidth") or exif.get("ImageWidth")
+        h = exif.get("ExifImageHeight") or exif.get("ImageLength")
+        if w and h:
+            lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
+        return lines
 
     def _load_note_for(self, path: str | None) -> None:
         """Swap the notes text area to the given path, flushing any pending save first."""

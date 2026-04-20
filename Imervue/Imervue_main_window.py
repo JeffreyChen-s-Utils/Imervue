@@ -187,59 +187,61 @@ class _FileTreeView(QTreeView):
     def _delete_path(self, path: str):
         if not Path(path).exists():
             return
-
         viewer = self._main_window.viewer
         images = viewer.model.images
-        lang = language_wrapper.language_word_dict
-
         if Path(path).is_file() and path in images:
-            # 圖片在目前列表中 → 走 viewer undo stack（延遲刪除，可 Ctrl+Z）
-            idx = images.index(path)
-            images.pop(idx)
-
-            viewer.undo_stack.append({
-                "mode": "delete",
-                "deleted_paths": [path],
-                "indices": [idx],
-                "restored": False,
-            })
-
-            # 清 GPU texture / tile cache
-            tex = viewer.tile_textures.pop(path, None)
-            if tex is not None:
-                from OpenGL.GL import glDeleteTextures
-                glDeleteTextures([tex])
-            viewer.tile_cache.pop(path, None)
-
-            # 更新顯示
-            if viewer.tile_grid_mode:
-                viewer.tile_rects.clear()
-                viewer.update()
-            elif viewer.deep_zoom:
-                if images:
-                    viewer.current_index = min(idx, len(images) - 1)
-                    viewer.load_deep_zoom_image(images[viewer.current_index])
-                else:
-                    viewer.deep_zoom = None
-                    viewer.current_index = 0
-                    viewer.tile_grid_mode = True
-                    viewer.update()
-
-            if hasattr(self._main_window, "toast"):
-                self._main_window.toast.info(
-                    lang.get("tree_deleted", "Moved to trash: {name}").format(
-                        name=Path(path).name
-                    )
-                )
+            self._delete_from_viewer_list(path, viewer, images)
         else:
-            # 不在圖片列表中（資料夾或非圖片檔案）→ 直接移至垃圾桶
-            from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-            if _send_to_trash(path) and hasattr(self._main_window, "toast"):
-                self._main_window.toast.info(
-                    lang.get("tree_deleted", "Moved to trash: {name}").format(
-                        name=Path(path).name
-                    )
-                )
+            self._delete_external(path)
+
+    def _delete_from_viewer_list(self, path: str, viewer, images: list[str]) -> None:
+        idx = images.index(path)
+        images.pop(idx)
+        viewer.undo_stack.append({
+            "mode": "delete",
+            "deleted_paths": [path],
+            "indices": [idx],
+            "restored": False,
+        })
+        tex = viewer.tile_textures.pop(path, None)
+        if tex is not None:
+            from OpenGL.GL import glDeleteTextures
+            glDeleteTextures([tex])
+        viewer.tile_cache.pop(path, None)
+        self._refresh_viewer_after_delete(viewer, images, idx)
+        self._notify_deleted(path)
+
+    @staticmethod
+    def _refresh_viewer_after_delete(viewer, images: list[str], idx: int) -> None:
+        if viewer.tile_grid_mode:
+            viewer.tile_rects.clear()
+            viewer.update()
+            return
+        if not viewer.deep_zoom:
+            return
+        if images:
+            viewer.current_index = min(idx, len(images) - 1)
+            viewer.load_deep_zoom_image(images[viewer.current_index])
+        else:
+            viewer.deep_zoom = None
+            viewer.current_index = 0
+            viewer.tile_grid_mode = True
+            viewer.update()
+
+    def _delete_external(self, path: str) -> None:
+        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
+        if _send_to_trash(path):
+            self._notify_deleted(path)
+
+    def _notify_deleted(self, path: str) -> None:
+        if not hasattr(self._main_window, "toast"):
+            return
+        lang = language_wrapper.language_word_dict
+        self._main_window.toast.info(
+            lang.get("tree_deleted", "Moved to trash: {name}").format(
+                name=Path(path).name
+            )
+        )
 
 
 class ImervueMainWindow(QMainWindow):
@@ -780,8 +782,14 @@ class ImervueMainWindow(QMainWindow):
         """
         now_theater = not self.is_theater_mode()
         self._theater_mode = now_theater
+        widgets_to_hide = self._theater_widget_list()
+        if now_theater:
+            self._enter_theater_mode(widgets_to_hide)
+        else:
+            self._exit_theater_mode(widgets_to_hide)
 
-        widgets_to_hide = [
+    def _theater_widget_list(self) -> list:
+        widgets = [
             self.menuBar(),
             self.statusBar(),
             self.tree,
@@ -790,34 +798,37 @@ class ImervueMainWindow(QMainWindow):
         ]
         sidebar = getattr(self, "exif_sidebar", None)
         if sidebar is not None:
-            widgets_to_hide.append(sidebar)
+            widgets.append(sidebar)
         main_tab_bar = self._main_tabs.tabBar()
         if main_tab_bar is not None:
-            widgets_to_hide.append(main_tab_bar)
+            widgets.append(main_tab_bar)
+        return widgets
 
-        if now_theater:
-            # Save visibility, then hide
-            self._theater_prev_visibility = [w.isVisible() for w in widgets_to_hide]
-            self._theater_widgets = widgets_to_hide
-            for w in widgets_to_hide:
-                w.setVisible(False)
-            if hasattr(self, "toast"):
-                lang = language_wrapper.language_word_dict
-                self.toast.info(lang.get("theater_on", "Theater mode — Shift+Tab to exit"))
+    def _enter_theater_mode(self, widgets: list) -> None:
+        self._theater_prev_visibility = [w.isVisible() for w in widgets]
+        self._theater_widgets = widgets
+        for w in widgets:
+            w.setVisible(False)
+        self._theater_toast("theater_on", "Theater mode — Shift+Tab to exit")
+
+    def _exit_theater_mode(self, fallback_widgets: list) -> None:
+        prev = getattr(self, "_theater_prev_visibility", None)
+        widgets = getattr(self, "_theater_widgets", fallback_widgets)
+        if prev and len(prev) == len(widgets):
+            for w, vis in zip(widgets, prev, strict=False):
+                w.setVisible(vis)
         else:
-            prev = getattr(self, "_theater_prev_visibility", None)
-            widgets = getattr(self, "_theater_widgets", widgets_to_hide)
-            if prev and len(prev) == len(widgets):
-                for w, vis in zip(widgets, prev, strict=False):
-                    w.setVisible(vis)
-            else:
-                for w in widgets:
-                    w.setVisible(True)
-            self._theater_prev_visibility = None
-            self._theater_widgets = None
-            if hasattr(self, "toast"):
-                lang = language_wrapper.language_word_dict
-                self.toast.info(lang.get("theater_off", "Theater mode off"))
+            for w in widgets:
+                w.setVisible(True)
+        self._theater_prev_visibility = None
+        self._theater_widgets = None
+        self._theater_toast("theater_off", "Theater mode off")
+
+    def _theater_toast(self, key: str, default: str) -> None:
+        if not hasattr(self, "toast"):
+            return
+        lang = language_wrapper.language_word_dict
+        self.toast.info(lang.get(key, default))
 
     def change_tile_size(self, size):
         if size != "None":

@@ -82,6 +82,40 @@ _METHOD_EXACT = "exact"
 _COUNT_PLACEHOLDER = "{count}"
 
 
+def _flatten_hash_map(
+    hash_map: dict[str, list[tuple[str, int]]],
+) -> list[tuple[int, str, int]]:
+    return [
+        (int(h_str), path, size)
+        for h_str, items in hash_map.items()
+        for path, size in items
+    ]
+
+
+def _find_root(parent: list[int], x: int) -> int:
+    while parent[x] != x:
+        parent[x] = parent[parent[x]]
+        x = parent[x]
+    return x
+
+
+def _union(parent: list[int], a: int, b: int) -> None:
+    ra, rb = _find_root(parent, a), _find_root(parent, b)
+    if ra != rb:
+        parent[ra] = rb
+
+
+def _build_clusters(
+    entries: list[tuple[int, str, int]],
+    parent: list[int],
+) -> list[list[tuple[str, int]]]:
+    from collections import defaultdict
+    clusters: dict[int, list[tuple[str, int]]] = defaultdict(list)
+    for i, (_h, path, size) in enumerate(entries):
+        clusters[_find_root(parent, i)].append((path, size))
+    return [g for g in clusters.values() if len(g) > 1]
+
+
 # ---------------------------------------------------------------------------
 # Worker thread
 # ---------------------------------------------------------------------------
@@ -157,23 +191,31 @@ class _ScanWorker(QThread):
             return None
 
     def _collect_paths(self) -> list[str]:
-        result = []
-        if self._recursive:
-            for root, _dirs, files in os.walk(self._folder):
-                if self._abort:
-                    break
-                for f in files:
-                    if Path(f).suffix.lower() in _IMAGE_EXTS:
-                        result.append(os.path.join(root, f))
-        else:
-            try:
-                for entry in os.scandir(self._folder):
-                    if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
-                        result.append(entry.path)
-            except OSError:
-                pass
+        result = (self._walk_images() if self._recursive
+                  else self._scandir_images())
         result.sort(key=lambda p: os.path.basename(p).lower())
         return result
+
+    def _walk_images(self) -> list[str]:
+        result: list[str] = []
+        for root, _dirs, files in os.walk(self._folder):
+            if self._abort:
+                break
+            result.extend(
+                os.path.join(root, f) for f in files
+                if Path(f).suffix.lower() in _IMAGE_EXTS
+            )
+        return result
+
+    def _scandir_images(self) -> list[str]:
+        try:
+            return [
+                entry.path for entry in os.scandir(self._folder)
+                if entry.is_file()
+                and Path(entry.name).suffix.lower() in _IMAGE_EXTS
+            ]
+        except OSError:
+            return []
 
     @staticmethod
     def _file_hash(path: str) -> str:
@@ -194,41 +236,25 @@ class _ScanWorker(QThread):
         hash_map: dict[str, list[tuple[str, int]]],
     ) -> list[list[tuple[str, int]]]:
         """Cluster perceptual hashes by hamming distance."""
-        # First: identical hashes are always duplicates
-        entries: list[tuple[int, str, int]] = []  # (hash_int, path, size)
-        for h_str, items in hash_map.items():
-            h_int = int(h_str)
-            for path, size in items:
-                entries.append((h_int, path, size))
+        entries = _flatten_hash_map(hash_map)
+        parent = list(range(len(entries)))
+        if not self._union_similar(entries, parent):
+            return []
+        return _build_clusters(entries, parent)
 
+    def _union_similar(
+        self,
+        entries: list[tuple[int, str, int]],
+        parent: list[int],
+    ) -> bool:
         n = len(entries)
-        parent = list(range(n))
-
-        def find(x):
-            while parent[x] != x:
-                parent[x] = parent[parent[x]]
-                x = parent[x]
-            return x
-
-        def union(a, b):
-            ra, rb = find(a), find(b)
-            if ra != rb:
-                parent[ra] = rb
-
-        # O(n^2) but n is typically small (folder of images)
         for i in range(n):
             if self._abort:
-                return []
+                return False
             for j in range(i + 1, n):
                 if _hamming_distance(entries[i][0], entries[j][0]) <= self._threshold:
-                    union(i, j)
-
-        from collections import defaultdict
-        clusters: dict[int, list[tuple[str, int]]] = defaultdict(list)
-        for i in range(n):
-            clusters[find(i)].append((entries[i][1], entries[i][2]))
-
-        return [g for g in clusters.values() if len(g) > 1]
+                    _union(parent, i, j)
+        return True
 
 
 # ---------------------------------------------------------------------------

@@ -103,19 +103,22 @@ _IMAGE_EXTS = frozenset({
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
     """Collect image paths from *folder*, sorted by name."""
-    result: list[str] = []
     if recursive:
-        for root, _dirs, files in os.walk(folder):
-            for f in files:
-                if Path(f).suffix.lower() in _IMAGE_EXTS:
-                    result.append(os.path.join(root, f))
+        result = [
+            os.path.join(root, f)
+            for root, _dirs, files in os.walk(folder)
+            for f in files
+            if Path(f).suffix.lower() in _IMAGE_EXTS
+        ]
     else:
         try:
-            for entry in os.scandir(folder):
-                if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
-                    result.append(entry.path)
+            entries = list(os.scandir(folder))
         except OSError:
-            pass
+            entries = []
+        result = [
+            e.path for e in entries
+            if e.is_file() and Path(e.name).suffix.lower() in _IMAGE_EXTS
+        ]
     result.sort(key=lambda p: os.path.basename(p).lower())
     return result
 

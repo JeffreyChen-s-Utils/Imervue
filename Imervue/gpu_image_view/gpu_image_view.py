@@ -1038,101 +1038,91 @@ class GPUImageView(QOpenGLWidget):
             painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
 
     def _draw_pixel_view(self, painter: QPainter):
-        """Shift+P — 在 zoom ≥ 4x 時繪製像素網格 + hover pixel RGB.
-
-        Only active when the per-pixel square is big enough (>= 4 screen
-        pixels) so the grid doesn't drown in moiré. Hovered pixel value is
-        shown in a small HUD near the cursor.
-        """
+        """Shift+P — 在 zoom ≥ 4x 時繪製像素網格 + hover pixel RGB."""
         if not self.deep_zoom or self.zoom < 4.0:
             return
-
         base = self.deep_zoom.levels[0]
         h, w = base.shape[:2]
+        x0, y0, x1, y1 = self._visible_pixel_bounds(w, h)
+        if (x1 - x0) * (y1 - y0) <= 40000:
+            self._draw_pixel_grid(painter, x0, y0, x1, y1)
+        if self._hover_image_xy is not None:
+            cx, cy = self._hover_image_xy
+            if 0 <= cx < w and 0 <= cy < h:
+                self._draw_hover_pixel_hud(painter, base, cx, cy)
 
-        # Viewport 在原圖座標
+    def _visible_pixel_bounds(self, w: int, h: int) -> tuple[int, int, int, int]:
         left = -self.dz_offset_x / self.zoom
         top = -self.dz_offset_y / self.zoom
         right = left + self.width() / self.zoom
         bottom = top + self.height() / self.zoom
+        return (
+            max(0, int(left)), max(0, int(top)),
+            min(w, int(right) + 1), min(h, int(bottom) + 1),
+        )
 
-        x0 = max(0, int(left))
-        y0 = max(0, int(top))
-        x1 = min(w, int(right) + 1)
-        y1 = min(h, int(bottom) + 1)
+    def _draw_pixel_grid(self, painter: QPainter,
+                         x0: int, y0: int, x1: int, y1: int) -> None:
+        pen = QPen(QColor(128, 128, 128, 120))
+        pen.setWidth(0)
+        painter.setPen(pen)
+        y_top = int(y0 * self.zoom + self.dz_offset_y)
+        y_bot = int(y1 * self.zoom + self.dz_offset_y)
+        for gx in range(x0, x1 + 1):
+            sx = int(gx * self.zoom + self.dz_offset_x)
+            painter.drawLine(sx, y_top, sx, y_bot)
+        x_left = int(x0 * self.zoom + self.dz_offset_x)
+        x_right = int(x1 * self.zoom + self.dz_offset_x)
+        for gy in range(y0, y1 + 1):
+            sy = int(gy * self.zoom + self.dz_offset_y)
+            painter.drawLine(x_left, sy, x_right, sy)
 
-        # 整張圖 zoom 很大時，格子線反而會變太密；限制繪製格子數量
-        if (x1 - x0) * (y1 - y0) > 40000:
-            pass  # 只畫 hover 的 RGB，不畫整張網格
-        else:
-            pen = QPen(QColor(128, 128, 128, 120))
-            pen.setWidth(0)
-            painter.setPen(pen)
-            # 垂直線
-            for gx in range(x0, x1 + 1):
-                sx = gx * self.zoom + self.dz_offset_x
-                painter.drawLine(int(sx), int(y0 * self.zoom + self.dz_offset_y),
-                                 int(sx), int(y1 * self.zoom + self.dz_offset_y))
-            # 水平線
-            for gy in range(y0, y1 + 1):
-                sy = gy * self.zoom + self.dz_offset_y
-                painter.drawLine(int(x0 * self.zoom + self.dz_offset_x), int(sy),
-                                 int(x1 * self.zoom + self.dz_offset_x), int(sy))
+    def _draw_hover_pixel_hud(self, painter: QPainter, base, cx: int, cy: int) -> None:
+        pixel = base[cy, cx]
+        r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
+        a = int(pixel[3]) if base.shape[2] >= 4 else 255
+        lines = [
+            f"({cx}, {cy})",
+            f"RGB {r:3d} {g:3d} {b:3d}",
+            f"A   {a:3d}    #{r:02X}{g:02X}{b:02X}",
+        ]
+        font = QFont(_FONT_CONSOLAS)
+        font.setPixelSize(12)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+        pad_x, pad_y = 6, 4
+        line_h = fm.height()
+        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
+        box_h = line_h * len(lines) + pad_y * 2
+        sx = cx * self.zoom + self.dz_offset_x
+        sy = cy * self.zoom + self.dz_offset_y
+        size = self.zoom
+        self._draw_hover_pixel_outline(painter, sx, sy, size)
+        hx, hy = self._place_hud_box(int(sx), int(sy), int(size), box_w, box_h)
+        painter.fillRect(hx, hy, box_w, box_h, QColor(0, 0, 0, 190))
+        painter.setPen(QColor(240, 240, 240))
+        for i, line in enumerate(lines):
+            painter.drawText(hx + pad_x, hy + pad_y + fm.ascent() + i * line_h, line)
+        painter.fillRect(hx + box_w - 20, hy + pad_y, 14, 14, QColor(r, g, b))
 
-        # Hover pixel HUD
-        if self._hover_image_xy is not None:
-            cx, cy = self._hover_image_xy
-            if 0 <= cx < w and 0 <= cy < h:
-                pixel = base[cy, cx]
-                r = int(pixel[0])
-                g = int(pixel[1])
-                b = int(pixel[2])
-                a = int(pixel[3]) if base.shape[2] >= 4 else 255
-                hex_str = f"#{r:02X}{g:02X}{b:02X}"
+    @staticmethod
+    def _draw_hover_pixel_outline(painter: QPainter, sx: float, sy: float,
+                                  size: float) -> None:
+        pen = QPen(QColor(255, 220, 0, 230))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(int(sx), int(sy), int(size), int(size))
 
-                font = QFont(_FONT_CONSOLAS)
-                font.setPixelSize(12)
-                painter.setFont(font)
-                fm = painter.fontMetrics()
-
-                lines = [
-                    f"({cx}, {cy})",
-                    f"RGB {r:3d} {g:3d} {b:3d}",
-                    f"A   {a:3d}    {hex_str}",
-                ]
-                pad_x, pad_y = 6, 4
-                line_h = fm.height()
-                box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
-                box_h = line_h * len(lines) + pad_y * 2
-
-                # Highlight the target pixel square
-                sx = cx * self.zoom + self.dz_offset_x
-                sy = cy * self.zoom + self.dz_offset_y
-                size = self.zoom
-                pen = QPen(QColor(255, 220, 0, 230))
-                pen.setWidth(2)
-                painter.setPen(pen)
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.drawRect(int(sx), int(sy), int(size), int(size))
-
-                # Place HUD offset from cursor, clamped to viewport
-                hx = int(sx) + int(size) + 12
-                hy = int(sy)
-                if hx + box_w > self.width():
-                    hx = int(sx) - box_w - 12
-                if hy + box_h > self.height():
-                    hy = self.height() - box_h - 4
-                hy = max(hy, 0)
-
-                painter.fillRect(hx, hy, box_w, box_h, QColor(0, 0, 0, 190))
-                painter.setPen(QColor(240, 240, 240))
-                for i, line in enumerate(lines):
-                    painter.drawText(hx + pad_x, hy + pad_y + fm.ascent() + i * line_h, line)
-
-                # Colour swatch
-                painter.fillRect(
-                    hx + box_w - 20, hy + pad_y, 14, 14, QColor(r, g, b)
-                )
+    def _place_hud_box(self, sx: int, sy: int, size: int,
+                       box_w: int, box_h: int) -> tuple[int, int]:
+        hx = sx + size + 12
+        hy = sy
+        if hx + box_w > self.width():
+            hx = sx - box_w - 12
+        if hy + box_h > self.height():
+            hy = self.height() - box_h - 4
+        return hx, max(hy, 0)
 
     # ---------------------------
     # Status bar sync
@@ -2024,51 +2014,55 @@ class GPUImageView(QOpenGLWidget):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
             return
-
         if self.tile_grid_mode and event.button() == Qt.MouseButton.LeftButton:
-
-            mx, my = event.position().x(), event.position().y()
-
-            # ===== 拖曳框選完成 =====
-            if self._drag_selecting:
-                select_tiles_in_rect(self._drag_start_pos, self._drag_end_pos, self)
-                self._drag_selecting = False
-                self._drag_start_pos = None
-                self._drag_end_pos = None
-                self.update()
-                return
-
-            # ===== 單擊圖片切換選取 =====
-            clicked_tile = None
-            for x0, y0, x1, y1, path in self.tile_rects:
-                if x0 <= mx <= x1 and y0 <= my <= y1:
-                    clicked_tile = path
-                    break
-
-            if clicked_tile:
-
-                if not self.tile_selection_mode:
-                    # 正常模式 → 進入 DeepZoom
-                    self._saved_tile_state = {
-                        "grid_offset_x": self.grid_offset_x,
-                        "grid_offset_y": self.grid_offset_y,
-                        "tile_scale": self.tile_scale,
-                    }
-                    self.tile_grid_mode = False
-                    if clicked_tile in self.model.images:
-                        self.current_index = self.model.images.index(clicked_tile)
-                    self.load_deep_zoom_image(clicked_tile)
-                    return
-
-                # 已在選取模式 → 才做多選
-                if clicked_tile in self.selected_tiles:
-                    self.selected_tiles.remove(clicked_tile)
-                else:
-                    self.selected_tiles.add(clicked_tile)
-
-                self.update()
+            if self._handle_tile_release(event):
                 return
         super().mouseReleaseEvent(event)
+
+    def _handle_tile_release(self, event) -> bool:
+        if self._drag_selecting:
+            self._finish_drag_select()
+            return True
+        mx, my = event.position().x(), event.position().y()
+        clicked_tile = self._tile_at(mx, my)
+        if not clicked_tile:
+            return False
+        if not self.tile_selection_mode:
+            self._enter_deep_zoom(clicked_tile)
+            return True
+        self._toggle_tile_selection(clicked_tile)
+        return True
+
+    def _finish_drag_select(self) -> None:
+        select_tiles_in_rect(self._drag_start_pos, self._drag_end_pos, self)
+        self._drag_selecting = False
+        self._drag_start_pos = None
+        self._drag_end_pos = None
+        self.update()
+
+    def _tile_at(self, mx: float, my: float) -> str | None:
+        for x0, y0, x1, y1, path in self.tile_rects:
+            if x0 <= mx <= x1 and y0 <= my <= y1:
+                return path
+        return None
+
+    def _enter_deep_zoom(self, path: str) -> None:
+        self._saved_tile_state = {
+            "grid_offset_x": self.grid_offset_x,
+            "grid_offset_y": self.grid_offset_y,
+            "tile_scale": self.tile_scale,
+        }
+        self.tile_grid_mode = False
+        if path in self.model.images:
+            self.current_index = self.model.images.index(path)
+        self.load_deep_zoom_image(path)
+
+    def _toggle_tile_selection(self, path: str) -> None:
+        if path in self.selected_tiles:
+            self.selected_tiles.remove(path)
+        else:
+            self.selected_tiles.add(path)
+        self.update()
 
     # F1-F5 → colour labels (red/yellow/green/blue/purple). Lightroom-style.
     _COLOR_LABEL_KEYS = {

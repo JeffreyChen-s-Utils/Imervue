@@ -51,66 +51,67 @@ class ExifEditorDialog(QDialog):
 
         self._piexif = _try_import_piexif()
         if not self._piexif:
-            layout.addWidget(QLabel(
-                lang.get(
-                    "exif_editor_no_piexif",
-                    "piexif package is required for EXIF editing.\n"
-                    "Install with: pip install piexif",
-                )
-            ))
-            close_btn = QPushButton(lang.get("exif_editor_close", "Close"))
-            close_btn.clicked.connect(self.reject)
-            layout.addWidget(close_btn)
+            self._build_missing_piexif_ui(layout, lang)
             return
 
-        # 讀取現有 EXIF
+        self._exif_dict = self._load_exif_dict(path)
+        self._fields: dict[tuple[str, str], QLineEdit] = {}
+        layout.addWidget(self._build_fields_group(lang))
+        self._append_gps_label(layout)
+        layout.addLayout(self._build_button_row(lang))
+
+    def _build_missing_piexif_ui(self, layout, lang) -> None:
+        layout.addWidget(QLabel(
+            lang.get(
+                "exif_editor_no_piexif",
+                "piexif package is required for EXIF editing.\n"
+                "Install with: pip install piexif",
+            )
+        ))
+        close_btn = QPushButton(lang.get("exif_editor_close", "Close"))
+        close_btn.clicked.connect(self.reject)
+        layout.addWidget(close_btn)
+
+    def _load_exif_dict(self, path: str) -> dict:
         try:
-            self._exif_dict = self._piexif.load(path)
-        except Exception:
-            self._exif_dict = {
+            return self._piexif.load(path)
+        except (ValueError, OSError):
+            return {
                 "0th": {}, "Exif": {}, "GPS": {},
                 "1st": {}, "Interop": {}, "thumbnail": None,
             }
 
-        # 建立表單
+    def _build_fields_group(self, lang) -> QGroupBox:
         form = QFormLayout()
-        self._fields: dict[tuple[str, str], QLineEdit] = {}
-
         for ifd_name, tag_name, label_key, default_label in self._EDITABLE:
-            label = lang.get(label_key, default_label)
             edit = QLineEdit()
-
-            # 讀取現有值
-            ifd_key = getattr(self._piexif.ImageIFD, tag_name, None)
-            if ifd_key is None:
-                ifd_key = getattr(self._piexif.ExifIFD, tag_name, None)
-
-            if ifd_key is not None:
-                ifd = self._exif_dict.get(ifd_name, {})
-                raw = ifd.get(ifd_key, b"")
-                if isinstance(raw, bytes):
-                    try:
-                        edit.setText(raw.decode("utf-8", errors="replace"))
-                    except Exception:
-                        edit.setText("")
-                elif isinstance(raw, str):
-                    edit.setText(raw)
-
+            self._prefill_field(edit, ifd_name, tag_name)
             self._fields[(ifd_name, tag_name)] = edit
-            form.addRow(label + ":", edit)
-
+            form.addRow(lang.get(label_key, default_label) + ":", edit)
         grp = QGroupBox(lang.get("exif_editor_fields", "Metadata Fields"))
         grp.setLayout(form)
-        layout.addWidget(grp)
+        return grp
 
-        # GPS 只顯示（不編輯）
+    def _prefill_field(self, edit: QLineEdit, ifd_name: str, tag_name: str) -> None:
+        ifd_key = getattr(self._piexif.ImageIFD, tag_name, None) \
+            or getattr(self._piexif.ExifIFD, tag_name, None)
+        if ifd_key is None:
+            return
+        raw = self._exif_dict.get(ifd_name, {}).get(ifd_key, b"")
+        if isinstance(raw, bytes):
+            edit.setText(raw.decode("utf-8", errors="replace"))
+        elif isinstance(raw, str):
+            edit.setText(raw)
+
+    def _append_gps_label(self, layout) -> None:
         gps = self._exif_dict.get("GPS", {})
-        if gps:
-            gps_label = QLabel(f"GPS: {len(gps)} tag(s) present")
-            gps_label.setStyleSheet("color: #888;")
-            layout.addWidget(gps_label)
+        if not gps:
+            return
+        gps_label = QLabel(f"GPS: {len(gps)} tag(s) present")
+        gps_label.setStyleSheet("color: #888;")
+        layout.addWidget(gps_label)
 
-        # 按鈕
+    def _build_button_row(self, lang) -> QHBoxLayout:
         btn_row = QHBoxLayout()
         save_btn = QPushButton(lang.get("exif_editor_save", "Save"))
         save_btn.clicked.connect(self._save)
@@ -118,7 +119,7 @@ class ExifEditorDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(save_btn)
         btn_row.addWidget(cancel_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     def _save(self):
         piexif = self._piexif

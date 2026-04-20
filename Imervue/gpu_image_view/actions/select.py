@@ -93,59 +93,70 @@ def switch_to_previous_folder(main_gui: GPUImageView) -> None:
 
 def _switch_sibling_folder(main_gui: GPUImageView, direction: int) -> None:
     """Scan sibling directories in alphabetical order and open the first that has images."""
-    images = main_gui.model.images
-    if not images:
-        return
-
-    current_folder = Path(images[0]).parent
-    parent = current_folder.parent
-    if not parent.exists():
-        return
-
-    try:
-        siblings = sorted(
-            (p for p in parent.iterdir() if p.is_dir()),
-            key=lambda p: p.name.lower(),
-        )
-    except OSError:
-        return
-
+    siblings = _sibling_folders(main_gui)
     if not siblings:
         return
-
+    current_folder = Path(main_gui.model.images[0]).parent
     try:
         idx = siblings.index(current_folder)
     except ValueError:
         idx = 0
 
-    # 掃描下一個/上一個有圖片的兄弟資料夾（最多走完一圈）
     from Imervue.gpu_image_view.images.image_loader import _scan_images, open_path
     for step in range(1, len(siblings) + 1):
-        next_idx = (idx + direction * step) % len(siblings)
-        candidate = siblings[next_idx]
-        found = _scan_images(str(candidate))
-        if found:
-            mw = main_gui.main_window
-            lang = mw.language_wrapper.language_word_dict
-            mw.model.setRootPath(str(candidate))
-            mw.tree.setRootIndex(mw.model.index(str(candidate)))
-            main_gui.clear_tile_grid()
-            open_path(main_gui=main_gui, path=str(candidate))
-            mw.filename_label.setText(
-                lang.get(
-                    "main_window_current_folder_format",
-                    "Current Folder: {path}",
-                ).format(path=str(candidate))
-            )
-            if hasattr(mw, "breadcrumb"):
-                mw.breadcrumb.set_path(str(candidate))
-            mw.watch_folder(str(candidate))
-            user_setting_dict["user_last_folder"] = str(candidate)
-            if hasattr(mw, "toast"):
-                key = "nav_folder_next" if direction > 0 else "nav_folder_prev"
-                fallback = "Next folder: {name}" if direction > 0 else "Previous folder: {name}"
-                mw.toast.info(lang.get(key, fallback).format(name=candidate.name))
+        candidate = siblings[(idx + direction * step) % len(siblings)]
+        if _scan_images(str(candidate)):
+            _open_sibling(main_gui, candidate, direction, open_path)
             return
+
+
+def _sibling_folders(main_gui: GPUImageView) -> list[Path]:
+    images = main_gui.model.images
+    if not images:
+        return []
+    parent = Path(images[0]).parent.parent
+    if not parent.exists():
+        return []
+    try:
+        return sorted(
+            (p for p in parent.iterdir() if p.is_dir()),
+            key=lambda p: p.name.lower(),
+        )
+    except OSError:
+        return []
+
+
+def _open_sibling(
+    main_gui: GPUImageView,
+    candidate: Path,
+    direction: int,
+    open_path,
+) -> None:
+    mw = main_gui.main_window
+    lang = mw.language_wrapper.language_word_dict
+    mw.model.setRootPath(str(candidate))
+    mw.tree.setRootIndex(mw.model.index(str(candidate)))
+    main_gui.clear_tile_grid()
+    open_path(main_gui=main_gui, path=str(candidate))
+    mw.filename_label.setText(
+        lang.get(
+            "main_window_current_folder_format",
+            "Current Folder: {path}",
+        ).format(path=str(candidate))
+    )
+    if hasattr(mw, "breadcrumb"):
+        mw.breadcrumb.set_path(str(candidate))
+    mw.watch_folder(str(candidate))
+    user_setting_dict["user_last_folder"] = str(candidate)
+    _toast_sibling_switch(mw, lang, candidate, direction)
+
+
+def _toast_sibling_switch(mw, lang, candidate: Path, direction: int) -> None:
+    if not hasattr(mw, "toast"):
+        return
+    key = "nav_folder_next" if direction > 0 else "nav_folder_prev"
+    fallback = "Next folder: {name}" if direction > 0 else "Previous folder: {name}"
+    mw.toast.info(lang.get(key, fallback).format(name=candidate.name))
 
 
 def select_tiles_in_rect(start_pos, end_pos, main_gui: GPUImageView):
