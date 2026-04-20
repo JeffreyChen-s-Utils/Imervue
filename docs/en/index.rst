@@ -675,6 +675,23 @@ Multi-Window
 
 ``File`` > ``New Window`` opens another independent Imervue window. Each window can browse a different folder.
 
+Workspace Layout Presets
+------------------------
+
+``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
+arrangement, splitter sizes, and active root folder under a name — then lets
+you flip between saved layouts the same way Lightroom switches *Library* /
+*Develop* / *Export* or Adobe Bridge switches *Metadata* / *Filmstrip*. The
+dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
+``user_settings.json`` (under the ``workspaces`` key) and survive across
+sessions.
+
+.. tip::
+   Build a **Browse** workspace with the tree and thumbnail grid visible, and a
+   separate **Develop** workspace with the develop panel maximised and the tree
+   collapsed. One click moves your whole window to the right shape for each
+   task.
+
 Touchpad Gestures
 -----------------
 
@@ -921,6 +938,25 @@ Similar-Image Search
 current deep-zoom image (or the first selected tile) and lists near matches
 from the index sorted by Hamming distance. Adjust the ``Max distance`` spin to
 widen or tighten the net.
+
+Semantic Search (CLIP)
+^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Semantic Search`` lets you type a natural-language phrase
+(for example *"golden retriever in snow"* or *"neon street at night"*) and
+returns ranked images from the indexed library. Each image is embedded with a
+CLIP vision/language encoder and stored alongside its path; a text query is
+embedded into the same vector space and compared by cosine similarity.
+
+Embeddings are cached to ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) or
+``~/.cache/imervue/clip_cache.npz`` (POSIX) as a single compact ``.npz`` archive
+so the next launch skips re-encoding. Only the paths you have scanned are
+queryable — use ``Scan Folder…`` inside the dialog to extend the index.
+
+.. note::
+   Semantic Search requires the optional ``open_clip_torch`` and ``torch``
+   packages. If they are not installed the menu entry explains what is missing
+   and other features continue to work.
 
 Auto-Tag
 ^^^^^^^^

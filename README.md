@@ -111,6 +111,7 @@ Key design principles:
 - **Advanced filter** — resolution / file size / orientation / modified date range
 - **Stack RAW+JPEG pairs** — collapse shoot-in-RAW+JPEG captures into one tile; the preview is shown while the RAW stays accessible as a sibling
 - **Session / Workspace save & restore** — snapshot current tabs, active image, selection, and filter state to a `.imervue-session.json` file and reload later
+- **Workspace layout presets** — save named window layouts (geometry, dock / toolbar state, splitter sizes, active folder) via File > Workspaces… and flip between Browse / Develop / Export arrangements without rearranging panels every time
 - **Macro record / replay** — capture rating / favorite / color / tag actions and reapply them to any selection (Alt+M replays the last macro)
 - Recent folders and recent images tracking
 - Automatic restore of last opened folder on startup
@@ -150,6 +151,7 @@ Key design principles:
 - **Library Search** — SQLite index with multi-root scanning; query by extension, size, dimensions, filename
 - **Smart Albums** — save & reapply rule-based filter queries
 - **Find Similar Images** — pHash-based search with adjustable Hamming distance
+- **Semantic Search (CLIP)** — query the library with natural language ("golden retriever in snow", "neon street at night") via a CLIP text/image embedding index; embeddings are cached to an `.npz` archive and queried with an O(N) cosine scan. Requires optional dependencies `open_clip_torch` + `torch`; the feature degrades gracefully when they are absent.
 - **Auto-Tag Images** — heuristic (photo / document / screenshot / landscape / portrait) with optional CLIP ONNX upgrade
 - **Hierarchical Tags** manager — tree-structured tag paths with bulk assign/untag
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
@@ -242,6 +244,13 @@ pip install .
 | rawpy | RAW image decoding |
 | imageio | Image I/O |
 | imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
+
+Optional (feature-gated; omit to disable the feature cleanly):
+
+| Package | Purpose |
+|---------|---------|
+| open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
+| onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
 
 ---
 
@@ -432,6 +441,7 @@ window keeps browsing independently.
 - Paste from Clipboard / Auto-annotate Clipboard Images
 - File Association (Windows only — register/unregister right-click context menu)
 - **Session** (submenu: Save Session… / Load Session…)
+- **Workspaces…** — save / load / rename / delete named window layouts
 - **External Editors…** — configure executables (name, path, arguments)
 - **Open in External Editor** — submenu listing configured editors
 - Keyboard Shortcuts (customizable key bindings)
@@ -448,6 +458,7 @@ window keeps browsing independently.
 - **Library Search** (SQLite multi-root index)
 - **Smart Albums** (save / apply / delete rule-based filters)
 - **Find Similar Images** (pHash Hamming distance)
+- **Semantic Search (CLIP)** — natural-language queries over an embedding index (optional dependency)
 - **Auto-Tag Images** (heuristic + optional CLIP ONNX)
 - **Hierarchical Tags** (tree-structured tag paths)
 - **Token Batch Rename** (live-preview templates)
