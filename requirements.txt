@@ -7,4 +7,5 @@ rawpy
 imageio
 imageio-ffmpeg
 PyOpenGL_accelerate
+defusedxml
 Imervue

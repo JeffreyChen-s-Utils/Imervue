@@ -11,18 +11,37 @@ authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 dependencies = [
-    "PySide6==6.11.0", "qt-material", "Pillow", "PyOpenGL", "numpy", "rawpy", "imageio", "PyOpenGL_accelerate"
+    "PySide6==6.11.0", "qt-material", "Pillow", "PyOpenGL", "numpy", "rawpy",
+    "imageio", "imageio-ffmpeg", "PyOpenGL_accelerate", "defusedxml",
 ]
-description = "Imervue, Image + Immerse + View"
+description = "GPU-accelerated image viewer with non-destructive develop, RAW/HDR/panorama support, AI upscale, XMP sidecars, and a plugin system."
+keywords = [
+    "image-viewer", "photo-viewer", "raw", "hdr", "panorama", "focus-stacking",
+    "ai-upscale", "gpu", "opengl", "qt", "pyside6", "develop", "xmp", "lightroom",
+]
 requires-python = ">=3.10"
 license-files = ["LICENSE"]
 classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",
     "Environment :: X11 Applications",
-    "Operating System :: OS Independent"
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: Chinese (Traditional)",
+    "Natural Language :: Japanese",
+    "Natural Language :: Korean",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Multimedia :: Graphics :: Viewers",
+    "Topic :: Multimedia :: Graphics :: Editors",
+    "Topic :: Multimedia :: Graphics :: Editors :: Raster-Based",
 ]
 
 [project.urls]

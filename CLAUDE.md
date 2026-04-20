@@ -142,3 +142,73 @@ default rule sets of SonarQube, Codacy, pylint, flake8, ruff, and bandit for Pyt
 When writing or modifying code, mentally check each function against the above rules before
 finalising. If unavoidable rule violation (e.g. Qt callback signature forces extra parameters),
 add a `# noqa: <rule>` or equivalent suppression with a brief justification comment on the same line.
+
+## Project-Specific Compliance Patterns
+
+These patterns were established while zeroing out the Codacy / SonarCloud / bandit backlog.
+Keep following them so the CI stays green and so new maintainers have an obvious prior-art
+example to copy.
+
+### Network & Supply-Chain Safety
+
+- **All `urllib.request.urlopen` calls MUST go through a module-level `_https_urlopen` guard.**
+  Canonical implementations live in `Imervue/plugin/pip_installer.py` and
+  `Imervue/plugin/plugin_downloader.py`. The guard parses the URL with `urllib.parse.urlparse`,
+  rejects any scheme other than `https`, then calls `urlopen`. This defends against both
+  future maintainers and compromised upstream strings slipping in `http://`, `file://`, or
+  `ftp://` URLs (SonarQube `python:S5332`, bandit `B310`).
+- Do NOT call `urllib.request.urlopen` directly in new code. Import or add a local
+  `_https_urlopen` helper instead.
+- The internal `urlopen` call inside the guard is the ONLY allowed direct use, and must carry
+  `# nosec B310  # scheme validated above` on the same line.
+- **Hugging Face Hub downloads MUST pin a revision.** `hf_hub_download(...)` must pass
+  `revision=<commit-sha-or-tag>` (bandit `B615`, "unsafe download without explicit revision").
+  Default to `info.get("revision", "main")` only if the model info dict already ships an
+  explicit revision per model — never leave it fully unpinned.
+
+### Suppression Comment Conventions
+
+Use the right comment for the right tool. They are NOT interchangeable.
+
+| Tool         | Comment form                             | Placement   | Notes                                               |
+|--------------|------------------------------------------|-------------|-----------------------------------------------------|
+| ruff / flake8 | `# noqa: <CODE>` (e.g. `# noqa: S310`)  | line-level  | Must list specific codes — never bare `# noqa`.     |
+| bandit        | `# nosec B<NNN>` (e.g. `# nosec B310`)  | line-level  | ruff's `# noqa` does NOT suppress bandit.           |
+| SonarCloud    | `# NOSONAR`                              | line-level  | Use for hotspots that cannot be config-skipped (e.g. deliberate clear-text URLs in test inputs). |
+| pylint        | `# pylint: disable=<name>`               | line-level  | Prefer refactor over suppression.                   |
+
+Every suppression MUST include a brief justification on the same line
+(`# nosec B310  # scheme validated above`). Unexplained suppressions will not pass review.
+
+### Project-Wide Skip Configuration
+
+Systemic false positives are skipped at the config level, never with per-line comments. The
+authoritative skip lists live in:
+
+- `.bandit` (YAML, with per-rule justification comments) — the canonical source.
+- `pyproject.toml` `[tool.bandit]` — mirror for tooling that only reads `pyproject.toml`.
+  Keep both files in sync.
+- `.codacy.yaml` `engines.bandit.exclude_paths` — excludes `tests/**` (pytest `assert` is B101,
+  narrow `except/pass` is B110) and `Imervue/multi_language/**` (translator strings like
+  "API key" trip B105 hardcoded-password).
+
+When adding a new bandit skip:
+1. Add it to `.bandit` with a `# B<NNN>: <one-line reason>` comment.
+2. Mirror it in `pyproject.toml` `[tool.bandit].skips`.
+3. Verify locally: `py -m bandit -c pyproject.toml -r Imervue/` must return `No issues identified`.
+
+### Local CI Reproduction
+
+Before pushing, reproduce each engine locally so CI does not have to tell you:
+
+- **bandit**: `py -m bandit -c pyproject.toml -r Imervue/`
+  (the `-c` flag is REQUIRED — without it, bandit ignores the skip config).
+- **ruff**: `py -m ruff check .`
+- **pytest**: `py -m pytest tests/`
+
+### External Dashboards
+
+- **Codacy project issues**: https://app.codacy.com/gh/JeffreyChen-s-Utils/Imervue/issues/current
+- **SonarCloud project**: https://sonarcloud.io/project/overview?id=JeffreyChen-s-Utils_Imervue
+  (use `api/hotspots/search?projectKey=JeffreyChen-s-Utils_Imervue` for programmatic access
+  without a token).

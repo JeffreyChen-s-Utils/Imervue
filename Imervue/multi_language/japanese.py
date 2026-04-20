@@ -485,6 +485,15 @@ japanese_word_dict = {
     "modify_menu_reset": "すべての修正をリセット",
     # 追加ツール
     "extra_tools_menu": "追加ツール",
+    # 追加ツールのサブメニュー（機能別）
+    "batch_submenu": "一括処理",
+    "library_submenu": "ライブラリとメタデータ",
+    "views_submenu": "表示",
+    "workflow_submenu": "ワークフロー",
+    "export_submenu": "書き出し",
+    "develop_submenu": "現像（非破壊）",
+    "retouch_submenu": "レタッチと変形",
+    "multi_image_submenu": "マルチ画像",
     # 一括フォーマット変換
     "batch_convert_title": "一括フォーマット変換",
     "batch_convert_source": _JAPANESE_TR30BD30FC30B930D5,

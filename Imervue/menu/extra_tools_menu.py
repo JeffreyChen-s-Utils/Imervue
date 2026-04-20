@@ -12,201 +12,148 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
     lang = language_wrapper.language_word_dict
     menu = ui.menuBar().addMenu(lang.get("extra_tools_menu", "Extra Tools"))
 
-    # 批次格式轉換
-    convert_action = menu.addAction(
-        lang.get("batch_convert_title", "Batch Format Conversion"))
-    convert_action.triggered.connect(lambda: _open_batch_convert(ui))
+    _build_batch_submenu(menu, ui, lang)
+    _build_library_submenu(menu, ui, lang)
+    _build_views_submenu(menu, ui, lang)
+    _build_workflow_submenu(menu, ui, lang)
+    _build_export_submenu(menu, ui, lang)
+    _build_develop_submenu(menu, ui, lang)
+    _build_retouch_submenu(menu, ui, lang)
+    _build_multi_image_submenu(menu, ui, lang)
 
-    # AI 圖片放大
-    upscale_action = menu.addAction(
-        lang.get("upscale_title", "AI Image Upscale"))
-    upscale_action.triggered.connect(lambda: _open_ai_upscale(ui))
 
-    # 重複圖片偵測
-    dup_action = menu.addAction(
-        lang.get("duplicate_title", "Find Duplicate Images"))
-    dup_action.triggered.connect(lambda: _open_duplicate_detection(ui))
+def _add_action(submenu, lang: dict, key: str, fallback: str, callback) -> None:
+    action = submenu.addAction(lang.get(key, fallback))
+    action.triggered.connect(callback)
 
-    # 圖片整理工具
-    organizer_action = menu.addAction(
-        lang.get("organizer_title", "Image Organizer"))
-    organizer_action.triggered.connect(lambda: _open_image_organizer(ui))
 
-    # EXIF 批次清除
-    strip_action = menu.addAction(
-        lang.get("exif_strip_title", "Batch EXIF Strip"))
-    strip_action.triggered.connect(lambda: _open_exif_strip(ui))
+# --- Submenus ---------------------------------------------------------------
 
-    # 圖片淨化重繪
-    sanitize_action = menu.addAction(
-        lang.get("sanitize_title", "Image Sanitizer"))
-    sanitize_action.triggered.connect(lambda: _open_image_sanitize(ui))
+def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("batch_submenu", "Batch"))
+    _add_action(sub, lang, "batch_convert_title", "Batch Format Conversion",
+                lambda: _open_batch_convert(ui))
+    _add_action(sub, lang, "exif_strip_title", "Batch EXIF Strip",
+                lambda: _open_exif_strip(ui))
+    _add_action(sub, lang, "sanitize_title", "Image Sanitizer",
+                lambda: _open_image_sanitize(ui))
+    _add_action(sub, lang, "organizer_title", "Image Organizer",
+                lambda: _open_image_organizer(ui))
+    _add_action(sub, lang, "token_rename_title", "Token Batch Rename",
+                lambda: _open_token_rename(ui))
 
-    menu.addSeparator()
 
-    # 全域圖片資料庫搜尋
-    lib_action = menu.addAction(
-        lang.get("library_search_title", "Library Search"))
-    lib_action.triggered.connect(lambda: _open_library_search(ui))
+def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("library_submenu", "Library & Metadata"))
+    _add_action(sub, lang, "library_search_title", "Library Search",
+                lambda: _open_library_search(ui))
+    _add_action(sub, lang, "smart_albums_title", "Smart Albums",
+                lambda: _open_smart_albums(ui))
+    _add_action(sub, lang, "similar_search_title", "Find Similar Images",
+                lambda: _open_similar_search(ui))
+    _add_action(sub, lang, "duplicate_title", "Find Duplicate Images",
+                lambda: _open_duplicate_detection(ui))
+    _add_action(sub, lang, "auto_tag_title", "Auto-Tag Images",
+                lambda: _open_auto_tag(ui))
+    _add_action(sub, lang, "htags_title", "Hierarchical Tags",
+                lambda: _open_hierarchical_tags(ui))
+    sub.addSeparator()
+    _add_action(sub, lang, "metadata_export_title", "Export Metadata (CSV / JSON)",
+                lambda: _open_metadata_export(ui))
+    _add_action(sub, lang, "xmp_title", "XMP Sidecars",
+                lambda: _open_xmp_sidecar(ui))
+    _add_action(sub, lang, "geotag_title", "GPS Geotag",
+                lambda: _open_gps_geotag(ui))
 
-    # 智慧相簿
-    smart_action = menu.addAction(
-        lang.get("smart_albums_title", "Smart Albums"))
-    smart_action.triggered.connect(lambda: _open_smart_albums(ui))
 
-    # 相似圖片搜尋
-    similar_action = menu.addAction(
-        lang.get("similar_search_title", "Find Similar Images"))
-    similar_action.triggered.connect(lambda: _open_similar_search(ui))
-
-    # 自動標記
-    auto_tag_action = menu.addAction(
-        lang.get("auto_tag_title", "Auto-Tag Images"))
-    auto_tag_action.triggered.connect(lambda: _open_auto_tag(ui))
-
-    # 階層式標籤
-    htags_action = menu.addAction(
-        lang.get("htags_title", "Hierarchical Tags"))
-    htags_action.triggered.connect(lambda: _open_hierarchical_tags(ui))
-
-    # Token 批次重新命名
-    rename_action = menu.addAction(
-        lang.get("token_rename_title", "Token Batch Rename"))
-    rename_action.triggered.connect(lambda: _open_token_rename(ui))
-
-    # 中繼資料匯出 (CSV / JSON)
-    meta_action = menu.addAction(
-        lang.get("metadata_export_title", "Export Metadata (CSV / JSON)"))
-    meta_action.triggered.connect(lambda: _open_metadata_export(ui))
-
-    # XMP sidecar 匯入 / 匯出（Lightroom / Capture One 相容）
-    xmp_action = menu.addAction(lang.get("xmp_title", "XMP Sidecars"))
-    xmp_action.triggered.connect(lambda: _open_xmp_sidecar(ui))
-
-    # 分揀 (Pick / Reject)
-    cull_action = menu.addAction(
-        lang.get("culling_title", "Culling"))
-    cull_action.triggered.connect(lambda: _open_culling(ui))
-
-    # 暫存籃
-    tray_action = menu.addAction(
-        lang.get("staging_tray_title", "Staging Tray"))
-    tray_action.triggered.connect(lambda: _open_staging_tray(ui))
-
-    # 雙窗格檔案管理
-    dual_pane_action = menu.addAction(
-        lang.get("dual_pane_title", "Dual-Pane File Manager"))
-    dual_pane_action.triggered.connect(lambda: _open_dual_pane(ui))
-
-    menu.addSeparator()
-
-    # 巨集管理（錄製 / 重播）
-    macros_action = menu.addAction(lang.get("macro_title", "Macros"))
-    macros_action.triggered.connect(lambda: _open_macro_manager(ui))
-
-    # Contact sheet PDF
-    contact_action = menu.addAction(
-        lang.get("contact_sheet_title", "Contact Sheet PDF"))
-    contact_action.triggered.connect(lambda: _open_contact_sheet(ui))
-
-    # Web gallery HTML
-    web_gallery_action = menu.addAction(
-        lang.get("web_gallery_title", "Web Gallery"))
-    web_gallery_action.triggered.connect(lambda: _open_web_gallery(ui))
-
-    # Slideshow MP4
-    slideshow_action = menu.addAction(
-        lang.get("slideshow_mp4_title", "Slideshow Video"))
-    slideshow_action.triggered.connect(lambda: _open_slideshow_mp4(ui))
-
-    menu.addSeparator()
-
-    # 時間軸檢視 (Google Photos 樣式)
-    timeline_menu = menu.addMenu(lang.get("timeline_title", "Timeline View"))
+def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("views_submenu", "Views"))
+    timeline_menu = sub.addMenu(lang.get("timeline_title", "Timeline View"))
     for gran_key, fallback in (
         ("day", "By day"), ("month", "By month"), ("year", "By year"),
     ):
-        a = timeline_menu.addAction(lang.get(f"timeline_by_{gran_key}", fallback))
-        a.triggered.connect(lambda checked, g=gran_key: _open_timeline(ui, g))
+        action = timeline_menu.addAction(lang.get(f"timeline_by_{gran_key}", fallback))
+        action.triggered.connect(lambda checked, g=gran_key: _open_timeline(ui, g))
+    _add_action(sub, lang, "calendar_title", "Calendar View",
+                lambda: _open_calendar_view(ui))
+    _add_action(sub, lang, "map_title", "Map View",
+                lambda: _open_map_view(ui))
 
-    # 行事曆檢視（依拍攝日期）
-    calendar_action = menu.addAction(
-        lang.get("calendar_title", "Calendar View"))
-    calendar_action.triggered.connect(lambda: _open_calendar_view(ui))
 
-    # 地圖檢視（GPS）
-    map_action = menu.addAction(lang.get("map_title", "Map View"))
-    map_action.triggered.connect(lambda: _open_map_view(ui))
+def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("workflow_submenu", "Workflow"))
+    _add_action(sub, lang, "culling_title", "Culling",
+                lambda: _open_culling(ui))
+    _add_action(sub, lang, "staging_tray_title", "Staging Tray",
+                lambda: _open_staging_tray(ui))
+    _add_action(sub, lang, "vcopies_title", "Virtual Copies",
+                lambda: _open_virtual_copies(ui))
+    _add_action(sub, lang, "dual_pane_title", "Dual-Pane File Manager",
+                lambda: _open_dual_pane(ui))
+    _add_action(sub, lang, "macro_title", "Macros",
+                lambda: _open_macro_manager(ui))
 
-    menu.addSeparator()
 
-    # --- Non-destructive develop editors (per-image) ---
-    tone_action = menu.addAction(lang.get("tone_curve_title", "Tone Curve"))
-    tone_action.triggered.connect(lambda: _open_tone_curve(ui))
+def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("export_submenu", "Export"))
+    _add_action(sub, lang, "contact_sheet_title", "Contact Sheet PDF",
+                lambda: _open_contact_sheet(ui))
+    _add_action(sub, lang, "web_gallery_title", "Web Gallery",
+                lambda: _open_web_gallery(ui))
+    _add_action(sub, lang, "slideshow_mp4_title", "Slideshow Video",
+                lambda: _open_slideshow_mp4(ui))
+    _add_action(sub, lang, "print_title", "Print Layout",
+                lambda: _open_print_layout(ui))
 
-    lut_action = menu.addAction(lang.get("lut_title", "Apply .cube LUT"))
-    lut_action.triggered.connect(lambda: _open_lut(ui))
 
-    vcopies_action = menu.addAction(
-        lang.get("vcopies_title", "Virtual Copies"))
-    vcopies_action.triggered.connect(lambda: _open_virtual_copies(ui))
+def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("develop_submenu", "Develop (Non-Destructive)"))
+    _add_action(sub, lang, "tone_curve_title", "Tone Curve",
+                lambda: _open_tone_curve(ui))
+    _add_action(sub, lang, "lut_title", "Apply .cube LUT",
+                lambda: _open_lut(ui))
+    _add_action(sub, lang, "split_title", "Split Toning",
+                lambda: _open_split_toning(ui))
+    _add_action(sub, lang, "masks_title", "Local Adjustment Masks",
+                lambda: _open_masks(ui))
+    _add_action(sub, lang, "proof_title", "Soft Proof",
+                lambda: _open_soft_proof(ui))
 
-    face_action = menu.addAction(lang.get("face_title", "Face Detection"))
-    face_action.triggered.connect(lambda: _open_face_detection(ui))
 
-    masks_action = menu.addAction(
-        lang.get("masks_title", "Local Adjustment Masks"))
-    masks_action.triggered.connect(lambda: _open_masks(ui))
+def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("retouch_submenu", "Retouch & Transform"))
+    _add_action(sub, lang, "upscale_title", "AI Image Upscale",
+                lambda: _open_ai_upscale(ui))
+    _add_action(sub, lang, "nr_title", "Noise Reduction / Sharpening",
+                lambda: _open_noise_sharpen(ui))
+    _add_action(sub, lang, "heal_title", "Healing Brush",
+                lambda: _open_healing_brush(ui))
+    _add_action(sub, lang, "stamp_title", "Clone Stamp",
+                lambda: _open_clone_stamp(ui))
+    _add_action(sub, lang, "face_title", "Face Detection",
+                lambda: _open_face_detection(ui))
+    _add_action(sub, lang, "sky_title", "Sky / Background",
+                lambda: _open_sky_replace(ui))
+    sub.addSeparator()
+    _add_action(sub, lang, "crop_title", "Crop / Straighten",
+                lambda: _open_crop_straighten(ui))
+    _add_action(sub, lang, "autostr_title", "Auto-Straighten",
+                lambda: _open_auto_straighten(ui))
+    _add_action(sub, lang, "lens_title", "Lens Correction",
+                lambda: _open_lens_correction(ui))
 
-    split_action = menu.addAction(lang.get("split_title", "Split Toning"))
-    split_action.triggered.connect(lambda: _open_split_toning(ui))
 
-    menu.addSeparator()
+def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
+    sub = menu.addMenu(lang.get("multi_image_submenu", "Multi-Image"))
+    _add_action(sub, lang, "hdr_title", "HDR Merge",
+                lambda: _open_hdr_merge(ui))
+    _add_action(sub, lang, "pano_title", "Panorama Stitch",
+                lambda: _open_panorama(ui))
+    _add_action(sub, lang, "fstack_title", "Focus Stacking",
+                lambda: _open_focus_stack(ui))
 
-    # --- Destructive transforms (output a new file) ---
-    lens_action = menu.addAction(
-        lang.get("lens_title", "Lens Correction"))
-    lens_action.triggered.connect(lambda: _open_lens_correction(ui))
 
-    heal_action = menu.addAction(lang.get("heal_title", "Healing Brush"))
-    heal_action.triggered.connect(lambda: _open_healing_brush(ui))
-
-    stamp_action = menu.addAction(lang.get("stamp_title", "Clone Stamp"))
-    stamp_action.triggered.connect(lambda: _open_clone_stamp(ui))
-
-    crop_action = menu.addAction(lang.get("crop_title", "Crop / Straighten"))
-    crop_action.triggered.connect(lambda: _open_crop_straighten(ui))
-
-    autostr_action = menu.addAction(
-        lang.get("autostr_title", "Auto-Straighten"))
-    autostr_action.triggered.connect(lambda: _open_auto_straighten(ui))
-
-    nr_action = menu.addAction(
-        lang.get("nr_title", "Noise Reduction / Sharpening"))
-    nr_action.triggered.connect(lambda: _open_noise_sharpen(ui))
-
-    sky_action = menu.addAction(lang.get("sky_title", "Sky / Background"))
-    sky_action.triggered.connect(lambda: _open_sky_replace(ui))
-
-    proof_action = menu.addAction(lang.get("proof_title", "Soft Proof"))
-    proof_action.triggered.connect(lambda: _open_soft_proof(ui))
-
-    geotag_action = menu.addAction(lang.get("geotag_title", "GPS Geotag"))
-    geotag_action.triggered.connect(lambda: _open_gps_geotag(ui))
-
-    hdr_action = menu.addAction(lang.get("hdr_title", "HDR Merge"))
-    hdr_action.triggered.connect(lambda: _open_hdr_merge(ui))
-
-    pano_action = menu.addAction(lang.get("pano_title", "Panorama Stitch"))
-    pano_action.triggered.connect(lambda: _open_panorama(ui))
-
-    fstack_action = menu.addAction(
-        lang.get("fstack_title", "Focus Stacking"))
-    fstack_action.triggered.connect(lambda: _open_focus_stack(ui))
-
-    print_action = menu.addAction(lang.get("print_title", "Print Layout"))
-    print_action.triggered.connect(lambda: _open_print_layout(ui))
-
+# --- Dialog openers ---------------------------------------------------------
 
 def _open_batch_convert(ui: ImervueMainWindow):
     from Imervue.gui.batch_convert_dialog import open_batch_convert

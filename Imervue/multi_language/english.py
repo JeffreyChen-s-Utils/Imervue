@@ -493,6 +493,15 @@ english_word_dict = {
     "modify_menu_reset": "Reset Edits",
     # Extra Tools
     "extra_tools_menu": "Extra Tools",
+    # Extra Tools submenus (function-grouped)
+    "batch_submenu": "Batch",
+    "library_submenu": "Library & Metadata",
+    "views_submenu": "Views",
+    "workflow_submenu": "Workflow",
+    "export_submenu": "Export",
+    "develop_submenu": "Develop (Non-Destructive)",
+    "retouch_submenu": "Retouch & Transform",
+    "multi_image_submenu": "Multi-Image",
     # Batch Convert
     "batch_convert_title": "Batch Format Conversion",
     "batch_convert_source": _ENGLISH_SOURCE_FOLDER,
