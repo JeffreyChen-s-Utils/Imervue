@@ -891,6 +891,25 @@ english_word_dict = {
     "session_load": "Load Session\u2026",
     "session_saved": "Session saved to {path}",
     "session_restored": "Restored {ok} items (skipped {skip})",
+    "workspace_menu": "Workspaces\u2026",
+    "workspace_title": "Workspaces",
+    "workspace_explain": (
+        "Save the current window layout as a named preset and jump "
+        "between layouts without rearranging panels."
+    ),
+    "workspace_save": "Save Current",
+    "workspace_load": "Load",
+    "workspace_rename": "Rename",
+    "workspace_delete": "Delete",
+    "workspace_name_label": "Name:",
+    "workspace_overwrite_title": "Overwrite workspace?",
+    "workspace_overwrite_msg": (
+        "A workspace named '{name}' already exists. Overwrite it?"
+    ),
+    "workspace_rename_conflict": (
+        "Cannot rename \u2014 a workspace named '{name}' already exists."
+    ),
+    "workspace_delete_confirm": "Delete workspace '{name}'?",
     # External editors
     "ext_editor_menu": "External Editors\u2026",
     "ext_editor_open_in": "Open in External Editor",

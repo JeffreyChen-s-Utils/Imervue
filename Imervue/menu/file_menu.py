@@ -100,6 +100,11 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     load_session_action.triggered.connect(
         lambda: _load_session(ui_we_want_to_set))
 
+    workspace_action = file_menu.addAction(
+        lang.get("workspace_menu", "Workspaces\u2026"))
+    workspace_action.triggered.connect(
+        lambda: _open_workspaces(ui_we_want_to_set))
+
     # 外部編輯器
     editors_action = file_menu.addAction(
         lang.get("ext_editor_menu", "External Editors\u2026"))
@@ -398,6 +403,11 @@ def _load_session(ui: ImervueMainWindow) -> None:
                 "Restored {ok} items (skipped {skip})",
             ).format(ok=counts["applied"], skip=counts["skipped"])
         )
+
+
+def _open_workspaces(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.workspace_dialog import open_workspace_dialog
+    open_workspace_dialog(ui)
 
 
 def _open_external_editors_settings(ui: ImervueMainWindow) -> None:
