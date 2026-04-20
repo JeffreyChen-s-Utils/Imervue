@@ -367,6 +367,18 @@ english_word_dict = {
     "batch_export_max_height": "Max Height:",
     "batch_export_start": "Export",
     "batch_export_done": "Exported {success}/{total} image(s)",
+    "batch_export_preset": "Preset:",
+    "batch_export_preset_custom": "Custom",
+    # Watermark
+    "watermark_title": "Watermark",
+    "watermark_text": "Text:",
+    "watermark_position": "Position:",
+    "watermark_opacity": "Opacity:",
+    "watermark_tl": "Top-left",
+    "watermark_tr": "Top-right",
+    "watermark_bl": "Bottom-left",
+    "watermark_br": "Bottom-right",
+    "watermark_center": "Center",
     # GIF / Video
     "gif_video_title": "Create GIF / Video",
     "gif_video_order": "Drag to reorder (top = first frame):",

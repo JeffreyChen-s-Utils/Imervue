@@ -361,6 +361,18 @@ japanese_word_dict = {
     "batch_export_max_height": "最大高さ：",
     "batch_export_start": "エクスポート",
     "batch_export_done": "{success}/{total} 枚をエクスポートしました",
+    "batch_export_preset": "プリセット：",
+    "batch_export_preset_custom": "カスタム",
+    # 透かし
+    "watermark_title": "透かし",
+    "watermark_text": "テキスト：",
+    "watermark_position": "位置：",
+    "watermark_opacity": "不透明度：",
+    "watermark_tl": "左上",
+    "watermark_tr": "右上",
+    "watermark_bl": "左下",
+    "watermark_br": "右下",
+    "watermark_center": "中央",
     # GIF / 動画
     "gif_video_title": "GIF / 動画を作成",
     "gif_video_order": "ドラッグで並べ替え（上が最初のフレーム）：",

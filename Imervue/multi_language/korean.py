@@ -356,6 +356,18 @@ korean_word_dict = {
     "batch_export_max_height": "최대 높이:",
     "batch_export_start": "내보내기",
     "batch_export_done": "{success}/{total}개의 이미지를 내보냈습니다",
+    "batch_export_preset": "프리셋:",
+    "batch_export_preset_custom": "사용자 지정",
+    # 워터마크
+    "watermark_title": "워터마크",
+    "watermark_text": "텍스트:",
+    "watermark_position": "위치:",
+    "watermark_opacity": "불투명도:",
+    "watermark_tl": "좌상단",
+    "watermark_tr": "우상단",
+    "watermark_bl": "좌하단",
+    "watermark_br": "우하단",
+    "watermark_center": "중앙",
     # GIF / 동영상
     "gif_video_title": "GIF / 동영상 만들기",
     "gif_video_order": "드래그하여 순서 변경 (위 = 첫 프레임):",

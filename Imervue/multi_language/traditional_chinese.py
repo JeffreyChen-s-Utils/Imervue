@@ -352,6 +352,18 @@ traditional_chinese_word_dict = {
     "batch_export_max_height": "最大高度：",
     "batch_export_start": "匯出",
     "batch_export_done": "已匯出 {success}/{total} 張圖片",
+    "batch_export_preset": "預設：",
+    "batch_export_preset_custom": "自訂",
+    # 浮水印
+    "watermark_title": "浮水印",
+    "watermark_text": "文字：",
+    "watermark_position": "位置：",
+    "watermark_opacity": "不透明度：",
+    "watermark_tl": "左上",
+    "watermark_tr": "右上",
+    "watermark_bl": "左下",
+    "watermark_br": "右下",
+    "watermark_center": "置中",
     # GIF / 影片
     "gif_video_title": "製作 GIF / 影片",
     "gif_video_order": "拖曳排序（最上方 = 第一幀）：",
