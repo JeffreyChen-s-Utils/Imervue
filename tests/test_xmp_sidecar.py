@@ -5,6 +5,10 @@ from pathlib import Path
 
 import pytest
 
+# xmp_sidecar depends on defusedxml for safe XML parsing; skip the whole
+# module when the optional dependency is not installed in this environment.
+pytest.importorskip("defusedxml")
+
 
 @pytest.fixture
 def xmp():
