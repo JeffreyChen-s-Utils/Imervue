@@ -273,11 +273,11 @@ class AnnotationCanvas(QWidget):
         self._drag_orig_points: list[tuple[int, int]] | None = None
 
         # Crop tool state
-        self._crop_rect: tuple[int, int, int, int] | None = None  # (x, y, w, h) in image coords
-        self._crop_ratio: tuple[int, int] = (0, 0)  # (0,0) = free
+        self._crop_rect: tuple[int, int, int, int] | None = None  # x, y, w, h in image coords
+        self._crop_ratio: tuple[int, int] = (0, 0)  # zero zero means freeform ratio
         self._crop_dragging: bool = False
         self._crop_drag_start: tuple[int, int] | None = None
-        self._crop_drag_handle: str | None = None  # None = new, "move", "nw"..."w"
+        self._crop_drag_handle: str | None = None  # none for new, or move, or nw..w handle
         self._crop_drag_orig: tuple[int, int, int, int] | None = None
 
         # Inline text editor

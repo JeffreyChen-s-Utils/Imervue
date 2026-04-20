@@ -1089,8 +1089,7 @@ class ImervueMainWindow(QMainWindow):
             with contextlib.suppress(Exception):
                 self.restoreState(QByteArray(base64.b64decode(state_b64)))
 
-        # 檢查還原的位置是否在某個可用螢幕上
-        # 若螢幕已拔除，視窗可能落在不可見區域
+        # 檢查還原的位置是否在某個可用螢幕上; 若螢幕已拔除, 視窗可能落在不可見區域
         if not self._geometry_on_visible_screen():
             self.showMaximized()
             return

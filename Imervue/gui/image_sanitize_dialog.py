@@ -321,7 +321,7 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
     arr = np.array(img, copy=True)
     # Unseeded on purpose: if an attacker can predict the scramble pattern
     # they can recover the hidden payload, which defeats the entire feature.
-    rng = np.random.default_rng()  # noqa: NPY002
+    rng = np.random.default_rng()  # noqa: NPY002  NOSONAR  unpredictability is the feature
     scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
     # Where mask is True use random LSB, otherwise keep the original LSB.

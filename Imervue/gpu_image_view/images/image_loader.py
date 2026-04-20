@@ -56,7 +56,7 @@ def load_image_file(path, thumbnail=False, recipe=None):
                     elif thumb.format == rawpy.ThumbFormat.BITMAP:
                         img = thumb.data
                     else:
-                        raise Exception("No valid embedded preview")
+                        raise ValueError("No valid embedded preview")
                 except Exception:
                     # fallback 用 half_size
                     img = raw.postprocess(

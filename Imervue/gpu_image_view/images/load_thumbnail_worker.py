@@ -22,7 +22,7 @@ class LoadThumbnailWorker(QRunnable):
     def __init__(self, path, size=None, generation=0):
         super().__init__()
         self.path = path
-        self.size = size      # None = 使用原圖尺寸
+        self.size = size      # None means use the original image size
         self.generation = generation
         self.signals = WorkerSignals()
         self._abort = False
@@ -116,7 +116,7 @@ class LoadThumbnailWorker(QRunnable):
                 elif thumb.format == rawpy.ThumbFormat.BITMAP:
                     img_data = thumb.data
                 else:
-                    raise Exception("No valid embedded preview")
+                    raise ValueError("No valid embedded preview")
 
             except Exception:
                 # fallback: 用 half_size 降低記憶體

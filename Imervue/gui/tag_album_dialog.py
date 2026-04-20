@@ -357,12 +357,7 @@ class TagAlbumDialog(QDialog):
                 break
 
     def _open_album_image(self, item: QListWidgetItem):
-        path = item.text()
-        if Path(path).is_file():
-            from Imervue.gpu_image_view.images.image_loader import open_path
-            self.main_gui.clear_tile_grid()
-            open_path(main_gui=self.main_gui, path=path)
-            self.close()
+        self._open_tag_image(item)
 
     def _view_album(self):
         album_item = self._album_list.currentItem()

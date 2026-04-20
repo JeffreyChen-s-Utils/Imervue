@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 import numpy as np
 import os
 from collections import OrderedDict
-from OpenGL.GL import *  # noqa: F401, F403 — OpenGL uses hundreds of constants; explicit list impractical
+from OpenGL.GL import *  # noqa: F401, F403  NOSONAR  OpenGL uses hundreds of constants
 from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
 from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -1773,7 +1773,7 @@ class GPUImageView(QOpenGLWidget):
         self.active_deep_zoom_worker = None
 
         # 首次進入此圖片 → 自動 fit-to-window
-        cur_path = self.model.images[self.current_index] if self.model.images else None
+        cur_path = self.model.images[self.current_index]
         if cur_path and cur_path not in self._view_memory:
             self._fit_to_window()
 

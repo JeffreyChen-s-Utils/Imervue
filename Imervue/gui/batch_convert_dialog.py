@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.batch_convert")
 
+_JPEG_EXT = ".jpeg"
+
 FORMAT_OPTIONS = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
 FORMAT_EXTENSIONS = {
     "PNG": ".png", "JPEG": ".jpg", "WebP": ".webp",
@@ -40,9 +42,10 @@ FORMAT_EXTENSIONS = {
 }
 QUALITY_FORMATS = {"JPEG", "WebP"}
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
+    ".png", ".jpg", _JPEG_EXT, ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng",
 })
+_JPEG_EXTS = (".jpg", _JPEG_EXT)
 
 
 def _scan_folder(folder: str) -> list[str]:
@@ -86,7 +89,7 @@ class _ConvertWorker(QThread):
                 # Skip if already in target format
                 if self._skip_same_fmt:
                     same = (src_ext == target_ext) or (
-                        src_ext in (".jpg", ".jpeg") and target_ext in (".jpg", ".jpeg")
+                        src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
                     )
                     if same:
                         skipped += 1

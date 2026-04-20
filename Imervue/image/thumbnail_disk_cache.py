@@ -219,7 +219,7 @@ class ThumbnailDiskCache:
     def clear(self) -> None:
         """Delete every cached thumbnail. Used by 'Clear cache' in the UI."""
         with self._lock:
-            for name in list(self._files.keys()):
+            for name in self._files:
                 with contextlib.suppress(OSError):
                     (self._dir / name).unlink(missing_ok=True)
             self._files.clear()

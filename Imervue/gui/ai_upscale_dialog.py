@@ -64,18 +64,20 @@ UPSCALE_MODELS = {
     },
 }
 
+_TRAD_PREFIX = "trad:"
+
 # Traditional (non-AI) resampling methods — no dependencies, lossless.
-# Keys use "trad:" prefix to distinguish from AI model keys.
+# Keys use _TRAD_PREFIX to distinguish from AI model keys.
 TRADITIONAL_METHODS = {
-    "trad:lanczos": {
+    f"{_TRAD_PREFIX}lanczos": {
         "desc_key": "upscale_method_lanczos",
         "desc_default": "Lanczos (high quality, lossless)",
     },
-    "trad:bicubic": {
+    f"{_TRAD_PREFIX}bicubic": {
         "desc_key": "upscale_method_bicubic",
         "desc_default": "Bicubic (fast, good quality)",
     },
-    "trad:nearest": {
+    f"{_TRAD_PREFIX}nearest": {
         "desc_key": "upscale_method_nearest",
         "desc_default": "Nearest Neighbor (pixel art)",
     },
@@ -84,9 +86,9 @@ TRADITIONAL_METHODS = {
 # Map traditional key → PIL Resampling enum (resolved at runtime to avoid
 # importing PIL at module level).
 _TRAD_RESAMPLING = {
-    "trad:lanczos": "LANCZOS",
-    "trad:bicubic": "BICUBIC",
-    "trad:nearest": "NEAREST",
+    f"{_TRAD_PREFIX}lanczos": "LANCZOS",
+    f"{_TRAD_PREFIX}bicubic": "BICUBIC",
+    f"{_TRAD_PREFIX}nearest": "NEAREST",
 }
 
 REQUIRED_PACKAGES = [
@@ -253,7 +255,7 @@ class _UpscaleWorker(QThread):
     # -- run -----------------------------------------------------------------
 
     def run(self):
-        if self._model_key.startswith("trad:"):
+        if self._model_key.startswith(_TRAD_PREFIX):
             self._run_traditional()
         else:
             self._run_ai()
@@ -532,7 +534,7 @@ class AIUpscaleDialog(QDialog):
 
     def _is_traditional(self) -> bool:
         key = self._model_combo.currentData()
-        return key is not None and key.startswith("trad:")
+        return key is not None and key.startswith(_TRAD_PREFIX)
 
     def _on_method_changed(self, _index: int):
         trad = self._is_traditional()
@@ -573,9 +575,9 @@ class AIUpscaleDialog(QDialog):
             self._status_label.setText("")
 
             scale_override = (self._scale_spin.value()
-                              if model_key.startswith("trad:") else 0)
+                              if model_key.startswith(_TRAD_PREFIX) else 0)
             # Tile progress is only relevant for AI models
-            self._tile_progress.setVisible(not model_key.startswith("trad:"))
+            self._tile_progress.setVisible(not model_key.startswith(_TRAD_PREFIX))
 
             self._worker = _UpscaleWorker(
                 self._paths, output_dir, model_key, overwrite,
@@ -586,7 +588,7 @@ class AIUpscaleDialog(QDialog):
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        if model_key.startswith("trad:"):
+        if model_key.startswith(_TRAD_PREFIX):
             # Traditional methods need no extra dependencies.
             _launch_worker()
         else:

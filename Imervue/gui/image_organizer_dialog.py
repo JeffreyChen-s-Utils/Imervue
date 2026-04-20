@@ -406,13 +406,13 @@ class ImageOrganizerDialog(QDialog):
 
     def _current_plan_kwargs(self) -> dict:
         rule = self._rule_combo.currentData() or RULE_DATE
-        return dict(
-            rule=rule,
-            year_only=self._date_combo.currentData() if rule == RULE_DATE else False,
-            large_mb=self._size_large_spin.value(),
-            small_mb=self._size_small_spin.value(),
-            count_per_folder=self._count_spin.value(),
-        )
+        return {
+            "rule": rule,
+            "year_only": self._date_combo.currentData() if rule == RULE_DATE else False,
+            "large_mb": self._size_large_spin.value(),
+            "small_mb": self._size_small_spin.value(),
+            "count_per_folder": self._count_spin.value(),
+        }
 
     def _do_preview(self):
         src = self._src_edit.text().strip()

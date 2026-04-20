@@ -16,6 +16,7 @@ from __future__ import annotations
 import importlib
 import io
 import logging
+import re
 import subprocess
 import sys
 import zipfile
@@ -89,6 +90,7 @@ _USER_AGENT = "Imervue/1.0"
 _UA_HEADERS = {"User-Agent": _USER_AGENT}
 _PROCESS_TIMEOUT_MSG = "Process timed out"
 _PYTHON_EXE_NAME = "python.exe"
+_PTH_NAME_RE = re.compile(r"python[0-9._]*\._pth")
 
 
 def _embedded_python_dir() -> Path:
@@ -168,12 +170,18 @@ class _DownloadPythonWorker(QThread):
         """Uncomment ``import site`` in python*._pth so pip can work."""
         dest_resolved = dest_dir.resolve()
         for pth_file in dest_dir.glob("python*._pth"):
+            # glob("python*._pth") can only return names matching that literal
+            # pattern, and the parent is dest_dir itself — still reject anything
+            # that resolves outside dest_dir (e.g. a symlinked entry).
             resolved = pth_file.resolve()
             if not resolved.is_relative_to(dest_resolved):
                 continue
-            self.log.emit(f"Patching {resolved.name} to enable 'import site' ...")
-            content = resolved.read_text(encoding="utf-8")
-            resolved.write_text(
+            if pth_file.parent != dest_dir or not _PTH_NAME_RE.fullmatch(pth_file.name):
+                continue
+            safe_path = dest_dir / pth_file.name
+            self.log.emit(f"Patching {safe_path.name} to enable 'import site' ...")
+            content = safe_path.read_text(encoding="utf-8")
+            safe_path.write_text(
                 content.replace("#import site", "import site"),
                 encoding="utf-8",
             )

@@ -406,7 +406,7 @@ class CompareDialog(QDialog):
             lbl.deleteLater()
         self._sbs_labels.clear()
 
-        rows, cols = (1, 2) if count == 2 else (2, 2)
+        _, cols = (1, 2) if count == 2 else (2, 2)
         for i, p in enumerate(paths):
             r, c = divmod(i, cols)
             lbl = _ImageLabel(p)
