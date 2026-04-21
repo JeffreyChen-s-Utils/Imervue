@@ -99,12 +99,15 @@ python -m nuitka ^
   --noinclude-data-files=*.pth ^
   --noinclude-data-files=*.safetensors ^
   --noinclude-data-files=*.gguf ^
+  --noinclude-data-files=exe/*.log ^
+  --noinclude-data-files=exe/*.json ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
   --module-parameter=torch-disable-jit=yes ^
   --nofollow-import-to=pytest ^
   --nofollow-import-to=doctest ^
+  --nofollow-import-to=rembg ^
   --windows-icon-from-ico=exe\Imervue.ico ^
   --output-filename=Imervue.exe ^
   --output-dir=build_nuitka ^
@@ -134,12 +137,15 @@ python -m nuitka `
   --noinclude-data-files=*.pth `
   --noinclude-data-files=*.safetensors `
   --noinclude-data-files=*.gguf `
+  --noinclude-data-files=exe/*.log `
+  --noinclude-data-files=exe/*.json `
   --include-data-dir=exe=exe `
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md `
   --include-data-files=LICENSE=LICENSE `
   --module-parameter=torch-disable-jit=yes `
   --nofollow-import-to=pytest `
   --nofollow-import-to=doctest `
+  --nofollow-import-to=rembg `
   --windows-icon-from-ico=exe\Imervue.ico `
   --output-filename=Imervue.exe `
   --output-dir=build_nuitka `
@@ -151,7 +157,7 @@ python -m nuitka `
 **一行版（任何 shell 都能用，最保險）**：
 
 ```
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --noinclude-data-files=plugins/*/models/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --noinclude-data-files=plugins/*/models/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --noinclude-data-files=exe/*.log --noinclude-data-files=exe/*.json --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --nofollow-import-to=rembg --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
 ```
 
 產物：`build_nuitka\Imervue.dist\Imervue.exe`（standalone）或 `build_nuitka\Imervue.exe`（onefile）。
@@ -191,12 +197,15 @@ python -m nuitka \
   --noinclude-data-files=*.pth \
   --noinclude-data-files=*.safetensors \
   --noinclude-data-files=*.gguf \
+  --noinclude-data-files=exe/*.log \
+  --noinclude-data-files=exe/*.json \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
   --module-parameter=torch-disable-jit=yes \
   --nofollow-import-to=pytest \
   --nofollow-import-to=doctest \
+  --nofollow-import-to=rembg \
   --linux-icon=exe/Imervue.png \
   --output-filename=Imervue \
   --output-dir=build_nuitka \
@@ -234,12 +243,15 @@ python -m nuitka \
   --noinclude-data-files=*.pth \
   --noinclude-data-files=*.safetensors \
   --noinclude-data-files=*.gguf \
+  --noinclude-data-files=exe/*.log \
+  --noinclude-data-files=exe/*.json \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
   --module-parameter=torch-disable-jit=yes \
   --nofollow-import-to=pytest \
   --nofollow-import-to=doctest \
+  --nofollow-import-to=rembg \
   --macos-app-icon=exe/Imervue.icns \
   --macos-app-name=Imervue \
   --macos-app-version=1.0.0 \
@@ -294,6 +306,15 @@ xcrun stapler staple build_nuitka/Imervue.app
     Torch JIT is disabled by default in standalone mode, make a choice explicit
   ```
   在 frozen 環境下 `torch.jit` 的動態編譯會因為找不到原始 `.py` 而失敗，所以正確答案永遠是 `yes`（停用 JIT）。即使專案本身沒直接用 `torch`，它常被 `rembg` / `onnxruntime` 之類的 plugin 依賴拖進來，留著這個旗標不會有副作用。
+- `--nofollow-import-to=rembg`：`rembg` 在本專案是**執行期才透過 plugin pip installer 裝到 `<app_dir>/lib/site-packages/` 的可選依賴**（見 §5），`Imervue/image/segmentation.py` 那行 `from rembg import remove` 外面就包著 `try/except ImportError` 的 fallback。但只要開發機的 `.venv` 裡裝過 `rembg`，Nuitka 的靜態分析就會順著 `rembg → pymatting → numba → llvmlite` 把整條鏈拖進來，噴三條警告：
+  ```
+  Nuitka-Plugins:WARNING: anti-bloat: Undesirable import of 'numba' in 'pymatting.util.distance'
+  Nuitka-Plugins:WARNING: options-nanny: Using module 'numba' with incomplete support
+      ... Numba is not yet fully working with Nuitka standalone ...
+  Nuitka-Plugins:WARNING: options-nanny: Module 'numba' has parameter:
+      Numba JIT is disabled by default in standalone mode, make a choice explicit
+  ```
+  在鏈的根（`rembg`）切斷是最乾淨的解法——`anti-bloat` 跟 `options-nanny` 是兩個獨立的 Nuitka plugin，`--noinclude-numba-mode=nofollow` 只對前者生效，後者會持續針對 venv 裡偵測到的 `numba` 噴警告。改用 `--nofollow-import-to=rembg` 後 Nuitka 根本不會 walk 到 `pymatting` / `numba`，三條警告同時消失，bundle 也少掉數百 MB 的 LLVM runtime。runtime 不受影響——plugin 啟用時會把 `rembg` 裝進 `<app_dir>/lib/site-packages/`，由一般的 FileFinder 從 `sys.path` 載入。
 - `--nofollow-import-to=pytest`、`--nofollow-import-to=doctest`：`imageio.testing` 第 8 行 `import pytest`、`imageio.plugins._tifffile` 第 10490 行 `import doctest`（只在 `if __name__ == "__main__"` 的自測區塊），Nuitka 靜態分析會順著把 `pytest` 與 `doctest`（及其拖出的 `unittest`）整包拖進來（合計 200+ 模組），拖慢打包並噴
   ```
   Nuitka-Plugins:WARNING: anti-bloat: Undesirable import of 'pytest' in 'imageio.testing'
@@ -301,6 +322,7 @@ xcrun stapler staple build_nuitka/Imervue.app
   ```
   擋住 `pytest` 與 `doctest` 本身即可，runtime 不會走到。**不要**多加 `--nofollow-import-to=imageio.testing` 或 `--nofollow-import-to=imageio.plugins._tifffile`：它們會跟 `--include-package=imageio` 打架，噴 `Nuitka-Inclusion:WARNING: Not allowed to include module ... due to ... 'not follow to'`。那幾個檔案本身都不大，編進 bundle 無害。
 - `defusedxml`：`Imervue/image/xmp_sidecar.py` 用 `defusedxml` 做 XMP 的安全 XML 解析（bandit `B405`–`B411`）。Nuitka 的靜態 import 分析會自動順著 `from defusedxml import ElementTree as DefusedET` 把它收進來，不需要 `--include-package=defusedxml`。**但 venv 必須先 `pip install defusedxml`**——requirements.txt 已加入這條依賴，缺了的話 frozen 產物會在讀寫 XMP sidecar 時直接 crash。
+- `--noinclude-data-files=exe/*.log`、`--noinclude-data-files=exe/*.json`：`exe/` 資料夾本意只放打包資源（`Imervue.ico`、`start_Imervue.py`），但開發期容易不小心把 `auto_py_to_exe_config.json`（auto-py-to-exe 的 GUI 設定檔，已移到 `packaging/`）或 plugin 執行殘留的 `*.log` 丟進去，而 `--include-data-dir=exe=exe` 會把整個資料夾鏡射進產物，讓無關檔案流到發佈品裡。這兩條防禦性過濾保證即使 `exe/` 又被污染，Nuitka 也不會收進去。驗證：打包後 `dir /s build_nuitka\*.log build_nuitka\*.json`（Windows）或 `find build_nuitka -name '*.log' -o -name '*.json'`（Linux / macOS）在 `exe/` 路徑下應該無輸出。
 - `--noinclude-data-files=plugins/*/models/*` 與各 ML 副檔名（`.onnx` / `.pt` / `.pth` / `.safetensors` / `.gguf`）：把 **ML 權重徹底排除在產物之外**。
   - `plugins/object_splitter/models/isnet-*.onnx` 兩顆加起來 ~340 MB，打包進去會讓安裝檔異常肥大。
   - 走 `rembg.new_session()` 時會用 `U2NET_HOME` 環境變數指向的目錄自動下載缺失的模型；`object_splitter` 把這變數設成 `<plugin>/models/`，所以第一次用會下載、之後快取。
@@ -333,12 +355,15 @@ python -m nuitka ^
   --noinclude-data-files=*.pth ^
   --noinclude-data-files=*.safetensors ^
   --noinclude-data-files=*.gguf ^
+  --noinclude-data-files=exe/*.log ^
+  --noinclude-data-files=exe/*.json ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
   --module-parameter=torch-disable-jit=yes ^
   --nofollow-import-to=pytest ^
   --nofollow-import-to=doctest ^
+  --nofollow-import-to=rembg ^
   --windows-icon-from-ico=exe\Imervue.ico ^
   --output-filename=Imervue.exe ^
   --output-dir=build_nuitka ^
@@ -372,12 +397,15 @@ COMMON_ARGS=(
   --noinclude-data-files=*.pth
   --noinclude-data-files=*.safetensors
   --noinclude-data-files=*.gguf
+  --noinclude-data-files=exe/*.log
+  --noinclude-data-files=exe/*.json
   --include-data-dir=exe=exe
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md
   --include-data-files=LICENSE=LICENSE
   --module-parameter=torch-disable-jit=yes
   --nofollow-import-to=pytest
   --nofollow-import-to=doctest
+  --nofollow-import-to=rembg
   --output-dir=build_nuitka
   --remove-output
   --assume-yes-for-downloads
@@ -430,6 +458,9 @@ esac
 | `options-nanny: Module 'torch' has parameter: Torch JIT is disabled by default in standalone mode, make a choice explicit` | 全平台 | 加 `--module-parameter=torch-disable-jit=yes`。frozen 環境下 JIT 找不到原始 `.py` 會失敗，一律停用。`torch` 可能經由 `rembg` / `onnxruntime` 間接被拖進來，即使專案沒直接用也建議加 |
 | `anti-bloat: Undesirable import of 'pytest' in 'imageio.testing'` | 全平台 | 加 `--nofollow-import-to=pytest`。runtime 不會走到 `imageio.testing`，切掉整包 `pytest`（200+ 模組）可大幅加速打包 |
 | `anti-bloat: Undesirable import of 'doctest' (intending to avoid 'unittest') in 'imageio.plugins._tifffile'` | 全平台 | 加 `--nofollow-import-to=doctest`。那一行在 `if __name__ == "__main__"` 的自測區塊，runtime 永遠不會走到；擋掉 `doctest` 同時也阻斷它拖進 `unittest` 的鏈 |
+| `anti-bloat: Undesirable import of 'numba' in 'pymatting.util.distance'` | 全平台 | 加 `--nofollow-import-to=rembg`，在鏈的根切斷。`rembg` 是執行期 plugin 才裝的可選依賴（見 §5），硬擋 `numba` 只能消 anti-bloat 一條警告，options-nanny 還是會唸 |
+| `options-nanny: Using module 'numba' with incomplete support ... Numba is not yet fully working with Nuitka standalone` | 全平台 | 同上——加 `--nofollow-import-to=rembg`。`--noinclude-numba-mode=nofollow` 只針對 anti-bloat plugin，options-nanny 會**獨立**掃 venv 偵測到 `numba` 噴這條警告，得把 `rembg` 整條鏈從靜態分析切掉才會停 |
+| `options-nanny: Module 'numba' has parameter: Numba JIT is disabled by default in standalone mode, make a choice explicit` | 全平台 | 同上——加 `--nofollow-import-to=rembg`。一旦 Nuitka 根本看不到 `numba`，options-nanny 就不會再問 JIT 的選擇；不需要另加 `--module-parameter=numba-disable-jit=yes` 或 `--noinclude-numba-mode=nofollow` |
 | `Nuitka-Inclusion:WARNING: Not allowed to include module 'imageio.testing' due to ... 'not follow to'` | 全平台 | 移除 `--nofollow-import-to=imageio.testing`。它跟 `--include-package=imageio` 衝突（package 想全收、nofollow 想排除）。只 `--nofollow-import-to=pytest` 即可擋下真正肥的依賴；`imageio/testing.py` 本身只有 20 行，編進 bundle 無害 |
 | `patchelf not found` | Linux | 裝 `patchelf`（§1.3） |
 | `Could not load the Qt platform plugin "xcb"` | Linux | 缺 `libxkbcommon` 或 `xcb-util-cursor` 家族（§1.3） |

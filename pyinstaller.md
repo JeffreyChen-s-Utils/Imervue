@@ -245,13 +245,13 @@ xcrun stapler staple dist/Imervue.app
 
 ## 3. 使用 auto-py-to-exe（僅 Windows，GUI 方式）
 
-專案內已附帶設定檔 `exe/auto_py_to_exe_config.json`：
+專案內已附帶設定檔 `packaging/auto_py_to_exe_config.json`：
 
 ```bat
 auto-py-to-exe
 ```
 
-1. `Settings` → `Import Config From JSON File` → 選擇 `exe/auto_py_to_exe_config.json`
+1. `Settings` → `Import Config From JSON File` → 選擇 `packaging/auto_py_to_exe_config.json`
 2. 調整 `Script Location` 為本機 `Imervue\__main__.py` 絕對路徑
 3. Additional Files 加入：
    - `Imervue\multi_language` → `Imervue\multi_language`
