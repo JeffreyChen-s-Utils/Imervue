@@ -99,6 +99,8 @@ python -m nuitka ^
   --noinclude-data-files=*.pth ^
   --noinclude-data-files=*.safetensors ^
   --noinclude-data-files=*.gguf ^
+  --noinclude-data-files=exe/*.log ^
+  --noinclude-data-files=exe/*.json ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
@@ -135,6 +137,8 @@ python -m nuitka `
   --noinclude-data-files=*.pth `
   --noinclude-data-files=*.safetensors `
   --noinclude-data-files=*.gguf `
+  --noinclude-data-files=exe/*.log `
+  --noinclude-data-files=exe/*.json `
   --include-data-dir=exe=exe `
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md `
   --include-data-files=LICENSE=LICENSE `
@@ -153,7 +157,7 @@ python -m nuitka `
 **一行版（任何 shell 都能用，最保險）**：
 
 ```
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --noinclude-data-files=plugins/*/models/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --nofollow-import-to=rembg --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --noinclude-data-files=plugins/*/models/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --noinclude-data-files=exe/*.log --noinclude-data-files=exe/*.json --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --nofollow-import-to=rembg --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
 ```
 
 產物：`build_nuitka\Imervue.dist\Imervue.exe`（standalone）或 `build_nuitka\Imervue.exe`（onefile）。
@@ -193,6 +197,8 @@ python -m nuitka \
   --noinclude-data-files=*.pth \
   --noinclude-data-files=*.safetensors \
   --noinclude-data-files=*.gguf \
+  --noinclude-data-files=exe/*.log \
+  --noinclude-data-files=exe/*.json \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
@@ -237,6 +243,8 @@ python -m nuitka \
   --noinclude-data-files=*.pth \
   --noinclude-data-files=*.safetensors \
   --noinclude-data-files=*.gguf \
+  --noinclude-data-files=exe/*.log \
+  --noinclude-data-files=exe/*.json \
   --include-data-dir=exe=exe \
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md \
   --include-data-files=LICENSE=LICENSE \
@@ -314,6 +322,7 @@ xcrun stapler staple build_nuitka/Imervue.app
   ```
   擋住 `pytest` 與 `doctest` 本身即可，runtime 不會走到。**不要**多加 `--nofollow-import-to=imageio.testing` 或 `--nofollow-import-to=imageio.plugins._tifffile`：它們會跟 `--include-package=imageio` 打架，噴 `Nuitka-Inclusion:WARNING: Not allowed to include module ... due to ... 'not follow to'`。那幾個檔案本身都不大，編進 bundle 無害。
 - `defusedxml`：`Imervue/image/xmp_sidecar.py` 用 `defusedxml` 做 XMP 的安全 XML 解析（bandit `B405`–`B411`）。Nuitka 的靜態 import 分析會自動順著 `from defusedxml import ElementTree as DefusedET` 把它收進來，不需要 `--include-package=defusedxml`。**但 venv 必須先 `pip install defusedxml`**——requirements.txt 已加入這條依賴，缺了的話 frozen 產物會在讀寫 XMP sidecar 時直接 crash。
+- `--noinclude-data-files=exe/*.log`、`--noinclude-data-files=exe/*.json`：`exe/` 資料夾本意只放打包資源（`Imervue.ico`、`start_Imervue.py`），但開發期容易不小心把 `auto_py_to_exe_config.json`（auto-py-to-exe 的 GUI 設定檔，已移到 `packaging/`）或 plugin 執行殘留的 `*.log` 丟進去，而 `--include-data-dir=exe=exe` 會把整個資料夾鏡射進產物，讓無關檔案流到發佈品裡。這兩條防禦性過濾保證即使 `exe/` 又被污染，Nuitka 也不會收進去。驗證：打包後 `dir /s build_nuitka\*.log build_nuitka\*.json`（Windows）或 `find build_nuitka -name '*.log' -o -name '*.json'`（Linux / macOS）在 `exe/` 路徑下應該無輸出。
 - `--noinclude-data-files=plugins/*/models/*` 與各 ML 副檔名（`.onnx` / `.pt` / `.pth` / `.safetensors` / `.gguf`）：把 **ML 權重徹底排除在產物之外**。
   - `plugins/object_splitter/models/isnet-*.onnx` 兩顆加起來 ~340 MB，打包進去會讓安裝檔異常肥大。
   - 走 `rembg.new_session()` 時會用 `U2NET_HOME` 環境變數指向的目錄自動下載缺失的模型；`object_splitter` 把這變數設成 `<plugin>/models/`，所以第一次用會下載、之後快取。
@@ -346,6 +355,8 @@ python -m nuitka ^
   --noinclude-data-files=*.pth ^
   --noinclude-data-files=*.safetensors ^
   --noinclude-data-files=*.gguf ^
+  --noinclude-data-files=exe/*.log ^
+  --noinclude-data-files=exe/*.json ^
   --include-data-dir=exe=exe ^
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
   --include-data-files=LICENSE=LICENSE ^
@@ -386,6 +397,8 @@ COMMON_ARGS=(
   --noinclude-data-files=*.pth
   --noinclude-data-files=*.safetensors
   --noinclude-data-files=*.gguf
+  --noinclude-data-files=exe/*.log
+  --noinclude-data-files=exe/*.json
   --include-data-dir=exe=exe
   --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md
   --include-data-files=LICENSE=LICENSE
