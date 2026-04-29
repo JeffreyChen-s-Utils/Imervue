@@ -1244,4 +1244,8 @@ korean_word_dict = {
     # 테마 선택
     "preferences_theme_label": "테마:",
     "preferences_theme_hint": "테마를 완전히 적용하려면 재시작이 필요합니다.",
+    # 지원 보고서
+    "error_report_action": "지원 번들 생성…",
+    "error_report_done": "지원 번들을 {path}에 저장했습니다",
+    "error_report_failed": "생성에 실패했습니다",
 }

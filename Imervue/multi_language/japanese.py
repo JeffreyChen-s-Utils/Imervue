@@ -1250,4 +1250,8 @@ japanese_word_dict = {
     # テーマ選択
     "preferences_theme_label": "テーマ:",
     "preferences_theme_hint": "テーマを完全に反映するには再起動が必要です。",
+    # サポートレポート
+    "error_report_action": "サポート用バンドルを生成…",
+    "error_report_done": "サポートバンドルを {path} に保存しました",
+    "error_report_failed": "生成に失敗しました",
 }

@@ -1239,4 +1239,8 @@ chinese_word_dict = {
     # 主题切换
     "preferences_theme_label": "主题：",
     "preferences_theme_hint": "切换主题后重新启动才会完全应用。",
+    # 故障报告
+    "error_report_action": "生成支持反馈压缩包…",
+    "error_report_done": "支持反馈已保存至 {path}",
+    "error_report_failed": "生成失败",
 }

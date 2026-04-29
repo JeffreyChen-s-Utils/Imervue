@@ -204,6 +204,14 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
     cheat_sheet_action.triggered.connect(
         lambda: _export_cheat_sheet(ui_we_want_to_set))
 
+    error_report_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get(
+            "error_report_action", "Generate Support Bundle…",
+        )
+    )
+    error_report_action.triggered.connect(
+        lambda: _generate_error_report(ui_we_want_to_set))
+
     return tip_menu
 
 
@@ -215,6 +223,27 @@ def _show_dialog(ui: ImervueMainWindow):
 def _show_whats_new(ui: ImervueMainWindow) -> None:
     from Imervue.gui.whats_new_dialog import open_whats_new_dialog
     open_whats_new_dialog(parent=ui)
+
+
+def _generate_error_report(ui: ImervueMainWindow) -> None:
+    from Imervue.system.error_report import build_report
+
+    lang = language_wrapper.language_word_dict
+    try:
+        path = build_report()
+    except Exception as exc:
+        if hasattr(ui, "toast"):
+            ui.toast.error(
+                f"{lang.get('error_report_failed', 'Report failed')}: {exc}",
+            )
+        return
+    if hasattr(ui, "toast"):
+        ui.toast.info(
+            lang.get(
+                "error_report_done",
+                "Support bundle saved to {path}",
+            ).format(path=path),
+        )
 
 
 def _export_cheat_sheet(ui: ImervueMainWindow) -> None:

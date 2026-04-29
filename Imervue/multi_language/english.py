@@ -1265,4 +1265,8 @@ english_word_dict = {
     # Theme picker
     "preferences_theme_label": "Theme:",
     "preferences_theme_hint": "Restart required for the new theme to fully apply.",
+    # Error report bundle
+    "error_report_action": "Generate Support Bundle…",
+    "error_report_done": "Support bundle saved to {path}",
+    "error_report_failed": "Report failed",
 }

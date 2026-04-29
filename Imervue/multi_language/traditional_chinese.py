@@ -1238,4 +1238,8 @@ traditional_chinese_word_dict = {
     # 主題切換
     "preferences_theme_label": "主題：",
     "preferences_theme_hint": "切換主題後重新啟動才會完全套用。",
+    # 支援回報
+    "error_report_action": "產生支援回報壓縮檔…",
+    "error_report_done": "支援回報已存到 {path}",
+    "error_report_failed": "回報產生失敗",
 }
