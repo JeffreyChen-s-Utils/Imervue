@@ -116,6 +116,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_split_toning(ui))
     _add_action(sub, lang, "masks_title", "Local Adjustment Masks",
                 lambda: _open_masks(ui))
+    _add_action(sub, lang, "layers_title", "Layers",
+                lambda: _open_layers(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -283,6 +285,31 @@ def _open_tone_curve(ui: ImervueMainWindow):
 def _open_lut(ui: ImervueMainWindow):
     from Imervue.gui.lut_dialog import open_lut
     open_lut(ui.viewer)
+
+
+def _open_layers(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.layers_dialog import open_layers_dialog
+    from Imervue.image.recipe import Recipe
+    from Imervue.image.recipe_store import recipe_store
+    viewer = ui.viewer
+    images = getattr(viewer.model, "images", [])
+    idx = getattr(viewer, "current_index", -1)
+    if not (0 <= idx < len(images)):
+        return
+    path = images[idx]
+    recipe = recipe_store.get_for_path(path) or Recipe()
+    new_layers = open_layers_dialog(recipe, parent=ui)
+    if new_layers is None:
+        return
+    new_recipe = Recipe(
+        **{f.name: getattr(recipe, f.name) for f in recipe.__dataclass_fields__.values()}
+    )
+    new_recipe.extra = dict(recipe.extra)
+    new_recipe.extra["layers"] = new_layers
+    recipe_store.set_for_path(path, new_recipe)
+    hook = getattr(viewer, "reload_current_image_with_recipe", None)
+    if callable(hook):
+        hook(path)
 
 
 def _open_virtual_copies(ui: ImervueMainWindow):
