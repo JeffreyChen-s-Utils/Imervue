@@ -1241,4 +1241,7 @@ korean_word_dict = {
     "cheat_sheet_export": "치트 시트 내보내기(PDF)…",
     "cheat_sheet_done": "치트 시트를 {path}에 저장했습니다",
     "cheat_sheet_failed": "내보내기에 실패했습니다",
+    # 테마 선택
+    "preferences_theme_label": "테마:",
+    "preferences_theme_hint": "테마를 완전히 적용하려면 재시작이 필요합니다.",
 }

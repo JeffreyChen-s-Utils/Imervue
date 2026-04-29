@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -25,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.themes import DEFAULT_THEME_NAME, list_themes
 from Imervue.system.ui_scale import (
     UI_SCALE_DEFAULT_PERCENT,
     UI_SCALE_MAX_PERCENT,
@@ -58,6 +60,7 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addLayout(self._build_vram_form())
         layout.addLayout(self._build_ui_scale_form())
+        layout.addLayout(self._build_theme_form())
         layout.addStretch(1)
         layout.addWidget(self._build_button_box())
 
@@ -132,6 +135,30 @@ class PreferencesDialog(QDialog):
         form.addRow(hint)
         return form
 
+    def _build_theme_form(self) -> QFormLayout:
+        lang = language_wrapper.language_word_dict
+        form = QFormLayout()
+
+        self._theme_combo = QComboBox()
+        current = str(user_setting_dict.get("theme", DEFAULT_THEME_NAME))
+        for theme in list_themes():
+            self._theme_combo.addItem(theme.label, userData=theme.name)
+            if theme.name == current:
+                self._theme_combo.setCurrentIndex(self._theme_combo.count() - 1)
+
+        hint = QLabel(
+            lang.get(
+                "preferences_theme_hint",
+                "Restart required for the new theme to fully apply.",
+            )
+        )
+        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setWordWrap(True)
+
+        form.addRow(lang.get("preferences_theme_label", "Theme:"), self._theme_combo)
+        form.addRow(hint)
+        return form
+
     def _build_button_box(self) -> QDialogButtonBox:
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -151,6 +178,7 @@ class PreferencesDialog(QDialog):
         user_setting_dict["vram_limit_auto"] = bool(self._auto_vram.isChecked())
         user_setting_dict["vram_limit_mb"] = int(self._vram_spin.value())
         user_setting_dict["ui_scale_percent"] = int(self._ui_scale_spin.value())
+        user_setting_dict["theme"] = str(self._theme_combo.currentData())
         schedule_save()
         self.accept()
 

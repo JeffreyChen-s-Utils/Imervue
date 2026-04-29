@@ -1247,4 +1247,7 @@ japanese_word_dict = {
     "cheat_sheet_export": "チートシートを書き出し（PDF）…",
     "cheat_sheet_done": "チートシートを {path} に保存しました",
     "cheat_sheet_failed": "書き出しに失敗しました",
+    # テーマ選択
+    "preferences_theme_label": "テーマ:",
+    "preferences_theme_hint": "テーマを完全に反映するには再起動が必要です。",
 }

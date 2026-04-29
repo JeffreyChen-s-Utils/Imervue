@@ -1262,4 +1262,7 @@ english_word_dict = {
     "cheat_sheet_export": "Export Cheat Sheet (PDF)…",
     "cheat_sheet_done": "Cheat sheet saved to {path}",
     "cheat_sheet_failed": "Export failed",
+    # Theme picker
+    "preferences_theme_label": "Theme:",
+    "preferences_theme_hint": "Restart required for the new theme to fully apply.",
 }

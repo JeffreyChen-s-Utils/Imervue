@@ -1235,4 +1235,7 @@ traditional_chinese_word_dict = {
     "cheat_sheet_export": "匯出快捷鍵小抄（PDF）…",
     "cheat_sheet_done": "快捷鍵小抄已存到 {path}",
     "cheat_sheet_failed": "匯出失敗",
+    # 主題切換
+    "preferences_theme_label": "主題：",
+    "preferences_theme_hint": "切換主題後重新啟動才會完全套用。",
 }

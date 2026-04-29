@@ -1236,4 +1236,7 @@ chinese_word_dict = {
     "cheat_sheet_export": "导出快捷键小抄（PDF）…",
     "cheat_sheet_done": "快捷键小抄已保存至 {path}",
     "cheat_sheet_failed": "导出失败",
+    # 主题切换
+    "preferences_theme_label": "主题：",
+    "preferences_theme_hint": "切换主题后重新启动才会完全应用。",
 }
