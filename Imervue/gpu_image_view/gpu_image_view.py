@@ -29,7 +29,53 @@ if TYPE_CHECKING:
 import numpy as np
 import os
 from collections import OrderedDict
-from OpenGL.GL import *  # noqa: F401, F403  NOSONAR  OpenGL uses hundreds of constants
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_CLAMP_TO_EDGE,
+    GL_COLOR_BUFFER_BIT,
+    GL_LINEAR,
+    GL_LINES,
+    GL_LINE_LOOP,
+    GL_MODELVIEW,
+    GL_NO_ERROR,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_PROJECTION,
+    GL_QUADS,
+    GL_RGBA,
+    GL_SRC_ALPHA,
+    GL_TEXTURE_2D,
+    GL_TEXTURE_MAG_FILTER,
+    GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T,
+    GL_TRIANGLE_FAN,
+    GL_UNPACK_ALIGNMENT,
+    GL_UNSIGNED_BYTE,
+    glBegin,
+    glBindTexture,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glColor4f,
+    glDeleteTextures,
+    glDisable,
+    glEnable,
+    glEnd,
+    glGenTextures,
+    glGetError,
+    glGetIntegerv,
+    glLineWidth,
+    glLoadIdentity,
+    glMatrixMode,
+    glOrtho,
+    glPixelStorei,
+    glScalef,
+    glTexImage2D,
+    glTexParameteri,
+    glTranslatef,
+    glVertex2f,
+    glViewport,
+)
 from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
 from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -45,6 +91,17 @@ _PREFETCH_MAX = _PREFETCH_RANGE * 2 + 1
 
 _FONT_SEGOE_UI = "Segoe UI"
 _FONT_CONSOLAS = "Consolas"
+
+
+def _format_file_size(path: str) -> str:
+    """Return a human-readable size for ``path``, or "" if unavailable."""
+    try:
+        size_bytes = os.path.getsize(path)
+    except OSError:
+        return ""
+    if size_bytes >= 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    return f"{size_bytes / 1024:.1f} KB"
 
 
 class GPUImageView(QOpenGLWidget):
@@ -271,34 +328,8 @@ class GPUImageView(QOpenGLWidget):
         if self._apply_user_vram_override(_log):
             return
 
-        total_kb = 0
-        try:
-            # NVX_gpu_memory_info — NVIDIA cards
-            val = glGetIntegerv(0x9048)
-            if isinstance(val, (list, tuple)) and val:
-                total_kb = int(val[0])
-            elif val is not None:
-                total_kb = int(val)
-        except Exception:
-            total_kb = 0
-
-        if total_kb <= 0:
-            try:
-                # ATI_meminfo — AMD cards (returns 4 ints; first is total free)
-                val = glGetIntegerv(0x87FC)
-                if isinstance(val, (list, tuple)) and val:
-                    total_kb = int(val[0])
-            except Exception:
-                total_kb = 0
-
-        # Clear any GL error left by the probes above — neither extension is
-        # guaranteed to exist, and we don't want a GL_INVALID_ENUM lingering
-        # into the next real draw call.
-        with contextlib.suppress(Exception):
-            # Drain the GL error queue — body intentionally empty since
-            # glGetError has the side-effect of clearing the flag.
-            while glGetError() != GL_NO_ERROR:  # noqa: S108
-                continue
+        total_kb = self._probe_vendor_vram_kb()
+        self._drain_gl_error_queue()
 
         if total_kb <= 0:
             _log.info(
@@ -333,6 +364,34 @@ class GPUImageView(QOpenGLWidget):
             f"User-configured VRAM tile cache limit: {override // (1024 * 1024)} MB"
         )
         return True
+
+    def _probe_vendor_vram_kb(self) -> int:
+        """Try NVX (NVIDIA) then ATI (AMD) VRAM probes, return KB or 0."""
+        # NVIDIA: GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX
+        kb = self._probe_gl_integer(0x9048)
+        if kb > 0:
+            return kb
+        # AMD: TEXTURE_FREE_MEMORY_ATI (4-int vector, take total free pool)
+        return self._probe_gl_integer(0x87FC)
+
+    @staticmethod
+    def _probe_gl_integer(enum: int) -> int:
+        """Read an integer (or first element of a vector) from glGetIntegerv."""
+        try:
+            val = glGetIntegerv(enum)
+        except Exception:
+            return 0
+        if isinstance(val, (list, tuple)):
+            return int(val[0]) if val else 0
+        return int(val) if val is not None else 0
+
+    @staticmethod
+    def _drain_gl_error_queue() -> None:
+        """Clear any GL error left by extension probes that aren't supported."""
+        with contextlib.suppress(Exception):
+            # glGetError has the side-effect of clearing the flag.
+            while glGetError() != GL_NO_ERROR:  # noqa: S108
+                continue
 
     def resizeGL(self, w, h):
         dpr = self.devicePixelRatio()
@@ -694,25 +753,33 @@ class GPUImageView(QOpenGLWidget):
     def _collect_overlay_layers(self) -> list:
         """Return active overlay layers in draw order. Each entry is a
         callable painter -> None or a list of such callables."""
-        zoom_active = (not self.tile_grid_mode) and self.deep_zoom
-        anim_active = self._animation and self._animation.is_animated
+        zoom_active = bool((not self.tile_grid_mode) and self.deep_zoom)
+        anim_active = bool(self._animation and self._animation.is_animated)
         pixel_active = zoom_active and self._pixel_view and self.zoom >= 4.0
+
+        # Table-driven dispatch flattens what was a deeply-nested if-chain.
+        # Each tuple = (predicate_value, painter or [painters]).
+        layer_table: list[tuple[bool, object]] = [
+            (
+                self.tile_grid_mode and bool(self.tile_rects),
+                [self._draw_tile_labels, self._draw_tile_badges,
+                 self._draw_tile_placeholders],
+            ),
+            (zoom_active, self._draw_zoom_indicator),
+            (zoom_active and self._show_histogram, self._draw_histogram),
+            (anim_active, self._draw_anim_indicator),
+            (zoom_active and self._show_osd, self._draw_osd),
+            (self._show_debug_hud, self._draw_debug_hud),
+            (pixel_active, self._draw_pixel_view),
+        ]
         candidates: list = []
-        if self.tile_grid_mode and self.tile_rects:
-            candidates += [self._draw_tile_labels, self._draw_tile_badges,
-                           self._draw_tile_placeholders]
-        if zoom_active:
-            candidates.append(self._draw_zoom_indicator)
-        if zoom_active and self._show_histogram:
-            candidates.append(self._draw_histogram)
-        if anim_active:
-            candidates.append(self._draw_anim_indicator)
-        if zoom_active and self._show_osd:
-            candidates.append(self._draw_osd)
-        if self._show_debug_hud:
-            candidates.append(self._draw_debug_hud)
-        if pixel_active:
-            candidates.append(self._draw_pixel_view)
+        for active, painter in layer_table:
+            if not active:
+                continue
+            if isinstance(painter, list):
+                candidates += painter
+            else:
+                candidates.append(painter)
         return candidates
 
     def _paint_overlay(self, painter: QPainter):
@@ -760,17 +827,10 @@ class GPUImageView(QOpenGLWidget):
     def _draw_tile_badges(self, painter: QPainter):
         """在每個縮圖角落繪製評分/收藏/書籤/色彩標籤徽章."""
         from Imervue.user_settings.user_setting_dict import user_setting_dict
-        from Imervue.user_settings.bookmark import is_bookmarked
-        from Imervue.user_settings.color_labels import COLOR_RGB, _store as _color_store
+        from Imervue.user_settings.color_labels import _store as _color_store
 
         ratings = user_setting_dict.get("image_ratings", {}) or {}
-        favs = user_setting_dict.get("image_favorites", set())
-        if not isinstance(favs, set):
-            # settings may have been serialized as list
-            try:
-                favs = set(favs)
-            except TypeError:
-                favs = set()
+        favs = self._badge_favorites_set()
         color_store = _color_store()
 
         font = QFont(_FONT_SEGOE_UI)
@@ -779,40 +839,63 @@ class GPUImageView(QOpenGLWidget):
         painter.setFont(font)
 
         for x0, y0, x1, y1, path in self.tile_rects:
-            # Left edge: colour label strip (6 px wide)
             color_name = color_store.get(path)
-            if color_name and color_name in COLOR_RGB:
-                r, g, b = COLOR_RGB[color_name]
-                painter.fillRect(
-                    int(x0), int(y0), 6, int(y1 - y0),
-                    QColor(r, g, b, 230),
-                )
+            self._paint_color_strip(painter, x0, y0, y1, color_name)
+            self._paint_favorite_badge(painter, x0, y0, path in favs, color_name)
+            self._paint_bookmark_badge(painter, x0, y0, x1, path)
+            self._paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
 
-            # Top-left: favorite heart — nudged right to dodge the colour strip
-            if path in favs:
-                offset = 10 if color_name else 4
-                painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18,
-                                 QColor(0, 0, 0, 140))
-                painter.setPen(QColor(255, 90, 120))
-                painter.drawText(int(x0 + offset + 2), int(y0 + 18), "\u2665")
+    @staticmethod
+    def _badge_favorites_set() -> set:
+        """Read favorites from settings, tolerating list/set serialisation."""
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        favs = user_setting_dict.get("image_favorites", set())
+        if isinstance(favs, set):
+            return favs
+        try:
+            return set(favs)
+        except TypeError:
+            return set()
 
-            # Top-right: bookmark
-            if is_bookmarked(path):
-                painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18,
-                                 QColor(0, 0, 0, 140))
-                painter.setPen(QColor(255, 210, 80))
-                painter.drawText(int(x1 - 20), int(y0 + 18), "\u2605")
+    @staticmethod
+    def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:
+        """Left-edge 6 px colour-label strip - skipped when no label is set."""
+        from Imervue.user_settings.color_labels import COLOR_RGB
+        if not color_name or color_name not in COLOR_RGB:
+            return
+        r, g, b = COLOR_RGB[color_name]
+        painter.fillRect(int(x0), int(y0), 6, int(y1 - y0), QColor(r, g, b, 230))
 
-            # Bottom-left: star rating
-            rating = ratings.get(path, 0)
-            if rating and rating > 0:
-                badge_text = "\u2605" * int(rating)
-                fm = painter.fontMetrics()
-                tw = fm.horizontalAdvance(badge_text)
-                painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18,
-                                 QColor(0, 0, 0, 140))
-                painter.setPen(QColor(255, 210, 80))
-                painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
+    @staticmethod
+    def _paint_favorite_badge(painter, x0, y0, is_fav: bool, color_name) -> None:
+        if not is_fav:
+            return
+        offset = 10 if color_name else 4
+        painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18,
+                         QColor(0, 0, 0, 140))
+        painter.setPen(QColor(255, 90, 120))
+        painter.drawText(int(x0 + offset + 2), int(y0 + 18), "\u2665")
+
+    @staticmethod
+    def _paint_bookmark_badge(painter, x0, y0, x1, path: str) -> None:
+        from Imervue.user_settings.bookmark import is_bookmarked
+        if not is_bookmarked(path):
+            return
+        painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
+        painter.setPen(QColor(255, 210, 80))
+        painter.drawText(int(x1 - 20), int(y0 + 18), "\u2605")
+
+    @staticmethod
+    def _paint_rating_badge(painter, x0, y1, rating: int) -> None:
+        if not rating or rating <= 0:
+            return
+        badge_text = "\u2605" * int(rating)
+        fm = painter.fontMetrics()
+        tw = fm.horizontalAdvance(badge_text)
+        painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18,
+                         QColor(0, 0, 0, 140))
+        painter.setPen(QColor(255, 210, 80))
+        painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
 
     def _draw_tile_placeholders(self, painter: QPainter):
         """Draw a subtle spinner-like dot pattern on unloaded tile slots.
@@ -1159,50 +1242,44 @@ class GPUImageView(QOpenGLWidget):
         idx = self.current_index
 
         if not self.deep_zoom or not images or idx >= len(images):
-            # Tile grid / no image — only index text is meaningful
-            if not images:
-                mw.clear_status_info()
-                return
-            index_text = (
-                f"{idx + 1}/{len(images)}" if self.deep_zoom
-                else f"— / {len(images)}"
-            )
-            mw.update_status_info(
-                index=index_text,
-                resolution="", size="", zoom="", cursor="",
-            )
+            self._update_status_info_no_image(mw, images, idx)
             return
 
         path = images[idx]
         base = self.deep_zoom.levels[0]
         h, w = base.shape[:2]
 
-        try:
-            size_bytes = os.path.getsize(path)
-            if size_bytes >= 1024 * 1024:
-                size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
-            else:
-                size_str = f"{size_bytes / 1024:.1f} KB"
-        except OSError:
-            size_str = ""
-
-        cursor_str = ""
-        if self._hover_image_xy is not None:
-            cx, cy = self._hover_image_xy
-            if 0 <= cx < w and 0 <= cy < h:
-                cursor_str = f"x={cx}, y={cy}"
-
         from Imervue.user_settings.color_labels import get_color_label
-        color_label = get_color_label(path) or ""
-
         mw.update_status_info(
             index=f"{idx + 1}/{len(images)}",
             resolution=f"{w}×{h}",
-            size=size_str,
+            size=_format_file_size(path),
             zoom=f"{self.zoom * 100:.0f}%",
-            cursor=cursor_str,
-            label=color_label,
+            cursor=self._format_cursor(w, h),
+            label=get_color_label(path) or "",
         )
+
+    def _update_status_info_no_image(self, mw, images: list[str], idx: int) -> None:
+        """Status-bar update path for tile-grid / unloaded-image states."""
+        if not images:
+            mw.clear_status_info()
+            return
+        index_text = (
+            f"{idx + 1}/{len(images)}" if self.deep_zoom
+            else f"— / {len(images)}"
+        )
+        mw.update_status_info(
+            index=index_text,
+            resolution="", size="", zoom="", cursor="",
+        )
+
+    def _format_cursor(self, w: int, h: int) -> str:
+        if self._hover_image_xy is None:
+            return ""
+        cx, cy = self._hover_image_xy
+        if 0 <= cx < w and 0 <= cy < h:
+            return f"x={cx}, y={cy}"
+        return ""
 
     # ---------------------------
     # Fit to Window
@@ -1269,18 +1346,30 @@ class GPUImageView(QOpenGLWidget):
         clipboard = QApplication.clipboard()
         qimg = clipboard.image()
         if qimg.isNull():
-            # 嘗試從剪貼簿取得檔案路徑
-            mime = clipboard.mimeData()
-            if mime and mime.hasUrls():
-                for url in mime.urls():
-                    p = url.toLocalFile()
-                    if p and Path(p).is_file():
-                        from Imervue.gpu_image_view.images.image_loader import open_path
-                        open_path(main_gui=self, path=p)
-                        return
+            self._open_clipboard_url_if_any(clipboard)
             return
 
-        # 將剪貼簿圖片存檔到目前資料夾
+        folder = self._resolve_paste_target_folder()
+        if folder is None:
+            return
+
+        save_path = self._save_clipboard_image(qimg, folder)
+        self._load_pasted_image(save_path)
+
+    def _open_clipboard_url_if_any(self, clipboard) -> None:
+        """If the clipboard holds a file URL, open it in the viewer."""
+        mime = clipboard.mimeData()
+        if not (mime and mime.hasUrls()):
+            return
+        for url in mime.urls():
+            p = url.toLocalFile()
+            if p and Path(p).is_file():
+                from Imervue.gpu_image_view.images.image_loader import open_path
+                open_path(main_gui=self, path=p)
+                return
+
+    def _resolve_paste_target_folder(self) -> str | None:
+        """Pick the folder where a pasted clipboard image should land."""
         images = self.model.images
         if images:
             folder = str(Path(images[0]).parent)
@@ -1288,15 +1377,20 @@ class GPUImageView(QOpenGLWidget):
             from Imervue.user_settings.user_setting_dict import user_setting_dict
             folder = user_setting_dict.get("user_last_folder", "")
         if not folder or not Path(folder).is_dir():
-            return
+            return None
+        return folder
 
-        # 產生唯一檔名
+    def _save_clipboard_image(self, qimg, folder: str) -> str:
+        """Persist ``qimg`` under ``folder`` with a timestamped name."""
         import time
         name = f"pasted_{int(time.time())}.png"
         save_path = str(Path(folder) / name)
         qimg.save(save_path, "PNG")
+        return save_path
 
-        # 加入 model 並載入
+    def _load_pasted_image(self, save_path: str) -> None:
+        """Insert the saved file into the model and open it in the viewer."""
+        images = self.model.images
         if save_path not in images:
             images.append(save_path)
             images.sort(key=lambda p: os.path.basename(p).lower())
@@ -1305,7 +1399,7 @@ class GPUImageView(QOpenGLWidget):
         open_path(main_gui=self, path=save_path)
 
         if hasattr(self.main_window, 'toast'):
-            self.main_window.toast.info(f"Pasted: {name}")
+            self.main_window.toast.info(f"Pasted: {Path(save_path).name}")
 
     # ===========================
     # 載入管理
@@ -1314,36 +1408,46 @@ class GPUImageView(QOpenGLWidget):
         """VRAM 超出上限時淘汰不在視窗內的紋理（在 paint 前呼叫）"""
         if self._vram_usage <= self._vram_limit:
             return
-        # 收集目前可見的 path
-        visible = set()
+        visible = self._compute_visible_tile_paths()
+        self._evict_invisible_tile_textures(visible)
+
+    def _evict_base_tile_size(self) -> int:
+        """Return the tile-grid cell base size for visibility computation."""
+        if self.model.images and self.thumbnail_size is not None:
+            return self.thumbnail_size
+        if self.tile_cache:
+            return next(iter(self.tile_cache.values())).shape[1]
+        return 256
+
+    def _compute_visible_tile_paths(self) -> set[str]:
+        """Return the subset of cached tiles whose rect intersects the viewport."""
         images = self.model.images
-        if images and self.thumbnail_size is not None:
-            base_tile = self.thumbnail_size
-        elif self.tile_cache:
-            first_img = next(iter(self.tile_cache.values()))
-            base_tile = first_img.shape[1]
-        else:
-            base_tile = 256
+        base_tile = self._evict_base_tile_size()
         scaled_tile = base_tile * self.tile_scale
-        pad = self.tile_padding
-        cell = scaled_tile + pad
+        cell = scaled_tile + self.tile_padding
         cols = max(1, int(self.width() // cell))
+        vw, vh = self.width(), self.height()
+
+        visible: set[str] = set()
         for i, p in enumerate(images):
             if p not in self.tile_cache:
                 continue
-            row = i // cols
-            col = i % cols
+            row, col = divmod(i, cols)
             x0 = col * cell + self.grid_offset_x
             y0 = row * cell + self.grid_offset_y
             img = self.tile_cache[p]
             x1 = x0 + img.shape[1] * self.tile_scale
             y1 = y0 + img.shape[0] * self.tile_scale
-            if x1 >= 0 and x0 <= self.width() and y1 >= 0 and y0 <= self.height():
+            if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
                 visible.add(p)
-        # 淘汰不可見的紋理 — list() required because we mutate the dict inside the loop.
+        return visible
+
+    def _evict_invisible_tile_textures(self, visible: set[str]) -> None:
+        """Delete GPU textures for paths not in ``visible`` until under VRAM cap."""
+        # list() required because we mutate the dict inside the loop.
         for p in list(self.tile_textures):  # noqa: S7504
             if self._vram_usage <= self._vram_limit:
-                break
+                return
             if p not in visible:
                 glDeleteTextures([self.tile_textures.pop(p)])
                 self._vram_usage -= self._tile_tex_sizes.pop(p, 0)
@@ -1687,8 +1791,14 @@ class GPUImageView(QOpenGLWidget):
     # 隨機圖片 (X)
     # ---------------------------
     def jump_to_random_image(self) -> None:
-        """Jump to a random image in the current list, avoiding re-pick if possible."""
-        import random
+        """Jump to a random image in the current list, avoiding re-pick if possible.
+
+        Uses ``random.choice`` deliberately — this is a UI navigation feature
+        (the X-key shortcut "show me a random photo"), not a security-sensitive
+        operation. There is no token / nonce / cryptographic context here, so
+        an unpredictable PRNG is unnecessary and would only add overhead.
+        """
+        import random  # nosec B311  # NOSONAR S2245 UI navigation, not security-sensitive
         images = self.model.images
         if not images:
             return
@@ -1697,7 +1807,7 @@ class GPUImageView(QOpenGLWidget):
             self.load_deep_zoom_image(images[0])
             return
         choices = [i for i in range(len(images)) if i != self.current_index]
-        idx = random.choice(choices)
+        idx = random.choice(choices)  # nosec B311  # NOSONAR S2245 UI navigation, not security-sensitive
         self.current_index = idx
         self.tile_grid_mode = False
         self.load_deep_zoom_image(images[idx])
@@ -1828,8 +1938,14 @@ class GPUImageView(QOpenGLWidget):
         images = self.model.images
         if not images:
             return
+        needed = self._compute_prefetch_targets(images)
+        with QMutexLocker(self._prefetch_mutex):
+            self._cancel_outdated_prefetch_workers(needed)
+            self._evict_outdated_prefetch_cache(needed)
+            self._spawn_prefetch_workers(needed)
 
-        # 計算需要預載的路徑集合
+    def _compute_prefetch_targets(self, images: list[str]) -> set[str]:
+        """Return the set of paths within ±_PREFETCH_RANGE of current_index."""
         needed: set[str] = set()
         for offset in range(-_PREFETCH_RANGE, _PREFETCH_RANGE + 1):
             if offset == 0:
@@ -1837,27 +1953,29 @@ class GPUImageView(QOpenGLWidget):
             idx = self.current_index + offset
             if 0 <= idx < len(images):
                 needed.add(images[idx])
+        return needed
 
-        with QMutexLocker(self._prefetch_mutex):
-            # 取消不再需要的 worker — list() required: we mutate _prefetch_workers in-loop.
-            for path in list(self._prefetch_workers):  # noqa: S7504
-                if path not in needed:
-                    self._prefetch_workers.pop(path).abort()
+    def _cancel_outdated_prefetch_workers(self, needed: set[str]) -> None:
+        # list() required: we mutate _prefetch_workers in-loop.
+        for path in list(self._prefetch_workers):  # noqa: S7504
+            if path not in needed:
+                self._prefetch_workers.pop(path).abort()
 
-            # 淘汰不在範圍內的快取 — list() required: we del from _prefetch_cache in-loop.
-            for path in list(self._prefetch_cache):  # noqa: S7504
-                if path not in needed:
-                    del self._prefetch_cache[path]
+    def _evict_outdated_prefetch_cache(self, needed: set[str]) -> None:
+        # list() required: we del from _prefetch_cache in-loop.
+        for path in list(self._prefetch_cache):  # noqa: S7504
+            if path not in needed:
+                del self._prefetch_cache[path]
 
-            # 對需要且尚未載入/正在載入的路徑啟動 worker
-            from Imervue.image.recipe_store import recipe_store
-            for path in needed:
-                if path in self._prefetch_cache or path in self._prefetch_workers:
-                    continue
-                worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
-                worker.signals.finished.connect(self._on_prefetch_loaded)
-                self._prefetch_workers[path] = worker
-                self.thread_pool.start(worker)
+    def _spawn_prefetch_workers(self, needed: set[str]) -> None:
+        from Imervue.image.recipe_store import recipe_store
+        for path in needed:
+            if path in self._prefetch_cache or path in self._prefetch_workers:
+                continue
+            worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
+            worker.signals.finished.connect(self._on_prefetch_loaded)
+            self._prefetch_workers[path] = worker
+            self.thread_pool.start(worker)
 
     def _on_prefetch_loaded(self, dzi, path):
         """預載 worker 完成回調"""
@@ -2138,33 +2256,48 @@ class GPUImageView(QOpenGLWidget):
 
     def _handle_arrow_keys(self, key, modifiers, shift) -> bool:
         ctrl = modifiers & Qt.KeyboardModifier.ControlModifier
-        if ctrl and shift and key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
-            if key == Qt.Key.Key_Right:
-                switch_to_next_folder(main_gui=self)
-            else:
-                switch_to_previous_folder(main_gui=self)
+        if ctrl and shift and self._handle_folder_jump(key):
             return True
-
-        step = self.thumbnail_size or 1024
-        move_step = int(step / 2) if shift else step
         if self.tile_grid_mode:
-            if key == Qt.Key.Key_Up:
-                self.grid_offset_y += move_step
-            elif key == Qt.Key.Key_Down:
-                self.grid_offset_y -= move_step
-            elif key == Qt.Key.Key_Left:
-                self.grid_offset_x += move_step
-            elif key == Qt.Key.Key_Right:
-                self.grid_offset_x -= move_step
-            self.update()
+            self._scroll_grid_by_arrow(key, shift)
             return True
         if self.deep_zoom:
-            if key == Qt.Key.Key_Right:
-                switch_to_next_image(main_gui=self)
-                return True
-            if key == Qt.Key.Key_Left:
-                switch_to_previous_image(main_gui=self)
-                return True
+            return self._switch_image_by_arrow(key)
+        return False
+
+    def _handle_folder_jump(self, key) -> bool:
+        """Ctrl+Shift+Left/Right → jump to sibling folder. Returns True on hit."""
+        if key == Qt.Key.Key_Right:
+            switch_to_next_folder(main_gui=self)
+            return True
+        if key == Qt.Key.Key_Left:
+            switch_to_previous_folder(main_gui=self)
+            return True
+        return False
+
+    def _scroll_grid_by_arrow(self, key, shift) -> None:
+        """Translate arrow keys into tile-grid pan deltas."""
+        step = self.thumbnail_size or 1024
+        move_step = int(step / 2) if shift else step
+        deltas = {
+            Qt.Key.Key_Up: (0, move_step),
+            Qt.Key.Key_Down: (0, -move_step),
+            Qt.Key.Key_Left: (move_step, 0),
+            Qt.Key.Key_Right: (-move_step, 0),
+        }
+        dx, dy = deltas.get(key, (0, 0))
+        self.grid_offset_x += dx
+        self.grid_offset_y += dy
+        self.update()
+
+    def _switch_image_by_arrow(self, key) -> bool:
+        """Left / Right → previous / next image in deep zoom. Returns True on hit."""
+        if key == Qt.Key.Key_Right:
+            switch_to_next_image(main_gui=self)
+            return True
+        if key == Qt.Key.Key_Left:
+            switch_to_previous_image(main_gui=self)
+            return True
         return False
 
     def keyPressEvent(self, event):
@@ -2286,40 +2419,56 @@ class GPUImageView(QOpenGLWidget):
 
     def _dispatch_toggle_action(self, action: str, modifiers) -> bool:
         """View-mode toggles: theater, pixel_view, split, dual, multi-monitor, color."""
-        if action == "theater":
-            if hasattr(self.main_window, "toggle_theater_mode"):
-                self.main_window.toggle_theater_mode()
-            return True
-        if action == "pixel_view":
-            if self.deep_zoom:
-                self._pixel_view = not self._pixel_view
-                if self._pixel_view:
-                    self._toast("pixel_view_hint",
-                                "Pixel view — zoom in to ≥400% to see grid")
-                self.update()
-            return True
-        if action == "split_view":
-            if hasattr(self.main_window, "activate_dual_view"):
-                self.main_window.activate_dual_view("split")
-            return True
-        if action == "dual_page":
-            if hasattr(self.main_window, "activate_dual_view"):
-                mode = ("manga_rtl"
-                        if modifiers & Qt.KeyboardModifier.ControlModifier
-                        else "manga")
-                self.main_window.activate_dual_view(mode)
-            return True
-        if action == "multi_monitor":
-            if hasattr(self.main_window, "toggle_multi_monitor_window"):
-                self.main_window.toggle_multi_monitor_window()
-            return True
-        if action == "color_mode_cycle":
-            self.renderer.color_mode = (self.renderer.color_mode + 1) % 4
-            idx = self.renderer.color_mode
-            self._toast(self._COLOR_MODE_KEYS[idx], self._COLOR_MODE_NAMES[idx])
-            self.update()
-            return True
-        return False
+        # Lookup table flattens what was a long if/elif chain. Each handler
+        # is a bound method; some accept ``modifiers`` for context-aware modes.
+        toggle_handlers = {
+            "theater": self._toggle_theater_mode,
+            "pixel_view": self._toggle_pixel_view,
+            "split_view": self._toggle_split_view,
+            "dual_page": lambda: self._toggle_dual_page(modifiers),
+            "multi_monitor": self._toggle_multi_monitor,
+            "color_mode_cycle": self._cycle_color_mode,
+        }
+        handler = toggle_handlers.get(action)
+        if handler is None:
+            return False
+        handler()
+        return True
+
+    def _toggle_theater_mode(self) -> None:
+        if hasattr(self.main_window, "toggle_theater_mode"):
+            self.main_window.toggle_theater_mode()
+
+    def _toggle_pixel_view(self) -> None:
+        if not self.deep_zoom:
+            return
+        self._pixel_view = not self._pixel_view
+        if self._pixel_view:
+            self._toast("pixel_view_hint",
+                        "Pixel view — zoom in to ≥400% to see grid")
+        self.update()
+
+    def _toggle_split_view(self) -> None:
+        if hasattr(self.main_window, "activate_dual_view"):
+            self.main_window.activate_dual_view("split")
+
+    def _toggle_dual_page(self, modifiers) -> None:
+        if not hasattr(self.main_window, "activate_dual_view"):
+            return
+        mode = ("manga_rtl"
+                if modifiers & Qt.KeyboardModifier.ControlModifier
+                else "manga")
+        self.main_window.activate_dual_view(mode)
+
+    def _toggle_multi_monitor(self) -> None:
+        if hasattr(self.main_window, "toggle_multi_monitor_window"):
+            self.main_window.toggle_multi_monitor_window()
+
+    def _cycle_color_mode(self) -> None:
+        self.renderer.color_mode = (self.renderer.color_mode + 1) % 4
+        idx = self.renderer.color_mode
+        self._toast(self._COLOR_MODE_KEYS[idx], self._COLOR_MODE_NAMES[idx])
+        self.update()
 
     def _dispatch_culling_action(self, action: str) -> bool:
         mapping = {"cull_pick": "pick", "cull_reject": "reject",

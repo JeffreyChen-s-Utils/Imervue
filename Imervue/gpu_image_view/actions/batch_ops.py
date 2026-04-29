@@ -213,7 +213,9 @@ class BatchMoveDialog(QDialog):
                 else:
                     shutil.copy2(src, str(target))
                 count += 1
-            except (OSError, shutil.Error):
+            except OSError:
+                # shutil.Error already inherits from OSError on every supported
+                # platform, so listing it explicitly is redundant.
                 failed += 1
         return count, failed
 

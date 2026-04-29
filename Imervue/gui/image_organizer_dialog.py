@@ -229,7 +229,8 @@ class _OrganizerWorker(QThread):
             else:
                 shutil.copy2(src, dest)
             return True
-        except (OSError, shutil.Error):
+        except OSError:
+            # shutil.Error inherits from OSError, so the bare OSError catches both.
             logger.exception("Failed to %s %s", "move" if self._move else "copy", src)
             return False
 

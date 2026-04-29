@@ -14,8 +14,9 @@ from Imervue.plugin import pip_installer, plugin_downloader
 
 
 # The non-https URLs below are intentional test inputs — the whole point of
-# the test suite is to prove the guard rejects them. NOSONAR markers keep
-# SonarCloud's python:S5332 ("clear-text protocol") from flagging them.
+# the test suite is to prove the guard rejects them. Inline suppression
+# markers keep SonarCloud's python:S5332 ("clear-text protocol") from
+# flagging the deliberate clear-text inputs.
 
 class TestPipInstallerHttpsGuard(unittest.TestCase):
     def test_rejects_http_scheme(self):

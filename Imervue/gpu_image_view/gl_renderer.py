@@ -8,7 +8,41 @@ from __future__ import annotations
 import ctypes
 import logging
 import numpy as np
-from OpenGL.GL import *  # noqa: F401, F403  NOSONAR  OpenGL uses hundreds of constants
+from OpenGL.GL import (
+    GL_ARRAY_BUFFER,
+    GL_DYNAMIC_DRAW,
+    GL_FALSE,
+    GL_FLOAT,
+    GL_FRAGMENT_SHADER,
+    GL_LINE_LOOP,
+    GL_QUADS,
+    GL_TEXTURE0,
+    GL_TEXTURE_2D,
+    GL_TRIANGLE_FAN,
+    GL_VERTEX_SHADER,
+    glActiveTexture,
+    glBegin,
+    glBindBuffer,
+    glBindTexture,
+    glBufferData,
+    glColor4f,
+    glDisableVertexAttribArray,
+    glDrawArrays,
+    glEnableVertexAttribArray,
+    glEnd,
+    glGenBuffers,
+    glGetAttribLocation,
+    glGetFloatv,
+    glGetUniformLocation,
+    glTexCoord2f,
+    glTexParameterf,
+    glUniform1i,
+    glUniform4f,
+    glUniformMatrix4fv,
+    glUseProgram,
+    glVertex2f,
+    glVertexAttribPointer,
+)
 from OpenGL.GL import shaders as gl_shaders
 
 logger = logging.getLogger("Imervue.gl_renderer")

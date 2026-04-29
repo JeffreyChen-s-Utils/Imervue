@@ -958,29 +958,42 @@ class AnnotationCanvas(QWidget):
         """
         ix, iy = self._screen_to_image(pt.x(), pt.y())
         for a in reversed(self._annotations):  # topmost first
-            tol = max(5, a.stroke_width + 2)
-            if a.kind in ("line", "arrow") and len(a.points) >= 2:
-                if _point_segment_distance(
-                    ix, iy, a.points[0], a.points[-1]
-                ) <= tol:
-                    return a
-                continue
-            if a.kind == _KIND_FREEHAND and len(a.points) >= 2:
-                hit = False
-                for p, q in zip(a.points, a.points[1:], strict=False):
-                    if _point_segment_distance(ix, iy, p, q) <= tol:
-                        hit = True
-                        break
-                if hit:
-                    return a
-                continue
-            if a.kind == _KIND_TEXT:
-                x1, y1, x2, y2 = self._text_bounding_box(a)
-            else:
-                x1, y1, x2, y2 = a.bounding_box()
-            if x1 - tol <= ix <= x2 + tol and y1 - tol <= iy <= y2 + tol:
+            if self._annotation_hits_point(a, ix, iy):
                 return a
         return None
+
+    def _annotation_hits_point(self, a: Annotation, ix: int, iy: int) -> bool:
+        """Hit-test ``a`` at image-space (ix, iy) using a kind-aware metric."""
+        tol = max(5, a.stroke_width + 2)
+        if a.kind in ("line", "arrow"):
+            return self._line_annotation_hits(a, ix, iy, tol)
+        if a.kind == _KIND_FREEHAND:
+            return self._freehand_annotation_hits(a, ix, iy, tol)
+        return self._bbox_annotation_hits(a, ix, iy, tol)
+
+    @staticmethod
+    def _line_annotation_hits(a: Annotation, ix: int, iy: int, tol: float) -> bool:
+        if len(a.points) < 2:
+            return False
+        return _point_segment_distance(ix, iy, a.points[0], a.points[-1]) <= tol
+
+    @staticmethod
+    def _freehand_annotation_hits(a: Annotation, ix: int, iy: int, tol: float) -> bool:
+        if len(a.points) < 2:
+            return False
+        return any(
+            _point_segment_distance(ix, iy, p, q) <= tol
+            for p, q in zip(a.points, a.points[1:], strict=False)
+        )
+
+    def _bbox_annotation_hits(
+        self, a: Annotation, ix: int, iy: int, tol: float,
+    ) -> bool:
+        if a.kind == _KIND_TEXT:
+            x1, y1, x2, y2 = self._text_bounding_box(a)
+        else:
+            x1, y1, x2, y2 = a.bounding_box()
+        return x1 - tol <= ix <= x2 + tol and y1 - tol <= iy <= y2 + tol
 
     # ---------- Mouse events ----------
 
