@@ -1227,4 +1227,7 @@ traditional_chinese_word_dict = {
     "layers_pick_image": "選擇影像",
     "layers_pick_lut": "選擇 LUT",
     "layers_select_hint": "選擇或新增一個圖層即可編輯。",
+    # 新功能介紹
+    "whats_new_title": "新功能介紹",
+    "whats_new_header": "上次開啟 Imervue 之後新增的功能：",
 }

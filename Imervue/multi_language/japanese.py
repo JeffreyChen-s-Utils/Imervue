@@ -1239,4 +1239,7 @@ japanese_word_dict = {
     "layers_pick_image": "画像を選択",
     "layers_pick_lut": "LUT を選択",
     "layers_select_hint": "編集するレイヤーを選択または追加してください。",
+    # 新機能
+    "whats_new_title": "新機能",
+    "whats_new_header": "前回起動時からの主な変更点：",
 }

@@ -191,9 +191,19 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
     )
     action.triggered.connect(lambda: _show_dialog(ui_we_want_to_set))
 
+    whats_new_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get("whats_new_title", "What's New")
+    )
+    whats_new_action.triggered.connect(lambda: _show_whats_new(ui_we_want_to_set))
+
     return tip_menu
 
 
 def _show_dialog(ui: ImervueMainWindow):
     dlg = ShortcutDialog(ui)
     dlg.exec()
+
+
+def _show_whats_new(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.whats_new_dialog import open_whats_new_dialog
+    open_whats_new_dialog(parent=ui)

@@ -502,6 +502,10 @@ class ImervueMainWindow(QMainWindow):
 
         _init_plugin_system_example(self)
 
+        # ===== What's New 自動彈出（升級後第一次啟動）=====
+        # 延遲到主視窗顯示後再跑,避免遮住啟動畫面
+        QTimer.singleShot(800, self._maybe_show_whats_new)
+
         # ===== 分頁快捷鍵 =====
         # Ctrl+T 新分頁 / Ctrl+W 關閉 / Ctrl+Tab 下一個 / Ctrl+Shift+Tab 上一個。
         # 模仿瀏覽器行為，註冊在 main window 範圍內。
@@ -931,6 +935,15 @@ class ImervueMainWindow(QMainWindow):
         idx = self.model.index(directory)
         if idx.isValid():
             self.tree.update(idx)
+
+    def _maybe_show_whats_new(self) -> None:
+        """Pop up the What's New dialog if the user just upgraded."""
+        try:
+            from Imervue.gui.whats_new_dialog import show_whats_new_if_upgraded
+        except ImportError:
+            return
+        with contextlib.suppress(Exception):
+            show_whats_new_if_upgraded(self)
 
     def _on_clipboard_image_captured(self, pil_image) -> None:
         """Open the annotation dialog when the clipboard monitor sees a new image."""

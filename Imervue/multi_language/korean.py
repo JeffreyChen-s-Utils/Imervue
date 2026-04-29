@@ -1233,4 +1233,7 @@ korean_word_dict = {
     "layers_pick_image": "이미지 선택",
     "layers_pick_lut": "LUT 선택",
     "layers_select_hint": "편집할 레이어를 선택하거나 추가하세요.",
+    # 새로운 기능
+    "whats_new_title": "새로운 기능",
+    "whats_new_header": "지난번 Imervue를 사용한 이후 추가된 변경사항입니다.",
 }

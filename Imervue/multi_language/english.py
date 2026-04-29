@@ -1254,4 +1254,7 @@ english_word_dict = {
     "layers_pick_image": "Choose image",
     "layers_pick_lut": "Choose LUT",
     "layers_select_hint": "Select or add a layer to edit it.",
+    # What's New
+    "whats_new_title": "What's New",
+    "whats_new_header": "Here's what changed since you last opened Imervue.",
 }
