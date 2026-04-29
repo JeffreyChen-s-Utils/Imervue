@@ -1322,4 +1322,12 @@ english_word_dict = {
     "frequency_sep_hint": "Writes <name>_low.png and <name>_high.png next to the source. Recombine via low + (high - 128).",
     "frequency_sep_done": "Layers saved: {low}, {high}",
     "frequency_sep_failed": "Failed",
+    # Smart Crop plugin
+    "smart_crop_title": "Smart Crop",
+    "smart_crop_intro": "Pick a crop suggestion to write into the image's recipe.",
+    "smart_crop_preset_free": "Free",
+    "smart_crop_preset_1:1": "Square (1:1)",
+    "smart_crop_preset_4:5": "Portrait (4:5)",
+    "smart_crop_preset_3:2": "Landscape (3:2)",
+    "smart_crop_preset_16:9": "Widescreen (16:9)",
 }

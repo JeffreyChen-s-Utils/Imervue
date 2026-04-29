@@ -1296,4 +1296,12 @@ chinese_word_dict = {
     "frequency_sep_hint": "在源文件旁写出 <名称>_low.png 与 <名称>_high.png,可在外部编辑后以 low + (high - 128) 合成。",
     "frequency_sep_done": "图层已保存：{low}, {high}",
     "frequency_sep_failed": "失败",
+    # 智能裁剪
+    "smart_crop_title": "智能裁剪",
+    "smart_crop_intro": "选择一个裁剪建议写入图片的 recipe。",
+    "smart_crop_preset_free": "原始比例",
+    "smart_crop_preset_1:1": "正方形（1:1）",
+    "smart_crop_preset_4:5": "竖幅（4:5）",
+    "smart_crop_preset_3:2": "横幅（3:2）",
+    "smart_crop_preset_16:9": "宽屏（16:9）",
 }

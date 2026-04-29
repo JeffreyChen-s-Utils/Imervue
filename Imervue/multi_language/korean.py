@@ -1301,4 +1301,12 @@ korean_word_dict = {
     "frequency_sep_hint": "원본 옆에 <이름>_low.png와 <이름>_high.png를 저장합니다. low + (high - 128)로 다시 합성할 수 있습니다.",
     "frequency_sep_done": "레이어 저장됨: {low}, {high}",
     "frequency_sep_failed": "실패",
+    # 스마트 크롭
+    "smart_crop_title": "스마트 크롭",
+    "smart_crop_intro": "크롭 제안을 선택하여 이미지의 레시피에 적용합니다.",
+    "smart_crop_preset_free": "원본 비율",
+    "smart_crop_preset_1:1": "정사각형(1:1)",
+    "smart_crop_preset_4:5": "세로형(4:5)",
+    "smart_crop_preset_3:2": "가로형(3:2)",
+    "smart_crop_preset_16:9": "와이드스크린(16:9)",
 }

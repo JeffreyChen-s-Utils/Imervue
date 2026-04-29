@@ -1295,4 +1295,12 @@ traditional_chinese_word_dict = {
     "frequency_sep_hint": "在來源檔旁寫出 <名稱>_low.png 與 <名稱>_high.png,可在外部編輯後以 low + (high - 128) 合成。",
     "frequency_sep_done": "圖層已儲存：{low}, {high}",
     "frequency_sep_failed": "失敗",
+    # 智慧裁切
+    "smart_crop_title": "智慧裁切",
+    "smart_crop_intro": "選擇一個裁切建議寫入圖片的 recipe。",
+    "smart_crop_preset_free": "原始比例",
+    "smart_crop_preset_1:1": "方形（1:1）",
+    "smart_crop_preset_4:5": "直幅（4:5）",
+    "smart_crop_preset_3:2": "橫幅（3:2）",
+    "smart_crop_preset_16:9": "寬螢幕（16:9）",
 }

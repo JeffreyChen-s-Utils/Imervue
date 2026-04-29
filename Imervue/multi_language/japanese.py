@@ -1307,4 +1307,12 @@ japanese_word_dict = {
     "frequency_sep_hint": "ソースの隣に <名前>_low.png と <名前>_high.png を書き出します。low + (high - 128) で再合成できます。",
     "frequency_sep_done": "レイヤーを保存: {low}, {high}",
     "frequency_sep_failed": "失敗",
+    # スマートクロップ
+    "smart_crop_title": "スマートクロップ",
+    "smart_crop_intro": "クロップ案を選んで画像のレシピに書き込みます。",
+    "smart_crop_preset_free": "そのまま",
+    "smart_crop_preset_1:1": "スクエア（1:1）",
+    "smart_crop_preset_4:5": "ポートレート（4:5）",
+    "smart_crop_preset_3:2": "横長（3:2）",
+    "smart_crop_preset_16:9": "ワイド（16:9）",
 }
