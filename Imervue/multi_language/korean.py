@@ -1388,4 +1388,17 @@ korean_word_dict = {
     "profiles_rename_failed": "이름을 변경할 수 없습니다(중복이거나 잘못된 이름).",
     "profiles_cannot_delete_protected": "기본 또는 현재 사용 중인 프로필은 삭제할 수 없습니다.",
     "profiles_delete_confirm": "프로필 '{name}'을(를) 영구 삭제하시겠습니까? 되돌릴 수 없습니다.",
+    # 자동 색상 보정
+    "auto_balance_title": "자동 색상 보정",
+    "auto_balance_method": "방법:",
+    "auto_balance_method_gray_world": "그레이 월드",
+    "auto_balance_method_white_patch": "화이트 패치",
+    "auto_balance_method_percentile_stretch": "오토 레벨(백분위)",
+    "auto_balance_method_simplified_retinex": "Retinex(색조 캐스트 제거)",
+    "auto_balance_intensity": "강도:",
+    "auto_balance_percentile": "클립 백분위:",
+    "auto_balance_retinex_radius": "Retinex 반경:",
+    "auto_balance_hint": "원본 옆에 <이름>_balanced.png를 저장합니다. 백분위는 '오토 레벨'에, 반경은 'Retinex'에 적용됩니다.",
+    "auto_balance_done": "{path}에 저장됨",
+    "auto_balance_failed": "색상 보정 실패",
 }

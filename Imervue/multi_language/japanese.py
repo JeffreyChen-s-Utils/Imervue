@@ -1394,4 +1394,17 @@ japanese_word_dict = {
     "profiles_rename_failed": "名前変更できません（重複または無効な名前）。",
     "profiles_cannot_delete_protected": "デフォルトまたは現在使用中のプロファイルは削除できません。",
     "profiles_delete_confirm": "「{name}」プロファイルを完全に削除しますか？取り消せません。",
+    # 自動カラーバランス
+    "auto_balance_title": "自動カラーバランス",
+    "auto_balance_method": "方式:",
+    "auto_balance_method_gray_world": "グレーワールド",
+    "auto_balance_method_white_patch": "ホワイトパッチ",
+    "auto_balance_method_percentile_stretch": "オートレベル（パーセンタイル）",
+    "auto_balance_method_simplified_retinex": "Retinex（色被り除去）",
+    "auto_balance_intensity": "強度:",
+    "auto_balance_percentile": "クリップパーセンタイル:",
+    "auto_balance_retinex_radius": "Retinex 半径:",
+    "auto_balance_hint": "ソースの隣に <名前>_balanced.png を書き出します。パーセンタイルは「オートレベル」、半径は「Retinex」に適用されます。",
+    "auto_balance_done": "保存しました: {path}",
+    "auto_balance_failed": "カラーバランス失敗",
 }

@@ -1409,4 +1409,17 @@ english_word_dict = {
     "profiles_rename_failed": "Could not rename (duplicate or invalid name).",
     "profiles_cannot_delete_protected": "You cannot delete the default or active profile.",
     "profiles_delete_confirm": "Permanently delete profile '{name}'? This cannot be undone.",
+    # Auto color balance
+    "auto_balance_title": "Auto Color Balance",
+    "auto_balance_method": "Method:",
+    "auto_balance_method_gray_world": "Gray-world",
+    "auto_balance_method_white_patch": "White-patch",
+    "auto_balance_method_percentile_stretch": "Auto-levels (percentile)",
+    "auto_balance_method_simplified_retinex": "Retinex (illumination removal)",
+    "auto_balance_intensity": "Intensity:",
+    "auto_balance_percentile": "Clip percentile:",
+    "auto_balance_retinex_radius": "Retinex radius:",
+    "auto_balance_hint": "Writes <name>_balanced.png next to the source. Percentile applies to 'Auto-levels'; radius applies to 'Retinex'.",
+    "auto_balance_done": "Saved {path}",
+    "auto_balance_failed": "Auto balance failed",
 }

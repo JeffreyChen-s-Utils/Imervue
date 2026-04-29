@@ -1383,4 +1383,17 @@ chinese_word_dict = {
     "profiles_rename_failed": "无法重命名（重复或名称无效）。",
     "profiles_cannot_delete_protected": "无法删除默认或当前使用中的配置文件。",
     "profiles_delete_confirm": "确定永久删除「{name}」配置文件？此操作无法撤销。",
+    # 自动色彩平衡
+    "auto_balance_title": "自动色彩平衡",
+    "auto_balance_method": "方法：",
+    "auto_balance_method_gray_world": "灰色世界",
+    "auto_balance_method_white_patch": "白色贴片",
+    "auto_balance_method_percentile_stretch": "自动色阶（百分位）",
+    "auto_balance_method_simplified_retinex": "Retinex（去除色偏）",
+    "auto_balance_intensity": "强度：",
+    "auto_balance_percentile": "裁切百分位：",
+    "auto_balance_retinex_radius": "Retinex 半径：",
+    "auto_balance_hint": "在源文件旁写出 <名称>_balanced.png。百分位用于「自动色阶」,半径用于「Retinex」。",
+    "auto_balance_done": "已保存 {path}",
+    "auto_balance_failed": "色彩平衡失败",
 }

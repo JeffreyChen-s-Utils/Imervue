@@ -1382,4 +1382,17 @@ traditional_chinese_word_dict = {
     "profiles_rename_failed": "無法重新命名（重複或名稱無效）。",
     "profiles_cannot_delete_protected": "無法刪除預設或目前使用中的設定檔。",
     "profiles_delete_confirm": "確定永久刪除「{name}」設定檔？此動作無法還原。",
+    # 自動色彩平衡
+    "auto_balance_title": "自動色彩平衡",
+    "auto_balance_method": "方法：",
+    "auto_balance_method_gray_world": "灰色世界",
+    "auto_balance_method_white_patch": "白色貼片",
+    "auto_balance_method_percentile_stretch": "自動色階（百分位）",
+    "auto_balance_method_simplified_retinex": "Retinex（去除色偏）",
+    "auto_balance_intensity": "強度：",
+    "auto_balance_percentile": "裁切百分位：",
+    "auto_balance_retinex_radius": "Retinex 半徑：",
+    "auto_balance_hint": "在來源檔旁寫出 <名稱>_balanced.png。百分位用於「自動色階」,半徑用於「Retinex」。",
+    "auto_balance_done": "已儲存 {path}",
+    "auto_balance_failed": "色彩平衡失敗",
 }
