@@ -310,6 +310,20 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
 _LSB_SCRAMBLE_RATE = 0.5
 
 
+def _make_unseeded_rng():
+    """Return a numpy Generator with OS-entropy seeding only.
+
+    Wrapped in its own function so the security rationale (seed must NOT be
+    predictable, or the LSB scramble is reversible) lives in one place and
+    the inline call site stays free of suppression noise. ``numpy`` is
+    imported lazily here to match the rest of this module — image-sanitize
+    is the only feature that pulls numpy in, and we don't want every dialog
+    open to pay the import cost.
+    """
+    import numpy as np
+    return np.random.default_rng()  # noqa: NPY002  # NOSONAR S6709 unpredictable seed required
+
+
 def _scramble_lsb(img: Image.Image) -> Image.Image:
     """Sparsely randomise the LSB of every 8-bit channel.
 
@@ -327,9 +341,9 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
     if img.mode not in ("L", "LA", _MODE_RGB, _MODE_RGBA):
         img = img.convert(_MODE_RGBA if "A" in img.mode else _MODE_RGB)
     arr = np.array(img, copy=True)
-    # Unseeded on purpose: if an attacker can predict the scramble pattern
-    # they can recover the hidden payload, which defeats the entire feature.
-    rng = np.random.default_rng()  # noqa: NPY002  NOSONAR  unpredictability is the feature
+    # Unseeded on purpose: predictable seed → reversible scramble → defeats
+    # the feature. The helper centralises the suppression comments.
+    rng = _make_unseeded_rng()
     scramble_mask = rng.random(size=arr.shape, dtype=np.float32) < _LSB_SCRAMBLE_RATE
     noise = rng.integers(0, 2, size=arr.shape, dtype=arr.dtype)
     # Where mask is True use random LSB, otherwise keep the original LSB.
