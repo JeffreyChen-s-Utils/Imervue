@@ -137,6 +137,7 @@ class Recipe:
             or _enabled_flag(self.extra.get("channel_mixer"))
             or _enabled_flag(self.extra.get("gradient_map"))
             or _enabled_flag(self.extra.get("film_grain"))
+            or _enabled_flag(self.extra.get("lens_flare"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -308,6 +309,7 @@ class Recipe:
         arr = _apply_channel_mixer(arr, recipe)
         arr = _apply_gradient_map(arr, recipe)
         arr = _apply_threshold_posterize(arr, recipe)
+        arr = _apply_lens_flare(arr, recipe)
         arr = _apply_film_grain(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
@@ -411,6 +413,22 @@ def _apply_threshold_posterize(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     except (ValueError, TypeError) as err:
         logger.warning("Threshold/posterize apply failed: %s", err)
     return arr
+
+
+def _apply_lens_flare(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply procedural lens flare from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.lens_flare import LensFlareOptions, apply_lens_flare
+    except ImportError:
+        return arr
+    options = LensFlareOptions.from_dict(recipe.extra.get("lens_flare"))
+    try:
+        return apply_lens_flare(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Lens flare apply failed: %s", err)
+        return arr
 
 
 def _apply_film_grain(arr: np.ndarray, recipe: Recipe) -> np.ndarray:

@@ -1308,4 +1308,12 @@ english_word_dict = {
     "film_grain_size": "Grain size:",
     "film_grain_seed": "Seed:",
     "film_grain_seed_auto": "Auto",
+    # Lens flare
+    "lens_flare_title": "Lens Flare",
+    "lens_flare_enable": "Enable lens flare",
+    "lens_flare_x": "Position X (0–100%):",
+    "lens_flare_y": "Position Y (0–100%):",
+    "lens_flare_intensity": "Intensity:",
+    "lens_flare_size": "Halo size:",
+    "lens_flare_colour": "Colour:",
 }

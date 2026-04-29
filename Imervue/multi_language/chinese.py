@@ -1282,4 +1282,12 @@ chinese_word_dict = {
     "film_grain_size": "颗粒大小：",
     "film_grain_seed": "种子：",
     "film_grain_seed_auto": "自动",
+    # 镜头光晕
+    "lens_flare_title": "镜头光晕",
+    "lens_flare_enable": "启用镜头光晕",
+    "lens_flare_x": "位置 X（0–100%）：",
+    "lens_flare_y": "位置 Y（0–100%）：",
+    "lens_flare_intensity": "强度：",
+    "lens_flare_size": "光晕大小：",
+    "lens_flare_colour": "颜色：",
 }

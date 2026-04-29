@@ -1287,4 +1287,12 @@ korean_word_dict = {
     "film_grain_size": "그레인 크기:",
     "film_grain_seed": "시드:",
     "film_grain_seed_auto": "자동",
+    # 렌즈 플레어
+    "lens_flare_title": "렌즈 플레어",
+    "lens_flare_enable": "렌즈 플레어 활성화",
+    "lens_flare_x": "X 위치(0–100%):",
+    "lens_flare_y": "Y 위치(0–100%):",
+    "lens_flare_intensity": "강도:",
+    "lens_flare_size": "후광 크기:",
+    "lens_flare_colour": "색상:",
 }

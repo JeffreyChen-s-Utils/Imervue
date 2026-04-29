@@ -1293,4 +1293,12 @@ japanese_word_dict = {
     "film_grain_size": "粒子サイズ:",
     "film_grain_seed": "シード:",
     "film_grain_seed_auto": "自動",
+    # レンズフレア
+    "lens_flare_title": "レンズフレア",
+    "lens_flare_enable": "レンズフレアを有効にする",
+    "lens_flare_x": "位置 X（0–100%）:",
+    "lens_flare_y": "位置 Y（0–100%）:",
+    "lens_flare_intensity": "強度:",
+    "lens_flare_size": "ハロサイズ:",
+    "lens_flare_colour": "色:",
 }

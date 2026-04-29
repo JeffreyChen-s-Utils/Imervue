@@ -1281,4 +1281,12 @@ traditional_chinese_word_dict = {
     "film_grain_size": "顆粒大小：",
     "film_grain_seed": "種子：",
     "film_grain_seed_auto": "自動",
+    # 鏡頭光暈
+    "lens_flare_title": "鏡頭光暈",
+    "lens_flare_enable": "啟用鏡頭光暈",
+    "lens_flare_x": "位置 X（0–100%）：",
+    "lens_flare_y": "位置 Y（0–100%）：",
+    "lens_flare_intensity": "強度：",
+    "lens_flare_size": "光暈大小：",
+    "lens_flare_colour": "顏色：",
 }
