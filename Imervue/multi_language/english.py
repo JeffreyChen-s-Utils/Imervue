@@ -1257,4 +1257,9 @@ english_word_dict = {
     # What's New
     "whats_new_title": "What's New",
     "whats_new_header": "Here's what changed since you last opened Imervue.",
+    # Cheat sheet PDF
+    "cheat_sheet_title": "Imervue Keyboard Shortcuts",
+    "cheat_sheet_export": "Export Cheat Sheet (PDF)…",
+    "cheat_sheet_done": "Cheat sheet saved to {path}",
+    "cheat_sheet_failed": "Export failed",
 }

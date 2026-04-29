@@ -1236,4 +1236,9 @@ korean_word_dict = {
     # 새로운 기능
     "whats_new_title": "새로운 기능",
     "whats_new_header": "지난번 Imervue를 사용한 이후 추가된 변경사항입니다.",
+    # 단축키 치트 시트 PDF
+    "cheat_sheet_title": "Imervue 키보드 단축키",
+    "cheat_sheet_export": "치트 시트 내보내기(PDF)…",
+    "cheat_sheet_done": "치트 시트를 {path}에 저장했습니다",
+    "cheat_sheet_failed": "내보내기에 실패했습니다",
 }

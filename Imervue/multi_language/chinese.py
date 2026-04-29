@@ -1231,4 +1231,9 @@ chinese_word_dict = {
     # 新功能介绍
     "whats_new_title": "新功能介绍",
     "whats_new_header": "上次打开 Imervue 之后新增的功能：",
+    # 快捷键小抄 PDF
+    "cheat_sheet_title": "Imervue 快捷键一览",
+    "cheat_sheet_export": "导出快捷键小抄（PDF）…",
+    "cheat_sheet_done": "快捷键小抄已保存至 {path}",
+    "cheat_sheet_failed": "导出失败",
 }

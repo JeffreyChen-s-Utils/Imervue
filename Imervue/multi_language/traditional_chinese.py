@@ -1230,4 +1230,9 @@ traditional_chinese_word_dict = {
     # 新功能介紹
     "whats_new_title": "新功能介紹",
     "whats_new_header": "上次開啟 Imervue 之後新增的功能：",
+    # 快捷鍵小抄 PDF
+    "cheat_sheet_title": "Imervue 快捷鍵一覽",
+    "cheat_sheet_export": "匯出快捷鍵小抄（PDF）…",
+    "cheat_sheet_done": "快捷鍵小抄已存到 {path}",
+    "cheat_sheet_failed": "匯出失敗",
 }

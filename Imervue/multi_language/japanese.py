@@ -1242,4 +1242,9 @@ japanese_word_dict = {
     # 新機能
     "whats_new_title": "新機能",
     "whats_new_header": "前回起動時からの主な変更点：",
+    # チートシート PDF
+    "cheat_sheet_title": "Imervue キーボードショートカット",
+    "cheat_sheet_export": "チートシートを書き出し（PDF）…",
+    "cheat_sheet_done": "チートシートを {path} に保存しました",
+    "cheat_sheet_failed": "書き出しに失敗しました",
 }
