@@ -116,6 +116,10 @@ mccabe.max-complexity = 16
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "PLR2004", "PLR0913", "PLR0915", "E501"]
 "Imervue/multi_language/*.py" = ["E501"]
+# Plugins ship their translations via get_translations(); long-localised
+# strings (CJK + Korean) routinely exceed 100 chars and splitting them
+# mid-character hurts readability.
+"plugins/**/*.py" = ["E501"]
 "Imervue/gpu_image_view/gl_renderer.py" = ["E501", "F403", "F405", "E702"]  # OpenGL.GL wildcard + GLSL strings + glTexCoord/glVertex pairs
 "Imervue/gpu_image_view/gpu_image_view.py" = ["F403", "F405", "C901"]  # OpenGL.GL wildcard + Qt keyPressEvent dispatcher
 "Imervue/gui/annotation_dialog.py" = ["C901"]        # mouseMoveEvent Qt event state machine

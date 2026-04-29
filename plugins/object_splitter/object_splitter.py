@@ -23,10 +23,7 @@ from PySide6.QtWidgets import (
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.app_paths import (
-    is_frozen as _is_frozen,
-    frozen_site_packages as _frozen_site_packages,
-)
+from Imervue.system.app_paths import is_frozen as _is_frozen
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -109,11 +106,7 @@ class _SubprocessWorker(QThread):
                 if line.startswith("STEP:"):
                     parts = line[5:].split(":", 2)
                     if len(parts) == 3:
-                        try:
-                            self.step.emit(
-                                int(parts[0]), int(parts[1]), parts[2])
-                        except (ValueError, RuntimeError):
-                            pass
+                        self.step.emit(int(parts[0]), int(parts[1]), parts[2])
                 elif line.startswith("OK:"):
                     self.result_ready.emit(True, line[3:])
                     proc.wait()
@@ -407,10 +400,6 @@ class ObjectSplitterDialog(QDialog):
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():
-            try:
-                self._worker.disconnect()
-            except (RuntimeError, TypeError):
-                pass
             self._worker.wait(5000)
             self._worker = None
         super().closeEvent(event)
@@ -457,7 +446,8 @@ class ObjectSplitterPlugin(ImervuePlugin):
         python = _find_python()
         if not python:
             return None
-        site_pkgs = str(_frozen_site_packages())
+        from Imervue.system.app_paths import app_dir
+        site_pkgs = str(app_dir() / "lib" / "site-packages")
         return python, site_pkgs
 
     def _open_dialog(self):

@@ -52,6 +52,55 @@ class AIStyleTransferPlugin(ImervuePlugin):
     plugin_description = "ONNX fast neural style transfer (Johnson et al.)."
     plugin_author = "Imervue"
 
+    def get_translations(self) -> dict[str, dict[str, str]]:
+        return {
+            "English": {
+                "style_transfer_title": "AI Style Transfer",
+                "style_transfer_model": "Style model:",
+                "style_transfer_intensity": "Intensity:",
+                "style_transfer_no_models": "(no models found)",
+                "style_transfer_hint": "Drop ONNX style models into plugins/ai_style_transfer/models/. Output goes to <name>_styled.png.",
+                "style_transfer_done": "Saved {path}",
+                "style_transfer_failed": "Style transfer failed",
+            },
+            "Traditional_Chinese": {
+                "style_transfer_title": "AI 風格轉換",
+                "style_transfer_model": "風格模型：",
+                "style_transfer_intensity": "強度：",
+                "style_transfer_no_models": "（找不到模型）",
+                "style_transfer_hint": "將 ONNX 風格模型放入 plugins/ai_style_transfer/models/。輸出寫到 <名稱>_styled.png。",
+                "style_transfer_done": "已儲存 {path}",
+                "style_transfer_failed": "風格轉換失敗",
+            },
+            "Chinese": {
+                "style_transfer_title": "AI 风格迁移",
+                "style_transfer_model": "风格模型：",
+                "style_transfer_intensity": "强度：",
+                "style_transfer_no_models": "（未找到模型）",
+                "style_transfer_hint": "将 ONNX 风格模型放入 plugins/ai_style_transfer/models/。输出保存到 <名称>_styled.png。",
+                "style_transfer_done": "已保存 {path}",
+                "style_transfer_failed": "风格迁移失败",
+            },
+            "Japanese": {
+                "style_transfer_title": "AI スタイル転送",
+                "style_transfer_model": "スタイルモデル:",
+                "style_transfer_intensity": "強度:",
+                "style_transfer_no_models": "（モデルが見つかりません）",
+                "style_transfer_hint": "ONNX スタイルモデルを plugins/ai_style_transfer/models/ に配置してください。出力は <名前>_styled.png に書き出されます。",
+                "style_transfer_done": "保存しました: {path}",
+                "style_transfer_failed": "スタイル転送失敗",
+            },
+            "Korean": {
+                "style_transfer_title": "AI 스타일 전이",
+                "style_transfer_model": "스타일 모델:",
+                "style_transfer_intensity": "강도:",
+                "style_transfer_no_models": "(모델을 찾을 수 없음)",
+                "style_transfer_hint": "ONNX 스타일 모델을 plugins/ai_style_transfer/models/에 배치하세요. 출력은 <이름>_styled.png에 저장됩니다.",
+                "style_transfer_done": "{path}에 저장됨",
+                "style_transfer_failed": "스타일 전이 실패",
+            },
+        }
+
     def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
         lang = language_wrapper.language_word_dict
         for action in menu_bar.actions():

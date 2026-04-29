@@ -56,6 +56,70 @@ class AIDenoisePlugin(ImervuePlugin):
     plugin_description = "Bilateral filter or ONNX neural denoise."
     plugin_author = "Imervue"
 
+    def get_translations(self) -> dict[str, dict[str, str]]:
+        return {
+            "English": {
+                "ai_denoise_title": "AI Denoise",
+                "ai_denoise_method": "Method:",
+                "ai_denoise_method_bilateral": "Bilateral (fast)",
+                "ai_denoise_method_neural": "Neural",
+                "ai_denoise_radius": "Spatial radius:",
+                "ai_denoise_sigma": "Intensity sigma:",
+                "ai_denoise_blend": "Blend with original:",
+                "ai_denoise_hint": "Drop ONNX denoise models into plugins/ai_denoise/models/. Output goes to <name>_denoised.png.",
+                "ai_denoise_done": "Saved {path}",
+                "ai_denoise_failed": "Denoise failed",
+            },
+            "Traditional_Chinese": {
+                "ai_denoise_title": "AI 降噪",
+                "ai_denoise_method": "方法：",
+                "ai_denoise_method_bilateral": "雙邊濾波（快速）",
+                "ai_denoise_method_neural": "神經網路",
+                "ai_denoise_radius": "空間半徑：",
+                "ai_denoise_sigma": "強度 sigma：",
+                "ai_denoise_blend": "與原圖混合：",
+                "ai_denoise_hint": "將 ONNX 降噪模型放入 plugins/ai_denoise/models/。輸出寫到 <名稱>_denoised.png。",
+                "ai_denoise_done": "已儲存 {path}",
+                "ai_denoise_failed": "降噪失敗",
+            },
+            "Chinese": {
+                "ai_denoise_title": "AI 降噪",
+                "ai_denoise_method": "方法：",
+                "ai_denoise_method_bilateral": "双边滤波（快速）",
+                "ai_denoise_method_neural": "神经网络",
+                "ai_denoise_radius": "空间半径：",
+                "ai_denoise_sigma": "强度 sigma：",
+                "ai_denoise_blend": "与原图混合：",
+                "ai_denoise_hint": "将 ONNX 降噪模型放入 plugins/ai_denoise/models/。输出保存到 <名称>_denoised.png。",
+                "ai_denoise_done": "已保存 {path}",
+                "ai_denoise_failed": "降噪失败",
+            },
+            "Japanese": {
+                "ai_denoise_title": "AI ノイズ除去",
+                "ai_denoise_method": "方式:",
+                "ai_denoise_method_bilateral": "バイラテラル（高速）",
+                "ai_denoise_method_neural": "ニューラル",
+                "ai_denoise_radius": "空間半径:",
+                "ai_denoise_sigma": "強度 sigma:",
+                "ai_denoise_blend": "オリジナルとブレンド:",
+                "ai_denoise_hint": "ONNX デノイズモデルを plugins/ai_denoise/models/ に配置してください。出力は <名前>_denoised.png に書き出されます。",
+                "ai_denoise_done": "保存しました: {path}",
+                "ai_denoise_failed": "デノイズ失敗",
+            },
+            "Korean": {
+                "ai_denoise_title": "AI 노이즈 제거",
+                "ai_denoise_method": "방법:",
+                "ai_denoise_method_bilateral": "양방향 필터(빠름)",
+                "ai_denoise_method_neural": "신경망",
+                "ai_denoise_radius": "공간 반경:",
+                "ai_denoise_sigma": "강도 sigma:",
+                "ai_denoise_blend": "원본과 혼합:",
+                "ai_denoise_hint": "ONNX 노이즈 제거 모델을 plugins/ai_denoise/models/에 배치하세요. 출력은 <이름>_denoised.png에 저장됩니다.",
+                "ai_denoise_done": "{path}에 저장됨",
+                "ai_denoise_failed": "노이즈 제거 실패",
+            },
+        }
+
     def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
         lang = language_wrapper.language_word_dict
         for action in menu_bar.actions():

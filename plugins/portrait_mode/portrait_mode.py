@@ -47,6 +47,50 @@ class PortraitModePlugin(ImervuePlugin):
     plugin_description = "Subject-isolated background blur via rembg."
     plugin_author = "Imervue"
 
+    def get_translations(self) -> dict[str, dict[str, str]]:
+        return {
+            "English": {
+                "portrait_mode_title": "Portrait Mode",
+                "portrait_mode_blur": "Blur radius:",
+                "portrait_mode_feather": "Feather radius:",
+                "portrait_mode_hint": "Writes <name>_portrait.png next to the source. Requires rembg + onnxruntime.",
+                "portrait_mode_done": "Saved {path}",
+                "portrait_mode_failed": "Portrait mode failed",
+            },
+            "Traditional_Chinese": {
+                "portrait_mode_title": "人像模式",
+                "portrait_mode_blur": "模糊半徑：",
+                "portrait_mode_feather": "羽化半徑：",
+                "portrait_mode_hint": "在來源檔旁寫出 <名稱>_portrait.png。需要 rembg 與 onnxruntime。",
+                "portrait_mode_done": "已儲存 {path}",
+                "portrait_mode_failed": "人像模式失敗",
+            },
+            "Chinese": {
+                "portrait_mode_title": "人像模式",
+                "portrait_mode_blur": "模糊半径：",
+                "portrait_mode_feather": "羽化半径：",
+                "portrait_mode_hint": "在源文件旁写出 <名称>_portrait.png。需要 rembg 与 onnxruntime。",
+                "portrait_mode_done": "已保存 {path}",
+                "portrait_mode_failed": "人像模式失败",
+            },
+            "Japanese": {
+                "portrait_mode_title": "ポートレートモード",
+                "portrait_mode_blur": "ブラー半径:",
+                "portrait_mode_feather": "フェザー半径:",
+                "portrait_mode_hint": "ソースの隣に <名前>_portrait.png を書き出します。rembg と onnxruntime が必要です。",
+                "portrait_mode_done": "保存しました: {path}",
+                "portrait_mode_failed": "ポートレートモード失敗",
+            },
+            "Korean": {
+                "portrait_mode_title": "인물 모드",
+                "portrait_mode_blur": "블러 반경:",
+                "portrait_mode_feather": "페더 반경:",
+                "portrait_mode_hint": "원본 옆에 <이름>_portrait.png를 저장합니다. rembg와 onnxruntime이 필요합니다.",
+                "portrait_mode_done": "{path}에 저장됨",
+                "portrait_mode_failed": "인물 모드 실패",
+            },
+        }
+
     def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
         lang = language_wrapper.language_word_dict
         for action in menu_bar.actions():
