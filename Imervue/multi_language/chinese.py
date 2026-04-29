@@ -1190,4 +1190,9 @@ chinese_word_dict = {
     "autostr_angle": "旋转（\u00b0）：",
     "autostr_output": "输出：",
     "autostr_apply": "应用",
+    # 偏好设置
+    "preferences_title": "偏好设置",
+    "preferences_vram_label": "GPU 图块缓存上限：",
+    "preferences_vram_auto": "自动检测 GPU",
+    "preferences_vram_hint": "GPU 查看器的图块缓存预算，重新启动后生效。",
 }

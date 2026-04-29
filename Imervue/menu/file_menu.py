@@ -123,6 +123,12 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         lang.get("shortcut_title", "Keyboard Shortcuts"))
     shortcut_action.triggered.connect(lambda: _open_shortcut_settings(ui_we_want_to_set))
 
+    # 偏好設定
+    preferences_action = file_menu.addAction(
+        lang.get("preferences_title", "Preferences"))
+    preferences_action.triggered.connect(
+        lambda: _open_preferences(ui_we_want_to_set))
+
     file_menu.addSeparator()
 
     exit_action = file_menu.addAction(lang.get("main_window_exit"))
@@ -354,6 +360,11 @@ def _unregister_assoc(ui: ImervueMainWindow):
 def _open_shortcut_settings(ui: ImervueMainWindow):
     from Imervue.gui.shortcut_settings_dialog import open_shortcut_settings
     open_shortcut_settings(ui)
+
+
+def _open_preferences(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.preferences_dialog import open_preferences_dialog
+    open_preferences_dialog(ui)
 
 
 def _save_session(ui: ImervueMainWindow) -> None:

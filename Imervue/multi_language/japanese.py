@@ -1201,4 +1201,9 @@ japanese_word_dict = {
     "autostr_angle": "回転（\u00b0）：",
     "autostr_output": "出力：",
     "autostr_apply": "適用",
+    # 環境設定
+    "preferences_title": "環境設定",
+    "preferences_vram_label": "GPU タイルキャッシュ上限：",
+    "preferences_vram_auto": "GPU から自動検出",
+    "preferences_vram_hint": "GPU ビューアのタイルキャッシュ予算。再起動が必要です。",
 }

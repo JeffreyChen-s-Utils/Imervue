@@ -1216,4 +1216,9 @@ english_word_dict = {
     "autostr_angle": "Rotation (\u00b0):",
     "autostr_output": _ENGLISH_OUTPUT_LABEL,
     "autostr_apply": "Apply",
+    # Preferences
+    "preferences_title": "Preferences",
+    "preferences_vram_label": "GPU tile-cache limit:",
+    "preferences_vram_auto": "Auto-detect from GPU",
+    "preferences_vram_hint": "Tile-cache budget for the GPU viewer. Restart required.",
 }

@@ -260,9 +260,16 @@ class GPUImageView(QOpenGLWidget):
         or any driver that doesn't expose either extension. The detected
         limit is clamped to ``[256 MB, 8 GB]`` so a bad query can't blow up
         memory or accidentally disable the cache.
+
+        A user override (Preferences > VRAM limit) takes precedence — if
+        ``vram_limit_auto`` is ``False`` in user settings the user's value
+        is used as-is and no driver probing happens.
         """
         import logging as _logging
         _log = _logging.getLogger("Imervue.vram")
+
+        if self._apply_user_vram_override(_log):
+            return
 
         total_kb = 0
         try:
@@ -300,16 +307,32 @@ class GPUImageView(QOpenGLWidget):
             )
             return
 
+        from Imervue.gpu_image_view.vram_budget import clamp_detected_bytes
         total_bytes = total_kb * 1024
-        detected = int(total_bytes * 0.4)
-        min_bytes = 256 * 1024 * 1024        # 256 MB floor
-        max_bytes = 8 * 1024 * 1024 * 1024   # 8 GB ceiling
-        detected = max(min_bytes, min(max_bytes, detected))
+        detected = clamp_detected_bytes(int(total_bytes * 0.4))
         self._vram_limit = detected
         _log.info(
             f"Detected VRAM {total_bytes // (1024 * 1024)} MB → tile cache "
             f"limit set to {detected // (1024 * 1024)} MB"
         )
+
+    def _apply_user_vram_override(self, log) -> bool:
+        """Apply a user-configured VRAM limit, returning True when honoured.
+
+        Delegates to ``vram_budget.compute_user_override_bytes`` which
+        handles the auto/explicit toggle and clamping. Returns True when
+        an override was applied (caller should skip driver probing).
+        """
+        from Imervue.gpu_image_view.vram_budget import compute_user_override_bytes
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        override = compute_user_override_bytes(user_setting_dict)
+        if override is None:
+            return False
+        self._vram_limit = override
+        log.info(
+            f"User-configured VRAM tile cache limit: {override // (1024 * 1024)} MB"
+        )
+        return True
 
     def resizeGL(self, w, h):
         dpr = self.devicePixelRatio()

@@ -1189,4 +1189,9 @@ traditional_chinese_word_dict = {
     "autostr_angle": "旋轉（\u00b0）：",
     "autostr_output": "輸出：",
     "autostr_apply": "套用",
+    # 偏好設定
+    "preferences_title": "偏好設定",
+    "preferences_vram_label": "GPU 圖塊快取上限：",
+    "preferences_vram_auto": "自動偵測 GPU",
+    "preferences_vram_hint": "GPU 檢視器的圖塊快取預算，重新啟動後生效。",
 }

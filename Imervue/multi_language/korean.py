@@ -1195,4 +1195,9 @@ korean_word_dict = {
     "autostr_angle": "회전 (\u00b0):",
     "autostr_output": "출력:",
     "autostr_apply": "적용",
+    # 환경 설정
+    "preferences_title": "환경 설정",
+    "preferences_vram_label": "GPU 타일 캐시 한도:",
+    "preferences_vram_auto": "GPU에서 자동 감지",
+    "preferences_vram_hint": "GPU 뷰어의 타일 캐시 예산. 재시작이 필요합니다.",
 }
