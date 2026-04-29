@@ -60,6 +60,14 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+
+    # 套用使用者偏好的 UI 縮放（必須在主視窗建構前完成，否則 widget 已經量好尺寸）
+    # Apply the saved UI scale percentage before any widget is laid out
+    from Imervue.user_settings.user_setting_dict import read_user_setting
+    from Imervue.system.ui_scale import load_and_apply_from_settings
+    read_user_setting()
+    load_and_apply_from_settings(app)
+
     window = ImervueMainWindow(debug=args.debug)
     # 視窗位置由 _restore_window_geometry() 在 __init__ 中自動還原
     # 首次啟動時會 showMaximized()，之後記住上次的位置/大小/螢幕

@@ -1206,4 +1206,6 @@ japanese_word_dict = {
     "preferences_vram_label": "GPU タイルキャッシュ上限：",
     "preferences_vram_auto": "GPU から自動検出",
     "preferences_vram_hint": "GPU ビューアのタイルキャッシュ予算。再起動が必要です。",
+    "preferences_ui_scale_label": "UI スケール:",
+    "preferences_ui_scale_hint": "アプリケーションフォントを調整してすべてのウィジェットを拡大／縮小します。再起動が必要です。",
 }

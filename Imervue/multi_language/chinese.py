@@ -1195,4 +1195,6 @@ chinese_word_dict = {
     "preferences_vram_label": "GPU 图块缓存上限：",
     "preferences_vram_auto": "自动检测 GPU",
     "preferences_vram_hint": "GPU 查看器的图块缓存预算，重新启动后生效。",
+    "preferences_ui_scale_label": "界面缩放：",
+    "preferences_ui_scale_hint": "通过调整应用程序字体放大或缩小所有控件，重新启动后生效。",
 }

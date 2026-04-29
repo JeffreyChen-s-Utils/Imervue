@@ -1194,4 +1194,6 @@ traditional_chinese_word_dict = {
     "preferences_vram_label": "GPU 圖塊快取上限：",
     "preferences_vram_auto": "自動偵測 GPU",
     "preferences_vram_hint": "GPU 檢視器的圖塊快取預算，重新啟動後生效。",
+    "preferences_ui_scale_label": "介面縮放：",
+    "preferences_ui_scale_hint": "藉由調整應用程式字型放大或縮小所有元件，重新啟動後生效。",
 }

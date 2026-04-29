@@ -1221,4 +1221,6 @@ english_word_dict = {
     "preferences_vram_label": "GPU tile-cache limit:",
     "preferences_vram_auto": "Auto-detect from GPU",
     "preferences_vram_hint": "Tile-cache budget for the GPU viewer. Restart required.",
+    "preferences_ui_scale_label": "UI scale:",
+    "preferences_ui_scale_hint": "Scales every widget by adjusting the application font. Restart required.",
 }
