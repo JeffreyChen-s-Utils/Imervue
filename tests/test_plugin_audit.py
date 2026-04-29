@@ -117,6 +117,7 @@ def test_known_plugins_are_present():
         "object_splitter",
         "portrait_mode",
         "safety_review",
+        "spanish_translation",
     }
     missing = expected - set(PLUGIN_NAMES)
     assert not missing, f"Expected plugins are missing: {sorted(missing)}"

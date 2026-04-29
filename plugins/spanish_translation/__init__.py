@@ -1,0 +1,3 @@
+from spanish_translation.spanish_translation_plugin import SpanishTranslationPlugin
+
+plugin_class = SpanishTranslationPlugin
