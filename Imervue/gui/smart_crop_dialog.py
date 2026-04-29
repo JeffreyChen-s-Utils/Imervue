@@ -1,10 +1,10 @@
-"""Smart Crop plugin — saliency-driven crop-rect suggestions.
+"""Smart Crop dialog — saliency-driven crop-rect suggestions.
 
 Pure-numpy heuristic; no ML model, no extra dependencies. Suggests one
 crop frame per aspect ratio (free / 1:1 / 4:5 / 3:2 / 16:9) with the
 centre of saliency mass landing on a rule-of-thirds anchor. Chosen
-crop is written into ``recipe.extra['layers']`` as a virtual rectangle
-the user can apply via Develop > Crop.
+crop is written into ``recipe.crop`` so the existing develop pipeline
+applies it non-destructively.
 """
 from __future__ import annotations
 
@@ -26,64 +26,13 @@ from PySide6.QtWidgets import (
 
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
-from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.plugin.plugin_base import ImervuePlugin
-
 from Imervue.image.saliency import CropSuggestion, suggest_crops
+from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-logger = logging.getLogger("Imervue.plugin.smart_crop")
-
-
-class SmartCropPlugin(ImervuePlugin):
-    plugin_name = "Smart Crop"
-    plugin_version = "1.0.0"
-    plugin_description = "Saliency + rule-of-thirds crop suggestions."
-    plugin_author = "Imervue"
-
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
-        lang = language_wrapper.language_word_dict
-        # Reuse the Extra Tools menu so the action sits with other crop tools.
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                # Find the "Retouch & Transform" submenu and add to it.
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "retouch_submenu", "Retouch & Transform",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("smart_crop_title", "Smart Crop")
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
-
-    def _open_dialog(self) -> None:
-        viewer = getattr(self, "viewer", None)
-        if viewer is None:
-            return
-        images = getattr(viewer.model, "images", [])
-        idx = getattr(viewer, "current_index", -1)
-        if not (0 <= idx < len(images)):
-            return
-        path = images[idx]
-        try:
-            arr = _load_rgba(path)
-        except (OSError, ValueError):
-            logger.exception("Smart crop failed to load %s", path)
-            return
-        suggestions = suggest_crops(arr)
-        SmartCropDialog(viewer, path, suggestions).exec()
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
+logger = logging.getLogger("Imervue.smart_crop_dialog")
 
 
 class SmartCropDialog(QDialog):
@@ -153,3 +102,25 @@ class SmartCropDialog(QDialog):
         if callable(hook):
             hook(self._path)
         self.accept()
+
+
+def open_smart_crop_dialog(viewer: GPUImageView) -> None:
+    images = getattr(viewer.model, "images", [])
+    idx = getattr(viewer, "current_index", -1)
+    if not (0 <= idx < len(images)):
+        return
+    path = str(images[idx])
+    try:
+        arr = _load_rgba(path)
+    except (OSError, ValueError):
+        logger.exception("Smart crop failed to load %s", path)
+        return
+    suggestions = suggest_crops(arr)
+    SmartCropDialog(viewer, path, suggestions).exec()
+
+
+def _load_rgba(path: str) -> np.ndarray:
+    img = Image.open(path)
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    return np.array(img)

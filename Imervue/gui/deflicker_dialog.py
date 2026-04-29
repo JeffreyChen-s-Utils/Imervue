@@ -1,9 +1,10 @@
-"""Deflicker plugin — luminance-normalise a folder of time-lapse frames.
+"""Deflicker dialog — luminance-normalise a folder of time-lapse frames.
 
 Pure-numpy implementation lives in ``Imervue.image.deflicker``; this
-module is just the thin Qt wrapper that gathers the user's options,
-loads each image, runs the gain pass, and writes corrected copies into
-a ``deflickered/`` subfolder so originals stay intact.
+module is the Qt front-end that gathers options, runs a background
+worker that loads each frame, applies gain correction, and writes
+corrected copies into a ``deflickered/`` subfolder so originals stay
+intact.
 """
 from __future__ import annotations
 
@@ -33,51 +34,13 @@ from Imervue.image.deflicker import (
     frame_luminance_means,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.plugin.plugin_base import ImervuePlugin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-logger = logging.getLogger("Imervue.plugin.deflicker")
+logger = logging.getLogger("Imervue.deflicker_dialog")
 
 _SUPPORTED_EXTS = (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".webp")
-
-
-class DeflickerPlugin(ImervuePlugin):
-    plugin_name = "Time-lapse Deflicker"
-    plugin_version = "1.0.0"
-    plugin_description = "Normalise per-frame luminance across a folder."
-    plugin_author = "Imervue"
-
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
-        lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "batch_submenu", "Batch",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("deflicker_title", "Deflicker (Time-lapse)"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
-
-    def _open_dialog(self) -> None:
-        viewer = getattr(self, "viewer", None)
-        if viewer is None:
-            return
-        images = list(getattr(viewer.model, "images", []))
-        if not images:
-            return
-        DeflickerDialog(viewer, images).exec()
-
-
-# ---------------------------------------------------------------------------
-# Dialog + worker thread
-# ---------------------------------------------------------------------------
 
 
 class DeflickerDialog(QDialog):
@@ -192,7 +155,6 @@ class DeflickerWorker(QThread):
                 frames.append(None)
             self.progress.emit(idx + 1)
 
-        # Compute gains over the loaded frames (skipping None entries)
         valid_frames = [f for f in frames if f is not None]
         if not valid_frames:
             self.finished_with_count.emit(0)
@@ -200,8 +162,6 @@ class DeflickerWorker(QThread):
         means = frame_luminance_means(valid_frames)
         gains = compute_gain_factors(means, self._options)
 
-        # Apply gain and write each corrected frame to ``deflickered/`` next
-        # to the source file.
         written = 0
         gain_iter = iter(gains.tolist())
         for path, frame in zip(self._paths, frames, strict=False):
@@ -221,6 +181,13 @@ class DeflickerWorker(QThread):
             except OSError:
                 logger.warning("Failed to write %s", out_path)
         self.finished_with_count.emit(written)
+
+
+def open_deflicker_dialog(viewer: GPUImageView) -> None:
+    images = list(getattr(viewer.model, "images", []))
+    if not images:
+        return
+    DeflickerDialog(viewer, images).exec()
 
 
 def _load_rgba(path: str) -> np.ndarray:

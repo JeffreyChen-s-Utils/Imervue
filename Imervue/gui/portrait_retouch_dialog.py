@@ -1,4 +1,4 @@
-"""Portrait auto-retouch plugin — skin smoothing + red-eye + eye sharpen."""
+"""Portrait auto-retouch dialog — skin smoothing + red-eye + eye sharpen."""
 from __future__ import annotations
 
 import logging
@@ -25,51 +25,13 @@ from Imervue.image.portrait_retouch import (
     auto_retouch,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.plugin.plugin_base import ImervuePlugin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-logger = logging.getLogger("Imervue.plugin.portrait_retouch")
+logger = logging.getLogger("Imervue.portrait_retouch_dialog")
 
 _PERCENT_STEPS = 100
-
-
-class PortraitRetouchPlugin(ImervuePlugin):
-    plugin_name = "Portrait Auto-Retouch"
-    plugin_version = "1.0.0"
-    plugin_description = (
-        "Skin smoothing, red-eye removal, eye sharpening — all adjustable."
-    )
-    plugin_author = "Imervue"
-
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
-        lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "retouch_submenu", "Retouch & Transform",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get(
-                                "portrait_retouch_title", "Portrait Auto-Retouch",
-                            ),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
-
-    def _open_dialog(self) -> None:
-        viewer = getattr(self, "viewer", None)
-        if viewer is None:
-            return
-        images = list(getattr(viewer.model, "images", []))
-        idx = getattr(viewer, "current_index", -1)
-        if not (0 <= idx < len(images)):
-            return
-        PortraitRetouchDialog(viewer, str(images[idx])).exec()
 
 
 class PortraitRetouchDialog(QDialog):
@@ -190,6 +152,14 @@ class PortraitRetouchDialog(QDialog):
                     "portrait_retouch_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
+
+
+def open_portrait_retouch_dialog(viewer: GPUImageView) -> None:
+    images = list(getattr(viewer.model, "images", []))
+    idx = getattr(viewer, "current_index", -1)
+    if not (0 <= idx < len(images)):
+        return
+    PortraitRetouchDialog(viewer, str(images[idx])).exec()
 
 
 def _load_rgba(path: str) -> np.ndarray:

@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.ai_colorize import (
+from ai_colorize.colorize import (
     HEURISTIC_PRESETS,
     ColorizeOptions,
     heuristic_colorize,

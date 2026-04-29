@@ -2,11 +2,38 @@
 Pytest configuration and shared fixtures for Imervue tests.
 """
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 from PIL import Image
 
 _rng = np.random.default_rng(seed=0xC0FFEE)
+
+
+# ---------------------------------------------------------------------------
+# Plugin-import bootstrap
+# ---------------------------------------------------------------------------
+# Plugin packages live under ``<repo>/plugins/<name>/`` and are NOT on the
+# default sys.path — at runtime the plugin manager prepends each plugin's
+# directory so ``__init__.py`` can do ``from <plugin>.<module> import …``.
+# Tests that exercise plugin-internal modules (e.g. ``portrait_blur`` lives
+# inside the portrait_mode plugin) need the same path injection. Doing it
+# once here at session-collect time keeps individual test modules clean.
+
+def _bootstrap_plugin_imports() -> None:
+    """Mirror what ``plugin_manager`` does at runtime — put ``plugins/`` on
+    sys.path so each plugin directory is importable as a package."""
+    plugin_root = Path(__file__).resolve().parent.parent / "plugins"
+    if not plugin_root.is_dir():
+        return
+    plugin_root_str = str(plugin_root)
+    if plugin_root_str not in sys.path:
+        sys.path.insert(0, plugin_root_str)
+
+
+_bootstrap_plugin_imports()
 
 
 # ===========================

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.image.ai_denoise import (
+from ai_denoise.denoise import (
     BilateralOptions,
     bilateral_denoise,
     onnx_denoise,

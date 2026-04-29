@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.image.portrait_blur import (
+from portrait_mode.portrait_blur import (
     BLUR_RADIUS_MAX,
     BLUR_RADIUS_MIN,
     PortraitBlurOptions,

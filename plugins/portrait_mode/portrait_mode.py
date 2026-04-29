@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.portrait_blur import (
+from portrait_mode.portrait_blur import (
     BLUR_RADIUS_MAX,
     BLUR_RADIUS_MIN,
     FEATHER_RADIUS_MAX,

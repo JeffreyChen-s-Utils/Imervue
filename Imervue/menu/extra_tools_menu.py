@@ -41,6 +41,8 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_image_organizer(ui))
     _add_action(sub, lang, "token_rename_title", "Token Batch Rename",
                 lambda: _open_token_rename(ui))
+    _add_action(sub, lang, "deflicker_title", "Deflicker (Time-lapse)",
+                lambda: _open_deflicker(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -146,6 +148,10 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_clone_stamp(ui))
     _add_action(sub, lang, "frequency_sep_title", "Frequency Separation",
                 lambda: _open_frequency_separation(ui))
+    _add_action(sub, lang, "smart_crop_title", "Smart Crop",
+                lambda: _open_smart_crop(ui))
+    _add_action(sub, lang, "portrait_retouch_title", "Portrait Auto-Retouch",
+                lambda: _open_portrait_retouch(ui))
     _add_action(sub, lang, "face_title", "Face Detection",
                 lambda: _open_face_detection(ui))
     _add_action(sub, lang, "sky_title", "Sky / Background",
@@ -336,6 +342,21 @@ def _open_frequency_separation(ui: ImervueMainWindow) -> None:
         open_frequency_separation_dialog,
     )
     open_frequency_separation_dialog(ui.viewer)
+
+
+def _open_smart_crop(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.smart_crop_dialog import open_smart_crop_dialog
+    open_smart_crop_dialog(ui.viewer)
+
+
+def _open_portrait_retouch(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.portrait_retouch_dialog import open_portrait_retouch_dialog
+    open_portrait_retouch_dialog(ui.viewer)
+
+
+def _open_deflicker(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.deflicker_dialog import open_deflicker_dialog
+    open_deflicker_dialog(ui.viewer)
 
 
 def _open_layers(ui: ImervueMainWindow) -> None:

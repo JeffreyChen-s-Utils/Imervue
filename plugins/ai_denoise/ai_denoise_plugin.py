@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.ai_denoise import (
+from ai_denoise.denoise import (
     SPATIAL_RADIUS_MAX,
     SPATIAL_RADIUS_MIN,
     BilateralOptions,
