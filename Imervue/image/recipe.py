@@ -134,6 +134,7 @@ class Recipe:
             _enabled_flag(self.extra.get("threshold"))
             or _enabled_flag(self.extra.get("posterize"))
             or _enabled_flag(self.extra.get("levels"))
+            or _enabled_flag(self.extra.get("channel_mixer"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -302,6 +303,7 @@ class Recipe:
         arr = _apply_lut(arr, recipe)
         arr = _apply_masks(arr, recipe)
         arr = _apply_levels(arr, recipe)
+        arr = _apply_channel_mixer(arr, recipe)
         arr = _apply_threshold_posterize(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
@@ -343,6 +345,25 @@ def _apply_levels(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
         return apply_levels(arr, options)
     except (ValueError, TypeError) as err:
         logger.warning("Levels apply failed: %s", err)
+        return arr
+
+
+def _apply_channel_mixer(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply channel mixer matrix from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.channel_mixer import (
+            ChannelMixerOptions,
+            apply_channel_mixer,
+        )
+    except ImportError:
+        return arr
+    options = ChannelMixerOptions.from_dict(recipe.extra.get("channel_mixer"))
+    try:
+        return apply_channel_mixer(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Channel mixer apply failed: %s", err)
         return arr
 
 

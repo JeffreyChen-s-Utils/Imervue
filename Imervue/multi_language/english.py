@@ -1281,4 +1281,12 @@ english_word_dict = {
     "levels_black": "Black point:",
     "levels_white": "White point:",
     "levels_gamma": "Gamma:",
+    # Channel mixer
+    "channel_mixer_title": "Channel Mixer",
+    "channel_mixer_enable": "Enable channel mixer",
+    "channel_mixer_monochrome": "Monochrome",
+    "channel_mixer_offset": "Offset",
+    "channel_mixer_out_red": "Red →",
+    "channel_mixer_out_green": "Green →",
+    "channel_mixer_out_blue": "Blue →",
 }

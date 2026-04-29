@@ -1255,4 +1255,12 @@ chinese_word_dict = {
     "levels_black": "黑色点：",
     "levels_white": "白色点：",
     "levels_gamma": "Gamma：",
+    # 通道混合
+    "channel_mixer_title": "通道混合器",
+    "channel_mixer_enable": "启用通道混合",
+    "channel_mixer_monochrome": "单色",
+    "channel_mixer_offset": "偏移",
+    "channel_mixer_out_red": "红 →",
+    "channel_mixer_out_green": "绿 →",
+    "channel_mixer_out_blue": "蓝 →",
 }

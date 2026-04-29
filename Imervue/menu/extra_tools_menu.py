@@ -120,6 +120,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_layers(ui))
     _add_action(sub, lang, "levels_title", "Levels",
                 lambda: _open_levels(ui))
+    _add_action(sub, lang, "channel_mixer_title", "Channel Mixer",
+                lambda: _open_channel_mixer(ui))
     _add_action(sub, lang, "posterize_title", "Threshold / Posterize",
                 lambda: _open_posterize(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
@@ -299,6 +301,11 @@ def _open_posterize(ui: ImervueMainWindow) -> None:
 def _open_levels(ui: ImervueMainWindow) -> None:
     from Imervue.gui.levels_dialog import open_levels_dialog
     open_levels_dialog(ui.viewer)
+
+
+def _open_channel_mixer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.channel_mixer_dialog import open_channel_mixer_dialog
+    open_channel_mixer_dialog(ui.viewer)
 
 
 def _open_layers(ui: ImervueMainWindow) -> None:

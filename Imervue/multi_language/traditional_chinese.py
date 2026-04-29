@@ -1254,4 +1254,12 @@ traditional_chinese_word_dict = {
     "levels_black": "黑色點：",
     "levels_white": "白色點：",
     "levels_gamma": "Gamma：",
+    # 色版混合
+    "channel_mixer_title": "色版混合器",
+    "channel_mixer_enable": "啟用色版混合",
+    "channel_mixer_monochrome": "單色",
+    "channel_mixer_offset": "偏移",
+    "channel_mixer_out_red": "紅 →",
+    "channel_mixer_out_green": "綠 →",
+    "channel_mixer_out_blue": "藍 →",
 }

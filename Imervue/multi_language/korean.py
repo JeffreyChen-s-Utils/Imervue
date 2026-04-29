@@ -1260,4 +1260,12 @@ korean_word_dict = {
     "levels_black": "검은색 포인트:",
     "levels_white": "흰색 포인트:",
     "levels_gamma": "감마:",
+    # 채널 믹서
+    "channel_mixer_title": "채널 믹서",
+    "channel_mixer_enable": "채널 믹서 활성화",
+    "channel_mixer_monochrome": "흑백",
+    "channel_mixer_offset": "오프셋",
+    "channel_mixer_out_red": "빨강 →",
+    "channel_mixer_out_green": "녹색 →",
+    "channel_mixer_out_blue": "파랑 →",
 }

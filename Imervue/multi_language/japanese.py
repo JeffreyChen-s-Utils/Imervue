@@ -1266,4 +1266,12 @@ japanese_word_dict = {
     "levels_black": "黒レベル:",
     "levels_white": "白レベル:",
     "levels_gamma": "ガンマ:",
+    # チャンネルミキサー
+    "channel_mixer_title": "チャンネルミキサー",
+    "channel_mixer_enable": "チャンネルミキサーを有効にする",
+    "channel_mixer_monochrome": "モノクロ",
+    "channel_mixer_offset": "オフセット",
+    "channel_mixer_out_red": "赤 →",
+    "channel_mixer_out_green": "緑 →",
+    "channel_mixer_out_blue": "青 →",
 }
