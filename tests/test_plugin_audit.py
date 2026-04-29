@@ -113,6 +113,7 @@ def test_known_plugins_are_present():
         "ai_background_remover",
         "ai_colorize",
         "ai_denoise",
+        "ai_smart_resize",
         "ai_style_transfer",
         "npr_filters",
         "object_splitter",

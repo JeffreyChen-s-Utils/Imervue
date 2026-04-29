@@ -966,6 +966,15 @@ spanish_word_dict.update({
     "style_transfer_hint": "Coloque modelos ONNX en plugins/ai_style_transfer/models/. La salida va a <nombre>_styled.png.",
     "style_transfer_done": "Guardado {path}",
     "style_transfer_failed": "Fallo de la transferencia de estilo",
+    # AI Smart Resize plugin
+    "smart_resize_title": "Redimensionado inteligente por IA",
+    "smart_resize_width": "Ancho objetivo (px):",
+    "smart_resize_height": "Alto objetivo (px):",
+    "smart_resize_boost": "Protección del sujeto:",
+    "smart_resize_protect_alpha": "Proteger regiones transparentes",
+    "smart_resize_hint": "Elimina o inserta costuras de baja energía. Hasta ±40 % en cada dimensión. Genera <nombre>_smart.png junto al original.",
+    "smart_resize_done": "Guardado {path}",
+    "smart_resize_failed": "Fallo del redimensionado inteligente",
     # NPR Filters plugin
     "npr_filters_title": "Filtros de estilo NPR",
     "npr_filters_style": "Estilo:",
