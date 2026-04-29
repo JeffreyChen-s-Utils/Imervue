@@ -1344,4 +1344,16 @@ korean_word_dict = {
     "ai_denoise_hint": "ONNX 노이즈 제거 모델을 plugins/ai_denoise/models/에 배치하세요. 출력은 <이름>_denoised.png에 저장됩니다.",
     "ai_denoise_done": "{path}에 저장됨",
     "ai_denoise_failed": "노이즈 제거 실패",
+    # AI 채색
+    "ai_colorize_title": "AI 채색",
+    "ai_colorize_method": "방법:",
+    "ai_colorize_method_neural": "신경망",
+    "ai_colorize_intensity": "강도:",
+    "ai_colorize_preset_sepia": "세피아",
+    "ai_colorize_preset_cool": "차가운 톤",
+    "ai_colorize_preset_warm": "따뜻한 톤",
+    "ai_colorize_preset_vintage": "빈티지",
+    "ai_colorize_hint": "ONNX 채색 모델을 plugins/ai_colorize/models/에 배치하세요. 출력은 <이름>_colorized.png에 저장됩니다.",
+    "ai_colorize_done": "{path}에 저장됨",
+    "ai_colorize_failed": "채색 실패",
 }

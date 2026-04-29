@@ -1339,4 +1339,16 @@ chinese_word_dict = {
     "ai_denoise_hint": "将 ONNX 降噪模型放入 plugins/ai_denoise/models/。输出保存到 <名称>_denoised.png。",
     "ai_denoise_done": "已保存 {path}",
     "ai_denoise_failed": "降噪失败",
+    # AI 上色
+    "ai_colorize_title": "AI 上色",
+    "ai_colorize_method": "方法：",
+    "ai_colorize_method_neural": "神经网络",
+    "ai_colorize_intensity": "强度：",
+    "ai_colorize_preset_sepia": "棕褐",
+    "ai_colorize_preset_cool": "冷色调",
+    "ai_colorize_preset_warm": "暖色调",
+    "ai_colorize_preset_vintage": "复古",
+    "ai_colorize_hint": "将 ONNX 上色模型放入 plugins/ai_colorize/models/。输出保存到 <名称>_colorized.png。",
+    "ai_colorize_done": "已保存 {path}",
+    "ai_colorize_failed": "上色失败",
 }

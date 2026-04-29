@@ -1338,4 +1338,16 @@ traditional_chinese_word_dict = {
     "ai_denoise_hint": "將 ONNX 降噪模型放入 plugins/ai_denoise/models/。輸出寫到 <名稱>_denoised.png。",
     "ai_denoise_done": "已儲存 {path}",
     "ai_denoise_failed": "降噪失敗",
+    # AI 上色
+    "ai_colorize_title": "AI 上色",
+    "ai_colorize_method": "方法：",
+    "ai_colorize_method_neural": "神經網路",
+    "ai_colorize_intensity": "強度：",
+    "ai_colorize_preset_sepia": "棕褐",
+    "ai_colorize_preset_cool": "冷色調",
+    "ai_colorize_preset_warm": "暖色調",
+    "ai_colorize_preset_vintage": "復古",
+    "ai_colorize_hint": "將 ONNX 上色模型放入 plugins/ai_colorize/models/。輸出寫到 <名稱>_colorized.png。",
+    "ai_colorize_done": "已儲存 {path}",
+    "ai_colorize_failed": "上色失敗",
 }

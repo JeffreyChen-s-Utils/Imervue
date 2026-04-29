@@ -1365,4 +1365,16 @@ english_word_dict = {
     "ai_denoise_hint": "Drop ONNX denoise models into plugins/ai_denoise/models/. Output goes to <name>_denoised.png.",
     "ai_denoise_done": "Saved {path}",
     "ai_denoise_failed": "Denoise failed",
+    # AI colorize plugin
+    "ai_colorize_title": "AI Colorize",
+    "ai_colorize_method": "Method:",
+    "ai_colorize_method_neural": "Neural",
+    "ai_colorize_intensity": "Intensity:",
+    "ai_colorize_preset_sepia": "Sepia",
+    "ai_colorize_preset_cool": "Cool",
+    "ai_colorize_preset_warm": "Warm",
+    "ai_colorize_preset_vintage": "Vintage",
+    "ai_colorize_hint": "Drop ONNX colorize models into plugins/ai_colorize/models/. Output goes to <name>_colorized.png.",
+    "ai_colorize_done": "Saved {path}",
+    "ai_colorize_failed": "Colorize failed",
 }

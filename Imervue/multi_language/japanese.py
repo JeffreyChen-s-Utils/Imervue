@@ -1350,4 +1350,16 @@ japanese_word_dict = {
     "ai_denoise_hint": "ONNX デノイズモデルを plugins/ai_denoise/models/ に配置してください。出力は <名前>_denoised.png に書き出されます。",
     "ai_denoise_done": "保存しました: {path}",
     "ai_denoise_failed": "デノイズ失敗",
+    # AI カラー化
+    "ai_colorize_title": "AI カラー化",
+    "ai_colorize_method": "方式:",
+    "ai_colorize_method_neural": "ニューラル",
+    "ai_colorize_intensity": "強度:",
+    "ai_colorize_preset_sepia": "セピア",
+    "ai_colorize_preset_cool": "クール",
+    "ai_colorize_preset_warm": "ウォーム",
+    "ai_colorize_preset_vintage": "ビンテージ",
+    "ai_colorize_hint": "ONNX カラー化モデルを plugins/ai_colorize/models/ に配置してください。出力は <名前>_colorized.png に書き出されます。",
+    "ai_colorize_done": "保存しました: {path}",
+    "ai_colorize_failed": "カラー化失敗",
 }
