@@ -12,9 +12,19 @@ permissions:
 jobs:
   test:
     runs-on: windows-latest
+    # ``experimental`` toggles continue-on-error so a Python release with
+    # missing upstream wheels (PySide6, rawpy, etc.) does not block CI.
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        experimental: [false]
+        include:
+          - python-version: "3.14"
+            experimental: true
+
+    name: Python ${{ matrix.python-version }}${{ matrix.experimental && ' (experimental)' || '' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -22,9 +32,10 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash pytest pytest-cov
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog pytest pytest-cov
     - name: Run tests
       run: python -m pytest tests/ -v --tb=short -W ignore::DeprecationWarning

@@ -1,5 +1,21 @@
 # Project Guidelines
 
+## Definition of Done (HARD REQUIREMENT)
+
+Every feature, bug fix, refactor, or behaviour change MUST satisfy ALL of the following before it
+can be committed. No exceptions — incomplete work stays on the working copy until the gates pass.
+
+1. **Unit tests are written and they pass.** New code without new tests is incomplete; the commit
+   fails this gate. See the **Unit Tests** section below for the exact coverage expectations.
+2. `py -m pytest tests/` runs clean (or only skips that already existed before the change).
+3. `py -m ruff check .` reports no new errors.
+4. `py -m bandit -c pyproject.toml -r Imervue/` reports `No issues identified`.
+5. The commit message contains no AI tool/model names and no `Co-Authored-By` line.
+
+When you finish editing code, work through this list explicitly before staging. If a gate fails,
+fix it — do not ship around it. Skipping tests "to come back later" is not allowed because later
+never happens and the gap compounds.
+
 ## Git Commits
 
 - NEVER add `Co-Authored-By` lines to commit messages. All commits should only contain the commit message itself with no co-author attribution.
@@ -48,11 +64,45 @@
 
 ### Unit Tests
 
-- Every code change (new feature, bug fix, refactor) MUST include corresponding unit tests.
-- Tests should cover: happy path, edge cases, error handling, and boundary conditions.
-- Use `unittest` framework consistent with existing test files in `tests/`.
-- Test file naming: `tests/test_<module_name>.py`.
-- Run all tests with `py -m pytest tests/` before committing to ensure nothing is broken.
+Tests are not optional polish — they are part of the change. A feature without tests is an
+incomplete feature and MUST NOT be committed. This rule applies equally to bug fixes (regression
+test required) and refactors (existing behaviour must remain green; add a test if the refactor
+exposes a previously untested path).
+
+**Required coverage for every change:**
+
+- **Happy path** — the new code does what it advertises on a representative input.
+- **Edge cases** — empty inputs, single-element inputs, max-size inputs, None / missing keys.
+- **Error handling** — every `except` branch is exercised; invalid inputs raise the documented
+  exception or are clamped to the documented safe range.
+- **Boundary conditions** — the values just inside and just outside any range, threshold, or
+  enum. Off-by-one defects live here.
+- **Round-trips** — anything that serialises (recipe, settings, layer dict, XMP) needs a
+  `to_dict → from_dict → equal` test.
+
+**Required test types for every feature:**
+
+- **Pure-helper tests.** Extract pure logic out of Qt classes into helper functions (see
+  `vram_budget.py`, `layers.py`, `recycle_bin_dialog.list_pending_entries`) and unit-test
+  those directly without instantiating Qt widgets. Cheap, fast, deterministic.
+- **Qt smoke test.** If the feature has a dialog, instantiate it under the `qapp` fixture and
+  assert the visible state (row counts, button enable state, signal emissions). Use
+  `monkeypatch` to auto-confirm `QMessageBox` / `QFileDialog` instead of stubbing whole modules.
+- **Integration test where the wiring is non-obvious.** If the feature plugs into another
+  subsystem (recipe pipeline, undo stack, file-tree model), add a test that exercises the
+  end-to-end flow on small synthetic inputs.
+
+**Mechanics:**
+
+- Use `pytest` style. Module-level functions and `Test*` classes are both fine; follow the
+  style of the file you're adding to.
+- Test file naming: `tests/test_<module_name>.py`. One test module per production module.
+- Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_array`,
+  `image_folder`). Do not roll your own QApplication or RNG seed.
+- Never write to the real `user_setting.json`. The autouse `_isolate_user_settings` fixture
+  redirects the path; trust it and just mutate `user_setting_dict` directly in tests.
+- Run `py -m pytest tests/` before committing. If a test was already skipping because of a
+  missing optional dependency, leave it skipping — but every NEW test must run, not skip.
 
 ### Linter & Static Analysis Compliance (SonarQube / Codacy / pylint / flake8 / ruff)
 

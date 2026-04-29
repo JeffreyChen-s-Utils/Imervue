@@ -8,4 +8,5 @@ imageio
 imageio-ffmpeg
 PyOpenGL_accelerate
 defusedxml
+watchdog
 Imervue

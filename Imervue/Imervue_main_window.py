@@ -519,6 +519,14 @@ class ImervueMainWindow(QMainWindow):
         self._folder_refresh_timer.setInterval(500)  # 去抖動 500ms
         self._folder_refresh_timer.timeout.connect(self._do_folder_refresh)
 
+        # ===== 檔案樹遞迴監控（watchdog）=====
+        # QFileSystemModel 內建的 watcher 對外部批次變更（git checkout、rsync、
+        # 拖放）反應不及時。watchdog 用獨立執行緒遞迴監看樹根，事件透過 Qt
+        # signal 跨執行緒回到 UI 並去抖動觸發 model 重新整理。
+        from Imervue.system.file_tree_watcher import FileTreeWatchdog
+        self._tree_watchdog = FileTreeWatchdog(self)
+        self._tree_watchdog.bind_model(self.model)
+
         # ===== 還原視窗位置與大小（多螢幕適配） =====
         self._restore_window_geometry()
 
@@ -863,6 +871,9 @@ class ImervueMainWindow(QMainWindow):
             self._folder_watcher.removePaths(dirs)
         if folder:
             self._folder_watcher.addPath(folder)
+        # 同步啟動遞迴 watchdog 觀察整個樹根，QFileSystemModel 才會即時更新
+        if folder and hasattr(self, "_tree_watchdog"):
+            self._tree_watchdog.watch(folder)
 
     def _on_watched_folder_changed(self, _path: str):
         """資料夾內容變更 → 啟動去抖動計時器"""
@@ -1126,6 +1137,11 @@ class ImervueMainWindow(QMainWindow):
         # --- 斷開分頁切換信號，避免銷毀過程中觸發 ---
         with contextlib.suppress(Exception):
             self._main_tabs.currentChanged.disconnect(self._on_main_tab_changed)
+
+        # --- 停止 watchdog 觀察執行緒 ---
+        with contextlib.suppress(Exception):
+            if hasattr(self, "_tree_watchdog"):
+                self._tree_watchdog.stop()
 
         # --- 安全關閉修改面板 ---
         # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄

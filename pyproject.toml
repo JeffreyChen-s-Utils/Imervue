@@ -12,7 +12,7 @@ authors = [
 ]
 dependencies = [
     "PySide6==6.11.0", "qt-material", "Pillow", "PyOpenGL", "numpy", "rawpy",
-    "imageio", "imageio-ffmpeg", "PyOpenGL_accelerate", "defusedxml",
+    "imageio", "imageio-ffmpeg", "PyOpenGL_accelerate", "defusedxml", "watchdog",
 ]
 description = "GPU-accelerated image viewer with non-destructive develop, RAW/HDR/panorama support, AI upscale, XMP sidecars, and a plugin system."
 keywords = [
@@ -25,6 +25,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Win32 (MS Windows)",
     "Environment :: MacOS X",

@@ -114,6 +114,18 @@ class Recipe:
             and self._advanced_sliders_are_zero()
             and self._curves_are_identity()
             and not self.lut_path
+            and self._extra_is_identity()
+        )
+
+    def _extra_is_identity(self) -> bool:
+        """No layers / masks / split-toning configured in the extras blob."""
+        if not self.extra:
+            return True
+        # These extras change pixels when present and non-empty.
+        return not (
+            self.extra.get("layers")
+            or self.extra.get("masks")
+            or self.extra.get("split_toning")
         )
 
     def _curves_are_identity(self) -> bool:
@@ -281,6 +293,7 @@ class Recipe:
         arr = _apply_split_toning(arr, recipe)
         arr = _apply_lut(arr, recipe)
         arr = _apply_masks(arr, recipe)
+        arr = _apply_layer_stack(arr, recipe)
         return arr
 
 
@@ -304,6 +317,25 @@ def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
         )
     except (ValueError, TypeError) as err:
         logger.warning("Split toning apply failed: %s", err)
+        return arr
+
+
+def _apply_layer_stack(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply user-stacked overlay layers from recipe.extra['layers'] if present."""
+    raw = recipe.extra.get("layers") if recipe.extra else None
+    if not raw:
+        return arr
+    try:
+        from Imervue.image.layers import apply_layers, layers_from_dict_list
+    except ImportError:
+        return arr
+    layers = layers_from_dict_list(raw)
+    if not layers:
+        return arr
+    try:
+        return apply_layers(arr, layers)
+    except (ValueError, TypeError) as err:
+        logger.warning("Layer stack apply failed: %s", err)
         return arr
 
 

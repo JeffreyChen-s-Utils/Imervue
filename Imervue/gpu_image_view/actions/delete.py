@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
-from OpenGL.GL import glDeleteTextures
-
-from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
+# Heavy imports (OpenGL, rawpy via LoadThumbnailWorker) are deferred so this
+# module is importable in environments that ship neither — including the
+# unit tests for ``commit_pending_deletions`` which only touches the undo
+# stack and ``Path.unlink``.
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -14,7 +15,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.delete")
 
 
+class _UndoStackOwner(Protocol):
+    """Minimal duck-typed surface that ``commit_pending_deletions`` requires.
+
+    The real caller is ``GPUImageView`` but the function only reads / clears
+    the undo stack, so any object exposing that attribute satisfies it.
+    Declared as a ``Protocol`` so unit tests can hand in a lightweight stub
+    without a full OpenGL / rawpy import chain.
+    """
+
+    undo_stack: list[dict]
+
+
 def delete_current_image(main_gui: GPUImageView):
+    from OpenGL.GL import glDeleteTextures
+
     images = main_gui.model.images
 
     if not images or main_gui.current_index >= len(images):
@@ -56,6 +71,8 @@ def delete_current_image(main_gui: GPUImageView):
 
 
 def delete_selected_tiles(main_gui):
+    from OpenGL.GL import glDeleteTextures
+
     paths = list(main_gui.selected_tiles)
     if not paths:
         return
@@ -93,7 +110,7 @@ def delete_selected_tiles(main_gui):
     for path in deleted_paths:
         tex = main_gui.tile_textures.pop(path, None)
         if tex is not None:
-            glDeleteTextures([tex])
+            glDeleteTextures([tex])  # noqa: F821 — imported above
 
     # CPU cache
     for path in deleted_paths:
@@ -106,6 +123,8 @@ def delete_selected_tiles(main_gui):
     main_gui.update()
 
 def undo_delete(main_gui: GPUImageView):
+    from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
+
     if not main_gui.undo_stack:
         return
 
@@ -138,7 +157,7 @@ def undo_delete(main_gui: GPUImageView):
     main_gui.update()
 
 
-def commit_pending_deletions(main_gui: GPUImageView):
+def commit_pending_deletions(main_gui: _UndoStackOwner):
     for action in main_gui.undo_stack:
         # 跳過已還原的動作
         if action.get("restored", False):
