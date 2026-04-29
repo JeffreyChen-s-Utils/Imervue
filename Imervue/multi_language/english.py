@@ -1316,4 +1316,10 @@ english_word_dict = {
     "lens_flare_intensity": "Intensity:",
     "lens_flare_size": "Halo size:",
     "lens_flare_colour": "Colour:",
+    # Frequency separation
+    "frequency_sep_title": "Frequency Separation",
+    "frequency_sep_radius": "Blur radius:",
+    "frequency_sep_hint": "Writes <name>_low.png and <name>_high.png next to the source. Recombine via low + (high - 128).",
+    "frequency_sep_done": "Layers saved: {low}, {high}",
+    "frequency_sep_failed": "Failed",
 }

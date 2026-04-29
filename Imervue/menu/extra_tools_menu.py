@@ -144,6 +144,8 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_healing_brush(ui))
     _add_action(sub, lang, "stamp_title", "Clone Stamp",
                 lambda: _open_clone_stamp(ui))
+    _add_action(sub, lang, "frequency_sep_title", "Frequency Separation",
+                lambda: _open_frequency_separation(ui))
     _add_action(sub, lang, "face_title", "Face Detection",
                 lambda: _open_face_detection(ui))
     _add_action(sub, lang, "sky_title", "Sky / Background",
@@ -327,6 +329,13 @@ def _open_film_grain(ui: ImervueMainWindow) -> None:
 def _open_lens_flare(ui: ImervueMainWindow) -> None:
     from Imervue.gui.lens_flare_dialog import open_lens_flare_dialog
     open_lens_flare_dialog(ui.viewer)
+
+
+def _open_frequency_separation(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.frequency_separation_dialog import (
+        open_frequency_separation_dialog,
+    )
+    open_frequency_separation_dialog(ui.viewer)
 
 
 def _open_layers(ui: ImervueMainWindow) -> None:

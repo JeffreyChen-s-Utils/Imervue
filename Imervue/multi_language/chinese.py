@@ -1290,4 +1290,10 @@ chinese_word_dict = {
     "lens_flare_intensity": "强度：",
     "lens_flare_size": "光晕大小：",
     "lens_flare_colour": "颜色：",
+    # 频率分离
+    "frequency_sep_title": "频率分离",
+    "frequency_sep_radius": "模糊半径：",
+    "frequency_sep_hint": "在源文件旁写出 <名称>_low.png 与 <名称>_high.png,可在外部编辑后以 low + (high - 128) 合成。",
+    "frequency_sep_done": "图层已保存：{low}, {high}",
+    "frequency_sep_failed": "失败",
 }

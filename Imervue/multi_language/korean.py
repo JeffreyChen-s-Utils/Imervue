@@ -1295,4 +1295,10 @@ korean_word_dict = {
     "lens_flare_intensity": "강도:",
     "lens_flare_size": "후광 크기:",
     "lens_flare_colour": "색상:",
+    # 주파수 분리
+    "frequency_sep_title": "주파수 분리",
+    "frequency_sep_radius": "블러 반경:",
+    "frequency_sep_hint": "원본 옆에 <이름>_low.png와 <이름>_high.png를 저장합니다. low + (high - 128)로 다시 합성할 수 있습니다.",
+    "frequency_sep_done": "레이어 저장됨: {low}, {high}",
+    "frequency_sep_failed": "실패",
 }

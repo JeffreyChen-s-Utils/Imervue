@@ -1301,4 +1301,10 @@ japanese_word_dict = {
     "lens_flare_intensity": "強度:",
     "lens_flare_size": "ハロサイズ:",
     "lens_flare_colour": "色:",
+    # 周波数分離
+    "frequency_sep_title": "周波数分離",
+    "frequency_sep_radius": "ブラー半径:",
+    "frequency_sep_hint": "ソースの隣に <名前>_low.png と <名前>_high.png を書き出します。low + (high - 128) で再合成できます。",
+    "frequency_sep_done": "レイヤーを保存: {low}, {high}",
+    "frequency_sep_failed": "失敗",
 }
