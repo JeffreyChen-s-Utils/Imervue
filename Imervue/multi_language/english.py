@@ -1422,4 +1422,12 @@ english_word_dict = {
     "auto_balance_hint": "Writes <name>_balanced.png next to the source. Percentile applies to 'Auto-levels'; radius applies to 'Retinex'.",
     "auto_balance_done": "Saved {path}",
     "auto_balance_failed": "Auto balance failed",
+    # AI style transfer plugin
+    "style_transfer_title": "AI Style Transfer",
+    "style_transfer_model": "Style model:",
+    "style_transfer_intensity": "Intensity:",
+    "style_transfer_no_models": "(no models found)",
+    "style_transfer_hint": "Drop ONNX style models into plugins/ai_style_transfer/models/. Output goes to <name>_styled.png.",
+    "style_transfer_done": "Saved {path}",
+    "style_transfer_failed": "Style transfer failed",
 }

@@ -1,0 +1,3 @@
+from ai_style_transfer.ai_style_transfer_plugin import AIStyleTransferPlugin
+
+plugin_class = AIStyleTransferPlugin

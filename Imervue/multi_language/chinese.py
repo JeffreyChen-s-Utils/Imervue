@@ -1396,4 +1396,12 @@ chinese_word_dict = {
     "auto_balance_hint": "在源文件旁写出 <名称>_balanced.png。百分位用于「自动色阶」,半径用于「Retinex」。",
     "auto_balance_done": "已保存 {path}",
     "auto_balance_failed": "色彩平衡失败",
+    # AI 风格迁移
+    "style_transfer_title": "AI 风格迁移",
+    "style_transfer_model": "风格模型：",
+    "style_transfer_intensity": "强度：",
+    "style_transfer_no_models": "（未找到模型）",
+    "style_transfer_hint": "将 ONNX 风格模型放入 plugins/ai_style_transfer/models/。输出保存到 <名称>_styled.png。",
+    "style_transfer_done": "已保存 {path}",
+    "style_transfer_failed": "风格迁移失败",
 }

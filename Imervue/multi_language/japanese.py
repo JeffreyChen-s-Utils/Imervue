@@ -1407,4 +1407,12 @@ japanese_word_dict = {
     "auto_balance_hint": "ソースの隣に <名前>_balanced.png を書き出します。パーセンタイルは「オートレベル」、半径は「Retinex」に適用されます。",
     "auto_balance_done": "保存しました: {path}",
     "auto_balance_failed": "カラーバランス失敗",
+    # AI スタイル転送
+    "style_transfer_title": "AI スタイル転送",
+    "style_transfer_model": "スタイルモデル:",
+    "style_transfer_intensity": "強度:",
+    "style_transfer_no_models": "（モデルが見つかりません）",
+    "style_transfer_hint": "ONNX スタイルモデルを plugins/ai_style_transfer/models/ に配置してください。出力は <名前>_styled.png に書き出されます。",
+    "style_transfer_done": "保存しました: {path}",
+    "style_transfer_failed": "スタイル転送失敗",
 }

@@ -1395,4 +1395,12 @@ traditional_chinese_word_dict = {
     "auto_balance_hint": "在來源檔旁寫出 <名稱>_balanced.png。百分位用於「自動色階」,半徑用於「Retinex」。",
     "auto_balance_done": "已儲存 {path}",
     "auto_balance_failed": "色彩平衡失敗",
+    # AI 風格轉換
+    "style_transfer_title": "AI 風格轉換",
+    "style_transfer_model": "風格模型：",
+    "style_transfer_intensity": "強度：",
+    "style_transfer_no_models": "（找不到模型）",
+    "style_transfer_hint": "將 ONNX 風格模型放入 plugins/ai_style_transfer/models/。輸出寫到 <名稱>_styled.png。",
+    "style_transfer_done": "已儲存 {path}",
+    "style_transfer_failed": "風格轉換失敗",
 }

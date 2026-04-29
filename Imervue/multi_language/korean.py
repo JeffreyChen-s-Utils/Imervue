@@ -1401,4 +1401,12 @@ korean_word_dict = {
     "auto_balance_hint": "원본 옆에 <이름>_balanced.png를 저장합니다. 백분위는 '오토 레벨'에, 반경은 'Retinex'에 적용됩니다.",
     "auto_balance_done": "{path}에 저장됨",
     "auto_balance_failed": "색상 보정 실패",
+    # AI 스타일 전이
+    "style_transfer_title": "AI 스타일 전이",
+    "style_transfer_model": "스타일 모델:",
+    "style_transfer_intensity": "강도:",
+    "style_transfer_no_models": "(모델을 찾을 수 없음)",
+    "style_transfer_hint": "ONNX 스타일 모델을 plugins/ai_style_transfer/models/에 배치하세요. 출력은 <이름>_styled.png에 저장됩니다.",
+    "style_transfer_done": "{path}에 저장됨",
+    "style_transfer_failed": "스타일 전이 실패",
 }
