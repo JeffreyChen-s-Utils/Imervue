@@ -1333,4 +1333,15 @@ korean_word_dict = {
     "portrait_retouch_hint": "원본 옆에 <이름>_retouched.png를 저장합니다.",
     "portrait_retouch_done": "{path}에 저장됨",
     "portrait_retouch_failed": "인물 보정 실패",
+    # AI 노이즈 제거
+    "ai_denoise_title": "AI 노이즈 제거",
+    "ai_denoise_method": "방법:",
+    "ai_denoise_method_bilateral": "양방향 필터(빠름)",
+    "ai_denoise_method_neural": "신경망",
+    "ai_denoise_radius": "공간 반경:",
+    "ai_denoise_sigma": "강도 sigma:",
+    "ai_denoise_blend": "원본과 혼합:",
+    "ai_denoise_hint": "ONNX 노이즈 제거 모델을 plugins/ai_denoise/models/에 배치하세요. 출력은 <이름>_denoised.png에 저장됩니다.",
+    "ai_denoise_done": "{path}에 저장됨",
+    "ai_denoise_failed": "노이즈 제거 실패",
 }

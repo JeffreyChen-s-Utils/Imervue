@@ -1339,4 +1339,15 @@ japanese_word_dict = {
     "portrait_retouch_hint": "ソースの隣に <名前>_retouched.png を書き出します。",
     "portrait_retouch_done": "保存しました: {path}",
     "portrait_retouch_failed": "ポートレートレタッチ失敗",
+    # AI ノイズ除去
+    "ai_denoise_title": "AI ノイズ除去",
+    "ai_denoise_method": "方式:",
+    "ai_denoise_method_bilateral": "バイラテラル（高速）",
+    "ai_denoise_method_neural": "ニューラル",
+    "ai_denoise_radius": "空間半径:",
+    "ai_denoise_sigma": "強度 sigma:",
+    "ai_denoise_blend": "オリジナルとブレンド:",
+    "ai_denoise_hint": "ONNX デノイズモデルを plugins/ai_denoise/models/ に配置してください。出力は <名前>_denoised.png に書き出されます。",
+    "ai_denoise_done": "保存しました: {path}",
+    "ai_denoise_failed": "デノイズ失敗",
 }

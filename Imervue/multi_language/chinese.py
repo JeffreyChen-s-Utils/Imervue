@@ -1328,4 +1328,15 @@ chinese_word_dict = {
     "portrait_retouch_hint": "在源文件旁写出 <名称>_retouched.png。",
     "portrait_retouch_done": "已保存 {path}",
     "portrait_retouch_failed": "人像修图失败",
+    # AI 降噪
+    "ai_denoise_title": "AI 降噪",
+    "ai_denoise_method": "方法：",
+    "ai_denoise_method_bilateral": "双边滤波（快速）",
+    "ai_denoise_method_neural": "神经网络",
+    "ai_denoise_radius": "空间半径：",
+    "ai_denoise_sigma": "强度 sigma：",
+    "ai_denoise_blend": "与原图混合：",
+    "ai_denoise_hint": "将 ONNX 降噪模型放入 plugins/ai_denoise/models/。输出保存到 <名称>_denoised.png。",
+    "ai_denoise_done": "已保存 {path}",
+    "ai_denoise_failed": "降噪失败",
 }

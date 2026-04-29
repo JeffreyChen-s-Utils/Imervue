@@ -1354,4 +1354,15 @@ english_word_dict = {
     "portrait_retouch_hint": "Writes <name>_retouched.png next to the source.",
     "portrait_retouch_done": "Saved {path}",
     "portrait_retouch_failed": "Portrait retouch failed",
+    # AI denoise plugin
+    "ai_denoise_title": "AI Denoise",
+    "ai_denoise_method": "Method:",
+    "ai_denoise_method_bilateral": "Bilateral (fast)",
+    "ai_denoise_method_neural": "Neural",
+    "ai_denoise_radius": "Spatial radius:",
+    "ai_denoise_sigma": "Intensity sigma:",
+    "ai_denoise_blend": "Blend with original:",
+    "ai_denoise_hint": "Drop ONNX denoise models into plugins/ai_denoise/models/. Output goes to <name>_denoised.png.",
+    "ai_denoise_done": "Saved {path}",
+    "ai_denoise_failed": "Denoise failed",
 }
