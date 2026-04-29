@@ -88,6 +88,8 @@ def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_culling(ui))
     _add_action(sub, lang, "staging_tray_title", "Staging Tray",
                 lambda: _open_staging_tray(ui))
+    _add_action(sub, lang, "reference_panel_title", "Reference Panel",
+                lambda: _open_reference_panel(ui))
     _add_action(sub, lang, "vcopies_title", "Virtual Copies",
                 lambda: _open_virtual_copies(ui))
     _add_action(sub, lang, "dual_pane_title", "Dual-Pane File Manager",
@@ -257,6 +259,11 @@ def _open_culling(ui: ImervueMainWindow):
 def _open_staging_tray(ui: ImervueMainWindow):
     from Imervue.gui.staging_tray_dialog import open_staging_tray
     open_staging_tray(ui)
+
+
+def _open_reference_panel(ui: ImervueMainWindow):
+    from Imervue.gui.reference_panel_dialog import open_reference_panel
+    open_reference_panel(ui)
 
 
 def _open_dual_pane(ui: ImervueMainWindow):
