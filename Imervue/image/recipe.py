@@ -136,6 +136,7 @@ class Recipe:
             or _enabled_flag(self.extra.get("levels"))
             or _enabled_flag(self.extra.get("channel_mixer"))
             or _enabled_flag(self.extra.get("gradient_map"))
+            or _enabled_flag(self.extra.get("film_grain"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -307,6 +308,7 @@ class Recipe:
         arr = _apply_channel_mixer(arr, recipe)
         arr = _apply_gradient_map(arr, recipe)
         arr = _apply_threshold_posterize(arr, recipe)
+        arr = _apply_film_grain(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
 
@@ -409,6 +411,22 @@ def _apply_threshold_posterize(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     except (ValueError, TypeError) as err:
         logger.warning("Threshold/posterize apply failed: %s", err)
     return arr
+
+
+def _apply_film_grain(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply procedural film grain from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.film_grain import FilmGrainOptions, apply_film_grain
+    except ImportError:
+        return arr
+    options = FilmGrainOptions.from_dict(recipe.extra.get("film_grain"))
+    try:
+        return apply_film_grain(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Film grain apply failed: %s", err)
+        return arr
 
 
 def _apply_layer_stack(arr: np.ndarray, recipe: Recipe) -> np.ndarray:

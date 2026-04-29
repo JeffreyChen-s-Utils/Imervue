@@ -1285,4 +1285,12 @@ japanese_word_dict = {
     "gradient_map_preset_fire": "ファイア",
     "gradient_map_preset_ocean": "オーシャン",
     "gradient_map_preset_magenta_teal": "マゼンタ-ティール",
+    # フィルムグレイン
+    "film_grain_title": "フィルムグレイン",
+    "film_grain_enable": "フィルムグレインを有効にする",
+    "film_grain_monochrome": "モノクログレイン",
+    "film_grain_intensity": "強度:",
+    "film_grain_size": "粒子サイズ:",
+    "film_grain_seed": "シード:",
+    "film_grain_seed_auto": "自動",
 }

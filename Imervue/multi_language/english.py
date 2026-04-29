@@ -1300,4 +1300,12 @@ english_word_dict = {
     "gradient_map_preset_fire": "Fire",
     "gradient_map_preset_ocean": "Ocean",
     "gradient_map_preset_magenta_teal": "Magenta–Teal",
+    # Film grain
+    "film_grain_title": "Film Grain",
+    "film_grain_enable": "Enable film grain",
+    "film_grain_monochrome": "Monochrome grain",
+    "film_grain_intensity": "Intensity:",
+    "film_grain_size": "Grain size:",
+    "film_grain_seed": "Seed:",
+    "film_grain_seed_auto": "Auto",
 }

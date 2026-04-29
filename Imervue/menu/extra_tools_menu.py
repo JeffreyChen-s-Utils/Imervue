@@ -124,6 +124,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_channel_mixer(ui))
     _add_action(sub, lang, "gradient_map_title", "Gradient Map",
                 lambda: _open_gradient_map(ui))
+    _add_action(sub, lang, "film_grain_title", "Film Grain",
+                lambda: _open_film_grain(ui))
     _add_action(sub, lang, "posterize_title", "Threshold / Posterize",
                 lambda: _open_posterize(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
@@ -313,6 +315,11 @@ def _open_channel_mixer(ui: ImervueMainWindow) -> None:
 def _open_gradient_map(ui: ImervueMainWindow) -> None:
     from Imervue.gui.gradient_map_dialog import open_gradient_map_dialog
     open_gradient_map_dialog(ui.viewer)
+
+
+def _open_film_grain(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.film_grain_dialog import open_film_grain_dialog
+    open_film_grain_dialog(ui.viewer)
 
 
 def _open_layers(ui: ImervueMainWindow) -> None:

@@ -1274,4 +1274,12 @@ chinese_word_dict = {
     "gradient_map_preset_fire": "火焰",
     "gradient_map_preset_ocean": "海洋",
     "gradient_map_preset_magenta_teal": "洋红–青绿",
+    # 胶片颗粒
+    "film_grain_title": "胶片颗粒",
+    "film_grain_enable": "启用胶片颗粒",
+    "film_grain_monochrome": "单色颗粒",
+    "film_grain_intensity": "强度：",
+    "film_grain_size": "颗粒大小：",
+    "film_grain_seed": "种子：",
+    "film_grain_seed_auto": "自动",
 }

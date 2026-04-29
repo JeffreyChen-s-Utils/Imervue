@@ -1279,4 +1279,12 @@ korean_word_dict = {
     "gradient_map_preset_fire": "파이어",
     "gradient_map_preset_ocean": "오션",
     "gradient_map_preset_magenta_teal": "마젠타-틸",
+    # 필름 그레인
+    "film_grain_title": "필름 그레인",
+    "film_grain_enable": "필름 그레인 활성화",
+    "film_grain_monochrome": "단색 그레인",
+    "film_grain_intensity": "강도:",
+    "film_grain_size": "그레인 크기:",
+    "film_grain_seed": "시드:",
+    "film_grain_seed_auto": "자동",
 }
