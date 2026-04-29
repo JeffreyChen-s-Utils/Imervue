@@ -114,6 +114,7 @@ def test_known_plugins_are_present():
         "ai_colorize",
         "ai_denoise",
         "ai_motion_deblur",
+        "ai_portrait_relight",
         "ai_smart_resize",
         "ai_style_transfer",
         "npr_filters",
