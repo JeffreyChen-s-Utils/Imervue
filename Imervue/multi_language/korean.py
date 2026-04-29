@@ -1324,4 +1324,13 @@ korean_word_dict = {
     "portrait_mode_hint": "원본 옆에 <이름>_portrait.png를 저장합니다. rembg와 onnxruntime이 필요합니다.",
     "portrait_mode_done": "{path}에 저장됨",
     "portrait_mode_failed": "인물 모드 실패",
+    # 인물 자동 보정
+    "portrait_retouch_title": "인물 자동 보정",
+    "portrait_retouch_smooth": "피부 스무딩:",
+    "portrait_retouch_smooth_radius": "스무딩 반경:",
+    "portrait_retouch_red_eye": "적목 제거:",
+    "portrait_retouch_sharpen": "눈 선명도:",
+    "portrait_retouch_hint": "원본 옆에 <이름>_retouched.png를 저장합니다.",
+    "portrait_retouch_done": "{path}에 저장됨",
+    "portrait_retouch_failed": "인물 보정 실패",
 }

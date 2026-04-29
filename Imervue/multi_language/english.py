@@ -1345,4 +1345,13 @@ english_word_dict = {
     "portrait_mode_hint": "Writes <name>_portrait.png next to the source. Requires rembg + onnxruntime.",
     "portrait_mode_done": "Saved {path}",
     "portrait_mode_failed": "Portrait mode failed",
+    # Portrait auto-retouch plugin
+    "portrait_retouch_title": "Portrait Auto-Retouch",
+    "portrait_retouch_smooth": "Skin smoothing:",
+    "portrait_retouch_smooth_radius": "Smoothing radius:",
+    "portrait_retouch_red_eye": "Red-eye removal:",
+    "portrait_retouch_sharpen": "Eye sharpening:",
+    "portrait_retouch_hint": "Writes <name>_retouched.png next to the source.",
+    "portrait_retouch_done": "Saved {path}",
+    "portrait_retouch_failed": "Portrait retouch failed",
 }

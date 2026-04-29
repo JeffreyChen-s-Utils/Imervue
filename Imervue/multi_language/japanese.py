@@ -1330,4 +1330,13 @@ japanese_word_dict = {
     "portrait_mode_hint": "ソースの隣に <名前>_portrait.png を書き出します。rembg と onnxruntime が必要です。",
     "portrait_mode_done": "保存しました: {path}",
     "portrait_mode_failed": "ポートレートモード失敗",
+    # ポートレート自動レタッチ
+    "portrait_retouch_title": "ポートレート自動レタッチ",
+    "portrait_retouch_smooth": "肌のスムージング:",
+    "portrait_retouch_smooth_radius": "スムージング半径:",
+    "portrait_retouch_red_eye": "赤目補正:",
+    "portrait_retouch_sharpen": "目のシャープ:",
+    "portrait_retouch_hint": "ソースの隣に <名前>_retouched.png を書き出します。",
+    "portrait_retouch_done": "保存しました: {path}",
+    "portrait_retouch_failed": "ポートレートレタッチ失敗",
 }

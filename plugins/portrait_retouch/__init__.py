@@ -1,0 +1,3 @@
+from portrait_retouch.portrait_retouch_plugin import PortraitRetouchPlugin
+
+plugin_class = PortraitRetouchPlugin

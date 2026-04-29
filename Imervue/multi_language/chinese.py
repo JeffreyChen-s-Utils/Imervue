@@ -1319,4 +1319,13 @@ chinese_word_dict = {
     "portrait_mode_hint": "在源文件旁写出 <名称>_portrait.png。需要 rembg 与 onnxruntime。",
     "portrait_mode_done": "已保存 {path}",
     "portrait_mode_failed": "人像模式失败",
+    # 人像自动修图
+    "portrait_retouch_title": "人像自动修图",
+    "portrait_retouch_smooth": "皮肤平滑：",
+    "portrait_retouch_smooth_radius": "平滑半径：",
+    "portrait_retouch_red_eye": "红眼修复：",
+    "portrait_retouch_sharpen": "眼睛锐化：",
+    "portrait_retouch_hint": "在源文件旁写出 <名称>_retouched.png。",
+    "portrait_retouch_done": "已保存 {path}",
+    "portrait_retouch_failed": "人像修图失败",
 }
