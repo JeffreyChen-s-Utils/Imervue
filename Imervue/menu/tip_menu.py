@@ -212,6 +212,14 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
     error_report_action.triggered.connect(
         lambda: _generate_error_report(ui_we_want_to_set))
 
+    onboarding_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get(
+            "onboarding_menu", "Show Welcome Tour",
+        )
+    )
+    onboarding_action.triggered.connect(
+        lambda: _show_onboarding(ui_we_want_to_set))
+
     return tip_menu
 
 
@@ -223,6 +231,11 @@ def _show_dialog(ui: ImervueMainWindow):
 def _show_whats_new(ui: ImervueMainWindow) -> None:
     from Imervue.gui.whats_new_dialog import open_whats_new_dialog
     open_whats_new_dialog(parent=ui)
+
+
+def _show_onboarding(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.onboarding_dialog import open_onboarding_dialog
+    open_onboarding_dialog(parent=ui)
 
 
 def _generate_error_report(ui: ImervueMainWindow) -> None:

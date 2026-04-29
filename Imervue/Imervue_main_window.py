@@ -937,13 +937,21 @@ class ImervueMainWindow(QMainWindow):
             self.tree.update(idx)
 
     def _maybe_show_whats_new(self) -> None:
-        """Pop up the What's New dialog if the user just upgraded."""
+        """Pop up the What's New dialog if the user just upgraded.
+
+        Also runs the onboarding tour on first launch — both checks are
+        cheap when not triggered, and we want exactly one auto-popup
+        flow at startup so the two play together rather than racing.
+        """
         try:
+            from Imervue.gui.onboarding_dialog import show_onboarding_if_first_run
             from Imervue.gui.whats_new_dialog import show_whats_new_if_upgraded
         except ImportError:
             return
         with contextlib.suppress(Exception):
-            show_whats_new_if_upgraded(self)
+            shown = show_onboarding_if_first_run(self)
+            if not shown:
+                show_whats_new_if_upgraded(self)
 
     def _on_clipboard_image_captured(self, pil_image) -> None:
         """Open the annotation dialog when the clipboard monitor sees a new image."""
