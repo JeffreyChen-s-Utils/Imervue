@@ -966,6 +966,21 @@ spanish_word_dict.update({
     "style_transfer_hint": "Coloque modelos ONNX en plugins/ai_style_transfer/models/. La salida va a <nombre>_styled.png.",
     "style_transfer_done": "Guardado {path}",
     "style_transfer_failed": "Fallo de la transferencia de estilo",
+    # NPR Filters plugin
+    "npr_filters_title": "Filtros de estilo NPR",
+    "npr_filters_style": "Estilo:",
+    "npr_filters_style_pencil_sketch": "Dibujo a lápiz",
+    "npr_filters_style_oil_painting": "Pintura al óleo",
+    "npr_filters_style_watercolor": "Acuarela",
+    "npr_filters_style_line_art": "Línea",
+    "npr_filters_intensity": "Mezcla con el original:",
+    "npr_filters_sigma_s": "Escala espacial:",
+    "npr_filters_sigma_r": "Detalle / rango:",
+    "npr_filters_oil_levels": "Niveles de posterización:",
+    "npr_filters_line_threshold": "Umbral de borde:",
+    "npr_filters_hint": "Genera <nombre>_npr.png junto al original. Requiere opencv-python.",
+    "npr_filters_done": "Guardado {path}",
+    "npr_filters_failed": "Fallo del filtro NPR",
 })
 
 # ---------------------------------------------------------------------------

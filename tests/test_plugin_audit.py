@@ -114,6 +114,7 @@ def test_known_plugins_are_present():
         "ai_colorize",
         "ai_denoise",
         "ai_style_transfer",
+        "npr_filters",
         "object_splitter",
         "portrait_mode",
         "safety_review",
