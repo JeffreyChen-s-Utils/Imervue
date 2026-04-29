@@ -43,11 +43,11 @@ def test_clamp_scale_percent(value, expected):
 
 
 def test_scaled_point_size_default_passthrough():
-    assert scaled_point_size(10.0, 100) == 10.0
+    assert scaled_point_size(10.0, 100) == pytest.approx(10.0)
 
 
 def test_scaled_point_size_doubled():
-    assert scaled_point_size(10.0, 200) == 20.0
+    assert scaled_point_size(10.0, 200) == pytest.approx(20.0)
 
 
 def test_scaled_point_size_minimum_floor():
@@ -59,7 +59,7 @@ def test_scaled_point_size_clamps_runaway_request():
     """A 1000% request still scales to the [80, 200] cap."""
     out = scaled_point_size(10.0, 1000)
     # Clamped to 200% → 20.0pt
-    assert out == 20.0
+    assert out == pytest.approx(20.0)
 
 
 # ---------------------------------------------------------------------------

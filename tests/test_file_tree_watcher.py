@@ -2,6 +2,17 @@
 from __future__ import annotations
 
 import time
+from unittest.mock import MagicMock
+
+
+def _fake_model() -> MagicMock:
+    """Create a stand-in for QFileSystemModel.
+
+    We only need the ``setRootPath`` slot — using ``MagicMock`` lets us match
+    Qt's camelCase API without defining a method that violates our snake_case
+    naming rule. The mock records each call's arguments via ``call_args_list``.
+    """
+    return MagicMock(spec=["setRootPath"])
 
 
 def test_watch_no_op_for_nonexistent_path(qapp):
@@ -98,36 +109,26 @@ def test_refresh_calls_set_root_path(qapp, tmp_path):
     """When a model is bound, _do_refresh re-roots it."""
     from Imervue.system.file_tree_watcher import FileTreeWatchdog
 
-    calls: list[str] = []
-
-    class FakeModel:
-        def setRootPath(self, p):
-            calls.append(p)
-
+    model = _fake_model()
     wd = FileTreeWatchdog()
-    wd.bind_model(FakeModel())
+    wd.bind_model(model)
     try:
         wd.watch(str(tmp_path))
         wd._do_refresh()
     finally:
         wd.stop()
     # Implementation does setRootPath("") then setRootPath(path)
-    assert calls == ["", str(tmp_path)]
+    actual = [c.args[0] for c in model.setRootPath.call_args_list]
+    assert actual == ["", str(tmp_path)]
 
 
 def test_debounce_collapses_many_events_into_one_refresh(qapp, tmp_path):
     """Bursts of events should fire _do_refresh at most once per debounce window."""
-    import time
     from Imervue.system.file_tree_watcher import FileTreeWatchdog
 
-    refresh_calls: list[None] = []
-
-    class FakeModel:
-        def setRootPath(self, _p):
-            refresh_calls.append(None)
-
+    model = _fake_model()
     wd = FileTreeWatchdog()
-    wd.bind_model(FakeModel())
+    wd.bind_model(model)
     try:
         wd.watch(str(tmp_path))
         # Simulate a burst of 50 changes — debounce should collapse them
@@ -135,7 +136,7 @@ def test_debounce_collapses_many_events_into_one_refresh(qapp, tmp_path):
             (tmp_path / f"f_{i}.txt").write_text("x")
         # Wait long enough for debounce + a margin
         deadline = time.monotonic() + 2.0
-        while not refresh_calls and time.monotonic() < deadline:
+        while model.setRootPath.call_count == 0 and time.monotonic() < deadline:
             qapp.processEvents()
             time.sleep(0.05)
         # Pump a bit more to catch any over-fire
@@ -148,21 +149,14 @@ def test_debounce_collapses_many_events_into_one_refresh(qapp, tmp_path):
     # Each refresh writes 2 entries (setRootPath("") + setRootPath(path)).
     # 50 distinct create events should NOT produce 50 refreshes — debounce
     # must collapse them. Allow up to ~5 refreshes total to be safe across OSes.
-    assert 0 < len(refresh_calls) <= 10
+    assert 0 < model.setRootPath.call_count <= 10
 
 
 def test_watch_replaces_model_safely(qapp, tmp_path):
     """Re-binding a model mid-watch must not crash on the next event."""
     from Imervue.system.file_tree_watcher import FileTreeWatchdog
 
-    class _M:
-        def __init__(self):
-            self.calls = 0
-
-        def setRootPath(self, _p):
-            self.calls += 1
-
-    a, b = _M(), _M()
+    a, b = _fake_model(), _fake_model()
     wd = FileTreeWatchdog()
     try:
         wd.bind_model(a)
@@ -170,8 +164,8 @@ def test_watch_replaces_model_safely(qapp, tmp_path):
         wd.bind_model(b)
         # Manually trigger refresh — should target b, not a
         wd._do_refresh()
-        assert b.calls == 2  # setRootPath("") + setRootPath(path)
-        assert a.calls == 0
+        assert b.setRootPath.call_count == 2  # setRootPath("") + setRootPath(path)
+        assert a.setRootPath.call_count == 0
     finally:
         wd.stop()
 

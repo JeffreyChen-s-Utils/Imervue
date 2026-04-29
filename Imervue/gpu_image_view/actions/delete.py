@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 # Heavy imports (OpenGL, rawpy via LoadThumbnailWorker) are deferred so this
 # module is importable in environments that ship neither — including the
@@ -13,6 +13,18 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.delete")
+
+
+class _UndoStackOwner(Protocol):
+    """Minimal duck-typed surface that ``commit_pending_deletions`` requires.
+
+    The real caller is ``GPUImageView`` but the function only reads / clears
+    the undo stack, so any object exposing that attribute satisfies it.
+    Declared as a ``Protocol`` so unit tests can hand in a lightweight stub
+    without a full OpenGL / rawpy import chain.
+    """
+
+    undo_stack: list[dict]
 
 
 def delete_current_image(main_gui: GPUImageView):
@@ -145,7 +157,7 @@ def undo_delete(main_gui: GPUImageView):
     main_gui.update()
 
 
-def commit_pending_deletions(main_gui: GPUImageView):
+def commit_pending_deletions(main_gui: _UndoStackOwner):
     for action in main_gui.undo_stack:
         # 跳過已還原的動作
         if action.get("restored", False):

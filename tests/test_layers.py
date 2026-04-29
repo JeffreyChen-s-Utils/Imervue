@@ -23,7 +23,7 @@ def test_layer_defaults():
     layer = Layer()
     assert layer.kind == "text"
     assert layer.enabled is True
-    assert layer.opacity == 1.0
+    assert layer.opacity == pytest.approx(1.0)
     assert layer.blend_mode == "normal"
     assert layer.params == {}
 
@@ -55,8 +55,8 @@ def test_layer_from_dict_normalises_unknown_blend_mode():
 
 
 def test_layer_from_dict_clamps_opacity():
-    assert Layer.from_dict({"opacity": 3.0}).opacity == 1.0
-    assert Layer.from_dict({"opacity": -2.0}).opacity == 0.0
+    assert Layer.from_dict({"opacity": 3.0}).opacity == pytest.approx(1.0)
+    assert Layer.from_dict({"opacity": -2.0}).opacity == pytest.approx(0.0)
 
 
 def test_layers_from_dict_list_skips_garbage_entries():

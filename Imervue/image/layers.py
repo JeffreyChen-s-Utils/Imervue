@@ -246,7 +246,7 @@ def _apply_blend_formula(base: np.ndarray, overlay: np.ndarray, mode: str) -> np
         low = 2.0 * base * overlay
         high = 1.0 - 2.0 * (1.0 - base) * (1.0 - overlay)
         return np.where(base < 0.5, low, high)
-    # default = "normal"
+    # Unrecognised mode falls through to normal blend (overlay-on-base passthrough).
     return overlay
 
 
