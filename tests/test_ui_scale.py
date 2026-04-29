@@ -125,3 +125,41 @@ def test_preferences_dialog_ui_scale_range(qapp):
     dlg = PreferencesDialog()
     assert dlg._ui_scale_spin.minimum() == UI_SCALE_MIN_PERCENT
     assert dlg._ui_scale_spin.maximum() == UI_SCALE_MAX_PERCENT
+
+
+# ---------------------------------------------------------------------------
+# Startup-flow integration — what __main__.py actually does
+# ---------------------------------------------------------------------------
+
+
+def test_load_and_apply_default_when_setting_missing(qapp):
+    """No saved scale → apply the documented default and don't crash."""
+    user_setting_dict.pop("ui_scale_percent", None)
+    pct = load_and_apply_from_settings(qapp)
+    assert pct == UI_SCALE_DEFAULT_PERCENT
+
+
+def test_load_and_apply_clamps_corrupt_setting(qapp):
+    """A garbage saved value should not propagate; it gets clamped on apply."""
+    user_setting_dict["ui_scale_percent"] = "abc-not-a-number"
+    pct = load_and_apply_from_settings(qapp)
+    assert pct == UI_SCALE_DEFAULT_PERCENT
+
+
+def test_apply_ui_scale_persisted_then_clamped(qapp):
+    """A saved value beyond the cap is honoured up to the cap, no further."""
+    user_setting_dict["ui_scale_percent"] = 9999
+    pct = load_and_apply_from_settings(qapp)
+    assert pct == UI_SCALE_MAX_PERCENT
+
+
+def test_main_imports_apply_helper_without_circular_deps():
+    """__main__.py imports load_and_apply_from_settings — confirm the path stays valid.
+
+    Catches accidental relocation of the helper. Important because the entry
+    point can't easily report import errors before the splash screen.
+    """
+    import importlib
+    from Imervue.system import ui_scale as mod
+    importlib.reload(mod)  # ensure module is re-importable after change
+    assert callable(mod.load_and_apply_from_settings)

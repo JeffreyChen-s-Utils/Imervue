@@ -354,3 +354,155 @@ def test_dialog_emits_serialised_layers_on_apply(qapp):
     assert isinstance(captured["value"], list)
     assert len(captured["value"]) == 1
     assert captured["value"][0]["kind"] == "text"
+
+
+# ---------------------------------------------------------------------------
+# Multi-layer stacking — the integration the previous round skipped
+# ---------------------------------------------------------------------------
+
+
+def test_two_layers_compose_in_order(tmp_path):
+    """Layer 0 paints over base, then layer 1 paints over layer 0's result."""
+    from PIL import Image
+    red_path = tmp_path / "red.png"
+    Image.fromarray(_solid_rgba(8, 8, (255, 0, 0))).save(str(red_path))
+    blue_path = tmp_path / "blue.png"
+    Image.fromarray(_solid_rgba(8, 8, (0, 0, 255))).save(str(blue_path))
+
+    base = _solid_rgba(8, 8, (0, 255, 0))  # green base
+    red = Layer(kind="image", opacity=1.0, params={"path": str(red_path)})
+    blue = Layer(kind="image", opacity=1.0, params={"path": str(blue_path)})
+
+    out = apply_layers(base, [red, blue])
+    # Last layer wins because opacity 1.0 normal blend overrides everything
+    assert out[0, 0, 2] == 255  # B
+    assert out[0, 0, 0] == 0    # R
+
+
+def test_disabled_middle_layer_does_not_break_chain(tmp_path):
+    """A disabled layer in the middle leaves the surrounding layers intact."""
+    from PIL import Image
+    red_path = tmp_path / "red.png"
+    Image.fromarray(_solid_rgba(8, 8, (255, 0, 0))).save(str(red_path))
+    blue_path = tmp_path / "blue.png"
+    Image.fromarray(_solid_rgba(8, 8, (0, 0, 255))).save(str(blue_path))
+    yellow_path = tmp_path / "yellow.png"
+    Image.fromarray(_solid_rgba(8, 8, (255, 255, 0))).save(str(yellow_path))
+
+    base = _solid_rgba(8, 8, (50, 50, 50))
+    red = Layer(kind="image", opacity=1.0, params={"path": str(red_path)})
+    blue_off = Layer(
+        kind="image", enabled=False, opacity=1.0, params={"path": str(blue_path)},
+    )
+    yellow = Layer(kind="image", opacity=1.0, params={"path": str(yellow_path)})
+
+    out = apply_layers(base, [red, blue_off, yellow])
+    # Yellow (last enabled) dominates; blue (disabled) never paints.
+    assert out[0, 0, 0] == 255  # R
+    assert out[0, 0, 1] == 255  # G
+    assert out[0, 0, 2] == 0    # B (would be 255 if blue had painted)
+
+
+def test_partial_opacity_blends_with_layer_below(tmp_path):
+    """50% opacity overlay halfway between base and overlay colours."""
+    from PIL import Image
+    red_path = tmp_path / "red.png"
+    Image.fromarray(_solid_rgba(8, 8, (255, 0, 0))).save(str(red_path))
+
+    base = _solid_rgba(8, 8, (0, 0, 0))  # black
+    half_red = Layer(
+        kind="image", opacity=0.5, blend_mode="normal", params={"path": str(red_path)},
+    )
+    out = apply_layers(base, [half_red])
+    # Mid-grey on R channel: 0 * 0.5 + 255 * 0.5 ≈ 127
+    assert 120 <= out[0, 0, 0] <= 134
+
+
+def test_zero_size_layer_list_is_passthrough():
+    base = _solid_rgba(4, 4, (10, 20, 30))
+    out = apply_layers(base, [])
+    assert np.array_equal(out, base)
+
+
+# ---------------------------------------------------------------------------
+# Recipe extra → is_identity wiring (was missing direct coverage)
+# ---------------------------------------------------------------------------
+
+
+def test_recipe_extra_is_identity_when_extra_empty():
+    from Imervue.image.recipe import Recipe
+    assert Recipe()._extra_is_identity() is True
+
+
+def test_recipe_extra_is_identity_with_unrelated_keys():
+    """Forward-compat extras (e.g. develop panel version) must NOT break identity."""
+    from Imervue.image.recipe import Recipe
+    r = Recipe()
+    r.extra["panel_version"] = 7
+    assert r._extra_is_identity() is True
+    assert r.is_identity() is True
+
+
+def test_recipe_extra_is_not_identity_with_layers():
+    from Imervue.image.recipe import Recipe
+    r = Recipe()
+    r.extra["layers"] = [{"kind": "text", "params": {"text": "x"}}]
+    assert r._extra_is_identity() is False
+    assert r.is_identity() is False
+
+
+def test_recipe_extra_is_not_identity_with_masks():
+    from Imervue.image.recipe import Recipe
+    r = Recipe()
+    r.extra["masks"] = [{"kind": "radial"}]
+    assert r._extra_is_identity() is False
+
+
+def test_recipe_extra_is_not_identity_with_split_toning():
+    from Imervue.image.recipe import Recipe
+    r = Recipe()
+    r.extra["split_toning"] = {"shadow_hue": 210.0, "shadow_sat": 0.5}
+    assert r._extra_is_identity() is False
+
+
+def test_recipe_with_empty_layers_list_is_identity():
+    """A layers key with an empty list must still count as identity."""
+    from Imervue.image.recipe import Recipe
+    r = Recipe()
+    r.extra["layers"] = []
+    assert r.is_identity() is True
+
+
+# ---------------------------------------------------------------------------
+# Dialog wrapper (open_layers_dialog) — cancellation path
+# ---------------------------------------------------------------------------
+
+
+def test_open_layers_dialog_returns_none_on_cancel(qapp, monkeypatch):
+    from Imervue.gui import layers_dialog as mod
+    from Imervue.image.recipe import Recipe
+
+    # Force exec() to mimic the user clicking Cancel/Close.
+    monkeypatch.setattr(
+        mod.LayersDialog, "exec",
+        lambda self: mod.QDialog.DialogCode.Rejected,
+    )
+    result = mod.open_layers_dialog(Recipe())
+    assert result is None
+
+
+def test_open_layers_dialog_returns_layers_on_accept(qapp, monkeypatch):
+    from Imervue.gui import layers_dialog as mod
+    from Imervue.image.recipe import Recipe
+
+    def fake_exec(self):
+        # Simulate the Apply button firing
+        self._add_layer()
+        self._apply()
+        return mod.QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(mod.LayersDialog, "exec", fake_exec)
+    result = mod.open_layers_dialog(Recipe())
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0]["kind"] == "text"

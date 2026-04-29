@@ -113,3 +113,50 @@ def test_preferences_dialog_spinbox_range(qapp):
     dlg = PreferencesDialog()
     assert dlg._vram_spin.minimum() == VRAM_MIN_MB
     assert dlg._vram_spin.maximum() == VRAM_MAX_MB
+
+
+# ---------------------------------------------------------------------------
+# Wrapper + reject path
+# ---------------------------------------------------------------------------
+
+
+def test_open_preferences_dialog_smoke(qapp, monkeypatch):
+    """The wrapper builds + opens the dialog without raising."""
+    from Imervue.gui import preferences_dialog as mod
+    monkeypatch.setattr(mod.PreferencesDialog, "exec", lambda self: 0)
+    mod.open_preferences_dialog(parent=None)
+
+
+def test_preferences_dialog_reject_does_not_persist(qapp):
+    """Closing the dialog without OK keeps user_setting_dict untouched."""
+    from Imervue.gui.preferences_dialog import PreferencesDialog
+    user_setting_dict["vram_limit_auto"] = True
+    user_setting_dict["vram_limit_mb"] = 1536
+    user_setting_dict["ui_scale_percent"] = 100
+
+    dlg = PreferencesDialog()
+    dlg._vram_spin.setValue(4096)
+    dlg._auto_vram.setChecked(False)
+    dlg._ui_scale_spin.setValue(180)
+    # Reject — no _accept call, no persistence
+    dlg.reject()
+
+    assert user_setting_dict["vram_limit_auto"] is True
+    assert user_setting_dict["vram_limit_mb"] == 1536
+    assert user_setting_dict["ui_scale_percent"] == 100
+
+
+def test_round_trip_persists_through_dict(qapp):
+    """OK twice — persisted values survive a fresh dialog instance."""
+    from Imervue.gui.preferences_dialog import PreferencesDialog
+
+    dlg1 = PreferencesDialog()
+    dlg1._auto_vram.setChecked(False)
+    dlg1._vram_spin.setValue(2560)
+    dlg1._ui_scale_spin.setValue(130)
+    dlg1._accept()
+
+    dlg2 = PreferencesDialog()
+    assert dlg2._auto_vram.isChecked() is False
+    assert dlg2._vram_spin.value() == 2560
+    assert dlg2._ui_scale_spin.value() == 130

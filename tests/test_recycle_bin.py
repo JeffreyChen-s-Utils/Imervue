@@ -227,3 +227,123 @@ def test_dialog_restore_reinserts_into_image_list(qapp, tmp_path):
     # Path should be inserted at index 2 of the model images
     assert viewer.model.images[2] == str(p)
     assert viewer.undo_stack[0]["restored"] is True
+
+
+# ---------------------------------------------------------------------------
+# Integration with commit_pending_deletions — the gap from last round
+# ---------------------------------------------------------------------------
+
+
+class _MinimalViewer:
+    """Just enough viewer-like surface for delete + recycle-bin tests."""
+
+    def __init__(self):
+        self.undo_stack: list[dict] = []
+        self.model = type("M", (), {"images": []})()
+        self.thumbnail_size = 256
+        self._load_generation = 0
+        self.thread_pool = type("T", (), {"start": lambda *a, **kw: None})()
+        self.add_thumbnail = lambda *a, **kw: None
+
+
+def test_restore_then_commit_does_not_unlink_restored_file(qapp, tmp_path):
+    """End-to-end: restoring through the dialog must protect the file from purge."""
+    from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
+    from Imervue.gui.recycle_bin_dialog import RecycleBinDialog
+
+    keep = tmp_path / "keep.png"
+    drop = tmp_path / "drop.png"
+    keep.write_bytes(b"k")
+    drop.write_bytes(b"d")
+
+    viewer = _MinimalViewer()
+    viewer.undo_stack.append({
+        "mode": "delete",
+        "deleted_paths": [str(keep), str(drop)],
+        "indices": [0, 1],
+        "restored": False,
+    })
+
+    dlg = RecycleBinDialog(viewer)
+    # Select only "keep" and restore it
+    keep_item = None
+    for i in range(dlg._tree.topLevelItemCount()):
+        item = dlg._tree.topLevelItem(i)
+        if item.text(1) == str(keep):
+            keep_item = item
+            break
+    assert keep_item is not None
+    dlg._tree.setCurrentItem(keep_item)
+    dlg._restore_selected()
+
+    # Now commit pending deletions — only "drop" should disappear from disk.
+    commit_pending_deletions(viewer)
+    assert keep.exists(), "Restored file was wrongly unlinked at commit time"
+    assert not drop.exists(), "Pending deletion file was not unlinked"
+
+
+def test_purge_removes_action_from_undo_stack_for_commit(qapp, tmp_path):
+    """After in-dialog purge, commit_pending_deletions must not double-free."""
+    from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
+    from Imervue.gui.recycle_bin_dialog import RecycleBinDialog
+    from PySide6.QtWidgets import QMessageBox
+
+    target = tmp_path / "doomed.png"
+    target.write_bytes(b"x")
+
+    viewer = _MinimalViewer()
+    viewer.undo_stack.append({
+        "mode": "delete",
+        "deleted_paths": [str(target)],
+        "indices": [0],
+        "restored": False,
+    })
+
+    dlg = RecycleBinDialog(viewer)
+    dlg._tree.selectAll()
+
+    import pytest
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            QMessageBox, "question",
+            lambda *a, **kw: QMessageBox.StandardButton.Yes,
+        )
+        dlg._purge_selected()
+
+    assert not target.exists()
+    # commit must be a no-op (action is empty / restored=True)
+    commit_pending_deletions(viewer)
+
+
+def test_refresh_repopulates_after_external_undo_pop(qapp, tmp_path):
+    """If something else mutates undo_stack while the dialog is open, refresh resyncs."""
+    from Imervue.gui.recycle_bin_dialog import RecycleBinDialog
+
+    p = tmp_path / "x.png"
+    p.write_bytes(b"x")
+
+    viewer = _MinimalViewer()
+    viewer.undo_stack.append({
+        "mode": "delete",
+        "deleted_paths": [str(p)],
+        "indices": [0],
+        "restored": False,
+    })
+
+    dlg = RecycleBinDialog(viewer)
+    assert dlg._tree.topLevelItemCount() == 1
+
+    # External code (e.g. delete-undo via Ctrl+Z) marks the action restored
+    viewer.undo_stack[0]["restored"] = True
+    dlg.refresh()
+    assert dlg._tree.topLevelItemCount() == 0
+
+
+def test_open_recycle_bin_dialog_smoke(qapp, tmp_path, monkeypatch):
+    """The wrapper builds + opens the dialog without raising."""
+    from Imervue.gui import recycle_bin_dialog as mod
+
+    viewer = _MinimalViewer()
+    # Skip the modal exec() — we only want to verify wiring + initialisation
+    monkeypatch.setattr(mod.RecycleBinDialog, "exec", lambda self: 0)
+    mod.open_recycle_bin_dialog(viewer)
