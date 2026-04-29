@@ -1268,4 +1268,15 @@ korean_word_dict = {
     "channel_mixer_out_red": "빨강 →",
     "channel_mixer_out_green": "녹색 →",
     "channel_mixer_out_blue": "파랑 →",
+    # 그라데이션 맵
+    "gradient_map_title": "그라데이션 맵",
+    "gradient_map_enable": "그라데이션 맵 활성화",
+    "gradient_map_preset": "프리셋:",
+    "gradient_map_intensity": "강도:",
+    "gradient_map_preset_mono": "흑백",
+    "gradient_map_preset_sepia": "세피아",
+    "gradient_map_preset_cyanotype": "사이아노타이프",
+    "gradient_map_preset_fire": "파이어",
+    "gradient_map_preset_ocean": "오션",
+    "gradient_map_preset_magenta_teal": "마젠타-틸",
 }

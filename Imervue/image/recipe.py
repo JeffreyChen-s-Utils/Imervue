@@ -135,6 +135,7 @@ class Recipe:
             or _enabled_flag(self.extra.get("posterize"))
             or _enabled_flag(self.extra.get("levels"))
             or _enabled_flag(self.extra.get("channel_mixer"))
+            or _enabled_flag(self.extra.get("gradient_map"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -304,6 +305,7 @@ class Recipe:
         arr = _apply_masks(arr, recipe)
         arr = _apply_levels(arr, recipe)
         arr = _apply_channel_mixer(arr, recipe)
+        arr = _apply_gradient_map(arr, recipe)
         arr = _apply_threshold_posterize(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
@@ -364,6 +366,25 @@ def _apply_channel_mixer(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
         return apply_channel_mixer(arr, options)
     except (ValueError, TypeError) as err:
         logger.warning("Channel mixer apply failed: %s", err)
+        return arr
+
+
+def _apply_gradient_map(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply gradient map from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.gradient_map import (
+            GradientMapOptions,
+            apply_gradient_map,
+        )
+    except ImportError:
+        return arr
+    options = GradientMapOptions.from_dict(recipe.extra.get("gradient_map"))
+    try:
+        return apply_gradient_map(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Gradient map apply failed: %s", err)
         return arr
 
 

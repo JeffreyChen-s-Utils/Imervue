@@ -1263,4 +1263,15 @@ chinese_word_dict = {
     "channel_mixer_out_red": "红 →",
     "channel_mixer_out_green": "绿 →",
     "channel_mixer_out_blue": "蓝 →",
+    # 渐变映射
+    "gradient_map_title": "渐变映射",
+    "gradient_map_enable": "启用渐变映射",
+    "gradient_map_preset": "预设：",
+    "gradient_map_intensity": "强度：",
+    "gradient_map_preset_mono": "黑白",
+    "gradient_map_preset_sepia": "棕褐",
+    "gradient_map_preset_cyanotype": "蓝晒",
+    "gradient_map_preset_fire": "火焰",
+    "gradient_map_preset_ocean": "海洋",
+    "gradient_map_preset_magenta_teal": "洋红–青绿",
 }

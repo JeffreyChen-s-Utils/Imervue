@@ -1289,4 +1289,15 @@ english_word_dict = {
     "channel_mixer_out_red": "Red →",
     "channel_mixer_out_green": "Green →",
     "channel_mixer_out_blue": "Blue →",
+    # Gradient map
+    "gradient_map_title": "Gradient Map",
+    "gradient_map_enable": "Enable gradient map",
+    "gradient_map_preset": "Preset:",
+    "gradient_map_intensity": "Intensity:",
+    "gradient_map_preset_mono": "Mono",
+    "gradient_map_preset_sepia": "Sepia",
+    "gradient_map_preset_cyanotype": "Cyanotype",
+    "gradient_map_preset_fire": "Fire",
+    "gradient_map_preset_ocean": "Ocean",
+    "gradient_map_preset_magenta_teal": "Magenta–Teal",
 }

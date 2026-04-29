@@ -1262,4 +1262,15 @@ traditional_chinese_word_dict = {
     "channel_mixer_out_red": "紅 →",
     "channel_mixer_out_green": "綠 →",
     "channel_mixer_out_blue": "藍 →",
+    # 漸層對應
+    "gradient_map_title": "漸層對應",
+    "gradient_map_enable": "啟用漸層對應",
+    "gradient_map_preset": "預設集：",
+    "gradient_map_intensity": "強度：",
+    "gradient_map_preset_mono": "黑白",
+    "gradient_map_preset_sepia": "棕褐",
+    "gradient_map_preset_cyanotype": "藍曬",
+    "gradient_map_preset_fire": "火焰",
+    "gradient_map_preset_ocean": "海洋",
+    "gradient_map_preset_magenta_teal": "洋紅–青綠",
 }

@@ -1274,4 +1274,15 @@ japanese_word_dict = {
     "channel_mixer_out_red": "赤 →",
     "channel_mixer_out_green": "緑 →",
     "channel_mixer_out_blue": "青 →",
+    # グラデーションマップ
+    "gradient_map_title": "グラデーションマップ",
+    "gradient_map_enable": "グラデーションマップを有効にする",
+    "gradient_map_preset": "プリセット:",
+    "gradient_map_intensity": "強度:",
+    "gradient_map_preset_mono": "モノクロ",
+    "gradient_map_preset_sepia": "セピア",
+    "gradient_map_preset_cyanotype": "サイアノタイプ",
+    "gradient_map_preset_fire": "ファイア",
+    "gradient_map_preset_ocean": "オーシャン",
+    "gradient_map_preset_magenta_teal": "マゼンタ-ティール",
 }
