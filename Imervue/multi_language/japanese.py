@@ -1260,4 +1260,10 @@ japanese_word_dict = {
     "posterize_threshold_level": "しきい値（0–255）:",
     "posterize_levels_enable": "ポスタリゼーションを有効にする",
     "posterize_levels_count": "チャンネルあたりの階調数（2–64）:",
+    # レベル補正
+    "levels_title": "レベル補正",
+    "levels_enable": "レベル補正を有効にする",
+    "levels_black": "黒レベル:",
+    "levels_white": "白レベル:",
+    "levels_gamma": "ガンマ:",
 }

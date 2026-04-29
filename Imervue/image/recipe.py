@@ -133,6 +133,7 @@ class Recipe:
         return not (
             _enabled_flag(self.extra.get("threshold"))
             or _enabled_flag(self.extra.get("posterize"))
+            or _enabled_flag(self.extra.get("levels"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -300,6 +301,7 @@ class Recipe:
         arr = _apply_split_toning(arr, recipe)
         arr = _apply_lut(arr, recipe)
         arr = _apply_masks(arr, recipe)
+        arr = _apply_levels(arr, recipe)
         arr = _apply_threshold_posterize(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
@@ -325,6 +327,22 @@ def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
         )
     except (ValueError, TypeError) as err:
         logger.warning("Split toning apply failed: %s", err)
+        return arr
+
+
+def _apply_levels(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply Levels (black/white/gamma) from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.levels import LevelsOptions, apply_levels
+    except ImportError:
+        return arr
+    options = LevelsOptions.from_dict(recipe.extra.get("levels"))
+    try:
+        return apply_levels(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Levels apply failed: %s", err)
         return arr
 
 

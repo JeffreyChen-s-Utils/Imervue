@@ -1275,4 +1275,10 @@ english_word_dict = {
     "posterize_threshold_level": "Threshold level (0–255):",
     "posterize_levels_enable": "Enable posterize",
     "posterize_levels_count": "Levels per channel (2–64):",
+    # Levels editor
+    "levels_title": "Levels",
+    "levels_enable": "Enable levels",
+    "levels_black": "Black point:",
+    "levels_white": "White point:",
+    "levels_gamma": "Gamma:",
 }

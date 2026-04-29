@@ -1254,4 +1254,10 @@ korean_word_dict = {
     "posterize_threshold_level": "임계값(0–255):",
     "posterize_levels_enable": "포스터화 활성화",
     "posterize_levels_count": "채널당 단계 수(2–64):",
+    # 레벨 조정
+    "levels_title": "레벨 조정",
+    "levels_enable": "레벨 활성화",
+    "levels_black": "검은색 포인트:",
+    "levels_white": "흰색 포인트:",
+    "levels_gamma": "감마:",
 }

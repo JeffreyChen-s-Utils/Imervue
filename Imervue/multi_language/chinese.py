@@ -1249,4 +1249,10 @@ chinese_word_dict = {
     "posterize_threshold_level": "二值化阈值（0–255）：",
     "posterize_levels_enable": "启用色调分离",
     "posterize_levels_count": "每通道层级（2–64）：",
+    # 色阶
+    "levels_title": "色阶",
+    "levels_enable": "启用色阶",
+    "levels_black": "黑色点：",
+    "levels_white": "白色点：",
+    "levels_gamma": "Gamma：",
 }

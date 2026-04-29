@@ -1248,4 +1248,10 @@ traditional_chinese_word_dict = {
     "posterize_threshold_level": "二值化臨界值（0–255）：",
     "posterize_levels_enable": "啟用色調分離",
     "posterize_levels_count": "每色階階數（2–64）：",
+    # 色階
+    "levels_title": "色階",
+    "levels_enable": "啟用色階",
+    "levels_black": "黑色點：",
+    "levels_white": "白色點：",
+    "levels_gamma": "Gamma：",
 }
