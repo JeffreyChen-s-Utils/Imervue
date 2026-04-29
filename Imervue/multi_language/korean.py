@@ -1309,4 +1309,12 @@ korean_word_dict = {
     "smart_crop_preset_4:5": "세로형(4:5)",
     "smart_crop_preset_3:2": "가로형(3:2)",
     "smart_crop_preset_16:9": "와이드스크린(16:9)",
+    # 타임랩스 디플리커
+    "deflicker_title": "디플리커(타임랩스)",
+    "deflicker_mode": "기준 모드:",
+    "deflicker_mode_rolling": "이동 평균",
+    "deflicker_mode_global": "전체 평균",
+    "deflicker_window": "이동 창:",
+    "deflicker_frame_count": "{count}개 프레임을 처리합니다.",
+    "deflicker_done": "{count}개 디플리커 프레임을 저장했습니다.",
 }

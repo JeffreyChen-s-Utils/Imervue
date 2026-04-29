@@ -1315,4 +1315,12 @@ japanese_word_dict = {
     "smart_crop_preset_4:5": "ポートレート（4:5）",
     "smart_crop_preset_3:2": "横長（3:2）",
     "smart_crop_preset_16:9": "ワイド（16:9）",
+    # タイムラプスのフリッカー除去
+    "deflicker_title": "デフリッカー（タイムラプス）",
+    "deflicker_mode": "ターゲットモード:",
+    "deflicker_mode_rolling": "移動平均",
+    "deflicker_mode_global": "全体平均",
+    "deflicker_window": "移動ウィンドウ:",
+    "deflicker_frame_count": "{count} フレームを処理します。",
+    "deflicker_done": "{count} フレームを書き出しました。",
 }

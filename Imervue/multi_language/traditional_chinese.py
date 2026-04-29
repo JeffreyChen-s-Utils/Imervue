@@ -1303,4 +1303,12 @@ traditional_chinese_word_dict = {
     "smart_crop_preset_4:5": "直幅（4:5）",
     "smart_crop_preset_3:2": "橫幅（3:2）",
     "smart_crop_preset_16:9": "寬螢幕（16:9）",
+    # 縮時去 flicker
+    "deflicker_title": "去閃爍（縮時攝影）",
+    "deflicker_mode": "目標模式：",
+    "deflicker_mode_rolling": "滾動平均",
+    "deflicker_mode_global": "整體平均",
+    "deflicker_window": "滾動視窗：",
+    "deflicker_frame_count": "將處理 {count} 個影格。",
+    "deflicker_done": "已寫出 {count} 個去閃爍影格。",
 }

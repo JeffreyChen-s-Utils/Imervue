@@ -1304,4 +1304,12 @@ chinese_word_dict = {
     "smart_crop_preset_4:5": "竖幅（4:5）",
     "smart_crop_preset_3:2": "横幅（3:2）",
     "smart_crop_preset_16:9": "宽屏（16:9）",
+    # 延时去闪烁
+    "deflicker_title": "去闪烁（延时摄影）",
+    "deflicker_mode": "目标模式：",
+    "deflicker_mode_rolling": "滚动平均",
+    "deflicker_mode_global": "整体平均",
+    "deflicker_window": "滚动窗口：",
+    "deflicker_frame_count": "将处理 {count} 个帧。",
+    "deflicker_done": "已写出 {count} 个去闪烁帧。",
 }

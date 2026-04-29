@@ -1330,4 +1330,12 @@ english_word_dict = {
     "smart_crop_preset_4:5": "Portrait (4:5)",
     "smart_crop_preset_3:2": "Landscape (3:2)",
     "smart_crop_preset_16:9": "Widescreen (16:9)",
+    # Deflicker plugin
+    "deflicker_title": "Deflicker (Time-lapse)",
+    "deflicker_mode": "Target mode:",
+    "deflicker_mode_rolling": "Rolling mean",
+    "deflicker_mode_global": "Global mean",
+    "deflicker_window": "Rolling window:",
+    "deflicker_frame_count": "{count} frames will be processed.",
+    "deflicker_done": "Wrote {count} deflickered frames.",
 }
