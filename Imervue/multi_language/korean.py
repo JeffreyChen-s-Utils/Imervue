@@ -1317,4 +1317,11 @@ korean_word_dict = {
     "deflicker_window": "이동 창:",
     "deflicker_frame_count": "{count}개 프레임을 처리합니다.",
     "deflicker_done": "{count}개 디플리커 프레임을 저장했습니다.",
+    # 인물 모드
+    "portrait_mode_title": "인물 모드",
+    "portrait_mode_blur": "블러 반경:",
+    "portrait_mode_feather": "페더 반경:",
+    "portrait_mode_hint": "원본 옆에 <이름>_portrait.png를 저장합니다. rembg와 onnxruntime이 필요합니다.",
+    "portrait_mode_done": "{path}에 저장됨",
+    "portrait_mode_failed": "인물 모드 실패",
 }

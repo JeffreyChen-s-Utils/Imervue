@@ -1338,4 +1338,11 @@ english_word_dict = {
     "deflicker_window": "Rolling window:",
     "deflicker_frame_count": "{count} frames will be processed.",
     "deflicker_done": "Wrote {count} deflickered frames.",
+    # Portrait mode plugin
+    "portrait_mode_title": "Portrait Mode",
+    "portrait_mode_blur": "Blur radius:",
+    "portrait_mode_feather": "Feather radius:",
+    "portrait_mode_hint": "Writes <name>_portrait.png next to the source. Requires rembg + onnxruntime.",
+    "portrait_mode_done": "Saved {path}",
+    "portrait_mode_failed": "Portrait mode failed",
 }

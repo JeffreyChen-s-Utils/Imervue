@@ -1312,4 +1312,11 @@ chinese_word_dict = {
     "deflicker_window": "滚动窗口：",
     "deflicker_frame_count": "将处理 {count} 个帧。",
     "deflicker_done": "已写出 {count} 个去闪烁帧。",
+    # 人像模式
+    "portrait_mode_title": "人像模式",
+    "portrait_mode_blur": "模糊半径：",
+    "portrait_mode_feather": "羽化半径：",
+    "portrait_mode_hint": "在源文件旁写出 <名称>_portrait.png。需要 rembg 与 onnxruntime。",
+    "portrait_mode_done": "已保存 {path}",
+    "portrait_mode_failed": "人像模式失败",
 }

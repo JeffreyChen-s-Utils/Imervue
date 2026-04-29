@@ -1323,4 +1323,11 @@ japanese_word_dict = {
     "deflicker_window": "移動ウィンドウ:",
     "deflicker_frame_count": "{count} フレームを処理します。",
     "deflicker_done": "{count} フレームを書き出しました。",
+    # ポートレートモード
+    "portrait_mode_title": "ポートレートモード",
+    "portrait_mode_blur": "ブラー半径:",
+    "portrait_mode_feather": "フェザー半径:",
+    "portrait_mode_hint": "ソースの隣に <名前>_portrait.png を書き出します。rembg と onnxruntime が必要です。",
+    "portrait_mode_done": "保存しました: {path}",
+    "portrait_mode_failed": "ポートレートモード失敗",
 }
