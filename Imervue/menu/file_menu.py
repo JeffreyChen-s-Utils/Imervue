@@ -49,7 +49,12 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
 
     file_menu.addSeparator()
 
-    # 新增刪除動作
+    # 資源回收筒（檢視 / 還原 / 永久刪除待處理的軟刪除檔案）
+    recycle_action = file_menu.addAction(
+        lang.get("recycle_bin_title", "Recycle Bin"))
+    recycle_action.triggered.connect(lambda: _open_recycle_bin(ui_we_want_to_set))
+
+    # 立即清空所有待刪除（保留原行為以便從選單觸發 commit）
     delete_action = file_menu.addAction(lang.get("main_window_remove_undo_stack"))
     delete_action.triggered.connect(lambda: commit_pending_deletions(ui_we_want_to_set.viewer))
 
@@ -365,6 +370,11 @@ def _open_shortcut_settings(ui: ImervueMainWindow):
 def _open_preferences(ui: ImervueMainWindow) -> None:
     from Imervue.gui.preferences_dialog import open_preferences_dialog
     open_preferences_dialog(ui)
+
+
+def _open_recycle_bin(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.recycle_bin_dialog import open_recycle_bin_dialog
+    open_recycle_bin_dialog(ui.viewer, parent=ui)
 
 
 def _save_session(ui: ImervueMainWindow) -> None:

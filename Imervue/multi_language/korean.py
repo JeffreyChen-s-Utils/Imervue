@@ -1202,4 +1202,12 @@ korean_word_dict = {
     "preferences_vram_hint": "GPU 뷰어의 타일 캐시 예산. 재시작이 필요합니다.",
     "preferences_ui_scale_label": "UI 스케일:",
     "preferences_ui_scale_hint": "응용 프로그램 글꼴을 조정하여 모든 위젯의 크기를 변경합니다. 재시작이 필요합니다.",
+    # 휴지통
+    "recycle_bin_title": "휴지통",
+    "recycle_bin_col_name": "이름",
+    "recycle_bin_col_path": "경로",
+    "recycle_bin_restore": "복원",
+    "recycle_bin_purge": "영구 삭제",
+    "recycle_bin_purge_confirm": "{count}개 항목을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "close": "닫기",
 }

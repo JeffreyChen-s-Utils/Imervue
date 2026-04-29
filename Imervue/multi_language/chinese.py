@@ -1197,4 +1197,12 @@ chinese_word_dict = {
     "preferences_vram_hint": "GPU 查看器的图块缓存预算，重新启动后生效。",
     "preferences_ui_scale_label": "界面缩放：",
     "preferences_ui_scale_hint": "通过调整应用程序字体放大或缩小所有控件，重新启动后生效。",
+    # 回收站
+    "recycle_bin_title": "回收站",
+    "recycle_bin_col_name": "名称",
+    "recycle_bin_col_path": "路径",
+    "recycle_bin_restore": "还原",
+    "recycle_bin_purge": "永久删除",
+    "recycle_bin_purge_confirm": "确定永久删除 {count} 个项目？此操作无法撤销。",
+    "close": "关闭",
 }

@@ -1223,4 +1223,12 @@ english_word_dict = {
     "preferences_vram_hint": "Tile-cache budget for the GPU viewer. Restart required.",
     "preferences_ui_scale_label": "UI scale:",
     "preferences_ui_scale_hint": "Scales every widget by adjusting the application font. Restart required.",
+    # Recycle Bin
+    "recycle_bin_title": "Recycle Bin",
+    "recycle_bin_col_name": "Name",
+    "recycle_bin_col_path": "Path",
+    "recycle_bin_restore": "Restore",
+    "recycle_bin_purge": "Delete Forever",
+    "recycle_bin_purge_confirm": "Permanently delete {count} item(s)? This cannot be undone.",
+    "close": _ENGLISH_CLOSE,
 }

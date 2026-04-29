@@ -1208,4 +1208,12 @@ japanese_word_dict = {
     "preferences_vram_hint": "GPU ビューアのタイルキャッシュ予算。再起動が必要です。",
     "preferences_ui_scale_label": "UI スケール:",
     "preferences_ui_scale_hint": "アプリケーションフォントを調整してすべてのウィジェットを拡大／縮小します。再起動が必要です。",
+    # ごみ箱
+    "recycle_bin_title": "ごみ箱",
+    "recycle_bin_col_name": "名前",
+    "recycle_bin_col_path": "パス",
+    "recycle_bin_restore": "復元",
+    "recycle_bin_purge": "完全に削除",
+    "recycle_bin_purge_confirm": "{count} 個の項目を完全に削除しますか？この操作は取り消せません。",
+    "close": "閉じる",
 }

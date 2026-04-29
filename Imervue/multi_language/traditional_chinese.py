@@ -1196,4 +1196,12 @@ traditional_chinese_word_dict = {
     "preferences_vram_hint": "GPU 檢視器的圖塊快取預算，重新啟動後生效。",
     "preferences_ui_scale_label": "介面縮放：",
     "preferences_ui_scale_hint": "藉由調整應用程式字型放大或縮小所有元件，重新啟動後生效。",
+    # 資源回收筒
+    "recycle_bin_title": "資源回收筒",
+    "recycle_bin_col_name": "名稱",
+    "recycle_bin_col_path": "路徑",
+    "recycle_bin_restore": "還原",
+    "recycle_bin_purge": "永久刪除",
+    "recycle_bin_purge_confirm": "確定永久刪除 {count} 個項目？此動作無法還原。",
+    "close": "關閉",
 }
