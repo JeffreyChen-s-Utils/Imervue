@@ -1798,7 +1798,7 @@ class GPUImageView(QOpenGLWidget):
         operation. There is no token / nonce / cryptographic context here, so
         an unpredictable PRNG is unnecessary and would only add overhead.
         """
-        import random  # NOSONAR S2245 UI navigation, not security-sensitive
+        import random  # nosec B311  # NOSONAR S2245 UI navigation, not security-sensitive
         images = self.model.images
         if not images:
             return
@@ -1807,7 +1807,7 @@ class GPUImageView(QOpenGLWidget):
             self.load_deep_zoom_image(images[0])
             return
         choices = [i for i in range(len(images)) if i != self.current_index]
-        idx = random.choice(choices)  # NOSONAR S2245 UI navigation, not security-sensitive
+        idx = random.choice(choices)  # nosec B311  # NOSONAR S2245 UI navigation, not security-sensitive
         self.current_index = idx
         self.tile_grid_mode = False
         self.load_deep_zoom_image(images[idx])
