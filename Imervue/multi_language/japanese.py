@@ -1254,4 +1254,10 @@ japanese_word_dict = {
     "error_report_action": "サポート用バンドルを生成…",
     "error_report_done": "サポートバンドルを {path} に保存しました",
     "error_report_failed": "生成に失敗しました",
+    # しきい値 / ポスタリゼーション
+    "posterize_title": "しきい値 / ポスタリゼーション",
+    "posterize_threshold_enable": "しきい値を有効にする",
+    "posterize_threshold_level": "しきい値（0–255）:",
+    "posterize_levels_enable": "ポスタリゼーションを有効にする",
+    "posterize_levels_count": "チャンネルあたりの階調数（2–64）:",
 }

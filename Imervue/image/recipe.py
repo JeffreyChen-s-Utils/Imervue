@@ -60,6 +60,11 @@ def _is_zero(value: float) -> bool:
     return math.isclose(value, 0.0, abs_tol=_ADJUST_EPS)
 
 
+def _enabled_flag(entry: object) -> bool:
+    """Return True when ``entry`` is a dict whose ``enabled`` field is truthy."""
+    return bool(isinstance(entry, dict) and entry.get("enabled"))
+
+
 @dataclass
 class Recipe:
     """Non-destructive edit recipe for a single image.
@@ -118,14 +123,16 @@ class Recipe:
         )
 
     def _extra_is_identity(self) -> bool:
-        """No layers / masks / split-toning configured in the extras blob."""
+        """No layers / masks / split-toning / threshold / posterize configured."""
         if not self.extra:
             return True
-        # These extras change pixels when present and non-empty.
+        if (self.extra.get("layers")
+                or self.extra.get("masks")
+                or self.extra.get("split_toning")):
+            return False
         return not (
-            self.extra.get("layers")
-            or self.extra.get("masks")
-            or self.extra.get("split_toning")
+            _enabled_flag(self.extra.get("threshold"))
+            or _enabled_flag(self.extra.get("posterize"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -293,6 +300,7 @@ class Recipe:
         arr = _apply_split_toning(arr, recipe)
         arr = _apply_lut(arr, recipe)
         arr = _apply_masks(arr, recipe)
+        arr = _apply_threshold_posterize(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
 
@@ -318,6 +326,29 @@ def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     except (ValueError, TypeError) as err:
         logger.warning("Split toning apply failed: %s", err)
         return arr
+
+
+def _apply_threshold_posterize(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply threshold and posterize from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.posterize import (
+            PosterizeOptions,
+            ThresholdOptions,
+            apply_posterize,
+            apply_threshold,
+        )
+    except ImportError:
+        return arr
+    threshold_opts = ThresholdOptions.from_dict(recipe.extra.get("threshold"))
+    posterize_opts = PosterizeOptions.from_dict(recipe.extra.get("posterize"))
+    try:
+        arr = apply_threshold(arr, threshold_opts)
+        arr = apply_posterize(arr, posterize_opts)
+    except (ValueError, TypeError) as err:
+        logger.warning("Threshold/posterize apply failed: %s", err)
+    return arr
 
 
 def _apply_layer_stack(arr: np.ndarray, recipe: Recipe) -> np.ndarray:

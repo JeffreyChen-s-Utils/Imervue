@@ -1269,4 +1269,10 @@ english_word_dict = {
     "error_report_action": "Generate Support Bundle…",
     "error_report_done": "Support bundle saved to {path}",
     "error_report_failed": "Report failed",
+    # Threshold / Posterize
+    "posterize_title": "Threshold / Posterize",
+    "posterize_threshold_enable": "Enable threshold",
+    "posterize_threshold_level": "Threshold level (0–255):",
+    "posterize_levels_enable": "Enable posterize",
+    "posterize_levels_count": "Levels per channel (2–64):",
 }

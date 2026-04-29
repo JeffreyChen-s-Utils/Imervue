@@ -1248,4 +1248,10 @@ korean_word_dict = {
     "error_report_action": "지원 번들 생성…",
     "error_report_done": "지원 번들을 {path}에 저장했습니다",
     "error_report_failed": "생성에 실패했습니다",
+    # 임계값 / 포스터화
+    "posterize_title": "임계값 / 포스터화",
+    "posterize_threshold_enable": "임계값 활성화",
+    "posterize_threshold_level": "임계값(0–255):",
+    "posterize_levels_enable": "포스터화 활성화",
+    "posterize_levels_count": "채널당 단계 수(2–64):",
 }

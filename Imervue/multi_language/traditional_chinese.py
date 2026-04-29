@@ -1242,4 +1242,10 @@ traditional_chinese_word_dict = {
     "error_report_action": "產生支援回報壓縮檔…",
     "error_report_done": "支援回報已存到 {path}",
     "error_report_failed": "回報產生失敗",
+    # 二值化 / 色調分離
+    "posterize_title": "二值化 / 色調分離",
+    "posterize_threshold_enable": "啟用二值化",
+    "posterize_threshold_level": "二值化臨界值（0–255）：",
+    "posterize_levels_enable": "啟用色調分離",
+    "posterize_levels_count": "每色階階數（2–64）：",
 }

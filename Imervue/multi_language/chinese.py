@@ -1243,4 +1243,10 @@ chinese_word_dict = {
     "error_report_action": "生成支持反馈压缩包…",
     "error_report_done": "支持反馈已保存至 {path}",
     "error_report_failed": "生成失败",
+    # 二值化 / 色调分离
+    "posterize_title": "二值化 / 色调分离",
+    "posterize_threshold_enable": "启用二值化",
+    "posterize_threshold_level": "二值化阈值（0–255）：",
+    "posterize_levels_enable": "启用色调分离",
+    "posterize_levels_count": "每通道层级（2–64）：",
 }
