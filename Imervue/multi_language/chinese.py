@@ -1369,4 +1369,18 @@ chinese_word_dict = {
     "onboarding_step_develop_body": "切到「修改」选项卡调整曝光、对比度、曲线、遮罩等。所有编辑均为非破坏性，原始文件绝不被覆盖。",
     "onboarding_step_extra_title": "高级工具与插件",
     "onboarding_step_extra_body": "「高级工具」菜单放入了重量级功能：AI 超分辨率、全景拼接、印样、智能裁剪、降噪、上色等。插件可继续扩展菜单。",
+    # 个人配置文件
+    "profiles_title": "个人配置文件",
+    "profiles_active_marker": "（使用中）",
+    "profiles_switch": "切换到",
+    "profiles_add": "新增…",
+    "profiles_rename": "重命名…",
+    "profiles_delete": "删除",
+    "profiles_new_name": "新配置文件名称：",
+    "profiles_switched": "已切换到「{name}」配置文件，重启后完全生效。",
+    "profiles_created": "配置文件「{name}」已创建。",
+    "profiles_create_failed": "无法创建此配置文件（重复或名称为空）。",
+    "profiles_rename_failed": "无法重命名（重复或名称无效）。",
+    "profiles_cannot_delete_protected": "无法删除默认或当前使用中的配置文件。",
+    "profiles_delete_confirm": "确定永久删除「{name}」配置文件？此操作无法撤销。",
 }

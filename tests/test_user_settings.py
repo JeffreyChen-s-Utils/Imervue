@@ -12,9 +12,12 @@ from pathlib import Path
 
 class TestUserSettingDict:
     def test_write_and_read(self):
-        """Settings should round-trip through JSON."""
+        """Settings should round-trip through JSON in the v2 multi-profile format."""
         from Imervue.user_settings.user_setting_dict import (
-            user_setting_dict, write_user_setting, read_user_setting,
+            DEFAULT_PROFILE,
+            read_user_setting,
+            user_setting_dict,
+            write_user_setting,
         )
 
         # Set some values
@@ -25,10 +28,13 @@ class TestUserSettingDict:
         path = write_user_setting()
         assert path.exists()
 
-        # Verify JSON content
+        # Verify v2 container shape: {"current_profile": ..., "profiles": {...}}
         data = json.loads(path.read_text())
-        assert data["language"] == "Japanese"
-        assert data["user_last_folder"] == "/test/folder"
+        assert data["current_profile"] == DEFAULT_PROFILE
+        assert "profiles" in data
+        default_profile = data["profiles"][DEFAULT_PROFILE]
+        assert default_profile["language"] == "Japanese"
+        assert default_profile["user_last_folder"] == "/test/folder"
 
         # Reset and read back
         user_setting_dict["language"] = "English"

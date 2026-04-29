@@ -134,6 +134,12 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     preferences_action.triggered.connect(
         lambda: _open_preferences(ui_we_want_to_set))
 
+    # 個人設定檔（multi-profile）
+    profiles_action = file_menu.addAction(
+        lang.get("profiles_title", "Profiles…"))
+    profiles_action.triggered.connect(
+        lambda: _open_profiles(ui_we_want_to_set))
+
     file_menu.addSeparator()
 
     exit_action = file_menu.addAction(lang.get("main_window_exit"))
@@ -375,6 +381,11 @@ def _open_preferences(ui: ImervueMainWindow) -> None:
 def _open_recycle_bin(ui: ImervueMainWindow) -> None:
     from Imervue.gui.recycle_bin_dialog import open_recycle_bin_dialog
     open_recycle_bin_dialog(ui.viewer, parent=ui)
+
+
+def _open_profiles(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.profiles_dialog import open_profiles_dialog
+    open_profiles_dialog(parent=ui)
 
 
 def _save_session(ui: ImervueMainWindow) -> None:

@@ -1374,4 +1374,18 @@ korean_word_dict = {
     "onboarding_step_develop_body": "수정 탭에서 노출·대비·톤 커브·마스크 등을 조정할 수 있습니다. 모든 편집은 비파괴이므로 원본은 덮어쓰이지 않습니다.",
     "onboarding_step_extra_title": "Extra Tools와 플러그인",
     "onboarding_step_extra_body": "Extra Tools 메뉴에는 AI 업스케일, 파노라마 스티치, 컨택트 시트, 스마트 크롭, 노이즈 제거, 채색 같은 헤비웨이트 기능이 모여 있습니다. 플러그인으로 더 확장할 수 있습니다.",
+    # 프로필
+    "profiles_title": "프로필",
+    "profiles_active_marker": "(사용 중)",
+    "profiles_switch": "전환",
+    "profiles_add": "추가…",
+    "profiles_rename": "이름 변경…",
+    "profiles_delete": "삭제",
+    "profiles_new_name": "새 프로필 이름:",
+    "profiles_switched": "'{name}' 프로필로 전환했습니다. 재시작하면 완전히 적용됩니다.",
+    "profiles_created": "프로필 '{name}'을(를) 만들었습니다.",
+    "profiles_create_failed": "프로필을 만들 수 없습니다(중복이거나 이름이 비어 있음).",
+    "profiles_rename_failed": "이름을 변경할 수 없습니다(중복이거나 잘못된 이름).",
+    "profiles_cannot_delete_protected": "기본 또는 현재 사용 중인 프로필은 삭제할 수 없습니다.",
+    "profiles_delete_confirm": "프로필 '{name}'을(를) 영구 삭제하시겠습니까? 되돌릴 수 없습니다.",
 }

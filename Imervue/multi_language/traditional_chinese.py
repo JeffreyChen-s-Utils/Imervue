@@ -1368,4 +1368,18 @@ traditional_chinese_word_dict = {
     "onboarding_step_develop_body": "切到「修改」分頁調整曝光、對比、曲線、遮罩等。所有編輯皆為非破壞性，原始檔絕不被覆寫。",
     "onboarding_step_extra_title": "進階工具與插件",
     "onboarding_step_extra_body": "「進階工具」選單放入了重量級功能：AI 升解析度、全景接圖、印樣、智慧裁切、降噪、上色等。插件可繼續擴充選單。",
+    # 個人設定檔
+    "profiles_title": "個人設定檔",
+    "profiles_active_marker": "（使用中）",
+    "profiles_switch": "切換到",
+    "profiles_add": "新增…",
+    "profiles_rename": "重新命名…",
+    "profiles_delete": "刪除",
+    "profiles_new_name": "新設定檔名稱：",
+    "profiles_switched": "已切換到「{name}」設定檔，重新啟動後完整生效。",
+    "profiles_created": "設定檔「{name}」已建立。",
+    "profiles_create_failed": "無法建立此設定檔（重複或名稱為空）。",
+    "profiles_rename_failed": "無法重新命名（重複或名稱無效）。",
+    "profiles_cannot_delete_protected": "無法刪除預設或目前使用中的設定檔。",
+    "profiles_delete_confirm": "確定永久刪除「{name}」設定檔？此動作無法還原。",
 }

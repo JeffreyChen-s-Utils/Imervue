@@ -1380,4 +1380,18 @@ japanese_word_dict = {
     "onboarding_step_develop_body": "「修正」タブで露出・コントラスト・トーンカーブ・マスクなどを調整できます。すべて非破壊なので元ファイルは上書きされません。",
     "onboarding_step_extra_title": "Extra Tools とプラグイン",
     "onboarding_step_extra_body": "Extra Tools メニューには AI アップスケール、パノラマ合成、コンタクトシート、スマートクロップ、デノイズ、カラー化など重量級機能を集めています。プラグインでさらに拡張可能です。",
+    # プロファイル
+    "profiles_title": "プロファイル",
+    "profiles_active_marker": "（使用中）",
+    "profiles_switch": "切り替え",
+    "profiles_add": "追加…",
+    "profiles_rename": "名前変更…",
+    "profiles_delete": "削除",
+    "profiles_new_name": "新しいプロファイル名:",
+    "profiles_switched": "「{name}」プロファイルに切り替えました。再起動すると完全に反映されます。",
+    "profiles_created": "プロファイル「{name}」を作成しました。",
+    "profiles_create_failed": "プロファイルを作成できません（重複または空の名前）。",
+    "profiles_rename_failed": "名前変更できません（重複または無効な名前）。",
+    "profiles_cannot_delete_protected": "デフォルトまたは現在使用中のプロファイルは削除できません。",
+    "profiles_delete_confirm": "「{name}」プロファイルを完全に削除しますか？取り消せません。",
 }

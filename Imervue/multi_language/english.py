@@ -1395,4 +1395,18 @@ english_word_dict = {
     "onboarding_step_develop_body": "Switch to the Modify tab to adjust exposure, contrast, tone curves, masks, and more. Edits are non-destructive — your originals are never overwritten.",
     "onboarding_step_extra_title": "Extra Tools and plugins",
     "onboarding_step_extra_body": "The Extra Tools menu hosts the heavyweight features: AI upscale, panorama stitch, contact sheets, smart crop, denoise, colorize. Plugins extend the menu further.",
+    # Profiles dialog
+    "profiles_title": "Profiles",
+    "profiles_active_marker": "(active)",
+    "profiles_switch": "Switch to",
+    "profiles_add": "Add…",
+    "profiles_rename": "Rename…",
+    "profiles_delete": "Delete",
+    "profiles_new_name": "New profile name:",
+    "profiles_switched": "Switched to profile '{name}'. Restart for full effect.",
+    "profiles_created": "Profile '{name}' created.",
+    "profiles_create_failed": "Could not create that profile (duplicate or empty name).",
+    "profiles_rename_failed": "Could not rename (duplicate or invalid name).",
+    "profiles_cannot_delete_protected": "You cannot delete the default or active profile.",
+    "profiles_delete_confirm": "Permanently delete profile '{name}'? This cannot be undone.",
 }
