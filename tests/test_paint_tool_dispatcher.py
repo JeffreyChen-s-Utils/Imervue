@@ -424,3 +424,81 @@ def test_eyedropper_release_clears_active(state, canvas):
     canvas[20, 20, :3] = (200, 100, 50)
     tool.handle(_move(20, 20), canvas)
     assert state.foreground != (200, 100, 50)
+
+
+# ---------------------------------------------------------------------------
+# Alt-modifier eyedropper override
+# ---------------------------------------------------------------------------
+
+
+_ALT = int(Qt.KeyboardModifier.AltModifier.value)
+
+
+def _press_alt(x, y):
+    return PointerEvent(
+        phase="press", x=x, y=y, button=1, modifiers=_ALT, pressure=1.0,
+    )
+
+
+def test_alt_press_routes_brush_to_eyedropper(state, canvas):
+    """Holding Alt while the brush tool is active redirects the press
+    to the eyedropper for the duration of the gesture."""
+    state.set_tool("brush")
+    canvas[10, 10] = (123, 45, 67, 255)
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    snapshot = canvas.copy()
+    disp(_press_alt(10, 10))
+    # Eyedropper sampled the colour and didn't paint.
+    assert state.foreground == (123, 45, 67)
+    np.testing.assert_array_equal(canvas, snapshot)
+
+
+def test_alt_release_does_not_paint_brush(state, canvas):
+    """The release that ends an Alt gesture must not produce a brush
+    stroke even after the modifier was released mid-gesture."""
+    state.set_tool("brush")
+    canvas[10, 10] = (50, 50, 50, 255)
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    disp(_press_alt(10, 10))
+    snapshot = canvas.copy()
+    # User lifts Alt before releasing — modifiers=0 on the release
+    # event. The dispatcher's latch keeps the gesture on eyedropper.
+    disp(_release(10, 10))
+    np.testing.assert_array_equal(canvas, snapshot)
+
+
+def test_press_without_alt_routes_to_active_tool(state, canvas):
+    """Sanity check: a normal press still goes to the active tool."""
+    state.set_tool("brush")
+    state.set_foreground((255, 0, 0))
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    snapshot = canvas.copy()
+    disp(_press(32, 32))
+    assert (canvas != snapshot).any()
+
+
+def test_alt_subsequent_gesture_returns_to_active_tool(state, canvas):
+    """After a complete Alt gesture, the next non-Alt press goes back
+    to the user's active tool (brush) — the override is per-gesture,
+    not sticky."""
+    state.set_tool("brush")
+    state.set_foreground((10, 10, 10))
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    canvas[5, 5] = (200, 50, 100, 255)
+    disp(_press_alt(5, 5))
+    disp(_release(5, 5))
+    snapshot = canvas.copy()
+    disp(_press(20, 20))
+    assert (canvas != snapshot).any()
+
+
+def test_alt_no_op_when_active_tool_is_eyedropper(state, canvas):
+    """If the user already has eyedropper selected, the dispatcher
+    must NOT strip Alt — the eyedropper's own convention says Alt
+    samples the background. Stripping would break the documented
+    behaviour for eyedropper users."""
+    state.set_tool("eyedropper")
+    canvas[10, 10] = (33, 44, 55, 255)
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    disp(_press_alt(10, 10))
+    assert state.background == (33, 44, 55)

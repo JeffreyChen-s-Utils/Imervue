@@ -58,6 +58,27 @@ class Tool(Protocol):
         """Process one event. Returns ``True`` if the canvas changed."""
 
 
+def _strip_alt(evt: PointerEvent, alt_bit: int) -> PointerEvent:
+    """Return a copy of ``evt`` with the Alt modifier bit cleared.
+
+    PointerEvent is a frozen-style dataclass holding plain primitives,
+    so a shallow copy via ``replace`` would suffice — but the type
+    isn't actually frozen. Constructing a new instance keeps the
+    semantics explicit: the caller never mutates the input event.
+    """
+    if not (int(evt.modifiers) & alt_bit):
+        return evt
+    return PointerEvent(
+        phase=evt.phase,
+        x=evt.x, y=evt.y,
+        button=evt.button,
+        modifiers=int(evt.modifiers) & ~alt_bit,
+        pressure=evt.pressure,
+        tilt_x=evt.tilt_x,
+        tilt_y=evt.tilt_y,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
@@ -97,13 +118,18 @@ class ToolDispatcher:
         self._parent_widget = parent_widget
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
+        # Holding Alt during a press redirects the event to the
+        # eyedropper for the duration of the gesture. Tracks whether
+        # the current ongoing stroke started with the override so the
+        # follow-up move / release events stay on the eyedropper too.
+        self._alt_override_active = False
 
     def __call__(self, evt: PointerEvent) -> bool:
         from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         canvas = self._image_provider()
         if canvas is None:
             return False
-        tool_name = self._state.tool
+        tool_name, evt = self._resolve_tool(evt)
         if tool_name != self._active_tool and self._active_tool in self._handlers:
             # User flipped tools mid-stroke — give the old handler a
             # chance to clean up internal state if it cares.
@@ -135,6 +161,46 @@ class ToolDispatcher:
     def last_damage(self):
         """Union damage rect from the most-recent positive ``__call__``."""
         return self._last_damage
+
+    # ---- Alt → eyedropper override --------------------------------------
+
+    # Qt.KeyboardModifier.AltModifier.value == 0x08000000 (134217728).
+    # Hard-coded here to avoid importing Qt at module-import time —
+    # the dispatcher is otherwise Qt-free for unit testing.
+    _ALT_MODIFIER_BIT = 0x08000000
+
+    def _resolve_tool(
+        self, evt: PointerEvent,
+    ) -> tuple[str | None, PointerEvent]:
+        """Return ``(tool_name, event)`` to dispatch.
+
+        Holding Alt at press time redirects the gesture to the
+        eyedropper; the subsequent move / release events on the same
+        gesture stay routed there even after the modifier is released.
+        Without this latch the eyedropper would only see the press
+        event and the user would never receive a sampled colour
+        because the pen only lifts after the modifier-up arrives.
+
+        When the override is active the returned event has its Alt
+        bit cleared — otherwise the eyedropper's own Alt convention
+        ("Alt held → sample background") would fire on top of the
+        modifier we used to *trigger* the eyedropper, picking the BG
+        when the user just wanted the FG.
+        """
+        active_tool = self._state.tool
+        if active_tool == "eyedropper":
+            return (active_tool, evt)
+        if evt.phase == "press":
+            self._alt_override_active = bool(
+                int(evt.modifiers) & self._ALT_MODIFIER_BIT,
+            )
+        if self._alt_override_active:
+            stripped = _strip_alt(evt, self._ALT_MODIFIER_BIT)
+            if evt.phase in ("release", "leave"):
+                # Clear after dispatching the terminating event.
+                self._alt_override_active = False
+            return ("eyedropper", stripped)
+        return (active_tool, evt)
 
     # ---- internals -------------------------------------------------------
 
