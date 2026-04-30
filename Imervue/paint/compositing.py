@@ -109,6 +109,24 @@ def composite_stack(
             group_opacity = float(grp.opacity)
         if not layer.visible or layer.opacity <= 0:
             continue
+        adjustment = getattr(layer, "adjustment", None)
+        if adjustment is not None:
+            from Imervue.paint.adjustments import apply_adjustment
+            # An adjustment layer applies its transform to everything
+            # composited so far — subsequent layers paint on top of the
+            # adjusted buffer.
+            adjusted = apply_adjustment(out, adjustment)
+            effective_opacity = layer.opacity * group_opacity
+            if effective_opacity >= 1.0:
+                out = adjusted
+            else:
+                # Blend partially — useful for "this curve only at
+                # 50% strength".
+                base_f = out.astype(np.float32)
+                adjusted_f = adjusted.astype(np.float32)
+                mixed = base_f * (1.0 - effective_opacity) + adjusted_f * effective_opacity
+                out = np.clip(mixed, 0.0, 255.0).astype(np.uint8)
+            continue
         if layer.image.shape[:2] != (h, w):
             raise ValueError(
                 f"layer {layer.name!r} shape {layer.image.shape[:2]} "

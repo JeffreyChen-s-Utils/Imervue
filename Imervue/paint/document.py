@@ -55,6 +55,7 @@ class Layer:
     clip: bool = False           # clip to layer below
     lock_alpha: bool = False     # paint only where alpha > 0 already exists
     group: str | None = None     # name of the LayerGroup this layer belongs to
+    adjustment: Any = None       # Adjustment | None — when set the layer is non-destructive
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -222,6 +223,32 @@ class PaintDocument:
         self._groups = dict(groups) if groups else {}
         self._notify()
 
+    def add_adjustment_layer(
+        self, adjustment: Any, *, name: str | None = None,
+        on_top_of_active: bool = True,
+    ) -> Layer:
+        """Add a non-destructive adjustment layer above the active one.
+
+        ``adjustment`` is an :class:`Imervue.paint.adjustments.Adjustment`.
+        The layer's image is a fully-transparent placeholder of the
+        document shape; the compositor consults ``layer.adjustment``
+        and skips the regular blend path when it's set.
+        """
+        if not self._layers:
+            raise RuntimeError("cannot add an adjustment layer to an empty document")
+        h, w = self.shape  # type: ignore[misc]
+        layer = Layer(
+            name=name or f"{adjustment.kind.title()} adjustment",
+            image=np.zeros((h, w, 4), dtype=np.uint8),
+            adjustment=adjustment,
+        )
+        insert_at = self._active_index + 1 if on_top_of_active else len(self._layers)
+        insert_at = min(insert_at, len(self._layers))
+        self._layers.insert(insert_at, layer)
+        self._active_index = insert_at
+        self._notify()
+        return layer
+
     def add_layer(
         self, *, name: str | None = None, on_top_of_active: bool = True,
     ) -> Layer:
@@ -263,6 +290,7 @@ class PaintDocument:
             clip=layer.clip,
             lock_alpha=layer.lock_alpha,
             group=layer.group,
+            adjustment=layer.adjustment,
         )
         self._layers.insert(self._active_index + 1, copy)
         self._active_index += 1

@@ -34,6 +34,7 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.paint.adjustments import Adjustment
 from Imervue.paint.compositing import LAYER_BLEND_MODES
 from Imervue.paint.document import (
     GROUP_BLEND_MODES,
@@ -75,6 +76,10 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
             "clip": bool(layer.clip),
             "has_mask": layer.mask is not None,
             "group": layer.group,
+            "adjustment": (
+                layer.adjustment.to_dict()
+                if layer.adjustment is not None else None
+            ),
         })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
@@ -201,6 +206,13 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
                     f"document {(height, width)}",
                 )
         group_name = lmeta.get("group")
+        adjustment_raw = lmeta.get("adjustment")
+        adjustment = None
+        if isinstance(adjustment_raw, dict):
+            try:
+                adjustment = Adjustment.from_dict(adjustment_raw)
+            except (ValueError, TypeError):
+                adjustment = None
         layers.append(Layer(
             name=str(lmeta.get("name", f"Layer {i}")),
             image=image,
@@ -213,6 +225,7 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
             clip=bool(lmeta.get("clip", False)),
             lock_alpha=bool(lmeta.get("lock_alpha", False)),
             group=str(group_name) if group_name else None,
+            adjustment=adjustment,
         ))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))
