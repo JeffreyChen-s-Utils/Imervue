@@ -94,6 +94,40 @@ def test_workspace_starts_with_paintable_default_canvas(qapp):
         ws.deleteLater()
 
 
+def test_workspace_remains_paintable_after_main_window_none_bind(qapp):
+    """Regression for the actual user-reported "下筆沒反應": when the
+    host main window switches to the Paint tab without an image bound
+    to the viewer, it calls ``paint_workspace.load_image(None)``.
+    After that the brush must still paint — i.e. the workspace must
+    have a layer to paint into, not an empty document."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    ws = PaintWorkspace()
+    try:
+        ws.resize(1200, 800)
+        ws.show()
+        QTest.qWait(50)
+
+        # Simulate exactly what the main window does on tab change with
+        # no current image.
+        ws.load_image(None)
+        assert ws.canvas().current_image() is not None
+
+        ws.state().set_foreground((0, 128, 255))
+        canvas = ws.canvas()
+        cx = canvas.width() // 2
+        cy = canvas.height() // 2
+        before = canvas.current_image().copy()
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+        assert (before != canvas.current_image()).any()
+    finally:
+        ws.deleteLater()
+
+
 def test_workspace_inside_tab_widget_paints_canvas(qapp):
     """Regression: when the workspace is the active widget of a host
     QTabWidget (the real main-window structure), the layout converges
@@ -278,12 +312,22 @@ def test_workspace_dispatcher_receives_canvas_for_first_press(qapp):
         ws.deleteLater()
 
 
-def test_workspace_load_image_none_clears_canvas(qapp, sample_rgba_array):
+def test_workspace_load_image_none_resets_to_blank_canvas(qapp, sample_rgba_array):
+    """Regression: the host main window calls
+    ``paint_workspace.load_image(None)`` whenever the viewer has no
+    current image. That used to clear the document outright, which
+    wiped the seeded blank canvas from ``__init__`` — every brush
+    stroke after that no-opped because ``current_image()`` returned
+    ``None``. ``load_image(None)`` must reset to a fresh blank canvas
+    so the workspace stays paintable."""
     ws = PaintWorkspace()
     try:
         ws.load_image(sample_rgba_array)
         ws.load_image(None)
-        assert ws.canvas().current_image() is None
+        img = ws.canvas().current_image()
+        assert img is not None
+        # Default blank fill is opaque white.
+        assert tuple(img[0, 0]) == (255, 255, 255, 255)
     finally:
         ws.deleteLater()
 

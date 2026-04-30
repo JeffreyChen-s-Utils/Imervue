@@ -134,8 +134,18 @@ class PaintWorkspace(QMainWindow):
         return self._state
 
     def load_image(self, arr) -> None:
-        """Forward an HxWx4 RGBA buffer to the central canvas."""
-        self._canvas.load_image(arr)
+        """Forward an HxWx4 RGBA buffer to the central canvas.
+
+        ``None`` resets to a fresh blank canvas — never to an empty
+        document. The Paint workspace is always for painting, so the
+        invariant "there is always a layer to paint on" must hold even
+        when the host main window passes ``None`` to indicate "no
+        source image is bound".
+        """
+        if arr is None:
+            self._canvas.new_blank_document()
+        else:
+            self._canvas.load_image(arr)
         # The canvas swapped its PaintDocument; rebind the layer dock
         # so it re-subscribes and refreshes against the new stack.
         self._layer_dock.set_document(self._canvas.document())
