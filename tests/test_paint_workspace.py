@@ -94,6 +94,68 @@ def test_workspace_starts_with_paintable_default_canvas(qapp):
         ws.deleteLater()
 
 
+def test_workspace_qtest_mouse_click_paints_canvas(qapp):
+    """QTest-driven regression: a real Qt mouse press on a shown
+    workspace must paint the active layer. This goes through the full
+    mousePressEvent → _dispatch → dispatcher → brush → apply_dab path,
+    catching wiring breaks the synthetic dispatcher tests miss."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    ws = PaintWorkspace()
+    try:
+        ws.resize(1200, 800)
+        ws.show()
+        QTest.qWait(50)
+        ws.state().set_foreground((255, 0, 0))
+
+        canvas = ws.canvas()
+        before = canvas.current_image().copy()
+        cx = canvas.width() // 2
+        cy = canvas.height() // 2
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+
+        after = canvas.current_image()
+        assert (before != after).any(), "real mouse click must paint the canvas"
+        # Canvas has been laid out — fit must have applied (zoom > min).
+        from Imervue.paint.canvas import ZOOM_MIN
+        assert canvas.zoom_factor() > ZOOM_MIN
+    finally:
+        ws.deleteLater()
+
+
+def test_workspace_layer_dock_plus_button_adds_layer(qapp):
+    """QTest-driven regression: clicking the LayerDock '+' button must
+    add a layer to the underlying document. Goes through Qt's clicked
+    signal so any wiring break (e.g. lambda capture, signal disconnect
+    via stale Python wrapper) surfaces here."""
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QToolButton
+
+    ws = PaintWorkspace()
+    try:
+        ws.show()
+        QTest.qWait(50)
+
+        dock = ws._layer_dock  # noqa: SLF001
+        before_count = dock._document.layer_count  # noqa: SLF001
+
+        buttons = dock.findChildren(QToolButton)
+        # The five buttons are add / remove / up / down / duplicate, in
+        # that order. Index 0 is the add ('+') button.
+        assert len(buttons) == 5
+        buttons[0].click()
+        QTest.qWait(20)
+
+        assert dock._document.layer_count == before_count + 1  # noqa: SLF001
+        assert dock._list.count() == before_count + 1  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
 def test_workspace_brush_press_paints_active_layer(qapp):
     """End-to-end "下筆有顏色" check: brushing on a fresh workspace must
     deposit colour onto the active layer's pixel buffer. Verifies the
