@@ -99,6 +99,10 @@ class PointerEvent:
     button: int           # Qt.MouseButton value, 0 if no button
     modifiers: int        # Qt.KeyboardModifier flags
     pressure: float       # 0.0..1.0 — 1.0 if no tablet
+    # Pen tilt — projection of the stylus onto the canvas plane.
+    # 0.0 == perpendicular (no tilt). Mice / fingers always emit 0.0.
+    tilt_x: float = 0.0   # -1.0..1.0 — left/right tilt
+    tilt_y: float = 0.0   # -1.0..1.0 — up/down tilt
 
 
 # A tool dispatcher receives one PointerEvent at a time. Returning ``True``
