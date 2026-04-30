@@ -117,6 +117,118 @@ class Animation:
 # ---------------------------------------------------------------------------
 
 
+def tween_frames(
+    animation: Animation,
+    n_inbetweens: int,
+    *,
+    key_indices: list[int] | None = None,
+) -> Animation:
+    """Insert ``n_inbetweens`` cross-faded frames between each pair of
+    keys.
+
+    By default every frame is treated as a key. ``key_indices`` (when
+    supplied) lets the caller pick a subset — useful for "I drew
+    poses on frames 0, 5, 10; fill in between" workflows.
+
+    Each inbetween is a single-layer :class:`PaintDocument` whose
+    image is the linear cross-fade of the two surrounding keys'
+    composites. Returns a fresh :class:`Animation`; the input is not
+    mutated.
+
+    ``n_inbetweens = 0`` short-circuits to a copy of the input
+    (animation length unchanged); negative values raise.
+    """
+    if n_inbetweens < 0:
+        raise ValueError(
+            f"n_inbetweens must be >= 0, got {n_inbetweens!r}",
+        )
+    if not animation.frames or n_inbetweens == 0:
+        return Animation(
+            frames=list(animation.frames),
+            fps=animation.fps,
+            active_index=animation.active_index,
+            looping=animation.looping,
+        )
+    if key_indices is None:
+        keys = list(range(len(animation.frames)))
+    else:
+        keys = sorted({
+            int(i) for i in key_indices
+            if 0 <= int(i) < len(animation.frames)
+        })
+    if not keys:
+        return Animation(
+            frames=list(animation.frames),
+            fps=animation.fps,
+            active_index=animation.active_index,
+            looping=animation.looping,
+        )
+
+    new_frames: list[AnimationFrame] = []
+    for i, key_idx in enumerate(keys):
+        new_frames.append(animation.frames[key_idx])
+        if i == len(keys) - 1:
+            continue
+        next_key_idx = keys[i + 1]
+        key_a = animation.frames[key_idx]
+        key_b = animation.frames[next_key_idx]
+        for j in range(1, n_inbetweens + 1):
+            t = j / (n_inbetweens + 1)
+            inbetween_doc = _interpolate_documents(
+                key_a.document, key_b.document, t,
+            )
+            new_frames.append(AnimationFrame(
+                document=inbetween_doc,
+                name=f"tween {j}/{n_inbetweens + 1}",
+                duration_ms=key_a.duration_ms,
+            ))
+    return Animation(
+        frames=new_frames,
+        fps=animation.fps,
+        active_index=min(animation.active_index, len(new_frames) - 1),
+        looping=animation.looping,
+    )
+
+
+def _interpolate_documents(
+    doc_a: PaintDocument,
+    doc_b: PaintDocument,
+    t: float,
+) -> PaintDocument:
+    """Build a fresh single-layer :class:`PaintDocument` that is the
+    linear cross-fade of ``doc_a`` and ``doc_b``'s composites at ``t``."""
+    composite_a = doc_a.composite()
+    composite_b = doc_b.composite()
+    if composite_a is None and composite_b is None:
+        empty_doc = PaintDocument()
+        return empty_doc
+    shape_a = doc_a.shape
+    shape_b = doc_b.shape
+    target_shape = shape_a or shape_b
+    if target_shape is None:
+        return PaintDocument()
+    if composite_a is None:
+        h, w = target_shape
+        composite_a = np.zeros((h, w, 4), dtype=np.uint8)
+    if composite_b is None:
+        h, w = target_shape
+        composite_b = np.zeros((h, w, 4), dtype=np.uint8)
+    if composite_a.shape != composite_b.shape:
+        raise ValueError(
+            f"key documents have different shapes "
+            f"({composite_a.shape} vs {composite_b.shape}); "
+            f"can't tween mismatched canvases",
+        )
+    blended = (
+        composite_a.astype(np.float32) * (1.0 - float(t))
+        + composite_b.astype(np.float32) * float(t)
+    )
+    blended_u8 = np.clip(blended, 0.0, 255.0).astype(np.uint8)
+    out = PaintDocument()
+    out.load_image(blended_u8)
+    return out
+
+
 def composite_with_onion_skin(
     animation: Animation,
     *,
