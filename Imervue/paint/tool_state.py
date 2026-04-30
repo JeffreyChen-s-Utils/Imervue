@@ -96,6 +96,7 @@ EVENT_COLOR = "color"          # foreground / background changed
 EVENT_HISTORY = "history"      # color history changed
 EVENT_FILL = "fill"            # any fill setting changed
 EVENT_SELECTION_MODE = "selection_mode"   # selection combine mode changed
+EVENT_GRADIENT = "gradient"    # gradient kind / reverse changed
 
 
 @dataclass(frozen=True)
@@ -140,6 +141,8 @@ class ToolState:
     brush: BrushSettings = field(default_factory=BrushSettings)
     fill: FillSettings = field(default_factory=FillSettings)
     selection_mode: str = "replace"
+    gradient_kind: str = "linear"
+    gradient_reverse: bool = False
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -220,6 +223,27 @@ class ToolState:
             self._emit(EVENT_COLOR)
 
     # ---- brush -----------------------------------------------------------
+
+    def set_gradient(self, *, kind: str | None = None,
+                     reverse: bool | None = None) -> bool:
+        """Update gradient kind / reverse. Returns True if anything changed."""
+        from Imervue.paint.gradient import GRADIENT_KINDS
+        changed = False
+        if kind is not None:
+            if kind not in GRADIENT_KINDS:
+                raise ValueError(
+                    f"unknown gradient kind {kind!r}; expected one of {GRADIENT_KINDS}",
+                )
+            if kind != self.gradient_kind:
+                self.gradient_kind = kind
+                changed = True
+        if reverse is not None and bool(reverse) != self.gradient_reverse:
+            self.gradient_reverse = bool(reverse)
+            changed = True
+        if changed:
+            self._persist()
+            self._emit(EVENT_GRADIENT)
+        return changed
 
     def set_selection_mode(self, mode: str) -> bool:
         """Switch the active selection combine mode."""
@@ -315,6 +339,8 @@ class ToolState:
                 "sample_all_layers": self.fill.sample_all_layers,
             },
             "selection_mode": self.selection_mode,
+            "gradient_kind": self.gradient_kind,
+            "gradient_reverse": self.gradient_reverse,
             "color_history": [list(c) for c in self.color_history],
         }
 
@@ -333,10 +359,16 @@ class ToolState:
         from Imervue.paint.selection import SELECTION_MODES
         if selection_mode not in SELECTION_MODES:
             selection_mode = "replace"
+        from Imervue.paint.gradient import GRADIENT_KINDS
+        gradient_kind = raw.get("gradient_kind", "linear")
+        if gradient_kind not in GRADIENT_KINDS:
+            gradient_kind = "linear"
+        gradient_reverse = bool(raw.get("gradient_reverse", False))
         history = _history_from_list(raw.get("color_history"))
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
+            gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             color_history=history,
         )
 

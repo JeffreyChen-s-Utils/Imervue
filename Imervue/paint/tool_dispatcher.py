@@ -34,6 +34,7 @@ from Imervue.paint.brush_engine import (
 )
 from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.fill import flood_fill
+from Imervue.paint.gradient import render_gradient
 from Imervue.paint.selection import (
     combine,
     magic_wand_mask,
@@ -130,6 +131,7 @@ class ToolDispatcher:
             "text": _build_text_tool(
                 self._state, self._selection_provider, self._parent_widget,
             ),
+            "gradient": GradientTool(self._state, self._selection_provider),
         }
 
 
@@ -480,6 +482,36 @@ def translate_selection(
     canvas[dst_ys[valid], dst_xs[valid]] = cut[src_ys[valid], src_xs[valid]]
     new_selection[dst_ys[valid], dst_xs[valid]] = True
     return new_selection
+
+
+class GradientTool:
+    """Drag-to-define gradient using current ToolState gradient_kind."""
+
+    def __init__(self, state: ToolState, selection_provider=None):
+        self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
+        self._start: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            self._start = (evt.x, evt.y)
+            return False
+        if evt.phase == "release" and self._start is not None:
+            start = self._start
+            self._start = None
+            painted = render_gradient(
+                canvas, start, (evt.x, evt.y),
+                fg=self._state.foreground,
+                bg=self._state.background,
+                kind=self._state.gradient_kind,
+                reverse=self._state.gradient_reverse,
+                selection=self._selection_provider(),
+            )
+            return painted
+        return False
+
+    def cancel(self) -> None:
+        self._start = None
 
 
 class MoveTool:
