@@ -100,6 +100,44 @@ def feather(mask: np.ndarray, radius: int) -> np.ndarray:
     return _box_blur(arr, radius)
 
 
+def lock_alpha_mask(
+    layer_image: np.ndarray,
+    base_selection: np.ndarray | None,
+) -> np.ndarray | None:
+    """Combine a layer's existing-alpha mask with an optional selection.
+
+    When the active layer has lock-alpha on, paint must only land on
+    pixels that already have alpha > 0. This helper produces the
+    composite mask:
+
+    * if ``base_selection`` is None — return a bool mask matching the
+      layer's alpha > 0 region
+    * otherwise — return ``base_selection AND (alpha > 0)``
+
+    Returns ``None`` if the result would be a fresh full-True mask
+    (i.e. neither the lock nor a selection narrows the paint region),
+    so callers can keep the cheap "no selection" fast path.
+    """
+    if (
+        layer_image.ndim != 3
+        or layer_image.shape[2] != 4
+        or layer_image.dtype != np.uint8
+    ):
+        raise ValueError(
+            f"layer_image must be HxWx4 uint8 RGBA, "
+            f"got {layer_image.shape} {layer_image.dtype}",
+        )
+    alpha_mask = layer_image[..., 3] > 0
+    if base_selection is None:
+        return alpha_mask
+    if base_selection.shape != alpha_mask.shape:
+        raise ValueError(
+            f"selection shape {base_selection.shape} does not match "
+            f"layer {alpha_mask.shape}",
+        )
+    return base_selection & alpha_mask
+
+
 def from_layer_alpha(layer_image: np.ndarray, threshold: int = 0) -> np.ndarray:
     """Build a bool selection from a layer's alpha channel.
 

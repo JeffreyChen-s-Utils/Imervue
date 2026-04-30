@@ -41,7 +41,8 @@ class Layer:
     locked: bool = False
     mask: np.ndarray | None = None
     mask_enabled: bool = True
-    clip: bool = False     # clip to layer below
+    clip: bool = False           # clip to layer below
+    lock_alpha: bool = False     # paint only where alpha > 0 already exists
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -186,6 +187,64 @@ class PaintDocument:
         self._notify()
 
     # ---- layer mask -----------------------------------------------------
+
+    def set_layer_locked(self, index: int = -1, *, locked: bool) -> bool:
+        """Toggle the full-layer lock (no edits allowed)."""
+        layer = self._resolve_layer(index)
+        if layer is None or layer.locked == bool(locked):
+            return False
+        layer.locked = bool(locked)
+        self._notify()
+        return True
+
+    def set_layer_lock_alpha(self, index: int = -1, *, lock_alpha: bool) -> bool:
+        """Toggle the lock-alpha (transparent-pixel) lock.
+
+        When ``lock_alpha`` is on, paint operations should only affect
+        pixels that already have alpha > 0. The dispatcher consults
+        :func:`Imervue.paint.selection_ops.lock_alpha_mask` to combine
+        this flag with the active selection.
+        """
+        layer = self._resolve_layer(index)
+        if layer is None or layer.lock_alpha == bool(lock_alpha):
+            return False
+        layer.lock_alpha = bool(lock_alpha)
+        self._notify()
+        return True
+
+    def set_layer_clip(self, index: int = -1, *, clip: bool) -> bool:
+        """Toggle the layer's clip-to-layer-below flag."""
+        layer = self._resolve_layer(index)
+        if layer is None or layer.clip == bool(clip):
+            return False
+        layer.clip = bool(clip)
+        self._notify()
+        return True
+
+    def selection_from_layer_alpha(
+        self, index: int = -1, *, threshold: int = 0,
+    ) -> bool:
+        """Replace the active selection with one derived from a layer's alpha.
+
+        Pixels with alpha strictly greater than ``threshold`` become
+        selected. ``threshold=0`` matches MediBang's "Select Layer"
+        command. Returns ``True`` if the selection actually changed.
+        """
+        from Imervue.paint.selection_ops import from_layer_alpha
+        layer = self._resolve_layer(index)
+        if layer is None:
+            return False
+        new_selection = from_layer_alpha(layer.image, threshold=threshold)
+        # Reuse set_selection so listener notification + shape check fire.
+        previous = self._selection
+        if (
+            previous is not None
+            and previous.shape == new_selection.shape
+            and np.array_equal(previous, new_selection)
+        ):
+            return False
+        self.set_selection(new_selection)
+        return True
 
     def add_layer_mask(self, index: int = -1, *, fill: int = 255) -> bool:
         """Attach a fresh ``HxW`` uint8 mask to a layer.
