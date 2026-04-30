@@ -20,7 +20,8 @@ from Imervue.paint.document import PaintDocument
 
 
 def test_adjustment_kinds_set():
-    assert set(ADJUSTMENT_KINDS) == {"levels", "curves", "hsv"}
+    # 13b extends this — assert the original three are still present.
+    assert {"levels", "curves", "hsv"} <= set(ADJUSTMENT_KINDS)
 
 
 def test_adjustment_construction_default_params():
