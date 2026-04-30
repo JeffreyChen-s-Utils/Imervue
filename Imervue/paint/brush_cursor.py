@@ -17,9 +17,32 @@ from __future__ import annotations
 import numpy as np
 
 DEFAULT_CURSOR_COLOR = (0, 0, 0, 200)
+# Quick-mask brush cursor — translucent red, 50 % alpha, matches the
+# overlay colour rendered by ``quick_mask.quick_mask_overlay`` so the
+# user knows their next dab edits the mask, not the layer pixels.
+QUICK_MASK_CURSOR_COLOR = (255, 0, 0, 128)
 MAX_RADIUS = 4096
 MIN_THICKNESS = 1
 MAX_THICKNESS = 64
+
+
+def cursor_color_for_state(
+    foreground_rgb: tuple[int, int, int],
+    *,
+    quick_mask_active: bool = False,
+    foreground_alpha: int = 200,
+) -> tuple[int, int, int, int]:
+    """Pick the cursor ring colour given the active state.
+
+    When quick mask is active the cursor switches to the mask-edit
+    red so the user has a visual cue that the brush is editing the
+    selection instead of the layer pixels. Otherwise the cursor
+    inherits the user's foreground colour with the standard alpha.
+    """
+    if quick_mask_active:
+        return QUICK_MASK_CURSOR_COLOR
+    r, g, b = foreground_rgb
+    return (int(r), int(g), int(b), int(foreground_alpha))
 
 
 def render_cursor_ring(

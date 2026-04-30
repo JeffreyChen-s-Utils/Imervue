@@ -155,6 +155,7 @@ class ToolState:
     ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     snap_to_pixel: bool = False
+    quick_mask_active: bool = False
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
     )
@@ -431,6 +432,7 @@ class ToolState:
             "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
             "snap_to_pixel": bool(self.snap_to_pixel),
+            "quick_mask_active": bool(self.quick_mask_active),
         }
 
     @classmethod
@@ -466,6 +468,7 @@ class ToolState:
             symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
+            quick_mask_active=bool(raw.get("quick_mask_active", False)),
         )
 
 

@@ -135,3 +135,67 @@ def test_cursor_bbox_shrinks_with_smaller_radius():
     big = cursor_bbox(20, 20, 16)
     small = cursor_bbox(20, 20, 4)
     assert big[2] > small[2]
+
+
+# ---------------------------------------------------------------------------
+# Quick-mask cursor colour
+# ---------------------------------------------------------------------------
+
+
+def test_cursor_color_uses_foreground_when_not_quick_mask():
+    from Imervue.paint.brush_cursor import cursor_color_for_state
+    color = cursor_color_for_state((10, 20, 30))
+    assert color == (10, 20, 30, 200)
+
+
+def test_cursor_color_overrides_to_quick_mask_red():
+    """Quick-mask flips the cursor to the mask-edit red so the user
+    has a visual cue that strokes mutate the selection, not the
+    layer pixels."""
+    from Imervue.paint.brush_cursor import (
+        QUICK_MASK_CURSOR_COLOR,
+        cursor_color_for_state,
+    )
+    color = cursor_color_for_state((0, 0, 0), quick_mask_active=True)
+    assert color == QUICK_MASK_CURSOR_COLOR
+
+
+def test_cursor_color_honours_custom_alpha():
+    from Imervue.paint.brush_cursor import cursor_color_for_state
+    color = cursor_color_for_state((100, 100, 100), foreground_alpha=64)
+    assert color == (100, 100, 100, 64)
+
+
+def test_cursor_color_quick_mask_ignores_alpha_arg():
+    """When quick mask is active the cursor must use the documented
+    quick-mask colour regardless of the foreground alpha argument."""
+    from Imervue.paint.brush_cursor import (
+        QUICK_MASK_CURSOR_COLOR,
+        cursor_color_for_state,
+    )
+    color = cursor_color_for_state(
+        (100, 100, 100), quick_mask_active=True, foreground_alpha=10,
+    )
+    assert color == QUICK_MASK_CURSOR_COLOR
+
+
+# ---------------------------------------------------------------------------
+# ToolState round-trip for quick_mask_active
+# ---------------------------------------------------------------------------
+
+
+def test_tool_state_quick_mask_active_default_is_false():
+    from Imervue.paint.tool_state import ToolState
+    assert ToolState().quick_mask_active is False
+
+
+def test_tool_state_quick_mask_active_round_trips_via_dict():
+    from Imervue.paint.tool_state import ToolState
+    original = ToolState(quick_mask_active=True)
+    rebuilt = ToolState.from_dict(original.to_dict())
+    assert rebuilt.quick_mask_active is True
+
+
+def test_tool_state_quick_mask_active_default_when_missing():
+    from Imervue.paint.tool_state import ToolState
+    assert ToolState.from_dict({}).quick_mask_active is False
