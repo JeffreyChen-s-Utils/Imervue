@@ -517,6 +517,8 @@ japanese_word_dict = {
     "paint_shortcut_col_reset": 'リセット',
     "paint_shortcut_reset_all": 'すべてデフォルトに戻す',
     "paint_shortcut_reset_row": '↺',
+    "paint_dock_swatches": 'スウォッチ',
+    "paint_swatch_clear": 'クリア',
     "paint_color_fg": '前景',
     "paint_color_bg": '背景',
     "paint_color_swap": 'X',

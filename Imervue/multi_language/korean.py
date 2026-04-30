@@ -511,6 +511,8 @@ korean_word_dict = {
     "paint_shortcut_col_reset": '초기화',
     "paint_shortcut_reset_all": '모두 기본값으로 초기화',
     "paint_shortcut_reset_row": '↺',
+    "paint_dock_swatches": '스와치',
+    "paint_swatch_clear": '비우기',
     "paint_color_fg": '전경',
     "paint_color_bg": '배경',
     "paint_color_swap": 'X',

@@ -1007,6 +1007,8 @@ spanish_word_dict.update({
     "paint_shortcut_col_reset": 'Restablecer',
     "paint_shortcut_reset_all": 'Restablecer todo',
     "paint_shortcut_reset_row": '↺',
+    "paint_dock_swatches": 'Muestras',
+    "paint_swatch_clear": 'Vaciar',
     "paint_color_fg": 'PR',
     "paint_color_bg": 'FN',
     "paint_color_swap": 'X',

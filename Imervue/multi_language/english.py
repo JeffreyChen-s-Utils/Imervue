@@ -525,6 +525,8 @@ english_word_dict = {
     "paint_shortcut_col_reset": 'Reset',
     "paint_shortcut_reset_all": 'Reset all to default',
     "paint_shortcut_reset_row": '↺',
+    "paint_dock_swatches": 'Swatches',
+    "paint_swatch_clear": 'Clear',
     "paint_color_fg": 'FG',
     "paint_color_bg": 'BG',
     "paint_color_swap": 'X',

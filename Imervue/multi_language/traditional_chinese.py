@@ -506,6 +506,8 @@ traditional_chinese_word_dict = {
     "paint_shortcut_col_reset": '重設',
     "paint_shortcut_reset_all": '全部重設為預設值',
     "paint_shortcut_reset_row": '↺',
+    "paint_dock_swatches": '色票',
+    "paint_swatch_clear": '清空',
     "paint_color_fg": '前景',
     "paint_color_bg": '背景',
     "paint_color_swap": 'X',
