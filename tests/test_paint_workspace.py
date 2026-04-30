@@ -77,6 +77,65 @@ def test_workspace_load_image_forwards_to_canvas(qapp, sample_rgba_array):
         ws.deleteLater()
 
 
+def test_workspace_starts_with_paintable_default_canvas(qapp):
+    """Regression for "下筆後沒顏色": a fresh PaintWorkspace must come
+    up with a non-empty document so the brush has somewhere to paint.
+    Without this seed, ``current_image()`` is ``None`` and the tool
+    dispatcher silently no-ops on every stroke."""
+    ws = PaintWorkspace()
+    try:
+        img = ws.canvas().current_image()
+        assert img is not None
+        h, w = img.shape[:2]
+        assert h > 0 and w > 0
+        # The default fill is opaque white.
+        assert tuple(img[0, 0]) == (255, 255, 255, 255)
+    finally:
+        ws.deleteLater()
+
+
+def test_workspace_dispatcher_receives_canvas_for_first_press(qapp):
+    """End-to-end regression: dispatching a press on a fresh workspace
+    must reach the active tool's ``handle`` with a real numpy buffer.
+    Before the default-canvas seed, ``image_provider`` returned ``None``
+    and ``ToolDispatcher.__call__`` short-circuited to ``False``."""
+    import numpy as np
+
+    from Imervue.paint.canvas import PointerEvent
+
+    ws = PaintWorkspace()
+    try:
+        captured: list = []
+
+        class _CapturingTool:
+            def handle(self, evt, canvas):
+                captured.append((evt, canvas))
+                return False
+
+            def cancel(self):
+                pass
+
+        # Swap the real brush handler for a probe so we observe what the
+        # dispatcher hands to a tool — without mutating the global tool
+        # registry. The active tool remains ``"brush"`` (the default).
+        dispatcher = ws._dispatcher  # noqa: SLF001
+        dispatcher._handlers["brush"] = _CapturingTool()  # noqa: SLF001
+
+        evt = PointerEvent(
+            phase="press", x=5.0, y=5.0,
+            button=1, modifiers=0, pressure=1.0,
+        )
+        dispatcher(evt)
+
+        assert len(captured) == 1
+        _, canvas_arr = captured[0]
+        assert isinstance(canvas_arr, np.ndarray)
+        assert canvas_arr.ndim == 3
+        assert canvas_arr.shape[2] == 4
+    finally:
+        ws.deleteLater()
+
+
 def test_workspace_load_image_none_clears_canvas(qapp, sample_rgba_array):
     ws = PaintWorkspace()
     try:

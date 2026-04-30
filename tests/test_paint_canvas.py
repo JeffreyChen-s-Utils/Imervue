@@ -216,3 +216,96 @@ def test_zoom_factor_starts_at_unity(qapp):
         assert canvas.zoom_factor() == pytest.approx(1.0)
     finally:
         canvas.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# new_blank_document — the "open with a paintable canvas" entry point.
+# ---------------------------------------------------------------------------
+
+
+def test_new_blank_document_creates_active_layer(qapp):
+    """Regression: a fresh PaintCanvas has no layers, so the dispatcher's
+    ``image_provider`` returns ``None`` and brush strokes silently no-op
+    ("下筆後沒顏色"). ``new_blank_document`` seeds a Background layer so
+    painting works immediately."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        assert canvas.current_image() is None
+        canvas.new_blank_document(width=64, height=48)
+        img = canvas.current_image()
+        assert img is not None
+        assert img.shape == (48, 64, 4)
+        assert img.dtype == np.uint8
+    finally:
+        canvas.deleteLater()
+
+
+def test_new_blank_document_default_fill_is_opaque_white(qapp):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.new_blank_document(width=8, height=8)
+        img = canvas.current_image()
+        assert img is not None
+        np.testing.assert_array_equal(
+            img, np.full((8, 8, 4), 255, dtype=np.uint8),
+        )
+    finally:
+        canvas.deleteLater()
+
+
+def test_new_blank_document_custom_fill(qapp):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.new_blank_document(width=4, height=4, fill=(10, 20, 30, 200))
+        img = canvas.current_image()
+        assert img is not None
+        assert tuple(img[0, 0]) == (10, 20, 30, 200)
+    finally:
+        canvas.deleteLater()
+
+
+def test_new_blank_document_rejects_zero_size(qapp):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        with pytest.raises(ValueError, match="positive"):
+            canvas.new_blank_document(width=0, height=10)
+        with pytest.raises(ValueError, match="positive"):
+            canvas.new_blank_document(width=10, height=-5)
+    finally:
+        canvas.deleteLater()
+
+
+def test_new_blank_document_rejects_bad_fill(qapp):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        with pytest.raises(ValueError, match="4-tuple"):
+            canvas.new_blank_document(width=4, height=4, fill=(255, 255, 255))
+        with pytest.raises(ValueError, match="4-tuple"):
+            canvas.new_blank_document(width=4, height=4, fill=(255, 255, 255, 999))
+    finally:
+        canvas.deleteLater()
+
+
+def test_reset_view_at_real_size_uses_fit_zoom(qapp, sample_rgba_array):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        canvas.resize(800, 600)
+        canvas.reset_view()
+        # Document is 100×80, widget 800×600 → fit is min(8.0, 7.5, 1.0)
+        # = 1.0 (clamped).
+        assert canvas.zoom_factor() == pytest.approx(1.0)
+    finally:
+        canvas.deleteLater()

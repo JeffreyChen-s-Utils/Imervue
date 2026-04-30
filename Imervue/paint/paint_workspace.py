@@ -64,8 +64,12 @@ class PaintWorkspace(QMainWindow):
         self._status = QStatusBar(self)
         self.setStatusBar(self._status)
 
-        # Central canvas
+        # Central canvas. Seeded with a default white canvas so the user
+        # can start painting the moment the workspace opens — without a
+        # layer the tool dispatcher's ``image_provider`` returns ``None``
+        # and brush strokes silently no-op.
         self._canvas = PaintCanvas(self)
+        self._canvas.new_blank_document()
         self.setCentralWidget(self._canvas)
 
         # Top tool-options strip

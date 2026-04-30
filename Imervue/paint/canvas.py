@@ -83,6 +83,10 @@ ZOOM_MIN = 0.05
 ZOOM_MAX = 32.0
 ZOOM_STEP = 1.15
 
+DEFAULT_CANVAS_WIDTH = 1024
+DEFAULT_CANVAS_HEIGHT = 1024
+DEFAULT_CANVAS_FILL = (255, 255, 255, 255)
+
 
 @dataclass
 class PointerEvent:
@@ -180,6 +184,34 @@ class PaintCanvas(QOpenGLWidget):
         self._marquee_timer.timeout.connect(self._tick_marquee)
 
     # ---- public API ------------------------------------------------------
+
+    def new_blank_document(
+        self,
+        width: int = DEFAULT_CANVAS_WIDTH,
+        height: int = DEFAULT_CANVAS_HEIGHT,
+        fill: tuple[int, int, int, int] = DEFAULT_CANVAS_FILL,
+    ) -> None:
+        """Replace the canvas with a fresh ``height``×``width`` Background
+        layer filled with ``fill`` (RGBA, 0–255).
+
+        Without this helper a freshly-constructed PaintCanvas has zero
+        layers, so :meth:`current_image` returns ``None`` and the tool
+        dispatcher silently no-ops on the first brush stroke. The
+        workspace calls this from ``__init__`` so the user can paint
+        immediately, matching MediBang's "open with a blank canvas"
+        behaviour.
+        """
+        if width <= 0 or height <= 0:
+            raise ValueError(
+                f"canvas size must be positive, got {width}×{height}",
+            )
+        if len(fill) != 4 or any(not 0 <= int(c) <= 255 for c in fill):
+            raise ValueError(
+                f"fill must be a 4-tuple of 0..255 ints, got {fill!r}",
+            )
+        arr = np.empty((int(height), int(width), 4), dtype=np.uint8)
+        arr[..., :] = fill
+        self.load_image(arr)
 
     def load_image(self, arr: np.ndarray | None) -> None:
         """Replace the canvas with a single-layer document of ``arr``.
