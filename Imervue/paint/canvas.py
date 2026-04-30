@@ -149,6 +149,7 @@ class PaintCanvas(QOpenGLWidget):
         self.setCursor(QCursor(cursor_for_tool("brush")))
 
         self._image: np.ndarray | None = None
+        self._selection: np.ndarray | None = None
         self._texture: int | None = None
         self._needs_upload = False
 
@@ -166,6 +167,7 @@ class PaintCanvas(QOpenGLWidget):
     def load_image(self, arr: np.ndarray | None) -> None:
         if arr is None:
             self._image = None
+            self._selection = None
             self._needs_upload = True
             self.update()
             return
@@ -175,6 +177,9 @@ class PaintCanvas(QOpenGLWidget):
                 f"got {arr.shape} {arr.dtype}",
             )
         self._image = np.ascontiguousarray(arr)
+        # Loading a new image always invalidates the previous selection —
+        # the mask is per-image and a different shape would be invalid.
+        self._selection = None
         self._needs_upload = True
         self._reset_view_to_fit()
         self.image_loaded.emit(arr.shape[1], arr.shape[0])
@@ -182,6 +187,20 @@ class PaintCanvas(QOpenGLWidget):
 
     def current_image(self) -> np.ndarray | None:
         return self._image
+
+    def current_selection(self) -> np.ndarray | None:
+        return self._selection
+
+    def set_selection(self, mask: np.ndarray | None) -> None:
+        if mask is None:
+            self._selection = None
+        else:
+            if mask.ndim != 2 or mask.dtype != np.bool_:
+                raise ValueError(
+                    f"selection mask must be HxW bool, got {mask.shape} {mask.dtype}",
+                )
+            self._selection = mask
+        self.update()
 
     def set_tool_dispatcher(self, dispatcher: ToolDispatcher | None) -> None:
         self._dispatcher = dispatcher

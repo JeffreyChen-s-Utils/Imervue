@@ -103,9 +103,14 @@ class PaintWorkspace(QMainWindow):
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
 
         # Tool dispatcher routes pointer events to the active tool. The
-        # canvas owns the live image, so we hand the dispatcher a getter
-        # rather than caching a snapshot.
-        self._dispatcher = ToolDispatcher(self._state, self._canvas.current_image)
+        # canvas owns the live image and selection mask, so we hand the
+        # dispatcher getters rather than caching snapshots.
+        self._dispatcher = ToolDispatcher(
+            self._state,
+            image_provider=self._canvas.current_image,
+            selection_provider=self._canvas.current_selection,
+            set_selection=self._canvas.set_selection,
+        )
         self._canvas.set_tool_dispatcher(self._dispatcher)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)

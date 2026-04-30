@@ -95,6 +95,7 @@ EVENT_BRUSH = "brush"          # any brush setting changed
 EVENT_COLOR = "color"          # foreground / background changed
 EVENT_HISTORY = "history"      # color history changed
 EVENT_FILL = "fill"            # any fill setting changed
+EVENT_SELECTION_MODE = "selection_mode"   # selection combine mode changed
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ class ToolState:
     background: tuple[int, int, int] = DEFAULT_BG
     brush: BrushSettings = field(default_factory=BrushSettings)
     fill: FillSettings = field(default_factory=FillSettings)
+    selection_mode: str = "replace"
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -219,6 +221,20 @@ class ToolState:
 
     # ---- brush -----------------------------------------------------------
 
+    def set_selection_mode(self, mode: str) -> bool:
+        """Switch the active selection combine mode."""
+        from Imervue.paint.selection import SELECTION_MODES
+        if mode not in SELECTION_MODES:
+            raise ValueError(
+                f"unknown selection mode {mode!r}; expected one of {SELECTION_MODES}",
+            )
+        if mode == self.selection_mode:
+            return False
+        self.selection_mode = mode
+        self._persist()
+        self._emit(EVENT_SELECTION_MODE)
+        return True
+
     def set_fill(self, **kwargs: Any) -> bool:
         """Update fill bucket attributes."""
         new = self.fill
@@ -298,6 +314,7 @@ class ToolState:
                 "contiguous": self.fill.contiguous,
                 "sample_all_layers": self.fill.sample_all_layers,
             },
+            "selection_mode": self.selection_mode,
             "color_history": [list(c) for c in self.color_history],
         }
 
@@ -312,10 +329,15 @@ class ToolState:
         bg = _safe_rgb(raw.get("background"), DEFAULT_BG)
         brush = _brush_from_dict(raw.get("brush"))
         fill = _fill_from_dict(raw.get("fill"))
+        selection_mode = raw.get("selection_mode", "replace")
+        from Imervue.paint.selection import SELECTION_MODES
+        if selection_mode not in SELECTION_MODES:
+            selection_mode = "replace"
         history = _history_from_list(raw.get("color_history"))
         return cls(
             tool=tool, foreground=fg, background=bg,
-            brush=brush, fill=fill, color_history=history,
+            brush=brush, fill=fill, selection_mode=selection_mode,
+            color_history=history,
         )
 
 

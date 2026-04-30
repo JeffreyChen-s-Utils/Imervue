@@ -34,6 +34,12 @@ from Imervue.paint.brush_engine import (
 )
 from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.fill import flood_fill
+from Imervue.paint.selection import (
+    combine,
+    magic_wand_mask,
+    polygon_mask,
+    rectangle_mask,
+)
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -66,12 +72,20 @@ class ToolDispatcher:
     next event, so its state is implicitly dropped).
     """
 
-    def __init__(self, state: ToolState, image_provider):
+    def __init__(
+        self, state: ToolState, image_provider,
+        selection_provider=None, set_selection=None,
+    ):
         """``image_provider`` is a callable returning the live numpy
-        canvas (or ``None`` if no image is loaded). Decoupled from the
-        Qt canvas so tests can pass a static array."""
+        canvas (or ``None`` if no image is loaded). ``selection_provider``
+        (optional) returns the current HxW bool mask or ``None``;
+        ``set_selection`` (optional) writes a new mask. Both default
+        to no-ops so dispatchers wired without selection support keep
+        working — selection tools are simply disabled."""
         self._state = state
         self._image_provider = image_provider
+        self._selection_provider = selection_provider or (lambda: None)
+        self._set_selection = set_selection or (lambda mask: None)
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
 
@@ -99,12 +113,39 @@ class ToolDispatcher:
     # ---- internals -------------------------------------------------------
 
     def _build_handlers(self) -> dict[str, Tool]:
+        sel_ctx = _SelectionContext(
+            self._state, self._selection_provider, self._set_selection,
+        )
         return {
             "brush": BrushTool(self._state),
             "eraser": EraserTool(self._state),
             "eyedropper": EyedropperTool(self._state),
             "fill": FillTool(self._state),
+            "select_rect": RectSelectTool(sel_ctx),
+            "select_lasso": LassoSelectTool(sel_ctx),
+            "select_wand": WandSelectTool(sel_ctx, self._state),
         }
+
+
+# ---------------------------------------------------------------------------
+# Selection plumbing — shared by the three selection tools.
+# ---------------------------------------------------------------------------
+
+
+class _SelectionContext:
+    """Read/write helper passed to every selection tool."""
+
+    def __init__(self, state: ToolState, provider, setter):
+        self._state = state
+        self._provider = provider
+        self._setter = setter
+
+    def existing(self) -> np.ndarray | None:
+        return self._provider()
+
+    def write(self, new_mask: np.ndarray) -> None:
+        combined = combine(self._provider(), new_mask, self._state.selection_mode)
+        self._setter(combined)
 
 
 # ---------------------------------------------------------------------------
@@ -285,3 +326,84 @@ class EyedropperTool:
             self._state.set_background(pixel)
         else:
             self._state.set_foreground(pixel)
+
+
+# ---------------------------------------------------------------------------
+# Selection tools
+# ---------------------------------------------------------------------------
+
+
+class RectSelectTool:
+    """Drag a rectangle, commit on release using the active combine mode."""
+
+    def __init__(self, sel_ctx: _SelectionContext):
+        self._sel = sel_ctx
+        self._start: tuple[int, int] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            self._start = (int(round(evt.x)), int(round(evt.y)))
+            return False
+        if evt.phase == "release" and self._start is not None:
+            x0, y0 = self._start
+            x1, y1 = int(round(evt.x)), int(round(evt.y))
+            self._start = None
+            h, w = canvas.shape[:2]
+            mask = rectangle_mask(h, w, x0, y0, x1, y1)
+            self._sel.write(mask)
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._start = None
+
+
+class LassoSelectTool:
+    """Free-form polygon selection — close path on release."""
+
+    def __init__(self, sel_ctx: _SelectionContext):
+        self._sel = sel_ctx
+        self._points: list[tuple[float, float]] = []
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            self._points = [(evt.x, evt.y)]
+            return False
+        if evt.phase == "move" and self._points:
+            self._points.append((evt.x, evt.y))
+            return False
+        if evt.phase == "release" and self._points:
+            self._points.append((evt.x, evt.y))
+            h, w = canvas.shape[:2]
+            mask = polygon_mask(h, w, self._points)
+            self._points = []
+            self._sel.write(mask)
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._points = []
+
+
+class WandSelectTool:
+    """Magic wand — click a pixel, select tolerance-matching neighbours."""
+
+    def __init__(self, sel_ctx: _SelectionContext, state: ToolState):
+        self._sel = sel_ctx
+        self._state = state
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase != "press":
+            return False
+        mask = magic_wand_mask(
+            canvas,
+            seed_x=int(round(evt.x)),
+            seed_y=int(round(evt.y)),
+            tolerance=self._state.fill.tolerance,
+            contiguous=self._state.fill.contiguous,
+        )
+        self._sel.write(mask)
+        return True
+
+    def cancel(self) -> None:
+        pass
