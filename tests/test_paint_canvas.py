@@ -375,6 +375,50 @@ def test_reset_view_at_real_size_uses_fit_zoom(qapp, sample_rgba_array):
         canvas.deleteLater()
 
 
+def test_apply_zoom_locks_user_view(qapp, sample_rgba_array):
+    """Wheel-zoom flips the user-controlled flag so subsequent window
+    resizes don't blow the user's chosen zoom away."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        assert canvas._user_view_locked is False  # noqa: SLF001
+        canvas._apply_zoom(1.5, 100.0, 100.0)  # noqa: SLF001
+        assert canvas._user_view_locked is True  # noqa: SLF001
+    finally:
+        canvas.deleteLater()
+
+
+def test_reset_view_clears_user_lock(qapp, sample_rgba_array):
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        canvas._apply_zoom(1.5, 100.0, 100.0)  # noqa: SLF001
+        assert canvas._user_view_locked is True  # noqa: SLF001
+        canvas.reset_view()
+        assert canvas._user_view_locked is False  # noqa: SLF001
+    finally:
+        canvas.deleteLater()
+
+
+def test_load_image_clears_user_lock(qapp, sample_rgba_array):
+    """Loading a new image gives the user a clean view — the auto-fit
+    should resume on resize until they manually wheel-zoom again."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        canvas._apply_zoom(2.0, 50.0, 50.0)  # noqa: SLF001
+        canvas.load_image(sample_rgba_array)
+        assert canvas._user_view_locked is False  # noqa: SLF001
+    finally:
+        canvas.deleteLater()
+
+
 def test_reset_view_to_fit_defers_when_widget_too_small(qapp):
     """Big-document-on-small-widget case: a 1024² seed canvas inside a
     100×30 default-laid-out widget would fit at ~0.029, below ZOOM_MIN.

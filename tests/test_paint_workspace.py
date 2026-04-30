@@ -94,6 +94,49 @@ def test_workspace_starts_with_paintable_default_canvas(qapp):
         ws.deleteLater()
 
 
+def test_workspace_inside_tab_widget_paints_canvas(qapp):
+    """Regression: when the workspace is the active widget of a host
+    QTabWidget (the real main-window structure), the layout converges
+    to a different canvas size *after* the initial fit. Without re-
+    fitting on resize, pan / zoom go stale and a click at the widget
+    centre maps to image coordinates outside the canvas — every dab
+    is off-canvas and the brush silently no-ops, even though the
+    layer dock + button still works."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QMainWindow, QTabWidget
+
+    host = QMainWindow()
+    host.resize(1400, 900)
+    tabs = QTabWidget(host)
+    host.setCentralWidget(tabs)
+
+    ws = PaintWorkspace(parent=host)
+    tabs.addTab(ws, "Paint")
+    tabs.setCurrentWidget(ws)
+    host.show()
+    QTest.qWait(100)
+    try:
+        ws.state().set_foreground((255, 0, 0))
+        canvas = ws.canvas()
+        # Click at widget centre must land somewhere inside the document.
+        cx = canvas.width() // 2
+        cy = canvas.height() // 2
+        img_x, img_y = canvas._screen_to_image(cx, cy)  # noqa: SLF001
+        h, w = canvas.current_image().shape[:2]
+        assert 0 <= img_x < w, f"image x {img_x} outside [0, {w})"
+        assert 0 <= img_y < h, f"image y {img_y} outside [0, {h})"
+
+        before = canvas.current_image().copy()
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
+        QTest.qWait(20)
+        assert (before != canvas.current_image()).any()
+    finally:
+        host.deleteLater()
+
+
 def test_workspace_qtest_mouse_click_paints_canvas(qapp):
     """QTest-driven regression: a real Qt mouse press on a shown
     workspace must paint the active layer. This goes through the full

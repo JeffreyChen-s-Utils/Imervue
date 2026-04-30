@@ -185,6 +185,14 @@ class PaintCanvas(QOpenGLWidget):
         # tries the fit so the canvas doesn't permanently appear as a
         # postage stamp clamped to ``ZOOM_MIN``.
         self._fit_pending = False
+        # Until the user takes manual view control (wheel-zoom or
+        # explicit pan) we keep the canvas auto-fitted to the widget on
+        # every resize. Otherwise the layout converging after init
+        # (docks settling, tab becoming active) leaves pan / zoom stale
+        # for the original size, so a click at the widget centre maps
+        # to image coordinates outside the canvas — and the brush silently
+        # no-ops because every dab is off-canvas.
+        self._user_view_locked = False
 
         self._dispatcher: ToolDispatcher | None = None
         self._panning = False
@@ -240,6 +248,7 @@ class PaintCanvas(QOpenGLWidget):
             self._needs_upload = True
             self._marquee_segments = None
             self._marquee_timer.stop()
+            self._user_view_locked = False
             self.update()
             return
         if arr.ndim != 3 or arr.shape[2] != 4 or arr.dtype != np.uint8:
@@ -252,6 +261,7 @@ class PaintCanvas(QOpenGLWidget):
         self._marquee_segments = None
         self._marquee_timer.stop()
         self._needs_upload = True
+        self._user_view_locked = False
         self._reset_view_to_fit()
         self.image_loaded.emit(arr.shape[1], arr.shape[0])
         self.update()
@@ -297,6 +307,10 @@ class PaintCanvas(QOpenGLWidget):
         self.setCursor(QCursor(cursor_for_tool(tool)))
 
     def reset_view(self) -> None:
+        # Explicit "fit to window" — re-enable auto-fit so subsequent
+        # window resizes keep the canvas centred until the user wheels
+        # / pans again.
+        self._user_view_locked = False
         self._reset_view_to_fit()
         self.update()
 
@@ -317,7 +331,11 @@ class PaintCanvas(QOpenGLWidget):
         glLoadIdentity()
         glOrtho(0, max(1, w), max(1, h), 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
-        if self._fit_pending:
+        # Re-fit on every resize until the user manually controls the
+        # view. ``_fit_pending`` covers the deferred-init case (widget
+        # was too small earlier); ``_user_view_locked`` is the user-took-
+        # control flag that pins the view once they wheel-zoom or pan.
+        if self._fit_pending or not self._user_view_locked:
             self._reset_view_to_fit()
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
@@ -406,6 +424,8 @@ class PaintCanvas(QOpenGLWidget):
             self._pan_anchor = (event.position().x(), event.position().y())
             self._pan_x += dx
             self._pan_y += dy
+            # Manual pan — stop auto-fitting on subsequent resizes.
+            self._user_view_locked = True
             self.update()
             return
         self._dispatch("move", event)
@@ -527,6 +547,8 @@ class PaintCanvas(QOpenGLWidget):
         self._zoom = new_zoom
         self._pan_x = anchor_x - rel_x * new_zoom
         self._pan_y = anchor_y - rel_y * new_zoom
+        # User wheel-zoomed — stop auto-fitting on subsequent resizes.
+        self._user_view_locked = True
         self.update()
 
     def _reset_view_to_fit(self) -> None:
