@@ -176,6 +176,95 @@ class PaintDocument:
         self._active_index += 1
         self._notify()
 
+    def merge_down(self) -> bool:
+        """Merge the active layer with the one immediately below it.
+
+        Returns ``True`` if anything changed. A no-op (returns
+        ``False``) when the active layer is the bottom of the stack —
+        there is nothing to merge into.
+        """
+        from Imervue.paint.layer_ops import merge_layer_pair
+        idx = self._active_index
+        if idx <= 0:
+            return False
+        below = self._layers[idx - 1]
+        above = self._layers[idx]
+        merged = merge_layer_pair(below, above)
+        self._layers[idx - 1] = merged
+        del self._layers[idx]
+        self._active_index = idx - 1
+        self._notify()
+        return True
+
+    def merge_visible(self) -> bool:
+        """Replace every visible layer with their merged composite.
+
+        Hidden layers are kept untouched in their original positions.
+        The merged layer is inserted where the lowest visible layer
+        sat. Returns ``True`` if any merge actually happened.
+        """
+        from Imervue.paint.layer_ops import composite_visible_layers
+        if not self._layers:
+            return False
+        shape = self.shape
+        if shape is None:
+            return False
+        merged = composite_visible_layers(self._layers, shape)
+        if merged is None:
+            return False
+        # Find indices of visible layers; the merged result replaces
+        # the lowest one and the rest are dropped.
+        visible_idx = [
+            i for i, layer in enumerate(self._layers)
+            if layer.visible and layer.opacity > 0
+        ]
+        if len(visible_idx) <= 1:
+            # Nothing to merge — single visible layer is already the
+            # composite of the visible set.
+            return False
+        # Was the active layer one of the visibles? Track its identity
+        # so the active pointer survives the rebuild.
+        active_was_visible = self._active_index in visible_idx
+        kept_layers: list = []
+        new_active = -1
+        merged_inserted = False
+        for i, layer in enumerate(self._layers):
+            if i in visible_idx:
+                if not merged_inserted:
+                    kept_layers.append(merged)
+                    if active_was_visible:
+                        new_active = len(kept_layers) - 1
+                    merged_inserted = True
+                # All other visible layers are absorbed.
+            else:
+                kept_layers.append(layer)
+                if i == self._active_index:
+                    new_active = len(kept_layers) - 1
+        self._layers = kept_layers
+        self._active_index = max(0, new_active)
+        self._notify()
+        return True
+
+    def flatten(self) -> bool:
+        """Replace the entire stack with one ``Background`` layer.
+
+        Visible layers are merged into a single Layer; hidden layers
+        are dropped. Returns ``True`` if the stack actually shrank.
+        """
+        from Imervue.paint.layer_ops import flatten_layers
+        if not self._layers:
+            return False
+        shape = self.shape
+        if shape is None:
+            return False
+        flat = flatten_layers(self._layers, shape)
+        if len(self._layers) == 1 and self._layers[0].image is flat.image:
+            return False
+        self._layers = [flat]
+        self._active_index = 0
+        self._notify()
+        return True
+
     def move_active_layer(self, *, up: bool) -> None:
         idx = self._active_index
         target = idx + 1 if up else idx - 1
