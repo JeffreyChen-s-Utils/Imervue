@@ -169,6 +169,45 @@ def test_set_tool_dispatcher_accepts_callable(qapp):
         canvas.deleteLater()
 
 
+def test_dispatch_produces_int_button_and_modifiers(qapp, sample_rgba_array):
+    """Regression: PySide6 6.x returns Qt.MouseButton / KeyboardModifier
+    as flag enums that don't auto-convert via int(). _dispatch has to
+    go through .value to keep PointerEvent.button + .modifiers as
+    plain ints."""
+    import warnings
+
+    from PySide6.QtCore import QEvent, QPointF
+    from PySide6.QtGui import QMouseEvent
+
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        captured: list = []
+        canvas.set_tool_dispatcher(lambda evt: captured.append(evt) or False)
+        with warnings.catch_warnings():
+            # The QMouseEvent constructor used here is technically
+            # deprecated; Qt is pushing callers to a 7-arg form that
+            # also takes scene and global points. The 6-arg form still
+            # works and is plenty for the dispatch unit test.
+            warnings.simplefilter("ignore", DeprecationWarning)
+            mouse_evt = QMouseEvent(
+                QEvent.Type.MouseMove,
+                QPointF(5.0, 5.0),
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.AltModifier,
+            )
+        canvas._dispatch("move", mouse_evt)   # noqa: SLF001
+        assert captured, "dispatcher must fire for a real QMouseEvent"
+        evt = captured[0]
+        assert isinstance(evt.button, int)
+        assert isinstance(evt.modifiers, int)
+    finally:
+        canvas.deleteLater()
+
+
 def test_zoom_factor_starts_at_unity(qapp):
     canvas = _make_canvas(qapp)
     if canvas is None:

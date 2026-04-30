@@ -390,11 +390,14 @@ class PaintCanvas(QOpenGLWidget):
         if self._dispatcher is None:
             return
         x, y = self._screen_to_image(event.position().x(), event.position().y())
+        # PySide6 6.x returns Qt.MouseButton / Qt.KeyboardModifier as
+        # flag enums that don't auto-convert via int() — go through
+        # ``.value`` so PointerEvent stays plain-int as the tests expect.
         evt = PointerEvent(
             phase=phase,
             x=x, y=y,
-            button=int(event.button()),
-            modifiers=int(event.modifiers()),
+            button=int(event.button().value),
+            modifiers=int(event.modifiers().value),
             pressure=self._last_pressure,
         )
         if self._dispatcher(evt):
