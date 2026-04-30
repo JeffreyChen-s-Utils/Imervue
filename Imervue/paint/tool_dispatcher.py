@@ -175,27 +175,45 @@ class BrushTool:
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
         self._stroke: BrushStroke | None = None
+        self._stabilizer = None   # type: ignore[assignment]
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
             return self._begin(evt, canvas)
         if evt.phase == "move" and self._stroke is not None:
-            self._stroke.extend(canvas, evt.x, evt.y)
+            x, y = self._smoothed_xy(evt.x, evt.y)
+            self._stroke.extend(canvas, x, y)
             return True
         if evt.phase == "release" and self._stroke is not None:
+            self._drain_to(canvas, evt.x, evt.y)
             self._stroke.end(canvas, evt.x, evt.y)
             self._stroke = None
+            self._stabilizer = None
             return True
         if evt.phase == "leave" and self._stroke is not None:
             # Treat leaving the canvas as a stroke end so we don't strand
             # the state machine in an active stroke.
+            self._drain_to(canvas, evt.x, evt.y)
             self._stroke.end(canvas, evt.x, evt.y)
             self._stroke = None
+            self._stabilizer = None
             return True
         return False
 
     def cancel(self) -> None:
         self._stroke = None
+        self._stabilizer = None
+
+    def _smoothed_xy(self, x: float, y: float) -> tuple[float, float]:
+        if self._stabilizer is None:
+            return (x, y)
+        return self._stabilizer.step(x, y)
+
+    def _drain_to(self, canvas: np.ndarray, x: float, y: float) -> None:
+        if self._stabilizer is None or self._stroke is None:
+            return
+        for px, py in self._stabilizer.flush(x, y):
+            self._stroke.extend(canvas, px, py)
 
     # ---- internals -------------------------------------------------------
 
@@ -204,8 +222,16 @@ class BrushTool:
             pressure_opacity_factor,
             pressure_size_factor,
         )
+        from Imervue.paint.stabilizer import StrokeStabilizer
         import time
         brush = self._state.brush
+        # Stabiliser smooths jittery input. strength=0 short-circuits the
+        # filter so cheap mice with no jitter pay zero cost.
+        if brush.stabilizer > 0.0:
+            self._stabilizer = StrokeStabilizer(brush.stabilizer)
+            self._stabilizer.begin(evt.x, evt.y)
+        else:
+            self._stabilizer = None
         # Pen pressure scales BOTH size and opacity — MediBang uses both
         # axes so a pen line tapers in width as well as ink density.
         size_scaled = max(1, int(round(brush.size * pressure_size_factor(evt.pressure))))

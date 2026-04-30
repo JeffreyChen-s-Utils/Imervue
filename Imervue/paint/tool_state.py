@@ -109,6 +109,7 @@ class BrushSettings:
     hardness: float = 0.8
     density: float = 1.0
     blend_mode: str = DEFAULT_BLEND_MODE
+    stabilizer: float = 0.0   # 0 = off, 0..1 — input low-pass strength
 
 
 # Fill bucket parameters live alongside brush so the dock panels and
@@ -332,6 +333,7 @@ class ToolState:
                 "hardness": self.brush.hardness,
                 "density": self.brush.density,
                 "blend_mode": self.brush.blend_mode,
+                "stabilizer": self.brush.stabilizer,
             },
             "fill": {
                 "tolerance": self.fill.tolerance,
@@ -432,6 +434,8 @@ def _clamp_brush_attr(key: str, value: Any) -> Any:
         return max(BRUSH_HARDNESS_MIN, min(BRUSH_HARDNESS_MAX, float(value)))
     if key == "density":
         return max(BRUSH_DENSITY_MIN, min(BRUSH_DENSITY_MAX, float(value)))
+    if key == "stabilizer":
+        return max(0.0, min(1.0, float(value)))
     return value
 
 
@@ -460,6 +464,7 @@ def _brush_from_dict(raw: Any) -> BrushSettings:
         hardness=_clamp_brush_attr("hardness", raw.get("hardness", 0.8)),
         density=_clamp_brush_attr("density", raw.get("density", 1.0)),
         blend_mode=blend,
+        stabilizer=_clamp_brush_attr("stabilizer", raw.get("stabilizer", 0.0)),
     )
 
 
