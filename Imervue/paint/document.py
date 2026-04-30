@@ -24,6 +24,11 @@ from Imervue.paint.compositing import LAYER_BLEND_MODES, composite_stack
 DEFAULT_LAYER_NAME = "Layer"
 BACKGROUND_LAYER_NAME = "Background"
 
+# Eight Photoshop-style colour labels artists use to triage layers.
+# ``None`` is the "no label" default; the seven named values match the
+# colours MediBang / Photoshop tint the row chip with.
+LAYER_LABELS = ("red", "orange", "yellow", "green", "blue", "violet", "grey")
+
 # Layer-group blend modes — ``pass_through`` keeps each member layer's
 # own blend mode (the group only multiplies opacity / visibility). The
 # other modes match the Layer-level set; non-pass-through groups
@@ -59,6 +64,7 @@ class Layer:
     effects: tuple = ()          # tuple[LayerEffect, ...] — drop shadow / glow / stroke
     blend_if: Any = None         # BlendIf | None — luminance-range visibility gate
     vector_data: Any = None      # VectorLayerData | None — vector strokes; image is the cache
+    color_label: str | None = None   # one of LAYER_LABELS or None for "no label"
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -77,6 +83,11 @@ class Layer:
             raise ValueError(
                 f"unknown blend_mode {self.blend_mode!r}; "
                 f"expected one of {LAYER_BLEND_MODES}",
+            )
+        if self.color_label is not None and self.color_label not in LAYER_LABELS:
+            raise ValueError(
+                f"unknown color_label {self.color_label!r}; "
+                f"expected None or one of {LAYER_LABELS}",
             )
         self.opacity = max(0.0, min(1.0, float(self.opacity)))
 
@@ -371,6 +382,44 @@ class PaintDocument:
         layer.lock_alpha = bool(lock_alpha)
         self._notify()
         return True
+
+    def set_layer_color_label(
+        self, index: int = -1, *, label: str | None,
+    ) -> bool:
+        """Tag a layer with a colour label (or clear it with ``None``).
+
+        Returns ``True`` if the label changed. Unknown label values
+        raise ``ValueError`` so a typo can't silently mis-tag a layer.
+        """
+        if label is not None and label not in LAYER_LABELS:
+            raise ValueError(
+                f"unknown color_label {label!r}; "
+                f"expected None or one of {LAYER_LABELS}",
+            )
+        layer = self._resolve_layer(index)
+        if layer is None or layer.color_label == label:
+            return False
+        layer.color_label = label
+        self._notify()
+        return True
+
+    def find_layers(self, query: str) -> list[int]:
+        """Return indices of layers whose name matches ``query``.
+
+        Match is case-insensitive substring + AND-combined whitespace
+        tokens, matching the search semantics in
+        :class:`Imervue.paint.material_library.MaterialIndex`. Used by
+        the LayerDock's filter / search field.
+        """
+        tokens = [t.lower() for t in query.split() if t]
+        if not tokens:
+            return list(range(len(self._layers)))
+        out: list[int] = []
+        for index, layer in enumerate(self._layers):
+            haystack = layer.name.lower()
+            if all(token in haystack for token in tokens):
+                out.append(index)
+        return out
 
     def set_layer_clip(self, index: int = -1, *, clip: bool) -> bool:
         """Toggle the layer's clip-to-layer-below flag."""

@@ -330,3 +330,81 @@ def test_document_active_layer_index_clamped_after_remove():
     doc.add_layer()
     doc.remove_active_layer()
     assert doc.active_layer_index() == 0
+
+
+# ---------------------------------------------------------------------------
+# Layer colour labels + search
+# ---------------------------------------------------------------------------
+
+
+def test_layer_color_label_defaults_to_none():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.active_layer().color_label is None
+
+
+def test_layer_rejects_unknown_color_label():
+    arr = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError, match="unknown color_label"):
+        Layer(name="bad", image=arr, color_label="rainbow")
+
+
+def test_set_layer_color_label_sets_and_returns_true():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.set_layer_color_label(label="red") is True
+    assert doc.active_layer().color_label == "red"
+
+
+def test_set_layer_color_label_idempotent():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_color_label(label="red")
+    assert doc.set_layer_color_label(label="red") is False
+
+
+def test_set_layer_color_label_clears_with_none():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_color_label(label="red")
+    assert doc.set_layer_color_label(label=None) is True
+    assert doc.active_layer().color_label is None
+
+
+def test_set_layer_color_label_rejects_unknown():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    with pytest.raises(ValueError, match="unknown color_label"):
+        doc.set_layer_color_label(label="ultraviolet")
+
+
+def test_find_layers_empty_query_returns_all_indices():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.add_layer(name="Inks")
+    doc.add_layer(name="Flats")
+    assert doc.find_layers("") == [0, 1, 2]
+
+
+def test_find_layers_case_insensitive_substring():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.add_layer(name="Inks")
+    doc.add_layer(name="Flats")
+    assert doc.find_layers("INK") == [1]
+
+
+def test_find_layers_and_combines_tokens():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.add_layer(name="Cool Ambient Glow")
+    doc.add_layer(name="Warm Highlights")
+    # Both tokens "cool" + "glow" must match; only the Ambient Glow
+    # layer matches both.
+    assert doc.find_layers("cool glow") == [1]
+
+
+def test_find_layers_no_match_returns_empty():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.find_layers("nonexistent") == []
