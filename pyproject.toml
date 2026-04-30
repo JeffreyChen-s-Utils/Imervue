@@ -122,6 +122,7 @@ mccabe.max-complexity = 16
 "plugins/**/*.py" = ["E501"]
 "Imervue/gpu_image_view/gl_renderer.py" = ["E501", "F403", "F405", "E702"]  # OpenGL.GL wildcard + GLSL strings + glTexCoord/glVertex pairs
 "Imervue/gpu_image_view/gpu_image_view.py" = ["F403", "F405", "C901"]  # OpenGL.GL wildcard + Qt keyPressEvent dispatcher
+"Imervue/paint/canvas.py" = ["E702"]  # glTexCoord/glVertex pairs are clearer on one line
 "Imervue/gui/annotation_dialog.py" = ["C901"]        # mouseMoveEvent Qt event state machine
 "Imervue/menu/tip_menu.py" = ["E501"]                # translated help strings
 
