@@ -137,11 +137,31 @@ def composite_stack(
         if effects:
             from Imervue.paint.layer_effects import apply_effects
             layer_image = apply_effects(layer_image, effects)
+
+        # Combine the layer's effective mask with any blend-if mask.
+        effective_mask = getattr(layer, "effective_mask", layer.mask)
+        blend_if = getattr(layer, "blend_if", None)
+        if blend_if is not None:
+            from Imervue.paint.blend_if import compute_blend_if_mask
+            blend_if_alpha = compute_blend_if_mask(
+                layer_image, out, blend_if,
+            )
+            blend_if_mask = (blend_if_alpha * 255.0).clip(0, 255).astype(np.uint8)
+            if effective_mask is None:
+                effective_mask = blend_if_mask
+            else:
+                combined = (
+                    effective_mask.astype(np.float32) / 255.0
+                ) * blend_if_alpha
+                effective_mask = (
+                    combined * 255.0
+                ).clip(0, 255).astype(np.uint8)
+
         out = composite_layer_pair(
             out, layer_image,
             opacity=layer.opacity * group_opacity,
             blend_mode=layer.blend_mode,
-            mask=getattr(layer, "effective_mask", layer.mask),
+            mask=effective_mask,
         )
     return out
 

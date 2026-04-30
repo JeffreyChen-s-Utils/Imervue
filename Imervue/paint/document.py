@@ -57,6 +57,7 @@ class Layer:
     group: str | None = None     # name of the LayerGroup this layer belongs to
     adjustment: Any = None       # Adjustment | None — when set the layer is non-destructive
     effects: tuple = ()          # tuple[LayerEffect, ...] — drop shadow / glow / stroke
+    blend_if: Any = None         # BlendIf | None — luminance-range visibility gate
 
     @property
     def effective_mask(self) -> np.ndarray | None:
