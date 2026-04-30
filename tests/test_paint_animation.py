@@ -180,3 +180,69 @@ def test_onion_skip_when_after_off_end():
     out = composite_with_onion_skin(a, before_count=0, after_count=5)
     assert out is not None
     assert tuple(out[2, 2, :3]) == (0, 0, 255)
+
+
+# ---------------------------------------------------------------------------
+# render_onion_skin_overlay — ghosts-only buffer for the canvas widget
+# ---------------------------------------------------------------------------
+
+
+def test_overlay_returns_none_for_empty_animation():
+    from Imervue.paint.animation import render_onion_skin_overlay
+    out = render_onion_skin_overlay(Animation())
+    assert out is None
+
+
+def test_overlay_returns_none_when_no_neighbours_visible():
+    """Active frame is the only frame — both before / after are empty
+    so the overlay short-circuits to ``None`` instead of returning a
+    fully-transparent buffer the canvas would still try to upload."""
+    from Imervue.paint.animation import render_onion_skin_overlay
+    doc = PaintDocument()
+    doc.load_image(np.full((4, 4, 4), 100, dtype=np.uint8))
+    anim = Animation(frames=[AnimationFrame(document=doc, name="solo")])
+    out = render_onion_skin_overlay(anim, before_count=1, after_count=1)
+    assert out is None
+
+
+def test_overlay_excludes_active_frame_pixels():
+    """The active frame must not appear in the overlay — only the
+    neighbours' ghosts."""
+    from Imervue.paint.animation import render_onion_skin_overlay
+    a = _three_frame_animation()
+    a.set_active_index(1)
+    overlay = render_onion_skin_overlay(a, before_count=1, after_count=1)
+    assert overlay is not None
+    # Active frame is green (0, 255, 0); ghosts are red + blue. The
+    # green channel should not be dominant at any overlay pixel.
+    painted = overlay[..., 3] > 0
+    assert painted.any()
+    assert overlay[painted, 1].max() <= 0
+
+
+def test_overlay_negative_count_raises():
+    from Imervue.paint.animation import render_onion_skin_overlay
+    with pytest.raises(ValueError, match=">= 0"):
+        render_onion_skin_overlay(_three_frame_animation(), before_count=-1)
+
+
+def test_overlay_opacity_step_out_of_range_raises():
+    from Imervue.paint.animation import render_onion_skin_overlay
+    with pytest.raises(ValueError, match=r"\[0, 1\]"):
+        render_onion_skin_overlay(
+            _three_frame_animation(), opacity_step=1.5,
+        )
+
+
+def test_overlay_ghosts_are_translucent_not_opaque():
+    """The painted ghost pixels must be partially transparent — that's
+    the visual cue artists rely on to distinguish ghosts from the
+    active frame."""
+    from Imervue.paint.animation import render_onion_skin_overlay
+    a = _three_frame_animation()
+    a.set_active_index(2)
+    overlay = render_onion_skin_overlay(a, before_count=2, after_count=0)
+    assert overlay is not None
+    painted = overlay[overlay[..., 3] > 0, 3]
+    assert painted.size > 0
+    assert int(painted.min()) < 255

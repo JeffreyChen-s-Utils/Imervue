@@ -297,6 +297,73 @@ def composite_with_onion_skin(
     return out
 
 
+def render_onion_skin_overlay(
+    animation: Animation,
+    *,
+    before_count: int = 1,
+    after_count: int = 1,
+    before_tint: tuple[int, int, int] = DEFAULT_BEFORE_TINT,
+    after_tint: tuple[int, int, int] = DEFAULT_AFTER_TINT,
+    opacity_step: float = DEFAULT_OPACITY_STEP,
+) -> np.ndarray | None:
+    """Render the onion-skin ghosts WITHOUT the active frame.
+
+    Returns an HxWx4 RGBA buffer the canvas can blit as an overlay
+    above its own composite. ``None`` is returned when the animation
+    has no frames or when neither neighbour direction would produce
+    a visible ghost (e.g. ``before_count == 0`` and the active frame
+    is the last one).
+
+    Compared with :func:`composite_with_onion_skin` (which produces a
+    flattened active+ghosts composite), this overlay-only variant lets
+    the user keep editing the active frame's layers normally while
+    the canvas widget shows neighbour ghosts on top in a separate pass.
+    """
+    if before_count < 0 or after_count < 0:
+        raise ValueError(
+            f"before_count / after_count must be >= 0, got "
+            f"{before_count} / {after_count}",
+        )
+    if not 0.0 <= float(opacity_step) <= 1.0:
+        raise ValueError(
+            f"opacity_step must be in [0, 1], got {opacity_step!r}",
+        )
+    if not animation.frames:
+        return None
+    active_frame = animation.active_frame()
+    if active_frame is None:
+        return None
+    shape = active_frame.document.shape
+    if shape is None:
+        return None
+    h, w = shape
+
+    # Walk both sides farthest-first so closer ghosts overlay older ones.
+    out = np.zeros((h, w, 4), dtype=np.uint8)
+    for distance in range(before_count, 0, -1):
+        idx = animation.active_index - distance
+        if idx < 0:
+            continue
+        out = _composite_onion_frame(
+            out, animation.frames[idx].document, distance,
+            before_tint, opacity_step,
+        )
+    for distance in range(after_count, 0, -1):
+        idx = animation.active_index + distance
+        if idx >= len(animation.frames):
+            continue
+        out = _composite_onion_frame(
+            out, animation.frames[idx].document, distance,
+            after_tint, opacity_step,
+        )
+    if out[..., 3].sum() == 0:
+        # No ghost was actually drawn — empty animation edges, all
+        # neighbours had alpha-zero composites, etc. Return ``None`` so
+        # the canvas can short-circuit the overlay paint.
+        return None
+    return out
+
+
 def _composite_active(buffer: np.ndarray, doc: PaintDocument) -> np.ndarray:
     composite = doc.composite()
     if composite is None:
