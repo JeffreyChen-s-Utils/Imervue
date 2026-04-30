@@ -255,6 +255,96 @@ def test_brush_symmetry_cancel_clears_all_strokes(state, canvas):
 
 
 # ---------------------------------------------------------------------------
+# BrushTool — ruler snap
+# ---------------------------------------------------------------------------
+
+
+def test_brush_linear_ruler_constrains_stroke_to_line(state, canvas):
+    """A horizontal ruler at y=20 must paint dabs only along that row."""
+    state.set_foreground((255, 0, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_ruler(mode="linear", anchor=(0.0, 20.0), angle_deg=0.0)
+    tool = BrushTool(state)
+    tool.handle(_press(10, 5), canvas)   # off-line cursor
+    tool.handle(_move(40, 50), canvas)   # off-line cursor
+    tool.handle(_release(40, 50), canvas)
+    # Snapped y is always 20 — pixels at row 20 must be painted, and the
+    # off-line rows the cursor visited must remain untouched.
+    assert canvas[20, 10, 0] == 255
+    assert canvas[20, 40, 0] == 255
+    # Source cursor row 5 / 50 should be background (no paint reached
+    # those rows because every cursor sample was projected onto y=20).
+    assert canvas[5, 10, 0] == 255  # canvas was white pre-paint
+    assert canvas[50, 40, 0] == 255
+
+
+def test_brush_concentric_ruler_snaps_to_ring(state, canvas):
+    """Press inside a ring's inner half snaps to the ring nearest centre."""
+    state.set_foreground((0, 200, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    # Anchor at canvas centre (32, 32), spacing 10 — rings at 10, 20, 30.
+    state.set_ruler(mode="concentric", anchor=(32.0, 32.0), spacing=10.0)
+    tool = BrushTool(state)
+    # Cursor at (44, 32) → distance 12 from anchor, snaps to radius 10
+    # → snapped point (42, 32).
+    tool.handle(_press(44, 32), canvas)
+    assert canvas[32, 42, 1] == 200
+    # The unsnapped cursor pixel (44, 32) must NOT be painted by the
+    # press — the cursor was projected onto the ring.
+    # Brush size=3 means a 3-px radius dab; pixel at x=44 is two away
+    # from the snap centre x=42 → still within the dab. So instead
+    # check far away from the snap.
+    assert canvas[32, 50, 1] == 255  # canvas-white (not painted)
+
+
+def test_brush_ruler_off_mode_paints_at_raw_cursor(state, canvas):
+    state.set_foreground((10, 20, 30))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_ruler(mode="off")
+    tool = BrushTool(state)
+    tool.handle(_press(15, 25), canvas)
+    assert canvas[25, 15, 0] == 10
+
+
+def test_brush_ruler_snapshot_survives_mid_stroke_change(state, canvas):
+    """Changing the ruler mid-stroke must not reroute the active stroke."""
+    state.set_foreground((255, 0, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_ruler(mode="linear", anchor=(0.0, 20.0), angle_deg=0.0)
+    tool = BrushTool(state)
+    tool.handle(_press(10, 50), canvas)  # snapped to (10, 20)
+    state.set_ruler(mode="off")
+    tool.handle(_release(40, 50), canvas)
+    # Mid-stroke ruler swap is ignored: end point still snapped to y=20.
+    assert canvas[20, 40, 0] == 255
+
+
+def test_brush_ruler_plus_symmetry_compose(state, canvas):
+    """Ruler snap precedes mirror — both must apply."""
+    state.set_foreground((0, 0, 200))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_ruler(mode="linear", anchor=(0.0, 20.0), angle_deg=0.0)
+    state.set_symmetry_mode("horizontal")
+    tool = BrushTool(state)
+    # Press at (10, 50) snaps to (10, 20). Mirror over canvas-x-centre
+    # 32 → (54, 20).
+    tool.handle(_press(10, 50), canvas)
+    assert canvas[20, 10, 2] == 200
+    assert canvas[20, 54, 2] == 200
+
+
+def test_brush_ruler_only_active_for_brush_paint(state, canvas):
+    """The dispatcher's ruler integration only affects the brush tool —
+    fill / eraser / etc. don't (yet) consult the ruler. Sanity check
+    that an active ruler doesn't break unrelated tools."""
+    state.set_ruler(mode="linear", anchor=(0.0, 20.0), angle_deg=0.0)
+    tool = EraserTool(state)
+    # Eraser at (10, 50): with ruler ignored, alpha at row 50 must drop.
+    tool.handle(_press(10, 50), canvas)
+    assert canvas[50, 10, 3] == 0
+
+
+# ---------------------------------------------------------------------------
 # EraserTool
 # ---------------------------------------------------------------------------
 

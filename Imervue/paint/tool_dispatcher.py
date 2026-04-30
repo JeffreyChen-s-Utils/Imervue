@@ -172,33 +172,42 @@ class _SelectionContext:
 class BrushTool:
     """Standard brush — paints colour through the current brush kernel.
 
-    When :attr:`ToolState.symmetry_mode` is active the tool drives one
-    :class:`BrushStroke` per mirror image of the cursor; every move is
-    fanned out to all of them in lock-step so the canvas paints a
-    perfectly mirrored / radial pattern. ``mode == "off"`` reduces to a
-    single stroke at the source point with no extra cost.
+    The pipeline applied to every cursor sample is **ruler-snap →
+    stabiliser → symmetry mirror**. Each stage is opt-in: an off-mode
+    ruler is identity, a zero-strength stabiliser is bypassed, and an
+    off-mode symmetry mirror produces a single stroke. With everything
+    on, the user gets a snapped, smoothed, mirrored stroke from one
+    cursor input.
+
+    Ruler / symmetry geometry is snapshotted at press time so a
+    mid-stroke mode change or canvas resize can't tear the active
+    stroke.
     """
 
     def __init__(self, state: ToolState, selection_provider=None):
+        from Imervue.paint.rulers import Ruler
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
         self._strokes: list[BrushStroke] = []
         self._stabilizer = None   # type: ignore[assignment]
         self._mode: str = "off"
         self._origin: tuple[float, float] = (0.0, 0.0)
+        self._ruler: Ruler = Ruler()
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
             return self._begin(evt, canvas)
         if evt.phase == "move" and self._strokes:
-            x, y = self._smoothed_xy(evt.x, evt.y)
+            x, y = self._snap(evt.x, evt.y)
+            x, y = self._smoothed_xy(x, y)
             self._extend_all(canvas, x, y)
             return True
         if evt.phase in ("release", "leave") and self._strokes:
             # Leaving the canvas is treated like a release so the state
             # machine never strands an active stroke.
-            self._drain_to(canvas, evt.x, evt.y)
-            self._end_all(canvas, evt.x, evt.y)
+            sx, sy = self._snap(evt.x, evt.y)
+            self._drain_to(canvas, sx, sy)
+            self._end_all(canvas, sx, sy)
             self._strokes = []
             self._stabilizer = None
             return True
@@ -211,13 +220,21 @@ class BrushTool:
     def _smoothed_xy(self, x: float, y: float) -> tuple[float, float]:
         if self._stabilizer is None:
             return (x, y)
-        return self._stabilizer.step(x, y)
+        sx, sy = self._stabilizer.step(x, y)
+        # Re-snap after the stabiliser so curved-ruler interpolation is
+        # pulled back onto the track. Idempotent for points already on.
+        return self._snap(sx, sy)
 
     def _drain_to(self, canvas: np.ndarray, x: float, y: float) -> None:
         if self._stabilizer is None or not self._strokes:
             return
         for px, py in self._stabilizer.flush(x, y):
-            self._extend_all(canvas, px, py)
+            rx, ry = self._snap(px, py)
+            self._extend_all(canvas, rx, ry)
+
+    def _snap(self, x: float, y: float) -> tuple[float, float]:
+        from Imervue.paint.rulers import snap_to_ruler
+        return snap_to_ruler((x, y), self._ruler)
 
     def _mirror(self, x: float, y: float) -> list[tuple[float, float]]:
         from Imervue.paint.symmetry import mirror_points
@@ -241,11 +258,15 @@ class BrushTool:
         from Imervue.paint.stabilizer import StrokeStabilizer
         import time
         brush = self._state.brush
+        # Snapshot the ruler at press time, then snap the press point so
+        # downstream stabiliser + mirror stages see a point on the track.
+        self._ruler = self._state.ruler
+        sx, sy = self._snap(evt.x, evt.y)
         # Stabiliser smooths jittery input. strength=0 short-circuits the
         # filter so cheap mice with no jitter pay zero cost.
         if brush.stabilizer > 0.0:
             self._stabilizer = StrokeStabilizer(brush.stabilizer)
-            self._stabilizer.begin(evt.x, evt.y)
+            self._stabilizer.begin(sx, sy)
         else:
             self._stabilizer = None
         # Pen pressure scales BOTH size and opacity — MediBang uses both
@@ -269,7 +290,7 @@ class BrushTool:
             tip_path=brush.tip_path,
         )
         self._strokes = []
-        for px, py in self._mirror(evt.x, evt.y):
+        for px, py in self._mirror(sx, sy):
             stroke = BrushStroke(options)
             stroke.begin(canvas, px, py)
             self._strokes.append(stroke)

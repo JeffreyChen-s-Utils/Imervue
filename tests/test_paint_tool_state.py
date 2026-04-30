@@ -335,3 +335,85 @@ def test_from_dict_drops_unknown_symmetry_mode():
 def test_from_dict_handles_missing_symmetry_key():
     rebuilt = ts.ToolState.from_dict({})
     assert rebuilt.symmetry_mode == "off"
+
+
+# ---------------------------------------------------------------------------
+# Ruler
+# ---------------------------------------------------------------------------
+
+
+def test_default_ruler_is_off_mode():
+    state = ts.load_tool_state()
+    assert state.ruler.mode == "off"
+
+
+def test_set_ruler_replaces_with_new_instance():
+    from Imervue.paint.rulers import Ruler
+    state = ts.load_tool_state()
+    new = Ruler(mode="linear", anchor=(10.0, 20.0), angle_deg=45.0)
+    assert state.set_ruler(new) is True
+    assert state.ruler == new
+
+
+def test_set_ruler_with_kwargs_patches_fields():
+    state = ts.load_tool_state()
+    state.set_ruler(mode="linear", angle_deg=30.0)
+    assert state.ruler.mode == "linear"
+    assert state.ruler.angle_deg == 30.0
+
+
+def test_set_ruler_idempotent_returns_false():
+    state = ts.load_tool_state()
+    state.set_ruler(mode="linear", angle_deg=45.0)
+    assert state.set_ruler(mode="linear", angle_deg=45.0) is False
+
+
+def test_set_ruler_rejects_unknown_mode():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="unknown ruler mode"):
+        state.set_ruler(mode="fractal")
+
+
+def test_set_ruler_rejects_both_ruler_and_kwargs():
+    from Imervue.paint.rulers import Ruler
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="ruler= or"):
+        state.set_ruler(Ruler(mode="linear"), angle_deg=10.0)
+
+
+def test_set_ruler_emits_ruler_event():
+    state = ts.load_tool_state()
+    received: list[str] = []
+    state.subscribe(received.append)
+    state.set_ruler(mode="linear")
+    assert ts.EVENT_RULER in received
+
+
+def test_ruler_persists_to_user_setting_dict():
+    state = ts.load_tool_state()
+    state.set_ruler(mode="ellipse", anchor=(100.0, 50.0), rx=20.0, ry=10.0)
+    raw = user_setting_dict.get("paint_state")
+    assert raw["ruler"]["mode"] == "ellipse"
+    assert raw["ruler"]["anchor"] == [100.0, 50.0]
+
+
+def test_ruler_round_trips_via_to_from_dict():
+    state = ts.load_tool_state()
+    state.set_ruler(
+        mode="parallel", anchor=(5.0, 6.0), angle_deg=30.0, spacing=15.0,
+    )
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.ruler.mode == "parallel"
+    assert rebuilt.ruler.anchor == (5.0, 6.0)
+    assert rebuilt.ruler.angle_deg == 30.0
+    assert rebuilt.ruler.spacing == 15.0
+
+
+def test_from_dict_handles_missing_ruler_key():
+    rebuilt = ts.ToolState.from_dict({})
+    assert rebuilt.ruler.mode == "off"
+
+
+def test_from_dict_drops_unknown_ruler_mode():
+    rebuilt = ts.ToolState.from_dict({"ruler": {"mode": "kaleidoscope"}})
+    assert rebuilt.ruler.mode == "off"

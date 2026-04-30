@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from Imervue.paint.rulers import Ruler
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
 
 _STATE_KEY = "paint_state"
@@ -98,6 +99,7 @@ EVENT_FILL = "fill"            # any fill setting changed
 EVENT_SELECTION_MODE = "selection_mode"   # selection combine mode changed
 EVENT_GRADIENT = "gradient"    # gradient kind / reverse changed
 EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
+EVENT_RULER = "ruler"          # ruler mode / geometry changed
 
 
 @dataclass(frozen=True)
@@ -147,6 +149,7 @@ class ToolState:
     gradient_kind: str = "linear"
     gradient_reverse: bool = False
     symmetry_mode: str = "off"
+    ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -248,6 +251,32 @@ class ToolState:
             self._persist()
             self._emit(EVENT_GRADIENT)
         return changed
+
+    def set_ruler(self, ruler: Ruler | None = None, **kwargs: Any) -> bool:
+        """Replace the active ruler.
+
+        Pass either a fully-built :class:`Ruler` (``set_ruler(ruler)``) or
+        keyword overrides to mutate one field at a time
+        (``set_ruler(mode="linear", angle_deg=45)``); kwargs build a new
+        Ruler from the current ruler with only the named fields replaced.
+        Unknown modes raise ``ValueError`` so a typo can't silently fall
+        back to off.
+        """
+        from Imervue.paint.rulers import RULER_MODES
+        if ruler is None:
+            ruler = replace(self.ruler, **kwargs) if kwargs else self.ruler
+        elif kwargs:
+            raise ValueError("set_ruler accepts either ruler= or **kwargs, not both")
+        if ruler.mode not in RULER_MODES:
+            raise ValueError(
+                f"unknown ruler mode {ruler.mode!r}; expected one of {RULER_MODES}",
+            )
+        if ruler == self.ruler:
+            return False
+        self.ruler = ruler
+        self._persist()
+        self._emit(EVENT_RULER)
+        return True
 
     def set_symmetry_mode(self, mode: str) -> bool:
         """Switch the active brush symmetry mirror mode."""
@@ -362,6 +391,7 @@ class ToolState:
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
             "symmetry_mode": self.symmetry_mode,
+            "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
         }
 
@@ -389,12 +419,13 @@ class ToolState:
         symmetry_mode = raw.get("symmetry_mode", DEFAULT_SYMMETRY_MODE)
         if symmetry_mode not in SYMMETRY_MODES:
             symmetry_mode = DEFAULT_SYMMETRY_MODE
+        ruler = Ruler.from_dict(raw.get("ruler"))
         history = _history_from_list(raw.get("color_history"))
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
-            symmetry_mode=symmetry_mode,
+            symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
         )
 
