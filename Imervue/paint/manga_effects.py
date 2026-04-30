@@ -120,6 +120,80 @@ def render_speed_lines(
 # ---------------------------------------------------------------------------
 
 
+def render_tonal_halftone(
+    canvas: np.ndarray,
+    source: np.ndarray,
+    *,
+    dot_max_radius: float = 4.0,
+    spacing: float = 8.0,
+    color: tuple[int, int, int] = DEFAULT_HALFTONE_COLOR,
+    invert: bool = False,
+) -> DamageRect:
+    """Variable-density halftone — dot radius scales by source luminance.
+
+    Classic comic-shading effect: every grid-cell centre samples the
+    luminance of the source image at that point and stamps a dot
+    whose radius is proportional to ``(1 - luminance)`` (so darker
+    source pixels → bigger dots, lighter → smaller / none). With
+    ``invert=True`` the relationship reverses, useful for "fill the
+    bright areas with a stipple texture".
+
+    ``source`` must be the same HxW shape as ``canvas``; the alpha
+    channel of the source is ignored — only RGB luminance matters.
+    """
+    _check_canvas(canvas)
+    _check_canvas(source)
+    h, w = canvas.shape[:2]
+    if source.shape[:2] != (h, w):
+        raise ValueError(
+            f"source shape {source.shape[:2]} does not match canvas {(h, w)}",
+        )
+    if spacing <= 0.0:
+        raise ValueError(f"spacing must be > 0, got {spacing}")
+    if dot_max_radius < 0.0:
+        raise ValueError(f"dot_max_radius must be >= 0, got {dot_max_radius}")
+
+    src_rgb = source[..., :3].astype(np.float32)
+    luminance = (
+        0.299 * src_rgb[..., 0]
+        + 0.587 * src_rgb[..., 1]
+        + 0.114 * src_rgb[..., 2]
+    ) / 255.0
+
+    ys, xs = np.indices((h, w), dtype=np.float32)
+    grid_x = np.round(xs / spacing) * spacing
+    grid_y = np.round(ys / spacing) * spacing
+    fx = xs - grid_x
+    fy = ys - grid_y
+    distance_to_centre_sq = fx * fx + fy * fy
+
+    centre_xi = np.clip(grid_x.astype(np.int32), 0, w - 1)
+    centre_yi = np.clip(grid_y.astype(np.int32), 0, h - 1)
+    centre_lum = luminance[centre_yi, centre_xi]
+    if invert:
+        local_radius = float(dot_max_radius) * centre_lum
+    else:
+        local_radius = float(dot_max_radius) * (1.0 - centre_lum)
+
+    # Strict positive radius guard — at zero radius the equality test
+    # ``distance_sq <= 0`` would still light up every grid centre pixel.
+    inside = (
+        (local_radius > 0.0)
+        & (distance_to_centre_sq <= local_radius * local_radius)
+    )
+    if not inside.any():
+        return DamageRect(0, 0, 0, 0)
+
+    canvas[inside] = (color[0], color[1], color[2], 255)
+    ys_hit, xs_hit = np.where(inside)
+    return DamageRect(
+        x=int(xs_hit.min()),
+        y=int(ys_hit.min()),
+        w=int(xs_hit.max() - xs_hit.min() + 1),
+        h=int(ys_hit.max() - ys_hit.min() + 1),
+    )
+
+
 def render_halftone(
     canvas: np.ndarray,
     selection: np.ndarray | None = None,
