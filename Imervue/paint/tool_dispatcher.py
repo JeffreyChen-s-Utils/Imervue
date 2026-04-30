@@ -245,6 +245,7 @@ class BrushTool:
             selection=self._selection_provider(),
             kind=brush.kind,
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
+            tip_path=brush.tip_path,
         )
         self._stroke = BrushStroke(options)
         self._stroke.begin(canvas, evt.x, evt.y)

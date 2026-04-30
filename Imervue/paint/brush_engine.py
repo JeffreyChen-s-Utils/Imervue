@@ -348,6 +348,7 @@ class BrushStrokeOptions:
     selection: np.ndarray | None = None   # bool HxW; paint clipped to True
     kind: str = "pen"               # pen / pencil / marker / airbrush / watercolor
     seed: int = 0                   # RNG seed for kind-specific noise
+    tip_path: str | None = None     # custom PNG used as kernel; None = round
 
 
 class BrushStroke:
@@ -362,7 +363,7 @@ class BrushStroke:
         from Imervue.paint.brush_dynamics import stylise_kernel
         self._options = options
         self._rng = np.random.default_rng(options.seed)
-        base = round_brush_kernel(options.size, options.hardness)
+        base = _resolve_base_kernel(options)
         # Re-stylise the kernel each dab for kinds that depend on noise
         # (pencil / airbrush) — store the base + a callable instead of
         # caching one shape so the texture varies along the stroke.
@@ -436,6 +437,18 @@ class BrushStroke:
         self._active = False
         self._last = None
         return result
+
+
+def _resolve_base_kernel(options: BrushStrokeOptions) -> np.ndarray:
+    """Build the per-stroke base kernel — custom tip if set, else round."""
+    if options.tip_path:
+        try:
+            from Imervue.paint.custom_brush import load_brush_tip
+            return load_brush_tip(options.tip_path, options.size)
+        except (OSError, ValueError):
+            # Fall back to the default round kernel; never crash a stroke.
+            return round_brush_kernel(options.size, options.hardness)
+    return round_brush_kernel(options.size, options.hardness)
 
 
 def _union(a: DabResult, b: DabResult) -> DabResult:

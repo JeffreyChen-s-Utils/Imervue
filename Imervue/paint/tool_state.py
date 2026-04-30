@@ -110,6 +110,7 @@ class BrushSettings:
     density: float = 1.0
     blend_mode: str = DEFAULT_BLEND_MODE
     stabilizer: float = 0.0   # 0 = off, 0..1 — input low-pass strength
+    tip_path: str | None = None   # custom PNG used as kernel; None = round
 
 
 # Fill bucket parameters live alongside brush so the dock panels and
@@ -334,6 +335,7 @@ class ToolState:
                 "density": self.brush.density,
                 "blend_mode": self.brush.blend_mode,
                 "stabilizer": self.brush.stabilizer,
+                "tip_path": self.brush.tip_path,
             },
             "fill": {
                 "tolerance": self.fill.tolerance,
@@ -436,6 +438,10 @@ def _clamp_brush_attr(key: str, value: Any) -> Any:
         return max(BRUSH_DENSITY_MIN, min(BRUSH_DENSITY_MAX, float(value)))
     if key == "stabilizer":
         return max(0.0, min(1.0, float(value)))
+    if key == "tip_path":
+        if value is None:
+            return None
+        return str(value) if value else None
     return value
 
 
@@ -465,6 +471,7 @@ def _brush_from_dict(raw: Any) -> BrushSettings:
         density=_clamp_brush_attr("density", raw.get("density", 1.0)),
         blend_mode=blend,
         stabilizer=_clamp_brush_attr("stabilizer", raw.get("stabilizer", 0.0)),
+        tip_path=_clamp_brush_attr("tip_path", raw.get("tip_path")),
     )
 
 
