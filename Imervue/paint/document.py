@@ -354,6 +354,52 @@ class PaintDocument:
             raise IndexError(f"layer index {index} out of range")
         return self._layers[index]
 
+    # ---- crop ----------------------------------------------------------
+
+    def crop(self, rect: tuple[int, int, int, int]) -> bool:
+        """Crop the document to ``(x, y, w, h)`` — every layer + the
+        selection are sliced together so they stay aligned."""
+        from Imervue.paint.crop import crop_to_rect
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = crop_to_rect(layer.image, rect)
+            if layer.mask is not None:
+                layer.mask = crop_to_rect(layer.mask, rect)
+        if self._selection is not None:
+            self._selection = crop_to_rect(self._selection, rect)
+        self._notify()
+        return True
+
+    def crop_to_selection(self) -> bool:
+        """Crop to the bounding box of the active selection.
+
+        Returns ``False`` if there is no selection or the selection is
+        empty (nothing to crop to)."""
+        from Imervue.paint.crop import selection_bounds
+        if self._selection is None:
+            return False
+        rect = selection_bounds(self._selection)
+        if rect is None:
+            return False
+        return self.crop(rect)
+
+    def crop_to_non_transparent(self) -> bool:
+        """Crop to the union bbox of every layer's alpha > 0 region.
+
+        Hidden layers are included — the operation is a "trim away
+        empty borders" command, not a "crop to what's visible". A
+        fully-transparent stack yields ``False`` (nothing to crop to).
+        """
+        from Imervue.paint.crop import non_transparent_bounds, union_bounds
+        if not self._layers:
+            return False
+        rects = [non_transparent_bounds(layer.image) for layer in self._layers]
+        rect = union_bounds(*rects)
+        if rect is None:
+            return False
+        return self.crop(rect)
+
     def transform_selection(
         self, *,
         scale: float = 1.0,
