@@ -623,6 +623,103 @@ class HistoryDock(QDockWidget):
 
 
 # ---------------------------------------------------------------------------
+# Page navigator dock — multi-page projects
+# ---------------------------------------------------------------------------
+
+
+class PageNavigatorDock(QDockWidget):
+    """Page-strip view for a :class:`PaintProject`.
+
+    Shows one row per page (thumbnail + name) plus add / remove /
+    move-up / move-down buttons. Clicking a row emits
+    :attr:`page_activated` with the page index so the workspace can
+    bind that page's document into the canvas.
+    """
+
+    page_activated = Signal(int)
+    add_requested = Signal()
+    remove_requested = Signal(int)
+    move_requested = Signal(int, int)   # (src, dst)
+
+    def __init__(self, project=None, parent=None):
+        lang = language_wrapper.language_word_dict
+        super().__init__(lang.get("paint_dock_pages", "Pages"), parent)
+        self._project = project
+
+        body = QWidget()
+        layout = QVBoxLayout(body)
+
+        self._list = QListWidget()
+        self._list.currentRowChanged.connect(self._on_row_changed)
+        layout.addWidget(self._list, stretch=1)
+
+        row = QHBoxLayout()
+        for key, fallback, slot in (
+            ("paint_pages_add", "+", self._on_add),
+            ("paint_pages_remove", "−", self._on_remove),
+            ("paint_pages_up", "↑", lambda: self._on_move(up=True)),
+            ("paint_pages_down", "↓", lambda: self._on_move(up=False)),
+        ):
+            btn = QToolButton()
+            btn.setText(lang.get(key, fallback))
+            btn.clicked.connect(slot)
+            row.addWidget(btn)
+        row.addStretch(1)
+        layout.addLayout(row)
+        self.setWidget(body)
+
+        self.refresh()
+
+    # ---- public ----------------------------------------------------------
+
+    def set_project(self, project) -> None:
+        self._project = project
+        self.refresh()
+
+    def project(self):
+        return self._project
+
+    def refresh(self) -> None:
+        self._list.blockSignals(True)
+        try:
+            self._list.clear()
+            if self._project is None:
+                return
+            for idx, page in enumerate(self._project.pages):
+                self._list.addItem(QListWidgetItem(f"{idx + 1}. {page.name}"))
+            active = self._project.active_page_index
+            if 0 <= active < self._list.count():
+                self._list.setCurrentRow(active)
+        finally:
+            self._list.blockSignals(False)
+
+    # ---- internals -------------------------------------------------------
+
+    def _on_row_changed(self, row: int) -> None:
+        if self._project is None or row < 0:
+            return
+        if row != self._project.active_page_index:
+            self.page_activated.emit(row)
+
+    def _on_add(self) -> None:
+        self.add_requested.emit()
+
+    def _on_remove(self) -> None:
+        if self._project is None:
+            return
+        self.remove_requested.emit(self._project.active_page_index)
+
+    def _on_move(self, *, up: bool) -> None:
+        if self._project is None:
+            return
+        src = self._project.active_page_index
+        dst = src - 1 if up else src + 1
+        if not 0 <= dst < self._project.page_count:
+            return
+        self.move_requested.emit(src, dst)
+
+
+# ---------------------------------------------------------------------------
 # Material library dock
 # ---------------------------------------------------------------------------
 
