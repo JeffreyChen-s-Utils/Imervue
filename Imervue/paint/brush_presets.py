@@ -42,6 +42,9 @@ from Imervue.user_settings.user_setting_dict import (
 )
 
 _USER_SETTING_KEY = "paint_brush_presets"
+_GROUPS_USER_SETTING_KEY = "paint_brush_preset_groups"
+MAX_GROUPS = 64
+MAX_PRESETS_PER_GROUP = 256
 
 
 @dataclass(frozen=True)
@@ -215,3 +218,132 @@ def load_brush_presets() -> list[BrushPreset]:
 def all_presets() -> list[BrushPreset]:
     """Built-in catalogue + user presets, in display order."""
     return list(BUILT_IN_PRESETS) + load_brush_presets()
+
+
+# ---------------------------------------------------------------------------
+# Preset groups (dock categorisation)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PresetGroup:
+    """Named ordered collection of brush presets — a dock category.
+
+    Groups are an organisational layer above presets — the brush dock
+    can fold each group into a collapsible section so a user with a
+    hundred custom presets isn't drowning in a flat list.
+    """
+
+    name: str
+    presets: tuple[BrushPreset, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not str(self.name).strip():
+            raise ValueError("group name must be non-empty")
+        if len(self.presets) > MAX_PRESETS_PER_GROUP:
+            raise ValueError(
+                f"group {self.name!r} has {len(self.presets)} presets; "
+                f"max is {MAX_PRESETS_PER_GROUP}",
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "name": str(self.name),
+            "presets": [preset.to_dict() for preset in self.presets],
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> PresetGroup:
+        if not isinstance(raw, dict):
+            raise ValueError(
+                f"group payload must be a dict, got {type(raw).__name__}",
+            )
+        name = str(raw.get("name", "")).strip() or "group"
+        presets_raw = raw.get("presets") or []
+        if not isinstance(presets_raw, list):
+            presets_raw = []
+        presets: list[BrushPreset] = []
+        for entry in presets_raw[:MAX_PRESETS_PER_GROUP]:
+            try:
+                presets.append(BrushPreset.from_dict(entry))
+            except (ValueError, TypeError):
+                continue
+        return cls(name=name, presets=tuple(presets))
+
+
+BUILT_IN_GROUPS: tuple[PresetGroup, ...] = (
+    PresetGroup(
+        name="Inks",
+        presets=(
+            BrushPreset(name="Hard Pen", kind="pen", size=4,
+                        opacity=1.0, hardness=1.0),
+        ),
+    ),
+    PresetGroup(
+        name="Sketch",
+        presets=(
+            BrushPreset(name="Pencil Sketch", kind="pencil", size=3,
+                        opacity=0.7, hardness=0.6, stabilizer=0.2),
+        ),
+    ),
+    PresetGroup(
+        name="Color",
+        presets=(
+            BrushPreset(name="Soft Round", kind="pen", size=24,
+                        opacity=0.85, hardness=0.4),
+            BrushPreset(name="Marker Bold", kind="marker", size=18,
+                        opacity=1.0, hardness=0.95,
+                        blend_mode="multiply"),
+        ),
+    ),
+    PresetGroup(
+        name="Wash",
+        presets=(
+            BrushPreset(name="Airbrush", kind="airbrush", size=80,
+                        opacity=0.25, hardness=0.0),
+            BrushPreset(name="Watercolor", kind="watercolor", size=40,
+                        opacity=0.5, hardness=0.2),
+        ),
+    ),
+)
+
+
+def find_group(name: str) -> PresetGroup | None:
+    for group in BUILT_IN_GROUPS:
+        if group.name == name:
+            return group
+    for group in load_brush_preset_groups():
+        if group.name == name:
+            return group
+    return None
+
+
+def save_brush_preset_groups(groups: list[PresetGroup]) -> None:
+    """Persist a list of user-defined groups (whole-list replace)."""
+    if len(groups) > MAX_GROUPS:
+        raise ValueError(
+            f"refusing to save {len(groups)} groups; max is {MAX_GROUPS}",
+        )
+    user_setting_dict[_GROUPS_USER_SETTING_KEY] = [
+        group.to_dict() for group in groups
+    ]
+    schedule_save()
+
+
+def load_brush_preset_groups() -> list[PresetGroup]:
+    """Return user-defined groups; corrupt entries skipped."""
+    raw = user_setting_dict.get(_GROUPS_USER_SETTING_KEY)
+    if not isinstance(raw, list):
+        return []
+    out: list[PresetGroup] = []
+    for entry in raw:
+        try:
+            out.append(PresetGroup.from_dict(entry))
+        except (ValueError, TypeError):
+            continue
+    return out
+
+
+def all_groups() -> list[PresetGroup]:
+    """Built-in groups + user-defined groups in display order."""
+    return list(BUILT_IN_GROUPS) + load_brush_preset_groups()
