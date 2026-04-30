@@ -120,6 +120,38 @@ def test_composite_stack_rejects_layer_with_wrong_shape():
         composite_stack([big], (4, 4))
 
 
+def test_composite_stack_single_layer_fast_path_returns_image_buffer():
+    """Hot path: a single fully-visible normal-blend layer is its own
+    composite. Returning ``layer.image`` directly drops the per-stroke
+    composite cost on a 1024² canvas from ~70 ms to ~0 — without that
+    the brush feels visibly laggy."""
+    layer = _layer((100, 150, 200, 255), name="solo")
+    out = composite_stack([layer], (4, 4))
+    assert out is layer.image
+
+
+def test_composite_stack_skips_fast_path_for_partial_opacity():
+    layer = _layer((100, 150, 200, 255), name="dim", opacity=0.5)
+    out = composite_stack([layer], (4, 4))
+    # Output is computed (not the same buffer) — opacity blending was
+    # actually performed.
+    assert out is not layer.image
+
+
+def test_composite_stack_skips_fast_path_for_non_normal_blend():
+    layer = _layer((100, 150, 200, 255), name="mul", blend_mode="multiply")
+    out = composite_stack([layer], (4, 4))
+    assert out is not layer.image
+
+
+def test_composite_stack_skips_fast_path_for_invisible_layer():
+    layer = _layer((100, 150, 200, 255), name="hidden", visible=False)
+    out = composite_stack([layer], (4, 4))
+    # Hidden layer must yield a transparent canvas, not the layer image.
+    assert out is not layer.image
+    assert (out == 0).all()
+
+
 # ---------------------------------------------------------------------------
 # Layer construction
 # ---------------------------------------------------------------------------
@@ -265,13 +297,22 @@ def test_document_composite_caches_result():
     assert a is b   # cached
 
 
-def test_document_invalidate_composite_clears_cache():
+def test_document_invalidate_composite_reflects_layer_mutation():
+    """After ``invalidate_composite`` the next ``composite`` call must
+    reflect the current layer state. For multi-layer / non-trivial
+    cases that means a fresh allocation; for the single-layer fast
+    path, ``composite`` returns ``layer.image`` directly so any in-
+    place mutation is already visible — both behaviours satisfy "the
+    composite is up to date after invalidation"."""
     doc = PaintDocument()
-    doc.load_image(np.full((4, 4, 4), 100, dtype=np.uint8))
-    a = doc.composite()
+    arr = np.full((4, 4, 4), 100, dtype=np.uint8)
+    doc.load_image(arr)
+    doc.composite()  # populate the cache
+    # Mutate the layer in place, then invalidate.
+    doc.active_layer().image[0, 0] = (200, 50, 25, 255)
     doc.invalidate_composite()
-    b = doc.composite()
-    assert a is not b
+    refreshed = doc.composite()
+    assert tuple(refreshed[0, 0]) == (200, 50, 25, 255)
 
 
 def test_document_listeners_receive_change_notifications():

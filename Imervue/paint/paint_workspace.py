@@ -21,10 +21,10 @@ not yet a paint operation — Phase 2 plugs the brush engine into
 """
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QMenuBar, QStatusBar
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -43,8 +43,6 @@ from Imervue.paint.tool_dispatcher import ToolDispatcher
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
-
-logger = logging.getLogger("Imervue.paint.workspace")
 
 
 class PaintWorkspace(QMainWindow):
@@ -106,8 +104,27 @@ class PaintWorkspace(QMainWindow):
         # Wire status-bar hover updates and tool-driven cursor changes.
         self._canvas.hover_changed.connect(self._on_hover_changed)
         self._canvas.image_loaded.connect(self._on_image_loaded)
-        self._navigator_dock.zoom_changed.connect(self._on_navigator_zoom)
+        self._navigator_dock.zoom_changed.connect(self._canvas.set_zoom)
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
+        self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
+
+        # Throttled navigator-preview updates. ``document_changed`` fires
+        # on every brush dab; rebuilding the QPixmap each time would
+        # double the per-stroke cost. Coalesce into a single update
+        # ~6 fps via a singleshot timer started on the first dirty event
+        # and refreshed only after it fires.
+        self._nav_dirty = False
+        self._nav_timer = QTimer(self)
+        self._nav_timer.setSingleShot(True)
+        self._nav_timer.setInterval(160)
+        self._nav_timer.timeout.connect(self._refresh_navigator_preview)
+        self._canvas.document_changed.connect(self._on_document_changed)
+        # Push the seeded blank canvas into the navigator immediately so
+        # the user sees something on first open.
+        self._refresh_navigator_preview()
+        # Sync the slider with the canvas's actual zoom (which may have
+        # been auto-fitted between the seed and now).
+        self._navigator_dock.set_zoom(self._canvas.zoom_factor())
 
         # Tool dispatcher routes pointer events to the active tool. The
         # canvas owns the live image and selection mask, so we hand the
@@ -174,10 +191,29 @@ class PaintWorkspace(QMainWindow):
         ).format(w=w, h=h)
         self._status.showMessage(msg, 3000)
 
-    def _on_navigator_zoom(self, factor: float) -> None:  # pragma: no cover - GL
-        # Phase 2 will wire this to the canvas' zoom setter directly.
-        # For Phase 1 the slider just records the user's intent.
-        logger.debug("navigator zoom set to %.2fx", factor)
+    def _on_document_changed(self) -> None:
+        """Mark the navigator preview dirty and start the coalesce timer."""
+        self._nav_dirty = True
+        if not self._nav_timer.isActive():
+            self._nav_timer.start()
+
+    def _refresh_navigator_preview(self) -> None:
+        """Build a QPixmap of the current composite and push it to the dock."""
+        self._nav_dirty = False
+        composite = self._canvas.document().composite()
+        if composite is None:
+            self._navigator_dock.set_preview_image(None)
+            return
+        h, w = composite.shape[:2]
+        # ``composite`` may alias ``layer.image`` via the single-layer
+        # fast path. QImage with bytesPerLine on a numpy view is safe so
+        # long as the buffer stays alive — keep a reference on self
+        # until the next refresh.
+        self._nav_buffer = composite.tobytes()
+        qimage = QImage(
+            self._nav_buffer, w, h, w * 4, QImage.Format.Format_RGBA8888,
+        )
+        self._navigator_dock.set_preview_image(QPixmap.fromImage(qimage))
 
     # ---- compatibility shim ---------------------------------------------
 

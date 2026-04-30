@@ -94,6 +94,77 @@ def test_workspace_starts_with_paintable_default_canvas(qapp):
         ws.deleteLater()
 
 
+def test_workspace_navigator_shows_preview_after_init(qapp):
+    """Regression: NavigatorDock.set_preview_image is wired now —
+    the user must see the seeded blank canvas in the navigator,
+    not the "(no canvas)" placeholder."""
+    ws = PaintWorkspace()
+    try:
+        # __init__ pushed the seeded canvas into the dock synchronously.
+        pixmap = ws._navigator_dock._preview.pixmap()  # noqa: SLF001
+        assert pixmap is not None
+        assert not pixmap.isNull()
+        assert ws._navigator_dock._preview.text() == ""  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_workspace_navigator_preview_refreshes_after_paint(qapp):
+    """After a brush stroke the navigator preview must reflect the new
+    pixels. The ``document_changed`` signal triggers a debounced
+    QTimer; we fire it directly to avoid waiting on the event loop."""
+    from Imervue.paint.canvas import PointerEvent
+
+    ws = PaintWorkspace()
+    try:
+        ws.state().set_foreground((255, 0, 0))
+        evt = PointerEvent(
+            phase="press", x=5.0, y=5.0,
+            button=1, modifiers=0, pressure=1.0,
+        )
+        ws._dispatcher(evt)  # noqa: SLF001
+        # Trigger the throttle directly.
+        ws._refresh_navigator_preview()  # noqa: SLF001
+        pixmap = ws._navigator_dock._preview.pixmap()  # noqa: SLF001
+        assert pixmap is not None
+        assert not pixmap.isNull()
+    finally:
+        ws.deleteLater()
+
+
+def test_workspace_navigator_zoom_slider_drives_canvas_zoom(qapp):
+    """The Navigator dock's zoom slider must actually change the canvas
+    zoom (it used to only log)."""
+    ws = PaintWorkspace()
+    try:
+        ws.show()
+        from PySide6.QtTest import QTest
+        QTest.qWait(20)
+        # Slider value 200 means 2.0x zoom (slider is value/100).
+        ws._navigator_dock._zoom_slider.setValue(200)  # noqa: SLF001
+        QTest.qWait(20)
+        assert ws.canvas().zoom_factor() == pytest.approx(2.0)
+    finally:
+        ws.deleteLater()
+
+
+def test_workspace_canvas_zoom_change_syncs_slider(qapp):
+    """Programmatic zoom (or wheel) on the canvas must move the
+    Navigator slider so the two stay in sync."""
+    ws = PaintWorkspace()
+    try:
+        ws.show()
+        from PySide6.QtTest import QTest
+        QTest.qWait(20)
+        ws.canvas().set_zoom(1.5)
+        QTest.qWait(20)
+        slider_value = ws._navigator_dock._zoom_slider.value()  # noqa: SLF001
+        # Slider stores percentage so 1.5x → 150.
+        assert slider_value == 150
+    finally:
+        ws.deleteLater()
+
+
 def test_workspace_remains_paintable_after_main_window_none_bind(qapp):
     """Regression for the actual user-reported "下筆沒反應": when the
     host main window switches to the Paint tab without an image bound

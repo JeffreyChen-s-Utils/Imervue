@@ -165,6 +165,8 @@ class PaintCanvas(QOpenGLWidget):
 
     hover_changed = Signal(int, int)
     image_loaded = Signal(int, int)   # (width, height)
+    zoom_changed = Signal(float)      # emitted after wheel / programmatic zoom
+    document_changed = Signal()       # emitted when the active layer changes
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -264,6 +266,7 @@ class PaintCanvas(QOpenGLWidget):
         self._user_view_locked = False
         self._reset_view_to_fit()
         self.image_loaded.emit(arr.shape[1], arr.shape[0])
+        self.document_changed.emit()
         self.update()
 
     def document(self) -> PaintDocument:
@@ -316,6 +319,29 @@ class PaintCanvas(QOpenGLWidget):
 
     def zoom_factor(self) -> float:
         return self._zoom
+
+    def set_zoom(self, factor: float) -> None:
+        """Programmatic zoom — pivots about the widget centre.
+
+        Used by the Navigator dock's zoom slider. Marks the view as
+        user-controlled so subsequent window resizes don't auto-fit
+        away the chosen zoom.
+        """
+        target = clamp_zoom(factor)
+        if target == self._zoom:
+            return
+        widget_w = max(1, self.width())
+        widget_h = max(1, self.height())
+        anchor_x = widget_w * 0.5
+        anchor_y = widget_h * 0.5
+        rel_x = (anchor_x - self._pan_x) / self._zoom
+        rel_y = (anchor_y - self._pan_y) / self._zoom
+        self._zoom = target
+        self._pan_x = anchor_x - rel_x * target
+        self._pan_y = anchor_y - rel_y * target
+        self._user_view_locked = True
+        self.zoom_changed.emit(target)
+        self.update()
 
     # ---- GL lifecycle ----------------------------------------------------
 
@@ -519,6 +545,7 @@ class PaintCanvas(QOpenGLWidget):
             # so the change becomes visible.
             self._document.invalidate_composite()
             self._needs_upload = True
+            self.document_changed.emit()
             self.update()
 
     def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
@@ -549,6 +576,7 @@ class PaintCanvas(QOpenGLWidget):
         self._pan_y = anchor_y - rel_y * new_zoom
         # User wheel-zoomed — stop auto-fitting on subsequent resizes.
         self._user_view_locked = True
+        self.zoom_changed.emit(new_zoom)
         self.update()
 
     def _reset_view_to_fit(self) -> None:

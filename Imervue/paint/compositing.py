@@ -97,8 +97,29 @@ def composite_stack(
     """
     layer_list = list(layers)
     h, w = base_shape
-    out = np.zeros((h, w, 4), dtype=np.uint8)
     groups = groups or {}
+
+    # Fast path: a single, fully-visible, normal-blend, no-mask layer
+    # is just its own image — no conversion / blend math needed. The
+    # general path below allocates a fresh float32 buffer per layer
+    # which costs ~70ms on a 1024² canvas; that turned every fast
+    # mouse-move during a stroke into a sub-15fps repaint.
+    if len(layer_list) == 1:
+        only = layer_list[0]
+        if (
+            only.visible
+            and only.opacity >= 1.0
+            and only.blend_mode == "normal"
+            and getattr(only, "adjustment", None) is None
+            and not getattr(only, "effects", ())
+            and only.effective_mask is None
+            and getattr(only, "blend_if", None) is None
+            and only.group is None
+            and only.image.shape[:2] == (h, w)
+        ):
+            return only.image
+
+    out = np.zeros((h, w, 4), dtype=np.uint8)
     for layer in layer_list:
         layer_group = getattr(layer, "group", None)
         group_opacity = 1.0
