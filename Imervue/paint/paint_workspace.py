@@ -75,10 +75,12 @@ class PaintWorkspace(QMainWindow):
         self._tool_bar = PaintToolBar(self._state, self)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self._tool_bar)
 
-        # Right dock column — order matches MediBang's defaults
+        # Right dock column — order matches MediBang's defaults. The
+        # layer dock is bound to the canvas's PaintDocument so external
+        # changes (tool that adds a layer, file load) refresh the panel.
         self._color_dock = ColorDock(self._state, self)
         self._brush_dock = BrushDock(self._state, self)
-        self._layer_dock = LayerDock(self)
+        self._layer_dock = LayerDock(self._canvas.document(), self)
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
 
@@ -129,6 +131,9 @@ class PaintWorkspace(QMainWindow):
     def load_image(self, arr) -> None:
         """Forward an HxWx4 RGBA buffer to the central canvas."""
         self._canvas.load_image(arr)
+        # The canvas swapped its PaintDocument; rebind the layer dock
+        # so it re-subscribes and refreshes against the new stack.
+        self._layer_dock.set_document(self._canvas.document())
 
     # ---- handlers --------------------------------------------------------
 

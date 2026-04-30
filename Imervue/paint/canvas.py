@@ -74,6 +74,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QMouseEvent, QTabletEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
+from Imervue.paint.document import PaintDocument
 from Imervue.paint.marquee import selection_outline_segments
 
 logger = logging.getLogger("Imervue.paint.canvas")
@@ -153,8 +154,7 @@ class PaintCanvas(QOpenGLWidget):
         self.setMouseTracking(True)
         self.setCursor(QCursor(cursor_for_tool("brush")))
 
-        self._image: np.ndarray | None = None
-        self._selection: np.ndarray | None = None
+        self._document: PaintDocument = PaintDocument()
         self._texture: int | None = None
         self._needs_upload = False
 
@@ -178,10 +178,16 @@ class PaintCanvas(QOpenGLWidget):
     # ---- public API ------------------------------------------------------
 
     def load_image(self, arr: np.ndarray | None) -> None:
+        """Replace the canvas with a single-layer document of ``arr``.
+
+        ``None`` clears the document — the canvas paints empty until
+        another image is loaded.
+        """
         if arr is None:
-            self._image = None
-            self._selection = None
+            self._document = PaintDocument()
             self._needs_upload = True
+            self._marquee_segments = None
+            self._marquee_timer.stop()
             self.update()
             return
         if arr.ndim != 3 or arr.shape[2] != 4 or arr.dtype != np.uint8:
@@ -189,32 +195,42 @@ class PaintCanvas(QOpenGLWidget):
                 f"PaintCanvas.load_image expects HxWx4 uint8 RGBA, "
                 f"got {arr.shape} {arr.dtype}",
             )
-        self._image = np.ascontiguousarray(arr)
-        # Loading a new image always invalidates the previous selection —
-        # the mask is per-image and a different shape would be invalid.
-        self._selection = None
+        self._document = PaintDocument()
+        self._document.load_image(arr)
+        self._marquee_segments = None
+        self._marquee_timer.stop()
         self._needs_upload = True
         self._reset_view_to_fit()
         self.image_loaded.emit(arr.shape[1], arr.shape[0])
         self.update()
 
+    def document(self) -> PaintDocument:
+        return self._document
+
     def current_image(self) -> np.ndarray | None:
-        return self._image
+        """Return the *active layer's* image — the buffer tools paint into.
+
+        Returning the active layer (rather than the composited frame)
+        is what makes layer-aware painting work: every tool mutates the
+        active layer in place, and the canvas re-composites on the
+        next paint.
+        """
+        layer = self._document.active_layer()
+        return None if layer is None else layer.image
 
     def current_selection(self) -> np.ndarray | None:
-        return self._selection
+        return self._document.selection()
 
     def set_selection(self, mask: np.ndarray | None) -> None:
+        if mask is not None and (mask.ndim != 2 or mask.dtype != np.bool_):
+            raise ValueError(
+                f"selection mask must be HxW bool, got {mask.shape} {mask.dtype}",
+            )
+        self._document.set_selection(mask)
         if mask is None:
-            self._selection = None
             self._marquee_segments = None
             self._marquee_timer.stop()
         else:
-            if mask.ndim != 2 or mask.dtype != np.bool_:
-                raise ValueError(
-                    f"selection mask must be HxW bool, got {mask.shape} {mask.dtype}",
-                )
-            self._selection = mask
             self._marquee_segments = selection_outline_segments(mask)
             if self._marquee_segments.shape[0] > 0:
                 self._marquee_timer.start()
@@ -252,15 +268,16 @@ class PaintCanvas(QOpenGLWidget):
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
         glClear(GL_COLOR_BUFFER_BIT)
-        if self._image is None:
+        composite = self._document.composite()
+        if composite is None:
             return
         if self._needs_upload:
-            self._upload_texture()
+            self._upload_texture(composite)
             self._needs_upload = False
         if self._texture is None:
             return
 
-        h, w = self._image.shape[:2]
+        h, w = composite.shape[:2]
         glPushMatrix()
         glLoadIdentity()
         glTranslatef(self._pan_x, self._pan_y, 0.0)
@@ -377,8 +394,10 @@ class PaintCanvas(QOpenGLWidget):
             pressure=self._last_pressure,
         )
         if self._dispatcher(evt):
-            # The dispatcher mutated the backing array in place — re-upload
-            # the texture on the next paint so the change becomes visible.
+            # The dispatcher mutated the active layer in place — drop the
+            # cached composite and re-upload the texture on the next paint
+            # so the change becomes visible.
+            self._document.invalidate_composite()
             self._needs_upload = True
             self.update()
 
@@ -411,9 +430,10 @@ class PaintCanvas(QOpenGLWidget):
         self.update()
 
     def _reset_view_to_fit(self) -> None:
-        if self._image is None:
+        shape = self._document.shape
+        if shape is None:
             return
-        h, w = self._image.shape[:2]
+        h, w = shape
         if w <= 0 or h <= 0:
             return
         widget_w = max(1, self.width())
@@ -422,15 +442,17 @@ class PaintCanvas(QOpenGLWidget):
         self._pan_x = (widget_w - w * self._zoom) * 0.5
         self._pan_y = (widget_h - h * self._zoom) * 0.5
 
-    def _upload_texture(self) -> None:  # pragma: no cover - GL needs display server
-        if self._image is None:
+    def _upload_texture(  # pragma: no cover - GL needs display server
+        self, composite: np.ndarray,
+    ) -> None:
+        if composite is None:
             if self._texture is not None:
                 glDeleteTextures(1, [self._texture])
                 self._texture = None
             return
         if self._texture is None:
             self._texture = int(glGenTextures(1))
-        h, w = self._image.shape[:2]
+        h, w = composite.shape[:2]
         glBindTexture(GL_TEXTURE_2D, self._texture)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
@@ -438,6 +460,6 @@ class PaintCanvas(QOpenGLWidget):
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, self._image.tobytes(),
+            GL_RGBA, GL_UNSIGNED_BYTE, composite.tobytes(),
         )
         glBindTexture(GL_TEXTURE_2D, 0)

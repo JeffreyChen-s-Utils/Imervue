@@ -347,41 +347,47 @@ class BrushDock(QDockWidget):
 
 
 class LayerDock(QDockWidget):
-    """Stub layer panel backed by an in-memory list.
+    """Layer list bound to a :class:`Imervue.paint.document.PaintDocument`.
 
-    Phase 1 ships UI only — Phase 2 wires this to the real
-    :mod:`Imervue.image.layers` recipe so the canvas composes through it.
+    Reflects the document's stack, lets the user reorder / add / remove
+    / toggle visibility, and edits the active layer's opacity and blend
+    mode. The dock subscribes to the document's listener channel so
+    external changes (e.g. a tool that adds a layer) refresh the
+    visible state automatically.
     """
 
-    layers_changed = Signal()
-
-    def __init__(self, parent=None):
+    def __init__(self, document=None, parent=None):
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_dock_layers", "Layers"), parent)
+        self._document = document
+        self._suspend = False
 
         body = QWidget()
         layout = QVBoxLayout(body)
 
         self._list = QListWidget()
-        self._list.addItem(lang.get("paint_layers_background", "Background"))
+        self._list.currentRowChanged.connect(self._on_row_changed)
+        self._list.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()
-        for key, fallback in (
-            ("paint_layers_add", "+"),
-            ("paint_layers_remove", "−"),
-            ("paint_layers_up", "↑"),
-            ("paint_layers_down", "↓"),
-            ("paint_layers_duplicate", "⧉"),
+        for key, fallback, slot in (
+            ("paint_layers_add", "+", self._on_add),
+            ("paint_layers_remove", "−", self._on_remove),
+            ("paint_layers_up", "↑", lambda: self._on_move(up=True)),
+            ("paint_layers_down", "↓", lambda: self._on_move(up=False)),
+            ("paint_layers_duplicate", "⧉", self._on_duplicate),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
+            btn.clicked.connect(slot)
             row.addWidget(btn)
         row.addStretch(1)
         layout.addLayout(row)
 
         layout.addWidget(QLabel(lang.get("paint_layers_opacity", "Opacity:")))
         self._opacity = _slider(0, 100, 100)
+        self._opacity.valueChanged.connect(self._on_opacity_changed)
         layout.addWidget(self._opacity)
 
         layout.addWidget(QLabel(lang.get("paint_layers_blend", "Blend:")))
@@ -391,10 +397,119 @@ class LayerDock(QDockWidget):
                 lang.get(f"paint_blend_{mode}", mode.replace("_", " ").title()),
                 userData=mode,
             )
+        self._blend.currentIndexChanged.connect(self._on_blend_changed)
         layout.addWidget(self._blend)
         layout.addStretch(1)
 
         self.setWidget(body)
+
+        if self._document is not None:
+            self._unsubscribe = self._document.listen(self.refresh)
+            self.destroyed.connect(lambda *_: self._unsubscribe())
+            self.refresh()
+
+    def set_document(self, document) -> None:
+        if self._document is document:
+            return
+        self._document = document
+        if document is None:
+            self._list.clear()
+            return
+        self._unsubscribe = document.listen(self.refresh)
+        self.refresh()
+
+    def refresh(self) -> None:
+        if self._document is None:
+            return
+        self._suspend = True
+        try:
+            self._list.clear()
+            for idx, layer in enumerate(self._document.layers()):
+                # Stack drawn top-down — most-recently-added layer at the
+                # top of the visual list, matching MediBang / Photoshop.
+                row_index = self._document.layer_count - 1 - idx
+                item = QListWidgetItem(layer.name)
+                item.setFlags(
+                    item.flags()
+                    | Qt.ItemFlag.ItemIsUserCheckable
+                    | Qt.ItemFlag.ItemIsEditable,
+                )
+                item.setCheckState(
+                    Qt.CheckState.Checked if layer.visible else Qt.CheckState.Unchecked,
+                )
+                item.setData(Qt.ItemDataRole.UserRole, idx)
+                self._list.insertItem(row_index, item)
+            active_row = (
+                self._document.layer_count - 1 - self._document.active_layer_index()
+            )
+            self._list.setCurrentRow(max(0, active_row))
+
+            active = self._document.active_layer()
+            if active is not None:
+                self._opacity.setValue(int(round(active.opacity * 100)))
+                self._blend.setCurrentIndex(self._blend.findData(active.blend_mode))
+        finally:
+            self._suspend = False
+
+    # ---- handlers --------------------------------------------------------
+
+    def _on_row_changed(self, row: int) -> None:
+        if self._suspend or self._document is None or row < 0:
+            return
+        layer_idx = self._row_to_layer_index(row)
+        if 0 <= layer_idx < self._document.layer_count:
+            self._document.set_active_layer(layer_idx)
+
+    def _on_item_changed(self, item: QListWidgetItem) -> None:
+        if self._suspend or self._document is None:
+            return
+        layer_idx = int(item.data(Qt.ItemDataRole.UserRole))
+        new_visible = item.checkState() == Qt.CheckState.Checked
+        new_name = item.text()
+        self._document.set_layer_attribute(
+            layer_idx, visible=new_visible, name=new_name,
+        )
+
+    def _on_add(self) -> None:
+        if self._document is None or self._document.layer_count == 0:
+            return
+        self._document.add_layer()
+
+    def _on_remove(self) -> None:
+        if self._document is None:
+            return
+        self._document.remove_active_layer()
+
+    def _on_duplicate(self) -> None:
+        if self._document is None:
+            return
+        self._document.duplicate_active_layer()
+
+    def _on_move(self, *, up: bool) -> None:
+        if self._document is None:
+            return
+        self._document.move_active_layer(up=up)
+
+    def _on_opacity_changed(self, value: int) -> None:
+        if self._suspend or self._document is None:
+            return
+        active_idx = self._document.active_layer_index()
+        if active_idx >= 0:
+            self._document.set_layer_attribute(active_idx, opacity=value / 100.0)
+
+    def _on_blend_changed(self) -> None:
+        if self._suspend or self._document is None:
+            return
+        active_idx = self._document.active_layer_index()
+        if active_idx >= 0:
+            self._document.set_layer_attribute(
+                active_idx, blend_mode=self._blend.currentData(),
+            )
+
+    def _row_to_layer_index(self, row: int) -> int:
+        if self._document is None:
+            return -1
+        return self._document.layer_count - 1 - row
 
 
 # ---------------------------------------------------------------------------

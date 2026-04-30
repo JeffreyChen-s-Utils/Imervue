@@ -70,7 +70,7 @@ def test_dispatcher_routes_to_active_tool(state, canvas):
 
 def test_dispatcher_unknown_tool_returns_false(state, canvas):
     disp = ToolDispatcher(state, image_provider=lambda: canvas)
-    state.set_tool("text")  # text tool has no Phase 2b handler
+    state.set_tool("blur")  # blur tool has no handler yet
     assert disp(_press(10, 10)) is False
 
 
