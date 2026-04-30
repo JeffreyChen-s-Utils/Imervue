@@ -20,6 +20,80 @@ import numpy as np
 
 
 @dataclass(frozen=True)
+class ChannelRange:
+    """One-channel band-pass with feathered low / high transitions.
+
+    All four values are integers in ``[0, 255]`` (or ``>= 0`` for the
+    feathers); ``lo > hi`` is rejected on construction so a corrupt
+    persisted range can't crash the renderer.
+    """
+
+    lo: int = 0
+    hi: int = 255
+    lo_feather: int = 0
+    hi_feather: int = 0
+
+    def __post_init__(self) -> None:
+        for key, value in (("lo", self.lo), ("hi", self.hi)):
+            if not 0 <= int(value) <= 255:
+                raise ValueError(
+                    f"{key} must be in [0, 255], got {value!r}",
+                )
+        for key, value in (
+            ("lo_feather", self.lo_feather),
+            ("hi_feather", self.hi_feather),
+        ):
+            if int(value) < 0:
+                raise ValueError(
+                    f"{key} must be >= 0, got {value!r}",
+                )
+        if self.lo > self.hi:
+            raise ValueError(
+                f"lo ({self.lo}) > hi ({self.hi}) — band would be empty",
+            )
+
+    def to_dict(self) -> dict:
+        return {
+            "lo": int(self.lo),
+            "hi": int(self.hi),
+            "lo_feather": int(self.lo_feather),
+            "hi_feather": int(self.hi_feather),
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> ChannelRange:
+        if not isinstance(raw, dict):
+            raise ValueError(
+                f"channel range payload must be a dict, "
+                f"got {type(raw).__name__}",
+            )
+        try:
+            lo = int(raw.get("lo", 0))
+        except (TypeError, ValueError):
+            lo = 0
+        try:
+            hi = int(raw.get("hi", 255))
+        except (TypeError, ValueError):
+            hi = 255
+        try:
+            lo_feather = int(raw.get("lo_feather", 0))
+        except (TypeError, ValueError):
+            lo_feather = 0
+        try:
+            hi_feather = int(raw.get("hi_feather", 0))
+        except (TypeError, ValueError):
+            hi_feather = 0
+        lo = max(0, min(255, lo))
+        hi = max(0, min(255, hi))
+        lo = min(lo, hi)
+        return cls(
+            lo=lo, hi=hi,
+            lo_feather=max(0, lo_feather),
+            hi_feather=max(0, hi_feather),
+        )
+
+
+@dataclass(frozen=True)
 class BlendIf:
     """Per-pixel luminance-range gates for a layer.
 
@@ -39,6 +113,14 @@ class BlendIf:
     underlying_max: int = 255
     underlying_min_feather: int = 0
     underlying_max_feather: int = 0
+    # Optional per-RGB-channel ranges. None = "don't gate this channel".
+    # Compositing intersects all non-None gates with the luminance gate.
+    this_red: ChannelRange | None = None
+    this_green: ChannelRange | None = None
+    this_blue: ChannelRange | None = None
+    underlying_red: ChannelRange | None = None
+    underlying_green: ChannelRange | None = None
+    underlying_blue: ChannelRange | None = None
 
     def __post_init__(self) -> None:
         for key, value in (
@@ -72,7 +154,7 @@ class BlendIf:
             )
 
     def to_dict(self) -> dict:
-        return {
+        out = {
             "this_min": int(self.this_min),
             "this_max": int(self.this_max),
             "this_min_feather": int(self.this_min_feather),
@@ -82,6 +164,14 @@ class BlendIf:
             "underlying_min_feather": int(self.underlying_min_feather),
             "underlying_max_feather": int(self.underlying_max_feather),
         }
+        for key in (
+            "this_red", "this_green", "this_blue",
+            "underlying_red", "underlying_green", "underlying_blue",
+        ):
+            value = getattr(self, key)
+            if value is not None:
+                out[key] = value.to_dict()
+        return out
 
     @classmethod
     def from_dict(cls, raw: dict) -> BlendIf:
@@ -113,7 +203,22 @@ class BlendIf:
         merged["underlying_min"] = min(
             merged["underlying_min"], merged["underlying_max"],
         )
-        return cls(**merged)
+        # Per-channel ranges are optional — pull each from the dict
+        # only when present, leave None otherwise.
+        kwargs: dict = dict(merged)
+        for key in (
+            "this_red", "this_green", "this_blue",
+            "underlying_red", "underlying_green", "underlying_blue",
+        ):
+            value = raw.get(key)
+            if isinstance(value, dict):
+                try:
+                    kwargs[key] = ChannelRange.from_dict(value)
+                except (ValueError, TypeError):
+                    kwargs[key] = None
+            else:
+                kwargs[key] = None
+        return cls(**kwargs)
 
 
 def compute_blend_if_mask(
@@ -144,6 +249,20 @@ def compute_blend_if_mask(
         blend_if.this_min, blend_if.this_max,
         blend_if.this_min_feather, blend_if.this_max_feather,
     )
+    # Per-channel gates intersect with the luminance gate via min().
+    for channel_index, channel_range in (
+        (0, blend_if.this_red),
+        (1, blend_if.this_green),
+        (2, blend_if.this_blue),
+    ):
+        if channel_range is not None:
+            ch = layer_image[..., channel_index].astype(np.float32)
+            ch_alpha = _band_pass(
+                ch,
+                channel_range.lo, channel_range.hi,
+                channel_range.lo_feather, channel_range.hi_feather,
+            )
+            this_alpha = this_alpha * ch_alpha
     if underlying is None:
         return this_alpha
     if (
@@ -162,6 +281,19 @@ def compute_blend_if_mask(
         blend_if.underlying_min, blend_if.underlying_max,
         blend_if.underlying_min_feather, blend_if.underlying_max_feather,
     )
+    for channel_index, channel_range in (
+        (0, blend_if.underlying_red),
+        (1, blend_if.underlying_green),
+        (2, blend_if.underlying_blue),
+    ):
+        if channel_range is not None:
+            ch = underlying[..., channel_index].astype(np.float32)
+            ch_alpha = _band_pass(
+                ch,
+                channel_range.lo, channel_range.hi,
+                channel_range.lo_feather, channel_range.hi_feather,
+            )
+            und_alpha = und_alpha * ch_alpha
     return (this_alpha * und_alpha).astype(np.float32)
 
 
