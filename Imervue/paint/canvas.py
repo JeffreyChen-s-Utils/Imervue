@@ -60,10 +60,13 @@ from OpenGL.GL import (
     glPopMatrix,
     glPushMatrix,
     glScalef,
+    glPixelStorei,
     glTexCoord2f,
     glTexImage2D,
     glTexParameterf,
     glTexParameteri,
+    glTexSubImage2D,
+    GL_UNPACK_ROW_LENGTH,
     glTranslatef,
     glVertex2f,
     glViewport,
@@ -74,6 +77,8 @@ from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QMouseEvent, QTabletEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
+from Imervue.paint.damage import EMPTY as EMPTY_DAMAGE
+from Imervue.paint.damage import DamageRect
 from Imervue.paint.document import PaintDocument
 from Imervue.paint.marquee import selection_outline_segments
 
@@ -176,6 +181,10 @@ class PaintCanvas(QOpenGLWidget):
         self._document: PaintDocument = PaintDocument()
         self._texture: int | None = None
         self._needs_upload = False
+        # Pending damage rect — when non-empty and not full-frame the
+        # next paint uses ``glTexSubImage2D`` for that region instead
+        # of the full ``glTexImage2D`` upload.
+        self._pending_damage: DamageRect = EMPTY_DAMAGE
 
         self._zoom = 1.0
         self._pan_x = 0.0
@@ -248,6 +257,7 @@ class PaintCanvas(QOpenGLWidget):
         if arr is None:
             self._document = PaintDocument()
             self._needs_upload = True
+            self._pending_damage = EMPTY_DAMAGE
             self._marquee_segments = None
             self._marquee_timer.stop()
             self._user_view_locked = False
@@ -263,6 +273,7 @@ class PaintCanvas(QOpenGLWidget):
         self._marquee_segments = None
         self._marquee_timer.stop()
         self._needs_upload = True
+        self._pending_damage = EMPTY_DAMAGE
         self._user_view_locked = False
         self._reset_view_to_fit()
         self.image_loaded.emit(arr.shape[1], arr.shape[0])
@@ -542,9 +553,17 @@ class PaintCanvas(QOpenGLWidget):
         if self._dispatcher(evt):
             # The dispatcher mutated the active layer in place — drop the
             # cached composite and re-upload the texture on the next paint
-            # so the change becomes visible.
+            # so the change becomes visible. ``last_damage`` (when the
+            # dispatcher exposes it) lets us shrink the upload to the
+            # touched region; tools without damage tracking fall back
+            # to a full-frame upload.
             self._document.invalidate_composite()
             self._needs_upload = True
+            damage = getattr(self._dispatcher, "last_damage", None)
+            if isinstance(damage, DamageRect) and not damage.is_empty:
+                self._pending_damage = self._pending_damage.union(damage)
+            else:
+                self._pending_damage = EMPTY_DAMAGE
             self.document_changed.emit()
             self.update()
 
@@ -610,16 +629,38 @@ class PaintCanvas(QOpenGLWidget):
                 glDeleteTextures(1, [self._texture])
                 self._texture = None
             return
-        if self._texture is None:
-            self._texture = int(glGenTextures(1))
         h, w = composite.shape[:2]
+        first_upload = self._texture is None
+        if first_upload:
+            self._texture = int(glGenTextures(1))
         glBindTexture(GL_TEXTURE_2D, self._texture)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, composite.tobytes(),
-        )
+        if first_upload:
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        damage = self._pending_damage.clipped_to((h, w))
+        if (
+            first_upload
+            or damage.is_empty
+            or damage.covers_full((h, w))
+        ):
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, composite.tobytes(),
+            )
+        else:
+            # Sub-region upload — only the dirty pixels move across
+            # the bus. Use UNPACK_ROW_LENGTH so we can pass a contiguous
+            # slice of the full image without copying it first.
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, w)
+            sub = composite[damage.y:damage.y2, damage.x:damage.x2, :]
+            glTexSubImage2D(
+                GL_TEXTURE_2D, 0,
+                damage.x, damage.y, damage.w, damage.h,
+                GL_RGBA, GL_UNSIGNED_BYTE,
+                np.ascontiguousarray(sub).tobytes(),
+            )
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
         glBindTexture(GL_TEXTURE_2D, 0)
+        self._pending_damage = EMPTY_DAMAGE

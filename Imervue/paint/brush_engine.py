@@ -381,6 +381,10 @@ class BrushStroke:
         )
         self._last: tuple[float, float] | None = None
         self._active = False
+        # Union of dab-damage rects since the last begin() — exposed
+        # via :attr:`stroke_damage` so the canvas can request a
+        # partial texture upload over only the touched region.
+        self._stroke_damage: DabResult = DabResult(0, 0, 0, 0)
 
     @property
     def is_active(self) -> bool:
@@ -391,13 +395,16 @@ class BrushStroke:
             raise RuntimeError("BrushStroke.begin called while already active")
         self._active = True
         self._last = (x, y)
+        self._stroke_damage = DabResult(0, 0, 0, 0)
         kernel = self._next_kernel()
-        return apply_dab(
+        damage = apply_dab(
             canvas, x, y, kernel, self._options.color,
             opacity=self._options.opacity,
             blend_mode=self._options.blend_mode,
             selection=self._options.selection,
         )
+        self._stroke_damage = _union(self._stroke_damage, damage)
+        return damage
 
     def extend(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
         if not self._active or self._last is None:
@@ -414,7 +421,13 @@ class BrushStroke:
             )
             damage = _union(damage, d)
         self._last = (x, y)
+        self._stroke_damage = _union(self._stroke_damage, damage)
         return damage
+
+    @property
+    def stroke_damage(self) -> DabResult:
+        """Union of every dab damage rect since the last :meth:`begin`."""
+        return self._stroke_damage
 
     def _next_kernel(self) -> np.ndarray:
         """Return the kernel to stamp for the next dab.

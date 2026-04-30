@@ -78,6 +78,12 @@ class ToolDispatcher:
         selection_provider=None, set_selection=None,
         parent_widget=None,
     ):
+        # Damage rect from the last positively-handled event — the
+        # canvas reads this after dispatch returns True so it can
+        # upload only the dirty pixels via glTexSubImage2D instead of
+        # full-frame glTexImage2D.
+        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
+        self._last_damage = _EMPTY_DAMAGE
         """``image_provider`` is a callable returning the live numpy
         canvas (or ``None`` if no image is loaded). ``selection_provider``
         (optional) returns the current HxW bool mask or ``None``;
@@ -93,6 +99,7 @@ class ToolDispatcher:
         self._active_tool: str | None = None
 
     def __call__(self, evt: PointerEvent) -> bool:
+        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         canvas = self._image_provider()
         if canvas is None:
             return False
@@ -108,10 +115,26 @@ class ToolDispatcher:
         if handler is None:
             return False
         try:
-            return handler.handle(evt, canvas)
+            handled = handler.handle(evt, canvas)
         except (ValueError, RuntimeError) as exc:
             logger.warning("tool %r raised: %s", tool_name, exc)
             return False
+        # After a successful event, snapshot the tool's damage rect so
+        # the canvas can do a sub-region texture upload. Tools without
+        # damage tracking expose ``last_damage`` via the protocol; the
+        # absence of that attribute falls through to "full upload".
+        if handled:
+            self._last_damage = getattr(
+                handler, "last_damage", _EMPTY_DAMAGE,
+            )
+        else:
+            self._last_damage = _EMPTY_DAMAGE
+        return handled
+
+    @property
+    def last_damage(self):
+        """Union damage rect from the most-recent positive ``__call__``."""
+        return self._last_damage
 
     # ---- internals -------------------------------------------------------
 
@@ -185,6 +208,7 @@ class BrushTool:
     """
 
     def __init__(self, state: ToolState, selection_provider=None):
+        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         from Imervue.paint.rulers import Ruler
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
@@ -196,14 +220,21 @@ class BrushTool:
         # Press-point of the active stroke — fed to the perspective
         # ruler so its snap line passes through where the user pressed.
         self._stroke_anchor: tuple[float, float] | None = None
+        self.last_damage = _EMPTY_DAMAGE
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         if evt.phase == "press":
-            return self._begin(evt, canvas)
+            self.last_damage = _EMPTY_DAMAGE
+            handled = self._begin(evt, canvas)
+            if handled:
+                self.last_damage = self._collect_damage()
+            return handled
         if evt.phase == "move" and self._strokes:
             x, y = self._snap(evt.x, evt.y)
             x, y = self._smoothed_xy(x, y)
             self._extend_all(canvas, x, y)
+            self.last_damage = self._collect_damage()
             return True
         if evt.phase in ("release", "leave") and self._strokes:
             # Leaving the canvas is treated like a release so the state
@@ -211,11 +242,20 @@ class BrushTool:
             sx, sy = self._snap(evt.x, evt.y)
             self._drain_to(canvas, sx, sy)
             self._end_all(canvas, sx, sy)
+            self.last_damage = self._collect_damage()
             self._strokes = []
             self._stabilizer = None
             self._stroke_anchor = None
             return True
         return False
+
+    def _collect_damage(self):
+        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
+        from Imervue.paint.damage import from_dab_result
+        damage = _EMPTY_DAMAGE
+        for stroke in self._strokes:
+            damage = damage.union(from_dab_result(stroke.stroke_damage))
+        return damage
 
     def cancel(self) -> None:
         self._strokes = []
