@@ -38,6 +38,7 @@ from Imervue.paint.dock_panels import (
     NavigatorDock,
 )
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
+from Imervue.paint.tool_dispatcher import ToolDispatcher
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -100,6 +101,12 @@ class PaintWorkspace(QMainWindow):
         self._canvas.image_loaded.connect(self._on_image_loaded)
         self._navigator_dock.zoom_changed.connect(self._on_navigator_zoom)
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
+
+        # Tool dispatcher routes pointer events to the active tool. The
+        # canvas owns the live image, so we hand the dispatcher a getter
+        # rather than caching a snapshot.
+        self._dispatcher = ToolDispatcher(self._state, self._canvas.current_image)
+        self._canvas.set_tool_dispatcher(self._dispatcher)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())

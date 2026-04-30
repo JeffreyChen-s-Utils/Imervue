@@ -149,6 +149,71 @@ def apply_dab(
     return DabResult(cx0, cy0, cx1 - cx0, cy1 - cy0)
 
 
+def apply_erase_dab(
+    canvas: np.ndarray,
+    cx: float,
+    cy: float,
+    kernel: np.ndarray,
+    *,
+    opacity: float = 1.0,
+) -> DabResult:
+    """Subtract ``kernel * opacity`` from ``canvas`` alpha, in-place.
+
+    Eraser semantics: leave RGB untouched, drop alpha by the kernel
+    weight. RGB stays in place (rather than going black) so subsequent
+    paint over the erased region lands on the original colour rather
+    than a lower-saturation halo. Returns the damaged rectangle.
+    """
+    _check_canvas(canvas)
+    if kernel.ndim != 2:
+        raise ValueError(f"kernel must be 2-D, got shape {kernel.shape}")
+    opacity = max(0.0, min(1.0, float(opacity)))
+    if opacity <= 0.0:
+        return DabResult(0, 0, 0, 0)
+
+    kh, kw = kernel.shape
+    half_w = kw // 2
+    half_h = kh // 2
+    x0 = int(round(cx)) - half_w
+    y0 = int(round(cy)) - half_h
+    x1 = x0 + kw
+    y1 = y0 + kh
+
+    h, w = canvas.shape[:2]
+    cx0 = max(0, x0)
+    cy0 = max(0, y0)
+    cx1 = min(w, x1)
+    cy1 = min(h, y1)
+    if cx1 <= cx0 or cy1 <= cy0:
+        return DabResult(0, 0, 0, 0)
+
+    kx0 = cx0 - x0
+    ky0 = cy0 - y0
+    kx1 = kx0 + (cx1 - cx0)
+    ky1 = ky0 + (cy1 - cy0)
+
+    k = kernel[ky0:ky1, kx0:kx1] * opacity
+    a = canvas[cy0:cy1, cx0:cx1, 3].astype(np.float32) / 255.0
+    new_a = a * (1.0 - k)
+    canvas[cy0:cy1, cx0:cx1, 3] = np.clip(new_a * 255.0, 0.0, 255.0).astype(np.uint8)
+    return DabResult(cx0, cy0, cx1 - cx0, cy1 - cy0)
+
+
+def sample_pixel(canvas: np.ndarray, x: float, y: float) -> tuple[int, int, int] | None:
+    """Read ``(R, G, B)`` at ``(x, y)`` from the canvas. Returns ``None``
+    if the coordinates fall outside the canvas. Used by the eyedropper
+    tool to feed ToolState.foreground.
+    """
+    _check_canvas(canvas)
+    h, w = canvas.shape[:2]
+    ix = int(round(x))
+    iy = int(round(y))
+    if not (0 <= ix < w and 0 <= iy < h):
+        return None
+    pixel = canvas[iy, ix]
+    return (int(pixel[0]), int(pixel[1]), int(pixel[2]))
+
+
 def _composite_in_place(
     dst: np.ndarray, alpha: np.ndarray, fg_color: np.ndarray, blend_mode: str,
 ) -> None:

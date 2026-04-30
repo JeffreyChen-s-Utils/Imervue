@@ -299,6 +299,9 @@ class PaintCanvas(QOpenGLWidget):
             pressure=self._last_pressure,
         )
         if self._dispatcher(evt):
+            # The dispatcher mutated the backing array in place — re-upload
+            # the texture on the next paint so the change becomes visible.
+            self._needs_upload = True
             self.update()
 
     def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
