@@ -75,17 +75,19 @@ class ToolDispatcher:
     def __init__(
         self, state: ToolState, image_provider,
         selection_provider=None, set_selection=None,
+        parent_widget=None,
     ):
         """``image_provider`` is a callable returning the live numpy
         canvas (or ``None`` if no image is loaded). ``selection_provider``
         (optional) returns the current HxW bool mask or ``None``;
-        ``set_selection`` (optional) writes a new mask. Both default
-        to no-ops so dispatchers wired without selection support keep
-        working — selection tools are simply disabled."""
+        ``set_selection`` (optional) writes a new mask. ``parent_widget``
+        (optional) is used as the parent for any modal tool dialogs
+        (text tool, gradient tool…) so they centre on the canvas."""
         self._state = state
         self._image_provider = image_provider
         self._selection_provider = selection_provider or (lambda: None)
         self._set_selection = set_selection or (lambda mask: None)
+        self._parent_widget = parent_widget
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
 
@@ -125,12 +127,22 @@ class ToolDispatcher:
             "select_lasso": LassoSelectTool(sel_ctx),
             "select_wand": WandSelectTool(sel_ctx, self._state),
             "move": MoveTool(self._state, self._selection_provider, self._set_selection),
+            "text": _build_text_tool(
+                self._state, self._selection_provider, self._parent_widget,
+            ),
         }
 
 
 # ---------------------------------------------------------------------------
 # Selection plumbing — shared by the three selection tools.
 # ---------------------------------------------------------------------------
+
+
+def _build_text_tool(state, selection_provider, parent_widget):
+    """Late-import the text tool so the Qt-heavy module isn't pulled in
+    until the dispatcher actually constructs handlers."""
+    from Imervue.paint.text_tool import TextTool
+    return TextTool(state, selection_provider, parent_widget)
 
 
 class _SelectionContext:

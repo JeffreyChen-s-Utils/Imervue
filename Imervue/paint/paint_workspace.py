@@ -110,6 +110,7 @@ class PaintWorkspace(QMainWindow):
             image_provider=self._canvas.current_image,
             selection_provider=self._canvas.current_selection,
             set_selection=self._canvas.set_selection,
+            parent_widget=self,
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
 
