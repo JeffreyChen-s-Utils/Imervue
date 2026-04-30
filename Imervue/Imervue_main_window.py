@@ -451,6 +451,16 @@ class ImervueMainWindow(QMainWindow):
             lang.get("modify_menu_title", "Modify"),
         )
 
+        # --------------------------------------------------------
+        # Tab 2: Paint workspace — MediBang-style painting surface
+        # --------------------------------------------------------
+        from Imervue.paint.paint_workspace import PaintWorkspace
+        self.paint_workspace = PaintWorkspace(parent=self)
+        self._main_tabs.addTab(
+            self.paint_workspace,
+            lang.get("paint_tab_title", "Paint"),
+        )
+
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
@@ -547,7 +557,7 @@ class ImervueMainWindow(QMainWindow):
     # 主分頁切換（Imervue ↔ 修改）
     # ==========================
     def _on_main_tab_changed(self, idx: int) -> None:
-        """Switch between Imervue (viewer) and Modify (annotation canvas) tabs."""
+        """Switch between Imervue (viewer), Modify and Paint tabs."""
         if idx == 1:
             # 切到修改分頁 → 綁定圖片，canvas 會自動插入 splitter 中間
             images = self.viewer.model.images
@@ -555,9 +565,28 @@ class ImervueMainWindow(QMainWindow):
             if images and 0 <= self.viewer.current_index < len(images):
                 path = images[self.viewer.current_index]
             self.modify_panel.bind_to_path(path)
+        elif idx == 2:
+            # Paint 分頁 — 把目前圖片載入畫布
+            self._bind_paint_workspace_to_current_image()
         else:
             # 切回 Imervue 主頁
             self.exif_sidebar.update_info()
+
+    def _bind_paint_workspace_to_current_image(self) -> None:
+        images = self.viewer.model.images
+        if not images or not (0 <= self.viewer.current_index < len(images)):
+            self.paint_workspace.load_image(None)
+            return
+        path = images[self.viewer.current_index]
+        try:
+            from PIL import Image
+            import numpy as np
+            with Image.open(path) as src:
+                rgba = src.convert("RGBA")
+                arr = np.array(rgba)
+            self.paint_workspace.load_image(arr)
+        except (OSError, ValueError):
+            self.paint_workspace.load_image(None)
 
     # ==========================
     # 選單
