@@ -42,8 +42,14 @@ RULER_MODES = (
     "ellipse",
     "concentric",
     "parallel",
+    "perspective",
 )
 DEFAULT_RULER_MODE = "off"
+
+# Up to three vanishing points for the perspective ruler — matches the
+# 1 / 2 / 3-point comic-art convention. More VPs would not crash the
+# math but the UI affords only the three standard cases.
+PERSPECTIVE_MAX_VANISHING_POINTS = 3
 
 # Floats below this magnitude are treated as zero — protects against
 # divide-by-zero when the cursor coincides with the ruler centre.
@@ -63,6 +69,11 @@ class Ruler:
       ``angle_deg`` for rotation)
     * ``concentric`` — ``anchor`` + ``spacing``
     * ``parallel`` — ``anchor`` + ``angle_deg`` + ``spacing``
+    * ``perspective`` — ``vanishing_points`` (1–3 (x, y) tuples). The
+      ruler snaps each stroke to a line through its press point and
+      whichever vanishing point gives the closest projected foot;
+      callers pass the press point via the ``stroke_anchor`` keyword
+      of :func:`snap_to_ruler`.
     """
 
     mode: str = DEFAULT_RULER_MODE
@@ -71,6 +82,7 @@ class Ruler:
     rx: float = 50.0
     ry: float = 50.0
     spacing: float = 20.0
+    vanishing_points: tuple[tuple[float, float], ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -80,6 +92,7 @@ class Ruler:
             "rx": float(self.rx),
             "ry": float(self.ry),
             "spacing": float(self.spacing),
+            "vanishing_points": [list(p) for p in self.vanishing_points],
         }
 
     @classmethod
@@ -101,6 +114,7 @@ class Ruler:
             rx=_safe_positive(raw.get("rx"), 50.0),
             ry=_safe_positive(raw.get("ry"), 50.0),
             spacing=_safe_positive(raw.get("spacing"), 20.0),
+            vanishing_points=_safe_vanishing_points(raw.get("vanishing_points")),
         )
 
 
@@ -110,13 +124,20 @@ OFF_RULER = Ruler()
 
 
 def snap_to_ruler(
-    point: tuple[float, float], ruler: Ruler,
+    point: tuple[float, float],
+    ruler: Ruler,
+    *,
+    stroke_anchor: tuple[float, float] | None = None,
 ) -> tuple[float, float]:
     """Project ``point`` onto the geometry described by ``ruler``.
 
     Pure function: never mutates the ruler or the point. Returns a
     fresh ``(x, y)`` tuple. Off-mode rulers short-circuit to the input
     so the no-snap path pays only a dict lookup.
+
+    ``stroke_anchor`` is the per-stroke origin (typically the press
+    point); the perspective ruler routes lines through it. Other modes
+    ignore it.
     """
     mode = ruler.mode
     if mode == "off":
@@ -135,6 +156,9 @@ def snap_to_ruler(
         return _snap_parallel(
             point, ruler.anchor, ruler.angle_deg, ruler.spacing,
         )
+    if mode == "perspective":
+        anchor = stroke_anchor if stroke_anchor is not None else ruler.anchor
+        return _snap_perspective(point, anchor, ruler.vanishing_points)
     raise ValueError(
         f"unknown ruler mode {mode!r}; expected one of {RULER_MODES}",
     )
@@ -265,6 +289,49 @@ def _snap_parallel(
             ay + along * dy + snap_across * ny)
 
 
+def _snap_perspective(
+    point: tuple[float, float],
+    anchor: tuple[float, float],
+    vanishing_points: tuple[tuple[float, float], ...],
+) -> tuple[float, float]:
+    """Snap a cursor onto the line through ``anchor`` and the closest VP.
+
+    For each vanishing point, build the line passing through the
+    stroke anchor and the VP, then compute the perpendicular foot of
+    ``point`` on that line. The output is the foot whose distance to
+    the cursor is smallest. Vanishing points coincident with the
+    anchor (degenerate, no defined direction) are silently skipped.
+    Empty / all-degenerate VP sets fall through to "no snap" so a
+    half-configured ruler doesn't strand the brush.
+    """
+    px, py = float(point[0]), float(point[1])
+    ax, ay = float(anchor[0]), float(anchor[1])
+    best_foot: tuple[float, float] | None = None
+    best_dist_sq = math.inf
+    for vp in vanishing_points:
+        vx, vy = float(vp[0]), float(vp[1])
+        dx = vx - ax
+        dy = vy - ay
+        length_sq = dx * dx + dy * dy
+        if length_sq <= _EPSILON:
+            continue
+        length = math.sqrt(length_sq)
+        ux = dx / length
+        uy = dy / length
+        rel_x = px - ax
+        rel_y = py - ay
+        t = rel_x * ux + rel_y * uy
+        foot_x = ax + t * ux
+        foot_y = ay + t * uy
+        dist_sq = (px - foot_x) ** 2 + (py - foot_y) ** 2
+        if dist_sq < best_dist_sq:
+            best_foot = (foot_x, foot_y)
+            best_dist_sq = dist_sq
+    if best_foot is None:
+        return (px, py)
+    return best_foot
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -296,3 +363,26 @@ def _safe_positive(value: object, default: float) -> float:
     except (TypeError, ValueError):
         return default
     return f if f > _EPSILON else default
+
+
+def _safe_vanishing_points(value: object) -> tuple[tuple[float, float], ...]:
+    """Coerce an on-disk vanishing-points field into a tuple of (x, y).
+
+    Drops malformed entries silently so a hand-edited settings file
+    can never crash workspace boot. Caps the count at
+    :data:`PERSPECTIVE_MAX_VANISHING_POINTS` since the UI affords only
+    1 / 2 / 3-point perspective.
+    """
+    if not isinstance(value, (list, tuple)):
+        return ()
+    out: list[tuple[float, float]] = []
+    for entry in value:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            continue
+        try:
+            out.append((float(entry[0]), float(entry[1])))
+        except (TypeError, ValueError):
+            continue
+        if len(out) >= PERSPECTIVE_MAX_VANISHING_POINTS:
+            break
+    return tuple(out)

@@ -193,6 +193,9 @@ class BrushTool:
         self._mode: str = "off"
         self._origin: tuple[float, float] = (0.0, 0.0)
         self._ruler: Ruler = Ruler()
+        # Press-point of the active stroke — fed to the perspective
+        # ruler so its snap line passes through where the user pressed.
+        self._stroke_anchor: tuple[float, float] | None = None
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
@@ -210,12 +213,14 @@ class BrushTool:
             self._end_all(canvas, sx, sy)
             self._strokes = []
             self._stabilizer = None
+            self._stroke_anchor = None
             return True
         return False
 
     def cancel(self) -> None:
         self._strokes = []
         self._stabilizer = None
+        self._stroke_anchor = None
 
     def _smoothed_xy(self, x: float, y: float) -> tuple[float, float]:
         if self._stabilizer is None:
@@ -234,7 +239,9 @@ class BrushTool:
 
     def _snap(self, x: float, y: float) -> tuple[float, float]:
         from Imervue.paint.rulers import snap_to_ruler
-        return snap_to_ruler((x, y), self._ruler)
+        return snap_to_ruler(
+            (x, y), self._ruler, stroke_anchor=self._stroke_anchor,
+        )
 
     def _mirror(self, x: float, y: float) -> list[tuple[float, float]]:
         from Imervue.paint.symmetry import mirror_points
@@ -262,9 +269,11 @@ class BrushTool:
         # it in recents now so subsequent slider tweaks don't re-bump
         # the same colour to the front.
         self._state.record_foreground_in_history()
-        # Snapshot the ruler at press time, then snap the press point so
+        # Snapshot the ruler at press time, record the stroke anchor
+        # for the perspective ruler, then snap the press point so
         # downstream stabiliser + mirror stages see a point on the track.
         self._ruler = self._state.ruler
+        self._stroke_anchor = (float(evt.x), float(evt.y))
         sx, sy = self._snap(evt.x, evt.y)
         # Stabiliser smooths jittery input. strength=0 short-circuits the
         # filter so cheap mice with no jitter pay zero cost.

@@ -18,6 +18,7 @@ from Imervue.paint.rulers import Ruler, snap_to_ruler
 def test_ruler_modes_includes_documented_set():
     assert set(rulers.RULER_MODES) == {
         "off", "linear", "cross", "ellipse", "concentric", "parallel",
+        "perspective",
     }
 
 
@@ -300,6 +301,110 @@ def test_parallel_zero_spacing_raises():
 
 
 # ---------------------------------------------------------------------------
+# perspective ruler
+# ---------------------------------------------------------------------------
+
+
+def test_perspective_one_point_snaps_to_line_through_vp():
+    """One-point perspective: cursor snaps to the perpendicular foot
+    on the line from the stroke anchor through the vanishing point."""
+    r = Ruler(mode="perspective", vanishing_points=((100.0, 0.0),))
+    # Stroke anchor at origin; cursor at (50, 30). The line from
+    # anchor through VP is the +x axis, so the perpendicular foot is
+    # (50, 0).
+    snapped = snap_to_ruler((50.0, 30.0), r, stroke_anchor=(0.0, 0.0))
+    assert snapped == pytest.approx((50.0, 0.0))
+
+
+def test_perspective_picks_nearest_vanishing_point():
+    """Two-point perspective: the cursor snaps onto whichever VP's
+    line is closest. A cursor up and slightly right snaps onto the
+    upward line, not the rightward one."""
+    r = Ruler(
+        mode="perspective",
+        vanishing_points=((100.0, 0.0), (0.0, 100.0)),
+    )
+    # Cursor near the +y axis — closer to the line toward (0, 100).
+    snapped = snap_to_ruler((5.0, 80.0), r, stroke_anchor=(0.0, 0.0))
+    assert snapped == pytest.approx((0.0, 80.0))
+
+
+def test_perspective_three_point_picks_minimum_distance():
+    r = Ruler(
+        mode="perspective",
+        vanishing_points=(
+            (1000.0, 0.0),     # rightward
+            (-1000.0, 0.0),    # leftward (collinear with the first)
+            (0.0, -1000.0),    # upward
+        ),
+    )
+    snapped = snap_to_ruler((1.0, -50.0), r, stroke_anchor=(0.0, 0.0))
+    # The upward line gives the smaller perpendicular distance.
+    assert snapped == pytest.approx((0.0, -50.0))
+
+
+def test_perspective_no_vanishing_points_returns_input():
+    r = Ruler(mode="perspective", vanishing_points=())
+    snapped = snap_to_ruler((5.0, 7.0), r, stroke_anchor=(0.0, 0.0))
+    assert snapped == pytest.approx((5.0, 7.0))
+
+
+def test_perspective_vp_at_anchor_is_skipped():
+    """A VP coincident with the stroke anchor has no defined direction
+    and must be silently skipped — never propagate a NaN through the
+    snap. Falls back to the next VP, or to "no snap" if none remain."""
+    r = Ruler(
+        mode="perspective",
+        vanishing_points=((0.0, 0.0), (10.0, 0.0)),
+    )
+    snapped = snap_to_ruler((5.0, 7.0), r, stroke_anchor=(0.0, 0.0))
+    # The valid VP is along +x, so the cursor (5, 7) snaps to (5, 0).
+    assert snapped == pytest.approx((5.0, 0.0))
+
+
+def test_perspective_falls_back_to_ruler_anchor_when_no_stroke_anchor():
+    """Callers that don't supply a stroke anchor (e.g. tests, future
+    tools) should still get a usable snap — the ruler's own anchor
+    field acts as the line origin."""
+    r = Ruler(
+        mode="perspective",
+        anchor=(10.0, 10.0),
+        vanishing_points=((110.0, 10.0),),
+    )
+    snapped = snap_to_ruler((20.0, 30.0), r)
+    assert snapped == pytest.approx((20.0, 10.0))
+
+
+def test_perspective_caps_vanishing_points_from_dict():
+    """The 1/2/3-point convention is enforced on the storage path —
+    a corrupted settings file with 5 VPs is silently truncated."""
+    raw = {
+        "mode": "perspective",
+        "vanishing_points": [[i, 0] for i in range(5)],
+    }
+    rebuilt = Ruler.from_dict(raw)
+    assert len(rebuilt.vanishing_points) == 3
+
+
+def test_perspective_round_trip_via_dict():
+    original = Ruler(
+        mode="perspective",
+        vanishing_points=((-200.0, 0.0), (200.0, 0.0), (0.0, -800.0)),
+    )
+    rebuilt = Ruler.from_dict(original.to_dict())
+    assert rebuilt == original
+
+
+def test_perspective_from_dict_drops_malformed_vp_entries():
+    raw = {
+        "mode": "perspective",
+        "vanishing_points": [[1, 2], "garbage", [3], [4, 5]],
+    }
+    rebuilt = Ruler.from_dict(raw)
+    assert rebuilt.vanishing_points == ((1.0, 2.0), (4.0, 5.0))
+
+
+# ---------------------------------------------------------------------------
 # from_dict / to_dict round-trip
 # ---------------------------------------------------------------------------
 
@@ -317,6 +422,7 @@ def test_to_dict_emits_json_friendly_types():
         "rx": 11.0,
         "ry": 22.0,
         "spacing": 5.0,
+        "vanishing_points": [],
     }
 
 
