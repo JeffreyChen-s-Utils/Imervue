@@ -296,6 +296,70 @@ def test_new_blank_document_rejects_bad_fill(qapp):
         canvas.deleteLater()
 
 
+def test_dispatch_pointer_routes_to_dispatcher(qapp, sample_rgba_array):
+    """``_dispatch_pointer`` is the shared mouse / tablet entry point —
+    both paths must reach the dispatcher with a populated PointerEvent."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        captured: list = []
+        canvas.set_tool_dispatcher(lambda evt: captured.append(evt) or False)
+        canvas._dispatch_pointer(  # noqa: SLF001
+            "press",
+            x_screen=10.0, y_screen=20.0,
+            button=int(Qt.MouseButton.LeftButton.value),
+            modifiers=0,
+            pressure=0.6,
+            tilt_x=0.5, tilt_y=-0.25,
+        )
+        assert len(captured) == 1
+        evt = captured[0]
+        assert evt.phase == "press"
+        assert evt.pressure == pytest.approx(0.6)
+        assert evt.tilt_x == pytest.approx(0.5)
+        assert evt.tilt_y == pytest.approx(-0.25)
+    finally:
+        canvas.deleteLater()
+
+
+def test_dispatch_pointer_clamps_extreme_tilt(qapp, sample_rgba_array):
+    """Tilts arrive as raw degrees scaled by the tablet path; the
+    PointerEvent contract says they're already in [-1, 1]. The shared
+    helper must clamp out-of-range inputs so noisy hardware can't push
+    downstream tools into NaN territory."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.load_image(sample_rgba_array)
+        captured: list = []
+        canvas.set_tool_dispatcher(lambda evt: captured.append(evt) or False)
+        canvas._dispatch_pointer(  # noqa: SLF001
+            "move",
+            x_screen=5.0, y_screen=5.0,
+            button=0, modifiers=0,
+            pressure=1.0,
+            tilt_x=99.0, tilt_y=-99.0,
+        )
+        assert captured[0].tilt_x == pytest.approx(1.0)
+        assert captured[0].tilt_y == pytest.approx(-1.0)
+    finally:
+        canvas.deleteLater()
+
+
+def test_tablet_phase_map_covers_press_move_release():
+    """Regression: tabletEvent must map QEvent.TabletPress / TabletMove /
+    TabletRelease onto the corresponding PointerEvent phase. Without the
+    map the tablet path silently dropped events ("下筆後沒顏色")."""
+    from Imervue.paint.canvas import _TABLET_PHASE
+    from PySide6.QtCore import QEvent
+    assert _TABLET_PHASE[QEvent.Type.TabletPress] == "press"
+    assert _TABLET_PHASE[QEvent.Type.TabletMove] == "move"
+    assert _TABLET_PHASE[QEvent.Type.TabletRelease] == "release"
+
+
 def test_reset_view_at_real_size_uses_fit_zoom(qapp, sample_rgba_array):
     canvas = _make_canvas(qapp)
     if canvas is None:
@@ -307,5 +371,27 @@ def test_reset_view_at_real_size_uses_fit_zoom(qapp, sample_rgba_array):
         # Document is 100×80, widget 800×600 → fit is min(8.0, 7.5, 1.0)
         # = 1.0 (clamped).
         assert canvas.zoom_factor() == pytest.approx(1.0)
+    finally:
+        canvas.deleteLater()
+
+
+def test_reset_view_to_fit_defers_when_widget_too_small(qapp):
+    """Big-document-on-small-widget case: a 1024² seed canvas inside a
+    100×30 default-laid-out widget would fit at ~0.029, below ZOOM_MIN.
+    Rather than locking at the floor zoom (where a brush stroke is too
+    small to see), defer the fit until the next ``resizeGL``."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.resize(50, 50)
+        canvas.new_blank_document(width=2048, height=2048)
+        # raw_zoom would be 50/2048 ≈ 0.024 < ZOOM_MIN → must defer.
+        assert canvas._fit_pending is True   # noqa: SLF001
+        # Once the widget is given enough room, the next fit succeeds.
+        canvas.resize(800, 600)
+        canvas._reset_view_to_fit()  # noqa: SLF001
+        assert canvas._fit_pending is False  # noqa: SLF001
+        assert canvas.zoom_factor() > ZOOM_MIN
     finally:
         canvas.deleteLater()

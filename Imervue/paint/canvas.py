@@ -70,7 +70,7 @@ from OpenGL.GL import (
     GL_MODELVIEW,
     GL_PROJECTION,
 )
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QMouseEvent, QTabletEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -86,6 +86,15 @@ ZOOM_STEP = 1.15
 DEFAULT_CANVAS_WIDTH = 1024
 DEFAULT_CANVAS_HEIGHT = 1024
 DEFAULT_CANVAS_FILL = (255, 255, 255, 255)
+
+# QTabletEvent.type() → PointerEvent.phase. Wacom-style stylii deliver
+# distinct event types for press / move / release; a missing entry means
+# we ignore the event (e.g. ``TabletEnterProximity``).
+_TABLET_PHASE = {
+    QEvent.Type.TabletPress: "press",
+    QEvent.Type.TabletMove: "move",
+    QEvent.Type.TabletRelease: "release",
+}
 
 
 @dataclass
@@ -169,6 +178,13 @@ class PaintCanvas(QOpenGLWidget):
         self._zoom = 1.0
         self._pan_x = 0.0
         self._pan_y = 0.0
+        # Set when ``_reset_view_to_fit`` is called against a widget
+        # that's too small to host the document at a sensible zoom
+        # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
+        # before Qt has laid the widget out). The next ``resizeGL`` re-
+        # tries the fit so the canvas doesn't permanently appear as a
+        # postage stamp clamped to ``ZOOM_MIN``.
+        self._fit_pending = False
 
         self._dispatcher: ToolDispatcher | None = None
         self._panning = False
@@ -301,6 +317,8 @@ class PaintCanvas(QOpenGLWidget):
         glLoadIdentity()
         glOrtho(0, max(1, w), max(1, h), 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
+        if self._fit_pending:
+            self._reset_view_to_fit()
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
         glClear(GL_COLOR_BUFFER_BIT)
@@ -411,26 +429,69 @@ class PaintCanvas(QOpenGLWidget):
         self._apply_zoom(factor, event.position().x(), event.position().y())
 
     def tabletEvent(self, event: QTabletEvent) -> None:  # pragma: no cover - tablet
-        # Pen pressure 0..1 — feed through to the next mouse dispatch so
-        # the brush can scale size / opacity by it.
+        # ``event.accept()`` suppresses Qt's synthesised mouse event,
+        # so the brush would receive nothing if we only stored pressure
+        # here — that is the original "下筆後沒顏色" symptom for tablet
+        # users. Map the tablet event onto the same dispatch path used
+        # by mouse input so press / move / release reach the active
+        # tool with full pressure + tilt detail.
         self._last_pressure = float(event.pressure())
+        phase = _TABLET_PHASE.get(event.type())
+        if phase is not None:
+            self._dispatch_pointer(
+                phase,
+                event.position().x(), event.position().y(),
+                button=int(event.button().value),
+                modifiers=int(event.modifiers().value),
+                pressure=self._last_pressure,
+                tilt_x=float(event.xTilt()) / 60.0,
+                tilt_y=float(event.yTilt()) / 60.0,
+            )
         event.accept()
 
     # ---- internal helpers ------------------------------------------------
 
     def _dispatch(self, phase: str, event: QMouseEvent) -> None:
-        if self._dispatcher is None:
-            return
-        x, y = self._screen_to_image(event.position().x(), event.position().y())
         # PySide6 6.x returns Qt.MouseButton / Qt.KeyboardModifier as
         # flag enums that don't auto-convert via int() — go through
         # ``.value`` so PointerEvent stays plain-int as the tests expect.
-        evt = PointerEvent(
-            phase=phase,
-            x=x, y=y,
+        self._dispatch_pointer(
+            phase,
+            event.position().x(), event.position().y(),
             button=int(event.button().value),
             modifiers=int(event.modifiers().value),
             pressure=self._last_pressure,
+        )
+
+    def _dispatch_pointer(
+        self,
+        phase: str,
+        x_screen: float,
+        y_screen: float,
+        *,
+        button: int,
+        modifiers: int,
+        pressure: float,
+        tilt_x: float = 0.0,
+        tilt_y: float = 0.0,
+    ) -> None:
+        """Shared mouse / tablet entry into the tool dispatcher.
+
+        Translates screen coordinates into image space, builds the
+        immutable :class:`PointerEvent`, hands it to the active tool,
+        and refreshes the canvas only when the tool reported a change.
+        """
+        if self._dispatcher is None:
+            return
+        x, y = self._screen_to_image(x_screen, y_screen)
+        evt = PointerEvent(
+            phase=phase,
+            x=x, y=y,
+            button=button,
+            modifiers=modifiers,
+            pressure=pressure,
+            tilt_x=max(-1.0, min(1.0, tilt_x)),
+            tilt_y=max(-1.0, min(1.0, tilt_y)),
         )
         if self._dispatcher(evt):
             # The dispatcher mutated the active layer in place — drop the
@@ -475,11 +536,21 @@ class PaintCanvas(QOpenGLWidget):
         h, w = shape
         if w <= 0 or h <= 0:
             return
-        widget_w = max(1, self.width())
-        widget_h = max(1, self.height())
-        self._zoom = clamp_zoom(min(widget_w / w, widget_h / h, 1.0))
+        widget_w = self.width()
+        widget_h = self.height()
+        if widget_w <= 0 or widget_h <= 0:
+            self._fit_pending = True
+            return
+        raw_zoom = min(widget_w / w, widget_h / h, 1.0)
+        if raw_zoom <= ZOOM_MIN:
+            # Widget too small (or document oversized) — defer to the
+            # next resizeGL so the canvas doesn't lock at the floor zoom.
+            self._fit_pending = True
+            return
+        self._zoom = clamp_zoom(raw_zoom)
         self._pan_x = (widget_w - w * self._zoom) * 0.5
         self._pan_y = (widget_h - h * self._zoom) * 0.5
+        self._fit_pending = False
 
     def _upload_texture(  # pragma: no cover - GL needs display server
         self, composite: np.ndarray,

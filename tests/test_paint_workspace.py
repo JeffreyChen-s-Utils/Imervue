@@ -94,6 +94,43 @@ def test_workspace_starts_with_paintable_default_canvas(qapp):
         ws.deleteLater()
 
 
+def test_workspace_brush_press_paints_active_layer(qapp):
+    """End-to-end "下筆有顏色" check: brushing on a fresh workspace must
+    deposit colour onto the active layer's pixel buffer. Verifies the
+    canvas and the document's active layer are the same buffer (no
+    copy-on-write surprise) so the LayerDock thumbnail reflects what
+    the user just drew."""
+    from Imervue.paint.canvas import PointerEvent
+
+    ws = PaintWorkspace()
+    try:
+        ws.state().set_foreground((255, 0, 0))
+        canvas_img = ws.canvas().current_image()
+        assert canvas_img is not None
+        h, w = canvas_img.shape[:2]
+        cx, cy = w // 2, h // 2
+        before = tuple(canvas_img[cy, cx])
+
+        evt = PointerEvent(
+            phase="press", x=float(cx), y=float(cy),
+            button=1, modifiers=0, pressure=1.0,
+        )
+        assert ws._dispatcher(evt) is True  # noqa: SLF001
+
+        # The dispatcher returns the active layer image, which must be
+        # the same buffer the document holds — otherwise the LayerDock
+        # would render a stale thumbnail and the "圖層跟畫不一樣"
+        # divergence would appear.
+        active_layer = ws.canvas().document().active_layer()
+        assert active_layer is not None
+        assert active_layer.image is canvas_img
+        after = tuple(canvas_img[cy, cx])
+        assert after != before
+        assert after[0] == 255 and after[1] == 0 and after[2] == 0
+    finally:
+        ws.deleteLater()
+
+
 def test_workspace_dispatcher_receives_canvas_for_first_press(qapp):
     """End-to-end regression: dispatching a press on a fresh workspace
     must reach the active tool's ``handle`` with a real numpy buffer.
