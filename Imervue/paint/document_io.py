@@ -29,6 +29,7 @@ should reject unknown versions rather than guessing.
 """
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
@@ -49,12 +50,32 @@ FILE_EXTENSION = ".imervue"
 
 
 def save_document(document: PaintDocument, path: str | Path) -> None:
-    """Write ``document`` to a ``.imervue`` NPZ bundle.
+    """Write ``document`` to a ``.imervue`` NPZ bundle on disk."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    arrays = _document_to_arrays(document)
+    # Pass a file object to bypass numpy's auto-".npz" suffix munging —
+    # the project uses ``.imervue`` as the user-facing extension and
+    # ``np.savez_compressed`` would otherwise append ``.npz`` silently.
+    with open(target, "wb") as fh:
+        np.savez_compressed(fh, **arrays)
 
-    The path is created or overwritten. Empty documents (no layers)
-    raise ``ValueError`` — saving a document with nothing in it makes
-    no sense and trips up the loader.
+
+def save_document_to_buffer(document: PaintDocument) -> bytes:
+    """Serialise ``document`` to an in-memory NPZ blob.
+
+    Used by the project_io layer to pack each page into a parent
+    archive without first writing it to disk. The byte format is
+    identical to :func:`save_document`'s on-disk output.
     """
+    arrays = _document_to_arrays(document)
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer, **arrays)
+    return buffer.getvalue()
+
+
+def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
+    """Build the NPZ-array dict that represents one PaintDocument."""
     layers = document.layers()
     if not layers:
         raise ValueError("cannot save an empty document — no layers to write")
@@ -118,14 +139,7 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
     selection = document.selection()
     if selection is not None:
         arrays["selection"] = selection
-
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    # Pass a file object to bypass numpy's auto-".npz" suffix munging —
-    # the project uses ``.imervue`` as the user-facing extension and
-    # ``np.savez_compressed`` would otherwise append ``.npz`` silently.
-    with open(target, "wb") as fh:
-        np.savez_compressed(fh, **arrays)
+    return arrays
 
 
 def load_document(path: str | Path) -> PaintDocument:
@@ -140,11 +154,25 @@ def load_document(path: str | Path) -> PaintDocument:
     if not target.exists():
         raise FileNotFoundError(f"document {target!s} does not exist")
     with open(target, "rb") as fh, np.load(fh, allow_pickle=False) as data:
-        metadata = _read_metadata(data)
-        layers, active_index = _read_layers(data, metadata)
-        selection = _read_selection(data, metadata)
-        groups = _read_groups(metadata)
-        named_selections = _read_named_selections(data, metadata)
+        return _document_from_npz(data)
+
+
+def load_document_from_buffer(blob: bytes) -> PaintDocument:
+    """Deserialise an in-memory NPZ blob produced by
+    :func:`save_document_to_buffer` back into a PaintDocument.
+
+    Used by project_io to unpack each page from the parent archive."""
+    with io.BytesIO(blob) as fh, np.load(fh, allow_pickle=False) as data:
+        return _document_from_npz(data)
+
+
+def _document_from_npz(data) -> PaintDocument:
+    """Shared loader body — turn a loaded NpzFile into a PaintDocument."""
+    metadata = _read_metadata(data)
+    layers, active_index = _read_layers(data, metadata)
+    selection = _read_selection(data, metadata)
+    groups = _read_groups(metadata)
+    named_selections = _read_named_selections(data, metadata)
     document = PaintDocument()
     document.replace_state(
         layers=layers,
