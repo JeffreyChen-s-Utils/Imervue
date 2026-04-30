@@ -35,6 +35,7 @@ from Imervue.paint.dock_panels import (
     ColorDock,
     HistoryDock,
     LayerDock,
+    MaterialDock,
     NavigatorDock,
 )
 from Imervue.paint.filter_menu import build_filter_menu
@@ -86,12 +87,14 @@ class PaintWorkspace(QMainWindow):
         self._layer_dock = LayerDock(self._canvas.document(), self)
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
+        self._material_dock = MaterialDock(parent=self)
 
         for dock in (
             self._color_dock,
             self._brush_dock,
             self._layer_dock,
             self._navigator_dock,
+            self._material_dock,
             self._history_dock,
         ):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
