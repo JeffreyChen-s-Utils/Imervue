@@ -26,13 +26,14 @@ section "Document file format" (the canonical PDF / HTML).
 """
 from __future__ import annotations
 
+import contextlib
 import struct
 from pathlib import Path
 
 import numpy as np
 
 from Imervue.paint.compositing import LAYER_BLEND_MODES
-from Imervue.paint.document import Layer, PaintDocument
+from Imervue.paint.document import Layer, LayerGroup, PaintDocument
 
 PSD_SIGNATURE = b"8BPS"
 PSD_VERSION = 1
@@ -72,6 +73,13 @@ _LAYER_FLAG_PHOTOSHOP_5_PLUS = 0x08
 _COMPRESSION_RAW = 0
 _COMPRESSION_RLE = 1
 
+# Section-divider types — used by ``lsct`` to mark layer groups.
+_SECTION_OTHER = 0
+_SECTION_OPEN_GROUP = 1
+_SECTION_CLOSED_GROUP = 2
+_SECTION_END = 3
+_SECTION_END_NAME = "</Layer group>"
+
 
 # ---------------------------------------------------------------------------
 # Save
@@ -94,7 +102,9 @@ def save_psd(document: PaintDocument, path: str | Path) -> None:
         fh.write(_pack_header(h, w))
         fh.write(_pack_color_mode_section())
         fh.write(_pack_image_resources_section())
-        fh.write(_pack_layer_and_mask_section(layers, h, w))
+        fh.write(_pack_layer_and_mask_section(
+            layers, h, w, groups={g.name: g for g in document.groups()},
+        ))
         fh.write(_pack_image_data_section(document, h, w))
 
 
@@ -116,28 +126,59 @@ def _pack_image_resources_section() -> bytes:
     return struct.pack(">I", 0)
 
 
-def _pack_layer_and_mask_section(layers: list[Layer], h: int, w: int) -> bytes:
-    # Build per-layer records + channel-data blob in one pass so the
-    # channel-info "data length" entries inside the records line up
-    # exactly with what we write afterwards.
+def _pack_layer_and_mask_section(
+    layers: list[Layer], h: int, w: int,
+    groups: dict[str, LayerGroup] | None = None,
+) -> bytes:
+    """Pack the layer + mask section.
+
+    Group encoding follows the Photoshop convention (bottom-to-top):
+
+    * a ``section divider end`` (lsct type 3) appears immediately
+      before the first member layer of a group;
+    * member layers follow in their natural bottom-to-top order;
+    * a ``group header`` (lsct type 1 or 2) appears immediately after
+      the last member, carrying the group's name + visibility +
+      opacity.
+
+    Adjacent layers in different groups round-trip via consecutive
+    end / header pairs.
+    """
+    groups = groups or {}
     records = bytearray()
     channel_blob = bytearray()
-    for layer in layers:
-        record, channel_bytes = _pack_one_layer(layer, h, w)
-        records.extend(record)
-        channel_blob.extend(channel_bytes)
+    record_count = 0
 
-    # Layer info: u16 layer count, then concatenated records, then the
-    # channel-data blob. Pad to even length per spec.
-    layer_count_word = struct.pack(">H", len(layers))
+    def _emit(record_bytes: bytes, channel_bytes: bytes) -> None:
+        nonlocal record_count
+        records.extend(record_bytes)
+        channel_blob.extend(channel_bytes)
+        record_count += 1
+
+    current_group: str | None = None
+    for layer in layers:
+        if layer.group != current_group:
+            if current_group is not None:
+                # Emit the closing group header for the group we're leaving.
+                grp = groups.get(current_group)
+                _emit(*_pack_group_header(current_group, grp, h, w))
+            if layer.group is not None:
+                # Open a new group at this position.
+                _emit(*_pack_section_end(h, w))
+            current_group = layer.group
+        record, channel_bytes = _pack_one_layer(layer, h, w)
+        _emit(record, channel_bytes)
+    if current_group is not None:
+        grp = groups.get(current_group)
+        _emit(*_pack_group_header(current_group, grp, h, w))
+
+    layer_count_word = struct.pack(">H", record_count)
     layer_info_payload = layer_count_word + bytes(records) + bytes(channel_blob)
     if len(layer_info_payload) % 2:
         layer_info_payload += b"\x00"
     layer_info_section = struct.pack(">I", len(layer_info_payload)) + layer_info_payload
 
-    # Global layer mask info — empty.
     global_mask = struct.pack(">I", 0)
-
     block = layer_info_section + global_mask
     return struct.pack(">I", len(block)) + block
 
@@ -170,6 +211,7 @@ def _pack_one_layer(layer: Layer, h: int, w: int) -> tuple[bytes, bytes]:
         struct.pack(">I", 0)        # layer mask data length
         + struct.pack(">I", 0)      # blending ranges length
         + name_bytes
+        + _pack_additional_info_luni(layer.name)
     )
     extra_with_length = struct.pack(">I", len(extra)) + extra
 
@@ -189,6 +231,102 @@ def _pack_one_layer(layer: Layer, h: int, w: int) -> tuple[bytes, bytes]:
         channel_data.extend(struct.pack(">H", _COMPRESSION_RAW))
         channel_data.extend(plane.tobytes())
     return record, bytes(channel_data)
+
+
+def _pack_section_end(h: int, w: int) -> tuple[bytes, bytes]:
+    """Pack a ``section divider end`` placeholder layer.
+
+    These have empty bounds + zero channels but a well-known name and
+    an ``lsct`` additional-info block of type 3. Photoshop reads them
+    as "the bottom-most member of the group above starts here".
+    """
+    return _pack_section_layer(
+        name=_SECTION_END_NAME, divider_type=_SECTION_END,
+        visible=True, opacity=1.0, blend_mode="normal",
+    )
+
+
+def _pack_group_header(
+    group_name: str, group: LayerGroup | None, h: int, w: int,
+) -> tuple[bytes, bytes]:
+    """Pack the ``group header`` layer that names a layer group.
+
+    Carries the group's visibility / opacity / blend mode so a
+    Photoshop user sees the same group state after a round-trip.
+    """
+    visible = True
+    opacity = 1.0
+    blend_mode = "normal"
+    if group is not None:
+        visible = bool(group.visible)
+        opacity = float(group.opacity)
+        if group.blend_mode != "pass_through":
+            blend_mode = group.blend_mode
+    divider_type = (
+        _SECTION_OPEN_GROUP if (group is None or group.expanded)
+        else _SECTION_CLOSED_GROUP
+    )
+    return _pack_section_layer(
+        name=group_name, divider_type=divider_type,
+        visible=visible, opacity=opacity, blend_mode=blend_mode,
+    )
+
+
+def _pack_section_layer(
+    *, name: str, divider_type: int,
+    visible: bool, opacity: float, blend_mode: str,
+) -> tuple[bytes, bytes]:
+    blend_key = _BLEND_MODE_TO_PSD.get(
+        blend_mode, _BLEND_MODE_TO_PSD["normal"],
+    )
+    opacity_byte = max(0, min(255, int(round(opacity * 255))))
+    flags = _LAYER_FLAG_PHOTOSHOP_5_PLUS
+    if not visible:
+        flags |= _LAYER_FLAG_HIDDEN
+    # Empty layer — zero bounds, zero channels.
+    bounds = struct.pack(">iiiiH", 0, 0, 0, 0, 0)
+    name_bytes = _pack_pascal_padded(name, pad_to=4)
+    extra = (
+        struct.pack(">I", 0)        # layer mask data length
+        + struct.pack(">I", 0)      # blending ranges length
+        + name_bytes
+        + _pack_additional_info_luni(name)
+        + _pack_additional_info_lsct(divider_type)
+    )
+    record = (
+        bounds
+        + b"8BIM"
+        + blend_key
+        + struct.pack(">BBBB", opacity_byte, 0, flags, 0)
+        + struct.pack(">I", len(extra))
+        + extra
+    )
+    # No channel data for zero-channel layers.
+    return record, b""
+
+
+def _pack_additional_info_luni(name: str) -> bytes:
+    """Pack a ``luni`` Unicode-name additional-info block.
+
+    Layout: ``8BIM`` + ``luni`` + length(u32) + payload + 2-byte pad.
+    Payload: u32 character count, then UTF-16-BE characters.
+    Photoshop prefers ``luni`` over the legacy Pascal name when both
+    are present.
+    """
+    chars = name
+    payload = struct.pack(">I", len(chars)) + chars.encode("utf-16-be")
+    if len(payload) % 2:
+        payload += b"\x00"
+    block = b"8BIM" + b"luni" + struct.pack(">I", len(payload)) + payload
+    return block
+
+
+def _pack_additional_info_lsct(divider_type: int) -> bytes:
+    """Pack an ``lsct`` section-divider additional-info block."""
+    payload = struct.pack(">I", int(divider_type))
+    if len(payload) % 2:
+        payload += b"\x00"
+    return b"8BIM" + b"lsct" + struct.pack(">I", len(payload)) + payload
 
 
 def _pack_image_data_section(
@@ -250,7 +388,7 @@ def load_psd(path: str | Path) -> PaintDocument:
     h, w = _parse_header(cursor)
     _skip_color_mode_section(cursor)
     _skip_image_resources_section(cursor)
-    layers = _parse_layer_and_mask_section(cursor, h, w)
+    layers, groups = _parse_layer_and_mask_section(cursor, h, w)
     document = PaintDocument()
     if not layers:
         # No layers — treat the trailing composite as a single
@@ -259,7 +397,9 @@ def load_psd(path: str | Path) -> PaintDocument:
         document.load_image(composite)
         return document
     # Discard the trailing composite — we have the layer pixels.
-    document.replace_state(layers=layers, active_index=len(layers) - 1)
+    document.replace_state(
+        layers=layers, active_index=len(layers) - 1, groups=groups,
+    )
     return document
 
 
@@ -297,15 +437,17 @@ def _skip_image_resources_section(cursor) -> None:
     cursor.skip(length)
 
 
-def _parse_layer_and_mask_section(cursor, h: int, w: int) -> list[Layer]:
+def _parse_layer_and_mask_section(
+    cursor, h: int, w: int,
+) -> tuple[list[Layer], dict[str, LayerGroup]]:
     section_length = cursor.read_u32()
     if section_length == 0:
-        return []
+        return [], {}
     section_end = cursor.pos + section_length
     layer_info_length = cursor.read_u32()
     if layer_info_length == 0:
         cursor.seek(section_end)
-        return []
+        return [], {}
     layer_info_end = cursor.pos + layer_info_length
 
     layer_count_signed = cursor.read_i16()
@@ -318,15 +460,56 @@ def _parse_layer_and_mask_section(cursor, h: int, w: int) -> list[Layer]:
     for _ in range(layer_count):
         records.append(_parse_layer_record(cursor))
 
+    # Walk records bottom-to-top, reading channel data, and assemble
+    # groups via lsct section dividers. PSD encodes a group as:
+    #   ┌── section divider end (lsct=3)
+    #   │   member layers (regular records)
+    #   └── group header (lsct=1 or 2, name = group name)
     layers: list[Layer] = []
+    groups: dict[str, LayerGroup] = {}
+    pending_group_members: list[Layer] = []
+    in_group_depth = 0
     for record in records:
-        layer = _read_layer_channel_data(cursor, record, h, w)
-        if layer is not None:
+        section_type = record.get("section_type")
+        if section_type == _SECTION_END:
+            # The next regular records belong to a group whose header
+            # we'll see later. Just consume the empty record's (lack of)
+            # channel data and bump the depth.
+            _read_layer_channel_data(cursor, record, h, w)
+            in_group_depth += 1
+        elif section_type in (_SECTION_OPEN_GROUP, _SECTION_CLOSED_GROUP):
+            _read_layer_channel_data(cursor, record, h, w)
+            group_name = record["name"]
+            blend_mode = _PSD_TO_BLEND_MODE.get(record["blend_key"], "normal")
+            grp_blend = blend_mode if blend_mode in LAYER_BLEND_MODES else "normal"
+            # Skip a corrupt group (bad name / opacity) rather than
+            # fail the whole load.
+            with contextlib.suppress(ValueError):
+                groups[group_name] = LayerGroup(
+                    name=group_name,
+                    visible=not bool(
+                        record["flags"] & _LAYER_FLAG_HIDDEN,
+                    ),
+                    opacity=record["opacity"] / 255.0,
+                    blend_mode=grp_blend if grp_blend != "normal"
+                    else "pass_through",
+                    expanded=section_type == _SECTION_OPEN_GROUP,
+                )
+            for member in pending_group_members:
+                member.group = group_name
+            pending_group_members = []
+            in_group_depth = max(0, in_group_depth - 1)
+        else:
+            layer = _read_layer_channel_data(cursor, record, h, w)
+            if layer is None:
+                continue
+            if in_group_depth > 0:
+                pending_group_members.append(layer)
             layers.append(layer)
 
     cursor.seek(layer_info_end)
     cursor.seek(section_end)
-    return layers
+    return layers, groups
 
 
 def _parse_layer_record(cursor) -> dict:
@@ -354,7 +537,10 @@ def _parse_layer_record(cursor) -> dict:
     cursor.skip(mask_data_length)
     blending_ranges_length = cursor.read_u32()
     cursor.skip(blending_ranges_length)
-    name = _read_pascal_padded(cursor, pad_to=4)
+    legacy_name = _read_pascal_padded(cursor, pad_to=4)
+    additional = _parse_additional_info(
+        cursor, end=extra_start + extra_length,
+    )
     cursor.seek(extra_start + extra_length)
     return {
         "bounds": (top, left, bottom, right),
@@ -362,8 +548,41 @@ def _parse_layer_record(cursor) -> dict:
         "blend_key": blend_key,
         "opacity": opacity,
         "flags": flags,
-        "name": name,
+        # Prefer the Unicode name when present; legacy name is a
+        # latin-1 fallback that loses high codepoints.
+        "name": additional.get("luni", legacy_name),
+        "section_type": additional.get("lsct"),
     }
+
+
+def _parse_additional_info(cursor, *, end: int) -> dict:
+    """Walk the additional-info blocks at the tail of a layer record's
+    extra-data section. Recognised keys: ``luni`` (Unicode name),
+    ``lsct`` (section divider type)."""
+    out: dict = {}
+    while cursor.pos + 12 <= end:
+        sig = cursor.read(4)
+        if sig not in (b"8BIM", b"8B64"):
+            # Some encoders pad with zeros — back up so the outer
+            # ``cursor.seek(end)`` skips cleanly.
+            cursor.seek(cursor.pos - 4)
+            break
+        key = cursor.read(4)
+        length = cursor.read_u32()
+        block_start = cursor.pos
+        block_end = block_start + length
+        if key == b"luni" and length >= 4:
+            char_count = cursor.read_u32()
+            chars_bytes = cursor.read(char_count * 2)
+            out["luni"] = chars_bytes.decode("utf-16-be", errors="replace")
+        elif key == b"lsct" and length >= 4:
+            out["lsct"] = cursor.read_u32()
+        cursor.seek(block_end)
+        # Many additional-info payloads are padded to a 2-byte
+        # boundary; account for it.
+        if (cursor.pos - block_start) % 2:
+            cursor.skip(1)
+    return out
 
 
 def _read_layer_channel_data(

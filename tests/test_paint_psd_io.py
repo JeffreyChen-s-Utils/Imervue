@@ -216,3 +216,94 @@ def test_random_pixels_round_trip_byte_for_byte(tmp_path):
     save_psd(doc, path)
     loaded = load_psd(path)
     np.testing.assert_array_equal(loaded.layers()[0].image, base)
+
+
+# ---------------------------------------------------------------------------
+# Unicode names
+# ---------------------------------------------------------------------------
+
+
+def test_layer_name_round_trips_chinese_characters(tmp_path):
+    doc = _make_doc()
+    doc.layers()[1].name = "插畫"
+    path = tmp_path / "cjk.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    assert loaded.layers()[1].name == "插畫"
+
+
+def test_layer_name_round_trips_japanese_kana(tmp_path):
+    doc = _make_doc()
+    doc.layers()[1].name = "キャラクター"
+    path = tmp_path / "jp.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    assert loaded.layers()[1].name == "キャラクター"
+
+
+def test_layer_name_round_trips_mixed_unicode(tmp_path):
+    doc = _make_doc()
+    doc.layers()[1].name = "Sketch — 草稿 (v2)"
+    path = tmp_path / "mixed.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    assert loaded.layers()[1].name == "Sketch — 草稿 (v2)"
+
+
+# ---------------------------------------------------------------------------
+# Layer groups
+# ---------------------------------------------------------------------------
+
+
+def test_groups_round_trip_layer_membership(tmp_path):
+    doc = _make_doc()
+    doc.create_group("Inks")
+    doc.set_layer_group(group="Inks")
+    path = tmp_path / "groups.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    # Members of "Inks" should still be tagged with the group on read.
+    in_group = [layer for layer in loaded.layers() if layer.group == "Inks"]
+    assert len(in_group) >= 1
+    assert "Inks" in [g.name for g in loaded.groups()]
+
+
+def test_groups_round_trip_group_visibility(tmp_path):
+    doc = _make_doc()
+    doc.create_group("Inks", visible=False)
+    doc.set_layer_group(group="Inks")
+    path = tmp_path / "hidden_group.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    grp = loaded.group("Inks")
+    assert grp is not None
+    assert grp.visible is False
+
+
+def test_groups_round_trip_group_opacity(tmp_path):
+    doc = _make_doc()
+    doc.create_group("Inks", opacity=0.5)
+    doc.set_layer_group(group="Inks")
+    path = tmp_path / "opacity_group.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    grp = loaded.group("Inks")
+    assert grp is not None
+    assert abs(grp.opacity - 0.5) <= 1.0 / 255.0 + 1e-6
+
+
+def test_groups_outside_layer_unaffected(tmp_path):
+    """A layer above the group with no group tag round-trips with no
+    spurious group assignment."""
+    doc = _make_doc()
+    doc.create_group("Inks")
+    # Move only the bottom layer into the group.
+    doc.set_layer_group(index=0, group="Inks")
+    # Layer at index 1 ("Above") is intentionally NOT in the group.
+    path = tmp_path / "outside.psd"
+    save_psd(doc, path)
+    loaded = load_psd(path)
+    # The "Above" layer should keep no group on read.
+    above = [layer for layer in loaded.layers() if layer.name == "Above"]
+    assert above
+    assert above[0].group is None
