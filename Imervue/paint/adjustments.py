@@ -35,6 +35,8 @@ ADJUSTMENT_KINDS = (
     "color_balance",
     "selective_color",
     "photo_filter",
+    "hsl",
+    "gradient_map",
 )
 
 # Six named ranges in selective-color, mapped to their HSV hue centres.
@@ -92,6 +94,24 @@ DEFAULT_PARAMS: dict[str, dict] = {
         # Defaults reproduce Photoshop's "Warming Filter (85)".
         "color": [235, 165, 95],
         "density": 0.25,
+    },
+    "hsl": {
+        # Hue-Saturation-Lightness — proper HSL where pure black has
+        # L = 0 and pure white has L = 1, unlike HSV's V which sits at
+        # 1 for any fully-saturated colour. Saturation / lightness
+        # are multipliers (1.0 = identity).
+        "hue_shift_deg": 0.0,
+        "saturation": 1.0,
+        "lightness": 1.0,
+    },
+    "gradient_map": {
+        # Map per-pixel luminance to a multi-stop gradient. Default
+        # is a black → white gradient = grayscale (identity for
+        # already-grey images, desaturate-to-grey for colour ones).
+        "stops": [
+            {"position": 0.0, "color": [0, 0, 0, 255]},
+            {"position": 1.0, "color": [255, 255, 255, 255]},
+        ],
     },
 }
 
@@ -165,6 +185,10 @@ def apply_adjustment(
         return _apply_selective_color(image, adjustment.params)
     if adjustment.kind == "photo_filter":
         return _apply_photo_filter(image, adjustment.params)
+    if adjustment.kind == "hsl":
+        return _apply_hsl(image, adjustment.params)
+    if adjustment.kind == "gradient_map":
+        return _apply_gradient_map(image, adjustment.params)
     raise ValueError(f"unknown adjustment kind {adjustment.kind!r}")
 
 
@@ -387,6 +411,153 @@ def _apply_photo_filter(image: np.ndarray, params: dict) -> np.ndarray:
     out = image.copy()
     out[..., :3] = np.clip(blended * 255.0, 0.0, 255.0).astype(np.uint8)
     return out
+
+
+# ---------------------------------------------------------------------------
+# HSL
+# ---------------------------------------------------------------------------
+
+
+def _apply_hsl(image: np.ndarray, params: dict) -> np.ndarray:
+    p = {**DEFAULT_PARAMS["hsl"], **params}
+    hue_shift = float(p.get("hue_shift_deg", 0.0))
+    sat = max(0.0, min(8.0, float(p.get("saturation", 1.0))))
+    light = max(0.0, min(8.0, float(p.get("lightness", 1.0))))
+    rgb = image[..., :3].astype(np.float32) / 255.0
+    hsl = _rgb_to_hsl(rgb)
+    hsl[..., 0] = (hsl[..., 0] + hue_shift) % 360.0
+    hsl[..., 1] = np.clip(hsl[..., 1] * sat, 0.0, 1.0)
+    hsl[..., 2] = np.clip(hsl[..., 2] * light, 0.0, 1.0)
+    rgb_out = _hsl_to_rgb(hsl)
+    out = image.copy()
+    out[..., :3] = np.clip(rgb_out * 255.0, 0.0, 255.0).astype(np.uint8)
+    return out
+
+
+def _rgb_to_hsl(rgb: np.ndarray) -> np.ndarray:
+    """Vectorised RGB → HSL. Inputs ``[0, 1]`` RGB; outputs H in
+    ``[0, 360)`` and S, L in ``[0, 1]``."""
+    r = rgb[..., 0]
+    g = rgb[..., 1]
+    b = rgb[..., 2]
+    cmax = np.max(rgb, axis=-1)
+    cmin = np.min(rgb, axis=-1)
+    delta = cmax - cmin
+    lightness = (cmax + cmin) / 2.0
+
+    safe_delta = np.where(delta == 0, 1.0, delta)
+    h = np.zeros_like(cmax)
+    mask_r = (cmax == r) & (delta != 0)
+    mask_g = (cmax == g) & (delta != 0)
+    mask_b = (cmax == b) & (delta != 0)
+    h = np.where(mask_r, ((g - b) / safe_delta) % 6.0, h)
+    h = np.where(mask_g, ((b - r) / safe_delta) + 2.0, h)
+    h = np.where(mask_b, ((r - g) / safe_delta) + 4.0, h)
+    h = h * 60.0
+
+    # Saturation differs from HSV — HSL's S is normalised against
+    # how close L is to mid-grey: S = delta / (1 - |2L - 1|).
+    denom = 1.0 - np.abs(2.0 * lightness - 1.0)
+    safe_denom = np.where(denom <= 1e-9, 1.0, denom)
+    s = np.where(delta == 0, 0.0, delta / safe_denom)
+    return np.stack([h, s, lightness], axis=-1)
+
+
+def _hsl_to_rgb(hsl: np.ndarray) -> np.ndarray:
+    """Inverse of :func:`_rgb_to_hsl`. Returns HxWx3 RGB in ``[0, 1]``."""
+    h = hsl[..., 0] % 360.0
+    s = hsl[..., 1]
+    l_ = hsl[..., 2]
+    c = (1.0 - np.abs(2.0 * l_ - 1.0)) * s
+    h_prime = h / 60.0
+    x = c * (1.0 - np.abs(h_prime % 2.0 - 1.0))
+    m = l_ - c / 2.0
+
+    r = np.zeros_like(c)
+    g = np.zeros_like(c)
+    b = np.zeros_like(c)
+    seg0 = (h_prime >= 0) & (h_prime < 1)
+    seg1 = (h_prime >= 1) & (h_prime < 2)
+    seg2 = (h_prime >= 2) & (h_prime < 3)
+    seg3 = (h_prime >= 3) & (h_prime < 4)
+    seg4 = (h_prime >= 4) & (h_prime < 5)
+    seg5 = (h_prime >= 5) & (h_prime < 6)
+    r = np.where(seg0, c, r)
+    g = np.where(seg0, x, g)
+    r = np.where(seg1, x, r)
+    g = np.where(seg1, c, g)
+    g = np.where(seg2, c, g)
+    b = np.where(seg2, x, b)
+    g = np.where(seg3, x, g)
+    b = np.where(seg3, c, b)
+    r = np.where(seg4, x, r)
+    b = np.where(seg4, c, b)
+    r = np.where(seg5, c, r)
+    b = np.where(seg5, x, b)
+    return np.stack([r + m, g + m, b + m], axis=-1)
+
+
+# ---------------------------------------------------------------------------
+# Gradient Map
+# ---------------------------------------------------------------------------
+
+
+def _apply_gradient_map(image: np.ndarray, params: dict) -> np.ndarray:
+    """Map per-pixel luminance to a multi-stop gradient lookup."""
+    p = {**DEFAULT_PARAMS["gradient_map"], **params}
+    stops_raw = p.get("stops") or DEFAULT_PARAMS["gradient_map"]["stops"]
+    lut = _build_gradient_lut(stops_raw)
+    rgb = image[..., :3].astype(np.float32)
+    luminance = (
+        0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]
+    )
+    indices = np.clip(np.rint(luminance), 0, 255).astype(np.int32)
+    mapped = lut[indices]
+    out = image.copy()
+    out[..., :3] = mapped[..., :3]
+    return out
+
+
+def _build_gradient_lut(stops_raw) -> np.ndarray:
+    """Compile a list of {position, color} stops into a 256×4 uint8
+    LUT. Ill-formed stops are dropped; if fewer than 2 valid stops
+    remain the default black→white pair pads it out."""
+    cleaned: list[tuple[float, tuple[int, int, int, int]]] = []
+    for entry in stops_raw or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            position = max(0.0, min(1.0, float(entry.get("position", 0.0))))
+        except (TypeError, ValueError):
+            continue
+        raw_color = entry.get("color")
+        if isinstance(raw_color, (list, tuple)) and len(raw_color) >= 3:
+            try:
+                if len(raw_color) >= 4:
+                    color = tuple(max(0, min(255, int(c))) for c in raw_color[:4])
+                else:
+                    color = (
+                        *(max(0, min(255, int(c))) for c in raw_color[:3]),
+                        255,
+                    )
+            except (TypeError, ValueError):
+                continue
+        else:
+            color = (0, 0, 0, 255)
+        cleaned.append((position, color))   # type: ignore[arg-type]
+    cleaned.sort(key=lambda pair: pair[0])
+    if len(cleaned) < 2:
+        cleaned = [
+            (0.0, (0, 0, 0, 255)),
+            (1.0, (255, 255, 255, 255)),
+        ]
+
+    positions = np.array([c[0] for c in cleaned], dtype=np.float32) * 255.0
+    colors = np.array([c[1] for c in cleaned], dtype=np.float32)
+    lut = np.zeros((256, 4), dtype=np.float32)
+    for ch in range(4):
+        lut[:, ch] = np.interp(np.arange(256, dtype=np.float32), positions, colors[:, ch])
+    return np.clip(lut, 0.0, 255.0).astype(np.uint8)
 
 
 def _rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
