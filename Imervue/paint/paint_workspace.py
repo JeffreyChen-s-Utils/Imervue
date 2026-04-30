@@ -37,6 +37,7 @@ from Imervue.paint.dock_panels import (
     LayerDock,
     NavigatorDock,
 )
+from Imervue.paint.filter_menu import build_filter_menu
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
 from Imervue.paint.tool_dispatcher import ToolDispatcher
 
@@ -53,11 +54,11 @@ class PaintWorkspace(QMainWindow):
         super().__init__(parent)
         self._state = state if state is not None else ts.load_tool_state()
 
-        # The embedded main window must not show its own menu bar — the host
-        # main window already owns one.
-        empty_menu = QMenuBar(self)
-        empty_menu.hide()
-        self.setMenuBar(empty_menu)
+        # The embedded main window has its own menu bar so the Filter menu
+        # has somewhere to live. The host window's menu bar is unaffected.
+        paint_menu_bar = QMenuBar(self)
+        paint_menu_bar.addMenu(build_filter_menu(self))
+        self.setMenuBar(paint_menu_bar)
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)
