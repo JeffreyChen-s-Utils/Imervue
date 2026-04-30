@@ -241,3 +241,91 @@ def test_load_returns_empty_panel_when_nothing_stored():
 def test_load_handles_non_dict_storage():
     user_setting_dict["paint_reference_panel"] = ["not", "a", "dict"]
     assert rp.load_reference_panel().references == []
+
+
+# ---------------------------------------------------------------------------
+# Rotate / scale verbs
+# ---------------------------------------------------------------------------
+
+
+def _populated_panel():
+    panel = rp.ReferencePanel()
+    panel.add(rp.ReferenceImage(path="a.png", scale=1.0, rotation_deg=0.0))
+    panel.add(rp.ReferenceImage(path="b.png", scale=1.0, rotation_deg=0.0))
+    return panel
+
+
+def test_rotate_accumulates_delta():
+    panel = _populated_panel()
+    panel.rotate(0, 45)
+    panel.rotate(0, 30)
+    assert panel.references[0].rotation_deg == 75.0
+
+
+def test_rotate_wraps_into_canonical_range():
+    """Successive rotations must wrap rather than drift past 180°."""
+    panel = _populated_panel()
+    panel.rotate(0, 200)
+    assert -180.0 < panel.references[0].rotation_deg <= 180.0
+
+
+def test_rotate_idempotent_zero_delta_returns_false():
+    panel = _populated_panel()
+    assert panel.rotate(0, 0.0) is False
+
+
+def test_rotate_returns_false_for_out_of_range_index():
+    panel = _populated_panel()
+    assert panel.rotate(99, 45) is False
+
+
+def test_set_rotation_replaces_absolute_value():
+    panel = _populated_panel()
+    panel.rotate(0, 45)
+    panel.set_rotation(0, -90)
+    assert panel.references[0].rotation_deg == -90.0
+
+
+def test_scale_by_clamps_to_max():
+    panel = _populated_panel()
+    panel.scale_by(0, 100.0)
+    assert panel.references[0].scale == rp.MAX_SCALE
+
+
+def test_scale_by_clamps_to_min():
+    panel = _populated_panel()
+    panel.scale_by(0, 0.0001)
+    assert panel.references[0].scale == rp.MIN_SCALE
+
+
+def test_scale_by_rejects_non_positive_factor():
+    panel = _populated_panel()
+    with pytest.raises(ValueError, match="factor"):
+        panel.scale_by(0, -1.0)
+
+
+def test_scale_by_idempotent_at_clamp_boundary():
+    panel = _populated_panel()
+    panel.set_scale(0, rp.MAX_SCALE)
+    assert panel.scale_by(0, 100.0) is False
+
+
+def test_set_scale_clamps_above_range():
+    panel = _populated_panel()
+    panel.set_scale(0, 999.0)
+    assert panel.references[0].scale == rp.MAX_SCALE
+
+
+def test_rotate_does_not_mutate_unrelated_fields():
+    panel = _populated_panel()
+    panel.set_scale(0, 2.0)
+    panel.rotate(0, 45)
+    assert panel.references[0].scale == 2.0
+    assert panel.references[0].path == "a.png"
+
+
+def test_set_rotation_zero_modulo_full_turn_is_no_op():
+    """360° wraps back to 0; calling set_rotation with 360 on a
+    reference at 0° must report no change."""
+    panel = _populated_panel()
+    assert panel.set_rotation(0, 360.0) is False

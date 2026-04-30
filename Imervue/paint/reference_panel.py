@@ -126,6 +126,56 @@ class ReferencePanel:
     def clear(self) -> None:
         self.references = []
 
+    # ---- per-entry transforms ------------------------------------------
+
+    def rotate(self, index: int, delta_deg: float) -> bool:
+        """Rotate the reference at ``index`` by ``delta_deg`` degrees.
+
+        The rotation accumulates onto the existing ``rotation_deg``
+        field and wraps into the canonical ``(-180, 180]`` range so
+        successive rotations don't drift toward arbitrarily large
+        values that would break a UI slider's expected bounds.
+        """
+        if not 0 <= index < len(self.references):
+            return False
+        current = self.references[index]
+        new_rotation = _wrap_rotation(current.rotation_deg + float(delta_deg))
+        if new_rotation == current.rotation_deg:
+            return False
+        return self.replace(index, _replace_field(current, rotation_deg=new_rotation))
+
+    def set_rotation(self, index: int, rotation_deg: float) -> bool:
+        """Replace the rotation field absolutely (wraps to (-180, 180])."""
+        if not 0 <= index < len(self.references):
+            return False
+        wrapped = _wrap_rotation(float(rotation_deg))
+        current = self.references[index]
+        if wrapped == current.rotation_deg:
+            return False
+        return self.replace(index, _replace_field(current, rotation_deg=wrapped))
+
+    def scale_by(self, index: int, factor: float) -> bool:
+        """Multiply the reference's scale by ``factor``, clamped."""
+        if not 0 <= index < len(self.references):
+            return False
+        if float(factor) <= 0:
+            raise ValueError(f"factor must be > 0, got {factor!r}")
+        current = self.references[index]
+        new_scale = max(MIN_SCALE, min(MAX_SCALE, current.scale * float(factor)))
+        if new_scale == current.scale:
+            return False
+        return self.replace(index, _replace_field(current, scale=new_scale))
+
+    def set_scale(self, index: int, scale: float) -> bool:
+        """Set the reference's scale absolutely, clamped to MIN/MAX."""
+        if not 0 <= index < len(self.references):
+            return False
+        clamped = max(MIN_SCALE, min(MAX_SCALE, float(scale)))
+        current = self.references[index]
+        if clamped == current.scale:
+            return False
+        return self.replace(index, _replace_field(current, scale=clamped))
+
     def to_dict(self) -> dict:
         return {"references": [r.to_dict() for r in self.references]}
 
@@ -143,6 +193,41 @@ class ReferencePanel:
             except (ValueError, TypeError):
                 continue
         return out
+
+
+# ---------------------------------------------------------------------------
+# Internal field-replace helpers
+# ---------------------------------------------------------------------------
+
+
+def _wrap_rotation(deg: float) -> float:
+    """Wrap an angle into the canonical ``(-180, 180]`` range."""
+    wrapped = ((float(deg) + 180.0) % 360.0) - 180.0
+    # ``-180`` and ``180`` both arise from the modulo math; pick the
+    # positive boundary so the slider's labelling stays stable.
+    if wrapped == -180.0:
+        return 180.0
+    return wrapped
+
+
+def _replace_field(reference: ReferenceImage, **kwargs) -> ReferenceImage:
+    """Return a copy of ``reference`` with the supplied fields swapped.
+
+    ReferenceImage is frozen so mutation requires a new instance.
+    Wrapping the dataclass-replace pattern in a helper keeps the
+    transform verbs above readable.
+    """
+    fields = reference.to_dict()
+    fields.update(kwargs)
+    return ReferenceImage(
+        path=fields["path"],
+        x=float(fields["x"]),
+        y=float(fields["y"]),
+        scale=float(fields["scale"]),
+        rotation_deg=float(fields["rotation_deg"]),
+        opacity=float(fields["opacity"]),
+        visible=bool(fields["visible"]),
+    )
 
 
 # ---------------------------------------------------------------------------
