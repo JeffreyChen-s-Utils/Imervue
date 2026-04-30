@@ -97,6 +97,7 @@ EVENT_HISTORY = "history"      # color history changed
 EVENT_FILL = "fill"            # any fill setting changed
 EVENT_SELECTION_MODE = "selection_mode"   # selection combine mode changed
 EVENT_GRADIENT = "gradient"    # gradient kind / reverse changed
+EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,7 @@ class ToolState:
     selection_mode: str = "replace"
     gradient_kind: str = "linear"
     gradient_reverse: bool = False
+    symmetry_mode: str = "off"
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -247,6 +249,20 @@ class ToolState:
             self._emit(EVENT_GRADIENT)
         return changed
 
+    def set_symmetry_mode(self, mode: str) -> bool:
+        """Switch the active brush symmetry mirror mode."""
+        from Imervue.paint.symmetry import SYMMETRY_MODES
+        if mode not in SYMMETRY_MODES:
+            raise ValueError(
+                f"unknown symmetry mode {mode!r}; expected one of {SYMMETRY_MODES}",
+            )
+        if mode == self.symmetry_mode:
+            return False
+        self.symmetry_mode = mode
+        self._persist()
+        self._emit(EVENT_SYMMETRY)
+        return True
+
     def set_selection_mode(self, mode: str) -> bool:
         """Switch the active selection combine mode."""
         from Imervue.paint.selection import SELECTION_MODES
@@ -345,6 +361,7 @@ class ToolState:
             "selection_mode": self.selection_mode,
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
+            "symmetry_mode": self.symmetry_mode,
             "color_history": [list(c) for c in self.color_history],
         }
 
@@ -368,11 +385,16 @@ class ToolState:
         if gradient_kind not in GRADIENT_KINDS:
             gradient_kind = "linear"
         gradient_reverse = bool(raw.get("gradient_reverse", False))
+        from Imervue.paint.symmetry import DEFAULT_SYMMETRY_MODE, SYMMETRY_MODES
+        symmetry_mode = raw.get("symmetry_mode", DEFAULT_SYMMETRY_MODE)
+        if symmetry_mode not in SYMMETRY_MODES:
+            symmetry_mode = DEFAULT_SYMMETRY_MODE
         history = _history_from_list(raw.get("color_history"))
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
+            symmetry_mode=symmetry_mode,
             color_history=history,
         )
 

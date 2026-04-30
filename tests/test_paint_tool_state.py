@@ -275,3 +275,63 @@ def test_from_dict_recovers_from_corrupt_color_history():
         "color_history": ["bogus", [1, 2], [10, 20, 30], [-5, 999, 1000], None],
     })
     assert rebuilt.color_history == [(10, 20, 30), (0, 255, 255)]
+
+
+# ---------------------------------------------------------------------------
+# Symmetry mode
+# ---------------------------------------------------------------------------
+
+
+def test_default_symmetry_mode_is_off():
+    state = ts.load_tool_state()
+    assert state.symmetry_mode == "off"
+
+
+def test_set_symmetry_mode_changes_value():
+    state = ts.load_tool_state()
+    assert state.set_symmetry_mode("radial_4") is True
+    assert state.symmetry_mode == "radial_4"
+
+
+def test_set_symmetry_mode_idempotent_returns_false():
+    state = ts.load_tool_state()
+    state.set_symmetry_mode("horizontal")
+    assert state.set_symmetry_mode("horizontal") is False
+
+
+def test_set_symmetry_mode_rejects_unknown():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError):
+        state.set_symmetry_mode("kaleidoscope")
+
+
+def test_set_symmetry_mode_emits_symmetry_event():
+    state = ts.load_tool_state()
+    received: list[str] = []
+    state.subscribe(received.append)
+    state.set_symmetry_mode("vertical")
+    assert ts.EVENT_SYMMETRY in received
+
+
+def test_symmetry_mode_persists_to_user_setting_dict():
+    state = ts.load_tool_state()
+    state.set_symmetry_mode("radial_8")
+    raw = user_setting_dict.get("paint_state")
+    assert raw["symmetry_mode"] == "radial_8"
+
+
+def test_symmetry_mode_round_trips_via_to_from_dict():
+    state = ts.load_tool_state()
+    state.set_symmetry_mode("both")
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.symmetry_mode == "both"
+
+
+def test_from_dict_drops_unknown_symmetry_mode():
+    rebuilt = ts.ToolState.from_dict({"symmetry_mode": "kaleidoscope"})
+    assert rebuilt.symmetry_mode == "off"
+
+
+def test_from_dict_handles_missing_symmetry_key():
+    rebuilt = ts.ToolState.from_dict({})
+    assert rebuilt.symmetry_mode == "off"

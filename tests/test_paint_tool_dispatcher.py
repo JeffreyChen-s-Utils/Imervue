@@ -153,6 +153,108 @@ def test_brush_cancel_clears_active_stroke(state, canvas):
 
 
 # ---------------------------------------------------------------------------
+# BrushTool — symmetry
+# ---------------------------------------------------------------------------
+
+
+def test_brush_symmetry_horizontal_paints_mirror_dab(state, canvas):
+    """Press at (10, 32) with horizontal symmetry must also paint at (54, 32)
+    on a 64-wide canvas (origin at 32, mirror x = 2*32 - 10 = 54)."""
+    state.set_foreground((255, 0, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("horizontal")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 32), canvas)
+    # Source dab.
+    assert canvas[32, 10, 0] == 255
+    # Mirror dab on the opposite side of the vertical axis.
+    assert canvas[32, 54, 0] == 255
+
+
+def test_brush_symmetry_off_paints_only_source(state, canvas):
+    state.set_foreground((255, 0, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("off")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 32), canvas)
+    # The symmetric position remains white.
+    assert canvas[32, 54, 0] == 255  # canvas is white pre-paint
+    # Confirm the source spot was actually painted (sanity).
+    assert canvas[32, 10, 0] == 255
+
+
+def test_brush_symmetry_radial_4_paints_four_dabs(state, canvas):
+    state.set_foreground((0, 0, 255))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("radial_4")
+    tool = BrushTool(state)
+    # Press at (40, 32) — 8 pixels right of centre. Radial 4 stamps at
+    # 0°, 90°, 180°, 270° → (40, 32), (32, 40), (24, 32), (32, 24).
+    tool.handle(_press(40, 32), canvas)
+    assert canvas[32, 40, 2] == 255  # 0°
+    assert canvas[40, 32, 2] == 255  # 90°
+    assert canvas[32, 24, 2] == 255  # 180°
+    assert canvas[24, 32, 2] == 255  # 270°
+
+
+def test_brush_symmetry_extend_mirrors_move(state, canvas):
+    state.set_foreground((0, 200, 0))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("vertical")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 10), canvas)
+    tool.handle(_move(10, 20), canvas)
+    tool.handle(_release(10, 20), canvas)
+    # Mirror of (10, 20) over horizontal axis through y=32 is (10, 44).
+    assert canvas[20, 10, 1] == 200
+    assert canvas[44, 10, 1] == 200
+
+
+def test_brush_symmetry_origin_snapshot_survives_resize(state):
+    """Mode + origin are captured at press time, so a canvas swap mid-stroke
+    doesn't reroute mirrors to a different centre."""
+    canvas_64 = np.full((64, 64, 4), 255, dtype=np.uint8)
+    state.set_foreground((100, 100, 100))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("horizontal")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 32), canvas_64)
+    # Same canvas instance for the rest of the stroke — verifies the
+    # origin captured at press is reused on subsequent dabs.
+    tool.handle(_move(15, 32), canvas_64)
+    tool.handle(_release(15, 32), canvas_64)
+    # Mirror of (15, 32) over x=32 is x=49.
+    assert canvas_64[32, 15, 0] == 100
+    assert canvas_64[32, 49, 0] == 100
+
+
+def test_brush_symmetry_mid_stroke_mode_change_does_not_tear(state, canvas):
+    """Switching symmetry_mode mid-stroke must not change the active stroke's
+    mirror layout — the snapshot at press time wins."""
+    state.set_foreground((50, 50, 50))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("horizontal")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 32), canvas)
+    # User flips to off mid-stroke — the active stroke must still mirror.
+    state.set_symmetry_mode("off")
+    tool.handle(_release(10, 32), canvas)
+    # Mirror dab at x=54 must still be painted.
+    assert canvas[32, 54, 0] == 50
+
+
+def test_brush_symmetry_cancel_clears_all_strokes(state, canvas):
+    state.set_foreground((10, 20, 30))
+    state.set_brush(size=3, opacity=1.0, hardness=1.0)
+    state.set_symmetry_mode("both")
+    tool = BrushTool(state)
+    tool.handle(_press(10, 10), canvas)
+    tool.cancel()
+    # Move after cancel returns False — no active strokes left.
+    assert tool.handle(_move(20, 20), canvas) is False
+
+
+# ---------------------------------------------------------------------------
 # EraserTool
 # ---------------------------------------------------------------------------
 

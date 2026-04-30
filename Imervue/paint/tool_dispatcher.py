@@ -170,39 +170,42 @@ class _SelectionContext:
 
 
 class BrushTool:
-    """Standard brush — paints colour through the current brush kernel."""
+    """Standard brush — paints colour through the current brush kernel.
+
+    When :attr:`ToolState.symmetry_mode` is active the tool drives one
+    :class:`BrushStroke` per mirror image of the cursor; every move is
+    fanned out to all of them in lock-step so the canvas paints a
+    perfectly mirrored / radial pattern. ``mode == "off"`` reduces to a
+    single stroke at the source point with no extra cost.
+    """
 
     def __init__(self, state: ToolState, selection_provider=None):
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
-        self._stroke: BrushStroke | None = None
+        self._strokes: list[BrushStroke] = []
         self._stabilizer = None   # type: ignore[assignment]
+        self._mode: str = "off"
+        self._origin: tuple[float, float] = (0.0, 0.0)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
             return self._begin(evt, canvas)
-        if evt.phase == "move" and self._stroke is not None:
+        if evt.phase == "move" and self._strokes:
             x, y = self._smoothed_xy(evt.x, evt.y)
-            self._stroke.extend(canvas, x, y)
+            self._extend_all(canvas, x, y)
             return True
-        if evt.phase == "release" and self._stroke is not None:
+        if evt.phase in ("release", "leave") and self._strokes:
+            # Leaving the canvas is treated like a release so the state
+            # machine never strands an active stroke.
             self._drain_to(canvas, evt.x, evt.y)
-            self._stroke.end(canvas, evt.x, evt.y)
-            self._stroke = None
-            self._stabilizer = None
-            return True
-        if evt.phase == "leave" and self._stroke is not None:
-            # Treat leaving the canvas as a stroke end so we don't strand
-            # the state machine in an active stroke.
-            self._drain_to(canvas, evt.x, evt.y)
-            self._stroke.end(canvas, evt.x, evt.y)
-            self._stroke = None
+            self._end_all(canvas, evt.x, evt.y)
+            self._strokes = []
             self._stabilizer = None
             return True
         return False
 
     def cancel(self) -> None:
-        self._stroke = None
+        self._strokes = []
         self._stabilizer = None
 
     def _smoothed_xy(self, x: float, y: float) -> tuple[float, float]:
@@ -211,10 +214,22 @@ class BrushTool:
         return self._stabilizer.step(x, y)
 
     def _drain_to(self, canvas: np.ndarray, x: float, y: float) -> None:
-        if self._stabilizer is None or self._stroke is None:
+        if self._stabilizer is None or not self._strokes:
             return
         for px, py in self._stabilizer.flush(x, y):
-            self._stroke.extend(canvas, px, py)
+            self._extend_all(canvas, px, py)
+
+    def _mirror(self, x: float, y: float) -> list[tuple[float, float]]:
+        from Imervue.paint.symmetry import mirror_points
+        return mirror_points((x, y), self._mode, self._origin)
+
+    def _extend_all(self, canvas: np.ndarray, x: float, y: float) -> None:
+        for stroke, (px, py) in zip(self._strokes, self._mirror(x, y), strict=True):
+            stroke.extend(canvas, px, py)
+
+    def _end_all(self, canvas: np.ndarray, x: float, y: float) -> None:
+        for stroke, (px, py) in zip(self._strokes, self._mirror(x, y), strict=True):
+            stroke.end(canvas, px, py)
 
     # ---- internals -------------------------------------------------------
 
@@ -237,6 +252,11 @@ class BrushTool:
         # axes so a pen line tapers in width as well as ink density.
         size_scaled = max(1, int(round(brush.size * pressure_size_factor(evt.pressure))))
         opacity_scaled = brush.opacity * pressure_opacity_factor(evt.pressure)
+        # Snapshot symmetry mode + origin at stroke start so a mid-stroke
+        # mode change or canvas resize doesn't tear the mirror geometry.
+        self._mode = self._state.symmetry_mode
+        h, w = canvas.shape[:2]
+        self._origin = (w / 2.0, h / 2.0)
         options = BrushStrokeOptions(
             color=self._state.foreground,
             size=size_scaled,
@@ -248,8 +268,11 @@ class BrushTool:
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
             tip_path=brush.tip_path,
         )
-        self._stroke = BrushStroke(options)
-        self._stroke.begin(canvas, evt.x, evt.y)
+        self._strokes = []
+        for px, py in self._mirror(evt.x, evt.y):
+            stroke = BrushStroke(options)
+            stroke.begin(canvas, px, py)
+            self._strokes.append(stroke)
         return True
 
 
