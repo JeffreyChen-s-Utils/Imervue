@@ -138,6 +138,74 @@ def lock_alpha_mask(
     return base_selection & alpha_mask
 
 
+def refine_edge(
+    mask: np.ndarray,
+    *,
+    smooth: int = 0,
+    feather: int = 0,
+    contrast: float = 0.0,
+    shift: int = 0,
+) -> np.ndarray:
+    """Smooth + feather + contrast + shift the boundary of ``mask``.
+
+    Returns a float32 alpha mask in ``[0, 1]`` — the user-facing
+    "Refine Edge" / "Select And Mask" output the dispatcher can apply
+    as a layer mask. Pipeline order is fixed (shift → smooth → feather
+    → contrast) to give the user predictable layering of effects.
+
+    * ``shift`` (px) — positive grows the boundary outward, negative
+      shrinks it inward. Capped to :data:`MAX_RADIUS`.
+    * ``smooth`` — open / close pass count that erodes-then-dilates-
+      twice-then-erodes; pulls jagged single-pixel artefacts off the
+      boundary without changing the overall area much. Each pass is a
+      full open + close, so ``smooth = 2`` is much heavier than 1.
+    * ``feather`` (px) — separable box-blur radius that fades the
+      bool edge into fractional alpha.
+    * ``contrast`` in ``[-1, 1]`` — steepens (positive) or softens
+      (negative) the alpha curve around 0.5 via a logistic S-curve.
+    """
+    _check_bool_mask(mask)
+    smooth = max(0, min(MAX_RADIUS, int(smooth)))
+    feather = _validate_radius(feather)
+    contrast = max(-1.0, min(1.0, float(contrast)))
+    shift_amount = max(-MAX_RADIUS, min(MAX_RADIUS, int(shift)))
+
+    refined = mask.copy()
+    if shift_amount > 0:
+        for _ in range(shift_amount):
+            refined = _dilate_once(refined)
+    elif shift_amount < 0:
+        for _ in range(-shift_amount):
+            refined = _erode_once(refined)
+
+    if smooth > 0:
+        for _ in range(smooth):
+            refined = _erode_once(refined)
+        for _ in range(2 * smooth):
+            refined = _dilate_once(refined)
+        for _ in range(smooth):
+            refined = _erode_once(refined)
+
+    alpha = refined.astype(np.float32)
+    if feather > 0:
+        alpha = _box_blur(alpha, feather)
+
+    if contrast > 0.0:
+        # Positive contrast steepens the transition via a logistic
+        # S-curve around 0.5 — slope tuned so contrast = 1 produces a
+        # near-binary mask without quite collapsing the feather.
+        k = float(contrast) * 12.0
+        alpha = 1.0 / (1.0 + np.exp(-k * (alpha - 0.5)))
+        alpha = np.clip(alpha, 0.0, 1.0).astype(np.float32)
+    elif contrast < 0.0:
+        # Negative contrast softens by lerping every alpha toward
+        # mid-grey 0.5; magnitude in [0, 1] controls how far.
+        blend = -float(contrast)
+        alpha = alpha * (1.0 - blend) + 0.5 * blend
+        alpha = np.clip(alpha, 0.0, 1.0).astype(np.float32)
+    return alpha
+
+
 def from_layer_alpha(layer_image: np.ndarray, threshold: int = 0) -> np.ndarray:
     """Build a bool selection from a layer's alpha channel.
 
