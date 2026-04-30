@@ -142,6 +142,44 @@ class PaintDocument:
         self._selection = None
         self._notify()
 
+    def replace_state(
+        self,
+        *,
+        layers: list[Layer],
+        active_index: int = 0,
+        selection: np.ndarray | None = None,
+    ) -> None:
+        """Replace the document state wholesale.
+
+        Used by the :mod:`document_io` loader to drop a freshly-read
+        layer stack into the document. Validates layer-shape
+        consistency and selection compatibility before swapping in.
+        """
+        if not layers:
+            raise ValueError("layers must be non-empty")
+        shape = layers[0].image.shape[:2]
+        for i, layer in enumerate(layers):
+            if layer.image.shape[:2] != shape:
+                raise ValueError(
+                    f"layer {i} ({layer.name!r}) shape "
+                    f"{layer.image.shape[:2]} does not match "
+                    f"layer 0 {shape}",
+                )
+        if selection is not None:
+            if selection.shape != shape:
+                raise ValueError(
+                    f"selection shape {selection.shape} does not "
+                    f"match document {shape}",
+                )
+            if selection.dtype != np.bool_:
+                raise ValueError(
+                    f"selection dtype must be bool, got {selection.dtype}",
+                )
+        self._layers = list(layers)
+        self._active_index = max(0, min(int(active_index), len(layers) - 1))
+        self._selection = selection
+        self._notify()
+
     def add_layer(
         self, *, name: str | None = None, on_top_of_active: bool = True,
     ) -> Layer:
