@@ -279,9 +279,13 @@ class BrushTool:
 
     def _snap(self, x: float, y: float) -> tuple[float, float]:
         from Imervue.paint.rulers import snap_to_ruler
-        return snap_to_ruler(
+        sx, sy = snap_to_ruler(
             (x, y), self._ruler, stroke_anchor=self._stroke_anchor,
         )
+        if self._state.snap_to_pixel:
+            from Imervue.paint.visual_guides import snap_to_pixel
+            sx, sy = snap_to_pixel(sx, sy)
+        return (sx, sy)
 
     def _mirror(self, x: float, y: float) -> list[tuple[float, float]]:
         from Imervue.paint.symmetry import mirror_points

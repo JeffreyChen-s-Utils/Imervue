@@ -223,3 +223,85 @@ def test_render_overlay_invisible_guide_skipped():
     s.add_guide(Guide(orientation="vertical", position=10, visible=False))
     out = render_overlay((20, 20), s)
     assert out[..., 3].sum() == 0
+
+
+# ---------------------------------------------------------------------------
+# Pixel grid + snap-to-pixel
+# ---------------------------------------------------------------------------
+
+
+def test_should_show_pixel_grid_threshold():
+    from Imervue.paint.visual_guides import (
+        PIXEL_GRID_MIN_ZOOM,
+        should_show_pixel_grid,
+    )
+    assert not should_show_pixel_grid(1.0)
+    assert not should_show_pixel_grid(PIXEL_GRID_MIN_ZOOM - 0.1)
+    assert should_show_pixel_grid(PIXEL_GRID_MIN_ZOOM)
+    assert should_show_pixel_grid(20.0)
+
+
+def test_snap_to_pixel_rounds_to_nearest_centre():
+    from Imervue.paint.visual_guides import snap_to_pixel
+    # Pixel centres sit at integer + 0.5.
+    assert snap_to_pixel(3.2, 4.7) == (3.5, 4.5)
+    assert snap_to_pixel(0.0, 0.0) == (0.5, 0.5)
+
+
+def test_snap_to_pixel_round_trip_at_centre():
+    """A point already at a pixel centre should snap to itself."""
+    from Imervue.paint.visual_guides import snap_to_pixel
+    assert snap_to_pixel(7.5, 11.5) == (7.5, 11.5)
+
+
+def test_snap_to_pixel_handles_negatives():
+    from Imervue.paint.visual_guides import snap_to_pixel
+    snapped = snap_to_pixel(-0.4, -2.7)
+    assert snapped == (-0.5, -2.5)
+
+
+# ---------------------------------------------------------------------------
+# ToolState round-trip for snap_to_pixel
+# ---------------------------------------------------------------------------
+
+
+def test_tool_state_snap_to_pixel_default_is_false():
+    from Imervue.paint.tool_state import ToolState
+    state = ToolState()
+    assert state.snap_to_pixel is False
+
+
+def test_tool_state_snap_to_pixel_round_trips_via_dict():
+    from Imervue.paint.tool_state import ToolState
+    original = ToolState(snap_to_pixel=True)
+    rebuilt = ToolState.from_dict(original.to_dict())
+    assert rebuilt.snap_to_pixel is True
+
+
+def test_tool_state_snap_to_pixel_default_when_missing():
+    from Imervue.paint.tool_state import ToolState
+    rebuilt = ToolState.from_dict({})
+    assert rebuilt.snap_to_pixel is False
+
+
+# ---------------------------------------------------------------------------
+# Brush snap integration — pure logic via _snap
+# ---------------------------------------------------------------------------
+
+
+def test_brush_snap_pins_to_pixel_when_state_flag_on():
+    from Imervue.paint.tool_dispatcher import BrushTool
+    from Imervue.paint.tool_state import ToolState
+    state = ToolState(snap_to_pixel=True)
+    brush = BrushTool(state)
+    snapped = brush._snap(3.2, 4.7)  # noqa: SLF001
+    assert snapped == (3.5, 4.5)
+
+
+def test_brush_snap_passes_through_when_state_flag_off():
+    from Imervue.paint.tool_dispatcher import BrushTool
+    from Imervue.paint.tool_state import ToolState
+    state = ToolState(snap_to_pixel=False)
+    brush = BrushTool(state)
+    snapped = brush._snap(3.2, 4.7)  # noqa: SLF001
+    assert snapped == (3.2, 4.7)

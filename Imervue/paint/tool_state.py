@@ -154,6 +154,7 @@ class ToolState:
     symmetry_mode: str = "off"
     ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
+    snap_to_pixel: bool = False
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
     )
@@ -429,6 +430,7 @@ class ToolState:
             "symmetry_mode": self.symmetry_mode,
             "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
+            "snap_to_pixel": bool(self.snap_to_pixel),
         }
 
     @classmethod
@@ -463,6 +465,7 @@ class ToolState:
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
+            snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
         )
 
 

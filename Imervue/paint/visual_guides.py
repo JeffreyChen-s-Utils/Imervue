@@ -28,6 +28,34 @@ DEFAULT_GRID_MAJOR_COLOR = (128, 128, 128, 160)
 MIN_GRID_INTERVAL = 2
 MAX_GRID_INTERVAL = 4096
 
+# Minimum on-screen size of a single image pixel (in widget pixels)
+# at which the pixel grid is visually useful — below this the grid
+# lines themselves crowd out the underlying art and the user gets
+# moire instead of guidance. 8.0 ≈ 800 % zoom for a 1:1 widget.
+PIXEL_GRID_MIN_ZOOM = 8.0
+
+
+def should_show_pixel_grid(zoom: float) -> bool:
+    """Whether to draw the per-pixel grid at the given canvas zoom.
+
+    Returns ``True`` when the user has zoomed past
+    :data:`PIXEL_GRID_MIN_ZOOM` so the canvas widget can decide
+    whether to spend the per-paint cost of building the grid texture.
+    """
+    return float(zoom) >= PIXEL_GRID_MIN_ZOOM
+
+
+def snap_to_pixel(x: float, y: float) -> tuple[float, float]:
+    """Round a sub-pixel position to the centre of the nearest pixel.
+
+    Pixel centres sit at integer ``+0.5`` in image space; using the
+    centre means a stamped dab lands exactly on one pixel rather than
+    blurring across two. Used by the brush when the user enables
+    snap-to-pixel for pixel-art workflows.
+    """
+    return (float(int(round(float(x) - 0.5)) + 0.5),
+            float(int(round(float(y) - 0.5)) + 0.5))
+
 
 @dataclass(frozen=True)
 class Guide:
