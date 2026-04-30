@@ -37,6 +37,9 @@ ADJUSTMENT_KINDS = (
     "photo_filter",
     "hsl",
     "gradient_map",
+    "channel_mixer",
+    "posterize",
+    "threshold",
 )
 
 # Six named ranges in selective-color, mapped to their HSV hue centres.
@@ -112,6 +115,19 @@ DEFAULT_PARAMS: dict[str, dict] = {
             {"position": 0.0, "color": [0, 0, 0, 255]},
             {"position": 1.0, "color": [255, 255, 255, 255]},
         ],
+    },
+    "channel_mixer": {
+        # Per-output-channel linear combination of input RGB.
+        # Default = identity matrix (no change).
+        "output_red": [1.0, 0.0, 0.0, 0.0],
+        "output_green": [0.0, 1.0, 0.0, 0.0],
+        "output_blue": [0.0, 0.0, 1.0, 0.0],
+    },
+    "posterize": {
+        "levels": 4,
+    },
+    "threshold": {
+        "threshold": 128,
     },
 }
 
@@ -189,6 +205,12 @@ def apply_adjustment(
         return _apply_hsl(image, adjustment.params)
     if adjustment.kind == "gradient_map":
         return _apply_gradient_map(image, adjustment.params)
+    if adjustment.kind == "channel_mixer":
+        return _apply_channel_mixer(image, adjustment.params)
+    if adjustment.kind == "posterize":
+        return _apply_posterize(image, adjustment.params)
+    if adjustment.kind == "threshold":
+        return _apply_threshold(image, adjustment.params)
     raise ValueError(f"unknown adjustment kind {adjustment.kind!r}")
 
 
@@ -558,6 +580,79 @@ def _build_gradient_lut(stops_raw) -> np.ndarray:
     for ch in range(4):
         lut[:, ch] = np.interp(np.arange(256, dtype=np.float32), positions, colors[:, ch])
     return np.clip(lut, 0.0, 255.0).astype(np.uint8)
+
+
+# ---------------------------------------------------------------------------
+# Channel Mixer
+# ---------------------------------------------------------------------------
+
+
+def _apply_channel_mixer(image: np.ndarray, params: dict) -> np.ndarray:
+    p = {**DEFAULT_PARAMS["channel_mixer"], **params}
+    out_r = _coerce_mixer_row(p.get("output_red"), default=(1.0, 0.0, 0.0, 0.0))
+    out_g = _coerce_mixer_row(p.get("output_green"), default=(0.0, 1.0, 0.0, 0.0))
+    out_b = _coerce_mixer_row(p.get("output_blue"), default=(0.0, 0.0, 1.0, 0.0))
+    rgb = image[..., :3].astype(np.float32) / 255.0
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    new_r = r * out_r[0] + g * out_r[1] + b * out_r[2] + out_r[3]
+    new_g = r * out_g[0] + g * out_g[1] + b * out_g[2] + out_g[3]
+    new_b = r * out_b[0] + g * out_b[1] + b * out_b[2] + out_b[3]
+    out = image.copy()
+    out[..., 0] = np.clip(new_r * 255.0, 0.0, 255.0).astype(np.uint8)
+    out[..., 1] = np.clip(new_g * 255.0, 0.0, 255.0).astype(np.uint8)
+    out[..., 2] = np.clip(new_b * 255.0, 0.0, 255.0).astype(np.uint8)
+    return out
+
+
+def _coerce_mixer_row(
+    value, *, default: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+    """Validate / clamp one (r_factor, g_factor, b_factor, constant)
+    row from a channel-mixer parameter dict."""
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return default
+    out = []
+    for c in value:
+        try:
+            out.append(max(-2.0, min(2.0, float(c))))
+        except (TypeError, ValueError):
+            out.append(0.0)
+    return (out[0], out[1], out[2], out[3])
+
+
+# ---------------------------------------------------------------------------
+# Posterize
+# ---------------------------------------------------------------------------
+
+
+def _apply_posterize(image: np.ndarray, params: dict) -> np.ndarray:
+    p = {**DEFAULT_PARAMS["posterize"], **params}
+    levels = max(2, min(256, int(p.get("levels", 4))))
+    rgb = image[..., :3].astype(np.float32) / 255.0
+    quantised = np.round(rgb * (levels - 1)) / (levels - 1) * 255.0
+    out = image.copy()
+    out[..., :3] = np.clip(quantised, 0.0, 255.0).astype(np.uint8)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Threshold
+# ---------------------------------------------------------------------------
+
+
+def _apply_threshold(image: np.ndarray, params: dict) -> np.ndarray:
+    p = {**DEFAULT_PARAMS["threshold"], **params}
+    threshold = max(0, min(255, int(p.get("threshold", 128))))
+    rgb = image[..., :3].astype(np.float32)
+    luminance = (
+        0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]
+    )
+    above = luminance > float(threshold)
+    out = image.copy()
+    out[..., 0] = np.where(above, 255, 0).astype(np.uint8)
+    out[..., 1] = np.where(above, 255, 0).astype(np.uint8)
+    out[..., 2] = np.where(above, 255, 0).astype(np.uint8)
+    return out
 
 
 def _rgb_to_hsv(rgb: np.ndarray) -> np.ndarray:
