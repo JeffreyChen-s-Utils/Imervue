@@ -73,7 +73,7 @@ def test_color_dock_rgb_slider_writes_back_to_state(qapp, state):
 
 def test_color_dock_history_swatches_match_state(qapp, state):
     for rgb in [(10, 0, 0), (20, 0, 0), (30, 0, 0)]:
-        state.set_foreground(rgb)
+        state.set_foreground(rgb, commit=True)
     dock = ColorDock(state)
     try:
         layout = dock._history_grid.layout()

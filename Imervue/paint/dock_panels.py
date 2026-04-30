@@ -188,7 +188,10 @@ class ColorDock(QDockWidget):
         for idx, rgb in enumerate(self._state.color_history):
             btn = _make_swatch_button()
             btn.setProperty("rgb", rgb)
-            btn.clicked.connect(lambda _checked=False, c=rgb: self._state.set_foreground(c))
+            btn.clicked.connect(
+                lambda _checked=False, c=rgb:
+                self._state.set_foreground(c, commit=True),
+            )
             _paint_swatch(btn, rgb)
             layout.addWidget(btn, idx // 6, idx % 6)
 
@@ -198,7 +201,9 @@ class ColorDock(QDockWidget):
         from PySide6.QtWidgets import QColorDialog
         col = QColorDialog.getColor(QColor(*self._state.foreground), self)
         if col.isValid():
-            self._state.set_foreground((col.red(), col.green(), col.blue()))
+            self._state.set_foreground(
+                (col.red(), col.green(), col.blue()), commit=True,
+            )
 
     def _pick_bg(self) -> None:  # pragma: no cover - Qt UI
         from PySide6.QtWidgets import QColorDialog
@@ -230,7 +235,10 @@ class ColorDock(QDockWidget):
             return
         rgb = hex_to_rgb(self._hex_edit.text())
         if rgb is not None:
-            self._state.set_foreground(rgb)
+            # editingFinished only fires when the user actually
+            # commits the hex (Enter / focus out), so this counts as
+            # a deliberate colour pick — record it in recents.
+            self._state.set_foreground(rgb, commit=True)
         else:
             # Re-display the canonical text for the current foreground.
             self._hex_edit.setText(rgb_to_hex(self._state.foreground))

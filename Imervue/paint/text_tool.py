@@ -64,8 +64,10 @@ class TextTool:
             selection=self._selection_provider(),
         )
         # Match the foreground state to the colour the user picked so
-        # subsequent paint strokes pick up the same shade.
-        self._state.set_foreground(options.color)
+        # subsequent paint strokes pick up the same shade. Text-tool
+        # commit (the dialog OK action) counts as a deliberate pick,
+        # so push it into recents.
+        self._state.set_foreground(options.color, commit=True)
         return True
 
     def cancel(self) -> None:

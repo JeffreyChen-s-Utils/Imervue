@@ -65,10 +65,37 @@ def test_set_tool_rejects_unknown():
 # ---------------------------------------------------------------------------
 
 
-def test_set_foreground_updates_value_and_history():
+def test_set_foreground_updates_value_only_by_default():
     state = ts.load_tool_state()
+    # Default ``commit=False`` updates the foreground but does NOT
+    # push to recents — slider drags / live previews shouldn't
+    # pollute the history with intermediate values.
     assert state.set_foreground((10, 20, 30)) is True
     assert state.foreground == (10, 20, 30)
+    assert state.color_history == []
+
+
+def test_set_foreground_with_commit_pushes_to_history():
+    state = ts.load_tool_state()
+    assert state.set_foreground((10, 20, 30), commit=True) is True
+    assert state.foreground == (10, 20, 30)
+    assert state.color_history[0] == (10, 20, 30)
+
+
+def test_set_foreground_commit_on_same_color_still_bumps_history():
+    state = ts.load_tool_state()
+    state.set_foreground((10, 20, 30), commit=True)
+    state.set_foreground((40, 50, 60), commit=True)
+    # Re-committing (10, 20, 30) bumps it back to the front of recents.
+    state.set_foreground((10, 20, 30), commit=True)
+    assert state.color_history[0] == (10, 20, 30)
+
+
+def test_record_foreground_in_history_pushes_current_value():
+    state = ts.load_tool_state()
+    state.set_foreground((10, 20, 30))   # no commit
+    assert state.color_history == []
+    state.record_foreground_in_history()
     assert state.color_history[0] == (10, 20, 30)
 
 
@@ -180,15 +207,28 @@ def test_set_brush_idempotent_returns_false():
 def test_color_history_dedupes_recent_picks():
     state = ts.load_tool_state()
     for rgb in [(1, 0, 0), (2, 0, 0), (1, 0, 0)]:
-        state.set_foreground(rgb)
+        state.set_foreground(rgb, commit=True)
     assert state.color_history[:2] == [(1, 0, 0), (2, 0, 0)]
 
 
 def test_color_history_caps_at_max_entries():
     state = ts.load_tool_state()
     for i in range(ts.COLOR_HISTORY_MAX + 5):
-        state.set_foreground((i, 0, 0))
+        state.set_foreground((i, 0, 0), commit=True)
     assert len(state.color_history) == ts.COLOR_HISTORY_MAX
+
+
+def test_color_history_unaffected_by_live_preview_drags():
+    """Regression: dragging a colour slider triggers many
+    set_foreground calls; only committed picks should land in
+    the recents history."""
+    state = ts.load_tool_state()
+    state.set_foreground((100, 50, 25), commit=True)   # one real pick
+    # Now simulate a slider drag — many set_foreground calls
+    # without commit. None should push to history.
+    for v in range(0, 256, 8):
+        state.set_foreground((v, v, v))   # no commit kwarg
+    assert state.color_history == [(100, 50, 25)]
 
 
 def test_clear_color_history_empties_list():
@@ -211,12 +251,23 @@ def test_subscribe_receives_tool_change():
     assert ts.EVENT_TOOL in received
 
 
-def test_subscribe_receives_color_change_and_history_event():
+def test_subscribe_receives_color_change_event():
     state = ts.load_tool_state()
     received: list[str] = []
     state.subscribe(received.append)
     state.set_foreground((9, 9, 9))
     assert ts.EVENT_COLOR in received
+
+
+def test_subscribe_history_event_only_on_commit():
+    """EVENT_HISTORY fires only when the change is committed —
+    live-preview drags emit EVENT_COLOR but not EVENT_HISTORY."""
+    state = ts.load_tool_state()
+    received: list[str] = []
+    state.subscribe(received.append)
+    state.set_foreground((9, 9, 9))   # live preview
+    assert ts.EVENT_HISTORY not in received
+    state.set_foreground((20, 20, 20), commit=True)
     assert ts.EVENT_HISTORY in received
 
 

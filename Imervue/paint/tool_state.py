@@ -191,16 +191,46 @@ class ToolState:
 
     # ---- colours ---------------------------------------------------------
 
-    def set_foreground(self, rgb: tuple[int, int, int]) -> bool:
+    def set_foreground(
+        self, rgb: tuple[int, int, int], *, commit: bool = False,
+    ) -> bool:
+        """Set the active foreground colour.
+
+        ``commit=True`` also records the colour in the recents history.
+        Default is ``False`` so live-preview adjustments (slider drags,
+        wheel scrolls) don't pollute "recently used" with every
+        intermediate value — only colours the user actually paints
+        with, picks via the colour dialog, or clicks from a swatch
+        should land in recents. The dispatcher / brush tools call
+        :meth:`record_foreground_in_history` at stroke-start to
+        commit the value the user is about to paint with.
+        """
         rgb = _clamp_rgb(rgb)
         if rgb == self.foreground:
+            if commit:
+                # Same colour, but the caller still wants this use to
+                # bump it to the front of recents.
+                self._push_color_history(rgb)
+                self._persist()
+                self._emit(EVENT_HISTORY)
             return False
         self.foreground = rgb
-        self._push_color_history(rgb)
+        if commit:
+            self._push_color_history(rgb)
         self._persist()
         self._emit(EVENT_COLOR)
-        self._emit(EVENT_HISTORY)
+        if commit:
+            self._emit(EVENT_HISTORY)
         return True
+
+    def record_foreground_in_history(self) -> None:
+        """Push the current foreground onto the recents stack without
+        otherwise changing state. Called by the brush dispatcher when
+        a stroke begins so "recents" reflects colours actually used
+        for paint."""
+        self._push_color_history(self.foreground)
+        self._persist()
+        self._emit(EVENT_HISTORY)
 
     def set_background(self, rgb: tuple[int, int, int]) -> bool:
         rgb = _clamp_rgb(rgb)

@@ -258,6 +258,10 @@ class BrushTool:
         from Imervue.paint.stabilizer import StrokeStabilizer
         import time
         brush = self._state.brush
+        # Stroke begins → user has committed to this colour. Record
+        # it in recents now so subsequent slider tweaks don't re-bump
+        # the same colour to the front.
+        self._state.record_foreground_in_history()
         # Snapshot the ruler at press time, then snap the press point so
         # downstream stabiliser + mirror stages see a point on the track.
         self._ruler = self._state.ruler
@@ -432,7 +436,9 @@ class EyedropperTool:
         if evt.modifiers & self.ALT_MOD_VALUE:
             self._state.set_background(pixel)
         else:
-            self._state.set_foreground(pixel)
+            # Eyedropper is a deliberate "I want this colour" action,
+            # so commit it to the recents history.
+            self._state.set_foreground(pixel, commit=True)
 
 
 # ---------------------------------------------------------------------------
