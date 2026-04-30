@@ -132,6 +132,7 @@ class ToolDispatcher:
                 self._state, self._selection_provider, self._parent_widget,
             ),
             "gradient": GradientTool(self._state, self._selection_provider),
+            "smudge": SmudgeTool(self._state, self._selection_provider),
         }
 
 
@@ -546,6 +547,67 @@ class GradientTool:
 
     def cancel(self) -> None:
         self._start = None
+
+
+class SmudgeTool:
+    """Drag canvas pixels along the stroke path."""
+
+    def __init__(self, state: ToolState, selection_provider=None):
+        self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
+        self._kernel = None
+        self._carried = None
+        self._spacing = 1.0
+        self._last: tuple[float, float] | None = None
+        self._selection_snapshot = None
+        self._active = False
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            return self._begin(evt, canvas)
+        if evt.phase == "move" and self._active:
+            return self._extend(evt, canvas)
+        if evt.phase in ("release", "leave") and self._active:
+            self._extend(evt, canvas)
+            self._active = False
+            self._carried = None
+            self._last = None
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._active = False
+        self._carried = None
+        self._last = None
+
+    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.smudge import sample_carry
+        brush = self._state.brush
+        self._kernel = round_brush_kernel(brush.size, brush.hardness)
+        self._spacing = spacing_from_brush(brush.size, brush.hardness)
+        self._selection_snapshot = self._selection_provider()
+        self._carried = sample_carry(canvas, evt.x, evt.y, self._kernel)
+        self._last = (evt.x, evt.y)
+        self._active = True
+        return False  # press alone doesn't change pixels — wait for drag
+
+    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.brush_engine import stroke_dab_positions
+        from Imervue.paint.smudge import smudge_dab
+        if self._last is None or self._kernel is None or self._carried is None:
+            return False
+        brush = self._state.brush
+        # Smudge strength reuses the brush opacity slider — high opacity
+        # smudges aggressively, low opacity barely shifts pigment.
+        strength = max(0.05, brush.opacity)
+        for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
+            _result, self._carried = smudge_dab(
+                canvas, px, py, self._kernel, self._carried,
+                strength=strength,
+                selection=self._selection_snapshot,
+            )
+        self._last = (evt.x, evt.y)
+        return True
 
 
 class MoveTool:
