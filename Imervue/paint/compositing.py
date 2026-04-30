@@ -98,7 +98,7 @@ def composite_stack(layers: Iterable, base_shape: tuple[int, int]) -> np.ndarray
             out, layer.image,
             opacity=layer.opacity,
             blend_mode=layer.blend_mode,
-            mask=layer.mask,
+            mask=getattr(layer, "effective_mask", layer.mask),
         )
     return out
 

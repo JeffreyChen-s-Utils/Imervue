@@ -61,8 +61,12 @@ def merge_layer_pair(below: Layer, above: Layer) -> Layer:
         below.image, above.image,
         opacity=above.opacity,
         blend_mode=above.blend_mode,
-        mask=above.mask,
+        mask=above.effective_mask,
     )
+    # Keep below's mask: it still clips where the merged contribution
+    # appears against the canvas. Above's mask has been baked into the
+    # merged pixels via composite_layer_pair's mask kwarg.
+    below_mask = None if below.mask is None else below.mask.copy()
     return Layer(
         name=below.name,
         image=merged_pixels,
@@ -70,7 +74,8 @@ def merge_layer_pair(below: Layer, above: Layer) -> Layer:
         blend_mode=below.blend_mode,
         visible=below.visible,
         locked=below.locked,
-        mask=None,    # below's mask is preserved? See note in composite_visible_layers.
+        mask=below_mask,
+        mask_enabled=below.mask_enabled,
         clip=below.clip,
     )
 
@@ -101,7 +106,7 @@ def composite_visible_layers(
             out, layer.image,
             opacity=layer.opacity,
             blend_mode=layer.blend_mode,
-            mask=layer.mask,
+            mask=layer.effective_mask,
         )
     return Layer(name=visibles[0].name, image=out)
 
