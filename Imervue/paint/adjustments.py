@@ -203,7 +203,33 @@ def _apply_levels(image: np.ndarray, params: dict) -> np.ndarray:
 
 def _apply_curves(image: np.ndarray, params: dict) -> np.ndarray:
     p = {**DEFAULT_PARAMS["curves"], **params}
-    raw_points = p.get("points") or DEFAULT_PARAMS["curves"]["points"]
+    base_points = p.get("points") or DEFAULT_PARAMS["curves"]["points"]
+    base_lut = _build_curve_lut(base_points)
+    # Per-channel curves override the base. Falling back to the base
+    # LUT keeps the legacy single-curve API working without changes.
+    r_lut = _build_curve_lut(p.get("points_r"), fallback=base_lut)
+    g_lut = _build_curve_lut(p.get("points_g"), fallback=base_lut)
+    b_lut = _build_curve_lut(p.get("points_b"), fallback=base_lut)
+
+    out = image.copy()
+    out[..., 0] = r_lut[image[..., 0]]
+    out[..., 1] = g_lut[image[..., 1]]
+    out[..., 2] = b_lut[image[..., 2]]
+    return out
+
+
+def _build_curve_lut(
+    raw_points,
+    *,
+    fallback: np.ndarray | None = None,
+) -> np.ndarray:
+    """Compile a list of [in, out] control points into a 256-entry uint8
+    LUT. Falls back to ``fallback`` (or the identity LUT if no fallback
+    is supplied) when the input has fewer than 2 valid points."""
+    if not raw_points:
+        if fallback is not None:
+            return fallback
+        return np.arange(256, dtype=np.uint8)
     points = sorted(
         (
             (max(0, min(255, int(pt[0]))), max(0, min(255, int(pt[1]))))
@@ -213,19 +239,13 @@ def _apply_curves(image: np.ndarray, params: dict) -> np.ndarray:
         key=lambda pt: pt[0],
     )
     if len(points) < 2:
-        # Need at least two points to define a curve; fall back to identity.
-        return image.copy()
-
+        if fallback is not None:
+            return fallback
+        return np.arange(256, dtype=np.uint8)
     xs = np.array([pt[0] for pt in points], dtype=np.float32)
     ys = np.array([pt[1] for pt in points], dtype=np.float32)
     lut = np.interp(np.arange(256, dtype=np.float32), xs, ys)
-    lut_u8 = np.clip(lut, 0, 255).astype(np.uint8)
-
-    out = image.copy()
-    out[..., 0] = lut_u8[image[..., 0]]
-    out[..., 1] = lut_u8[image[..., 1]]
-    out[..., 2] = lut_u8[image[..., 2]]
-    return out
+    return np.clip(lut, 0, 255).astype(np.uint8)
 
 
 # ---------------------------------------------------------------------------
