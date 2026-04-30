@@ -354,6 +354,37 @@ class PaintDocument:
             raise IndexError(f"layer index {index} out of range")
         return self._layers[index]
 
+    def transform_selection(
+        self, *,
+        scale: float = 1.0,
+        angle_deg: float = 0.0,
+        dx: float = 0.0,
+        dy: float = 0.0,
+        anchor: tuple[float, float] | None = None,
+    ) -> bool:
+        """Scale / rotate / translate the active layer's selected pixels.
+
+        Cuts the selection out of the active layer, applies the affine
+        transform, and pastes the warped pixels back. Updates the
+        document selection to reflect the new pixel positions.
+        Returns ``True`` if anything was warped (i.e. the selection
+        is non-empty and the transform isn't an identity).
+        """
+        from Imervue.paint.selection_transform import transform_selection
+        layer = self.active_layer()
+        if layer is None or self._selection is None:
+            return False
+        if not self._selection.any():
+            return False
+        new_image, new_selection = transform_selection(
+            layer.image, self._selection,
+            scale=scale, angle_deg=angle_deg, dx=dx, dy=dy, anchor=anchor,
+        )
+        layer.image = new_image
+        self._selection = new_selection
+        self._notify()
+        return True
+
     # ---- canvas transforms ---------------------------------------------
 
     def transform_canvas(self, *, action: str) -> bool:
