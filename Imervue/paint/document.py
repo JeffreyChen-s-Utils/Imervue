@@ -58,6 +58,7 @@ class Layer:
     adjustment: Any = None       # Adjustment | None — when set the layer is non-destructive
     effects: tuple = ()          # tuple[LayerEffect, ...] — drop shadow / glow / stroke
     blend_if: Any = None         # BlendIf | None — luminance-range visibility gate
+    vector_data: Any = None      # VectorLayerData | None — vector strokes; image is the cache
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -266,6 +267,33 @@ class PaintDocument:
         layer = Layer(
             name=name or self._unique_layer_name(),
             image=np.zeros((h, w, 4), dtype=np.uint8),
+        )
+        insert_at = self._active_index + 1 if on_top_of_active else len(self._layers)
+        insert_at = min(insert_at, len(self._layers))
+        self._layers.insert(insert_at, layer)
+        self._active_index = insert_at
+        self._notify()
+        return layer
+
+    def add_vector_layer(
+        self, *, name: str | None = None, on_top_of_active: bool = True,
+    ) -> Layer:
+        """Add a non-destructive vector-stroke layer.
+
+        The layer's ``image`` field is the rasterised cache — the
+        canonical state lives in ``layer.vector_data.strokes``. Edits
+        mutate the stroke list and call
+        :func:`Imervue.paint.vector_layer.realise_vector_layer` to
+        repaint the cache.
+        """
+        from Imervue.paint.vector_layer import VectorLayerData
+        if not self._layers:
+            raise RuntimeError("cannot add a layer to an empty document")
+        h, w = self.shape  # type: ignore[misc]
+        layer = Layer(
+            name=name or self._unique_layer_name(),
+            image=np.zeros((h, w, 4), dtype=np.uint8),
+            vector_data=VectorLayerData(),
         )
         insert_at = self._active_index + 1 if on_top_of_active else len(self._layers)
         insert_at = min(insert_at, len(self._layers))
