@@ -94,6 +94,7 @@ EVENT_TOOL = "tool"            # current tool changed
 EVENT_BRUSH = "brush"          # any brush setting changed
 EVENT_COLOR = "color"          # foreground / background changed
 EVENT_HISTORY = "history"      # color history changed
+EVENT_FILL = "fill"            # any fill setting changed
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,21 @@ class BrushSettings:
     hardness: float = 0.8
     density: float = 1.0
     blend_mode: str = DEFAULT_BLEND_MODE
+
+
+# Fill bucket parameters live alongside brush so the dock panels and
+# the dispatcher both pull from the same place.
+FILL_TOLERANCE_MIN = 0
+FILL_TOLERANCE_MAX = 255
+
+
+@dataclass(frozen=True)
+class FillSettings:
+    """Fill bucket options."""
+
+    tolerance: int = 32
+    contiguous: bool = True
+    sample_all_layers: bool = False
 
 
 @dataclass
@@ -121,6 +137,7 @@ class ToolState:
     foreground: tuple[int, int, int] = DEFAULT_FG
     background: tuple[int, int, int] = DEFAULT_BG
     brush: BrushSettings = field(default_factory=BrushSettings)
+    fill: FillSettings = field(default_factory=FillSettings)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -202,6 +219,20 @@ class ToolState:
 
     # ---- brush -----------------------------------------------------------
 
+    def set_fill(self, **kwargs: Any) -> bool:
+        """Update fill bucket attributes."""
+        new = self.fill
+        for key, value in kwargs.items():
+            if not hasattr(self.fill, key):
+                raise ValueError(f"unknown fill attribute {key!r}")
+            new = replace(new, **{key: _clamp_fill_attr(key, value)})
+        if new == self.fill:
+            return False
+        self.fill = new
+        self._persist()
+        self._emit(EVENT_FILL)
+        return True
+
     def set_brush(self, **kwargs: Any) -> bool:
         """Update one or more brush attributes at once.
 
@@ -262,6 +293,11 @@ class ToolState:
                 "density": self.brush.density,
                 "blend_mode": self.brush.blend_mode,
             },
+            "fill": {
+                "tolerance": self.fill.tolerance,
+                "contiguous": self.fill.contiguous,
+                "sample_all_layers": self.fill.sample_all_layers,
+            },
             "color_history": [list(c) for c in self.color_history],
         }
 
@@ -275,10 +311,11 @@ class ToolState:
         fg = _safe_rgb(raw.get("foreground"), DEFAULT_FG)
         bg = _safe_rgb(raw.get("background"), DEFAULT_BG)
         brush = _brush_from_dict(raw.get("brush"))
+        fill = _fill_from_dict(raw.get("fill"))
         history = _history_from_list(raw.get("color_history"))
         return cls(
             tool=tool, foreground=fg, background=bg,
-            brush=brush, color_history=history,
+            brush=brush, fill=fill, color_history=history,
         )
 
 
@@ -312,6 +349,24 @@ def _clamp_rgb(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
     if not isinstance(rgb, tuple) or len(rgb) != 3:
         raise ValueError(f"rgb must be a 3-tuple, got {rgb!r}")
     return tuple(max(0, min(255, int(c))) for c in rgb)  # type: ignore[return-value]
+
+
+def _clamp_fill_attr(key: str, value: Any) -> Any:
+    if key == "tolerance":
+        return max(FILL_TOLERANCE_MIN, min(FILL_TOLERANCE_MAX, int(value)))
+    if key in ("contiguous", "sample_all_layers"):
+        return bool(value)
+    return value
+
+
+def _fill_from_dict(raw: Any) -> FillSettings:
+    if not isinstance(raw, dict):
+        return FillSettings()
+    return FillSettings(
+        tolerance=_clamp_fill_attr("tolerance", raw.get("tolerance", 32)),
+        contiguous=bool(raw.get("contiguous", True)),
+        sample_all_layers=bool(raw.get("sample_all_layers", False)),
+    )
 
 
 def _clamp_brush_attr(key: str, value: Any) -> Any:

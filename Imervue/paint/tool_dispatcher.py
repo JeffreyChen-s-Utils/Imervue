@@ -33,6 +33,7 @@ from Imervue.paint.brush_engine import (
     spacing_from_brush,
 )
 from Imervue.paint.canvas import PointerEvent
+from Imervue.paint.fill import flood_fill
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -102,6 +103,7 @@ class ToolDispatcher:
             "brush": BrushTool(self._state),
             "eraser": EraserTool(self._state),
             "eyedropper": EyedropperTool(self._state),
+            "fill": FillTool(self._state),
         }
 
 
@@ -219,6 +221,26 @@ class EraserTool:
 # ---------------------------------------------------------------------------
 # Eyedropper
 # ---------------------------------------------------------------------------
+
+
+class FillTool:
+    """Paint bucket — single-click flood fills the region under the cursor."""
+
+    def __init__(self, state: ToolState):
+        self._state = state
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase != "press":
+            return False
+        result = flood_fill(
+            canvas,
+            seed_x=int(round(evt.x)),
+            seed_y=int(round(evt.y)),
+            color=self._state.foreground,
+            tolerance=self._state.fill.tolerance,
+            contiguous=self._state.fill.contiguous,
+        )
+        return not result.is_empty
 
 
 class EyedropperTool:
