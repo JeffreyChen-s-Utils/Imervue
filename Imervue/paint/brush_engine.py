@@ -346,6 +346,8 @@ class BrushStrokeOptions:
     blend_mode: str = "normal"
     spacing: float | None = None    # None → spacing_from_brush(size, hardness)
     selection: np.ndarray | None = None   # bool HxW; paint clipped to True
+    kind: str = "pen"               # pen / pencil / marker / airbrush / watercolor
+    seed: int = 0                   # RNG seed for kind-specific noise
 
 
 class BrushStroke:
@@ -357,8 +359,21 @@ class BrushStroke:
     """
 
     def __init__(self, options: BrushStrokeOptions):
+        from Imervue.paint.brush_dynamics import stylise_kernel
         self._options = options
-        self._kernel = round_brush_kernel(options.size, options.hardness)
+        self._rng = np.random.default_rng(options.seed)
+        base = round_brush_kernel(options.size, options.hardness)
+        # Re-stylise the kernel each dab for kinds that depend on noise
+        # (pencil / airbrush) — store the base + a callable instead of
+        # caching one shape so the texture varies along the stroke.
+        if options.kind in ("pencil", "airbrush"):
+            self._base_kernel = base
+            self._kernel = stylise_kernel(base, options.kind, self._rng)
+            self._restyle_each_dab = True
+        else:
+            self._base_kernel = base
+            self._kernel = stylise_kernel(base, options.kind, self._rng)
+            self._restyle_each_dab = False
         self._spacing = (
             options.spacing if options.spacing is not None
             else spacing_from_brush(options.size, options.hardness)
@@ -375,8 +390,9 @@ class BrushStroke:
             raise RuntimeError("BrushStroke.begin called while already active")
         self._active = True
         self._last = (x, y)
+        kernel = self._next_kernel()
         return apply_dab(
-            canvas, x, y, self._kernel, self._options.color,
+            canvas, x, y, kernel, self._options.color,
             opacity=self._options.opacity,
             blend_mode=self._options.blend_mode,
             selection=self._options.selection,
@@ -388,8 +404,9 @@ class BrushStroke:
         positions = stroke_dab_positions(self._last, (x, y), self._spacing)
         damage = DabResult(0, 0, 0, 0)
         for px, py in positions:
+            kernel = self._next_kernel()
             d = apply_dab(
-                canvas, px, py, self._kernel, self._options.color,
+                canvas, px, py, kernel, self._options.color,
                 opacity=self._options.opacity,
                 blend_mode=self._options.blend_mode,
                 selection=self._options.selection,
@@ -397,6 +414,20 @@ class BrushStroke:
             damage = _union(damage, d)
         self._last = (x, y)
         return damage
+
+    def _next_kernel(self) -> np.ndarray:
+        """Return the kernel to stamp for the next dab.
+
+        For deterministic kinds (pen / marker / watercolor) the
+        stylised kernel is computed once and reused. For grainy kinds
+        (pencil / airbrush) we re-stylise on every dab so the noise
+        pattern shifts along the stroke — without that, a long line
+        would show the same dot pattern repeated.
+        """
+        from Imervue.paint.brush_dynamics import stylise_kernel
+        if self._restyle_each_dab:
+            return stylise_kernel(self._base_kernel, self._options.kind, self._rng)
+        return self._kernel
 
     def end(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
         if not self._active:

@@ -200,18 +200,25 @@ class BrushTool:
     # ---- internals -------------------------------------------------------
 
     def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.brush_dynamics import (
+            pressure_opacity_factor,
+            pressure_size_factor,
+        )
+        import time
         brush = self._state.brush
-        # Pen pressure scales the dab opacity (with a floor so light
-        # pressure still puts paint down).
-        pressure = max(0.1, min(1.0, evt.pressure))
-        opacity = brush.opacity * pressure
+        # Pen pressure scales BOTH size and opacity — MediBang uses both
+        # axes so a pen line tapers in width as well as ink density.
+        size_scaled = max(1, int(round(brush.size * pressure_size_factor(evt.pressure))))
+        opacity_scaled = brush.opacity * pressure_opacity_factor(evt.pressure)
         options = BrushStrokeOptions(
             color=self._state.foreground,
-            size=brush.size,
-            opacity=opacity,
+            size=size_scaled,
+            opacity=opacity_scaled,
             hardness=brush.hardness,
             blend_mode=brush.blend_mode,
             selection=self._selection_provider(),
+            kind=brush.kind,
+            seed=int(time.monotonic_ns() & 0xFFFFFFFF),
         )
         self._stroke = BrushStroke(options)
         self._stroke.begin(canvas, evt.x, evt.y)
