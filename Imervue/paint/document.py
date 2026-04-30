@@ -56,6 +56,7 @@ class Layer:
     lock_alpha: bool = False     # paint only where alpha > 0 already exists
     group: str | None = None     # name of the LayerGroup this layer belongs to
     adjustment: Any = None       # Adjustment | None — when set the layer is non-destructive
+    effects: tuple = ()          # tuple[LayerEffect, ...] — drop shadow / glow / stroke
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -296,12 +297,27 @@ class PaintDocument:
             lock_alpha=layer.lock_alpha,
             group=layer.group,
             adjustment=layer.adjustment,
+            effects=layer.effects,
         )
         self._layers.insert(self._active_index + 1, copy)
         self._active_index += 1
         self._notify()
 
     # ---- layer mask -----------------------------------------------------
+
+    def set_layer_effects(
+        self, index: int = -1, *, effects: tuple,
+    ) -> bool:
+        """Replace a layer's effect tuple in one shot."""
+        layer = self._resolve_layer(index)
+        if layer is None:
+            return False
+        new_effects = tuple(effects)
+        if layer.effects == new_effects:
+            return False
+        layer.effects = new_effects
+        self._notify()
+        return True
 
     def set_layer_locked(self, index: int = -1, *, locked: bool) -> bool:
         """Toggle the full-layer lock (no edits allowed)."""

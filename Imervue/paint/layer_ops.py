@@ -123,8 +123,13 @@ def composite_visible_layers(
                 f"layer {layer.name!r} shape {layer.image.shape[:2]} "
                 f"does not match document {shape}",
             )
+        layer_image = layer.image
+        effects = getattr(layer, "effects", ())
+        if effects:
+            from Imervue.paint.layer_effects import apply_effects
+            layer_image = apply_effects(layer_image, effects)
         out = composite_layer_pair(
-            out, layer.image,
+            out, layer_image,
             opacity=eff_opacity,
             blend_mode=layer.blend_mode,
             mask=layer.effective_mask,

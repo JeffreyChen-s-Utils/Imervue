@@ -42,6 +42,7 @@ from Imervue.paint.document import (
     LayerGroup,
     PaintDocument,
 )
+from Imervue.paint.layer_effects import LayerEffect
 
 FORMAT_VERSION = 1
 FILE_EXTENSION = ".imervue"
@@ -80,6 +81,7 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
                 layer.adjustment.to_dict()
                 if layer.adjustment is not None else None
             ),
+            "effects": [eff.to_dict() for eff in (layer.effects or ())],
         })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
@@ -222,6 +224,14 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
                 adjustment = Adjustment.from_dict(adjustment_raw)
             except (ValueError, TypeError):
                 adjustment = None
+        effects_raw = lmeta.get("effects") or []
+        effects: list[LayerEffect] = []
+        if isinstance(effects_raw, list):
+            for eff_raw in effects_raw:
+                try:
+                    effects.append(LayerEffect.from_dict(eff_raw))
+                except (ValueError, TypeError):
+                    continue
         layers.append(Layer(
             name=str(lmeta.get("name", f"Layer {i}")),
             image=image,
@@ -235,6 +245,7 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
             lock_alpha=bool(lmeta.get("lock_alpha", False)),
             group=str(group_name) if group_name else None,
             adjustment=adjustment,
+            effects=tuple(effects),
         ))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))
