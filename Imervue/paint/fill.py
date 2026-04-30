@@ -50,18 +50,35 @@ def flood_fill(
     *,
     tolerance: int = 32,
     contiguous: bool = True,
+    selection: np.ndarray | None = None,
 ) -> FillResult:
-    """Fill the region around ``(seed_x, seed_y)`` with ``color``."""
+    """Fill the region around ``(seed_x, seed_y)`` with ``color``.
+
+    If ``selection`` is provided (HxW bool mask), the fill is clipped
+    to the selection — pixels outside it are never modified, even when
+    they fall inside the colour-tolerance band.
+    """
     _check_canvas(canvas)
     h, w = canvas.shape[:2]
     sx, sy = int(round(seed_x)), int(round(seed_y))
     if not (0 <= sx < w and 0 <= sy < h):
         return FillResult(0, 0, 0, 0, 0)
+    if selection is not None:
+        if selection.shape != (h, w):
+            raise ValueError(
+                f"selection mask shape {selection.shape} does not match "
+                f"canvas {(h, w)}",
+            )
+        if not selection[sy, sx]:
+            # Seed lies outside the selection — fill never starts.
+            return FillResult(0, 0, 0, 0, 0)
     tolerance = max(0, min(255, int(tolerance)))
 
     seed = canvas[sy, sx, :3].astype(np.int16)
     diff = np.abs(canvas[..., :3].astype(np.int16) - seed[None, None, :])
     candidates = diff.max(axis=-1) <= tolerance
+    if selection is not None:
+        candidates = candidates & selection
 
     mask = _contiguous_region(candidates, sx, sy) if contiguous else candidates
 

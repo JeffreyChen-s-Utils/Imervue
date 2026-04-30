@@ -104,6 +104,7 @@ def apply_dab(
     *,
     opacity: float = 1.0,
     blend_mode: str = "normal",
+    selection: np.ndarray | None = None,
 ) -> DabResult:
     """Composite ``kernel * color`` into ``canvas`` at ``(cx, cy)`` in-place.
 
@@ -144,6 +145,13 @@ def apply_dab(
 
     dst_view = canvas[cy0:cy1, cx0:cx1]
     k = kernel[ky0:ky1, kx0:kx1] * opacity   # alpha for this dab
+    if selection is not None:
+        if selection.shape != canvas.shape[:2]:
+            raise ValueError(
+                f"selection mask shape {selection.shape} does not match "
+                f"canvas {canvas.shape[:2]}",
+            )
+        k = k * selection[cy0:cy1, cx0:cx1].astype(np.float32)
     fg = np.array(color, dtype=np.float32)
     _composite_in_place(dst_view, k, fg, blend_mode)
     return DabResult(cx0, cy0, cx1 - cx0, cy1 - cy0)
@@ -156,6 +164,7 @@ def apply_erase_dab(
     kernel: np.ndarray,
     *,
     opacity: float = 1.0,
+    selection: np.ndarray | None = None,
 ) -> DabResult:
     """Subtract ``kernel * opacity`` from ``canvas`` alpha, in-place.
 
@@ -193,6 +202,13 @@ def apply_erase_dab(
     ky1 = ky0 + (cy1 - cy0)
 
     k = kernel[ky0:ky1, kx0:kx1] * opacity
+    if selection is not None:
+        if selection.shape != canvas.shape[:2]:
+            raise ValueError(
+                f"selection mask shape {selection.shape} does not match "
+                f"canvas {canvas.shape[:2]}",
+            )
+        k = k * selection[cy0:cy1, cx0:cx1].astype(np.float32)
     a = canvas[cy0:cy1, cx0:cx1, 3].astype(np.float32) / 255.0
     new_a = a * (1.0 - k)
     canvas[cy0:cy1, cx0:cx1, 3] = np.clip(new_a * 255.0, 0.0, 255.0).astype(np.uint8)
@@ -329,6 +345,7 @@ class BrushStrokeOptions:
     hardness: float
     blend_mode: str = "normal"
     spacing: float | None = None    # None → spacing_from_brush(size, hardness)
+    selection: np.ndarray | None = None   # bool HxW; paint clipped to True
 
 
 class BrushStroke:
@@ -362,6 +379,7 @@ class BrushStroke:
             canvas, x, y, self._kernel, self._options.color,
             opacity=self._options.opacity,
             blend_mode=self._options.blend_mode,
+            selection=self._options.selection,
         )
 
     def extend(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
@@ -374,6 +392,7 @@ class BrushStroke:
                 canvas, px, py, self._kernel, self._options.color,
                 opacity=self._options.opacity,
                 blend_mode=self._options.blend_mode,
+                selection=self._options.selection,
             )
             damage = _union(damage, d)
         self._last = (x, y)

@@ -117,13 +117,14 @@ class ToolDispatcher:
             self._state, self._selection_provider, self._set_selection,
         )
         return {
-            "brush": BrushTool(self._state),
-            "eraser": EraserTool(self._state),
+            "brush": BrushTool(self._state, self._selection_provider),
+            "eraser": EraserTool(self._state, self._selection_provider),
             "eyedropper": EyedropperTool(self._state),
-            "fill": FillTool(self._state),
+            "fill": FillTool(self._state, self._selection_provider),
             "select_rect": RectSelectTool(sel_ctx),
             "select_lasso": LassoSelectTool(sel_ctx),
             "select_wand": WandSelectTool(sel_ctx, self._state),
+            "move": MoveTool(self._state, self._selection_provider, self._set_selection),
         }
 
 
@@ -156,8 +157,9 @@ class _SelectionContext:
 class BrushTool:
     """Standard brush — paints colour through the current brush kernel."""
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, selection_provider=None):
         self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
         self._stroke: BrushStroke | None = None
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
@@ -195,6 +197,7 @@ class BrushTool:
             opacity=opacity,
             hardness=brush.hardness,
             blend_mode=brush.blend_mode,
+            selection=self._selection_provider(),
         )
         self._stroke = BrushStroke(options)
         self._stroke.begin(canvas, evt.x, evt.y)
@@ -214,11 +217,13 @@ class EraserTool:
     re-using BrushStroke would obscure rather than help.
     """
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, selection_provider=None):
         self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
         self._kernel = None
         self._spacing = 1.0
         self._opacity = 1.0
+        self._selection_snapshot: np.ndarray | None = None
         self._last: tuple[float, float] | None = None
         self._active = False
 
@@ -244,9 +249,13 @@ class EraserTool:
         self._spacing = spacing_from_brush(brush.size, brush.hardness)
         pressure = max(0.1, min(1.0, evt.pressure))
         self._opacity = brush.opacity * pressure
+        self._selection_snapshot = self._selection_provider()
         self._last = (evt.x, evt.y)
         self._active = True
-        apply_erase_dab(canvas, evt.x, evt.y, self._kernel, opacity=self._opacity)
+        apply_erase_dab(
+            canvas, evt.x, evt.y, self._kernel,
+            opacity=self._opacity, selection=self._selection_snapshot,
+        )
         return True
 
     def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
@@ -254,7 +263,10 @@ class EraserTool:
             return False
         from Imervue.paint.brush_engine import stroke_dab_positions
         for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
-            apply_erase_dab(canvas, px, py, self._kernel, opacity=self._opacity)
+            apply_erase_dab(
+                canvas, px, py, self._kernel,
+                opacity=self._opacity, selection=self._selection_snapshot,
+            )
         self._last = (evt.x, evt.y)
         return True
 
@@ -267,8 +279,9 @@ class EraserTool:
 class FillTool:
     """Paint bucket — single-click flood fills the region under the cursor."""
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, selection_provider=None):
         self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
@@ -280,6 +293,7 @@ class FillTool:
             color=self._state.foreground,
             tolerance=self._state.fill.tolerance,
             contiguous=self._state.fill.contiguous,
+            selection=self._selection_provider(),
         )
         return not result.is_empty
 
@@ -407,3 +421,87 @@ class WandSelectTool:
 
     def cancel(self) -> None:
         pass
+
+
+# ---------------------------------------------------------------------------
+# Move tool
+# ---------------------------------------------------------------------------
+
+
+def translate_selection(
+    canvas: np.ndarray, selection: np.ndarray, dx: int, dy: int,
+) -> np.ndarray:
+    """Move the selected pixels by (dx, dy) and return the new selection.
+
+    Pure-numpy: cuts the selected RGBA pixels (clearing the original
+    location to fully-transparent) and pastes them at the offset
+    location in-place. Pixels that fall off the canvas are dropped.
+    Returns the translated selection mask so the caller can update its
+    selection storage. This function never reads or writes outside the
+    canvas bounds.
+    """
+    if canvas.ndim != 3 or canvas.shape[2] != 4 or canvas.dtype != np.uint8:
+        raise ValueError(
+            f"translate_selection expects HxWx4 uint8 RGBA, got "
+            f"{canvas.shape} {canvas.dtype}",
+        )
+    if selection.shape != canvas.shape[:2]:
+        raise ValueError(
+            f"selection shape {selection.shape} does not match "
+            f"canvas {canvas.shape[:2]}",
+        )
+    if dx == 0 and dy == 0:
+        return selection.copy()
+    h, w = canvas.shape[:2]
+    cut = canvas.copy()
+    canvas[selection] = (0, 0, 0, 0)
+
+    new_selection = np.zeros_like(selection)
+
+    src_ys, src_xs = np.where(selection)
+    if len(src_ys) == 0:
+        return new_selection
+
+    dst_ys = src_ys + dy
+    dst_xs = src_xs + dx
+    valid = (dst_ys >= 0) & (dst_ys < h) & (dst_xs >= 0) & (dst_xs < w)
+    canvas[dst_ys[valid], dst_xs[valid]] = cut[src_ys[valid], src_xs[valid]]
+    new_selection[dst_ys[valid], dst_xs[valid]] = True
+    return new_selection
+
+
+class MoveTool:
+    """Drag the active selection (or the whole canvas) to a new location.
+
+    Phase 2 ships the commit-on-release variant — the canvas is mutated
+    once, on release, by the integer drag delta. Phase 3 will replace
+    this with a live floating-layer preview.
+    """
+
+    def __init__(self, state: ToolState, selection_provider, set_selection):
+        self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
+        self._set_selection = set_selection or (lambda mask: None)
+        self._start: tuple[int, int] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            self._start = (int(round(evt.x)), int(round(evt.y)))
+            return False
+        if evt.phase == "release" and self._start is not None:
+            dx = int(round(evt.x)) - self._start[0]
+            dy = int(round(evt.y)) - self._start[1]
+            self._start = None
+            if dx == 0 and dy == 0:
+                return False
+            selection = self._selection_provider()
+            if selection is None:
+                # No selection — move the whole canvas content.
+                selection = np.ones(canvas.shape[:2], dtype=np.bool_)
+            new_mask = translate_selection(canvas, selection, dx, dy)
+            self._set_selection(new_mask)
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._start = None
