@@ -31,6 +31,7 @@ from OpenGL.GL import (
     GL_CLAMP_TO_EDGE,
     GL_COLOR_BUFFER_BIT,
     GL_LINEAR,
+    GL_LINES,
     GL_ONE_MINUS_SRC_ALPHA,
     GL_QUADS,
     GL_RGBA,
@@ -48,9 +49,11 @@ from OpenGL.GL import (
     glClearColor,
     glColor4f,
     glDeleteTextures,
+    glDisable,
     glEnable,
     glEnd,
     glGenTextures,
+    glLineWidth,
     glLoadIdentity,
     glMatrixMode,
     glOrtho,
@@ -67,9 +70,11 @@ from OpenGL.GL import (
     GL_MODELVIEW,
     GL_PROJECTION,
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCursor, QMouseEvent, QTabletEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
+
+from Imervue.paint.marquee import selection_outline_segments
 
 logger = logging.getLogger("Imervue.paint.canvas")
 
@@ -162,6 +167,14 @@ class PaintCanvas(QOpenGLWidget):
         self._pan_anchor = (0, 0)
         self._last_pressure = 1.0
 
+        # Cached marquee segments — recomputed when set_selection() is
+        # called, redrawn under an animated phase by _marquee_timer.
+        self._marquee_segments: np.ndarray | None = None
+        self._marquee_phase = 0
+        self._marquee_timer = QTimer(self)
+        self._marquee_timer.setInterval(120)
+        self._marquee_timer.timeout.connect(self._tick_marquee)
+
     # ---- public API ------------------------------------------------------
 
     def load_image(self, arr: np.ndarray | None) -> None:
@@ -194,12 +207,19 @@ class PaintCanvas(QOpenGLWidget):
     def set_selection(self, mask: np.ndarray | None) -> None:
         if mask is None:
             self._selection = None
+            self._marquee_segments = None
+            self._marquee_timer.stop()
         else:
             if mask.ndim != 2 or mask.dtype != np.bool_:
                 raise ValueError(
                     f"selection mask must be HxW bool, got {mask.shape} {mask.dtype}",
                 )
             self._selection = mask
+            self._marquee_segments = selection_outline_segments(mask)
+            if self._marquee_segments.shape[0] > 0:
+                self._marquee_timer.start()
+            else:
+                self._marquee_timer.stop()
         self.update()
 
     def set_tool_dispatcher(self, dispatcher: ToolDispatcher | None) -> None:
@@ -255,7 +275,46 @@ class PaintCanvas(QOpenGLWidget):
         glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
         glEnd()
         glBindTexture(GL_TEXTURE_2D, 0)
+        self._draw_marquee()
         glPopMatrix()
+
+    def _draw_marquee(self) -> None:  # pragma: no cover - GL needs display server
+        """Draw the active selection outline as marching ants.
+
+        Two passes — one in white, one in black — offset by the
+        marquee phase so successive frames look like the dashes are
+        marching along the boundary. Disabling the texture target
+        during line drawing avoids the line colour multiplying with
+        whatever was last bound.
+        """
+        if self._marquee_segments is None or self._marquee_segments.shape[0] == 0:
+            return
+        glDisable(GL_TEXTURE_2D)
+        glLineWidth(1.0)
+        # Sample every other segment for each colour pass — the offset
+        # walk produces the marching effect on consecutive frames.
+        seg = self._marquee_segments
+        white_idx = (np.arange(seg.shape[0]) + self._marquee_phase) % 4 < 2
+        self._draw_segments(seg[white_idx], 1.0, 1.0, 1.0)
+        self._draw_segments(seg[~white_idx], 0.0, 0.0, 0.0)
+        glEnable(GL_TEXTURE_2D)
+
+    @staticmethod
+    def _draw_segments(  # pragma: no cover - GL needs display server
+        seg: np.ndarray, r: float, g: float, b: float,
+    ) -> None:
+        if seg.shape[0] == 0:
+            return
+        glColor4f(r, g, b, 1.0)
+        glBegin(GL_LINES)
+        for x0, y0, x1, y1 in seg:
+            glVertex2f(float(x0), float(y0))
+            glVertex2f(float(x1), float(y1))
+        glEnd()
+
+    def _tick_marquee(self) -> None:
+        self._marquee_phase = (self._marquee_phase + 1) % 8
+        self.update()
 
     # ---- mouse / tablet --------------------------------------------------
 
