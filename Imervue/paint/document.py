@@ -354,6 +354,30 @@ class PaintDocument:
             raise IndexError(f"layer index {index} out of range")
         return self._layers[index]
 
+    # ---- canvas transforms ---------------------------------------------
+
+    def transform_canvas(self, *, action: str) -> bool:
+        """Apply a canvas-wide transform to every layer + the selection.
+
+        ``action`` must be one of
+        :data:`Imervue.paint.canvas_transforms.CANVAS_TRANSFORM_ACTIONS`
+        (rotate_90_ccw / rotate_90_cw / rotate_180 / flip_horizontal /
+        flip_vertical). The 90° rotations swap width and height; the
+        document.shape after the call reflects the new orientation.
+        Returns ``True`` if anything changed.
+        """
+        from Imervue.paint.canvas_transforms import apply_canvas_transform
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = apply_canvas_transform(layer.image, action)
+            if layer.mask is not None:
+                layer.mask = apply_canvas_transform(layer.mask, action)
+        if self._selection is not None:
+            self._selection = apply_canvas_transform(self._selection, action)
+        self._notify()
+        return True
+
     def merge_down(self) -> bool:
         """Merge the active layer with the one immediately below it.
 
