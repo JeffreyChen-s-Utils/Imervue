@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QMenuBar, QStatusBar
@@ -111,6 +112,12 @@ class PaintWorkspace(QMainWindow):
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
         self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
 
+        # MaterialDock thumbnail clicks → drop the chosen tile onto a
+        # fresh layer. Categories beyond ``pose`` (texture / pattern /
+        # tone / brush_tip) will route to their own consumers in later
+        # phases; pose is the first wired through.
+        self._material_dock.material_chosen.connect(self._on_material_chosen)
+
         # Throttled navigator-preview updates. ``document_changed`` fires
         # on every brush dab; rebuilding the QPixmap each time would
         # double the per-stroke cost. Coalesce into a single update
@@ -193,6 +200,40 @@ class PaintWorkspace(QMainWindow):
             "paint_status_image_loaded", "Canvas: {w} × {h}",
         ).format(w=w, h=h)
         self._status.showMessage(msg, 3000)
+
+    def _on_material_chosen(self, path: str) -> None:
+        """Drop a material onto the canvas — currently routes pose
+        category onto a new layer; other categories are placeholders."""
+        from pathlib import Path
+
+        from Imervue.paint.material_library import MaterialEntry
+        from Imervue.paint.pose_drop import fit_pose_to_canvas, load_pose_image
+
+        # Look up the entry's category in the dock's index. Falls back
+        # to the file extension if the path isn't in the index (the
+        # user dragged in a file from outside the configured root).
+        entry = next(
+            (e for e in self._material_dock.index().entries
+             if str(e.path) == path),
+            None,
+        )
+        if entry is None:
+            entry = MaterialEntry(name=Path(path).stem, path=Path(path))
+        if entry.category != "pose":
+            # Other categories are wired in later phases.
+            return
+        canvas_doc = self._canvas.document()
+        if canvas_doc.shape is None:
+            return
+        try:
+            pose = load_pose_image(entry.path)
+        except (OSError, ValueError):
+            return
+        fitted = fit_pose_to_canvas(pose, canvas_doc.shape)
+        layer = canvas_doc.add_layer(name=f"Pose · {entry.name}")
+        np.copyto(layer.image, fitted)
+        canvas_doc.invalidate_composite()
+        self._canvas.update()
 
     def _on_document_changed(self) -> None:
         """Mark the navigator preview dirty and start the coalesce timer."""
