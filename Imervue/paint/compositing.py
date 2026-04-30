@@ -75,18 +75,38 @@ def composite_layer_pair(
     return out
 
 
-def composite_stack(layers: Iterable, base_shape: tuple[int, int]) -> np.ndarray:
+def composite_stack(
+    layers: Iterable,
+    base_shape: tuple[int, int],
+    groups: dict | None = None,
+) -> np.ndarray:
     """Walk a layer stack bottom→top and return the flattened RGBA buffer.
 
     Hidden / fully-transparent layers are skipped. The first visible
     layer is used as the base; the others are composited on top. If
     nothing is visible the result is a fully-transparent ``base_shape``
     canvas.
+
+    ``groups`` maps group name → LayerGroup. A layer whose ``group``
+    field names a hidden / zero-opacity group is skipped; otherwise
+    the group's opacity multiplies into the layer's effective opacity.
+    Group blend modes other than ``pass_through`` are stored verbatim
+    but currently treated as ``pass_through`` (each layer keeps its
+    own blend mode); a follow-up commit may add internal group
+    compositing.
     """
     layer_list = list(layers)
     h, w = base_shape
     out = np.zeros((h, w, 4), dtype=np.uint8)
+    groups = groups or {}
     for layer in layer_list:
+        layer_group = getattr(layer, "group", None)
+        group_opacity = 1.0
+        if layer_group is not None and layer_group in groups:
+            grp = groups[layer_group]
+            if not grp.visible or grp.opacity <= 0:
+                continue
+            group_opacity = float(grp.opacity)
         if not layer.visible or layer.opacity <= 0:
             continue
         if layer.image.shape[:2] != (h, w):
@@ -96,7 +116,7 @@ def composite_stack(layers: Iterable, base_shape: tuple[int, int]) -> np.ndarray
             )
         out = composite_layer_pair(
             out, layer.image,
-            opacity=layer.opacity,
+            opacity=layer.opacity * group_opacity,
             blend_mode=layer.blend_mode,
             mask=getattr(layer, "effective_mask", layer.mask),
         )

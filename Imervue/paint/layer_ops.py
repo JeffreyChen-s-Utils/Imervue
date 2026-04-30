@@ -81,7 +81,9 @@ def merge_layer_pair(below: Layer, above: Layer) -> Layer:
 
 
 def composite_visible_layers(
-    layers: list[Layer], shape: tuple[int, int],
+    layers: list[Layer],
+    shape: tuple[int, int],
+    groups: dict | None = None,
 ) -> Layer | None:
     """Composite the visible, non-zero-opacity layers into one Layer.
 
@@ -89,14 +91,33 @@ def composite_visible_layers(
     opacity == 0). The result uses the lowest visible layer's name
     plus normal / opacity-1 blending — its pixels carry the baked
     contribution of every visible layer.
+
+    ``groups`` is consulted the same way as
+    :func:`Imervue.paint.compositing.composite_stack`: layers belonging
+    to a hidden / zero-opacity group are skipped.
     """
     from Imervue.paint.document import Layer
-    visibles = [layer for layer in layers if layer.visible and layer.opacity > 0]
+    groups = groups or {}
+
+    def _effective(layer: Layer) -> tuple[bool, float]:
+        layer_group = getattr(layer, "group", None)
+        group_opacity = 1.0
+        if layer_group is not None and layer_group in groups:
+            grp = groups[layer_group]
+            if not grp.visible or grp.opacity <= 0:
+                return (False, 0.0)
+            group_opacity = float(grp.opacity)
+        if not layer.visible or layer.opacity <= 0:
+            return (False, 0.0)
+        return (True, layer.opacity * group_opacity)
+
+    visibles = [(layer, _effective(layer)) for layer in layers]
+    visibles = [(layer, eff[1]) for layer, eff in visibles if eff[0]]
     if not visibles:
         return None
     h, w = shape
     out = np.zeros((h, w, 4), dtype=np.uint8)
-    for layer in visibles:
+    for layer, eff_opacity in visibles:
         if layer.image.shape[:2] != (h, w):
             raise ValueError(
                 f"layer {layer.name!r} shape {layer.image.shape[:2]} "
@@ -104,15 +125,17 @@ def composite_visible_layers(
             )
         out = composite_layer_pair(
             out, layer.image,
-            opacity=layer.opacity,
+            opacity=eff_opacity,
             blend_mode=layer.blend_mode,
             mask=layer.effective_mask,
         )
-    return Layer(name=visibles[0].name, image=out)
+    return Layer(name=visibles[0][0].name, image=out)
 
 
 def flatten_layers(
-    layers: list[Layer], shape: tuple[int, int],
+    layers: list[Layer],
+    shape: tuple[int, int],
+    groups: dict | None = None,
 ) -> Layer:
     """Composite the visible layers and return one ``Background`` layer.
 
@@ -124,7 +147,7 @@ def flatten_layers(
     ``shape`` so downstream code can skip a None branch.
     """
     from Imervue.paint.document import Layer
-    merged = composite_visible_layers(layers, shape)
+    merged = composite_visible_layers(layers, shape, groups=groups)
     if merged is None:
         h, w = shape
         return Layer(

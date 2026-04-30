@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -22,6 +23,16 @@ from Imervue.paint.compositing import LAYER_BLEND_MODES, composite_stack
 
 DEFAULT_LAYER_NAME = "Layer"
 BACKGROUND_LAYER_NAME = "Background"
+
+# Layer-group blend modes — ``pass_through`` keeps each member layer's
+# own blend mode (the group only multiplies opacity / visibility). The
+# other modes match the Layer-level set; non-pass-through groups
+# composite their members internally first, then blend the result as a
+# unit. For 9a only ``pass_through`` is honoured; the rest are stored
+# verbatim so the persisted state survives round-trips, and a future
+# pass can wire up internal compositing.
+GROUP_BLEND_MODES = ("pass_through", *LAYER_BLEND_MODES)
+DEFAULT_GROUP_BLEND_MODE = "pass_through"
 
 
 @dataclass
@@ -43,6 +54,7 @@ class Layer:
     mask_enabled: bool = True
     clip: bool = False           # clip to layer below
     lock_alpha: bool = False     # paint only where alpha > 0 already exists
+    group: str | None = None     # name of the LayerGroup this layer belongs to
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -65,6 +77,33 @@ class Layer:
         self.opacity = max(0.0, min(1.0, float(self.opacity)))
 
 
+@dataclass
+class LayerGroup:
+    """Named group of layers with shared visibility / opacity / blend mode.
+
+    Groups are stored in :class:`PaintDocument._groups`; layers point at
+    a group via :attr:`Layer.group`. ``expanded`` is a UI-only hint that
+    persists across saves so a collapsed group stays collapsed.
+    """
+
+    name: str
+    visible: bool = True
+    opacity: float = 1.0
+    blend_mode: str = DEFAULT_GROUP_BLEND_MODE
+    locked: bool = False
+    expanded: bool = True
+
+    def __post_init__(self) -> None:
+        if not str(self.name).strip():
+            raise ValueError("group name must be non-empty")
+        if self.blend_mode not in GROUP_BLEND_MODES:
+            raise ValueError(
+                f"unknown group blend_mode {self.blend_mode!r}; "
+                f"expected one of {GROUP_BLEND_MODES}",
+            )
+        self.opacity = max(0.0, min(1.0, float(self.opacity)))
+
+
 class PaintDocument:
     """Layer stack + active-layer pointer + selection mask.
 
@@ -79,6 +118,7 @@ class PaintDocument:
         self._selection: np.ndarray | None = None
         self._composite_cache: np.ndarray | None = None
         self._listeners: list[Callable[[], None]] = []
+        self._groups: dict[str, LayerGroup] = {}
 
     # ---- listeners -------------------------------------------------------
 
@@ -148,6 +188,7 @@ class PaintDocument:
         layers: list[Layer],
         active_index: int = 0,
         selection: np.ndarray | None = None,
+        groups: dict | None = None,
     ) -> None:
         """Replace the document state wholesale.
 
@@ -178,6 +219,7 @@ class PaintDocument:
         self._layers = list(layers)
         self._active_index = max(0, min(int(active_index), len(layers) - 1))
         self._selection = selection
+        self._groups = dict(groups) if groups else {}
         self._notify()
 
     def add_layer(
@@ -219,6 +261,8 @@ class PaintDocument:
             mask=None if layer.mask is None else layer.mask.copy(),
             mask_enabled=layer.mask_enabled,
             clip=layer.clip,
+            lock_alpha=layer.lock_alpha,
+            group=layer.group,
         )
         self._layers.insert(self._active_index + 1, copy)
         self._active_index += 1
@@ -381,6 +425,16 @@ class PaintDocument:
         self._notify()
         return True
 
+    def _is_layer_effectively_visible(self, layer: Layer) -> bool:
+        """Visibility considering both the layer flag and any group's flag."""
+        if not layer.visible or layer.opacity <= 0:
+            return False
+        if layer.group is not None and layer.group in self._groups:
+            grp = self._groups[layer.group]
+            if not grp.visible or grp.opacity <= 0:
+                return False
+        return True
+
     def _resolve_layer(self, index: int) -> Layer | None:
         if not self._layers:
             return None
@@ -469,6 +523,109 @@ class PaintDocument:
         self._notify()
         return True
 
+    # ---- layer groups ---------------------------------------------------
+
+    def groups(self) -> list[LayerGroup]:
+        return list(self._groups.values())
+
+    def group(self, name: str) -> LayerGroup | None:
+        return self._groups.get(name)
+
+    def create_group(self, name: str, **attrs: Any) -> LayerGroup:
+        """Register a fresh layer group. Raises if the name already exists."""
+        if name in self._groups:
+            raise ValueError(f"group {name!r} already exists")
+        group = LayerGroup(name=name, **attrs)
+        self._groups[name] = group
+        self._notify()
+        return group
+
+    def delete_group(self, name: str, *, dissolve: bool = True) -> bool:
+        """Remove a group. With ``dissolve`` (default) member layers
+        move out to top-level; otherwise they are deleted with the group.
+        Returns ``True`` if the group existed."""
+        if name not in self._groups:
+            return False
+        del self._groups[name]
+        if dissolve:
+            for layer in self._layers:
+                if layer.group == name:
+                    layer.group = None
+        else:
+            self._layers = [layer for layer in self._layers if layer.group != name]
+            self._active_index = max(
+                0, min(self._active_index, len(self._layers) - 1),
+            )
+            if not self._layers:
+                self._active_index = -1
+        self._notify()
+        return True
+
+    def set_layer_group(
+        self, index: int = -1, *, group: str | None,
+    ) -> bool:
+        """Move a layer into a group (or out, with ``group=None``)."""
+        layer = self._resolve_layer(index)
+        if layer is None:
+            return False
+        if group is not None and group not in self._groups:
+            raise ValueError(f"unknown group {group!r}")
+        if layer.group == group:
+            return False
+        layer.group = group
+        self._notify()
+        return True
+
+    def set_group_attribute(self, group_name: str, **kwargs: Any) -> bool:
+        """Update one or more attributes on a layer group.
+
+        ``group_name`` is the lookup key. Pass attribute updates as
+        keyword arguments; ``name=`` is rejected here so renames must
+        go through :meth:`rename_group`.
+        """
+        group = self._groups.get(group_name)
+        if group is None:
+            raise ValueError(f"unknown group {group_name!r}")
+        changed = False
+        for key, value in kwargs.items():
+            if not hasattr(group, key) or key == "name":
+                raise ValueError(f"unknown / immutable group attribute {key!r}")
+            new_value = value
+            if key == "opacity":
+                new_value = max(0.0, min(1.0, float(value)))
+            elif key == "blend_mode" and value not in GROUP_BLEND_MODES:
+                raise ValueError(
+                    f"unknown group blend_mode {value!r}; "
+                    f"expected one of {GROUP_BLEND_MODES}",
+                )
+            if getattr(group, key) != new_value:
+                setattr(group, key, new_value)
+                changed = True
+        if changed:
+            self._notify()
+        return changed
+
+    def rename_group(self, old_name: str, new_name: str) -> bool:
+        """Rename a group, updating every member layer's tag. Returns
+        ``True`` if the rename took effect."""
+        if old_name == new_name:
+            return False
+        if old_name not in self._groups:
+            raise ValueError(f"unknown group {old_name!r}")
+        if new_name in self._groups:
+            raise ValueError(f"group {new_name!r} already exists")
+        if not str(new_name).strip():
+            raise ValueError("new group name must be non-empty")
+        group = self._groups.pop(old_name)
+        # Dataclass field assignment — LayerGroup is mutable.
+        group.name = new_name
+        self._groups[new_name] = group
+        for layer in self._layers:
+            if layer.group == old_name:
+                layer.group = new_name
+        self._notify()
+        return True
+
     # ---- canvas transforms ---------------------------------------------
 
     def transform_canvas(self, *, action: str) -> bool:
@@ -526,14 +683,16 @@ class PaintDocument:
         shape = self.shape
         if shape is None:
             return False
-        merged = composite_visible_layers(self._layers, shape)
+        merged = composite_visible_layers(self._layers, shape, groups=self._groups)
         if merged is None:
             return False
-        # Find indices of visible layers; the merged result replaces
-        # the lowest one and the rest are dropped.
+        # Find indices of effectively-visible layers; the merged result
+        # replaces the lowest one and the rest are dropped. Group
+        # visibility is honoured here so a layer inside a hidden group
+        # survives merge_visible — it's not in the on-screen composite.
         visible_idx = [
             i for i, layer in enumerate(self._layers)
-            if layer.visible and layer.opacity > 0
+            if self._is_layer_effectively_visible(layer)
         ]
         if len(visible_idx) <= 1:
             # Nothing to merge — single visible layer is already the
@@ -574,7 +733,7 @@ class PaintDocument:
         shape = self.shape
         if shape is None:
             return False
-        flat = flatten_layers(self._layers, shape)
+        flat = flatten_layers(self._layers, shape, groups=self._groups)
         if len(self._layers) == 1 and self._layers[0].image is flat.image:
             return False
         self._layers = [flat]
@@ -646,7 +805,9 @@ class PaintDocument:
             shape = self.shape
             if shape is None:
                 return None
-            self._composite_cache = composite_stack(self._layers, shape)
+            self._composite_cache = composite_stack(
+                self._layers, shape, groups=self._groups,
+            )
         return self._composite_cache
 
     def invalidate_composite(self) -> None:

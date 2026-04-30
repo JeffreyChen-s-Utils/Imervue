@@ -35,7 +35,12 @@ from pathlib import Path
 import numpy as np
 
 from Imervue.paint.compositing import LAYER_BLEND_MODES
-from Imervue.paint.document import Layer, PaintDocument
+from Imervue.paint.document import (
+    GROUP_BLEND_MODES,
+    Layer,
+    LayerGroup,
+    PaintDocument,
+)
 
 FORMAT_VERSION = 1
 FILE_EXTENSION = ".imervue"
@@ -69,10 +74,23 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
             "mask_enabled": bool(layer.mask_enabled),
             "clip": bool(layer.clip),
             "has_mask": layer.mask is not None,
+            "group": layer.group,
         })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
             arrays[f"layer_{i}_mask"] = layer.mask
+
+    groups_meta = [
+        {
+            "name": grp.name,
+            "visible": bool(grp.visible),
+            "opacity": float(grp.opacity),
+            "blend_mode": str(grp.blend_mode),
+            "locked": bool(grp.locked),
+            "expanded": bool(grp.expanded),
+        }
+        for grp in document.groups()
+    ]
 
     metadata = {
         "format_version": FORMAT_VERSION,
@@ -80,6 +98,7 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
         "height": int(h),
         "active_layer": int(document.active_layer_index()),
         "layers": layers_meta,
+        "groups": groups_meta,
     }
     arrays["_metadata"] = np.array(json.dumps(metadata))
     selection = document.selection()
@@ -110,11 +129,13 @@ def load_document(path: str | Path) -> PaintDocument:
         metadata = _read_metadata(data)
         layers, active_index = _read_layers(data, metadata)
         selection = _read_selection(data, metadata)
+        groups = _read_groups(metadata)
     document = PaintDocument()
     document.replace_state(
         layers=layers,
         active_index=active_index,
         selection=selection,
+        groups=groups,
     )
     return document
 
@@ -179,6 +200,7 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
                     f"layer {i} mask shape {mask.shape} does not match "
                     f"document {(height, width)}",
                 )
+        group_name = lmeta.get("group")
         layers.append(Layer(
             name=str(lmeta.get("name", f"Layer {i}")),
             image=image,
@@ -190,10 +212,43 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
             mask_enabled=bool(lmeta.get("mask_enabled", True)),
             clip=bool(lmeta.get("clip", False)),
             lock_alpha=bool(lmeta.get("lock_alpha", False)),
+            group=str(group_name) if group_name else None,
         ))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))
     return layers, active
+
+
+def _read_groups(metadata: dict) -> dict[str, LayerGroup]:
+    """Rebuild the group registry from metadata. Older saves without
+    a ``groups`` key produce an empty registry — Layer.group references
+    that don't resolve are tolerated by the compositor (treated as
+    top-level layers)."""
+    raw = metadata.get("groups")
+    if not isinstance(raw, list):
+        return {}
+    out: dict[str, LayerGroup] = {}
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name", "")).strip()
+        if not name:
+            continue
+        blend = str(entry.get("blend_mode", "pass_through"))
+        if blend not in GROUP_BLEND_MODES:
+            blend = "pass_through"
+        try:
+            out[name] = LayerGroup(
+                name=name,
+                visible=bool(entry.get("visible", True)),
+                opacity=float(entry.get("opacity", 1.0)),
+                blend_mode=blend,
+                locked=bool(entry.get("locked", False)),
+                expanded=bool(entry.get("expanded", True)),
+            )
+        except (ValueError, TypeError):
+            continue
+    return out
 
 
 def _read_selection(data, metadata: dict) -> np.ndarray | None:
