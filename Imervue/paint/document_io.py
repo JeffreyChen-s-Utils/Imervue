@@ -97,6 +97,12 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
         for grp in document.groups()
     ]
 
+    named_selection_names = list(document.list_named_selections())
+    for i, name in enumerate(named_selection_names):
+        mask = document.named_selection(name)
+        if mask is not None:
+            arrays[f"named_selection_{i}"] = mask
+
     metadata = {
         "format_version": FORMAT_VERSION,
         "width": int(w),
@@ -104,6 +110,7 @@ def save_document(document: PaintDocument, path: str | Path) -> None:
         "active_layer": int(document.active_layer_index()),
         "layers": layers_meta,
         "groups": groups_meta,
+        "named_selections": named_selection_names,
     }
     arrays["_metadata"] = np.array(json.dumps(metadata))
     selection = document.selection()
@@ -135,12 +142,14 @@ def load_document(path: str | Path) -> PaintDocument:
         layers, active_index = _read_layers(data, metadata)
         selection = _read_selection(data, metadata)
         groups = _read_groups(metadata)
+        named_selections = _read_named_selections(data, metadata)
     document = PaintDocument()
     document.replace_state(
         layers=layers,
         active_index=active_index,
         selection=selection,
         groups=groups,
+        named_selections=named_selections,
     )
     return document
 
@@ -261,6 +270,29 @@ def _read_groups(metadata: dict) -> dict[str, LayerGroup]:
             )
         except (ValueError, TypeError):
             continue
+    return out
+
+
+def _read_named_selections(
+    data, metadata: dict,
+) -> dict[str, np.ndarray]:
+    """Reconstruct the named-selection registry from the save bundle.
+
+    Older saves without the metadata key produce an empty dict so the
+    document still loads cleanly."""
+    names = metadata.get("named_selections")
+    if not isinstance(names, list):
+        return {}
+    out: dict[str, np.ndarray] = {}
+    expected_shape = (int(metadata["height"]), int(metadata["width"]))
+    for i, name in enumerate(names):
+        key = f"named_selection_{i}"
+        if key not in data.files:
+            continue
+        mask = np.ascontiguousarray(data[key])
+        if mask.dtype != np.bool_ or mask.shape != expected_shape:
+            continue
+        out[str(name)] = mask
     return out
 
 
