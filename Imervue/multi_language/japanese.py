@@ -604,6 +604,7 @@ japanese_word_dict = {
     "paint_layers_search": 'レイヤーを検索…',
     "paint_view_pixel_grid": 'ピクセルグリッド',
     "paint_view_snap_pixel": 'ピクセルにスナップ',
+    "paint_view_snap_edges": 'エッジにスナップ',
     "paint_view_onion_skin": 'オニオンスキン',
     "paint_view_quick_mask": 'クイックマスク',
     "paint_view_bleed_guides": '裁ち落とし/安全エリア',

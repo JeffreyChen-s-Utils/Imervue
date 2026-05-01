@@ -28,8 +28,8 @@ def test_view_menu_has_documented_actions(qapp):
     ws = PaintWorkspace()
     try:
         view_menu = menu_for(ws, "view")
-        # 5 toggles + 1 separator + 2 rotation actions = 8 entries.
-        assert len(view_menu.actions()) == 8
+        # 6 toggles (25f added Snap to Edges) + 1 sep + 2 rotation = 9.
+        assert len(view_menu.actions()) == 9
     finally:
         ws.deleteLater()
 

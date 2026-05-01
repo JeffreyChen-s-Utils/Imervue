@@ -612,6 +612,7 @@ english_word_dict = {
     "paint_layers_search": 'Search layers…',
     "paint_view_pixel_grid": 'Pixel Grid',
     "paint_view_snap_pixel": 'Snap to Pixel',
+    "paint_view_snap_edges": 'Snap to Edges',
     "paint_view_onion_skin": 'Onion Skin',
     "paint_view_quick_mask": 'Quick Mask',
     "paint_view_bleed_guides": 'Bleed Guides',

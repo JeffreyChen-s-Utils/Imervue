@@ -49,6 +49,9 @@ def populate_view_menu(workspace: PaintWorkspace) -> None:
         ("paint_view_snap_pixel", "Snap to Pixel",
          bridge.toggle_snap_to_pixel, "", True,
          bridge.snap_to_pixel_active()),
+        ("paint_view_snap_edges", "Snap to Edges",
+         bridge.toggle_snap_to_edges, "", True,
+         bridge.snap_to_edges_active()),
         ("paint_view_onion_skin", "Onion Skin",
          bridge.toggle_onion_skin, "", True,
          bridge.onion_skin_active()),
@@ -106,6 +109,9 @@ class _ViewMenuBridge:
     def snap_to_pixel_active(self) -> bool:
         return bool(self._workspace.state().snap_to_pixel)
 
+    def snap_to_edges_active(self) -> bool:
+        return bool(self._workspace.state().snap_to_edges)
+
     def onion_skin_active(self) -> bool:
         return bool(getattr(self._workspace, "_onion_skin_visible", False))
 
@@ -132,6 +138,11 @@ class _ViewMenuBridge:
         state.snap_to_pixel = bool(checked)
         # Use the existing private persistence path so the next
         # session starts with the same flag.
+        state._persist()  # noqa: SLF001
+
+    def toggle_snap_to_edges(self, checked: bool) -> None:
+        state = self._workspace.state()
+        state.snap_to_edges = bool(checked)
         state._persist()  # noqa: SLF001
 
     def toggle_onion_skin(self, checked: bool) -> None:

@@ -1314,11 +1314,18 @@ class _CropTool:
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
             self._press = None
+            # Snap the released corner to nearby edges first so the
+            # aspect-ratio constraint operates on user-aligned coords.
+            snapped_release = self._maybe_snap_to_edges(
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             aspect = getattr(self._state, "crop_aspect", None)
             try:
-                snapped = snap_to_aspect(x0, y0, evt.x, evt.y, aspect)
+                snapped = snap_to_aspect(
+                    x0, y0, snapped_release[0], snapped_release[1], aspect,
+                )
             except ValueError:
-                snapped = (x0, y0, float(evt.x), float(evt.y))
+                snapped = (x0, y0, snapped_release[0], snapped_release[1])
             sx0, sy0, sx1, sy1 = snapped
             rect = normalise_rect(
                 sx0, sy0, sx1, sy1, canvas.shape[:2],
@@ -1340,3 +1347,35 @@ class _CropTool:
 
     def cancel(self) -> None:
         self._press = None
+
+    def _maybe_snap_to_edges(
+        self, x: float, y: float, canvas_shape: tuple[int, int],
+    ) -> tuple[float, float]:
+        """Pull ``(x, y)`` to nearby canvas / layer edges when the
+        workspace state opts in via ``snap_to_edges``. Returns the
+        possibly-adjusted point."""
+        if not getattr(self._state, "snap_to_edges", False):
+            return (x, y)
+        ws = self._workspace
+        if ws is None:
+            return (x, y)
+        from Imervue.paint.snap_guides import (
+            collect_canvas_candidates,
+            collect_layer_candidates,
+            snap_point,
+        )
+        try:
+            x_canvas, y_canvas = collect_canvas_candidates(canvas_shape)
+        except ValueError:
+            return (x, y)
+        document = ws.canvas().document()
+        layer_images = [
+            document.layer_at(i).image for i in range(document.layer_count)
+        ]
+        x_layer, y_layer = collect_layer_candidates(layer_images)
+        sx, sy, _hits = snap_point(
+            x, y,
+            x_candidates=x_canvas + x_layer,
+            y_candidates=y_canvas + y_layer,
+        )
+        return (sx, sy)

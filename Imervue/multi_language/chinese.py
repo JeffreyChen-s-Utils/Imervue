@@ -593,6 +593,7 @@ chinese_word_dict = {
     "paint_layers_search": '搜索图层…',
     "paint_view_pixel_grid": '像素网格',
     "paint_view_snap_pixel": '对齐像素',
+    "paint_view_snap_edges": '对齐边缘',
     "paint_view_onion_skin": '洋葱皮',
     "paint_view_quick_mask": '快速蒙版',
     "paint_view_bleed_guides": '出血/安全区指示',

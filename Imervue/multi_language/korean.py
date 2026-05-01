@@ -598,6 +598,7 @@ korean_word_dict = {
     "paint_layers_search": '레이어 검색…',
     "paint_view_pixel_grid": '픽셀 격자',
     "paint_view_snap_pixel": '픽셀에 맞추기',
+    "paint_view_snap_edges": '가장자리에 맞추기',
     "paint_view_onion_skin": '오니언 스킨',
     "paint_view_quick_mask": '퀵 마스크',
     "paint_view_bleed_guides": '재단/안전 영역 가이드',
