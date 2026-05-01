@@ -788,7 +788,7 @@ class PaintCanvas(QOpenGLWidget):
     # ---- mouse / tablet --------------------------------------------------
 
     def keyPressEvent(self, event) -> None:  # pragma: no cover - Qt UI
-        """Bracket-key brush-size + HUD flash."""
+        """Bracket-key brush size + Enter pen-commit + HUD flash."""
         from PySide6.QtCore import Qt as _Qt
         key = event.key()
         if key in (_Qt.Key.Key_BracketLeft, _Qt.Key.Key_BracketRight):
@@ -805,7 +805,34 @@ class PaintCanvas(QOpenGLWidget):
             trigger_size_hud(self._tool_state_for_hud, self._size_hud)
             self.update()
             return
+        if key in (_Qt.Key.Key_Return, _Qt.Key.Key_Enter):
+            workspace = self._workspace_for_pen_commit()
+            if workspace is None:
+                event.ignore()
+                return
+            from Imervue.paint.pen_commit import commit_pen_path
+            if commit_pen_path(workspace):
+                self._needs_upload = True
+                self.document_changed.emit()
+                self.update()
+            return
         super().keyPressEvent(event)
+
+    def _workspace_for_pen_commit(self):
+        """Return the workspace if it owns a bezier pen path.
+
+        The canvas doesn't import :class:`PaintWorkspace` directly to
+        avoid a circular dependency; instead it duck-types on the
+        ``_bezier_pen_path`` attribute the pen tool stores.
+        """
+        candidate = self.parent()
+        for _ in range(4):   # walk up at most a few parents
+            if candidate is None:
+                break
+            if hasattr(candidate, "_bezier_pen_path"):
+                return candidate
+            candidate = candidate.parent() if hasattr(candidate, "parent") else None
+        return None
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI
         if self._is_pan_button(event):
