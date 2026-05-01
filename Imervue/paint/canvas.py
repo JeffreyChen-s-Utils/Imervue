@@ -141,6 +141,7 @@ _TOOL_CURSORS = {
     "select_rect": Qt.CursorShape.CrossCursor,
     "select_lasso": Qt.CursorShape.CrossCursor,
     "select_wand": Qt.CursorShape.PointingHandCursor,
+    "select_quick": Qt.CursorShape.CrossCursor,
     "move": Qt.CursorShape.SizeAllCursor,
     "text": Qt.CursorShape.IBeamCursor,
     "gradient": Qt.CursorShape.CrossCursor,

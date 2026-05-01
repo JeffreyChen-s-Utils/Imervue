@@ -238,6 +238,7 @@ class ToolDispatcher:
             "select_rect": RectSelectTool(sel_ctx),
             "select_lasso": LassoSelectTool(sel_ctx),
             "select_wand": WandSelectTool(sel_ctx, self._state),
+            "select_quick": QuickSelectTool(sel_ctx, self._state),
             "move": MoveTool(self._state, self._selection_provider, self._set_selection),
             "text": _build_text_tool(
                 self._state, self._selection_provider, self._parent_widget,
@@ -705,6 +706,62 @@ class WandSelectTool:
 
     def cancel(self) -> None:
         pass
+
+
+class QuickSelectTool:
+    """Drag-to-paint selection — accumulate wand masks under the cursor.
+
+    Each press / move event runs a magic-wand sample at the cursor
+    and unions the result into the running selection. On release,
+    the accumulated mask becomes the new document selection through
+    the standard ``_SelectionContext.write`` path so the active
+    combine mode (replace / add / subtract / intersect) still
+    applies relative to the *pre-stroke* selection.
+    """
+
+    def __init__(self, sel_ctx: _SelectionContext, state: ToolState):
+        self._sel = sel_ctx
+        self._state = state
+        self._active = False
+        # Selection accumulated since the last press — committed via
+        # _sel.write when the gesture ends so the user's combine-mode
+        # choice applies to the whole drag rather than each sample.
+        self._accumulated: np.ndarray | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            self._active = True
+            self._accumulated = self._wand_mask(canvas, evt)
+            return True
+        if evt.phase == "move" and self._active:
+            sample = self._wand_mask(canvas, evt)
+            if self._accumulated is None:
+                self._accumulated = sample
+            else:
+                self._accumulated = np.logical_or(self._accumulated, sample)
+            return True
+        if evt.phase in ("release", "leave") and self._active:
+            self._active = False
+            if self._accumulated is not None and self._accumulated.any():
+                self._sel.write(self._accumulated)
+            self._accumulated = None
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._active = False
+        self._accumulated = None
+
+    def _wand_mask(
+        self, canvas: np.ndarray, evt: PointerEvent,
+    ) -> np.ndarray:
+        return magic_wand_mask(
+            canvas,
+            seed_x=int(round(evt.x)),
+            seed_y=int(round(evt.y)),
+            tolerance=self._state.fill.tolerance,
+            contiguous=self._state.fill.contiguous,
+        )
 
 
 # ---------------------------------------------------------------------------

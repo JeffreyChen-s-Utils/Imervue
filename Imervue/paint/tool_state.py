@@ -38,6 +38,7 @@ TOOLS = (
     "select_rect",
     "select_lasso",
     "select_wand",
+    "select_quick",
     "move",
     "text",
     "gradient",

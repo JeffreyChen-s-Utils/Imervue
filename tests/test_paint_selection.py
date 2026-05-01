@@ -15,6 +15,7 @@ from Imervue.paint.selection import (
 )
 from Imervue.paint.tool_dispatcher import (
     LassoSelectTool,
+    QuickSelectTool,
     RectSelectTool,
     WandSelectTool,
     _SelectionContext,
@@ -330,3 +331,74 @@ def test_set_selection_mode_rejects_unknown(state):
 def test_set_selection_mode_idempotent_returns_false(state):
     state.set_selection_mode("add")
     assert state.set_selection_mode("add") is False
+
+
+# ---------------------------------------------------------------------------
+# Quick Select brush (28i)
+# ---------------------------------------------------------------------------
+
+
+def test_quick_select_in_tools_list():
+    assert "select_quick" in ts.TOOLS
+
+
+def test_quick_select_paints_first_sample(state, canvas):
+    ctx, holder = _make_ctx(state)
+    state.set_fill(tolerance=0, contiguous=True)
+    tool = QuickSelectTool(ctx, state)
+    tool.handle(_press(0, 0), canvas)
+    tool.handle(_release(0, 0), canvas)
+    assert holder[0] is not None
+    # The white outer ring under the cursor is selected.
+    assert holder[0][0, 0]
+    # The black square middle was not visited.
+    assert not holder[0][6, 6]
+
+
+def test_quick_select_unions_multiple_samples(state, canvas):
+    """Drag from a white pixel through a black pixel — both regions
+    end up in the final selection."""
+    ctx, holder = _make_ctx(state)
+    state.set_fill(tolerance=0, contiguous=True)
+    tool = QuickSelectTool(ctx, state)
+    tool.handle(_press(0, 0), canvas)
+    tool.handle(_move(6, 6), canvas)
+    tool.handle(_release(6, 6), canvas)
+    assert holder[0] is not None
+    assert holder[0][0, 0]   # white ring
+    assert holder[0][6, 6]   # black centre
+
+
+def test_quick_select_cancel_drops_pending_strokes(state, canvas):
+    ctx, holder = _make_ctx(state)
+    state.set_fill(tolerance=0, contiguous=True)
+    tool = QuickSelectTool(ctx, state)
+    tool.handle(_press(0, 0), canvas)
+    tool.cancel()
+    tool.handle(_release(6, 6), canvas)
+    # Release after cancel must not commit any selection.
+    assert holder[0] is None
+
+
+def test_quick_select_release_without_press_is_safe(state, canvas):
+    """A stray release event before a press must not crash."""
+    ctx, _holder = _make_ctx(state)
+    tool = QuickSelectTool(ctx, state)
+    # Should NOT raise.
+    tool.handle(_release(0, 0), canvas)
+
+
+def test_quick_select_respects_selection_combine_mode(state, canvas):
+    """If the user picks 'subtract' before painting, the accumulated
+    drag still lands as a subtract from the pre-stroke selection."""
+    ctx, holder = _make_ctx(state)
+    holder[0] = rectangle_mask(16, 16, 0, 0, 16, 16)   # full canvas selected
+    state.set_fill(tolerance=0, contiguous=True)
+    state.set_selection_mode("subtract")
+    tool = QuickSelectTool(ctx, state)
+    tool.handle(_press(6, 6), canvas)   # black centre region
+    tool.handle(_release(6, 6), canvas)
+    assert holder[0] is not None
+    # Black centre subtracted; outer ring still selected.
+    assert holder[0][0, 0]
+    assert not holder[0][6, 6]

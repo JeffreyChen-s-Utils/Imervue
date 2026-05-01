@@ -54,6 +54,7 @@ TOOL_ORDER = (
     ("select_rect",   "M"),
     ("select_lasso",  "L"),
     ("select_wand",   "W"),
+    ("select_quick",  "Q"),
     ("move",          "V"),
     None,             # ── group break
     ("text",          "T"),
