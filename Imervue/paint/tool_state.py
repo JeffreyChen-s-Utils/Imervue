@@ -48,6 +48,7 @@ TOOLS = (
     "bezier_pen",
     "clone_stamp",
     "transform",
+    "speech_bubble",
 )
 DEFAULT_TOOL = "brush"
 

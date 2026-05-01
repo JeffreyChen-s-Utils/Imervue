@@ -566,6 +566,7 @@ english_word_dict = {
     "paint_tool_bezier_pen": 'Pen',
     "paint_tool_clone_stamp": 'Clone Stamp',
     "paint_tool_transform": 'Transform',
+    "paint_tool_speech_bubble": 'Speech Bubble',
     "paint_settings_pressure_curve": 'Pressure Curve…',
     "paint_settings_shortcuts": 'Shortcuts…',
     "paint_settings_workspace_layouts": 'Workspace Layouts…',

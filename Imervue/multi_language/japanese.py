@@ -558,6 +558,7 @@ japanese_word_dict = {
     "paint_tool_bezier_pen": 'ペン',
     "paint_tool_clone_stamp": 'スタンプ',
     "paint_tool_transform": '変形',
+    "paint_tool_speech_bubble": '吹き出し',
     "paint_settings_pressure_curve": '筆圧カーブ…',
     "paint_settings_shortcuts": 'ショートカット…',
     "paint_settings_workspace_layouts": 'ワークスペース…',

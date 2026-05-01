@@ -230,6 +230,7 @@ class ToolDispatcher:
             "bezier_pen": _BezierPenTool(self._state),
             "clone_stamp": _CloneStampTool(self._state),
             "transform": _TransformHandleTool(self._state),
+            "speech_bubble": _SpeechBubbleTool(self._state),
         }
 
 
@@ -1031,3 +1032,75 @@ class _TransformHandleTool:
     def cancel(self) -> None:
         self._active_handle = None
         self._last_pos = None
+
+
+# ---------------------------------------------------------------------------
+# Speech-bubble tool — drag-to-define ellipse + optional second click
+# defines the tail tip. Press → start rect. Release → commit.
+# ---------------------------------------------------------------------------
+
+
+class _SpeechBubbleTool:
+    """Comic-style speech bubble dispatcher.
+
+    Two-stage gesture:
+
+    1. **Press + drag + release** — defines the bubble's bounding rect.
+       The bubble is rasterised on release with no tail.
+    2. **Optional follow-up click** while the same bubble is the
+       most-recently committed one — extends a tail toward the click
+       point. The follow-up is recognised when the click lands within
+       a small radius of the previous bubble; otherwise the tool
+       starts a fresh bubble drag.
+
+    Phase-23c ships stage 1 only — the dispatcher commits on
+    release with ``tail_to=None``. A future revision can add the
+    follow-up click without changing the public surface.
+    """
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._press: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.speech_bubble import (
+            MIN_BUBBLE_DIM,
+            BubbleStyle,
+            render_speech_bubble,
+        )
+        if evt.phase == "press":
+            self._press = (float(evt.x), float(evt.y))
+            return False
+        if evt.phase == "release" and self._press is not None:
+            x0, y0 = self._press
+            x1, y1 = float(evt.x), float(evt.y)
+            self._press = None
+            rx = int(round(min(x0, x1)))
+            ry = int(round(min(y0, y1)))
+            rw = int(round(abs(x1 - x0)))
+            rh = int(round(abs(y1 - y0)))
+            if rw < MIN_BUBBLE_DIM or rh < MIN_BUBBLE_DIM:
+                return False
+            h, w = canvas.shape[:2]
+            # Clip the rect to the canvas — the user can drag beyond
+            # the edge but the bubble must not write outside.
+            rx = max(0, min(rx, w - MIN_BUBBLE_DIM))
+            ry = max(0, min(ry, h - MIN_BUBBLE_DIM))
+            rw = min(rw, w - rx)
+            rh = min(rh, h - ry)
+            bubble = render_speech_bubble(
+                (h, w), (rx, ry, rw, rh), tail_to=None,
+                style=BubbleStyle(),
+            )
+            # Composite the bubble onto the layer with simple
+            # source-over: opaque bubble pixels overwrite the layer.
+            mask = bubble[..., 3] > 0
+            canvas[mask] = bubble[mask]
+            return True
+        if evt.phase in ("leave",):
+            self._press = None
+            return False
+        return False
+
+    def cancel(self) -> None:
+        self._press = None

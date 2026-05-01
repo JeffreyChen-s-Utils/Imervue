@@ -552,6 +552,7 @@ korean_word_dict = {
     "paint_tool_bezier_pen": '펜',
     "paint_tool_clone_stamp": '복제 도장',
     "paint_tool_transform": '변형',
+    "paint_tool_speech_bubble": '말풍선',
     "paint_settings_pressure_curve": '필압 커브…',
     "paint_settings_shortcuts": '단축키…',
     "paint_settings_workspace_layouts": '작업 영역 레이아웃…',
