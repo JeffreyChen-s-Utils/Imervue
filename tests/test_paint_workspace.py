@@ -31,14 +31,14 @@ def test_workspace_constructs(qapp):
         ws.deleteLater()
 
 
-def test_workspace_has_nine_dock_widgets(qapp):
+def test_workspace_has_ten_dock_widgets(qapp):
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
         # Colour, Brush, Layer, Navigator, Material, History,
-        # Swatches, Reference (24d), Animation (24f).
-        assert len(docks) == 9
+        # Swatches, Reference (24d), Animation (24f), Histogram (25d).
+        assert len(docks) == 10
     finally:
         ws.deleteLater()
 

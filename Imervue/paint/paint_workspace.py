@@ -136,6 +136,10 @@ class PaintWorkspace(QMainWindow):
         from Imervue.paint.reference_dock import ReferenceDock
         self._reference_dock = ReferenceDock(self)
 
+        # Histogram dock — RGB / luma bin counts of the active doc.
+        from Imervue.paint.histogram_dock import HistogramDock
+        self._histogram_dock = HistogramDock(self)
+
         # Animation timeline dock — frame snapshots + transport.
         # The dock owns the AnimationTimeline; the workspace listens
         # to its signals to push frames onto the active canvas.
@@ -161,6 +165,7 @@ class PaintWorkspace(QMainWindow):
             self._swatch_dock,
             self._reference_dock,
             self._animation_dock,
+            self._histogram_dock,
         ):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
             dock.setFeatures(
@@ -496,6 +501,7 @@ class PaintWorkspace(QMainWindow):
             ("paint_dock_swatches", "Swatches", self._swatch_dock),
             ("paint_dock_reference", "Reference", self._reference_dock),
             ("paint_dock_animation", "Animation", self._animation_dock),
+            ("paint_dock_histogram", "Histogram", self._histogram_dock),
         )
         self._window_dock_actions = {}
         for key, fallback, dock in entries:
@@ -643,11 +649,19 @@ class PaintWorkspace(QMainWindow):
             self._nav_timer.start()
 
     def _refresh_navigator_preview(self) -> None:
-        """Build a QPixmap of the current composite and push it to the dock."""
+        """Build a QPixmap of the current composite and push it to the dock.
+
+        Also refreshes the histogram dock from the same composite —
+        both consumers piggyback on the same coalesce timer to avoid
+        re-running per brush dab.
+        """
         self._nav_dirty = False
         composite = self._canvas.document().composite()
         if composite is None:
             self._navigator_dock.set_preview_image(None)
+            if hasattr(self, "_histogram_dock"):
+                from Imervue.paint.histogram import empty_histogram
+                self._histogram_dock.set_histogram(empty_histogram())
             return
         h, w = composite.shape[:2]
         # ``composite`` may alias ``layer.image`` via the single-layer
@@ -659,6 +673,9 @@ class PaintWorkspace(QMainWindow):
             self._nav_buffer, w, h, w * 4, QImage.Format.Format_RGBA8888,
         )
         self._navigator_dock.set_preview_image(QPixmap.fromImage(qimage))
+        if hasattr(self, "_histogram_dock"):
+            from Imervue.paint.histogram import compute_histogram
+            self._histogram_dock.set_histogram(compute_histogram(composite))
 
     # ---- compatibility shim ---------------------------------------------
 
