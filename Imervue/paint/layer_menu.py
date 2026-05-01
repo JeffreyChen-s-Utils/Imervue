@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtGui import QKeySequence
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.paint.gradient_map_presets import GRADIENT_MAP_PRESETS
 from Imervue.paint.paint_menu_bar import menu_for
 
 if TYPE_CHECKING:
@@ -85,6 +86,25 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         if shortcut:
             action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(slot)
+    _populate_gradient_map_submenu(menu, bridge, lang)
+
+
+def _populate_gradient_map_submenu(menu, bridge, lang) -> None:
+    """Append a "Gradient Map" submenu listing the presets.
+
+    Each entry creates a fresh adjustment layer using the preset's
+    stop list. Kept as a sub-routine so the main population loop
+    stays focused on the simpler one-shot actions.
+    """
+    menu.addSeparator()
+    submenu = menu.addMenu(
+        lang.get("paint_layer_gradient_map", "Add Gradient Map"),
+    )
+    for preset_id, label_key, fallback, _ in GRADIENT_MAP_PRESETS:
+        action = submenu.addAction(lang.get(label_key, fallback))
+        action.triggered.connect(
+            lambda _checked=False, pid=preset_id: bridge.add_gradient_map(pid),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +225,31 @@ class _LayerMenuBridge:
         document = self._workspace.canvas().document()
         if document.divide_active_layer() > 0:
             self._refresh_canvas()
+
+    def add_gradient_map(self, preset_id: str) -> None:
+        """Insert a Gradient Map adjustment layer for ``preset_id``.
+
+        The adjustment is non-destructive — the underlying pixels stay
+        unchanged. Unknown preset ids are a silent no-op so a stale
+        toolbar action survives a future preset rename without
+        crashing the workspace.
+        """
+        from Imervue.paint.adjustments import Adjustment
+        from Imervue.paint.gradient_map_presets import preset_stops
+
+        stops = preset_stops(preset_id)
+        if stops is None:
+            return
+        document = self._workspace.canvas().document()
+        if document.shape is None:
+            return
+        adjustment = Adjustment(
+            kind="gradient_map", params={"stops": stops},
+        )
+        document.add_adjustment_layer(
+            adjustment, name=f"Gradient Map ({preset_id})",
+        )
+        self._refresh_canvas()
 
     def toggle_binary_layer(self) -> None:
         """Flip the active layer between plain raster and 1-bit ink.

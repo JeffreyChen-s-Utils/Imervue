@@ -32,8 +32,9 @@ def test_layer_menu_has_documented_actions(qapp):
         # 4 layer-stack actions + sep + 5 mask actions + sep
         # + clipping toggle + sep + 4 effect actions + sep
         # + 2 reference-layer actions + sep + 1-bit toggle
-        # + divide-layer + sep + delete = 25 entries.
-        assert len(layer_menu.actions()) == 25
+        # + divide-layer + sep + delete + sep
+        # + gradient-map submenu = 27 entries.
+        assert len(layer_menu.actions()) == 27
     finally:
         ws.deleteLater()
 
@@ -222,6 +223,34 @@ def test_divide_layer_no_op_on_empty(qapp):
         bridge.divide_layer()
         # Default workspace seeds a fully-transparent layer; divide
         # finds nothing and the stack is unchanged.
+        assert document.layer_count == before
+    finally:
+        ws.deleteLater()
+
+
+def test_add_gradient_map_inserts_adjustment_layer(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        before = document.layer_count
+        bridge.add_gradient_map("sunset")
+        assert document.layer_count == before + 1
+        layer = document.active_layer()
+        assert layer is not None
+        assert layer.adjustment is not None
+        assert layer.adjustment.kind == "gradient_map"
+    finally:
+        ws.deleteLater()
+
+
+def test_add_gradient_map_unknown_preset_is_no_op(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        before = document.layer_count
+        bridge.add_gradient_map("not-a-preset")
         assert document.layer_count == before
     finally:
         ws.deleteLater()
