@@ -647,6 +647,8 @@ traditional_chinese_word_dict = {
     "paint_filter_film_grain": '底片顆粒…',
     "paint_filter_film_grain_intensity": '強度',
     "paint_filter_film_grain_size": '顆粒大小',
+    "paint_filter_halftone": '轉換為網點…',
+    "paint_filter_halftone_lpi": '網線密度 (LPI)',
     "paint_text_size": '大小：',
     "paint_text_bold": '粗體',
     "paint_text_italic": '斜體',

@@ -108,6 +108,20 @@ def test_apply_filter_film_grain_changes_pixels(gray_canvas):
     assert not np.array_equal(out, gray_canvas)
 
 
+def test_apply_filter_halftone_produces_dot_pattern(gray_canvas):
+    """The halftone filter must replace soft greys with a sparse dot
+    pattern — so the output's alpha channel is no longer constant."""
+    spec = _spec_by_key("halftone")
+    out = apply_filter_to_layer(
+        spec, {"lpi": 60}, gray_canvas, selection=None,
+    )
+    assert out.shape == gray_canvas.shape
+    assert out.dtype == np.uint8
+    # The dot pattern should produce variation in alpha across the
+    # image; a flat fill would have a single alpha value.
+    assert len(np.unique(out[..., 3])) > 1
+
+
 # ---------------------------------------------------------------------------
 # Selection clipping
 # ---------------------------------------------------------------------------

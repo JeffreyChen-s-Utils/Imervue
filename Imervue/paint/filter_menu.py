@@ -117,6 +117,11 @@ def _apply_film_grain(arr: np.ndarray, params: dict[str, Any]) -> np.ndarray:
     ))
 
 
+def _apply_halftone(arr: np.ndarray, params: dict[str, Any]) -> np.ndarray:
+    from Imervue.paint.halftone import apply_halftone_to_image
+    return apply_halftone_to_image(arr, lpi=int(params["lpi"]))
+
+
 FILTER_SPECS: tuple[FilterSpec, ...] = (
     FilterSpec(
         key="levels",
@@ -185,6 +190,16 @@ FILTER_SPECS: tuple[FilterSpec, ...] = (
                       "int_slider", 1, 12, 2),
         ),
         apply_fn=_apply_film_grain,
+    ),
+    FilterSpec(
+        key="halftone",
+        label_key="paint_filter_halftone",
+        label_fallback="Convert to Halftone…",
+        parameters=(
+            ParamSpec("lpi", "paint_filter_halftone_lpi", "Lines per inch",
+                      "int_slider", 10, 200, 60),
+        ),
+        apply_fn=_apply_halftone,
     ),
 )
 

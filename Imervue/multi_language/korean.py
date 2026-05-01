@@ -652,6 +652,8 @@ korean_word_dict = {
     "paint_filter_film_grain": '필름 그레인…',
     "paint_filter_film_grain_intensity": '강도',
     "paint_filter_film_grain_size": '입자 크기',
+    "paint_filter_halftone": '하프톤으로 변환…',
+    "paint_filter_halftone_lpi": '인치당 선 수 (LPI)',
     "paint_text_size": '크기:',
     "paint_text_bold": '굵게',
     "paint_text_italic": '기울임',

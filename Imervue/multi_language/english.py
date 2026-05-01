@@ -666,6 +666,8 @@ english_word_dict = {
     "paint_filter_film_grain": 'Film Grain…',
     "paint_filter_film_grain_intensity": 'Intensity',
     "paint_filter_film_grain_size": 'Grain size',
+    "paint_filter_halftone": 'Convert to Halftone…',
+    "paint_filter_halftone_lpi": 'Lines per inch',
     "paint_text_size": 'Size:',
     "paint_text_bold": 'Bold',
     "paint_text_italic": 'Italic',

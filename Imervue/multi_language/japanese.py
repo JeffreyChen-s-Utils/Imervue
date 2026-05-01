@@ -658,6 +658,8 @@ japanese_word_dict = {
     "paint_filter_film_grain": 'フィルムグレイン…',
     "paint_filter_film_grain_intensity": '強度',
     "paint_filter_film_grain_size": '粒子サイズ',
+    "paint_filter_halftone": 'ハーフトーンに変換…',
+    "paint_filter_halftone_lpi": '線数 (LPI)',
     "paint_text_size": 'サイズ:',
     "paint_text_bold": '太字',
     "paint_text_italic": '斜体',
