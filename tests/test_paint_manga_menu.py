@@ -180,3 +180,37 @@ def test_toggle_tone_layer_no_op_without_active():
     # No active layer; the bridge must short-circuit.
     bridge.toggle_tone_layer()
     assert bridge._workspace.document().active_layer() is None  # noqa: SLF001
+
+
+def test_stamp_page_numbers_no_project_is_safe(qapp):
+    """Without a project mounted on the workspace the verb must be a
+    silent no-op — guards against a binding that crashes a brand-new
+    workspace before the user opens a multi-page project."""
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        # No _paint_project attribute — verb must short-circuit.
+        bridge.stamp_page_numbers()
+    finally:
+        ws.deleteLater()
+
+
+def test_stamp_page_numbers_runs_against_attached_project(qapp):
+    import numpy as np
+    from Imervue.paint.document import PaintDocument
+    from Imervue.paint.paint_project import PaintProject, ProjectPage
+    ws = PaintWorkspace()
+    try:
+        proj = PaintProject(name="p")
+        for _ in range(2):
+            doc = PaintDocument()
+            doc.load_image(np.zeros((32, 32, 4), dtype=np.uint8))
+            proj.add_page(ProjectPage(document=doc, name="P"))
+        ws._paint_project = proj   # noqa: SLF001
+        before = [p.document.layer_count for p in proj.pages]
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        bridge.stamp_page_numbers()
+        after = [p.document.layer_count for p in proj.pages]
+        assert all(a == b + 1 for a, b in zip(after, before, strict=True))
+    finally:
+        ws.deleteLater()

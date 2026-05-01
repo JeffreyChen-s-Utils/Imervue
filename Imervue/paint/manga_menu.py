@@ -55,6 +55,10 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
         lang.get("paint_manga_toggle_tone_layer", "Toggle Tone Layer"),
     )
     tone_action.triggered.connect(bridge.toggle_tone_layer)
+    page_numbers_action = menu.addAction(
+        lang.get("paint_manga_stamp_page_numbers", "Stamp Page Numbers"),
+    )
+    page_numbers_action.triggered.connect(bridge.stamp_page_numbers)
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +79,21 @@ class _MangaMenuBridge:
             return
         params = dialog.values()
         commit_panel_layout(self._workspace, params)
+
+    def stamp_page_numbers(self) -> None:
+        """Drop a "Page N" layer on every page in the active project.
+
+        Silently no-ops when the workspace has no project loaded — a
+        single-document edit doesn't need page numbering. The default
+        corner / size / margin are used; a follow-up dialog can make
+        these tunable.
+        """
+        from Imervue.paint.page_numbering import stamp_page_numbers as stamp_fn
+        project = getattr(self._workspace, "_paint_project", None)
+        if project is None or project.page_count == 0:
+            return
+        stamp_fn(project)
+        self._workspace.canvas().update()
 
     def toggle_tone_layer(self) -> None:
         """Flip the active layer between plain raster and tone-render.
