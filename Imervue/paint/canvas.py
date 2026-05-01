@@ -214,6 +214,11 @@ class PaintCanvas(QOpenGLWidget):
         # tablet. Promoted out of the unrotated path so View-menu
         # rotation actions (21d) and Phase 22 paintGL apply uniformly.
         self._rotation_deg = 0.0
+        # Overlay flags driven by the View menu (21d). The renderer
+        # consults these in ``paintGL`` so subsequent overlay phases
+        # (pixel grid, onion skin, bleed guides) can hang their draw
+        # calls off the same flag without changing this constructor.
+        self._pixel_grid_visible = False
         # Set when ``_reset_view_to_fit`` is called against a widget
         # that's too small to host the document at a sensible zoom
         # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
@@ -357,6 +362,29 @@ class PaintCanvas(QOpenGLWidget):
     def zoom_factor(self) -> float:
         return self._zoom
 
+    def set_pixel_grid_visible(self, visible: bool) -> None:
+        """Toggle the pixel-grid overlay; repaints the canvas.
+
+        The overlay only renders if the zoom is past
+        :data:`Imervue.paint.visual_guides.PIXEL_GRID_MIN_ZOOM` —
+        below that the grid would crowd the underlying pixels and
+        the user gets moiré rather than guidance.
+        """
+        new_value = bool(visible)
+        if new_value == self._pixel_grid_visible:
+            return
+        self._pixel_grid_visible = new_value
+        self.update()
+
+    def should_paint_pixel_grid(self) -> bool:
+        """Pure-logic predicate the GL paint path consults.
+
+        Exposed for unit testing because ``paintGL`` itself can't be
+        exercised without a display server.
+        """
+        from Imervue.paint.visual_guides import should_show_pixel_grid
+        return self._pixel_grid_visible and should_show_pixel_grid(self._zoom)
+
     def rotation_degrees(self) -> float:
         """Return the current view rotation in degrees."""
         return float(self._rotation_deg)
@@ -466,6 +494,8 @@ class PaintCanvas(QOpenGLWidget):
         glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
         glEnd()
         glBindTexture(GL_TEXTURE_2D, 0)
+        if self.should_paint_pixel_grid():
+            self._draw_pixel_grid(w, h)
         self._draw_marquee()
         glPopMatrix()
 
@@ -506,6 +536,31 @@ class PaintCanvas(QOpenGLWidget):
     def _tick_marquee(self) -> None:
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
+
+    def _draw_pixel_grid(  # pragma: no cover - GL needs display server
+        self, w: int, h: int,
+    ) -> None:
+        """Draw a 1-image-pixel grid overlay above the layer composite.
+
+        At zoom levels past PIXEL_GRID_MIN_ZOOM each image pixel
+        occupies enough widget pixels for a 1-px grid to read as
+        guidance rather than noise. The line width is fixed at the
+        GL default (1 px in the modelview-scaled space) so heavier
+        zoom doesn't bloat the lines into solid bands.
+        """
+        glDisable(GL_TEXTURE_2D)
+        glLineWidth(1.0 / max(self._zoom, 1e-3))
+        glColor4f(0.5, 0.5, 0.5, 0.5)
+        glBegin(GL_LINES)
+        for x in range(int(w) + 1):
+            glVertex2f(float(x), 0.0)
+            glVertex2f(float(x), float(h))
+        for y in range(int(h) + 1):
+            glVertex2f(0.0, float(y))
+            glVertex2f(float(w), float(y))
+        glEnd()
+        glLineWidth(1.0)
+        glEnable(GL_TEXTURE_2D)
 
     # ---- mouse / tablet --------------------------------------------------
 

@@ -119,7 +119,13 @@ class _ViewMenuBridge:
 
     def toggle_pixel_grid(self, checked: bool) -> None:
         self._workspace._pixel_grid_visible = bool(checked)   # noqa: SLF001
-        self._workspace.canvas().update()
+        # The canvas owns the actual draw decision so the setter
+        # short-circuits the repaint when nothing visually changes.
+        canvas = self._workspace.canvas()
+        if hasattr(canvas, "set_pixel_grid_visible"):
+            canvas.set_pixel_grid_visible(bool(checked))
+        else:   # pragma: no cover - older canvas builds
+            canvas.update()
 
     def toggle_snap_to_pixel(self, checked: bool) -> None:
         state = self._workspace.state()
