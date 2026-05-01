@@ -72,6 +72,8 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         (None, None, None, None),
         ("paint_layer_toggle_binary", "Toggle 1-bit Layer",
          bridge.toggle_binary_layer, ""),
+        ("paint_layer_divide", "Divide Layer by Colour",
+         bridge.divide_layer, ""),
         (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
@@ -192,6 +194,16 @@ class _LayerMenuBridge:
         """Drop the bucket's reference-layer pointer."""
         document = self._workspace.canvas().document()
         if document.set_reference_layer_index(None):
+            self._refresh_canvas()
+
+    def divide_layer(self) -> None:
+        """Replace the active layer with one per flat colour.
+
+        Empty / fully-transparent layers leave the stack alone — the
+        document verb returns 0 in that case.
+        """
+        document = self._workspace.canvas().document()
+        if document.divide_active_layer() > 0:
             self._refresh_canvas()
 
     def toggle_binary_layer(self) -> None:

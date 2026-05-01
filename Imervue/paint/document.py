@@ -1058,6 +1058,72 @@ class PaintDocument:
         self._notify()
         return True
 
+    def divide_active_layer(
+        self, *,
+        quantize: int | None = None,
+        max_buckets: int | None = None,
+    ) -> int:
+        """Replace the active layer with one per discovered flat colour.
+
+        Walks the active layer's pixels, groups by quantised colour,
+        and inserts a fresh raster layer for each group with that
+        bucket's representative colour painted only where the original
+        had it. The original layer is removed. Returns the number of
+        new layers inserted; ``0`` means the active layer was empty
+        / fully transparent and nothing changed.
+
+        ``quantize`` and ``max_buckets`` forward to
+        :func:`Imervue.paint.divide_layer.divide_layer_into_color_layers`;
+        ``None`` keeps the helper's defaults.
+        """
+        from Imervue.paint.divide_layer import (
+            divide_layer_into_color_layers,
+            render_color_layer,
+        )
+        layer = self.active_layer()
+        if layer is None or self.shape is None:
+            return 0
+        kwargs: dict[str, Any] = {}
+        if quantize is not None:
+            kwargs["quantize"] = int(quantize)
+        if max_buckets is not None:
+            kwargs["max_buckets"] = int(max_buckets)
+        color_layers = divide_layer_into_color_layers(layer.image, **kwargs)
+        if not color_layers:
+            return 0
+        h, w = self.shape
+        old_index = self._active_index
+        old_name = layer.name
+        new_layers: list[Layer] = []
+        for color_layer in color_layers:
+            new_layers.append(Layer(
+                name=f"{old_name} {color_layer.color}",
+                image=render_color_layer((h, w), color_layer),
+                opacity=layer.opacity,
+                blend_mode=layer.blend_mode,
+                visible=layer.visible,
+                group=layer.group,
+                color_label=layer.color_label,
+            ))
+        # Drop the source and splice in the per-colour layers in its
+        # slot, biggest-bucket first (the largest flat fill ends up at
+        # the bottom of the run, matching the input's visual order).
+        del self._layers[old_index]
+        for offset, fresh in enumerate(new_layers):
+            self._layers.insert(old_index + offset, fresh)
+        self._active_index = old_index
+        # Reference layer follows the layer-list mutation: it pointed
+        # at the source if anywhere, so clear it — none of the new
+        # layers carries the original's authority as a reference.
+        if self._reference_layer_index is not None:
+            ref = self._reference_layer_index
+            if ref == old_index:
+                self._reference_layer_index = None
+            elif ref > old_index:
+                self._reference_layer_index = ref + len(new_layers) - 1
+        self._notify()
+        return len(new_layers)
+
     def merge_down(self) -> bool:
         """Merge the active layer with the one immediately below it.
 

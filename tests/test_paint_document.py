@@ -683,3 +683,57 @@ def test_compositor_renders_binary_layer():
     unique_alphas = set(np.unique(out[..., 3]).tolist())
     assert unique_alphas.issubset({0, 255})
 
+
+# ---------------------------------------------------------------------------
+# Divide layer (auto colour separation)
+# ---------------------------------------------------------------------------
+
+
+def test_divide_active_layer_returns_zero_for_empty_layer():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.divide_active_layer() == 0
+    # Stack unchanged.
+    assert doc.layer_count == 1
+
+
+def test_divide_active_layer_splits_two_colours():
+    doc = PaintDocument()
+    img = np.zeros((4, 4, 4), dtype=np.uint8)
+    img[..., 3] = 255
+    img[:, :2, :3] = (255, 0, 0)
+    img[:, 2:, :3] = (0, 0, 255)
+    doc.load_image(img)
+    inserted = doc.divide_active_layer()
+    assert inserted == 2
+    assert doc.layer_count == 2
+
+
+def test_divide_active_layer_renders_per_colour_alpha():
+    doc = PaintDocument()
+    img = np.zeros((4, 4, 4), dtype=np.uint8)
+    img[..., 3] = 255
+    img[:, :2, :3] = (255, 0, 0)
+    img[:, 2:, :3] = (0, 0, 255)
+    doc.load_image(img)
+    doc.divide_active_layer()
+    layers = doc.layers()
+    # Each output layer has alpha only inside its mask, so the union
+    # of their alpha matches the original opaque region.
+    union_alpha = np.zeros((4, 4), dtype=np.uint8)
+    for layer in layers:
+        union_alpha = np.maximum(union_alpha, layer.image[..., 3])
+    assert (union_alpha == 255).all()
+
+
+def test_divide_active_layer_clears_reference_pointing_at_source():
+    doc = PaintDocument()
+    img = np.zeros((4, 4, 4), dtype=np.uint8)
+    img[..., 3] = 255
+    img[:, :2, :3] = (10, 200, 30)
+    img[:, 2:, :3] = (200, 30, 10)
+    doc.load_image(img)
+    doc.set_reference_layer_index(0)
+    doc.divide_active_layer()
+    assert doc.reference_layer_index() is None
+

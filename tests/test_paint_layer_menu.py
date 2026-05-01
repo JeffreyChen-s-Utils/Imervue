@@ -31,9 +31,9 @@ def test_layer_menu_has_documented_actions(qapp):
         layer_menu = menu_for(ws, "layer")
         # 4 layer-stack actions + sep + 5 mask actions + sep
         # + clipping toggle + sep + 4 effect actions + sep
-        # + 2 reference-layer actions + sep + 1-bit toggle + sep
-        # + delete = 24 entries.
-        assert len(layer_menu.actions()) == 24
+        # + 2 reference-layer actions + sep + 1-bit toggle
+        # + divide-layer + sep + delete = 25 entries.
+        assert len(layer_menu.actions()) == 25
     finally:
         ws.deleteLater()
 
@@ -192,6 +192,37 @@ def test_toggle_binary_layer_clears_existing_binary(qapp):
         bridge.toggle_binary_layer()
         layer = ws.canvas().document().active_layer()
         assert layer.binary is None
+    finally:
+        ws.deleteLater()
+
+
+def test_divide_layer_splits_active_into_buckets(qapp):
+    import numpy as np
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        flat = np.zeros((4, 4, 4), dtype=np.uint8)
+        flat[..., 3] = 255
+        flat[:, :2, :3] = (200, 0, 0)
+        flat[:, 2:, :3] = (0, 200, 0)
+        document.load_image(flat)
+        bridge.divide_layer()
+        assert document.layer_count == 2
+    finally:
+        ws.deleteLater()
+
+
+def test_divide_layer_no_op_on_empty(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        before = document.layer_count
+        bridge.divide_layer()
+        # Default workspace seeds a fully-transparent layer; divide
+        # finds nothing and the stack is unchanged.
+        assert document.layer_count == before
     finally:
         ws.deleteLater()
 
