@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
+from Imervue.plugin.model_dir import ensure_model_dir
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
@@ -33,7 +34,9 @@ logger = logging.getLogger("Imervue.plugin.object_splitter")
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _RUNNER_SCRIPT = _PLUGIN_DIR / "_runner.py"
-_MODELS_DIR = _PLUGIN_DIR / "models"
+# Created at import time so the user can find the folder in their
+# file manager and drop weights in.
+_MODELS_DIR = ensure_model_dir(_PLUGIN_DIR / "models")
 
 REQUIRED_PACKAGES = [
     ("rembg", "rembg"),

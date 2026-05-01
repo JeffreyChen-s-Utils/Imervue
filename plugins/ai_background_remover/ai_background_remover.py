@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
+from Imervue.plugin.model_dir import ensure_model_dir
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
@@ -50,8 +51,9 @@ _PLUGIN_DIR = Path(__file__).resolve().parent
 _RUNNER_SCRIPT = _PLUGIN_DIR / "_rembg_runner.py"
 logger.info("AI BG Remover: module loading, plugin dir = %s", _PLUGIN_DIR)
 
-# \u6a21\u578b\u5b58\u653e\u5728\u63d2\u4ef6\u76ee\u9304\u4e0b\u7684 models/
-_MODELS_DIR = _PLUGIN_DIR / "models"
+# \u6a21\u578b\u5b58\u653e\u5728\u63d2\u4ef6\u76ee\u9304\u4e0b\u7684 models/\u3002Created at import time so the user
+# can find the folder in their file manager and drop weights in.
+_MODELS_DIR = ensure_model_dir(_PLUGIN_DIR / "models")
 os.environ["U2NET_HOME"] = str(_MODELS_DIR)
 logger.info("AI BG Remover: U2NET_HOME = %s", _MODELS_DIR)
 

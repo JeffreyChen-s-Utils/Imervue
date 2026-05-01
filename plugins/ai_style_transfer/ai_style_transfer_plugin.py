@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from ai_style_transfer.style_transfer import StyleTransferOptions, stylise
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
 
 if TYPE_CHECKING:
@@ -249,9 +250,12 @@ class StyleTransferDialog(QDialog):
 
 
 def _discover_onnx_models() -> list[Path]:
-    if not _MODELS_DIR.is_dir():
-        return []
-    return list(_MODELS_DIR.glob("*.onnx"))
+    """Return every .onnx file dropped into ``plugins/ai_style_transfer/models/``.
+
+    Creates the directory on first call so the user can find the
+    folder in their file manager and drop weights in.
+    """
+    return discover_models(_MODELS_DIR)
 
 
 def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:

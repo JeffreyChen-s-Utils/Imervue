@@ -40,6 +40,7 @@ from ai_motion_deblur.deblur import (
     wiener_deblur,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
 
 if TYPE_CHECKING:
@@ -338,9 +339,12 @@ class AIMotionDeblurDialog(QDialog):
 
 
 def _discover_onnx_models() -> list[Path]:
-    if not _MODELS_DIR.is_dir():
-        return []
-    return list(_MODELS_DIR.glob("*.onnx"))
+    """Return every .onnx file dropped into ``plugins/ai_motion_deblur/models/``.
+
+    Creates the directory on first call so the user can find the
+    folder in their file manager and drop weights in.
+    """
+    return discover_models(_MODELS_DIR)
 
 
 def _slider(lo: int, hi: int, value: int) -> QSlider:
