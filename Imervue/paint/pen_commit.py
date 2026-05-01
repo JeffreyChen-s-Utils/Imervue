@@ -41,14 +41,51 @@ def commit_pen_path(workspace: PaintWorkspace) -> bool:
     layer = document.active_layer()
     if layer is None:
         return False
-    options = _options_from_state(workspace.state())
-    from Imervue.paint.stroke_along_path import stroke_along_path
-    damage = stroke_along_path(layer.image, path, options)
+    state = workspace.state()
+    # Vector layer → record the path as a non-destructive VectorStroke
+    # so the user can edit width / colour / per-node geometry later
+    # rather than baking pixels in.
+    if getattr(layer, "vector_data", None) is not None:
+        committed = _commit_to_vector_layer(path, layer, state)
+    else:
+        committed = _commit_to_raster_layer(path, layer, state)
     # Reset the path so the next pen click starts a fresh stroke.
     path.nodes.clear()
     path.closed = False
     document.invalidate_composite()
+    return committed
+
+
+def _commit_to_raster_layer(path, layer, state) -> bool:
+    options = _options_from_state(state)
+    from Imervue.paint.stroke_along_path import stroke_along_path
+    damage = stroke_along_path(layer.image, path, options)
     return not damage.is_empty
+
+
+def _commit_to_vector_layer(path, layer, state) -> bool:
+    """Convert the bezier path's anchors into a :class:`VectorStroke`
+    and append it to the layer's vector data.
+
+    Bezier handles are flattened to a polyline at commit time —
+    the editable storage stays as a polyline (one VectorStroke per
+    pen session) so existing rasteriser code works unchanged. A
+    future revision can promote the VectorStroke model to true
+    bezier curves once we have a UI for editing handles.
+    """
+    from Imervue.paint.vector_layer import VectorStroke
+    points = tuple((float(n.anchor[0]), float(n.anchor[1])) for n in path.nodes)
+    brush = state.brush
+    fg = tuple(int(c) for c in state.foreground)
+    color = (fg[0], fg[1], fg[2], 255)
+    stroke = VectorStroke(
+        points=points,
+        width=max(1.0, float(brush.size)),
+        color=color,
+        opacity=float(brush.opacity),
+    )
+    layer.vector_data.add(stroke)
+    return True
 
 
 def _options_from_state(state) -> BrushStrokeOptions:

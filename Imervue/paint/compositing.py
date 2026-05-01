@@ -75,6 +75,28 @@ def composite_layer_pair(
     return out
 
 
+def _apply_clip(
+    layer, effective_mask: np.ndarray | None,
+    clip_base_alpha: np.ndarray | None,
+) -> np.ndarray | None:
+    """Multiply the most-recent base layer's alpha into ``effective_mask``
+    when ``layer.clip`` is set. Returns the (possibly new) mask.
+
+    ``None`` ``clip_base_alpha`` (e.g. clip layer at the bottom of the
+    stack) leaves the mask unchanged so the layer renders normally
+    rather than disappearing — matches Photoshop's fallback.
+    """
+    if not getattr(layer, "clip", False) or clip_base_alpha is None:
+        return effective_mask
+    if effective_mask is None:
+        return clip_base_alpha
+    combined = (
+        effective_mask.astype(np.float32) / 255.0
+        * clip_base_alpha.astype(np.float32) / 255.0
+    )
+    return (combined * 255.0).clip(0, 255).astype(np.uint8)
+
+
 def composite_stack(
     layers: Iterable,
     base_shape: tuple[int, int],
@@ -117,6 +139,12 @@ def composite_stack(
             and only.group is None
             and only.image.shape[:2] == (h, w)
         ):
+            # Vector layers stash strokes off the image; realise the
+            # cache before returning so the fast path serves up-to-
+            # date pixels rather than the stale empty buffer.
+            if getattr(only, "vector_data", None) is not None:
+                from Imervue.paint.vector_layer import realise_vector_layer
+                realise_vector_layer(only)
             return only.image
 
     out = np.zeros((h, w, 4), dtype=np.uint8)
@@ -159,6 +187,13 @@ def composite_stack(
                 f"layer {layer.name!r} shape {layer.image.shape[:2]} "
                 f"does not match document {base_shape}",
             )
+        # Vector layers store the canonical state in ``vector_data``;
+        # the rasterised image is a cache that must be refreshed when
+        # strokes change. ``realise_vector_layer`` is a no-op for raster
+        # layers so the dispatch is cheap regardless.
+        if getattr(layer, "vector_data", None) is not None:
+            from Imervue.paint.vector_layer import realise_vector_layer
+            realise_vector_layer(layer)
         layer_image = layer.image
         effects = getattr(layer, "effects", ())
         if effects:
@@ -167,21 +202,7 @@ def composite_stack(
 
         # Combine the layer's effective mask with any blend-if mask.
         effective_mask = getattr(layer, "effective_mask", layer.mask)
-        # Clipping mask: a layer with ``clip=True`` clips its output
-        # to the alpha of the most-recent non-clipped layer below it.
-        # Multiply the alpha into the effective mask so the existing
-        # downstream code path handles compositing without extra logic.
-        if getattr(layer, "clip", False) and clip_base_alpha is not None:
-            if effective_mask is None:
-                effective_mask = clip_base_alpha
-            else:
-                clip_combined = (
-                    effective_mask.astype(np.float32) / 255.0
-                    * clip_base_alpha.astype(np.float32) / 255.0
-                )
-                effective_mask = (
-                    clip_combined * 255.0
-                ).clip(0, 255).astype(np.uint8)
+        effective_mask = _apply_clip(layer, effective_mask, clip_base_alpha)
         blend_if = getattr(layer, "blend_if", None)
         if blend_if is not None:
             from Imervue.paint.blend_if import compute_blend_if_mask
