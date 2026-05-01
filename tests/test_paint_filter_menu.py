@@ -122,6 +122,49 @@ def test_apply_filter_halftone_produces_dot_pattern(gray_canvas):
     assert len(np.unique(out[..., 3])) > 1
 
 
+def test_apply_filter_curves_s_curve_increases_contrast(gray_canvas):
+    """S-curve preset on a flat midtone (128) should darken or
+    brighten depending on the source value; on a uniform 128 input
+    the S-curve sits exactly on the midpoint, so we test with a
+    gradient instead."""
+    canvas = np.zeros_like(gray_canvas)
+    canvas[..., 3] = 255
+    canvas[..., :3] = np.linspace(0, 255, canvas.shape[1], dtype=np.uint8)[
+        None, :, None
+    ]
+    spec = _spec_by_key("curves")
+    out = apply_filter_to_layer(
+        spec, {"preset": "s_curve", "strength": 0.3},
+        canvas, selection=None,
+    )
+    # The shadow side (column 0) must be ≤ source; highlight side
+    # (last column) must be ≥ source — that's the S-curve signature.
+    assert int(out[0, 0, 0]) <= int(canvas[0, 0, 0])
+    assert int(out[0, -1, 0]) >= int(canvas[0, -1, 0])
+
+
+def test_apply_filter_curves_lift_shadows_brightens_dark_pixels(gray_canvas):
+    spec = _spec_by_key("curves")
+    canvas = np.zeros_like(gray_canvas)
+    canvas[..., 3] = 255   # opaque black
+    out = apply_filter_to_layer(
+        spec, {"preset": "lift_shadows", "strength": 0.3},
+        canvas, selection=None,
+    )
+    assert int(out[0, 0, 0]) > 0
+
+
+def test_apply_filter_curves_compress_highlights_pulls_white_down(gray_canvas):
+    spec = _spec_by_key("curves")
+    canvas = np.full_like(gray_canvas, 255)
+    canvas[..., 3] = 255
+    out = apply_filter_to_layer(
+        spec, {"preset": "compress_highlights", "strength": 0.3},
+        canvas, selection=None,
+    )
+    assert int(out[0, 0, 0]) < 255
+
+
 # ---------------------------------------------------------------------------
 # Selection clipping
 # ---------------------------------------------------------------------------

@@ -122,6 +122,36 @@ def _apply_halftone(arr: np.ndarray, params: dict[str, Any]) -> np.ndarray:
     return apply_halftone_to_image(arr, lpi=int(params["lpi"]))
 
 
+def _apply_curves(arr: np.ndarray, params: dict[str, Any]) -> np.ndarray:
+    """Curves filter — picks one of three presets (S-curve / lift /
+    compress) tuned by ``strength``. The full per-channel curve
+    editor is reserved for a follow-up; the preset selector covers
+    the 90% case in one slider."""
+    from Imervue.image.curves import (
+        CURVE_CHANNELS,
+        IDENTITY_POINTS,
+        CurveOptions,
+        apply_curves,
+        compress_highlights_preset,
+        lift_shadows_preset,
+        s_curve_preset,
+    )
+    preset = str(params.get("preset", "s_curve"))
+    strength = float(params.get("strength", 0.15))
+    if preset == "lift_shadows":
+        master = lift_shadows_preset(strength)
+    elif preset == "compress_highlights":
+        master = compress_highlights_preset(strength)
+    else:
+        master = s_curve_preset(strength)
+    options = CurveOptions(
+        enabled=True,
+        per_channel={ch: IDENTITY_POINTS for ch in CURVE_CHANNELS}
+        | {"rgb": master},
+    )
+    return apply_curves(arr, options)
+
+
 FILTER_SPECS: tuple[FilterSpec, ...] = (
     FilterSpec(
         key="levels",
@@ -200,6 +230,27 @@ FILTER_SPECS: tuple[FilterSpec, ...] = (
                       "int_slider", 10, 200, 60),
         ),
         apply_fn=_apply_halftone,
+    ),
+    FilterSpec(
+        key="curves",
+        label_key="paint_filter_curves",
+        label_fallback="Curves…",
+        parameters=(
+            ParamSpec("preset", "paint_filter_curves_preset", "Preset",
+                      "choice", default="s_curve",
+                      choices=(
+                          ("s_curve", "paint_filter_curves_s_curve",
+                           "S-curve (contrast)"),
+                          ("lift_shadows", "paint_filter_curves_lift_shadows",
+                           "Lift shadows"),
+                          ("compress_highlights",
+                           "paint_filter_curves_compress_highlights",
+                           "Compress highlights"),
+                      )),
+            ParamSpec("strength", "paint_filter_curves_strength", "Strength",
+                      "float_slider", 0.0, 0.5, 0.15, step=0.01),
+        ),
+        apply_fn=_apply_curves,
     ),
 )
 
