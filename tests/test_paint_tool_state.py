@@ -468,3 +468,161 @@ def test_from_dict_handles_missing_ruler_key():
 def test_from_dict_drops_unknown_ruler_mode():
     rebuilt = ts.ToolState.from_dict({"ruler": {"mode": "kaleidoscope"}})
     assert rebuilt.ruler.mode == "off"
+
+
+# ---------------------------------------------------------------------------
+# Sub-tools (per-tool named presets)
+# ---------------------------------------------------------------------------
+
+
+def test_sub_tools_default_to_empty():
+    state = ts.load_tool_state()
+    assert state.sub_tools == {}
+
+
+def test_add_sub_tool_captures_current_brush():
+    state = ts.load_tool_state()
+    state.set_brush(size=42, opacity=0.5)
+    sub_tool = state.add_sub_tool("brush", "rough-pen")
+    assert sub_tool.brush.size == 42
+    assert sub_tool.brush.opacity == 0.5
+    assert state.list_sub_tools("brush")[0].name == "rough-pen"
+
+
+def test_add_sub_tool_replaces_existing_with_same_name():
+    state = ts.load_tool_state()
+    state.set_brush(size=10)
+    state.add_sub_tool("brush", "preset")
+    state.set_brush(size=22)
+    state.add_sub_tool("brush", "preset")   # same name → replace
+    presets = state.list_sub_tools("brush")
+    assert len(presets) == 1
+    assert presets[0].brush.size == 22
+
+
+def test_add_sub_tool_preserves_order_of_others():
+    state = ts.load_tool_state()
+    state.add_sub_tool("brush", "first")
+    state.add_sub_tool("brush", "second")
+    state.add_sub_tool("brush", "first")   # update-in-place must not move it
+    names = [st.name for st in state.list_sub_tools("brush")]
+    assert names == ["first", "second"]
+
+
+def test_add_sub_tool_rejects_unknown_tool():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="unknown tool"):
+        state.add_sub_tool("not-a-tool", "preset")
+
+
+def test_add_sub_tool_rejects_blank_name():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="name"):
+        state.add_sub_tool("brush", "   ")
+
+
+def test_add_sub_tool_rejects_overly_long_name():
+    state = ts.load_tool_state()
+    long_name = "x" * (ts.SUB_TOOL_NAME_MAX_LEN + 1)
+    with pytest.raises(ValueError, match="<="):
+        state.add_sub_tool("brush", long_name)
+
+
+def test_apply_sub_tool_swaps_active_settings():
+    state = ts.load_tool_state()
+    state.set_brush(size=10, opacity=0.2)
+    state.add_sub_tool("brush", "soft")
+    state.set_brush(size=99, opacity=1.0)
+    state.set_tool("eyedropper")   # different tool — apply must switch back
+    assert state.apply_sub_tool("brush", "soft") is True
+    assert state.tool == "brush"
+    assert state.brush.size == 10
+    assert state.brush.opacity == 0.2
+
+
+def test_apply_sub_tool_returns_false_for_missing_name():
+    state = ts.load_tool_state()
+    assert state.apply_sub_tool("brush", "ghost") is False
+
+
+def test_apply_sub_tool_rejects_unknown_tool():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="unknown tool"):
+        state.apply_sub_tool("nope", "preset")
+
+
+def test_remove_sub_tool_drops_entry():
+    state = ts.load_tool_state()
+    state.add_sub_tool("brush", "preset")
+    assert state.remove_sub_tool("brush", "preset") is True
+    assert state.list_sub_tools("brush") == []
+
+
+def test_remove_sub_tool_returns_false_for_missing():
+    state = ts.load_tool_state()
+    assert state.remove_sub_tool("brush", "missing") is False
+
+
+def test_remove_sub_tool_rejects_unknown_tool():
+    state = ts.load_tool_state()
+    with pytest.raises(ValueError, match="unknown tool"):
+        state.remove_sub_tool("nope", "preset")
+
+
+def test_sub_tool_emits_sub_tool_channel():
+    state = ts.load_tool_state()
+    seen: list[str] = []
+    state.subscribe(seen.append)
+    state.add_sub_tool("brush", "preset")
+    assert ts.EVENT_SUB_TOOL in seen
+
+
+def test_sub_tool_persists_to_user_setting_dict():
+    state = ts.load_tool_state()
+    state.set_brush(size=50)
+    state.add_sub_tool("brush", "fifty")
+    raw = user_setting_dict["paint_state"]
+    assert "sub_tools" in raw
+    assert raw["sub_tools"]["brush"][0]["name"] == "fifty"
+    assert raw["sub_tools"]["brush"][0]["brush"]["size"] == 50
+
+
+def test_sub_tools_round_trip_via_from_dict():
+    state = ts.load_tool_state()
+    state.set_brush(size=33)
+    state.add_sub_tool("brush", "p1")
+    state.set_fill(tolerance=99)
+    state.add_sub_tool("fill", "p2")
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.list_sub_tools("brush")[0].brush.size == 33
+    assert rebuilt.list_sub_tools("fill")[0].fill.tolerance == 99
+
+
+def test_sub_tools_from_dict_drops_unknown_tool_keys():
+    rebuilt = ts.ToolState.from_dict({"sub_tools": {"not-a-tool": []}})
+    assert rebuilt.sub_tools == {}
+
+
+def test_sub_tools_from_dict_drops_malformed_entries():
+    rebuilt = ts.ToolState.from_dict({
+        "sub_tools": {"brush": ["not-a-dict", {"name": ""}]},
+    })
+    assert rebuilt.sub_tools == {}
+
+
+def test_list_sub_tools_returns_fresh_list():
+    """Mutating the returned list must not affect state's internal store."""
+    state = ts.load_tool_state()
+    state.add_sub_tool("brush", "preset")
+    listed = state.list_sub_tools("brush")
+    listed.clear()
+    assert len(state.list_sub_tools("brush")) == 1
+
+
+def test_remove_last_sub_tool_drops_empty_bucket():
+    """Removing the only entry in a tool bucket must not leave an
+    empty list behind in ``sub_tools``."""
+    state = ts.load_tool_state()
+    state.add_sub_tool("brush", "preset")
+    state.remove_sub_tool("brush", "preset")
+    assert "brush" not in state.sub_tools

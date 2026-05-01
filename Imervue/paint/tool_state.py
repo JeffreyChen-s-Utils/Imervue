@@ -109,6 +109,7 @@ EVENT_SELECTION_MODE = "selection_mode"   # selection combine mode changed
 EVENT_GRADIENT = "gradient"    # gradient kind / reverse changed
 EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
 EVENT_RULER = "ruler"          # ruler mode / geometry changed
+EVENT_SUB_TOOL = "sub_tool"    # sub-tool registry / active sub-tool changed
 
 
 @dataclass(frozen=True)
@@ -150,6 +151,39 @@ class FillSettings:
     use_reference_layer: bool = False
 
 
+# Each entry in :attr:`ToolState.sub_tools` is a frozen snapshot of the
+# brush + fill settings the user wants to recall under ``name`` for a
+# given main tool. Stored under the tool id as the dict key — matching
+# MediBang / Clip Studio's "sub-tool" tabs that hang under each main
+# tool. Only the slices relevant to the tool are remembered; switching
+# tools re-applies the named preset's full snapshot.
+SUB_TOOL_NAME_MAX_LEN = 80
+
+
+@dataclass(frozen=True)
+class SubTool:
+    """One saved sub-tool preset for a main tool.
+
+    ``brush`` and ``fill`` are full settings snapshots (the same
+    immutable dataclasses the live state uses) so applying a preset
+    is just a swap rather than a partial diff. Sub-tools whose main
+    tool doesn't use one of these slices simply ignore the unused
+    field on apply.
+    """
+
+    name: str
+    brush: BrushSettings = field(default_factory=BrushSettings)
+    fill: FillSettings = field(default_factory=FillSettings)
+
+    def __post_init__(self) -> None:
+        if not str(self.name).strip():
+            raise ValueError("sub-tool name must be non-empty")
+        if len(str(self.name)) > SUB_TOOL_NAME_MAX_LEN:
+            raise ValueError(
+                f"sub-tool name must be <= {SUB_TOOL_NAME_MAX_LEN} chars",
+            )
+
+
 @dataclass
 class ToolState:
     """The mutable state container.
@@ -173,6 +207,7 @@ class ToolState:
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     quick_mask_active: bool = False
+    sub_tools: dict[str, list[SubTool]] = field(default_factory=dict)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
     )
@@ -398,6 +433,76 @@ class ToolState:
         self._emit(EVENT_BRUSH)
         return True
 
+    # ---- sub-tools -------------------------------------------------------
+
+    def add_sub_tool(self, tool: str, name: str) -> SubTool:
+        """Capture the current brush + fill settings as a named sub-tool.
+
+        The sub-tool is filed under ``tool`` (one of :data:`TOOLS`).
+        An existing sub-tool with the same name on the same tool is
+        replaced; the order of other entries is preserved. Returns
+        the freshly-stored :class:`SubTool` so callers can inspect it.
+        """
+        if tool not in TOOLS:
+            raise ValueError(f"unknown tool {tool!r}; expected one of {TOOLS}")
+        sub_tool = SubTool(name=name, brush=self.brush, fill=self.fill)
+        bucket = self.sub_tools.setdefault(tool, [])
+        for i, existing in enumerate(bucket):
+            if existing.name == sub_tool.name:
+                bucket[i] = sub_tool
+                self._persist()
+                self._emit(EVENT_SUB_TOOL)
+                return sub_tool
+        bucket.append(sub_tool)
+        self._persist()
+        self._emit(EVENT_SUB_TOOL)
+        return sub_tool
+
+    def remove_sub_tool(self, tool: str, name: str) -> bool:
+        """Drop a saved sub-tool. Returns ``True`` if it existed."""
+        if tool not in TOOLS:
+            raise ValueError(f"unknown tool {tool!r}; expected one of {TOOLS}")
+        bucket = self.sub_tools.get(tool)
+        if not bucket:
+            return False
+        for i, existing in enumerate(bucket):
+            if existing.name == name:
+                del bucket[i]
+                if not bucket:
+                    del self.sub_tools[tool]
+                self._persist()
+                self._emit(EVENT_SUB_TOOL)
+                return True
+        return False
+
+    def apply_sub_tool(self, tool: str, name: str) -> bool:
+        """Switch to ``tool`` and apply the named sub-tool's settings.
+
+        Returns ``True`` if the preset was found and applied. The full
+        brush and fill snapshots replace the live settings; main-tool
+        switch happens before the slot writes so listeners see a
+        coherent ordering of (tool change → settings change) events.
+        """
+        if tool not in TOOLS:
+            raise ValueError(f"unknown tool {tool!r}; expected one of {TOOLS}")
+        bucket = self.sub_tools.get(tool, ())
+        for entry in bucket:
+            if entry.name == name:
+                self.set_tool(tool)
+                self.brush = entry.brush
+                self.fill = entry.fill
+                self._persist()
+                self._emit(EVENT_BRUSH)
+                self._emit(EVENT_FILL)
+                return True
+        return False
+
+    def list_sub_tools(self, tool: str) -> list[SubTool]:
+        """Return a fresh list of sub-tools registered under ``tool``."""
+        if tool not in TOOLS:
+            raise ValueError(f"unknown tool {tool!r}; expected one of {TOOLS}")
+        return list(self.sub_tools.get(tool, ()))
+
     # ---- color history ---------------------------------------------------
 
     def _push_color_history(self, rgb: tuple[int, int, int]) -> None:
@@ -453,6 +558,10 @@ class ToolState:
             "snap_to_pixel": bool(self.snap_to_pixel),
             "snap_to_edges": bool(self.snap_to_edges),
             "quick_mask_active": bool(self.quick_mask_active),
+            "sub_tools": {
+                tool: [_sub_tool_to_dict(st) for st in entries]
+                for tool, entries in self.sub_tools.items()
+            },
         }
 
     @classmethod
@@ -481,6 +590,7 @@ class ToolState:
             symmetry_mode = DEFAULT_SYMMETRY_MODE
         ruler = Ruler.from_dict(raw.get("ruler"))
         history = _history_from_list(raw.get("color_history"))
+        sub_tools = _sub_tools_from_dict(raw.get("sub_tools"))
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
@@ -490,6 +600,7 @@ class ToolState:
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
             snap_to_edges=bool(raw.get("snap_to_edges", False)),
             quick_mask_active=bool(raw.get("quick_mask_active", False)),
+            sub_tools=sub_tools,
         )
 
 
@@ -600,6 +711,57 @@ def _brush_from_dict(raw: Any) -> BrushSettings:
         color_jitter=_clamp_brush_attr("color_jitter", raw.get("color_jitter", 0.0)),
         follow_tilt=_clamp_brush_attr("follow_tilt", raw.get("follow_tilt", False)),
     )
+
+
+def _sub_tool_to_dict(sub_tool: SubTool) -> dict:
+    return {
+        "name": str(sub_tool.name),
+        "brush": {
+            "kind": sub_tool.brush.kind,
+            "size": sub_tool.brush.size,
+            "opacity": sub_tool.brush.opacity,
+            "hardness": sub_tool.brush.hardness,
+            "density": sub_tool.brush.density,
+            "blend_mode": sub_tool.brush.blend_mode,
+            "stabilizer": sub_tool.brush.stabilizer,
+            "tip_path": sub_tool.brush.tip_path,
+            "scatter": sub_tool.brush.scatter,
+            "color_jitter": sub_tool.brush.color_jitter,
+            "follow_tilt": sub_tool.brush.follow_tilt,
+        },
+        "fill": {
+            "tolerance": sub_tool.fill.tolerance,
+            "contiguous": sub_tool.fill.contiguous,
+            "sample_all_layers": sub_tool.fill.sample_all_layers,
+            "expand_px": sub_tool.fill.expand_px,
+            "use_reference_layer": sub_tool.fill.use_reference_layer,
+        },
+    }
+
+
+def _sub_tools_from_dict(raw: Any) -> dict[str, list[SubTool]]:
+    """Re-hydrate a saved ``sub_tools`` dict, dropping malformed entries."""
+    out: dict[str, list[SubTool]] = {}
+    if not isinstance(raw, dict):
+        return out
+    for tool, entries in raw.items():
+        if tool not in TOOLS or not isinstance(entries, list):
+            continue
+        bucket: list[SubTool] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                bucket.append(SubTool(
+                    name=str(entry.get("name", "")),
+                    brush=_brush_from_dict(entry.get("brush")),
+                    fill=_fill_from_dict(entry.get("fill")),
+                ))
+            except (TypeError, ValueError):
+                continue
+        if bucket:
+            out[tool] = bucket
+    return out
 
 
 def _history_from_list(raw: Any) -> list[tuple[int, int, int]]:
