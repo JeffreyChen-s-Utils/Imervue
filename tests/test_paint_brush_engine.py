@@ -374,3 +374,86 @@ def test_pixel_art_mode_default_is_off():
         color=(0, 0, 0), size=4, opacity=1.0, hardness=1.0,
     )
     assert options.pixel_art is False
+
+
+# ---------------------------------------------------------------------------
+# Tapered stroke (29g)
+# ---------------------------------------------------------------------------
+
+
+def test_taper_options_default_to_zero():
+    options = BrushStrokeOptions(
+        color=(0, 0, 0), size=4, opacity=1.0, hardness=1.0,
+    )
+    assert options.taper_start_dabs == 0
+    assert options.taper_end_dabs == 0
+
+
+def test_start_taper_ramps_first_dab_softer_than_steady(blank_canvas):
+    """With taper_start_dabs=4 the first dab paints with 1/4 of full
+    opacity, so its alpha is materially lower than a later dab."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+        taper_start_dabs=4,
+    ))
+    stroke.begin(blank_canvas, 10, 10)
+    first_alpha = int(blank_canvas[10, 10, 3])
+    # Move far enough to lay down several follow-up dabs at a fresh
+    # spot; pick one well past the taper window.
+    stroke.end(blank_canvas, 30, 10)
+    later_alpha = int(blank_canvas[10, 30, 3])
+    assert first_alpha < later_alpha
+
+
+def test_no_start_taper_yields_uniform_alpha(blank_canvas):
+    """Without taper_start_dabs the first and later dabs match."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+    ))
+    stroke.begin(blank_canvas, 10, 10)
+    first_alpha = int(blank_canvas[10, 10, 3])
+    stroke.end(blank_canvas, 30, 10)
+    later_alpha = int(blank_canvas[10, 30, 3])
+    assert first_alpha == later_alpha
+
+
+def test_end_taper_buffers_and_fades_tail(blank_canvas):
+    """A long stroke with taper_end_dabs=4 ends with a tail of dabs
+    progressively fainter than the steady-state segment."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+        taper_end_dabs=4,
+    ))
+    stroke.begin(blank_canvas, 5, 30)
+    stroke.end(blank_canvas, 55, 30)
+    # Pixel near the start (post-taper-window) is at full alpha.
+    mid_alpha = int(blank_canvas[30, 25, 3])
+    # Pixel near the very end is in the tail-fade window.
+    tail_alpha = int(blank_canvas[30, 54, 3])
+    assert mid_alpha > tail_alpha
+
+
+def test_no_end_taper_keeps_tail_at_full_alpha(blank_canvas):
+    """Without taper_end_dabs the last dab is at full alpha."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+    ))
+    stroke.begin(blank_canvas, 5, 30)
+    stroke.end(blank_canvas, 55, 30)
+    tail_alpha = int(blank_canvas[30, 54, 3])
+    assert tail_alpha == 255
+
+
+def test_combined_start_and_end_taper(blank_canvas):
+    """Both ends fade. Middle is at full opacity, both ends weaker."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+        taper_start_dabs=4, taper_end_dabs=4,
+    ))
+    stroke.begin(blank_canvas, 5, 30)
+    stroke.end(blank_canvas, 55, 30)
+    head_alpha = int(blank_canvas[30, 5, 3])
+    mid_alpha = int(blank_canvas[30, 30, 3])
+    tail_alpha = int(blank_canvas[30, 54, 3])
+    assert mid_alpha > head_alpha
+    assert mid_alpha > tail_alpha

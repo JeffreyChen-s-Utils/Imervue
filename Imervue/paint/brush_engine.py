@@ -356,6 +356,15 @@ class BrushStrokeOptions:
     # pixel brush. Tests in test_paint_brush_engine.py exercise the
     # snap + kernel behaviour.
     pixel_art: bool = False
+    # Stroke-tapering — ramp opacity over the first / last N dabs so
+    # mouse-only strokes get the soft pen-pressure feel naturally.
+    # Both default to 0 (no taper) so existing brushes are unchanged.
+    # ``taper_start_dabs`` ramps opacity from 0 → 1 over the first N
+    # dabs; ``taper_end_dabs`` is honoured by the dispatcher via
+    # :class:`Imervue.paint.tapered_stroke.TaperedStroke` because
+    # end-tapering needs lookahead the engine itself doesn't have.
+    taper_start_dabs: int = 0
+    taper_end_dabs: int = 0
 
 
 def square_brush_kernel(size: int) -> np.ndarray:
@@ -380,6 +389,14 @@ class BrushStroke:
         from Imervue.paint.brush_dynamics import stylise_kernel
         self._options = options
         self._rng = np.random.default_rng(options.seed)
+        # Dab counter for start-taper opacity ramp.
+        self._dab_index = 0
+        # End-taper buffer — when ``taper_end_dabs > 0`` the most
+        # recent N dabs are queued here. Each new dab flushes the
+        # oldest at full opacity; on stroke end the buffer is
+        # replayed with progressively lower opacity so the tail
+        # fades out smoothly. Each entry is ``(x, y, kernel)``.
+        self._tail_buffer: list[tuple[float, float, np.ndarray]] = []
         base = _resolve_base_kernel(options)
         # Pixel-art mode bypasses the per-kind noise shaping — the
         # kernel is the hard square already and we don't want any
@@ -421,13 +438,7 @@ class BrushStroke:
         x, y = self._snap_position(x, y)
         self._last = (x, y)
         self._stroke_damage = DabResult(0, 0, 0, 0)
-        kernel = self._next_kernel()
-        damage = apply_dab(
-            canvas, x, y, kernel, self._options.color,
-            opacity=self._options.opacity,
-            blend_mode=self._options.blend_mode,
-            selection=self._options.selection,
-        )
+        damage = self._stage_dab(canvas, x, y)
         self._stroke_damage = _union(self._stroke_damage, damage)
         return damage
 
@@ -444,16 +455,75 @@ class BrushStroke:
             else:
                 dab_px = raw_px
                 dab_py = raw_py
-            kernel = self._next_kernel()
-            d = apply_dab(
-                canvas, dab_px, dab_py, kernel, self._options.color,
-                opacity=self._options.opacity,
-                blend_mode=self._options.blend_mode,
-                selection=self._options.selection,
-            )
+            d = self._stage_dab(canvas, dab_px, dab_py)
             damage = _union(damage, d)
         self._last = (x, y)
         self._stroke_damage = _union(self._stroke_damage, damage)
+        return damage
+
+    def _stage_dab(
+        self, canvas: np.ndarray, x: float, y: float,
+    ) -> DabResult:
+        """Apply a dab — directly when no end-taper, otherwise via the
+        tail buffer that defers the most recent N dabs."""
+        kernel = self._next_kernel()
+        end_taper = int(self._options.taper_end_dabs)
+        if end_taper <= 0:
+            damage = self._paint_dab(canvas, x, y, kernel, fade=1.0)
+            self._dab_index += 1
+            return damage
+        # Buffer this dab. If the buffer is full, the oldest one
+        # gets painted at full opacity (it's no longer in the tail
+        # window) and the new dab takes its slot.
+        damage = DabResult(0, 0, 0, 0)
+        self._tail_buffer.append((x, y, kernel))
+        if len(self._tail_buffer) > end_taper:
+            old_x, old_y, old_kernel = self._tail_buffer.pop(0)
+            damage = self._paint_dab(
+                canvas, old_x, old_y, old_kernel, fade=1.0,
+            )
+            self._dab_index += 1
+        return damage
+
+    def _paint_dab(
+        self,
+        canvas: np.ndarray,
+        x: float, y: float,
+        kernel: np.ndarray,
+        *,
+        fade: float,
+    ) -> DabResult:
+        return apply_dab(
+            canvas, x, y, kernel, self._options.color,
+            opacity=self._taper_start_opacity() * float(fade),
+            blend_mode=self._options.blend_mode,
+            selection=self._options.selection,
+        )
+
+    def _taper_start_opacity(self) -> float:
+        """Scale the configured opacity by the start-taper ramp."""
+        opacity = self._options.opacity
+        ramp = int(self._options.taper_start_dabs)
+        if ramp <= 0:
+            return opacity
+        progress = min(1.0, (self._dab_index + 1) / float(ramp))
+        return opacity * progress
+
+    def _flush_tail(self, canvas: np.ndarray) -> DabResult:
+        """Drain the end-taper buffer with progressively lower opacity."""
+        damage = DabResult(0, 0, 0, 0)
+        if not self._tail_buffer:
+            return damage
+        n = len(self._tail_buffer)
+        for i, (x, y, kernel) in enumerate(self._tail_buffer):
+            # Fade from near-full at the first buffered dab down to
+            # near-zero at the last; (n - i) / (n + 1) keeps both
+            # endpoints non-trivial so the transition is smooth.
+            fade = max(0.0, (n - i) / float(n + 1))
+            d = self._paint_dab(canvas, x, y, kernel, fade=fade)
+            damage = _union(damage, d)
+            self._dab_index += 1
+        self._tail_buffer = []
         return damage
 
     def _snap_position(self, x: float, y: float) -> tuple[float, float]:
@@ -485,6 +555,11 @@ class BrushStroke:
         if not self._active:
             raise RuntimeError("BrushStroke.end called before begin()")
         result = self.extend(canvas, x, y)
+        # Flush whatever end-taper buffer remains so the final stroke
+        # tail fades naturally instead of cutting off at full opacity.
+        tail_damage = self._flush_tail(canvas)
+        result = _union(result, tail_damage)
+        self._stroke_damage = _union(self._stroke_damage, tail_damage)
         self._active = False
         self._last = None
         return result
