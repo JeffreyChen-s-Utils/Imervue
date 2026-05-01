@@ -21,10 +21,22 @@ those for thumbnails.
 The functions all operate on ``HxW`` value arrays (``float32`` in
 ``[0, 1]``) or ``HxWx4`` ``uint8`` RGBA layers, and return new
 arrays — they never mutate the input.
+
+Tone-layer property
+-------------------
+
+:class:`ToneSettings` packages the per-layer "render this layer as a
+halftone at composite time" hint MediBang exposes as the *Tone* layer
+type. The compositor in :mod:`Imervue.paint.compositing` consults
+``layer.tone`` and, when set, runs the layer's RGBA through
+:func:`render_tone_layer` to produce the dot pattern that gets
+blended on top — non-destructive, so toggling the tone off restores
+the original soft greys.
 """
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -209,6 +221,109 @@ def map_value_to_halftone(
     out[..., 2] = color[2]
     # Preserve the dot alpha generated above.
     return out
+
+
+@dataclass(frozen=True)
+class ToneSettings:
+    """Per-layer halftone-render settings.
+
+    Stored on :attr:`Imervue.paint.document.Layer.tone`. ``lpi`` and
+    ``dpi`` follow :func:`lpi_to_cell_pixels`'s convention; ``angle_deg``
+    rotates the rendered tone tile in place (45° is the printing-press
+    default that breaks moire patterns); ``color`` is the ink colour
+    of the dots — black is the manga convention but coloured tones are
+    valid for digital-only work.
+    """
+
+    lpi: int = DEFAULT_LPI
+    dpi: int = 300
+    angle_deg: float = 0.0
+    color: tuple[int, int, int] = (0, 0, 0)
+
+    def __post_init__(self) -> None:
+        if not (HALFTONE_LPI_MIN <= int(self.lpi) <= HALFTONE_LPI_MAX):
+            raise ValueError(
+                f"lpi must be in [{HALFTONE_LPI_MIN}, {HALFTONE_LPI_MAX}],"
+                f" got {self.lpi}",
+            )
+        if int(self.dpi) <= 0:
+            raise ValueError(f"dpi must be positive, got {self.dpi}")
+        if len(self.color) != 3:
+            raise ValueError(f"color must be a 3-tuple, got {self.color!r}")
+        for component in self.color:
+            if not 0 <= int(component) <= 255:
+                raise ValueError(
+                    f"color components must be in 0..255, got {self.color}",
+                )
+
+    def to_dict(self) -> dict:
+        return {
+            "lpi": int(self.lpi),
+            "dpi": int(self.dpi),
+            "angle_deg": float(self.angle_deg),
+            "color": list(self.color),
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict | None) -> ToneSettings | None:
+        """Re-hydrate from a saved dict; ``None`` / malformed → ``None``.
+
+        The compositor treats a missing tone as "render normally", so
+        a corrupt entry should fall back to plain rendering rather
+        than crash the whole open-document path.
+        """
+        if not isinstance(raw, dict):
+            return None
+        try:
+            color_raw = raw.get("color", [0, 0, 0])
+            if not isinstance(color_raw, (list, tuple)) or len(color_raw) != 3:
+                return None
+            color = (
+                int(color_raw[0]), int(color_raw[1]), int(color_raw[2]),
+            )
+            return cls(
+                lpi=int(raw.get("lpi", DEFAULT_LPI)),
+                dpi=int(raw.get("dpi", 300)),
+                angle_deg=float(raw.get("angle_deg", 0.0)),
+                color=color,
+            )
+        except (TypeError, ValueError):
+            return None
+
+
+def render_tone_layer(
+    layer: np.ndarray, tone: ToneSettings,
+) -> np.ndarray:
+    """Convert a layer's soft greys into a halftone using ``tone``.
+
+    Density source = ``(1 - luminance) * alpha`` so painting with a
+    soft grey brush on a transparent layer yields proportional dot
+    density, exactly like :func:`apply_halftone_to_image`. The output
+    inherits the tone's ink colour (instead of MediBang's hard-coded
+    black) and is rotated by ``tone.angle_deg``. Returns a fresh
+    HxWx4 uint8 RGBA buffer — the input is not mutated.
+    """
+    if layer.ndim != 3 or layer.shape[2] != 4 or layer.dtype != np.uint8:
+        raise ValueError(
+            f"layer must be HxWx4 uint8 RGBA, got shape={layer.shape}"
+            f" dtype={layer.dtype}",
+        )
+    rgb = layer[..., :3].astype(np.float32) / 255.0
+    luma = (
+        0.2126 * rgb[..., 0]
+        + 0.7152 * rgb[..., 1]
+        + 0.0722 * rgb[..., 2]
+    )
+    alpha = layer[..., 3].astype(np.float32) / 255.0
+    density = np.clip((1.0 - luma) * alpha, _MIN_DENSITY, _MAX_DENSITY)
+    cell = lpi_to_cell_pixels(tone.lpi, dpi=tone.dpi)
+    dots = render_halftone_dots(density.astype(np.float32), cell=cell)
+    dots[..., 0] = tone.color[0]
+    dots[..., 1] = tone.color[1]
+    dots[..., 2] = tone.color[2]
+    if tone.angle_deg % 360 != 0:
+        dots = rotate_tile(dots, angle_deg=tone.angle_deg)
+    return dots
 
 
 def rotate_tile(tile: np.ndarray, *, angle_deg: float) -> np.ndarray:

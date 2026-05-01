@@ -65,6 +65,7 @@ class Layer:
     blend_if: Any = None         # BlendIf | None — luminance-range visibility gate
     vector_data: Any = None      # VectorLayerData | None — vector strokes; image is the cache
     color_label: str | None = None   # one of LAYER_LABELS or None for "no label"
+    tone: Any = None             # ToneSettings | None — render layer as halftone at composite
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -402,6 +403,7 @@ class PaintDocument:
             group=layer.group,
             adjustment=layer.adjustment,
             effects=layer.effects,
+            tone=layer.tone,
         )
         insert_at = self._active_index + 1
         self._layers.insert(insert_at, copy)
@@ -446,6 +448,20 @@ class PaintDocument:
         if layer is None or layer.lock_alpha == bool(lock_alpha):
             return False
         layer.lock_alpha = bool(lock_alpha)
+        self._notify()
+        return True
+
+    def set_layer_tone(self, index: int = -1, *, tone: Any) -> bool:
+        """Toggle / replace the per-layer halftone-render setting.
+
+        ``tone`` should be a :class:`Imervue.paint.halftone.ToneSettings`
+        or ``None`` to revert to plain raster rendering. Returns ``True``
+        if the assignment changed the layer.
+        """
+        layer = self._resolve_layer(index)
+        if layer is None or layer.tone == tone:
+            return False
+        layer.tone = tone
         self._notify()
         return True
 

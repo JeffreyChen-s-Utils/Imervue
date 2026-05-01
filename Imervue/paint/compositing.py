@@ -75,6 +75,20 @@ def composite_layer_pair(
     return out
 
 
+def _layer_image_with_tone(layer) -> np.ndarray:
+    """Return ``layer.image`` rendered as a halftone if a tone is set.
+
+    Extracted from :func:`composite_stack` so the main loop's
+    cyclomatic complexity stays inside the project ceiling. When the
+    tone hint is unset the input is returned untouched.
+    """
+    tone = getattr(layer, "tone", None)
+    if tone is None:
+        return layer.image
+    from Imervue.paint.halftone import render_tone_layer
+    return render_tone_layer(layer.image, tone)
+
+
 def _apply_clip(
     layer, effective_mask: np.ndarray | None,
     clip_base_alpha: np.ndarray | None,
@@ -137,6 +151,7 @@ def composite_stack(
             and only.effective_mask is None
             and getattr(only, "blend_if", None) is None
             and only.group is None
+            and getattr(only, "tone", None) is None
             and only.image.shape[:2] == (h, w)
         ):
             # Vector layers stash strokes off the image; realise the
@@ -194,7 +209,7 @@ def composite_stack(
         if getattr(layer, "vector_data", None) is not None:
             from Imervue.paint.vector_layer import realise_vector_layer
             realise_vector_layer(layer)
-        layer_image = layer.image
+        layer_image = _layer_image_with_tone(layer)
         effects = getattr(layer, "effects", ())
         if effects:
             from Imervue.paint.layer_effects import apply_effects

@@ -103,6 +103,9 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
                 if layer.adjustment is not None else None
             ),
             "effects": [eff.to_dict() for eff in (layer.effects or ())],
+            "tone": (
+                layer.tone.to_dict() if layer.tone is not None else None
+            ),
         })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
@@ -272,6 +275,8 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
                     effects.append(LayerEffect.from_dict(eff_raw))
                 except (ValueError, TypeError):
                     continue
+        from Imervue.paint.halftone import ToneSettings
+        tone = ToneSettings.from_dict(lmeta.get("tone"))
         layers.append(Layer(
             name=str(lmeta.get("name", f"Layer {i}")),
             image=image,
@@ -286,6 +291,7 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
             group=str(group_name) if group_name else None,
             adjustment=adjustment,
             effects=tuple(effects),
+            tone=tone,
         ))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))

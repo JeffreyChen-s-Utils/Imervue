@@ -537,3 +537,85 @@ def test_replace_state_clamps_invalid_reference_to_none():
     doc.replace_state(layers=layers, reference_layer_index=99)
     assert doc.reference_layer_index() is None
 
+
+# ---------------------------------------------------------------------------
+# Per-layer tone (halftone-render hint)
+# ---------------------------------------------------------------------------
+
+
+def test_layer_defaults_tone_to_none():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.active_layer().tone is None
+
+
+def test_set_layer_tone_assigns_settings():
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    tone = ToneSettings(lpi=80)
+    assert doc.set_layer_tone(tone=tone) is True
+    assert doc.active_layer().tone == tone
+
+
+def test_set_layer_tone_idempotent_returns_false():
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_tone(tone=ToneSettings())
+    assert doc.set_layer_tone(tone=ToneSettings()) is False
+
+
+def test_set_layer_tone_clear_with_none():
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_tone(tone=ToneSettings())
+    assert doc.set_layer_tone(tone=None) is True
+    assert doc.active_layer().tone is None
+
+
+def test_duplicate_active_layer_carries_tone():
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_tone(tone=ToneSettings(lpi=70))
+    doc.duplicate_active_layer()
+    duplicated = doc.active_layer()
+    assert duplicated.tone is not None
+    assert duplicated.tone.lpi == 70
+
+
+def test_compositor_renders_tone_layer():
+    """A tone layer's grey content should composite as a sparse dot
+    pattern instead of the original soft fill."""
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    grey = np.full((32, 32, 4), 128, dtype=np.uint8)
+    grey[..., 3] = 255
+    doc.load_image(grey)
+    plain = doc.composite()
+    assert plain is not None
+    plain_unique = len(np.unique(plain[..., 3]))
+    doc.set_layer_tone(tone=ToneSettings(lpi=60))
+    toned = doc.composite()
+    assert toned is not None
+    toned_unique = len(np.unique(toned[..., 3]))
+    # Plain raster: composite alpha is uniform (a single value or a
+    # very small set). Toned: alpha is bimodal between dot interior /
+    # exterior, producing more distinct alpha values.
+    assert toned_unique > plain_unique
+
+
+def test_compositor_skips_tone_when_unset():
+    from Imervue.paint.halftone import ToneSettings
+    doc = PaintDocument()
+    grey = np.full((32, 32, 4), 100, dtype=np.uint8)
+    grey[..., 3] = 255
+    doc.load_image(grey)
+    base = doc.composite()
+    doc.set_layer_tone(tone=ToneSettings())
+    doc.set_layer_tone(tone=None)
+    after_clear = doc.composite()
+    np.testing.assert_array_equal(base, after_clear)
+

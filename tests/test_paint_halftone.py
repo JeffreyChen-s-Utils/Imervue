@@ -243,3 +243,117 @@ def test_halftone_conversion_preserves_overall_tone_strength():
     full = 64 * 64 * 255
     fraction = total / full
     assert 0.2 < fraction < 0.8
+
+
+# ---------------------------------------------------------------------------
+# ToneSettings + render_tone_layer
+# ---------------------------------------------------------------------------
+
+
+def test_tone_settings_defaults_pass_validation():
+    from Imervue.paint.halftone import ToneSettings
+    tone = ToneSettings()
+    assert tone.lpi == DEFAULT_LPI
+    assert tone.color == (0, 0, 0)
+
+
+def test_tone_settings_rejects_lpi_below_min():
+    from Imervue.paint.halftone import ToneSettings
+    with pytest.raises(ValueError):
+        ToneSettings(lpi=HALFTONE_LPI_MIN - 1)
+
+
+def test_tone_settings_rejects_lpi_above_max():
+    from Imervue.paint.halftone import ToneSettings
+    with pytest.raises(ValueError):
+        ToneSettings(lpi=HALFTONE_LPI_MAX + 1)
+
+
+def test_tone_settings_rejects_non_positive_dpi():
+    from Imervue.paint.halftone import ToneSettings
+    with pytest.raises(ValueError):
+        ToneSettings(dpi=0)
+
+
+def test_tone_settings_rejects_bad_color_length():
+    from Imervue.paint.halftone import ToneSettings
+    with pytest.raises(ValueError):
+        ToneSettings(color=(0, 0))   # type: ignore[arg-type]
+
+
+def test_tone_settings_rejects_color_out_of_range():
+    from Imervue.paint.halftone import ToneSettings
+    with pytest.raises(ValueError):
+        ToneSettings(color=(0, 0, 999))
+
+
+def test_tone_settings_round_trips_via_to_from_dict():
+    from Imervue.paint.halftone import ToneSettings
+    original = ToneSettings(lpi=80, dpi=600, angle_deg=45.0, color=(10, 20, 30))
+    rebuilt = ToneSettings.from_dict(original.to_dict())
+    assert rebuilt == original
+
+
+def test_tone_settings_from_dict_returns_none_for_garbage():
+    from Imervue.paint.halftone import ToneSettings
+    assert ToneSettings.from_dict(None) is None
+    assert ToneSettings.from_dict({"lpi": "not-an-int"}) is None
+    assert ToneSettings.from_dict({"color": [0, 0]}) is None
+
+
+def test_render_tone_layer_paints_dots_in_dark_areas():
+    from Imervue.paint.halftone import ToneSettings, render_tone_layer
+    layer = np.zeros((32, 32, 4), dtype=np.uint8)
+    layer[..., 3] = 255   # opaque
+    layer[..., :3] = 0    # black → high density
+    out = render_tone_layer(layer, ToneSettings(lpi=60))
+    # Some pixels are inside dots, some are between them — the alpha
+    # field is bimodal, with a non-trivial fraction inked.
+    inked = (out[..., 3] > 0).mean()
+    assert 0.2 < inked < 0.95
+
+
+def test_render_tone_layer_uses_tone_color():
+    from Imervue.paint.halftone import ToneSettings, render_tone_layer
+    layer = np.zeros((32, 32, 4), dtype=np.uint8)
+    layer[..., 3] = 255
+    layer[..., :3] = 0
+    out = render_tone_layer(
+        layer, ToneSettings(lpi=60, color=(200, 30, 60)),
+    )
+    # Pick a pixel inside a dot — its RGB should be the tone colour,
+    # not the original layer's grayscale.
+    inside = out[out[..., 3] > 0]
+    assert inside.size > 0
+    assert (inside[:, 0] == 200).all()
+    assert (inside[:, 1] == 30).all()
+    assert (inside[:, 2] == 60).all()
+
+
+def test_render_tone_layer_white_input_yields_almost_no_dots():
+    """High-luma input (light grey paint) → near-empty halftone."""
+    from Imervue.paint.halftone import ToneSettings, render_tone_layer
+    layer = np.full((32, 32, 4), 255, dtype=np.uint8)
+    out = render_tone_layer(layer, ToneSettings(lpi=60))
+    # Density floor is ~5% so a tiny fraction of pixels still gets
+    # inked, but not many.
+    inked = (out[..., 3] > 0).mean()
+    assert inked < 0.2
+
+
+def test_render_tone_layer_rejects_non_rgba():
+    from Imervue.paint.halftone import ToneSettings, render_tone_layer
+    bad = np.zeros((4, 4, 3), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        render_tone_layer(bad, ToneSettings())
+
+
+def test_render_tone_layer_angle_rotates_pattern():
+    """A 45° rotation must produce a different dot mask vs 0°."""
+    from Imervue.paint.halftone import ToneSettings, render_tone_layer
+    layer = np.zeros((32, 32, 4), dtype=np.uint8)
+    layer[..., 3] = 255
+    layer[..., :3] = 80   # mid-grey
+    a = render_tone_layer(layer, ToneSettings(lpi=60, angle_deg=0.0))
+    b = render_tone_layer(layer, ToneSettings(lpi=60, angle_deg=45.0))
+    assert not np.array_equal(a[..., 3], b[..., 3])

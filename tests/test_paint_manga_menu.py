@@ -132,3 +132,51 @@ def test_workspace_exposes_manga_menu(qapp):
                    for a in actions)
     finally:
         ws.deleteLater()
+
+
+def test_toggle_tone_layer_installs_default_settings(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        bridge.toggle_tone_layer()
+        layer = ws.canvas().document().active_layer()
+        assert layer.tone is not None
+    finally:
+        ws.deleteLater()
+
+
+def test_toggle_tone_layer_clears_existing_tone(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        bridge.toggle_tone_layer()
+        bridge.toggle_tone_layer()
+        layer = ws.canvas().document().active_layer()
+        assert layer.tone is None
+    finally:
+        ws.deleteLater()
+
+
+def test_toggle_tone_layer_no_op_without_active():
+    """Empty document → no-op rather than crash."""
+    from Imervue.paint.document import PaintDocument
+    from Imervue.paint.manga_menu import _MangaMenuBridge
+
+    class _Stub:
+        def __init__(self):
+            self._doc = PaintDocument()
+
+        def canvas(self):
+            return self
+
+        def document(self):
+            return self._doc
+
+        def update(self):
+            pass
+
+    bridge = _MangaMenuBridge.__new__(_MangaMenuBridge)
+    bridge._workspace = _Stub()  # noqa: SLF001
+    # No active layer; the bridge must short-circuit.
+    bridge.toggle_tone_layer()
+    assert bridge._workspace.document().active_layer() is None  # noqa: SLF001

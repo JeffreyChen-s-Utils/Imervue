@@ -319,3 +319,33 @@ def test_reference_layer_index_default_none_round_trip(tmp_path):
     save_document(doc, target)
     loaded = load_document(target)
     assert loaded.reference_layer_index() is None
+
+
+# ---------------------------------------------------------------------------
+# Tone-layer persistence
+# ---------------------------------------------------------------------------
+
+
+def test_layer_tone_round_trips(tmp_path):
+    from Imervue.paint.halftone import ToneSettings
+    doc = _make_doc()
+    doc.set_layer_tone(tone=ToneSettings(
+        lpi=85, dpi=600, angle_deg=15.0, color=(120, 60, 200),
+    ))
+    target = tmp_path / f"tone{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    tone = loaded.active_layer().tone
+    assert tone is not None
+    assert tone.lpi == 85
+    assert tone.dpi == 600
+    assert tone.angle_deg == pytest.approx(15.0)
+    assert tone.color == (120, 60, 200)
+
+
+def test_missing_layer_tone_round_trips_to_none(tmp_path):
+    doc = _make_doc()
+    target = tmp_path / f"plain{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.active_layer().tone is None

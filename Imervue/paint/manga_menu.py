@@ -50,6 +50,11 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
     )
     action.setShortcut(QKeySequence("Ctrl+Shift+P"))
     action.triggered.connect(bridge.open_panel_cutter)
+    menu.addSeparator()
+    tone_action = menu.addAction(
+        lang.get("paint_manga_toggle_tone_layer", "Toggle Tone Layer"),
+    )
+    tone_action.triggered.connect(bridge.toggle_tone_layer)
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +75,24 @@ class _MangaMenuBridge:
             return
         params = dialog.values()
         commit_panel_layout(self._workspace, params)
+
+    def toggle_tone_layer(self) -> None:
+        """Flip the active layer between plain raster and tone-render.
+
+        On → installs default :class:`ToneSettings` so the compositor
+        starts producing the dot pattern. Off → drops the tone hint
+        and the original soft greys reappear. Re-running the action
+        toggles back; the layer pixels are never destructively
+        rewritten.
+        """
+        from Imervue.paint.halftone import ToneSettings
+        document = self._workspace.canvas().document()
+        layer = document.active_layer()
+        if layer is None:
+            return
+        new_tone = None if layer.tone is not None else ToneSettings()
+        if document.set_layer_tone(tone=new_tone):
+            self._workspace.canvas().update()
 
 
 # ---------------------------------------------------------------------------
