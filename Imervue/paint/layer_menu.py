@@ -42,6 +42,17 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         ("paint_layer_merge_down", "Merge Down",
          bridge.merge_down, "Ctrl+E"),
         (None, None, None, None),
+        ("paint_layer_add_mask", "Add Mask",
+         bridge.add_mask, "Ctrl+Shift+M"),
+        ("paint_layer_add_mask_from_selection", "Add Mask From Selection",
+         bridge.add_mask_from_selection, "Ctrl+Alt+Shift+M"),
+        ("paint_layer_invert_mask", "Invert Mask",
+         bridge.invert_mask, ""),
+        ("paint_layer_apply_mask", "Apply Mask",
+         bridge.apply_mask, ""),
+        ("paint_layer_delete_mask", "Delete Mask",
+         bridge.delete_mask, ""),
+        (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
     ):
@@ -49,7 +60,8 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
             menu.addSeparator()
             continue
         action = menu.addAction(lang.get(key, fallback))
-        action.setShortcut(QKeySequence(shortcut))
+        if shortcut:
+            action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(slot)
 
 
@@ -98,6 +110,33 @@ class _LayerMenuBridge:
             return
         document.remove_active_layer()
         self._refresh_canvas()
+
+    # ---- masks ----------------------------------------------------------
+
+    def add_mask(self) -> None:
+        document = self._workspace.canvas().document()
+        if document.add_layer_mask():
+            self._refresh_canvas()
+
+    def add_mask_from_selection(self) -> None:
+        document = self._workspace.canvas().document()
+        if document.add_layer_mask_from_selection():
+            self._refresh_canvas()
+
+    def delete_mask(self) -> None:
+        document = self._workspace.canvas().document()
+        if document.clear_layer_mask():
+            self._refresh_canvas()
+
+    def invert_mask(self) -> None:
+        document = self._workspace.canvas().document()
+        if document.invert_layer_mask():
+            self._refresh_canvas()
+
+    def apply_mask(self) -> None:
+        document = self._workspace.canvas().document()
+        if document.apply_layer_mask():
+            self._refresh_canvas()
 
     # ---- internals ------------------------------------------------------
 
