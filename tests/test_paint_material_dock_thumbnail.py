@@ -78,3 +78,19 @@ def test_dock_default_index_populates_grid(empty_dock):
     # must NOT silently swap in the default catalog. The workspace
     # injects it via the index= kwarg. Verify that.
     assert len(empty_dock.index()) == 0
+
+
+def test_thumbnail_button_carries_material_path(qapp, tmp_path):
+    """The thumbnail button stashes its material path so the drag
+    handler can paste it into the canvas-side MIME payload."""
+    from Imervue.paint.dock_panels import _MaterialThumbnailButton
+
+    target = tmp_path / "tile.png"
+    pix = QPixmap(8, 8)
+    pix.fill()
+    pix.save(str(target))
+    btn = _MaterialThumbnailButton(str(target), pix)
+    try:
+        assert btn._path == str(target)   # noqa: SLF001
+    finally:
+        btn.deleteLater()

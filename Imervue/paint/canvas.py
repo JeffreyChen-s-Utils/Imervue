@@ -197,6 +197,10 @@ class PaintCanvas(QOpenGLWidget):
         # the user having to Tab onto it.
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(QCursor(cursor_for_tool("brush")))
+        # Drag-and-drop target for the materials dock — drop a tile to
+        # spawn a new layer with the material pasted under the cursor.
+        # The accept logic lives in :meth:`dragEnterEvent`.
+        self.setAcceptDrops(True)
 
         self._document: PaintDocument = PaintDocument()
         self._texture: int | None = None
@@ -954,6 +958,66 @@ class PaintCanvas(QOpenGLWidget):
                 self._pending_damage = EMPTY_DAMAGE
             self.document_changed.emit()
             self.update()
+
+    # ---- material drag-drop ---------------------------------------------
+
+    def dragEnterEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        from Imervue.paint.material_drop import MATERIAL_MIME_TYPE
+        mime = event.mimeData()
+        if mime is None:
+            event.ignore()
+            return
+        if mime.hasFormat(MATERIAL_MIME_TYPE) or mime.hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        # Re-affirm on every move so Qt keeps showing the move cursor.
+        event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        from Imervue.paint.material_drop import (
+            MATERIAL_MIME_TYPE,
+            commit_material_to_document,
+            load_material_image,
+        )
+        mime = event.mimeData()
+        if mime is None:
+            event.ignore()
+            return
+        path: str | None = None
+        if mime.hasFormat(MATERIAL_MIME_TYPE):
+            blob = mime.data(MATERIAL_MIME_TYPE)
+            try:
+                path = bytes(blob.data()).decode("utf-8")
+            except UnicodeDecodeError:
+                path = None
+        elif mime.hasUrls():
+            for url in mime.urls():
+                if url.isLocalFile():
+                    path = url.toLocalFile()
+                    break
+        if not path:
+            event.ignore()
+            return
+        try:
+            tile = load_material_image(path)
+        except (FileNotFoundError, OSError, ValueError):
+            event.ignore()
+            return
+        pos = event.position() if hasattr(event, "position") else event.pos()
+        sx = float(pos.x())
+        sy = float(pos.y())
+        ix, iy = self._screen_to_image(sx, sy)
+        commit_material_to_document(
+            self._document, tile,
+            drop_x=int(round(ix)), drop_y=int(round(iy)),
+        )
+        self.document_changed.emit()
+        self._needs_upload = True
+        self.update()
+        event.acceptProposedAction()
 
     def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
         if self._zoom <= 0:

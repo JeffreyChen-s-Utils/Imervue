@@ -771,6 +771,54 @@ class PageNavigatorDock(QDockWidget):
 # ---------------------------------------------------------------------------
 
 
+class _MaterialThumbnailButton(QToolButton):
+    """QToolButton that doubles as a drag source for its material path.
+
+    The dock keeps the click-to-emit ``material_chosen`` signal for
+    casual one-click apply; a slow press-and-drag instead starts a
+    QDrag carrying the material's path under the imervue MIME type so
+    the canvas drop handler can spawn a fresh layer at the drop point.
+    """
+
+    def __init__(self, path: str, preview):
+        super().__init__()
+        self._path = str(path)
+        self._preview = preview
+        self._press_pos = None
+
+    def mousePressEvent(self, event):  # pragma: no cover - Qt UI
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._press_pos = event.position().toPoint()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):  # pragma: no cover - Qt UI
+        from PySide6.QtCore import QByteArray, QMimeData
+        from PySide6.QtGui import QDrag
+
+        from Imervue.paint.material_drop import MATERIAL_MIME_TYPE
+
+        if (
+            self._press_pos is None
+            or not (event.buttons() & Qt.MouseButton.LeftButton)
+        ):
+            super().mouseMoveEvent(event)
+            return
+        moved = (event.position().toPoint() - self._press_pos).manhattanLength()
+        if moved < 8:
+            return
+        mime = QMimeData()
+        mime.setData(
+            MATERIAL_MIME_TYPE,
+            QByteArray(self._path.encode("utf-8")),
+        )
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+        if self._preview is not None and not self._preview.isNull():
+            drag.setPixmap(self._preview)
+        drag.exec(Qt.DropAction.CopyAction)
+        self._press_pos = None
+
+
 class MaterialDock(QDockWidget):
     """Searchable thumbnail grid backed by a :class:`MaterialIndex`.
 
@@ -892,9 +940,9 @@ class MaterialDock(QDockWidget):
             self._grid_layout.addWidget(btn, row, col)
 
     def _make_thumbnail(self, entry) -> QToolButton:
-        btn = QToolButton()
-        btn.setIconSize(QPixmap(64, 64).size())
         pix = self._render_thumbnail(entry)
+        btn = _MaterialThumbnailButton(str(entry.path), pix)
+        btn.setIconSize(QPixmap(64, 64).size())
         btn.setIcon(pix)
         btn.setText(entry.name)
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
