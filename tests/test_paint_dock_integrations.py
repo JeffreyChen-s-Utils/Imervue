@@ -38,13 +38,13 @@ def test_workspace_owns_swatch_dock(qapp):
         ws.deleteLater()
 
 
-def test_workspace_now_has_eight_docks(qapp):
-    """Was seven before 24d — adding the reference dock makes eight."""
+def test_workspace_now_has_nine_docks(qapp):
+    """Was eight before 24f — adding the animation dock makes nine."""
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
-        assert len(docks) == 8
+        assert len(docks) == 9
     finally:
         ws.deleteLater()
 
@@ -68,8 +68,8 @@ def test_window_menu_populates_one_entry_per_dock(qapp):
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        # Eight docks → eight Window-menu entries (24d added Reference).
-        assert len(window_menu.actions()) == 8
+        # Nine docks → nine Window-menu entries (24f added Animation).
+        assert len(window_menu.actions()) == 9
     finally:
         ws.deleteLater()
 

@@ -134,6 +134,21 @@ class PaintWorkspace(QMainWindow):
         from Imervue.paint.reference_dock import ReferenceDock
         self._reference_dock = ReferenceDock(self)
 
+        # Animation timeline dock — frame snapshots + transport.
+        # The dock owns the AnimationTimeline; the workspace listens
+        # to its signals to push frames onto the active canvas.
+        from Imervue.paint.animation_dock import AnimationDock
+        self._animation_dock = AnimationDock(parent=self)
+        self._animation_dock.add_frame_requested.connect(
+            self._on_animation_add_frame,
+        )
+        self._animation_dock.remove_frame_requested.connect(
+            self._on_animation_remove_frame,
+        )
+        self._animation_dock.frame_selected.connect(
+            self._on_animation_frame_selected,
+        )
+
         for dock in (
             self._color_dock,
             self._brush_dock,
@@ -143,6 +158,7 @@ class PaintWorkspace(QMainWindow):
             self._history_dock,
             self._swatch_dock,
             self._reference_dock,
+            self._animation_dock,
         ):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
             dock.setFeatures(
@@ -247,6 +263,61 @@ class PaintWorkspace(QMainWindow):
 
     def state(self) -> ToolState:
         return self._state
+
+    # ---- animation timeline --------------------------------------------
+
+    def _on_animation_add_frame(self) -> None:
+        """Snapshot the active canvas composite and append it to the
+        animation timeline as a fresh frame."""
+        composite = self._canvas.document().composite()
+        if composite is None:
+            return
+        timeline = self._animation_dock.timeline()
+        timeline.add_frame(composite)
+        self._animation_dock.refresh()
+        self._refresh_onion_skin_source()
+
+    def _on_animation_remove_frame(self, index: int) -> None:
+        timeline = self._animation_dock.timeline()
+        if timeline.remove_frame(index):
+            self._animation_dock.refresh()
+            self._refresh_onion_skin_source()
+
+    def _on_animation_frame_selected(self, index: int) -> None:
+        """Load the selected frame's image into the active layer.
+
+        Treats the active layer as the "current frame canvas" — the
+        user picks frames; we paste them. Existing layer pixels are
+        replaced. Onion-skin source is refreshed so the previous
+        frame ghost stays current.
+        """
+        timeline = self._animation_dock.timeline()
+        frame = timeline.frame_at(index)
+        if frame is None:
+            return
+        document = self._canvas.document()
+        layer = document.active_layer()
+        if layer is None or layer.image.shape != frame.image.shape:
+            return
+        np.copyto(layer.image, frame.image)
+        document.invalidate_composite()
+        self._canvas.update()
+        self._refresh_onion_skin_source()
+
+    def _refresh_onion_skin_source(self) -> None:
+        """Point the canvas onion-skin overlay at the previous frame."""
+        if not hasattr(self._canvas, "set_onion_skin_source"):
+            return
+        timeline = self._animation_dock.timeline()
+        prev = timeline.previous_frame()
+        if prev is None:
+            self._canvas.set_onion_skin_source(None)
+            return
+        # The canvas accepts a zero-arg callable that returns the
+        # buffer (the same protocol the existing 22d hook already
+        # uses), so wrap our cached reference in a thunk.
+        buffer = prev.image
+        self._canvas.set_onion_skin_source(lambda: buffer)
 
     # ---- quick mask mode -----------------------------------------------
 
@@ -422,6 +493,7 @@ class PaintWorkspace(QMainWindow):
             ("paint_dock_history", "History", self._history_dock),
             ("paint_dock_swatches", "Swatches", self._swatch_dock),
             ("paint_dock_reference", "Reference", self._reference_dock),
+            ("paint_dock_animation", "Animation", self._animation_dock),
         )
         self._window_dock_actions = {}
         for key, fallback, dock in entries:
