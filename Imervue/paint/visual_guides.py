@@ -31,8 +31,11 @@ MAX_GRID_INTERVAL = 4096
 # Minimum on-screen size of a single image pixel (in widget pixels)
 # at which the pixel grid is visually useful — below this the grid
 # lines themselves crowd out the underlying art and the user gets
-# moire instead of guidance. 8.0 ≈ 800 % zoom for a 1:1 widget.
-PIXEL_GRID_MIN_ZOOM = 8.0
+# moire instead of guidance. 4.0 ≈ 400 % zoom; lowered from 8 so
+# the grid actually shows at typical pixel-art editing zooms (most
+# users zoom to 4–6× rather than 8+× to keep more of the canvas
+# visible).
+PIXEL_GRID_MIN_ZOOM = 4.0
 
 
 def should_show_pixel_grid(zoom: float) -> bool:

@@ -206,6 +206,15 @@ class PaintCanvas(QOpenGLWidget):
         self.setAcceptDrops(True)
 
         self._document: PaintDocument = PaintDocument()
+        # Subscribe so wholesale document mutations (add layer, set
+        # layer attribute, invalidate composite, etc.) force a full
+        # texture re-upload on the next paint. Brush strokes mutate
+        # layer.image in place without firing _notify, so this
+        # subscription doesn't interfere with the dispatcher's
+        # damage-rect-based incremental upload path.
+        self._document_unsubscribe = self._document.listen(
+            self._on_document_changed,
+        )
         self._texture: int | None = None
         self._needs_upload = False
         # Pending damage rect — when non-empty and not full-frame the
@@ -319,7 +328,14 @@ class PaintCanvas(QOpenGLWidget):
         another image is loaded.
         """
         if arr is None:
+            # Re-subscribe to the new empty document so wholesale
+            # mutations on it (a fresh add_layer, etc.) trigger the
+            # texture-upload listener.
+            self._document_unsubscribe()
             self._document = PaintDocument()
+            self._document_unsubscribe = self._document.listen(
+                self._on_document_changed,
+            )
             self._needs_upload = True
             self._pending_damage = EMPTY_DAMAGE
             self._marquee_segments = None
@@ -333,7 +349,11 @@ class PaintCanvas(QOpenGLWidget):
                 f"PaintCanvas.load_image expects HxWx4 uint8 RGBA, "
                 f"got {arr.shape} {arr.dtype}",
             )
+        self._document_unsubscribe()
         self._document = PaintDocument()
+        self._document_unsubscribe = self._document.listen(
+            self._on_document_changed,
+        )
         self._document.load_image(arr)
         self._marquee_segments = None
         self._marquee_timer.stop()
@@ -371,6 +391,19 @@ class PaintCanvas(QOpenGLWidget):
         """
         self._needs_upload = True
         self._pending_damage = EMPTY_DAMAGE
+
+    def _on_document_changed(self) -> None:
+        """Subscriber for the active PaintDocument's _notify pulses.
+
+        Forces a full texture re-upload on the next paint and queues
+        a repaint. Triggered by add / remove / move / duplicate
+        layer, set_layer_attribute, merge / flatten, transform, and
+        any other wholesale mutation the document signals through
+        :meth:`PaintDocument.listen`.
+        """
+        self._needs_upload = True
+        self._pending_damage = EMPTY_DAMAGE
+        self.update()
 
     def set_selection(self, mask: np.ndarray | None) -> None:
         if mask is not None and (mask.ndim != 2 or mask.dtype != np.bool_):

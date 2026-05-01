@@ -163,6 +163,16 @@ class _ViewMenuBridge:
     def toggle_bleed_guides(self, checked: bool) -> None:
         self._workspace._bleed_guides_visible = bool(checked)   # noqa: SLF001
         canvas = self._workspace.canvas()
+        # Seed a default JIS-B5 bleed guide on first toggle-on so the
+        # overlay actually has geometry to draw. Older builds toggled
+        # the flag but left ``_bleed_guides`` as None which silently
+        # rendered nothing — the user's "doesn't work" complaint.
+        if checked and getattr(canvas, "_bleed_guides", None) is None:
+            import contextlib
+
+            from Imervue.paint.bleed_guides import preset
+            with contextlib.suppress(KeyError, AttributeError):
+                canvas.set_bleed_guides(preset("manga_b5"))
         if hasattr(canvas, "set_bleed_guides_visible"):
             canvas.set_bleed_guides_visible(bool(checked))
         else:   # pragma: no cover - older canvas builds
