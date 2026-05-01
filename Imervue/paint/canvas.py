@@ -630,19 +630,28 @@ class PaintCanvas(QOpenGLWidget):
         self.update()
 
     def resizeGL(self, w: int, h: int) -> None:  # pragma: no cover - GL
-        glViewport(0, 0, max(1, w), max(1, h))
+        # Qt passes ``w`` / ``h`` in logical (device-independent) pixels.
+        # The GL viewport must be in device pixels so the framebuffer
+        # fills the whole widget on HiDPI displays — otherwise only the
+        # top-left quadrant of the framebuffer is rendered to and the
+        # image ends up anchored to that subregion rather than the
+        # visible widget area.
+        dpr = max(1.0, float(self.devicePixelRatio()))
+        log_w = max(1, int(w))
+        log_h = max(1, int(h))
+        glViewport(0, 0, int(log_w * dpr), int(log_h * dpr))
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        glOrtho(0, max(1, w), max(1, h), 0, -1, 1)
+        # Ortho stays in logical pixels so the pan / zoom math (also
+        # logical) draws to the right region.
+        glOrtho(0, log_w, log_h, 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
         # Re-fit on every resize until the user manually controls the
         # view. ``_fit_pending`` covers the deferred-init case (widget
         # was too small earlier); ``_user_view_locked`` is the user-took-
         # control flag that pins the view once they wheel-zoom or pan.
-        # Pass the GL-reported size directly: ``self.width()`` may still
-        # report the previous frame's value during the layout cycle.
         if self._fit_pending or not self._user_view_locked:
-            self._reset_view_to_fit(widget_size=(int(w), int(h)))
+            self._reset_view_to_fit(widget_size=(log_w, log_h))
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
         glClear(GL_COLOR_BUFFER_BIT)
