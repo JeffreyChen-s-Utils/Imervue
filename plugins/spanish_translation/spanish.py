@@ -1017,6 +1017,8 @@ spanish_word_dict.update({
     "paint_workspace_preset_rename_label": 'Nuevo nombre:',
     "paint_workspace_preset_delete": 'Eliminar',
     "paint_workspace_preset_built_in": ' (incorporado)',
+    "paint_filter_preview_title": 'Vista previa del filtro',
+    "paint_filter_preview_value": 'Valor:',
     "paint_color_fg": 'PR',
     "paint_color_bg": 'FN',
     "paint_color_swap": 'X',

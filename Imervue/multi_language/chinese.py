@@ -516,6 +516,8 @@ chinese_word_dict = {
     "paint_workspace_preset_rename_label": '新名称：',
     "paint_workspace_preset_delete": '删除',
     "paint_workspace_preset_built_in": '（内置）',
+    "paint_filter_preview_title": '滤镜预览',
+    "paint_filter_preview_value": '数值：',
     "paint_color_fg": '前景',
     "paint_color_bg": '背景',
     "paint_color_swap": 'X',

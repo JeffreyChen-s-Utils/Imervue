@@ -521,6 +521,8 @@ korean_word_dict = {
     "paint_workspace_preset_rename_label": '새 이름:',
     "paint_workspace_preset_delete": '삭제',
     "paint_workspace_preset_built_in": ' (기본 제공)',
+    "paint_filter_preview_title": '필터 미리보기',
+    "paint_filter_preview_value": '값:',
     "paint_color_fg": '전경',
     "paint_color_bg": '배경',
     "paint_color_swap": 'X',

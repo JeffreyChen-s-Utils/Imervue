@@ -535,6 +535,8 @@ english_word_dict = {
     "paint_workspace_preset_rename_label": 'New name:',
     "paint_workspace_preset_delete": 'Delete',
     "paint_workspace_preset_built_in": ' (built-in)',
+    "paint_filter_preview_title": 'Filter Preview',
+    "paint_filter_preview_value": 'Value:',
     "paint_color_fg": 'FG',
     "paint_color_bg": 'BG',
     "paint_color_swap": 'X',
