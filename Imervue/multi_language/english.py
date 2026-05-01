@@ -527,6 +527,7 @@ english_word_dict = {
     "paint_shortcut_reset_row": '↺',
     "paint_dock_swatches": 'Swatches',
     "paint_dock_reference": 'Reference',
+    "paint_edit_quick_mask": 'Quick Mask Mode',
     "paint_reference_open": 'Open…',
     "paint_reference_clear": 'Clear',
     "paint_reference_reset_zoom": '100%',

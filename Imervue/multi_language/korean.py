@@ -513,6 +513,7 @@ korean_word_dict = {
     "paint_shortcut_reset_row": '↺',
     "paint_dock_swatches": '스와치',
     "paint_dock_reference": '참고 이미지',
+    "paint_edit_quick_mask": '퀵 마스크 모드',
     "paint_reference_open": '열기…',
     "paint_reference_clear": '지우기',
     "paint_reference_reset_zoom": '100%',

@@ -80,13 +80,15 @@ def test_filter_menu_keeps_existing_actions(qapp):
         ws.deleteLater()
 
 
-def test_unpopulated_menus_remain_empty(qapp):
-    """The Edit menu has no phase wiring yet — confirm it starts
-    empty so a future Edit-menu phase can assert on growth."""
+def test_edit_menu_has_quick_mask_entry(qapp):
+    """Phase 24e populated the Edit menu with the Quick Mask toggle."""
     ws = PaintWorkspace()
     try:
         edit_menu = menu_for(ws, "edit")
-        assert edit_menu.actions() == []
+        labels = [a.text() for a in edit_menu.actions()]
+        assert any("Quick Mask" in label or "遮罩" in label
+                   or "蒙版" in label or "マスク" in label or "마스크" in label
+                   for label in labels)
     finally:
         ws.deleteLater()
 

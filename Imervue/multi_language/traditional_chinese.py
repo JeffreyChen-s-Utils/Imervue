@@ -508,6 +508,7 @@ traditional_chinese_word_dict = {
     "paint_shortcut_reset_row": '↺',
     "paint_dock_swatches": '色票',
     "paint_dock_reference": '參考圖',
+    "paint_edit_quick_mask": '快速遮罩模式',
     "paint_reference_open": '開啟…',
     "paint_reference_clear": '清除',
     "paint_reference_reset_zoom": '100%',

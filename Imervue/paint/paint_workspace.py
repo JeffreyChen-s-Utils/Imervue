@@ -39,6 +39,7 @@ from Imervue.paint.dock_panels import (
     MaterialDock,
     NavigatorDock,
 )
+from Imervue.paint.edit_menu import populate_edit_menu
 from Imervue.paint.file_menu import populate_file_menu
 from Imervue.paint.layer_menu import populate_layer_menu
 from Imervue.paint.manga_menu import populate_manga_menu
@@ -67,6 +68,7 @@ class PaintWorkspace(QMainWindow):
         # ``_<key>_menu`` for the 21b–21g sub-phases to fill.
         self.setMenuBar(build_paint_menu_bar(self))
         populate_file_menu(self)
+        populate_edit_menu(self)
         populate_layer_menu(self)
         populate_view_menu(self)
         populate_tools_menu(self)
@@ -245,6 +247,61 @@ class PaintWorkspace(QMainWindow):
 
     def state(self) -> ToolState:
         return self._state
+
+    # ---- quick mask mode -----------------------------------------------
+
+    def is_quick_mask_active(self) -> bool:
+        return getattr(self, "_quick_mask_state", None) is not None
+
+    def enter_quick_mask(self) -> bool:
+        """Toggle the active layer into a paintable selection overlay.
+
+        Returns ``True`` if the mode was entered. Refuses gracefully
+        when there's no active layer (the user has nothing to paint
+        on); the caller can ignore the return.
+        """
+        if self.is_quick_mask_active():
+            return False
+        from Imervue.paint.quick_mask import enter_mode
+        canvas = self.canvas()
+        document = canvas.document()
+        layer = document.active_layer()
+        if layer is None:
+            return False
+        layer_index = document._active_index   # noqa: SLF001
+        state = enter_mode(
+            layer.image, document.selection(), layer_index=layer_index,
+        )
+        # Swap the layer's pixels for the proxy buffer so brushes paint
+        # into the overlay rather than the underlying art.
+        layer.image = state.buffer
+        self._quick_mask_state = state
+        document.invalidate_composite()
+        canvas.update()
+        return True
+
+    def exit_quick_mask(self) -> bool:
+        """Convert the painted overlay back into a selection and
+        restore the layer's original pixels."""
+        if not self.is_quick_mask_active():
+            return False
+        from Imervue.paint.quick_mask import exit_mode
+        state = self._quick_mask_state   # noqa: SLF001
+        canvas = self.canvas()
+        document = canvas.document()
+        if state.layer_index < 0 or state.layer_index >= document.layer_count:
+            # The active layer disappeared while in quick-mask mode;
+            # drop the state without touching anything.
+            self._quick_mask_state = None
+            return False
+        layer = document.layer_at(state.layer_index)
+        restored, selection = exit_mode(state)
+        layer.image = restored
+        canvas.set_selection(selection)
+        self._quick_mask_state = None
+        document.invalidate_composite()
+        canvas.update()
+        return True
 
     # ---- multi-document tabs --------------------------------------------
 

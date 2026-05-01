@@ -508,6 +508,7 @@ chinese_word_dict = {
     "paint_shortcut_reset_row": '↺',
     "paint_dock_swatches": '色板',
     "paint_dock_reference": '参考图',
+    "paint_edit_quick_mask": '快速蒙版模式',
     "paint_reference_open": '打开…',
     "paint_reference_clear": '清除',
     "paint_reference_reset_zoom": '100%',

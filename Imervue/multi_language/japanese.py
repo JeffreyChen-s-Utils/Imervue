@@ -519,6 +519,7 @@ japanese_word_dict = {
     "paint_shortcut_reset_row": '↺',
     "paint_dock_swatches": 'スウォッチ',
     "paint_dock_reference": 'リファレンス',
+    "paint_edit_quick_mask": 'クイックマスクモード',
     "paint_reference_open": '開く…',
     "paint_reference_clear": 'クリア',
     "paint_reference_reset_zoom": '100%',
