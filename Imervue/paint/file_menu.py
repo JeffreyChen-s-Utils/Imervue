@@ -50,23 +50,31 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
     workspace._file_menu_bridge = bridge   # noqa: SLF001
     menu = menu_for(workspace, "file")
     lang = language_wrapper.language_word_dict
-    for key, fallback, slot in (
+    from PySide6.QtGui import QKeySequence
+    for key, fallback, slot, shortcut in (
+        ("paint_file_new_tab", "New Tab",
+         bridge.new_tab, "Ctrl+N"),
+        ("paint_file_close_tab", "Close Tab",
+         bridge.close_active_tab, "Ctrl+W"),
+        (None, None, None, None),
         ("paint_file_import_brush_preset", "Import brush preset…",
-         bridge.import_brush_preset),
+         bridge.import_brush_preset, ""),
         ("paint_file_import_palette", "Import palette…",
-         bridge.import_palette),
-        (None, None, None),
+         bridge.import_palette, ""),
+        (None, None, None, None),
         ("paint_file_export_image", "Export image…",
-         bridge.export_active_image),
+         bridge.export_active_image, ""),
         ("paint_file_export_pages_cbz", "Export pages → CBZ…",
-         bridge.export_pages_cbz),
+         bridge.export_pages_cbz, ""),
         ("paint_file_export_pages_pdf", "Export pages → PDF…",
-         bridge.export_pages_pdf),
+         bridge.export_pages_pdf, ""),
     ):
         if key is None:
             menu.addSeparator()
             continue
         action = menu.addAction(lang.get(key, fallback))
+        if shortcut:
+            action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(slot)
 
 
@@ -85,6 +93,18 @@ class _FileMenuBridge:
 
     def __init__(self, workspace: PaintWorkspace):
         self._workspace = workspace
+
+    # ---- multi-document tabs --------------------------------------------
+
+    def new_tab(self) -> None:
+        self._workspace.new_tab()
+
+    def close_active_tab(self) -> None:
+        # ``_tabs`` is the workspace-private QTabWidget — bridge talks
+        # to the public ``close_tab(index)`` so we don't have to duplicate
+        # the "refuse to close the last tab" rule here.
+        index = self._workspace._tabs.currentIndex()  # noqa: SLF001
+        self._workspace.close_tab(index)
 
     # ---- import paths ----------------------------------------------------
 

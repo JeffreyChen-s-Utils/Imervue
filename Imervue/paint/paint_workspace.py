@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QMainWindow, QStatusBar
+from PySide6.QtWidgets import QMainWindow, QStatusBar, QTabWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
@@ -77,13 +77,23 @@ class PaintWorkspace(QMainWindow):
         self._status = QStatusBar(self)
         self.setStatusBar(self._status)
 
-        # Central canvas. Seeded with a default white canvas so the user
-        # can start painting the moment the workspace opens — without a
-        # layer the tool dispatcher's ``image_provider`` returns ``None``
-        # and brush strokes silently no-op.
+        # Central canvas tab strip — each tab owns one PaintCanvas + its
+        # own PaintDocument so the user can keep multiple drawings open
+        # at once. ``self._canvas`` always points at the *active* tab's
+        # canvas; switching tabs reassigns it via :meth:`_on_tab_changed`.
+        # Seeded with one blank tab so the workspace is immediately
+        # paintable just like the pre-tab version.
+        self._tabs = QTabWidget(self)
+        self._tabs.setTabsClosable(True)
+        self._tabs.setMovable(True)
+        self._tabs.tabCloseRequested.connect(self._on_tab_close_requested)
+        # ``currentChanged`` is wired AFTER ``_dispatcher`` is built —
+        # otherwise the signal fires during ``addTab`` below and the
+        # handler trips over the missing dispatcher attribute.
+        self.setCentralWidget(self._tabs)
         self._canvas = PaintCanvas(self)
         self._canvas.new_blank_document()
-        self.setCentralWidget(self._canvas)
+        self._tabs.addTab(self._canvas, self._next_untitled_tab_name())
 
         # Top tool-options strip
         self._options_bar = PaintOptionsBar(self._state, self)
@@ -179,11 +189,15 @@ class PaintWorkspace(QMainWindow):
         # Tool dispatcher routes pointer events to the active tool. The
         # canvas owns the live image and selection mask, so we hand the
         # dispatcher getters rather than caching snapshots.
+        # Dispatcher providers are deliberately wrapped in lambdas so
+        # they always read from the *current* active canvas — without
+        # this indirection a tab switch would leave the dispatcher
+        # talking to the previous tab's pixel buffer.
         self._dispatcher = ToolDispatcher(
             self._state,
-            image_provider=self._canvas.current_image,
-            selection_provider=self._canvas.current_selection,
-            set_selection=self._canvas.set_selection,
+            image_provider=lambda: self._canvas.current_image(),
+            selection_provider=lambda: self._canvas.current_selection(),
+            set_selection=lambda mask: self._canvas.set_selection(mask),
             parent_widget=self,
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
@@ -206,6 +220,10 @@ class PaintWorkspace(QMainWindow):
         self.destroyed.connect(lambda *_: self._unsubscribe())
         self._refresh_cursor_for_tool()
 
+        # Now safe to wire tab-change re-binding — every dock and the
+        # dispatcher have been constructed above.
+        self._tabs.currentChanged.connect(self._on_tab_changed)
+
     # ---- public ----------------------------------------------------------
 
     def canvas(self) -> PaintCanvas:
@@ -213,6 +231,87 @@ class PaintWorkspace(QMainWindow):
 
     def state(self) -> ToolState:
         return self._state
+
+    # ---- multi-document tabs --------------------------------------------
+
+    def tab_count(self) -> int:
+        """Return how many open documents the workspace currently holds."""
+        return self._tabs.count()
+
+    def new_tab(self) -> PaintCanvas:
+        """Open a fresh blank document in a new tab and switch to it.
+
+        Returns the new tab's :class:`PaintCanvas` so callers can
+        e.g. ``load_image`` into it. The dispatcher follows because
+        its providers read from ``self._canvas`` at event time.
+        """
+        canvas = PaintCanvas(self)
+        canvas.new_blank_document()
+        canvas.set_tool_dispatcher(self._dispatcher)
+        idx = self._tabs.addTab(canvas, self._next_untitled_tab_name())
+        self._tabs.setCurrentIndex(idx)
+        return canvas
+
+    def close_tab(self, index: int) -> bool:
+        """Close the tab at ``index``. Returns ``True`` on success.
+
+        Refuses to close the last remaining tab — the workspace
+        always needs at least one paintable canvas, mirroring the
+        single-tab invariant from before tabs existed.
+        """
+        if index < 0 or index >= self._tabs.count():
+            return False
+        if self._tabs.count() <= 1:
+            return False
+        widget = self._tabs.widget(index)
+        self._tabs.removeTab(index)
+        if widget is not None:
+            widget.deleteLater()
+        return True
+
+    def _next_untitled_tab_name(self) -> str:
+        """Generate a unique 'Untitled-N' name for a new tab."""
+        existing = {self._tabs.tabText(i) for i in range(self._tabs.count())}
+        n = self._tabs.count() + 1
+        while f"Untitled-{n}" in existing:
+            n += 1
+        return f"Untitled-{n}"
+
+    def _on_tab_close_requested(self, index: int) -> None:
+        self.close_tab(index)
+
+    def _on_tab_changed(self, index: int) -> None:
+        """Reassign ``self._canvas`` to the new active tab and rebind
+        the docks + signal connections that depend on it."""
+        if index < 0:
+            return
+        new_canvas = self._tabs.widget(index)
+        if not isinstance(new_canvas, PaintCanvas):
+            return
+        # Disconnect signals from the old canvas and reconnect to the
+        # new one so hover / zoom / document events route correctly.
+        old_canvas = self._canvas
+        if old_canvas is not None and old_canvas is not new_canvas:
+            try:
+                old_canvas.hover_changed.disconnect(self._on_hover_changed)
+                old_canvas.image_loaded.disconnect(self._on_image_loaded)
+                old_canvas.zoom_changed.disconnect(self._navigator_dock.set_zoom)
+                old_canvas.document_changed.disconnect(self._on_document_changed)
+            except (RuntimeError, TypeError):
+                # Signal might already be disconnected (e.g. on shutdown).
+                pass
+        self._canvas = new_canvas
+        self._canvas.set_tool_dispatcher(self._dispatcher)
+        self._canvas.hover_changed.connect(self._on_hover_changed)
+        self._canvas.image_loaded.connect(self._on_image_loaded)
+        self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
+        self._canvas.document_changed.connect(self._on_document_changed)
+        # Docks bound to the previous document need to point at the new one.
+        if hasattr(self, "_layer_dock"):
+            self._layer_dock.set_document(self._canvas.document())
+        if hasattr(self, "_navigator_dock"):
+            self._navigator_dock.set_zoom(self._canvas.zoom_factor())
+        self._refresh_navigator_preview()
 
     def load_image(self, arr) -> None:
         """Forward an HxWx4 RGBA buffer to the central canvas.

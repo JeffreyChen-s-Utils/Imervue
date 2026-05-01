@@ -552,6 +552,8 @@ english_word_dict = {
     "paint_manga_gutter": 'Gutter',
     "paint_manga_border": 'Border',
     "paint_manga_margin": 'Margin',
+    "paint_file_new_tab": 'New Tab',
+    "paint_file_close_tab": 'Close Tab',
     "paint_file_import_brush_preset": 'Import brush preset…',
     "paint_file_import_palette": 'Import palette…',
     "paint_file_export_image": 'Export image…',

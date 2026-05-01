@@ -533,6 +533,8 @@ chinese_word_dict = {
     "paint_manga_gutter": '格距',
     "paint_manga_border": '边框粗细',
     "paint_manga_margin": '页边距',
+    "paint_file_new_tab": '新建标签页',
+    "paint_file_close_tab": '关闭标签页',
     "paint_file_import_brush_preset": '导入笔刷预设…',
     "paint_file_import_palette": '导入色板…',
     "paint_file_export_image": '导出图片…',
