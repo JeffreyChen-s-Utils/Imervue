@@ -136,6 +136,12 @@ class GPUImageView(QOpenGLWidget):
         # canvas should not auto-fit on resize. Cleared on every
         # fresh image load via :meth:`_fit_to_window`.
         self._user_locked_view = False
+        # Most-recent ``resizeGL`` size — same role as the paint
+        # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
+        # so the initial centre uses the GL-reported logical size
+        # rather than ``self.width()`` / ``height()`` which can lag
+        # the actual layout for the first frame or two.
+        self._last_resize_size: tuple[int, int] = (0, 0)
 
 
         # ===== 圖片切換控制 =====
@@ -399,14 +405,17 @@ class GPUImageView(QOpenGLWidget):
 
     def resizeGL(self, w, h):
         dpr = self.devicePixelRatio()
-        glViewport(0, 0, int(w * dpr), int(h * dpr))
+        log_w = max(1, int(w))
+        log_h = max(1, int(h))
+        glViewport(0, 0, int(log_w * dpr), int(log_h * dpr))
         if self.renderer.use_shaders:
-            self.renderer.set_ortho(w, h)
+            self.renderer.set_ortho(log_w, log_h)
         else:
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
-            glOrtho(0, w, h, 0, -1, 1)
+            glOrtho(0, log_w, log_h, 0, -1, 1)
             glMatrixMode(GL_MODELVIEW)
+        self._last_resize_size = (log_w, log_h)
         # Re-fit while the user hasn't taken view control, so the
         # image stays centred when docks finish laying out and the
         # widget reaches its real size after the first resize.
@@ -1314,7 +1323,13 @@ class GPUImageView(QOpenGLWidget):
             return
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-        w, h = self.width() or 1, self.height() or 1
+        # Prefer the most recent ``resizeGL`` size — it's authoritative
+        # for the GL coordinate system and avoids the brief frames
+        # where ``self.width()`` lags the actual layout.
+        if self._last_resize_size != (0, 0):
+            w, h = self._last_resize_size
+        else:
+            w, h = self.width() or 1, self.height() or 1
         self.zoom = min(w / img_w, h / img_h, 1.0)
         displayed_w = img_w * self.zoom
         displayed_h = img_h * self.zoom

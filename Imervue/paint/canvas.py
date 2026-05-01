@@ -268,6 +268,12 @@ class PaintCanvas(QOpenGLWidget):
         # auto-refit safety net so the canvas re-centres when Qt's
         # layout converges to a larger size after the first resizeGL.
         self._fitted_widget_size: tuple[int, int] = (0, 0)
+        # Most-recent ``resizeGL`` size. Used by ``_reset_view_to_fit``
+        # whenever the caller doesn't supply an explicit override —
+        # ``self.width()`` / ``height()`` can lag the GL-reported
+        # size on some Qt builds, leaving the centred document
+        # anchored to the previous frame's dimensions.
+        self._last_resize_size: tuple[int, int] = (0, 0)
         # Until the user takes manual view control (wheel-zoom or
         # explicit pan) we keep the canvas auto-fitted to the widget on
         # every resize. Otherwise the layout converging after init
@@ -619,14 +625,18 @@ class PaintCanvas(QOpenGLWidget):
 
     def _deferred_fit_after_show(self) -> None:  # pragma: no cover - Qt UI
         """Recompute the fit once Qt has finalised the widget layout."""
-        if self.width() <= 0 or self.height() <= 0:
+        widget_w, widget_h = self._last_resize_size
+        if (widget_w, widget_h) == (0, 0):
+            widget_w = self.width()
+            widget_h = self.height()
+        if widget_w <= 0 or widget_h <= 0:
             # Still degenerate — leave _fit_pending set so paintGL's
             # safety net retries on the next paint.
             return
         if self._user_view_locked:
             self._fit_pending = False
             return
-        self._reset_view_to_fit()
+        self._reset_view_to_fit(widget_size=(widget_w, widget_h))
         self.update()
 
     def resizeGL(self, w: int, h: int) -> None:  # pragma: no cover - GL
@@ -646,6 +656,7 @@ class PaintCanvas(QOpenGLWidget):
         # logical) draws to the right region.
         glOrtho(0, log_w, log_h, 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
+        self._last_resize_size = (log_w, log_h)
         # Re-fit on every resize until the user manually controls the
         # view. ``_fit_pending`` covers the deferred-init case (widget
         # was too small earlier); ``_user_view_locked`` is the user-took-
@@ -666,8 +677,13 @@ class PaintCanvas(QOpenGLWidget):
         # fit and now while the user hasn't taken view control — handles
         # the QTabWidget intermediate-size scenario where the first
         # resizeGL fired before the tab page reached its real width.
-        widget_w = self.width()
-        widget_h = self.height()
+        # The auto-refit reads from ``_last_resize_size`` so it never
+        # disagrees with whatever GL was last told (and what ortho was
+        # set to in ``resizeGL``).
+        widget_w, widget_h = self._last_resize_size
+        if (widget_w, widget_h) == (0, 0):
+            widget_w = self.width()
+            widget_h = self.height()
         needs_refit = widget_w > 0 and widget_h > 0 and (
             self._fit_pending
             or (
@@ -676,7 +692,7 @@ class PaintCanvas(QOpenGLWidget):
             )
         )
         if needs_refit:
-            self._reset_view_to_fit()
+            self._reset_view_to_fit(widget_size=(widget_w, widget_h))
         if self._needs_upload:
             self._upload_texture(composite)
             self._needs_upload = False
@@ -1296,6 +1312,12 @@ class PaintCanvas(QOpenGLWidget):
             return
         if widget_size is not None:
             widget_w, widget_h = widget_size
+        elif self._last_resize_size != (0, 0):
+            # Prefer the last ``resizeGL``-reported size — Qt 6's
+            # logical-pixel convention there is consistent across
+            # platforms, while ``self.width()`` can briefly lag while
+            # the layout settles.
+            widget_w, widget_h = self._last_resize_size
         else:
             widget_w = self.width()
             widget_h = self.height()
