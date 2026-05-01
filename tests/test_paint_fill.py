@@ -190,3 +190,236 @@ def test_set_fill_rejects_unknown_attribute():
     state = ts.load_tool_state()
     with pytest.raises(ValueError):
         state.set_fill(magic_wand_size=8)
+
+
+# ---------------------------------------------------------------------------
+# Reference-layer fill — bucket samples a separate buffer for boundaries
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def empty_target_canvas():
+    """Fully-transparent 16x16 RGBA buffer — like a blank colour layer."""
+    return np.zeros((16, 16, 4), dtype=np.uint8)
+
+
+@pytest.fixture
+def lineart_reference():
+    """White 16x16 with an opaque-black ring around a transparent inner.
+
+    The reference looks like a comic-style closed region: a black
+    pen-stroke loop on a transparent canvas. The inside (rows/cols
+    5..10) and the outside (rows/cols < 4 or > 11) are both
+    transparent and connected only via the ink ring — but the ink
+    has alpha 255 on top of a placeholder colour, so a fill seeded
+    inside the ring should NOT escape across the ink.
+    """
+    ref = np.zeros((16, 16, 4), dtype=np.uint8)
+    # outer + inner are transparent (alpha 0)
+    # ring rows / cols 4 and 11 painted black + opaque
+    ref[4:12, 4, :] = (0, 0, 0, 255)
+    ref[4:12, 11, :] = (0, 0, 0, 255)
+    ref[4, 4:12, :] = (0, 0, 0, 255)
+    ref[11, 4:12, :] = (0, 0, 0, 255)
+    return ref
+
+
+def test_reference_fill_paints_target_inside_ring(
+    empty_target_canvas, lineart_reference,
+):
+    canvas = empty_target_canvas.copy()
+    out = flood_fill(
+        canvas, 7, 7, (255, 0, 0),
+        tolerance=0, contiguous=True,
+        reference_image=lineart_reference,
+    )
+    # Inside the ring is fully painted red; the ink ring itself stays
+    # untouched on the target canvas.
+    assert canvas[7, 7, 0] == 255
+    assert canvas[7, 7, 3] == 255
+    assert canvas[4, 4, 3] == 0   # ink-ring pixel on the target is still empty
+    # 6x6 inside, minus pixels that fell on the ring border itself.
+    assert out.pixels_filled == 6 * 6
+
+
+def test_reference_fill_does_not_cross_opaque_ink(
+    empty_target_canvas, lineart_reference,
+):
+    canvas = empty_target_canvas.copy()
+    flood_fill(
+        canvas, 0, 0, (0, 200, 0),
+        tolerance=0, contiguous=True,
+        reference_image=lineart_reference,
+    )
+    # Outside the ring is filled green; inside stays empty because the
+    # ink ring blocks the flood.
+    assert canvas[0, 0, 1] == 200
+    assert canvas[7, 7, 3] == 0
+
+
+def test_reference_fill_rejects_shape_mismatch(empty_target_canvas):
+    bad = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        flood_fill(
+            empty_target_canvas, 0, 0, (1, 2, 3),
+            reference_image=bad,
+        )
+
+
+def test_reference_fill_rejects_wrong_channel_count(empty_target_canvas):
+    bad = np.zeros((16, 16, 2), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        flood_fill(
+            empty_target_canvas, 0, 0, (1, 2, 3),
+            reference_image=bad,
+        )
+
+
+def test_reference_fill_accepts_rgb_reference(empty_target_canvas):
+    """A 3-channel reference is also valid — alpha is implicit-opaque."""
+    ref = np.full((16, 16, 3), 255, dtype=np.uint8)
+    ref[7, 7] = (0, 0, 0)
+    canvas = empty_target_canvas.copy()
+    out = flood_fill(
+        canvas, 0, 0, (10, 20, 30),
+        tolerance=0, contiguous=True,
+        reference_image=ref,
+    )
+    # White everywhere except the single black pixel — fill covers
+    # 16*16 - 1 pixels.
+    assert out.pixels_filled == 16 * 16 - 1
+
+
+# ---------------------------------------------------------------------------
+# Expand (anti-overflow) — dilate fill mask by N px before painting
+# ---------------------------------------------------------------------------
+
+
+def test_expand_grows_fill_into_anti_aliased_halo():
+    canvas = np.full((10, 10, 4), 255, dtype=np.uint8)
+    canvas[..., 3] = 255
+    # Anti-aliased halo: a ring of grey-150 around a black core.
+    canvas[3:7, 3:7, :3] = 0      # opaque black core
+    canvas[2:8, 2:8, 0] = np.where(
+        canvas[2:8, 2:8, 0] == 0, 0, 150,
+    )
+    out = flood_fill(
+        canvas.copy(), 3, 3, (200, 0, 0),
+        tolerance=0, contiguous=True, expand=0,
+    )
+    out_expanded = flood_fill(
+        canvas.copy(), 3, 3, (200, 0, 0),
+        tolerance=0, contiguous=True, expand=2,
+    )
+    # Expanding strictly grows the fill region (or leaves it equal at the
+    # canvas border).
+    assert out_expanded.pixels_filled > out.pixels_filled
+
+
+def test_expand_zero_is_noop(chequer_canvas):
+    a = flood_fill(
+        chequer_canvas.copy(), 0, 0, (200, 0, 0),
+        tolerance=0, contiguous=True, expand=0,
+    )
+    b = flood_fill(
+        chequer_canvas.copy(), 0, 0, (200, 0, 0),
+        tolerance=0, contiguous=True,
+    )
+    assert a.pixels_filled == b.pixels_filled
+
+
+def test_expand_rejects_negative():
+    canvas = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        flood_fill(canvas, 0, 0, (1, 2, 3), expand=-1)
+
+
+def test_expand_rejects_above_max():
+    canvas = np.zeros((4, 4, 4), dtype=np.uint8)
+    from Imervue.paint.fill import MAX_EXPAND
+    with pytest.raises(ValueError):
+        flood_fill(canvas, 0, 0, (1, 2, 3), expand=MAX_EXPAND + 1)
+
+
+def test_expand_clipped_by_selection():
+    """Expanded mask must still respect the active selection."""
+    canvas = np.full((10, 10, 4), 255, dtype=np.uint8)
+    canvas[..., :3] = 0   # black canvas — global match within tolerance 0
+    selection = np.zeros((10, 10), dtype=np.bool_)
+    selection[2:5, 2:5] = True   # only a 3x3 region is selectable
+    flood_fill(
+        canvas, 3, 3, (200, 0, 0),
+        tolerance=0, contiguous=False, expand=4,
+        selection=selection,
+    )
+    # Outside the selection must remain untouched even though dilation
+    # would otherwise spill across it.
+    assert canvas[0, 0, 0] == 0   # untouched
+    assert canvas[3, 3, 0] == 200 # filled inside the selection
+
+
+# ---------------------------------------------------------------------------
+# FillTool dispatcher honours the new options
+# ---------------------------------------------------------------------------
+
+
+def test_fill_tool_uses_reference_provider_when_enabled(
+    empty_target_canvas, lineart_reference,
+):
+    state = ts.load_tool_state()
+    state.set_foreground((0, 100, 200))
+    state.set_fill(tolerance=0, contiguous=True, use_reference_layer=True)
+    tool = FillTool(
+        state,
+        selection_provider=lambda: None,
+        reference_provider=lambda: lineart_reference,
+    )
+    canvas = empty_target_canvas.copy()
+    evt = PointerEvent(
+        phase="press", x=7, y=7, button=1, modifiers=0, pressure=1.0,
+    )
+    assert tool.handle(evt, canvas) is True
+    assert canvas[7, 7, 0] == 0
+    assert canvas[7, 7, 2] == 200
+
+
+def test_fill_tool_ignores_reference_when_flag_off(
+    empty_target_canvas, lineart_reference,
+):
+    """Reference is only consulted while ``use_reference_layer`` is on."""
+    state = ts.load_tool_state()
+    state.set_foreground((0, 100, 200))
+    state.set_fill(tolerance=0, contiguous=True, use_reference_layer=False)
+    tool = FillTool(
+        state,
+        selection_provider=lambda: None,
+        reference_provider=lambda: lineart_reference,
+    )
+    canvas = empty_target_canvas.copy()
+    evt = PointerEvent(
+        phase="press", x=7, y=7, button=1, modifiers=0, pressure=1.0,
+    )
+    # Without a reference the empty target floods entirely with the
+    # foreground colour.
+    assert tool.handle(evt, canvas) is True
+    assert canvas[0, 0, 2] == 200
+
+
+def test_fill_settings_round_trip_includes_new_fields():
+    state = ts.load_tool_state()
+    state.set_fill(expand_px=5, use_reference_layer=True)
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.fill.expand_px == 5
+    assert rebuilt.fill.use_reference_layer is True
+
+
+def test_fill_settings_clamps_expand_above_max():
+    state = ts.load_tool_state()
+    state.set_fill(expand_px=ts.FILL_EXPAND_MAX + 99)
+    assert state.fill.expand_px == ts.FILL_EXPAND_MAX
+
+
+def test_fill_settings_clamps_expand_below_zero():
+    state = ts.load_tool_state()
+    state.set_fill(expand_px=-5)
+    assert state.fill.expand_px == ts.FILL_EXPAND_MIN

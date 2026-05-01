@@ -408,3 +408,132 @@ def test_find_layers_no_match_returns_empty():
     doc = PaintDocument()
     doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
     assert doc.find_layers("nonexistent") == []
+
+
+# ---------------------------------------------------------------------------
+# Reference layer (bucket sampling)
+# ---------------------------------------------------------------------------
+
+
+def _doc_with_layers(n: int = 3) -> PaintDocument:
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    for _ in range(n - 1):
+        doc.add_layer()
+    return doc
+
+
+def test_reference_layer_index_defaults_to_none():
+    doc = _doc_with_layers(2)
+    assert doc.reference_layer_index() is None
+    assert doc.reference_layer_image() is None
+
+
+def test_set_reference_layer_index_returns_true_on_change():
+    doc = _doc_with_layers(2)
+    assert doc.set_reference_layer_index(0) is True
+    assert doc.reference_layer_index() == 0
+
+
+def test_set_reference_layer_index_idempotent_returns_false():
+    doc = _doc_with_layers(2)
+    doc.set_reference_layer_index(0)
+    assert doc.set_reference_layer_index(0) is False
+
+
+def test_set_reference_layer_index_clear_with_none():
+    doc = _doc_with_layers(2)
+    doc.set_reference_layer_index(0)
+    assert doc.set_reference_layer_index(None) is True
+    assert doc.reference_layer_index() is None
+
+
+def test_set_reference_layer_index_rejects_out_of_range():
+    doc = _doc_with_layers(2)
+    with pytest.raises(IndexError):
+        doc.set_reference_layer_index(99)
+
+
+def test_reference_layer_image_returns_the_layer_buffer():
+    doc = _doc_with_layers(2)
+    doc.layer_at(0).image[:] = (10, 20, 30, 255)
+    doc.set_reference_layer_index(0)
+    img = doc.reference_layer_image()
+    assert img is not None
+    assert tuple(img[0, 0]) == (10, 20, 30, 255)
+
+
+def test_reference_layer_image_returns_none_when_layer_hidden():
+    doc = _doc_with_layers(2)
+    doc.set_reference_layer_index(0)
+    doc.set_layer_attribute(0, visible=False)
+    assert doc.reference_layer_image() is None
+
+
+def test_reference_index_shifts_when_new_layer_inserted_below():
+    """add_layer above an active that sits below the reference must
+    bump the reference index up so it still points at the same layer.
+    """
+    doc = _doc_with_layers(2)
+    doc.set_active_layer(0)
+    doc.set_reference_layer_index(1)
+    doc.add_layer()  # inserts at index 1, pushing old index-1 to 2
+    assert doc.reference_layer_index() == 2
+
+
+def test_reference_index_drops_when_reference_layer_removed():
+    doc = _doc_with_layers(3)
+    doc.set_active_layer(1)
+    doc.set_reference_layer_index(1)
+    doc.remove_active_layer()
+    assert doc.reference_layer_index() is None
+
+
+def test_reference_index_shifts_down_when_lower_layer_removed():
+    doc = _doc_with_layers(3)
+    doc.set_reference_layer_index(2)
+    doc.set_active_layer(0)
+    doc.remove_active_layer()
+    assert doc.reference_layer_index() == 1
+
+
+def test_reference_index_swaps_with_move_active_layer():
+    doc = _doc_with_layers(3)
+    doc.set_reference_layer_index(2)
+    doc.set_active_layer(2)
+    doc.move_active_layer(up=False)
+    assert doc.reference_layer_index() == 1
+
+
+def test_reference_index_cleared_by_load_image():
+    doc = _doc_with_layers(2)
+    doc.set_reference_layer_index(0)
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.reference_layer_index() is None
+
+
+def test_reference_index_cleared_by_flatten():
+    doc = _doc_with_layers(3)
+    doc.set_reference_layer_index(1)
+    doc.flatten()
+    assert doc.reference_layer_index() is None
+
+
+def test_replace_state_accepts_reference_layer_index():
+    doc = PaintDocument()
+    h, w = 4, 4
+    layers = [
+        Layer(name="A", image=np.zeros((h, w, 4), dtype=np.uint8)),
+        Layer(name="B", image=np.zeros((h, w, 4), dtype=np.uint8)),
+    ]
+    doc.replace_state(layers=layers, reference_layer_index=1)
+    assert doc.reference_layer_index() == 1
+
+
+def test_replace_state_clamps_invalid_reference_to_none():
+    doc = PaintDocument()
+    h, w = 4, 4
+    layers = [Layer(name="A", image=np.zeros((h, w, 4), dtype=np.uint8))]
+    doc.replace_state(layers=layers, reference_layer_index=99)
+    assert doc.reference_layer_index() is None
+

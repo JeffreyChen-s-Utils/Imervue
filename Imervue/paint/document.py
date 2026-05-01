@@ -135,6 +135,12 @@ class PaintDocument:
         self._listeners: list[Callable[[], None]] = []
         self._groups: dict[str, LayerGroup] = {}
         self._named_selections: dict[str, np.ndarray] = {}
+        # Index of the layer the bucket fill samples for connectivity /
+        # tolerance — MediBang's "Reference Layer" toggle. ``None`` means
+        # the bucket samples its own target layer (the legacy default).
+        # Stored as an index, not a Layer reference, so it survives
+        # reorderings via the helpers below.
+        self._reference_layer_index: int | None = None
 
     # ---- listeners -------------------------------------------------------
 
@@ -185,6 +191,50 @@ class PaintDocument:
         self._active_index = index
         self._notify()
 
+    # ---- reference layer (bucket sampling) -------------------------------
+
+    def reference_layer_index(self) -> int | None:
+        """Index of the layer the bucket samples, or ``None`` if unset."""
+        return self._reference_layer_index
+
+    def reference_layer_image(self) -> np.ndarray | None:
+        """The HxWx4 RGBA buffer of the reference layer, or ``None``.
+
+        Convenience wrapper used by the fill dispatcher so callers do
+        not need to know about index bookkeeping. Returns ``None`` if
+        no reference layer is set, the index has gone stale, or the
+        target layer is hidden — a hidden reference would be confusing
+        because the user can't see what bounds the fill.
+        """
+        idx = self._reference_layer_index
+        if idx is None or not 0 <= idx < len(self._layers):
+            return None
+        layer = self._layers[idx]
+        if not self._is_layer_effectively_visible(layer):
+            return None
+        return layer.image
+
+    def set_reference_layer_index(self, index: int | None) -> bool:
+        """Mark a layer as the bucket's reference, or clear with ``None``.
+
+        Returns ``True`` if the pointer changed. Out-of-range indices
+        raise ``IndexError`` so a typo cannot silently no-op.
+        """
+        if index is None:
+            if self._reference_layer_index is None:
+                return False
+            self._reference_layer_index = None
+            self._notify()
+            return True
+        idx = int(index)
+        if not 0 <= idx < len(self._layers):
+            raise IndexError(f"reference layer index {idx} out of range")
+        if idx == self._reference_layer_index:
+            return False
+        self._reference_layer_index = idx
+        self._notify()
+        return True
+
     # ---- layer ops ------------------------------------------------------
 
     def load_image(self, arr: np.ndarray) -> None:
@@ -196,6 +246,7 @@ class PaintDocument:
         self._layers = [Layer(name=BACKGROUND_LAYER_NAME, image=np.ascontiguousarray(arr))]
         self._active_index = 0
         self._selection = None
+        self._reference_layer_index = None
         self._notify()
 
     def replace_state(
@@ -206,6 +257,7 @@ class PaintDocument:
         selection: np.ndarray | None = None,
         groups: dict | None = None,
         named_selections: dict | None = None,
+        reference_layer_index: int | None = None,
     ) -> None:
         """Replace the document state wholesale.
 
@@ -240,6 +292,13 @@ class PaintDocument:
         self._named_selections = (
             dict(named_selections) if named_selections else {}
         )
+        if reference_layer_index is None:
+            self._reference_layer_index = None
+        else:
+            ref = int(reference_layer_index)
+            self._reference_layer_index = (
+                ref if 0 <= ref < len(self._layers) else None
+            )
         self._notify()
 
     def add_adjustment_layer(
@@ -265,6 +324,7 @@ class PaintDocument:
         insert_at = min(insert_at, len(self._layers))
         self._layers.insert(insert_at, layer)
         self._active_index = insert_at
+        self._shift_reference_for_insert(insert_at)
         self._notify()
         return layer
 
@@ -283,6 +343,7 @@ class PaintDocument:
         insert_at = min(insert_at, len(self._layers))
         self._layers.insert(insert_at, layer)
         self._active_index = insert_at
+        self._shift_reference_for_insert(insert_at)
         self._notify()
         return layer
 
@@ -310,14 +371,17 @@ class PaintDocument:
         insert_at = min(insert_at, len(self._layers))
         self._layers.insert(insert_at, layer)
         self._active_index = insert_at
+        self._shift_reference_for_insert(insert_at)
         self._notify()
         return layer
 
     def remove_active_layer(self) -> None:
         if self._active_index < 0 or len(self._layers) <= 1:
             return  # never remove the last layer
-        del self._layers[self._active_index]
+        removed = self._active_index
+        del self._layers[removed]
         self._active_index = max(0, self._active_index - 1)
+        self._shift_reference_for_remove(removed)
         self._notify()
 
     def duplicate_active_layer(self) -> None:
@@ -339,8 +403,10 @@ class PaintDocument:
             adjustment=layer.adjustment,
             effects=layer.effects,
         )
-        self._layers.insert(self._active_index + 1, copy)
-        self._active_index += 1
+        insert_at = self._active_index + 1
+        self._layers.insert(insert_at, copy)
+        self._active_index = insert_at
+        self._shift_reference_for_insert(insert_at)
         self._notify()
 
     # ---- layer mask -----------------------------------------------------
@@ -561,6 +627,30 @@ class PaintDocument:
             if not grp.visible or grp.opacity <= 0:
                 return False
         return True
+
+    def _shift_reference_for_insert(self, insert_at: int) -> None:
+        """Bump the reference index up one when a new layer slid in below."""
+        ref = self._reference_layer_index
+        if ref is not None and insert_at <= ref:
+            self._reference_layer_index = ref + 1
+
+    def _shift_reference_for_remove(self, removed_index: int) -> None:
+        """Drop / shift the reference index when a layer was deleted."""
+        ref = self._reference_layer_index
+        if ref is None:
+            return
+        if ref == removed_index:
+            self._reference_layer_index = None
+        elif ref > removed_index:
+            self._reference_layer_index = ref - 1
+
+    def _swap_reference(self, a: int, b: int) -> None:
+        """Track the reference layer across an a<->b position swap."""
+        ref = self._reference_layer_index
+        if ref == a:
+            self._reference_layer_index = b
+        elif ref == b:
+            self._reference_layer_index = a
 
     def _resolve_layer(self, index: int) -> Layer | None:
         if not self._layers:
@@ -828,12 +918,21 @@ class PaintDocument:
                 if layer.group == name:
                     layer.group = None
         else:
+            ref_layer = (
+                self._layers[self._reference_layer_index]
+                if self._reference_layer_index is not None
+                else None
+            )
             self._layers = [layer for layer in self._layers if layer.group != name]
             self._active_index = max(
                 0, min(self._active_index, len(self._layers) - 1),
             )
             if not self._layers:
                 self._active_index = -1
+            if ref_layer is None or ref_layer not in self._layers:
+                self._reference_layer_index = None
+            else:
+                self._reference_layer_index = self._layers.index(ref_layer)
         self._notify()
         return True
 
@@ -943,6 +1042,13 @@ class PaintDocument:
         self._layers[idx - 1] = merged
         del self._layers[idx]
         self._active_index = idx - 1
+        # The pair below+above was collapsed into below's slot; either
+        # of those being the reference resolves to the merged layer.
+        ref = self._reference_layer_index
+        if ref == idx:
+            self._reference_layer_index = idx - 1
+        elif ref is not None and ref > idx:
+            self._reference_layer_index = ref - 1
         self._notify()
         return True
 
@@ -979,21 +1085,32 @@ class PaintDocument:
         active_was_visible = self._active_index in visible_idx
         kept_layers: list = []
         new_active = -1
+        merged_slot = -1
+        ref_was_visible = self._reference_layer_index in visible_idx
+        new_ref = -1
         merged_inserted = False
         for i, layer in enumerate(self._layers):
             if i in visible_idx:
                 if not merged_inserted:
                     kept_layers.append(merged)
+                    merged_slot = len(kept_layers) - 1
                     if active_was_visible:
-                        new_active = len(kept_layers) - 1
+                        new_active = merged_slot
                     merged_inserted = True
                 # All other visible layers are absorbed.
             else:
                 kept_layers.append(layer)
                 if i == self._active_index:
                     new_active = len(kept_layers) - 1
+                if i == self._reference_layer_index:
+                    new_ref = len(kept_layers) - 1
+        if ref_was_visible:
+            # Reference was one of the absorbed layers — fold it onto
+            # the merged stand-in so the bucket keeps a coherent target.
+            new_ref = merged_slot
         self._layers = kept_layers
         self._active_index = max(0, new_active)
+        self._reference_layer_index = new_ref if new_ref >= 0 else None
         self._notify()
         return True
 
@@ -1014,6 +1131,7 @@ class PaintDocument:
             return False
         self._layers = [flat]
         self._active_index = 0
+        self._reference_layer_index = None
         self._notify()
         return True
 
@@ -1024,6 +1142,7 @@ class PaintDocument:
             return
         self._layers[idx], self._layers[target] = self._layers[target], self._layers[idx]
         self._active_index = target
+        self._swap_reference(idx, target)
         self._notify()
 
     def set_layer_attribute(self, index: int, **kwargs) -> None:

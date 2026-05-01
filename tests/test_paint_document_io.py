@@ -297,3 +297,25 @@ def test_replace_state_notifies_listeners():
     new_layers = [Layer(name="X", image=np.zeros((4, 4, 4), dtype=np.uint8))]
     doc.replace_state(layers=new_layers)
     assert calls
+
+
+# ---------------------------------------------------------------------------
+# Reference-layer persistence
+# ---------------------------------------------------------------------------
+
+
+def test_reference_layer_index_round_trips_through_save(tmp_path):
+    doc = _make_doc(with_selection=False)
+    doc.set_reference_layer_index(0)
+    target = tmp_path / f"ref{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.reference_layer_index() == 0
+
+
+def test_reference_layer_index_default_none_round_trip(tmp_path):
+    doc = _make_doc()
+    target = tmp_path / f"noref{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.reference_layer_index() is None

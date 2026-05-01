@@ -98,6 +98,7 @@ class ToolDispatcher:
         self, state: ToolState, image_provider,
         selection_provider=None, set_selection=None,
         parent_widget=None,
+        reference_provider=None,
     ):
         # Damage rect from the last positively-handled event — the
         # canvas reads this after dispatch returns True so it can
@@ -116,6 +117,11 @@ class ToolDispatcher:
         self._selection_provider = selection_provider or (lambda: None)
         self._set_selection = set_selection or (lambda mask: None)
         self._parent_widget = parent_widget
+        # Returns the document's reference layer image (HxWx4 RGBA) or
+        # ``None`` when no reference layer is set. Sources are wired up
+        # by the workspace; tests can leave it unset and the bucket
+        # falls back to sampling its own target layer.
+        self._reference_provider = reference_provider or (lambda: None)
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
         # Holding Alt during a press redirects the event to the
@@ -217,7 +223,11 @@ class ToolDispatcher:
             "brush": BrushTool(self._state, self._selection_provider),
             "eraser": EraserTool(self._state, self._selection_provider),
             "eyedropper": EyedropperTool(self._state),
-            "fill": FillTool(self._state, self._selection_provider),
+            "fill": FillTool(
+                self._state,
+                self._selection_provider,
+                self._reference_provider,
+            ),
             "select_rect": RectSelectTool(sel_ctx),
             "select_lasso": LassoSelectTool(sel_ctx),
             "select_wand": WandSelectTool(sel_ctx, self._state),
@@ -507,23 +517,42 @@ class EraserTool:
 
 
 class FillTool:
-    """Paint bucket — single-click flood fills the region under the cursor."""
+    """Paint bucket — single-click flood fills the region under the cursor.
 
-    def __init__(self, state: ToolState, selection_provider=None):
+    ``selection_provider`` returns the active selection mask (or
+    ``None``) at click time. ``reference_provider`` is optional and
+    returns the HxWx4 RGBA buffer of the document's reference layer
+    when MediBang's "Reference Layer" mode is on; ``None`` falls the
+    fill back to sampling its own target.
+    """
+
+    def __init__(
+        self,
+        state: ToolState,
+        selection_provider=None,
+        reference_provider=None,
+    ):
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
+        self._reference_provider = reference_provider or (lambda: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
             return False
+        fill = self._state.fill
+        reference = (
+            self._reference_provider() if fill.use_reference_layer else None
+        )
         result = flood_fill(
             canvas,
             seed_x=int(round(evt.x)),
             seed_y=int(round(evt.y)),
             color=self._state.foreground,
-            tolerance=self._state.fill.tolerance,
-            contiguous=self._state.fill.contiguous,
+            tolerance=fill.tolerance,
+            contiguous=fill.contiguous,
             selection=self._selection_provider(),
+            reference_image=reference,
+            expand=fill.expand_px,
         )
         return not result.is_empty
 

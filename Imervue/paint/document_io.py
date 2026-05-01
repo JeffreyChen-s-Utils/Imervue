@@ -134,6 +134,11 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
         "layers": layers_meta,
         "groups": groups_meta,
         "named_selections": named_selection_names,
+        "reference_layer": (
+            None
+            if document.reference_layer_index() is None
+            else int(document.reference_layer_index())
+        ),
     }
     arrays["_metadata"] = np.array(json.dumps(metadata))
     selection = document.selection()
@@ -174,12 +179,19 @@ def _document_from_npz(data) -> PaintDocument:
     groups = _read_groups(metadata)
     named_selections = _read_named_selections(data, metadata)
     document = PaintDocument()
+    raw_ref = metadata.get("reference_layer")
+    reference_index = (
+        raw_ref
+        if isinstance(raw_ref, int) and 0 <= raw_ref < len(layers)
+        else None
+    )
     document.replace_state(
         layers=layers,
         active_index=active_index,
         selection=selection,
         groups=groups,
         named_selections=named_selections,
+        reference_layer_index=reference_index,
     )
     return document
 

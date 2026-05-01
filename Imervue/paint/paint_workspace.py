@@ -230,6 +230,7 @@ class PaintWorkspace(QMainWindow):
             selection_provider=lambda: self._canvas.current_selection(),
             set_selection=lambda mask: self._canvas.set_selection(mask),
             parent_widget=self,
+            reference_provider=lambda: self._canvas.document().reference_layer_image(),
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
         # Bezier pen needs a workspace handle so it can read / write

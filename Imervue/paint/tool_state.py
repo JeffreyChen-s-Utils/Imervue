@@ -132,6 +132,11 @@ class BrushSettings:
 # the dispatcher both pull from the same place.
 FILL_TOLERANCE_MIN = 0
 FILL_TOLERANCE_MAX = 255
+# Mirrors :data:`Imervue.paint.fill.MAX_EXPAND` — duplicated as a plain
+# constant so the tool-state dataclass can be imported without dragging
+# in numpy / fill at module-load time.
+FILL_EXPAND_MIN = 0
+FILL_EXPAND_MAX = 32
 
 
 @dataclass(frozen=True)
@@ -141,6 +146,8 @@ class FillSettings:
     tolerance: int = 32
     contiguous: bool = True
     sample_all_layers: bool = False
+    expand_px: int = 0
+    use_reference_layer: bool = False
 
 
 @dataclass
@@ -434,6 +441,8 @@ class ToolState:
                 "tolerance": self.fill.tolerance,
                 "contiguous": self.fill.contiguous,
                 "sample_all_layers": self.fill.sample_all_layers,
+                "expand_px": self.fill.expand_px,
+                "use_reference_layer": self.fill.use_reference_layer,
             },
             "selection_mode": self.selection_mode,
             "gradient_kind": self.gradient_kind,
@@ -519,7 +528,9 @@ def _clamp_rgb(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
 def _clamp_fill_attr(key: str, value: Any) -> Any:
     if key == "tolerance":
         return max(FILL_TOLERANCE_MIN, min(FILL_TOLERANCE_MAX, int(value)))
-    if key in ("contiguous", "sample_all_layers"):
+    if key == "expand_px":
+        return max(FILL_EXPAND_MIN, min(FILL_EXPAND_MAX, int(value)))
+    if key in ("contiguous", "sample_all_layers", "use_reference_layer"):
         return bool(value)
     return value
 
@@ -531,6 +542,8 @@ def _fill_from_dict(raw: Any) -> FillSettings:
         tolerance=_clamp_fill_attr("tolerance", raw.get("tolerance", 32)),
         contiguous=bool(raw.get("contiguous", True)),
         sample_all_layers=bool(raw.get("sample_all_layers", False)),
+        expand_px=_clamp_fill_attr("expand_px", raw.get("expand_px", 0)),
+        use_reference_layer=bool(raw.get("use_reference_layer", False)),
     )
 
 

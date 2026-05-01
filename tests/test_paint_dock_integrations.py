@@ -68,18 +68,23 @@ def test_window_menu_populates_one_entry_per_dock(qapp):
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        # Ten docks → ten Window-menu entries (25d added Histogram).
-        assert len(window_menu.actions()) == 10
+        # Ten dock toggles + separator + the 26f "New View" entry = 12.
+        assert len(window_menu.actions()) == 12
     finally:
         ws.deleteLater()
 
 
 def test_window_menu_actions_are_checkable(qapp):
+    """Every dock-toggle is checkable; the trailing separator + the
+    "New View" command after it intentionally are not."""
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        for action in window_menu.actions():
-            assert action.isCheckable(), action.text()
+        toggles = [
+            a for a in window_menu.actions()
+            if not a.isSeparator() and a.isCheckable()
+        ]
+        assert len(toggles) == 10
     finally:
         ws.deleteLater()
 

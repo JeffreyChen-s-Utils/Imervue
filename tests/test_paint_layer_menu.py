@@ -31,8 +31,8 @@ def test_layer_menu_has_documented_actions(qapp):
         layer_menu = menu_for(ws, "layer")
         # 4 layer-stack actions + sep + 5 mask actions + sep
         # + clipping toggle + sep + 4 effect actions + sep
-        # + delete = 19 entries.
-        assert len(layer_menu.actions()) == 19
+        # + 2 reference-layer actions + sep + delete = 22 entries.
+        assert len(layer_menu.actions()) == 22
     finally:
         ws.deleteLater()
 
@@ -145,6 +145,29 @@ def test_workspace_holds_bridge_reference(qapp):
     ws = PaintWorkspace()
     try:
         assert isinstance(ws._layer_menu_bridge, _LayerMenuBridge)  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_set_reference_layer_marks_active(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        bridge.set_reference_layer()
+        assert document.reference_layer_index() == document.active_layer_index()
+    finally:
+        ws.deleteLater()
+
+
+def test_clear_reference_layer_drops_pointer(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        bridge.set_reference_layer()
+        bridge.clear_reference_layer()
+        assert document.reference_layer_index() is None
     finally:
         ws.deleteLater()
 

@@ -65,6 +65,11 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         ("paint_layer_fx_clear", "Clear Effects",
          bridge.clear_effects, ""),
         (None, None, None, None),
+        ("paint_layer_set_reference", "Set as Reference Layer",
+         bridge.set_reference_layer, ""),
+        ("paint_layer_clear_reference", "Clear Reference Layer",
+         bridge.clear_reference_layer, ""),
+        (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
     ):
@@ -167,6 +172,23 @@ class _LayerMenuBridge:
         if layer is None or not layer.effects:
             return
         if document.set_layer_effects(effects=()):
+            self._refresh_canvas()
+
+    # ---- reference layer (bucket sampling) ------------------------------
+
+    def set_reference_layer(self) -> None:
+        """Mark the active layer as the bucket's reference."""
+        document = self._workspace.canvas().document()
+        idx = document.active_layer_index()
+        if idx < 0:
+            return
+        if document.set_reference_layer_index(idx):
+            self._refresh_canvas()
+
+    def clear_reference_layer(self) -> None:
+        """Drop the bucket's reference-layer pointer."""
+        document = self._workspace.canvas().document()
+        if document.set_reference_layer_index(None):
             self._refresh_canvas()
 
     def _add_effect(self, kind: str) -> None:
