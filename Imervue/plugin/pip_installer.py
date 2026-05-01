@@ -25,18 +25,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request
 
-
-def _https_urlopen(req: Request, timeout: int):
-    """urlopen that refuses any scheme other than https.
-
-    The URLs used by this module are hardcoded https:// endpoints (python.org,
-    pypa.io), but this guard makes the scheme explicit so bandit B310 and
-    future maintainers both see that non-https is rejected.
-    """
-    scheme = urlparse(req.full_url).scheme
-    if scheme != "https":
-        raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
-    return urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
+import contextlib
 
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -50,7 +39,19 @@ from Imervue.system.app_paths import (
     embedded_python_dir as _embedded_python_dir_path,
     ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
 )
-import contextlib
+
+
+def _https_urlopen(req: Request, timeout: int):
+    """urlopen that refuses any scheme other than https.
+
+    The URLs used by this module are hardcoded https:// endpoints (python.org,
+    pypa.io), but this guard makes the scheme explicit so bandit B310 and
+    future maintainers both see that non-https is rejected.
+    """
+    scheme = urlparse(req.full_url).scheme
+    if scheme != "https":
+        raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
+    return urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget

@@ -78,8 +78,8 @@ def group_by_date(paths: list[str | Path]) -> dict[_dt.date, list[str]]:
     out: dict[_dt.date, list[str]] = {}
     for p in paths:
         out.setdefault(capture_date(p), []).append(str(p))
-    for k in out:
-        out[k].sort()
+    for value in out.values():
+        value.sort()
     return out
 
 
@@ -93,8 +93,8 @@ def group_by_month(
         if date == UNKNOWN_DATE:
             continue
         out.setdefault((date.year, date.month), []).extend(items)
-    for k in out:
-        out[k].sort()
+    for value in out.values():
+        value.sort()
     return out
 
 

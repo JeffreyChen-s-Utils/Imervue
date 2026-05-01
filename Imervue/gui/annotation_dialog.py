@@ -703,11 +703,14 @@ class AnnotationCanvas(QWidget):
         self, painter: QPainter, ann: Annotation, brush: str, opacity: int
     ) -> bool:
         if brush == "spray":
-            self._draw_freehand_spray_qt(painter, ann, opacity); return True
+            self._draw_freehand_spray_qt(painter, ann, opacity)
+            return True
         if brush == "calligraphy":
-            self._draw_freehand_calligraphy_qt(painter, ann, opacity); return True
+            self._draw_freehand_calligraphy_qt(painter, ann, opacity)
+            return True
         if brush == "charcoal":
-            self._draw_freehand_charcoal_qt(painter, ann, opacity); return True
+            self._draw_freehand_charcoal_qt(painter, ann, opacity)
+            return True
         return False
 
     @staticmethod
@@ -1025,11 +1028,14 @@ class AnnotationCanvas(QWidget):
         ix, iy = self._screen_to_image(pt.x(), pt.y())
 
         if self._tool == _KIND_CROP:
-            self._press_crop(pt, ix, iy); return
+            self._press_crop(pt, ix, iy)
+            return
         if self._tool == _KIND_SELECT:
-            self._press_select(pt, ix, iy); return
+            self._press_select(pt, ix, iy)
+            return
         if self._tool == _KIND_TEXT:
-            self._begin_text_edit(ix, iy); return
+            self._begin_text_edit(ix, iy)
+            return
         self._begin_shape(ix, iy)
 
     def _press_crop(self, pt, ix: int, iy: int) -> None:
@@ -1339,11 +1345,15 @@ class AnnotationCanvas(QWidget):
             self._update_destructive_preview(ann)
 
         def on_slider(v: int) -> None:
-            spin.blockSignals(True); spin.setValue(v); spin.blockSignals(False)
+            spin.blockSignals(True)
+            spin.setValue(v)
+            spin.blockSignals(False)
             apply_value(v)
 
         def on_spin(v: int) -> None:
-            slider.blockSignals(True); slider.setValue(v); slider.blockSignals(False)
+            slider.blockSignals(True)
+            slider.setValue(v)
+            slider.blockSignals(False)
             apply_value(v)
 
         slider.valueChanged.connect(on_slider)

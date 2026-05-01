@@ -32,8 +32,9 @@ class TestContactSheetOptions:
         assert opts.dpi == 300
 
     def test_is_frozen_dataclass(self):
+        import dataclasses
         opts = contact_sheet.ContactSheetOptions()
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             opts.rows = 99  # type: ignore[misc]
 
 

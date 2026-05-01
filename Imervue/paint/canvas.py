@@ -639,8 +639,10 @@ class PaintCanvas(QOpenGLWidget):
         # view. ``_fit_pending`` covers the deferred-init case (widget
         # was too small earlier); ``_user_view_locked`` is the user-took-
         # control flag that pins the view once they wheel-zoom or pan.
+        # Pass the GL-reported size directly: ``self.width()`` may still
+        # report the previous frame's value during the layout cycle.
         if self._fit_pending or not self._user_view_locked:
-            self._reset_view_to_fit()
+            self._reset_view_to_fit(widget_size=(int(w), int(h)))
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
         glClear(GL_COLOR_BUFFER_BIT)
@@ -1264,15 +1266,30 @@ class PaintCanvas(QOpenGLWidget):
         self.zoom_changed.emit(new_zoom)
         self.update()
 
-    def _reset_view_to_fit(self) -> None:
+    def _reset_view_to_fit(
+        self,
+        widget_size: tuple[int, int] | None = None,
+    ) -> None:
+        """Centre and zoom the document inside the widget.
+
+        ``widget_size`` is an explicit ``(w, h)`` override — used by
+        ``resizeGL`` to pass the freshly-reported GL viewport size,
+        which can differ from ``self.width() / self.height()`` for a
+        few frames during the QTabWidget layout cycle. Without it the
+        canvas would fit to the stale cached size and the user would
+        see the document anchored off-screen.
+        """
         shape = self._document.shape
         if shape is None:
             return
         h, w = shape
         if w <= 0 or h <= 0:
             return
-        widget_w = self.width()
-        widget_h = self.height()
+        if widget_size is not None:
+            widget_w, widget_h = widget_size
+        else:
+            widget_w = self.width()
+            widget_h = self.height()
         if widget_w <= 0 or widget_h <= 0:
             self._fit_pending = True
             return

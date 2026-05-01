@@ -84,7 +84,7 @@ class SplitToningDialog(QDialog):
         row = QHBoxLayout()
         row.addWidget(s, 1)
         lbl = QLabel(f"{s.value()}°")
-        s.valueChanged.connect(lambda v, l=lbl: l.setText(f"{v}°"))
+        s.valueChanged.connect(lambda v, label=lbl: label.setText(f"{v}°"))
         row.addWidget(lbl)
         return row
 

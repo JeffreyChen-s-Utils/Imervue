@@ -132,6 +132,10 @@ class GPUImageView(QOpenGLWidget):
         self.tile_manager = None
         self.deep_zoom = None
         self._saved_tile_state = None
+        # When True, the user has zoomed / panned manually so the
+        # canvas should not auto-fit on resize. Cleared on every
+        # fresh image load via :meth:`_fit_to_window`.
+        self._user_locked_view = False
 
 
         # ===== 圖片切換控制 =====
@@ -403,6 +407,26 @@ class GPUImageView(QOpenGLWidget):
             glLoadIdentity()
             glOrtho(0, w, h, 0, -1, 1)
             glMatrixMode(GL_MODELVIEW)
+        # Re-fit while the user hasn't taken view control, so the
+        # image stays centred when docks finish laying out and the
+        # widget reaches its real size after the first resize.
+        if not self._user_locked_view and self.deep_zoom is not None:
+            self._fit_to_window()
+
+    def showEvent(self, event):
+        """Defer a fit-to-window until after Qt's first layout pass.
+
+        The widget's first ``resizeGL`` lands while the host frame is
+        still at an intermediate size — the fit math anchors to that
+        smaller width / height and the image ends up half off-screen
+        once the layout settles. ``QTimer.singleShot(0, …)`` runs
+        after Qt drains its layout queue so the deferred fit catches
+        the post-layout size.
+        """
+        super().showEvent(event)
+        if self.deep_zoom is not None and not self._user_locked_view:
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, self._fit_to_window)
 
     # ===========================
     # 繪製
@@ -1296,6 +1320,10 @@ class GPUImageView(QOpenGLWidget):
         displayed_h = img_h * self.zoom
         self.dz_offset_x = (w - displayed_w) / 2
         self.dz_offset_y = (h - displayed_h) / 2
+        # Fresh fit → user hasn't panned / zoomed yet, so subsequent
+        # resizes (docks settling, window maximised) keep the image
+        # centred instead of hanging off-screen.
+        self._user_locked_view = False
 
     def _fit_to_width(self):
         """縮放使圖片寬度填滿視窗"""
@@ -2051,6 +2079,7 @@ class GPUImageView(QOpenGLWidget):
             self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
             self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
 
+            self._user_locked_view = True
             self._update_status_info()
             self.update()
 
@@ -2116,6 +2145,7 @@ class GPUImageView(QOpenGLWidget):
         elif self.deep_zoom:
             self.dz_offset_x += delta.x()
             self.dz_offset_y += delta.y()
+            self._user_locked_view = True
         self.update()
 
     def _handle_left_drag_select(self, event) -> None:
@@ -2155,9 +2185,12 @@ class GPUImageView(QOpenGLWidget):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
             return
-        if self.tile_grid_mode and event.button() == Qt.MouseButton.LeftButton:
-            if self._handle_tile_release(event):
-                return
+        if (
+            self.tile_grid_mode
+            and event.button() == Qt.MouseButton.LeftButton
+            and self._handle_tile_release(event)
+        ):
+            return
         super().mouseReleaseEvent(event)
 
     def _handle_tile_release(self, event) -> bool:

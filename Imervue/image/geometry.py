@@ -65,7 +65,11 @@ def _largest_inner_rect(w: int, h: int, angle_deg: float) -> tuple[int, int, int
     sin_a, cos_a = math.sin(angle), math.cos(angle)
     if short_side <= 2.0 * sin_a * cos_a * long_side or abs(sin_a - cos_a) < 1e-10:
         x_scale = 0.5 * short_side
-        rw, rh = (x_scale / sin_a, x_scale / cos_a) if w >= h else (x_scale / cos_a, x_scale / sin_a)
+        rw, rh = (
+            (x_scale / sin_a, x_scale / cos_a)
+            if w >= h
+            else (x_scale / cos_a, x_scale / sin_a)
+        )
     else:
         cos2a = cos_a * cos_a - sin_a * sin_a
         rw = (w * cos_a - h * sin_a) / cos2a
