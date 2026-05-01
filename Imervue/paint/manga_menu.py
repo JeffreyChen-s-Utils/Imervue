@@ -69,6 +69,10 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
         action.triggered.connect(
             lambda _checked=False, k=kind: bridge.add_speedlines(k),
         )
+    flash_action = menu.addAction(
+        lang.get("paint_manga_flash", "Action Flash"),
+    )
+    flash_action.triggered.connect(bridge.add_flash)
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +93,21 @@ class _MangaMenuBridge:
             return
         params = dialog.values()
         commit_panel_layout(self._workspace, params)
+
+    def add_flash(self) -> None:
+        """Insert a comic-style action-flash layer (starburst + halo)."""
+        import numpy as np
+
+        from Imervue.paint.flash_effect import FlashOptions, render_flash
+        document = self._workspace.canvas().document()
+        if document.shape is None:
+            return
+        h, w = document.shape
+        rendered = render_flash((h, w), FlashOptions())
+        layer = document.add_layer(name="Flash")
+        np.copyto(layer.image, rendered)
+        document.invalidate_composite()
+        self._workspace.canvas().update()
 
     def add_speedlines(self, kind: str) -> None:
         """Insert a speedline / focus-line / burst FX layer.

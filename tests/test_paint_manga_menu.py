@@ -234,3 +234,18 @@ def test_add_speedlines_inserts_layer_with_content(qapp):
         _ = np
     finally:
         ws.deleteLater()
+
+
+def test_add_flash_inserts_layer_with_content(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        before = document.layer_count
+        bridge.add_flash()
+        assert document.layer_count == before + 1
+        layer = document.active_layer()
+        assert (layer.image[..., 3] > 0).any()
+        assert layer.name == "Flash"
+    finally:
+        ws.deleteLater()
