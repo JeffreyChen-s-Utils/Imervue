@@ -364,6 +364,72 @@ def render_onion_skin_overlay(
     return out
 
 
+def render_project_onion_skin_overlay(
+    project,
+    *,
+    before_count: int = 1,
+    after_count: int = 1,
+    before_tint: tuple[int, int, int] = DEFAULT_BEFORE_TINT,
+    after_tint: tuple[int, int, int] = DEFAULT_AFTER_TINT,
+    opacity_step: float = DEFAULT_OPACITY_STEP,
+) -> np.ndarray | None:
+    """Cross-page onion skin — ghosts of neighbouring project pages.
+
+    The animation-frame onion skin (above) reuses the same per-frame
+    blend math but reads from :attr:`Animation.frames`. For a multi-
+    page comic project the artist wants the same overlay sourced
+    from neighbouring *pages* instead — a flip-book of the comic
+    drawn page by page. ``project`` is a
+    :class:`Imervue.paint.paint_project.PaintProject`; the overlay
+    reads its ``pages`` list and ``active_page_index`` field.
+
+    Returns an HxWx4 RGBA overlay or ``None`` when the project has
+    no pages, the active page has no shape, or no ghosts ended up
+    visible (empty pages on every side, etc.).
+    """
+    if before_count < 0 or after_count < 0:
+        raise ValueError(
+            f"before_count / after_count must be >= 0, got "
+            f"{before_count} / {after_count}",
+        )
+    if not 0.0 <= float(opacity_step) <= 1.0:
+        raise ValueError(
+            f"opacity_step must be in [0, 1], got {opacity_step!r}",
+        )
+    pages = getattr(project, "pages", None)
+    if not pages:
+        return None
+    active_index = int(getattr(project, "active_page_index", 0))
+    if not 0 <= active_index < len(pages):
+        return None
+    active_doc = pages[active_index].document
+    shape = active_doc.shape
+    if shape is None:
+        return None
+    h, w = shape
+
+    out = np.zeros((h, w, 4), dtype=np.uint8)
+    for distance in range(before_count, 0, -1):
+        idx = active_index - distance
+        if idx < 0:
+            continue
+        out = _composite_onion_frame(
+            out, pages[idx].document, distance,
+            before_tint, opacity_step,
+        )
+    for distance in range(after_count, 0, -1):
+        idx = active_index + distance
+        if idx >= len(pages):
+            continue
+        out = _composite_onion_frame(
+            out, pages[idx].document, distance,
+            after_tint, opacity_step,
+        )
+    if out[..., 3].sum() == 0:
+        return None
+    return out
+
+
 def _composite_active(buffer: np.ndarray, doc: PaintDocument) -> np.ndarray:
     composite = doc.composite()
     if composite is None:

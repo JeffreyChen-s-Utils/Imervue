@@ -246,3 +246,74 @@ def test_overlay_ghosts_are_translucent_not_opaque():
     painted = overlay[overlay[..., 3] > 0, 3]
     assert painted.size > 0
     assert int(painted.min()) < 255
+
+
+# ---------------------------------------------------------------------------
+# Cross-page onion skin (29i)
+# ---------------------------------------------------------------------------
+
+
+def _project_three_pages():
+    from Imervue.paint.paint_project import PaintProject, ProjectPage
+    project = PaintProject(name="p")
+    for color in [(255, 0, 0), (0, 255, 0), (0, 0, 255)]:
+        page = ProjectPage(document=_doc_with_color(color), name="page")
+        project.add_page(page)
+    return project
+
+
+def test_project_onion_skin_returns_none_for_empty_project():
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    from Imervue.paint.paint_project import PaintProject
+    empty = PaintProject(name="p")
+    assert render_project_onion_skin_overlay(empty) is None
+
+
+def test_project_onion_skin_returns_none_when_no_neighbours():
+    """A 1-page project has no neighbours — overlay is empty."""
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    from Imervue.paint.paint_project import PaintProject, ProjectPage
+    p = PaintProject(name="p")
+    p.add_page(ProjectPage(
+        document=_doc_with_color((255, 0, 0)), name="only",
+    ))
+    assert render_project_onion_skin_overlay(p) is None
+
+
+def test_project_onion_skin_paints_ghost_from_previous_page():
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    project = _project_three_pages()
+    project.active_page_index = 1   # green page; red is the previous
+    overlay = render_project_onion_skin_overlay(
+        project, before_count=1, after_count=0,
+    )
+    assert overlay is not None
+    # Ghost from page 0 (red) lands tinted under the active overlay.
+    inked = overlay[overlay[..., 3] > 0]
+    assert inked.size > 0
+
+
+def test_project_onion_skin_combines_before_and_after():
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    project = _project_three_pages()
+    project.active_page_index = 1
+    overlay = render_project_onion_skin_overlay(
+        project, before_count=1, after_count=1,
+    )
+    assert overlay is not None
+    # Both neighbours contributed → at least some inked area.
+    assert (overlay[..., 3] > 0).any()
+
+
+def test_project_onion_skin_rejects_negative_counts():
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    project = _project_three_pages()
+    with pytest.raises(ValueError):
+        render_project_onion_skin_overlay(project, before_count=-1)
+
+
+def test_project_onion_skin_rejects_bad_opacity_step():
+    from Imervue.paint.animation import render_project_onion_skin_overlay
+    project = _project_three_pages()
+    with pytest.raises(ValueError):
+        render_project_onion_skin_overlay(project, opacity_step=2.0)
