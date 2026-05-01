@@ -198,10 +198,11 @@ def test_workspace_pose_drop_adds_layer(qapp, tmp_path):
         ws.deleteLater()
 
 
-def test_workspace_skips_non_pose_categories(qapp, tmp_path):
-    """Non-pose materials don't yet have a destination — clicking
-    them must not change the layer stack so the user doesn't end up
-    with phantom layers."""
+def test_workspace_skips_brush_tip_category(qapp, tmp_path):
+    """``brush_tip`` is wired in a later phase — clicking such an
+    entry must not change the layer stack so the user doesn't end up
+    with phantom layers. Texture / tone / pattern have their own
+    dedicated tile-fill consumer (see test_paint_material_consumer)."""
     from Imervue.paint import tool_state as ts
     from Imervue.paint.material_library import MaterialEntry, MaterialIndex
     from Imervue.paint.paint_workspace import PaintWorkspace
@@ -210,13 +211,13 @@ def test_workspace_skips_non_pose_categories(qapp, tmp_path):
     user_setting_dict.pop("paint_state", None)
     ts.reset_tool_state()
 
-    target = tmp_path / "tex.png"
+    target = tmp_path / "tip.png"
     Image.fromarray(np.full((20, 20, 4), 100, dtype=np.uint8), mode="RGBA").save(str(target))
 
     ws = PaintWorkspace()
     try:
         ws._material_dock.set_index(MaterialIndex(entries=[  # noqa: SLF001
-            MaterialEntry(name="tex", path=target, category="texture"),
+            MaterialEntry(name="tip", path=target, category="brush_tip"),
         ]))
         before = ws.canvas().document().layer_count
         ws._on_material_chosen(str(target))  # noqa: SLF001

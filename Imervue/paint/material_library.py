@@ -29,9 +29,11 @@ keys; nothing in the index logic hard-codes the names.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import numpy as np
 
 MATERIAL_CATEGORIES = (
     "texture",
@@ -53,12 +55,20 @@ class MaterialEntry:
     ``path`` is the absolute on-disk location; ``category`` is one of
     :data:`MATERIAL_CATEGORIES`; ``tags`` is a free-form keyword list
     used by the search box ("seamless", "halftone", "bricks"…).
+
+    ``provider`` is an optional zero-arg callable that returns a numpy
+    HxWx4 RGBA tile. When set, the entry is "procedural" — the dock
+    calls the provider to render a preview and the canvas consumer
+    calls it to materialise the tile. Procedural entries do NOT
+    serialise via :meth:`to_dict` (callables are not JSON-friendly);
+    they live only at runtime, regenerated from code on each boot.
     """
 
     name: str
     path: Path
     category: str = DEFAULT_CATEGORY
     tags: tuple[str, ...] = ()
+    provider: Callable[[], np.ndarray] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -67,6 +77,20 @@ class MaterialEntry:
             "category": self.category,
             "tags": list(self.tags),
         }
+
+    def is_procedural(self) -> bool:
+        return self.provider is not None
+
+    def render(self) -> np.ndarray | None:
+        """Materialise the procedural tile, or ``None`` for path entries.
+
+        Path-backed entries return ``None`` so the caller knows to
+        load from ``path`` instead. Provider exceptions propagate so
+        the caller can fall back to the placeholder tile.
+        """
+        if self.provider is None:
+            return None
+        return self.provider()
 
     @classmethod
     def from_dict(cls, raw: dict, *, root: Path | None = None) -> MaterialEntry:
@@ -242,3 +266,32 @@ class MaterialIndex:
 def find_index_file(root: str | Path) -> Path:
     """Return the canonical index-file path for a library root."""
     return Path(root) / _INDEX_FILENAME
+
+
+_PROCEDURAL_PATH_PREFIX = "procedural://"
+
+
+def default_material_index() -> MaterialIndex:
+    """Return the built-in catalog of procedural materials.
+
+    Pulled from
+    :data:`Imervue.paint.material_procedural.DEFAULT_PROCEDURAL_CATALOG`,
+    so adding a tone / texture only requires editing that list — the
+    library and dock pick up new entries on the next boot.
+
+    Procedural entries use a synthetic ``procedural://<name>`` path
+    sentinel so equality / dedup operations still work, but the path
+    must never be stat'd (it does not exist on disk).
+    """
+    from Imervue.paint.material_procedural import DEFAULT_PROCEDURAL_CATALOG
+    entries = [
+        MaterialEntry(
+            name=name,
+            path=Path(f"{_PROCEDURAL_PATH_PREFIX}{name}"),
+            category=category,
+            tags=tags,
+            provider=provider,
+        )
+        for name, category, tags, provider in DEFAULT_PROCEDURAL_CATALOG
+    ]
+    return MaterialIndex(entries=entries)

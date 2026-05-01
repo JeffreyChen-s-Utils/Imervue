@@ -894,16 +894,7 @@ class MaterialDock(QDockWidget):
     def _make_thumbnail(self, entry) -> QToolButton:
         btn = QToolButton()
         btn.setIconSize(QPixmap(64, 64).size())
-        pix = QPixmap(str(entry.path))
-        if pix.isNull():
-            # Placeholder swatch when the on-disk image is missing.
-            pix = QPixmap(64, 64)
-            pix.fill(QColor("#444"))
-        else:
-            pix = pix.scaled(
-                64, 64, Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
+        pix = self._render_thumbnail(entry)
         btn.setIcon(pix)
         btn.setText(entry.name)
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -911,6 +902,40 @@ class MaterialDock(QDockWidget):
             lambda *_, p=str(entry.path): self.material_chosen.emit(p),
         )
         return btn
+
+    @staticmethod
+    def _render_thumbnail(entry) -> QPixmap:
+        """Build a 64×64 thumbnail QPixmap from any kind of entry.
+
+        Procedural entries call their provider and convert the numpy
+        tile into a QImage. Path-backed entries load via QPixmap
+        which handles every Qt-supported image format. Both fall back
+        to a neutral placeholder swatch on failure so a broken entry
+        never propagates a None into the grid.
+        """
+        if getattr(entry, "is_procedural", lambda: False)():
+            try:
+                tile = entry.render()
+            except (ValueError, RuntimeError):
+                tile = None
+            if tile is not None:
+                arr = np.ascontiguousarray(tile)
+                h, w = arr.shape[:2]
+                qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888)
+                pix = QPixmap.fromImage(qimg.copy())
+                return pix.scaled(
+                    64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+        pix = QPixmap(str(entry.path))
+        if not pix.isNull():
+            return pix.scaled(
+                64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        placeholder = QPixmap(64, 64)
+        placeholder.fill(QColor("#444"))
+        return placeholder
 
 
 # ---------------------------------------------------------------------------

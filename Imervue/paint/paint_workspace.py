@@ -99,7 +99,14 @@ class PaintWorkspace(QMainWindow):
         self._layer_dock = LayerDock(self._canvas.document(), self)
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
-        self._material_dock = MaterialDock(parent=self)
+        # Seed the material dock with the procedural catalog so the
+        # user has tones / textures / patterns out of the box without
+        # having to point the library at any folder. A future per-user
+        # library setting can override this via ``set_index``.
+        from Imervue.paint.material_library import default_material_index
+        self._material_dock = MaterialDock(
+            index=default_material_index(), parent=self,
+        )
         # Swatch dock — floating, free-form recent-colour grid bound
         # to the same ToolState as the colour dock.
         from Imervue.paint.swatch_panel import SwatchPanel
@@ -282,12 +289,18 @@ class PaintWorkspace(QMainWindow):
         self._status.showMessage(msg, 3000)
 
     def _on_material_chosen(self, path: str) -> None:
-        """Drop a material onto the canvas — currently routes pose
-        category onto a new layer; other categories are placeholders."""
+        """Drop a material onto the canvas based on its category.
+
+        * ``pose`` — load full image, fit to canvas, paste into a new
+          layer (existing behaviour).
+        * ``texture`` / ``tone`` / ``pattern`` — render the tile,
+          ``np.tile`` it across the canvas, and paste into a new
+          layer named after the material.
+        * ``brush_tip`` — placeholder (wired in a later phase).
+        """
         from pathlib import Path
 
         from Imervue.paint.material_library import MaterialEntry
-        from Imervue.paint.pose_drop import fit_pose_to_canvas, load_pose_image
 
         # Look up the entry's category in the dock's index. Falls back
         # to the file extension if the path isn't in the index (the
@@ -299,9 +312,14 @@ class PaintWorkspace(QMainWindow):
         )
         if entry is None:
             entry = MaterialEntry(name=Path(path).stem, path=Path(path))
-        if entry.category != "pose":
-            # Other categories are wired in later phases.
-            return
+        if entry.category == "pose":
+            self._drop_pose_material(entry)
+        elif entry.category in ("texture", "tone", "pattern"):
+            self._drop_tile_material(entry)
+        # brush_tip is wired in a later phase.
+
+    def _drop_pose_material(self, entry) -> None:
+        from Imervue.paint.pose_drop import fit_pose_to_canvas, load_pose_image
         canvas_doc = self._canvas.document()
         if canvas_doc.shape is None:
             return
@@ -314,6 +332,62 @@ class PaintWorkspace(QMainWindow):
         np.copyto(layer.image, fitted)
         canvas_doc.invalidate_composite()
         self._canvas.update()
+
+    def _drop_tile_material(self, entry) -> None:
+        """Tile a procedural / on-disk material across the canvas as
+        a fresh layer. Honours the active selection: if a selection
+        exists, the tiled fill is masked to it so the user can drop
+        a tone "into" a region they've already lassoed."""
+        from Imervue.paint.material_procedural import tile_to_canvas
+        canvas_doc = self._canvas.document()
+        if canvas_doc.shape is None:
+            return
+        tile = self._load_material_tile(entry)
+        if tile is None:
+            return
+        h, w = canvas_doc.shape
+        filled = tile_to_canvas(tile, (h, w))
+        selection = self._canvas.current_selection()
+        layer = canvas_doc.add_layer(name=f"{entry.category.title()} · {entry.name}")
+        if selection is None:
+            np.copyto(layer.image, filled)
+        else:
+            # Apply the tile only inside the selection mask; the rest
+            # of the layer stays fully transparent.
+            layer.image[selection] = filled[selection]
+        canvas_doc.invalidate_composite()
+        self._canvas.update()
+
+    @staticmethod
+    def _load_material_tile(entry):
+        """Return an HxWx4 RGBA tile for ``entry``, or ``None`` on failure.
+
+        Procedural entries call their provider; path entries are
+        decoded via PIL so they go through the same code path as
+        pose drops (no PySide image-format quirks). Both paths
+        validate the array shape before returning so the caller can
+        treat ``None`` as "nothing to paste".
+        """
+        if entry.is_procedural():
+            try:
+                tile = entry.render()
+            except (ValueError, RuntimeError):
+                return None
+        else:
+            from PIL import Image
+            try:
+                with Image.open(entry.path) as img:
+                    tile = np.array(img.convert("RGBA"))
+            except (OSError, ValueError):
+                return None
+        if (
+            tile is None
+            or tile.ndim != 3
+            or tile.shape[2] != 4
+            or tile.dtype != np.uint8
+        ):
+            return None
+        return tile
 
     def _on_document_changed(self) -> None:
         """Mark the navigator preview dirty and start the coalesce timer."""
