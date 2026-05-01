@@ -62,13 +62,11 @@ from OpenGL.GL import (
     glPushMatrix,
     glRotatef,
     glScalef,
-    glPixelStorei,
     glTexCoord2f,
     glTexImage2D,
     glTexParameterf,
     glTexParameteri,
     glTexSubImage2D,
-    GL_UNPACK_ROW_LENGTH,
     glTranslatef,
     glVertex2f,
     glViewport,
@@ -1058,16 +1056,21 @@ class PaintCanvas(QOpenGLWidget):
             )
         else:
             # Sub-region upload — only the dirty pixels move across
-            # the bus. Use UNPACK_ROW_LENGTH so we can pass a contiguous
-            # slice of the full image without copying it first.
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, w)
-            sub = composite[damage.y:damage.y2, damage.x:damage.x2, :]
+            # the bus. The slice is materialised into a packed buffer
+            # via ``ascontiguousarray`` so the bytes handed to OpenGL
+            # are exactly damage.h * damage.w * 4 long; we therefore
+            # leave UNPACK_ROW_LENGTH at the default (0 = packed
+            # rows). Setting it to ``w`` here would tell GL that each
+            # source row is the full canvas wide and trigger a read
+            # past the end of the packed buffer.
+            sub = np.ascontiguousarray(
+                composite[damage.y:damage.y2, damage.x:damage.x2, :],
+            )
             glTexSubImage2D(
                 GL_TEXTURE_2D, 0,
                 damage.x, damage.y, damage.w, damage.h,
                 GL_RGBA, GL_UNSIGNED_BYTE,
-                np.ascontiguousarray(sub).tobytes(),
+                sub.tobytes(),
             )
-            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
         glBindTexture(GL_TEXTURE_2D, 0)
         self._pending_damage = EMPTY_DAMAGE
