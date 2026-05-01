@@ -473,6 +473,57 @@ def test_brush_tool_forwards_snap_to_pixel_to_options(state, canvas):
     assert (region[..., 3] == 255).all()
 
 
+def test_brush_clips_to_panel_when_snap_to_panel_on(state, canvas):
+    """A press inside panel 0 with ``snap_to_panel=True`` must paint
+    only inside that panel — even if the brush kernel overlaps the
+    gutter."""
+    from Imervue.paint.manga_panels import panel_grid
+    state.snap_to_panel = True
+    state.set_tool("brush")
+    state.set_brush(size=15, hardness=1.0, opacity=1.0)
+    state.set_foreground((200, 0, 0))
+    h_canvas, w_canvas = canvas.shape[:2]
+    layout = panel_grid(
+        w_canvas, h_canvas, 2, 2, gutter=4, border_width=0,
+    )
+    disp = ToolDispatcher(
+        state, image_provider=lambda: canvas,
+        panel_layout_provider=lambda: layout,
+    )
+    cell = layout.cells[0]
+    cx = cell.x + cell.w // 2
+    cy = cell.y + cell.h // 2
+    disp(_press(cx, cy))
+    # Inside panel 0 the centre pixel is painted red.
+    assert canvas[cy, cx, 0] == 200
+    # Pixel inside panel 1 (right of the gutter) keeps its original
+    # white background — clipping prevented any red from reaching it.
+    cell1 = layout.cells[1]
+    assert canvas[cell1.y + cell1.h // 2, cell1.x + cell1.w // 2, 0] == 255
+
+
+def test_brush_does_not_clip_when_snap_to_panel_off(state, canvas):
+    """With ``snap_to_panel=False`` the layout is ignored — even when
+    the dispatcher has one mounted."""
+    from Imervue.paint.manga_panels import panel_grid
+    state.snap_to_panel = False
+    state.set_tool("brush")
+    state.set_brush(size=3, hardness=1.0, opacity=1.0)
+    state.set_foreground((200, 0, 0))
+    h_canvas, w_canvas = canvas.shape[:2]
+    layout = panel_grid(
+        w_canvas, h_canvas, 2, 2, gutter=4, border_width=0,
+    )
+    disp = ToolDispatcher(
+        state, image_provider=lambda: canvas,
+        panel_layout_provider=lambda: layout,
+    )
+    # Press on the gutter intersection — no panel under the cursor.
+    disp(_press(w_canvas // 2, h_canvas // 2))
+    # Brush still painted at the press point because clipping was off.
+    assert canvas[h_canvas // 2, w_canvas // 2, 0] == 200
+
+
 # ---------------------------------------------------------------------------
 # Alt-modifier eyedropper override
 # ---------------------------------------------------------------------------

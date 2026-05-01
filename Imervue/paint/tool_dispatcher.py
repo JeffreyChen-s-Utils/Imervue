@@ -100,6 +100,7 @@ class ToolDispatcher:
         parent_widget=None,
         reference_provider=None,
         composite_provider=None,
+        panel_layout_provider=None,
     ):
         # Damage rect from the last positively-handled event — the
         # canvas reads this after dispatch returns True so it can
@@ -127,6 +128,10 @@ class ToolDispatcher:
         # flattened) for the "Sample All Layers" eyedropper. ``None``
         # falls the eyedropper back to the active-layer sample.
         self._composite_provider = composite_provider or (lambda: None)
+        # Returns the active manga panel layout (or None) — the
+        # snap-to-panel brush option uses this to clip strokes to
+        # the panel under the cursor at press time.
+        self._panel_layout_provider = panel_layout_provider or (lambda: None)
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
         # Holding Alt during a press redirects the event to the
@@ -134,6 +139,28 @@ class ToolDispatcher:
         # the current ongoing stroke started with the override so the
         # follow-up move / release events stay on the eyedropper too.
         self._alt_override_active = False
+
+    def _panel_clip_for_point(
+        self, x: float, y: float,
+    ) -> np.ndarray | None:
+        """Return the panel-mask under ``(x, y)`` or ``None``.
+
+        Pulled out of the BrushTool so the panel lookup logic stays
+        Qt-free: BrushTool consumes a plain callable that the
+        dispatcher constructs, and the dispatcher in turn consults
+        :func:`Imervue.paint.manga_panels.panel_at_point`.
+        """
+        layout = self._panel_layout_provider()
+        if layout is None:
+            return None
+        from Imervue.paint.manga_panels import panel_at_point, panel_mask
+        index = panel_at_point(layout, x, y)
+        if index is None:
+            return None
+        canvas = self._image_provider()
+        if canvas is None:
+            return None
+        return panel_mask(layout, canvas.shape[:2], index)
 
     def __call__(self, evt: PointerEvent) -> bool:
         from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
@@ -225,7 +252,10 @@ class ToolDispatcher:
             self._state, self._selection_provider, self._set_selection,
         )
         return {
-            "brush": BrushTool(self._state, self._selection_provider),
+            "brush": BrushTool(
+                self._state, self._selection_provider,
+                panel_clip_provider=self._panel_clip_for_point,
+            ),
             "eraser": EraserTool(self._state, self._selection_provider),
             "eyedropper": EyedropperTool(
                 self._state, self._composite_provider,
@@ -305,11 +335,22 @@ class BrushTool:
     stroke.
     """
 
-    def __init__(self, state: ToolState, selection_provider=None):
+    def __init__(
+        self, state: ToolState,
+        selection_provider=None,
+        panel_clip_provider=None,
+    ):
         from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         from Imervue.paint.rulers import Ruler
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
+        # ``panel_clip_provider(x, y)`` returns a bool HxW mask True
+        # only inside the panel containing ``(x, y)``, or None when
+        # there is no panel layout / the press point is in a gutter.
+        # The snap-to-panel option ANDs this with the live selection
+        # at press time so a stroke that crosses a gutter doesn't
+        # paint outside its panel.
+        self._panel_clip_provider = panel_clip_provider or (lambda _x, _y: None)
         self._strokes: list[BrushStroke] = []
         self._stabilizer = None   # type: ignore[assignment]
         self._mode: str = "off"
@@ -319,6 +360,24 @@ class BrushTool:
         # ruler so its snap line passes through where the user pressed.
         self._stroke_anchor: tuple[float, float] | None = None
         self.last_damage = _EMPTY_DAMAGE
+
+    def _panel_clipped_selection(
+        self, sx: float, sy: float,
+    ) -> np.ndarray | None:
+        """Return the live selection ANDed with the panel mask if applicable.
+
+        Off when ``state.snap_to_panel`` is False or the panel
+        provider returns None for the press point.
+        """
+        selection = self._selection_provider()
+        if not self._state.snap_to_panel:
+            return selection
+        panel_mask = self._panel_clip_provider(sx, sy)
+        if panel_mask is None:
+            return selection
+        if selection is None:
+            return panel_mask
+        return selection & panel_mask
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
@@ -439,7 +498,7 @@ class BrushTool:
             opacity=opacity_scaled,
             hardness=brush.hardness,
             blend_mode=brush.blend_mode,
-            selection=self._selection_provider(),
+            selection=self._panel_clipped_selection(sx, sy),
             kind=brush.kind,
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
             tip_path=brush.tip_path,

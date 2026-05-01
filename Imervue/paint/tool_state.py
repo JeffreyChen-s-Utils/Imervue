@@ -211,6 +211,12 @@ class ToolState:
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
+    # When ``True`` and the workspace has a manga panel layout
+    # registered, the brush clips strokes to the interior of the
+    # panel containing the press point. Matches MediBang's
+    # "コマ内描画制限" toggle. Default off so the existing brush
+    # behaviour is unchanged.
+    snap_to_panel: bool = False
     quick_mask_active: bool = False
     # When ``True`` the eyedropper samples from the document composite
     # (every visible layer flattened) instead of the active layer
@@ -583,6 +589,7 @@ class ToolState:
             "color_history": [list(c) for c in self.color_history],
             "snap_to_pixel": bool(self.snap_to_pixel),
             "snap_to_edges": bool(self.snap_to_edges),
+            "snap_to_panel": bool(self.snap_to_panel),
             "quick_mask_active": bool(self.quick_mask_active),
             "eyedropper_sample_all_layers": bool(self.eyedropper_sample_all_layers),
             "sub_tools": {
@@ -626,6 +633,7 @@ class ToolState:
             color_history=history,
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
             snap_to_edges=bool(raw.get("snap_to_edges", False)),
+            snap_to_panel=bool(raw.get("snap_to_panel", False)),
             quick_mask_active=bool(raw.get("quick_mask_active", False)),
             eyedropper_sample_all_layers=bool(
                 raw.get("eyedropper_sample_all_layers", False),

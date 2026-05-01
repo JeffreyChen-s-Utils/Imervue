@@ -145,6 +145,56 @@ def panel_rows(
     )
 
 
+def panel_at_point(
+    layout: PanelLayout, x: float, y: float,
+) -> int | None:
+    """Return the index of the panel whose interior contains ``(x, y)``.
+
+    Returns ``None`` when the point falls in a gutter or outside the
+    layout entirely. Used by the snap-to-panel brush option (29e) so
+    the dispatcher knows which panel's interior to clip the stroke
+    to.
+    """
+    px, py = int(round(x)), int(round(y))
+    for i, cell in enumerate(layout.cells):
+        if cell.x <= px < cell.x + cell.w and cell.y <= py < cell.y + cell.h:
+            return i
+    return None
+
+
+def panel_mask(
+    layout: PanelLayout,
+    canvas_shape: tuple[int, int],
+    panel_index: int,
+) -> np.ndarray:
+    """Return a bool HxW mask True only inside panel ``panel_index``.
+
+    Used as a clipping selection for the brush so a stroke that
+    crosses a gutter doesn't paint outside its panel. Out-of-range
+    panel indices raise ``IndexError`` so a stale binding fails
+    loudly rather than silently producing an empty mask.
+    """
+    if not 0 <= int(panel_index) < len(layout.cells):
+        raise IndexError(
+            f"panel index {panel_index} out of range "
+            f"(layout has {len(layout.cells)} cells)",
+        )
+    h_canvas, w_canvas = canvas_shape
+    if h_canvas <= 0 or w_canvas <= 0:
+        raise ValueError(
+            f"canvas_shape must be positive, got {canvas_shape!r}",
+        )
+    cell = layout.cells[int(panel_index)]
+    mask = np.zeros((h_canvas, w_canvas), dtype=np.bool_)
+    x0 = max(0, cell.x)
+    y0 = max(0, cell.y)
+    x1 = min(w_canvas, cell.x + cell.w)
+    y1 = min(h_canvas, cell.y + cell.h)
+    if x1 > x0 and y1 > y0:
+        mask[y0:y1, x0:x1] = True
+    return mask
+
+
 def draw_panel_borders(
     canvas: np.ndarray,
     layout: PanelLayout,

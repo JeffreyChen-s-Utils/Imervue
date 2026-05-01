@@ -218,3 +218,56 @@ def test_draw_panel_borders_rejects_wrong_dtype():
     layout = panel_grid(10, 10, 1, 1, gutter=0, border_width=1)
     with pytest.raises(ValueError, match="HxWx4"):
         draw_panel_borders(canvas_f32, layout)
+
+
+# ---------------------------------------------------------------------------
+# panel_at_point + panel_mask (29e)
+# ---------------------------------------------------------------------------
+
+
+def test_panel_at_point_finds_each_cell():
+    """A 2x2 grid: each panel's centre maps back to its own index."""
+    from Imervue.paint.manga_panels import panel_at_point
+    layout = panel_grid(100, 100, 2, 2, gutter=0, border_width=0)
+    for index, cell in enumerate(layout.cells):
+        cx = cell.x + cell.w // 2
+        cy = cell.y + cell.h // 2
+        assert panel_at_point(layout, cx, cy) == index
+
+
+def test_panel_at_point_returns_none_in_gutter():
+    from Imervue.paint.manga_panels import panel_at_point
+    layout = panel_grid(100, 100, 2, 2, gutter=20, border_width=0)
+    # Centre of the canvas falls in the gutter intersection.
+    assert panel_at_point(layout, 50, 50) is None
+
+
+def test_panel_at_point_returns_none_outside_layout():
+    from Imervue.paint.manga_panels import panel_at_point
+    layout = panel_grid(100, 100, 2, 2, gutter=0, border_width=0)
+    assert panel_at_point(layout, -5, -5) is None
+    assert panel_at_point(layout, 200, 200) is None
+
+
+def test_panel_mask_paints_only_inside_panel():
+    from Imervue.paint.manga_panels import panel_mask
+    layout = panel_grid(100, 100, 2, 2, gutter=0, border_width=0)
+    mask = panel_mask(layout, (100, 100), 0)
+    cell = layout.cells[0]
+    assert mask[cell.y + 1, cell.x + 1]
+    # A pixel inside cell 1 is False (outside cell 0).
+    assert not mask[cell.y + 1, cell.x + cell.w + 1]
+
+
+def test_panel_mask_rejects_out_of_range_index():
+    from Imervue.paint.manga_panels import panel_mask
+    layout = panel_grid(100, 100, 2, 2, gutter=0, border_width=0)
+    with pytest.raises(IndexError):
+        panel_mask(layout, (100, 100), 99)
+
+
+def test_panel_mask_rejects_non_positive_canvas():
+    from Imervue.paint.manga_panels import panel_mask
+    layout = panel_grid(100, 100, 2, 2, gutter=0, border_width=0)
+    with pytest.raises(ValueError):
+        panel_mask(layout, (0, 100), 0)
