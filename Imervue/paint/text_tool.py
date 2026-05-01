@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QFontComboBox,
     QFormLayout,
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QSpinBox,
     QTextEdit,
@@ -35,6 +36,14 @@ from Imervue.paint.text_render import (
     composite_onto,
     render_text,
 )
+
+# The sample text shown in the live font preview. Mixed case + a
+# digit + punctuation so subtle differences between fonts (kerning,
+# weight, italic angle) are visible at a glance. Each language can
+# override via the ``paint_text_preview_sample`` translation key —
+# CJK locales typically prefer their own pangram.
+DEFAULT_FONT_PREVIEW_SAMPLE = "AaBbCc 123 Hello!"
+FONT_PREVIEW_POINT_SIZE = 18
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -96,6 +105,27 @@ class TextToolDialog(QDialog):
         self._color_btn.clicked.connect(self._pick_color)
         self._update_color_button()
 
+        # Sample-text preview rendered in the currently-selected font
+        # face. QFontComboBox already shows each entry in its own
+        # typeface in the dropdown; this label adds a longer sample
+        # sentence so the user can preview kerning / italic angle /
+        # weight before committing. Updates live as the user changes
+        # font / size / bold / italic.
+        self._preview_sample = lang.get(
+            "paint_text_preview_sample", DEFAULT_FONT_PREVIEW_SAMPLE,
+        )
+        self._preview = QLabel(self._preview_sample)
+        self._preview.setMinimumHeight(36)
+        self._preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._preview.setStyleSheet(
+            "QLabel { background:#222; color:#eee; padding:4px; }"
+        )
+        self._font_box.currentFontChanged.connect(self._refresh_preview)
+        self._size.valueChanged.connect(self._refresh_preview)
+        self._bold.toggled.connect(self._refresh_preview)
+        self._italic.toggled.connect(self._refresh_preview)
+        self._refresh_preview()
+
         layout = QVBoxLayout(self)
         form = QFormLayout()
         form.addRow(lang.get("paint_text_input", "Text:"), self._text_edit)
@@ -107,6 +137,9 @@ class TextToolDialog(QDialog):
         style_row.addWidget(self._color_btn)
         style_row.addStretch(1)
         form.addRow(lang.get("paint_text_style", "Style:"), style_row)
+        form.addRow(
+            lang.get("paint_text_preview", "Preview:"), self._preview,
+        )
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(
@@ -144,3 +177,18 @@ class TextToolDialog(QDialog):
         self._color_btn.setStyleSheet(
             f"background:rgb({r},{g},{b}); color:{fg}; padding:4px 12px;"
         )
+
+    def _refresh_preview(self, *_args) -> None:  # noqa: ARG002
+        """Re-apply the current font/size/bold/italic to the preview label.
+
+        The preview cap-sizes the rendered glyphs at
+        :data:`FONT_PREVIEW_POINT_SIZE` regardless of the actual size
+        spinner, so a 200pt heading still renders cleanly inside the
+        small preview row. Bold / italic toggles are honoured directly
+        for visual fidelity.
+        """
+        font = QFont(self._font_box.currentFont())
+        font.setPointSize(FONT_PREVIEW_POINT_SIZE)
+        font.setBold(self._bold.isChecked())
+        font.setItalic(self._italic.isChecked())
+        self._preview.setFont(font)

@@ -207,3 +207,73 @@ def test_text_tool_ignores_move_and_release(qapp):
     release = PointerEvent(phase="release", x=2, y=2, button=0, modifiers=0, pressure=1.0)
     assert tool.handle(move, canvas) is False
     assert tool.handle(release, canvas) is False
+
+
+# ---------------------------------------------------------------------------
+# Font preview (28k)
+# ---------------------------------------------------------------------------
+
+
+def test_text_dialog_has_preview_label(qapp):
+    from Imervue.paint.text_tool import (
+        DEFAULT_FONT_PREVIEW_SAMPLE,
+        TextToolDialog,
+    )
+    dialog = TextToolDialog(initial_color=(0, 0, 0))
+    try:
+        assert dialog._preview.text() == DEFAULT_FONT_PREVIEW_SAMPLE  # noqa: SLF001
+    finally:
+        dialog.deleteLater()
+
+
+def test_preview_font_follows_combo_box(qapp):
+    """Switching the font in the combo box must update the preview's
+    font family — the live-preview wiring."""
+    from PySide6.QtGui import QFont
+
+    from Imervue.paint.text_tool import TextToolDialog
+    dialog = TextToolDialog(initial_color=(0, 0, 0))
+    try:
+        new_font = QFont("Courier New")
+        dialog._font_box.setCurrentFont(new_font)  # noqa: SLF001
+        assert dialog._preview.font().family() == new_font.family()  # noqa: SLF001
+    finally:
+        dialog.deleteLater()
+
+
+def test_preview_font_follows_bold_toggle(qapp):
+    from Imervue.paint.text_tool import TextToolDialog
+    dialog = TextToolDialog(initial_color=(0, 0, 0))
+    try:
+        dialog._bold.setChecked(True)   # noqa: SLF001
+        assert dialog._preview.font().bold() is True   # noqa: SLF001
+        dialog._bold.setChecked(False)   # noqa: SLF001
+        assert dialog._preview.font().bold() is False   # noqa: SLF001
+    finally:
+        dialog.deleteLater()
+
+
+def test_preview_font_follows_italic_toggle(qapp):
+    from Imervue.paint.text_tool import TextToolDialog
+    dialog = TextToolDialog(initial_color=(0, 0, 0))
+    try:
+        dialog._italic.setChecked(True)   # noqa: SLF001
+        assert dialog._preview.font().italic() is True   # noqa: SLF001
+        dialog._italic.setChecked(False)   # noqa: SLF001
+        assert dialog._preview.font().italic() is False   # noqa: SLF001
+    finally:
+        dialog.deleteLater()
+
+
+def test_preview_caps_size_at_preview_constant(qapp):
+    """A massive size in the spinner doesn't blow up the preview row."""
+    from Imervue.paint.text_tool import (
+        FONT_PREVIEW_POINT_SIZE,
+        TextToolDialog,
+    )
+    dialog = TextToolDialog(initial_color=(0, 0, 0))
+    try:
+        dialog._size.setValue(200)   # noqa: SLF001
+        assert dialog._preview.font().pointSize() == FONT_PREVIEW_POINT_SIZE  # noqa: SLF001
+    finally:
+        dialog.deleteLater()
