@@ -214,3 +214,23 @@ def test_stamp_page_numbers_runs_against_attached_project(qapp):
         assert all(a == b + 1 for a, b in zip(after, before, strict=True))
     finally:
         ws.deleteLater()
+
+
+def test_add_speedlines_inserts_layer_with_content(qapp):
+    import numpy as np
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._manga_menu_bridge   # noqa: SLF001
+        document = ws.canvas().document()
+        before = document.layer_count
+        bridge.add_speedlines("radial")
+        assert document.layer_count == before + 1
+        layer = document.active_layer()
+        assert (layer.image[..., 3] > 0).any()
+        # Confirm a non-default kind is also valid.
+        bridge.add_speedlines("parallel")
+        assert document.layer_count == before + 2
+        # Sanity guard for unused locals.
+        _ = np
+    finally:
+        ws.deleteLater()

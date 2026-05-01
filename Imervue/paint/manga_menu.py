@@ -59,6 +59,16 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
         lang.get("paint_manga_stamp_page_numbers", "Stamp Page Numbers"),
     )
     page_numbers_action.triggered.connect(bridge.stamp_page_numbers)
+    menu.addSeparator()
+    for kind, label_key, fallback in (
+        ("radial", "paint_manga_speedlines_radial", "Speedlines: Radial"),
+        ("parallel", "paint_manga_speedlines_parallel", "Speedlines: Parallel"),
+        ("burst", "paint_manga_speedlines_burst", "Speedlines: Burst"),
+    ):
+        action = menu.addAction(lang.get(label_key, fallback))
+        action.triggered.connect(
+            lambda _checked=False, k=kind: bridge.add_speedlines(k),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +89,31 @@ class _MangaMenuBridge:
             return
         params = dialog.values()
         commit_panel_layout(self._workspace, params)
+
+    def add_speedlines(self, kind: str) -> None:
+        """Insert a speedline / focus-line / burst FX layer.
+
+        Uses canvas-centred defaults — the user can re-roll the seed
+        or move / mask the layer afterwards via the standard layer
+        operations. Pure document-mutation so the refresh path is
+        the same as every other manga action.
+        """
+        import numpy as np
+
+        from Imervue.paint.speedlines import (
+            SpeedlineOptions,
+            render_speedlines,
+        )
+        document = self._workspace.canvas().document()
+        if document.shape is None:
+            return
+        h, w = document.shape
+        options = SpeedlineOptions(kind=str(kind))
+        rendered = render_speedlines((h, w), options)
+        layer = document.add_layer(name=f"Speedlines ({kind})")
+        np.copyto(layer.image, rendered)
+        document.invalidate_composite()
+        self._workspace.canvas().update()
 
     def stamp_page_numbers(self) -> None:
         """Drop a "Page N" layer on every page in the active project.
