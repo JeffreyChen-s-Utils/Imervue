@@ -44,6 +44,15 @@ LAYOUT_PADDING_PX = 8
 RUBY_FONT_RATIO = 0.5
 RUBY_GAP_PX = 2
 
+# Paragraph alignment within the rendered buffer. ``left`` is the
+# default Western convention; ``right`` matches Arabic / Hebrew or
+# right-aligned manga callouts; ``center`` is what speech bubbles
+# typically use; ``justify`` stretches inter-word whitespace so the
+# line fills the full content width (last line of each paragraph
+# stays left-aligned, matching print typography).
+TEXT_ALIGNMENTS = ("left", "center", "right", "justify")
+DEFAULT_TEXT_ALIGNMENT = "left"
+
 
 @dataclass(frozen=True)
 class TextStyle:
@@ -149,9 +158,23 @@ class StyledText:
     might be in the middle of typing and we don't want to disturb
     their cursor by collapsing runs out from under them. Call
     :meth:`merge_adjacent` explicitly when persisting / serialising.
+
+    ``alignment`` controls per-line horizontal placement (left /
+    center / right / justify). The renderer measures each line's
+    rendered width then shifts every run on that line so the line
+    sits where the alignment requests; ``justify`` stretches inter-
+    run gaps to make lines flush at both edges.
     """
 
     runs: list[StyledRun] = field(default_factory=list)
+    alignment: str = DEFAULT_TEXT_ALIGNMENT
+
+    def __post_init__(self) -> None:
+        if self.alignment not in TEXT_ALIGNMENTS:
+            raise ValueError(
+                f"unknown alignment {self.alignment!r}; "
+                f"expected one of {TEXT_ALIGNMENTS}",
+            )
 
     def append(self, text: str, style: TextStyle | None = None) -> None:
         self.runs.append(StyledRun(
@@ -231,7 +254,10 @@ class StyledText:
         self.runs = new_runs
 
     def to_dict(self) -> dict:
-        return {"runs": [r.to_dict() for r in self.runs]}
+        out: dict = {"runs": [r.to_dict() for r in self.runs]}
+        if self.alignment != DEFAULT_TEXT_ALIGNMENT:
+            out["alignment"] = self.alignment
+        return out
 
     @classmethod
     def from_dict(cls, raw: dict) -> StyledText:
@@ -240,11 +266,14 @@ class StyledText:
         rows = raw.get("runs", ())
         if not isinstance(rows, list):
             return cls()
-        out: list[StyledRun] = []
+        out_runs: list[StyledRun] = []
         for row in rows:
             if isinstance(row, dict):
-                out.append(StyledRun.from_dict(row))
-        return cls(runs=out)
+                out_runs.append(StyledRun.from_dict(row))
+        alignment = raw.get("alignment", DEFAULT_TEXT_ALIGNMENT)
+        if alignment not in TEXT_ALIGNMENTS:
+            alignment = DEFAULT_TEXT_ALIGNMENT
+        return cls(runs=out_runs, alignment=alignment)
 
     @classmethod
     def from_plain(
@@ -421,11 +450,70 @@ def _layout_runs(text: StyledText) -> dict:
     total_height = pen_y + (
         int(line_height) if line_height else DEFAULT_FONT_SIZE
     )
+    if text.alignment != "left" and placements:
+        _apply_alignment(placements, text.alignment, int(max_width))
     return {
         "placements": placements,
         "width": int(max_width),
         "height": int(total_height),
     }
+
+
+def _apply_alignment(
+    placements: list[dict], alignment: str, content_width: int,
+) -> None:
+    """Shift each line's placements horizontally to honour ``alignment``.
+
+    Mutates the ``placements`` list in place. Lines are identified by
+    their ``y`` value — runs that share a y are co-line. ``justify``
+    spreads inter-run gaps across the line (the last line of the
+    output always falls back to ``left`` so a one-word last line
+    isn't stretched into the canvas margins).
+    """
+    # Group by y, preserving insertion order so the last group is
+    # the last line.
+    groups: list[tuple[int, list[dict]]] = []
+    for placement in placements:
+        y = int(placement["y"])
+        if groups and groups[-1][0] == y:
+            groups[-1][1].append(placement)
+        else:
+            groups.append((y, [placement]))
+    for line_index, (_y, line_runs) in enumerate(groups):
+        line_width = _line_width(line_runs)
+        slack = content_width - line_width
+        if slack <= 0:
+            continue
+        if alignment == "center":
+            offset = slack // 2
+            for placement in line_runs:
+                placement["x"] += offset
+        elif alignment == "right":
+            for placement in line_runs:
+                placement["x"] += slack
+        elif alignment == "justify":
+            # Justify all but the last line — print typography
+            # convention so the trailing word doesn't stretch.
+            if line_index == len(groups) - 1 or len(line_runs) < 2:
+                continue
+            extra_per_gap = slack // (len(line_runs) - 1)
+            for i, placement in enumerate(line_runs):
+                placement["x"] += extra_per_gap * i
+
+
+def _line_width(line_runs: list[dict]) -> int:
+    """Return the rendered width of a single line of placements."""
+    if not line_runs:
+        return 0
+    max_right = 0
+    for placement in line_runs:
+        run = placement["run"]
+        font = _load_font(run.style)
+        seg_w, _ = _measure(font, run.text)
+        right = int(placement["x"]) + seg_w
+        max_right = max(max_right, right)
+    leftmost = min(int(placement["x"]) for placement in line_runs)
+    return max(0, max_right - leftmost)
 
 
 def _ruby_height_for_first_line(text: StyledText) -> int:

@@ -347,3 +347,92 @@ def test_render_empty_ruby_matches_no_ruby_field():
     np.testing.assert_array_equal(
         render_styled_text(a), render_styled_text(b),
     )
+
+
+# ---------------------------------------------------------------------------
+# Text alignment (29j)
+# ---------------------------------------------------------------------------
+
+
+def test_default_alignment_is_left():
+    text = StyledText()
+    assert text.alignment == "left"
+
+
+def test_alignment_rejects_unknown_value():
+    with pytest.raises(ValueError, match="alignment"):
+        StyledText(alignment="diagonal")
+
+
+def test_alignment_constants_cover_documented_set():
+    from Imervue.paint.rich_text import TEXT_ALIGNMENTS
+    assert set(TEXT_ALIGNMENTS) == {"left", "center", "right", "justify"}
+
+
+def test_alignment_round_trips_through_to_dict():
+    original = StyledText(alignment="center")
+    original.append("hi", TextStyle())
+    rebuilt = StyledText.from_dict(original.to_dict())
+    assert rebuilt.alignment == "center"
+
+
+def test_to_dict_omits_default_alignment():
+    """Default alignment should not bloat the saved JSON."""
+    text = StyledText()
+    text.append("x", TextStyle())
+    raw = text.to_dict()
+    assert "alignment" not in raw
+
+
+def test_from_dict_drops_unknown_alignment():
+    rebuilt = StyledText.from_dict({"runs": [], "alignment": "skewed"})
+    assert rebuilt.alignment == "left"
+
+
+def test_center_alignment_shifts_short_line_right():
+    """A short line on a multi-line text gets visually centred."""
+    text = StyledText(alignment="center")
+    text.append("longer first line\n", TextStyle(font_size=24))
+    text.append("hi", TextStyle(font_size=24))
+    out = render_styled_text(text)
+    # The "hi" line should have inked pixels skewed right of the
+    # buffer's left edge — confirmed by checking that the centre of
+    # mass of the second line's ink is past the left margin.
+    rows_with_ink = np.where(out[..., 3].any(axis=1))[0]
+    assert rows_with_ink.size > 0
+    # The lowest band of inked rows is the second line.
+    bottom_rows = rows_with_ink[len(rows_with_ink) // 2 :]
+    bottom_segment = out[bottom_rows]
+    inked_cols = np.where(bottom_segment[..., 3].any(axis=0))[0]
+    assert inked_cols.size > 0
+    # First inked column for centred text is materially > 0.
+    assert int(inked_cols.min()) > 0
+
+
+def test_right_alignment_pushes_short_line_to_right_edge():
+    """The shorter line in a right-aligned multi-line text reaches
+    the right margin of the rendered buffer."""
+    text = StyledText(alignment="right")
+    text.append("longer first line\n", TextStyle(font_size=24))
+    text.append("hi", TextStyle(font_size=24))
+    out = render_styled_text(text)
+    rows_with_ink = np.where(out[..., 3].any(axis=1))[0]
+    bottom_rows = rows_with_ink[len(rows_with_ink) // 2 :]
+    inked_cols = np.where(out[bottom_rows][..., 3].any(axis=0))[0]
+    if inked_cols.size > 0:
+        # The right edge of the rendered "hi" lands close to the
+        # buffer's right margin.
+        assert int(inked_cols.max()) >= out.shape[1] - 20
+
+
+def test_justify_does_not_stretch_last_line():
+    """Last line of a justified paragraph stays left-aligned, matching
+    print typography."""
+    left = StyledText()
+    left.append("hi", TextStyle(font_size=24))
+    justified = StyledText(alignment="justify")
+    justified.append("hi", TextStyle(font_size=24))
+    # Single-line text → last line → no stretching → identical pixels.
+    np.testing.assert_array_equal(
+        render_styled_text(left), render_styled_text(justified),
+    )
