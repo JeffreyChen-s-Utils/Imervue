@@ -213,5 +213,5 @@ def test_bridge_invalidates_composite(workspace):
 def test_image_menu_has_documented_actions(workspace):
     from Imervue.paint.paint_menu_bar import menu_for
     image_menu = menu_for(workspace, "image")
-    # 2 flip + sep + 3 rotate = 6 entries.
-    assert len(image_menu.actions()) == 6
+    # Image Size + sep + 2 flip + sep + 3 rotate = 8 entries (25b added Size).
+    assert len(image_menu.actions()) == 8

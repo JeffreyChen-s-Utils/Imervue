@@ -682,6 +682,37 @@ class PaintDocument:
         self._notify()
         return True
 
+    def resize(
+        self, new_w: int, new_h: int, *, resample: str = "bilinear",
+    ) -> bool:
+        """Resample every layer + mask + selection to ``(new_h, new_w)``.
+
+        Pure-numpy via Pillow under the hood (see
+        :mod:`Imervue.paint.image_resize`). Returns ``True`` once the
+        document was actually resized; identity-resize on a same-size
+        document still returns ``True`` so the caller can refresh
+        unconditionally without inspecting the verb's return value.
+        """
+        if not self._layers:
+            return False
+        from Imervue.paint.image_resize import (
+            resize_mask, resize_rgba, resize_selection,
+        )
+        for layer in self._layers:
+            layer.image = resize_rgba(
+                layer.image, new_w, new_h, resample=resample,
+            )
+            if layer.mask is not None:
+                layer.mask = resize_mask(
+                    layer.mask, new_w, new_h, resample=resample,
+                )
+        if self._selection is not None:
+            self._selection = resize_selection(
+                self._selection, new_w, new_h,
+            )
+        self._notify()
+        return True
+
     def rotate_180(self) -> bool:
         """Rotate the whole document 180° — equivalent to flip H + flip V."""
         if not self._layers:
