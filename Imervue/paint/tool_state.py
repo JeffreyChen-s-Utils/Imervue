@@ -49,6 +49,10 @@ TOOLS = (
     "clone_stamp",
     "transform",
     "speech_bubble",
+    "shape_rect",
+    "shape_ellipse",
+    "shape_line",
+    "shape_polygon",
 )
 DEFAULT_TOOL = "brush"
 

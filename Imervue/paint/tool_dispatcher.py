@@ -231,6 +231,10 @@ class ToolDispatcher:
             "clone_stamp": _CloneStampTool(self._state),
             "transform": _TransformHandleTool(self._state),
             "speech_bubble": _SpeechBubbleTool(self._state),
+            "shape_rect": _RectShapeTool(self._state),
+            "shape_ellipse": _EllipseShapeTool(self._state),
+            "shape_line": _LineShapeTool(self._state),
+            "shape_polygon": _PolygonShapeTool(self._state),
         }
 
 
@@ -1104,3 +1108,170 @@ class _SpeechBubbleTool:
 
     def cancel(self) -> None:
         self._press = None
+
+
+# ---------------------------------------------------------------------------
+# Shape tools — rect / ellipse / line / polygon. Drag-to-define for
+# the first three, multi-click for polygon (right-click closes).
+# ---------------------------------------------------------------------------
+
+
+def _shape_color(state: ToolState) -> tuple[int, int, int, int]:
+    fg = tuple(int(c) for c in state.foreground)
+    return (fg[0], fg[1], fg[2], 255)
+
+
+def _shape_mode(state: ToolState) -> str:
+    """Pull a fill / stroke mode from the workspace state, defaulting
+    to ``"fill"``. Stored as ``state.shape_mode`` if the user added
+    it via the options bar; absent → fill."""
+    return getattr(state, "shape_mode", "fill")
+
+
+def _shape_stroke_width(state: ToolState) -> int:
+    """Use the brush size as the shape stroke width — keeps the
+    options bar simple (one size slider drives both)."""
+    return max(1, int(state.brush.size))
+
+
+class _RectShapeTool:
+    """Press → record corner; release → rasterise rectangle."""
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._press: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.shape_engine import rasterise_rect
+        if evt.phase == "press":
+            self._press = (float(evt.x), float(evt.y))
+            return False
+        if evt.phase == "release" and self._press is not None:
+            x0, y0 = self._press
+            self._press = None
+            return rasterise_rect(
+                canvas, x0, y0, float(evt.x) - x0, float(evt.y) - y0,
+                _shape_color(self._state),
+                mode=_shape_mode(self._state),
+                stroke_width=_shape_stroke_width(self._state),
+            )
+        if evt.phase in ("leave",):
+            self._press = None
+        return False
+
+    def cancel(self) -> None:
+        self._press = None
+
+
+class _EllipseShapeTool:
+    """Press → record corner; release → rasterise ellipse inscribed
+    in the corner-to-corner rectangle."""
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._press: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.shape_engine import rasterise_ellipse
+        if evt.phase == "press":
+            self._press = (float(evt.x), float(evt.y))
+            return False
+        if evt.phase == "release" and self._press is not None:
+            x0, y0 = self._press
+            x1, y1 = float(evt.x), float(evt.y)
+            self._press = None
+            cx = (x0 + x1) / 2.0
+            cy = (y0 + y1) / 2.0
+            rx = abs(x1 - x0) / 2.0
+            ry = abs(y1 - y0) / 2.0
+            return rasterise_ellipse(
+                canvas, cx, cy, rx, ry,
+                _shape_color(self._state),
+                mode=_shape_mode(self._state),
+                stroke_width=_shape_stroke_width(self._state),
+            )
+        if evt.phase in ("leave",):
+            self._press = None
+        return False
+
+    def cancel(self) -> None:
+        self._press = None
+
+
+class _LineShapeTool:
+    """Press → record start; release → rasterise straight line."""
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._press: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.shape_engine import rasterise_line
+        if evt.phase == "press":
+            self._press = (float(evt.x), float(evt.y))
+            return False
+        if evt.phase == "release" and self._press is not None:
+            x0, y0 = self._press
+            self._press = None
+            return rasterise_line(
+                canvas, x0, y0, float(evt.x), float(evt.y),
+                _shape_color(self._state),
+                width=_shape_stroke_width(self._state),
+            )
+        if evt.phase in ("leave",):
+            self._press = None
+        return False
+
+    def cancel(self) -> None:
+        self._press = None
+
+
+class _PolygonShapeTool:
+    """Multi-press polygon — left-click adds a vertex, right-click or
+    a click within ``CLOSE_RADIUS`` of the first vertex closes the
+    polygon and rasterises it.
+
+    The vertex list resets after every successful commit so a fresh
+    polygon starts with the next press, mirroring the lasso tool's
+    one-gesture-one-shape model.
+    """
+
+    CLOSE_RADIUS = 8.0
+    RIGHT_BUTTON = 2   # Qt.MouseButton.RightButton.value
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._vertices: list[tuple[float, float]] = []
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.shape_engine import rasterise_polygon
+        if evt.phase != "press":
+            return False
+        x, y = float(evt.x), float(evt.y)
+        # Right-click commits the current vertex list as a polygon.
+        if int(evt.button) == self.RIGHT_BUTTON and self._vertices:
+            painted = rasterise_polygon(
+                canvas, self._vertices, _shape_color(self._state),
+                mode=_shape_mode(self._state),
+                stroke_width=_shape_stroke_width(self._state),
+            )
+            self._vertices = []
+            return painted
+        # Click near the first vertex closes the polygon.
+        if self._vertices:
+            sx, sy = self._vertices[0]
+            close_sq = (x - sx) ** 2 + (y - sy) ** 2
+            if close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS:
+                painted = rasterise_polygon(
+                    canvas, self._vertices, _shape_color(self._state),
+                    mode=_shape_mode(self._state),
+                    stroke_width=_shape_stroke_width(self._state),
+                )
+                self._vertices = []
+                return painted
+        # Otherwise append a new vertex; nothing painted yet.
+        self._vertices.append((x, y))
+        return False
+
+    def cancel(self) -> None:
+        self._vertices = []
