@@ -215,6 +215,14 @@ class PaintWorkspace(QMainWindow):
             and hasattr(transform_tool, "attach_workspace")
         ):
             transform_tool.attach_workspace(self)
+        # Crop tool needs the workspace so it can resolve to the
+        # active tab's PaintDocument and invoke ``document.crop``.
+        crop_tool = self._dispatcher._handlers.get("crop")  # noqa: SLF001
+        if (
+            crop_tool is not None
+            and hasattr(crop_tool, "attach_workspace")
+        ):
+            crop_tool.attach_workspace(self)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())

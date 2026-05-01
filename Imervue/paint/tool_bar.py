@@ -67,6 +67,7 @@ TOOL_ORDER = (
     ("shape_ellipse", "Shift+E"),
     ("shape_line",    "Shift+I"),
     ("shape_polygon", "Shift+P"),
+    ("crop",          "C"),
     ("transform",     "Ctrl+T"),
     None,             # ── group break
     ("hand",          "H"),
@@ -187,6 +188,7 @@ class PaintOptionsBar(QToolBar):
             "eyedropper", "move", "hand", "zoom", "blur", "smudge",
             "bezier_pen", "clone_stamp", "transform", "speech_bubble",
             "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
+            "crop",
         ):
             self._page_for_tool[tool] = empty_idx
 

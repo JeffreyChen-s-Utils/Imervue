@@ -582,6 +582,7 @@ japanese_word_dict = {
     "paint_tool_shape_ellipse": '楕円',
     "paint_tool_shape_line": '直線',
     "paint_tool_shape_polygon": '多角形',
+    "paint_tool_crop": '切り抜き',
     "paint_settings_pressure_curve": '筆圧カーブ…',
     "paint_settings_shortcuts": 'ショートカット…',
     "paint_settings_workspace_layouts": 'ワークスペース…',

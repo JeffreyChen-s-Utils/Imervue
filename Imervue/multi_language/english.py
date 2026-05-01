@@ -590,6 +590,7 @@ english_word_dict = {
     "paint_tool_shape_ellipse": 'Ellipse',
     "paint_tool_shape_line": 'Line',
     "paint_tool_shape_polygon": 'Polygon',
+    "paint_tool_crop": 'Crop',
     "paint_settings_pressure_curve": 'Pressure Curve…',
     "paint_settings_shortcuts": 'Shortcuts…',
     "paint_settings_workspace_layouts": 'Workspace Layouts…',

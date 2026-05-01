@@ -571,6 +571,7 @@ traditional_chinese_word_dict = {
     "paint_tool_shape_ellipse": '橢圓',
     "paint_tool_shape_line": '直線',
     "paint_tool_shape_polygon": '多邊形',
+    "paint_tool_crop": '裁切',
     "paint_settings_pressure_curve": '筆壓曲線…',
     "paint_settings_shortcuts": '快捷鍵…',
     "paint_settings_workspace_layouts": '工作區佈局…',

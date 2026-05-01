@@ -235,6 +235,7 @@ class ToolDispatcher:
             "shape_ellipse": _EllipseShapeTool(self._state),
             "shape_line": _LineShapeTool(self._state),
             "shape_polygon": _PolygonShapeTool(self._state),
+            "crop": _CropTool(self._state),
         }
 
 
@@ -1275,3 +1276,67 @@ class _PolygonShapeTool:
 
     def cancel(self) -> None:
         self._vertices = []
+
+
+# ---------------------------------------------------------------------------
+# Crop tool — drag to define rect; commit immediately on release.
+# Aspect-ratio preset (read from ``state.crop_aspect``) snaps the drag
+# rectangle while it's being defined.
+# ---------------------------------------------------------------------------
+
+
+class _CropTool:
+    """Crop dispatcher.
+
+    Press → record one corner. Release → snap to ``state.crop_aspect``
+    if set, then call ``document.crop(rect)`` via the workspace.
+
+    The dispatcher only sees the canvas image, not the document, so
+    the actual crop is delegated to ``state.canvas`` ↦ ``workspace``
+    via :meth:`attach_workspace`. When no workspace is attached the
+    tool is a no-op — matching the bezier pen + transform tools'
+    convention.
+    """
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._workspace = None
+        self._press: tuple[float, float] | None = None
+
+    def attach_workspace(self, workspace) -> None:
+        self._workspace = workspace
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.crop_tool import normalise_rect, snap_to_aspect
+        if evt.phase == "press":
+            self._press = (float(evt.x), float(evt.y))
+            return False
+        if evt.phase == "release" and self._press is not None:
+            x0, y0 = self._press
+            self._press = None
+            aspect = getattr(self._state, "crop_aspect", None)
+            try:
+                snapped = snap_to_aspect(x0, y0, evt.x, evt.y, aspect)
+            except ValueError:
+                snapped = (x0, y0, float(evt.x), float(evt.y))
+            sx0, sy0, sx1, sy1 = snapped
+            rect = normalise_rect(
+                sx0, sy0, sx1, sy1, canvas.shape[:2],
+            )
+            if rect is None:
+                return False
+            ws = self._workspace
+            if ws is None:
+                return False
+            document = ws.canvas().document()
+            if not document.crop(rect):
+                return False
+            document.invalidate_composite()
+            ws.canvas().update()
+            return True
+        if evt.phase in ("leave",):
+            self._press = None
+        return False
+
+    def cancel(self) -> None:
+        self._press = None

@@ -576,6 +576,7 @@ korean_word_dict = {
     "paint_tool_shape_ellipse": '타원',
     "paint_tool_shape_line": '직선',
     "paint_tool_shape_polygon": '다각형',
+    "paint_tool_crop": '자르기',
     "paint_settings_pressure_curve": '필압 커브…',
     "paint_settings_shortcuts": '단축키…',
     "paint_settings_workspace_layouts": '작업 영역 레이아웃…',

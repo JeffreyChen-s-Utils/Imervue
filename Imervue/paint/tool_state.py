@@ -53,6 +53,7 @@ TOOLS = (
     "shape_ellipse",
     "shape_line",
     "shape_polygon",
+    "crop",
 )
 DEFAULT_TOOL = "brush"
 
