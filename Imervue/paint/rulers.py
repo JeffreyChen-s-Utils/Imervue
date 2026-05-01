@@ -43,6 +43,7 @@ RULER_MODES = (
     "concentric",
     "parallel",
     "perspective",
+    "curve",
 )
 DEFAULT_RULER_MODE = "off"
 
@@ -50,6 +51,16 @@ DEFAULT_RULER_MODE = "off"
 # 1 / 2 / 3-point comic-art convention. More VPs would not crash the
 # math but the UI affords only the three standard cases.
 PERSPECTIVE_MAX_VANISHING_POINTS = 3
+
+# Curve ruler caps — Catmull-Rom needs at least 2 points to define a
+# segment and tops out at 64 in the UI; more isn't useful for a brush
+# guide and slows the per-pixel snap loop.
+CURVE_MIN_POINTS = 2
+CURVE_MAX_POINTS = 64
+# Per-segment sampling resolution for the discrete distance search.
+# Higher → smoother snap, slower; 32 keeps the worst-case search at
+# 64*32 = 2048 candidates, which is below 1ms in pure Python.
+CURVE_SAMPLES_PER_SEGMENT = 32
 
 # Floats below this magnitude are treated as zero — protects against
 # divide-by-zero when the cursor coincides with the ruler centre.
@@ -83,6 +94,7 @@ class Ruler:
     ry: float = 50.0
     spacing: float = 20.0
     vanishing_points: tuple[tuple[float, float], ...] = ()
+    control_points: tuple[tuple[float, float], ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -93,6 +105,7 @@ class Ruler:
             "ry": float(self.ry),
             "spacing": float(self.spacing),
             "vanishing_points": [list(p) for p in self.vanishing_points],
+            "control_points": [list(p) for p in self.control_points],
         }
 
     @classmethod
@@ -115,6 +128,7 @@ class Ruler:
             ry=_safe_positive(raw.get("ry"), 50.0),
             spacing=_safe_positive(raw.get("spacing"), 20.0),
             vanishing_points=_safe_vanishing_points(raw.get("vanishing_points")),
+            control_points=_safe_control_points(raw.get("control_points")),
         )
 
 
@@ -159,6 +173,8 @@ def snap_to_ruler(
     if mode == "perspective":
         anchor = stroke_anchor if stroke_anchor is not None else ruler.anchor
         return _snap_perspective(point, anchor, ruler.vanishing_points)
+    if mode == "curve":
+        return _snap_curve(point, ruler.control_points)
     raise ValueError(
         f"unknown ruler mode {mode!r}; expected one of {RULER_MODES}",
     )
@@ -332,6 +348,72 @@ def _snap_perspective(
     return best_foot
 
 
+def _snap_curve(
+    point: tuple[float, float],
+    control_points: tuple[tuple[float, float], ...],
+) -> tuple[float, float]:
+    """Snap onto the closest point of a Catmull-Rom spline.
+
+    Builds a uniform Catmull-Rom curve through every control point
+    (the curve passes through each one — the artist's intent), then
+    samples each segment :data:`CURVE_SAMPLES_PER_SEGMENT` times and
+    returns the sample with the smallest distance to ``point``. Two-
+    point control sets degenerate to a straight segment between them.
+
+    Empty / single-control-point inputs fall through to "no snap" so
+    a half-configured ruler doesn't strand the brush.
+    """
+    if len(control_points) < CURVE_MIN_POINTS:
+        return (float(point[0]), float(point[1]))
+    px, py = float(point[0]), float(point[1])
+    pts = [(float(p[0]), float(p[1])) for p in control_points]
+    best: tuple[float, float] = pts[0]
+    best_dist_sq = _dist_sq(point, pts[0])
+    # For each segment between p1=pts[i] and p2=pts[i+1] use the two
+    # neighbouring points as the tangent guides; at the endpoints we
+    # duplicate the segment endpoint so the curve still passes
+    # through the user-set control.
+    n = len(pts)
+    for i in range(n - 1):
+        p0 = pts[i - 1] if i > 0 else pts[i]
+        p1 = pts[i]
+        p2 = pts[i + 1]
+        p3 = pts[i + 2] if i + 2 < n else pts[i + 1]
+        for k in range(CURVE_SAMPLES_PER_SEGMENT + 1):
+            t = k / CURVE_SAMPLES_PER_SEGMENT
+            sample = _catmull_rom(p0, p1, p2, p3, t)
+            d = (px - sample[0]) ** 2 + (py - sample[1]) ** 2
+            if d < best_dist_sq:
+                best_dist_sq = d
+                best = sample
+    return best
+
+
+def _catmull_rom(
+    p0: tuple[float, float],
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    t: float,
+) -> tuple[float, float]:
+    """Sample the uniform Catmull-Rom curve at parameter ``t`` in [0, 1]."""
+    t2 = t * t
+    t3 = t2 * t
+    coeff_p0 = -0.5 * t3 + t2 - 0.5 * t
+    coeff_p1 = 1.5 * t3 - 2.5 * t2 + 1.0
+    coeff_p2 = -1.5 * t3 + 2.0 * t2 + 0.5 * t
+    coeff_p3 = 0.5 * t3 - 0.5 * t2
+    x = (
+        coeff_p0 * p0[0] + coeff_p1 * p1[0]
+        + coeff_p2 * p2[0] + coeff_p3 * p3[0]
+    )
+    y = (
+        coeff_p0 * p0[1] + coeff_p1 * p1[1]
+        + coeff_p2 * p2[1] + coeff_p3 * p3[1]
+    )
+    return (x, y)
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -384,5 +466,27 @@ def _safe_vanishing_points(value: object) -> tuple[tuple[float, float], ...]:
         except (TypeError, ValueError):
             continue
         if len(out) >= PERSPECTIVE_MAX_VANISHING_POINTS:
+            break
+    return tuple(out)
+
+
+def _safe_control_points(value: object) -> tuple[tuple[float, float], ...]:
+    """Coerce an on-disk curve-control list into a tuple of (x, y).
+
+    Mirrors :func:`_safe_vanishing_points` — malformed entries are
+    dropped silently, the count is capped at :data:`CURVE_MAX_POINTS`,
+    and the result is a fresh immutable tuple safe to share.
+    """
+    if not isinstance(value, (list, tuple)):
+        return ()
+    out: list[tuple[float, float]] = []
+    for entry in value:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            continue
+        try:
+            out.append((float(entry[0]), float(entry[1])))
+        except (TypeError, ValueError):
+            continue
+        if len(out) >= CURVE_MAX_POINTS:
             break
     return tuple(out)

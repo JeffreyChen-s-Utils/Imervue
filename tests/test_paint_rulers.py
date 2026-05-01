@@ -18,7 +18,7 @@ from Imervue.paint.rulers import Ruler, snap_to_ruler
 def test_ruler_modes_includes_documented_set():
     assert set(rulers.RULER_MODES) == {
         "off", "linear", "cross", "ellipse", "concentric", "parallel",
-        "perspective",
+        "perspective", "curve",
     }
 
 
@@ -423,6 +423,7 @@ def test_to_dict_emits_json_friendly_types():
         "ry": 22.0,
         "spacing": 5.0,
         "vanishing_points": [],
+        "control_points": [],
     }
 
 
@@ -477,5 +478,92 @@ def test_unknown_mode_at_runtime_raises():
     object.__setattr__(r, "rx", 50.0)
     object.__setattr__(r, "ry", 50.0)
     object.__setattr__(r, "spacing", 20.0)
+    object.__setattr__(r, "vanishing_points", ())
+    object.__setattr__(r, "control_points", ())
     with pytest.raises(ValueError, match="unknown ruler mode"):
         snap_to_ruler((1.0, 1.0), r)
+
+
+# ---------------------------------------------------------------------------
+# Curve ruler
+# ---------------------------------------------------------------------------
+
+
+def test_curve_ruler_in_modes_list():
+    assert "curve" in rulers.RULER_MODES
+
+
+def test_curve_with_no_points_falls_through_to_input():
+    ruler = Ruler(mode="curve", control_points=())
+    assert snap_to_ruler((3.0, 5.0), ruler) == (3.0, 5.0)
+
+
+def test_curve_with_one_point_falls_through_to_input():
+    """Single-point curve is degenerate — must not snap blindly to it."""
+    ruler = Ruler(mode="curve", control_points=((10.0, 10.0),))
+    assert snap_to_ruler((3.0, 5.0), ruler) == (3.0, 5.0)
+
+
+def test_curve_two_points_snaps_onto_segment():
+    """Two-point curve degenerates to a straight segment — cursor far
+    from the segment must snap onto it."""
+    ruler = Ruler(
+        mode="curve",
+        control_points=((0.0, 0.0), (10.0, 0.0)),
+    )
+    snapped = snap_to_ruler((5.0, 50.0), ruler)
+    # Closest point on the segment to (5, 50) is the foot at (5, 0).
+    assert snapped[0] == pytest.approx(5.0, abs=0.5)
+    assert snapped[1] == pytest.approx(0.0, abs=0.5)
+
+
+def test_curve_endpoints_are_passed_through():
+    """A cursor exactly at a control point must snap to it (the curve
+    passes through every control point)."""
+    pts = ((0.0, 0.0), (5.0, 5.0), (10.0, 0.0))
+    ruler = Ruler(mode="curve", control_points=pts)
+    for pt in pts:
+        snapped = snap_to_ruler(pt, ruler)
+        assert snapped[0] == pytest.approx(pt[0], abs=0.5)
+        assert snapped[1] == pytest.approx(pt[1], abs=0.5)
+
+
+def test_curve_snap_finds_midpoint_for_midpoint_query():
+    """A cursor right between two adjacent controls must snap to a
+    point near the midpoint, not to either endpoint exclusively."""
+    ruler = Ruler(
+        mode="curve",
+        control_points=((0.0, 0.0), (10.0, 0.0)),
+    )
+    snapped = snap_to_ruler((5.0, 0.0), ruler)
+    assert snapped[0] == pytest.approx(5.0, abs=0.5)
+    assert snapped[1] == pytest.approx(0.0, abs=0.5)
+
+
+def test_curve_round_trips_through_to_dict():
+    pts = ((1.0, 2.0), (3.0, 4.0), (5.0, 6.0))
+    original = Ruler(mode="curve", control_points=pts)
+    rebuilt = Ruler.from_dict(original.to_dict())
+    assert rebuilt.mode == "curve"
+    assert rebuilt.control_points == pts
+
+
+def test_curve_drops_malformed_control_points_on_load():
+    """A hand-edited settings dict must never crash boot."""
+    rebuilt = Ruler.from_dict({
+        "mode": "curve",
+        "control_points": [
+            [1.0, 2.0],
+            "garbage",
+            [3.0],
+            [None, None],
+            [4.0, 5.0],
+        ],
+    })
+    assert rebuilt.control_points == ((1.0, 2.0), (4.0, 5.0))
+
+
+def test_curve_caps_control_count_at_max():
+    over = [[float(i), 0.0] for i in range(rulers.CURVE_MAX_POINTS + 10)]
+    rebuilt = Ruler.from_dict({"mode": "curve", "control_points": over})
+    assert len(rebuilt.control_points) == rulers.CURVE_MAX_POINTS
