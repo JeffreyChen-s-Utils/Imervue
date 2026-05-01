@@ -57,6 +57,7 @@ class FillResult:
 
 
 MAX_EXPAND = 32
+MAX_GAP_CLOSE = 16
 
 
 def flood_fill(
@@ -70,6 +71,7 @@ def flood_fill(
     selection: np.ndarray | None = None,
     reference_image: np.ndarray | None = None,
     expand: int = 0,
+    gap_close: int = 0,
 ) -> FillResult:
     """Fill the region around ``(seed_x, seed_y)`` with ``color``.
 
@@ -88,6 +90,18 @@ def flood_fill(
     that many 4-connected pixels before painting, so the colour creeps
     under the anti-aliased halo of the reference lineart. ``expand=0``
     is a no-op.
+
+    ``gap_close`` (0..``MAX_GAP_CLOSE``) is MediBang's "Color Drop"
+    feature — temporarily dilate the ink mask by ``gap_close`` 4-
+    connected pixels before flooding so small gaps in the lineart
+    (broken pen strokes, AA leaks) bridge for the duration of the
+    fill. Closes gaps up to ``2 * gap_close`` pixels wide; bigger
+    gaps stay open. The original lineart pixels are never touched —
+    the dilation only affects which cells the flood sees as
+    boundaries. Trade-off: legitimate corridors thinner than
+    ``2 * gap_close`` also vanish for this fill, so the user picks
+    the radius for the largest gap they want to bridge.
+    ``gap_close=0`` is a no-op.
     """
     _check_canvas(canvas)
     h, w = canvas.shape[:2]
@@ -105,11 +119,26 @@ def flood_fill(
             return FillResult(0, 0, 0, 0, 0)
     tolerance = max(0, min(255, int(tolerance)))
     expand_px = _validate_expand(expand)
+    gap_close_px = _validate_gap_close(gap_close)
 
     sample = _resolve_sample_buffer(reference_image, canvas, (h, w))
     seed = sample[sy, sx].astype(np.int16)
     diff = np.abs(sample.astype(np.int16) - seed[None, None, :])
     candidates = diff.max(axis=-1) <= tolerance
+    if gap_close_px > 0:
+        # Thicken the *ink* (not-candidates) by ``gap_close_px`` so
+        # that small broken-line gaps bridge for the duration of this
+        # flood. Pure dilation rather than closing: closing-then-erode
+        # leaves 1-px gaps in 1-px lines unbridged because the eroded
+        # bridge has no surviving neighbour. Pure dilation matches
+        # MediBang's "Close gap" slider — gaps up to ``2 * gap_close``
+        # pixels wide bridge from each side; legitimate corridors of
+        # that width also disappear, so the user picks the radius for
+        # the largest gap they want to bridge.
+        from Imervue.paint.selection_ops import expand as dilate
+        ink = ~candidates
+        ink_thickened = dilate(ink, gap_close_px)
+        candidates = ~ink_thickened
     if selection is not None:
         candidates = candidates & selection
 
@@ -220,4 +249,19 @@ def _validate_expand(expand: int) -> int:
         raise ValueError(f"expand must be >= 0, got {value}")
     if value > MAX_EXPAND:
         raise ValueError(f"expand must be <= {MAX_EXPAND}, got {value}")
+    return value
+
+
+def _validate_gap_close(gap_close: int) -> int:
+    """Clamp / reject ``gap_close`` to ``[0, MAX_GAP_CLOSE]``."""
+    try:
+        value = int(gap_close)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"gap_close must be an integer, got {gap_close!r}",
+        ) from exc
+    if value < 0:
+        raise ValueError(f"gap_close must be >= 0, got {value}")
+    if value > MAX_GAP_CLOSE:
+        raise ValueError(f"gap_close must be <= {MAX_GAP_CLOSE}, got {value}")
     return value

@@ -553,6 +553,7 @@ class FillTool:
             selection=self._selection_provider(),
             reference_image=reference,
             expand=fill.expand_px,
+            gap_close=fill.gap_close_px,
         )
         return not result.is_empty
 

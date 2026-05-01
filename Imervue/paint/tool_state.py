@@ -138,6 +138,8 @@ FILL_TOLERANCE_MAX = 255
 # in numpy / fill at module-load time.
 FILL_EXPAND_MIN = 0
 FILL_EXPAND_MAX = 32
+FILL_GAP_CLOSE_MIN = 0
+FILL_GAP_CLOSE_MAX = 16
 
 
 @dataclass(frozen=True)
@@ -149,6 +151,7 @@ class FillSettings:
     sample_all_layers: bool = False
     expand_px: int = 0
     use_reference_layer: bool = False
+    gap_close_px: int = 0
 
 
 # Each entry in :attr:`ToolState.sub_tools` is a frozen snapshot of the
@@ -548,6 +551,7 @@ class ToolState:
                 "sample_all_layers": self.fill.sample_all_layers,
                 "expand_px": self.fill.expand_px,
                 "use_reference_layer": self.fill.use_reference_layer,
+                "gap_close_px": self.fill.gap_close_px,
             },
             "selection_mode": self.selection_mode,
             "gradient_kind": self.gradient_kind,
@@ -641,6 +645,8 @@ def _clamp_fill_attr(key: str, value: Any) -> Any:
         return max(FILL_TOLERANCE_MIN, min(FILL_TOLERANCE_MAX, int(value)))
     if key == "expand_px":
         return max(FILL_EXPAND_MIN, min(FILL_EXPAND_MAX, int(value)))
+    if key == "gap_close_px":
+        return max(FILL_GAP_CLOSE_MIN, min(FILL_GAP_CLOSE_MAX, int(value)))
     if key in ("contiguous", "sample_all_layers", "use_reference_layer"):
         return bool(value)
     return value
@@ -655,6 +661,7 @@ def _fill_from_dict(raw: Any) -> FillSettings:
         sample_all_layers=bool(raw.get("sample_all_layers", False)),
         expand_px=_clamp_fill_attr("expand_px", raw.get("expand_px", 0)),
         use_reference_layer=bool(raw.get("use_reference_layer", False)),
+        gap_close_px=_clamp_fill_attr("gap_close_px", raw.get("gap_close_px", 0)),
     )
 
 

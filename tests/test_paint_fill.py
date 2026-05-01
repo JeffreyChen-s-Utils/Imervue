@@ -423,3 +423,122 @@ def test_fill_settings_clamps_expand_below_zero():
     state = ts.load_tool_state()
     state.set_fill(expand_px=-5)
     assert state.fill.expand_px == ts.FILL_EXPAND_MIN
+
+
+# ---------------------------------------------------------------------------
+# Color Drop — morphological closing of broken-line gaps
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def gappy_lineart_canvas():
+    """20x20 canvas with a closed black box that has a 1px gap on the
+    right wall — a regular flood from inside leaks straight out.
+    """
+    arr = np.full((20, 20, 4), 255, dtype=np.uint8)
+    # Top, bottom, left walls fully closed.
+    arr[5, 5:16, :3] = 0
+    arr[14, 5:16, :3] = 0
+    arr[5:15, 5, :3] = 0
+    # Right wall has a 1-pixel hole at row 9.
+    arr[5:9, 15, :3] = 0
+    arr[10:15, 15, :3] = 0
+    return arr
+
+
+def test_regular_fill_leaks_through_gap(gappy_lineart_canvas):
+    canvas = gappy_lineart_canvas.copy()
+    flood_fill(canvas, 8, 9, (200, 0, 0), tolerance=0, contiguous=True)
+    # The leak reaches the canvas's far edge.
+    assert (canvas[0, 0, 0] == 200) or (canvas[19, 19, 0] == 200)
+
+
+def test_gap_close_contains_fill_inside_box(gappy_lineart_canvas):
+    canvas = gappy_lineart_canvas.copy()
+    flood_fill(
+        canvas, 8, 9, (200, 0, 0),
+        tolerance=0, contiguous=True, gap_close=2,
+    )
+    # Outside the box stays white.
+    assert canvas[0, 0, 0] == 255
+    assert canvas[19, 19, 0] == 255
+    # Inside the box is painted.
+    assert canvas[8, 9, 0] == 200
+
+
+def test_gap_close_zero_is_noop():
+    """Without gap_close the fill behaves exactly like the existing path."""
+    canvas = np.full((10, 10, 4), 255, dtype=np.uint8)
+    canvas[..., :3] = 0
+    a = canvas.copy()
+    b = canvas.copy()
+    out_a = flood_fill(a, 0, 0, (200, 0, 0), tolerance=0, gap_close=0)
+    out_b = flood_fill(b, 0, 0, (200, 0, 0), tolerance=0)
+    assert out_a.pixels_filled == out_b.pixels_filled
+
+
+def test_gap_close_rejects_negative():
+    canvas = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        flood_fill(canvas, 0, 0, (1, 2, 3), gap_close=-1)
+
+
+def test_gap_close_rejects_above_max():
+    from Imervue.paint.fill import MAX_GAP_CLOSE
+    canvas = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        flood_fill(canvas, 0, 0, (1, 2, 3), gap_close=MAX_GAP_CLOSE + 1)
+
+
+def test_gap_close_too_small_does_not_close_wide_gap():
+    """A gap wider than ``2 * gap_close`` must remain open — the
+    documented trade-off of the dilation-based bridge."""
+    arr = np.full((20, 20, 4), 255, dtype=np.uint8)
+    arr[5, 5:16, :3] = 0
+    arr[14, 5:16, :3] = 0
+    arr[5:15, 5, :3] = 0
+    # 5-pixel-wide gap on the right wall: only rows 5..8 + 14 of col
+    # 15 are inked; rows 9..13 are open. gap_close=1 dilates by 1 on
+    # each side which can't bridge 5 pixels.
+    arr[5:9, 15, :3] = 0
+    arr[14, 15, :3] = 0
+    canvas = arr.copy()
+    flood_fill(
+        canvas, 8, 9, (200, 0, 0),
+        tolerance=0, contiguous=True, gap_close=1,
+    )
+    # Leak still happens because the gap is too wide for a 1-px close.
+    assert (canvas[0, 0, 0] == 200) or (canvas[19, 19, 0] == 200)
+
+
+def test_fill_settings_round_trip_includes_gap_close():
+    state = ts.load_tool_state()
+    state.set_fill(gap_close_px=4)
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.fill.gap_close_px == 4
+
+
+def test_fill_settings_clamps_gap_close_above_max():
+    state = ts.load_tool_state()
+    state.set_fill(gap_close_px=ts.FILL_GAP_CLOSE_MAX + 50)
+    assert state.fill.gap_close_px == ts.FILL_GAP_CLOSE_MAX
+
+
+def test_fill_settings_clamps_gap_close_below_zero():
+    state = ts.load_tool_state()
+    state.set_fill(gap_close_px=-5)
+    assert state.fill.gap_close_px == ts.FILL_GAP_CLOSE_MIN
+
+
+def test_fill_tool_uses_gap_close_setting(gappy_lineart_canvas):
+    state = ts.load_tool_state()
+    state.set_foreground((100, 0, 0))
+    state.set_fill(tolerance=0, contiguous=True, gap_close_px=2)
+    tool = FillTool(state)
+    canvas = gappy_lineart_canvas.copy()
+    evt = PointerEvent(
+        phase="press", x=8, y=9, button=1, modifiers=0, pressure=1.0,
+    )
+    assert tool.handle(evt, canvas) is True
+    # Outside the box stays white — gap_close prevented the leak.
+    assert canvas[0, 0, 0] == 255
