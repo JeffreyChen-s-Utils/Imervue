@@ -245,3 +245,105 @@ def test_render_different_colours_per_run_yield_different_pixels():
     a = render_styled_text(a_text)
     b = render_styled_text(b_text)
     assert not np.array_equal(a, b)
+
+
+# ---------------------------------------------------------------------------
+# Ruby (furigana) annotation
+# ---------------------------------------------------------------------------
+
+
+def test_styled_run_defaults_ruby_to_empty():
+    run = StyledRun(text="Hello")
+    assert run.ruby_text == ""
+
+
+def test_styled_run_rejects_non_string_ruby():
+    with pytest.raises(ValueError, match="ruby_text"):
+        StyledRun(text="x", ruby_text=None)   # type: ignore[arg-type]
+
+
+def test_styled_run_to_dict_omits_empty_ruby():
+    """An unset ruby field shouldn't bloat saved JSON."""
+    raw = StyledRun(text="x").to_dict()
+    assert "ruby_text" not in raw
+
+
+def test_styled_run_round_trips_ruby_via_to_from_dict():
+    original = StyledRun(text="桜", ruby_text="さくら")
+    rebuilt = StyledRun.from_dict(original.to_dict())
+    assert rebuilt.ruby_text == "さくら"
+
+
+def test_merge_adjacent_keeps_runs_with_different_ruby_separate():
+    """Two runs that share style but carry different ruby readings
+    must NOT collapse — the ruby reading is meaningful per-run."""
+    text = StyledText(runs=[
+        StyledRun(text="桜", ruby_text="さくら"),
+        StyledRun(text="野", ruby_text="の"),
+    ])
+    text.merge_adjacent()
+    assert len(text.runs) == 2
+
+
+def test_merge_adjacent_collapses_runs_with_same_ruby():
+    """Identical style + identical ruby reading on consecutive runs
+    is the safe-to-merge case."""
+    text = StyledText(runs=[
+        StyledRun(text="桜", ruby_text="さくら"),
+        StyledRun(text="桜", ruby_text="さくら"),
+    ])
+    text.merge_adjacent()
+    assert len(text.runs) == 1
+
+
+def test_apply_style_preserves_ruby_on_split_parts():
+    text = StyledText(runs=[
+        StyledRun(text="桜野", ruby_text="さくらの"),
+    ])
+    text.apply_style(start=0, end=1, style=TextStyle(font_size=48))
+    # Both halves keep the original ruby_text — preserving data is
+    # safer than silently dropping it on a partial restyle.
+    assert all(run.ruby_text == "さくらの" for run in text.runs)
+
+
+def test_render_with_ruby_makes_buffer_taller():
+    """A run with ruby annotation needs vertical space above the line
+    for the small ruby glyphs."""
+    plain = StyledText()
+    plain.append("ABC", style=TextStyle(font_size=24))
+    plain_buf = render_styled_text(plain)
+
+    ruby = StyledText()
+    ruby.runs.append(StyledRun(
+        text="ABC", style=TextStyle(font_size=24), ruby_text="ruby",
+    ))
+    ruby_buf = render_styled_text(ruby)
+    assert ruby_buf.shape[0] > plain_buf.shape[0]
+
+
+def test_render_with_ruby_paints_pixels_above_base_text():
+    """Ruby pixels must appear strictly above the base text rows."""
+    text = StyledText()
+    text.runs.append(StyledRun(
+        text="A",
+        style=TextStyle(font_size=48, color=(255, 0, 0, 255)),
+        ruby_text="r",
+    ))
+    buf = render_styled_text(text)
+    rows_with_ink = np.where(buf[..., 3].any(axis=1))[0]
+    assert rows_with_ink.size > 0
+    assert rows_with_ink.min() < rows_with_ink.max()
+
+
+def test_render_empty_ruby_matches_no_ruby_field():
+    """Ruby empty-string round-trip yields the same image as a run
+    without ruby_text — no spurious vertical offset."""
+    a = StyledText()
+    a.runs.append(StyledRun(text="A", style=TextStyle(font_size=32)))
+    b = StyledText()
+    b.runs.append(StyledRun(
+        text="A", style=TextStyle(font_size=32), ruby_text="",
+    ))
+    np.testing.assert_array_equal(
+        render_styled_text(a), render_styled_text(b),
+    )

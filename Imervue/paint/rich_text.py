@@ -35,6 +35,15 @@ LINE_HEIGHT_RATIO = 1.25   # line height = font_size * this
 # don't clip at the buffer edge.
 LAYOUT_PADDING_PX = 8
 
+# Ruby (furigana) annotation — small reading glyphs drawn above the
+# base run for CJK comic typesetting. The ratio matches the printing
+# convention of ruby being half the base point size; the gap is the
+# vertical space between ruby baseline and base run top so the two
+# do not collide. The constants are module-level so the layout +
+# render passes use the exact same numbers.
+RUBY_FONT_RATIO = 0.5
+RUBY_GAP_PX = 2
+
 
 @dataclass(frozen=True)
 class TextStyle:
@@ -89,10 +98,19 @@ class TextStyle:
 
 @dataclass
 class StyledRun:
-    """One ``(text, style)`` pair in a :class:`StyledText`."""
+    """One ``(text, style)`` pair in a :class:`StyledText`.
+
+    ``ruby_text`` is the optional furigana / phonetic reading drawn
+    above the run at :data:`RUBY_FONT_RATIO` of the base font size.
+    The renderer leaves vertical room above the line for the ruby
+    glyphs so they do not crash into the previous line. An empty
+    string (the default) means "no ruby" — the run lays out as plain
+    text.
+    """
 
     text: str
     style: TextStyle = field(default_factory=TextStyle)
+    ruby_text: str = ""
 
     def __post_init__(self) -> None:
         # Disallow ``None``-typed text — every run must be a string,
@@ -101,9 +119,16 @@ class StyledRun:
             raise ValueError(
                 f"run text must be str, got {type(self.text).__name__}",
             )
+        if not isinstance(self.ruby_text, str):
+            raise ValueError(
+                f"ruby_text must be str, got {type(self.ruby_text).__name__}",
+            )
 
     def to_dict(self) -> dict:
-        return {"text": self.text, "style": self.style.to_dict()}
+        out: dict = {"text": self.text, "style": self.style.to_dict()}
+        if self.ruby_text:
+            out["ruby_text"] = self.ruby_text
+        return out
 
     @classmethod
     def from_dict(cls, raw: dict) -> StyledRun:
@@ -112,6 +137,7 @@ class StyledRun:
         return cls(
             text=str(raw.get("text", "")),
             style=TextStyle.from_dict(raw.get("style", {})),
+            ruby_text=str(raw.get("ruby_text", "")),
         )
 
 
@@ -140,18 +166,27 @@ class StyledText:
         return sum(len(r.text) for r in self.runs)
 
     def merge_adjacent(self) -> None:
-        """Collapse consecutive runs that share a TextStyle.
+        """Collapse consecutive runs that share a TextStyle and ruby.
 
         Mutates in place. Empty-text runs are always dropped — they
-        have no visible effect and confuse downstream renderers.
+        have no visible effect and confuse downstream renderers. Ruby
+        annotation participates in the equality check so two runs
+        with different ruby readings stay separate even when their
+        font / colour matches.
         """
         out: list[StyledRun] = []
         for run in self.runs:
             if not run.text:
                 continue
-            if out and out[-1].style == run.style:
+            if (
+                out
+                and out[-1].style == run.style
+                and out[-1].ruby_text == run.ruby_text
+            ):
                 out[-1] = StyledRun(
-                    text=out[-1].text + run.text, style=out[-1].style,
+                    text=out[-1].text + run.text,
+                    style=out[-1].style,
+                    ruby_text=out[-1].ruby_text,
                 )
             else:
                 out.append(replace(run))
@@ -181,13 +216,16 @@ class StyledText:
             if local_start > 0:
                 new_runs.append(StyledRun(
                     text=run.text[:local_start], style=run.style,
+                    ruby_text=run.ruby_text,
                 ))
             new_runs.append(StyledRun(
                 text=run.text[local_start:local_end], style=style,
+                ruby_text=run.ruby_text,
             ))
             if local_end < len(run.text):
                 new_runs.append(StyledRun(
                     text=run.text[local_end:], style=run.style,
+                    ruby_text=run.ruby_text,
                 ))
             cursor = run_end
         self.runs = new_runs
@@ -256,7 +294,40 @@ def render_styled_text(
             font=font,
             fill=tuple(int(c) for c in run.style.color),
         )
+        if run.ruby_text:
+            _draw_ruby(draw, run, font, placement)
     return np.ascontiguousarray(np.array(pil, dtype=np.uint8))
+
+
+def _draw_ruby(
+    draw: ImageDraw.ImageDraw,
+    run: StyledRun,
+    base_font: ImageFont.ImageFont,
+    placement: dict,
+) -> None:
+    """Render the run's ruby annotation centred above the base text.
+
+    The ruby font is :data:`RUBY_FONT_RATIO` × the base size; its
+    horizontal centre matches the base run's, and its baseline sits
+    :data:`RUBY_GAP_PX` above the base run's top edge. The layout
+    pass reserves the vertical space so the result never overlaps
+    the previous line.
+    """
+    ruby_size = max(TEXT_SIZE_MIN, int(run.style.font_size * RUBY_FONT_RATIO))
+    ruby_style = replace(run.style, font_size=ruby_size)
+    ruby_font = _load_font(ruby_style)
+    base_w, _ = _measure(base_font, run.text)
+    ruby_w, ruby_h = _measure(ruby_font, run.ruby_text)
+    base_x = placement["x"] + LAYOUT_PADDING_PX
+    base_y = placement["y"] + LAYOUT_PADDING_PX
+    ruby_x = base_x + max(0, (base_w - ruby_w) // 2)
+    ruby_y = base_y - ruby_h - RUBY_GAP_PX
+    draw.text(
+        (ruby_x, ruby_y),
+        run.ruby_text,
+        font=ruby_font,
+        fill=tuple(int(c) for c in run.style.color),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -302,12 +373,18 @@ def _layout_runs(text: StyledText) -> dict:
     line (multi-line bubbles) — line height is the largest font size
     in the line × :data:`LINE_HEIGHT_RATIO`.
 
+    Reserves vertical space above the first line for any ruby
+    annotation on the runs in that line, so the rendered ruby glyphs
+    never run off the top of the buffer or collide with the run
+    above.
+
     Returns a dict with ``width`` / ``height`` of the laid-out text
     plus a ``placements`` list of ``{run, x, y}`` entries.
     """
     placements: list[dict] = []
+    ruby_top_offset = _ruby_height_for_first_line(text)
     pen_x = 0
-    pen_y = 0
+    pen_y = ruby_top_offset
     line_height = 0
     max_width = 0
     for run in text.runs:
@@ -327,7 +404,9 @@ def _layout_runs(text: StyledText) -> dict:
             if not segment:
                 continue
             placements.append({
-                "run": StyledRun(text=segment, style=run.style),
+                "run": StyledRun(
+                    text=segment, style=run.style, ruby_text=run.ruby_text,
+                ),
                 "x": pen_x,
                 "y": pen_y,
             })
@@ -347,6 +426,34 @@ def _layout_runs(text: StyledText) -> dict:
         "width": int(max_width),
         "height": int(total_height),
     }
+
+
+def _ruby_height_for_first_line(text: StyledText) -> int:
+    """Return the vertical reservation needed for ruby on the first line.
+
+    Walks runs left-to-right and stops at the first newline since
+    that opens a new line; ruby on later lines is handled by the
+    line-height bump in the regular layout loop. Zero when no run in
+    the first line carries ruby annotation.
+    """
+    needed = 0
+    for run in text.runs:
+        if "\n" in run.text:
+            # Once a line break is seen the first line is complete;
+            # ruby on subsequent runs belongs to a later line.
+            head = run.text.split("\n", 1)[0]
+            if head and run.ruby_text:
+                needed = max(needed, _ruby_block_height(run))
+            break
+        if run.ruby_text and run.text:
+            needed = max(needed, _ruby_block_height(run))
+    return needed
+
+
+def _ruby_block_height(run: StyledRun) -> int:
+    """Pixel height a ruby annotation reserves above the base text."""
+    ruby_size = max(TEXT_SIZE_MIN, int(run.style.font_size * RUBY_FONT_RATIO))
+    return ruby_size + RUBY_GAP_PX
 
 
 def _measure(font, segment: str) -> tuple[int, int]:
