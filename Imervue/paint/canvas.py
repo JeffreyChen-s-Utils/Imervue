@@ -22,6 +22,7 @@ Public API:
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -59,6 +60,7 @@ from OpenGL.GL import (
     glOrtho,
     glPopMatrix,
     glPushMatrix,
+    glRotatef,
     glScalef,
     glPixelStorei,
     glTexCoord2f,
@@ -167,6 +169,20 @@ def clamp_zoom(value: float) -> float:
     return max(ZOOM_MIN, min(ZOOM_MAX, float(value)))
 
 
+def _wrap_rotation(degrees: float) -> float:
+    """Fold a rotation angle into the canonical ``(-180, 180]`` range.
+
+    The view rotation accumulates over multiple ``set_rotation_around_centre``
+    calls; without wrapping, an artist who rotates many times in one
+    direction would push the field past 360° and surprise downstream
+    code that assumes a bounded angle.
+    """
+    wrapped = ((float(degrees) + 180.0) % 360.0) - 180.0
+    if wrapped == -180.0:
+        return 180.0
+    return wrapped
+
+
 class PaintCanvas(QOpenGLWidget):
     """GPU canvas for the Paint tab. See module docstring for the API."""
 
@@ -191,6 +207,13 @@ class PaintCanvas(QOpenGLWidget):
         self._zoom = 1.0
         self._pan_x = 0.0
         self._pan_y = 0.0
+        # Display rotation in degrees. Affects the GL modelview matrix
+        # and screen→image conversion, but never mutates the layer
+        # pixels themselves — purely a view transform so the user can
+        # spin the canvas under their hand without re-orienting the
+        # tablet. Promoted out of the unrotated path so View-menu
+        # rotation actions (21d) and Phase 22 paintGL apply uniformly.
+        self._rotation_deg = 0.0
         # Set when ``_reset_view_to_fit`` is called against a widget
         # that's too small to host the document at a sensible zoom
         # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
@@ -263,6 +286,7 @@ class PaintCanvas(QOpenGLWidget):
             self._marquee_segments = None
             self._marquee_timer.stop()
             self._user_view_locked = False
+            self._rotation_deg = 0.0
             self.update()
             return
         if arr.ndim != 3 or arr.shape[2] != 4 or arr.dtype != np.uint8:
@@ -333,6 +357,38 @@ class PaintCanvas(QOpenGLWidget):
     def zoom_factor(self) -> float:
         return self._zoom
 
+    def rotation_degrees(self) -> float:
+        """Return the current view rotation in degrees."""
+        return float(self._rotation_deg)
+
+    def set_canvas_rotation(self, degrees: float) -> None:
+        """Set the view rotation absolutely. Repaints; never mutates pixels."""
+        wrapped = _wrap_rotation(float(degrees))
+        if wrapped == self._rotation_deg:
+            return
+        self._rotation_deg = wrapped
+        self._user_view_locked = True
+        self.update()
+
+    def set_rotation_around_centre(
+        self, anchor_zoom: float, delta_deg: float,
+    ) -> None:
+        """Rotate the view by ``delta_deg`` keeping the widget centre fixed.
+
+        ``anchor_zoom`` is informational — the widget centre is the
+        anchor in screen space; the maths reduces to a simple delta
+        because rotating about the visual midpoint doesn't shift it.
+        Pan stays valid because the rotation pivots about the centre,
+        not about an off-centre image-space point.
+        """
+        del anchor_zoom   # accepted for callsite stability; unused
+        new_rotation = _wrap_rotation(self._rotation_deg + float(delta_deg))
+        if new_rotation == self._rotation_deg:
+            return
+        self._rotation_deg = new_rotation
+        self._user_view_locked = True
+        self.update()
+
     def set_zoom(self, factor: float) -> None:
         """Programmatic zoom — pivots about the widget centre.
 
@@ -393,6 +449,13 @@ class PaintCanvas(QOpenGLWidget):
         glLoadIdentity()
         glTranslatef(self._pan_x, self._pan_y, 0.0)
         glScalef(self._zoom, self._zoom, 1.0)
+        # Rotation pivots about the canvas centre so the visual mid
+        # stays put — matches the screen↔image conversion math in
+        # ``_screen_to_image`` and the View-menu rotate action.
+        if self._rotation_deg != 0.0:
+            glTranslatef(w / 2.0, h / 2.0, 0.0)
+            glRotatef(self._rotation_deg, 0.0, 0.0, 1.0)
+            glTranslatef(-w / 2.0, -h / 2.0, 0.0)
 
         glBindTexture(GL_TEXTURE_2D, self._texture)
         glColor4f(1.0, 1.0, 1.0, 1.0)
@@ -572,9 +635,26 @@ class PaintCanvas(QOpenGLWidget):
     def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
         if self._zoom <= 0:
             return (0.0, 0.0)
-        x = (sx - self._pan_x) / self._zoom
-        y = (sy - self._pan_y) / self._zoom
-        return (x, y)
+        # Undo pan + zoom first; then unwind the view rotation around
+        # the canvas's image-space midpoint so a rotated canvas still
+        # routes brush dabs onto the pixel under the cursor.
+        rel_x = (sx - self._pan_x) / self._zoom
+        rel_y = (sy - self._pan_y) / self._zoom
+        if self._rotation_deg == 0.0:
+            return (rel_x, rel_y)
+        shape = self._document.shape
+        if shape is None:
+            return (rel_x, rel_y)
+        h, w = shape
+        cx = float(w) / 2.0
+        cy = float(h) / 2.0
+        rad = math.radians(-self._rotation_deg)
+        cos_a = math.cos(rad)
+        sin_a = math.sin(rad)
+        dx = rel_x - cx
+        dy = rel_y - cy
+        return (cx + dx * cos_a - dy * sin_a,
+                cy + dx * sin_a + dy * cos_a)
 
     def _is_pan_button(self, event: QMouseEvent) -> bool:
         if event.button() == Qt.MouseButton.MiddleButton:
