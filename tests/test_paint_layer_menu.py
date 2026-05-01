@@ -30,8 +30,9 @@ def test_layer_menu_has_documented_actions(qapp):
     try:
         layer_menu = menu_for(ws, "layer")
         # 4 layer-stack actions + sep + 5 mask actions + sep
-        # + clipping toggle + sep + delete = 14 entries.
-        assert len(layer_menu.actions()) == 14
+        # + clipping toggle + sep + 4 effect actions + sep
+        # + delete = 19 entries.
+        assert len(layer_menu.actions()) == 19
     finally:
         ws.deleteLater()
 

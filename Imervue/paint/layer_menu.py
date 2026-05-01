@@ -56,6 +56,15 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         ("paint_layer_toggle_clip", "Toggle Clipping Mask",
          bridge.toggle_clipping_mask, "Ctrl+Alt+G"),
         (None, None, None, None),
+        ("paint_layer_fx_drop_shadow", "Add Drop Shadow",
+         bridge.add_drop_shadow, ""),
+        ("paint_layer_fx_outer_glow", "Add Outer Glow",
+         bridge.add_outer_glow, ""),
+        ("paint_layer_fx_stroke", "Add Stroke",
+         bridge.add_stroke, ""),
+        ("paint_layer_fx_clear", "Clear Effects",
+         bridge.clear_effects, ""),
+        (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
     ):
@@ -139,6 +148,46 @@ class _LayerMenuBridge:
     def apply_mask(self) -> None:
         document = self._workspace.canvas().document()
         if document.apply_layer_mask():
+            self._refresh_canvas()
+
+    # ---- layer effects --------------------------------------------------
+
+    def add_drop_shadow(self) -> None:
+        self._add_effect("drop_shadow")
+
+    def add_outer_glow(self) -> None:
+        self._add_effect("outer_glow")
+
+    def add_stroke(self) -> None:
+        self._add_effect("stroke")
+
+    def clear_effects(self) -> None:
+        document = self._workspace.canvas().document()
+        layer = document.active_layer()
+        if layer is None or not layer.effects:
+            return
+        if document.set_layer_effects(effects=()):
+            self._refresh_canvas()
+
+    def _add_effect(self, kind: str) -> None:
+        """Append an effect of ``kind`` to the active layer.
+
+        Replaces an existing effect of the same kind so a second
+        click on "Add Drop Shadow" doesn't stack two shadows — the
+        renderer takes the first occurrence per kind anyway.
+        """
+        from Imervue.paint.layer_effects import DEFAULT_PARAMS, LayerEffect
+        document = self._workspace.canvas().document()
+        layer = document.active_layer()
+        if layer is None:
+            return
+        new_effect = LayerEffect(
+            kind=kind, params=dict(DEFAULT_PARAMS[kind]),
+        )
+        # Drop any existing effect of the same kind so the user gets
+        # an obvious "replaced" rather than a silent no-op.
+        keep = tuple(e for e in layer.effects if e.kind != kind)
+        if document.set_layer_effects(effects=keep + (new_effect,)):
             self._refresh_canvas()
 
     # ---- clipping mask --------------------------------------------------
