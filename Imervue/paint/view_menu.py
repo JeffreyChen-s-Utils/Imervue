@@ -136,7 +136,11 @@ class _ViewMenuBridge:
 
     def toggle_onion_skin(self, checked: bool) -> None:
         self._workspace._onion_skin_visible = bool(checked)   # noqa: SLF001
-        self._workspace.canvas().update()
+        canvas = self._workspace.canvas()
+        if hasattr(canvas, "set_onion_skin_visible"):
+            canvas.set_onion_skin_visible(bool(checked))
+        else:   # pragma: no cover - older canvas builds
+            canvas.update()
 
     def toggle_quick_mask(self, checked: bool) -> None:
         state = self._workspace.state()

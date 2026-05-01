@@ -230,6 +230,14 @@ class PaintCanvas(QOpenGLWidget):
         # (e.g. unit tests that don't need the HUD overlay).
         self._size_hud = None
         self._tool_state_for_hud = None
+        # Optional onion-skin overlay — the workspace sets a callable
+        # via ``set_onion_skin_source(callable)`` that returns the
+        # HxWx4 RGBA buffer to alpha-blit above the active layer
+        # (or ``None`` to skip the overlay this frame).
+        self._onion_skin_visible = False
+        self._onion_skin_source = None
+        self._onion_skin_texture = None
+        self._onion_skin_buffer_id = None
         # Set when ``_reset_view_to_fit`` is called against a widget
         # that's too small to host the document at a sensible zoom
         # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
@@ -372,6 +380,27 @@ class PaintCanvas(QOpenGLWidget):
 
     def zoom_factor(self) -> float:
         return self._zoom
+
+    def set_onion_skin_visible(self, visible: bool) -> None:
+        """Toggle the onion-skin overlay; repaints the canvas."""
+        new_value = bool(visible)
+        if new_value == self._onion_skin_visible:
+            return
+        self._onion_skin_visible = new_value
+        self.update()
+
+    def set_onion_skin_source(self, callable_or_none) -> None:
+        """Wire the onion-skin overlay's pixel source.
+
+        ``callable_or_none`` is a zero-arg callable that returns the
+        current overlay buffer (HxWx4 uint8 RGBA matching the
+        document shape) or ``None`` to skip the overlay this frame.
+        Stored verbatim so callers can swap the source mid-session
+        (e.g. when the active animation changes).
+        """
+        self._onion_skin_source = callable_or_none
+        self._onion_skin_texture = None   # force re-upload of new buffers
+        self._onion_skin_buffer_id = None
 
     def set_size_hud(self, hud, tool_state) -> None:
         """Wire the brush-size HUD overlay.
@@ -517,6 +546,8 @@ class PaintCanvas(QOpenGLWidget):
         glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
         glEnd()
         glBindTexture(GL_TEXTURE_2D, 0)
+        if self._onion_skin_visible:
+            self._draw_onion_skin(w, h)
         if self.should_paint_pixel_grid():
             self._draw_pixel_grid(w, h)
         self._draw_marquee()
@@ -564,6 +595,58 @@ class PaintCanvas(QOpenGLWidget):
     def _tick_marquee(self) -> None:
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
+
+    def _draw_onion_skin(  # pragma: no cover - GL needs display
+        self, w: int, h: int,
+    ) -> None:
+        """Blit the onion-skin overlay buffer above the layer composite.
+
+        Uploads the source buffer as a separate GL texture so the
+        layer-composite texture isn't disturbed; re-upload only
+        fires when the source returns a different ndarray (compared
+        by ``id()``) so a steady-state animation doesn't churn the
+        texture every frame.
+        """
+        if self._onion_skin_source is None:
+            return
+        try:
+            buffer = self._onion_skin_source()
+        except (ValueError, RuntimeError):
+            return
+        if buffer is None:
+            return
+        if (
+            buffer.ndim != 3
+            or buffer.shape[2] != 4
+            or buffer.dtype != np.uint8
+        ):
+            return
+        bh, bw = buffer.shape[:2]
+        if (bh, bw) != (h, w):
+            return
+        # Upload only when the buffer object actually changed.
+        if id(buffer) != self._onion_skin_buffer_id:
+            if self._onion_skin_texture is None:
+                self._onion_skin_texture = int(glGenTextures(1))
+            glBindTexture(GL_TEXTURE_2D, self._onion_skin_texture)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGBA, bw, bh, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, buffer.tobytes(),
+            )
+            self._onion_skin_buffer_id = id(buffer)
+        glBindTexture(GL_TEXTURE_2D, self._onion_skin_texture)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glBegin(GL_QUADS)
+        glTexCoord2f(0.0, 0.0); glVertex2f(0.0, 0.0)
+        glTexCoord2f(1.0, 0.0); glVertex2f(w, 0.0)
+        glTexCoord2f(1.0, 1.0); glVertex2f(w, h)
+        glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
+        glEnd()
+        glBindTexture(GL_TEXTURE_2D, 0)
 
     def _draw_size_hud(self) -> None:  # pragma: no cover - GL needs display
         """Render the brush-size HUD ring at the canvas centre.
