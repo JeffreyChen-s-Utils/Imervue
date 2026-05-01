@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QMainWindow, QMenuBar, QStatusBar
+from PySide6.QtWidgets import QMainWindow, QStatusBar
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
@@ -39,7 +39,7 @@ from Imervue.paint.dock_panels import (
     MaterialDock,
     NavigatorDock,
 )
-from Imervue.paint.filter_menu import build_filter_menu
+from Imervue.paint.paint_menu_bar import build_paint_menu_bar
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
 from Imervue.paint.tool_dispatcher import ToolDispatcher
 
@@ -54,11 +54,12 @@ class PaintWorkspace(QMainWindow):
         super().__init__(parent)
         self._state = state if state is not None else ts.load_tool_state()
 
-        # The embedded main window has its own menu bar so the Filter menu
-        # has somewhere to live. The host window's menu bar is unaffected.
-        paint_menu_bar = QMenuBar(self)
-        paint_menu_bar.addMenu(build_filter_menu(self))
-        self.setMenuBar(paint_menu_bar)
+        # The embedded main window has its own menu bar so File / Edit
+        # / Layer / View / Tools / Filter / Settings / Window all live
+        # together — :func:`build_paint_menu_bar` populates the Filter
+        # menu and stashes the others on the workspace as
+        # ``_<key>_menu`` for the 21b–21g sub-phases to fill.
+        self.setMenuBar(build_paint_menu_bar(self))
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)
