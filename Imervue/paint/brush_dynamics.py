@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import numpy as np
 
-BRUSH_KINDS = ("pencil", "pen", "marker", "airbrush", "watercolor")
+BRUSH_KINDS = ("pencil", "pen", "marker", "airbrush", "watercolor", "sumi")
 
 
 def stylise_kernel(
@@ -50,6 +50,8 @@ def stylise_kernel(
         return _airbrush(kernel, rng)
     if kind == "watercolor":
         return _watercolor(kernel)
+    if kind == "sumi":
+        return _sumi(kernel, rng)
     return kernel.copy()
 
 
@@ -91,6 +93,38 @@ def _watercolor(kernel: np.ndarray) -> np.ndarray:
     eroded = np.minimum.reduce(shifts)
     edge = np.maximum(kernel - eroded, 0.0)
     out = kernel * 0.5 + edge * 1.6
+    return np.clip(out, 0.0, 1.0).astype(np.float32)
+
+
+def _sumi(kernel: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Calligraphy-style brush — directional ink gradient + irregular
+    edges from absorbed paper.
+
+    The kernel gets modulated by a horizontal alpha gradient so the
+    "trailing" side (right) has slightly less ink, simulating the
+    drying effect of a sumi-e brush leaving a thinner end. Per-row
+    multiplicative noise breaks the smooth disc into irregular hairs
+    along the perimeter — what calligraphy practitioners call
+    *kasure* (dry-brush effect).
+
+    Pure numpy; the seeded ``rng`` keeps a given stroke replayable.
+    """
+    h, w = kernel.shape
+    if h < 3 or w < 3:
+        return kernel.copy()
+    # Directional fade — the right side dries first.
+    fade = np.linspace(1.0, 0.55, w, dtype=np.float32)
+    fade_grid = np.broadcast_to(fade[None, :], (h, w))
+    # Horizontal hair texture — per-row coarse noise stretched along
+    # the y axis so the strands read as continuous brush hairs rather
+    # than salt-and-pepper.
+    coarse = rng.random((h, 1), dtype=np.float32) * 0.55 + 0.45
+    hair = np.broadcast_to(coarse, (h, w))
+    out = kernel * fade_grid * hair
+    # Punch the edge so the silhouette stays visible — rim doesn't
+    # dry to nothing.
+    rim_mask = (kernel > 0.0) & (kernel < 0.4)
+    out = np.where(rim_mask, np.maximum(out, kernel * 0.65), out)
     return np.clip(out, 0.0, 1.0).astype(np.float32)
 
 

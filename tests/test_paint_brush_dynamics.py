@@ -44,7 +44,9 @@ def test_stylise_kernel_unknown_kind_returns_identity(kernel):
 
 
 def test_brush_kinds_listed():
-    assert BRUSH_KINDS == ("pencil", "pen", "marker", "airbrush", "watercolor")
+    assert BRUSH_KINDS == (
+        "pencil", "pen", "marker", "airbrush", "watercolor", "sumi",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -178,3 +180,63 @@ def test_pressure_opacity_factor_floor_keeps_paint_visible():
 
 def test_pressure_opacity_factor_full_pressure_is_unity():
     assert pressure_opacity_factor(1.0) == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------------
+# Sumi-e brush kind
+# ---------------------------------------------------------------------------
+
+
+def test_sumi_returns_same_shape_and_dtype(kernel):
+    out = stylise_kernel(kernel, "sumi")
+    assert out.shape == kernel.shape
+    assert out.dtype == np.float32
+
+
+def test_sumi_drying_fade_makes_right_side_lighter(kernel):
+    """The right side of the kernel ('trailing edge') should average
+    less ink than the left because the brush is drying along its
+    travel direction."""
+    out = stylise_kernel(kernel, "sumi")
+    h, w = kernel.shape
+    left_half = out[:, : w // 2].mean()
+    right_half = out[:, w // 2:].mean()
+    assert left_half > right_half
+
+
+def test_sumi_seeded_rng_is_deterministic(kernel):
+    """Replays of the same stroke with the same seed must produce
+    identical kernels — important for undo/redo correctness."""
+    rng_a = np.random.default_rng(42)
+    rng_b = np.random.default_rng(42)
+    a = stylise_kernel(kernel, "sumi", rng_a)
+    b = stylise_kernel(kernel, "sumi", rng_b)
+    np.testing.assert_array_equal(a, b)
+
+
+def test_sumi_different_seeds_yield_different_textures(kernel):
+    a = stylise_kernel(kernel, "sumi", np.random.default_rng(1))
+    b = stylise_kernel(kernel, "sumi", np.random.default_rng(2))
+    assert not np.array_equal(a, b)
+
+
+def test_sumi_small_kernel_passes_through_unchanged():
+    """A 1×1 or 2×2 kernel can't carry the directional fade; the
+    stylise pass falls through to identity rather than crashing."""
+    tiny = np.array([[1.0]], dtype=np.float32)
+    out = stylise_kernel(tiny, "sumi")
+    np.testing.assert_array_equal(out, tiny)
+
+
+def test_sumi_preserves_visible_ink_in_kernel_interior(kernel):
+    """A stroke that leaves *no* pixels visible would mean the brush
+    is broken — the sumi modifier must keep at least some interior
+    ink."""
+    out = stylise_kernel(kernel, "sumi")
+    assert (out > 0.05).any()
+
+
+def test_sumi_output_clipped_to_unit_range(kernel):
+    out = stylise_kernel(kernel, "sumi")
+    assert out.min() >= 0.0
+    assert out.max() <= 1.0

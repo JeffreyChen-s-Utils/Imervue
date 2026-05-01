@@ -51,7 +51,7 @@ DEFAULT_TOOL = "brush"
 # Brush sub-types — the brush tool dispatches by this identifier so a single
 # tool entry covers pencil / pen / marker / airbrush / watercolour without
 # multiplying the toolbar.
-BRUSH_KINDS = ("pencil", "pen", "marker", "airbrush", "watercolor")
+BRUSH_KINDS = ("pencil", "pen", "marker", "airbrush", "watercolor", "sumi")
 DEFAULT_BRUSH_KIND = "pen"
 
 # Blend modes the brush can paint with. Mirrors the layer blend modes the
