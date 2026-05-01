@@ -229,6 +229,7 @@ class ToolDispatcher:
             "smudge": SmudgeTool(self._state, self._selection_provider),
             "bezier_pen": _BezierPenTool(self._state),
             "clone_stamp": _CloneStampTool(self._state),
+            "transform": _TransformHandleTool(self._state),
         }
 
 
@@ -954,3 +955,79 @@ class _CloneStampTool:
 
     def cancel(self) -> None:
         self._stamp.end_stroke()
+
+
+# ---------------------------------------------------------------------------
+# Transform handles tool — interactive scale / rotate via on-canvas handles
+# ---------------------------------------------------------------------------
+
+
+class _TransformHandleTool:
+    """Routes pointer events through :mod:`transform_handles`.
+
+    State lives on the workspace (``_transform_box``) so the tool can
+    survive across press / move / release without being attached to
+    a per-press object. The first activation sizes the box around the
+    full active layer; the user then drags handles to scale / rotate.
+
+    Commit is the responsibility of a separate workspace verb (e.g.
+    pressing Enter in the canvas key handler) — this tool only
+    mutates the box, never the layer pixels.
+    """
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._workspace = None
+        self._active_handle: str | None = None
+        self._last_pos: tuple[float, float] | None = None
+
+    def attach_workspace(self, workspace) -> None:
+        self._workspace = workspace
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.transform_handles import (
+            HANDLE_BODY,
+            apply_handle_drag,
+            from_rect,
+            hit_test,
+        )
+        ws = self._workspace
+        if ws is None:
+            return False
+        # Lazily seed the transform box around the layer's full extent
+        # the first time the tool sees an event.
+        if not hasattr(ws, "_transform_box"):
+            h, w = canvas.shape[:2]
+            ws._transform_box = from_rect(0.0, 0.0, float(w), float(h))
+        if evt.phase == "press":
+            handle = hit_test(ws._transform_box, (evt.x, evt.y))
+            if handle is None:
+                self._active_handle = None
+                self._last_pos = None
+                return False
+            self._active_handle = handle if handle != HANDLE_BODY else HANDLE_BODY
+            self._last_pos = (float(evt.x), float(evt.y))
+            return True
+        if (
+            evt.phase == "move"
+            and self._active_handle is not None
+            and self._last_pos is not None
+        ):
+            delta = (
+                float(evt.x) - self._last_pos[0],
+                float(evt.y) - self._last_pos[1],
+            )
+            ws._transform_box = apply_handle_drag(
+                ws._transform_box, self._active_handle, delta,
+            )
+            self._last_pos = (float(evt.x), float(evt.y))
+            return True
+        if evt.phase in ("release", "leave"):
+            self._active_handle = None
+            self._last_pos = None
+            return False
+        return False
+
+    def cancel(self) -> None:
+        self._active_handle = None
+        self._last_pos = None

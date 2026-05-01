@@ -565,6 +565,7 @@ english_word_dict = {
     "paint_view_reset_rotation": 'Reset Rotation',
     "paint_tool_bezier_pen": 'Pen',
     "paint_tool_clone_stamp": 'Clone Stamp',
+    "paint_tool_transform": 'Transform',
     "paint_settings_pressure_curve": 'Pressure Curve…',
     "paint_settings_shortcuts": 'Shortcuts…',
     "paint_settings_workspace_layouts": 'Workspace Layouts…',

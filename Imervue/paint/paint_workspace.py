@@ -184,6 +184,14 @@ class PaintWorkspace(QMainWindow):
         pen_tool = self._dispatcher._handlers.get("bezier_pen")  # noqa: SLF001
         if pen_tool is not None and hasattr(pen_tool, "attach_workspace"):
             pen_tool.attach_workspace(self)
+        # Transform-handle tool reads / writes the workspace's shared
+        # ``_transform_box`` so pointer state survives across events.
+        transform_tool = self._dispatcher._handlers.get("transform")  # noqa: SLF001
+        if (
+            transform_tool is not None
+            and hasattr(transform_tool, "attach_workspace")
+        ):
+            transform_tool.attach_workspace(self)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())

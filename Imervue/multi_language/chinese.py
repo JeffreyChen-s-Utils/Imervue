@@ -546,6 +546,7 @@ chinese_word_dict = {
     "paint_view_reset_rotation": '重置旋转',
     "paint_tool_bezier_pen": '钢笔',
     "paint_tool_clone_stamp": '仿制图章',
+    "paint_tool_transform": '变形',
     "paint_settings_pressure_curve": '笔压曲线…',
     "paint_settings_shortcuts": '快捷键…',
     "paint_settings_workspace_layouts": '工作区布局…',

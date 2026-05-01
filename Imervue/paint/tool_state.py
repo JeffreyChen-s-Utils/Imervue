@@ -47,6 +47,7 @@ TOOLS = (
     "zoom",
     "bezier_pen",
     "clone_stamp",
+    "transform",
 )
 DEFAULT_TOOL = "brush"
 

@@ -62,6 +62,7 @@ TOOL_ORDER = (
     ("smudge",        ""),
     ("bezier_pen",    "P"),
     ("clone_stamp",   "S"),
+    ("transform",     "Ctrl+T"),
     None,             # ── group break
     ("hand",          "H"),
     ("zoom",          "Z"),
@@ -177,7 +178,10 @@ class PaintOptionsBar(QToolBar):
 
         # Empty page for tools with no options yet (move / hand / zoom / blur / smudge / eyedropper)
         empty_idx = self._stack.addWidget(self._build_empty_strip(lang))
-        for tool in ("eyedropper", "move", "hand", "zoom", "blur", "smudge"):
+        for tool in (
+            "eyedropper", "move", "hand", "zoom", "blur", "smudge",
+            "bezier_pen", "clone_stamp", "transform",
+        ):
             self._page_for_tool[tool] = empty_idx
 
         self.addWidget(self._stack)

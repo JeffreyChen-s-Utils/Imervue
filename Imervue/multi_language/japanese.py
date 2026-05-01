@@ -557,6 +557,7 @@ japanese_word_dict = {
     "paint_view_reset_rotation": '回転をリセット',
     "paint_tool_bezier_pen": 'ペン',
     "paint_tool_clone_stamp": 'スタンプ',
+    "paint_tool_transform": '変形',
     "paint_settings_pressure_curve": '筆圧カーブ…',
     "paint_settings_shortcuts": 'ショートカット…',
     "paint_settings_workspace_layouts": 'ワークスペース…',
