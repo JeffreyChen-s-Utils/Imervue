@@ -224,6 +224,10 @@ class PaintWorkspace(QMainWindow):
         # they always read from the *current* active canvas — without
         # this indirection a tab switch would leave the dispatcher
         # talking to the previous tab's pixel buffer.
+        # Per-document undo / redo stack — committed by the dispatcher
+        # whenever a tool reports a successful mutation.
+        from Imervue.paint.undo_stack import UndoStack
+        self._undo_stack = UndoStack(self._canvas.document())
         self._dispatcher = ToolDispatcher(
             self._state,
             image_provider=lambda: self._canvas.current_image(),
@@ -232,6 +236,8 @@ class PaintWorkspace(QMainWindow):
             parent_widget=self,
             reference_provider=lambda: self._canvas.document().reference_layer_image(),
             composite_provider=lambda: self._canvas.document().composite(),
+            overlay_setter=lambda overlay: self._canvas.set_tool_overlay(overlay),
+            commit_undo=self._on_dispatcher_commit,
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
         # Bezier pen needs a workspace handle so it can read / write
@@ -274,6 +280,28 @@ class PaintWorkspace(QMainWindow):
         return self._state
 
     # ---- secondary views -----------------------------------------------
+
+    def _on_dispatcher_commit(self) -> None:
+        """Push an undo snapshot after the dispatcher commits a stroke.
+
+        Called by the dispatcher only at gesture boundaries (release
+        for brushes, single-click commits for fill / wand / shape) so
+        a long brush stroke counts as one undoable action rather than
+        every dab. The actual capture happens inside the UndoStack.
+        """
+        self._undo_stack.commit()
+
+    def undo(self) -> None:
+        """Undo the most recent committed stroke if there is one."""
+        if self._undo_stack.undo():
+            self._canvas.invalidate_texture()
+            self._canvas.update()
+
+    def redo(self) -> None:
+        """Re-apply the most recently undone stroke."""
+        if self._undo_stack.redo():
+            self._canvas.invalidate_texture()
+            self._canvas.update()
 
     def open_secondary_view(self):
         """Spawn an independent overview window onto the same composite.

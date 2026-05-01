@@ -38,6 +38,19 @@ def populate_edit_menu(workspace: PaintWorkspace) -> None:
     menu = menu_for(workspace, "edit")
     lang = language_wrapper.language_word_dict
 
+    undo_action = menu.addAction(lang.get("paint_edit_undo", "Undo"))
+    undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+    undo_action.triggered.connect(bridge.undo)
+    redo_action = menu.addAction(lang.get("paint_edit_redo", "Redo"))
+    # Bind both Ctrl+Y and Ctrl+Shift+Z so users from either Windows
+    # / Linux (Ctrl+Y) or macOS-style (Ctrl+Shift+Z) muscle memory
+    # have their gesture honoured. QAction supports a shortcut list.
+    redo_action.setShortcuts(
+        [QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")],
+    )
+    redo_action.triggered.connect(bridge.redo)
+    menu.addSeparator()
+
     quick_mask_action = menu.addAction(
         lang.get("paint_edit_quick_mask", "Quick Mask Mode"),
     )
@@ -67,6 +80,12 @@ class _EditMenuBridge:
     def __init__(self, workspace: PaintWorkspace):
         self._workspace = workspace
         self._quick_mask_action = None
+
+    def undo(self) -> None:
+        self._workspace.undo()
+
+    def redo(self) -> None:
+        self._workspace.redo()
 
     def toggle_quick_mask(self) -> None:
         """Flip the workspace's quick-mask mode and sync the action's

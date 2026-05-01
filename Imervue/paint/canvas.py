@@ -32,6 +32,8 @@ from OpenGL.GL import (
     GL_CLAMP_TO_EDGE,
     GL_COLOR_BUFFER_BIT,
     GL_LINEAR,
+    GL_LINE_LOOP,
+    GL_LINE_STRIP,
     GL_LINES,
     GL_ONE_MINUS_SRC_ALPHA,
     GL_QUADS,
@@ -274,6 +276,11 @@ class PaintCanvas(QOpenGLWidget):
         self._marquee_timer = QTimer(self)
         self._marquee_timer.setInterval(120)
         self._marquee_timer.timeout.connect(self._tick_marquee)
+        # Drag-preview overlay set by shape / rect-select tools while a
+        # gesture is in flight. Cleared on release. Drawn on top of
+        # the document texture so the user can see what they're about
+        # to commit before they let go.
+        self._tool_overlay: dict | None = None
 
     # ---- public API ------------------------------------------------------
 
@@ -355,6 +362,16 @@ class PaintCanvas(QOpenGLWidget):
     def current_selection(self) -> np.ndarray | None:
         return self._document.selection()
 
+    def invalidate_texture(self) -> None:
+        """Mark the GL texture for full re-upload on the next paint.
+
+        Used after wholesale document mutations (undo / redo, file
+        load) so the canvas's GL texture reflects the new pixels
+        instead of the previous frame's cache.
+        """
+        self._needs_upload = True
+        self._pending_damage = EMPTY_DAMAGE
+
     def set_selection(self, mask: np.ndarray | None) -> None:
         if mask is not None and (mask.ndim != 2 or mask.dtype != np.bool_):
             raise ValueError(
@@ -374,6 +391,24 @@ class PaintCanvas(QOpenGLWidget):
 
     def set_tool_dispatcher(self, dispatcher: ToolDispatcher | None) -> None:
         self._dispatcher = dispatcher
+
+    def set_tool_overlay(self, overlay: dict | None) -> None:
+        """Set or clear the active tool's drag-preview overlay.
+
+        ``overlay`` is a small dict telling the canvas what shape to
+        outline above the document texture:
+
+        * ``{"kind": "rect", "x0": ..., "y0": ..., "x1": ..., "y1": ...}``
+        * ``{"kind": "ellipse", "cx": ..., "cy": ..., "rx": ..., "ry": ...}``
+        * ``{"kind": "line", "x0": ..., "y0": ..., "x1": ..., "y1": ...}``
+        * ``{"kind": "polyline", "points": [(x, y), ...]}``
+
+        Pass ``None`` to clear. Tools call this on press / move and
+        clear on release; the canvas calls ``update`` so the overlay
+        repaints on the next event-loop tick.
+        """
+        self._tool_overlay = overlay
+        self.update()
 
     def set_cursor_for_tool(self, tool: str) -> None:
         self.setCursor(QCursor(cursor_for_tool(tool)))
@@ -601,6 +636,8 @@ class PaintCanvas(QOpenGLWidget):
         if self._bleed_guides_visible and self._bleed_guides is not None:
             self._draw_bleed_guides()
         self._draw_marquee()
+        if self._tool_overlay is not None:
+            self._draw_tool_overlay()
         glPopMatrix()
         # HUD overlay sits in widget-space (un-rotated) so the user
         # always sees a circular ring at the canvas centre regardless
@@ -645,6 +682,55 @@ class PaintCanvas(QOpenGLWidget):
     def _tick_marquee(self) -> None:
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
+
+    def _draw_tool_overlay(self) -> None:  # pragma: no cover - GL needs display
+        """Stroke the drag-preview shape set by the active tool.
+
+        Lines are drawn at zoom-compensated width so the outline is
+        always 1 screen-pixel thick regardless of canvas zoom.
+        """
+        overlay = self._tool_overlay
+        if not overlay:
+            return
+        kind = overlay.get("kind")
+        glDisable(GL_TEXTURE_2D)
+        glLineWidth(max(1.0, 1.0 / max(self._zoom, 1e-3)))
+        glColor4f(0.0, 0.0, 0.0, 0.7)
+        if kind == "rect":
+            x0 = float(overlay["x0"])
+            y0 = float(overlay["y0"])
+            x1 = float(overlay["x1"])
+            y1 = float(overlay["y1"])
+            glBegin(GL_LINE_LOOP)
+            glVertex2f(x0, y0)
+            glVertex2f(x1, y0)
+            glVertex2f(x1, y1)
+            glVertex2f(x0, y1)
+            glEnd()
+        elif kind == "ellipse":
+            cx = float(overlay["cx"])
+            cy = float(overlay["cy"])
+            rx = float(overlay["rx"])
+            ry = float(overlay["ry"])
+            segments = 64
+            glBegin(GL_LINE_LOOP)
+            for i in range(segments):
+                theta = 2.0 * math.pi * i / segments
+                glVertex2f(cx + rx * math.cos(theta), cy + ry * math.sin(theta))
+            glEnd()
+        elif kind == "line":
+            glBegin(GL_LINES)
+            glVertex2f(float(overlay["x0"]), float(overlay["y0"]))
+            glVertex2f(float(overlay["x1"]), float(overlay["y1"]))
+            glEnd()
+        elif kind == "polyline":
+            points = overlay.get("points", ())
+            if len(points) >= 2:
+                glBegin(GL_LINE_STRIP)
+                for x, y in points:
+                    glVertex2f(float(x), float(y))
+                glEnd()
+        glEnable(GL_TEXTURE_2D)
 
     def _draw_bleed_guides(self) -> None:  # pragma: no cover - GL needs display
         """Stroke the trim / bleed / safe rects from the active

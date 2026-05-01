@@ -101,6 +101,8 @@ class ToolDispatcher:
         reference_provider=None,
         composite_provider=None,
         panel_layout_provider=None,
+        overlay_setter=None,
+        commit_undo=None,
     ):
         # Damage rect from the last positively-handled event — the
         # canvas reads this after dispatch returns True so it can
@@ -132,6 +134,22 @@ class ToolDispatcher:
         # snap-to-panel brush option uses this to clip strokes to
         # the panel under the cursor at press time.
         self._panel_layout_provider = panel_layout_provider or (lambda: None)
+        # Sets / clears the canvas's drag-preview overlay. Tools that
+        # only commit on release (rect / ellipse / line / rect select)
+        # call this on press / move so the user sees what they're
+        # about to commit before they let go.
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        # Called once at the end of every committed gesture so the
+        # workspace can push an undo snapshot. Brushes commit on
+        # release; single-click tools (fill, wand) commit on press.
+        # The dispatcher figures out which boundary to fire on by
+        # tracking whether a press kicked off a continuous gesture.
+        self._commit_undo = commit_undo or (lambda: None)
+        # Tools that span a press-move-release gesture set this on a
+        # successful press; the release fires ``commit_undo``. Tools
+        # that mutate on a single click commit immediately when the
+        # press itself returns True.
+        self._gesture_pending_commit = False
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
         # Holding Alt during a press redirects the event to the
@@ -193,7 +211,46 @@ class ToolDispatcher:
             )
         else:
             self._last_damage = _EMPTY_DAMAGE
+        self._maybe_commit_undo(tool_name, evt, handled)
         return handled
+
+    # Tools whose press alone commits the gesture (no follow-up
+    # release expected to mutate). Single-shot mutations.
+    _SINGLE_SHOT_TOOLS = frozenset({
+        "fill", "select_wand",
+    })
+    # Tools that mutate canvas pixels — used to gate undo snapshots
+    # so a hover / hand / eyedropper interaction never burns a slot.
+    _MUTATING_TOOLS = frozenset({
+        "brush", "eraser", "fill", "smudge", "gradient",
+        "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
+        "speech_bubble", "clone_stamp",
+        "select_rect", "select_lasso", "select_wand", "select_quick",
+        "move",
+    })
+
+    def _maybe_commit_undo(
+        self, tool_name: str | None, evt: PointerEvent, handled: bool,
+    ) -> None:
+        """Push an undo snapshot at the right gesture boundary.
+
+        Continuous tools (brush, eraser, smudge, shape draws) commit
+        on release/leave so a stroke counts as one undoable action.
+        Single-shot tools (fill, wand) commit immediately on press.
+        Tools that don't mutate pixels never commit.
+        """
+        if tool_name not in self._MUTATING_TOOLS:
+            return
+        if tool_name in self._SINGLE_SHOT_TOOLS:
+            if handled and evt.phase == "press":
+                self._commit_undo()
+            return
+        if evt.phase == "press" and handled:
+            self._gesture_pending_commit = True
+            return
+        if evt.phase in ("release", "leave") and self._gesture_pending_commit:
+            self._gesture_pending_commit = False
+            self._commit_undo()
 
     @property
     def last_damage(self):
@@ -265,8 +322,8 @@ class ToolDispatcher:
                 self._selection_provider,
                 self._reference_provider,
             ),
-            "select_rect": RectSelectTool(sel_ctx),
-            "select_lasso": LassoSelectTool(sel_ctx),
+            "select_rect": RectSelectTool(sel_ctx, self._overlay_setter),
+            "select_lasso": LassoSelectTool(sel_ctx, self._overlay_setter),
             "select_wand": WandSelectTool(sel_ctx, self._state),
             "select_quick": QuickSelectTool(sel_ctx, self._state),
             "move": MoveTool(self._state, self._selection_provider, self._set_selection),
@@ -275,14 +332,14 @@ class ToolDispatcher:
             ),
             "gradient": GradientTool(self._state, self._selection_provider),
             "smudge": SmudgeTool(self._state, self._selection_provider),
-            "bezier_pen": _BezierPenTool(self._state),
-            "clone_stamp": _CloneStampTool(self._state),
+            "bezier_pen": _BezierPenTool(self._state, self._overlay_setter),
+            "clone_stamp": _CloneStampTool(self._state, self._overlay_setter),
             "transform": _TransformHandleTool(self._state),
             "speech_bubble": _SpeechBubbleTool(self._state),
-            "shape_rect": _RectShapeTool(self._state),
-            "shape_ellipse": _EllipseShapeTool(self._state),
-            "shape_line": _LineShapeTool(self._state),
-            "shape_polygon": _PolygonShapeTool(self._state),
+            "shape_rect": _RectShapeTool(self._state, self._overlay_setter),
+            "shape_ellipse": _EllipseShapeTool(self._state, self._overlay_setter),
+            "shape_line": _LineShapeTool(self._state, self._overlay_setter),
+            "shape_polygon": _PolygonShapeTool(self._state, self._overlay_setter),
             "crop": _CropTool(self._state),
         }
 
@@ -313,6 +370,17 @@ class _SelectionContext:
     def write(self, new_mask: np.ndarray) -> None:
         combined = combine(self._provider(), new_mask, self._state.selection_mode)
         self._setter(combined)
+
+    def clear(self) -> None:
+        """Drop the active selection entirely (no marquee).
+
+        The conventional click-on-empty-area-deselects gesture: a
+        rect-select press + release without movement, or any tool's
+        "you didn't draw anything" branch routes through here so the
+        next dab/fill/etc. operates against the full canvas instead
+        of inheriting a stale empty mask.
+        """
+        self._setter(None)
 
 
 # ---------------------------------------------------------------------------
@@ -694,18 +762,38 @@ class EyedropperTool:
 class RectSelectTool:
     """Drag a rectangle, commit on release using the active combine mode."""
 
-    def __init__(self, sel_ctx: _SelectionContext):
+    def __init__(self, sel_ctx: _SelectionContext, overlay_setter=None):
         self._sel = sel_ctx
         self._start: tuple[int, int] | None = None
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
             self._start = (int(round(evt.x)), int(round(evt.y)))
-            return False
+            self._overlay_setter({
+                "kind": "rect",
+                "x0": self._start[0], "y0": self._start[1],
+                "x1": self._start[0], "y1": self._start[1],
+            })
+            return True
+        if evt.phase == "move" and self._start is not None:
+            self._overlay_setter({
+                "kind": "rect",
+                "x0": self._start[0], "y0": self._start[1],
+                "x1": int(round(evt.x)), "y1": int(round(evt.y)),
+            })
+            return True
         if evt.phase == "release" and self._start is not None:
             x0, y0 = self._start
             x1, y1 = int(round(evt.x)), int(round(evt.y))
             self._start = None
+            self._overlay_setter(None)
+            # Click without drag → clear the selection so the user can
+            # tap an empty area to deselect, the gesture every paint
+            # app honours.
+            if x0 == x1 and y0 == y1:
+                self._sel.clear()
+                return True
             h, w = canvas.shape[:2]
             mask = rectangle_mask(h, w, x0, y0, x1, y1)
             self._sel.write(mask)
@@ -714,33 +802,52 @@ class RectSelectTool:
 
     def cancel(self) -> None:
         self._start = None
+        self._overlay_setter(None)
 
 
 class LassoSelectTool:
     """Free-form polygon selection — close path on release."""
 
-    def __init__(self, sel_ctx: _SelectionContext):
+    def __init__(self, sel_ctx: _SelectionContext, overlay_setter=None):
         self._sel = sel_ctx
         self._points: list[tuple[float, float]] = []
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
             self._points = [(evt.x, evt.y)]
-            return False
+            self._overlay_setter({"kind": "polyline", "points": list(self._points)})
+            return True
         if evt.phase == "move" and self._points:
             self._points.append((evt.x, evt.y))
-            return False
+            self._overlay_setter({"kind": "polyline", "points": list(self._points)})
+            return True
         if evt.phase == "release" and self._points:
             self._points.append((evt.x, evt.y))
-            h, w = canvas.shape[:2]
-            mask = polygon_mask(h, w, self._points)
+            points = list(self._points)
             self._points = []
+            self._overlay_setter(None)
+            # No-drag click → clear the selection (same convention as
+            # the rect-select tool's empty-rect path). "No drag"
+            # means every recorded point is within a pixel of the
+            # press point.
+            sx, sy = points[0]
+            no_drag = all(
+                abs(px - sx) < 1.0 and abs(py - sy) < 1.0
+                for px, py in points
+            )
+            if no_drag:
+                self._sel.clear()
+                return True
+            h, w = canvas.shape[:2]
+            mask = polygon_mask(h, w, points)
             self._sel.write(mask)
             return True
         return False
 
     def cancel(self) -> None:
         self._points = []
+        self._overlay_setter(None)
 
 
 class WandSelectTool:
@@ -1021,11 +1128,12 @@ class _BezierPenTool:
     paint the path with the active brush.
     """
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         self._workspace = None   # injected lazily via the dispatcher
         self._dragging_anchor_index: int | None = None
         self._press_pos: tuple[float, float] | None = None
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.bezier_path import PathNode
@@ -1037,6 +1145,7 @@ class _BezierPenTool:
             path.append(PathNode(anchor=anchor))
             self._dragging_anchor_index = len(path.nodes) - 1
             self._press_pos = anchor
+            self._refresh_overlay(path)
             return True
         if evt.phase == "move" and self._dragging_anchor_index is not None:
             # Mid-press drag → extend an out-handle from the anchor
@@ -1049,6 +1158,7 @@ class _BezierPenTool:
                 self._dragging_anchor_index,
                 replace(current, handle_out=handle_out),
             )
+            self._refresh_overlay(path)
             return True
         if evt.phase in ("release", "leave"):
             self._dragging_anchor_index = None
@@ -1059,6 +1169,16 @@ class _BezierPenTool:
     def cancel(self) -> None:
         self._dragging_anchor_index = None
         self._press_pos = None
+        self._overlay_setter(None)
+
+    def _refresh_overlay(self, path) -> None:
+        """Draw the path's anchor polyline so the user sees what they
+        are building before any rasterise step runs."""
+        anchors = [(float(node.anchor[0]), float(node.anchor[1])) for node in path.nodes]
+        if len(anchors) >= 1:
+            self._overlay_setter({"kind": "polyline", "points": anchors})
+        else:
+            self._overlay_setter(None)
 
     # ---- internals ------------------------------------------------------
 
@@ -1090,11 +1210,13 @@ class _CloneStampTool:
     other press / move stamps from the source area."""
 
     _ALT_BIT = 0x08000000   # Qt.KeyboardModifier.AltModifier.value
+    _SOURCE_MARKER_RADIUS = 14.0
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         from Imervue.paint.stamp_tool import StampState
         self._stamp = StampState()
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.stamp_tool import stamp_dab
@@ -1102,7 +1224,8 @@ class _CloneStampTool:
             if int(evt.modifiers) & self._ALT_BIT:
                 # Alt-press → set the source.
                 self._stamp.set_source((evt.x, evt.y))
-                return False
+                self._update_source_overlay()
+                return True
             if not self._stamp.has_source():
                 # No source yet — first press without Alt does nothing
                 # so the user gets a clean affordance to set source first.
@@ -1129,6 +1252,20 @@ class _CloneStampTool:
 
     def cancel(self) -> None:
         self._stamp.end_stroke()
+
+    def _update_source_overlay(self) -> None:
+        """Show a small ellipse at the source point so the user can
+        see where the stamp will sample from."""
+        if not self._stamp.has_source():
+            self._overlay_setter(None)
+            return
+        sx, sy = self._stamp.source
+        self._overlay_setter({
+            "kind": "ellipse",
+            "cx": float(sx), "cy": float(sy),
+            "rx": float(self._SOURCE_MARKER_RADIUS),
+            "ry": float(self._SOURCE_MARKER_RADIUS),
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -1306,18 +1443,31 @@ def _shape_stroke_width(state: ToolState) -> int:
 class _RectShapeTool:
     """Press → record corner; release → rasterise rectangle."""
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         self._press: tuple[float, float] | None = None
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_rect
         if evt.phase == "press":
             self._press = (float(evt.x), float(evt.y))
-            return False
+            self._overlay_setter({
+                "kind": "rect",
+                "x0": evt.x, "y0": evt.y, "x1": evt.x, "y1": evt.y,
+            })
+            return True
+        if evt.phase == "move" and self._press is not None:
+            x0, y0 = self._press
+            self._overlay_setter({
+                "kind": "rect",
+                "x0": x0, "y0": y0, "x1": evt.x, "y1": evt.y,
+            })
+            return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
             self._press = None
+            self._overlay_setter(None)
             return rasterise_rect(
                 canvas, x0, y0, float(evt.x) - x0, float(evt.y) - y0,
                 _shape_color(self._state),
@@ -1326,29 +1476,46 @@ class _RectShapeTool:
             )
         if evt.phase in ("leave",):
             self._press = None
+            self._overlay_setter(None)
         return False
 
     def cancel(self) -> None:
         self._press = None
+        self._overlay_setter(None)
 
 
 class _EllipseShapeTool:
     """Press → record corner; release → rasterise ellipse inscribed
     in the corner-to-corner rectangle."""
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         self._press: tuple[float, float] | None = None
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_ellipse
         if evt.phase == "press":
             self._press = (float(evt.x), float(evt.y))
-            return False
+            self._overlay_setter({
+                "kind": "ellipse",
+                "cx": evt.x, "cy": evt.y, "rx": 0.0, "ry": 0.0,
+            })
+            return True
+        if evt.phase == "move" and self._press is not None:
+            x0, y0 = self._press
+            x1, y1 = float(evt.x), float(evt.y)
+            self._overlay_setter({
+                "kind": "ellipse",
+                "cx": (x0 + x1) / 2.0, "cy": (y0 + y1) / 2.0,
+                "rx": abs(x1 - x0) / 2.0, "ry": abs(y1 - y0) / 2.0,
+            })
+            return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
             x1, y1 = float(evt.x), float(evt.y)
             self._press = None
+            self._overlay_setter(None)
             cx = (x0 + x1) / 2.0
             cy = (y0 + y1) / 2.0
             rx = abs(x1 - x0) / 2.0
@@ -1361,27 +1528,42 @@ class _EllipseShapeTool:
             )
         if evt.phase in ("leave",):
             self._press = None
+            self._overlay_setter(None)
         return False
 
     def cancel(self) -> None:
         self._press = None
+        self._overlay_setter(None)
 
 
 class _LineShapeTool:
     """Press → record start; release → rasterise straight line."""
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         self._press: tuple[float, float] | None = None
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_line
         if evt.phase == "press":
             self._press = (float(evt.x), float(evt.y))
-            return False
+            self._overlay_setter({
+                "kind": "line",
+                "x0": evt.x, "y0": evt.y, "x1": evt.x, "y1": evt.y,
+            })
+            return True
+        if evt.phase == "move" and self._press is not None:
+            x0, y0 = self._press
+            self._overlay_setter({
+                "kind": "line",
+                "x0": x0, "y0": y0, "x1": evt.x, "y1": evt.y,
+            })
+            return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
             self._press = None
+            self._overlay_setter(None)
             return rasterise_line(
                 canvas, x0, y0, float(evt.x), float(evt.y),
                 _shape_color(self._state),
@@ -1389,10 +1571,12 @@ class _LineShapeTool:
             )
         if evt.phase in ("leave",):
             self._press = None
+            self._overlay_setter(None)
         return False
 
     def cancel(self) -> None:
         self._press = None
+        self._overlay_setter(None)
 
 
 class _PolygonShapeTool:
@@ -1402,21 +1586,33 @@ class _PolygonShapeTool:
 
     The vertex list resets after every successful commit so a fresh
     polygon starts with the next press, mirroring the lasso tool's
-    one-gesture-one-shape model.
+    one-gesture-one-shape model. ``CLOSE_RADIUS`` was bumped from 8
+    to 12 px because the original was too small for users to
+    discover; ``move`` events now drive a live overlay so the
+    in-progress polygon outline + the rubber-band line from the
+    last vertex to the cursor are visible.
     """
 
-    CLOSE_RADIUS = 8.0
+    CLOSE_RADIUS = 12.0
     RIGHT_BUTTON = 2   # Qt.MouseButton.RightButton.value
 
-    def __init__(self, state: ToolState):
+    def __init__(self, state: ToolState, overlay_setter=None):
         self._state = state
         self._vertices: list[tuple[float, float]] = []
+        self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        self._cursor: tuple[float, float] | None = None
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_polygon
+        x, y = float(evt.x), float(evt.y)
+        if evt.phase == "move":
+            if self._vertices:
+                self._cursor = (x, y)
+                self._refresh_overlay()
+                return True
+            return False
         if evt.phase != "press":
             return False
-        x, y = float(evt.x), float(evt.y)
         # Right-click commits the current vertex list as a polygon.
         if int(evt.button) == self.RIGHT_BUTTON and self._vertices:
             painted = rasterise_polygon(
@@ -1425,6 +1621,8 @@ class _PolygonShapeTool:
                 stroke_width=_shape_stroke_width(self._state),
             )
             self._vertices = []
+            self._cursor = None
+            self._overlay_setter(None)
             return painted
         # Click near the first vertex closes the polygon.
         if self._vertices:
@@ -1437,13 +1635,34 @@ class _PolygonShapeTool:
                     stroke_width=_shape_stroke_width(self._state),
                 )
                 self._vertices = []
+                self._cursor = None
+                self._overlay_setter(None)
                 return painted
         # Otherwise append a new vertex; nothing painted yet.
         self._vertices.append((x, y))
+        self._cursor = (x, y)
+        self._refresh_overlay()
         return False
+
+    def _refresh_overlay(self) -> None:
+        points = list(self._vertices)
+        if self._cursor is not None and points and points[-1] != self._cursor:
+            points.append(self._cursor)
+        # Close-loop hint: when the cursor is near vertex 0, draw the
+        # closing edge so the user sees the polygon shape they're
+        # about to commit.
+        if self._cursor is not None and len(self._vertices) >= 2:
+            sx, sy = self._vertices[0]
+            cx, cy = self._cursor
+            close_sq = (cx - sx) ** 2 + (cy - sy) ** 2
+            if close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS:
+                points.append(self._vertices[0])
+        self._overlay_setter({"kind": "polyline", "points": points})
 
     def cancel(self) -> None:
         self._vertices = []
+        self._cursor = None
+        self._overlay_setter(None)
 
 
 # ---------------------------------------------------------------------------
