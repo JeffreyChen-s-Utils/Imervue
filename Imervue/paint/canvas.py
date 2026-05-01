@@ -264,6 +264,10 @@ class PaintCanvas(QOpenGLWidget):
         # tries the fit so the canvas doesn't permanently appear as a
         # postage stamp clamped to ``ZOOM_MIN``.
         self._fit_pending = False
+        # Widget size at the last successful fit. Used by paintGL's
+        # auto-refit safety net so the canvas re-centres when Qt's
+        # layout converges to a larger size after the first resizeGL.
+        self._fitted_widget_size: tuple[int, int] = (0, 0)
         # Until the user takes manual view control (wheel-zoom or
         # explicit pan) we keep the canvas auto-fitted to the widget on
         # every resize. Otherwise the layout converging after init
@@ -594,6 +598,37 @@ class PaintCanvas(QOpenGLWidget):
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_TEXTURE_2D)
 
+    def showEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        """Defer a fit-to-window until after Qt's first layout pass.
+
+        The canvas is hosted inside a QTabWidget that lays out its
+        pages asynchronously: the first ``resizeGL`` lands while the
+        widget is still at an intermediate size (the tab bar hasn't
+        finished sizing the page area), so the fit math anchors to
+        that smaller dimension and the canvas ends up half off-
+        screen once the layout settles.
+
+        ``QTimer.singleShot(0, …)`` runs after Qt drains its layout
+        queue; reasserting ``_fit_pending`` and forcing the next
+        ``resizeGL`` / ``paintGL`` to refit catches the post-layout
+        size. Cheap because the timer fires once per show.
+        """
+        super().showEvent(event)
+        self._fit_pending = True
+        QTimer.singleShot(0, self._deferred_fit_after_show)
+
+    def _deferred_fit_after_show(self) -> None:  # pragma: no cover - Qt UI
+        """Recompute the fit once Qt has finalised the widget layout."""
+        if self.width() <= 0 or self.height() <= 0:
+            # Still degenerate — leave _fit_pending set so paintGL's
+            # safety net retries on the next paint.
+            return
+        if self._user_view_locked:
+            self._fit_pending = False
+            return
+        self._reset_view_to_fit()
+        self.update()
+
     def resizeGL(self, w: int, h: int) -> None:  # pragma: no cover - GL
         glViewport(0, 0, max(1, w), max(1, h))
         glMatrixMode(GL_PROJECTION)
@@ -616,9 +651,20 @@ class PaintCanvas(QOpenGLWidget):
         # was called before Qt sized the widget, ``_fit_pending`` stayed
         # True. Some Qt builds don't fire a follow-up ``resizeGL`` between
         # the first valid layout and the first paint, leaving the canvas
-        # off-centre. Retry here whenever a paint happens with widths
-        # finally available.
-        if self._fit_pending and self.width() > 0 and self.height() > 0:
+        # off-centre. Also re-fit when the widget grew between the last
+        # fit and now while the user hasn't taken view control — handles
+        # the QTabWidget intermediate-size scenario where the first
+        # resizeGL fired before the tab page reached its real width.
+        widget_w = self.width()
+        widget_h = self.height()
+        needs_refit = widget_w > 0 and widget_h > 0 and (
+            self._fit_pending
+            or (
+                not self._user_view_locked
+                and self._fitted_widget_size != (widget_w, widget_h)
+            )
+        )
+        if needs_refit:
             self._reset_view_to_fit()
         if self._needs_upload:
             self._upload_texture(composite)
@@ -1240,6 +1286,7 @@ class PaintCanvas(QOpenGLWidget):
         self._pan_x = (widget_w - w * self._zoom) * 0.5
         self._pan_y = (widget_h - h * self._zoom) * 0.5
         self._fit_pending = False
+        self._fitted_widget_size = (widget_w, widget_h)
 
     def _upload_texture(  # pragma: no cover - GL needs display server
         self, composite: np.ndarray,

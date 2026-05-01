@@ -60,7 +60,7 @@ if (points.length) {
 """
 
 
-def _collect_library_paths(ui: "ImervueMainWindow") -> list[str]:
+def _collect_library_paths(ui: ImervueMainWindow) -> list[str]:
     viewer = getattr(ui, "viewer", None)
     model = getattr(viewer, "model", None)
     images = getattr(model, "images", None)
@@ -76,7 +76,7 @@ def _render_html(points: list[tuple[str, float, float]]) -> str:
 
 
 class MapViewDialog(QDialog):
-    def __init__(self, ui: "ImervueMainWindow"):
+    def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
         lang = language_wrapper.language_word_dict
@@ -121,5 +121,5 @@ class MapViewDialog(QDialog):
         return view
 
 
-def open_map_view(ui: "ImervueMainWindow") -> None:
+def open_map_view(ui: ImervueMainWindow) -> None:
     MapViewDialog(ui).exec()

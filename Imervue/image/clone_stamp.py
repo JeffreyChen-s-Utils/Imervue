@@ -35,7 +35,7 @@ class CloneStamp:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CloneStamp":
+    def from_dict(cls, data: dict) -> CloneStamp:
         return cls(
             sx=int(data["sx"]), sy=int(data["sy"]),
             dx=int(data["dx"]), dy=int(data["dy"]),

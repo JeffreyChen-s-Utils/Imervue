@@ -56,7 +56,7 @@ class _PanoWorker(QThread):
 
 
 class PanoramaDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView"):
+    def __init__(self, viewer: GPUImageView):
         super().__init__(viewer)
         self._viewer = viewer
         self._worker: _PanoWorker | None = None
@@ -163,5 +163,5 @@ class PanoramaDialog(QDialog):
             self.accept()
 
 
-def open_panorama(viewer: "GPUImageView") -> None:
+def open_panorama(viewer: GPUImageView) -> None:
     PanoramaDialog(viewer).exec()

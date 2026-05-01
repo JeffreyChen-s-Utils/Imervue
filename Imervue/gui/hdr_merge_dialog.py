@@ -56,7 +56,7 @@ class _HdrWorker(QThread):
 
 
 class HdrMergeDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView"):
+    def __init__(self, viewer: GPUImageView):
         super().__init__(viewer)
         self._viewer = viewer
         self._worker: _HdrWorker | None = None
@@ -153,5 +153,5 @@ class HdrMergeDialog(QDialog):
             self.accept()
 
 
-def open_hdr_merge(viewer: "GPUImageView") -> None:
+def open_hdr_merge(viewer: GPUImageView) -> None:
     HdrMergeDialog(viewer).exec()

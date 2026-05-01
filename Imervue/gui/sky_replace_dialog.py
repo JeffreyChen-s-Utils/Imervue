@@ -59,7 +59,7 @@ class _Worker(QThread):
 
 
 class SkyReplaceDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -142,7 +142,7 @@ class SkyReplaceDialog(QDialog):
             self.accept()
 
 
-def open_sky_replace(viewer: "GPUImageView") -> None:
+def open_sky_replace(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

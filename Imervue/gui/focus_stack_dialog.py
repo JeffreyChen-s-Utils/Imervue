@@ -55,7 +55,7 @@ class _StackWorker(QThread):
 
 
 class FocusStackDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView"):
+    def __init__(self, viewer: GPUImageView):
         super().__init__(viewer)
         self._viewer = viewer
         self._worker: _StackWorker | None = None
@@ -151,5 +151,5 @@ class FocusStackDialog(QDialog):
             self.accept()
 
 
-def open_focus_stack(viewer: "GPUImageView") -> None:
+def open_focus_stack(viewer: GPUImageView) -> None:
     FocusStackDialog(viewer).exec()

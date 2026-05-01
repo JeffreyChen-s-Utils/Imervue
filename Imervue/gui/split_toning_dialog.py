@@ -30,7 +30,7 @@ _BAL_STEPS = 100
 
 
 class SplitToningDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -105,7 +105,7 @@ class SplitToningDialog(QDialog):
         self.accept()
 
 
-def open_split_toning(viewer: "GPUImageView") -> None:
+def open_split_toning(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

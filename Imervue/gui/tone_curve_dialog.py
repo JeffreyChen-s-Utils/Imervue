@@ -192,7 +192,7 @@ class _CurveCanvas(QWidget):
 class ToneCurveDialog(QDialog):
     """Modal dialog that lets the user edit the four tone curves."""
 
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -265,7 +265,7 @@ class ToneCurveDialog(QDialog):
         self.accept()
 
 
-def open_tone_curve(viewer: "GPUImageView") -> None:
+def open_tone_curve(viewer: GPUImageView) -> None:
     """Open the tone curve editor for the currently displayed image."""
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:

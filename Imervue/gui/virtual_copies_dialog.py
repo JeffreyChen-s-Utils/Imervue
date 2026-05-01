@@ -33,7 +33,7 @@ logger = logging.getLogger("Imervue.virtual_copies_dialog")
 
 
 class VirtualCopiesDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -152,7 +152,7 @@ class VirtualCopiesDialog(QDialog):
         self._reload()
 
 
-def open_virtual_copies(viewer: "GPUImageView") -> None:
+def open_virtual_copies(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

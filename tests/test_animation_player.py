@@ -178,4 +178,4 @@ class TestStop:
 
 class TestAnimatedExts:
     def test_covers_common_formats(self):
-        assert ap.ANIMATED_EXTS >= {".gif", ".apng", ".webp", ".png"}
+        assert {".gif", ".apng", ".webp", ".png"} <= ap.ANIMATED_EXTS

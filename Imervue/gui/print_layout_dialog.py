@@ -50,7 +50,7 @@ class _Worker(QThread):
 
 
 class PrintLayoutDialog(QDialog):
-    def __init__(self, ui: "ImervueMainWindow"):
+    def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
         self._worker: _Worker | None = None
@@ -166,5 +166,5 @@ class PrintLayoutDialog(QDialog):
             self.accept()
 
 
-def open_print_layout(ui: "ImervueMainWindow") -> None:
+def open_print_layout(ui: ImervueMainWindow) -> None:
     PrintLayoutDialog(ui).exec()

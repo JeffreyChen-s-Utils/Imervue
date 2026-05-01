@@ -23,7 +23,7 @@ logger = logging.getLogger("Imervue.gps_geotag_dialog")
 
 
 class GpsGeotagDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -83,7 +83,7 @@ class GpsGeotagDialog(QDialog):
                 lang.get("geotag_failed", "Failed to write GPS tags."))
 
 
-def open_gps_geotag(viewer: "GPUImageView") -> None:
+def open_gps_geotag(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return
