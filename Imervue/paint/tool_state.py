@@ -110,6 +110,7 @@ EVENT_GRADIENT = "gradient"    # gradient kind / reverse changed
 EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
 EVENT_RULER = "ruler"          # ruler mode / geometry changed
 EVENT_SUB_TOOL = "sub_tool"    # sub-tool registry / active sub-tool changed
+EVENT_EYEDROPPER = "eyedropper"   # eyedropper sampling mode changed
 
 
 @dataclass(frozen=True)
@@ -210,6 +211,12 @@ class ToolState:
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     quick_mask_active: bool = False
+    # When ``True`` the eyedropper samples from the document composite
+    # (every visible layer flattened) instead of the active layer
+    # only. Matches MediBang / PS's "Sample All Layers" eyedropper
+    # toggle. False keeps the historical "active layer only" behaviour
+    # so existing workflows are unchanged.
+    eyedropper_sample_all_layers: bool = False
     sub_tools: dict[str, list[SubTool]] = field(default_factory=dict)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -396,6 +403,20 @@ class ToolState:
         self._emit(EVENT_SELECTION_MODE)
         return True
 
+    def set_eyedropper_sample_all_layers(self, enabled: bool) -> bool:
+        """Toggle whether the eyedropper samples the composite vs active.
+
+        Returns ``True`` if the flag changed; emits ``EVENT_EYEDROPPER``
+        so listening dock panels refresh their checkbox state.
+        """
+        new_value = bool(enabled)
+        if new_value == self.eyedropper_sample_all_layers:
+            return False
+        self.eyedropper_sample_all_layers = new_value
+        self._persist()
+        self._emit(EVENT_EYEDROPPER)
+        return True
+
     def set_fill(self, **kwargs: Any) -> bool:
         """Update fill bucket attributes."""
         new = self.fill
@@ -562,6 +583,7 @@ class ToolState:
             "snap_to_pixel": bool(self.snap_to_pixel),
             "snap_to_edges": bool(self.snap_to_edges),
             "quick_mask_active": bool(self.quick_mask_active),
+            "eyedropper_sample_all_layers": bool(self.eyedropper_sample_all_layers),
             "sub_tools": {
                 tool: [_sub_tool_to_dict(st) for st in entries]
                 for tool, entries in self.sub_tools.items()
@@ -604,6 +626,9 @@ class ToolState:
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
             snap_to_edges=bool(raw.get("snap_to_edges", False)),
             quick_mask_active=bool(raw.get("quick_mask_active", False)),
+            eyedropper_sample_all_layers=bool(
+                raw.get("eyedropper_sample_all_layers", False),
+            ),
             sub_tools=sub_tools,
         )
 

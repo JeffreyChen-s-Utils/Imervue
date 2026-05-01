@@ -626,3 +626,52 @@ def test_remove_last_sub_tool_drops_empty_bucket():
     state.add_sub_tool("brush", "preset")
     state.remove_sub_tool("brush", "preset")
     assert "brush" not in state.sub_tools
+
+
+# ---------------------------------------------------------------------------
+# Eyedropper sample-all-layers flag
+# ---------------------------------------------------------------------------
+
+
+def test_eyedropper_sample_all_defaults_to_false():
+    state = ts.load_tool_state()
+    assert state.eyedropper_sample_all_layers is False
+
+
+def test_set_eyedropper_sample_all_returns_true_on_change():
+    state = ts.load_tool_state()
+    assert state.set_eyedropper_sample_all_layers(True) is True
+    assert state.eyedropper_sample_all_layers is True
+
+
+def test_set_eyedropper_sample_all_idempotent_returns_false():
+    state = ts.load_tool_state()
+    state.set_eyedropper_sample_all_layers(True)
+    assert state.set_eyedropper_sample_all_layers(True) is False
+
+
+def test_set_eyedropper_sample_all_emits_eyedropper_channel():
+    state = ts.load_tool_state()
+    seen: list[str] = []
+    state.subscribe(seen.append)
+    state.set_eyedropper_sample_all_layers(True)
+    assert ts.EVENT_EYEDROPPER in seen
+
+
+def test_eyedropper_sample_all_persists_to_user_setting_dict():
+    state = ts.load_tool_state()
+    state.set_eyedropper_sample_all_layers(True)
+    raw = user_setting_dict["paint_state"]
+    assert raw["eyedropper_sample_all_layers"] is True
+
+
+def test_eyedropper_sample_all_round_trips_via_from_dict():
+    state = ts.load_tool_state()
+    state.set_eyedropper_sample_all_layers(True)
+    rebuilt = ts.ToolState.from_dict(state.to_dict())
+    assert rebuilt.eyedropper_sample_all_layers is True
+
+
+def test_eyedropper_sample_all_default_when_key_missing():
+    rebuilt = ts.ToolState.from_dict({})
+    assert rebuilt.eyedropper_sample_all_layers is False

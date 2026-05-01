@@ -426,6 +426,37 @@ def test_eyedropper_release_clears_active(state, canvas):
     assert state.foreground != (200, 100, 50)
 
 
+def test_eyedropper_samples_active_layer_by_default(state, canvas):
+    """With sample_all_layers off the eyedropper reads the active
+    layer's pixel even when a composite is available."""
+    canvas[10, 20, :3] = (40, 50, 60)
+    composite = canvas.copy()
+    composite[10, 20, :3] = (200, 100, 0)   # composite differs
+    tool = EyedropperTool(state, composite_provider=lambda: composite)
+    tool.handle(_press(20, 10), canvas)
+    assert state.foreground == (40, 50, 60)
+
+
+def test_eyedropper_samples_composite_when_flag_on(state, canvas):
+    canvas[10, 20, :3] = (40, 50, 60)
+    composite = canvas.copy()
+    composite[10, 20, :3] = (200, 100, 0)
+    state.set_eyedropper_sample_all_layers(True)
+    tool = EyedropperTool(state, composite_provider=lambda: composite)
+    tool.handle(_press(20, 10), canvas)
+    assert state.foreground == (200, 100, 0)
+
+
+def test_eyedropper_falls_back_to_canvas_when_composite_none(state, canvas):
+    """A None composite (e.g. mid-render or no document) must not
+    crash — sample falls back to the active-layer canvas."""
+    canvas[10, 20, :3] = (40, 50, 60)
+    state.set_eyedropper_sample_all_layers(True)
+    tool = EyedropperTool(state, composite_provider=lambda: None)
+    tool.handle(_press(20, 10), canvas)
+    assert state.foreground == (40, 50, 60)
+
+
 # ---------------------------------------------------------------------------
 # Alt-modifier eyedropper override
 # ---------------------------------------------------------------------------

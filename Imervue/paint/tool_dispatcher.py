@@ -99,6 +99,7 @@ class ToolDispatcher:
         selection_provider=None, set_selection=None,
         parent_widget=None,
         reference_provider=None,
+        composite_provider=None,
     ):
         # Damage rect from the last positively-handled event — the
         # canvas reads this after dispatch returns True so it can
@@ -122,6 +123,10 @@ class ToolDispatcher:
         # by the workspace; tests can leave it unset and the bucket
         # falls back to sampling its own target layer.
         self._reference_provider = reference_provider or (lambda: None)
+        # Returns the document's composite (every visible layer
+        # flattened) for the "Sample All Layers" eyedropper. ``None``
+        # falls the eyedropper back to the active-layer sample.
+        self._composite_provider = composite_provider or (lambda: None)
         self._handlers: dict[str, Tool] = self._build_handlers()
         self._active_tool: str | None = None
         # Holding Alt during a press redirects the event to the
@@ -222,7 +227,9 @@ class ToolDispatcher:
         return {
             "brush": BrushTool(self._state, self._selection_provider),
             "eraser": EraserTool(self._state, self._selection_provider),
-            "eyedropper": EyedropperTool(self._state),
+            "eyedropper": EyedropperTool(
+                self._state, self._composite_provider,
+            ),
             "fill": FillTool(
                 self._state,
                 self._selection_provider,
@@ -564,17 +571,26 @@ class EyedropperTool:
     Move events while the button is held also update the colour so the
     user can scrub across the canvas to find the right shade — a
     MediBang convention. Modifier-aware: holding Alt picks BG instead.
+
+    ``composite_provider`` returns the document's flattened RGBA buffer
+    when MediBang's "Sample All Layers" mode is on. ``None`` falls
+    the sample back to the active layer only — the legacy default.
     """
 
     ALT_MOD_VALUE: int
 
-    def __init__(self, state: ToolState):
+    def __init__(
+        self,
+        state: ToolState,
+        composite_provider=None,
+    ):
         self._state = state
         # Cache the alt modifier value at construction time; importing Qt
         # in this module keeps the dispatcher Qt-free at import.
         from PySide6.QtCore import Qt
         self.ALT_MOD_VALUE = int(Qt.KeyboardModifier.AltModifier.value)
         self._active = False
+        self._composite_provider = composite_provider or (lambda: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase == "press":
@@ -593,7 +609,12 @@ class EyedropperTool:
         self._active = False
 
     def _sample(self, evt: PointerEvent, canvas: np.ndarray) -> None:
-        pixel = sample_pixel(canvas, evt.x, evt.y)
+        source = canvas
+        if self._state.eyedropper_sample_all_layers:
+            composite = self._composite_provider()
+            if composite is not None:
+                source = composite
+        pixel = sample_pixel(source, evt.x, evt.y)
         if pixel is None:
             return
         if evt.modifiers & self.ALT_MOD_VALUE:
