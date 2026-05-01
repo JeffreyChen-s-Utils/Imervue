@@ -13,7 +13,7 @@ the main editing window.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QImage, QPixmap, QTransform
+from PySide6.QtGui import QImage, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -30,6 +30,10 @@ VIEW_MIN_SCALE = 0.05
 VIEW_MAX_SCALE = 16.0
 VIEW_DEFAULT_SCALE = 1.0
 VIEW_ZOOM_STEP = 1.25
+# Seamless tile preview shows a 3×3 grid of the composite — large
+# enough that the centre cell sees the wrap on every side, small
+# enough that the preview still fits a typical desktop window.
+TILE_PREVIEW_REPEAT = 3
 
 
 class SecondaryView(QMainWindow):
@@ -42,15 +46,24 @@ class SecondaryView(QMainWindow):
 
     closed = Signal()
 
-    def __init__(self, parent=None, *, mirror_horizontal: bool = False):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        mirror_horizontal: bool = False,
+        tile_preview: bool = False,
+    ):
         lang = language_wrapper.language_word_dict
         super().__init__(parent)
-        title_key = (
-            "paint_mirror_view" if mirror_horizontal else "paint_secondary_view"
-        )
-        title_default = (
-            "Mirror Preview" if mirror_horizontal else "Second View"
-        )
+        if tile_preview:
+            title_key = "paint_tile_preview"
+            title_default = "Tile Preview"
+        elif mirror_horizontal:
+            title_key = "paint_mirror_view"
+            title_default = "Mirror Preview"
+        else:
+            title_key = "paint_secondary_view"
+            title_default = "Second View"
         self.setWindowTitle(lang.get(title_key, title_default))
         self.setMinimumSize(320, 240)
 
@@ -61,6 +74,11 @@ class SecondaryView(QMainWindow):
         # document. Used to flag SecondaryView windows opened from the
         # "Mirror Preview" Window-menu entry.
         self._mirror_horizontal = bool(mirror_horizontal)
+        # Seamless-tile preview — display the composite as a 3×3 grid
+        # so the artist can verify wrap-around. Mutually exclusive
+        # with mirror_horizontal at the UI level (the Window menu has
+        # separate entries) but the flags are independent here.
+        self._tile_preview = bool(tile_preview)
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -115,6 +133,17 @@ class SecondaryView(QMainWindow):
         self._mirror_horizontal = new_value
         self._refresh_pixmap()
 
+    def is_tile_preview(self) -> bool:
+        return self._tile_preview
+
+    def set_tile_preview(self, enabled: bool) -> None:
+        """Toggle the seamless-tile 3×3 preview at display time."""
+        new_value = bool(enabled)
+        if new_value == self._tile_preview:
+            return
+        self._tile_preview = new_value
+        self._refresh_pixmap()
+
     def scale_factor(self) -> float:
         return self._scale
 
@@ -151,6 +180,10 @@ class SecondaryView(QMainWindow):
         )
         if self._mirror_horizontal:
             scaled = scaled.transformed(QTransform().scale(-1.0, 1.0))
+        if self._tile_preview:
+            scaled = _tile_pixmap(scaled, TILE_PREVIEW_REPEAT)
+            w *= TILE_PREVIEW_REPEAT
+            h *= TILE_PREVIEW_REPEAT
         self._image_label.setPixmap(scaled)
         self._image_label.resize(w, h)
 
@@ -162,6 +195,31 @@ class SecondaryView(QMainWindow):
 # ---------------------------------------------------------------------------
 # Workspace plumbing helpers — pure Python, callable from tests
 # ---------------------------------------------------------------------------
+
+
+def _tile_pixmap(source: QPixmap, repeat: int) -> QPixmap:
+    """Return a fresh ``QPixmap`` showing ``source`` tiled ``repeat`` × ``repeat``.
+
+    Used by :class:`SecondaryView` when the tile-preview flag is on.
+    Returns a deep copy so the caller can modify the result without
+    affecting ``source``.
+    """
+    if repeat < 1:
+        raise ValueError(f"repeat must be >= 1, got {repeat}")
+    if source.isNull():
+        return QPixmap(source)
+    cell_w = source.width()
+    cell_h = source.height()
+    canvas = QPixmap(cell_w * repeat, cell_h * repeat)
+    canvas.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(canvas)
+    try:
+        for row in range(repeat):
+            for col in range(repeat):
+                painter.drawPixmap(col * cell_w, row * cell_h, source)
+    finally:
+        painter.end()
+    return canvas
 
 
 def composite_to_pixmap(composite) -> QPixmap | None:

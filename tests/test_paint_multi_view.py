@@ -271,3 +271,90 @@ def test_window_menu_has_mirror_preview_action(workspace):
         "Mirror" in label or "鏡" in label or "ミラー" in label
         for label in labels
     )
+
+
+# ---------------------------------------------------------------------------
+# Seamless tile preview (28f)
+# ---------------------------------------------------------------------------
+
+
+def test_secondary_view_default_is_not_tile_preview(qapp):
+    view = SecondaryView()
+    try:
+        assert view.is_tile_preview() is False
+    finally:
+        view.deleteLater()
+
+
+def test_secondary_view_constructor_accepts_tile_flag(qapp):
+    view = SecondaryView(tile_preview=True)
+    try:
+        assert view.is_tile_preview() is True
+    finally:
+        view.deleteLater()
+
+
+def test_set_tile_preview_round_trips(qapp):
+    view = SecondaryView()
+    try:
+        view.set_tile_preview(True)
+        assert view.is_tile_preview() is True
+        view.set_tile_preview(False)
+        assert view.is_tile_preview() is False
+    finally:
+        view.deleteLater()
+
+
+def test_open_tile_preview_returns_tiled_view(workspace):
+    view = workspace.open_tile_preview()
+    assert view.is_tile_preview() is True
+
+
+def test_tile_preview_window_title_is_distinct(workspace):
+    plain = workspace.open_secondary_view()
+    tile = workspace.open_tile_preview()
+    assert plain.windowTitle() != tile.windowTitle()
+
+
+def test_tile_preview_renders_3x3_grid(workspace):
+    """The tile preview's pixmap is 3× the source size on each axis
+    so the artist sees the wrap on every side."""
+    layer = workspace.canvas().document().active_layer()
+    h, w = layer.image.shape[:2]
+    layer.image[..., :] = (0, 0, 0, 255)
+    workspace.canvas().document().invalidate_composite()
+    view = workspace.open_tile_preview()
+    pixmap = view._image_label.pixmap()  # noqa: SLF001
+    assert pixmap is not None
+    # 3× tile factor → at least 3× either dimension (scale=1.0).
+    assert pixmap.width() >= w * 3
+    assert pixmap.height() >= h * 3
+
+
+def test_tile_pixmap_helper_repeats_source(qapp):
+    from Imervue.paint.multi_view import _tile_pixmap
+
+    src = QPixmap(8, 8)
+    src.fill()
+    out = _tile_pixmap(src, 3)
+    assert out.width() == 24
+    assert out.height() == 24
+
+
+def test_tile_pixmap_helper_rejects_zero_repeat(qapp):
+    from Imervue.paint.multi_view import _tile_pixmap
+
+    src = QPixmap(4, 4)
+    src.fill()
+    with pytest.raises(ValueError):
+        _tile_pixmap(src, 0)
+
+
+def test_window_menu_has_tile_preview_action(workspace):
+    from Imervue.paint.paint_menu_bar import menu_for
+    window_menu = menu_for(workspace, "window")
+    labels = [a.text() for a in window_menu.actions() if not a.isSeparator()]
+    assert any(
+        "Tile" in label or "拼" in label or "タイル" in label
+        for label in labels
+    )

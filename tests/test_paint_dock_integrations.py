@@ -69,8 +69,9 @@ def test_window_menu_populates_one_entry_per_dock(qapp):
     try:
         window_menu = menu_for(ws, "window")
         # Ten dock toggles + separator + the 26f "New View" entry +
-        # the 28d "Mirror Preview" entry = 13.
-        assert len(window_menu.actions()) == 13
+        # the 28d "Mirror Preview" entry + the 28f "Tile Preview"
+        # entry = 14.
+        assert len(window_menu.actions()) == 14
     finally:
         ws.deleteLater()
 

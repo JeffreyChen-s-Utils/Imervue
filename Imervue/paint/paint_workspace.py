@@ -294,9 +294,26 @@ class PaintWorkspace(QMainWindow):
         """
         return self._open_secondary_view(mirror_horizontal=True)
 
-    def _open_secondary_view(self, *, mirror_horizontal: bool):
+    def open_tile_preview(self):
+        """Spawn a 3×3 tiled preview window for seamless-tile checking.
+
+        The composite is rendered as a tiled grid so the artist can
+        verify the canvas wraps cleanly on every edge — the texture-
+        artist workflow MediBang lacks but Photoshop / Krita expose.
+        """
+        return self._open_secondary_view(tile_preview=True)
+
+    def _open_secondary_view(
+        self, *,
+        mirror_horizontal: bool = False,
+        tile_preview: bool = False,
+    ):
         from Imervue.paint.multi_view import SecondaryView, composite_to_pixmap
-        view = SecondaryView(self, mirror_horizontal=mirror_horizontal)
+        view = SecondaryView(
+            self,
+            mirror_horizontal=mirror_horizontal,
+            tile_preview=tile_preview,
+        )
         if not hasattr(self, "_secondary_views"):
             self._secondary_views = []
         self._secondary_views.append(view)
@@ -638,6 +655,10 @@ class PaintWorkspace(QMainWindow):
             "paint_window_mirror_preview", "Mirror Preview",
         ))
         mirror_action.triggered.connect(self.open_mirror_preview)
+        tile_action = menu.addAction(lang.get(
+            "paint_window_tile_preview", "Tile Preview",
+        ))
+        tile_action.triggered.connect(self.open_tile_preview)
 
     # ---- handlers --------------------------------------------------------
 
