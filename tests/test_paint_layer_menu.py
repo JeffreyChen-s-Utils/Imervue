@@ -31,8 +31,9 @@ def test_layer_menu_has_documented_actions(qapp):
         layer_menu = menu_for(ws, "layer")
         # 4 layer-stack actions + sep + 5 mask actions + sep
         # + clipping toggle + sep + 4 effect actions + sep
-        # + 2 reference-layer actions + sep + delete = 22 entries.
-        assert len(layer_menu.actions()) == 22
+        # + 2 reference-layer actions + sep + 1-bit toggle + sep
+        # + delete = 24 entries.
+        assert len(layer_menu.actions()) == 24
     finally:
         ws.deleteLater()
 
@@ -168,6 +169,29 @@ def test_clear_reference_layer_drops_pointer(qapp):
         bridge.set_reference_layer()
         bridge.clear_reference_layer()
         assert document.reference_layer_index() is None
+    finally:
+        ws.deleteLater()
+
+
+def test_toggle_binary_layer_installs_default_settings(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        bridge.toggle_binary_layer()
+        layer = ws.canvas().document().active_layer()
+        assert layer.binary is not None
+    finally:
+        ws.deleteLater()
+
+
+def test_toggle_binary_layer_clears_existing_binary(qapp):
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._layer_menu_bridge   # noqa: SLF001
+        bridge.toggle_binary_layer()
+        bridge.toggle_binary_layer()
+        layer = ws.canvas().document().active_layer()
+        assert layer.binary is None
     finally:
         ws.deleteLater()
 

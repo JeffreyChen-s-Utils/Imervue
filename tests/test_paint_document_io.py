@@ -349,3 +349,35 @@ def test_missing_layer_tone_round_trips_to_none(tmp_path):
     save_document(doc, target)
     loaded = load_document(target)
     assert loaded.active_layer().tone is None
+
+
+# ---------------------------------------------------------------------------
+# Binary-layer persistence
+# ---------------------------------------------------------------------------
+
+
+def test_layer_binary_round_trips(tmp_path):
+    from Imervue.paint.binary_layer import (
+        BINARY_SOURCE_LUMA,
+        BinarySettings,
+    )
+    doc = _make_doc()
+    doc.set_layer_binary(binary=BinarySettings(
+        threshold=200, color=(40, 80, 200), source=BINARY_SOURCE_LUMA,
+    ))
+    target = tmp_path / f"bin{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    binary = loaded.active_layer().binary
+    assert binary is not None
+    assert binary.threshold == 200
+    assert binary.color == (40, 80, 200)
+    assert binary.source == BINARY_SOURCE_LUMA
+
+
+def test_missing_layer_binary_round_trips_to_none(tmp_path):
+    doc = _make_doc()
+    target = tmp_path / f"plain_bin{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.active_layer().binary is None

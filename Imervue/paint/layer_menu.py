@@ -70,6 +70,9 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         ("paint_layer_clear_reference", "Clear Reference Layer",
          bridge.clear_reference_layer, ""),
         (None, None, None, None),
+        ("paint_layer_toggle_binary", "Toggle 1-bit Layer",
+         bridge.toggle_binary_layer, ""),
+        (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
     ):
@@ -189,6 +192,23 @@ class _LayerMenuBridge:
         """Drop the bucket's reference-layer pointer."""
         document = self._workspace.canvas().document()
         if document.set_reference_layer_index(None):
+            self._refresh_canvas()
+
+    def toggle_binary_layer(self) -> None:
+        """Flip the active layer between plain raster and 1-bit ink.
+
+        On → installs default :class:`BinarySettings` so the
+        compositor thresholds the layer's alpha into ink-or-transparent
+        every time it composites. Off → drops the hint and the
+        original soft strokes reappear.
+        """
+        from Imervue.paint.binary_layer import BinarySettings
+        document = self._workspace.canvas().document()
+        layer = document.active_layer()
+        if layer is None:
+            return
+        new_binary = None if layer.binary is not None else BinarySettings()
+        if document.set_layer_binary(binary=new_binary):
             self._refresh_canvas()
 
     def _add_effect(self, kind: str) -> None:

@@ -76,17 +76,24 @@ def composite_layer_pair(
 
 
 def _layer_image_with_tone(layer) -> np.ndarray:
-    """Return ``layer.image`` rendered as a halftone if a tone is set.
+    """Return ``layer.image`` after the tone / binary render hints.
 
     Extracted from :func:`composite_stack` so the main loop's
-    cyclomatic complexity stays inside the project ceiling. When the
-    tone hint is unset the input is returned untouched.
+    cyclomatic complexity stays inside the project ceiling. The hints
+    are mutually-exclusive in practice (a layer is either greyscale-
+    halftone or 1-bit ink) but if both are set the binary pass runs
+    on the halftone output, producing solid-ink dot silhouettes.
     """
+    image = layer.image
     tone = getattr(layer, "tone", None)
-    if tone is None:
-        return layer.image
-    from Imervue.paint.halftone import render_tone_layer
-    return render_tone_layer(layer.image, tone)
+    if tone is not None:
+        from Imervue.paint.halftone import render_tone_layer
+        image = render_tone_layer(image, tone)
+    binary = getattr(layer, "binary", None)
+    if binary is not None:
+        from Imervue.paint.binary_layer import render_binary_layer
+        image = render_binary_layer(image, binary)
+    return image
 
 
 def _apply_clip(
@@ -152,6 +159,7 @@ def composite_stack(
             and getattr(only, "blend_if", None) is None
             and only.group is None
             and getattr(only, "tone", None) is None
+            and getattr(only, "binary", None) is None
             and only.image.shape[:2] == (h, w)
         ):
             # Vector layers stash strokes off the image; realise the

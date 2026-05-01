@@ -619,3 +619,67 @@ def test_compositor_skips_tone_when_unset():
     after_clear = doc.composite()
     np.testing.assert_array_equal(base, after_clear)
 
+
+# ---------------------------------------------------------------------------
+# Per-layer binary (1-bit ink hint)
+# ---------------------------------------------------------------------------
+
+
+def test_layer_defaults_binary_to_none():
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    assert doc.active_layer().binary is None
+
+
+def test_set_layer_binary_assigns_settings():
+    from Imervue.paint.binary_layer import BinarySettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    settings = BinarySettings(threshold=200)
+    assert doc.set_layer_binary(binary=settings) is True
+    assert doc.active_layer().binary == settings
+
+
+def test_set_layer_binary_idempotent_returns_false():
+    from Imervue.paint.binary_layer import BinarySettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_binary(binary=BinarySettings())
+    assert doc.set_layer_binary(binary=BinarySettings()) is False
+
+
+def test_set_layer_binary_clear_with_none():
+    from Imervue.paint.binary_layer import BinarySettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_binary(binary=BinarySettings())
+    assert doc.set_layer_binary(binary=None) is True
+    assert doc.active_layer().binary is None
+
+
+def test_duplicate_active_layer_carries_binary():
+    from Imervue.paint.binary_layer import BinarySettings
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.set_layer_binary(binary=BinarySettings(threshold=180))
+    doc.duplicate_active_layer()
+    duplicated = doc.active_layer()
+    assert duplicated.binary is not None
+    assert duplicated.binary.threshold == 180
+
+
+def test_compositor_renders_binary_layer():
+    """Soft greys composite as bimodal ink-or-transparent under
+    a binary hint."""
+    from Imervue.paint.binary_layer import BinarySettings
+    doc = PaintDocument()
+    soft = np.zeros((16, 16, 4), dtype=np.uint8)
+    soft[..., 3] = np.arange(0, 256, 16, dtype=np.uint8)[:, None]
+    doc.load_image(soft)
+    doc.set_layer_binary(binary=BinarySettings(threshold=128))
+    out = doc.composite()
+    assert out is not None
+    # Every pixel's alpha is either 0 or 255 — no intermediate values.
+    unique_alphas = set(np.unique(out[..., 3]).tolist())
+    assert unique_alphas.issubset({0, 255})
+

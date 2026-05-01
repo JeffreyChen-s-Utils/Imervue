@@ -66,6 +66,7 @@ class Layer:
     vector_data: Any = None      # VectorLayerData | None — vector strokes; image is the cache
     color_label: str | None = None   # one of LAYER_LABELS or None for "no label"
     tone: Any = None             # ToneSettings | None — render layer as halftone at composite
+    binary: Any = None           # BinarySettings | None — 1-bit ink-or-transparent render
 
     @property
     def effective_mask(self) -> np.ndarray | None:
@@ -404,6 +405,7 @@ class PaintDocument:
             adjustment=layer.adjustment,
             effects=layer.effects,
             tone=layer.tone,
+            binary=layer.binary,
         )
         insert_at = self._active_index + 1
         self._layers.insert(insert_at, copy)
@@ -462,6 +464,21 @@ class PaintDocument:
         if layer is None or layer.tone == tone:
             return False
         layer.tone = tone
+        self._notify()
+        return True
+
+    def set_layer_binary(self, index: int = -1, *, binary: Any) -> bool:
+        """Toggle / replace the per-layer 1-bit-render setting.
+
+        ``binary`` should be a
+        :class:`Imervue.paint.binary_layer.BinarySettings` or ``None``
+        to revert to plain raster rendering. Returns ``True`` if the
+        assignment changed the layer.
+        """
+        layer = self._resolve_layer(index)
+        if layer is None or layer.binary == binary:
+            return False
+        layer.binary = binary
         self._notify()
         return True
 

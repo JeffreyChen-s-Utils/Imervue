@@ -106,6 +106,9 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
             "tone": (
                 layer.tone.to_dict() if layer.tone is not None else None
             ),
+            "binary": (
+                layer.binary.to_dict() if layer.binary is not None else None
+            ),
         })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
@@ -275,8 +278,10 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
                     effects.append(LayerEffect.from_dict(eff_raw))
                 except (ValueError, TypeError):
                     continue
+        from Imervue.paint.binary_layer import BinarySettings
         from Imervue.paint.halftone import ToneSettings
         tone = ToneSettings.from_dict(lmeta.get("tone"))
+        binary = BinarySettings.from_dict(lmeta.get("binary"))
         layers.append(Layer(
             name=str(lmeta.get("name", f"Layer {i}")),
             image=image,
@@ -292,6 +297,7 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
             adjustment=adjustment,
             effects=tuple(effects),
             tone=tone,
+            binary=binary,
         ))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))
