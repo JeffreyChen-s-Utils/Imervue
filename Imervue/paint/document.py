@@ -619,6 +619,82 @@ class PaintDocument:
             return False
         return self.crop(rect)
 
+    # ---- whole-canvas transforms ---------------------------------------
+
+    def flip_horizontal(self) -> bool:
+        """Mirror every layer + mask + selection along the vertical axis.
+
+        In-place numpy view via ``np.fliplr`` on each buffer; returns
+        ``True`` once flipped (the operation always succeeds with a
+        non-empty document).
+        """
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = np.ascontiguousarray(np.fliplr(layer.image))
+            if layer.mask is not None:
+                layer.mask = np.ascontiguousarray(np.fliplr(layer.mask))
+        if self._selection is not None:
+            self._selection = np.ascontiguousarray(np.fliplr(self._selection))
+        self._notify()
+        return True
+
+    def flip_vertical(self) -> bool:
+        """Mirror every layer + mask + selection along the horizontal axis."""
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = np.ascontiguousarray(np.flipud(layer.image))
+            if layer.mask is not None:
+                layer.mask = np.ascontiguousarray(np.flipud(layer.mask))
+        if self._selection is not None:
+            self._selection = np.ascontiguousarray(np.flipud(self._selection))
+        self._notify()
+        return True
+
+    def rotate_90_cw(self) -> bool:
+        """Rotate the whole document 90° clockwise.
+
+        ``np.rot90(arr, k=-1)`` is the canonical 90°-CW; the result
+        swaps width and height across every layer + mask + selection.
+        """
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = np.ascontiguousarray(np.rot90(layer.image, k=-1))
+            if layer.mask is not None:
+                layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=-1))
+        if self._selection is not None:
+            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=-1))
+        self._notify()
+        return True
+
+    def rotate_90_ccw(self) -> bool:
+        """Rotate the whole document 90° counter-clockwise."""
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = np.ascontiguousarray(np.rot90(layer.image, k=1))
+            if layer.mask is not None:
+                layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=1))
+        if self._selection is not None:
+            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=1))
+        self._notify()
+        return True
+
+    def rotate_180(self) -> bool:
+        """Rotate the whole document 180° — equivalent to flip H + flip V."""
+        if not self._layers:
+            return False
+        for layer in self._layers:
+            layer.image = np.ascontiguousarray(np.rot90(layer.image, k=2))
+            if layer.mask is not None:
+                layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=2))
+        if self._selection is not None:
+            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=2))
+        self._notify()
+        return True
+
     def transform_selection(
         self, *,
         scale: float = 1.0,

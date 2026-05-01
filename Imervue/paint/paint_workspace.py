@@ -41,6 +41,7 @@ from Imervue.paint.dock_panels import (
 )
 from Imervue.paint.edit_menu import populate_edit_menu
 from Imervue.paint.file_menu import populate_file_menu
+from Imervue.paint.image_menu import populate_image_menu
 from Imervue.paint.layer_menu import populate_layer_menu
 from Imervue.paint.manga_menu import populate_manga_menu
 from Imervue.paint.paint_menu_bar import build_paint_menu_bar
@@ -69,6 +70,7 @@ class PaintWorkspace(QMainWindow):
         self.setMenuBar(build_paint_menu_bar(self))
         populate_file_menu(self)
         populate_edit_menu(self)
+        populate_image_menu(self)
         populate_layer_menu(self)
         populate_view_menu(self)
         populate_tools_menu(self)

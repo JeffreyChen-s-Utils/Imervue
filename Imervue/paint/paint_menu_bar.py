@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 MENU_KEYS: tuple[tuple[str, str], ...] = (
     ("file", "paint_menu_file"),
     ("edit", "paint_menu_edit"),
+    ("image", "paint_menu_image"),
     ("layer", "paint_menu_layer"),
     ("view", "paint_menu_view"),
     ("tools", "paint_menu_tools"),
@@ -37,6 +38,7 @@ MENU_KEYS: tuple[tuple[str, str], ...] = (
 _MENU_FALLBACKS: dict[str, str] = {
     "file": "File",
     "edit": "Edit",
+    "image": "Image",
     "layer": "Layer",
     "view": "View",
     "tools": "Tools",
