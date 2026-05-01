@@ -263,3 +263,116 @@ def test_realise_vector_layer_overwrites_old_pixels():
     realise_vector_layer(layer)
     # No strokes left → image is fully transparent again.
     assert (layer.image == 0).all()
+
+
+# ---------------------------------------------------------------------------
+# Per-node widths
+# ---------------------------------------------------------------------------
+
+
+def test_widths_default_to_empty_tuple():
+    stroke = VectorStroke(points=((0.0, 0.0), (10.0, 10.0)))
+    assert stroke.widths == ()
+
+
+def test_widths_must_match_points_length():
+    with pytest.raises(ValueError, match="widths length"):
+        VectorStroke(
+            points=((0.0, 0.0), (10.0, 10.0)),
+            widths=(4.0,),   # only one width for two points
+        )
+
+
+def test_widths_must_be_positive():
+    with pytest.raises(ValueError, match="must be > 0"):
+        VectorStroke(
+            points=((0.0, 0.0), (10.0, 10.0)),
+            widths=(4.0, 0.0),
+        )
+
+
+def test_width_at_returns_per_node_value():
+    stroke = VectorStroke(
+        points=((0.0, 0.0), (10.0, 10.0)),
+        widths=(4.0, 8.0),
+    )
+    assert stroke.width_at(0) == 4.0
+    assert stroke.width_at(1) == 8.0
+
+
+def test_width_at_falls_back_to_uniform_width():
+    stroke = VectorStroke(
+        points=((0.0, 0.0), (10.0, 10.0)),
+        width=6.0,
+    )
+    assert stroke.width_at(0) == 6.0
+    assert stroke.width_at(1) == 6.0
+
+
+def test_width_at_index_out_of_range_raises():
+    stroke = VectorStroke(
+        points=((0.0, 0.0), (10.0, 10.0)),
+        widths=(4.0, 8.0),
+    )
+    with pytest.raises(IndexError):
+        stroke.width_at(5)
+
+
+def test_widths_round_trip_via_dict():
+    original = VectorStroke(
+        points=((0.0, 0.0), (10.0, 10.0)),
+        widths=(4.0, 8.0),
+        color=(0, 255, 0, 255),
+    )
+    rebuilt = VectorStroke.from_dict(original.to_dict())
+    assert rebuilt.widths == (4.0, 8.0)
+
+
+def test_to_dict_omits_widths_when_uniform():
+    """A uniform-width stroke must not bloat the on-disk JSON with
+    a redundant widths array — the absence is the signal."""
+    stroke = VectorStroke(
+        points=((0.0, 0.0), (10.0, 10.0)),
+        width=4.0,
+    )
+    raw = stroke.to_dict()
+    assert "widths" not in raw
+
+
+def test_from_dict_drops_mismatched_width_count():
+    """An on-disk file with widths count ≠ points count is corrupt;
+    fall back to the uniform width rather than crash."""
+    rebuilt = VectorStroke.from_dict({
+        "points": [[0, 0], [10, 10]],
+        "widths": [4.0],   # mismatched
+        "width": 6.0,
+    })
+    assert rebuilt.widths == ()
+    assert rebuilt.width == 6.0
+
+
+def test_old_save_without_widths_loads_with_uniform_width():
+    """Saved files from before per-node widths existed must keep
+    loading — the widths field is optional with empty default."""
+    rebuilt = VectorStroke.from_dict({
+        "points": [[0, 0], [10, 10]],
+        "width": 5.0,
+    })
+    assert rebuilt.widths == ()
+    assert rebuilt.width == 5.0
+
+
+def test_tapered_stroke_paints_more_at_thick_end():
+    """A stroke that tapers from width 12 → 4 should leave more
+    painted pixels on the thick end than the thin one."""
+    canvas = np.zeros((40, 80, 4), dtype=np.uint8)
+    stroke = VectorStroke(
+        points=((10.0, 20.0), (70.0, 20.0)),
+        widths=(12.0, 4.0),
+        color=(255, 0, 0, 255),
+    )
+    rasterise_strokes(canvas, [stroke])
+    painted = canvas[..., 3] > 0
+    thick_end_count = int(painted[:, :30].sum())
+    thin_end_count = int(painted[:, 50:].sum())
+    assert thick_end_count > thin_end_count

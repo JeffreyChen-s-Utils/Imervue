@@ -41,6 +41,12 @@ class VectorStroke:
     stroke diameter in pixels (matches the raster brush's ``size``
     parameter). ``opacity`` is in [0, 1].
 
+    ``widths`` is an optional per-point width array. When non-empty
+    its length must match ``points`` and each entry must be > 0; the
+    rasteriser interpolates width linearly between consecutive nodes.
+    Empty (the default) means "uniform width = ``width``" and keeps
+    older saved strokes loading unchanged.
+
     Empty / single-point strokes still rasterise — a single point
     stamps one dab so the user sees something at the click location.
     """
@@ -49,6 +55,7 @@ class VectorStroke:
     width: float = DEFAULT_VECTOR_WIDTH
     color: tuple[int, int, int, int] = DEFAULT_VECTOR_COLOR
     opacity: float = 1.0
+    widths: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         if self.width <= 0:
@@ -63,14 +70,36 @@ class VectorStroke:
             raise ValueError(
                 f"color must be a 4-tuple of 0..255 ints, got {self.color!r}",
             )
+        if self.widths:
+            if len(self.widths) != len(self.points):
+                raise ValueError(
+                    f"widths length {len(self.widths)} does not match "
+                    f"points length {len(self.points)}",
+                )
+            if any(float(w) <= 0 for w in self.widths):
+                raise ValueError(
+                    f"per-node widths must be > 0, got {self.widths!r}",
+                )
+
+    def width_at(self, index: int) -> float:
+        """Return the width at the node ``index`` — falls back to the
+        uniform ``width`` when no per-node widths are set."""
+        if not self.widths:
+            return float(self.width)
+        if not 0 <= index < len(self.widths):
+            raise IndexError(f"node index {index} out of range")
+        return float(self.widths[index])
 
     def to_dict(self) -> dict:
-        return {
+        out = {
             "points": [list(p) for p in self.points],
             "width": float(self.width),
             "color": list(self.color),
             "opacity": float(self.opacity),
         }
+        if self.widths:
+            out["widths"] = [float(w) for w in self.widths]
+        return out
 
     @classmethod
     def from_dict(cls, raw: dict) -> VectorStroke:
@@ -83,6 +112,17 @@ class VectorStroke:
                         points.append((float(entry[0]), float(entry[1])))
                     except (TypeError, ValueError):
                         continue
+        # Per-node widths only survive the round-trip if the count
+        # matches the surviving point count — partial / mismatched
+        # arrays drop silently to "uniform width".
+        raw_widths = raw.get("widths") or ()
+        widths: tuple[float, ...] = ()
+        if isinstance(raw_widths, (list, tuple)) and len(raw_widths) == len(points):
+            try:
+                clean = tuple(max(1e-3, float(w)) for w in raw_widths)
+                widths = clean
+            except (TypeError, ValueError):
+                widths = ()
         return cls(
             points=tuple(points),
             width=float(raw.get("width", DEFAULT_VECTOR_WIDTH)),
@@ -92,6 +132,7 @@ class VectorStroke:
                 )
             ),
             opacity=max(0.0, min(1.0, float(raw.get("opacity", 1.0)))),
+            widths=widths,
         )
 
 
@@ -197,41 +238,58 @@ def _rasterise_one(canvas: np.ndarray, stroke: VectorStroke) -> None:
     if not stroke.points:
         return
     from Imervue.paint.brush_engine import apply_dab, round_brush_kernel
-    size = max(1, int(round(stroke.width)))
-    kernel = round_brush_kernel(size, hardness=0.7)
     color_rgb = (int(stroke.color[0]), int(stroke.color[1]), int(stroke.color[2]))
-    spacing = max(1.0, stroke.width * 0.25)
+    has_per_node_widths = bool(stroke.widths)
+
+    def _kernel_for(width: float):
+        size = max(1, int(round(float(width))))
+        return round_brush_kernel(size, hardness=0.7)
 
     if len(stroke.points) == 1:
+        width = stroke.width_at(0) if has_per_node_widths else stroke.width
         x, y = stroke.points[0]
         apply_dab(
-            canvas, float(x), float(y), kernel, color_rgb,
+            canvas, float(x), float(y), _kernel_for(width), color_rgb,
             opacity=stroke.opacity,
         )
         return
 
-    # Stamp the first point exactly once, then march along each segment.
+    # Stamp the first point at its own width.
+    first_width = stroke.width_at(0) if has_per_node_widths else stroke.width
     apply_dab(
         canvas, float(stroke.points[0][0]), float(stroke.points[0][1]),
-        kernel, color_rgb, opacity=stroke.opacity,
+        _kernel_for(first_width), color_rgb, opacity=stroke.opacity,
     )
-    for (x0, y0), (x1, y1) in zip(stroke.points[:-1], stroke.points[1:], strict=False):
+    for index, ((x0, y0), (x1, y1)) in enumerate(
+        zip(stroke.points[:-1], stroke.points[1:], strict=False),
+    ):
+        if has_per_node_widths:
+            w_start = stroke.width_at(index)
+            w_end = stroke.width_at(index + 1)
+        else:
+            w_start = stroke.width
+            w_end = stroke.width
+        # Spacing tracks the smaller of the two widths so a tapered
+        # segment never thins past a visible gap.
+        spacing = max(1.0, min(w_start, w_end) * 0.25)
         dx = float(x1) - float(x0)
         dy = float(y1) - float(y0)
         distance = math.hypot(dx, dy)
         if distance <= spacing:
             apply_dab(
-                canvas, float(x1), float(y1), kernel, color_rgb,
+                canvas, float(x1), float(y1), _kernel_for(w_end), color_rgb,
                 opacity=stroke.opacity,
             )
             continue
         n_steps = int(math.ceil(distance / spacing))
         for i in range(1, n_steps + 1):
             t = i / n_steps
+            interpolated_width = w_start + (w_end - w_start) * t
             apply_dab(
                 canvas,
                 float(x0) + dx * t,
                 float(y0) + dy * t,
-                kernel, color_rgb,
+                _kernel_for(interpolated_width),
+                color_rgb,
                 opacity=stroke.opacity,
             )
