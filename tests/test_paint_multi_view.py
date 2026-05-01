@@ -185,3 +185,89 @@ def test_window_menu_has_new_view_action(workspace):
     assert any("New View" in label or "新" in label or "新規" in label
                or "보조" in label or "뷰" in label
                for label in labels)
+
+
+# ---------------------------------------------------------------------------
+# Mirror preview (28d)
+# ---------------------------------------------------------------------------
+
+
+def test_secondary_view_default_is_not_mirrored(qapp):
+    view = SecondaryView()
+    try:
+        assert view.is_mirror_horizontal() is False
+    finally:
+        view.deleteLater()
+
+
+def test_secondary_view_constructor_accepts_mirror_flag(qapp):
+    view = SecondaryView(mirror_horizontal=True)
+    try:
+        assert view.is_mirror_horizontal() is True
+    finally:
+        view.deleteLater()
+
+
+def test_set_mirror_horizontal_round_trips(qapp):
+    view = SecondaryView()
+    try:
+        view.set_mirror_horizontal(True)
+        assert view.is_mirror_horizontal() is True
+        view.set_mirror_horizontal(False)
+        assert view.is_mirror_horizontal() is False
+    finally:
+        view.deleteLater()
+
+
+def test_open_mirror_preview_returns_mirrored_view(workspace):
+    view = workspace.open_mirror_preview()
+    assert view.is_mirror_horizontal() is True
+
+
+def test_open_secondary_view_default_is_unmirrored(workspace):
+    view = workspace.open_secondary_view()
+    assert view.is_mirror_horizontal() is False
+
+
+def test_mirror_preview_window_title_is_distinct(workspace):
+    plain_view = workspace.open_secondary_view()
+    mirror_view = workspace.open_mirror_preview()
+    assert plain_view.windowTitle() != mirror_view.windowTitle()
+
+
+def test_mirror_preview_renders_horizontally_flipped(workspace):
+    """A pixel painted on the right half of the source must appear
+    on the left half of the rendered (flipped) preview pixmap."""
+    layer = workspace.canvas().document().active_layer()
+    h, w = layer.image.shape[:2]
+    layer.image[..., 3] = 255
+    layer.image[..., :3] = 0
+    layer.image[:, w - 1, 0] = 255   # red stripe on rightmost column
+    workspace.canvas().document().invalidate_composite()
+    view = workspace.open_mirror_preview()
+    pixmap = view._image_label.pixmap()  # noqa: SLF001
+    assert pixmap is not None
+    img = pixmap.toImage()
+    left_color = img.pixelColor(0, img.height() // 2)
+    right_color = img.pixelColor(img.width() - 1, img.height() // 2)
+    # Mirrored: the right-side stripe shows up on the left of the preview.
+    assert left_color.red() > right_color.red()
+    plain_view = workspace.open_secondary_view()
+    plain_pix = plain_view._image_label.pixmap()  # noqa: SLF001
+    plain_img = plain_pix.toImage()
+    plain_left = plain_img.pixelColor(0, plain_img.height() // 2)
+    plain_right = plain_img.pixelColor(plain_img.width() - 1, plain_img.height() // 2)
+    # Unmirrored: the stripe stays on the right of the preview.
+    assert plain_right.red() > plain_left.red()
+    # h variable used only for clarity above.
+    _ = h
+
+
+def test_window_menu_has_mirror_preview_action(workspace):
+    from Imervue.paint.paint_menu_bar import menu_for
+    window_menu = menu_for(workspace, "window")
+    labels = [a.text() for a in window_menu.actions() if not a.isSeparator()]
+    assert any(
+        "Mirror" in label or "鏡" in label or "ミラー" in label
+        for label in labels
+    )

@@ -282,8 +282,21 @@ class PaintWorkspace(QMainWindow):
         same composite + auto-removes itself from the workspace's
         view list when its window is closed.
         """
+        return self._open_secondary_view(mirror_horizontal=False)
+
+    def open_mirror_preview(self):
+        """Spawn a horizontally-flipped read-only preview window.
+
+        Same plumbing as :meth:`open_secondary_view`; the flip is a
+        view-only transform on the composite so the underlying
+        document is unaffected. The "anatomy check" workflow — drawing
+        a face / pose and looking at it mirrored to spot asymmetry.
+        """
+        return self._open_secondary_view(mirror_horizontal=True)
+
+    def _open_secondary_view(self, *, mirror_horizontal: bool):
         from Imervue.paint.multi_view import SecondaryView, composite_to_pixmap
-        view = SecondaryView(self)
+        view = SecondaryView(self, mirror_horizontal=mirror_horizontal)
         if not hasattr(self, "_secondary_views"):
             self._secondary_views = []
         self._secondary_views.append(view)
@@ -621,6 +634,10 @@ class PaintWorkspace(QMainWindow):
             "paint_window_new_view", "New View",
         ))
         new_view_action.triggered.connect(self.open_secondary_view)
+        mirror_action = menu.addAction(lang.get(
+            "paint_window_mirror_preview", "Mirror Preview",
+        ))
+        mirror_action.triggered.connect(self.open_mirror_preview)
 
     # ---- handlers --------------------------------------------------------
 

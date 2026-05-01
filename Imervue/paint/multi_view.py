@@ -13,7 +13,7 @@ the main editing window.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -42,16 +42,25 @@ class SecondaryView(QMainWindow):
 
     closed = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, mirror_horizontal: bool = False):
         lang = language_wrapper.language_word_dict
         super().__init__(parent)
-        self.setWindowTitle(
-            lang.get("paint_secondary_view", "Second View"),
+        title_key = (
+            "paint_mirror_view" if mirror_horizontal else "paint_secondary_view"
         )
+        title_default = (
+            "Mirror Preview" if mirror_horizontal else "Second View"
+        )
+        self.setWindowTitle(lang.get(title_key, title_default))
         self.setMinimumSize(320, 240)
 
         self._scale = VIEW_DEFAULT_SCALE
         self._composite_pixmap: QPixmap | None = None
+        # When set, the rendered composite is flipped horizontally for
+        # display. Pure-view transform — does not touch the underlying
+        # document. Used to flag SecondaryView windows opened from the
+        # "Mirror Preview" Window-menu entry.
+        self._mirror_horizontal = bool(mirror_horizontal)
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -95,6 +104,17 @@ class SecondaryView(QMainWindow):
         self._composite_pixmap = pixmap
         self._refresh_pixmap()
 
+    def is_mirror_horizontal(self) -> bool:
+        return self._mirror_horizontal
+
+    def set_mirror_horizontal(self, enabled: bool) -> None:
+        """Toggle the horizontal flip applied at display time."""
+        new_value = bool(enabled)
+        if new_value == self._mirror_horizontal:
+            return
+        self._mirror_horizontal = new_value
+        self._refresh_pixmap()
+
     def scale_factor(self) -> float:
         return self._scale
 
@@ -129,6 +149,8 @@ class SecondaryView(QMainWindow):
             Qt.AspectRatioMode.IgnoreAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
+        if self._mirror_horizontal:
+            scaled = scaled.transformed(QTransform().scale(-1.0, 1.0))
         self._image_label.setPixmap(scaled)
         self._image_label.resize(w, h)
 
