@@ -271,6 +271,63 @@ class PaintWorkspace(QMainWindow):
     def state(self) -> ToolState:
         return self._state
 
+    # ---- autosave -------------------------------------------------------
+
+    def start_autosave(
+        self, *, interval_sec: int | None = None, target_dir=None,
+    ) -> None:
+        """Start the periodic snapshot timer.
+
+        Cheap to call repeatedly — a second call replaces the existing
+        timer interval rather than stacking timers. Pulled out as an
+        explicit method (not ctor wiring) so tests can opt out and
+        keep workspace construction cheap.
+        """
+        from Imervue.paint.autosave import DEFAULT_INTERVAL_SEC
+        seconds = int(interval_sec or DEFAULT_INTERVAL_SEC)
+        self._autosave_target_dir = target_dir
+        if not hasattr(self, "_autosave_timer"):
+            self._autosave_timer = QTimer(self)
+            self._autosave_timer.timeout.connect(self._on_autosave_tick)
+        self._autosave_timer.start(max(1000, seconds * 1000))
+
+    def stop_autosave(self) -> None:
+        if hasattr(self, "_autosave_timer"):
+            self._autosave_timer.stop()
+
+    def take_autosave_snapshot_now(self):
+        """Force an immediate snapshot — returns the snapshot path or
+        ``None`` if there's nothing to save yet."""
+        from Imervue.paint.autosave import take_snapshot
+        composite = self._canvas.document().composite()
+        if composite is None:
+            return None
+        target = getattr(self, "_autosave_target_dir", None)
+        try:
+            return take_snapshot(composite, target_dir=target)
+        except (OSError, ValueError):
+            return None
+
+    def restore_latest_autosave(self, *, target_dir=None) -> bool:
+        """Load the most-recent autosave PNG into the active canvas.
+
+        Returns ``True`` when a snapshot was found and pasted; the
+        caller drives the user-visible "restore?" prompt around this.
+        """
+        from Imervue.paint.autosave import latest_snapshot, load_snapshot
+        path = latest_snapshot(target_dir=target_dir)
+        if path is None:
+            return False
+        try:
+            arr = load_snapshot(path)
+        except (OSError, ValueError):
+            return False
+        self.load_image(arr)
+        return True
+
+    def _on_autosave_tick(self) -> None:
+        self.take_autosave_snapshot_now()
+
     # ---- animation timeline --------------------------------------------
 
     def _on_animation_add_frame(self) -> None:
