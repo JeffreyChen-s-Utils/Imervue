@@ -127,6 +127,11 @@ class PaintWorkspace(QMainWindow):
             lambda r, g, b: self._state.set_foreground((r, g, b), commit=False),
         )
 
+        # Reference dock — pinned reference image with independent
+        # pan/zoom, useful when copying a pose / lighting reference.
+        from Imervue.paint.reference_dock import ReferenceDock
+        self._reference_dock = ReferenceDock(self)
+
         for dock in (
             self._color_dock,
             self._brush_dock,
@@ -135,6 +140,7 @@ class PaintWorkspace(QMainWindow):
             self._material_dock,
             self._history_dock,
             self._swatch_dock,
+            self._reference_dock,
         ):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
             dock.setFeatures(
@@ -358,6 +364,7 @@ class PaintWorkspace(QMainWindow):
             ("paint_dock_material", "Materials", self._material_dock),
             ("paint_dock_history", "History", self._history_dock),
             ("paint_dock_swatches", "Swatches", self._swatch_dock),
+            ("paint_dock_reference", "Reference", self._reference_dock),
         )
         self._window_dock_actions = {}
         for key, fallback, dock in entries:
