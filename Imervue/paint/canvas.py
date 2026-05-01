@@ -194,6 +194,10 @@ class PaintCanvas(QOpenGLWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
+        # Click-focus + keyboard focus so bracket-key brush-size
+        # changes (and future shortcut keys) reach this widget without
+        # the user having to Tab onto it.
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(QCursor(cursor_for_tool("brush")))
 
         self._document: PaintDocument = PaintDocument()
@@ -219,6 +223,13 @@ class PaintCanvas(QOpenGLWidget):
         # (pixel grid, onion skin, bleed guides) can hang their draw
         # calls off the same flag without changing this constructor.
         self._pixel_grid_visible = False
+        # Optional brush-size HUD; the workspace assigns a real
+        # SizeHudState via ``set_size_hud(state)`` after init so the
+        # canvas can render the radius ring on bracket-key changes.
+        # Stays ``None`` for canvases used outside the workspace
+        # (e.g. unit tests that don't need the HUD overlay).
+        self._size_hud = None
+        self._tool_state_for_hud = None
         # Set when ``_reset_view_to_fit`` is called against a widget
         # that's too small to host the document at a sensible zoom
         # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
@@ -362,6 +373,18 @@ class PaintCanvas(QOpenGLWidget):
     def zoom_factor(self) -> float:
         return self._zoom
 
+    def set_size_hud(self, hud, tool_state) -> None:
+        """Wire the brush-size HUD overlay.
+
+        ``hud`` is a :class:`Imervue.paint.size_hud.SizeHudState`
+        and ``tool_state`` is the workspace's :class:`ToolState`.
+        Both are stashed; the bracket-key handler in
+        ``keyPressEvent`` consults them to bump the brush size and
+        flash the HUD.
+        """
+        self._size_hud = hud
+        self._tool_state_for_hud = tool_state
+
     def set_pixel_grid_visible(self, visible: bool) -> None:
         """Toggle the pixel-grid overlay; repaints the canvas.
 
@@ -498,6 +521,11 @@ class PaintCanvas(QOpenGLWidget):
             self._draw_pixel_grid(w, h)
         self._draw_marquee()
         glPopMatrix()
+        # HUD overlay sits in widget-space (un-rotated) so the user
+        # always sees a circular ring at the canvas centre regardless
+        # of the canvas rotation. Drawn AFTER popping the modelview.
+        if self._size_hud is not None:
+            self._draw_size_hud()
 
     def _draw_marquee(self) -> None:  # pragma: no cover - GL needs display server
         """Draw the active selection outline as marching ants.
@@ -537,6 +565,60 @@ class PaintCanvas(QOpenGLWidget):
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
 
+    def _draw_size_hud(self) -> None:  # pragma: no cover - GL needs display
+        """Render the brush-size HUD ring at the canvas centre.
+
+        Two passes (black shadow + white foreground) for legibility
+        against any underlying composite. Alpha follows the HUD
+        state's decay curve; 0 short-circuits without any GL calls
+        so an idle canvas never pays the per-frame overhead.
+        """
+        import time
+        alpha = self._size_hud.alpha_at(now=time.monotonic())
+        if alpha <= 0.0:
+            return
+        if self._tool_state_for_hud is None:
+            return
+        radius = float(self._tool_state_for_hud.brush.size) * self._zoom * 0.5
+        if radius <= 0:
+            return
+        cx = self.width() / 2.0
+        cy = self.height() / 2.0
+        # Schedule another paint while the HUD is fading so the
+        # animation doesn't stall mid-fade after the user releases
+        # the bracket key.
+        if alpha > 0.0:
+            self.update()
+        # Draw a circle outline by stepping through angles. 64 steps
+        # gives a smooth-enough ring at typical brush sizes; the
+        # HUD never needs higher fidelity than the cursor outline.
+        glDisable(GL_TEXTURE_2D)
+        steps = 64
+        # Black shadow (1 px outside the white ring) for readability.
+        glLineWidth(2.0)
+        glColor4f(0.0, 0.0, 0.0, alpha * 0.7)
+        glBegin(GL_LINES)
+        for i in range(steps):
+            t0 = (i / steps) * 2.0 * math.pi
+            t1 = ((i + 1) / steps) * 2.0 * math.pi
+            glVertex2f(cx + (radius + 1) * math.cos(t0),
+                       cy + (radius + 1) * math.sin(t0))
+            glVertex2f(cx + (radius + 1) * math.cos(t1),
+                       cy + (radius + 1) * math.sin(t1))
+        glEnd()
+        glLineWidth(1.0)
+        glColor4f(1.0, 1.0, 1.0, alpha)
+        glBegin(GL_LINES)
+        for i in range(steps):
+            t0 = (i / steps) * 2.0 * math.pi
+            t1 = ((i + 1) / steps) * 2.0 * math.pi
+            glVertex2f(cx + radius * math.cos(t0),
+                       cy + radius * math.sin(t0))
+            glVertex2f(cx + radius * math.cos(t1),
+                       cy + radius * math.sin(t1))
+        glEnd()
+        glEnable(GL_TEXTURE_2D)
+
     def _draw_pixel_grid(  # pragma: no cover - GL needs display server
         self, w: int, h: int,
     ) -> None:
@@ -563,6 +645,26 @@ class PaintCanvas(QOpenGLWidget):
         glEnable(GL_TEXTURE_2D)
 
     # ---- mouse / tablet --------------------------------------------------
+
+    def keyPressEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        """Bracket-key brush-size + HUD flash."""
+        from PySide6.QtCore import Qt as _Qt
+        key = event.key()
+        if key in (_Qt.Key.Key_BracketLeft, _Qt.Key.Key_BracketRight):
+            if self._tool_state_for_hud is None or self._size_hud is None:
+                event.ignore()
+                return
+            from Imervue.paint.size_hud_bridge import (
+                adjust_brush_size, trigger_size_hud,
+            )
+            adjust_brush_size(
+                self._tool_state_for_hud,
+                larger=(key == _Qt.Key.Key_BracketRight),
+            )
+            trigger_size_hud(self._tool_state_for_hud, self._size_hud)
+            self.update()
+            return
+        super().keyPressEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI
         if self._is_pan_button(event):

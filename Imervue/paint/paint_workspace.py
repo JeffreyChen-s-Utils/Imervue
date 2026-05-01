@@ -133,6 +133,8 @@ class PaintWorkspace(QMainWindow):
         # at the canvas centre via the SizeHudState helper.
         from Imervue.paint.size_hud import SizeHudState
         self._size_hud = SizeHudState()
+        if hasattr(self._canvas, "set_size_hud"):
+            self._canvas.set_size_hud(self._size_hud, self._state)
 
         # Wire status-bar hover updates and tool-driven cursor changes.
         self._canvas.hover_changed.connect(self._on_hover_changed)
