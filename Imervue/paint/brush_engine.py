@@ -349,6 +349,23 @@ class BrushStrokeOptions:
     kind: str = "pen"               # pen / pencil / marker / airbrush / watercolor
     seed: int = 0                   # RNG seed for kind-specific noise
     tip_path: str | None = None     # custom PNG used as kernel; None = round
+    # Pixel-art mode — when True, the kernel is forced to a hard
+    # ``size x size`` square of 1.0s (no anti-aliased falloff), dab
+    # positions snap to integer pixels, and tip / kind shaping is
+    # bypassed. Matches MediBang's "ドット絵モード" / Aseprite's
+    # pixel brush. Tests in test_paint_brush_engine.py exercise the
+    # snap + kernel behaviour.
+    pixel_art: bool = False
+
+
+def square_brush_kernel(size: int) -> np.ndarray:
+    """Return an ``(N, N)`` float32 kernel with every cell at 1.0.
+
+    The pixel-art kernel: hard square edges, no anti-aliased falloff.
+    ``size`` is clamped to the documented brush range.
+    """
+    size = max(KERNEL_SIZE_MIN, min(KERNEL_SIZE_MAX, int(size)))
+    return np.ones((size, size), dtype=np.float32)
 
 
 class BrushStroke:
@@ -364,10 +381,17 @@ class BrushStroke:
         self._options = options
         self._rng = np.random.default_rng(options.seed)
         base = _resolve_base_kernel(options)
+        # Pixel-art mode bypasses the per-kind noise shaping — the
+        # kernel is the hard square already and we don't want any
+        # variation between dabs.
+        if options.pixel_art:
+            self._base_kernel = base
+            self._kernel = base
+            self._restyle_each_dab = False
         # Re-stylise the kernel each dab for kinds that depend on noise
         # (pencil / airbrush) — store the base + a callable instead of
         # caching one shape so the texture varies along the stroke.
-        if options.kind in ("pencil", "airbrush"):
+        elif options.kind in ("pencil", "airbrush"):
             self._base_kernel = base
             self._kernel = stylise_kernel(base, options.kind, self._rng)
             self._restyle_each_dab = True
@@ -394,6 +418,7 @@ class BrushStroke:
         if self._active:
             raise RuntimeError("BrushStroke.begin called while already active")
         self._active = True
+        x, y = self._snap_position(x, y)
         self._last = (x, y)
         self._stroke_damage = DabResult(0, 0, 0, 0)
         kernel = self._next_kernel()
@@ -409,12 +434,19 @@ class BrushStroke:
     def extend(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
         if not self._active or self._last is None:
             raise RuntimeError("BrushStroke.extend called before begin()")
+        x, y = self._snap_position(x, y)
         positions = stroke_dab_positions(self._last, (x, y), self._spacing)
         damage = DabResult(0, 0, 0, 0)
-        for px, py in positions:
+        for raw_px, raw_py in positions:
+            if self._options.pixel_art:
+                dab_px = float(int(round(raw_px)))
+                dab_py = float(int(round(raw_py)))
+            else:
+                dab_px = raw_px
+                dab_py = raw_py
             kernel = self._next_kernel()
             d = apply_dab(
-                canvas, px, py, kernel, self._options.color,
+                canvas, dab_px, dab_py, kernel, self._options.color,
                 opacity=self._options.opacity,
                 blend_mode=self._options.blend_mode,
                 selection=self._options.selection,
@@ -423,6 +455,12 @@ class BrushStroke:
         self._last = (x, y)
         self._stroke_damage = _union(self._stroke_damage, damage)
         return damage
+
+    def _snap_position(self, x: float, y: float) -> tuple[float, float]:
+        """Snap ``(x, y)`` to integer pixels when pixel-art mode is on."""
+        if not self._options.pixel_art:
+            return (x, y)
+        return (float(int(round(x))), float(int(round(y))))
 
     @property
     def stroke_damage(self) -> DabResult:
@@ -454,6 +492,10 @@ class BrushStroke:
 
 def _resolve_base_kernel(options: BrushStrokeOptions) -> np.ndarray:
     """Build the per-stroke base kernel — custom tip if set, else round."""
+    if options.pixel_art:
+        # Pixel-art mode overrides every other kernel choice — hard
+        # square with no falloff, regardless of hardness / kind / tip.
+        return square_brush_kernel(options.size)
     if options.tip_path:
         try:
             from Imervue.paint.custom_brush import load_brush_tip

@@ -442,6 +442,7 @@ class BrushTool:
             kind=brush.kind,
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
             tip_path=brush.tip_path,
+            pixel_art=self._state.snap_to_pixel,
         )
         self._strokes = []
         for px, py in self._mirror(sx, sy):

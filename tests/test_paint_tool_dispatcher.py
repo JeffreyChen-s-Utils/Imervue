@@ -457,6 +457,22 @@ def test_eyedropper_falls_back_to_canvas_when_composite_none(state, canvas):
     assert state.foreground == (40, 50, 60)
 
 
+def test_brush_tool_forwards_snap_to_pixel_to_options(state, canvas):
+    """When ``snap_to_pixel`` is on the brush dispatcher must build
+    its BrushStrokeOptions with ``pixel_art=True`` so the engine
+    swaps in the hard-square kernel."""
+    state.snap_to_pixel = True
+    state.set_tool("brush")
+    state.set_brush(size=3, hardness=1.0, opacity=1.0)
+    state.set_foreground((255, 0, 0))
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    disp(_press(20, 20))
+    # Expect a clean 3x3 red stamp — no AA half-alpha cells.
+    region = canvas[19:22, 19:22]
+    assert (region[..., 0] == 255).all()
+    assert (region[..., 3] == 255).all()
+
+
 # ---------------------------------------------------------------------------
 # Alt-modifier eyedropper override
 # ---------------------------------------------------------------------------

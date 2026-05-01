@@ -277,3 +277,100 @@ def test_stroke_end_clears_active(blank_canvas):
 def test_dab_result_empty_property_matches_zero_dimensions():
     assert DabResult(0, 0, 0, 0).is_empty is True
     assert DabResult(0, 0, 1, 1).is_empty is False
+
+
+# ---------------------------------------------------------------------------
+# Pixel-art mode (28e)
+# ---------------------------------------------------------------------------
+
+
+def test_square_brush_kernel_is_all_ones():
+    from Imervue.paint.brush_engine import square_brush_kernel
+    kernel = square_brush_kernel(5)
+    assert kernel.shape == (5, 5)
+    assert kernel.dtype == np.float32
+    assert (kernel == 1.0).all()
+
+
+def test_square_brush_kernel_clamps_size():
+    from Imervue.paint.brush_engine import square_brush_kernel
+    huge = square_brush_kernel(10_000)
+    assert huge.shape[0] <= KERNEL_SIZE_MAX
+    tiny = square_brush_kernel(0)
+    assert tiny.shape[0] >= KERNEL_SIZE_MIN
+
+
+def test_pixel_art_mode_uses_square_kernel(blank_canvas):
+    """A 3-px pixel-art dab fills exactly a 3x3 square at integer pos."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=3, opacity=1.0, hardness=1.0,
+        pixel_art=True,
+    ))
+    # Aim at integer (32, 32) so the centred 3x3 stamp lands at
+    # rows / cols 31..33 without snap ambiguity.
+    stroke.begin(blank_canvas, 32, 32)
+    region = blank_canvas[31:34, 31:34, 0]
+    assert (region == 255).all()
+
+
+def test_pixel_art_mode_snaps_to_integer_position(blank_canvas):
+    """Fractional coordinates must round to integers — the dab stamp
+    therefore lands on an aligned 3x3 grid."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=1, opacity=1.0, hardness=1.0,
+        pixel_art=True,
+    ))
+    stroke.begin(blank_canvas, 32.7, 32.3)
+    # Round to (33, 32).
+    assert blank_canvas[32, 33, 0] == 255
+    # Adjacent fractional cells stay untouched.
+    assert blank_canvas[32, 32, 0] == 0
+    assert blank_canvas[33, 33, 0] == 0
+
+
+def test_pixel_art_mode_ignores_hardness_falloff(blank_canvas):
+    """Even with hardness=0 (smooth round brush), pixel_art forces a
+    hard square — no fractional alpha at the kernel edge."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 255, 255), size=5, opacity=1.0, hardness=0.0,
+        pixel_art=True,
+    ))
+    stroke.begin(blank_canvas, 32, 32)
+    region = blank_canvas[30:35, 30:35, 3]
+    # Every cell in the 5x5 stamp is fully opaque.
+    assert (region == 255).all()
+
+
+def test_pixel_art_mode_off_keeps_anti_aliased_edges(blank_canvas):
+    """Without pixel_art the dab uses the standard round kernel, so
+    the corners of a 5x5 region are NOT all fully opaque."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 255, 255), size=5, opacity=1.0, hardness=0.0,
+        pixel_art=False,
+    ))
+    stroke.begin(blank_canvas, 32, 32)
+    corners = blank_canvas[[30, 30, 34, 34], [30, 34, 30, 34], 3]
+    # At least one corner has alpha < 255 (AA falloff).
+    assert (corners < 255).any()
+
+
+def test_pixel_art_mode_extend_snaps_dab_positions(blank_canvas):
+    """Continuing a stroke at a fractional position must also snap
+    so the stroke trails through integer pixels."""
+    stroke = BrushStroke(BrushStrokeOptions(
+        color=(255, 0, 0), size=1, opacity=1.0, hardness=1.0,
+        pixel_art=True,
+    ))
+    stroke.begin(blank_canvas, 32, 32)
+    stroke.extend(blank_canvas, 35.4, 32.0)
+    assert blank_canvas[32, 35, 0] == 255
+    # Off-axis intermediate dab positions are also integer-snapped —
+    # no fractional dab between (32, 32) and (35, 32).
+    assert blank_canvas[32, 33, 0] in (0, 255)
+
+
+def test_pixel_art_mode_default_is_off():
+    options = BrushStrokeOptions(
+        color=(0, 0, 0), size=4, opacity=1.0, hardness=1.0,
+    )
+    assert options.pixel_art is False
