@@ -35,9 +35,8 @@ def test_file_menu_populated_after_construction(qapp):
     ws = PaintWorkspace()
     try:
         file_menu = menu_for(ws, "file")
-        # 2 tab actions + sep + 2 import + sep + 3 export = 9 entries
-        # (separators count as actions in Qt's actions() list).
-        assert len(file_menu.actions()) == 9
+        # 2 tab + sep + 2 PSD + sep + 2 import + sep + 3 export = 12.
+        assert len(file_menu.actions()) == 12
     finally:
         ws.deleteLater()
 

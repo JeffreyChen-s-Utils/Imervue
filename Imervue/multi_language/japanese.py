@@ -581,6 +581,8 @@ japanese_word_dict = {
     "paint_manga_margin": '余白',
     "paint_file_new_tab": '新しいタブ',
     "paint_file_close_tab": 'タブを閉じる',
+    "paint_file_open_psd": 'PSD を開く…',
+    "paint_file_save_psd": 'PSD として保存…',
     "paint_file_import_brush_preset": 'ブラシプリセットをインポート…',
     "paint_file_import_palette": 'パレットをインポート…',
     "paint_file_export_image": '画像をエクスポート…',

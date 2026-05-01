@@ -57,6 +57,11 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
+        ("paint_file_open_psd", "Open PSD…",
+         bridge.open_psd, "Ctrl+O"),
+        ("paint_file_save_psd", "Save as PSD…",
+         bridge.save_psd, "Ctrl+S"),
+        (None, None, None, None),
         ("paint_file_import_brush_preset", "Import brush preset…",
          bridge.import_brush_preset, ""),
         ("paint_file_import_palette", "Import palette…",
@@ -105,6 +110,36 @@ class _FileMenuBridge:
         # the "refuse to close the last tab" rule here.
         index = self._workspace._tabs.currentIndex()  # noqa: SLF001
         self._workspace.close_tab(index)
+
+    # ---- PSD interop ----------------------------------------------------
+
+    def open_psd(self) -> None:  # pragma: no cover - QFileDialog
+        from PySide6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self._workspace,
+            language_wrapper.language_word_dict.get(
+                "paint_file_open_psd", "Open PSD",
+            ),
+            "",
+            "Photoshop (*.psd)",
+        )
+        if not path:
+            return
+        commit_open_psd(self._workspace, path)
+
+    def save_psd(self) -> None:  # pragma: no cover - QFileDialog
+        from PySide6.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getSaveFileName(
+            self._workspace,
+            language_wrapper.language_word_dict.get(
+                "paint_file_save_psd", "Save as PSD",
+            ),
+            "",
+            "Photoshop (*.psd)",
+        )
+        if not path:
+            return
+        commit_save_psd(self._workspace, path)
 
     # ---- import paths ----------------------------------------------------
 
@@ -286,3 +321,48 @@ def _image_filter_for(format_tag: str) -> str:
         "bmp": "BMP (*.bmp)",
         "tiff": "TIFF (*.tif *.tiff)",
     }.get(format_tag, f"{format_tag.upper()} (*.{format_tag})")
+
+
+# ---------------------------------------------------------------------------
+# PSD commit helpers — pure logic, callable from tests without a dialog
+# ---------------------------------------------------------------------------
+
+
+def commit_open_psd(workspace, path: str) -> bool:
+    """Load ``path`` as a PSD and replace the active document.
+
+    Returns ``True`` on success, ``False`` for any decode failure
+    (caller can show a non-modal error). Loaded PSDs land in a fresh
+    tab when the workspace supports tabs so the open document isn't
+    silently destroyed by the import.
+    """
+    from Imervue.paint.psd_io import load_psd
+    try:
+        new_doc = load_psd(path)
+    except (OSError, ValueError, FileNotFoundError):
+        return False
+    if new_doc.shape is None:
+        return False
+    composite = new_doc.composite()
+    if composite is None:
+        return False
+    if hasattr(workspace, "new_tab"):
+        canvas = workspace.new_tab()
+        canvas.load_image(composite)
+    else:
+        workspace.load_image(composite)
+    return True
+
+
+def commit_save_psd(workspace, path: str) -> bool:
+    """Write the active document to ``path``. Returns ``True`` on
+    success, ``False`` when there's no document or save fails."""
+    from Imervue.paint.psd_io import save_psd
+    document = workspace.canvas().document()
+    if document.shape is None:
+        return False
+    try:
+        save_psd(document, path)
+    except (OSError, ValueError):
+        return False
+    return True

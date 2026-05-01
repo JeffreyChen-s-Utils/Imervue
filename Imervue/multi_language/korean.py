@@ -575,6 +575,8 @@ korean_word_dict = {
     "paint_manga_margin": '여백',
     "paint_file_new_tab": '새 탭',
     "paint_file_close_tab": '탭 닫기',
+    "paint_file_open_psd": 'PSD 열기…',
+    "paint_file_save_psd": 'PSD로 저장…',
     "paint_file_import_brush_preset": '브러시 프리셋 가져오기…',
     "paint_file_import_palette": '팔레트 가져오기…',
     "paint_file_export_image": '이미지 내보내기…',

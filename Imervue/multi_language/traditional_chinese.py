@@ -570,6 +570,8 @@ traditional_chinese_word_dict = {
     "paint_manga_margin": '頁邊距',
     "paint_file_new_tab": '新增分頁',
     "paint_file_close_tab": '關閉分頁',
+    "paint_file_open_psd": '開啟 PSD…',
+    "paint_file_save_psd": '另存為 PSD…',
     "paint_file_import_brush_preset": '匯入筆刷預設…',
     "paint_file_import_palette": '匯入色票…',
     "paint_file_export_image": '匯出圖片…',
