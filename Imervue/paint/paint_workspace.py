@@ -271,6 +271,44 @@ class PaintWorkspace(QMainWindow):
     def state(self) -> ToolState:
         return self._state
 
+    # ---- secondary views -----------------------------------------------
+
+    def open_secondary_view(self):
+        """Spawn an independent overview window onto the same composite.
+
+        Multiple secondary views can be opened — each one tracks the
+        same composite + auto-removes itself from the workspace's
+        view list when its window is closed.
+        """
+        from Imervue.paint.multi_view import SecondaryView, composite_to_pixmap
+        view = SecondaryView(self)
+        if not hasattr(self, "_secondary_views"):
+            self._secondary_views = []
+        self._secondary_views.append(view)
+        view.closed.connect(lambda v=view: self._on_secondary_view_closed(v))
+        # Seed with the current composite so the new window has
+        # something to render before the next document change.
+        composite = self._canvas.document().composite()
+        view.set_composite(composite_to_pixmap(composite))
+        view.show()
+        return view
+
+    def secondary_view_count(self) -> int:
+        return len(getattr(self, "_secondary_views", ()))
+
+    def _on_secondary_view_closed(self, view) -> None:
+        if hasattr(self, "_secondary_views") and view in self._secondary_views:
+            self._secondary_views.remove(view)
+
+    def _push_composite_to_secondary_views(self, composite) -> None:
+        from Imervue.paint.multi_view import composite_to_pixmap
+        views = getattr(self, "_secondary_views", ())
+        if not views:
+            return
+        pixmap = composite_to_pixmap(composite)
+        for view in views:
+            view.set_composite(pixmap)
+
     # ---- autosave -------------------------------------------------------
 
     def start_autosave(
@@ -573,6 +611,14 @@ class PaintWorkspace(QMainWindow):
                 lambda visible, a=action: a.setChecked(bool(visible)),
             )
             self._window_dock_actions[key] = action
+        # "New View" — spawn an independent overview window onto the
+        # active document. Placed after the dock toggles so the
+        # menu structure stays "all docks, then standalone windows".
+        menu.addSeparator()
+        new_view_action = menu.addAction(lang.get(
+            "paint_window_new_view", "New View",
+        ))
+        new_view_action.triggered.connect(self.open_secondary_view)
 
     # ---- handlers --------------------------------------------------------
 
@@ -748,6 +794,8 @@ class PaintWorkspace(QMainWindow):
         if hasattr(self, "_histogram_dock"):
             from Imervue.paint.histogram import compute_histogram
             self._histogram_dock.set_histogram(compute_histogram(composite))
+        # Push to any open secondary views so they stay in sync.
+        self._push_composite_to_secondary_views(composite)
 
     # ---- compatibility shim ---------------------------------------------
 
