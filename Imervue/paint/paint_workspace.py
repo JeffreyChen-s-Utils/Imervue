@@ -41,6 +41,7 @@ from Imervue.paint.dock_panels import (
 )
 from Imervue.paint.file_menu import populate_file_menu
 from Imervue.paint.layer_menu import populate_layer_menu
+from Imervue.paint.manga_menu import populate_manga_menu
 from Imervue.paint.paint_menu_bar import build_paint_menu_bar
 from Imervue.paint.settings_menu import populate_settings_menu
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
@@ -69,6 +70,7 @@ class PaintWorkspace(QMainWindow):
         populate_layer_menu(self)
         populate_view_menu(self)
         populate_tools_menu(self)
+        populate_manga_menu(self)
         populate_settings_menu(self)
 
         # Status bar shows the cursor's image-space coordinates while painting.

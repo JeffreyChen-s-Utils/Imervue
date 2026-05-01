@@ -34,7 +34,7 @@ def test_menu_keys_documented_set():
     keys = {key for key, _label_key in MENU_KEYS}
     assert keys == {
         "file", "edit", "layer", "view",
-        "tools", "filter", "settings", "window",
+        "tools", "filter", "manga", "settings", "window",
     }
 
 

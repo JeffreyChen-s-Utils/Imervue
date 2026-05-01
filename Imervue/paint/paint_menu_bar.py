@@ -30,6 +30,7 @@ MENU_KEYS: tuple[tuple[str, str], ...] = (
     ("view", "paint_menu_view"),
     ("tools", "paint_menu_tools"),
     ("filter", "paint_menu_filter"),
+    ("manga", "paint_menu_manga"),
     ("settings", "paint_menu_settings"),
     ("window", "paint_menu_window"),
 )
@@ -40,6 +41,7 @@ _MENU_FALLBACKS: dict[str, str] = {
     "view": "View",
     "tools": "Tools",
     "filter": "Filter",
+    "manga": "Manga",
     "settings": "Settings",
     "window": "Window",
 }
