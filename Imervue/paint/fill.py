@@ -174,30 +174,64 @@ def flood_fill(
 
 
 def _contiguous_region(candidates: np.ndarray, sx: int, sy: int) -> np.ndarray:
-    """Iterative 4-connected dilation from the seed, clipped by candidates."""
+    """Scanline flood fill from the seed, clipped by ``candidates``.
+
+    The previous "iterative whole-canvas dilation" approach allocated
+    five HxW arrays per iteration and scaled with the diameter of the
+    flood region — pathological on large canvases (a 4K paint hung
+    the UI for several seconds). This scanline version walks a stack
+    of horizontal runs, marking them on a single output mask, and
+    expands above / below by checking the edges of each run. Memory
+    use is bounded; runtime is linear in the number of pixels in the
+    region rather than ``H * W * diameter``.
+    """
+    h, w = candidates.shape
     if not candidates[sy, sx]:
         return np.zeros_like(candidates)
 
     mask = np.zeros_like(candidates)
-    mask[sy, sx] = True
-    while True:
-        # Shift the mask in every direction and OR with the original.
-        # Using `np.pad`-based shifts (not `np.roll`) so wrap-around
-        # doesn't bleed across the canvas edges.
-        shifted_up = np.zeros_like(mask)
-        shifted_up[:-1, :] = mask[1:, :]
-        shifted_down = np.zeros_like(mask)
-        shifted_down[1:, :] = mask[:-1, :]
-        shifted_left = np.zeros_like(mask)
-        shifted_left[:, :-1] = mask[:, 1:]
-        shifted_right = np.zeros_like(mask)
-        shifted_right[:, 1:] = mask[:, :-1]
-
-        expanded = mask | shifted_up | shifted_down | shifted_left | shifted_right
-        new_mask = expanded & candidates
-        if new_mask.sum() == mask.sum():
-            return mask
-        mask = new_mask
+    # Stack of starting points; each pop runs a full horizontal scan.
+    stack: list[tuple[int, int]] = [(int(sx), int(sy))]
+    while stack:
+        x, y = stack.pop()
+        if not (0 <= y < h):
+            continue
+        if mask[y, x] or not candidates[y, x]:
+            continue
+        # Walk left along this row until we hit a non-candidate cell
+        # or a previously-visited one.
+        x_left = x
+        while x_left > 0 and candidates[y, x_left - 1] and not mask[y, x_left - 1]:
+            x_left -= 1
+        # And right from the seed.
+        x_right = x
+        while (
+            x_right < w - 1
+            and candidates[y, x_right + 1]
+            and not mask[y, x_right + 1]
+        ):
+            x_right += 1
+        # Mark the run.
+        mask[y, x_left : x_right + 1] = True
+        # Walk the row above and below; any candidate-but-unvisited
+        # pixel on those rows seeds a new run.
+        for ny in (y - 1, y + 1):
+            if not (0 <= ny < h):
+                continue
+            row_open = candidates[ny, x_left : x_right + 1] & ~mask[ny, x_left : x_right + 1]
+            # Find the start of every contiguous "True" run on the
+            # neighbour row by walking the boolean array; push only
+            # the leftmost cell of each run so we don't redo work.
+            i = 0
+            row_len = row_open.shape[0]
+            while i < row_len:
+                if row_open[i]:
+                    stack.append((x_left + i, ny))
+                    while i < row_len and row_open[i]:
+                        i += 1
+                else:
+                    i += 1
+    return mask
 
 
 def _check_canvas(canvas: np.ndarray) -> None:

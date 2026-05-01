@@ -544,6 +544,14 @@ class PaintCanvas(QOpenGLWidget):
         composite = self._document.composite()
         if composite is None:
             return
+        # Recovery path for the deferred-fit case: when ``new_blank_document``
+        # was called before Qt sized the widget, ``_fit_pending`` stayed
+        # True. Some Qt builds don't fire a follow-up ``resizeGL`` between
+        # the first valid layout and the first paint, leaving the canvas
+        # off-centre. Retry here whenever a paint happens with widths
+        # finally available.
+        if self._fit_pending and self.width() > 0 and self.height() > 0:
+            self._reset_view_to_fit()
         if self._needs_upload:
             self._upload_texture(composite)
             self._needs_upload = False
@@ -563,6 +571,20 @@ class PaintCanvas(QOpenGLWidget):
             glRotatef(self._rotation_deg, 0.0, 0.0, 1.0)
             glTranslatef(-w / 2.0, -h / 2.0, 0.0)
 
+        # White paper underneath the document texture so erased
+        # (alpha=0) areas show the paint-app-standard "white paper"
+        # rather than the editor's dark backdrop. Drawn UNTEXTURED
+        # so the rest of the GL widget (outside the canvas extent)
+        # keeps the dark grey backdrop set by ``glClearColor``.
+        glDisable(GL_TEXTURE_2D)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glBegin(GL_QUADS)
+        glVertex2f(0.0, 0.0)
+        glVertex2f(w, 0.0)
+        glVertex2f(w, h)
+        glVertex2f(0.0, h)
+        glEnd()
+        glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, self._texture)
         glColor4f(1.0, 1.0, 1.0, 1.0)
         glBegin(GL_QUADS)
@@ -863,7 +885,16 @@ class PaintCanvas(QOpenGLWidget):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI
         if self._panning and self._is_pan_button(event):
             self._panning = False
-            self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
+            # Restore the active tool's cursor — the open-hand was only
+            # valid while the pan gesture was active. Falling back to
+            # "brush" when the workspace hasn't installed a tool-state
+            # is safer than leaving the closed-hand stuck.
+            active_tool = (
+                self._tool_state_for_hud.tool
+                if self._tool_state_for_hud is not None
+                else "brush"
+            )
+            self.set_cursor_for_tool(active_tool)
             return
         self._dispatch("release", event)
 
