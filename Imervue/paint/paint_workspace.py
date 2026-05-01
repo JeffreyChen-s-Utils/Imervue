@@ -100,6 +100,13 @@ class PaintWorkspace(QMainWindow):
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
         self._material_dock = MaterialDock(parent=self)
+        # Swatch dock — floating, free-form recent-colour grid bound
+        # to the same ToolState as the colour dock.
+        from Imervue.paint.swatch_panel import SwatchPanel
+        self._swatch_dock = SwatchPanel(self._state, self)
+        self._swatch_dock.color_chosen.connect(
+            lambda r, g, b: self._state.set_foreground((r, g, b), commit=False),
+        )
 
         for dock in (
             self._color_dock,
@@ -108,6 +115,7 @@ class PaintWorkspace(QMainWindow):
             self._navigator_dock,
             self._material_dock,
             self._history_dock,
+            self._swatch_dock,
         ):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
             dock.setFeatures(
@@ -115,6 +123,16 @@ class PaintWorkspace(QMainWindow):
                 | dock.DockWidgetFeature.DockWidgetMovable
                 | dock.DockWidgetFeature.DockWidgetFloatable,
             )
+
+        # Window menu — toggle each dock's visibility from the
+        # workspace's menu bar so the user can hide / show panels
+        # without right-clicking the toolbar.
+        self._populate_window_menu()
+
+        # Brush-size HUD overlay — bracket-key bindings flash a ring
+        # at the canvas centre via the SizeHudState helper.
+        from Imervue.paint.size_hud import SizeHudState
+        self._size_hud = SizeHudState()
 
         # Wire status-bar hover updates and tool-driven cursor changes.
         self._canvas.hover_changed.connect(self._on_hover_changed)
@@ -193,6 +211,41 @@ class PaintWorkspace(QMainWindow):
         # The canvas swapped its PaintDocument; rebind the layer dock
         # so it re-subscribes and refreshes against the new stack.
         self._layer_dock.set_document(self._canvas.document())
+
+    # ---- window menu ----------------------------------------------------
+
+    def _populate_window_menu(self) -> None:
+        """One checkable Window-menu entry per dock — toggles visibility.
+
+        Each entry's check state mirrors the dock's
+        :meth:`isVisible` so closing a dock via its corner X also
+        unchecks the menu item.
+        """
+        from Imervue.paint.paint_menu_bar import menu_for
+        lang = language_wrapper.language_word_dict
+        menu = menu_for(self, "window")
+        entries = (
+            ("paint_dock_color", "Color", self._color_dock),
+            ("paint_dock_brush", "Brush", self._brush_dock),
+            ("paint_dock_layers", "Layers", self._layer_dock),
+            ("paint_dock_navigator", "Navigator", self._navigator_dock),
+            ("paint_dock_material", "Materials", self._material_dock),
+            ("paint_dock_history", "History", self._history_dock),
+            ("paint_dock_swatches", "Swatches", self._swatch_dock),
+        )
+        self._window_dock_actions = {}
+        for key, fallback, dock in entries:
+            action = menu.addAction(lang.get(key, fallback))
+            action.setCheckable(True)
+            action.setChecked(dock.isVisible() or True)
+            action.triggered.connect(
+                lambda checked, d=dock: d.setVisible(bool(checked)),
+            )
+            # Reflect external close (dock corner X).
+            dock.visibilityChanged.connect(
+                lambda visible, a=action: a.setChecked(bool(visible)),
+            )
+            self._window_dock_actions[key] = action
 
     # ---- handlers --------------------------------------------------------
 
