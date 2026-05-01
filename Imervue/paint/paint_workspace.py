@@ -40,6 +40,7 @@ from Imervue.paint.dock_panels import (
     NavigatorDock,
 )
 from Imervue.paint.file_menu import populate_file_menu
+from Imervue.paint.layer_menu import populate_layer_menu
 from Imervue.paint.paint_menu_bar import build_paint_menu_bar
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
 from Imervue.paint.tool_dispatcher import ToolDispatcher
@@ -62,6 +63,7 @@ class PaintWorkspace(QMainWindow):
         # ``_<key>_menu`` for the 21b–21g sub-phases to fill.
         self.setMenuBar(build_paint_menu_bar(self))
         populate_file_menu(self)
+        populate_layer_menu(self)
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)

@@ -80,14 +80,17 @@ def test_filter_menu_keeps_existing_actions(qapp):
         ws.deleteLater()
 
 
-def test_other_menus_start_empty(qapp):
-    """21b–21g hang the actions; 21a creates them empty so a test
-    that expects "did 21b populate File?" can assert on count."""
+def test_unpopulated_menus_start_empty(qapp):
+    """21d–21g hang the remaining actions; the menus they own should
+    start empty so a future "did 21d populate View?" test can assert
+    on count growth."""
     ws = PaintWorkspace()
     try:
-        for key in ("edit", "layer", "view", "tools", "settings", "window"):
+        for key in ("edit", "view", "tools", "settings", "window"):
             menu = menu_for(ws, key)
-            assert menu.actions() == []
+            assert menu.actions() == [], (
+                f"{key} menu unexpectedly has actions before its phase wires it"
+            )
     finally:
         ws.deleteLater()
 

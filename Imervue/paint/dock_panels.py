@@ -15,8 +15,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QDockWidget,
@@ -365,15 +366,31 @@ class LayerDock(QDockWidget):
     """
 
     def __init__(self, document=None, parent=None):
+        from Imervue.paint.layer_thumbnail import (
+            DEFAULT_THUMBNAIL_SIZE, ThumbnailCache,
+        )
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_dock_layers", "Layers"), parent)
         self._document = document
         self._suspend = False
+        self._search_query = ""
+        self._thumbnail_cache = ThumbnailCache()
+        self._thumbnail_size = DEFAULT_THUMBNAIL_SIZE
 
         body = QWidget()
         layout = QVBoxLayout(body)
 
+        self._search = QLineEdit()
+        self._search.setPlaceholderText(
+            lang.get("paint_layers_search", "Search layers…"),
+        )
+        self._search.textChanged.connect(self._on_search_changed)
+        layout.addWidget(self._search)
+
         self._list = QListWidget()
+        self._list.setIconSize(
+            QPixmap(self._thumbnail_size, self._thumbnail_size).size(),
+        )
         self._list.currentRowChanged.connect(self._on_row_changed)
         self._list.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self._list, stretch=1)
@@ -432,11 +449,15 @@ class LayerDock(QDockWidget):
         self._suspend = True
         try:
             self._list.clear()
+            visible_indices = self._filtered_indices()
             for idx, layer in enumerate(self._document.layers()):
+                if idx not in visible_indices:
+                    continue
                 # Stack drawn top-down — most-recently-added layer at the
                 # top of the visual list, matching MediBang / Photoshop.
-                row_index = self._document.layer_count - 1 - idx
-                item = QListWidgetItem(layer.name)
+                # The displayed row index ignores filtered-out rows so
+                # the search produces a tight list rather than gappy.
+                item = QListWidgetItem(_label_with_color_chip(layer))
                 item.setFlags(
                     item.flags()
                     | Qt.ItemFlag.ItemIsUserCheckable
@@ -446,11 +467,24 @@ class LayerDock(QDockWidget):
                     Qt.CheckState.Checked if layer.visible else Qt.CheckState.Unchecked,
                 )
                 item.setData(Qt.ItemDataRole.UserRole, idx)
-                self._list.insertItem(row_index, item)
-            active_row = (
-                self._document.layer_count - 1 - self._document.active_layer_index()
-            )
-            self._list.setCurrentRow(max(0, active_row))
+                # Thumbnail — cached by content so a no-op refresh is
+                # cheap. Falls back to a blank pixmap for an empty image.
+                thumb_arr = self._thumbnail_cache.get(
+                    layer.image, size=self._thumbnail_size,
+                )
+                item.setIcon(_array_to_icon(thumb_arr))
+                # Insertion order = newest-first; we walk the stack
+                # top-down by appending in reverse-active order. Use
+                # insertItem(0, ...) so each new entry stacks on top.
+                self._list.insertItem(0, item)
+            active_idx = self._document.active_layer_index()
+            if active_idx in visible_indices:
+                # Find the dock-row position of the active layer.
+                for row in range(self._list.count()):
+                    item = self._list.item(row)
+                    if item.data(Qt.ItemDataRole.UserRole) == active_idx:
+                        self._list.setCurrentRow(row)
+                        break
 
             active = self._document.active_layer()
             if active is not None:
@@ -458,6 +492,16 @@ class LayerDock(QDockWidget):
                 self._blend.setCurrentIndex(self._blend.findData(active.blend_mode))
         finally:
             self._suspend = False
+
+    def _filtered_indices(self) -> set[int]:
+        """Return the set of layer indices that survive the search filter."""
+        if not self._search_query.strip():
+            return set(range(self._document.layer_count))
+        return set(self._document.find_layers(self._search_query))
+
+    def _on_search_changed(self, text: str) -> None:  # pragma: no cover - Qt UI
+        self._search_query = text
+        self.refresh()
 
     # ---- handlers --------------------------------------------------------
 
@@ -473,7 +517,10 @@ class LayerDock(QDockWidget):
             return
         layer_idx = int(item.data(Qt.ItemDataRole.UserRole))
         new_visible = item.checkState() == Qt.CheckState.Checked
-        new_name = item.text()
+        # Editing the row inline writes back the displayed text — strip
+        # the colour-chip glyph prefix (added by ``_label_with_color_chip``)
+        # so the persisted layer name doesn't accumulate emoji.
+        new_name = _strip_color_chip(item.text())
         self._document.set_layer_attribute(
             layer_idx, visible=new_visible, name=new_name,
         )
@@ -894,3 +941,59 @@ def _paint_swatch(button: QToolButton, rgb: tuple[int, int, int]) -> None:
     painter.end()
     button.setIcon(pix)
     button.setIconSize(pix.size())
+
+
+# ---------------------------------------------------------------------------
+# Layer-row presentation helpers
+# ---------------------------------------------------------------------------
+
+
+_LAYER_LABEL_GLYPHS = {
+    "red": "🟥",
+    "orange": "🟧",
+    "yellow": "🟨",
+    "green": "🟩",
+    "blue": "🟦",
+    "violet": "🟪",
+    "grey": "⬜",
+}
+
+
+def _label_with_color_chip(layer) -> str:
+    """Return ``layer.name`` prefixed with the colour-label glyph.
+
+    The glyph approach keeps the LayerDock readable in plain-text
+    accessibility tools (no custom QStandardItem needed), and the
+    chip survives the existing ``itemChanged`` rename path because
+    Qt always presents the full string back to ``_on_item_changed``.
+    """
+    label = getattr(layer, "color_label", None)
+    name = layer.name
+    glyph = _LAYER_LABEL_GLYPHS.get(label or "")
+    if glyph is None:
+        return name
+    return f"{glyph} {name}"
+
+
+def _strip_color_chip(text: str) -> str:
+    """Remove the leading colour-chip glyph + space from ``text``.
+
+    Inverse of :func:`_label_with_color_chip`. Keeps the persisted
+    layer name free of emoji even after the user inline-edits a row
+    that already had a chip prefix.
+    """
+    for glyph in _LAYER_LABEL_GLYPHS.values():
+        prefix = f"{glyph} "
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
+def _array_to_icon(thumb: np.ndarray) -> QIcon:
+    """Wrap an HxWx4 RGBA buffer into a QIcon for the LayerDock list."""
+    h, w = thumb.shape[:2]
+    qimage = QImage(
+        bytes(thumb.tobytes()),
+        w, h, w * 4, QImage.Format.Format_RGBA8888,
+    )
+    return QIcon(QPixmap.fromImage(qimage))
