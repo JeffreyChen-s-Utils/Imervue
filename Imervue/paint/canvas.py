@@ -238,6 +238,11 @@ class PaintCanvas(QOpenGLWidget):
         self._onion_skin_source = None
         self._onion_skin_texture = None
         self._onion_skin_buffer_id = None
+        # Bleed guides — paired flag + optional BleedGuides instance.
+        # The flag persists across set_bleed_guides() calls so a
+        # transient None doesn't reset the user's toggle.
+        self._bleed_guides_visible = False
+        self._bleed_guides = None
         # Set when ``_reset_view_to_fit`` is called against a widget
         # that's too small to host the document at a sensible zoom
         # (e.g. PaintWorkspace seeding a 1024² blank during ``__init__``
@@ -380,6 +385,24 @@ class PaintCanvas(QOpenGLWidget):
 
     def zoom_factor(self) -> float:
         return self._zoom
+
+    def set_bleed_guides(self, guides) -> None:
+        """Wire a :class:`Imervue.paint.bleed_guides.BleedGuides`
+        instance the canvas should overlay above the layer composite.
+
+        ``None`` clears the guides; the visibility flag is preserved
+        so a later ``set_bleed_guides(g)`` re-shows them.
+        """
+        self._bleed_guides = guides
+        self.update()
+
+    def set_bleed_guides_visible(self, visible: bool) -> None:
+        """Toggle bleed-guide overlay visibility; repaints the canvas."""
+        new_value = bool(visible)
+        if new_value == self._bleed_guides_visible:
+            return
+        self._bleed_guides_visible = new_value
+        self.update()
 
     def set_onion_skin_visible(self, visible: bool) -> None:
         """Toggle the onion-skin overlay; repaints the canvas."""
@@ -550,6 +573,8 @@ class PaintCanvas(QOpenGLWidget):
             self._draw_onion_skin(w, h)
         if self.should_paint_pixel_grid():
             self._draw_pixel_grid(w, h)
+        if self._bleed_guides_visible and self._bleed_guides is not None:
+            self._draw_bleed_guides()
         self._draw_marquee()
         glPopMatrix()
         # HUD overlay sits in widget-space (un-rotated) so the user
@@ -595,6 +620,39 @@ class PaintCanvas(QOpenGLWidget):
     def _tick_marquee(self) -> None:
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
+
+    def _draw_bleed_guides(self) -> None:  # pragma: no cover - GL needs display
+        """Stroke the trim / bleed / safe rects from the active
+        :class:`BleedGuides` over the layer composite.
+
+        Three distinct colours so the user can tell the rects
+        apart at a glance — bleed (red, outermost), trim (cyan,
+        the printed boundary), safe (yellow, innermost).
+        """
+        guides = self._bleed_guides
+        if guides is None:
+            return
+        glDisable(GL_TEXTURE_2D)
+        glLineWidth(1.0 / max(self._zoom, 1e-3) + 1.0)
+        for rect, colour in (
+            (guides.bleed_rect_px(), (1.0, 0.2, 0.2, 0.85)),
+            (guides.trim_rect_px(), (0.2, 0.9, 1.0, 0.85)),
+            (guides.safe_rect_px(), (1.0, 0.95, 0.2, 0.85)),
+        ):
+            x, y, w_px, h_px = rect
+            glColor4f(*colour)
+            glBegin(GL_LINES)
+            for x0, y0, x1, y1 in (
+                (x, y, x + w_px, y),
+                (x + w_px, y, x + w_px, y + h_px),
+                (x + w_px, y + h_px, x, y + h_px),
+                (x, y + h_px, x, y),
+            ):
+                glVertex2f(float(x0), float(y0))
+                glVertex2f(float(x1), float(y1))
+            glEnd()
+        glLineWidth(1.0)
+        glEnable(GL_TEXTURE_2D)
 
     def _draw_onion_skin(  # pragma: no cover - GL needs display
         self, w: int, h: int,

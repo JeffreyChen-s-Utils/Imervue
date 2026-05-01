@@ -151,7 +151,11 @@ class _ViewMenuBridge:
 
     def toggle_bleed_guides(self, checked: bool) -> None:
         self._workspace._bleed_guides_visible = bool(checked)   # noqa: SLF001
-        self._workspace.canvas().update()
+        canvas = self._workspace.canvas()
+        if hasattr(canvas, "set_bleed_guides_visible"):
+            canvas.set_bleed_guides_visible(bool(checked))
+        else:   # pragma: no cover - older canvas builds
+            canvas.update()
 
     # ---- canvas rotation ----------------------------------------------
 
