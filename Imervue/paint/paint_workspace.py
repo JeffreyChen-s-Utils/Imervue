@@ -569,7 +569,22 @@ class PaintWorkspace(QMainWindow):
             self._drop_pose_material(entry)
         elif entry.category in ("texture", "tone", "pattern"):
             self._drop_tile_material(entry)
-        # brush_tip is wired in a later phase.
+        elif entry.category == "brush_tip":
+            self._drop_brush_tip_material(entry)
+
+    def _drop_brush_tip_material(self, entry) -> None:
+        """Bind the picked tip's PNG path to the active brush.
+
+        Procedural ``brush_tip`` entries that don't have an on-disk
+        path are silently ignored — the brush engine reads tips from
+        a file path, so a virtual entry has nothing to point at.
+        """
+        if entry.is_procedural():
+            return
+        path = str(entry.path)
+        if not path or path.startswith("procedural://"):
+            return
+        self._state.set_brush(tip_path=path)
 
     def _drop_pose_material(self, entry) -> None:
         from Imervue.paint.pose_drop import fit_pose_to_canvas, load_pose_image

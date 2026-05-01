@@ -515,6 +515,8 @@ chinese_word_dict = {
     "paint_edit_stroke_placement_outside": '外侧',
     "paint_edit_stroke_placement_inside": '内侧',
     "paint_edit_stroke_placement_center": '居中',
+    "paint_edit_capture_brush_tip": '从选区捕获笔刷形状…',
+    "paint_edit_capture_brush_tip_name": '笔刷名称',
     "paint_reference_open": '打开…',
     "paint_reference_clear": '清除',
     "paint_reference_reset_zoom": '100%',

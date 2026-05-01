@@ -526,6 +526,8 @@ japanese_word_dict = {
     "paint_edit_stroke_placement_outside": '外側',
     "paint_edit_stroke_placement_inside": '内側',
     "paint_edit_stroke_placement_center": '中央',
+    "paint_edit_capture_brush_tip": '選択範囲からブラシ形状を取得…',
+    "paint_edit_capture_brush_tip_name": 'ブラシ名',
     "paint_reference_open": '開く…',
     "paint_reference_clear": 'クリア',
     "paint_reference_reset_zoom": '100%',

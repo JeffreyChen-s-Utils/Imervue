@@ -515,6 +515,8 @@ traditional_chinese_word_dict = {
     "paint_edit_stroke_placement_outside": '外側',
     "paint_edit_stroke_placement_inside": '內側',
     "paint_edit_stroke_placement_center": '置中',
+    "paint_edit_capture_brush_tip": '從選區擷取筆刷形狀…',
+    "paint_edit_capture_brush_tip_name": '筆刷名稱',
     "paint_reference_open": '開啟…',
     "paint_reference_clear": '清除',
     "paint_reference_reset_zoom": '100%',

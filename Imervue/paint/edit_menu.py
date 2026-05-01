@@ -52,6 +52,11 @@ def populate_edit_menu(workspace: PaintWorkspace) -> None:
     )
     stroke_action.triggered.connect(bridge.open_stroke_selection)
 
+    capture_action = menu.addAction(
+        lang.get("paint_edit_capture_brush_tip", "Capture Brush Tip…"),
+    )
+    capture_action.triggered.connect(bridge.capture_brush_tip)
+
 
 # ---------------------------------------------------------------------------
 # Bridge
@@ -85,6 +90,22 @@ class _EditMenuBridge:
             return
         params = dialog.values()
         commit_stroke_selection(self._workspace, params)
+
+    def capture_brush_tip(self) -> None:  # pragma: no cover - Qt UI
+        from PySide6.QtWidgets import QInputDialog
+        document = self._workspace.canvas().document()
+        if document.selection() is None or document.active_layer() is None:
+            return
+        lang = language_wrapper.language_word_dict
+        name, ok = QInputDialog.getText(
+            self._workspace,
+            lang.get("paint_edit_capture_brush_tip", "Capture Brush Tip…"),
+            lang.get("paint_edit_capture_brush_tip_name", "Tip name"),
+            text="my_tip",
+        )
+        if not ok:
+            return
+        commit_capture_brush_tip(self._workspace, str(name))
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +166,44 @@ class StrokeSelectionDialog(QDialog):
 # ---------------------------------------------------------------------------
 # Commit — pure logic, callable from tests without a dialog
 # ---------------------------------------------------------------------------
+
+
+def commit_capture_brush_tip(
+    workspace, name: str, *, target_dir=None,
+) -> str | None:
+    """Capture the active document's selection as a brush-tip PNG.
+
+    Returns the absolute path of the saved tip on success, or
+    ``None`` when capture fails (no selection, empty selection,
+    too-large bbox). Side effects: registers the new tip in the
+    workspace's MaterialDock so the user sees it appear immediately.
+    """
+    from Imervue.paint.brush_tip_capture import (
+        capture_brush_tip,
+        save_brush_tip,
+    )
+    from Imervue.paint.material_library import MaterialEntry
+    document = workspace.canvas().document()
+    layer = document.active_layer()
+    if layer is None:
+        return None
+    selection = document.selection()
+    if selection is None:
+        return None
+    try:
+        tip = capture_brush_tip(layer.image, selection)
+        path = save_brush_tip(tip, name, target_dir=target_dir)
+    except (OSError, ValueError):
+        return None
+    # Surface the new tip in the material panel — append to the
+    # live index so the user can click it without reloading.
+    if hasattr(workspace, "_material_dock"):
+        index = workspace._material_dock.index()  # noqa: SLF001
+        index.entries.append(MaterialEntry(
+            name=path.stem, path=path, category="brush_tip", tags=("user",),
+        ))
+        workspace._material_dock._refresh_grid()  # noqa: SLF001
+    return str(path)
 
 
 def commit_stroke_selection(workspace, params: dict) -> bool:

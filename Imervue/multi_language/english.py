@@ -534,6 +534,8 @@ english_word_dict = {
     "paint_edit_stroke_placement_outside": 'Outside',
     "paint_edit_stroke_placement_inside": 'Inside',
     "paint_edit_stroke_placement_center": 'Center',
+    "paint_edit_capture_brush_tip": 'Capture Brush Tip…',
+    "paint_edit_capture_brush_tip_name": 'Tip name',
     "paint_reference_open": 'Open…',
     "paint_reference_clear": 'Clear',
     "paint_reference_reset_zoom": '100%',

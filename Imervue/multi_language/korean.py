@@ -520,6 +520,8 @@ korean_word_dict = {
     "paint_edit_stroke_placement_outside": '바깥쪽',
     "paint_edit_stroke_placement_inside": '안쪽',
     "paint_edit_stroke_placement_center": '중앙',
+    "paint_edit_capture_brush_tip": '선택 영역에서 브러시 모양 캡처…',
+    "paint_edit_capture_brush_tip_name": '브러시 이름',
     "paint_reference_open": '열기…',
     "paint_reference_clear": '지우기',
     "paint_reference_reset_zoom": '100%',
