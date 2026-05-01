@@ -402,3 +402,125 @@ def test_quick_select_respects_selection_combine_mode(state, canvas):
     # Black centre subtracted; outer ring still selected.
     assert holder[0][0, 0]
     assert not holder[0][6, 6]
+
+
+# ---------------------------------------------------------------------------
+# color_range_mask (29d)
+# ---------------------------------------------------------------------------
+
+
+def test_color_range_rejects_non_rgba():
+    from Imervue.paint.selection import color_range_mask
+    with pytest.raises(ValueError):
+        color_range_mask(np.zeros((4, 4, 3), dtype=np.uint8), (0, 0, 0))
+
+
+def test_color_range_rejects_bad_target():
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        color_range_mask(canvas_rgba, (0, 0))   # type: ignore[arg-type]
+
+
+def test_color_range_rejects_huge_hue_tolerance():
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        color_range_mask(canvas_rgba, (0, 0, 0), hue_tolerance=200.0)
+
+
+def test_color_range_rejects_sat_tolerance_above_one():
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        color_range_mask(canvas_rgba, (0, 0, 0), sat_tolerance=2.0)
+
+
+def test_color_range_picks_matching_pixels():
+    """A red target with a 30° hue tolerance picks red pixels and
+    skips green ones."""
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    canvas_rgba[..., 3] = 255
+    canvas_rgba[:, :2, :3] = (200, 30, 30)   # red
+    canvas_rgba[:, 2:, :3] = (30, 200, 30)   # green
+    mask = color_range_mask(
+        canvas_rgba, (200, 0, 0),
+        hue_tolerance=30.0, sat_tolerance=0.5, luma_tolerance=0.5,
+    )
+    assert mask[:, :2].all()
+    assert not mask[:, 2:].any()
+
+
+def test_color_range_excludes_transparent_pixels():
+    """Even if the colour matches, alpha=0 pixels stay unselected."""
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    canvas_rgba[:2, :, :3] = (200, 0, 0)
+    canvas_rgba[:2, :, 3] = 255
+    canvas_rgba[2:, :, :3] = (200, 0, 0)
+    canvas_rgba[2:, :, 3] = 0   # transparent
+    mask = color_range_mask(
+        canvas_rgba, (200, 0, 0),
+        hue_tolerance=30.0, sat_tolerance=1.0, luma_tolerance=1.0,
+    )
+    assert mask[:2, :].all()
+    assert not mask[2:, :].any()
+
+
+def test_color_range_hue_wraps_around_zero():
+    """Selecting near red (hue 0°) with a 30° tolerance also catches
+    pure red — verifies wrap-aware hue distance."""
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    canvas_rgba[..., 3] = 255
+    canvas_rgba[:, :2, :3] = (200, 0, 0)   # red, hue ≈ 0
+    canvas_rgba[:, 2:, :3] = (200, 30, 0)  # red-orange, hue ≈ 9
+    # Target: hue 350° (deep magenta-red); 30° tolerance wraps to 20°
+    # so it still includes pure red.
+    mask = color_range_mask(
+        canvas_rgba, (200, 0, 30),  # hue ≈ 351
+        hue_tolerance=30.0, sat_tolerance=1.0, luma_tolerance=0.5,
+    )
+    assert mask[:, :2].any()
+
+
+def test_color_range_alpha_threshold_filters():
+    """Pixels whose alpha is below the threshold are excluded even
+    when the colour matches exactly."""
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    canvas_rgba[..., :3] = (200, 0, 0)
+    canvas_rgba[:, :2, 3] = 200
+    canvas_rgba[:, 2:, 3] = 50
+    mask = color_range_mask(
+        canvas_rgba, (200, 0, 0),
+        alpha_threshold=128,
+        hue_tolerance=30.0, sat_tolerance=1.0, luma_tolerance=1.0,
+    )
+    assert mask[:, :2].all()
+    assert not mask[:, 2:].any()
+
+
+def test_color_range_tiny_tolerance_matches_seed_pixel():
+    """With small but non-zero tolerances on every axis, the seed
+    pixel itself matches and noticeably-different pixels don't."""
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    canvas_rgba[..., 3] = 255
+    canvas_rgba[0, 0, :3] = (123, 45, 67)
+    canvas_rgba[0, 1, :3] = (220, 220, 220)   # very different colour
+    mask = color_range_mask(
+        canvas_rgba, (123, 45, 67),
+        hue_tolerance=1.0, sat_tolerance=0.05, luma_tolerance=0.05,
+    )
+    assert mask[0, 0]
+    assert not mask[0, 1]
+
+
+def test_color_range_returns_correct_shape():
+    from Imervue.paint.selection import color_range_mask
+    canvas_rgba = np.zeros((10, 12, 4), dtype=np.uint8)
+    mask = color_range_mask(canvas_rgba, (0, 0, 0))
+    assert mask.shape == (10, 12)
+    assert mask.dtype == np.bool_
