@@ -553,6 +553,7 @@ korean_word_dict = {
     "paint_layer_invert_mask": '마스크 반전',
     "paint_layer_apply_mask": '마스크 적용',
     "paint_layer_delete_mask": '마스크 삭제',
+    "paint_layer_toggle_clip": '클리핑 마스크 토글',
     "paint_layers_search": '레이어 검색…',
     "paint_view_pixel_grid": '픽셀 격자',
     "paint_view_snap_pixel": '픽셀에 맞추기',

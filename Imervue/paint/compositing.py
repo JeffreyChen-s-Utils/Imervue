@@ -120,6 +120,12 @@ def composite_stack(
             return only.image
 
     out = np.zeros((h, w, 4), dtype=np.uint8)
+    # Tracks the alpha of the most-recent non-clipped (visible) layer.
+    # Clipping-mask layers above it use this to mask their output —
+    # mirroring Photoshop / MediBang's "clip to layer below" model.
+    # ``None`` means there is no base yet (a clip layer at the bottom
+    # of the stack has nothing to clip to and is rendered unclipped).
+    clip_base_alpha: np.ndarray | None = None
     for layer in layer_list:
         layer_group = getattr(layer, "group", None)
         group_opacity = 1.0
@@ -161,6 +167,21 @@ def composite_stack(
 
         # Combine the layer's effective mask with any blend-if mask.
         effective_mask = getattr(layer, "effective_mask", layer.mask)
+        # Clipping mask: a layer with ``clip=True`` clips its output
+        # to the alpha of the most-recent non-clipped layer below it.
+        # Multiply the alpha into the effective mask so the existing
+        # downstream code path handles compositing without extra logic.
+        if getattr(layer, "clip", False) and clip_base_alpha is not None:
+            if effective_mask is None:
+                effective_mask = clip_base_alpha
+            else:
+                clip_combined = (
+                    effective_mask.astype(np.float32) / 255.0
+                    * clip_base_alpha.astype(np.float32) / 255.0
+                )
+                effective_mask = (
+                    clip_combined * 255.0
+                ).clip(0, 255).astype(np.uint8)
         blend_if = getattr(layer, "blend_if", None)
         if blend_if is not None:
             from Imervue.paint.blend_if import compute_blend_if_mask
@@ -184,6 +205,12 @@ def composite_stack(
             blend_mode=layer.blend_mode,
             mask=effective_mask,
         )
+        # A non-clipped layer becomes the new clip base for any
+        # clipping layers that come above it in the stack. Clipping
+        # layers do NOT update the base — they're masked by the
+        # base, not contributors to it.
+        if not getattr(layer, "clip", False):
+            clip_base_alpha = layer.image[..., 3].copy()
     return out
 
 

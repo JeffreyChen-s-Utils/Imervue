@@ -548,6 +548,7 @@ traditional_chinese_word_dict = {
     "paint_layer_invert_mask": '反轉遮罩',
     "paint_layer_apply_mask": '套用遮罩',
     "paint_layer_delete_mask": '刪除遮罩',
+    "paint_layer_toggle_clip": '切換剪裁遮色片',
     "paint_layers_search": '搜尋圖層…',
     "paint_view_pixel_grid": '像素格線',
     "paint_view_snap_pixel": '對齊像素',

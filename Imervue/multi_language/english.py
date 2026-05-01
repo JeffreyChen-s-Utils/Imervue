@@ -567,6 +567,7 @@ english_word_dict = {
     "paint_layer_invert_mask": 'Invert Mask',
     "paint_layer_apply_mask": 'Apply Mask',
     "paint_layer_delete_mask": 'Delete Mask',
+    "paint_layer_toggle_clip": 'Toggle Clipping Mask',
     "paint_layers_search": 'Search layers…',
     "paint_view_pixel_grid": 'Pixel Grid',
     "paint_view_snap_pixel": 'Snap to Pixel',

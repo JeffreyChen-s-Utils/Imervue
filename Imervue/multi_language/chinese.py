@@ -548,6 +548,7 @@ chinese_word_dict = {
     "paint_layer_invert_mask": '反转蒙版',
     "paint_layer_apply_mask": '应用蒙版',
     "paint_layer_delete_mask": '删除蒙版',
+    "paint_layer_toggle_clip": '切换剪贴蒙版',
     "paint_layers_search": '搜索图层…',
     "paint_view_pixel_grid": '像素网格',
     "paint_view_snap_pixel": '对齐像素',

@@ -559,6 +559,7 @@ japanese_word_dict = {
     "paint_layer_invert_mask": 'マスクを反転',
     "paint_layer_apply_mask": 'マスクを適用',
     "paint_layer_delete_mask": 'マスクを削除',
+    "paint_layer_toggle_clip": 'クリッピングマスク切替',
     "paint_layers_search": 'レイヤーを検索…',
     "paint_view_pixel_grid": 'ピクセルグリッド',
     "paint_view_snap_pixel": 'ピクセルにスナップ',

@@ -29,9 +29,9 @@ def test_layer_menu_has_documented_actions(qapp):
     ws = PaintWorkspace()
     try:
         layer_menu = menu_for(ws, "layer")
-        # 4 layer-stack actions + separator + 5 mask actions
-        # + separator + delete = 12 entries.
-        assert len(layer_menu.actions()) == 12
+        # 4 layer-stack actions + sep + 5 mask actions + sep
+        # + clipping toggle + sep + delete = 14 entries.
+        assert len(layer_menu.actions()) == 14
     finally:
         ws.deleteLater()
 
@@ -62,8 +62,8 @@ def test_layer_menu_actions_have_shortcuts_or_documented_omission(qapp):
             if not a.isSeparator() and not a.shortcut().isEmpty()
         )
         # 4 layer-stack actions + Add Mask + Add Mask From Selection
-        # + Delete Layer = 7 actions with bindings.
-        assert with_shortcut == 7
+        # + Toggle Clipping Mask + Delete Layer = 8 with bindings.
+        assert with_shortcut == 8
     finally:
         ws.deleteLater()
 

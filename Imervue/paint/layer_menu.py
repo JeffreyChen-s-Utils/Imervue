@@ -53,6 +53,9 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         ("paint_layer_delete_mask", "Delete Mask",
          bridge.delete_mask, ""),
         (None, None, None, None),
+        ("paint_layer_toggle_clip", "Toggle Clipping Mask",
+         bridge.toggle_clipping_mask, "Ctrl+Alt+G"),
+        (None, None, None, None),
         ("paint_layer_delete", "Delete Layer",
          bridge.delete_layer, "Ctrl+Shift+Backspace"),
     ):
@@ -136,6 +139,21 @@ class _LayerMenuBridge:
     def apply_mask(self) -> None:
         document = self._workspace.canvas().document()
         if document.apply_layer_mask():
+            self._refresh_canvas()
+
+    # ---- clipping mask --------------------------------------------------
+
+    def toggle_clipping_mask(self) -> None:
+        """Flip the active layer's ``clip`` flag and refresh.
+
+        Matches Photoshop's Ctrl+Alt+G binding — toggles whether the
+        layer is clipped to the alpha of the layer below it.
+        """
+        document = self._workspace.canvas().document()
+        layer = document.active_layer()
+        if layer is None:
+            return
+        if document.set_layer_clip(clip=not layer.clip):
             self._refresh_canvas()
 
     # ---- internals ------------------------------------------------------
