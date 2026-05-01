@@ -42,9 +42,10 @@ from Imervue.paint.dock_panels import (
 from Imervue.paint.file_menu import populate_file_menu
 from Imervue.paint.layer_menu import populate_layer_menu
 from Imervue.paint.paint_menu_bar import build_paint_menu_bar
-from Imervue.paint.view_menu import populate_view_menu
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
 from Imervue.paint.tool_dispatcher import ToolDispatcher
+from Imervue.paint.tools_menu import populate_tools_menu
+from Imervue.paint.view_menu import populate_view_menu
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -66,6 +67,7 @@ class PaintWorkspace(QMainWindow):
         populate_file_menu(self)
         populate_layer_menu(self)
         populate_view_menu(self)
+        populate_tools_menu(self)
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)
@@ -154,6 +156,12 @@ class PaintWorkspace(QMainWindow):
             parent_widget=self,
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
+        # Bezier pen needs a workspace handle so it can read / write
+        # the shared BezierPath stored on the workspace; the dispatcher
+        # built it without that knowledge in _build_handlers().
+        pen_tool = self._dispatcher._handlers.get("bezier_pen")  # noqa: SLF001
+        if pen_tool is not None and hasattr(pen_tool, "attach_workspace"):
+            pen_tool.attach_workspace(self)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())

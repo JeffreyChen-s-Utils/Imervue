@@ -45,6 +45,8 @@ TOOLS = (
     "smudge",
     "hand",
     "zoom",
+    "bezier_pen",
+    "clone_stamp",
 )
 DEFAULT_TOOL = "brush"
 

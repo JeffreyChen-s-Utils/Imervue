@@ -190,6 +190,11 @@ class ToolDispatcher:
         active_tool = self._state.tool
         if active_tool == "eyedropper":
             return (active_tool, evt)
+        # Tools that have their own Alt convention must also bypass
+        # the eyedropper override — the clone-stamp uses Alt-press
+        # to set the source point, not to switch into eyedropper.
+        if active_tool == "clone_stamp":
+            return (active_tool, evt)
         if evt.phase == "press":
             self._alt_override_active = bool(
                 int(evt.modifiers) & self._ALT_MODIFIER_BIT,
@@ -222,6 +227,8 @@ class ToolDispatcher:
             ),
             "gradient": GradientTool(self._state, self._selection_provider),
             "smudge": SmudgeTool(self._state, self._selection_provider),
+            "bezier_pen": _BezierPenTool(self._state),
+            "clone_stamp": _CloneStampTool(self._state),
         }
 
 
@@ -814,3 +821,136 @@ class MoveTool:
 
     def cancel(self) -> None:
         self._start = None
+
+
+# ---------------------------------------------------------------------------
+# Bezier pen tool — append anchors to a workspace-owned BezierPath.
+# ---------------------------------------------------------------------------
+
+
+class _BezierPenTool:
+    """Pen-tool dispatcher — converts press events into PathNode appends.
+
+    A press adds an anchor at the click position with no handles; a
+    drag from the press through the move events extends the
+    out-handle for that anchor (Photoshop convention). Release ends
+    the click. The active path lives on the workspace as
+    ``_bezier_pen_path`` so the user can pick up where they left off
+    across multiple presses; double-click is the conventional "close
+    this path" gesture but is handled at the canvas-widget level
+    where Qt's QMouseEvent type carries the double-click flag.
+
+    The tool itself doesn't rasterise — it appends nodes; once the
+    user is done the workspace can call
+    :func:`Imervue.paint.stroke_along_path.stroke_along_path` to
+    paint the path with the active brush.
+    """
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        self._workspace = None   # injected lazily via the dispatcher
+        self._dragging_anchor_index: int | None = None
+        self._press_pos: tuple[float, float] | None = None
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.bezier_path import PathNode
+        path = self._workspace_path()
+        if path is None:
+            return False
+        if evt.phase == "press":
+            anchor = (float(evt.x), float(evt.y))
+            path.append(PathNode(anchor=anchor))
+            self._dragging_anchor_index = len(path.nodes) - 1
+            self._press_pos = anchor
+            return True
+        if evt.phase == "move" and self._dragging_anchor_index is not None:
+            # Mid-press drag → extend an out-handle from the anchor
+            # toward the cursor; the symmetric in-handle of the next
+            # node is left ``None`` until the user actually creates one.
+            current = path.nodes[self._dragging_anchor_index]
+            handle_out = (float(evt.x), float(evt.y))
+            from dataclasses import replace
+            path.replace(
+                self._dragging_anchor_index,
+                replace(current, handle_out=handle_out),
+            )
+            return True
+        if evt.phase in ("release", "leave"):
+            self._dragging_anchor_index = None
+            self._press_pos = None
+            return False
+        return False
+
+    def cancel(self) -> None:
+        self._dragging_anchor_index = None
+        self._press_pos = None
+
+    # ---- internals ------------------------------------------------------
+
+    def _workspace_path(self):
+        """Return the workspace's active BezierPath (creating one if
+        the workspace has just been opened)."""
+        from Imervue.paint.bezier_path import BezierPath
+        ws = self._workspace
+        if ws is None:
+            return None
+        if not hasattr(ws, "_bezier_pen_path"):
+            ws._bezier_pen_path = BezierPath()
+        return ws._bezier_pen_path
+
+    def attach_workspace(self, workspace) -> None:
+        """Bind the tool to a workspace so it can read / write the
+        shared :class:`BezierPath`. Called by the dispatcher when the
+        workspace constructs it."""
+        self._workspace = workspace
+
+
+# ---------------------------------------------------------------------------
+# Clone-stamp tool — wraps :mod:`stamp_tool`'s state machine.
+# ---------------------------------------------------------------------------
+
+
+class _CloneStampTool:
+    """Clone-stamp dispatcher — Alt-press sets the source point, every
+    other press / move stamps from the source area."""
+
+    _ALT_BIT = 0x08000000   # Qt.KeyboardModifier.AltModifier.value
+
+    def __init__(self, state: ToolState):
+        self._state = state
+        from Imervue.paint.stamp_tool import StampState
+        self._stamp = StampState()
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.stamp_tool import stamp_dab
+        if evt.phase == "press":
+            if int(evt.modifiers) & self._ALT_BIT:
+                # Alt-press → set the source.
+                self._stamp.set_source((evt.x, evt.y))
+                return False
+            if not self._stamp.has_source():
+                # No source yet — first press without Alt does nothing
+                # so the user gets a clean affordance to set source first.
+                return False
+            stamp_dab(
+                canvas, self._stamp, evt.x, evt.y,
+                size=self._state.brush.size,
+                hardness=self._state.brush.hardness,
+                opacity=self._state.brush.opacity,
+            )
+            return True
+        if evt.phase == "move" and self._stamp.has_source():
+            stamp_dab(
+                canvas, self._stamp, evt.x, evt.y,
+                size=self._state.brush.size,
+                hardness=self._state.brush.hardness,
+                opacity=self._state.brush.opacity,
+            )
+            return True
+        if evt.phase in ("release", "leave"):
+            self._stamp.end_stroke()
+            return False
+        return False
+
+    def cancel(self) -> None:
+        self._stamp.end_stroke()

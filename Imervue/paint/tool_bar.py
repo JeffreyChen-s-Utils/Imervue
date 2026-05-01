@@ -60,6 +60,8 @@ TOOL_ORDER = (
     ("gradient",      "G"),
     ("blur",          ""),
     ("smudge",        ""),
+    ("bezier_pen",    "P"),
+    ("clone_stamp",   "S"),
     None,             # ── group break
     ("hand",          "H"),
     ("zoom",          "Z"),

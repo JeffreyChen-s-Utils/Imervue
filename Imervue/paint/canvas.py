@@ -148,6 +148,8 @@ _TOOL_CURSORS = {
     "smudge": Qt.CursorShape.CrossCursor,
     "hand": Qt.CursorShape.OpenHandCursor,
     "zoom": Qt.CursorShape.PointingHandCursor,
+    "bezier_pen": Qt.CursorShape.CrossCursor,
+    "clone_stamp": Qt.CursorShape.CrossCursor,
 }
 
 
