@@ -954,27 +954,38 @@ class PaintDocument:
             return False
         del self._groups[name]
         if dissolve:
-            for layer in self._layers:
-                if layer.group == name:
-                    layer.group = None
+            self._dissolve_group_members(name)
         else:
-            ref_layer = (
-                self._layers[self._reference_layer_index]
-                if self._reference_layer_index is not None
-                else None
-            )
-            self._layers = [layer for layer in self._layers if layer.group != name]
+            self._remove_group_members(name)
+        self._notify()
+        return True
+
+    def _dissolve_group_members(self, name: str) -> None:
+        """Move every layer in the deleted group out to top-level."""
+        for layer in self._layers:
+            if layer.group == name:
+                layer.group = None
+
+    def _remove_group_members(self, name: str) -> None:
+        """Drop every layer that belonged to the deleted group, then
+        rebind the active index and the reference-layer index so they
+        still point at a real (or ``None``) layer."""
+        ref_layer = (
+            self._layers[self._reference_layer_index]
+            if self._reference_layer_index is not None
+            else None
+        )
+        self._layers = [layer for layer in self._layers if layer.group != name]
+        if not self._layers:
+            self._active_index = -1
+        else:
             self._active_index = max(
                 0, min(self._active_index, len(self._layers) - 1),
             )
-            if not self._layers:
-                self._active_index = -1
-            if ref_layer is None or ref_layer not in self._layers:
-                self._reference_layer_index = None
-            else:
-                self._reference_layer_index = self._layers.index(ref_layer)
-        self._notify()
-        return True
+        if ref_layer is None or ref_layer not in self._layers:
+            self._reference_layer_index = None
+        else:
+            self._reference_layer_index = self._layers.index(ref_layer)
 
     def set_layer_group(
         self, index: int = -1, *, group: str | None,

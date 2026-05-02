@@ -546,27 +546,9 @@ def _build_gradient_lut(stops_raw) -> np.ndarray:
     remain the default black→white pair pads it out."""
     cleaned: list[tuple[float, tuple[int, int, int, int]]] = []
     for entry in stops_raw or []:
-        if not isinstance(entry, dict):
-            continue
-        try:
-            position = max(0.0, min(1.0, float(entry.get("position", 0.0))))
-        except (TypeError, ValueError):
-            continue
-        raw_color = entry.get("color")
-        if isinstance(raw_color, (list, tuple)) and len(raw_color) >= 3:
-            try:
-                if len(raw_color) >= 4:
-                    color = tuple(max(0, min(255, int(c))) for c in raw_color[:4])
-                else:
-                    color = (
-                        *(max(0, min(255, int(c))) for c in raw_color[:3]),
-                        255,
-                    )
-            except (TypeError, ValueError):
-                continue
-        else:
-            color = (0, 0, 0, 255)
-        cleaned.append((position, color))   # type: ignore[arg-type]
+        parsed = _parse_gradient_stop(entry)
+        if parsed is not None:
+            cleaned.append(parsed)
     cleaned.sort(key=lambda pair: pair[0])
     if len(cleaned) < 2:
         cleaned = [
@@ -580,6 +562,45 @@ def _build_gradient_lut(stops_raw) -> np.ndarray:
     for ch in range(4):
         lut[:, ch] = np.interp(np.arange(256, dtype=np.float32), positions, colors[:, ch])
     return np.clip(lut, 0.0, 255.0).astype(np.uint8)
+
+
+def _parse_gradient_stop(
+    entry,
+) -> tuple[float, tuple[int, int, int, int]] | None:
+    """Coerce one ``{"position", "color"}`` blob into a clean
+    ``(position, rgba)`` tuple. Returns ``None`` if the entry has the
+    wrong shape so the caller can drop it cleanly."""
+    if not isinstance(entry, dict):
+        return None
+    try:
+        position = max(0.0, min(1.0, float(entry.get("position", 0.0))))
+    except (TypeError, ValueError):
+        return None
+    color = _parse_gradient_color(entry.get("color"))
+    if color is None:
+        return None
+    return (position, color)
+
+
+def _parse_gradient_color(
+    raw_color,
+) -> tuple[int, int, int, int] | None:
+    """Convert an optional 3- or 4-element colour list into an RGBA
+    ``(0..255, ...)`` tuple. ``None`` when the layout is invalid;
+    missing alpha falls back to fully opaque."""
+    if raw_color is None:
+        return (0, 0, 0, 255)
+    if not isinstance(raw_color, (list, tuple)) or len(raw_color) < 3:
+        return None
+    try:
+        if len(raw_color) >= 4:
+            return tuple(max(0, min(255, int(c))) for c in raw_color[:4])
+        return (
+            *(max(0, min(255, int(c))) for c in raw_color[:3]),
+            255,
+        )
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------

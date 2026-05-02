@@ -84,47 +84,12 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
         raise ValueError("cannot save document with unknown shape")
     h, w = shape
 
-    layers_meta: list[dict] = []
     arrays: dict[str, np.ndarray] = {}
+    layers_meta = [_layer_meta(layer) for layer in layers]
     for i, layer in enumerate(layers):
-        layers_meta.append({
-            "name": str(layer.name),
-            "opacity": float(layer.opacity),
-            "blend_mode": str(layer.blend_mode),
-            "visible": bool(layer.visible),
-            "locked": bool(layer.locked),
-            "lock_alpha": bool(layer.lock_alpha),
-            "mask_enabled": bool(layer.mask_enabled),
-            "clip": bool(layer.clip),
-            "has_mask": layer.mask is not None,
-            "group": layer.group,
-            "adjustment": (
-                layer.adjustment.to_dict()
-                if layer.adjustment is not None else None
-            ),
-            "effects": [eff.to_dict() for eff in (layer.effects or ())],
-            "tone": (
-                layer.tone.to_dict() if layer.tone is not None else None
-            ),
-            "binary": (
-                layer.binary.to_dict() if layer.binary is not None else None
-            ),
-        })
         arrays[f"layer_{i}_image"] = layer.image
         if layer.mask is not None:
             arrays[f"layer_{i}_mask"] = layer.mask
-
-    groups_meta = [
-        {
-            "name": grp.name,
-            "visible": bool(grp.visible),
-            "opacity": float(grp.opacity),
-            "blend_mode": str(grp.blend_mode),
-            "locked": bool(grp.locked),
-            "expanded": bool(grp.expanded),
-        }
-        for grp in document.groups()
-    ]
 
     named_selection_names = list(document.list_named_selections())
     for i, name in enumerate(named_selection_names):
@@ -138,7 +103,7 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
         "height": int(h),
         "active_layer": int(document.active_layer_index()),
         "layers": layers_meta,
-        "groups": groups_meta,
+        "groups": [_group_meta(grp) for grp in document.groups()],
         "named_selections": named_selection_names,
         "reference_layer": (
             None
@@ -151,6 +116,45 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
     if selection is not None:
         arrays["selection"] = selection
     return arrays
+
+
+def _layer_meta(layer) -> dict:
+    """Per-layer JSON-friendly metadata block."""
+    return {
+        "name": str(layer.name),
+        "opacity": float(layer.opacity),
+        "blend_mode": str(layer.blend_mode),
+        "visible": bool(layer.visible),
+        "locked": bool(layer.locked),
+        "lock_alpha": bool(layer.lock_alpha),
+        "mask_enabled": bool(layer.mask_enabled),
+        "clip": bool(layer.clip),
+        "has_mask": layer.mask is not None,
+        "group": layer.group,
+        "adjustment": (
+            layer.adjustment.to_dict()
+            if layer.adjustment is not None else None
+        ),
+        "effects": [eff.to_dict() for eff in (layer.effects or ())],
+        "tone": (
+            layer.tone.to_dict() if layer.tone is not None else None
+        ),
+        "binary": (
+            layer.binary.to_dict() if layer.binary is not None else None
+        ),
+    }
+
+
+def _group_meta(grp) -> dict:
+    """Per-group JSON-friendly metadata block."""
+    return {
+        "name": grp.name,
+        "visible": bool(grp.visible),
+        "opacity": float(grp.opacity),
+        "blend_mode": str(grp.blend_mode),
+        "locked": bool(grp.locked),
+        "expanded": bool(grp.expanded),
+    }
 
 
 def load_document(path: str | Path) -> PaintDocument:
@@ -235,73 +239,101 @@ def _read_layers(data, metadata: dict) -> tuple[list[Layer], int]:
     for i, lmeta in enumerate(metadata["layers"]):
         if not isinstance(lmeta, dict):
             raise ValueError(f"layer {i} metadata must be an object")
-        image_key = f"layer_{i}_image"
-        if image_key not in data.files:
-            raise ValueError(f"document is missing array {image_key!r}")
-        image = np.ascontiguousarray(data[image_key])
-        if image.shape != (height, width, 4):
-            raise ValueError(
-                f"layer {i} shape {image.shape} does not match "
-                f"document {(height, width, 4)}",
-            )
-        if image.dtype != np.uint8:
-            raise ValueError(
-                f"layer {i} dtype {image.dtype} must be uint8",
-            )
-        blend_mode = str(lmeta.get("blend_mode", "normal"))
-        if blend_mode not in LAYER_BLEND_MODES:
-            blend_mode = "normal"
-        mask = None
-        if lmeta.get("has_mask"):
-            mask_key = f"layer_{i}_mask"
-            if mask_key not in data.files:
-                raise ValueError(f"document is missing array {mask_key!r}")
-            mask = np.ascontiguousarray(data[mask_key])
-            if mask.shape != (height, width):
-                raise ValueError(
-                    f"layer {i} mask shape {mask.shape} does not match "
-                    f"document {(height, width)}",
-                )
-        group_name = lmeta.get("group")
-        adjustment_raw = lmeta.get("adjustment")
-        adjustment = None
-        if isinstance(adjustment_raw, dict):
-            try:
-                adjustment = Adjustment.from_dict(adjustment_raw)
-            except (ValueError, TypeError):
-                adjustment = None
-        effects_raw = lmeta.get("effects") or []
-        effects: list[LayerEffect] = []
-        if isinstance(effects_raw, list):
-            for eff_raw in effects_raw:
-                try:
-                    effects.append(LayerEffect.from_dict(eff_raw))
-                except (ValueError, TypeError):
-                    continue
-        from Imervue.paint.binary_layer import BinarySettings
-        from Imervue.paint.halftone import ToneSettings
-        tone = ToneSettings.from_dict(lmeta.get("tone"))
-        binary = BinarySettings.from_dict(lmeta.get("binary"))
-        layers.append(Layer(
-            name=str(lmeta.get("name", f"Layer {i}")),
-            image=image,
-            opacity=float(lmeta.get("opacity", 1.0)),
-            blend_mode=blend_mode,
-            visible=bool(lmeta.get("visible", True)),
-            locked=bool(lmeta.get("locked", False)),
-            mask=mask,
-            mask_enabled=bool(lmeta.get("mask_enabled", True)),
-            clip=bool(lmeta.get("clip", False)),
-            lock_alpha=bool(lmeta.get("lock_alpha", False)),
-            group=str(group_name) if group_name else None,
-            adjustment=adjustment,
-            effects=tuple(effects),
-            tone=tone,
-            binary=binary,
-        ))
+        layers.append(_read_layer(data, lmeta, i, width, height))
     active = int(metadata.get("active_layer", 0))
     active = max(0, min(active, len(layers) - 1))
     return layers, active
+
+
+def _read_layer(
+    data, lmeta: dict, index: int, width: int, height: int,
+) -> Layer:
+    """Materialise one ``Layer`` from a save-file metadata + array
+    blob. Splits the steps into shape-validate, mask-load, and
+    sub-feature decode helpers so the parent function stays under
+    the cognitive-complexity ceiling."""
+    image = _read_layer_image(data, index, width, height)
+    mask = _read_layer_mask(data, lmeta, index, width, height)
+    blend_mode = str(lmeta.get("blend_mode", "normal"))
+    if blend_mode not in LAYER_BLEND_MODES:
+        blend_mode = "normal"
+    group_name = lmeta.get("group")
+    from Imervue.paint.binary_layer import BinarySettings
+    from Imervue.paint.halftone import ToneSettings
+    return Layer(
+        name=str(lmeta.get("name", f"Layer {index}")),
+        image=image,
+        opacity=float(lmeta.get("opacity", 1.0)),
+        blend_mode=blend_mode,
+        visible=bool(lmeta.get("visible", True)),
+        locked=bool(lmeta.get("locked", False)),
+        mask=mask,
+        mask_enabled=bool(lmeta.get("mask_enabled", True)),
+        clip=bool(lmeta.get("clip", False)),
+        lock_alpha=bool(lmeta.get("lock_alpha", False)),
+        group=str(group_name) if group_name else None,
+        adjustment=_read_layer_adjustment(lmeta.get("adjustment")),
+        effects=tuple(_read_layer_effects(lmeta.get("effects") or [])),
+        tone=ToneSettings.from_dict(lmeta.get("tone")),
+        binary=BinarySettings.from_dict(lmeta.get("binary")),
+    )
+
+
+def _read_layer_image(
+    data, index: int, width: int, height: int,
+) -> np.ndarray:
+    image_key = f"layer_{index}_image"
+    if image_key not in data.files:
+        raise ValueError(f"document is missing array {image_key!r}")
+    image = np.ascontiguousarray(data[image_key])
+    if image.shape != (height, width, 4):
+        raise ValueError(
+            f"layer {index} shape {image.shape} does not match "
+            f"document {(height, width, 4)}",
+        )
+    if image.dtype != np.uint8:
+        raise ValueError(
+            f"layer {index} dtype {image.dtype} must be uint8",
+        )
+    return image
+
+
+def _read_layer_mask(
+    data, lmeta: dict, index: int, width: int, height: int,
+) -> np.ndarray | None:
+    if not lmeta.get("has_mask"):
+        return None
+    mask_key = f"layer_{index}_mask"
+    if mask_key not in data.files:
+        raise ValueError(f"document is missing array {mask_key!r}")
+    mask = np.ascontiguousarray(data[mask_key])
+    if mask.shape != (height, width):
+        raise ValueError(
+            f"layer {index} mask shape {mask.shape} does not match "
+            f"document {(height, width)}",
+        )
+    return mask
+
+
+def _read_layer_adjustment(raw):
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return Adjustment.from_dict(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+def _read_layer_effects(raw_list) -> list[LayerEffect]:
+    if not isinstance(raw_list, list):
+        return []
+    effects: list[LayerEffect] = []
+    for eff_raw in raw_list:
+        try:
+            effects.append(LayerEffect.from_dict(eff_raw))
+        except (ValueError, TypeError):
+            continue
+    return effects
 
 
 def _read_groups(metadata: dict) -> dict[str, LayerGroup]:
