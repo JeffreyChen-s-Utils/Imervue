@@ -1,18 +1,17 @@
 """Smoke tests for ``.github/workflows/release.yml``.
 
-The release workflow auto-bumps the version on PR merge to main,
-publishes the resulting build to PyPI, and creates a GitHub Release
-with the matching tag. We cannot run the workflow in pytest, but
-we can lock down the parts a careless edit would silently break:
+The release pipeline is a three-job graph:
 
-* the YAML parses,
-* the workflow is gated on the merged-PR signal,
-* the version-bump snippet matches the ``pyproject.toml`` shape it
-  patches,
-* the PyPI upload step uses the canonical token-auth literals,
-* ``twine check`` runs before the upload,
-* the release publisher creates a GitHub Release tagged with the
-  bumped version.
+* ``release``           — bumps version on PR merge, builds the
+                          PyPI artefacts, and uploads them.
+* ``build-exe-windows`` — produces the standalone Nuitka EXE.
+* ``publish-release``   — gathers everything and attaches it to a
+                          GitHub Release tagged with the bumped
+                          version.
+
+We cannot run the workflow inside pytest, but we can lock down the
+shape so a careless edit doesn't silently desync the bump,
+PyPI, EXE, and GitHub Release steps.
 """
 from __future__ import annotations
 
@@ -40,6 +39,8 @@ WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
 RELEASE_JOB = "release"
+BUILD_EXE_JOB = "build-exe-windows"
+PUBLISH_JOB = "publish-release"
 
 
 @pytest.fixture(scope="module")
@@ -55,6 +56,15 @@ def jobs(workflow) -> dict:
 @pytest.fixture(scope="module")
 def release_steps(jobs) -> list[dict]:
     return jobs[RELEASE_JOB]["steps"]
+
+
+@pytest.fixture(scope="module")
+def nuitka_command(jobs) -> str:
+    nuitka_step = next(
+        s for s in jobs[BUILD_EXE_JOB]["steps"]
+        if s.get("name") == "Run Nuitka"
+    )
+    return nuitka_step["run"]
 
 
 # ---------------------------------------------------------------------------
@@ -83,19 +93,21 @@ def test_triggers_on_pr_merge_to_main(workflow):
 
 def test_workflow_default_permissions_are_read_only(workflow):
     """Workflow-scoped token must be read-only — write is reserved
-    for the release job that pushes the bump commit and tag."""
+    for the jobs that actually push tags or create releases."""
     assert workflow["permissions"]["contents"] == "read"
 
 
-def test_release_job_grants_contents_write(jobs):
-    """The release publisher needs ``contents: write`` to push a tag
-    and upload the GitHub Release asset."""
-    job_perms = jobs[RELEASE_JOB].get("permissions", {})
-    assert job_perms.get("contents") == "write"
+# ---------------------------------------------------------------------------
+# Required jobs — graph is release → build-exe-windows → publish-release.
+# ---------------------------------------------------------------------------
 
 
-def test_release_job_present(jobs):
-    assert RELEASE_JOB in jobs
+REQUIRED_JOBS = (RELEASE_JOB, BUILD_EXE_JOB, PUBLISH_JOB)
+
+
+@pytest.mark.parametrize("job_name", REQUIRED_JOBS)
+def test_required_job_present(jobs, job_name):
+    assert job_name in jobs, f"missing job: {job_name}"
 
 
 def test_release_runs_only_when_pr_actually_merged(jobs):
@@ -108,6 +120,50 @@ def test_release_runs_only_when_pr_actually_merged(jobs):
 
 def test_release_runs_on_linux(jobs):
     assert jobs[RELEASE_JOB]["runs-on"] == "ubuntu-latest"
+
+
+def test_release_grants_contents_write(jobs):
+    """The release job pushes the bump commit + tag, so it needs
+    ``contents: write`` despite the workflow-level read-only default."""
+    assert jobs[RELEASE_JOB]["permissions"]["contents"] == "write"
+
+
+def test_release_outputs_new_version(jobs):
+    """Downstream jobs pin to the freshly-pushed tag via
+    ``needs.release.outputs.new`` — losing the output makes the
+    Windows-EXE checkout silently fall back to ``main``."""
+    outputs = jobs[RELEASE_JOB].get("outputs", {})
+    assert "new" in outputs
+
+
+def test_build_exe_runs_on_windows(jobs):
+    assert jobs[BUILD_EXE_JOB]["runs-on"] == "windows-latest"
+
+
+def test_build_exe_depends_on_release(jobs):
+    """The Nuitka build needs the bumped version + tag to exist before
+    it checks out, so ``needs: release`` is mandatory."""
+    needs = jobs[BUILD_EXE_JOB].get("needs")
+    if isinstance(needs, list):
+        assert RELEASE_JOB in needs
+    else:
+        assert needs == RELEASE_JOB
+
+
+def test_publish_release_runs_on_linux(jobs):
+    assert jobs[PUBLISH_JOB]["runs-on"] == "ubuntu-latest"
+
+
+def test_publish_release_grants_contents_write(jobs):
+    """``gh release create`` writes a tag asset so this job needs
+    ``contents: write`` even though the bump already happened."""
+    assert jobs[PUBLISH_JOB]["permissions"]["contents"] == "write"
+
+
+def test_publish_release_depends_on_both_upstream_jobs(jobs):
+    needs = jobs[PUBLISH_JOB]["needs"]
+    assert RELEASE_JOB in needs
+    assert BUILD_EXE_JOB in needs
 
 
 # ---------------------------------------------------------------------------
@@ -173,18 +229,100 @@ def test_upload_runs_twine_check_before_upload(release_steps):
     assert 0 <= check_idx < upload_idx, "twine check must precede twine upload"
 
 
+def test_release_stashes_pypi_artefacts(release_steps):
+    """``publish-release`` pulls the wheel + sdist out via
+    ``actions/download-artifact``; the release job has to upload
+    them under the matching artefact name first."""
+    upload_step = next(
+        s for s in release_steps
+        if "actions/upload-artifact" in s.get("uses", "")
+    )
+    assert upload_step["with"]["name"] == "pypi-dist"
+
+
+# ---------------------------------------------------------------------------
+# Nuitka invocation parity with nuitka.md §2.1
+# ---------------------------------------------------------------------------
+
+
+REQUIRED_NUITKA_FLAGS = (
+    "--standalone",
+    "--windows-console-mode=disable",
+    "--enable-plugin=pyside6",
+    "--include-package=qt_material",
+    "--include-package=imageio",
+    "--include-package=rawpy",
+    "--include-data-dir=plugins=plugins",
+    # Model weights must NEVER ship in the bundle (see nuitka.md §2.4).
+    "--noinclude-data-files=plugins/*/models/*",
+    "--noinclude-data-files=*.onnx",
+    "--noinclude-data-files=*.pt",
+    "--noinclude-data-files=*.pth",
+    "--noinclude-data-files=*.safetensors",
+    "--noinclude-data-files=*.gguf",
+    "--module-parameter=torch-disable-jit=yes",
+    "--nofollow-import-to=pytest",
+    "--nofollow-import-to=doctest",
+    "--nofollow-import-to=rembg",
+    "--windows-icon-from-ico=exe\\Imervue.ico",
+    "--output-dir=build_nuitka",
+    "--assume-yes-for-downloads",
+)
+
+
+@pytest.mark.parametrize("flag", REQUIRED_NUITKA_FLAGS)
+def test_nuitka_command_includes_flag(nuitka_command, flag):
+    assert flag in nuitka_command, f"workflow Nuitka command missing flag: {flag}"
+
+
+def test_nuitka_command_targets_imervue_package(nuitka_command):
+    """Final positional arg must be ``Imervue`` (the package), not
+    ``Imervue/__main__.py`` — see nuitka.md §2.1."""
+    tokens = nuitka_command.split()
+    assert "Imervue" in tokens
+    assert "Imervue/__main__.py" not in tokens
+    assert "Imervue\\__main__.py" not in tokens
+
+
+def test_build_exe_uploads_zip_artifact(jobs):
+    """The publisher downloads under the name ``imervue-windows-exe``;
+    the build job has to upload under that exact name."""
+    upload_step = next(
+        s for s in jobs[BUILD_EXE_JOB]["steps"]
+        if "actions/upload-artifact" in s.get("uses", "")
+    )
+    assert upload_step["with"]["name"] == "imervue-windows-exe"
+    # ``if-no-files-found: error`` makes a missing zip fail loud
+    # instead of silently publishing an EXE-less release.
+    assert upload_step["with"].get("if-no-files-found") == "error"
+
+
 # ---------------------------------------------------------------------------
 # Release-creation step
 # ---------------------------------------------------------------------------
 
 
-def test_release_step_creates_github_release(release_steps):
-    """The final step shells out to ``gh release create`` so the tag
+def test_release_step_creates_github_release(jobs):
+    """The publisher shells out to ``gh release create`` so the tag
     matches the bumped version and release notes are auto-generated."""
+    publish_steps = jobs[PUBLISH_JOB]["steps"]
     create_step = next(
-        s for s in release_steps if s.get("name") == "Create GitHub Release"
+        s for s in publish_steps if s.get("name") == "Create GitHub Release"
     )
     snippet = create_step["run"]
     assert "gh release create" in snippet
-    assert "${{ steps.version.outputs.new }}" in snippet
+    assert "${{ needs.release.outputs.new }}" in snippet
     assert "--generate-notes" in snippet
+
+
+def test_release_attaches_pypi_and_exe_assets(jobs):
+    """The ``gh release create`` command must list both the wheel
+    bundle (``dist/*``) and the Windows zip (``./release-assets/*.zip``)
+    so the published release carries every artefact the pipeline built."""
+    publish_steps = jobs[PUBLISH_JOB]["steps"]
+    create_step = next(
+        s for s in publish_steps if s.get("name") == "Create GitHub Release"
+    )
+    snippet = create_step["run"]
+    assert "dist/*" in snippet
+    assert "./release-assets/" in snippet
