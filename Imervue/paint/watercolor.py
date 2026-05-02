@@ -97,7 +97,7 @@ def diffuse(field: WetField, *, rate: float = 0.2) -> None:
     no diffusion; 0.25 is the maximum stable rate (each neighbour
     contributes a quarter of its mass)."""
     rate = max(0.0, min(0.25, float(rate)))
-    if rate == 0.0:
+    if rate <= 0.0:
         return
 
     def _diffuse_field(arr: np.ndarray) -> np.ndarray:
@@ -135,7 +135,7 @@ def evaporate(field: WetField, *, rate: float = 0.05) -> None:
 
     ``rate`` in ``[0, 1]`` is the fraction of water removed per call."""
     rate = max(0.0, min(1.0, float(rate)))
-    if rate == 0.0:
+    if rate <= 0.0:
         return
     field.water[...] = field.water * (1.0 - rate)
 

@@ -216,7 +216,7 @@ def render_halftone(
         raise ValueError(f"spacing must be > 0, got {spacing}")
     if dot_radius < 0.0:
         raise ValueError(f"dot_radius must be >= 0, got {dot_radius}")
-    if dot_radius == 0.0:
+    if dot_radius <= 0.0:
         return DamageRect(0, 0, 0, 0)
     h, w = canvas.shape[:2]
     if selection is not None and selection.shape != (h, w):

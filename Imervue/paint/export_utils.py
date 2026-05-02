@@ -82,7 +82,7 @@ def apply_watermark(
         )
     opacity = max(0.0, min(1.0, float(opacity)))
     padding = max(0, int(padding))
-    if opacity == 0.0:
+    if opacity <= 0.0:
         return image.copy()
 
     h, w = image.shape[:2]

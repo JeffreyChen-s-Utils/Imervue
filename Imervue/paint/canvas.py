@@ -714,7 +714,9 @@ class PaintCanvas(QOpenGLWidget):
         # Rotation pivots about the canvas centre so the visual mid
         # stays put — matches the screen↔image conversion math in
         # ``_screen_to_image`` and the View-menu rotate action.
-        if self._rotation_deg != 0.0:
+        # ``isclose`` covers tiny accumulated drift from repeated
+        # ±15° increments rather than a strict ``!= 0.0``.
+        if not math.isclose(self._rotation_deg, 0.0, abs_tol=1e-6):
             glTranslatef(w / 2.0, h / 2.0, 0.0)
             glRotatef(self._rotation_deg, 0.0, 0.0, 1.0)
             glTranslatef(-w / 2.0, -h / 2.0, 0.0)
@@ -1264,7 +1266,7 @@ class PaintCanvas(QOpenGLWidget):
         # routes brush dabs onto the pixel under the cursor.
         rel_x = (sx - self._pan_x) / self._zoom
         rel_y = (sy - self._pan_y) / self._zoom
-        if self._rotation_deg == 0.0:
+        if math.isclose(self._rotation_deg, 0.0, abs_tol=1e-6):
             return (rel_x, rel_y)
         shape = self._document.shape
         if shape is None:

@@ -423,7 +423,7 @@ def _apply_photo_filter(image: np.ndarray, params: dict) -> np.ndarray:
         raw_color = DEFAULT_PARAMS["photo_filter"]["color"]
     color = tuple(max(0, min(255, int(c))) for c in raw_color[:3])
     density = max(0.0, min(1.0, float(p.get("density", 0.25))))
-    if density == 0.0:
+    if density <= 0.0:
         return image.copy()
 
     rgb = image[..., :3].astype(np.float32) / 255.0

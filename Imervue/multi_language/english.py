@@ -25,6 +25,10 @@ _ENGLISH_NAME_LABEL = 'Name:'
 _ENGLISH_ADD_IMAGES = 'Add images\u2026'
 _NO_EXPORT_IMAGES = 'No images to export.'
 _EXPORT_FAILED = 'Export failed: {err}'
+# Repeated across LUT / gradient-map / film-grain / lens-flare /
+# auto-balance dialogs; extracted so a single edit (e.g. switching
+# to "Strength:") propagates everywhere without missing a row.
+_ENGLISH_INTENSITY_LABEL = 'Intensity:'
 
 english_word_dict = {
     "tab_new": "New Tab",
@@ -1347,7 +1351,7 @@ english_word_dict = {
     "lut_title": "Apply .cube LUT",
     "lut_file": ".cube file:",
     "lut_clear": "Clear",
-    "lut_intensity": "Intensity:",
+    "lut_intensity": _ENGLISH_INTENSITY_LABEL,
     "lut_pick": "Select .cube LUT",
     "lut_hint": "Pick any Adobe .cube LUT (up to 64\u00b3). Intensity blends with the original.",
 
@@ -1605,7 +1609,7 @@ english_word_dict = {
     "gradient_map_title": "Gradient Map",
     "gradient_map_enable": "Enable gradient map",
     "gradient_map_preset": "Preset:",
-    "gradient_map_intensity": "Intensity:",
+    "gradient_map_intensity": _ENGLISH_INTENSITY_LABEL,
     "gradient_map_preset_mono": "Mono",
     "gradient_map_preset_sepia": "Sepia",
     "gradient_map_preset_cyanotype": "Cyanotype",
@@ -1616,7 +1620,7 @@ english_word_dict = {
     "film_grain_title": "Film Grain",
     "film_grain_enable": "Enable film grain",
     "film_grain_monochrome": "Monochrome grain",
-    "film_grain_intensity": "Intensity:",
+    "film_grain_intensity": _ENGLISH_INTENSITY_LABEL,
     "film_grain_size": "Grain size:",
     "film_grain_seed": "Seed:",
     "film_grain_seed_auto": "Auto",
@@ -1625,7 +1629,7 @@ english_word_dict = {
     "lens_flare_enable": "Enable lens flare",
     "lens_flare_x": "Position X (0–100%):",
     "lens_flare_y": "Position Y (0–100%):",
-    "lens_flare_intensity": "Intensity:",
+    "lens_flare_intensity": _ENGLISH_INTENSITY_LABEL,
     "lens_flare_size": "Halo size:",
     "lens_flare_colour": "Colour:",
     # Frequency separation
@@ -1698,7 +1702,7 @@ english_word_dict = {
     "auto_balance_method_white_patch": "White-patch",
     "auto_balance_method_percentile_stretch": "Auto-levels (percentile)",
     "auto_balance_method_simplified_retinex": "Retinex (illumination removal)",
-    "auto_balance_intensity": "Intensity:",
+    "auto_balance_intensity": _ENGLISH_INTENSITY_LABEL,
     "auto_balance_percentile": "Clip percentile:",
     "auto_balance_retinex_radius": "Retinex radius:",
     "auto_balance_hint": "Writes <name>_balanced.png next to the source. Percentile applies to 'Auto-levels'; radius applies to 'Retinex'.",

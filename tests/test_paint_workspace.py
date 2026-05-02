@@ -136,15 +136,17 @@ def test_workspace_navigator_preview_refreshes_after_paint(qapp):
 
 def test_workspace_navigator_zoom_slider_drives_canvas_zoom(qapp):
     """The Navigator dock's zoom slider must actually change the canvas
-    zoom (it used to only log)."""
+    zoom (it used to only log).
+
+    Drives the slider directly without ``show()`` — on headless CI
+    runners ``show()`` reaches into OpenGL initialisation that can
+    SIGSEGV during teardown. ``valueChanged`` fires regardless of
+    visibility so the assertion still proves the wiring.
+    """
     ws = PaintWorkspace()
     try:
-        ws.show()
-        from PySide6.QtTest import QTest
-        QTest.qWait(20)
         # Slider value 200 means 2.0x zoom (slider is value/100).
         ws._navigator_dock._zoom_slider.setValue(200)  # noqa: SLF001
-        QTest.qWait(20)
         assert ws.canvas().zoom_factor() == pytest.approx(2.0)
     finally:
         ws.deleteLater()

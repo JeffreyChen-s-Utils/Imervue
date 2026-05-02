@@ -85,7 +85,7 @@ def render_size_hud(
     if thickness < 1:
         raise ValueError(f"thickness must be >= 1, got {thickness!r}")
     out = np.zeros((h, w, 4), dtype=np.uint8)
-    if alpha == 0.0:
+    if alpha <= 0.0:
         return out
 
     cx, cy = float(centre[0]), float(centre[1])

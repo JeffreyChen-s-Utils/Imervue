@@ -49,7 +49,7 @@ def match_color(
             f"{reference.shape} {reference.dtype}",
         )
     strength = max(0.0, min(1.0, float(strength)))
-    if strength == 0.0:
+    if strength <= 0.0:
         return source.copy()
 
     src_rgb = source[..., :3].astype(np.float32)

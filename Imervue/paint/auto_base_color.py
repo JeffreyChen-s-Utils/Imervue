@@ -71,6 +71,26 @@ def auto_base_fill(
     output is sorted by area descending and capped at
     ``max_regions``; callers wanting more should bump the cap.
     """
+    _validate_auto_base_args(
+        reference, ink_alpha_threshold, min_region_size, max_regions,
+    )
+    open_pixels = _open_pixels_after_gap_close(
+        reference, ink_alpha_threshold, gap_close,
+    )
+    palette_list = _materialise_palette(palette, seed=int(seed))
+    regions = _scan_open_regions(
+        open_pixels, palette_list,
+        min_region_size=int(min_region_size),
+        max_regions=int(max_regions),
+    )
+    regions.sort(key=lambda r: r.pixel_count, reverse=True)
+    return regions
+
+
+def _validate_auto_base_args(
+    reference: np.ndarray, ink_alpha_threshold: int,
+    min_region_size: int, max_regions: int,
+) -> None:
     if reference.ndim != 3 or reference.shape[2] != 4 or reference.dtype != np.uint8:
         raise ValueError(
             f"reference must be HxWx4 uint8 RGBA, got shape={reference.shape}"
@@ -87,22 +107,36 @@ def auto_base_fill(
     if int(max_regions) < 1:
         raise ValueError(f"max_regions must be >= 1, got {max_regions}")
 
-    h, w = reference.shape[:2]
+
+def _open_pixels_after_gap_close(
+    reference: np.ndarray, ink_alpha_threshold: int, gap_close: int,
+) -> np.ndarray:
     ink = reference[..., 3] > int(ink_alpha_threshold)
     if int(gap_close) > 0:
         from Imervue.paint.selection_ops import expand as dilate
         ink = dilate(ink, int(gap_close))
-    open_pixels = ~ink
+    return ~ink
 
+
+def _scan_open_regions(
+    open_pixels: np.ndarray, palette_list: list[tuple[int, int, int]],
+    *, min_region_size: int, max_regions: int,
+) -> list[BaseColorRegion]:
+    """Walk the canvas and flood-fill each unvisited open cell.
+
+    Returned regions retain raster order (top-left to bottom-right);
+    the caller sorts by ``pixel_count`` after the cap clamps the
+    upper bound on output length.
+    """
+    from Imervue.paint.fill import _contiguous_region
+    h, w = open_pixels.shape
     visited = np.zeros((h, w), dtype=np.bool_)
     regions: list[BaseColorRegion] = []
-    palette_list = _materialise_palette(palette, seed=int(seed))
-
-    from Imervue.paint.fill import _contiguous_region
-
     for sy in range(h):
+        if len(regions) >= max_regions:
+            break
         for sx in range(w):
-            if visited[sy, sx] or ink[sy, sx]:
+            if visited[sy, sx] or not open_pixels[sy, sx]:
                 continue
             mask = _contiguous_region(open_pixels, sx, sy)
             count = int(mask.sum())
@@ -110,22 +144,13 @@ def auto_base_fill(
                 visited[sy, sx] = True
                 continue
             visited |= mask
-            if count < int(min_region_size):
-                continue
-            color = palette_list[len(regions) % len(palette_list)]
-            regions.append(BaseColorRegion(
-                color=color, mask=mask, pixel_count=count,
-            ))
-            if len(regions) >= int(max_regions):
-                # Mark every remaining open pixel as visited so the
-                # outer scan exits early without re-flooding.
-                visited |= open_pixels & ~visited
-                break
-        else:
-            continue
-        break
-
-    regions.sort(key=lambda r: r.pixel_count, reverse=True)
+            if count >= min_region_size:
+                color = palette_list[len(regions) % len(palette_list)]
+                regions.append(BaseColorRegion(
+                    color=color, mask=mask, pixel_count=count,
+                ))
+                if len(regions) >= max_regions:
+                    break
     return regions
 
 

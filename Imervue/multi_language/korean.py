@@ -11,6 +11,9 @@ _KOREAN_NEW_NAME = '새 이름:'
 _KOREAN_ADD_IMAGES = '이미지 추가\u2026'
 _NO_EXPORT_IMAGES = '내보낼 이미지가 없습니다.'
 _EXPORT_FAILED = '내보내기 실패: {err}'
+# Shared 'Open folder' label — repeated by the main file menu, tree
+# right-click menu, and onboarding step.
+_KOREAN_OPEN_FOLDER = '폴더 열기'
 
 korean_word_dict = {
     "tab_new": "새 탭",
@@ -19,7 +22,7 @@ korean_word_dict = {
     "main_window_open_image": "파일 열기",
     "main_window_current_filename": "현재 파일 이름:",
     "main_window_current_file": "파일",
-    "main_window_open_folder": "폴더 열기",
+    "main_window_open_folder": _KOREAN_OPEN_FOLDER,
     "main_window_exit": "종료",
     "main_window_tile_size": "썸네일 크기",
     "main_window_select_folder": "폴더 선택",
@@ -149,7 +152,7 @@ korean_word_dict = {
     "right_click_slideshow_stop": "슬라이드쇼 중지",
     # 트리 뷰 우클릭
     "tree_open_in_explorer": "탐색기에서 열기",
-    "tree_open_folder": "폴더 열기",
+    "tree_open_folder": _KOREAN_OPEN_FOLDER,
     "tree_delete": "삭제",
     "tree_deleted": "휴지통으로 이동됨: {name}",
     # 정렬 메뉴
@@ -1648,7 +1651,7 @@ korean_word_dict = {
     "onboarding_progress": "{current}/{total} 단계",
     "onboarding_step_welcome_title": "Imervue에 오신 것을 환영합니다",
     "onboarding_step_welcome_body": "5단계 빠른 투어로 주요 기능을 안내합니다. '다음'으로 진행하거나 '건너뛰기'로 닫으세요.",
-    "onboarding_step_open_title": "폴더 열기",
+    "onboarding_step_open_title": _KOREAN_OPEN_FOLDER,
     "onboarding_step_open_body": "'파일 > 폴더 열기' 또는 왼쪽 트리에서 폴더를 클릭하면 Imervue가 이미지를 스캔하여 타일 그리드로 표시합니다.",
     "onboarding_step_view_title": "탐색과 확대",
     "onboarding_step_view_body": "타일을 더블 클릭(또는 Enter)하여 딥 줌에 진입하고, 방향키로 사진을 전환하며, Esc로 그리드로 돌아갑니다.",

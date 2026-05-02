@@ -92,7 +92,7 @@ def sample_path(
         y = y0 + (y1 - y0) * t
     dx = points[seg][0] - points[seg - 1][0]
     dy = points[seg][1] - points[seg - 1][1]
-    angle = math.atan2(dy, dx) if (dx != 0.0 or dy != 0.0) else 0.0
+    angle = math.atan2(dy, dx) if (dx or dy) else 0.0
     return (float(x), float(y), angle)
 
 

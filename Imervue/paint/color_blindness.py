@@ -88,7 +88,7 @@ def simulate(
             f"unknown CVD kind {kind!r}; expected one of {SIMULATION_KINDS}",
         )
     severity = max(0.0, min(1.0, float(severity)))
-    if severity == 0.0:
+    if severity <= 0.0:
         return image.copy()
 
     matrix = _CVD_MATRICES[kind]

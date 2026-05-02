@@ -14,6 +14,8 @@ amortises across the whole fill region.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 from PIL import Image
 
@@ -50,7 +52,7 @@ def render_pattern_fill(
             f"scale must be in [{MIN_SCALE}, {MAX_SCALE}], got {scale!r}",
         )
     opacity = max(0.0, min(1.0, float(opacity)))
-    if opacity == 0.0:
+    if opacity <= 0.0:
         return False
 
     pat = _transform_pattern(pattern, scale, rotation_deg)
@@ -98,11 +100,13 @@ def _transform_pattern(
     """Apply scale + rotation to the pattern via Pillow.
 
     Identity transforms (scale == 1, rotation == 0) skip the round
-    through Pillow so the common case stays cheap."""
-    if scale == 1.0 and rotation_deg == 0.0:
+    through Pillow so the common case stays cheap. ``isclose`` is
+    used so a slider that lands a hair off integer 1.0 / 0.0 still
+    short-circuits rather than burning a Pillow round-trip."""
+    if math.isclose(scale, 1.0) and math.isclose(rotation_deg, 0.0):
         return pattern
     pil = Image.fromarray(pattern, mode="RGBA")
-    if scale != 1.0:
+    if not math.isclose(scale, 1.0):
         ph, pw = pattern.shape[:2]
         new_w = max(1, int(round(pw * scale)))
         new_h = max(1, int(round(ph * scale)))
@@ -111,7 +115,7 @@ def _transform_pattern(
         # into 64-grey transition pixels. Soft-texture callers can wrap
         # this and pre-blur if they want smooth scaling.
         pil = pil.resize((new_w, new_h), Image.NEAREST)
-    if rotation_deg != 0.0:
+    if not math.isclose(rotation_deg, 0.0):
         pil = pil.rotate(
             float(rotation_deg), resample=Image.BILINEAR, expand=False,
         )

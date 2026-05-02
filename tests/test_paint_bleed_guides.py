@@ -161,7 +161,7 @@ def test_presets_includes_documented_set():
 
 def test_preset_returns_known_guides():
     g = preset("manga_b5")
-    assert g.trim_width_mm == 182.0
+    assert g.trim_width_mm == pytest.approx(182.0)
 
 
 def test_preset_unknown_raises():
@@ -171,4 +171,4 @@ def test_preset_unknown_raises():
 
 def test_preset_table_uses_3mm_bleed_default():
     """JIS B5 manga uses the 3 mm bleed convention."""
-    assert PRESETS["manga_b5"].bleed_mm == 3.0
+    assert PRESETS["manga_b5"].bleed_mm == pytest.approx(3.0)

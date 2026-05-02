@@ -100,7 +100,9 @@ def test_hex_to_rgb_short_form():
 def test_hex_to_rgb_returns_none_on_garbage():
     assert hex_to_rgb("#zzzzzz") is None
     assert hex_to_rgb("not a colour") is None
-    assert hex_to_rgb(None) is None
+    # Intentional negative path — the parser must return None on a
+    # non-string input rather than raise.
+    assert hex_to_rgb(None) is None  # type: ignore[arg-type]  # NOSONAR
     assert hex_to_rgb("12345") is None
 
 

@@ -22,12 +22,15 @@ Pure numpy / Qt-free.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
-# An ``identity transform`` is detected by exact equality on these
-# arguments and short-circuited. Comparing with a tolerance band
-# would dodge floating-point quirks at the cost of surprising users
-# who set scale = 1.0 + 1e-9 and expect resampling.
+# An ``identity transform`` is detected by ``math.isclose`` on these
+# arguments and short-circuited. ``isclose`` covers tiny accumulated
+# drift from repeated transform pushes; the default relative tolerance
+# (1e-9) keeps a deliberate ``scale = 1.0 + 1e-9`` from being silently
+# treated as identity.
 _IDENTITY_SCALE = 1.0
 _IDENTITY_ANGLE = 0.0
 
@@ -62,9 +65,9 @@ def transform_selection(
         return layer_image.copy(), selection_mask.copy()
 
     if (
-        scale == _IDENTITY_SCALE
-        and angle_deg == _IDENTITY_ANGLE
-        and dx == 0.0 and dy == 0.0
+        math.isclose(scale, _IDENTITY_SCALE)
+        and math.isclose(angle_deg, _IDENTITY_ANGLE)
+        and math.isclose(dx, 0.0) and math.isclose(dy, 0.0)
     ):
         # Pure identity — skip the warp pass entirely.
         return layer_image.copy(), selection_mask.copy()

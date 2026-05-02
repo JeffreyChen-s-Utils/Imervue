@@ -1141,10 +1141,11 @@ class _BezierPenTool:
         self._press_pos: tuple[float, float] | None = None
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:  # noqa: ARG002
-        # ``canvas`` is part of the dispatcher's tool-call contract;
+    def handle(self, evt: PointerEvent, _canvas: np.ndarray) -> bool:
+        # ``_canvas`` is part of the dispatcher's tool-call contract;
         # the bezier pen mutates ``workspace._path`` instead of the
-        # raster buffer so the parameter goes unused.
+        # raster buffer so the parameter goes unused (the leading
+        # underscore tells static analyzers we know).
         from Imervue.paint.bezier_path import PathNode
         path = self._workspace_path()
         if path is None:
