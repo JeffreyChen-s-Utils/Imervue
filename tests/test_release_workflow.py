@@ -19,7 +19,11 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
+
+# PyYAML is the only hard runtime dep these workflow assertions need
+# but the lean CI image used for the doc / lint matrix doesn't
+# install it. Skip the module cleanly rather than failing collection.
+yaml = pytest.importorskip("yaml")
 
 # ``tomllib`` is stdlib only on Python 3.11+; the CI matrix still
 # includes 3.10, so guard the import. The one test that actually
