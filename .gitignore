@@ -196,3 +196,4 @@ plugins/ai_background_remover/models/u2net_human_seg.onnx
 /build_nuitka/
 /plugins/
 sonar_issues.txt
+sonar_remaining.txt
