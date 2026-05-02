@@ -174,16 +174,16 @@ def test_workspace_remains_paintable_after_main_window_none_bind(qapp):
     host main window switches to the Paint tab without an image bound
     to the viewer, it calls ``paint_workspace.load_image(None)``.
     After that the brush must still paint — i.e. the workspace must
-    have a layer to paint into, not an empty document."""
-    from PySide6.QtCore import QPoint, Qt
-    from PySide6.QtTest import QTest
+    have a layer to paint into, not an empty document.
+
+    Dispatches the dab through the tool dispatcher directly instead
+    of the Qt event loop so the test runs without ``show()`` —
+    headless CI runners SIGSEGV inside QOpenGLWidget show paths.
+    """
+    from Imervue.paint.canvas import PointerEvent
 
     ws = PaintWorkspace()
     try:
-        ws.resize(1200, 800)
-        ws.show()
-        QTest.qWait(50)
-
         # Simulate exactly what the main window does on tab change with
         # no current image.
         ws.load_image(None)
@@ -191,13 +191,14 @@ def test_workspace_remains_paintable_after_main_window_none_bind(qapp):
 
         ws.state().set_foreground((0, 128, 255))
         canvas = ws.canvas()
-        cx = canvas.width() // 2
-        cy = canvas.height() // 2
         before = canvas.current_image().copy()
-        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
-        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
+        h, w = canvas.current_image().shape[:2]
+        cx, cy = w // 2, h // 2
+        for phase in ("press", "release"):
+            ws._dispatcher(PointerEvent(  # noqa: SLF001
+                phase=phase, x=cx, y=cy, button=1,
+                modifiers=0, pressure=1.0,
+            ))
         assert (before != canvas.current_image()).any()
     finally:
         ws.deleteLater()
