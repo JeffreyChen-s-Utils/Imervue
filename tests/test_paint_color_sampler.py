@@ -63,7 +63,7 @@ def test_sampler_point_round_trip_via_dict():
 
 def test_sampler_point_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        SamplerPoint.from_dict("garbage")  # type: ignore[arg-type]
+        SamplerPoint.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 # ---------------------------------------------------------------------------

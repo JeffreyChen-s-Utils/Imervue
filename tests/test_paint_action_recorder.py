@@ -61,7 +61,7 @@ def test_action_round_trip_via_dict():
 
 def test_action_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        Action.from_dict("garbage")  # type: ignore[arg-type]
+        Action.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 def test_action_from_dict_rejects_blank_kind():

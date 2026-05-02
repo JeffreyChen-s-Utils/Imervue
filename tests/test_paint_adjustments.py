@@ -55,7 +55,7 @@ def test_adjustment_round_trip_via_dict():
 
 def test_adjustment_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        Adjustment.from_dict("garbage")  # type: ignore[arg-type]
+        Adjustment.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 def test_adjustment_from_dict_rejects_unknown_kind():

@@ -60,7 +60,7 @@ def test_guide_round_trip_via_dict():
 
 def test_guide_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        Guide.from_dict("garbage")  # type: ignore[arg-type]
+        Guide.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 def test_guide_from_dict_falls_back_for_unknown_orientation():

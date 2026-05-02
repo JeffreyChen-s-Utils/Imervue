@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
+from typing import cast
 
 ROTATION_WRAP_DEGREES = 360.0
 
@@ -103,27 +104,33 @@ def rotate_around(
     image_pivot = screen_to_image(transform, pivot_screen)
     # Apply the rotation; the pan / zoom values stay as-is for now.
     new_rotation = _wrap_rotation(transform.rotation_deg + float(delta_deg))
-    candidate = replace(transform, rotation_deg=new_rotation)
+    # ``dataclasses.replace`` is typed as ``DataclassInstance`` in the
+    # stubs Sonar uses; cast keeps the returned type narrow without
+    # changing runtime behaviour.
+    candidate = cast(ViewTransform, replace(transform, rotation_deg=new_rotation))
     # After the rotation, the image_pivot would map to a new screen
     # position. Adjust pan so it lands back at pivot_screen.
     new_pivot = image_to_screen(candidate, image_pivot)
     pan_dx = pivot_screen[0] - new_pivot[0]
     pan_dy = pivot_screen[1] - new_pivot[1]
-    return replace(
+    return cast(ViewTransform, replace(
         candidate,
         pan_x=candidate.pan_x + pan_dx,
         pan_y=candidate.pan_y + pan_dy,
-    )
+    ))
 
 
 def reset_rotation(transform: ViewTransform) -> ViewTransform:
     """Return a transform with the rotation cleared (pan / zoom kept)."""
-    return replace(transform, rotation_deg=0.0)
+    return cast(ViewTransform, replace(transform, rotation_deg=0.0))
 
 
 def normalise_rotation(transform: ViewTransform) -> ViewTransform:
     """Wrap the rotation into ``(-180, 180]`` without changing visuals."""
-    return replace(transform, rotation_deg=_wrap_rotation(transform.rotation_deg))
+    return cast(
+        ViewTransform,
+        replace(transform, rotation_deg=_wrap_rotation(transform.rotation_deg)),
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
+from typing import cast
 
 # Handle kind constants — strings rather than an Enum so JSON
 # round-trips don't need a custom encoder.
@@ -167,7 +168,10 @@ def apply_handle_drag(
     cumulative or per-tick delta as appropriate.
     """
     if handle == HANDLE_BODY:
-        return replace(box, cx=box.cx + delta[0], cy=box.cy + delta[1])
+        return cast(
+            TransformBox,
+            replace(box, cx=box.cx + delta[0], cy=box.cy + delta[1]),
+        )
     if handle == HANDLE_ROTATE:
         return _apply_rotate(box, delta)
     if handle in CORNER_HANDLES or handle in EDGE_HANDLES:
@@ -218,7 +222,7 @@ def _apply_rotate(
     new_angle = math.degrees(math.atan2(
         new_y - box.cy, new_x - box.cx,
     )) + 90.0   # +90 because the rotate handle sits at -90° in local space
-    return replace(box, rotation_deg=new_angle)
+    return cast(TransformBox, replace(box, rotation_deg=new_angle))
 
 
 def _apply_resize(
@@ -252,10 +256,10 @@ def _apply_resize(
     sin_a = math.sin(rad)
     world_shift_x = cx_shift_local_x * cos_a - cx_shift_local_y * sin_a
     world_shift_y = cx_shift_local_x * sin_a + cx_shift_local_y * cos_a
-    return replace(
+    return cast(TransformBox, replace(
         box,
         cx=box.cx + world_shift_x,
         cy=box.cy + world_shift_y,
         width=new_width,
         height=new_height,
-    )
+    ))

@@ -60,7 +60,7 @@ def test_node_from_dict_drops_malformed_handle():
 
 def test_node_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        PathNode.from_dict("not a dict")
+        PathNode.from_dict("not a dict")  # NOSONAR — intentional negative-path test
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ def test_path_from_dict_drops_malformed_nodes():
 
 
 def test_path_from_dict_handles_non_dict_input():
-    rebuilt = BezierPath.from_dict("not a dict")
+    rebuilt = BezierPath.from_dict("not a dict")  # NOSONAR — intentional negative-path test
     assert rebuilt.nodes == []
 
 

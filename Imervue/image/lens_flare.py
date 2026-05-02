@@ -34,10 +34,13 @@ class LensFlareOptions:
     """Position / intensity / size / colour for the flare."""
 
     enabled: bool = False
-    position: list[float] = None     # [x, y] in 0..1
+    # Defaults seeded in ``__post_init__`` — declared Optional so mypy /
+    # SonarCloud see ``None`` as a legal sentinel rather than a
+    # type-mismatch.
+    position: list[float] | None = None     # [x, y] in 0..1
     intensity: float = 0.6
     size: float = 0.4                # fraction of the long edge for the halo
-    colour: list[int] = None         # [r, g, b] tint of the flare; default warm yellow
+    colour: list[int] | None = None  # [r, g, b] tint of the flare; default warm yellow
 
     def __post_init__(self):
         if self.position is None:

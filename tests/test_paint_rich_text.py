@@ -54,7 +54,10 @@ def test_style_round_trips_via_dict():
 
 
 def test_style_from_dict_garbage_falls_back():
-    out = TextStyle.from_dict("not a dict")
+    # Intentional negative path — from_dict must tolerate non-dict
+    # input and return a default. The type: ignore is the contract,
+    # not a wishlist; runtime behaviour is what's being asserted.
+    out = TextStyle.from_dict("not a dict")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
     assert out == TextStyle()
 
 
@@ -98,7 +101,8 @@ def test_styled_text_round_trip_via_dict():
 
 
 def test_styled_text_from_dict_garbage_returns_empty():
-    out = StyledText.from_dict("not a dict")
+    # Intentional negative path — see TextStyle equivalent above.
+    out = StyledText.from_dict("not a dict")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
     assert out.runs == []
 
 

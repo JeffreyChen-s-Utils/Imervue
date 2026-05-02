@@ -1375,7 +1375,7 @@ class PaintDocument:
             # Cache already nuked — full recompose is pending; nothing
             # to merge into. Listeners still fire so the canvas
             # repaints.
-            for cb in list(self._listeners):
+            for cb in self._listeners.copy():
                 cb()
             return
         if self._composite_dirty_rect is None:

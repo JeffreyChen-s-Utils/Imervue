@@ -116,7 +116,7 @@ def test_round_trip_via_dict():
 
 def test_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        PressureCurve.from_dict("garbage")  # type: ignore[arg-type]
+        PressureCurve.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 def test_from_dict_drops_corrupt_entries():

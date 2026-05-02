@@ -39,14 +39,16 @@ def test_rotate_180_preserves_shape():
 
 
 def test_rotate_180_is_double_flip():
-    arr = np.random.randint(0, 256, (6, 10, 4), dtype=np.uint8)
+    rng = np.random.default_rng(0)
+    arr = rng.integers(0, 256, (6, 10, 4), dtype=np.uint8)
     np.testing.assert_array_equal(
         ct.rotate_180(arr), ct.flip_vertical(ct.flip_horizontal(arr)),
     )
 
 
 def test_rotate_90_ccw_then_cw_round_trips():
-    arr = np.random.randint(0, 256, (6, 10, 4), dtype=np.uint8)
+    rng = np.random.default_rng(0)
+    arr = rng.integers(0, 256, (6, 10, 4), dtype=np.uint8)
     out = ct.rotate_90_cw(ct.rotate_90_ccw(arr))
     np.testing.assert_array_equal(out, arr)
 
@@ -68,7 +70,8 @@ def test_flip_vertical_mirrors_rows():
 
 
 def test_double_flip_horizontal_is_identity():
-    arr = np.random.randint(0, 256, (6, 8), dtype=np.uint8)
+    rng = np.random.default_rng(0)
+    arr = rng.integers(0, 256, (6, 8), dtype=np.uint8)
     np.testing.assert_array_equal(
         ct.flip_horizontal(ct.flip_horizontal(arr)), arr,
     )

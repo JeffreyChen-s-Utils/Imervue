@@ -71,7 +71,7 @@ def test_layer_effect_round_trip_via_dict():
 
 def test_layer_effect_from_dict_rejects_non_dict():
     with pytest.raises(ValueError, match="dict"):
-        LayerEffect.from_dict("garbage")  # type: ignore[arg-type]
+        LayerEffect.from_dict("garbage")  # type: ignore[arg-type]  # NOSONAR — intentional negative-path test
 
 
 def test_layer_effect_from_dict_rejects_unknown_kind():

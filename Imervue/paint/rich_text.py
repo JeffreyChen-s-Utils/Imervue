@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
+from typing import cast
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -343,7 +344,7 @@ def _draw_ruby(
     the previous line.
     """
     ruby_size = max(TEXT_SIZE_MIN, int(run.style.font_size * RUBY_FONT_RATIO))
-    ruby_style = replace(run.style, font_size=ruby_size)
+    ruby_style = cast(TextStyle, replace(run.style, font_size=ruby_size))
     ruby_font = _load_font(ruby_style)
     base_w, _ = _measure(base_font, run.text)
     ruby_w, ruby_h = _measure(ruby_font, run.ruby_text)
