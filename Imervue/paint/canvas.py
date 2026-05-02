@@ -672,7 +672,18 @@ class PaintCanvas(QOpenGLWidget):
             self._reset_view_to_fit(widget_size=(log_w, log_h))
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
-        glClear(GL_COLOR_BUFFER_BIT)
+        # Bail out early when no GL context is current — happens on
+        # teardown when a queued paint event fires after the canvas
+        # has been detached. Without this guard ``glClear`` returns
+        # ``GL_INVALID_OPERATION`` which PyOpenGL turns into a
+        # GLError that can take other tests down with it.
+        from PySide6.QtGui import QOpenGLContext
+        if QOpenGLContext.currentContext() is None:
+            return
+        try:
+            glClear(GL_COLOR_BUFFER_BIT)
+        except Exception:   # noqa: BLE001 - GL context may be torn down
+            return
         composite = self._document.composite()
         if composite is None:
             return

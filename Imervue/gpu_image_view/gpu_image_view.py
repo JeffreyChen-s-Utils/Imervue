@@ -448,10 +448,22 @@ class GPUImageView(QOpenGLWidget):
     # 繪製
     # ===========================
     def paintGL(self):
+        # Same guard as PaintCanvas.paintGL — a queued paint event
+        # can fire after the GL context has been torn down (test
+        # teardown / window close), and ``glClear`` then raises
+        # ``GLError(invalid operation)`` that propagates to the
+        # whole event loop.
+        from PySide6.QtGui import QOpenGLContext
+        if QOpenGLContext.currentContext() is None:
+            return
         painter = QPainter(self)
         painter.beginNativePainting()
 
-        glClear(GL_COLOR_BUFFER_BIT)
+        try:
+            glClear(GL_COLOR_BUFFER_BIT)
+        except Exception:   # noqa: BLE001 - GL context torn down
+            painter.endNativePainting()
+            return
 
         # ===== Tile Grid Mode =====
         if self.tile_grid_mode:

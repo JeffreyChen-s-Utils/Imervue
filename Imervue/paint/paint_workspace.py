@@ -55,6 +55,22 @@ if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
 
+def _safe_set_checked(action, value: bool) -> None:
+    """Best-effort ``QAction.setChecked`` that survives shiboken
+    teardown.
+
+    Dock-visibility signals stay connected during workspace
+    ``deleteLater()``; the C++ QAction can be freed before the
+    signal-disconnect propagates, leaving a queued slot that
+    would otherwise abort the GC pass with
+    ``RuntimeError: Internal C++ object already deleted``.
+    """
+    try:
+        action.setChecked(bool(value))
+    except RuntimeError:
+        return
+
+
 class PaintWorkspace(QMainWindow):
     """Assembles the Paint tab from the toolbar + canvas + dock pieces."""
 
@@ -694,9 +710,13 @@ class PaintWorkspace(QMainWindow):
             action.triggered.connect(
                 lambda checked, d=dock: d.setVisible(bool(checked)),
             )
-            # Reflect external close (dock corner X).
+            # Reflect external close (dock corner X). Wrap the
+            # ``setChecked`` call so a teardown that frees the
+            # QAction's C++ side before the dock's signal fully
+            # disconnects doesn't leave a dangling
+            # RuntimeError-raising slot in the queue.
             dock.visibilityChanged.connect(
-                lambda visible, a=action: a.setChecked(bool(visible)),
+                lambda visible, a=action: _safe_set_checked(a, visible),
             )
             self._window_dock_actions[key] = action
         # "New View" — spawn an independent overview window onto the
