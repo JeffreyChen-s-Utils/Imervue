@@ -16,11 +16,19 @@ careless edit would silently break:
 from __future__ import annotations
 
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
 import yaml
+
+# ``tomllib`` is stdlib only on Python 3.11+; the CI matrix still
+# includes 3.10, so guard the import. The one test that actually
+# parses ``pyproject.toml`` already skips on < 3.11, so a missing
+# parser doesn't take the rest of the suite down.
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    tomllib = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
