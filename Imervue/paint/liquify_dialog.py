@@ -154,23 +154,37 @@ class LiquifyDialog(QDialog):
 
     def eventFilter(self, obj, event):  # pragma: no cover - Qt UI
         if obj is self._preview and isinstance(event, QMouseEvent):
-            if event.type() == QMouseEvent.Type.MouseButtonPress:
-                if event.button() == Qt.MouseButton.LeftButton:
-                    self._last_mouse = event.position()
-                    self._apply_at(event.position(), drag_dx=0.0, drag_dy=0.0)
-                    return True
-            elif event.type() == QMouseEvent.Type.MouseMove:
-                if event.buttons() & Qt.MouseButton.LeftButton:
-                    if self._last_mouse is not None:
-                        dx = event.position().x() - self._last_mouse.x()
-                        dy = event.position().y() - self._last_mouse.y()
-                        self._apply_at(event.position(), drag_dx=dx, drag_dy=dy)
-                    self._last_mouse = event.position()
-                    return True
-            elif event.type() == QMouseEvent.Type.MouseButtonRelease:
-                self._last_mouse = None
+            handled = self._handle_preview_mouse_event(event)
+            if handled:
                 return True
         return super().eventFilter(obj, event)
+
+    def _handle_preview_mouse_event(self, event) -> bool:  # pragma: no cover - Qt UI
+        """Dispatch press / move / release on the preview QLabel.
+
+        Returns ``True`` once it consumed the event; falsy returns let
+        the base class handle it (matches QObject.eventFilter contract).
+        """
+        kind = event.type()
+        if kind == QMouseEvent.Type.MouseButtonPress:
+            if event.button() != Qt.MouseButton.LeftButton:
+                return False
+            self._last_mouse = event.position()
+            self._apply_at(event.position(), drag_dx=0.0, drag_dy=0.0)
+            return True
+        if kind == QMouseEvent.Type.MouseMove:
+            if not (event.buttons() & Qt.MouseButton.LeftButton):
+                return False
+            if self._last_mouse is not None:
+                dx = event.position().x() - self._last_mouse.x()
+                dy = event.position().y() - self._last_mouse.y()
+                self._apply_at(event.position(), drag_dx=dx, drag_dy=dy)
+            self._last_mouse = event.position()
+            return True
+        if kind == QMouseEvent.Type.MouseButtonRelease:
+            self._last_mouse = None
+            return True
+        return False
 
     # ---- engine plumbing (testable) -------------------------------------
 

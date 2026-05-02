@@ -104,47 +104,44 @@ def snap_rect(
     if threshold_px < 0:
         raise ValueError(f"threshold_px must be >= 0, got {threshold_px}")
     x, y, w, h = float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])
-    cx = x + w / 2.0
-    cy = y + h / 2.0
-    right = x + w
-    bottom = y + h
+    x_candidates = [x, x + w / 2.0, x + w]
+    y_candidates = [y, y + h / 2.0, y + h]
 
-    best_x_offset = 0.0
-    best_x_dist = float(threshold_px) + 1.0
-    best_x_target: SnapTarget | None = None
-    best_y_offset = 0.0
-    best_y_dist = float(threshold_px) + 1.0
-    best_y_target: SnapTarget | None = None
-
-    x_candidates = [(x, "left"), (cx, "centre"), (right, "right")]
-    y_candidates = [(y, "top"), (cy, "centre"), (bottom, "bottom")]
-
-    for target in targets:
-        if target.kind == "vertical":
-            for value, _ in x_candidates:
-                offset = float(target.position) - value
-                dist = abs(offset)
-                if dist < best_x_dist:
-                    best_x_dist = dist
-                    best_x_offset = offset
-                    best_x_target = target
-        else:
-            for value, _ in y_candidates:
-                offset = float(target.position) - value
-                dist = abs(offset)
-                if dist < best_y_dist:
-                    best_y_dist = dist
-                    best_y_offset = offset
-                    best_y_target = target
+    x_offset, x_target = _best_axis_snap(
+        targets, "vertical", x_candidates, threshold_px,
+    )
+    y_offset, y_target = _best_axis_snap(
+        targets, "horizontal", y_candidates, threshold_px,
+    )
 
     activated: list[SnapTarget] = []
-    new_x = x + best_x_offset
-    new_y = y + best_y_offset
-    if best_x_target is not None:
-        activated.append(best_x_target)
-    if best_y_target is not None:
-        activated.append(best_y_target)
-    return ((new_x, new_y, w, h), activated)
+    if x_target is not None:
+        activated.append(x_target)
+    if y_target is not None:
+        activated.append(y_target)
+    return ((x + x_offset, y + y_offset, w, h), activated)
+
+
+def _best_axis_snap(
+    targets: list[SnapTarget], kind: str,
+    candidates: list[float], threshold_px: int,
+) -> tuple[float, SnapTarget | None]:
+    """Return the smallest snap offset across ``candidates`` against
+    every ``kind``-typed target, plus the target that won."""
+    best_offset = 0.0
+    best_dist = float(threshold_px) + 1.0
+    best_target: SnapTarget | None = None
+    for target in targets:
+        if target.kind != kind:
+            continue
+        for value in candidates:
+            offset = float(target.position) - value
+            dist = abs(offset)
+            if dist < best_dist:
+                best_dist = dist
+                best_offset = offset
+                best_target = target
+    return best_offset, best_target
 
 
 def targets_from_rect(

@@ -120,26 +120,49 @@ def _median_cut(pixels: np.ndarray, n_buckets: int) -> list[np.ndarray]:
         return [pixels]
     buckets: list[np.ndarray] = [pixels]
     while len(buckets) < n_buckets:
-        widest_index = -1
-        widest_range = -1
-        widest_axis = 0
-        for i, bucket in enumerate(buckets):
-            if bucket.shape[0] < 2:
-                continue
-            ranges = bucket.max(axis=0) - bucket.min(axis=0)
-            axis = int(np.argmax(ranges))
-            span = int(ranges[axis])
-            if span > widest_range:
-                widest_index = i
-                widest_range = span
-                widest_axis = axis
-        if widest_index < 0 or widest_range == 0:
+        target = _pick_widest_bucket(buckets)
+        if target is None:
             break
-        bucket = buckets[widest_index]
-        sorted_bucket = bucket[bucket[:, widest_axis].argsort()]
-        midpoint = sorted_bucket.shape[0] // 2
-        if midpoint == 0 or midpoint == sorted_bucket.shape[0]:
+        index, axis, _span = target
+        if not _split_bucket_in_place(buckets, index, axis):
             break
-        buckets[widest_index] = sorted_bucket[:midpoint]
-        buckets.append(sorted_bucket[midpoint:])
     return buckets
+
+
+def _pick_widest_bucket(
+    buckets: list[np.ndarray],
+) -> tuple[int, int, int] | None:
+    """Return ``(index, axis, span)`` of the bucket with the widest
+    channel range, or ``None`` when every remaining bucket is too
+    small / too narrow to split further."""
+    widest_index = -1
+    widest_range = -1
+    widest_axis = 0
+    for i, bucket in enumerate(buckets):
+        if bucket.shape[0] < 2:
+            continue
+        ranges = bucket.max(axis=0) - bucket.min(axis=0)
+        axis = int(np.argmax(ranges))
+        span = int(ranges[axis])
+        if span > widest_range:
+            widest_index = i
+            widest_range = span
+            widest_axis = axis
+    if widest_index < 0 or widest_range == 0:
+        return None
+    return (widest_index, widest_axis, widest_range)
+
+
+def _split_bucket_in_place(
+    buckets: list[np.ndarray], index: int, axis: int,
+) -> bool:
+    """Median-split ``buckets[index]`` along ``axis``. Returns ``True``
+    when the split produced two non-empty halves."""
+    bucket = buckets[index]
+    sorted_bucket = bucket[bucket[:, axis].argsort()]
+    midpoint = sorted_bucket.shape[0] // 2
+    if midpoint == 0 or midpoint == sorted_bucket.shape[0]:
+        return False
+    buckets[index] = sorted_bucket[:midpoint]
+    buckets.append(sorted_bucket[midpoint:])
+    return True

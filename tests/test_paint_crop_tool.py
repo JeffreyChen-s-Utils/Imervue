@@ -54,7 +54,7 @@ def test_snap_widescreen_16_9_extends_height():
     """A 32×10 drag with 16:9 should keep width at 32 (= 32/16 * 9 = 18)."""
     _x0, _y0, x1, y1 = snap_to_aspect(0, 0, 32, 10, (16, 9))
     assert x1 == pytest.approx(32)
-    assert pytest.approx(y1, abs=0.01) == 18.0
+    assert y1 == pytest.approx(18.0, abs=0.01)
 
 
 def test_snap_preserves_drag_direction():

@@ -128,30 +128,56 @@ def _scan_open_regions(
     the caller sorts by ``pixel_count`` after the cap clamps the
     upper bound on output length.
     """
-    from Imervue.paint.fill import _contiguous_region
     h, w = open_pixels.shape
     visited = np.zeros((h, w), dtype=np.bool_)
     regions: list[BaseColorRegion] = []
-    for sy in range(h):
-        if len(regions) >= max_regions:
-            break
-        for sx in range(w):
-            if visited[sy, sx] or not open_pixels[sy, sx]:
-                continue
-            mask = _contiguous_region(open_pixels, sx, sy)
-            count = int(mask.sum())
-            if count == 0:
-                visited[sy, sx] = True
-                continue
-            visited |= mask
-            if count >= min_region_size:
-                color = palette_list[len(regions) % len(palette_list)]
-                regions.append(BaseColorRegion(
-                    color=color, mask=mask, pixel_count=count,
-                ))
-                if len(regions) >= max_regions:
-                    break
+    for sy, sx in _seed_iter(open_pixels):
+        if visited[sy, sx]:
+            continue
+        region = _try_capture_region(
+            open_pixels, sx, sy, visited, palette_list,
+            min_region_size=min_region_size, region_index=len(regions),
+        )
+        if region is not None:
+            regions.append(region)
+            if len(regions) >= max_regions:
+                break
     return regions
+
+
+def _seed_iter(open_pixels: np.ndarray):
+    """Yield ``(y, x)`` for every open pixel in raster order.
+
+    Pulled out so the outer scan loop can be a flat iterator of
+    candidate seeds — the dispatcher loop above only handles
+    visited-tracking and region append logic.
+    """
+    h, w = open_pixels.shape
+    for sy in range(h):
+        for sx in range(w):
+            if open_pixels[sy, sx]:
+                yield sy, sx
+
+
+def _try_capture_region(
+    open_pixels: np.ndarray, sx: int, sy: int,
+    visited: np.ndarray, palette_list: list[tuple[int, int, int]],
+    *, min_region_size: int, region_index: int,
+) -> BaseColorRegion | None:
+    """Flood-fill from ``(sx, sy)`` and return a region if it's big
+    enough, otherwise return ``None``. ``visited`` is updated in
+    place either way so future seeds skip the same cells."""
+    from Imervue.paint.fill import _contiguous_region
+    mask = _contiguous_region(open_pixels, sx, sy)
+    count = int(mask.sum())
+    if count == 0:
+        visited[sy, sx] = True
+        return None
+    visited |= mask
+    if count < min_region_size:
+        return None
+    color = palette_list[region_index % len(palette_list)]
+    return BaseColorRegion(color=color, mask=mask, pixel_count=count)
 
 
 def _materialise_palette(

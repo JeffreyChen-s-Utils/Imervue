@@ -122,44 +122,48 @@ def _link_segments(
     for seed_idx, (a, b) in enumerate(segments):
         if consumed[seed_idx]:
             continue
-        polyline = [a, b]
         consumed[seed_idx] = True
-        # Walk forward from b.
-        current = b
-        while True:
-            options = [
-                i for i in adjacency.get(current, [])
-                if not consumed[i]
-            ]
-            if not options:
-                break
-            next_idx = options[0]
-            seg = segments[next_idx]
-            consumed[next_idx] = True
-            other = seg[1] if seg[0] == current else seg[0]
-            polyline.append(other)
-            if other == polyline[0]:
-                break
-            current = other
-        # Walk backward from a.
-        current = a
-        while True:
-            options = [
-                i for i in adjacency.get(current, [])
-                if not consumed[i]
-            ]
-            if not options:
-                break
-            next_idx = options[0]
-            seg = segments[next_idx]
-            consumed[next_idx] = True
-            other = seg[1] if seg[0] == current else seg[0]
-            polyline.insert(0, other)
-            if other == polyline[-1]:
-                break
-            current = other
+        polyline = [a, b]
+        _walk_chain(polyline, b, segments, adjacency, consumed, append=True)
+        _walk_chain(polyline, a, segments, adjacency, consumed, append=False)
         polylines.append(polyline)
     return polylines
+
+
+def _walk_chain(
+    polyline: list[tuple[float, float]],
+    start: tuple[float, float],
+    segments: list[tuple[tuple[float, float], tuple[float, float]]],
+    adjacency: dict[tuple[float, float], list[int]],
+    consumed: list[bool],
+    *,
+    append: bool,
+) -> None:
+    """Extend ``polyline`` from ``start`` along unused adjacent segments.
+
+    ``append=True`` walks forward and tail-extends; ``append=False``
+    walks backward and head-extends. Stops when there are no unused
+    neighbours, or when the chain closes onto the polyline's other
+    end (forming a loop).
+    """
+    current = start
+    while True:
+        options = [i for i in adjacency.get(current, []) if not consumed[i]]
+        if not options:
+            return
+        next_idx = options[0]
+        consumed[next_idx] = True
+        seg = segments[next_idx]
+        other = seg[1] if seg[0] == current else seg[0]
+        if append:
+            polyline.append(other)
+            if other == polyline[0]:
+                return
+        else:
+            polyline.insert(0, other)
+            if other == polyline[-1]:
+                return
+        current = other
 
 
 def simplify_polyline(
