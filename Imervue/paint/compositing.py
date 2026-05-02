@@ -293,66 +293,106 @@ def composite_region(
     if not layer_list:
         h, w = base_shape
         return np.zeros((h, w, 4), dtype=np.uint8)
-    for layer in layer_list:
-        if not _layer_supports_region_composite(layer):
-            return None
-    x, y, rw, rh = rect
-    h, w = base_shape
-    if rw <= 0 or rh <= 0 or x < 0 or y < 0 or x + rw > w or y + rh > h:
+    if not all(_layer_supports_region_composite(layer) for layer in layer_list):
         return None
+    if not _rect_fits_inside(rect, base_shape):
+        return None
+    if any(layer.image.shape[:2] != base_shape for layer in layer_list):
+        return None
+
     groups = groups or {}
+    _, _, rw, rh = rect
     out = np.zeros((rh, rw, 4), dtype=np.uint8)
     clip_base_alpha: np.ndarray | None = None
     for layer in layer_list:
-        layer_group = getattr(layer, "group", None)
-        group_opacity = 1.0
-        if layer_group is not None and layer_group in groups:
-            grp = groups[layer_group]
-            if not grp.visible or grp.opacity <= 0:
-                continue
-            group_opacity = float(grp.opacity)
-        if not layer.visible or layer.opacity <= 0:
-            continue
-        if layer.image.shape[:2] != (h, w):
-            return None
-        if getattr(layer, "vector_data", None) is not None:
-            from Imervue.paint.vector_layer import realise_vector_layer
-            realise_vector_layer(layer)
-        layer_image = _layer_image_with_tone(layer)
-        layer_slice = layer_image[y:y + rh, x:x + rw]
-
-        full_mask = getattr(layer, "effective_mask", layer.mask)
-        full_mask = _apply_clip(layer, full_mask, clip_base_alpha)
-        sliced_mask = (
-            None if full_mask is None else full_mask[y:y + rh, x:x + rw]
+        out, clip_base_alpha = _composite_region_layer(
+            out, layer, rect, clip_base_alpha, groups,
         )
-        blend_if = getattr(layer, "blend_if", None)
-        if blend_if is not None:
-            from Imervue.paint.blend_if import compute_blend_if_mask
-            blend_alpha = compute_blend_if_mask(layer_slice, out, blend_if)
-            blend_mask = (blend_alpha * 255.0).clip(0, 255).astype(np.uint8)
-            if sliced_mask is None:
-                sliced_mask = blend_mask
-            else:
-                combined = (
-                    sliced_mask.astype(np.float32) / 255.0
-                ) * blend_alpha
-                sliced_mask = (
-                    combined * 255.0
-                ).clip(0, 255).astype(np.uint8)
-
-        out = composite_layer_pair(
-            out, layer_slice,
-            opacity=layer.opacity * group_opacity,
-            blend_mode=layer.blend_mode,
-            mask=sliced_mask,
-        )
-        if not getattr(layer, "clip", False):
-            # ``clip_base_alpha`` is queried full-frame by the next
-            # clipping layer's ``_apply_clip``; keep it at the document
-            # size so the slice arithmetic above stays correct.
-            clip_base_alpha = layer.image[..., 3].copy()
     return out
+
+
+def _rect_fits_inside(
+    rect: tuple[int, int, int, int], base_shape: tuple[int, int],
+) -> bool:
+    x, y, rw, rh = rect
+    h, w = base_shape
+    return rw > 0 and rh > 0 and x >= 0 and y >= 0 and x + rw <= w and y + rh <= h
+
+
+def _composite_region_layer(
+    out: np.ndarray, layer, rect: tuple[int, int, int, int],
+    clip_base_alpha: np.ndarray | None, groups: dict,
+) -> tuple[np.ndarray, np.ndarray | None]:
+    """Composite a single layer's slice onto ``out`` and return the
+    next ``(out, clip_base_alpha)`` pair. Skipping any layer that
+    isn't visible (group hidden / zero opacity) is a transparent
+    pass-through — clip-base tracking still updates because the
+    underlying pixels could still anchor a clipping layer above."""
+    group_opacity = _resolve_group_opacity(layer, groups)
+    if group_opacity is None:
+        return out, clip_base_alpha
+    if not layer.visible or layer.opacity <= 0:
+        return out, clip_base_alpha
+
+    if getattr(layer, "vector_data", None) is not None:
+        from Imervue.paint.vector_layer import realise_vector_layer
+        realise_vector_layer(layer)
+    layer_image = _layer_image_with_tone(layer)
+
+    x, y, rw, rh = rect
+    layer_slice = layer_image[y:y + rh, x:x + rw]
+    sliced_mask = _resolve_region_mask(
+        layer, clip_base_alpha, layer_slice, out, rect,
+    )
+    out = composite_layer_pair(
+        out, layer_slice,
+        opacity=layer.opacity * group_opacity,
+        blend_mode=layer.blend_mode,
+        mask=sliced_mask,
+    )
+    if not getattr(layer, "clip", False):
+        # ``clip_base_alpha`` is queried full-frame by the next
+        # clipping layer's ``_apply_clip``; keep it at the document
+        # size so the slice arithmetic above stays correct.
+        clip_base_alpha = layer.image[..., 3].copy()
+    return out, clip_base_alpha
+
+
+def _resolve_group_opacity(layer, groups: dict) -> float | None:
+    """Return the layer's effective group-opacity multiplier, or None
+    when the group is hidden / zero-opacity (caller should skip)."""
+    layer_group = getattr(layer, "group", None)
+    if layer_group is None or layer_group not in groups:
+        return 1.0
+    grp = groups[layer_group]
+    if not grp.visible or grp.opacity <= 0:
+        return None
+    return float(grp.opacity)
+
+
+def _resolve_region_mask(
+    layer, clip_base_alpha: np.ndarray | None,
+    layer_slice: np.ndarray, out: np.ndarray,
+    rect: tuple[int, int, int, int],
+) -> np.ndarray | None:
+    """Combine the layer's effective_mask, clip-mask, and any
+    blend_if alpha into a single uint8 mask sliced to ``rect``."""
+    x, y, rw, rh = rect
+    full_mask = _apply_clip(
+        layer, getattr(layer, "effective_mask", layer.mask), clip_base_alpha,
+    )
+    sliced_mask = (
+        None if full_mask is None else full_mask[y:y + rh, x:x + rw]
+    )
+    blend_if = getattr(layer, "blend_if", None)
+    if blend_if is None:
+        return sliced_mask
+    from Imervue.paint.blend_if import compute_blend_if_mask
+    blend_alpha = compute_blend_if_mask(layer_slice, out, blend_if)
+    if sliced_mask is None:
+        return (blend_alpha * 255.0).clip(0, 255).astype(np.uint8)
+    combined = (sliced_mask.astype(np.float32) / 255.0) * blend_alpha
+    return (combined * 255.0).clip(0, 255).astype(np.uint8)
 
 
 # ---------------------------------------------------------------------------
