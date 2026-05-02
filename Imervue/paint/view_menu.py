@@ -186,6 +186,12 @@ class _ViewMenuBridge:
         see only a checkmark and wonder why the grid isn't drawing.
         Reflecting the dormant state inside the menu keeps the cue
         visible for as long as the condition holds.
+
+        The slot survives a workspace teardown that hasn't yet
+        disconnected the canvas's ``zoom_changed`` signal — accessing
+        the QAction whose C++ side has been freed throws
+        ``RuntimeError`` from shiboken; we swallow it here rather
+        than let the dangling slot abort the GC pass.
         """
         from Imervue.paint.visual_guides import (
             PIXEL_GRID_MIN_ZOOM,
@@ -199,17 +205,27 @@ class _ViewMenuBridge:
         base = lang.get("paint_view_pixel_grid", "Pixel Grid")
         canvas = getattr(self._workspace, "_canvas", None)   # noqa: SLF001
         zoom = float(getattr(canvas, "_zoom", 1.0))   # noqa: SLF001
-        dormant = (
-            self.pixel_grid_active() and not should_show_pixel_grid(zoom)
-        )
+        try:
+            active = self.pixel_grid_active()
+        except RuntimeError:
+            return
+        dormant = active and not should_show_pixel_grid(zoom)
         if dormant:
             suffix = lang.get(
                 "paint_view_pixel_grid_dormant_suffix",
                 "  (zoom in to {zoom_x}×)",
             ).format(zoom_x=int(PIXEL_GRID_MIN_ZOOM))
-            action.setText(base + suffix)
+            new_text = base + suffix
         else:
-            action.setText(base)
+            new_text = base
+        try:
+            action.setText(new_text)
+        except RuntimeError:
+            # The QAction's C++ side was freed (workspace teardown
+            # raced ahead of the QTimer.singleShot we used to wire
+            # this slot). Drop the reference so future calls
+            # short-circuit on the ``action is None`` guard above.
+            actions.pop("paint_view_pixel_grid", None)
 
     def toggle_snap_to_pixel(self, checked: bool) -> None:
         state = self._workspace.state()
