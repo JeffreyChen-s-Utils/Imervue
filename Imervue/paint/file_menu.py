@@ -197,7 +197,7 @@ class _FileMenuBridge:
         path = self._pick_save_file(
             title_key="paint_file_export_image",
             title_fallback="Export image",
-            filter=_image_filter_for(preset.format),
+            name_filter=_image_filter_for(preset.format),
         )
         if not path:
             return
@@ -232,7 +232,7 @@ class _FileMenuBridge:
         path = self._pick_save_file(
             title_key="paint_file_export_pages_cbz",
             title_fallback="Export pages → CBZ",
-            filter="Comic Book Zip (*.cbz)",
+            name_filter="Comic Book Zip (*.cbz)",
         )
         if not path:
             return
@@ -249,7 +249,7 @@ class _FileMenuBridge:
         path = self._pick_save_file(
             title_key="paint_file_export_pages_pdf",
             title_fallback="Export pages → PDF",
-            filter="PDF (*.pdf)",
+            name_filter="PDF (*.pdf)",
         )
         if not path:
             return
@@ -284,14 +284,14 @@ class _FileMenuBridge:
         return path or None
 
     def _pick_save_file(  # pragma: no cover - QFileDialog
-        self, *, title_key: str, title_fallback: str, filter: str,
+        self, *, title_key: str, title_fallback: str, name_filter: str,
     ) -> str | None:
         lang = language_wrapper.language_word_dict
         path, _ = QFileDialog.getSaveFileName(
             self._workspace,
             lang.get(title_key, title_fallback),
             "",
-            filter,
+            name_filter,
         )
         return path or None
 
@@ -339,7 +339,7 @@ def commit_open_psd(workspace, path: str) -> bool:
     from Imervue.paint.psd_io import load_psd
     try:
         new_doc = load_psd(path)
-    except (OSError, ValueError, FileNotFoundError):
+    except (OSError, ValueError):
         return False
     if new_doc.shape is None:
         return False

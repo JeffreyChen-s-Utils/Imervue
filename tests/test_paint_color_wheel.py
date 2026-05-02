@@ -145,7 +145,7 @@ def test_white_corner_yields_zero_s_full_v():
 
 def test_black_corner_yields_zero_v():
     _, _, black_pt = triangle_vertices(0.0)
-    s, v = triangle_to_sv(black_pt, 0.0)
+    _, v = triangle_to_sv(black_pt, 0.0)
     assert v == pytest.approx(0.0)
 
 

@@ -199,13 +199,13 @@ def test_stroke_dab_positions_long_segment_uniformly_spaced():
     out = stroke_dab_positions((0, 0), (10, 0), spacing=2)
     # Five points: x ∈ {2, 4, 6, 8, 10}.
     assert len(out) == 5
-    assert pytest.approx(out[0][0]) == 2.0
-    assert pytest.approx(out[-1][0]) == 10.0
+    assert pytest.approx(out[0][0]) == pytest.approx(2.0)
+    assert pytest.approx(out[-1][0]) == pytest.approx(10.0)
 
 
 def test_stroke_dab_positions_includes_endpoint():
     out = stroke_dab_positions((0, 0), (7, 0), spacing=2)
-    assert pytest.approx(out[-1][0]) == 7.0
+    assert pytest.approx(out[-1][0]) == pytest.approx(7.0)
 
 
 def test_stroke_dab_positions_rejects_non_positive_spacing():
@@ -289,7 +289,7 @@ def test_square_brush_kernel_is_all_ones():
     kernel = square_brush_kernel(5)
     assert kernel.shape == (5, 5)
     assert kernel.dtype == np.float32
-    assert (kernel == 1.0).all()
+    assert np.allclose(kernel, 1.0)
 
 
 def test_square_brush_kernel_clamps_size():

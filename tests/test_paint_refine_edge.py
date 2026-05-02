@@ -88,7 +88,7 @@ def test_refine_edge_smooth_removes_isolated_pixels():
     sel = _square_selection()
     sel[0, 0] = True   # isolated pixel
     out = refine_edge(sel, smooth=2)
-    assert out[0, 0] == 0.0
+    assert out[0, 0] == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

@@ -158,8 +158,8 @@ def test_set_brush_can_update_multiple_attributes():
     state = ts.load_tool_state()
     state.set_brush(size=80, opacity=0.5, hardness=0.25, blend_mode="multiply")
     assert state.brush.size == 80
-    assert state.brush.opacity == 0.5
-    assert state.brush.hardness == 0.25
+    assert state.brush.opacity == pytest.approx(0.5)
+    assert state.brush.hardness == pytest.approx(0.25)
     assert state.brush.blend_mode == "multiply"
 
 
@@ -410,7 +410,7 @@ def test_set_ruler_with_kwargs_patches_fields():
     state = ts.load_tool_state()
     state.set_ruler(mode="linear", angle_deg=30.0)
     assert state.ruler.mode == "linear"
-    assert state.ruler.angle_deg == 30.0
+    assert state.ruler.angle_deg == pytest.approx(30.0)
 
 
 def test_set_ruler_idempotent_returns_false():
@@ -456,8 +456,8 @@ def test_ruler_round_trips_via_to_from_dict():
     rebuilt = ts.ToolState.from_dict(state.to_dict())
     assert rebuilt.ruler.mode == "parallel"
     assert rebuilt.ruler.anchor == (5.0, 6.0)
-    assert rebuilt.ruler.angle_deg == 30.0
-    assert rebuilt.ruler.spacing == 15.0
+    assert rebuilt.ruler.angle_deg == pytest.approx(30.0)
+    assert rebuilt.ruler.spacing == pytest.approx(15.0)
 
 
 def test_from_dict_handles_missing_ruler_key():
@@ -485,7 +485,7 @@ def test_add_sub_tool_captures_current_brush():
     state.set_brush(size=42, opacity=0.5)
     sub_tool = state.add_sub_tool("brush", "rough-pen")
     assert sub_tool.brush.size == 42
-    assert sub_tool.brush.opacity == 0.5
+    assert sub_tool.brush.opacity == pytest.approx(0.5)
     assert state.list_sub_tools("brush")[0].name == "rough-pen"
 
 
@@ -537,7 +537,7 @@ def test_apply_sub_tool_swaps_active_settings():
     assert state.apply_sub_tool("brush", "soft") is True
     assert state.tool == "brush"
     assert state.brush.size == 10
-    assert state.brush.opacity == 0.2
+    assert state.brush.opacity == pytest.approx(0.2)
 
 
 def test_apply_sub_tool_returns_false_for_missing_name():

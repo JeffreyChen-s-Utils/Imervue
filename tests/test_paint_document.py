@@ -240,7 +240,7 @@ def test_layer_rejects_unknown_blend_mode():
 def test_layer_clamps_opacity():
     arr = np.zeros((4, 4, 4), dtype=np.uint8)
     layer = Layer(name="x", image=arr, opacity=5.0)
-    assert layer.opacity == 1.0
+    assert layer.opacity == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +323,7 @@ def test_document_set_layer_attribute_updates_value():
     doc = PaintDocument()
     doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
     doc.set_layer_attribute(0, opacity=0.5)
-    assert doc.layers()[0].opacity == 0.5
+    assert doc.layers()[0].opacity == pytest.approx(0.5)
 
 
 def test_document_set_layer_attribute_rejects_unknown_key():

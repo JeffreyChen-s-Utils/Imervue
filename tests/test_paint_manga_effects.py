@@ -91,7 +91,7 @@ def test_speed_lines_color_is_applied(white_canvas):
         color=(255, 0, 0),
     )
     painted = _painted_pixels(white_canvas)
-    ys, xs = np.where(painted)
+    ys, xs = np.nonzero(painted)
     sample = white_canvas[ys[0], xs[0]]
     assert tuple(sample) == (255, 0, 0, 255)
 
@@ -211,7 +211,7 @@ def test_halftone_color_applied(white_canvas):
         white_canvas, dot_radius=2.0, spacing=10.0, color=(0, 200, 0),
     )
     painted = _painted_pixels(white_canvas)
-    ys, xs = np.where(painted)
+    ys, xs = np.nonzero(painted)
     assert tuple(white_canvas[ys[0], xs[0]]) == (0, 200, 0, 255)
 
 

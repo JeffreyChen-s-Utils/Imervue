@@ -32,7 +32,7 @@ def document():
 def test_layer_group_defaults():
     g = LayerGroup(name="G")
     assert g.visible is True
-    assert g.opacity == 1.0
+    assert g.opacity == pytest.approx(1.0)
     assert g.blend_mode == "pass_through"
     assert g.locked is False
     assert g.expanded is True
@@ -50,7 +50,7 @@ def test_layer_group_rejects_unknown_blend():
 
 def test_layer_group_clamps_opacity():
     g = LayerGroup(name="G", opacity=2.0)
-    assert g.opacity == 1.0
+    assert g.opacity == pytest.approx(1.0)
 
 
 def test_group_blend_modes_includes_pass_through():
@@ -83,7 +83,7 @@ def test_create_group_rejects_duplicate(document):
 
 def test_create_group_passes_attrs(document):
     g = document.create_group("Inks", opacity=0.5, blend_mode="multiply")
-    assert g.opacity == 0.5
+    assert g.opacity == pytest.approx(0.5)
     assert g.blend_mode == "multiply"
 
 
@@ -144,13 +144,13 @@ def test_set_layer_group_rejects_unknown(document):
 def test_set_group_attribute_updates_field(document):
     document.create_group("Inks")
     assert document.set_group_attribute("Inks", opacity=0.5) is True
-    assert document.group("Inks").opacity == 0.5
+    assert document.group("Inks").opacity == pytest.approx(0.5)
 
 
 def test_set_group_attribute_clamps_opacity(document):
     document.create_group("Inks")
     document.set_group_attribute("Inks", opacity=2.5)
-    assert document.group("Inks").opacity == 1.0
+    assert document.group("Inks").opacity == pytest.approx(1.0)
 
 
 def test_set_group_attribute_idempotent(document):

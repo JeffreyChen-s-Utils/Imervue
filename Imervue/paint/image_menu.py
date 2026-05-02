@@ -183,7 +183,7 @@ class ImageSizeDialog(QDialog):
     def _on_width_changed(self, value: int) -> None:  # pragma: no cover - Qt UI
         if self._suspend or not self._constrain.isChecked():
             return
-        new_w, new_h = scaled_dims_keep_aspect(
+        _, new_h = scaled_dims_keep_aspect(
             self._initial_w, self._initial_h,
             int(value), self._initial_h,
         )
@@ -196,7 +196,7 @@ class ImageSizeDialog(QDialog):
     def _on_height_changed(self, value: int) -> None:  # pragma: no cover - Qt UI
         if self._suspend or not self._constrain.isChecked():
             return
-        new_w, new_h = scaled_dims_keep_aspect(
+        new_w, _ = scaled_dims_keep_aspect(
             self._initial_w, self._initial_h,
             self._initial_w, int(value),
         )

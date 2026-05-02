@@ -53,7 +53,7 @@ class _HistogramView(QWidget):
     def channel(self) -> str:
         return self._channel
 
-    def paintEvent(self, event):  # noqa: N802 - Qt override, ARG002
+    def paintEvent(self, event):  # noqa: N802, ARG002
         del event
         painter = QPainter(self)
         try:

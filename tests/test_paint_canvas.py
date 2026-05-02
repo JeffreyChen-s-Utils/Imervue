@@ -90,11 +90,11 @@ def test_pointer_event_holds_provided_fields():
         pressure=0.75,
     )
     assert evt.phase == "press"
-    assert evt.x == 12.5
-    assert evt.y == 34.25
+    assert evt.x == pytest.approx(12.5)
+    assert evt.y == pytest.approx(34.25)
     assert evt.button == button_value
     assert evt.modifiers == modifier_value
-    assert evt.pressure == 0.75
+    assert evt.pressure == pytest.approx(0.75)
 
 
 # ---------------------------------------------------------------------------

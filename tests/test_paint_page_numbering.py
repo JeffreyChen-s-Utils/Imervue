@@ -112,7 +112,7 @@ def test_each_corner_paints_inside_its_quadrant(qapp, corner):
     layer = project.pages[0].document.active_layer().image
     inked = layer[..., 3] > 0
     assert inked.any()
-    ys, xs = np.where(inked)
+    ys, xs = np.nonzero(inked)
     cy = layer.shape[0] // 2
     cx = layer.shape[1] // 2
     if corner == "top_left":

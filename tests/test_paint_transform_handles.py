@@ -33,8 +33,8 @@ from Imervue.paint.transform_handles import (
 
 def test_construct_minimal():
     box = TransformBox(cx=10.0, cy=20.0, width=30.0, height=40.0)
-    assert box.cx == 10.0
-    assert box.rotation_deg == 0.0
+    assert box.cx == pytest.approx(10.0)
+    assert box.rotation_deg == pytest.approx(0.0)
 
 
 def test_rejects_undersized_width():
@@ -49,10 +49,10 @@ def test_rejects_undersized_height():
 
 def test_from_rect_centres_correctly():
     box = from_rect(10, 20, 40, 60)
-    assert box.cx == 30.0
-    assert box.cy == 50.0
-    assert box.width == 40.0
-    assert box.height == 60.0
+    assert box.cx == pytest.approx(30.0)
+    assert box.cy == pytest.approx(50.0)
+    assert box.width == pytest.approx(40.0)
+    assert box.height == pytest.approx(60.0)
 
 
 # ---------------------------------------------------------------------------
@@ -230,8 +230,7 @@ def test_drag_resize_on_rotated_box_uses_local_axes():
 
 def test_drag_rotate_handle_changes_rotation():
     box = from_rect(0, 0, 40, 40)
-    pos = handle_positions(box)
-    rotate_x, rotate_y = pos[HANDLE_ROTATE]
+    handle_positions(box)
     # Move the rotate handle 10 px to the right.
     new = apply_handle_drag(box, HANDLE_ROTATE, (10.0, 0.0))
     assert new.rotation_deg != box.rotation_deg

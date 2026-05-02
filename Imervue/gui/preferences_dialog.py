@@ -46,6 +46,10 @@ VRAM_MAX_MB = 8192
 VRAM_DEFAULT_MB = 1536  # 1.5 GB conservative fallback
 VRAM_STEP_MB = 128
 
+# Style sheet for the dim "hint" labels under each tunable —
+# centralised so a single edit recolours every hint.
+_HINT_LABEL_STYLE = "color: #888; font-size: 11px;"
+
 
 class PreferencesDialog(QDialog):
     """Modal preferences dialog editing values in ``user_setting_dict``."""
@@ -96,7 +100,7 @@ class PreferencesDialog(QDialog):
                 "Tile-cache budget for the GPU viewer. Restart required.",
             )
         )
-        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setStyleSheet(_HINT_LABEL_STYLE)
         hint.setWordWrap(True)
 
         form.addRow(
@@ -125,7 +129,7 @@ class PreferencesDialog(QDialog):
                 "Scales every widget by adjusting the application font. Restart required.",
             )
         )
-        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setStyleSheet(_HINT_LABEL_STYLE)
         hint.setWordWrap(True)
 
         form.addRow(
@@ -152,7 +156,7 @@ class PreferencesDialog(QDialog):
                 "Restart required for the new theme to fully apply.",
             )
         )
-        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setStyleSheet(_HINT_LABEL_STYLE)
         hint.setWordWrap(True)
 
         form.addRow(lang.get("preferences_theme_label", "Theme:"), self._theme_combo)

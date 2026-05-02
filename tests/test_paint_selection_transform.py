@@ -78,7 +78,7 @@ def test_180_degree_rotation_preserves_pixel_count():
     img[8:13, 8:13, :] = (50, 200, 100, 255)
     sel = _box_selection(img.shape[:2], 8, 13, 8, 13)
     original_sum = sel.sum()
-    out_img, out_sel = transform_selection(img, sel, angle_deg=180.0)
+    _, out_sel = transform_selection(img, sel, angle_deg=180.0)
     # Count of selected pixels should be approximately preserved.
     assert abs(int(out_sel.sum()) - int(original_sum)) <= 4
 
@@ -87,7 +87,7 @@ def test_uniform_scale_grows_selection():
     img = _make_layer(h=40, w=40)
     img[18:23, 18:23, :] = (200, 50, 50, 255)
     sel = _box_selection(img.shape[:2], 18, 23, 18, 23)
-    out_img, out_sel = transform_selection(img, sel, scale=2.0)
+    _, out_sel = transform_selection(img, sel, scale=2.0)
     # 2x scale → ~4x pixel count (within bilinear-edge slop).
     assert out_sel.sum() > sel.sum() * 3
     assert out_sel.sum() < sel.sum() * 5

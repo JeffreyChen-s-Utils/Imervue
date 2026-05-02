@@ -82,7 +82,7 @@ def test_color_jitter_deterministic_with_seed():
 
 
 def test_tilt_zero_returns_zero():
-    assert tilt_rotation_radians(0.0, 0.0) == 0.0
+    assert tilt_rotation_radians(0.0, 0.0) == pytest.approx(0.0)
 
 
 def test_tilt_positive_x_yields_zero_angle():
@@ -139,21 +139,21 @@ def test_rotate_kernel_rejects_non_2d():
 
 def test_brush_settings_carries_new_fields():
     bs = ts.BrushSettings(scatter=0.5, color_jitter=0.3, follow_tilt=True)
-    assert bs.scatter == 0.5
-    assert bs.color_jitter == 0.3
+    assert bs.scatter == pytest.approx(0.5)
+    assert bs.color_jitter == pytest.approx(0.3)
     assert bs.follow_tilt is True
 
 
 def test_set_brush_clamps_scatter_above_one():
     state = ts.ToolState()
     state.set_brush(scatter=2.0)
-    assert state.brush.scatter == 1.0
+    assert state.brush.scatter == pytest.approx(1.0)
 
 
 def test_set_brush_clamps_color_jitter_below_zero():
     state = ts.ToolState()
     state.set_brush(color_jitter=-0.5)
-    assert state.brush.color_jitter == 0.0
+    assert state.brush.color_jitter == pytest.approx(0.0)
 
 
 def test_set_brush_follow_tilt_coerces_to_bool():

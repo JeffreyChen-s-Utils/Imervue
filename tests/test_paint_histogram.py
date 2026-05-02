@@ -143,8 +143,8 @@ def test_normalise_returns_zero_to_one():
     arr = np.array([0, 5, 10, 5, 0], dtype=np.int64)
     out = normalise(arr)
     assert out.dtype == np.float32
-    assert pytest.approx(out.max()) == 1.0
-    assert pytest.approx(out.min()) == 0.0
+    assert pytest.approx(out.max()) == pytest.approx(1.0)
+    assert pytest.approx(out.min()) == pytest.approx(0.0)
 
 
 def test_normalise_all_zero_returns_all_zero():

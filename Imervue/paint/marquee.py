@@ -35,7 +35,7 @@ def selection_outline_segments(mask: np.ndarray) -> np.ndarray:
     # Vertical edges between pixel columns x and x+1 (interior boundary).
     vertical = mask[:, :-1] ^ mask[:, 1:]   # H × (W-1)
     if vertical.any():
-        ys, xs = np.where(vertical)
+        ys, xs = np.nonzero(vertical)
         # Edge sits on x = xs+1.
         seg = np.column_stack([
             xs + 1, ys, xs + 1, ys + 1,
@@ -45,7 +45,7 @@ def selection_outline_segments(mask: np.ndarray) -> np.ndarray:
     # Horizontal edges between pixel rows y and y+1.
     horizontal = mask[:-1, :] ^ mask[1:, :]   # (H-1) × W
     if horizontal.any():
-        ys, xs = np.where(horizontal)
+        ys, xs = np.nonzero(horizontal)
         # Edge sits on y = ys+1.
         seg = np.column_stack([
             xs, ys + 1, xs + 1, ys + 1,
@@ -54,25 +54,25 @@ def selection_outline_segments(mask: np.ndarray) -> np.ndarray:
 
     # Outer canvas-edge boundary — selection touching x=0 / x=W-1 / y=0 / y=H-1.
     if mask[:, 0].any():
-        ys = np.where(mask[:, 0])[0]
+        ys = np.nonzero(mask[:, 0])[0]
         seg = np.column_stack([
             np.zeros_like(ys), ys, np.zeros_like(ys), ys + 1,
         ]).astype(np.int32)
         segments.append(seg)
     if mask[:, -1].any():
-        ys = np.where(mask[:, -1])[0]
+        ys = np.nonzero(mask[:, -1])[0]
         seg = np.column_stack([
             np.full_like(ys, w), ys, np.full_like(ys, w), ys + 1,
         ]).astype(np.int32)
         segments.append(seg)
     if mask[0, :].any():
-        xs = np.where(mask[0, :])[0]
+        xs = np.nonzero(mask[0, :])[0]
         seg = np.column_stack([
             xs, np.zeros_like(xs), xs + 1, np.zeros_like(xs),
         ]).astype(np.int32)
         segments.append(seg)
     if mask[-1, :].any():
-        xs = np.where(mask[-1, :])[0]
+        xs = np.nonzero(mask[-1, :])[0]
         seg = np.column_stack([
             xs, np.full_like(xs, h), xs + 1, np.full_like(xs, h),
         ]).astype(np.int32)
@@ -89,5 +89,5 @@ def bounding_rect(mask: np.ndarray) -> tuple[int, int, int, int] | None:
         raise ValueError(f"mask must be 2-D bool, got {mask.shape} {mask.dtype}")
     if not mask.any():
         return None
-    ys, xs = np.where(mask)
+    ys, xs = np.nonzero(mask)
     return (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)

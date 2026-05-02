@@ -73,8 +73,8 @@ def test_fit_centers_horizontally_and_vertically():
     out = fit_pose_to_canvas(pose, (200, 200), margin=DEFAULT_POSE_MARGIN)
     # Painted region's bbox should be centred — top margin equals bottom.
     painted = out[..., 3] > 0
-    ys = np.where(painted.any(axis=1))[0]
-    xs = np.where(painted.any(axis=0))[0]
+    ys = np.nonzero(painted.any(axis=1))[0]
+    xs = np.nonzero(painted.any(axis=0))[0]
     top = int(ys.min())
     bottom = 200 - 1 - int(ys.max())
     left = int(xs.min())
@@ -90,8 +90,8 @@ def test_fit_preserves_aspect_ratio():
     pose[..., 3] = 255
     out = fit_pose_to_canvas(pose, (100, 100), margin=0.0)
     painted = out[..., 3] > 0
-    ys = np.where(painted.any(axis=1))[0]
-    xs = np.where(painted.any(axis=0))[0]
+    ys = np.nonzero(painted.any(axis=1))[0]
+    xs = np.nonzero(painted.any(axis=0))[0]
     out_h = int(ys.max() - ys.min() + 1)
     out_w = int(xs.max() - xs.min() + 1)
     # Expect 100 high × 50 wide (1:2 ratio preserved).
@@ -121,7 +121,7 @@ def test_fit_zero_margin_uses_full_canvas():
     pose[..., 3] = 255
     out = fit_pose_to_canvas(pose, (100, 100), margin=0.0)
     painted = out[..., 3] > 0
-    ys = np.where(painted.any(axis=1))[0]
+    ys = np.nonzero(painted.any(axis=1))[0]
     # With zero margin and a square pose on a square canvas, the
     # silhouette spans the full 100 rows.
     assert int(ys.min()) == 0

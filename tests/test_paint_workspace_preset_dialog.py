@@ -223,10 +223,10 @@ class _StubDock:
         self._visible = visible
         self.raise_calls = 0
 
-    def isVisible(self) -> bool:
+    def isVisible(self) -> bool:  # noqa: N802 — Qt API mirror
         return self._visible
 
-    def setVisible(self, value: bool) -> None:
+    def setVisible(self, value: bool) -> None:  # noqa: N802 — Qt API mirror
         self._visible = bool(value)
 
     def raise_(self) -> None:

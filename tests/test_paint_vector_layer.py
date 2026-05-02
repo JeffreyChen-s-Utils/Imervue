@@ -24,7 +24,7 @@ def test_vector_stroke_defaults():
     stroke = VectorStroke(points=((0.0, 0.0), (10.0, 10.0)))
     assert stroke.width == DEFAULT_VECTOR_WIDTH
     assert stroke.color == DEFAULT_VECTOR_COLOR
-    assert stroke.opacity == 1.0
+    assert stroke.opacity == pytest.approx(1.0)
 
 
 def test_vector_stroke_rejects_zero_width():
@@ -81,7 +81,7 @@ def test_vector_stroke_from_dict_clamps_color():
 
 def test_vector_stroke_from_dict_clamps_opacity():
     rebuilt = VectorStroke.from_dict({"points": [[0, 0]], "opacity": 99.0})
-    assert rebuilt.opacity == 1.0
+    assert rebuilt.opacity == pytest.approx(1.0)
 
 
 def test_vector_stroke_from_dict_drops_malformed_points():
@@ -296,8 +296,8 @@ def test_width_at_returns_per_node_value():
         points=((0.0, 0.0), (10.0, 10.0)),
         widths=(4.0, 8.0),
     )
-    assert stroke.width_at(0) == 4.0
-    assert stroke.width_at(1) == 8.0
+    assert stroke.width_at(0) == pytest.approx(4.0)
+    assert stroke.width_at(1) == pytest.approx(8.0)
 
 
 def test_width_at_falls_back_to_uniform_width():
@@ -305,8 +305,8 @@ def test_width_at_falls_back_to_uniform_width():
         points=((0.0, 0.0), (10.0, 10.0)),
         width=6.0,
     )
-    assert stroke.width_at(0) == 6.0
-    assert stroke.width_at(1) == 6.0
+    assert stroke.width_at(0) == pytest.approx(6.0)
+    assert stroke.width_at(1) == pytest.approx(6.0)
 
 
 def test_width_at_index_out_of_range_raises():
@@ -348,7 +348,7 @@ def test_from_dict_drops_mismatched_width_count():
         "width": 6.0,
     })
     assert rebuilt.widths == ()
-    assert rebuilt.width == 6.0
+    assert rebuilt.width == pytest.approx(6.0)
 
 
 def test_old_save_without_widths_loads_with_uniform_width():
@@ -359,7 +359,7 @@ def test_old_save_without_widths_loads_with_uniform_width():
         "width": 5.0,
     })
     assert rebuilt.widths == ()
-    assert rebuilt.width == 5.0
+    assert rebuilt.width == pytest.approx(5.0)
 
 
 def test_tapered_stroke_paints_more_at_thick_end():

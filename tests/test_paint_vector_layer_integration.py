@@ -114,7 +114,7 @@ def test_pen_commit_to_vector_layer_appends_vector_stroke(qapp):
         stroke = layer.vector_data.strokes[0]
         assert len(stroke.points) == 3
         assert stroke.color[:3] == (128, 64, 32)
-        assert stroke.width == 6.0
+        assert stroke.width == pytest.approx(6.0)
     finally:
         ws.deleteLater()
 

@@ -26,7 +26,7 @@ def test_preset_construction_with_defaults():
     p = bp.BrushPreset(name="Test")
     assert p.name == "Test"
     assert p.size == 12
-    assert p.opacity == 1.0
+    assert p.opacity == pytest.approx(1.0)
 
 
 def test_preset_is_frozen():

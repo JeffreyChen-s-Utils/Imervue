@@ -1240,7 +1240,7 @@ class PaintCanvas(QOpenGLWidget):
             return
         try:
             tile = load_material_image(path)
-        except (FileNotFoundError, OSError, ValueError):
+        except (OSError, ValueError):
             event.ignore()
             return
         pos = event.position() if hasattr(event, "position") else event.pos()

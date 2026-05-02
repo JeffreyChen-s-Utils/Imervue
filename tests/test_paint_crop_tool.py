@@ -60,7 +60,7 @@ def test_snap_widescreen_16_9_extends_height():
 def test_snap_preserves_drag_direction():
     """Negative drag (top-left to bottom-right reversed) keeps its
     sign so the anchor corner stays put."""
-    _x0, _y0, x1, y1 = snap_to_aspect(20, 20, -10, 0, (1, 1))
+    _x0, _y0, _x1, y1 = snap_to_aspect(20, 20, -10, 0, (1, 1))
     # dx is -30 (from 20 to -10), dy is -20 (from 20 to 0). |dx|>|dy|
     # so width dominates; new dy should match -|dx| = -30.
     assert y1 < 20    # moved up

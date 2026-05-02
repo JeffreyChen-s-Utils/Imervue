@@ -31,20 +31,20 @@ def test_rgb_to_hsv_pure_green():
 
 
 def test_rgb_to_hsv_pure_blue():
-    h, s, v = rgb_to_hsv((0, 0, 255))
+    h, s, _ = rgb_to_hsv((0, 0, 255))
     assert h == pytest.approx(240.0, abs=0.5)
     assert s == pytest.approx(1.0, abs=1e-3)
 
 
 def test_rgb_to_hsv_white_has_zero_saturation():
     _, s, v = rgb_to_hsv((255, 255, 255))
-    assert s == 0.0
+    assert s == pytest.approx(0.0)
     assert v == pytest.approx(1.0, abs=1e-3)
 
 
 def test_rgb_to_hsv_black_has_zero_value():
     _, _, v = rgb_to_hsv((0, 0, 0))
-    assert v == 0.0
+    assert v == pytest.approx(0.0)
 
 
 def test_rgb_to_hsv_clamps_out_of_range_components():

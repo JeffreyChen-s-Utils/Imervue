@@ -1,6 +1,7 @@
 """Tests for the pressure-curve editor widget + dialog."""
 from __future__ import annotations
 
+import pytest
 from PySide6.QtCore import QPointF, QRectF
 
 from Imervue.paint.pressure_curve import PressureCurve
@@ -153,8 +154,8 @@ def test_move_point_pins_first_at_x_zero(qapp):
     try:
         editor._move_point(0, 0.7, 0.3)  # noqa: SLF001
         # The first endpoint stays at x=0 even when the user drags it.
-        assert editor.points()[0][0] == 0.0
-        assert editor.points()[0][1] == 0.3
+        assert editor.points()[0][0] == pytest.approx(0.0)
+        assert editor.points()[0][1] == pytest.approx(0.3)
     finally:
         editor.deleteLater()
 
@@ -193,9 +194,9 @@ def test_to_curve_after_edits_round_trips_through_apply(qapp):
     editor.set_points([(0.0, 0.0), (0.5, 0.8), (1.0, 1.0)])
     try:
         curve = editor.to_curve()
-        assert curve.apply(0.0) == 0.0
-        assert curve.apply(1.0) == 1.0
-        assert curve.apply(0.5) == 0.8
+        assert curve.apply(0.0) == pytest.approx(0.0)
+        assert curve.apply(1.0) == pytest.approx(1.0)
+        assert curve.apply(0.5) == pytest.approx(0.8)
     finally:
         editor.deleteLater()
 

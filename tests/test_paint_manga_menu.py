@@ -173,7 +173,9 @@ def test_toggle_tone_layer_no_op_without_active():
             return self._doc
 
         def update(self):
-            pass
+            # No-op stub — the bridge calls update() to repaint, but
+            # the test only checks the document state.
+            return
 
     bridge = _MangaMenuBridge.__new__(_MangaMenuBridge)
     bridge._workspace = _Stub()  # noqa: SLF001

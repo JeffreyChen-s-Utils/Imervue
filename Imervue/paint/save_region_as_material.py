@@ -40,7 +40,7 @@ def selection_bounds(selection: np.ndarray | None) -> tuple[int, int, int, int] 
         )
     if not selection.any():
         return None
-    ys, xs = np.where(selection)
+    ys, xs = np.nonzero(selection)
     x0 = int(xs.min())
     y0 = int(ys.min())
     x1 = int(xs.max())

@@ -78,7 +78,7 @@ def test_remove_one_seam_drops_one_column(tiny_rgba):
 
 def test_remove_seams_preserves_high_energy_stripe(tiny_rgba):
     # Carve away as many seams as the budget allows; the red stripe must survive.
-    h, w = tiny_rgba.shape[:2]
+    _, w = tiny_rgba.shape[:2]
     delta = -int(w * MAX_SEAM_FRACTION)
     out = carve_seams(tiny_rgba, delta)
     # Some red pixels must remain in every row — the stripe is fully protected.
@@ -87,7 +87,7 @@ def test_remove_seams_preserves_high_energy_stripe(tiny_rgba):
 
 
 def test_remove_seams_clamps_at_one_column(tiny_rgba):
-    h, w = tiny_rgba.shape[:2]
+    _, w = tiny_rgba.shape[:2]
     out = carve_seams(tiny_rgba, -(w + 5))
     # The implementation breaks early — we should never carve below width 1.
     assert out.shape[1] >= 1

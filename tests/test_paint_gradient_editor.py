@@ -43,7 +43,7 @@ def _three_stop_gradient(name="G"):
 
 def test_gradient_stop_construction():
     s = GradientStop(position=0.5, color=(100, 50, 25, 255))
-    assert s.position == 0.5
+    assert s.position == pytest.approx(0.5)
     assert s.color == (100, 50, 25, 255)
 
 
@@ -263,5 +263,5 @@ def test_from_dict_pads_partial_coverage():
             {"position": 0.8, "color": [0, 0, 255, 255]},
         ],
     })
-    assert g.stops[0].position == 0.0
-    assert g.stops[-1].position == 1.0
+    assert g.stops[0].position == pytest.approx(0.0)
+    assert g.stops[-1].position == pytest.approx(1.0)

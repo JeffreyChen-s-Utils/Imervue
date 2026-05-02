@@ -34,7 +34,7 @@ def test_action_construction_with_defaults():
     a = Action(kind="set_brush_size")
     assert a.kind == "set_brush_size"
     assert a.params == {}
-    assert a.timestamp == 0.0
+    assert a.timestamp == pytest.approx(0.0)
 
 
 def test_action_is_frozen():

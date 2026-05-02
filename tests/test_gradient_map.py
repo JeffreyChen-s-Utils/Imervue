@@ -53,8 +53,8 @@ def test_stops_anchored_to_endpoints():
         "enabled": True,
         "stops": [(0.3, [255, 0, 0]), (0.7, [0, 0, 255])],
     })
-    assert opts.stops[0][0] == 0.0
-    assert opts.stops[-1][0] == 1.0
+    assert opts.stops[0][0] == pytest.approx(0.0)
+    assert opts.stops[-1][0] == pytest.approx(1.0)
 
 
 def test_garbage_stops_fall_back_to_default():

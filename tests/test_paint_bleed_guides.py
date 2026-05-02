@@ -117,7 +117,8 @@ def test_three_rects_are_concentric():
     bleed = g.bleed_rect_px()
     trim = g.trim_rect_px()
     safe = g.safe_rect_px()
-    # Centre = x + w/2.
+    # Each ``*_rect_px`` returns ``(x, y, w, h)`` so the rectangle
+    # centre lives at ``x + w / 2``.
     bleed_cx = bleed[0] + bleed[2] / 2
     trim_cx = trim[0] + trim[2] / 2
     safe_cx = safe[0] + safe[2] / 2

@@ -109,7 +109,7 @@ def test_trigger_size_hud_bumps_to_current_brush_size():
     hud = SizeHudState()
     trigger_size_hud(state, hud, now=10.0)
     assert hud.last_size == 24
-    assert hud.last_change_at == 10.0
+    assert hud.last_change_at == pytest.approx(10.0)
 
 
 def test_trigger_size_hud_uses_monotonic_when_no_now():

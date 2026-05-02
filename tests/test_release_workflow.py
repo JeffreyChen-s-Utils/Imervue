@@ -68,9 +68,17 @@ def test_triggers_on_push_to_main(workflow):
     assert on["push"]["branches"] == ["main"]
 
 
-def test_workflow_grants_contents_write(workflow):
-    """create-release needs to push a tag and upload assets."""
-    assert workflow["permissions"]["contents"] == "write"
+def test_workflow_default_permissions_are_read_only(workflow):
+    """Workflow-scoped token must be read-only — write is reserved
+    for the create-release job that actually publishes a tag."""
+    assert workflow["permissions"]["contents"] == "read"
+
+
+def test_create_release_job_grants_contents_write(jobs):
+    """The release publisher needs ``contents: write`` to push a tag
+    and upload the GitHub Release asset."""
+    job_perms = jobs["create-release"].get("permissions", {})
+    assert job_perms.get("contents") == "write"
 
 
 # ---------------------------------------------------------------------------

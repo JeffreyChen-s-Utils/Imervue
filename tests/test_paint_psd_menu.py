@@ -152,11 +152,10 @@ def test_round_trip_preserves_layer_names(workspace, tmp_path):
 def test_round_trip_preserves_blend_mode(workspace, tmp_path):
     document = workspace.canvas().document()
     document.add_layer(name="Multiply")
-    document.set_layer_blend_mode(blend_mode="multiply") if hasattr(
-        document, "set_layer_blend_mode",
-    ) else setattr(
-        document.active_layer(), "blend_mode", "multiply",
-    )
+    if hasattr(document, "set_layer_blend_mode"):
+        document.set_layer_blend_mode(blend_mode="multiply")
+    else:
+        document.active_layer().blend_mode = "multiply"
     target = tmp_path / "blend.psd"
     save_psd(document, target)
     reloaded = load_psd(target)

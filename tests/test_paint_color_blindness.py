@@ -78,7 +78,7 @@ def test_matrix_for_returns_copy():
     a = matrix_for("deuteranopia")
     b = matrix_for("deuteranopia")
     a[0, 0] = 99.0
-    assert b[0, 0] != 99.0
+    assert b[0, 0] != pytest.approx(99.0)
 
 
 def test_matrix_for_unknown_raises():

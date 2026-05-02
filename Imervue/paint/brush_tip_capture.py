@@ -68,7 +68,7 @@ def capture_brush_tip(
         )
     if not selection.any():
         raise ValueError("selection is empty — nothing to capture")
-    ys, xs = np.where(selection)
+    ys, xs = np.nonzero(selection)
     y0, y1 = int(ys.min()), int(ys.max()) + 1
     x0, x1 = int(xs.min()), int(xs.max()) + 1
     bbox_h = y1 - y0

@@ -330,7 +330,7 @@ def test_render_with_ruby_paints_pixels_above_base_text():
         ruby_text="r",
     ))
     buf = render_styled_text(text)
-    rows_with_ink = np.where(buf[..., 3].any(axis=1))[0]
+    rows_with_ink = np.nonzero(buf[..., 3].any(axis=1))[0]
     assert rows_with_ink.size > 0
     assert rows_with_ink.min() < rows_with_ink.max()
 
@@ -398,12 +398,12 @@ def test_center_alignment_shifts_short_line_right():
     # The "hi" line should have inked pixels skewed right of the
     # buffer's left edge — confirmed by checking that the centre of
     # mass of the second line's ink is past the left margin.
-    rows_with_ink = np.where(out[..., 3].any(axis=1))[0]
+    rows_with_ink = np.nonzero(out[..., 3].any(axis=1))[0]
     assert rows_with_ink.size > 0
     # The lowest band of inked rows is the second line.
     bottom_rows = rows_with_ink[len(rows_with_ink) // 2 :]
     bottom_segment = out[bottom_rows]
-    inked_cols = np.where(bottom_segment[..., 3].any(axis=0))[0]
+    inked_cols = np.nonzero(bottom_segment[..., 3].any(axis=0))[0]
     assert inked_cols.size > 0
     # First inked column for centred text is materially > 0.
     assert int(inked_cols.min()) > 0
@@ -416,9 +416,9 @@ def test_right_alignment_pushes_short_line_to_right_edge():
     text.append("longer first line\n", TextStyle(font_size=24))
     text.append("hi", TextStyle(font_size=24))
     out = render_styled_text(text)
-    rows_with_ink = np.where(out[..., 3].any(axis=1))[0]
+    rows_with_ink = np.nonzero(out[..., 3].any(axis=1))[0]
     bottom_rows = rows_with_ink[len(rows_with_ink) // 2 :]
-    inked_cols = np.where(out[bottom_rows][..., 3].any(axis=0))[0]
+    inked_cols = np.nonzero(out[bottom_rows][..., 3].any(axis=0))[0]
     if inked_cols.size > 0:
         # The right edge of the rendered "hi" lands close to the
         # buffer's right margin.

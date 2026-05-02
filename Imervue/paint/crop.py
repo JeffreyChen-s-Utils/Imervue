@@ -51,7 +51,7 @@ def selection_bounds(
         raise ValueError(f"selection_mask must be bool, got {selection_mask.dtype}")
     if not selection_mask.any():
         return None
-    ys, xs = np.where(selection_mask)
+    ys, xs = np.nonzero(selection_mask)
     x0, x1 = int(xs.min()), int(xs.max())
     y0, y1 = int(ys.min()), int(ys.max())
     return (x0, y0, x1 - x0 + 1, y1 - y0 + 1)

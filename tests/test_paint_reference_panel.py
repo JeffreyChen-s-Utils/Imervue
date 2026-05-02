@@ -34,7 +34,7 @@ def sample_image_path(tmp_path):
 
 def test_reference_image_construction(tmp_path, sample_image_path):
     ref = rp.ReferenceImage(path=str(sample_image_path), scale=2.0)
-    assert ref.scale == 2.0
+    assert ref.scale == pytest.approx(2.0)
     assert ref.visible is True
 
 
@@ -86,7 +86,7 @@ def test_from_dict_clamps_negative_opacity(sample_image_path):
         "path": str(sample_image_path),
         "opacity": -1.0,
     })
-    assert rebuilt.opacity == 0.0
+    assert rebuilt.opacity == pytest.approx(0.0)
 
 
 def test_from_dict_rejects_non_dict():
@@ -175,7 +175,7 @@ def test_panel_round_trip_via_dict(sample_image_path):
     panel.add(rp.ReferenceImage(path=str(sample_image_path), scale=1.5))
     rebuilt = rp.ReferencePanel.from_dict(panel.to_dict())
     assert len(rebuilt.references) == 1
-    assert rebuilt.references[0].scale == 1.5
+    assert rebuilt.references[0].scale == pytest.approx(1.5)
 
 
 def test_panel_from_dict_drops_corrupt_entries(sample_image_path):
@@ -231,7 +231,7 @@ def test_save_load_round_trip(sample_image_path):
     rp.save_reference_panel(panel)
     reloaded = rp.load_reference_panel()
     assert len(reloaded.references) == 1
-    assert reloaded.references[0].scale == 1.5
+    assert reloaded.references[0].scale == pytest.approx(1.5)
 
 
 def test_load_returns_empty_panel_when_nothing_stored():
@@ -259,7 +259,7 @@ def test_rotate_accumulates_delta():
     panel = _populated_panel()
     panel.rotate(0, 45)
     panel.rotate(0, 30)
-    assert panel.references[0].rotation_deg == 75.0
+    assert panel.references[0].rotation_deg == pytest.approx(75.0)
 
 
 def test_rotate_wraps_into_canonical_range():
@@ -320,7 +320,7 @@ def test_rotate_does_not_mutate_unrelated_fields():
     panel = _populated_panel()
     panel.set_scale(0, 2.0)
     panel.rotate(0, 45)
-    assert panel.references[0].scale == 2.0
+    assert panel.references[0].scale == pytest.approx(2.0)
     assert panel.references[0].path == "a.png"
 
 

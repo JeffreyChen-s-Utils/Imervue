@@ -49,7 +49,7 @@ def test_palette_rejects_non_three_tuple():
 
 
 def test_palette_rejects_oversized_size():
-    too_many = tuple(((i % 256, 0, 0)) for i in range(cp.MAX_PALETTE_SIZE + 1))
+    too_many = tuple((i % 256, 0, 0) for i in range(cp.MAX_PALETTE_SIZE + 1))
     with pytest.raises(ValueError, match=str(cp.MAX_PALETTE_SIZE)):
         cp.Palette(name="P", colors=too_many)
 

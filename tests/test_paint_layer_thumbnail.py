@@ -69,7 +69,7 @@ def test_thumbnail_preserves_aspect_ratio():
     # The image content is centred horizontally; rows above and
     # below the image are left transparent.
     painted = out[..., 3] > 0
-    rows_with_paint = np.where(painted.any(axis=1))[0]
+    rows_with_paint = np.nonzero(painted.any(axis=1))[0]
     assert rows_with_paint.size > 0
     # Top edge of paint > 0 (vertical padding present).
     assert int(rows_with_paint.min()) > 0

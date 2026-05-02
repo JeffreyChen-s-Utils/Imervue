@@ -98,7 +98,7 @@ def test_render_cursor_ring_color_applied():
     out = render_cursor_ring(
         (40, 40), 20, 20, 8, color=(255, 100, 50, 200),
     )
-    ys, xs = np.where(out[..., 3] > 0)
+    ys, xs = np.nonzero(out[..., 3] > 0)
     sample = out[ys[0], xs[0]]
     assert tuple(sample) == (255, 100, 50, 200)
 
@@ -118,7 +118,7 @@ def test_render_cursor_ring_off_canvas_centre_clipped():
 
 def test_cursor_bbox_contains_ring():
     bbox = cursor_bbox(20, 20, 8)
-    x, y, w, h = bbox
+    x, _, w, _ = bbox
     # All of (12, 28) on the x axis must lie within the box.
     assert x <= 12
     assert x + w >= 28

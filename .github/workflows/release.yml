@@ -9,13 +9,13 @@ on:
   push:
     branches: [ "main" ]
 
+# Workflow-level permissions are intentionally minimal — only the
+# create-release job needs ``contents: write`` (to push a tag and
+# upload the GitHub Release asset). Hoisting that scope to the job
+# keeps every other job at the default read-only token, matching
+# the principle of least privilege the supply-chain rules expect.
 permissions:
-  # Needed for the create-release job to push a tag and create a
-  # GitHub Release. id-token would be needed for PyPI Trusted
-  # Publishing (OIDC) — left commented because we use an API-token
-  # secret today; flip it on if you migrate to trusted publishing.
-  contents: write
-  # id-token: write
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------
@@ -167,13 +167,22 @@ jobs:
     needs: [check-version, publish-pypi, build-exe-windows]
     if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      # Job-scoped write so other jobs in this workflow keep a
+      # read-only token; only the release publisher needs to mutate
+      # the repo (push tag + upload release asset).
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: imervue-windows-exe
           path: ./release-assets
-      - uses: softprops/action-gh-release@v2
+      # Pinned to the v2 tag's full commit SHA — defends against a
+      # compromised tag re-pointing at a malicious revision. Refresh
+      # by re-running ``gh api repos/softprops/action-gh-release/git/refs/tags/v2``
+      # when bumping to a new release.
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           tag_name: ${{ needs.check-version.outputs.tag }}
           name: ${{ needs.check-version.outputs.tag }}

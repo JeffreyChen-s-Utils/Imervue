@@ -50,6 +50,11 @@ if TYPE_CHECKING:
 
 _SWATCH_PX = 22
 
+# Style sheet shared by the dim "hint" / placeholder labels in
+# multiple docks. Module-level so a future palette change updates
+# every callsite at once.
+_HINT_LABEL_STYLE = "color: #888;"
+
 
 # ---------------------------------------------------------------------------
 # Colour dock
@@ -144,7 +149,7 @@ class ColorDock(QDockWidget):
     @staticmethod
     def _build_history_label(lang: dict) -> QLabel:
         label = QLabel(lang.get("paint_color_history", "Recent"))
-        label.setStyleSheet("color: #888;")
+        label.setStyleSheet(_HINT_LABEL_STYLE)
         return label
 
     @staticmethod
@@ -653,7 +658,7 @@ class HistoryDock(QDockWidget):
         self._hint = QLabel(lang.get(
             "paint_history_empty", "(no undo states yet)",
         ))
-        self._hint.setStyleSheet("color: #888;")
+        self._hint.setStyleSheet(_HINT_LABEL_STYLE)
         layout.addWidget(self._hint)
         self.setWidget(body)
 
@@ -865,7 +870,7 @@ class MaterialDock(QDockWidget):
         self._empty_hint = QLabel(
             lang.get("paint_material_empty", "(no materials yet)"),
         )
-        self._empty_hint.setStyleSheet("color: #888;")
+        self._empty_hint.setStyleSheet(_HINT_LABEL_STYLE)
         self._empty_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._empty_hint)
 

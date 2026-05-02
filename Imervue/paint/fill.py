@@ -159,7 +159,7 @@ def flood_fill(
     canvas[mask, 2] = int(color[2])
     canvas[mask, 3] = 255
 
-    ys, xs = np.where(mask)
+    ys, xs = np.nonzero(mask)
     return FillResult(
         int(xs.min()), int(ys.min()),
         int(xs.max() - xs.min() + 1),

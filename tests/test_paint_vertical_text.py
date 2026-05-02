@@ -39,7 +39,7 @@ def test_vertical_text_color_appears_in_pixels(qapp):
         text="A", vertical=True, color=(255, 0, 0),
     ))
     # At least one pixel should pick up the requested colour.
-    red_pixels = np.where((out[..., 0] > 200) & (out[..., 3] > 0))
+    red_pixels = np.nonzero((out[..., 0] > 200) & (out[..., 3] > 0))
     assert len(red_pixels[0]) > 0
 
 

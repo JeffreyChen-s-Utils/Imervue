@@ -146,7 +146,7 @@ def _apply_curves(arr: np.ndarray, params: dict[str, Any]) -> np.ndarray:
         master = s_curve_preset(strength)
     options = CurveOptions(
         enabled=True,
-        per_channel={ch: IDENTITY_POINTS for ch in CURVE_CHANNELS}
+        per_channel=dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS)
         | {"rgb": master},
     )
     return apply_curves(arr, options)

@@ -161,16 +161,16 @@ def _pack_layer_and_mask_section(
             if current_group is not None:
                 # Emit the closing group header for the group we're leaving.
                 grp = groups.get(current_group)
-                _emit(*_pack_group_header(current_group, grp, h, w))
+                _emit(*_pack_group_header(current_group, grp))
             if layer.group is not None:
                 # Open a new group at this position.
-                _emit(*_pack_section_end(h, w))
+                _emit(*_pack_section_end())
             current_group = layer.group
         record, channel_bytes = _pack_one_layer(layer, h, w)
         _emit(record, channel_bytes)
     if current_group is not None:
         grp = groups.get(current_group)
-        _emit(*_pack_group_header(current_group, grp, h, w))
+        _emit(*_pack_group_header(current_group, grp))
 
     layer_count_word = struct.pack(">H", record_count)
     layer_info_payload = layer_count_word + bytes(records) + bytes(channel_blob)
@@ -233,7 +233,7 @@ def _pack_one_layer(layer: Layer, h: int, w: int) -> tuple[bytes, bytes]:
     return record, bytes(channel_data)
 
 
-def _pack_section_end(h: int, w: int) -> tuple[bytes, bytes]:
+def _pack_section_end() -> tuple[bytes, bytes]:
     """Pack a ``section divider end`` placeholder layer.
 
     These have empty bounds + zero channels but a well-known name and
@@ -247,7 +247,7 @@ def _pack_section_end(h: int, w: int) -> tuple[bytes, bytes]:
 
 
 def _pack_group_header(
-    group_name: str, group: LayerGroup | None, h: int, w: int,
+    group_name: str, group: LayerGroup | None,
 ) -> tuple[bytes, bytes]:
     """Pack the ``group header`` layer that names a layer group.
 

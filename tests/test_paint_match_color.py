@@ -148,7 +148,7 @@ def test_color_statistics_returns_per_channel_mean_std():
     assert abs(stats["r"][0] - 100) < 0.1
     assert abs(stats["g"][0] - 50) < 0.1
     assert abs(stats["b"][0] - 25) < 0.1
-    assert stats["r"][1] == 0.0
+    assert stats["r"][1] == pytest.approx(0.0)
 
 
 def test_color_statistics_gradient_has_nonzero_std():

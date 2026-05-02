@@ -98,7 +98,7 @@ def test_load_brush_tip_pure_white_luma_yields_zero_kernel(tmp_path):
     Image.new("RGBA", (8, 8), (255, 255, 255, 255)).save(str(p))
     kernel = load_brush_tip(p, size=4)
     assert kernel.shape == (4, 4)
-    assert kernel.max() == 0.0
+    assert kernel.max() == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

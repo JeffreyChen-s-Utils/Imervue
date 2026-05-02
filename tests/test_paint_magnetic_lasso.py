@@ -44,7 +44,7 @@ def test_edge_magnitude_high_at_edge():
 def test_edge_magnitude_uniform_returns_zero():
     img = _uniform_image()
     em = edge_magnitude(img)
-    assert em.max() == 0.0
+    assert em.max() == pytest.approx(0.0)
 
 
 def test_edge_magnitude_rejects_non_rgba():

@@ -460,7 +460,7 @@ def test_from_dict_recovers_negative_rx():
     """rx <= 0 must fall back to the default — never bypass the
     positive-axis invariant."""
     rebuilt = Ruler.from_dict({"mode": "ellipse", "rx": -5.0})
-    assert rebuilt.rx == 50.0
+    assert rebuilt.rx == pytest.approx(50.0)
 
 
 # ---------------------------------------------------------------------------

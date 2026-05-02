@@ -172,7 +172,7 @@ def test_import_medibang_clamps_hardness_to_unit_range(tmp_path):
     target = tmp_path / "h.mdp"
     target.write_bytes(b"name\x00 h\x00 hardness\x00 5.5")
     rebuilt = import_medibang_preset(target)
-    assert rebuilt.hardness == 1.0
+    assert rebuilt.hardness == pytest.approx(1.0)
 
 
 def test_import_medibang_clamps_opacity(tmp_path):
@@ -181,7 +181,7 @@ def test_import_medibang_clamps_opacity(tmp_path):
     target = tmp_path / "o.mdp"
     target.write_bytes(b"name\x00 o\x00 opacity\x00 5.5")
     rebuilt = import_medibang_preset(target)
-    assert rebuilt.opacity == 1.0
+    assert rebuilt.opacity == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------

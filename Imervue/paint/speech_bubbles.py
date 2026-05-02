@@ -345,7 +345,7 @@ def _tail_mask(
     corner_radius: int = 12,
 ) -> np.ndarray:
     h, w = shape
-    x, y, rw, rh = rect
+    _, _, rw, rh = rect
     if rw <= 0 or rh <= 0:
         return np.zeros((h, w), dtype=np.bool_)
     poly = compute_tail_polygon(
@@ -400,7 +400,7 @@ def _ray_to_bbox_edge(
 ) -> tuple[float, float]:
     cx, cy = origin
     ux, uy = direction
-    x, y, rw, rh = rect
+    _, _, rw, rh = rect
     half_w = float(rw) / 2.0
     half_h = float(rh) / 2.0
     # Scale so |ux*t| ≤ half_w AND |uy*t| ≤ half_h — t = min of the
@@ -471,7 +471,7 @@ def _shrink_rect(
 def _damage_from_mask(mask: np.ndarray) -> DamageRect:
     if not mask.any():
         return DamageRect(0, 0, 0, 0)
-    ys, xs = np.where(mask)
+    ys, xs = np.nonzero(mask)
     return DamageRect(
         x=int(xs.min()),
         y=int(ys.min()),

@@ -163,7 +163,7 @@ class PaintDocument:
     def _notify(self) -> None:
         self._composite_cache = None
         self._composite_dirty_rect = None
-        for cb in list(self._listeners):
+        for cb in self._listeners.copy():
             cb()
 
     # ---- shape / layer access -------------------------------------------
@@ -1293,7 +1293,7 @@ class PaintDocument:
             self._selection = mask
         # Selection changes don't dirty the composite cache, but the
         # canvas does need to redraw the marquee.
-        for cb in list(self._listeners):
+        for cb in self._listeners.copy():
             cb()
 
     # ---- composite ------------------------------------------------------
@@ -1339,7 +1339,7 @@ class PaintDocument:
         """Force the next :meth:`composite` to recompute everything."""
         self._composite_cache = None
         self._composite_dirty_rect = None
-        for cb in list(self._listeners):
+        for cb in self._listeners.copy():
             cb()
 
     def mark_composite_dirty(
@@ -1387,7 +1387,7 @@ class PaintDocument:
             ux1 = max(ex + ew, x1)
             uy1 = max(ey + eh, y1)
             self._composite_dirty_rect = (ux0, uy0, ux1 - ux0, uy1 - uy0)
-        for cb in list(self._listeners):
+        for cb in self._listeners.copy():
             cb()
 
     # ---- internals ------------------------------------------------------

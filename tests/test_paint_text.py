@@ -146,7 +146,8 @@ def test_text_tool_skips_when_dialog_cancelled(qapp, monkeypatch):
 
     class _CancelledDialog:
         def __init__(self, *a, **kw):
-            pass
+            # Test stub stand-in for TextToolDialog — no init state.
+            return
 
         def exec(self):
             from PySide6.QtWidgets import QDialog
@@ -171,7 +172,8 @@ def test_text_tool_renders_on_accept(qapp, monkeypatch):
 
     class _AcceptingDialog:
         def __init__(self, *a, **kw):
-            pass
+            # Test stub stand-in for TextToolDialog — no init state.
+            return
 
         def exec(self):
             from PySide6.QtWidgets import QDialog

@@ -59,7 +59,7 @@ class CurveOptions:
 
     enabled: bool = False
     per_channel: dict[str, tuple[tuple[int, int], ...]] = field(
-        default_factory=lambda: {ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        default_factory=lambda: dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
     )
 
     def to_dict(self) -> dict:

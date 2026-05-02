@@ -116,7 +116,7 @@ def test_gradient_map_two_stop_warm():
         ]},
     ))
     # Mid-tone maps to mid-gradient = (255, 128, 0) approx.
-    r, g, _b = int(out[0, 0, 0]), int(out[0, 0, 1]), int(out[0, 0, 2])
+    r, g = int(out[0, 0, 0]), int(out[0, 0, 1])
     assert r > 240   # both stops have R = 255
     assert 100 < g < 160   # interpolated mid
 

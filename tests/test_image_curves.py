@@ -94,7 +94,7 @@ def test_identity_curves_short_circuit(gray_canvas):
     returned unchanged so the recipe pipeline pays nothing."""
     options = CurveOptions(
         enabled=True,
-        per_channel={ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel=dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
     )
     out = apply_curves(gray_canvas, options)
     assert out is gray_canvas
@@ -109,7 +109,7 @@ def test_apply_curves_rejects_non_rgba():
 def test_apply_curves_does_not_mutate_input(gray_canvas):
     options = CurveOptions(
         enabled=True,
-        per_channel={**{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel={**dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
                      "rgb": s_curve_preset(0.3)},
     )
     snapshot = gray_canvas.copy()
@@ -122,7 +122,7 @@ def test_apply_curves_preserves_alpha(gray_canvas):
     gray_canvas[..., 3] = 200
     options = CurveOptions(
         enabled=True,
-        per_channel={**{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel={**dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
                      "rgb": s_curve_preset(0.4)},
     )
     out = apply_curves(gray_canvas, options)
@@ -138,7 +138,7 @@ def test_master_curve_remaps_all_channels(gray_canvas):
     """A non-identity master curve must change every RGB channel."""
     options = CurveOptions(
         enabled=True,
-        per_channel={**{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel={**dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
                      "rgb": [(0, 0), (128, 200), (255, 255)]},
     )
     out = apply_curves(gray_canvas, options)
@@ -151,7 +151,7 @@ def test_master_curve_remaps_all_channels(gray_canvas):
 def test_per_channel_curve_only_affects_its_channel(gray_canvas):
     options = CurveOptions(
         enabled=True,
-        per_channel={**{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel={**dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
                      "r": [(0, 0), (128, 50), (255, 255)]},
     )
     out = apply_curves(gray_canvas, options)
@@ -167,7 +167,7 @@ def test_master_then_per_channel_apply_in_order(gray_canvas):
     options = CurveOptions(
         enabled=True,
         per_channel={
-            **{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+            **dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
             "rgb": [(0, 0), (128, 200), (255, 255)],
             "r": [(0, 0), (200, 100), (255, 255)],
         },
@@ -194,7 +194,7 @@ def test_s_curve_increases_contrast():
     canvas[0, 3, :3] = 255
     options = CurveOptions(
         enabled=True,
-        per_channel={**{ch: IDENTITY_POINTS for ch in CURVE_CHANNELS},
+        per_channel={**dict.fromkeys(CURVE_CHANNELS, IDENTITY_POINTS),
                      "rgb": s_curve_preset(0.3)},
     )
     out = apply_curves(canvas, options)

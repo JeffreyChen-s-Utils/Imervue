@@ -294,7 +294,7 @@ def _star_vertices(
 def _damage_from_mask(mask: np.ndarray) -> DamageRect:
     if not mask.any():
         return DamageRect(0, 0, 0, 0)
-    ys, xs = np.where(mask)
+    ys, xs = np.nonzero(mask)
     return DamageRect(
         x=int(xs.min()),
         y=int(ys.min()),

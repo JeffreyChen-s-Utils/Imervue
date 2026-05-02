@@ -39,8 +39,8 @@ def test_template_set_includes_documented_formats():
 
 def test_template_by_name_finds_built_in():
     tpl = template_by_name("manga_b5")
-    assert tpl.width_mm == 182.0
-    assert tpl.height_mm == 257.0
+    assert tpl.width_mm == pytest.approx(182.0)
+    assert tpl.height_mm == pytest.approx(257.0)
 
 
 def test_template_by_name_raises_on_unknown():

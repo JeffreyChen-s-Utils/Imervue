@@ -158,7 +158,7 @@ def _to_gif_frame(frame: Image.Image, transparency_threshold: int) -> Image.Imag
         # Reserve palette index 255 as the transparent colour.
         palette_index = paletted.load()
         if palette_index is not None:
-            ys, xs = np.where(transparent_mask)
+            ys, xs = np.nonzero(transparent_mask)
             for y, x in zip(ys, xs, strict=True):
                 palette_index[int(x), int(y)] = 255
         paletted.info["transparency"] = 255

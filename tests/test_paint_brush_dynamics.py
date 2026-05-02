@@ -198,7 +198,7 @@ def test_sumi_drying_fade_makes_right_side_lighter(kernel):
     less ink than the left because the brush is drying along its
     travel direction."""
     out = stylise_kernel(kernel, "sumi")
-    h, w = kernel.shape
+    _, w = kernel.shape
     left_half = out[:, : w // 2].mean()
     right_half = out[:, w // 2:].mean()
     assert left_half > right_half

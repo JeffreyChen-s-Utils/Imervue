@@ -132,5 +132,5 @@ def test_flush_stops_within_tolerance():
 
 
 def test_strength_min_max_constants():
-    assert STRENGTH_MIN == 0.0
-    assert STRENGTH_MAX == 1.0
+    assert pytest.approx(0.0) == STRENGTH_MIN
+    assert pytest.approx(1.0) == STRENGTH_MAX

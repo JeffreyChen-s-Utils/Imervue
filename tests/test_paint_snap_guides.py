@@ -102,8 +102,8 @@ def test_snap_pulls_to_nearest_within_threshold():
         y_candidates=[0, 50, 100],
         threshold=5,
     )
-    assert sx == 100.0
-    assert sy == 50.0
+    assert sx == pytest.approx(100.0)
+    assert sy == pytest.approx(50.0)
     # Both axes hit a candidate.
     axes = [a for a, _v in hits]
     assert SNAP_VERTICAL in axes
@@ -117,8 +117,8 @@ def test_snap_passes_through_when_no_candidate_close():
         y_candidates=[0, 100],
         threshold=4,
     )
-    assert sx == 500.0
-    assert sy == 500.0
+    assert sx == pytest.approx(500.0)
+    assert sy == pytest.approx(500.0)
     assert hits == []
 
 

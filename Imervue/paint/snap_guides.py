@@ -59,8 +59,8 @@ def collect_layer_candidates(
         alpha = image[..., 3]
         if not alpha.any():
             continue
-        rows = np.where(alpha.any(axis=1))[0]
-        cols = np.where(alpha.any(axis=0))[0]
+        rows = np.nonzero(alpha.any(axis=1))[0]
+        cols = np.nonzero(alpha.any(axis=0))[0]
         if rows.size == 0 or cols.size == 0:
             continue
         ys.append(float(rows[0]))

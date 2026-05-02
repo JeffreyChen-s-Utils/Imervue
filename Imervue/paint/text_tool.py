@@ -80,7 +80,10 @@ class TextTool:
         return True
 
     def cancel(self) -> None:
-        pass
+        # Text commit is a single dialog round-trip — there is no
+        # in-flight state on the tool itself for the dispatcher to
+        # roll back.
+        return
 
 
 class TextToolDialog(QDialog):

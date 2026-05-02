@@ -185,7 +185,7 @@ def render_tonal_halftone(
         return DamageRect(0, 0, 0, 0)
 
     canvas[inside] = (color[0], color[1], color[2], 255)
-    ys_hit, xs_hit = np.where(inside)
+    ys_hit, xs_hit = np.nonzero(inside)
     return DamageRect(
         x=int(xs_hit.min()),
         y=int(ys_hit.min()),
@@ -242,7 +242,7 @@ def render_halftone(
         return DamageRect(0, 0, 0, 0)
 
     canvas[inside_dot] = (color[0], color[1], color[2], 255)
-    ys_hit, xs_hit = np.where(inside_dot)
+    ys_hit, xs_hit = np.nonzero(inside_dot)
     return DamageRect(
         x=int(xs_hit.min()),
         y=int(ys_hit.min()),

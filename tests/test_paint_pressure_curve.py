@@ -23,9 +23,9 @@ from Imervue.paint.pressure_curve import (
 
 def test_default_curve_is_identity():
     c = PressureCurve()
-    assert c.apply(0.0) == 0.0
-    assert c.apply(0.5) == 0.5
-    assert c.apply(1.0) == 1.0
+    assert c.apply(0.0) == pytest.approx(0.0)
+    assert c.apply(0.5) == pytest.approx(0.5)
+    assert c.apply(1.0) == pytest.approx(1.0)
 
 
 def test_curve_is_frozen():
@@ -63,12 +63,12 @@ def test_curve_rejects_partial_coverage():
 
 def test_apply_clamps_negative_input():
     c = PressureCurve()
-    assert c.apply(-0.5) == 0.0
+    assert c.apply(-0.5) == pytest.approx(0.0)
 
 
 def test_apply_clamps_above_one():
     c = PressureCurve()
-    assert c.apply(2.0) == 1.0
+    assert c.apply(2.0) == pytest.approx(1.0)
 
 
 def test_apply_interpolates_between_control_points():
@@ -83,22 +83,22 @@ def test_apply_interpolates_between_control_points():
 
 def test_apply_at_control_point_exact():
     c = PressureCurve(points=((0.0, 0.0), (0.5, 0.8), (1.0, 1.0)))
-    assert c.apply(0.0) == 0.0
-    assert c.apply(0.5) == 0.8
-    assert c.apply(1.0) == 1.0
+    assert c.apply(0.0) == pytest.approx(0.0)
+    assert c.apply(0.5) == pytest.approx(0.8)
+    assert c.apply(1.0) == pytest.approx(1.0)
 
 
 def test_apply_curve_helper_handles_none():
     # apply_curve(None, p) should return p clamped.
-    assert apply_curve(None, 0.5) == 0.5
-    assert apply_curve(None, -1.0) == 0.0
-    assert apply_curve(None, 2.0) == 1.0
+    assert apply_curve(None, 0.5) == pytest.approx(0.5)
+    assert apply_curve(None, -1.0) == pytest.approx(0.0)
+    assert apply_curve(None, 2.0) == pytest.approx(1.0)
 
 
 def test_apply_curve_helper_uses_curve():
     c = PressureCurve(points=((0.0, 0.0), (0.5, 0.0), (1.0, 1.0)))
     # Below 0.5 → 0; above ramps up.
-    assert apply_curve(c, 0.3) == 0.0
+    assert apply_curve(c, 0.3) == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -140,8 +140,8 @@ def test_from_dict_pads_partial_coverage():
     rebuilt = PressureCurve.from_dict({
         "points": [[0.3, 0.4], [0.7, 0.6]],
     })
-    assert rebuilt.points[0][0] == 0.0
-    assert rebuilt.points[-1][0] == 1.0
+    assert rebuilt.points[0][0] == pytest.approx(0.0)
+    assert rebuilt.points[-1][0] == pytest.approx(1.0)
 
 
 def test_from_dict_empty_falls_back_to_identity():
@@ -182,4 +182,4 @@ def test_light_touch_caps_below_one():
 
 
 def test_identity_constant_matches_default_apply():
-    assert IDENTITY.apply(0.5) == 0.5
+    assert IDENTITY.apply(0.5) == pytest.approx(0.5)

@@ -722,16 +722,20 @@ class EyedropperTool:
         self._composite_provider = composite_provider or (lambda: None)
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        # The eyedropper updates ToolState.foreground_color but never
+        # mutates the canvas, so it always reports ``False`` per the
+        # dispatcher contract (True == "I changed pixels"). Sonar
+        # flags this as S3516 ("always returns the same value") but
+        # the bool return type is non-negotiable — every tool's
+        # ``handle`` must return a bool so the dispatcher knows when
+        # to invalidate the composite.
         if evt.phase == "press":
             self._active = True
             self._sample(evt, canvas)
-            return False  # canvas unchanged — only state changed
-        if evt.phase == "move" and self._active:
+        elif evt.phase == "move" and self._active:
             self._sample(evt, canvas)
-            return False
-        if evt.phase in ("release", "leave"):
+        elif evt.phase in ("release", "leave"):
             self._active = False
-            return False
         return False
 
     def cancel(self) -> None:
@@ -871,7 +875,9 @@ class WandSelectTool:
         return True
 
     def cancel(self) -> None:
-        pass
+        # Quick-select is a single-shot click — there is no mid-gesture
+        # state to roll back when the dispatcher cancels.
+        return
 
 
 class QuickSelectTool:
@@ -965,7 +971,7 @@ def translate_selection(
 
     new_selection = np.zeros_like(selection)
 
-    src_ys, src_xs = np.where(selection)
+    src_ys, src_xs = np.nonzero(selection)
     if len(src_ys) == 0:
         return new_selection
 
@@ -1135,7 +1141,10 @@ class _BezierPenTool:
         self._press_pos: tuple[float, float] | None = None
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
 
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:  # noqa: ARG002
+        # ``canvas`` is part of the dispatcher's tool-call contract;
+        # the bezier pen mutates ``workspace._path`` instead of the
+        # raster buffer so the parameter goes unused.
         from Imervue.paint.bezier_path import PathNode
         path = self._workspace_path()
         if path is None:

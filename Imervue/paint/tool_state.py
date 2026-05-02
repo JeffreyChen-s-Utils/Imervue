@@ -244,7 +244,7 @@ class ToolState:
         return _unsubscribe
 
     def _emit(self, channel: str) -> None:
-        for cb in list(self._listeners):
+        for cb in self._listeners.copy():
             cb(channel)
 
     # ---- tool ------------------------------------------------------------

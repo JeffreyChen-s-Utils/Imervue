@@ -52,7 +52,7 @@ def _canvas(qapp):
 def test_default_rotation_is_zero(qapp):
     canvas = _canvas(qapp)
     try:
-        assert canvas.rotation_degrees() == 0.0
+        assert canvas.rotation_degrees() == pytest.approx(0.0)
     finally:
         canvas.deleteLater()
 
@@ -125,7 +125,7 @@ def test_load_image_resets_rotation(qapp):
     try:
         canvas.set_canvas_rotation(60.0)
         canvas.load_image(None)
-        assert canvas.rotation_degrees() == 0.0
+        assert canvas.rotation_degrees() == pytest.approx(0.0)
     finally:
         canvas.deleteLater()
 
@@ -236,7 +236,7 @@ def test_view_menu_rotate_ccw_no_longer_short_circuits(qapp):
         bridge.rotate_canvas_ccw()
         assert ws.canvas().rotation_degrees() == pytest.approx(-15.0)
         bridge.reset_canvas_rotation()
-        assert ws.canvas().rotation_degrees() == 0.0
+        assert ws.canvas().rotation_degrees() == pytest.approx(0.0)
     finally:
         ws.deleteLater()
 

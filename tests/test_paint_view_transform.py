@@ -22,9 +22,9 @@ from Imervue.paint.view_transform import (
 
 def test_default_transform_is_identity():
     t = ViewTransform()
-    assert t.pan_x == 0.0 and t.pan_y == 0.0
-    assert t.zoom == 1.0
-    assert t.rotation_deg == 0.0
+    assert t.pan_x == pytest.approx(0.0) and t.pan_y == pytest.approx(0.0)
+    assert t.zoom == pytest.approx(1.0)
+    assert t.rotation_deg == pytest.approx(0.0)
 
 
 def test_zero_zoom_rejected():
@@ -148,10 +148,10 @@ def test_rotate_around_full_turn_is_identity_visually():
 def test_reset_rotation_zeroes_angle_keeping_pan_zoom():
     t = ViewTransform(pan_x=20.0, pan_y=30.0, zoom=2.0, rotation_deg=45.0)
     cleared = reset_rotation(t)
-    assert cleared.rotation_deg == 0.0
-    assert cleared.pan_x == 20.0
-    assert cleared.pan_y == 30.0
-    assert cleared.zoom == 2.0
+    assert cleared.rotation_deg == pytest.approx(0.0)
+    assert cleared.pan_x == pytest.approx(20.0)
+    assert cleared.pan_y == pytest.approx(30.0)
+    assert cleared.zoom == pytest.approx(2.0)
 
 
 def test_normalise_rotation_wraps_large_value():

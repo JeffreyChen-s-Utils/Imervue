@@ -20,11 +20,11 @@ from Imervue.paint.text_on_path import (
 
 
 def test_path_length_empty_path_is_zero():
-    assert path_length([]) == 0.0
+    assert path_length([]) == pytest.approx(0.0)
 
 
 def test_path_length_single_point_is_zero():
-    assert path_length([(0.0, 0.0)]) == 0.0
+    assert path_length([(0.0, 0.0)]) == pytest.approx(0.0)
 
 
 def test_path_length_horizontal_segment():
@@ -43,7 +43,7 @@ def test_path_length_polyline_sums_segments():
 
 def test_cumulative_distances_starts_at_zero():
     cum = cumulative_distances([(0.0, 0.0), (5.0, 0.0), (5.0, 12.0)])
-    assert cum[0] == 0.0
+    assert cum[0] == pytest.approx(0.0)
     assert cum[-1] == pytest.approx(17.0)
 
 

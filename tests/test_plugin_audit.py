@@ -38,7 +38,10 @@ PLUGIN_NAMES = [d.name for d in _plugin_dirs()]
 def test_plugin_imports(plugin_name):
     """Every plugin package imports without raising."""
     module = importlib.import_module(plugin_name)
-    assert module is not None
+    # ``import_module`` raises rather than returning None, so this
+    # assertion just records the success path and proves the
+    # module reference is bound.
+    assert module.__name__ == plugin_name
 
 
 @pytest.mark.parametrize("plugin_name", PLUGIN_NAMES)

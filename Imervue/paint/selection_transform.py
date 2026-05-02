@@ -70,7 +70,7 @@ def transform_selection(
         return layer_image.copy(), selection_mask.copy()
 
     if anchor is None:
-        ys_sel, xs_sel = np.where(selection_mask)
+        ys_sel, xs_sel = np.nonzero(selection_mask)
         cx = (xs_sel.min() + xs_sel.max()) / 2.0
         cy = (ys_sel.min() + ys_sel.max()) / 2.0
     else:
