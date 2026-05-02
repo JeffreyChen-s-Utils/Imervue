@@ -82,25 +82,39 @@ def polygon_mask(h: int, w: int, points: list[tuple[float, float]]) -> np.ndarra
     if len(points) < 3:
         return mask
 
-    n = len(points)
     for y in range(h):
-        crossings: list[float] = []
-        for i in range(n):
-            x0, y0 = points[i]
-            x1, y1 = points[(i + 1) % n]
-            if (y0 <= y < y1) or (y1 <= y < y0):
-                # Linear interpolation: x at scanline y.
-                t = (y - y0) / (y1 - y0)
-                crossings.append(x0 + t * (x1 - x0))
-        crossings.sort()
-        for i in range(0, len(crossings), 2):
-            if i + 1 >= len(crossings):
-                break
-            lo = max(0, int(np.ceil(crossings[i])))
-            hi = min(w, int(np.floor(crossings[i + 1])) + 1)
-            if hi > lo:
-                mask[y, lo:hi] = True
+        crossings = _scanline_crossings(points, y)
+        _fill_scanline_runs(mask, y, crossings, w)
     return mask
+
+
+def _scanline_crossings(
+    points: list[tuple[float, float]], y: int,
+) -> list[float]:
+    """Return x-coords where ``y`` crosses each polygon edge."""
+    crossings: list[float] = []
+    n = len(points)
+    for i in range(n):
+        x0, y0 = points[i]
+        x1, y1 = points[(i + 1) % n]
+        if (y0 <= y < y1) or (y1 <= y < y0):
+            # Linear interpolation: x at scanline y.
+            t = (y - y0) / (y1 - y0)
+            crossings.append(x0 + t * (x1 - x0))
+    crossings.sort()
+    return crossings
+
+
+def _fill_scanline_runs(
+    mask: np.ndarray, y: int, crossings: list[float], w: int,
+) -> None:
+    for i in range(0, len(crossings), 2):
+        if i + 1 >= len(crossings):
+            break
+        lo = max(0, int(np.ceil(crossings[i])))
+        hi = min(w, int(np.floor(crossings[i + 1])) + 1)
+        if hi > lo:
+            mask[y, lo:hi] = True
 
 
 def magic_wand_mask(

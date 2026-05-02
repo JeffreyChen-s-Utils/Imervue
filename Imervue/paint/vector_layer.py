@@ -103,26 +103,7 @@ class VectorStroke:
 
     @classmethod
     def from_dict(cls, raw: dict) -> VectorStroke:
-        raw_points = raw.get("points", ())
-        points: list[tuple[float, float]] = []
-        if isinstance(raw_points, (list, tuple)):
-            for entry in raw_points:
-                if isinstance(entry, (list, tuple)) and len(entry) == 2:
-                    try:
-                        points.append((float(entry[0]), float(entry[1])))
-                    except (TypeError, ValueError):
-                        continue
-        # Per-node widths only survive the round-trip if the count
-        # matches the surviving point count — partial / mismatched
-        # arrays drop silently to "uniform width".
-        raw_widths = raw.get("widths") or ()
-        widths: tuple[float, ...] = ()
-        if isinstance(raw_widths, (list, tuple)) and len(raw_widths) == len(points):
-            try:
-                clean = tuple(max(1e-3, float(w)) for w in raw_widths)
-                widths = clean
-            except (TypeError, ValueError):
-                widths = ()
+        points = _parse_stroke_points(raw.get("points", ()))
         return cls(
             points=tuple(points),
             width=float(raw.get("width", DEFAULT_VECTOR_WIDTH)),
@@ -132,8 +113,43 @@ class VectorStroke:
                 )
             ),
             opacity=max(0.0, min(1.0, float(raw.get("opacity", 1.0)))),
-            widths=widths,
+            widths=_parse_stroke_widths(raw.get("widths") or (), len(points)),
         )
+
+
+def _parse_stroke_points(
+    raw_points: object,
+) -> list[tuple[float, float]]:
+    """Coerce a JSON-decoded sequence of (x, y) pairs into floats.
+
+    Bad entries (wrong shape, non-numeric values) are dropped so a
+    corrupt sidecar still loads as much of the stroke as possible
+    rather than collapsing the whole layer."""
+    points: list[tuple[float, float]] = []
+    if not isinstance(raw_points, (list, tuple)):
+        return points
+    for entry in raw_points:
+        if not (isinstance(entry, (list, tuple)) and len(entry) == 2):
+            continue
+        try:
+            points.append((float(entry[0]), float(entry[1])))
+        except (TypeError, ValueError):
+            continue
+    return points
+
+
+def _parse_stroke_widths(
+    raw_widths: object, expected_count: int,
+) -> tuple[float, ...]:
+    """Per-node widths only survive the round-trip if the count
+    matches the surviving point count — partial / mismatched
+    arrays drop silently to "uniform width"."""
+    if not (isinstance(raw_widths, (list, tuple)) and len(raw_widths) == expected_count):
+        return ()
+    try:
+        return tuple(max(1e-3, float(w)) for w in raw_widths)
+    except (TypeError, ValueError):
+        return ()
 
 
 @dataclass

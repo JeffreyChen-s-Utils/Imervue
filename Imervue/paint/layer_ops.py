@@ -98,21 +98,11 @@ def composite_visible_layers(
     """
     from Imervue.paint.document import Layer
     groups = groups or {}
-
-    def _effective(layer: Layer) -> tuple[bool, float]:
-        layer_group = getattr(layer, "group", None)
-        group_opacity = 1.0
-        if layer_group is not None and layer_group in groups:
-            grp = groups[layer_group]
-            if not grp.visible or grp.opacity <= 0:
-                return (False, 0.0)
-            group_opacity = float(grp.opacity)
-        if not layer.visible or layer.opacity <= 0:
-            return (False, 0.0)
-        return (True, layer.opacity * group_opacity)
-
-    visibles = [(layer, _effective(layer)) for layer in layers]
-    visibles = [(layer, eff[1]) for layer, eff in visibles if eff[0]]
+    visibles = [
+        (layer, opacity)
+        for layer in layers
+        if (opacity := _effective_layer_opacity(layer, groups)) is not None
+    ]
     if not visibles:
         return None
     h, w = shape
@@ -123,18 +113,37 @@ def composite_visible_layers(
                 f"layer {layer.name!r} shape {layer.image.shape[:2]} "
                 f"does not match document {shape}",
             )
-        layer_image = layer.image
-        effects = getattr(layer, "effects", ())
-        if effects:
-            from Imervue.paint.layer_effects import apply_effects
-            layer_image = apply_effects(layer_image, effects)
         out = composite_layer_pair(
-            out, layer_image,
+            out, _layer_image_with_effects(layer),
             opacity=eff_opacity,
             blend_mode=layer.blend_mode,
             mask=layer.effective_mask,
         )
     return Layer(name=visibles[0][0].name, image=out)
+
+
+def _effective_layer_opacity(layer: Layer, groups: dict) -> float | None:
+    """Return the layer's effective opacity (group * layer), or
+    ``None`` when the layer should be skipped entirely (hidden /
+    zero-opacity group or layer)."""
+    layer_group = getattr(layer, "group", None)
+    group_opacity = 1.0
+    if layer_group is not None and layer_group in groups:
+        grp = groups[layer_group]
+        if not grp.visible or grp.opacity <= 0:
+            return None
+        group_opacity = float(grp.opacity)
+    if not layer.visible or layer.opacity <= 0:
+        return None
+    return layer.opacity * group_opacity
+
+
+def _layer_image_with_effects(layer: Layer) -> np.ndarray:
+    effects = getattr(layer, "effects", ())
+    if not effects:
+        return layer.image
+    from Imervue.paint.layer_effects import apply_effects
+    return apply_effects(layer.image, effects)
 
 
 def flatten_layers(

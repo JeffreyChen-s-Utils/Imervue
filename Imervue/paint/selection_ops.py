@@ -170,39 +170,51 @@ def refine_edge(
     contrast = max(-1.0, min(1.0, float(contrast)))
     shift_amount = max(-MAX_RADIUS, min(MAX_RADIUS, int(shift)))
 
-    refined = mask.copy()
-    if shift_amount > 0:
-        for _ in range(shift_amount):
-            refined = _dilate_once(refined)
-    elif shift_amount < 0:
-        for _ in range(-shift_amount):
-            refined = _erode_once(refined)
-
-    if smooth > 0:
-        for _ in range(smooth):
-            refined = _erode_once(refined)
-        for _ in range(2 * smooth):
-            refined = _dilate_once(refined)
-        for _ in range(smooth):
-            refined = _erode_once(refined)
+    refined = _apply_shift(mask.copy(), shift_amount)
+    refined = _apply_smooth(refined, smooth)
 
     alpha = refined.astype(np.float32)
     if feather > 0:
         alpha = _box_blur(alpha, feather)
+    return _apply_contrast(alpha, contrast)
 
+
+def _apply_shift(mask: np.ndarray, shift_amount: int) -> np.ndarray:
+    if shift_amount > 0:
+        for _ in range(shift_amount):
+            mask = _dilate_once(mask)
+    elif shift_amount < 0:
+        for _ in range(-shift_amount):
+            mask = _erode_once(mask)
+    return mask
+
+
+def _apply_smooth(mask: np.ndarray, smooth: int) -> np.ndarray:
+    if smooth <= 0:
+        return mask
+    for _ in range(smooth):
+        mask = _erode_once(mask)
+    for _ in range(2 * smooth):
+        mask = _dilate_once(mask)
+    for _ in range(smooth):
+        mask = _erode_once(mask)
+    return mask
+
+
+def _apply_contrast(alpha: np.ndarray, contrast: float) -> np.ndarray:
     if contrast > 0.0:
         # Positive contrast steepens the transition via a logistic
         # S-curve around 0.5 — slope tuned so contrast = 1 produces a
         # near-binary mask without quite collapsing the feather.
         k = float(contrast) * 12.0
-        alpha = 1.0 / (1.0 + np.exp(-k * (alpha - 0.5)))
-        alpha = np.clip(alpha, 0.0, 1.0).astype(np.float32)
-    elif contrast < 0.0:
+        steepened = 1.0 / (1.0 + np.exp(-k * (alpha - 0.5)))
+        return np.clip(steepened, 0.0, 1.0).astype(np.float32)
+    if contrast < 0.0:
         # Negative contrast softens by lerping every alpha toward
         # mid-grey 0.5; magnitude in [0, 1] controls how far.
         blend = -float(contrast)
-        alpha = alpha * (1.0 - blend) + 0.5 * blend
-        alpha = np.clip(alpha, 0.0, 1.0).astype(np.float32)
+        softened = alpha * (1.0 - blend) + 0.5 * blend
+        return np.clip(softened, 0.0, 1.0).astype(np.float32)
     return alpha
 
 
