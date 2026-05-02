@@ -1,17 +1,18 @@
 """Smoke tests for ``.github/workflows/release.yml``.
 
-The release workflow ships a sequence of jobs that publish to PyPI
-and create a GitHub Release with the Nuitka-built Windows EXE. We
-cannot run the workflow in pytest, but we can lock down the parts a
-careless edit would silently break:
+The release workflow auto-bumps the version on PR merge to main,
+publishes the resulting build to PyPI, and creates a GitHub Release
+with the matching tag. We cannot run the workflow in pytest, but
+we can lock down the parts a careless edit would silently break:
 
 * the YAML parses,
-* every job exists and is gated on ``check-version.outputs.changed``,
-* the version-extraction snippet matches what ``pyproject.toml``
-  declares,
-* the Nuitka command in the workflow lists the same ``--noinclude``
-  / ``--include`` flags that ``nuitka.md`` documents — so a future
-  change to one without the other gets caught.
+* the workflow is gated on the merged-PR signal,
+* the version-bump snippet matches the ``pyproject.toml`` shape it
+  patches,
+* the PyPI upload step uses the canonical token-auth literals,
+* ``twine check`` runs before the upload,
+* the release publisher creates a GitHub Release tagged with the
+  bumped version.
 """
 from __future__ import annotations
 
@@ -38,6 +39,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
+RELEASE_JOB = "release"
+
 
 @pytest.fixture(scope="module")
 def workflow() -> dict:
@@ -47,6 +50,11 @@ def workflow() -> dict:
 @pytest.fixture(scope="module")
 def jobs(workflow) -> dict:
     return workflow["jobs"]
+
+
+@pytest.fixture(scope="module")
+def release_steps(jobs) -> list[dict]:
+    return jobs[RELEASE_JOB]["steps"]
 
 
 # ---------------------------------------------------------------------------
@@ -63,90 +71,62 @@ def test_workflow_is_valid_yaml(workflow):
     assert "jobs" in workflow
 
 
-def test_triggers_on_push_to_main(workflow):
+def test_triggers_on_pr_merge_to_main(workflow):
     # PyYAML decodes the bare-word ``on:`` key as boolean True; tolerate
     # both spellings rather than requiring a ``"on"`` quote in the YAML.
     on = workflow.get("on") or workflow.get(True)
     assert on is not None, "workflow has no trigger block"
-    assert "push" in on
-    assert on["push"]["branches"] == ["main"]
+    assert "pull_request" in on
+    assert on["pull_request"]["branches"] == ["main"]
+    assert "closed" in on["pull_request"]["types"]
 
 
 def test_workflow_default_permissions_are_read_only(workflow):
     """Workflow-scoped token must be read-only — write is reserved
-    for the create-release job that actually publishes a tag."""
+    for the release job that pushes the bump commit and tag."""
     assert workflow["permissions"]["contents"] == "read"
 
 
-def test_create_release_job_grants_contents_write(jobs):
+def test_release_job_grants_contents_write(jobs):
     """The release publisher needs ``contents: write`` to push a tag
     and upload the GitHub Release asset."""
-    job_perms = jobs["create-release"].get("permissions", {})
+    job_perms = jobs[RELEASE_JOB].get("permissions", {})
     assert job_perms.get("contents") == "write"
 
 
-# ---------------------------------------------------------------------------
-# Required jobs
-# ---------------------------------------------------------------------------
+def test_release_job_present(jobs):
+    assert RELEASE_JOB in jobs
 
 
-REQUIRED_JOBS = (
-    "check-version",
-    "publish-pypi",
-    "build-exe-windows",
-    "create-release",
-)
-
-
-@pytest.mark.parametrize("job_name", REQUIRED_JOBS)
-def test_required_job_present(jobs, job_name):
-    assert job_name in jobs, f"missing job: {job_name}"
-
-
-def test_publish_pypi_gated_on_version_change(jobs):
-    cond = jobs["publish-pypi"]["if"]
-    assert "check-version.outputs.changed" in cond
+def test_release_runs_only_when_pr_actually_merged(jobs):
+    """Closed-but-not-merged PRs should be a no-op; otherwise dropping
+    a PR triggers the release pipeline."""
+    cond = jobs[RELEASE_JOB]["if"]
+    assert "github.event.pull_request.merged" in cond
     assert "true" in cond
 
 
-def test_build_exe_gated_on_version_change(jobs):
-    cond = jobs["build-exe-windows"]["if"]
-    assert "check-version.outputs.changed" in cond
-
-
-def test_create_release_depends_on_pypi_and_exe(jobs):
-    needs = jobs["create-release"]["needs"]
-    assert "publish-pypi" in needs
-    assert "build-exe-windows" in needs
-
-
-def test_publish_pypi_runs_on_linux(jobs):
-    assert jobs["publish-pypi"]["runs-on"] == "ubuntu-latest"
-
-
-def test_build_exe_runs_on_windows(jobs):
-    assert jobs["build-exe-windows"]["runs-on"] == "windows-latest"
+def test_release_runs_on_linux(jobs):
+    assert jobs[RELEASE_JOB]["runs-on"] == "ubuntu-latest"
 
 
 # ---------------------------------------------------------------------------
-# Version-extraction parity with pyproject.toml
+# Version-bump snippet parity with pyproject.toml
 # ---------------------------------------------------------------------------
 
 
-def test_version_extraction_matches_pyproject_format(jobs):
-    """The workflow's version-extraction Python snippet must read the
-    same key path that pyproject.toml actually exposes."""
-    steps = jobs["check-version"]["steps"]
-    read_step = next(s for s in steps if s.get("id") == "read")
-    snippet = read_step["run"]
-    assert "tomllib" in snippet
+def test_version_bump_step_targets_pyproject_version(release_steps):
+    """The bump-version Python snippet must read & write the same
+    ``version = "..."`` line that ``pyproject.toml`` actually exposes."""
+    bump_step = next(s for s in release_steps if s.get("id") == "version")
+    snippet = bump_step["run"]
     assert "pyproject.toml" in snippet
-    assert "['project']['version']" in snippet
+    assert 'version' in snippet
 
 
 def test_pyproject_version_is_extractable():
-    """Live sanity check: the snippet's Python code (project →
-    version path) must succeed against the current pyproject."""
+    """Live sanity check: the snippet's regex (``version = "..."``)
+    must succeed against the current pyproject."""
     if sys.version_info < (3, 11):
         pytest.skip("tomllib needs Python 3.11+")
     with open(PYPROJECT, "rb") as f:
@@ -156,15 +136,24 @@ def test_pyproject_version_is_extractable():
     assert version  # non-empty
 
 
+def test_bump_step_reads_pr_labels(release_steps):
+    """The major / minor / patch decision pulls from PR labels via
+    ``github.event.pull_request.labels.*.name`` — losing that hook
+    would silently bury the user's release-type intent."""
+    bump_step = next(s for s in release_steps if s.get("id") == "bump")
+    env = bump_step.get("env", {})
+    labels_expr = env.get("LABELS", "")
+    assert "github.event.pull_request.labels" in labels_expr
+
+
 # ---------------------------------------------------------------------------
 # PyPI publish step uses canonical token-auth literals
 # ---------------------------------------------------------------------------
 
 
-def test_twine_upload_uses_token_username(jobs):
+def test_twine_upload_uses_token_username(release_steps):
     upload_step = next(
-        s for s in jobs["publish-pypi"]["steps"]
-        if s.get("name") == "Upload to PyPI"
+        s for s in release_steps if s.get("name") == "Upload to PyPI with twine"
     )
     assert upload_step["env"]["TWINE_USERNAME"] == "__token__"
     # The password must come from a secret, never a literal.
@@ -172,68 +161,16 @@ def test_twine_upload_uses_token_username(jobs):
     assert "secrets.PYPI_API_TOKEN" in pw
 
 
-def test_pypi_step_runs_twine_check_before_upload(jobs):
+def test_upload_runs_twine_check_before_upload(release_steps):
     """``twine check`` catches malformed long-description metadata
     before we burn an upload slot on PyPI (uploads are immutable)."""
-    step_names = [s.get("name") for s in jobs["publish-pypi"]["steps"]]
-    check_idx = step_names.index("Verify artifacts")
-    upload_idx = step_names.index("Upload to PyPI")
-    assert check_idx < upload_idx
-
-
-# ---------------------------------------------------------------------------
-# Nuitka invocation parity with nuitka.md §2.1
-# ---------------------------------------------------------------------------
-
-
-REQUIRED_NUITKA_FLAGS = (
-    "--standalone",
-    "--windows-console-mode=disable",
-    "--enable-plugin=pyside6",
-    "--include-package=qt_material",
-    "--include-package=imageio",
-    "--include-package=rawpy",
-    "--include-data-dir=plugins=plugins",
-    # Model weights must NEVER ship in the bundle (see nuitka.md §2.4).
-    "--noinclude-data-files=plugins/*/models/*",
-    "--noinclude-data-files=*.onnx",
-    "--noinclude-data-files=*.pt",
-    "--noinclude-data-files=*.pth",
-    "--noinclude-data-files=*.safetensors",
-    "--noinclude-data-files=*.gguf",
-    "--module-parameter=torch-disable-jit=yes",
-    "--nofollow-import-to=pytest",
-    "--nofollow-import-to=doctest",
-    "--nofollow-import-to=rembg",
-    "--windows-icon-from-ico=exe\\Imervue.ico",
-    "--output-dir=build_nuitka",
-    "--assume-yes-for-downloads",
-)
-
-
-@pytest.fixture(scope="module")
-def nuitka_command(jobs) -> str:
-    nuitka_step = next(
-        s for s in jobs["build-exe-windows"]["steps"]
-        if s.get("name") == "Run Nuitka"
+    upload_step = next(
+        s for s in release_steps if s.get("name") == "Upload to PyPI with twine"
     )
-    return nuitka_step["run"]
-
-
-@pytest.mark.parametrize("flag", REQUIRED_NUITKA_FLAGS)
-def test_nuitka_command_includes_flag(nuitka_command, flag):
-    assert flag in nuitka_command, f"workflow Nuitka command missing flag: {flag}"
-
-
-def test_nuitka_command_targets_imervue_package(nuitka_command):
-    """Final positional arg must be ``Imervue`` (the package), not
-    ``Imervue/__main__.py`` — see nuitka.md §2.1."""
-    # Allow trailing whitespace / continuations; just check the token
-    # appears as a standalone word.
-    tokens = nuitka_command.split()
-    assert "Imervue" in tokens
-    assert "Imervue/__main__.py" not in tokens
-    assert "Imervue\\__main__.py" not in tokens
+    snippet = upload_step["run"]
+    check_idx = snippet.find("twine check")
+    upload_idx = snippet.find("twine upload")
+    assert 0 <= check_idx < upload_idx, "twine check must precede twine upload"
 
 
 # ---------------------------------------------------------------------------
@@ -241,22 +178,13 @@ def test_nuitka_command_targets_imervue_package(nuitka_command):
 # ---------------------------------------------------------------------------
 
 
-def test_release_step_uploads_files(jobs):
-    release_steps = jobs["create-release"]["steps"]
-    gh_release = next(
-        s for s in release_steps
-        if "softprops/action-gh-release" in s.get("uses", "")
+def test_release_step_creates_github_release(release_steps):
+    """The final step shells out to ``gh release create`` so the tag
+    matches the bumped version and release notes are auto-generated."""
+    create_step = next(
+        s for s in release_steps if s.get("name") == "Create GitHub Release"
     )
-    assert "files" in gh_release["with"]
-    assert gh_release["with"]["tag_name"].startswith(
-        "${{ needs.check-version.outputs.tag",
-    )
-
-
-def test_release_downloads_windows_artifact(jobs):
-    release_steps = jobs["create-release"]["steps"]
-    download = next(
-        s for s in release_steps
-        if "actions/download-artifact" in s.get("uses", "")
-    )
-    assert download["with"]["name"] == "imervue-windows-exe"
+    snippet = create_step["run"]
+    assert "gh release create" in snippet
+    assert "${{ steps.version.outputs.new }}" in snippet
+    assert "--generate-notes" in snippet

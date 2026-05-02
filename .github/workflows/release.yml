@@ -1,190 +1,129 @@
+# Triggers when a PR is merged into main.
+#
+# Required repository secret:
+#   PYPI_API_TOKEN  — PyPI API token (starts with `pypi-`). Create one at
+#                     https://pypi.org/manage/account/token/ scoped to this project.
+#
+# Bump type is read from PR labels:
+#   release:major   — 1.0.29 -> 2.0.0
+#   release:minor   — 1.0.29 -> 1.1.0
+#   release:patch   — 1.0.29 -> 1.0.30   (also the default when no label present)
+#
+# Branch protection note: this workflow pushes a `Bump version` commit and a tag
+# directly to main. If main has required-PR protection, allow
+# `github-actions[bot]` to bypass, or swap the token for a PAT with bypass rights.
+
 name: Release
 
-# Runs after a PR merges into main (i.e. a direct push to main). The
-# job graph is idempotent on the version field of pyproject.toml — if
-# the version was not bumped in the merged PR, every gated job becomes
-# a no-op so cosmetic / docs / refactor merges do not burn CI minutes
-# nor risk re-uploading an unchanged build to PyPI.
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
+    types: [closed]
+    branches: [main]
 
-# Workflow-level permissions are intentionally minimal — only the
-# create-release job needs ``contents: write`` (to push a tag and
-# upload the GitHub Release asset). Hoisting that scope to the job
-# keeps every other job at the default read-only token, matching
-# the principle of least privilege the supply-chain rules expect.
+# Workflow-level token stays read-only. Only the ``release`` job
+# pushes the bump commit / tag and creates the GitHub Release, so
+# ``contents: write`` lives at job scope — every step that doesn't
+# need to mutate the repo runs on a least-privilege token.
 permissions:
   contents: read
 
 jobs:
-  # ---------------------------------------------------------------
-  # Decide whether this push contains a version bump worth releasing.
-  # The check is "does a git tag matching v<pyproject version> already
-  # exist on the remote?" — if not, the bump is new and we proceed.
-  # ---------------------------------------------------------------
-  check-version:
+  release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.read.outputs.version }}
-      tag: ${{ steps.read.outputs.tag }}
-      changed: ${{ steps.diff.outputs.changed }}
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main
+        uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
-          fetch-tags: true
-      - uses: actions/setup-python@v5
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - id: read
-        shell: bash
+
+      - name: Determine bump type from PR labels
+        id: bump
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
-          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-      - id: diff
-        shell: bash
-        run: |
-          if git rev-parse "refs/tags/${{ steps.read.outputs.tag }}" >/dev/null 2>&1; then
-            echo "Tag ${{ steps.read.outputs.tag }} already exists — skipping release."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          if echo "$LABELS" | grep -q '"release:major"'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$LABELS" | grep -q '"release:minor"'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
           else
-            echo "Tag ${{ steps.read.outputs.tag }} is new — releasing."
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "type=patch" >> "$GITHUB_OUTPUT"
           fi
 
-  # ---------------------------------------------------------------
-  # Build sdist + wheel and upload to PyPI via twine. Uses an API
-  # token stored in the repository's PYPI_API_TOKEN secret; the
-  # __token__ username is the canonical literal for token auth.
-  # ---------------------------------------------------------------
-  publish-pypi:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install build & twine
-        run: python -m pip install --upgrade pip build twine
-      - name: Build sdist + wheel
-        run: python -m build
-      - name: Verify artifacts
-        run: python -m twine check dist/*
-      - name: Upload to PyPI
+      - name: Bump version in pyproject.toml
+        id: version
+        env:
+          BUMP: ${{ steps.bump.outputs.type }}
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          bump = os.environ["BUMP"]
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          m = re.search(r'^version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', text, re.M)
+          if m is None:
+              raise SystemExit("version field not found in pyproject.toml")
+          major, minor, patch = (int(g) for g in m.groups())
+          if bump == "major":
+              major, minor, patch = major + 1, 0, 0
+          elif bump == "minor":
+              minor, patch = minor + 1, 0
+          else:
+              patch += 1
+          new = f"{major}.{minor}.{patch}"
+          text = re.sub(
+              r'^version\s*=\s*"[^"]+"',
+              f'version = "{new}"',
+              text,
+              count=1,
+              flags=re.M,
+          )
+          path.write_text(text, encoding="utf-8")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"new={new}\n")
+          print(f"Bumped to {new} ({bump})")
+          PY
+
+      - name: Commit and tag
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "Bump version to ${{ steps.version.outputs.new }} [skip ci]"
+          git tag -a "v${{ steps.version.outputs.new }}" \
+                  -m "Release v${{ steps.version.outputs.new }}"
+          git push origin main
+          git push origin "v${{ steps.version.outputs.new }}"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Upload to PyPI with twine
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload --non-interactive dist/*
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pypi-dist
-          path: dist/
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+          python -m twine upload dist/*
 
-  # ---------------------------------------------------------------
-  # Build a Windows standalone EXE via Nuitka and stash it as an
-  # action artifact for the downstream create-release job to attach.
-  # The Nuitka invocation mirrors nuitka.md §2.1 verbatim — see that
-  # doc for the rationale behind every flag.
-  # ---------------------------------------------------------------
-  build-exe-windows:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install runtime deps
-        shell: bash
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python -m pip install --upgrade pip wheel
-          # requirements.txt ends with the self-reference "Imervue"
-          # for end-users; strip it here so we don't pull the
-          # to-be-replaced version from PyPI.
-          grep -vE '^(Imervue|Imervue_dev)$' requirements.txt > _ci_req.txt
-          pip install -r _ci_req.txt
-          pip install nuitka ordered-set zstandard
-      - name: Run Nuitka
-        shell: cmd
-        run: |
-          python -m nuitka ^
-            --standalone ^
-            --windows-console-mode=disable ^
-            --enable-plugin=pyside6 ^
-            --python-flag=-m ^
-            --include-package=qt_material ^
-            --include-package=imageio ^
-            --include-package=rawpy ^
-            --include-package-data=qt_material ^
-            --include-package-data=imageio ^
-            --include-package-data=rawpy ^
-            --include-data-dir=plugins=plugins ^
-            --noinclude-data-files=plugins/*/models/* ^
-            --noinclude-data-files=*.onnx ^
-            --noinclude-data-files=*.pt ^
-            --noinclude-data-files=*.pth ^
-            --noinclude-data-files=*.safetensors ^
-            --noinclude-data-files=*.gguf ^
-            --noinclude-data-files=exe/*.log ^
-            --noinclude-data-files=exe/*.json ^
-            --include-data-dir=exe=exe ^
-            --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md ^
-            --include-data-files=LICENSE=LICENSE ^
-            --module-parameter=torch-disable-jit=yes ^
-            --nofollow-import-to=pytest ^
-            --nofollow-import-to=doctest ^
-            --nofollow-import-to=rembg ^
-            --windows-icon-from-ico=exe\Imervue.ico ^
-            --output-filename=Imervue.exe ^
-            --output-dir=build_nuitka ^
-            --remove-output ^
-            --assume-yes-for-downloads ^
-            Imervue
-      - name: Zip standalone bundle
-        shell: pwsh
-        run: |
-          $version = "${{ needs.check-version.outputs.version }}"
-          $zipName = "Imervue-windows-x64-$version.zip"
-          Compress-Archive -Path build_nuitka\Imervue.dist\* -DestinationPath $zipName
-          echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
-      - uses: actions/upload-artifact@v4
-        with:
-          name: imervue-windows-exe
-          path: ${{ env.ZIP_NAME }}
-          if-no-files-found: error
-
-  # ---------------------------------------------------------------
-  # Tag the commit and publish a GitHub Release with the EXE zip.
-  # Only fires after both PyPI publish AND EXE build succeed, so a
-  # half-released version (PyPI-only or EXE-only) never gets a tag.
-  # ---------------------------------------------------------------
-  create-release:
-    needs: [check-version, publish-pypi, build-exe-windows]
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      # Job-scoped write so other jobs in this workflow keep a
-      # read-only token; only the release publisher needs to mutate
-      # the repo (push tag + upload release asset).
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: imervue-windows-exe
-          path: ./release-assets
-      # Pinned to the v2 tag's full commit SHA — defends against a
-      # compromised tag re-pointing at a malicious revision. Refresh
-      # by re-running ``gh api repos/softprops/action-gh-release/git/refs/tags/v2``
-      # when bumping to a new release.
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
-        with:
-          tag_name: ${{ needs.check-version.outputs.tag }}
-          name: ${{ needs.check-version.outputs.tag }}
-          generate_release_notes: true
-          files: ./release-assets/*
+          gh release create "v${{ steps.version.outputs.new }}" \
+            dist/* \
+            --title "v${{ steps.version.outputs.new }}" \
+            --generate-notes
