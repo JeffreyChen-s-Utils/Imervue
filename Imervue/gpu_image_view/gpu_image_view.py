@@ -404,10 +404,17 @@ class GPUImageView(QOpenGLWidget):
                 continue
 
     def resizeGL(self, w, h):
-        dpr = self.devicePixelRatio()
-        log_w = max(1, int(w))
-        log_h = max(1, int(h))
-        glViewport(0, 0, int(log_w * dpr), int(log_h * dpr))
+        # Qt 6 passes ``w`` / ``h`` in DEVICE pixels (the framebuffer
+        # size). The fit math expects logical pixels, so we read them
+        # from ``self.width() / height()`` to stay in one coordinate
+        # space — mixing the two over-shoots ``pan_y`` by a factor of
+        # ``dpr`` on HiDPI screens and pins the image to the bottom of
+        # the canvas.
+        log_w = max(1, int(self.width()))
+        log_h = max(1, int(self.height()))
+        dev_w = max(1, int(w))
+        dev_h = max(1, int(h))
+        glViewport(0, 0, dev_w, dev_h)
         if self.renderer.use_shaders:
             self.renderer.set_ortho(log_w, log_h)
         else:

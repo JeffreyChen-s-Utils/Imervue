@@ -7,6 +7,7 @@ import pytest
 from Imervue.paint.compositing import (
     LAYER_BLEND_MODES,
     composite_layer_pair,
+    composite_region,
     composite_stack,
 )
 from Imervue.paint.document import (
@@ -150,6 +151,73 @@ def test_composite_stack_skips_fast_path_for_invisible_layer():
     # Hidden layer must yield a transparent canvas, not the layer image.
     assert out is not layer.image
     assert (out == 0).all()
+
+
+# ---------------------------------------------------------------------------
+# composite_region — partial recompose used by mark_composite_dirty
+# ---------------------------------------------------------------------------
+
+
+def test_composite_region_matches_full_composite_inside_rect():
+    """Region recompose must equal the corresponding slice of the full
+    composite for plain raster layers — otherwise brush dabs would
+    leave the cached frame in a mathematically different state from
+    what a full rebuild would produce."""
+    bottom = _layer((40, 50, 60, 255), shape=(8, 8), name="b")
+    top = _layer((10, 200, 100, 255), shape=(8, 8), name="t",
+                 opacity=0.5, blend_mode="screen")
+    full = composite_stack([bottom, top], (8, 8))
+    rect = (2, 3, 4, 3)
+    partial = composite_region([bottom, top], (8, 8), rect)
+    assert partial is not None
+    np.testing.assert_array_equal(
+        partial,
+        full[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]],
+    )
+
+
+def test_composite_region_returns_none_for_layer_with_effects():
+    """Layer effects (drop shadow / glow / stroke) leak past the layer
+    bounds — partial recompose can't see that context, so return None
+    and let the caller fall back to a full composite."""
+    layer = _layer((100, 100, 100, 255), shape=(8, 8), name="fx")
+    layer.effects = ({"kind": "drop_shadow"},)
+    out = composite_region([layer], (8, 8), (1, 1, 4, 4))
+    assert out is None
+
+
+def test_mark_composite_dirty_patches_only_the_rect():
+    """The cache returned after a brush dab must equal a full rebuild
+    when the only change is inside the marked rect."""
+    doc = PaintDocument()
+    doc.load_image(np.full((6, 8, 4), 0, dtype=np.uint8))
+    top = doc.add_layer(name="top")
+    top.image[...] = (200, 100, 50, 255)
+    first = doc.composite()
+    assert first is not None
+    cached_id = id(first)
+    top.image[2:4, 3:6] = (5, 5, 5, 255)
+    doc.mark_composite_dirty((3, 2, 3, 2))
+    patched = doc.composite()
+    # Cache buffer is reused — patching the dirty rect should not
+    # reallocate the array.
+    assert id(patched) == cached_id
+    expected = composite_stack(doc.layers(), doc.shape, groups=doc._groups)  # noqa: SLF001
+    np.testing.assert_array_equal(patched, expected)
+
+
+def test_mark_composite_dirty_clipped_off_canvas_is_dropped():
+    """Off-canvas rects must not raise or blow away the cache —
+    brush dabs at the edge can produce damage that overlaps the
+    image boundary and the canvas relies on graceful clipping."""
+    doc = PaintDocument()
+    doc.load_image(np.full((4, 4, 4), 0, dtype=np.uint8))
+    doc.composite()  # prime cache
+    cache_before = doc._composite_cache  # noqa: SLF001
+    doc.mark_composite_dirty((-10, -10, 5, 5))
+    # Fully off-canvas — cache stays untouched.
+    assert doc._composite_cache is cache_before  # noqa: SLF001
+    assert doc._composite_dirty_rect is None  # noqa: SLF001
 
 
 # ---------------------------------------------------------------------------

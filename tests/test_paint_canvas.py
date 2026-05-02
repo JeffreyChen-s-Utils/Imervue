@@ -439,3 +439,34 @@ def test_reset_view_to_fit_defers_when_widget_too_small(qapp):
         assert canvas.zoom_factor() > ZOOM_MIN
     finally:
         canvas.deleteLater()
+
+
+def test_reset_view_to_fit_centres_document_in_logical_pixels(qapp):
+    """The fit math must keep pan in logical-pixel space.
+
+    Regression for the HiDPI-bottom-anchor bug: Qt 6 calls ``resizeGL``
+    with device-pixel sizes, so any code path that mixes device and
+    logical pixels in the centering math drives ``pan_y`` past the
+    visible area and the document ends up clipped against the bottom
+    of the canvas. The math contract is plain: given an explicit
+    ``widget_size`` in logical pixels, ``pan_y`` is exactly half the
+    leftover space."""
+    canvas = _make_canvas(qapp)
+    if canvas is None:
+        pytest.skip("GL widget unavailable in this environment")
+    try:
+        canvas.new_blank_document(width=1024, height=1024)
+        canvas._reset_view_to_fit(widget_size=(1600, 900))  # noqa: SLF001
+        zoom = canvas.zoom_factor()
+        assert canvas._fit_pending is False  # noqa: SLF001
+        # 900 / 1024 ≈ 0.879 wins over 1600 / 1024 ≈ 1.563 and the cap of 1.0
+        assert zoom == pytest.approx(900 / 1024, rel=1e-6)
+        expected_pan_x = (1600 - 1024 * zoom) * 0.5
+        expected_pan_y = (900 - 1024 * zoom) * 0.5
+        assert canvas._pan_x == pytest.approx(expected_pan_x)  # noqa: SLF001
+        assert canvas._pan_y == pytest.approx(expected_pan_y)  # noqa: SLF001
+        # Sanity: with widget height matching the displayed height,
+        # vertical centering produces a non-negative, sub-widget pan.
+        assert 0 <= canvas._pan_y < 900  # noqa: SLF001
+    finally:
+        canvas.deleteLater()

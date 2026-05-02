@@ -12,10 +12,33 @@ place of the default round kernel.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+# Bound the cache so a user who tries hundreds of tips doesn't grow
+# resident memory unbounded; a typical session uses 1–4 tips, so the
+# bound is comfortable. Each entry is a small float32 kernel
+# (``size × size`` floats), so even at 64 entries × 256² that's only
+# a few MB.
+_TIP_CACHE_SIZE = 64
+
+
+@lru_cache(maxsize=_TIP_CACHE_SIZE)
+def _cached_kernel(path_str: str, mtime_ns: int, size: int) -> np.ndarray:
+    """Decode + resize a brush tip; cached on (path, mtime, size).
+
+    Editing the source PNG bumps ``mtime_ns`` so the cache invalidates
+    automatically — no manual reset required when the user drops in a
+    new tip with the same filename.
+    """
+    with Image.open(path_str) as src:
+        tip = src.convert("RGBA")
+        tip = tip.resize((size, size), Image.Resampling.BILINEAR)
+        arr = np.array(tip, dtype=np.uint8)
+    return _kernel_from_rgba(arr)
 
 
 def load_brush_tip(path: str | Path, size: int) -> np.ndarray:
@@ -31,14 +54,10 @@ def load_brush_tip(path: str | Path, size: int) -> np.ndarray:
     if not p.is_file():
         raise OSError(f"brush tip not found: {path}")
     try:
-        with Image.open(p) as src:
-            tip = src.convert("RGBA")
-            tip = tip.resize((size, size), Image.Resampling.BILINEAR)
-            arr = np.array(tip, dtype=np.uint8)
+        mtime_ns = p.stat().st_mtime_ns
+        return _cached_kernel(str(p), mtime_ns, int(size))
     except (OSError, ValueError) as exc:
         raise OSError(f"failed to read brush tip {path}: {exc}") from exc
-
-    return _kernel_from_rgba(arr)
 
 
 def _kernel_from_rgba(arr: np.ndarray) -> np.ndarray:

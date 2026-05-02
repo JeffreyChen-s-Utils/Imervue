@@ -33,6 +33,7 @@
 - [Browsing Modes](#browsing-modes)
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
+- [Paint Workspace](#paint-workspace)
 - [Plugin System](#plugin-system)
 - [Multi-Language Support](#multi-language-support)
 - [User Settings](#user-settings)
@@ -189,6 +190,24 @@ Key design principles:
 - **Soft Proof** — load an ICC profile, simulate the destination gamut, and highlight out-of-gamut pixels in magenta
 - **GPS Geotag editor** — read existing EXIF GPS coordinates and write new lat/lon back via piexif (JPEG)
 - **Print Layout** — compose multiple images onto a multi-page PDF sheet with configurable page size (A4/A3/Letter/Legal), orientation, grid, margins, gutter, and crop marks
+
+### Paint Workspace
+
+A MediBang-style **Paint** tab embedded as a third top-level tab (alongside Imervue / Modify). The workspace is its own QMainWindow with menus, a left tool strip, a context-sensitive options bar, and a tabbed dock column on the right. Multi-tab document editing — open many drawings at once, each with its own undo stack and recipe.
+
+- **Tool palette (24 tools)** — Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom (single-letter shortcuts: B / E / G / I / V / T / U / R / P / S / C / Z / H, Shift+R/E/I/P for shapes)
+- **Brushes** — pen / marker / pencil / highlighter / spray / calligraphy / watercolor / charcoal / crayon, with Size / Opacity / Hardness / Density / Blend-mode controls; pressure curve editor; brush-tip capture from a selection; import/export brush presets
+- **Layers** — full layer panel with thumbnails, visibility toggles, drag-to-reorder, blend modes, opacity, search, vector layers, 1-bit layers, layer masks (add / from selection / invert / apply), clipping masks, and layer effects (drop shadow / outer glow / stroke); divide-layer-by-colour, gradient-map presets
+- **Selection** — Rect / Lasso / Wand / Quick-select, with Replace / Add / Subtract / Intersect modes and Feather; **Quick Mask Mode** (Q) for paint-the-mask workflows; **Stroke Selection** dialog
+- **Animation** — frame timeline dock with snapshots, playback, onion skin overlay, and MP4/GIF export
+- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech Bubble tool
+- **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (each with a live-preview dialog)
+- **View aids** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (Ctrl+Shift+H to rotate CCW)
+- **Right-side docks (10, tabbed into one column)** — Color · Brush · Layer · Navigator · Material library · History · Swatch · Reference · Histogram · Animation. Each dock is movable / floatable; use **Settings > Workspace Layouts** to save and recall named arrangements
+- **File I/O** — open / save **PSD** (Photoshop) with layer round-trip; export to PNG / JPEG / WebP, plus multi-page comic export to **CBZ** or **PDF**; autosave snapshots with restore-latest
+- **Other** — Image Size dialog · Liquify · Healing / Clone Stamp · per-tab undo / redo (Ctrl+Z / Ctrl+Y) with the History dock for non-linear jumps · multiple secondary view windows (mirror / tile preview)
+
+Press ``E`` from Deep Zoom to send the current image straight into a new Paint tab.
 
 ### System Integration
 
@@ -691,6 +710,20 @@ Imervue/
 │   ├── traditional_chinese.py  # Traditional Chinese
 │   ├── korean.py            # Korean
 │   └── japanese.py          # Japanese
+├── paint/                   # Paint workspace (MediBang-style editor)
+│   ├── paint_workspace.py   # Embedded QMainWindow assembling tools + docks
+│   ├── canvas.py            # PaintCanvas (QOpenGLWidget) — pan / zoom / pointer dispatch
+│   ├── document.py          # PaintDocument — layers, selection, composite
+│   ├── tool_dispatcher.py   # Routes pointer events to the active tool
+│   ├── brush_engine.py      # Brush dab synthesis (pressure / dynamics / random)
+│   ├── layers.py            # Layer model + blend modes + masks
+│   ├── undo_stack.py        # Per-tab undo / redo (snapshot on gesture commit)
+│   ├── dock_panels.py       # Color / Brush / Layer / Navigator / Material / History
+│   ├── animation_dock.py    # Frame timeline with playback transport
+│   ├── manga_menu.py        # Panel cutter, speedlines, tone layers, action flash
+│   ├── filter_menu.py       # Levels / Curves / Posterize / Threshold / Halftone
+│   ├── document_io.py       # PSD load / save (Photoshop interop)
+│   └── …                    # 80+ submodules: tools, dialogs, helpers
 ├── plugin/                  # Plugin system
 │   ├── plugin_base.py       # ImervuePlugin base class
 │   ├── plugin_manager.py    # Plugin discovery and lifecycle

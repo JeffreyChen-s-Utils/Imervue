@@ -18,11 +18,12 @@ Signals
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QDockWidget,
     QHBoxLayout,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSpinBox,
@@ -157,7 +158,24 @@ class AnimationDock(QDockWidget):
 
     def _on_remove_clicked(self) -> None:
         idx = self._timeline.current_index
-        self.remove_frame_requested.emit(idx)
+        if 0 <= idx < len(self._timeline.frames) and len(self._timeline.frames) > 1:
+            self.remove_frame_requested.emit(idx)
+
+    def keyPressEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        """Delete / Backspace removes the currently-selected frame.
+
+        Mirrors the file-tree / layer-dock conventions so a user who
+        clicks a frame thumbnail and presses Delete sees it disappear
+        without first hunting for the ``− Frame`` button. Last-frame
+        protection still lives in
+        :meth:`AnimationTimeline.remove_frame` — pressing Delete on a
+        timeline with one frame is a no-op rather than an error.
+        """
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self._on_remove_clicked()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _on_fps_changed(self, fps: int) -> None:
         self._timeline.set_fps(int(fps))
@@ -186,6 +204,12 @@ class AnimationDock(QDockWidget):
             btn = self._make_thumbnail(i, frame.image)
             self._strip_layout.insertWidget(self._strip_layout.count() - 1, btn)
         self._highlight_active()
+        # Last-frame protection: ``AnimationTimeline.remove_frame``
+        # refuses to drop the only remaining frame so the dock always
+        # has something to show. Reflect that in the toolbar button so
+        # the user doesn't think the action is broken when nothing
+        # happens.
+        self._remove_btn.setEnabled(len(self._timeline.frames) > 1)
 
     def _make_thumbnail(self, index: int, image: np.ndarray) -> QToolButton:
         btn = QToolButton()
@@ -203,7 +227,31 @@ class AnimationDock(QDockWidget):
         btn.setText(str(index + 1))
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         btn.clicked.connect(lambda *_, i=index: self._on_frame_clicked(i))
+        # Right-click → context menu with a Delete entry. Mirrors the
+        # right-click-to-delete pattern used by the layer dock so the
+        # user has three independent ways to drop a frame: button,
+        # Delete key, or context menu.
+        btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        btn.customContextMenuRequested.connect(
+            lambda pos, b=btn, i=index: self._show_thumbnail_menu(b, pos, i),
+        )
         return btn
+
+    def _show_thumbnail_menu(  # pragma: no cover - Qt UI
+        self, button: QToolButton, pos: QPoint, index: int,
+    ) -> None:
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(button)
+        delete_action = menu.addAction(
+            lang.get("paint_animation_delete_frame", "Delete frame"),
+        )
+        # Last-frame protection — the timeline refuses to drop the
+        # only remaining frame, so disable the entry rather than
+        # firing a no-op signal.
+        delete_action.setEnabled(len(self._timeline.frames) > 1)
+        chosen = menu.exec(button.mapToGlobal(pos))
+        if chosen is delete_action:
+            self.remove_frame_requested.emit(index)
 
     def _on_frame_clicked(self, index: int) -> None:
         if self._timeline.set_current_index(index):

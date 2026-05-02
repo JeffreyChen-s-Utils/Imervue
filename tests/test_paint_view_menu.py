@@ -187,3 +187,29 @@ def test_rotate_ccw_does_not_crash_without_canvas_support(qapp):
         bridge.reset_canvas_rotation()
     finally:
         ws.deleteLater()
+
+
+def test_pixel_grid_label_gains_zoom_in_suffix_when_dormant(qapp):
+    """Toggling Pixel Grid below the zoom threshold leaves the toast
+    a few seconds after which it disappears. The menu action's
+    label keeps the "(zoom in)" cue for as long as the condition
+    holds — without it the user only sees a checkmark and assumes
+    the toggle is broken."""
+    ws = PaintWorkspace()
+    try:
+        bridge = ws._view_menu_bridge   # noqa: SLF001
+        action = bridge._actions["paint_view_pixel_grid"]   # noqa: SLF001
+        # Force a low zoom — well below the 4× threshold.
+        ws.canvas()._zoom = 1.0   # noqa: SLF001
+        bridge.toggle_pixel_grid(True)
+        assert "(zoom in" in action.text()
+        # Bumping zoom past the threshold drops the suffix.
+        ws.canvas()._zoom = 8.0   # noqa: SLF001
+        bridge.refresh_pixel_grid_label()
+        assert "(zoom in" not in action.text()
+        # Disabling the toggle also clears the suffix.
+        ws.canvas()._zoom = 1.0   # noqa: SLF001
+        bridge.toggle_pixel_grid(False)
+        assert "(zoom in" not in action.text()
+    finally:
+        ws.deleteLater()

@@ -163,23 +163,33 @@ class WorkspacePreset:
 
 
 BUILT_IN_PRESETS: tuple[WorkspacePreset, ...] = (
+    # Each preset varies primarily by which docks are *visible* —
+    # the right column is tabified so dock area / size_px have no
+    # visible effect on the modern workspace, but visibility plus
+    # which tab is surfaced (the first visible dock in this list)
+    # is what the user perceives when switching between layouts.
     WorkspacePreset(
         name="Default",
         docks=(
-            DockState("layers", area="right", order=0, size_px=240),
-            DockState("color", area="right", order=1, size_px=240),
-            DockState("brush", area="left", order=0, size_px=240),
-            DockState("navigator", area="left", order=1, size_px=200),
-            DockState("history", area="right", order=2, size_px=200),
+            DockState("layers", area="right", order=0, size_px=240, visible=True),
+            DockState("color", area="right", order=1, size_px=240, visible=True),
+            DockState("brush", area="right", order=2, size_px=240, visible=True),
+            DockState("navigator", area="right", order=3, size_px=200, visible=True),
+            DockState("history", area="right", order=4, size_px=200, visible=True),
             DockState("reference", visible=False),
         ),
     ),
     WorkspacePreset(
         name="Drawing",
+        # Distraction-free painting: only the colour + brush picker
+        # plus layers. Navigator / history / reference are hidden
+        # so the canvas dominates the screen. The brush dock is
+        # listed first so applying this preset surfaces the brush
+        # tab — that's the panel a painter wants front-and-centre.
         docks=(
-            DockState("brush", area="left", order=0, size_px=260),
-            DockState("color", area="left", order=1, size_px=260),
-            DockState("layers", area="right", order=0, size_px=240),
+            DockState("brush", area="right", order=0, size_px=260, visible=True),
+            DockState("color", area="right", order=1, size_px=260, visible=True),
+            DockState("layers", area="right", order=2, size_px=240, visible=True),
             DockState("navigator", visible=False),
             DockState("history", visible=False),
             DockState("reference", visible=False),
@@ -187,22 +197,30 @@ BUILT_IN_PRESETS: tuple[WorkspacePreset, ...] = (
     ),
     WorkspacePreset(
         name="Comic",
+        # Comic / manga workflow: reference dock surfaces first so
+        # the artist sees their pose / panel reference immediately.
+        # Layers + history are visible underneath for revisions;
+        # navigator is hidden because comic canvases are usually
+        # print-size and the minimap loses its value.
         docks=(
-            DockState("brush", area="left", order=0, size_px=240),
-            DockState("color", area="left", order=1, size_px=240),
-            DockState("reference", area="left", order=2, size_px=320, visible=True),
-            DockState("layers", area="right", order=0, size_px=260),
-            DockState("history", area="right", order=1, size_px=200),
-            DockState("navigator", area="right", order=2, size_px=200),
+            DockState("reference", area="right", order=0, size_px=320, visible=True),
+            DockState("layers", area="right", order=1, size_px=260, visible=True),
+            DockState("brush", area="right", order=2, size_px=240, visible=True),
+            DockState("color", area="right", order=3, size_px=240, visible=True),
+            DockState("history", area="right", order=4, size_px=200, visible=True),
+            DockState("navigator", visible=False),
         ),
     ),
     WorkspacePreset(
         name="Compact",
+        # Minimal-chrome layout: only layers + brush visible. Useful
+        # on small laptop screens where every other dock burns
+        # vertical space the user could spend on the canvas.
         docks=(
-            DockState("layers", area="right", order=0, size_px=220),
-            DockState("color", area="right", order=1, size_px=220),
-            DockState("brush", area="right", order=2, size_px=220),
-            DockState("navigator", area="right", order=3, size_px=180),
+            DockState("layers", area="right", order=0, size_px=220, visible=True),
+            DockState("brush", area="right", order=1, size_px=220, visible=True),
+            DockState("color", visible=False),
+            DockState("navigator", visible=False),
             DockState("history", visible=False),
             DockState("reference", visible=False),
         ),

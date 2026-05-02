@@ -78,6 +78,15 @@ def populate_view_menu(workspace: PaintWorkspace) -> None:
             action.setChecked(initial)
         action.triggered.connect(slot)
         bridge._actions[key] = action   # noqa: SLF001
+    # Reflect zoom changes in the pixel-grid label so a checked
+    # toggle still annotates "(zoom in)" when the current zoom is
+    # below the visibility threshold. ``populate_view_menu`` runs
+    # before the workspace finishes constructing its canvas, so we
+    # defer the connection (and the first refresh) to the next
+    # event-loop iteration — by which time ``workspace.canvas()``
+    # is real and ``zoom_changed`` is wired up.
+    from PySide6.QtCore import QTimer
+    QTimer.singleShot(0, bridge.connect_canvas_signals)
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +133,10 @@ class _ViewMenuBridge:
     # ---- toggles -------------------------------------------------------
 
     def toggle_pixel_grid(self, checked: bool) -> None:
+        from Imervue.paint.visual_guides import (
+            PIXEL_GRID_MIN_ZOOM,
+            should_show_pixel_grid,
+        )
         self._workspace._pixel_grid_visible = bool(checked)   # noqa: SLF001
         # The canvas owns the actual draw decision so the setter
         # short-circuits the repaint when nothing visually changes.
@@ -132,6 +145,71 @@ class _ViewMenuBridge:
             canvas.set_pixel_grid_visible(bool(checked))
         else:   # pragma: no cover - older canvas builds
             canvas.update()
+        # When the user enables the grid below the zoom threshold the
+        # toggle has no visible effect — the renderer needs at least
+        # ``PIXEL_GRID_MIN_ZOOM`` to draw lines that don't moire the
+        # underlying art. Surface that as a status-bar tip so the
+        # toggle doesn't read as broken.
+        status = getattr(self._workspace, "_status", None)
+        if checked and status is not None:
+            zoom = float(getattr(canvas, "_zoom", 1.0))   # noqa: SLF001
+            if not should_show_pixel_grid(zoom):
+                msg = language_wrapper.language_word_dict.get(
+                    "paint_status_pixel_grid_zoom_hint",
+                    "Pixel grid: zoom in to {zoom_x}× to see the grid.",
+                ).format(zoom_x=int(PIXEL_GRID_MIN_ZOOM))
+                status.showMessage(msg, 4000)
+        self.refresh_pixel_grid_label()
+
+    def connect_canvas_signals(self) -> None:
+        """Lazily connect to canvas signals once the workspace is built.
+
+        ``populate_view_menu`` fires before the canvas attribute
+        exists on the workspace, so the connection is deferred to a
+        ``QTimer.singleShot(0, …)`` callback that lands after the
+        rest of ``__init__`` finishes.
+        """
+        canvas = getattr(self._workspace, "_canvas", None)   # noqa: SLF001
+        if canvas is None or not hasattr(canvas, "zoom_changed"):
+            return
+        canvas.zoom_changed.connect(
+            lambda *_: self.refresh_pixel_grid_label(),
+        )
+        self.refresh_pixel_grid_label()
+
+    def refresh_pixel_grid_label(self) -> None:
+        """Append a "(zoom in)" suffix to the menu action when the
+        toggle is on but the current zoom is below the threshold.
+
+        Toast messages clear after a few seconds, so a user who
+        flicked the toggle and then looked back at the menu would
+        see only a checkmark and wonder why the grid isn't drawing.
+        Reflecting the dormant state inside the menu keeps the cue
+        visible for as long as the condition holds.
+        """
+        from Imervue.paint.visual_guides import (
+            PIXEL_GRID_MIN_ZOOM,
+            should_show_pixel_grid,
+        )
+        actions = getattr(self, "_actions", {})
+        action = actions.get("paint_view_pixel_grid")
+        if action is None:
+            return
+        lang = language_wrapper.language_word_dict
+        base = lang.get("paint_view_pixel_grid", "Pixel Grid")
+        canvas = getattr(self._workspace, "_canvas", None)   # noqa: SLF001
+        zoom = float(getattr(canvas, "_zoom", 1.0))   # noqa: SLF001
+        dormant = (
+            self.pixel_grid_active() and not should_show_pixel_grid(zoom)
+        )
+        if dormant:
+            suffix = lang.get(
+                "paint_view_pixel_grid_dormant_suffix",
+                "  (zoom in to {zoom_x}×)",
+            ).format(zoom_x=int(PIXEL_GRID_MIN_ZOOM))
+            action.setText(base + suffix)
+        else:
+            action.setText(base)
 
     def toggle_snap_to_pixel(self, checked: bool) -> None:
         state = self._workspace.state()

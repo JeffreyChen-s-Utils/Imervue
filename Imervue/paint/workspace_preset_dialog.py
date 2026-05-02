@@ -105,6 +105,62 @@ def is_built_in(name: str) -> bool:
     return any(b.name == name for b in BUILT_IN_PRESETS)
 
 
+# Map workspace preset dock names to the matching attribute on
+# :class:`PaintWorkspace`. Kept module-level so tests can stub the
+# attributes onto a plain object without spinning up a Qt main
+# window. Docks not listed here are left untouched when applying a
+# preset — the workspace owns several "extra" docks (material,
+# swatch, animation, histogram) that aren't yet part of the preset
+# model.
+_DOCK_NAME_TO_ATTR = {
+    "layers": "_layer_dock",
+    "color": "_color_dock",
+    "brush": "_brush_dock",
+    "navigator": "_navigator_dock",
+    "history": "_history_dock",
+    "reference": "_reference_dock",
+}
+
+
+def apply_workspace_preset(workspace, preset: WorkspacePreset) -> bool:
+    """Toggle the workspace's docks to match ``preset``.
+
+    Right-side docks are tabified into one column on the modern
+    workspace so the preset's ``area`` / ``size_px`` fields no
+    longer drive widget placement. What still matters — and what
+    made every preset look identical until the visibility wiring
+    landed — is the per-dock ``visible`` flag plus which tab is
+    surfaced afterwards. Returns ``True`` when at least one dock
+    visibility actually changed so the caller can decide whether
+    to show a "no change" toast.
+
+    The first visible dock listed in the preset becomes the
+    surfaced tab — for built-in presets that means switching to
+    "Drawing" surfaces the brush dock, "Comic" surfaces the layer
+    dock, and so on. ``raise_`` is called once at the end (rather
+    than for every visible dock in the loop) so the user-facing
+    tab order matches the preset's ``docks`` declaration instead
+    of whichever dock was last in the iteration.
+    """
+    changed = False
+    primary_dock = None
+    for dock_state in preset.docks:
+        attr = _DOCK_NAME_TO_ATTR.get(dock_state.name)
+        if attr is None:
+            continue
+        dock = getattr(workspace, attr, None)
+        if dock is None or not hasattr(dock, "setVisible"):
+            continue
+        if bool(dock.isVisible()) != bool(dock_state.visible):
+            dock.setVisible(bool(dock_state.visible))
+            changed = True
+        if dock_state.visible and primary_dock is None:
+            primary_dock = dock
+    if primary_dock is not None and hasattr(primary_dock, "raise_"):
+        primary_dock.raise_()
+    return changed
+
+
 class WorkspacePresetDialog(QDialog):
     """Manage workspace layout presets — list + apply / save / delete."""
 

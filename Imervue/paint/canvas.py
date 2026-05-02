@@ -640,20 +640,27 @@ class PaintCanvas(QOpenGLWidget):
         self.update()
 
     def resizeGL(self, w: int, h: int) -> None:  # pragma: no cover - GL
-        # Qt passes ``w`` / ``h`` in logical (device-independent) pixels.
-        # The GL viewport must be in device pixels so the framebuffer
-        # fills the whole widget on HiDPI displays — otherwise only the
-        # top-left quadrant of the framebuffer is rendered to and the
-        # image ends up anchored to that subregion rather than the
-        # visible widget area.
-        dpr = max(1.0, float(self.devicePixelRatio()))
-        log_w = max(1, int(w))
-        log_h = max(1, int(h))
-        glViewport(0, 0, int(log_w * dpr), int(log_h * dpr))
+        # Qt 6 passes ``w`` / ``h`` here in DEVICE pixels (the framebuffer
+        # size, computed internally as ``size() * devicePixelRatio()``).
+        # We don't trust the parameter convention across Qt minor versions,
+        # so the layout math reads ``self.width() / height()`` instead —
+        # those are guaranteed logical pixels regardless of Qt version,
+        # which keeps the fit calculation in the same coordinate space as
+        # the pan / zoom values it produces. Mixing the two (treating
+        # device-pixel ``h`` as if it were logical) is what previously
+        # left the document anchored at the bottom of the canvas on HiDPI
+        # screens — pan_y = (device_h - logical_displayed) / 2 over-shot
+        # by a factor of dpr.
+        log_w = max(1, int(self.width()))
+        log_h = max(1, int(self.height()))
+        dev_w = max(1, int(w))
+        dev_h = max(1, int(h))
+        glViewport(0, 0, dev_w, dev_h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        # Ortho stays in logical pixels so the pan / zoom math (also
-        # logical) draws to the right region.
+        # Ortho stays in logical pixels so pan / zoom math draws to the
+        # right region — the GL pipeline rescales to the device-pixel
+        # framebuffer automatically via the viewport.
         glOrtho(0, log_w, log_h, 0, -1, 1)
         glMatrixMode(GL_MODELVIEW)
         self._last_resize_size = (log_w, log_h)
@@ -1167,18 +1174,24 @@ class PaintCanvas(QOpenGLWidget):
             tilt_y=max(-1.0, min(1.0, tilt_y)),
         )
         if self._dispatcher(evt):
-            # The dispatcher mutated the active layer in place — drop the
-            # cached composite and re-upload the texture on the next paint
-            # so the change becomes visible. ``last_damage`` (when the
-            # dispatcher exposes it) lets us shrink the upload to the
-            # touched region; tools without damage tracking fall back
-            # to a full-frame upload.
-            self._document.invalidate_composite()
+            # The dispatcher mutated the active layer in place. When it
+            # reports a bounded ``last_damage`` rect we can let the
+            # document patch only that region of the cached composite —
+            # ``mark_composite_dirty`` keeps the rest of the cache,
+            # which is the dominant per-dab cost when materials add a
+            # full-canvas layer that would otherwise be re-composited
+            # on every brush stamp. Without a damage rect we fall back
+            # to a full invalidation so the next paint rebuilds the
+            # whole frame.
             self._needs_upload = True
             damage = getattr(self._dispatcher, "last_damage", None)
             if isinstance(damage, DamageRect) and not damage.is_empty:
+                self._document.mark_composite_dirty(
+                    (damage.x, damage.y, damage.w, damage.h),
+                )
                 self._pending_damage = self._pending_damage.union(damage)
             else:
+                self._document.invalidate_composite()
                 self._pending_damage = EMPTY_DAMAGE
             self.document_changed.emit()
             self.update()

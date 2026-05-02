@@ -1447,29 +1447,45 @@ class _RectShapeTool:
         self._state = state
         self._press: tuple[float, float] | None = None
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        self._workspace = None
+
+    def attach_workspace(self, workspace) -> None:
+        self._workspace = workspace
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_rect
         if evt.phase == "press":
-            self._press = (float(evt.x), float(evt.y))
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
+            self._press = (sx, sy)
             self._overlay_setter({
                 "kind": "rect",
-                "x0": evt.x, "y0": evt.y, "x1": evt.x, "y1": evt.y,
+                "x0": sx, "y0": sy, "x1": sx, "y1": sy,
             })
             return True
         if evt.phase == "move" and self._press is not None:
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             x0, y0 = self._press
             self._overlay_setter({
                 "kind": "rect",
-                "x0": x0, "y0": y0, "x1": evt.x, "y1": evt.y,
+                "x0": x0, "y0": y0, "x1": sx, "y1": sy,
             })
             return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             self._press = None
             self._overlay_setter(None)
             return rasterise_rect(
-                canvas, x0, y0, float(evt.x) - x0, float(evt.y) - y0,
+                canvas, x0, y0, sx - x0, sy - y0,
                 _shape_color(self._state),
                 mode=_shape_mode(self._state),
                 stroke_width=_shape_stroke_width(self._state),
@@ -1492,34 +1508,48 @@ class _EllipseShapeTool:
         self._state = state
         self._press: tuple[float, float] | None = None
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        self._workspace = None
+
+    def attach_workspace(self, workspace) -> None:
+        self._workspace = workspace
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_ellipse
         if evt.phase == "press":
-            self._press = (float(evt.x), float(evt.y))
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
+            self._press = (sx, sy)
             self._overlay_setter({
                 "kind": "ellipse",
-                "cx": evt.x, "cy": evt.y, "rx": 0.0, "ry": 0.0,
+                "cx": sx, "cy": sy, "rx": 0.0, "ry": 0.0,
             })
             return True
         if evt.phase == "move" and self._press is not None:
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             x0, y0 = self._press
-            x1, y1 = float(evt.x), float(evt.y)
             self._overlay_setter({
                 "kind": "ellipse",
-                "cx": (x0 + x1) / 2.0, "cy": (y0 + y1) / 2.0,
-                "rx": abs(x1 - x0) / 2.0, "ry": abs(y1 - y0) / 2.0,
+                "cx": (x0 + sx) / 2.0, "cy": (y0 + sy) / 2.0,
+                "rx": abs(sx - x0) / 2.0, "ry": abs(sy - y0) / 2.0,
             })
             return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
-            x1, y1 = float(evt.x), float(evt.y)
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             self._press = None
             self._overlay_setter(None)
-            cx = (x0 + x1) / 2.0
-            cy = (y0 + y1) / 2.0
-            rx = abs(x1 - x0) / 2.0
-            ry = abs(y1 - y0) / 2.0
+            cx = (x0 + sx) / 2.0
+            cy = (y0 + sy) / 2.0
+            rx = abs(sx - x0) / 2.0
+            ry = abs(sy - y0) / 2.0
             return rasterise_ellipse(
                 canvas, cx, cy, rx, ry,
                 _shape_color(self._state),
@@ -1543,29 +1573,45 @@ class _LineShapeTool:
         self._state = state
         self._press: tuple[float, float] | None = None
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        self._workspace = None
+
+    def attach_workspace(self, workspace) -> None:
+        self._workspace = workspace
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.shape_engine import rasterise_line
         if evt.phase == "press":
-            self._press = (float(evt.x), float(evt.y))
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
+            self._press = (sx, sy)
             self._overlay_setter({
                 "kind": "line",
-                "x0": evt.x, "y0": evt.y, "x1": evt.x, "y1": evt.y,
+                "x0": sx, "y0": sy, "x1": sx, "y1": sy,
             })
             return True
         if evt.phase == "move" and self._press is not None:
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             x0, y0 = self._press
             self._overlay_setter({
                 "kind": "line",
-                "x0": x0, "y0": y0, "x1": evt.x, "y1": evt.y,
+                "x0": x0, "y0": y0, "x1": sx, "y1": sy,
             })
             return True
         if evt.phase == "release" and self._press is not None:
             x0, y0 = self._press
+            sx, sy = _maybe_snap_to_edges(
+                self._state, self._workspace,
+                float(evt.x), float(evt.y), canvas.shape[:2],
+            )
             self._press = None
             self._overlay_setter(None)
             return rasterise_line(
-                canvas, x0, y0, float(evt.x), float(evt.y),
+                canvas, x0, y0, sx, sy,
                 _shape_color(self._state),
                 width=_shape_stroke_width(self._state),
             )
@@ -1738,31 +1784,46 @@ class _CropTool:
     def _maybe_snap_to_edges(
         self, x: float, y: float, canvas_shape: tuple[int, int],
     ) -> tuple[float, float]:
-        """Pull ``(x, y)`` to nearby canvas / layer edges when the
-        workspace state opts in via ``snap_to_edges``. Returns the
-        possibly-adjusted point."""
-        if not getattr(self._state, "snap_to_edges", False):
-            return (x, y)
-        ws = self._workspace
-        if ws is None:
-            return (x, y)
-        from Imervue.paint.snap_guides import (
-            collect_canvas_candidates,
-            collect_layer_candidates,
-            snap_point,
+        return _maybe_snap_to_edges(
+            self._state, self._workspace, x, y, canvas_shape,
         )
-        try:
-            x_canvas, y_canvas = collect_canvas_candidates(canvas_shape)
-        except ValueError:
-            return (x, y)
-        document = ws.canvas().document()
-        layer_images = [
-            document.layer_at(i).image for i in range(document.layer_count)
-        ]
-        x_layer, y_layer = collect_layer_candidates(layer_images)
-        sx, sy, _hits = snap_point(
-            x, y,
-            x_candidates=x_canvas + x_layer,
-            y_candidates=y_canvas + y_layer,
-        )
-        return (sx, sy)
+
+
+def _maybe_snap_to_edges(
+    state, workspace, x: float, y: float,
+    canvas_shape: tuple[int, int],
+) -> tuple[float, float]:
+    """Pull ``(x, y)`` to nearby canvas / layer edges when the
+    workspace state opts in via ``snap_to_edges``.
+
+    Module-level helper so every tool that wants to participate in
+    the View → Snap to Edges toggle can call it directly with a
+    state + workspace pair, instead of having to subclass the crop
+    tool. Returns the possibly-adjusted point; the workspace is
+    optional so unit tests can call this without spinning up a
+    Qt main window.
+    """
+    if not getattr(state, "snap_to_edges", False):
+        return (x, y)
+    if workspace is None:
+        return (x, y)
+    from Imervue.paint.snap_guides import (
+        collect_canvas_candidates,
+        collect_layer_candidates,
+        snap_point,
+    )
+    try:
+        x_canvas, y_canvas = collect_canvas_candidates(canvas_shape)
+    except ValueError:
+        return (x, y)
+    document = workspace.canvas().document()
+    layer_images = [
+        document.layer_at(i).image for i in range(document.layer_count)
+    ]
+    x_layer, y_layer = collect_layer_candidates(layer_images)
+    sx, sy, _hits = snap_point(
+        x, y,
+        x_candidates=x_canvas + x_layer,
+        y_candidates=y_canvas + y_layer,
+    )
+    return (sx, sy)

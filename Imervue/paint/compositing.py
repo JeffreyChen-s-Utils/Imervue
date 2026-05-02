@@ -258,6 +258,103 @@ def composite_stack(
     return out
 
 
+def _layer_supports_region_composite(layer) -> bool:
+    """Return True iff a sliced recomposite produces correct pixels.
+
+    Layer effects (drop shadow / outer glow / stroke) and adjustment
+    layers depend on context outside the dirty rect — a glow leaks
+    past the layer bounds, an adjustment reads the full background.
+    Per-pixel transforms (mask, blend mode, opacity, tone, binary,
+    blend_if) are safe because they operate independently per pixel.
+    """
+    if getattr(layer, "effects", ()):
+        return False
+    return getattr(layer, "adjustment", None) is None
+
+
+def composite_region(
+    layers: Iterable,
+    base_shape: tuple[int, int],
+    rect: tuple[int, int, int, int],
+    groups: dict | None = None,
+) -> np.ndarray | None:
+    """Composite just ``rect`` of the layer stack, or return ``None``.
+
+    ``rect`` is ``(x, y, w, h)`` in image-space pixels, already clipped
+    to ``base_shape``. The result is an HxWx4 RGBA buffer of size
+    ``(rect.h, rect.w, 4)`` — exactly the slice the caller can paste
+    into its cached full-frame composite.
+
+    Returns ``None`` if any layer in the stack uses an effect or
+    adjustment that depends on out-of-rect context; the caller is
+    expected to fall back to :func:`composite_stack` in that case.
+    """
+    layer_list = list(layers)
+    if not layer_list:
+        h, w = base_shape
+        return np.zeros((h, w, 4), dtype=np.uint8)
+    for layer in layer_list:
+        if not _layer_supports_region_composite(layer):
+            return None
+    x, y, rw, rh = rect
+    h, w = base_shape
+    if rw <= 0 or rh <= 0 or x < 0 or y < 0 or x + rw > w or y + rh > h:
+        return None
+    groups = groups or {}
+    out = np.zeros((rh, rw, 4), dtype=np.uint8)
+    clip_base_alpha: np.ndarray | None = None
+    for layer in layer_list:
+        layer_group = getattr(layer, "group", None)
+        group_opacity = 1.0
+        if layer_group is not None and layer_group in groups:
+            grp = groups[layer_group]
+            if not grp.visible or grp.opacity <= 0:
+                continue
+            group_opacity = float(grp.opacity)
+        if not layer.visible or layer.opacity <= 0:
+            continue
+        if layer.image.shape[:2] != (h, w):
+            return None
+        if getattr(layer, "vector_data", None) is not None:
+            from Imervue.paint.vector_layer import realise_vector_layer
+            realise_vector_layer(layer)
+        layer_image = _layer_image_with_tone(layer)
+        layer_slice = layer_image[y:y + rh, x:x + rw]
+
+        full_mask = getattr(layer, "effective_mask", layer.mask)
+        full_mask = _apply_clip(layer, full_mask, clip_base_alpha)
+        sliced_mask = (
+            None if full_mask is None else full_mask[y:y + rh, x:x + rw]
+        )
+        blend_if = getattr(layer, "blend_if", None)
+        if blend_if is not None:
+            from Imervue.paint.blend_if import compute_blend_if_mask
+            blend_alpha = compute_blend_if_mask(layer_slice, out, blend_if)
+            blend_mask = (blend_alpha * 255.0).clip(0, 255).astype(np.uint8)
+            if sliced_mask is None:
+                sliced_mask = blend_mask
+            else:
+                combined = (
+                    sliced_mask.astype(np.float32) / 255.0
+                ) * blend_alpha
+                sliced_mask = (
+                    combined * 255.0
+                ).clip(0, 255).astype(np.uint8)
+
+        out = composite_layer_pair(
+            out, layer_slice,
+            opacity=layer.opacity * group_opacity,
+            blend_mode=layer.blend_mode,
+            mask=sliced_mask,
+        )
+        if not getattr(layer, "clip", False):
+            # ``clip_base_alpha`` is queried full-frame by the next
+            # clipping layer's ``_apply_clip``; keep it at the document
+            # size so the slice arithmetic above stays correct.
+            clip_base_alpha = layer.image[..., 3].copy()
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Internals — same blend curves as the brush engine, vectorised here.
 # ---------------------------------------------------------------------------

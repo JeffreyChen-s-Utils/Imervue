@@ -466,6 +466,223 @@ Save & Undo
 
 ----
 
+Paint Workspace (Paint Tab)
+---------------------------
+
+The third top-level tab — **Paint** — is a MediBang-style painting workspace
+with multi-tab documents, vector and raster layers, manga tools, animation
+frames, and PSD import/export. Switch to it from the tab bar or press ``E``
+from Deep Zoom mode to send the current image straight into a new Paint tab.
+
+::
+
+   +------+----------------------+----------------+
+   | Tool |                      | Color · Brush  |
+   | Bar  |   Canvas (paint)     | Layer · Nav.   |
+   |      |                      | Material · …   |
+   +------+----------------------+----------------+
+
+The right-side docks (Color, Brush, Layer, Navigator, Material library,
+History, Swatch, Reference, Histogram, Animation) are tabbed into a single
+column so the canvas keeps the full visible height. Drag any dock title to
+re-arrange or float a panel, then save the result via
+``Settings`` > ``Workspace Layouts…``.
+
+Tool Palette (Left Strip)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
+
+   * - Tool
+     - Shortcut
+     - Purpose
+   * - Brush
+     - ``B``
+     - Paint with the active brush kind
+   * - Eraser
+     - ``E``
+     - Alpha-erase the active layer
+   * - Fill (bucket)
+     - ``G``
+     - Flood-fill with tolerance / contiguous / sample-all-layers
+   * - Eyedropper
+     - ``I``
+     - Pick foreground colour from canvas
+   * - Move
+     - ``V``
+     - Translate the active layer or selection
+   * - Rect / Lasso / Wand / Quick Select
+     - ``M`` / ``L`` / ``W``
+     - Selection tools with Replace / Add / Subtract / Intersect modes
+   * - Text
+     - ``T``
+     - Inline text editor with font / size / bold / italic
+   * - Gradient
+     - ``U``
+     - Linear / Radial / Angle / Diamond gradient fill
+   * - Blur / Smudge
+     - ``R``
+     - Local pixel manipulation
+   * - Pen (Bezier)
+     - ``P``
+     - Vector path with anchor / handle editing
+   * - Clone Stamp
+     - ``S``
+     - Shift+click sets source, click stamps with feather
+   * - Speech Bubble
+     - ``Ctrl + B``
+     - Comic / manga balloon with auto-tail
+   * - Rectangle / Ellipse / Line / Polygon
+     - ``Shift + R/E/I/P``
+     - Vector shape primitives with stroke + fill
+   * - Crop
+     - ``C``
+     - Interactive crop with aspect-ratio presets
+   * - Transform
+     - ``Ctrl + T``
+     - Free / scale / rotate / skew transform handles
+   * - Hand
+     - ``H``
+     - Pan the canvas with cursor drag
+   * - Zoom
+     - ``Z``
+     - Click to zoom in, Alt-click to zoom out
+
+Brushes
+^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Brush
+     - Effect
+   * - Pen
+     - Crisp anti-aliased line, the everyday brush
+   * - Marker / Highlighter
+     - Wide, semi-transparent strokes that build up
+   * - Pencil
+     - Thin slightly textured graphite line
+   * - Spray
+     - Scattered dots driven by density and flow
+   * - Calligraphy
+     - Width varies with stroke direction
+   * - Watercolor
+     - Wet-edge bleed and soft blending
+   * - Charcoal / Crayon
+     - Rough textured strokes with pressure tilt
+
+Each brush exposes Size / Opacity / Hardness / Density / Blend-mode in the
+**Brush dock** and the top **Options bar**. Use ``Settings`` >
+``Pressure Curve…`` to remap tablet pressure to width or opacity, and
+``Edit`` > ``Capture Brush Tip…`` to turn a marquee selection into a custom
+brush tip.
+
+Layers
+^^^^^^
+
+The **Layer dock** offers thumbnails, visibility toggles, inline rename,
+drag-to-reorder, and the active-layer blend mode + opacity. The
+``Layer`` menu adds:
+
+- **New / Vector / Duplicate / Merge Down** (``Ctrl + Shift + N`` /
+  ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
+- **Masks** — Add Mask / From Selection / Invert / Apply / Delete
+  (``Ctrl + Shift + M`` adds; ``Ctrl + Alt + Shift + M`` adds from selection)
+- **Clipping Mask** — clip the layer above to the current alpha
+  (``Ctrl + Alt + G``)
+- **Layer Effects** — Drop Shadow · Outer Glow · Stroke; clear effects
+- **Reference Layer** — pin one layer as the eyedropper source
+- **1-bit Layer** — toggle the active layer to a binary line-art layer
+- **Divide Layer by Colour** — split a flat colour layer into one layer
+  per colour for easy bucket re-fills
+- **Gradient Map** — submenu of presets (sepia / sunset / cyanotype …)
+
+Selections
+^^^^^^^^^^
+
+Use the rect / lasso / wand / quick-select tools, then the **Edit** menu's
+**Stroke Selection…** to outline the marquee with the current brush.
+``Q`` toggles **Quick Mask Mode** — paint with any brush to refine the
+selection edge in red, then press ``Q`` again to convert it back to a
+marquee.
+
+Animation
+^^^^^^^^^
+
+The **Animation dock** turns the document into a frame strip:
+
+- ``Add Frame`` snapshots the current layer state into a new keyframe.
+- Click a frame thumbnail to jump to it.
+- ``Onion Skin`` (View menu) overlays neighbouring frames at low alpha.
+- Export the strip via **File > Export pages** (CBZ for comic readers,
+  PDF for print) or **Animation Export** for MP4 / GIF.
+
+Manga Menu
+^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Action
+     - Description
+   * - Panel Cutter
+     - ``Ctrl + Shift + P`` — split the canvas into a grid of comic panels with configurable rows / columns / gutter / border / margin
+   * - Toggle Tone Layer
+     - Convert active layer to a screentone (halftone dot) layer
+   * - Stamp Page Numbers
+     - Add page numbers across multi-page documents
+   * - Speedlines
+     - Radial / Parallel / Burst speedline generators
+   * - Action Flash
+     - Manga-style explosion / impact burst overlay
+   * - Speech Bubble tool
+     - Drag a balloon, drop the tail toward the speaker
+
+Filters
+^^^^^^^
+
+``Filter`` opens a live-preview dialog for each effect:
+
+- **Levels** — black / gamma / white sliders, per-channel
+- **Curves** — draggable points (RGB / R / G / B) with monotone cubic interpolation
+- **Posterize** — quantise colour into N steps
+- **Threshold** — convert to pure black / white at a cut-off
+- **Auto Color Balance** — neutralise casts via grey-world / white-patch
+- **Film Grain** — luminance noise with adjustable size and amount
+- **Convert to Halftone** — newspaper-style dot screen
+
+View Aids
+^^^^^^^^^
+
+- **Pixel Grid** (``Ctrl + Shift + '``) — overlay a one-pixel grid at high zoom
+- **Snap to Pixel / Edges** — sub-pixel placement clamped to integer coordinates
+- **Onion Skin** — animation neighbour overlay
+- **Bleed Guides** — print bleed / safe-zone guides
+- **Rotate Canvas** (``Ctrl + Shift + H``) — view rotation without rasterising
+
+File I/O
+^^^^^^^^
+
+- **Open PSD…** (``Ctrl + O``) and **Save as PSD…** (``Ctrl + S``) — Photoshop layered round-trip with masks, blend modes, and layer effects
+- **Export image…** — flatten and save as PNG / JPEG / WebP / BMP / TIFF
+- **Export pages → CBZ** / **→ PDF** — multi-frame document export for comics
+- **Import / Export brush presets**, **Import palette** — share resources between installs
+- **Autosave snapshots** — periodic background snapshots with restore-latest from the File menu
+
+Workspace Layouts
+^^^^^^^^^^^^^^^^^
+
+``Settings`` > ``Workspace Layouts…`` saves the dock arrangement, tool-options
+state, and active panels under a name, then flips between them with one
+click — for example a "Drawing" layout with the Brush + Color docks
+prominent and a "Compositing" layout with the Layer + History docks expanded.
+
+----
+
 Rotation & Flipping
 --------------------
 

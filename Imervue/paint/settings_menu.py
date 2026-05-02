@@ -78,10 +78,22 @@ class _SettingsMenuBridge:
             save_shortcuts(dialog.registry())
 
     def open_workspace_presets(self) -> None:
-        from Imervue.paint.workspace_preset_dialog import WorkspacePresetDialog
+        from Imervue.paint.workspace_preset_dialog import (
+            WorkspacePresetDialog,
+            apply_workspace_preset,
+        )
+        from Imervue.paint.workspace_presets import all_workspace_presets
         dialog = WorkspacePresetDialog(parent=self._workspace)
-        # Apply / save are signals that fire in-dialog; we just open
-        # it modally and let the user pick.
+
+        def _on_apply(name: str) -> None:
+            preset = next(
+                (p for p in all_workspace_presets() if p.name == name), None,
+            )
+            if preset is None:
+                return
+            apply_workspace_preset(self._workspace, preset)
+
+        dialog.apply_requested.connect(_on_apply)
         dialog.exec()
 
     def open_liquify(self) -> None:

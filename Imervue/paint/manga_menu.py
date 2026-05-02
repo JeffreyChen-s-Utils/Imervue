@@ -17,11 +17,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence
+from PySide6.QtGui import QColor, QKeySequence
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFormLayout,
+    QHBoxLayout,
+    QPushButton,
     QSpinBox,
 )
 
@@ -94,45 +100,39 @@ class _MangaMenuBridge:
         params = dialog.values()
         commit_panel_layout(self._workspace, params)
 
-    def add_flash(self) -> None:
-        """Insert a comic-style action-flash layer (starburst + halo)."""
-        import numpy as np
+    def add_flash(self) -> None:  # pragma: no cover - Qt UI
+        """Pop a config dialog, then insert a starburst flash layer.
 
-        from Imervue.paint.flash_effect import FlashOptions, render_flash
-        document = self._workspace.canvas().document()
-        if document.shape is None:
-            return
-        h, w = document.shape
-        rendered = render_flash((h, w), FlashOptions())
-        layer = document.add_layer(name="Flash")
-        np.copyto(layer.image, rendered)
-        document.invalidate_composite()
-        self._workspace.canvas().update()
-
-    def add_speedlines(self, kind: str) -> None:
-        """Insert a speedline / focus-line / burst FX layer.
-
-        Uses canvas-centred defaults — the user can re-roll the seed
-        or move / mask the layer afterwards via the standard layer
-        operations. Pure document-mutation so the refresh path is
-        the same as every other manga action.
+        The dialog lets the user place the flash off-centre, adjust
+        the spike count / radii / colour, or cancel out without
+        spawning any layer — matching MediBang's "every effect is
+        configurable before commit" UX.
         """
-        import numpy as np
-
-        from Imervue.paint.speedlines import (
-            SpeedlineOptions,
-            render_speedlines,
-        )
         document = self._workspace.canvas().document()
         if document.shape is None:
             return
         h, w = document.shape
-        options = SpeedlineOptions(kind=str(kind))
-        rendered = render_speedlines((h, w), options)
-        layer = document.add_layer(name=f"Speedlines ({kind})")
-        np.copyto(layer.image, rendered)
-        document.invalidate_composite()
-        self._workspace.canvas().update()
+        dialog = FlashConfigDialog((h, w), parent=self._workspace)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        commit_flash_layer(self._workspace, dialog.options())
+
+    def add_speedlines(self, kind: str) -> None:  # pragma: no cover - Qt UI
+        """Pop a config dialog, then insert a speedline layer.
+
+        The dialog seeds with kind-aware defaults (parallel exposes
+        an angle slider, burst exposes the inner-radius ratio); the
+        user can move the focus point, adjust count / thickness /
+        jitter / colour, or cancel out without spawning a layer.
+        """
+        document = self._workspace.canvas().document()
+        if document.shape is None:
+            return
+        h, w = document.shape
+        dialog = SpeedlineConfigDialog(str(kind), (h, w), parent=self._workspace)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        commit_speedlines_layer(self._workspace, dialog.options())
 
     def stamp_page_numbers(self) -> None:
         """Drop a "Page N" layer on every page in the active project.
@@ -225,6 +225,363 @@ class PanelCutterDialog(QDialog):
 # ---------------------------------------------------------------------------
 # Commit — pure logic, callable from tests without a dialog
 # ---------------------------------------------------------------------------
+
+
+def commit_speedlines_layer(workspace: PaintWorkspace, options) -> bool:
+    """Render ``options`` into a fresh layer on the active document.
+
+    Pure-logic helper — the dialog is the only thing that depends on
+    a Qt event loop, so tests can call this directly with a
+    :class:`SpeedlineOptions` instance and assert the document state.
+    """
+    import numpy as np
+
+    from Imervue.paint.speedlines import render_speedlines
+    document = workspace.canvas().document()
+    if document.shape is None:
+        return False
+    h, w = document.shape
+    rendered = render_speedlines((h, w), options)
+    layer = document.add_layer(name=f"Speedlines ({options.kind})")
+    np.copyto(layer.image, rendered)
+    document.invalidate_composite()
+    workspace.canvas().update()
+    return True
+
+
+def commit_flash_layer(workspace: PaintWorkspace, options) -> bool:
+    """Render a flash layer from ``options`` onto the active document."""
+    import numpy as np
+
+    from Imervue.paint.flash_effect import render_flash
+    document = workspace.canvas().document()
+    if document.shape is None:
+        return False
+    h, w = document.shape
+    rendered = render_flash((h, w), options)
+    layer = document.add_layer(name="Flash")
+    np.copyto(layer.image, rendered)
+    document.invalidate_composite()
+    workspace.canvas().update()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Speedline / Flash config dialogs
+# ---------------------------------------------------------------------------
+
+
+def _color_button(initial: tuple[int, int, int, int]) -> QPushButton:
+    """Return a swatch button that pops a colour picker on click.
+
+    The current RGBA tuple is stored on the button via
+    :py:meth:`QObject.setProperty` so the dialog can read it back at
+    accept-time without juggling a separate attribute.
+    """
+    btn = QPushButton()
+    btn.setFixedHeight(24)
+    btn.setProperty("rgba", tuple(int(c) for c in initial))
+    _refresh_color_button(btn)
+    btn.clicked.connect(lambda: _pick_color(btn))
+    return btn
+
+
+def _refresh_color_button(btn: QPushButton) -> None:
+    rgba = btn.property("rgba") or (0, 0, 0, 255)
+    r, g, b, _ = (int(c) for c in rgba)
+    btn.setStyleSheet(
+        f"background:rgb({r},{g},{b}); border:1px solid #444; border-radius:3px;",
+    )
+
+
+def _pick_color(btn: QPushButton) -> None:  # pragma: no cover - Qt UI
+    rgba = btn.property("rgba") or (0, 0, 0, 255)
+    initial = QColor(int(rgba[0]), int(rgba[1]), int(rgba[2]), int(rgba[3]))
+    chosen = QColorDialog.getColor(
+        initial, btn, options=QColorDialog.ColorDialogOption.ShowAlphaChannel,
+    )
+    if not chosen.isValid():
+        return
+    btn.setProperty(
+        "rgba",
+        (chosen.red(), chosen.green(), chosen.blue(), chosen.alpha()),
+    )
+    _refresh_color_button(btn)
+
+
+class SpeedlineConfigDialog(QDialog):
+    """Configure a :class:`SpeedlineOptions` before render.
+
+    Mirrors MediBang's effect-property dialog: every parameter is
+    exposed, the user can re-centre the focus point, kind-specific
+    fields show conditionally, and Cancel walks away without a layer.
+    """
+
+    def __init__(self, kind: str, canvas_shape: tuple[int, int], parent=None):
+        super().__init__(parent)
+        from Imervue.paint.speedlines import (
+            DEFAULT_BURST_RADIUS_RATIO,
+            DEFAULT_LINE_COUNT,
+            DEFAULT_LINE_THICKNESS,
+            LINE_COUNT_MAX,
+            LINE_COUNT_MIN,
+            LINE_THICKNESS_MAX,
+            LINE_THICKNESS_MIN,
+            SPEEDLINE_KINDS,
+        )
+        lang = language_wrapper.language_word_dict
+        self.setWindowTitle(
+            lang.get("paint_manga_speedlines_title", "Speedlines"),
+        )
+        self.setMinimumWidth(360)
+        h, w = canvas_shape
+        self._canvas_shape = canvas_shape
+
+        form = QFormLayout(self)
+
+        self._kind = QComboBox()
+        for k in SPEEDLINE_KINDS:
+            self._kind.addItem(k)
+        self._kind.setCurrentText(
+            kind if kind in SPEEDLINE_KINDS else SPEEDLINE_KINDS[0],
+        )
+        form.addRow(lang.get("paint_manga_speedlines_kind", "Kind"), self._kind)
+
+        self._count = QSpinBox()
+        self._count.setRange(LINE_COUNT_MIN, LINE_COUNT_MAX)
+        self._count.setValue(DEFAULT_LINE_COUNT)
+        form.addRow(lang.get("paint_manga_speedlines_count", "Count"), self._count)
+
+        self._thickness = QSpinBox()
+        self._thickness.setRange(LINE_THICKNESS_MIN, LINE_THICKNESS_MAX)
+        self._thickness.setValue(DEFAULT_LINE_THICKNESS)
+        form.addRow(
+            lang.get("paint_manga_speedlines_thickness", "Thickness"),
+            self._thickness,
+        )
+
+        self._auto_center = QCheckBox(
+            lang.get("paint_manga_auto_center", "Auto-centre"),
+        )
+        self._auto_center.setChecked(True)
+        form.addRow(self._auto_center)
+
+        center_row = QHBoxLayout()
+        self._center_x = QSpinBox()
+        self._center_x.setRange(0, max(1, w - 1))
+        self._center_x.setValue(w // 2)
+        self._center_y = QSpinBox()
+        self._center_y.setRange(0, max(1, h - 1))
+        self._center_y.setValue(h // 2)
+        center_row.addWidget(self._center_x)
+        center_row.addWidget(self._center_y)
+        form.addRow(
+            lang.get("paint_manga_center", "Centre (x, y)"), center_row,
+        )
+        self._auto_center.toggled.connect(self._center_x.setDisabled)
+        self._auto_center.toggled.connect(self._center_y.setDisabled)
+        self._center_x.setDisabled(True)
+        self._center_y.setDisabled(True)
+
+        self._angle = QDoubleSpinBox()
+        self._angle.setRange(-180.0, 180.0)
+        self._angle.setDecimals(1)
+        self._angle.setValue(0.0)
+        form.addRow(
+            lang.get("paint_manga_speedlines_angle", "Angle (°, parallel)"),
+            self._angle,
+        )
+
+        self._inner_radius = QDoubleSpinBox()
+        self._inner_radius.setRange(0.0, 0.95)
+        self._inner_radius.setDecimals(2)
+        self._inner_radius.setSingleStep(0.05)
+        self._inner_radius.setValue(DEFAULT_BURST_RADIUS_RATIO)
+        form.addRow(
+            lang.get("paint_manga_speedlines_inner", "Inner radius (burst)"),
+            self._inner_radius,
+        )
+
+        self._jitter = QDoubleSpinBox()
+        self._jitter.setRange(0.0, 1.0)
+        self._jitter.setDecimals(2)
+        self._jitter.setSingleStep(0.05)
+        self._jitter.setValue(0.4)
+        form.addRow(
+            lang.get("paint_manga_speedlines_jitter", "Jitter"), self._jitter,
+        )
+
+        self._color = _color_button((0, 0, 0, 255))
+        form.addRow(
+            lang.get("paint_manga_speedlines_color", "Colour"), self._color,
+        )
+
+        self._seed = QSpinBox()
+        self._seed.setRange(0, 1_000_000)
+        self._seed.setValue(0)
+        form.addRow(lang.get("paint_manga_seed", "Seed"), self._seed)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel,
+            Qt.Orientation.Horizontal, self,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def options(self):
+        from Imervue.paint.speedlines import SpeedlineOptions
+        rgba = self._color.property("rgba") or (0, 0, 0, 255)
+        center = (
+            None if self._auto_center.isChecked()
+            else (int(self._center_x.value()), int(self._center_y.value()))
+        )
+        return SpeedlineOptions(
+            kind=self._kind.currentText(),
+            count=int(self._count.value()),
+            thickness=int(self._thickness.value()),
+            color=tuple(int(c) for c in rgba),
+            center=center,
+            angle_deg=float(self._angle.value()),
+            inner_radius_ratio=float(self._inner_radius.value()),
+            jitter=float(self._jitter.value()),
+            seed=int(self._seed.value()),
+        )
+
+
+class FlashConfigDialog(QDialog):
+    """Configure a :class:`FlashOptions` before render."""
+
+    def __init__(self, canvas_shape: tuple[int, int], parent=None):
+        super().__init__(parent)
+        from Imervue.paint.flash_effect import (
+            DEFAULT_FLASH_SPIKES,
+            DEFAULT_HALO_OPACITY,
+            DEFAULT_HALO_RADIUS_RATIO,
+            DEFAULT_INNER_RADIUS_RATIO,
+            DEFAULT_OUTER_RADIUS_RATIO,
+            FLASH_SPIKES_MAX,
+            FLASH_SPIKES_MIN,
+        )
+        lang = language_wrapper.language_word_dict
+        self.setWindowTitle(lang.get("paint_manga_flash_title", "Action Flash"))
+        self.setMinimumWidth(360)
+        h, w = canvas_shape
+
+        form = QFormLayout(self)
+
+        self._spikes = QSpinBox()
+        self._spikes.setRange(FLASH_SPIKES_MIN, FLASH_SPIKES_MAX)
+        self._spikes.setValue(DEFAULT_FLASH_SPIKES)
+        form.addRow(
+            lang.get("paint_manga_flash_spikes", "Spikes"), self._spikes,
+        )
+
+        self._outer = QDoubleSpinBox()
+        self._outer.setRange(0.06, 1.5)
+        self._outer.setDecimals(2)
+        self._outer.setSingleStep(0.05)
+        self._outer.setValue(DEFAULT_OUTER_RADIUS_RATIO)
+        form.addRow(
+            lang.get("paint_manga_flash_outer", "Outer radius"), self._outer,
+        )
+
+        self._inner = QDoubleSpinBox()
+        self._inner.setRange(0.0, 1.4)
+        self._inner.setDecimals(2)
+        self._inner.setSingleStep(0.05)
+        self._inner.setValue(DEFAULT_INNER_RADIUS_RATIO)
+        form.addRow(
+            lang.get("paint_manga_flash_inner", "Inner radius"), self._inner,
+        )
+
+        self._halo_radius = QDoubleSpinBox()
+        self._halo_radius.setRange(0.0, 2.0)
+        self._halo_radius.setDecimals(2)
+        self._halo_radius.setSingleStep(0.05)
+        self._halo_radius.setValue(DEFAULT_HALO_RADIUS_RATIO)
+        form.addRow(
+            lang.get("paint_manga_flash_halo_radius", "Halo radius"),
+            self._halo_radius,
+        )
+
+        self._halo_opacity = QDoubleSpinBox()
+        self._halo_opacity.setRange(0.0, 1.0)
+        self._halo_opacity.setDecimals(2)
+        self._halo_opacity.setSingleStep(0.05)
+        self._halo_opacity.setValue(DEFAULT_HALO_OPACITY)
+        form.addRow(
+            lang.get("paint_manga_flash_halo_opacity", "Halo opacity"),
+            self._halo_opacity,
+        )
+
+        self._auto_center = QCheckBox(
+            lang.get("paint_manga_auto_center", "Auto-centre"),
+        )
+        self._auto_center.setChecked(True)
+        form.addRow(self._auto_center)
+
+        center_row = QHBoxLayout()
+        self._center_x = QSpinBox()
+        self._center_x.setRange(0, max(1, w - 1))
+        self._center_x.setValue(w // 2)
+        self._center_y = QSpinBox()
+        self._center_y.setRange(0, max(1, h - 1))
+        self._center_y.setValue(h // 2)
+        center_row.addWidget(self._center_x)
+        center_row.addWidget(self._center_y)
+        form.addRow(
+            lang.get("paint_manga_center", "Centre (x, y)"), center_row,
+        )
+        self._auto_center.toggled.connect(self._center_x.setDisabled)
+        self._auto_center.toggled.connect(self._center_y.setDisabled)
+        self._center_x.setDisabled(True)
+        self._center_y.setDisabled(True)
+
+        self._rotation = QDoubleSpinBox()
+        self._rotation.setRange(-180.0, 180.0)
+        self._rotation.setDecimals(1)
+        self._rotation.setValue(0.0)
+        form.addRow(
+            lang.get("paint_manga_flash_rotation", "Rotation (°)"),
+            self._rotation,
+        )
+
+        self._color = _color_button((255, 230, 80, 255))
+        form.addRow(
+            lang.get("paint_manga_flash_color", "Colour"), self._color,
+        )
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel,
+            Qt.Orientation.Horizontal, self,
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def options(self):
+        from Imervue.paint.flash_effect import FlashOptions
+        rgba = self._color.property("rgba") or (255, 230, 80, 255)
+        # FlashOptions takes RGB only — strip the alpha but keep the
+        # picker's full-RGBA contract for symmetry with speedlines.
+        color_rgb = tuple(int(c) for c in rgba[:3])
+        center = (
+            None if self._auto_center.isChecked()
+            else (int(self._center_x.value()), int(self._center_y.value()))
+        )
+        return FlashOptions(
+            spikes=int(self._spikes.value()),
+            outer_radius_ratio=float(self._outer.value()),
+            inner_radius_ratio=float(self._inner.value()),
+            halo_radius_ratio=float(self._halo_radius.value()),
+            halo_opacity=float(self._halo_opacity.value()),
+            color=color_rgb,
+            center=center,
+            rotation_deg=float(self._rotation.value()),
+        )
 
 
 def commit_panel_layout(

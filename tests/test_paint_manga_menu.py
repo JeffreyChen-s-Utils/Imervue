@@ -216,33 +216,36 @@ def test_stamp_page_numbers_runs_against_attached_project(qapp):
         ws.deleteLater()
 
 
-def test_add_speedlines_inserts_layer_with_content(qapp):
-    import numpy as np
+def test_commit_speedlines_layer_inserts_layer_with_content(qapp):
+    """The bridge now pops a config dialog before render, so the
+    test exercises the pure-logic commit helper directly. Same
+    invariants — a fresh layer with non-empty alpha — without
+    blocking on a modal QDialog."""
+    from Imervue.paint.manga_menu import commit_speedlines_layer
+    from Imervue.paint.speedlines import SpeedlineOptions
     ws = PaintWorkspace()
     try:
-        bridge = ws._manga_menu_bridge   # noqa: SLF001
         document = ws.canvas().document()
         before = document.layer_count
-        bridge.add_speedlines("radial")
+        assert commit_speedlines_layer(ws, SpeedlineOptions(kind="radial"))
         assert document.layer_count == before + 1
         layer = document.active_layer()
         assert (layer.image[..., 3] > 0).any()
-        # Confirm a non-default kind is also valid.
-        bridge.add_speedlines("parallel")
+        # Non-default kind goes through the same code path.
+        assert commit_speedlines_layer(ws, SpeedlineOptions(kind="parallel"))
         assert document.layer_count == before + 2
-        # Sanity guard for unused locals.
-        _ = np
     finally:
         ws.deleteLater()
 
 
-def test_add_flash_inserts_layer_with_content(qapp):
+def test_commit_flash_layer_inserts_layer_with_content(qapp):
+    from Imervue.paint.flash_effect import FlashOptions
+    from Imervue.paint.manga_menu import commit_flash_layer
     ws = PaintWorkspace()
     try:
-        bridge = ws._manga_menu_bridge   # noqa: SLF001
         document = ws.canvas().document()
         before = document.layer_count
-        bridge.add_flash()
+        assert commit_flash_layer(ws, FlashOptions())
         assert document.layer_count == before + 1
         layer = document.active_layer()
         assert (layer.image[..., 3] > 0).any()

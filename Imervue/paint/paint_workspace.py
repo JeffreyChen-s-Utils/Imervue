@@ -155,7 +155,16 @@ class PaintWorkspace(QMainWindow):
             self._on_animation_frame_selected,
         )
 
-        for dock in (
+        # Tabify every right-side dock into a single column. Without
+        # tabification each dock contributes its full minimum height to
+        # the QMainWindow's sizeHint, which on a 1080p screen drives
+        # the embedded workspace taller than the visible area and
+        # forces the central canvas to inherit that excess height —
+        # the document then ends up centred well below the viewport.
+        # With a single tabbed group the column only needs the
+        # tallest dock's minimum, leaving the canvas free to fill the
+        # remaining vertical space.
+        all_right_docks = (
             self._color_dock,
             self._brush_dock,
             self._layer_dock,
@@ -166,8 +175,14 @@ class PaintWorkspace(QMainWindow):
             self._reference_dock,
             self._animation_dock,
             self._histogram_dock,
-        ):
+        )
+        anchor = all_right_docks[0]
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+        for dock in all_right_docks[1:]:
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            self.tabifyDockWidget(anchor, dock)
+        anchor.raise_()
+        for dock in all_right_docks:
             dock.setFeatures(
                 dock.features()
                 | dock.DockWidgetFeature.DockWidgetMovable
@@ -262,6 +277,19 @@ class PaintWorkspace(QMainWindow):
             and hasattr(crop_tool, "attach_workspace")
         ):
             crop_tool.attach_workspace(self)
+        # Shape tools (rect / ellipse / line / polygon) consume the
+        # workspace handle so View → Snap to Edges can pull the start
+        # / end vertices to canvas + layer edges. Without the
+        # workspace they silently disable the snap and use raw
+        # pointer coordinates — matches the lazy-attach pattern used
+        # by the bezier pen.
+        for shape_key in ("shape_rect", "shape_ellipse", "shape_line", "shape_polygon"):
+            shape_tool = self._dispatcher._handlers.get(shape_key)  # noqa: SLF001
+            if (
+                shape_tool is not None
+                and hasattr(shape_tool, "attach_workspace")
+            ):
+                shape_tool.attach_workspace(self)
 
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
