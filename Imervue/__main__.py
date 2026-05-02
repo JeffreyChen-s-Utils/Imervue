@@ -65,7 +65,9 @@ if __name__ == "__main__":
     # Apply the saved UI scale percentage before any widget is laid out
     from Imervue.user_settings.user_setting_dict import read_user_setting
     from Imervue.system.ui_scale import load_and_apply_from_settings
+    from Imervue.system.themes import load_and_apply_theme
     read_user_setting()
+    load_and_apply_theme(app)
     load_and_apply_from_settings(app)
 
     window = ImervueMainWindow(debug=args.debug)

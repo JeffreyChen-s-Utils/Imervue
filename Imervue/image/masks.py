@@ -60,7 +60,7 @@ class MaskAdjustments:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "MaskAdjustments":
+    def from_dict(cls, data: dict[str, Any]) -> MaskAdjustments:
         return cls(
             exposure=float(data.get("exposure", 0.0)),
             brightness=float(data.get("brightness", 0.0)),
@@ -91,7 +91,7 @@ class Mask:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Mask":
+    def from_dict(cls, data: dict[str, Any]) -> Mask:
         mtype = str(data.get("type", "brush"))
         if mtype not in _MASK_TYPES:
             mtype = "brush"

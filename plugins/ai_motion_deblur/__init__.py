@@ -1,0 +1,3 @@
+from ai_motion_deblur.ai_motion_deblur_plugin import AIMotionDeblurPlugin
+
+plugin_class = AIMotionDeblurPlugin

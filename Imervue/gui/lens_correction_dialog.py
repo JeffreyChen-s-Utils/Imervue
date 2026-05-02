@@ -63,7 +63,7 @@ class _LensWorker(QThread):
 
 
 class LensCorrectionDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -160,7 +160,7 @@ class LensCorrectionDialog(QDialog):
             self.accept()
 
 
-def open_lens_correction(viewer: "GPUImageView") -> None:
+def open_lens_correction(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

@@ -27,10 +27,10 @@ def is_identity_points(points: list[tuple[float, float]]) -> bool:
     """Return True when the control points describe a straight diagonal."""
     if not points:
         return True
-    xs, ys = zip(*points)
+    xs, ys = zip(*points, strict=False)
     if len(xs) != len(ys):
         return False
-    return all(abs(x - y) < 1e-6 for x, y in zip(xs, ys))
+    return all(abs(x - y) < 1e-6 for x, y in zip(xs, ys, strict=False))
 
 
 def _normalise_points(

@@ -41,6 +41,8 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_image_organizer(ui))
     _add_action(sub, lang, "token_rename_title", "Token Batch Rename",
                 lambda: _open_token_rename(ui))
+    _add_action(sub, lang, "deflicker_title", "Deflicker (Time-lapse)",
+                lambda: _open_deflicker(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -86,6 +88,8 @@ def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_culling(ui))
     _add_action(sub, lang, "staging_tray_title", "Staging Tray",
                 lambda: _open_staging_tray(ui))
+    _add_action(sub, lang, "reference_panel_title", "Reference Panel",
+                lambda: _open_reference_panel(ui))
     _add_action(sub, lang, "vcopies_title", "Virtual Copies",
                 lambda: _open_virtual_copies(ui))
     _add_action(sub, lang, "dual_pane_title", "Dual-Pane File Manager",
@@ -118,6 +122,20 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_masks(ui))
     _add_action(sub, lang, "layers_title", "Layers",
                 lambda: _open_layers(ui))
+    _add_action(sub, lang, "levels_title", "Levels",
+                lambda: _open_levels(ui))
+    _add_action(sub, lang, "channel_mixer_title", "Channel Mixer",
+                lambda: _open_channel_mixer(ui))
+    _add_action(sub, lang, "gradient_map_title", "Gradient Map",
+                lambda: _open_gradient_map(ui))
+    _add_action(sub, lang, "auto_balance_title", "Auto Color Balance",
+                lambda: _open_auto_balance(ui))
+    _add_action(sub, lang, "film_grain_title", "Film Grain",
+                lambda: _open_film_grain(ui))
+    _add_action(sub, lang, "lens_flare_title", "Lens Flare",
+                lambda: _open_lens_flare(ui))
+    _add_action(sub, lang, "posterize_title", "Threshold / Posterize",
+                lambda: _open_posterize(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -132,6 +150,12 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_healing_brush(ui))
     _add_action(sub, lang, "stamp_title", "Clone Stamp",
                 lambda: _open_clone_stamp(ui))
+    _add_action(sub, lang, "frequency_sep_title", "Frequency Separation",
+                lambda: _open_frequency_separation(ui))
+    _add_action(sub, lang, "smart_crop_title", "Smart Crop",
+                lambda: _open_smart_crop(ui))
+    _add_action(sub, lang, "portrait_retouch_title", "Portrait Auto-Retouch",
+                lambda: _open_portrait_retouch(ui))
     _add_action(sub, lang, "face_title", "Face Detection",
                 lambda: _open_face_detection(ui))
     _add_action(sub, lang, "sky_title", "Sky / Background",
@@ -237,6 +261,11 @@ def _open_staging_tray(ui: ImervueMainWindow):
     open_staging_tray(ui)
 
 
+def _open_reference_panel(ui: ImervueMainWindow):
+    from Imervue.gui.reference_panel_dialog import open_reference_panel
+    open_reference_panel(ui)
+
+
 def _open_dual_pane(ui: ImervueMainWindow):
     from Imervue.gui.dual_pane_dialog import open_dual_pane
     open_dual_pane(ui)
@@ -285,6 +314,63 @@ def _open_tone_curve(ui: ImervueMainWindow):
 def _open_lut(ui: ImervueMainWindow):
     from Imervue.gui.lut_dialog import open_lut
     open_lut(ui.viewer)
+
+
+def _open_posterize(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.posterize_dialog import open_posterize_dialog
+    open_posterize_dialog(ui.viewer)
+
+
+def _open_levels(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.levels_dialog import open_levels_dialog
+    open_levels_dialog(ui.viewer)
+
+
+def _open_channel_mixer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.channel_mixer_dialog import open_channel_mixer_dialog
+    open_channel_mixer_dialog(ui.viewer)
+
+
+def _open_gradient_map(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.gradient_map_dialog import open_gradient_map_dialog
+    open_gradient_map_dialog(ui.viewer)
+
+
+def _open_auto_balance(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.auto_color_balance_dialog import open_auto_color_balance_dialog
+    open_auto_color_balance_dialog(ui.viewer)
+
+
+def _open_film_grain(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.film_grain_dialog import open_film_grain_dialog
+    open_film_grain_dialog(ui.viewer)
+
+
+def _open_lens_flare(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.lens_flare_dialog import open_lens_flare_dialog
+    open_lens_flare_dialog(ui.viewer)
+
+
+def _open_frequency_separation(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.frequency_separation_dialog import (
+        open_frequency_separation_dialog,
+    )
+    open_frequency_separation_dialog(ui.viewer)
+
+
+def _open_smart_crop(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.smart_crop_dialog import open_smart_crop_dialog
+    open_smart_crop_dialog(ui.viewer)
+
+
+def _open_portrait_retouch(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.portrait_retouch_dialog import open_portrait_retouch_dialog
+    open_portrait_retouch_dialog(ui.viewer)
+
+
+def _open_deflicker(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.deflicker_dialog import open_deflicker_dialog
+    open_deflicker_dialog(ui.viewer)
 
 
 def _open_layers(ui: ImervueMainWindow) -> None:

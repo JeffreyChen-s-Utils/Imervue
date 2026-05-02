@@ -9,6 +9,17 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 
+from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
+    QTreeWidget, QTreeWidgetItem, QLabel, QProgressBar,
+    QMessageBox, QHeaderView,
+)
+
+from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.app_paths import plugins_dir as _plugins_dir
+
+
 def _https_urlopen(req: urllib.request.Request, timeout: int):
     """urlopen that refuses non-https schemes.
 
@@ -20,16 +31,6 @@ def _https_urlopen(req: urllib.request.Request, timeout: int):
     if scheme != "https":
         raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
     return urllib.request.urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
-
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTreeWidget, QTreeWidgetItem, QLabel, QProgressBar,
-    QMessageBox, QHeaderView,
-)
-
-from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow

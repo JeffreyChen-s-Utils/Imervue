@@ -132,6 +132,16 @@ class GPUImageView(QOpenGLWidget):
         self.tile_manager = None
         self.deep_zoom = None
         self._saved_tile_state = None
+        # When True, the user has zoomed / panned manually so the
+        # canvas should not auto-fit on resize. Cleared on every
+        # fresh image load via :meth:`_fit_to_window`.
+        self._user_locked_view = False
+        # Most-recent ``resizeGL`` size — same role as the paint
+        # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
+        # so the initial centre uses the GL-reported logical size
+        # rather than ``self.width()`` / ``height()`` which can lag
+        # the actual layout for the first frame or two.
+        self._last_resize_size: tuple[int, int] = (0, 0)
 
 
         # ===== 圖片切換控制 =====
@@ -394,24 +404,66 @@ class GPUImageView(QOpenGLWidget):
                 continue
 
     def resizeGL(self, w, h):
-        dpr = self.devicePixelRatio()
-        glViewport(0, 0, int(w * dpr), int(h * dpr))
+        # Qt 6 passes ``w`` / ``h`` in DEVICE pixels (the framebuffer
+        # size). The fit math expects logical pixels, so we read them
+        # from ``self.width() / height()`` to stay in one coordinate
+        # space — mixing the two over-shoots ``pan_y`` by a factor of
+        # ``dpr`` on HiDPI screens and pins the image to the bottom of
+        # the canvas.
+        log_w = max(1, int(self.width()))
+        log_h = max(1, int(self.height()))
+        dev_w = max(1, int(w))
+        dev_h = max(1, int(h))
+        glViewport(0, 0, dev_w, dev_h)
         if self.renderer.use_shaders:
-            self.renderer.set_ortho(w, h)
+            self.renderer.set_ortho(log_w, log_h)
         else:
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
-            glOrtho(0, w, h, 0, -1, 1)
+            glOrtho(0, log_w, log_h, 0, -1, 1)
             glMatrixMode(GL_MODELVIEW)
+        self._last_resize_size = (log_w, log_h)
+        # Re-fit while the user hasn't taken view control, so the
+        # image stays centred when docks finish laying out and the
+        # widget reaches its real size after the first resize.
+        if not self._user_locked_view and self.deep_zoom is not None:
+            self._fit_to_window()
+
+    def showEvent(self, event):
+        """Defer a fit-to-window until after Qt's first layout pass.
+
+        The widget's first ``resizeGL`` lands while the host frame is
+        still at an intermediate size — the fit math anchors to that
+        smaller width / height and the image ends up half off-screen
+        once the layout settles. ``QTimer.singleShot(0, …)`` runs
+        after Qt drains its layout queue so the deferred fit catches
+        the post-layout size.
+        """
+        super().showEvent(event)
+        if self.deep_zoom is not None and not self._user_locked_view:
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, self._fit_to_window)
 
     # ===========================
     # 繪製
     # ===========================
     def paintGL(self):
+        # Same guard as PaintCanvas.paintGL — a queued paint event
+        # can fire after the GL context has been torn down (test
+        # teardown / window close), and ``glClear`` then raises
+        # ``GLError(invalid operation)`` that propagates to the
+        # whole event loop.
+        from PySide6.QtGui import QOpenGLContext
+        if QOpenGLContext.currentContext() is None:
+            return
         painter = QPainter(self)
         painter.beginNativePainting()
 
-        glClear(GL_COLOR_BUFFER_BIT)
+        try:
+            glClear(GL_COLOR_BUFFER_BIT)
+        except Exception:   # noqa: BLE001 - GL context torn down
+            painter.endNativePainting()
+            return
 
         # ===== Tile Grid Mode =====
         if self.tile_grid_mode:
@@ -1290,12 +1342,22 @@ class GPUImageView(QOpenGLWidget):
             return
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-        w, h = self.width() or 1, self.height() or 1
+        # Prefer the most recent ``resizeGL`` size — it's authoritative
+        # for the GL coordinate system and avoids the brief frames
+        # where ``self.width()`` lags the actual layout.
+        if self._last_resize_size != (0, 0):
+            w, h = self._last_resize_size
+        else:
+            w, h = self.width() or 1, self.height() or 1
         self.zoom = min(w / img_w, h / img_h, 1.0)
         displayed_w = img_w * self.zoom
         displayed_h = img_h * self.zoom
         self.dz_offset_x = (w - displayed_w) / 2
         self.dz_offset_y = (h - displayed_h) / 2
+        # Fresh fit → user hasn't panned / zoomed yet, so subsequent
+        # resizes (docks settling, window maximised) keep the image
+        # centred instead of hanging off-screen.
+        self._user_locked_view = False
 
     def _fit_to_width(self):
         """縮放使圖片寬度填滿視窗"""
@@ -2051,6 +2113,7 @@ class GPUImageView(QOpenGLWidget):
             self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
             self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
 
+            self._user_locked_view = True
             self._update_status_info()
             self.update()
 
@@ -2116,6 +2179,7 @@ class GPUImageView(QOpenGLWidget):
         elif self.deep_zoom:
             self.dz_offset_x += delta.x()
             self.dz_offset_y += delta.y()
+            self._user_locked_view = True
         self.update()
 
     def _handle_left_drag_select(self, event) -> None:
@@ -2155,9 +2219,12 @@ class GPUImageView(QOpenGLWidget):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
             return
-        if self.tile_grid_mode and event.button() == Qt.MouseButton.LeftButton:
-            if self._handle_tile_release(event):
-                return
+        if (
+            self.tile_grid_mode
+            and event.button() == Qt.MouseButton.LeftButton
+            and self._handle_tile_release(event)
+        ):
+            return
         super().mouseReleaseEvent(event)
 
     def _handle_tile_release(self, event) -> bool:

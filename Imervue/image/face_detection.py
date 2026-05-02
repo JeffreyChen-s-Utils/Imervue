@@ -36,7 +36,7 @@ class FaceTag:
         return {"x": self.x, "y": self.y, "w": self.w, "h": self.h, "name": self.name}
 
     @classmethod
-    def from_dict(cls, data: dict) -> "FaceTag":
+    def from_dict(cls, data: dict) -> FaceTag:
         return cls(
             x=int(data["x"]),
             y=int(data["y"]),

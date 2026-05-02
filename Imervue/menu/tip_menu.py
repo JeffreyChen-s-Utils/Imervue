@@ -191,9 +191,100 @@ def build_tip_menu(ui_we_want_to_set: ImervueMainWindow):
     )
     action.triggered.connect(lambda: _show_dialog(ui_we_want_to_set))
 
+    whats_new_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get("whats_new_title", "What's New")
+    )
+    whats_new_action.triggered.connect(lambda: _show_whats_new(ui_we_want_to_set))
+
+    cheat_sheet_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get(
+            "cheat_sheet_export", "Export Cheat Sheet (PDF)",
+        )
+    )
+    cheat_sheet_action.triggered.connect(
+        lambda: _export_cheat_sheet(ui_we_want_to_set))
+
+    error_report_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get(
+            "error_report_action", "Generate Support Bundle…",
+        )
+    )
+    error_report_action.triggered.connect(
+        lambda: _generate_error_report(ui_we_want_to_set))
+
+    onboarding_action = tip_menu.addAction(
+        language_wrapper.language_word_dict.get(
+            "onboarding_menu", "Show Welcome Tour",
+        )
+    )
+    onboarding_action.triggered.connect(
+        lambda: _show_onboarding(ui_we_want_to_set))
+
     return tip_menu
 
 
 def _show_dialog(ui: ImervueMainWindow):
     dlg = ShortcutDialog(ui)
     dlg.exec()
+
+
+def _show_whats_new(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.whats_new_dialog import open_whats_new_dialog
+    open_whats_new_dialog(parent=ui)
+
+
+def _show_onboarding(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.onboarding_dialog import open_onboarding_dialog
+    open_onboarding_dialog(parent=ui)
+
+
+def _generate_error_report(ui: ImervueMainWindow) -> None:
+    from Imervue.system.error_report import build_report
+
+    lang = language_wrapper.language_word_dict
+    try:
+        path = build_report()
+    except Exception as exc:
+        if hasattr(ui, "toast"):
+            ui.toast.error(
+                f"{lang.get('error_report_failed', 'Report failed')}: {exc}",
+            )
+        return
+    if hasattr(ui, "toast"):
+        ui.toast.info(
+            lang.get(
+                "error_report_done",
+                "Support bundle saved to {path}",
+            ).format(path=path),
+        )
+
+
+def _export_cheat_sheet(ui: ImervueMainWindow) -> None:
+    from PySide6.QtWidgets import QFileDialog
+
+    from Imervue.export.cheat_sheet import (
+        CheatSheetOptions,
+        generate_cheat_sheet,
+    )
+
+    lang = language_wrapper.language_word_dict
+    out_path, _ = QFileDialog.getSaveFileName(
+        ui,
+        lang.get("cheat_sheet_export", "Export Cheat Sheet (PDF)"),
+        "Imervue-Shortcuts.pdf",
+        "PDF (*.pdf)",
+    )
+    if not out_path:
+        return
+    try:
+        generate_cheat_sheet(out_path, CheatSheetOptions())
+    except Exception as exc:
+        if hasattr(ui, "toast"):
+            ui.toast.error(f"{lang.get('cheat_sheet_failed', 'Export failed')}: {exc}")
+        return
+    if hasattr(ui, "toast"):
+        ui.toast.info(
+            lang.get("cheat_sheet_done", "Cheat sheet saved to {path}").format(
+                path=out_path,
+            )
+        )

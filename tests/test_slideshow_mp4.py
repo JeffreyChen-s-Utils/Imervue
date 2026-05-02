@@ -23,8 +23,9 @@ class TestSlideshowOptions:
         assert opts.quality == 8
 
     def test_is_frozen(self):
+        import dataclasses
         opts = sm.SlideshowOptions()
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             opts.fps = 60  # type: ignore[misc]
 
 

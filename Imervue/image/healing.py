@@ -39,7 +39,7 @@ class HealingSpot:
         return {"x": self.x, "y": self.y, "r": self.radius, "m": self.method}
 
     @classmethod
-    def from_dict(cls, data: dict) -> "HealingSpot":
+    def from_dict(cls, data: dict) -> HealingSpot:
         method = str(data.get("m", "telea"))
         if method not in _METHODS:
             method = "telea"

@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.calendar_view_dialog")
 
 
-def _library_paths(ui: "ImervueMainWindow") -> list[str]:
+def _library_paths(ui: ImervueMainWindow) -> list[str]:
     viewer = getattr(ui, "viewer", None)
     model = getattr(viewer, "model", None)
     images = getattr(model, "images", None)
@@ -40,7 +40,7 @@ def _library_paths(ui: "ImervueMainWindow") -> list[str]:
 
 
 class CalendarViewDialog(QDialog):
-    def __init__(self, ui: "ImervueMainWindow"):
+    def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
         lang = language_wrapper.language_word_dict
@@ -104,5 +104,5 @@ class CalendarViewDialog(QDialog):
             loader(path)
 
 
-def open_calendar_view(ui: "ImervueMainWindow") -> None:
+def open_calendar_view(ui: ImervueMainWindow) -> None:
     CalendarViewDialog(ui).exec()

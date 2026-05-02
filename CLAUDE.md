@@ -199,6 +199,55 @@ These patterns were established while zeroing out the Codacy / SonarCloud / band
 Keep following them so the CI stays green and so new maintainers have an obvious prior-art
 example to copy.
 
+### Plugins vs Main Program
+
+The line between `Imervue/` (the main package) and `plugins/<name>/` is **not** "AI features
+go in plugins" — that grouping made things inconsistent and was reorganised. The correct test
+is **dependency surface**:
+
+**A feature is a plugin when ANY of the following is true:**
+
+1. It needs a **heavy / optional runtime dependency** that we don't want to force on every user
+   (rembg, onnxruntime, torch, opencv-python, large model weights downloaded on first run).
+2. It needs **failure isolation** — ML / GPU / CUDA paths that can crash should not be allowed
+   to take down the main viewer.
+3. It needs **independent release cadence** — the team wants to ship updated models or
+   algorithms through the plugin downloader without re-shipping the main app.
+
+**A feature stays in the main program when:**
+
+- It runs on the default dep set (numpy, Pillow, PySide6, defusedxml, watchdog, imageio).
+- Failure means at worst a one-image error — not a process crash.
+- It's part of the everyday browse / develop workflow that all users should see by default.
+
+**Examples.** Smart Crop is pure-numpy Sobel + rule-of-thirds → main. AI Denoise has both a
+pure-numpy bilateral mode AND an optional ONNX path → plugin (because the plugin gates the
+ONNX path; the bilateral logic ships inside the plugin directory, not in main, so the main
+package never imports plugin-internal code).
+
+#### Directory rules
+
+- **Main program**: `Imervue/image/<feature>.py` for pure logic, `Imervue/gui/<feature>_dialog.py`
+  for the Qt front-end, menu entry registered in `Imervue/menu/extra_tools_menu.py`.
+- **Plugin**: `plugins/<name>/__init__.py` (sets `plugin_class`), `plugins/<name>/<name>_plugin.py`
+  for the plugin shell + Qt dialog, and **all pure logic lives INSIDE the plugin directory**
+  (e.g. `plugins/ai_denoise/denoise.py`). Never put plugin-internal logic under `Imervue/image/`.
+- **Models**: bundled model files go to `plugins/<name>/models/` (gitignored). Plugins discover
+  them at runtime so users can drop in their own.
+
+#### Testing plugin-internal modules
+
+Plugins are not on the default `sys.path` — at runtime `Imervue/plugin/plugin_manager.py`
+prepends `plugins/` so each plugin folder becomes importable as a package. `tests/conftest.py`
+mirrors that injection at session-collect time, which lets tests in `tests/` import plugin
+modules with `from <plugin_name>.<module> import …`. Do not duplicate the path injection in
+individual test files.
+
+#### When in doubt
+
+Ask: "if a user installs Imervue with the default `requirements.txt` and never touches the
+plugin manager, should this feature work?" If yes → main. If no → plugin.
+
 ### Network & Supply-Chain Safety
 
 - **All `urllib.request.urlopen` calls MUST go through a module-level `_https_urlopen` guard.**

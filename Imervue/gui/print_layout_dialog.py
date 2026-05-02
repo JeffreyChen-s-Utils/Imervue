@@ -50,7 +50,7 @@ class _Worker(QThread):
 
 
 class PrintLayoutDialog(QDialog):
-    def __init__(self, ui: "ImervueMainWindow"):
+    def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
         self._worker: _Worker | None = None
@@ -73,8 +73,12 @@ class PrintLayoutDialog(QDialog):
         self._page_combo = QComboBox()
         self._page_combo.addItems(list(PAGE_SIZES.keys()))
         self._landscape = QCheckBox(lang.get("print_landscape", "Landscape"))
-        self._rows = QSpinBox(); self._rows.setRange(1, 10); self._rows.setValue(2)
-        self._cols = QSpinBox(); self._cols.setRange(1, 10); self._cols.setValue(2)
+        self._rows = QSpinBox()
+        self._rows.setRange(1, 10)
+        self._rows.setValue(2)
+        self._cols = QSpinBox()
+        self._cols.setRange(1, 10)
+        self._cols.setValue(2)
         self._crop_marks = QCheckBox(lang.get("print_crop_marks", "Crop marks"))
 
         form = QFormLayout()
@@ -166,5 +170,5 @@ class PrintLayoutDialog(QDialog):
             self.accept()
 
 
-def open_print_layout(ui: "ImervueMainWindow") -> None:
+def open_print_layout(ui: ImervueMainWindow) -> None:
     PrintLayoutDialog(ui).exec()

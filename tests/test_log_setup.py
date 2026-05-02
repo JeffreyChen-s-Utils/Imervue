@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from Imervue.system import log_setup
+import contextlib
 
 
 @pytest.fixture
@@ -18,10 +19,8 @@ def clean_logger():
     yield root
     for h in root.handlers[:]:
         root.removeHandler(h)
-        try:
+        with contextlib.suppress(OSError):
             h.close()
-        except OSError:
-            pass
     for h in original_handlers:
         root.addHandler(h)
     root.setLevel(original_level)

@@ -82,7 +82,7 @@ class _FacePreview(QWidget):
 
 
 class FaceDetectionDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -217,7 +217,7 @@ class FaceDetectionDialog(QDialog):
         self.accept()
 
 
-def open_face_detection(viewer: "GPUImageView") -> None:
+def open_face_detection(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

@@ -75,7 +75,10 @@ def _debevec(
         color_adapt=0.0,
     )
     ldr = tonemap.process(hdr)
-    ldr = np.clip(ldr, 0.0, 1.0)
+    # OpenCV's Reinhard tonemapper can return NaN cells when the HDR
+    # exposure landed at a degenerate luminance; nan_to_num collapses
+    # them to 0 so the uint8 cast doesn't trip a RuntimeWarning.
+    ldr = np.nan_to_num(np.clip(ldr, 0.0, 1.0), nan=0.0, posinf=1.0, neginf=0.0)
     return (ldr * 255.0 + 0.5).astype(np.uint8)
 
 

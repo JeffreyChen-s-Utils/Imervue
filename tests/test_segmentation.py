@@ -50,7 +50,9 @@ class TestReplaceSky:
         arr = np.full((30, 30, 4), 100, dtype=np.uint8)
         arr[..., 3] = 255
         # All-green image — no sky should be detected.
-        arr[..., 0] = 30; arr[..., 1] = 180; arr[..., 2] = 30
+        arr[..., 0] = 30
+        arr[..., 1] = 180
+        arr[..., 2] = 30
         out = segmentation.replace_sky(arr)
         assert out.shape == arr.shape
 

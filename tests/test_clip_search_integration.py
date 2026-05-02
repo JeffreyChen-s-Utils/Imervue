@@ -123,7 +123,7 @@ class TestSaveReloadRoundtrip:
         reloaded = consumer.query_text("cat", top_k=3)
         assert [h.path for h in reloaded] == [h.path for h in baseline]
         # Scores survive the float32 roundtrip intact.
-        for a, b in zip(baseline, reloaded):
+        for a, b in zip(baseline, reloaded, strict=False):
             assert a.score == pytest.approx(b.score, abs=1e-6)
 
     def test_overwrite_on_reindex_keeps_unique_paths(self, scanned_folder, tmp_path):

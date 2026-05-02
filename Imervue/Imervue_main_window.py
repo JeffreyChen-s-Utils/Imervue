@@ -451,6 +451,16 @@ class ImervueMainWindow(QMainWindow):
             lang.get("modify_menu_title", "Modify"),
         )
 
+        # --------------------------------------------------------
+        # Tab 2: Paint workspace — MediBang-style painting surface
+        # --------------------------------------------------------
+        from Imervue.paint.paint_workspace import PaintWorkspace
+        self.paint_workspace = PaintWorkspace(parent=self)
+        self._main_tabs.addTab(
+            self.paint_workspace,
+            lang.get("paint_tab_title", "Paint"),
+        )
+
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
@@ -502,6 +512,10 @@ class ImervueMainWindow(QMainWindow):
 
         _init_plugin_system_example(self)
 
+        # ===== What's New 自動彈出（升級後第一次啟動）=====
+        # 延遲到主視窗顯示後再跑,避免遮住啟動畫面
+        QTimer.singleShot(800, self._maybe_show_whats_new)
+
         # ===== 分頁快捷鍵 =====
         # Ctrl+T 新分頁 / Ctrl+W 關閉 / Ctrl+Tab 下一個 / Ctrl+Shift+Tab 上一個。
         # 模仿瀏覽器行為，註冊在 main window 範圍內。
@@ -543,7 +557,7 @@ class ImervueMainWindow(QMainWindow):
     # 主分頁切換（Imervue ↔ 修改）
     # ==========================
     def _on_main_tab_changed(self, idx: int) -> None:
-        """Switch between Imervue (viewer) and Modify (annotation canvas) tabs."""
+        """Switch between Imervue (viewer), Modify and Paint tabs."""
         if idx == 1:
             # 切到修改分頁 → 綁定圖片，canvas 會自動插入 splitter 中間
             images = self.viewer.model.images
@@ -551,9 +565,28 @@ class ImervueMainWindow(QMainWindow):
             if images and 0 <= self.viewer.current_index < len(images):
                 path = images[self.viewer.current_index]
             self.modify_panel.bind_to_path(path)
+        elif idx == 2:
+            # Paint 分頁 — 把目前圖片載入畫布
+            self._bind_paint_workspace_to_current_image()
         else:
             # 切回 Imervue 主頁
             self.exif_sidebar.update_info()
+
+    def _bind_paint_workspace_to_current_image(self) -> None:
+        images = self.viewer.model.images
+        if not images or not (0 <= self.viewer.current_index < len(images)):
+            self.paint_workspace.load_image(None)
+            return
+        path = images[self.viewer.current_index]
+        try:
+            from PIL import Image
+            import numpy as np
+            with Image.open(path) as src:
+                rgba = src.convert("RGBA")
+                arr = np.array(rgba)
+            self.paint_workspace.load_image(arr)
+        except (OSError, ValueError):
+            self.paint_workspace.load_image(None)
 
     # ==========================
     # 選單
@@ -931,6 +964,23 @@ class ImervueMainWindow(QMainWindow):
         idx = self.model.index(directory)
         if idx.isValid():
             self.tree.update(idx)
+
+    def _maybe_show_whats_new(self) -> None:
+        """Pop up the What's New dialog if the user just upgraded.
+
+        Also runs the onboarding tour on first launch — both checks are
+        cheap when not triggered, and we want exactly one auto-popup
+        flow at startup so the two play together rather than racing.
+        """
+        try:
+            from Imervue.gui.onboarding_dialog import show_onboarding_if_first_run
+            from Imervue.gui.whats_new_dialog import show_whats_new_if_upgraded
+        except ImportError:
+            return
+        with contextlib.suppress(Exception):
+            shown = show_onboarding_if_first_run(self)
+            if not shown:
+                show_whats_new_if_upgraded(self)
 
     def _on_clipboard_image_captured(self, pil_image) -> None:
         """Open the annotation dialog when the clipboard monitor sees a new image."""

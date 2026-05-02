@@ -1,0 +1,3 @@
+from ai_smart_resize.ai_smart_resize_plugin import AISmartResizePlugin
+
+plugin_class = AISmartResizePlugin

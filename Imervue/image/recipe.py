@@ -60,6 +60,11 @@ def _is_zero(value: float) -> bool:
     return math.isclose(value, 0.0, abs_tol=_ADJUST_EPS)
 
 
+def _enabled_flag(entry: object) -> bool:
+    """Return True when ``entry`` is a dict whose ``enabled`` field is truthy."""
+    return bool(isinstance(entry, dict) and entry.get("enabled"))
+
+
 @dataclass
 class Recipe:
     """Non-destructive edit recipe for a single image.
@@ -118,14 +123,21 @@ class Recipe:
         )
 
     def _extra_is_identity(self) -> bool:
-        """No layers / masks / split-toning configured in the extras blob."""
+        """No layers / masks / split-toning / threshold / posterize configured."""
         if not self.extra:
             return True
-        # These extras change pixels when present and non-empty.
+        if (self.extra.get("layers")
+                or self.extra.get("masks")
+                or self.extra.get("split_toning")):
+            return False
         return not (
-            self.extra.get("layers")
-            or self.extra.get("masks")
-            or self.extra.get("split_toning")
+            _enabled_flag(self.extra.get("threshold"))
+            or _enabled_flag(self.extra.get("posterize"))
+            or _enabled_flag(self.extra.get("levels"))
+            or _enabled_flag(self.extra.get("channel_mixer"))
+            or _enabled_flag(self.extra.get("gradient_map"))
+            or _enabled_flag(self.extra.get("film_grain"))
+            or _enabled_flag(self.extra.get("lens_flare"))
         )
 
     def _curves_are_identity(self) -> bool:
@@ -293,6 +305,12 @@ class Recipe:
         arr = _apply_split_toning(arr, recipe)
         arr = _apply_lut(arr, recipe)
         arr = _apply_masks(arr, recipe)
+        arr = _apply_levels(arr, recipe)
+        arr = _apply_channel_mixer(arr, recipe)
+        arr = _apply_gradient_map(arr, recipe)
+        arr = _apply_threshold_posterize(arr, recipe)
+        arr = _apply_lens_flare(arr, recipe)
+        arr = _apply_film_grain(arr, recipe)
         arr = _apply_layer_stack(arr, recipe)
         return arr
 
@@ -317,6 +335,115 @@ def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
         )
     except (ValueError, TypeError) as err:
         logger.warning("Split toning apply failed: %s", err)
+        return arr
+
+
+def _apply_levels(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply Levels (black/white/gamma) from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.levels import LevelsOptions, apply_levels
+    except ImportError:
+        return arr
+    options = LevelsOptions.from_dict(recipe.extra.get("levels"))
+    try:
+        return apply_levels(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Levels apply failed: %s", err)
+        return arr
+
+
+def _apply_channel_mixer(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply channel mixer matrix from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.channel_mixer import (
+            ChannelMixerOptions,
+            apply_channel_mixer,
+        )
+    except ImportError:
+        return arr
+    options = ChannelMixerOptions.from_dict(recipe.extra.get("channel_mixer"))
+    try:
+        return apply_channel_mixer(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Channel mixer apply failed: %s", err)
+        return arr
+
+
+def _apply_gradient_map(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply gradient map from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.gradient_map import (
+            GradientMapOptions,
+            apply_gradient_map,
+        )
+    except ImportError:
+        return arr
+    options = GradientMapOptions.from_dict(recipe.extra.get("gradient_map"))
+    try:
+        return apply_gradient_map(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Gradient map apply failed: %s", err)
+        return arr
+
+
+def _apply_threshold_posterize(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply threshold and posterize from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.posterize import (
+            PosterizeOptions,
+            ThresholdOptions,
+            apply_posterize,
+            apply_threshold,
+        )
+    except ImportError:
+        return arr
+    threshold_opts = ThresholdOptions.from_dict(recipe.extra.get("threshold"))
+    posterize_opts = PosterizeOptions.from_dict(recipe.extra.get("posterize"))
+    try:
+        arr = apply_threshold(arr, threshold_opts)
+        arr = apply_posterize(arr, posterize_opts)
+    except (ValueError, TypeError) as err:
+        logger.warning("Threshold/posterize apply failed: %s", err)
+    return arr
+
+
+def _apply_lens_flare(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply procedural lens flare from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.lens_flare import LensFlareOptions, apply_lens_flare
+    except ImportError:
+        return arr
+    options = LensFlareOptions.from_dict(recipe.extra.get("lens_flare"))
+    try:
+        return apply_lens_flare(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Lens flare apply failed: %s", err)
+        return arr
+
+
+def _apply_film_grain(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    """Apply procedural film grain from recipe.extra if configured."""
+    if not recipe.extra:
+        return arr
+    try:
+        from Imervue.image.film_grain import FilmGrainOptions, apply_film_grain
+    except ImportError:
+        return arr
+    options = FilmGrainOptions.from_dict(recipe.extra.get("film_grain"))
+    try:
+        return apply_film_grain(arr, options)
+    except (ValueError, TypeError) as err:
+        logger.warning("Film grain apply failed: %s", err)
         return arr
 
 

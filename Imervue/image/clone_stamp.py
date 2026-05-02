@@ -35,7 +35,7 @@ class CloneStamp:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CloneStamp":
+    def from_dict(cls, data: dict) -> CloneStamp:
         return cls(
             sx=int(data["sx"]), sy=int(data["sy"]),
             dx=int(data["dx"]), dy=int(data["dy"]),
@@ -79,12 +79,16 @@ def _blit(
     ph, pw = src_patch.shape[:2]
     x0 = dx - pw // 2
     y0 = dy - ph // 2
-    cx0 = max(0, x0); cy0 = max(0, y0)
-    cx1 = min(w, x0 + pw); cy1 = min(h, y0 + ph)
+    cx0 = max(0, x0)
+    cy0 = max(0, y0)
+    cx1 = min(w, x0 + pw)
+    cy1 = min(h, y0 + ph)
     if cx1 <= cx0 or cy1 <= cy0:
         return
-    sx0 = cx0 - x0; sy0 = cy0 - y0
-    sx1 = sx0 + (cx1 - cx0); sy1 = sy0 + (cy1 - cy0)
+    sx0 = cx0 - x0
+    sy0 = cy0 - y0
+    sx1 = sx0 + (cx1 - cx0)
+    sy1 = sy0 + (cy1 - cy0)
     region = canvas[cy0:cy1, cx0:cx1, :3].astype(np.float32)
     patch = src_patch[sy0:sy1, sx0:sx1, :3].astype(np.float32)
     m = mask[sy0:sy1, sx0:sx1][..., None]
@@ -110,10 +114,14 @@ def apply_clone_stamp(
             continue
         # Extract source patch from the current canvas (so chained stamps
         # can sample each other's output — matches Photoshop behaviour).
-        x0 = sx - radius; y0 = sy - radius
-        x1 = sx + radius + 1; y1 = sy + radius + 1
-        px0 = max(0, x0); py0 = max(0, y0)
-        px1 = min(w, x1); py1 = min(h, y1)
+        x0 = sx - radius
+        y0 = sy - radius
+        x1 = sx + radius + 1
+        y1 = sy + radius + 1
+        px0 = max(0, x0)
+        py0 = max(0, y0)
+        px1 = min(w, x1)
+        py1 = min(h, y1)
         if px1 <= px0 or py1 <= py0:
             continue
         patch = np.zeros((2 * radius + 1, 2 * radius + 1, 4), dtype=np.uint8)

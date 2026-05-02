@@ -64,7 +64,7 @@ class _Worker(QThread):
 
 
 class NoiseSharpenDialog(QDialog):
-    def __init__(self, viewer: "GPUImageView", path: str):
+    def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
@@ -156,7 +156,7 @@ class NoiseSharpenDialog(QDialog):
             self.accept()
 
 
-def open_noise_sharpen(viewer: "GPUImageView") -> None:
+def open_noise_sharpen(viewer: GPUImageView) -> None:
     path = getattr(viewer, "current_image_path", None) if viewer else None
     if not path:
         return

@@ -10,7 +10,7 @@ from PIL import Image
 
 piexif = pytest.importorskip("piexif")
 
-from Imervue.library import calendar_index as ci
+from Imervue.library import calendar_index as ci  # noqa: E402  # piexif gate above
 
 
 def _write_jpeg_with_date(path, date_str: str | None):

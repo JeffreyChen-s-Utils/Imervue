@@ -1,0 +1,3 @@
+from ai_portrait_relight.ai_portrait_relight_plugin import AIPortraitRelightPlugin
+
+plugin_class = AIPortraitRelightPlugin

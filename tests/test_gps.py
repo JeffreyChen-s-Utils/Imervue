@@ -9,7 +9,7 @@ from PIL import Image
 # cleanly when it is not installed (the GPS reader itself only needs PIL).
 piexif = pytest.importorskip("piexif")
 
-from Imervue.image import gps
+from Imervue.image import gps  # noqa: E402  # piexif gate above
 
 
 def _rat(value: float) -> tuple[int, int]:

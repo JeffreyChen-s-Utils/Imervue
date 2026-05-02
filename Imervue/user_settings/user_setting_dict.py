@@ -9,13 +9,23 @@ from typing import Any
 from Imervue.system.app_paths import user_settings_path as _user_settings_path
 
 # 使用者設定的全域字典
-# Global dictionary for user settings
+# Global dictionary for user settings — always reflects the *current* profile.
 user_setting_dict: dict[str, Any] = {
     "language": "English",
     "user_recent_folders": [],
     "user_recent_images": [],
     "user_last_folder": "",
     "bookmarks": [],
+}
+
+# 多帳號設定 — 預設只有 "default" 一個 profile.
+# Sidecar state tracking which profile is active and which exist on disk.
+# Lives outside ``user_setting_dict`` so that profile switching can mutate
+# the dict freely without trampling the meta info.
+DEFAULT_PROFILE = "default"
+_profile_state: dict[str, Any] = {
+    "current": DEFAULT_PROFILE,
+    "available": [DEFAULT_PROFILE],
 }
 
 _lock = Lock()
@@ -61,31 +71,221 @@ def _flush_save() -> None:
         _settings_logger.error(f"Debounced save failed: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Profile-aware persistence
+# ---------------------------------------------------------------------------
+# On-disk format (v2 — multi-profile):
+#   {
+#       "current_profile": "default",
+#       "profiles": {
+#           "default": {"language": "English", ...},
+#           "client_a": {"language": "English", ...}
+#       }
+#   }
+#
+# Legacy format (v1 — single profile):
+#   {"language": "English", "user_recent_folders": [], ...}
+#
+# ``read_user_setting`` transparently migrates v1 → v2 by treating the entire
+# legacy payload as the "default" profile. ``write_user_setting`` always emits
+# v2.
+
+
 def write_user_setting() -> Path:
     """
-    將使用者設定寫入 JSON 檔案
-    Write user settings into JSON file
+    將使用者設定寫入 JSON 檔案（多帳號格式）。
+    Write user settings to disk in the multi-profile container.
 
-    :return: 設定檔路徑 (Path to the settings file)
+    Other profiles' data is preserved by reading the existing file first
+    and merging — the in-memory ``user_setting_dict`` only holds the
+    currently-active profile, so we can never overwrite an inactive one.
     """
     user_setting_file = _user_settings_path()
-    write_json(str(user_setting_file), user_setting_dict)
+    existing_profiles = _read_existing_profiles(user_setting_file)
+    current = current_profile()
+    existing_profiles[current] = dict(user_setting_dict)
+    payload = {
+        "current_profile": current,
+        "profiles": existing_profiles,
+    }
+    write_json(str(user_setting_file), payload)
     return user_setting_file
 
 
 def read_user_setting() -> Path:
     """
-    讀取使用者設定檔，並更新全域字典
-    Read user settings from JSON file and update global dictionary
-
-    :return: 設定檔路徑 (Path to the settings file)
+    讀取使用者設定檔，並更新全域字典（含 v1→v2 自動遷移）。
+    Read settings JSON, populate the global dict for the active profile.
     """
     user_setting_file = _user_settings_path()
-    if user_setting_file.exists() and user_setting_file.is_file():
-        data = read_json(str(user_setting_file))
-        if isinstance(data, dict):
-            user_setting_dict.update(data)
+    if not (user_setting_file.exists() and user_setting_file.is_file()):
+        return user_setting_file
+    data = read_json(str(user_setting_file))
+    if not isinstance(data, dict):
+        return user_setting_file
+
+    if _looks_like_multi_profile(data):
+        _load_multi_profile(data)
+    else:
+        _load_legacy_profile(data)
     return user_setting_file
+
+
+def _looks_like_multi_profile(data: dict) -> bool:
+    return (
+        "profiles" in data
+        and isinstance(data.get("profiles"), dict)
+        and "current_profile" in data
+    )
+
+
+def _load_multi_profile(data: dict) -> None:
+    profiles = {
+        name: payload for name, payload in data["profiles"].items()
+        if isinstance(payload, dict)
+    }
+    if not profiles:
+        profiles = {DEFAULT_PROFILE: {}}
+    current = str(data.get("current_profile", DEFAULT_PROFILE))
+    if current not in profiles:
+        current = next(iter(profiles))
+    _profile_state["current"] = current
+    _profile_state["available"] = list(profiles.keys())
+    user_setting_dict.update(profiles[current])
+
+
+def _load_legacy_profile(data: dict) -> None:
+    """Treat a v1 single-profile JSON file as the 'default' profile."""
+    user_setting_dict.update(data)
+    _profile_state["current"] = DEFAULT_PROFILE
+    _profile_state["available"] = [DEFAULT_PROFILE]
+
+
+def _read_existing_profiles(path: Path) -> dict[str, dict]:
+    """Return the on-disk profile map, or an empty dict if file is absent / invalid."""
+    if not path.exists():
+        return {}
+    loaded = read_json(str(path))
+    if not isinstance(loaded, dict):
+        return {}
+    if not _looks_like_multi_profile(loaded):
+        # Migrate legacy file — wrap its contents under "default".
+        return {DEFAULT_PROFILE: dict(loaded)}
+    return {
+        name: dict(payload) for name, payload in loaded["profiles"].items()
+        if isinstance(payload, dict)
+    }
+
+
+# ---------------------------------------------------------------------------
+# Profile management API
+# ---------------------------------------------------------------------------
+
+
+def current_profile() -> str:
+    """Return the name of the active profile."""
+    return _profile_state["current"]
+
+
+def list_profiles() -> list[str]:
+    """Return the names of every profile currently registered."""
+    return list(_profile_state["available"])
+
+
+def create_profile(name: str, copy_from_current: bool = False) -> bool:
+    """Create a new profile. Empty by default; ``copy_from_current`` clones the active one."""
+    name = (name or "").strip()
+    if not name or name in _profile_state["available"]:
+        return False
+    cancel_pending_save()
+    write_user_setting()  # ensure current state is persisted before we touch the file
+    path = _user_settings_path()
+    payload = read_json(str(path)) if path.exists() else None
+    if not isinstance(payload, dict) or "profiles" not in payload:
+        payload = {"current_profile": current_profile(), "profiles": {}}
+    seed = dict(user_setting_dict) if copy_from_current else {}
+    payload["profiles"][name] = seed
+    write_json(str(path), payload)
+    _profile_state["available"].append(name)
+    return True
+
+
+def delete_profile(name: str) -> bool:
+    """Remove a profile from disk. The default + active profiles cannot be deleted."""
+    if name == DEFAULT_PROFILE or name == current_profile():
+        return False
+    if name not in _profile_state["available"]:
+        return False
+    cancel_pending_save()
+    write_user_setting()
+    path = _user_settings_path()
+    if path.exists():
+        payload = read_json(str(path))
+        if isinstance(payload, dict) and "profiles" in payload:
+            payload["profiles"].pop(name, None)
+            write_json(str(path), payload)
+    _profile_state["available"].remove(name)
+    return True
+
+
+def rename_profile(old: str, new: str) -> bool:
+    """Rename ``old`` to ``new``. Default and active profiles can be renamed."""
+    new = (new or "").strip()
+    if (
+        not new
+        or new in _profile_state["available"]
+        or old not in _profile_state["available"]
+        or old == new
+    ):
+        return False
+    cancel_pending_save()
+    write_user_setting()
+    path = _user_settings_path()
+    if not path.exists():
+        return False
+    payload = read_json(str(path))
+    if not isinstance(payload, dict) or "profiles" not in payload:
+        return False
+    profiles = payload["profiles"]
+    if old not in profiles:
+        return False
+    profiles[new] = profiles.pop(old)
+    if payload.get("current_profile") == old:
+        payload["current_profile"] = new
+        _profile_state["current"] = new
+    write_json(str(path), payload)
+    available = _profile_state["available"]
+    available[available.index(old)] = new
+    return True
+
+
+def switch_profile(name: str) -> bool:
+    """Activate ``name``: persist the current profile, load the new one's data."""
+    if name not in _profile_state["available"]:
+        return False
+    if name == current_profile():
+        return True
+    cancel_pending_save()
+    write_user_setting()
+    path = _user_settings_path()
+    if not path.exists():
+        return False
+    payload = read_json(str(path))
+    if not isinstance(payload, dict) or "profiles" not in payload:
+        return False
+    new_data = payload["profiles"].get(name, {})
+    if not isinstance(new_data, dict):
+        new_data = {}
+    user_setting_dict.clear()
+    user_setting_dict.update(new_data)
+    _profile_state["current"] = name
+    write_user_setting()  # persist the new current pointer
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Low-level JSON I/O
+# ---------------------------------------------------------------------------
 
 
 def read_json(json_file_path: str) -> Any | None:
