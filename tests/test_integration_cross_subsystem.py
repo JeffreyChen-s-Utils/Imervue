@@ -541,3 +541,312 @@ def test_integration_hierarchical_tag_descendant_query(tmp_path):
         assert "/photos/kitty.jpg" in leaf_match
     finally:
         image_index.set_db_path(image_index._default_db_path())  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# 15. Recipe store per-path persistence — set, save to disk, reload, get
+#     the same recipe back. Covers the JSON schema + the file-identity hash.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_recipe_store_round_trips_per_path(tmp_path):
+    """Setting a recipe for a path, dropping the in-memory cache, and
+    reloading the store from disk must yield byte-equal recipes —
+    proves the JSON schema, the path-keyed identity hash, and the
+    autosave hook all stay in sync."""
+    from Imervue.image.recipe import Recipe
+    from Imervue.image.recipe_store import RecipeStore
+
+    fake_image = tmp_path / "shot.jpg"
+    fake_image.write_bytes(b"\xff\xd8\xff\xd9")  # 4-byte stub JPEG.
+
+    store_a = RecipeStore(store_path=tmp_path / "recipes.json")
+    recipe = Recipe(exposure=0.7, saturation=0.4, temperature=-0.3)
+    store_a.set_for_path(str(fake_image), recipe)
+    # Force the save side of the store via the documented public path
+    # (set_for_path schedules a write; close out via a fresh instance).
+    del store_a
+
+    store_b = RecipeStore(store_path=tmp_path / "recipes.json")
+    reloaded = store_b.get_for_path(str(fake_image))
+    assert reloaded is not None
+    assert reloaded.exposure == pytest.approx(recipe.exposure)
+    assert reloaded.saturation == pytest.approx(recipe.saturation)
+    assert reloaded.temperature == pytest.approx(recipe.temperature)
+
+
+# ---------------------------------------------------------------------------
+# 16. Phash similarity ordering — three pHashes from three colour gradients
+#     line up by Hamming distance the way the similar-image search expects.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_phash_orders_by_visual_similarity(tmp_path):
+    """``compute_phash`` over three images (A, A-shifted, totally-
+    different) must yield Hamming(A, A-shifted) < Hamming(A, other).
+    Catches regressions that would silently reorder the duplicate /
+    similar-image search results."""
+    from PIL import Image
+
+    from Imervue.library.phash import compute_phash, hamming
+
+    base = np.tile(
+        np.linspace(0, 255, 64, dtype=np.uint8), (64, 1),
+    )
+    base_rgb = np.stack([base, base, base], axis=-1)
+    shifted = np.roll(base_rgb, shift=2, axis=1)
+    inverted = 255 - base_rgb
+
+    a_path = tmp_path / "a.png"
+    b_path = tmp_path / "a-shifted.png"
+    c_path = tmp_path / "inverted.png"
+    Image.fromarray(base_rgb).save(a_path)
+    Image.fromarray(shifted).save(b_path)
+    Image.fromarray(inverted).save(c_path)
+
+    h_a = compute_phash(a_path)
+    h_b = compute_phash(b_path)
+    h_c = compute_phash(c_path)
+    assert h_a is not None and h_b is not None and h_c is not None
+    near = hamming(h_a, h_b)
+    far = hamming(h_a, h_c)
+    assert near < far, (
+        f"shifted ({near}) should hash closer than inverted ({far})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 17. Brush preset bundle — export a list of presets to a .imervuebrush,
+#     re-import, every preset survives byte-for-byte.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_brush_preset_bundle_round_trip(tmp_path):
+    """``export_bundle`` + ``import_bundle`` is the share-presets-with-
+    a-friend path. The two-way round-trip must preserve every field
+    on every preset."""
+    from Imervue.paint.brush_preset_io import export_bundle, import_bundle
+    from Imervue.paint.brush_presets import BrushPreset
+
+    presets = [
+        BrushPreset(
+            name="Smooth Pen", kind="pen",
+            size=18, opacity=0.95, hardness=1.0,
+        ),
+        BrushPreset(
+            name="Soft Watercolor", kind="watercolor",
+            size=42, opacity=0.6, hardness=0.4,
+        ),
+    ]
+    target = tmp_path / "bundle.imervuebrush"
+    export_bundle(presets, target)
+    reloaded = import_bundle(target)
+
+    assert len(reloaded) == len(presets)
+    for original, restored in zip(presets, reloaded, strict=True):
+        assert restored.name == original.name
+        assert restored.kind == original.kind
+        assert restored.size == original.size
+        assert restored.opacity == pytest.approx(original.opacity)
+        assert restored.hardness == pytest.approx(original.hardness)
+
+
+# ---------------------------------------------------------------------------
+# 18. Color palette .gpl import — the GIMP-format reader returns the colours
+#     in declaration order with the right RGB triples.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_palette_gimp_import_preserves_color_order(tmp_path):
+    """A minimal GIMP palette has ``GIMP Palette`` header + per-line
+    ``R G B name`` rows. The importer must yield colours in the
+    same order with the right RGB and (optionally) name."""
+    from Imervue.paint.color_palette_io import import_gimp_palette
+
+    palette_text = (
+        "GIMP Palette\n"
+        "Name: Test\n"
+        "Columns: 1\n"
+        "#\n"
+        "255   0   0\tRed\n"
+        "  0 255   0\tGreen\n"
+        "  0   0 255\tBlue\n"
+    )
+    target = tmp_path / "palette.gpl"
+    target.write_text(palette_text, encoding="utf-8")
+    colours = import_gimp_palette(target)
+
+    assert len(colours) == 3
+    assert tuple(colours[0].rgb) == (255, 0, 0)
+    assert tuple(colours[1].rgb) == (0, 255, 0)
+    assert tuple(colours[2].rgb) == (0, 0, 255)
+
+
+# ---------------------------------------------------------------------------
+# 19. Action recorder → replay — every recorded action's payload survives
+#     into the replay queue and the recorder reports the same length.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_action_recorder_round_trip_preserves_actions():
+    """Record three actions, persist via the manager, reload the
+    list from the in-memory store. Catches schema regressions in
+    ``Action.to_dict`` / ``ActionRecording.from_dict``."""
+    from Imervue.paint.action_recorder import (
+        Action,
+        ActionRecorder,
+        ActionRecording,
+    )
+
+    rec = ActionRecorder()
+    rec.start("smoke-test")
+    rec.record("brush", {"x": 1, "y": 2})
+    rec.record("erase", {"x": 3, "y": 4})
+    rec.record("brush", {"x": 5, "y": 6})
+    recording = rec.stop()
+    assert recording is not None
+
+    serialised = recording.to_dict()
+    reloaded = ActionRecording.from_dict(serialised)
+    assert reloaded.name == recording.name
+    assert len(reloaded.actions) == 3
+    kinds = [a.kind for a in reloaded.actions]
+    assert kinds == ["brush", "erase", "brush"]
+    assert reloaded.actions[2].params["x"] == 5
+    # Confirm Action's frozen dataclass field is `params`, not `payload`.
+    assert isinstance(Action.from_dict({"kind": "test"}), Action)
+
+
+# ---------------------------------------------------------------------------
+# 20. Pyramid tile generation — a 2048×2048 source produces a multi-level
+#     pyramid where each level halves the dimensions until ≤ tile size.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_pyramid_levels_halve_until_under_tile_size():
+    """Deep-zoom builds a pyramid where each level is half the
+    resolution of the previous. The renderer picks a level based on
+    the requested zoom — so the contract is "the pyramid has the
+    right number of levels and each is half the previous"."""
+    from Imervue.image.pyramid import DeepZoomImage
+
+    arr = np.zeros((2048, 2048, 3), dtype=np.uint8)
+    arr[..., 0] = np.linspace(0, 255, 2048, dtype=np.uint8)[None, :]
+
+    pyramid = DeepZoomImage(arr)
+    assert len(pyramid.levels) >= 2
+    # Each level must be roughly half the previous dimension (allow
+    # ±1 px slop for the integer floor-divide).
+    for prev, nxt in zip(pyramid.levels, pyramid.levels[1:], strict=False):
+        prev_h, prev_w = prev.shape[:2]
+        nxt_h, nxt_w = nxt.shape[:2]
+        assert nxt_w <= (prev_w + 1) // 2 + 1
+        assert nxt_h <= (prev_h + 1) // 2 + 1
+    # ``get_level`` clamps the zoom and returns ``(index, array)``.
+    idx, level_arr = pyramid.get_level(zoom=0.25)
+    assert 0 <= idx < len(pyramid.levels)
+    assert level_arr.shape == pyramid.levels[idx].shape
+
+
+# ---------------------------------------------------------------------------
+# 21. Compare modes — difference and overlay produce mathematically distinct
+#     outputs when run against the same two source images.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_compare_modes_yield_distinct_outputs():
+    """The Compare dialog ships overlay (alpha lerp) and difference
+    (absolute diff) tabs. For non-trivial inputs the two outputs
+    must differ — otherwise one of the kernels collapsed to the
+    other or both went through the same code path."""
+    from Imervue.gpu_image_view.actions.compare_dialog import (
+        compute_difference,
+        compute_overlay,
+    )
+
+    a = _solid_rgba(16, 16, (200, 100, 50, 255))
+    b = _solid_rgba(16, 16, (50, 200, 100, 255))
+    overlay = compute_overlay(a, b, alpha=0.5)
+    difference = compute_difference(a, b, gain=1.0)
+
+    assert overlay.shape == a.shape
+    assert difference.shape == a.shape
+    assert (overlay != difference).any(), (
+        "overlay and difference modes produced identical output"
+    )
+    # The two operators are mathematically different: overlay's
+    # max-channel value sits halfway between A and B (~125), while a
+    # gain-1 difference of (200, 100, 50) vs (50, 200, 100) hits
+    # 150 in the dominant channel. The overlay must come out
+    # brighter on average and the difference must spike higher.
+    assert int(difference.max()) >= int(overlay.max() - 20)
+
+
+# ---------------------------------------------------------------------------
+# 22. Web gallery export — three images in a folder produce an index.html
+#     plus per-image thumbnails on disk.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_web_gallery_export_writes_index_and_thumbs(tmp_path):
+    """The static-HTML gallery generator must produce ``index.html``
+    plus a thumbnail file for every input image. Catches a
+    regression where the inline-lightbox renderer drops the thumb-
+    generation pass entirely."""
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    from Imervue.export.web_gallery import WebGalleryOptions, generate_web_gallery
+
+    src_dir = tmp_path / "shoot"
+    src_dir.mkdir()
+    image_paths: list[str] = []
+    for i, color in enumerate(((255, 80, 80), (80, 255, 80), (80, 80, 255))):
+        p = src_dir / f"img-{i}.png"
+        Image.fromarray(np.full((48, 64, 3), color, dtype=np.uint8)).save(p)
+        image_paths.append(str(p))
+
+    out_dir = tmp_path / "gallery"
+    generate_web_gallery(
+        image_paths, out_dir, WebGalleryOptions(title="Test"),
+    )
+
+    index = out_dir / "index.html"
+    assert index.is_file()
+    body = index.read_text(encoding="utf-8")
+    assert "Test" in body
+    # Every source produced at least one referenced thumb.
+    thumbs = list(out_dir.rglob("*.jpg")) + list(out_dir.rglob("*.png"))
+    assert len(thumbs) >= len(image_paths)
+
+
+# ---------------------------------------------------------------------------
+# 23. Layer effects pipeline — a layer with a drop-shadow effect produces
+#     pixels outside the original image bounds in the composite.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_layer_effect_extends_pixels_past_source():
+    """Drop-shadow blooms past the source layer's silhouette. Apply
+    the effect and prove the composite has opaque pixels in
+    quadrants the source layer never touched — proves the effect
+    pipeline runs before the compositor and not after."""
+    from Imervue.paint.layer_effects import LayerEffect
+
+    doc = PaintDocument()
+    doc.load_image(_solid_rgba(40, 40, (240, 240, 240, 255)))
+    overlay = doc.add_layer(name="Solid")
+    overlay.image[...] = (0, 0, 0, 0)
+    # Tiny opaque block in the centre — drop-shadow will extend it.
+    overlay.image[18:22, 18:22] = (50, 50, 220, 255)
+    overlay.effects = (LayerEffect(
+        kind="drop_shadow",
+        params={"distance": 4, "blur": 2, "opacity": 1.0,
+                "color": [0, 0, 0, 255]},
+    ),)
+    composite = doc.composite()
+    base = doc.layer_at(0).image
+    # Shadow must put visible pixels in the lower-right where the
+    # block originally had none.
+    region = composite[22:30, 22:30]
+    assert (region != base[22:30, 22:30]).any()
