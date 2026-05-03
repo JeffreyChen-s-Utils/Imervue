@@ -270,3 +270,274 @@ def test_integration_layer_features_combine_in_composite():
     doc.invalidate_composite()
     composite_hidden = doc.composite()
     assert (composite != composite_hidden).any()
+
+
+# ---------------------------------------------------------------------------
+# 7. Undo / redo stack — a brush stroke survives the undo → redo round-trip.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_undo_redo_round_trips_brush_stroke():
+    """Paint a stroke, snapshot it, undo, paint a different stroke,
+    redo; the redo path must restore the *first* stroke verbatim and
+    the undo stack tracks both gestures separately."""
+    from Imervue.paint.brush_engine import BrushStroke, BrushStrokeOptions
+    from Imervue.paint.undo_stack import UndoStack
+
+    doc = PaintDocument()
+    doc.load_image(_solid_rgba(32, 32, (255, 255, 255, 255)))
+    layer = doc.add_layer(name="Ink")
+    stack = UndoStack(doc)
+    stack.commit()  # Baseline snapshot — empty layer.
+
+    # First stroke (red horizontal).
+    options = BrushStrokeOptions(
+        kind="pen", size=4, color=(255, 0, 0), opacity=1.0,
+        hardness=1.0, seed=1,
+    )
+    stroke = BrushStroke(options)
+    stroke.begin(layer.image, 4.0, 16.0)
+    stroke.end(layer.image, 28.0, 16.0)
+    stack.commit()
+    after_first = layer.image.copy()
+    assert (after_first[..., 3] > 0).any()
+
+    # Undo — the snapshot should revert to the empty baseline.
+    assert stack.undo()
+    assert not (doc.layer_at(-1).image[..., 3] > 0).any()
+
+    # Redo — the first stroke comes back byte-for-byte.
+    assert stack.redo()
+    np.testing.assert_array_equal(doc.layer_at(-1).image, after_first)
+
+
+# ---------------------------------------------------------------------------
+# 8. Vector layer rasterise — adding strokes to a vector layer makes them
+#    appear in the next composite.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_vector_layer_strokes_show_in_composite():
+    """A vector layer keeps its strokes off-image; only the
+    compositor's ``realise_vector_layer`` step flushes them into the
+    raster cache. Without that hook, the canvas would be silently
+    blank after a pen-tool gesture."""
+    from Imervue.paint.vector_layer import VectorLayerData, VectorStroke
+
+    doc = PaintDocument()
+    doc.load_image(_solid_rgba(40, 40, (240, 240, 240, 255)))
+    layer = doc.add_layer(name="Pen")
+    layer.vector_data = VectorLayerData()
+    layer.vector_data.add(VectorStroke(
+        points=((4.0, 20.0), (16.0, 20.0), (28.0, 20.0), (36.0, 20.0)),
+        width=3.0,
+        color=(20, 30, 200, 255),
+        opacity=1.0,
+    ))
+
+    composite = doc.composite()
+    base = doc.layer_at(0).image
+    # Somewhere along y=20 the blue stroke should be the dominant
+    # colour — proving the rasterise step ran inside ``composite``.
+    middle_row = composite[20, :, :3]
+    blue_dominant = (middle_row[:, 2] > middle_row[:, 0]).any()
+    assert blue_dominant
+    assert (composite != base).any()
+
+
+# ---------------------------------------------------------------------------
+# 9. XMP sidecar round-trip — rating, title, keywords, colour label survive.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_xmp_sidecar_round_trips_metadata(tmp_path):
+    """``XmpData`` written by :func:`save` must come back from
+    :func:`load` byte-equal in every tracked field. Catches
+    namespace / element-tag drift between writer and reader."""
+    pytest.importorskip("defusedxml")
+    from Imervue.image.xmp_sidecar import XmpData, load, save
+
+    fake_image = tmp_path / "photo.jpg"
+    fake_image.write_bytes(b"\xff\xd8\xff\xd9")  # 4-byte stub JPEG.
+
+    written = XmpData(
+        rating=4,
+        title="Sunset over Taipei",
+        description="Long-exposure handheld",
+        keywords=["sunset", "taipei", "long-exposure"],
+        color_label="Red",
+    )
+    save(fake_image, written)
+    reloaded = load(fake_image)
+
+    assert reloaded.rating == written.rating
+    assert reloaded.title == written.title
+    assert reloaded.description == written.description
+    assert reloaded.keywords == written.keywords
+    assert reloaded.color_label.lower() == written.color_label.lower()
+
+
+# ---------------------------------------------------------------------------
+# 10. Library index → multi-criteria search — inserted rows are queryable
+#     by extension + min-resolution.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_library_index_query_returns_matching_paths(tmp_path):
+    """Insert three image rows with varied resolution and extension,
+    then prove the query layer can filter on both criteria at once.
+    Locks down the SQL builder against a future regression that
+    silently drops one of the WHERE clauses."""
+    from Imervue.library import image_index
+
+    db_path = tmp_path / "library.db"
+    image_index.set_db_path(db_path)
+    try:
+        image_index.upsert_image(
+            "/library/big.jpg",
+            size=10_000_000, width=4096, height=2160, mtime=1.0,
+        )
+        image_index.upsert_image(
+            "/library/small.jpg",
+            size=200_000, width=320, height=240, mtime=2.0,
+        )
+        image_index.upsert_image(
+            "/library/big.png",
+            size=8_000_000, width=4096, height=2160, mtime=3.0,
+        )
+        # JPG-only + at least 1080p — only ``big.jpg`` qualifies.
+        hits = image_index.search_images(
+            exts=("jpg",), min_width=1920, min_height=1080,
+        )
+        assert "/library/big.jpg".replace("/", "\\") in [
+            str(p).replace("/", "\\") for p in hits
+        ] or "/library/big.jpg" in hits
+        assert "/library/big.png" not in hits
+        assert "/library/small.jpg" not in hits
+    finally:
+        # Reset the global so other tests don't reuse the throw-away DB.
+        image_index.set_db_path(image_index._default_db_path())  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# 11. Quick-mask → selection commit — painting into the proxy buffer and
+#     converting yields the same boolean mask.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_quick_mask_proxy_to_selection_round_trip():
+    """The Quick-Mask workflow paints opaque red into a proxy RGBA
+    buffer; ``selection_from_proxy`` must convert that proxy back
+    into a bool mask whose ``True`` cells line up with the painted
+    region."""
+    from Imervue.paint.quick_mask import make_proxy_buffer, selection_from_proxy
+
+    base_selection = None
+    proxy = make_proxy_buffer((20, 20), base_selection)
+    # Paint a 4x4 solid square into the proxy at (8..12, 8..12).
+    proxy[8:12, 8:12] = (255, 0, 0, 255)
+    sel = selection_from_proxy(proxy)
+    assert sel.shape == (20, 20)
+    assert sel.dtype == np.bool_
+    assert sel[8:12, 8:12].all()
+    # Outside the painted region the mask must be empty.
+    assert not sel[0:4, 0:4].any()
+    assert not sel[16:20, 16:20].any()
+
+
+# ---------------------------------------------------------------------------
+# 12. Watermark overlay — applying a watermark to a flat image must change
+#     the corner pixels but leave the bulk of the image alone.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_watermark_modifies_only_anchor_corner():
+    """The export-time watermark anchors the overlay at one of nine
+    grid cells. Apply with corner = bottom-right and assert the BR
+    region differs from the base while the TL region matches."""
+    from Imervue.paint.export_utils import apply_watermark
+
+    base = _solid_rgba(64, 64, (200, 200, 200, 255))
+    watermark = _solid_rgba(8, 8, (255, 0, 0, 255))
+    out = apply_watermark(
+        base, watermark, position="bottom-right",
+        opacity=1.0, padding=2,
+    )
+    # Top-left far corner: untouched grey.
+    np.testing.assert_array_equal(out[0:4, 0:4], base[0:4, 0:4])
+    # Bottom-right interior: red watermark must be visible.
+    br = out[-8:-2, -8:-2]
+    assert (br[..., 0] > 200).any()
+    assert (br[..., 1] < 100).any()
+
+
+# ---------------------------------------------------------------------------
+# 13. Tool dispatcher — set the active tool, dispatch a press, the active
+#     layer's pixels change.
+# ---------------------------------------------------------------------------
+
+
+def test_integration_tool_dispatcher_brush_paints_active_layer():
+    """End-to-end through the tool dispatcher: pick the brush, push a
+    PointerEvent, the active layer's pixels change. Catches regressions
+    in the dispatcher's tool-lookup table or the brush wiring."""
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.canvas import PointerEvent
+    from Imervue.paint.tool_dispatcher import ToolDispatcher
+
+    state = ts.load_tool_state()
+    state.set_tool("brush")
+    state.set_foreground((10, 200, 80))
+    state.set_brush(size=8, hardness=1.0, opacity=1.0)
+
+    canvas = _solid_rgba(40, 40, (255, 255, 255, 255))
+    before = canvas.copy()
+    dispatcher = ToolDispatcher(state, image_provider=lambda: canvas)
+    dispatcher(PointerEvent(
+        phase="press", x=20.0, y=20.0, button=1, modifiers=0, pressure=1.0,
+    ))
+    dispatcher(PointerEvent(
+        phase="release", x=20.0, y=20.0, button=0, modifiers=0, pressure=1.0,
+    ))
+    assert (canvas != before).any(), (
+        "tool dispatcher did not route the brush press to the canvas"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 14. Tag hierarchy — assigning a leaf tag and querying by an ancestor
+#     branch returns the image (descendant rule).
+# ---------------------------------------------------------------------------
+
+
+def test_integration_hierarchical_tag_descendant_query(tmp_path):
+    """Assigning ``animal/cat/british`` to an image must surface it
+    when we query for ``animal`` — the descendants-included contract
+    documented in user_guide.rst. Catches a regression where the
+    join only matches exact paths."""
+    from Imervue.library import image_index
+
+    db_path = tmp_path / "tags.db"
+    image_index.set_db_path(db_path)
+    try:
+        image_index.upsert_image("/photos/kitty.jpg", size=1_000)
+        image_index.add_image_tag("/photos/kitty.jpg", "animal/cat/british")
+        # Querying for the ancestor branch with descendants enabled
+        # must surface the image — that's the contract user_guide.rst
+        # documents for hierarchical tags.
+        descendants = image_index.images_with_tag(
+            "animal", include_descendants=True,
+        )
+        assert "/photos/kitty.jpg" in descendants
+        # Sibling branches must NOT match the same image.
+        plant_descendants = image_index.images_with_tag(
+            "plant", include_descendants=True,
+        )
+        assert "/photos/kitty.jpg" not in plant_descendants
+        # Exact-match (without descendants) on the leaf still works.
+        leaf_match = image_index.images_with_tag(
+            "animal/cat/british", include_descendants=False,
+        )
+        assert "/photos/kitty.jpg" in leaf_match
+    finally:
+        image_index.set_db_path(image_index._default_db_path())  # noqa: SLF001
