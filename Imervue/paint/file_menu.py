@@ -54,6 +54,8 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
     for key, fallback, slot, shortcut in (
         ("paint_file_new_tab", "New Tab",
          bridge.new_tab, "Ctrl+N"),
+        ("paint_file_new_project", "New Comic Project…",
+         bridge.new_comic_project, "Ctrl+Shift+N"),
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
@@ -103,6 +105,37 @@ class _FileMenuBridge:
 
     def new_tab(self) -> None:
         self._workspace.new_tab()
+
+    def new_comic_project(self) -> None:  # pragma: no cover - Qt dialog
+        """Pop a small picker (template + page count + project name)
+        and bind the resulting :class:`PaintProject` to the workspace.
+
+        Discoverability fix: previously the PageDock sat in its empty
+        "no project" state forever because nothing in the UI created
+        a project. This menu entry surfaces the comic-project flow.
+        """
+        from Imervue.paint.new_project_dialog import NewProjectDialog
+        from Imervue.paint.page_templates import (
+            project_from_template,
+            template_by_name,
+        )
+        from PySide6.QtWidgets import QDialog
+
+        dialog = NewProjectDialog(parent=self._workspace)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        choice = dialog.values()
+        try:
+            template = template_by_name(choice.template_name)
+        except KeyError:
+            return
+        project = project_from_template(
+            template,
+            page_count=choice.page_count,
+            project_name=choice.project_name,
+            author=choice.author,
+        )
+        self._workspace.set_paint_project(project)
 
     def close_active_tab(self) -> None:
         # ``_tabs`` is the workspace-private QTabWidget — bridge talks

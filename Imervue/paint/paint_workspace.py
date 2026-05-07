@@ -205,38 +205,78 @@ class PaintWorkspace(QMainWindow):
         self._pose_dock = PoseDock(parent=self)
         self._pose_dock.insert_requested.connect(self._on_pose_insert)
 
-        # Tabify every right-side dock into a single column. Without
-        # tabification each dock contributes its full minimum height to
-        # the QMainWindow's sizeHint, which on a 1080p screen drives
-        # the embedded workspace taller than the visible area and
-        # forces the central canvas to inherit that excess height —
-        # the document then ends up centred well below the viewport.
-        # With a single tabbed group the column only needs the
-        # tallest dock's minimum, leaving the canvas free to fill the
-        # remaining vertical space.
-        all_right_docks = (
+        # Tabify every right-side dock into THREE logical clusters
+        # rather than one 14-tab pile. The original single-cluster
+        # layout met the sizeHint constraint (only the tallest dock
+        # drives the column's minimum) but left the user picking
+        # through fourteen tabs to find anything. Splitting into
+        # three workflow-oriented groups keeps the same vertical
+        # budget while giving each cluster a small, scannable tab
+        # row matching MediBang's "drawing tools / canvas data /
+        # libraries" mental model.
+        drawing_cluster = (
             self._color_dock,
             self._brush_dock,
             self._fill_dock,
+            self._swatch_dock,
+        )
+        canvas_cluster = (
             self._layer_dock,
             self._navigator_dock,
-            self._material_dock,
             self._history_dock,
-            self._swatch_dock,
-            self._reference_dock,
-            self._animation_dock,
             self._page_dock,
-            self._stamp_dock,
-            self._pose_dock,
+            self._animation_dock,
             self._histogram_dock,
         )
-        anchor = all_right_docks[0]
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
-        for dock in all_right_docks[1:]:
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-            self.tabifyDockWidget(anchor, dock)
-        anchor.raise_()
+        library_cluster = (
+            self._material_dock,
+            self._stamp_dock,
+            self._pose_dock,
+            self._reference_dock,
+        )
+        all_right_docks = drawing_cluster + canvas_cluster + library_cluster
+
+        # Place anchors top → middle → bottom so the dock area
+        # naturally splits into three rows of tabs.
+        for cluster in (drawing_cluster, canvas_cluster, library_cluster):
+            anchor = cluster[0]
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+            for dock in cluster[1:]:
+                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+                self.tabifyDockWidget(anchor, dock)
+            anchor.raise_()
+
+        # Cache the cluster mapping so tool→dock-raise can find the
+        # right anchor without re-deriving the layout each time.
+        self._dock_clusters = {
+            "drawing": drawing_cluster,
+            "canvas": canvas_cluster,
+            "library": library_cluster,
+        }
+
+        # Stable objectName per dock so QMainWindow.saveState()/
+        # restoreState() can match docks across launches. Without
+        # this Qt has no reliable identifier (windowTitle is
+        # locale-translated and changes), and restoreState silently
+        # produces undefined results.
+        dock_object_names = {
+            id(self._color_dock): "paint_dock_color",
+            id(self._brush_dock): "paint_dock_brush",
+            id(self._fill_dock): "paint_dock_fill",
+            id(self._layer_dock): "paint_dock_layers",
+            id(self._navigator_dock): "paint_dock_navigator",
+            id(self._material_dock): "paint_dock_material",
+            id(self._history_dock): "paint_dock_history",
+            id(self._swatch_dock): "paint_dock_swatches",
+            id(self._reference_dock): "paint_dock_reference",
+            id(self._animation_dock): "paint_dock_animation",
+            id(self._page_dock): "paint_dock_pages",
+            id(self._stamp_dock): "paint_dock_stamps",
+            id(self._pose_dock): "paint_dock_pose",
+            id(self._histogram_dock): "paint_dock_histogram",
+        }
         for dock in all_right_docks:
+            dock.setObjectName(dock_object_names[id(dock)])
             dock.setFeatures(
                 dock.features()
                 | dock.DockWidgetFeature.DockWidgetMovable
@@ -247,6 +287,13 @@ class PaintWorkspace(QMainWindow):
         # workspace's menu bar so the user can hide / show panels
         # without right-clicking the toolbar.
         self._populate_window_menu()
+
+        # Restore the user's saved dock layout (which docks are
+        # tabbed, which are floating, which are hidden, etc.) from
+        # ``user_setting_dict``. Safe to call after the default
+        # cluster layout above — ``restoreState`` overwrites the
+        # default when a saved blob exists, otherwise falls through.
+        self._restore_dock_state()
 
         # Brush-size HUD overlay — bracket-key bindings flash a ring
         # at the canvas centre via the SizeHudState helper.
@@ -360,6 +407,66 @@ class PaintWorkspace(QMainWindow):
 
     def state(self) -> ToolState:
         return self._state
+
+    # ---- dock layout persistence ---------------------------------------
+
+    DOCK_STATE_SETTING_KEY = "paint_workspace_dock_state"
+
+    def _save_dock_state(self) -> None:
+        """Serialise the current dock layout into ``user_setting_dict``.
+
+        ``QMainWindow.saveState`` returns a QByteArray that captures
+        which docks are tabbed together, which are floating, where
+        they sit, and their visibility. We base64-encode it so the
+        JSON-serialised settings file can carry the binary blob.
+        """
+        from base64 import b64encode
+
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        blob = bytes(self.saveState().data())
+        user_setting_dict[self.DOCK_STATE_SETTING_KEY] = b64encode(blob).decode("ascii")
+
+    def _restore_dock_state(self) -> None:
+        """Apply the saved dock layout from ``user_setting_dict``.
+
+        Returns silently when no saved layout exists (first run) or
+        when ``restoreState`` rejects the blob (after a dock was
+        added / removed in a newer build, the saved state references
+        unknown objects and Qt skips it). Either way the default
+        cluster layout configured in ``__init__`` stays in place.
+
+        Wrapped in try/except so a corrupt blob never crashes the
+        workspace constructor — broken state is the user's local
+        settings file, not a bug to surface to a fresh launch.
+        """
+        from base64 import b64decode
+
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        encoded = user_setting_dict.get(self.DOCK_STATE_SETTING_KEY)
+        if not encoded:
+            return
+        try:
+            blob = b64decode(encoded)
+        except (ValueError, TypeError):
+            return
+        try:
+            from PySide6.QtCore import QByteArray
+            self.restoreState(QByteArray(blob))
+        except (RuntimeError, ValueError, TypeError):
+            return
+
+    def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Save the dock layout before the window goes away.
+
+        Settings save is a convenience; never block close on a
+        transient I/O error or a deleted child widget.
+        """
+        import contextlib
+        with contextlib.suppress(RuntimeError, OSError):
+            self._save_dock_state()
+        super().closeEvent(event)
 
     # ---- secondary views -----------------------------------------------
 
@@ -905,9 +1012,35 @@ class PaintWorkspace(QMainWindow):
     def _on_state_event(self, channel: str) -> None:
         if channel == ts.EVENT_TOOL:
             self._refresh_cursor_for_tool()
+            self._raise_dock_for_tool()
 
     def _refresh_cursor_for_tool(self) -> None:
         self._canvas.set_cursor_for_tool(self._state.tool)
+
+    # Tool ID → dock to raise so the relevant settings panel pops to
+    # the front of its tab cluster. Tools whose options live in a
+    # dock not in this map (selection, transform, hand, zoom) leave
+    # the current tab untouched.
+    _TOOL_DOCK_MAP_ATTR = "_TOOL_DOCK_MAP"
+
+    def _raise_dock_for_tool(self) -> None:
+        """Bring the dock holding the active tool's options to the
+        front of its tab cluster on tool switch."""
+        tool = self._state.tool
+        targets = {
+            "brush": self._brush_dock,
+            "eraser": self._brush_dock,
+            "fill": self._fill_dock,
+            "eyedropper": self._color_dock,
+            "text": self._brush_dock,   # text shares the brush cluster slot
+        }
+        dock = targets.get(tool)
+        if dock is None:
+            return
+        # raise_() is a no-op for a non-tabbed (top-level) dock, so
+        # safe to call regardless of whether the cluster is currently
+        # tabified or split apart by a custom user layout.
+        dock.raise_()
 
     def _on_hover_changed(self, x: int, y: int) -> None:
         if x < 0 or y < 0:

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QDockWidget,
     QHBoxLayout,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -82,7 +83,15 @@ class PoseCanvas(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Min-size keeps the figure usable when the dock is small,
+        # but the size policy lets it grow to fill whatever the dock
+        # gives us — undocking the pose panel into a 600×800 floater
+        # gives a 600×800 posing canvas instead of a stranded
+        # 240×240 square in the corner.
         self.setMinimumSize(CANVAS_PX, CANVAS_PX)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
+        )
         self.setMouseTracking(True)
         self._skeleton = default_skeleton()
         self._dragging: str | None = None
