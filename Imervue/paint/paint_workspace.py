@@ -468,6 +468,44 @@ class PaintWorkspace(QMainWindow):
             self._save_dock_state()
         super().closeEvent(event)
 
+    def reset_workspace_layout(self) -> None:
+        """Re-apply the default three-cluster layout.
+
+        Drops any saved state (so the next launch also starts on
+        the default), removes every right-side dock from its
+        current home, then re-tabifies the three clusters in their
+        canonical order. Useful when the user has shuffled docks
+        into corners or floated everything and wants a clean slate.
+        """
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        user_setting_dict.pop(self.DOCK_STATE_SETTING_KEY, None)
+        clusters = getattr(self, "_dock_clusters", None)
+        if not clusters:
+            return
+        ordered = (
+            clusters.get("drawing", ()) + clusters.get("canvas", ())
+            + clusters.get("library", ())
+        )
+        # Remove every dock from the main window first; addDockWidget
+        # then puts each into the right area and tabifyDockWidget
+        # pairs them. Without the explicit remove pass docks that
+        # the user floated stay floated through the reset.
+        for dock in ordered:
+            self.removeDockWidget(dock)
+        for cluster_name in ("drawing", "canvas", "library"):
+            cluster = clusters.get(cluster_name, ())
+            if not cluster:
+                continue
+            anchor = cluster[0]
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+            anchor.show()
+            for dock in cluster[1:]:
+                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+                self.tabifyDockWidget(anchor, dock)
+                dock.show()
+            anchor.raise_()
+
     # ---- secondary views -----------------------------------------------
 
     def _on_dispatcher_commit(self) -> None:
@@ -1006,6 +1044,15 @@ class PaintWorkspace(QMainWindow):
             "paint_window_tile_preview", "Tile Preview",
         ))
         tile_action.triggered.connect(self.open_tile_preview)
+        # Reset Layout — escape hatch for a user who shuffled docks
+        # off-screen or floated everything. Drops the saved state
+        # blob from user_setting_dict and re-applies the canonical
+        # cluster layout the constructor uses on a fresh install.
+        menu.addSeparator()
+        reset_action = menu.addAction(lang.get(
+            "paint_window_reset_layout", "Reset Workspace Layout",
+        ))
+        reset_action.triggered.connect(self.reset_workspace_layout)
 
     # ---- handlers --------------------------------------------------------
 
@@ -1046,16 +1093,50 @@ class PaintWorkspace(QMainWindow):
         if x < 0 or y < 0:
             self._status.clearMessage()
             return
-        msg = language_wrapper.language_word_dict.get(
-            "paint_status_cursor", "x: {x}  y: {y}",
-        ).format(x=x, y=y)
-        self._status.showMessage(msg)
+        self._status.showMessage(self._compose_status_line(x, y))
 
     def _on_image_loaded(self, w: int, h: int) -> None:
         msg = language_wrapper.language_word_dict.get(
             "paint_status_image_loaded", "Canvas: {w} × {h}",
         ).format(w=w, h=h)
         self._status.showMessage(msg, 3000)
+
+    def _compose_status_line(self, x: int, y: int) -> str:
+        """Build the rich status-bar string: cursor + zoom + layer + size.
+
+        Falls back gracefully when the canvas hasn't loaded a
+        document yet (shape None) or the active layer has no name
+        (Untitled). Each segment is separated by an em-space so the
+        line scans cleanly even on narrow status bars.
+        """
+        lang = language_wrapper.language_word_dict
+        segments: list[str] = [
+            lang.get("paint_status_cursor", "x: {x}  y: {y}").format(x=x, y=y),
+        ]
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None:
+            zoom = getattr(canvas, "_zoom", None)
+            if zoom is not None:
+                segments.append(
+                    lang.get("paint_status_zoom", "{pct}%").format(
+                        pct=int(round(float(zoom) * 100)),
+                    ),
+                )
+            document = canvas.document() if hasattr(canvas, "document") else None
+            if document is not None:
+                shape = getattr(document, "shape", None)
+                if shape is not None:
+                    h, w = shape
+                    segments.append(
+                        lang.get("paint_status_size", "{w}×{h}").format(w=w, h=h),
+                    )
+                active = (
+                    document.active_layer()
+                    if hasattr(document, "active_layer") else None
+                )
+                if active is not None and getattr(active, "name", None):
+                    segments.append(str(active.name))
+        return "    ".join(segments)
 
     def _on_material_chosen(self, path: str) -> None:
         """Drop a material onto the canvas based on its category.

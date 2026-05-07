@@ -84,6 +84,18 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
             action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(slot)
 
+    # File ▸ Recent submenu — rebuilt every time it's shown so the
+    # latest opens land at the top without having to re-tear-down
+    # the whole menu. Cleared / Open Recent paths route through
+    # the bridge so the same engine call services both new opens
+    # and recent reopens (preserves the "added to recent" path).
+    recent_menu = menu.addMenu(
+        lang.get("paint_file_recent", "Recent"),
+    )
+    bridge._recent_menu = recent_menu   # noqa: SLF001
+    recent_menu.aboutToShow.connect(bridge.refresh_recent_menu)
+    bridge.refresh_recent_menu()
+
 
 # ---------------------------------------------------------------------------
 # Bridge — file dialogs + engine calls
@@ -144,6 +156,63 @@ class _FileMenuBridge:
         index = self._workspace._tabs.currentIndex()  # noqa: SLF001
         self._workspace.close_tab(index)
 
+    # ---- recent files ---------------------------------------------------
+
+    def refresh_recent_menu(self) -> None:
+        """Rebuild the File ▸ Recent submenu from the persisted list.
+
+        Keeps the truncation simple: when no recents exist a single
+        disabled placeholder entry shows so the submenu doesn't look
+        broken; when entries exist, the bottom row offers Clear.
+        """
+        from Imervue.paint import recent_files
+
+        recent_menu = getattr(self, "_recent_menu", None)
+        if recent_menu is None:
+            return
+        recent_menu.clear()
+        lang = language_wrapper.language_word_dict
+        entries = recent_files.paths()
+        if not entries:
+            placeholder = recent_menu.addAction(
+                lang.get("paint_file_recent_empty", "(no recent files)"),
+            )
+            placeholder.setEnabled(False)
+            return
+        for path in entries:
+            label = self._format_recent_label(path)
+            action = recent_menu.addAction(label)
+            action.triggered.connect(
+                lambda _checked=False, p=path: self.open_psd_at(p),
+            )
+        recent_menu.addSeparator()
+        clear_action = recent_menu.addAction(
+            lang.get("paint_file_recent_clear", "Clear recent files"),
+        )
+        clear_action.triggered.connect(self._on_clear_recent)
+
+    def _on_clear_recent(self) -> None:
+        from Imervue.paint import recent_files
+        recent_files.clear()
+        self.refresh_recent_menu()
+
+    @staticmethod
+    def _format_recent_label(path: str) -> str:
+        """Turn an absolute path into a short menu label.
+
+        Show the file name plus the parent directory so the user can
+        disambiguate two files with the same name in different
+        folders without showing the full absolute path.
+        """
+        import os
+        head, tail = os.path.split(path)
+        if not tail:
+            return path
+        parent = os.path.basename(head)
+        if parent:
+            return f"{tail}    [{parent}]"
+        return tail
+
     # ---- PSD interop ----------------------------------------------------
 
     def open_psd(self) -> None:  # pragma: no cover - QFileDialog
@@ -158,7 +227,19 @@ class _FileMenuBridge:
         )
         if not path:
             return
+        self.open_psd_at(path)
+
+    def open_psd_at(self, path: str) -> None:
+        """Open ``path`` and add it to the recent-files list.
+
+        Centralised entry point for both the file-dialog open and the
+        File ▸ Recent submenu reopen, so every successful open feeds
+        the recent list through one code path.
+        """
+        from Imervue.paint import recent_files
         commit_open_psd(self._workspace, path)
+        recent_files.add(str(path))
+        self.refresh_recent_menu()
 
     def save_psd(self) -> None:  # pragma: no cover - QFileDialog
         from PySide6.QtWidgets import QFileDialog
