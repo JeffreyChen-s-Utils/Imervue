@@ -205,8 +205,23 @@ class _FileTreeView(QTreeView):
         })
         tex = viewer.tile_textures.pop(path, None)
         if tex is not None:
+            # The delete fires from a menu-action event handler, not
+            # from within ``paintGL``, so the viewer's GL context may
+            # not be current. Make it current before freeing the
+            # texture and swallow the GLError if the context is gone
+            # entirely (window already destroyed during shutdown).
             from OpenGL.GL import glDeleteTextures
-            glDeleteTextures([tex])
+            from PySide6.QtGui import QOpenGLContext
+            try:
+                if hasattr(viewer, "makeCurrent"):
+                    viewer.makeCurrent()
+                if QOpenGLContext.currentContext() is not None:
+                    glDeleteTextures([tex])
+            except Exception:   # noqa: BLE001, S110 — GL context torn down; nothing to log
+                pass
+            finally:
+                if hasattr(viewer, "doneCurrent"):
+                    viewer.doneCurrent()
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
         self._notify_deleted(path)

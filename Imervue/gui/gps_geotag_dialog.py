@@ -64,11 +64,11 @@ class GpsGeotagDialog(QDialog):
 
     def _load_existing(self) -> tuple[float, float] | None:
         try:
-            from Imervue.image.gps import read_gps
+            from Imervue.image.gps import extract_gps
         except ImportError:
             return None
         try:
-            coords = read_gps(self._path)
+            coords = extract_gps(self._path)
         except (OSError, ValueError):
             return None
         return coords
