@@ -29,7 +29,7 @@ from Imervue.image.masks import (
     masks_to_dict_list,
 )
 from Imervue.image.recipe import Recipe
-from Imervue.image.recipe_store import get_for_path, set_for_path
+from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ class MasksDialog(QDialog):
         layout.addWidget(buttons)
 
     def _load_existing(self) -> list[Mask]:
-        recipe = get_for_path(self._path) or Recipe()
+        recipe = recipe_store.get_for_path(self._path) or Recipe()
         return masks_from_dict_list(recipe.extra.get("masks") or [])
 
     def _refresh_list(self) -> None:
@@ -198,9 +198,9 @@ class MasksDialog(QDialog):
         m.feather = self._feather.value()
 
     def _save(self) -> None:
-        recipe = get_for_path(self._path) or Recipe()
+        recipe = recipe_store.get_for_path(self._path) or Recipe()
         recipe.extra["masks"] = masks_to_dict_list(self._masks)
-        set_for_path(self._path, recipe)
+        recipe_store.set_for_path(self._path, recipe)
         reload_fn = getattr(self._viewer, "reload_current_image", None)
         if callable(reload_fn):
             reload_fn()

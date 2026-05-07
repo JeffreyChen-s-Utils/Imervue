@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.recipe import Recipe
-from Imervue.image.recipe_store import get_for_path, set_for_path
+from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -38,7 +38,9 @@ class SplitToningDialog(QDialog):
         self.setWindowTitle(lang.get("split_title", "Split Toning"))
         self.setMinimumWidth(440)
 
-        existing = (get_for_path(path) or Recipe()).extra.get("split_toning", {})
+        existing = (recipe_store.get_for_path(path) or Recipe()).extra.get(
+            "split_toning", {},
+        )
         self._shadow_hue = self._slider(0, _HUE_MAX,
                                         int(existing.get("shadow_hue", 210)))
         self._shadow_sat = self._slider(
@@ -89,7 +91,7 @@ class SplitToningDialog(QDialog):
         return row
 
     def _save(self) -> None:
-        existing = get_for_path(self._path) or Recipe()
+        existing = recipe_store.get_for_path(self._path) or Recipe()
         existing.extra["split_toning"] = {
             "shadow_hue": float(self._shadow_hue.value()),
             "shadow_sat": self._shadow_sat.value() / _SAT_STEPS,
@@ -97,7 +99,7 @@ class SplitToningDialog(QDialog):
             "highlight_sat": self._highlight_sat.value() / _SAT_STEPS,
             "balance": self._balance.value() / _BAL_STEPS,
         }
-        set_for_path(self._path, existing)
+        recipe_store.set_for_path(self._path, existing)
         viewer = self._viewer
         reload_fn = getattr(viewer, "reload_current_image", None)
         if callable(reload_fn):
