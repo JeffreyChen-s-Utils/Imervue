@@ -171,6 +171,15 @@ class PaintWorkspace(QMainWindow):
             self._on_animation_frame_selected,
         )
 
+        # Comic-project page browser. The dock binds to
+        # ``self._paint_project`` (None until File ▸ New Project), so
+        # every action degrades gracefully when no project is loaded.
+        # Selecting a page swaps the active canvas's document with
+        # that page's document.
+        from Imervue.paint.page_dock import PageDock
+        self._page_dock = PageDock(self, parent=self)
+        self._page_dock.page_selected.connect(self._on_page_selected)
+
         # Tabify every right-side dock into a single column. Without
         # tabification each dock contributes its full minimum height to
         # the QMainWindow's sizeHint, which on a 1080p screen drives
@@ -190,6 +199,7 @@ class PaintWorkspace(QMainWindow):
             self._swatch_dock,
             self._reference_dock,
             self._animation_dock,
+            self._page_dock,
             self._histogram_dock,
         )
         anchor = all_right_docks[0]
@@ -509,6 +519,52 @@ class PaintWorkspace(QMainWindow):
         document.invalidate_composite()
         self._canvas.update()
         self._refresh_onion_skin_source()
+
+    # ---- comic-project page browser --------------------------------------
+
+    def set_paint_project(self, project) -> None:
+        """Bind ``project`` (a :class:`PaintProject` or ``None``) to the
+        workspace and refresh the page dock. The dock degrades to its
+        empty state when ``project`` is ``None``."""
+        self._paint_project = project
+        page_dock = getattr(self, "_page_dock", None)
+        if page_dock is not None:
+            page_dock.refresh()
+        # If a project just bound, swap the active canvas to the
+        # project's active page so the user sees the right document
+        # immediately.
+        if project is not None and project.active_page() is not None:
+            self._swap_canvas_document(project.active_page().document)
+
+    def _on_page_selected(self, index: int) -> None:
+        """Page-list click — swap the active canvas's document with
+        the selected page's document. The canvas keeps its tab name
+        but shows the new document; ``current_image()`` and the layer
+        dock auto-refresh because the dock subscribes to the new
+        document's listeners."""
+        project = getattr(self, "_paint_project", None)
+        if project is None:
+            return
+        try:
+            page = project.page_at(index)
+        except IndexError:
+            return
+        self._swap_canvas_document(page.document)
+
+    def _swap_canvas_document(self, document) -> None:
+        """Replace the active canvas's PaintDocument with ``document``.
+
+        Re-binds the layer dock + the dispatcher's image / selection
+        providers so they read from the new document. The canvas's
+        own ``_document`` reference is updated through the public
+        ``set_document`` setter.
+        """
+        if not hasattr(self._canvas, "set_document"):
+            return
+        self._canvas.set_document(document)
+        if hasattr(self._layer_dock, "set_document"):
+            self._layer_dock.set_document(document)
+        self._canvas.update()
 
     def _refresh_onion_skin_source(self) -> None:
         """Point the canvas onion-skin overlay at the previous frame."""

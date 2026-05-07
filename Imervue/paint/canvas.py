@@ -378,6 +378,31 @@ class PaintCanvas(QOpenGLWidget):
     def document(self) -> PaintDocument:
         return self._document
 
+    def set_document(self, document: PaintDocument) -> None:
+        """Swap the canvas's bound :class:`PaintDocument`.
+
+        Used by the comic-project page browser so picking a different
+        page hands the canvas a different document without going
+        through the load-image path. The composite cache, marquee
+        animation, and texture upload are all reset because the new
+        document's pixels are distinct from the previous one's.
+        """
+        if document is self._document:
+            return
+        self._document_unsubscribe()
+        self._document = document
+        self._document_unsubscribe = document.listen(
+            self._on_document_changed,
+        )
+        self._marquee_segments = None
+        self._marquee_timer.stop()
+        self._needs_upload = True
+        self._pending_damage = EMPTY_DAMAGE
+        shape = document.shape
+        if shape is not None:
+            self.image_loaded.emit(shape[1], shape[0])
+        self.update()
+
     def current_image(self) -> np.ndarray | None:
         """Return the *active layer's* image — the buffer tools paint into.
 

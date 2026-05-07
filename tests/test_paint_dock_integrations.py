@@ -38,13 +38,14 @@ def test_workspace_owns_swatch_dock(qapp):
         ws.deleteLater()
 
 
-def test_workspace_now_has_ten_docks(qapp):
-    """Was nine before 25d — adding the histogram dock makes ten."""
+def test_workspace_now_has_eleven_docks(qapp):
+    """Was nine before 25d (histogram), then ten through 32; 33b's
+    comic-project page browser makes eleven."""
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
-        assert len(docks) == 10
+        assert len(docks) == 11
     finally:
         ws.deleteLater()
 

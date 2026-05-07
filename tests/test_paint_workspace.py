@@ -48,14 +48,15 @@ def test_workspace_constructs(qapp):
         ws.deleteLater()
 
 
-def test_workspace_has_ten_dock_widgets(qapp):
+def test_workspace_has_eleven_dock_widgets(qapp):
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
         # Colour, Brush, Layer, Navigator, Material, History,
-        # Swatches, Reference (24d), Animation (24f), Histogram (25d).
-        assert len(docks) == 10
+        # Swatches, Reference (24d), Animation (24f), Histogram (25d),
+        # Pages (33b — comic-project page browser).
+        assert len(docks) == 11
     finally:
         ws.deleteLater()
 
@@ -334,9 +335,9 @@ def test_workspace_layer_dock_plus_button_adds_layer(qapp):
         before_count = dock._document.layer_count  # noqa: SLF001
 
         buttons = dock.findChildren(QToolButton)
-        # The five buttons are add / remove / up / down / duplicate, in
-        # that order. Index 0 is the add ('+') button.
-        assert len(buttons) == 5
+        # Six buttons in order: add / remove / up / down / duplicate /
+        # add-adjustment-layer. Index 0 is the add ('+') button.
+        assert len(buttons) == 6
         buttons[0].click()
         QTest.qWait(20)
 

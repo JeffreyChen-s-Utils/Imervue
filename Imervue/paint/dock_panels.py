@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QSpinBox,
+    QMenu,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -288,6 +289,25 @@ class BrushDock(QDockWidget):
         self._density = _slider(0, 100, 100)
         self._density.valueChanged.connect(self._on_density_changed)
 
+        # Stabilizer / scatter / colour-jitter / follow-tilt — engine
+        # already supports these via brush_dynamics + brush_random;
+        # surfacing them as live controls here matches MediBang's
+        # brush-options panel.
+        self._stabilizer = _slider(0, 100, 0)
+        self._stabilizer.valueChanged.connect(self._on_stabilizer_changed)
+
+        self._scatter = _slider(0, 100, 0)
+        self._scatter.valueChanged.connect(self._on_scatter_changed)
+
+        self._color_jitter = _slider(0, 100, 0)
+        self._color_jitter.valueChanged.connect(self._on_color_jitter_changed)
+
+        from PySide6.QtWidgets import QCheckBox
+        self._follow_tilt = QCheckBox(
+            lang.get("paint_brush_follow_tilt", "Follow pen tilt"),
+        )
+        self._follow_tilt.toggled.connect(self._on_follow_tilt_changed)
+
         self._blend = QComboBox()
         for mode in ts.BLEND_MODES:
             self._blend.addItem(
@@ -301,6 +321,18 @@ class BrushDock(QDockWidget):
         form.addRow(lang.get("paint_brush_opacity", "Opacity:"), self._opacity)
         form.addRow(lang.get("paint_brush_hardness", "Hardness:"), self._hardness)
         form.addRow(lang.get("paint_brush_density", "Density:"), self._density)
+        form.addRow(
+            lang.get("paint_brush_stabilizer", "Stabilizer:"),
+            self._stabilizer,
+        )
+        form.addRow(
+            lang.get("paint_brush_scatter", "Scatter:"), self._scatter,
+        )
+        form.addRow(
+            lang.get("paint_brush_color_jitter", "Colour jitter:"),
+            self._color_jitter,
+        )
+        form.addRow("", self._follow_tilt)
         form.addRow(lang.get("paint_brush_blend", "Blend:"), self._blend)
 
         self.setWidget(body)
@@ -320,6 +352,18 @@ class BrushDock(QDockWidget):
             self._opacity.setValue(int(round(self._state.brush.opacity * 100)))
             self._hardness.setValue(int(round(self._state.brush.hardness * 100)))
             self._density.setValue(int(round(self._state.brush.density * 100)))
+            self._stabilizer.setValue(
+                int(round(self._state.brush.stabilizer * 100)),
+            )
+            self._scatter.setValue(
+                int(round(self._state.brush.scatter * 100)),
+            )
+            self._color_jitter.setValue(
+                int(round(self._state.brush.color_jitter * 100)),
+            )
+            self._follow_tilt.setChecked(
+                bool(self._state.brush.follow_tilt),
+            )
             self._blend.setCurrentIndex(self._blend.findData(self._state.brush.blend_mode))
         finally:
             self._suspend = False
@@ -348,6 +392,28 @@ class BrushDock(QDockWidget):
         if self._suspend:
             return
         self._state.set_brush(density=self._density.value() / 100.0)
+
+    def _on_stabilizer_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_brush(stabilizer=self._stabilizer.value() / 100.0)
+
+    def _on_scatter_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_brush(scatter=self._scatter.value() / 100.0)
+
+    def _on_color_jitter_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_brush(
+            color_jitter=self._color_jitter.value() / 100.0,
+        )
+
+    def _on_follow_tilt_changed(self, checked: bool) -> None:
+        if self._suspend:
+            return
+        self._state.set_brush(follow_tilt=bool(checked))
 
     def _on_blend_changed(self) -> None:
         if self._suspend:
@@ -412,6 +478,23 @@ class LayerDock(QDockWidget):
             btn.setText(lang.get(key, fallback))
             btn.clicked.connect(slot)
             row.addWidget(btn)
+        # Dedicated "add adjustment layer" entry — MediBang's Layer
+        # palette has the same affordance under a separate icon. The
+        # ``+◐`` glyph (plus + half-tone disc) marks it as an
+        # adjustment-only insert vs the plain ``+`` raster add.
+        adj_btn = QToolButton()
+        adj_btn.setText(
+            lang.get("paint_layers_add_adjustment", "+◐"),
+        )
+        adj_btn.setToolTip(
+            lang.get(
+                "paint_layers_add_adjustment_tooltip",
+                "Add adjustment layer…",
+            ),
+        )
+        adj_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        adj_btn.setMenu(self._build_adjustment_menu())
+        row.addWidget(adj_btn)
         row.addStretch(1)
         layout.addLayout(row)
 
@@ -534,6 +617,57 @@ class LayerDock(QDockWidget):
         if self._document is None or self._document.layer_count == 0:
             return
         self._document.add_layer()
+
+    def _build_adjustment_menu(self) -> QMenu:
+        """Build the Adjustment-Layer popup menu lazily.
+
+        Each entry adds a fresh layer with the matching ``Adjustment``
+        instance pre-installed using the catalogue's documented
+        defaults — the user can then tweak the parameters in the
+        Adjustments dialog without first having to pick a kind.
+        """
+        from Imervue.paint.adjustments import (
+            ADJUSTMENT_KINDS,
+            DEFAULT_PARAMS,
+        )
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+        for kind in ADJUSTMENT_KINDS:
+            label = lang.get(
+                f"paint_adjustment_{kind}",
+                kind.replace("_", " ").title(),
+            )
+            action = menu.addAction(label)
+            action.triggered.connect(
+                lambda _checked=False, k=kind: self._add_adjustment_layer(
+                    k, dict(DEFAULT_PARAMS.get(k, {})),
+                ),
+            )
+        return menu
+
+    def _add_adjustment_layer(self, kind: str, params: dict) -> None:
+        from Imervue.paint.adjustments import Adjustment
+        if self._document is None or self._document.layer_count == 0:
+            return
+        layer = self._document.add_layer()
+        layer.adjustment = Adjustment(kind=kind, params=params)
+        layer.name = self._unique_adjustment_name(kind)
+        self._document.invalidate_composite()
+        self.refresh()
+
+    def _unique_adjustment_name(self, kind: str) -> str:
+        """Return ``"<Kind> 1"`` (or 2/3/...) so successive adjustment
+        layers of the same kind get sortable, non-clashing names."""
+        prefix = kind.replace("_", " ").title()
+        if self._document is None:
+            return prefix
+        existing = {layer.name for layer in self._document.layers()}
+        i = 1
+        while True:
+            candidate = f"{prefix} {i}"
+            if candidate not in existing:
+                return candidate
+            i += 1
 
     def _on_remove(self) -> None:
         if self._document is None:
