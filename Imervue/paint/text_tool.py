@@ -104,6 +104,12 @@ class TextToolDialog(QDialog):
         self._size.setValue(36)
         self._bold = QCheckBox(lang.get("paint_text_bold", "Bold"))
         self._italic = QCheckBox(lang.get("paint_text_italic", "Italic"))
+        # Vertical (top-to-bottom) layout for CJK manga text. Engine
+        # already supports the mode; this checkbox just routes it
+        # through TextRenderOptions.vertical.
+        self._vertical = QCheckBox(
+            lang.get("paint_text_vertical", "Vertical (top-to-bottom)"),
+        )
         self._color_btn = QPushButton(lang.get("paint_text_color", "Colour…"))
         self._color_btn.clicked.connect(self._pick_color)
         self._update_color_button()
@@ -140,6 +146,7 @@ class TextToolDialog(QDialog):
         style_row.addWidget(self._color_btn)
         style_row.addStretch(1)
         form.addRow(lang.get("paint_text_style", "Style:"), style_row)
+        form.addRow("", self._vertical)
         form.addRow(
             lang.get("paint_text_preview", "Preview:"), self._preview,
         )
@@ -164,6 +171,7 @@ class TextToolDialog(QDialog):
             color=self._color,
             bold=self._bold.isChecked(),
             italic=self._italic.isChecked(),
+            vertical=self._vertical.isChecked(),
         )
 
     def _pick_color(self) -> None:  # pragma: no cover - Qt dialog

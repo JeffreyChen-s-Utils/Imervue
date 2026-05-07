@@ -78,6 +78,15 @@ class PaintWorkspace(QMainWindow):
     def __init__(self, state: ToolState | None = None, parent=None):
         super().__init__(parent)
         self._state = state if state is not None else ts.load_tool_state()
+        # Seed the MediBang-style default brush preset pack on first
+        # workspace launch. Idempotent: when the user already has at
+        # least one brush sub-tool the seeder bails out, so existing
+        # users keep their saved presets and tests that build their
+        # own state are unaffected.
+        from Imervue.paint.default_brush_presets import (
+            seed_default_brush_presets,
+        )
+        seed_default_brush_presets(self._state)
 
         # The embedded main window has its own menu bar so File / Edit
         # / Layer / View / Tools / Filter / Settings / Window all live
@@ -189,6 +198,13 @@ class PaintWorkspace(QMainWindow):
         self._stamp_dock = StampDock(parent=self)
         self._stamp_dock.stamp_chosen.connect(self._on_stamp_chosen)
 
+        # Pose reference — interactive 2D stick figure the user can
+        # drag joints on; "Insert" stamps the skeleton into the
+        # active canvas as a guides layer.
+        from Imervue.paint.pose_dock import PoseDock
+        self._pose_dock = PoseDock(parent=self)
+        self._pose_dock.insert_requested.connect(self._on_pose_insert)
+
         # Tabify every right-side dock into a single column. Without
         # tabification each dock contributes its full minimum height to
         # the QMainWindow's sizeHint, which on a 1080p screen drives
@@ -211,6 +227,7 @@ class PaintWorkspace(QMainWindow):
             self._animation_dock,
             self._page_dock,
             self._stamp_dock,
+            self._pose_dock,
             self._histogram_dock,
         )
         anchor = all_right_docks[0]
@@ -531,6 +548,25 @@ class PaintWorkspace(QMainWindow):
         self._canvas.update()
         self._refresh_onion_skin_source()
 
+    # ---- pose reference --------------------------------------------------
+
+    def _on_pose_insert(self, skeleton) -> None:
+        """User clicked "Insert" on the pose dock. Render the
+        skeleton into a fresh layer at canvas size."""
+        from Imervue.paint.pose_skeleton import render_skeleton
+
+        document = self._canvas.document()
+        shape = document.shape
+        if shape is None:
+            return
+        h, w = shape
+        rendered = render_skeleton(skeleton, height=h, width=w)
+        layer = document.add_layer(name="Pose")
+        np.copyto(layer.image, rendered)
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
     # ---- stamp library ---------------------------------------------------
 
     def _on_stamp_chosen(self, key: str) -> None:
@@ -827,6 +863,7 @@ class PaintWorkspace(QMainWindow):
             ("paint_dock_reference", "Reference", self._reference_dock),
             ("paint_dock_animation", "Animation", self._animation_dock),
             ("paint_dock_stamps", "Stamps", self._stamp_dock),
+            ("paint_dock_pose", "Pose", self._pose_dock),
             ("paint_dock_histogram", "Histogram", self._histogram_dock),
         )
         self._window_dock_actions = {}
