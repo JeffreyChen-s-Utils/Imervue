@@ -66,28 +66,36 @@ def test_swatch_dock_click_updates_foreground(qapp):
 # ---------------------------------------------------------------------------
 
 
-def test_window_menu_populates_one_entry_per_dock(qapp):
+def test_window_menu_top_level_structure(qapp):
+    """Top-level Window menu entries: Drawing / Canvas / Library
+    submenus, separator, three standalone-window actions, separator,
+    Reset Layout."""
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        # Thirteen dock toggles + separator + 26f "New View" +
-        # 28d "Mirror Preview" + 28f "Tile Preview" = 17.
-        # (33f added the Pose dock toggle.)
-        assert len(window_menu.actions()) == 17
+        actions = window_menu.actions()
+        # 3 submenus + sep + 3 standalone + sep + 1 reset = 9.
+        assert len(actions) == 9
+        # Every submenu carries dock toggles inside.
+        submenus = [a.menu() for a in actions if a.menu() is not None]
+        assert len(submenus) == 3
     finally:
         ws.deleteLater()
 
 
-def test_window_menu_actions_are_checkable(qapp):
-    """Every dock-toggle is checkable; the trailing separator + the
-    "New View" command after it intentionally are not."""
+def test_window_menu_dock_toggles_live_in_cluster_submenus(qapp):
+    """All 13 dock toggles are reachable via the three submenus."""
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        toggles = [
-            a for a in window_menu.actions()
-            if not a.isSeparator() and a.isCheckable()
-        ]
+        toggles = []
+        for top in window_menu.actions():
+            sub = top.menu()
+            if sub is None:
+                continue
+            for sub_action in sub.actions():
+                if sub_action.isCheckable():
+                    toggles.append(sub_action)
         assert len(toggles) == 13
     finally:
         ws.deleteLater()

@@ -21,6 +21,7 @@ not yet a paint operation — Phase 2 plugs the brush engine into
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -72,11 +73,17 @@ def _safe_set_checked(action, value: bool) -> None:
         return
 
 
+logger = logging.getLogger("Imervue.paint.workspace")
+
+
 class PaintWorkspace(QMainWindow):
     """Assembles the Paint tab from the toolbar + canvas + dock pieces."""
 
     def __init__(self, state: ToolState | None = None, parent=None):
         super().__init__(parent)
+        # Accept image / PSD drops on the workspace itself so users
+        # can drag a file from the OS file manager into the canvas.
+        self.setAcceptDrops(True)
         self._state = state if state is not None else ts.load_tool_state()
         # Seed the MediBang-style default brush preset pack on first
         # workspace launch. Idempotent: when the user already has at
@@ -467,6 +474,80 @@ class PaintWorkspace(QMainWindow):
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()
         super().closeEvent(event)
+
+    # ---- drag-and-drop file open ---------------------------------------
+
+    SUPPORTED_DROP_EXTS = (
+        ".psd", ".png", ".jpg", ".jpeg", ".tif", ".tiff",
+        ".bmp", ".webp",
+    )
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Accept file URL drops the workspace knows how to open."""
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            event.ignore()
+            return
+        for url in mime.urls():
+            if url.isLocalFile() and self._is_supported_drop(url.toLocalFile()):
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
+    def dragMoveEvent(self, event) -> None:  # noqa: N802 - Qt override
+        # Mirror dragEnter — Qt requires both for a clean drop visual.
+        self.dragEnterEvent(event)
+
+    def dropEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Open every supported file the user dropped.
+
+        PSDs route through the file-menu bridge so the open feeds
+        the recent-files list. Plain raster files are loaded into
+        the active canvas via load_image — same path as the existing
+        File ▸ Open flow for non-PSDs.
+        """
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            event.ignore()
+            return
+        opened_any = False
+        for url in mime.urls():
+            if not url.isLocalFile():
+                continue
+            path = url.toLocalFile()
+            if not self._is_supported_drop(path):
+                continue
+            self._open_dropped_path(path)
+            opened_any = True
+        if opened_any:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _is_supported_drop(self, path: str) -> bool:
+        lowered = path.lower()
+        return any(lowered.endswith(ext) for ext in self.SUPPORTED_DROP_EXTS)
+
+    def _open_dropped_path(self, path: str) -> None:
+        if path.lower().endswith(".psd"):
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "open_psd_at"):
+                bridge.open_psd_at(path)
+                return
+        # Plain raster: load via Pillow, push into the active canvas.
+        try:
+            from PIL import Image
+            import numpy as np
+            with Image.open(path) as img:
+                rgba = np.array(img.convert("RGBA"), dtype=np.uint8)
+            self._canvas.load_image(rgba)
+            from Imervue.paint import recent_files
+            recent_files.add(path)
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "refresh_recent_menu"):
+                bridge.refresh_recent_menu()
+        except (OSError, ValueError) as exc:
+            logger.warning("dropped file %r could not be opened: %s", path, exc)
 
     def reset_workspace_layout(self) -> None:
         """Re-apply the default three-cluster layout.
@@ -987,47 +1068,70 @@ class PaintWorkspace(QMainWindow):
     # ---- window menu ----------------------------------------------------
 
     def _populate_window_menu(self) -> None:
-        """One checkable Window-menu entry per dock — toggles visibility.
+        """Checkable dock toggles grouped into three cluster submenus.
 
-        Each entry's check state mirrors the dock's
-        :meth:`isVisible` so closing a dock via its corner X also
-        unchecks the menu item.
+        Window menu structure:
+          ▸ Drawing       (Color / Brush / Bucket / Swatches)
+          ▸ Canvas        (Layer / Navigator / History / Pages / …)
+          ▸ Library       (Material / Stamps / Pose / Reference)
+          ─────
+          New View / Mirror Preview / Tile Preview
+          ─────
+          Reset Workspace Layout
+
+        Each toggle's check state mirrors the dock's ``isVisible``
+        so closing a dock via its corner X also unchecks the entry.
         """
         from Imervue.paint.paint_menu_bar import menu_for
         lang = language_wrapper.language_word_dict
         menu = menu_for(self, "window")
-        entries = (
-            ("paint_dock_color", "Color", self._color_dock),
-            ("paint_dock_brush", "Brush", self._brush_dock),
-            ("paint_dock_fill", "Bucket", self._fill_dock),
-            ("paint_dock_layers", "Layers", self._layer_dock),
-            ("paint_dock_navigator", "Navigator", self._navigator_dock),
-            ("paint_dock_material", "Materials", self._material_dock),
-            ("paint_dock_history", "History", self._history_dock),
-            ("paint_dock_swatches", "Swatches", self._swatch_dock),
-            ("paint_dock_reference", "Reference", self._reference_dock),
-            ("paint_dock_animation", "Animation", self._animation_dock),
-            ("paint_dock_stamps", "Stamps", self._stamp_dock),
-            ("paint_dock_pose", "Pose", self._pose_dock),
-            ("paint_dock_histogram", "Histogram", self._histogram_dock),
-        )
+        cluster_entries = {
+            "drawing": (
+                ("paint_dock_color", "Color", self._color_dock),
+                ("paint_dock_brush", "Brush", self._brush_dock),
+                ("paint_dock_fill", "Bucket", self._fill_dock),
+                ("paint_dock_swatches", "Swatches", self._swatch_dock),
+            ),
+            "canvas": (
+                ("paint_dock_layers", "Layers", self._layer_dock),
+                ("paint_dock_navigator", "Navigator", self._navigator_dock),
+                ("paint_dock_history", "History", self._history_dock),
+                ("paint_dock_pages", "Pages", self._page_dock),
+                ("paint_dock_animation", "Animation", self._animation_dock),
+                ("paint_dock_histogram", "Histogram", self._histogram_dock),
+            ),
+            "library": (
+                ("paint_dock_material", "Materials", self._material_dock),
+                ("paint_dock_stamps", "Stamps", self._stamp_dock),
+                ("paint_dock_pose", "Pose", self._pose_dock),
+                ("paint_dock_reference", "Reference", self._reference_dock),
+            ),
+        }
+        cluster_titles = {
+            "drawing": ("paint_window_group_drawing", "Drawing"),
+            "canvas": ("paint_window_group_canvas", "Canvas"),
+            "library": ("paint_window_group_library", "Library"),
+        }
         self._window_dock_actions = {}
-        for key, fallback, dock in entries:
-            action = menu.addAction(lang.get(key, fallback))
-            action.setCheckable(True)
-            action.setChecked(dock.isVisible() or True)
-            action.triggered.connect(
-                lambda checked, d=dock: d.setVisible(bool(checked)),
-            )
-            # Reflect external close (dock corner X). Wrap the
-            # ``setChecked`` call so a teardown that frees the
-            # QAction's C++ side before the dock's signal fully
-            # disconnects doesn't leave a dangling
-            # RuntimeError-raising slot in the queue.
-            dock.visibilityChanged.connect(
-                lambda visible, a=action: _safe_set_checked(a, visible),
-            )
-            self._window_dock_actions[key] = action
+        for cluster_key in ("drawing", "canvas", "library"):
+            title_key, title_fallback = cluster_titles[cluster_key]
+            submenu = menu.addMenu(lang.get(title_key, title_fallback))
+            for key, fallback, dock in cluster_entries[cluster_key]:
+                action = submenu.addAction(lang.get(key, fallback))
+                action.setCheckable(True)
+                action.setChecked(dock.isVisible() or True)
+                action.triggered.connect(
+                    lambda checked, d=dock: d.setVisible(bool(checked)),
+                )
+                # Reflect external close (dock corner X). Wrap the
+                # ``setChecked`` call so a teardown that frees the
+                # QAction's C++ side before the dock's signal fully
+                # disconnects doesn't leave a dangling
+                # RuntimeError-raising slot in the queue.
+                dock.visibilityChanged.connect(
+                    lambda visible, a=action: _safe_set_checked(a, visible),
+                )
+                self._window_dock_actions[key] = action
         # "New View" — spawn an independent overview window onto the
         # active document. Placed after the dock toggles so the
         # menu structure stays "all docks, then standalone windows".
@@ -1101,6 +1205,10 @@ class PaintWorkspace(QMainWindow):
         ).format(w=w, h=h)
         self._status.showMessage(msg, 3000)
 
+    # Tools whose options live on BrushSettings and therefore want
+    # the brush-size segment surfaced in the status bar.
+    _BRUSHED_TOOLS = frozenset({"brush", "eraser", "blur", "smudge"})
+
     def _compose_status_line(self, x: int, y: int) -> str:
         """Build the rich status-bar string: cursor + zoom + layer + size.
 
@@ -1136,6 +1244,13 @@ class PaintWorkspace(QMainWindow):
                 )
                 if active is not None and getattr(active, "name", None):
                     segments.append(str(active.name))
+        state = getattr(self, "_state", None)
+        if state is not None and state.tool in self._BRUSHED_TOOLS:
+            segments.append(
+                lang.get("paint_status_brush_size", "Brush: {size} px").format(
+                    size=int(state.brush.size),
+                ),
+            )
         return "    ".join(segments)
 
     def _on_material_chosen(self, path: str) -> None:
