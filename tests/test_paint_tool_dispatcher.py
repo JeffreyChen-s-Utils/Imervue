@@ -70,7 +70,10 @@ def test_dispatcher_routes_to_active_tool(state, canvas):
 
 def test_dispatcher_unknown_tool_returns_false(state, canvas):
     disp = ToolDispatcher(state, image_provider=lambda: canvas)
-    state.set_tool("blur")  # blur tool has no handler yet
+    # ``state.set_tool`` validates against the documented TOOLS list,
+    # so write the field directly to simulate a stale tab pointing at
+    # a tool that the current dispatcher build doesn't know about.
+    state.tool = "tool-from-the-future"   # noqa: SLF001 — bypass validation
     assert disp(_press(10, 10)) is False
 
 
@@ -600,3 +603,57 @@ def test_alt_no_op_when_active_tool_is_eyedropper(state, canvas):
     disp = ToolDispatcher(state, image_provider=lambda: canvas)
     disp(_press_alt(10, 10))
     assert state.background == (33, 44, 55)
+
+
+# ---------------------------------------------------------------------------
+# Toolbar tool ↔ dispatcher coverage — every tool the toolbar exposes must
+# either have a dispatcher handler OR be a canvas-only tool (hand / zoom).
+# ---------------------------------------------------------------------------
+
+
+# Tools that are canvas-widget operations rather than image mutators —
+# the canvas handles their pointer events directly (pan / zoom click).
+_CANVAS_ONLY_TOOLS = frozenset({"hand", "zoom"})
+
+
+def test_every_toolbar_tool_has_dispatcher_or_canvas_handler(state, canvas):
+    """Toolbar exposes 24 tools. 22 are image-mutators with dispatcher
+    handlers; 2 (hand / zoom) are canvas-widget operations the canvas
+    handles in mousePressEvent. Catches a regression where adding a
+    button to the toolbar without wiring its handler silently turns
+    clicks into no-ops."""
+    from Imervue.paint.tool_bar import TOOL_ORDER
+
+    toolbar_tools = {
+        entry[0] for entry in TOOL_ORDER if entry is not None
+    }
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    handler_keys = set(disp._handlers.keys())  # noqa: SLF001
+    expected = handler_keys | _CANVAS_ONLY_TOOLS
+    missing = toolbar_tools - expected
+    assert not missing, (
+        f"toolbar tools without a handler: {missing}"
+    )
+
+
+def test_blur_tool_dab_changes_canvas_pixels(state, canvas):
+    """Blur tool: press → drag → release smooths pixels under the
+    kernel. Catches regressions where the dispatcher's blur entry
+    is registered but the underlying ``blur_dab`` math no-ops."""
+    state.set_tool("blur")
+    state.set_brush(size=12, hardness=0.7, opacity=1.0)
+    # Stamp a sharp dark pixel into the canvas so we have something
+    # to soften.
+    canvas[10, 10] = (0, 0, 0, 255)
+    canvas[10, 10:14] = (0, 0, 0, 255)
+    before = canvas.copy()
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    disp(PointerEvent(
+        phase="press", x=10.0, y=10.0,
+        button=1, modifiers=0, pressure=1.0,
+    ))
+    disp(PointerEvent(
+        phase="release", x=10.0, y=10.0,
+        button=0, modifiers=0, pressure=1.0,
+    ))
+    assert (canvas != before).any(), "blur dab did not modify the canvas"

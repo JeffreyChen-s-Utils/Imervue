@@ -1077,6 +1077,35 @@ class PaintCanvas(QOpenGLWidget):
             self._pan_anchor = (event.position().x(), event.position().y())
             self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
             return
+        # Hand / zoom tools work on the canvas widget itself, not on
+        # the layer image — handle them here before the dispatcher
+        # would silently no-op (it has no handlers for these tools).
+        active_tool = (
+            self._tool_state_for_hud.tool
+            if self._tool_state_for_hud is not None
+            else None
+        )
+        if (
+            active_tool == "hand"
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            self._panning = True
+            self._pan_anchor = (event.position().x(), event.position().y())
+            self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
+            return
+        if (
+            active_tool == "zoom"
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            # Click zooms in 1.25×; Alt+click zooms out, mirroring
+            # the Photoshop / MediBang convention.
+            factor = 1.0 / 1.25 if (
+                event.modifiers() & Qt.KeyboardModifier.AltModifier
+            ) else 1.25
+            self._apply_zoom(
+                factor, event.position().x(), event.position().y(),
+            )
+            return
         self._dispatch("press", event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI
