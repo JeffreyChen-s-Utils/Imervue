@@ -335,10 +335,25 @@ class BrushDock(QDockWidget):
         form.addRow("", self._follow_tilt)
         form.addRow(lang.get("paint_brush_blend", "Blend:"), self._blend)
 
+        # MediBang-style sub-tool / preset manager. The button opens a
+        # modal dialog that drives ``state.add_sub_tool`` /
+        # ``apply_sub_tool`` / ``remove_sub_tool`` for the active main
+        # tool, so brush + fill snapshots round-trip through the
+        # existing persistence path.
+        self._presets_btn = QPushButton(
+            lang.get("paint_brush_presets_open", "Presets…"),
+        )
+        self._presets_btn.clicked.connect(self._on_presets_clicked)
+        form.addRow("", self._presets_btn)
+
         self.setWidget(body)
         self._refresh_from_state()
         self._unsubscribe = state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
+
+    def _on_presets_clicked(self) -> None:
+        from Imervue.paint.brush_preset_dialog import open_brush_preset_dialog
+        open_brush_preset_dialog(self._state, parent=self)
 
     def _on_state_event(self, channel: str) -> None:
         if channel == ts.EVENT_BRUSH:
@@ -419,6 +434,148 @@ class BrushDock(QDockWidget):
         if self._suspend:
             return
         self._state.set_brush(blend_mode=self._blend.currentData())
+
+
+# ---------------------------------------------------------------------------
+# Fill bucket options dock
+# ---------------------------------------------------------------------------
+
+
+class FillDock(QDockWidget):
+    """Surfaces every :class:`FillSettings` knob for the bucket tool.
+
+    Tabified next to BrushDock so the user flips between brush and
+    bucket option panels the way MediBang Paint Pro does. Updates
+    flow both ways: state-event subscription mirrors the singleton
+    when the user changes settings via shortcut or another panel,
+    and edits here go through ``state.set_fill(...)`` so persistence
+    + redraw fire on a single code path.
+    """
+
+    def __init__(self, state: ToolState, parent=None):
+        from PySide6.QtWidgets import QCheckBox
+        lang = language_wrapper.language_word_dict
+        super().__init__(lang.get("paint_dock_fill", "Bucket"), parent)
+        self._state = state
+        self._suspend = False
+
+        body = QWidget()
+        form = QFormLayout(body)
+
+        self._tolerance = _slider(0, 255, 32)
+        self._tolerance.valueChanged.connect(self._on_tolerance_changed)
+
+        self._contiguous = QCheckBox(
+            lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
+        )
+        self._contiguous.toggled.connect(self._on_contiguous_changed)
+
+        self._sample_all = QCheckBox(
+            lang.get("paint_fill_sample_all", "Sample all layers"),
+        )
+        self._sample_all.toggled.connect(self._on_sample_all_changed)
+
+        self._use_reference = QCheckBox(
+            lang.get(
+                "paint_fill_use_reference",
+                "Use reference layer for boundaries",
+            ),
+        )
+        self._use_reference.toggled.connect(self._on_use_reference_changed)
+
+        self._expand = _slider(ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0)
+        self._expand.valueChanged.connect(self._on_expand_changed)
+
+        self._gap_close = _slider(
+            ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0,
+        )
+        self._gap_close.valueChanged.connect(self._on_gap_close_changed)
+
+        form.addRow(
+            lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance,
+        )
+        form.addRow("", self._contiguous)
+        form.addRow("", self._sample_all)
+        form.addRow("", self._use_reference)
+        form.addRow(
+            lang.get("paint_fill_expand", "Expand (px):"), self._expand,
+        )
+        form.addRow(
+            lang.get("paint_fill_gap_close", "Close gap (px):"),
+            self._gap_close,
+        )
+
+        # MediBang-style "fill every closed region in one click". Goes
+        # to a workspace-level action so it can read the active layer
+        # + the reference layer through the document API. The button
+        # surfaces a no-op + status message when no callback is wired.
+        self._auto_fill_btn = QPushButton(
+            lang.get("paint_fill_auto_regions", "Auto-fill closed regions"),
+        )
+        self._auto_fill_btn.clicked.connect(self._on_auto_fill_clicked)
+        form.addRow("", self._auto_fill_btn)
+        self._auto_fill_callback = None
+
+        self.setWidget(body)
+        self._refresh_from_state()
+        self._unsubscribe = state.subscribe(self._on_state_event)
+        self.destroyed.connect(lambda *_: self._unsubscribe())
+
+    def set_auto_fill_callback(self, callback) -> None:
+        """Wire the workspace's auto-fill verb to the dock's button."""
+        self._auto_fill_callback = callback
+
+    def _on_auto_fill_clicked(self) -> None:
+        if self._auto_fill_callback is None:
+            return
+        self._auto_fill_callback()
+
+    def _on_state_event(self, channel: str) -> None:
+        if channel == ts.EVENT_FILL:
+            self._refresh_from_state()
+
+    def _refresh_from_state(self) -> None:
+        self._suspend = True
+        try:
+            fill = self._state.fill
+            self._tolerance.setValue(int(fill.tolerance))
+            self._contiguous.setChecked(bool(fill.contiguous))
+            self._sample_all.setChecked(bool(fill.sample_all_layers))
+            self._use_reference.setChecked(bool(fill.use_reference_layer))
+            self._expand.setValue(int(fill.expand_px))
+            self._gap_close.setValue(int(fill.gap_close_px))
+        finally:
+            self._suspend = False
+
+    def _on_tolerance_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(tolerance=int(self._tolerance.value()))
+
+    def _on_contiguous_changed(self, checked: bool) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(contiguous=bool(checked))
+
+    def _on_sample_all_changed(self, checked: bool) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(sample_all_layers=bool(checked))
+
+    def _on_use_reference_changed(self, checked: bool) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(use_reference_layer=bool(checked))
+
+    def _on_expand_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(expand_px=int(self._expand.value()))
+
+    def _on_gap_close_changed(self) -> None:
+        if self._suspend:
+            return
+        self._state.set_fill(gap_close_px=int(self._gap_close.value()))
 
 
 # ---------------------------------------------------------------------------

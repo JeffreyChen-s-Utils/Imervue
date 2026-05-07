@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 from Imervue.paint import tool_state as ts
-from Imervue.paint.dock_panels import BrushDock, LayerDock
+from Imervue.paint.dock_panels import BrushDock, FillDock, LayerDock
 from Imervue.paint.document import PaintDocument
 from Imervue.paint.page_dock import PageDock
 from Imervue.paint.paint_project import PaintProject, ProjectPage
@@ -213,3 +213,76 @@ def test_page_dock_double_click_emits_page_selected(qapp):
         assert emitted == [2]
     finally:
         dock.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# 4. Fill bucket dock — every FillSettings field round-trips both ways.
+# ---------------------------------------------------------------------------
+
+
+def test_fill_dock_controls_round_trip(qapp):
+    """Each control flips the same FillSettings field via set_fill,
+    and the dock mirrors back state changes that originate elsewhere."""
+    state = ts.load_tool_state()
+    dock = FillDock(state)
+    try:
+        # User-driven edits push into the singleton.
+        dock._tolerance.setValue(64)            # noqa: SLF001
+        dock._contiguous.setChecked(False)      # noqa: SLF001
+        dock._sample_all.setChecked(True)       # noqa: SLF001
+        dock._use_reference.setChecked(True)    # noqa: SLF001
+        dock._expand.setValue(4)                # noqa: SLF001
+        dock._gap_close.setValue(2)             # noqa: SLF001
+        assert state.fill.tolerance == 64
+        assert state.fill.contiguous is False
+        assert state.fill.sample_all_layers is True
+        assert state.fill.use_reference_layer is True
+        assert state.fill.expand_px == 4
+        assert state.fill.gap_close_px == 2
+
+        # External edit propagates back to the dock via EVENT_FILL.
+        state.set_fill(tolerance=8, use_reference_layer=False, expand_px=0)
+        assert dock._tolerance.value() == 8           # noqa: SLF001
+        assert dock._use_reference.isChecked() is False  # noqa: SLF001
+        assert dock._expand.value() == 0              # noqa: SLF001
+    finally:
+        dock.deleteLater()
+
+
+def test_fill_dock_use_reference_makes_dispatcher_pull_reference(qapp):
+    """When ``use_reference_layer`` is on the FillTool's reference
+    provider must be invoked; when off it must NOT be invoked."""
+    from Imervue.paint.canvas import PointerEvent
+    from Imervue.paint.tool_dispatcher import FillTool
+
+    state = ts.load_tool_state()
+    canvas = np.full((8, 8, 4), 255, dtype=np.uint8)
+    canvas[..., 3] = 255
+    # The reference must agree with the canvas where we click so the
+    # flood does not stop at the seed and we observe a real call path.
+    reference = np.full((8, 8, 4), 255, dtype=np.uint8)
+    reference[..., 3] = 255
+    calls = {"n": 0}
+
+    def reference_provider():
+        calls["n"] += 1
+        return reference
+
+    tool = FillTool(
+        state=state,
+        selection_provider=lambda: None,
+        reference_provider=reference_provider,
+    )
+
+    def _evt():
+        return PointerEvent(
+            phase="press", x=2, y=2, button=1, modifiers=0, pressure=1.0,
+        )
+
+    state.set_fill(use_reference_layer=False, contiguous=False, tolerance=255)
+    tool.handle(_evt(), canvas)
+    assert calls["n"] == 0
+
+    state.set_fill(use_reference_layer=True)
+    tool.handle(_evt(), canvas)
+    assert calls["n"] == 1

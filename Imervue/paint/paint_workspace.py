@@ -33,6 +33,7 @@ from Imervue.paint import tool_state as ts
 from Imervue.paint.canvas import PaintCanvas, cursor_for_tool
 from Imervue.paint.dock_panels import (
     BrushDock,
+    FillDock,
     ColorDock,
     HistoryDock,
     LayerDock,
@@ -128,6 +129,8 @@ class PaintWorkspace(QMainWindow):
         # changes (tool that adds a layer, file load) refresh the panel.
         self._color_dock = ColorDock(self._state, self)
         self._brush_dock = BrushDock(self._state, self)
+        self._fill_dock = FillDock(self._state, self)
+        self._fill_dock.set_auto_fill_callback(self._auto_fill_closed_regions)
         self._layer_dock = LayerDock(self._canvas.document(), self)
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
@@ -180,6 +183,12 @@ class PaintWorkspace(QMainWindow):
         self._page_dock = PageDock(self, parent=self)
         self._page_dock.page_selected.connect(self._on_page_selected)
 
+        # Comic stamp library — speech balloons / shouts / panel
+        # borders inserted as new raster layers on click.
+        from Imervue.paint.stamp_dock import StampDock
+        self._stamp_dock = StampDock(parent=self)
+        self._stamp_dock.stamp_chosen.connect(self._on_stamp_chosen)
+
         # Tabify every right-side dock into a single column. Without
         # tabification each dock contributes its full minimum height to
         # the QMainWindow's sizeHint, which on a 1080p screen drives
@@ -192,6 +201,7 @@ class PaintWorkspace(QMainWindow):
         all_right_docks = (
             self._color_dock,
             self._brush_dock,
+            self._fill_dock,
             self._layer_dock,
             self._navigator_dock,
             self._material_dock,
@@ -200,6 +210,7 @@ class PaintWorkspace(QMainWindow):
             self._reference_dock,
             self._animation_dock,
             self._page_dock,
+            self._stamp_dock,
             self._histogram_dock,
         )
         anchor = all_right_docks[0]
@@ -520,6 +531,64 @@ class PaintWorkspace(QMainWindow):
         self._canvas.update()
         self._refresh_onion_skin_source()
 
+    # ---- stamp library ---------------------------------------------------
+
+    def _on_stamp_chosen(self, key: str) -> None:
+        """User clicked a stamp thumbnail. Render it at ~1/3 of the
+        canvas size and paste it into a new layer at canvas centre."""
+        from Imervue.paint.comic_stamps import render_stamp
+
+        document = self._canvas.document()
+        shape = document.shape
+        if shape is None:
+            return
+        h, w = shape
+        target_w = max(64, int(w * 0.35))
+        target_h = max(64, int(h * 0.30))
+        stamp = render_stamp(key, target_w, target_h)
+        sh, sw = stamp.shape[:2]
+        # Add a transparent layer at the document's size, then paint
+        # the stamp into its centre. Going through ``add_layer`` keeps
+        # the document's invariants (active-index update, reference
+        # shift, listener notify) intact.
+        layer = document.add_layer(name=key)
+        x0 = max(0, (w - sw) // 2)
+        y0 = max(0, (h - sh) // 2)
+        x1 = min(w, x0 + sw)
+        y1 = min(h, y0 + sh)
+        layer.image[y0:y1, x0:x1] = stamp[: y1 - y0, : x1 - x0]
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
+    # ---- auto-region fill ------------------------------------------------
+
+    def _auto_fill_closed_regions(self) -> None:
+        """Paint the foreground colour into every enclosed region of
+        the document's reference layer (or the active layer when no
+        reference layer is set). Pushes one undo entry on success."""
+        from Imervue.paint.auto_region_fill import auto_region_fill
+
+        document = self._canvas.document()
+        target = document.active_layer()
+        if target is None:
+            return
+        ref_idx = document.reference_layer_index()
+        line_art = (
+            target.image if ref_idx is None
+            else document.layer_at(ref_idx).image
+        )
+        result = auto_region_fill(
+            target.image,
+            line_art,
+            self._state.foreground,
+        )
+        if result.is_empty:
+            return
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
     # ---- comic-project page browser --------------------------------------
 
     def set_paint_project(self, project) -> None:
@@ -749,6 +818,7 @@ class PaintWorkspace(QMainWindow):
         entries = (
             ("paint_dock_color", "Color", self._color_dock),
             ("paint_dock_brush", "Brush", self._brush_dock),
+            ("paint_dock_fill", "Bucket", self._fill_dock),
             ("paint_dock_layers", "Layers", self._layer_dock),
             ("paint_dock_navigator", "Navigator", self._navigator_dock),
             ("paint_dock_material", "Materials", self._material_dock),
@@ -756,6 +826,7 @@ class PaintWorkspace(QMainWindow):
             ("paint_dock_swatches", "Swatches", self._swatch_dock),
             ("paint_dock_reference", "Reference", self._reference_dock),
             ("paint_dock_animation", "Animation", self._animation_dock),
+            ("paint_dock_stamps", "Stamps", self._stamp_dock),
             ("paint_dock_histogram", "Histogram", self._histogram_dock),
         )
         self._window_dock_actions = {}

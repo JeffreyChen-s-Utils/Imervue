@@ -48,15 +48,16 @@ def test_workspace_constructs(qapp):
         ws.deleteLater()
 
 
-def test_workspace_has_eleven_dock_widgets(qapp):
+def test_workspace_has_thirteen_dock_widgets(qapp):
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
-        # Colour, Brush, Layer, Navigator, Material, History,
-        # Swatches, Reference (24d), Animation (24f), Histogram (25d),
-        # Pages (33b — comic-project page browser).
-        assert len(docks) == 11
+        # Colour, Brush, Bucket (33c), Layer, Navigator, Material,
+        # History, Swatches, Reference (24d), Animation (24f),
+        # Histogram (25d), Pages (33b), Stamps (33e — comic stamp
+        # library: speech balloons + bursts + panel borders).
+        assert len(docks) == 13
     finally:
         ws.deleteLater()
 

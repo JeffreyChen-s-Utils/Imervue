@@ -38,14 +38,15 @@ def test_workspace_owns_swatch_dock(qapp):
         ws.deleteLater()
 
 
-def test_workspace_now_has_eleven_docks(qapp):
-    """Was nine before 25d (histogram), then ten through 32; 33b's
-    comic-project page browser makes eleven."""
+def test_workspace_now_has_thirteen_docks(qapp):
+    """Was nine before 25d (histogram), then ten through 32, eleven
+    after 33b's page dock, twelve after 33c's bucket dock; 33e's
+    comic stamp library dock makes thirteen."""
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
-        assert len(docks) == 11
+        assert len(docks) == 13
     finally:
         ws.deleteLater()
 
@@ -69,10 +70,10 @@ def test_window_menu_populates_one_entry_per_dock(qapp):
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        # Ten dock toggles + separator + the 26f "New View" entry +
+        # Twelve dock toggles + separator + the 26f "New View" entry +
         # the 28d "Mirror Preview" entry + the 28f "Tile Preview"
-        # entry = 14.
-        assert len(window_menu.actions()) == 14
+        # entry = 16. (33e added the Stamps dock toggle.)
+        assert len(window_menu.actions()) == 16
     finally:
         ws.deleteLater()
 
@@ -87,7 +88,7 @@ def test_window_menu_actions_are_checkable(qapp):
             a for a in window_menu.actions()
             if not a.isSeparator() and a.isCheckable()
         ]
-        assert len(toggles) == 10
+        assert len(toggles) == 12
     finally:
         ws.deleteLater()
 
