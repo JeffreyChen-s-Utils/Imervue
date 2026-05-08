@@ -38,13 +38,15 @@ def test_reset_layout_clears_saved_state(qapp):
 
 
 def test_reset_layout_makes_every_dock_visible(qapp):
+    """Reset layout has to drop the explicitly-hidden flag on every
+    dock; ``isHidden`` is the local flag that survives the workspace
+    being off-screen (``isVisible`` is gated on the parent chain)."""
     ws = PaintWorkspace()
     try:
-        # Hide a dock first.
         ws._color_dock.setVisible(False)  # noqa: SLF001
-        assert not ws._color_dock.isVisible()  # noqa: SLF001
+        assert ws._color_dock.isHidden() is True  # noqa: SLF001
         ws.reset_workspace_layout()
-        assert ws._color_dock.isVisible()  # noqa: SLF001
+        assert ws._color_dock.isHidden() is False  # noqa: SLF001
     finally:
         ws.deleteLater()
 
