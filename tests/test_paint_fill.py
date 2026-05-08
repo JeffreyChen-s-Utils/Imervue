@@ -542,3 +542,73 @@ def test_fill_tool_uses_gap_close_setting(gappy_lineart_canvas):
     assert tool.handle(evt, canvas) is True
     # Outside the box stays white — gap_close prevented the leak.
     assert canvas[0, 0, 0] == 255
+
+
+# ---------------------------------------------------------------------------
+# Alpha-boundary respect — eraser leaves lingering RGB; the bucket
+# must not bleed across the alpha=0 / alpha>0 transition or it would
+# repaint the strokes the user just erased.
+# ---------------------------------------------------------------------------
+
+
+def test_fill_does_not_bleed_across_erased_region():
+    """Seed on an opaque pixel; an erased band on the same RGB must
+    block the flood instead of letting the bucket repaint the
+    eraser's leftovers."""
+    arr = np.zeros((4, 8, 4), dtype=np.uint8)
+    arr[..., :3] = (200, 50, 50)
+    arr[..., 3] = 255              # all opaque red
+    # Erase a 4-pixel-wide vertical band in the middle.
+    arr[:, 3:5, 3] = 0
+    flood_fill(arr, 0, 0, (10, 20, 30), tolerance=0, contiguous=True)
+    # Left half is repainted; the erased middle band stays untouched
+    # (alpha 0, RGB still red); the right half is unreached.
+    assert (arr[:, 0:3, :3] == (10, 20, 30)).all()
+    assert (arr[:, 3:5, 0] == 200).all()       # erased RGB preserved
+    assert (arr[:, 3:5, 3] == 0).all()         # still erased
+    assert (arr[:, 5:8, :3] == (200, 50, 50)).all()  # right half untouched
+
+
+def test_fill_seed_on_erased_pixel_fills_only_transparent_region():
+    """Seeding the bucket on an alpha=0 pixel must restrict the flood
+    to the connected transparent region — opaque neighbours act as a
+    wall even when they share the lingering RGB."""
+    arr = np.zeros((4, 6, 4), dtype=np.uint8)
+    arr[..., :3] = (123, 45, 67)
+    arr[..., 3] = 255
+    # Erase a 2x2 hole in the middle.
+    arr[1:3, 2:4, 3] = 0
+    flood_fill(arr, 2, 1, (250, 250, 250), tolerance=0, contiguous=True)
+    # Hole is now opaque white; surrounding still original red.
+    assert (arr[1:3, 2:4, :3] == (250, 250, 250)).all()
+    assert (arr[1:3, 2:4, 3] == 255).all()
+    # Outside the hole is unchanged.
+    assert (arr[0, :, :3] == (123, 45, 67)).all()
+
+
+def test_fill_global_mode_also_respects_alpha_boundary():
+    """Non-contiguous fill (whole-canvas match) must also drop the
+    erased pixels from the candidate set, otherwise the bucket would
+    repaint them as a side-effect of matching their lingering RGB."""
+    arr = np.zeros((3, 6, 4), dtype=np.uint8)
+    arr[..., :3] = (200, 200, 200)
+    arr[..., 3] = 255
+    arr[:, 2:4, 3] = 0
+    flood_fill(arr, 0, 0, (5, 10, 15), tolerance=0, contiguous=False)
+    # The erased band keeps alpha 0 and RGB stays as it was.
+    assert (arr[:, 2:4, 3] == 0).all()
+    assert (arr[:, 2:4, 0] == 200).all()
+    # Visible pixels became the new colour.
+    assert (arr[:, 0:2, :3] == (5, 10, 15)).all()
+    assert (arr[:, 4:6, :3] == (5, 10, 15)).all()
+
+
+def test_fill_blank_layer_seed_fills_entire_layer():
+    """Filling a freshly-cleared layer (every pixel alpha=0) from any
+    seed point still floods the whole canvas — the alpha gate keeps
+    the candidate set on the transparent side, which IS the entire
+    canvas, so no regression for the new-layer case."""
+    arr = np.zeros((5, 5, 4), dtype=np.uint8)
+    flood_fill(arr, 2, 2, (0, 128, 255), tolerance=0, contiguous=True)
+    assert (arr[..., :3] == (0, 128, 255)).all()
+    assert (arr[..., 3] == 255).all()

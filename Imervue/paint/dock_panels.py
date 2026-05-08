@@ -51,6 +51,12 @@ if TYPE_CHECKING:
 
 _SWATCH_PX = 22
 
+# Restore-from-transparent fallbacks used when the user toggles a
+# slot to ``None`` without ever having set a colour first. Black for
+# FG and white for BG mirror the historical paint defaults.
+DEFAULT_FG_FALLBACK = (0, 0, 0)
+DEFAULT_BG_FALLBACK = (255, 255, 255)
+
 # Style sheet shared by the dim "hint" / placeholder labels in
 # multiple docks. Module-level so a future palette change updates
 # every callsite at once.
@@ -70,6 +76,10 @@ class ColorDock(QDockWidget):
         super().__init__(lang.get("paint_dock_color", "Color"), parent)
         self._state = state
         self._suspend = False  # re-entrancy guard for slider <-> state sync
+        # Last opaque colour for each slot — restored when the user
+        # toggles "transparent" off again.
+        self._stashed_fg: tuple[int, int, int] | None = None
+        self._stashed_bg: tuple[int, int, int] | None = None
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -94,8 +104,25 @@ class ColorDock(QDockWidget):
         row = QHBoxLayout()
         self._fg_swatch = _make_swatch_button()
         self._fg_swatch.clicked.connect(self._pick_fg)
+        self._fg_swatch.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._fg_swatch.customContextMenuRequested.connect(
+            lambda _pos: self._show_swatch_menu(self._fg_swatch, fg=True),
+        )
+        self._fg_swatch.setToolTip(lang.get(
+            "paint_color_fg_tooltip",
+            "Foreground (paint colour) — click to pick, right-click for transparent",
+        ))
         self._bg_swatch = _make_swatch_button()
         self._bg_swatch.clicked.connect(self._pick_bg)
+        self._bg_swatch.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._bg_swatch.customContextMenuRequested.connect(
+            lambda _pos: self._show_swatch_menu(self._bg_swatch, fg=False),
+        )
+        self._bg_swatch.setToolTip(lang.get(
+            "paint_color_bg_tooltip",
+            "Background (gradient end, X-swap target) — "
+            "click to pick, right-click for transparent",
+        ))
         swap = QToolButton()
         swap.setText(lang.get("paint_color_swap", "X"))
         swap.setToolTip(lang.get("paint_color_swap_tooltip", "Swap (X)"))
@@ -104,21 +131,83 @@ class ColorDock(QDockWidget):
         reset.setText(lang.get("paint_color_reset", "D"))
         reset.setToolTip(lang.get("paint_color_reset_tooltip", "Reset (D)"))
         reset.clicked.connect(self._state.reset_colors)
+        # Single-click "transparent / no colour" toggle. Cycles each
+        # slot between its current colour and ``None`` so the user
+        # doesn't have to dig through a context menu when they just
+        # want a clean fade-to-transparent gradient.
+        self._transparent_btn = QToolButton()
+        self._transparent_btn.setText(
+            lang.get("paint_color_transparent", "∅"),
+        )
+        self._transparent_btn.setToolTip(
+            lang.get(
+                "paint_color_transparent_tooltip",
+                "Toggle BG transparent (right-click swatch for FG)",
+            ),
+        )
+        self._transparent_btn.clicked.connect(self._toggle_bg_transparent)
 
         row.addWidget(QLabel(lang.get("paint_color_fg", "FG")))
         row.addWidget(self._fg_swatch)
         row.addWidget(QLabel(lang.get("paint_color_bg", "BG")))
         row.addWidget(self._bg_swatch)
         row.addStretch(1)
+        row.addWidget(self._transparent_btn)
         row.addWidget(swap)
         row.addWidget(reset)
         return row
+
+    def _toggle_bg_transparent(self) -> None:
+        """Click handler: flip BG between its current colour and ``None``.
+
+        Stashes the previous BG so the toggle round-trips — a second
+        click restores whatever colour was active. The stash persists
+        for the lifetime of the dock; closing and re-opening starts
+        fresh.
+        """
+        if self._state.background is None:
+            self._state.set_background(self._stashed_bg or DEFAULT_BG_FALLBACK)
+        else:
+            self._stashed_bg = self._state.background
+            self._state.set_background(None)
+
+    def _show_swatch_menu(self, swatch, *, fg: bool) -> None:  # pragma: no cover - Qt UI
+        """Right-click context menu on either swatch — currently just
+        the "Transparent" toggle for whichever slot was clicked."""
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(swatch)
+        label = "Transparent"
+        action = menu.addAction(label)
+        action.setCheckable(True)
+        if fg:
+            action.setChecked(self._state.foreground is None)
+            action.triggered.connect(self._toggle_fg_transparent)
+        else:
+            action.setChecked(self._state.background is None)
+            action.triggered.connect(self._toggle_bg_transparent)
+        menu.exec(swatch.mapToGlobal(swatch.rect().bottomLeft()))
+
+    def _toggle_fg_transparent(self) -> None:
+        if self._state.foreground is None:
+            self._state.set_foreground(self._stashed_fg or DEFAULT_FG_FALLBACK)
+        else:
+            self._stashed_fg = self._state.foreground
+            self._state.set_foreground(None)
 
     def _build_hsv_form(self, lang: dict) -> QFormLayout:
         form = QFormLayout()
         self._h_slider = _slider(0, 359, 0)
         self._s_slider = _slider(0, 100, 100)
         self._v_slider = _slider(0, 100, 100)
+        self._h_slider.setToolTip(lang.get(
+            "paint_color_h_tooltip", "Hue (0–359°)",
+        ))
+        self._s_slider.setToolTip(lang.get(
+            "paint_color_s_tooltip", "Saturation (0–100%)",
+        ))
+        self._v_slider.setToolTip(lang.get(
+            "paint_color_v_tooltip", "Value / brightness (0–100%)",
+        ))
         form.addRow(lang.get("paint_color_h", "H"), self._h_slider)
         form.addRow(lang.get("paint_color_s", "S"), self._s_slider)
         form.addRow(lang.get("paint_color_v", "V"), self._v_slider)
@@ -131,6 +220,15 @@ class ColorDock(QDockWidget):
         self._r_slider = _slider(0, 255, 0)
         self._g_slider = _slider(0, 255, 0)
         self._b_slider = _slider(0, 255, 0)
+        self._r_slider.setToolTip(lang.get(
+            "paint_color_r_tooltip", "Red channel (0–255)",
+        ))
+        self._g_slider.setToolTip(lang.get(
+            "paint_color_g_tooltip", "Green channel (0–255)",
+        ))
+        self._b_slider.setToolTip(lang.get(
+            "paint_color_b_tooltip", "Blue channel (0–255)",
+        ))
         form.addRow(lang.get("paint_color_r", "R"), self._r_slider)
         form.addRow(lang.get("paint_color_g", "G"), self._g_slider)
         form.addRow(lang.get("paint_color_b", "B"), self._b_slider)
@@ -144,6 +242,10 @@ class ColorDock(QDockWidget):
         self._hex_edit = QLineEdit()
         self._hex_edit.setMaxLength(7)
         self._hex_edit.editingFinished.connect(self._on_hex_changed)
+        self._hex_edit.setToolTip(lang.get(
+            "paint_color_hex_tooltip",
+            "CSS hex (e.g. #FF8800) — Enter or Tab commits and pushes to recents",
+        ))
         row.addWidget(self._hex_edit, stretch=1)
         return row
 
@@ -170,16 +272,26 @@ class ColorDock(QDockWidget):
     def _refresh_from_state(self) -> None:
         self._suspend = True
         try:
-            r, g, b = self._state.foreground
-            h, s, v = rgb_to_hsv((r, g, b))
-            self._r_slider.setValue(r)
-            self._g_slider.setValue(g)
-            self._b_slider.setValue(b)
-            self._h_slider.setValue(int(round(h)))
-            self._s_slider.setValue(int(round(s * 100)))
-            self._v_slider.setValue(int(round(v * 100)))
-            self._hex_edit.setText(rgb_to_hex(self._state.foreground))
-            _paint_swatch(self._fg_swatch, self._state.foreground)
+            # Sliders / hex echo the foreground numerically. When
+            # foreground is "transparent" (None) there is no number
+            # to mirror — leave the previous slider positions in
+            # place and blank out the hex edit so the user has a
+            # clear cue that the active foreground is the no-colour
+            # slot.
+            fg = self._state.foreground
+            if fg is None:
+                self._hex_edit.setText("")
+            else:
+                r, g, b = fg
+                h, s, v = rgb_to_hsv((r, g, b))
+                self._r_slider.setValue(r)
+                self._g_slider.setValue(g)
+                self._b_slider.setValue(b)
+                self._h_slider.setValue(int(round(h)))
+                self._s_slider.setValue(int(round(s * 100)))
+                self._v_slider.setValue(int(round(v * 100)))
+                self._hex_edit.setText(rgb_to_hex(fg))
+            _paint_swatch(self._fg_swatch, fg)
             _paint_swatch(self._bg_swatch, self._state.background)
             self._refresh_history()
         finally:
@@ -206,7 +318,8 @@ class ColorDock(QDockWidget):
 
     def _pick_fg(self) -> None:  # pragma: no cover - Qt UI
         from PySide6.QtWidgets import QColorDialog
-        col = QColorDialog.getColor(QColor(*self._state.foreground), self)
+        seed = self._state.foreground or (0, 0, 0)
+        col = QColorDialog.getColor(QColor(*seed), self)
         if col.isValid():
             self._state.set_foreground(
                 (col.red(), col.green(), col.blue()), commit=True,
@@ -214,9 +327,18 @@ class ColorDock(QDockWidget):
 
     def _pick_bg(self) -> None:  # pragma: no cover - Qt UI
         from PySide6.QtWidgets import QColorDialog
-        col = QColorDialog.getColor(QColor(*self._state.background), self)
+        seed = self._state.background or (255, 255, 255)
+        col = QColorDialog.getColor(QColor(*seed), self)
         if col.isValid():
             self._state.set_background((col.red(), col.green(), col.blue()))
+
+    def _set_fg_transparent(self) -> None:
+        """Toggle the foreground to "transparent / no colour"."""
+        self._state.set_foreground(None)
+
+    def _set_bg_transparent(self) -> None:
+        """Toggle the background to "transparent / no colour"."""
+        self._state.set_background(None)
 
     def _on_hsv_changed(self) -> None:
         if self._suspend:
@@ -248,7 +370,9 @@ class ColorDock(QDockWidget):
             self._state.set_foreground(rgb, commit=True)
         else:
             # Re-display the canonical text for the current foreground.
-            self._hex_edit.setText(rgb_to_hex(self._state.foreground))
+            # Blank when foreground is "transparent" (no number to echo).
+            fg = self._state.foreground
+            self._hex_edit.setText("" if fg is None else rgb_to_hex(fg))
 
 
 # ---------------------------------------------------------------------------
@@ -269,25 +393,61 @@ class BrushDock(QDockWidget):
         form = QFormLayout(body)
 
         self._kind = QComboBox()
+        # Tall enough to host the brush-kind preview thumbnail; the
+        # combo's icon size has to be set before the items go in or
+        # the icons render at QStyle's default ~16px.
+        from PySide6.QtCore import QSize
+        from Imervue.paint.brush_kind_preview import (
+            DEFAULT_THUMBNAIL_H,
+            DEFAULT_THUMBNAIL_W,
+            render_brush_kind_pixmap,
+        )
+        self._kind.setIconSize(QSize(DEFAULT_THUMBNAIL_W, DEFAULT_THUMBNAIL_H))
+        from PySide6.QtGui import QIcon
         for kind in ts.BRUSH_KINDS:
+            try:
+                icon = QIcon(render_brush_kind_pixmap(kind))
+            except (RuntimeError, ValueError):
+                icon = QIcon()
             self._kind.addItem(
+                icon,
                 lang.get(f"paint_brush_kind_{kind}", kind.capitalize()),
                 userData=kind,
             )
         self._kind.currentIndexChanged.connect(self._on_kind_changed)
+        self._kind.setToolTip(lang.get(
+            "paint_brush_kind_tooltip",
+            "Brush family — pen / pencil / marker / airbrush / watercolor",
+        ))
 
         self._size = QSpinBox()
         self._size.setRange(ts.BRUSH_SIZE_MIN, ts.BRUSH_SIZE_MAX)
         self._size.valueChanged.connect(self._on_size_changed)
+        self._size.setToolTip(lang.get(
+            "paint_brush_size_tooltip",
+            "Brush diameter in canvas pixels — [ smaller, ] larger",
+        ))
 
         self._opacity = _slider(0, 100, 100)
         self._opacity.valueChanged.connect(self._on_opacity_changed)
+        self._opacity.setToolTip(lang.get(
+            "paint_brush_opacity_tooltip",
+            "Per-dab paint coverage (0–100%)",
+        ))
 
         self._hardness = _slider(0, 100, 80)
         self._hardness.valueChanged.connect(self._on_hardness_changed)
+        self._hardness.setToolTip(lang.get(
+            "paint_brush_hardness_tooltip",
+            "Edge falloff — 0% soft, 100% hard disc",
+        ))
 
         self._density = _slider(0, 100, 100)
         self._density.valueChanged.connect(self._on_density_changed)
+        self._density.setToolTip(lang.get(
+            "paint_brush_density_tooltip",
+            "Per-dab opacity multiplier — lower deposits less ink per stamp",
+        ))
 
         # Stabilizer / scatter / colour-jitter / follow-tilt — engine
         # already supports these via brush_dynamics + brush_random;
@@ -295,18 +455,34 @@ class BrushDock(QDockWidget):
         # brush-options panel.
         self._stabilizer = _slider(0, 100, 0)
         self._stabilizer.valueChanged.connect(self._on_stabilizer_changed)
+        self._stabilizer.setToolTip(lang.get(
+            "paint_brush_stabilizer_tooltip",
+            "Smooth jittery input — 0 off, 100 maximum lag for a clean line",
+        ))
 
         self._scatter = _slider(0, 100, 0)
         self._scatter.valueChanged.connect(self._on_scatter_changed)
+        self._scatter.setToolTip(lang.get(
+            "paint_brush_scatter_tooltip",
+            "Random per-dab offset, as a fraction of brush size",
+        ))
 
         self._color_jitter = _slider(0, 100, 0)
         self._color_jitter.valueChanged.connect(self._on_color_jitter_changed)
+        self._color_jitter.setToolTip(lang.get(
+            "paint_brush_color_jitter_tooltip",
+            "Random hue / luma drift along the stroke",
+        ))
 
         from PySide6.QtWidgets import QCheckBox
         self._follow_tilt = QCheckBox(
             lang.get("paint_brush_follow_tilt", "Follow pen tilt"),
         )
         self._follow_tilt.toggled.connect(self._on_follow_tilt_changed)
+        self._follow_tilt.setToolTip(lang.get(
+            "paint_brush_follow_tilt_tooltip",
+            "Stretch the brush kernel along the tablet pen tilt direction",
+        ))
 
         self._blend = QComboBox()
         for mode in ts.BLEND_MODES:
@@ -315,6 +491,10 @@ class BrushDock(QDockWidget):
                 userData=mode,
             )
         self._blend.currentIndexChanged.connect(self._on_blend_changed)
+        self._blend.setToolTip(lang.get(
+            "paint_brush_blend_tooltip",
+            "Compositing mode applied at every dab — Normal is alpha-over",
+        ))
 
         form.addRow(lang.get("paint_brush_kind", "Kind:"), self._kind)
         form.addRow(lang.get("paint_brush_size", "Size:"), self._size)
@@ -464,16 +644,31 @@ class FillDock(QDockWidget):
 
         self._tolerance = _slider(0, 255, 32)
         self._tolerance.valueChanged.connect(self._on_tolerance_changed)
+        self._tolerance.setToolTip(lang.get(
+            "paint_fill_tolerance_tooltip",
+            "Per-channel colour distance accepted as the same region "
+            "(0 exact, 255 anything)",
+        ))
 
         self._contiguous = QCheckBox(
             lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
         )
         self._contiguous.toggled.connect(self._on_contiguous_changed)
+        self._contiguous.setToolTip(lang.get(
+            "paint_fill_contiguous_tooltip",
+            "On: only pixels reachable from the click. Off: every "
+            "matching pixel canvas-wide.",
+        ))
 
         self._sample_all = QCheckBox(
             lang.get("paint_fill_sample_all", "Sample all layers"),
         )
         self._sample_all.toggled.connect(self._on_sample_all_changed)
+        self._sample_all.setToolTip(lang.get(
+            "paint_fill_sample_all_tooltip",
+            "Match colours against the visible composite instead of "
+            "just the active layer",
+        ))
 
         self._use_reference = QCheckBox(
             lang.get(
@@ -482,14 +677,30 @@ class FillDock(QDockWidget):
             ),
         )
         self._use_reference.toggled.connect(self._on_use_reference_changed)
+        self._use_reference.setToolTip(lang.get(
+            "paint_fill_use_reference_tooltip",
+            "Read connectivity from the document's pinned reference "
+            "layer (e.g. line art) so fill stops at ink boundaries "
+            "regardless of the active layer's colour",
+        ))
 
         self._expand = _slider(ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0)
         self._expand.valueChanged.connect(self._on_expand_changed)
+        self._expand.setToolTip(lang.get(
+            "paint_fill_expand_tooltip",
+            "Dilate the fill by N pixels after computing it — bridges "
+            "the anti-aliased halo around lineart",
+        ))
 
         self._gap_close = _slider(
             ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0,
         )
         self._gap_close.valueChanged.connect(self._on_gap_close_changed)
+        self._gap_close.setToolTip(lang.get(
+            "paint_fill_gap_close_tooltip",
+            "Bridge gaps in the lineart up to N pixels wide so fill "
+            "doesn't leak through broken pen strokes",
+        ))
 
         form.addRow(
             lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance,
@@ -893,10 +1104,19 @@ class NavigatorDock(QDockWidget):
         self._zoom_slider.valueChanged.connect(
             lambda v: self.zoom_changed.emit(v / 100.0),
         )
+        self._zoom_slider.setToolTip(lang.get(
+            "paint_navigator_zoom_tooltip",
+            "Drag to zoom the canvas (5–800%) — same as Ctrl+wheel "
+            "but with a numeric scrub",
+        ))
         zoom_row.addWidget(self._zoom_slider, stretch=1)
 
         fit_btn = QPushButton(lang.get("paint_navigator_fit", "Fit"))
         fit_btn.clicked.connect(self.fit_requested.emit)
+        fit_btn.setToolTip(lang.get(
+            "paint_navigator_fit_tooltip",
+            "Reset the canvas to fit the viewport",
+        ))
         zoom_row.addWidget(fit_btn)
 
         layout.addLayout(zoom_row)
@@ -1301,13 +1521,47 @@ def _make_swatch_button() -> QToolButton:
     return btn
 
 
-def _paint_swatch(button: QToolButton, rgb: tuple[int, int, int]) -> None:
+def _paint_swatch(
+    button: QToolButton,
+    rgb: tuple[int, int, int] | None,
+) -> None:
+    """Render a colour-chip icon on ``button``.
+
+    ``rgb=None`` represents "transparent / no colour" and renders a
+    grey checker pattern with a red diagonal slash — the same idiom
+    Photoshop / Krita / MediBang use for "no fill" so users can
+    spot the transparent slot at a glance.
+    """
     pix = QPixmap(_SWATCH_PX, _SWATCH_PX)
-    pix.fill(QColor(*rgb))
-    painter = QPainter(pix)
-    painter.setPen(QColor(0, 0, 0, 80))
-    painter.drawRect(0, 0, _SWATCH_PX - 1, _SWATCH_PX - 1)
-    painter.end()
+    if rgb is None:
+        pix.fill(QColor(255, 255, 255))
+        painter = QPainter(pix)
+        # Light-grey checker pattern.
+        cell = 4
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(200, 200, 200))
+        for y in range(0, _SWATCH_PX, cell):
+            for x in range(0, _SWATCH_PX, cell):
+                if ((x // cell) + (y // cell)) % 2 == 0:
+                    painter.drawRect(x, y, cell, cell)
+        # Red slash for the universal "no colour" affordance.
+        slash_pen = painter.pen()
+        slash_pen = QColor(220, 40, 40)
+        from PySide6.QtGui import QPen
+        pen = QPen(slash_pen)
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.drawLine(2, _SWATCH_PX - 3, _SWATCH_PX - 3, 2)
+        painter.setPen(QColor(0, 0, 0, 120))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(0, 0, _SWATCH_PX - 1, _SWATCH_PX - 1)
+        painter.end()
+    else:
+        pix.fill(QColor(*rgb))
+        painter = QPainter(pix)
+        painter.setPen(QColor(0, 0, 0, 80))
+        painter.drawRect(0, 0, _SWATCH_PX - 1, _SWATCH_PX - 1)
+        painter.end()
     button.setIcon(pix)
     button.setIconSize(pix.size())
 

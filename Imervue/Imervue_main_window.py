@@ -413,8 +413,23 @@ class ImervueMainWindow(QMainWindow):
         right_layout.addWidget(viewer_row, stretch=1)
 
         def _on_name_changed(name):
+            base_template = language_wrapper.language_word_dict.get(
+                "main_window_current_filename_format",
+            ).format(name=name)
+            # Append "(i/n)" position info when the viewer knows its
+            # spot in the folder so the user can pace their browsing
+            # without hunting through the file list. Keep the
+            # baseline label so any locale that already localised
+            # the prefix stays untouched.
+            extras: list[str] = []
+            with contextlib.suppress(Exception):
+                images = self.viewer.model.images or []
+                idx = self.viewer.current_index
+                if 0 <= idx < len(images):
+                    extras.append(f"({idx + 1}/{len(images)})")
             self.filename_label.setText(
-                language_wrapper.language_word_dict.get("main_window_current_filename_format").format(name=name))
+                base_template + ("  " + " ".join(extras) if extras else ""),
+            )
             self.exif_sidebar.update_info()
             # Keep the tab bar in lockstep with whatever image the viewer
             # now shows. Only sync in deep-zoom mode — tile grid / folder

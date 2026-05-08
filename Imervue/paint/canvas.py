@@ -35,8 +35,10 @@ from OpenGL.GL import (
     GL_LINE_LOOP,
     GL_LINE_STRIP,
     GL_LINES,
+    GL_NEAREST,
     GL_ONE_MINUS_SRC_ALPHA,
     GL_QUADS,
+    GL_REPEAT,
     GL_RGBA,
     GL_SRC_ALPHA,
     GL_TEXTURE_2D,
@@ -165,6 +167,41 @@ def cursor_for_tool(tool: str) -> Qt.CursorShape:
     return _TOOL_CURSORS.get(tool, Qt.CursorShape.ArrowCursor)
 
 
+# ---------------------------------------------------------------------------
+# Transparency checker — drawn behind the document so alpha=0 areas
+# read as the universal "no pixel" pattern. Two greys, 8-pixel cells;
+# matches Photoshop / MediBang / Krita's default transparency grid.
+# ---------------------------------------------------------------------------
+_CHECKER_CELL_PX = 8
+_CHECKER_TILE_PX = _CHECKER_CELL_PX * 2
+_CHECKER_LIGHT = (255, 255, 255, 255)
+_CHECKER_DARK = (204, 204, 204, 255)
+
+
+def build_checker_pattern(
+    cell: int = _CHECKER_CELL_PX,
+    *,
+    light: tuple[int, int, int, int] = _CHECKER_LIGHT,
+    dark: tuple[int, int, int, int] = _CHECKER_DARK,
+) -> np.ndarray:
+    """Return a 2x2-cell RGBA tile for the transparency checker.
+
+    Pure numpy / Qt-free so the pattern can be exercised in tests
+    without a GL context. The tile width is always ``cell * 2`` —
+    big enough that ``GL_REPEAT`` produces a continuous checker when
+    the shader maps texcoords ``(0..w/tile, 0..h/tile)``.
+    """
+    if int(cell) <= 0:
+        raise ValueError(f"cell must be > 0, got {cell!r}")
+    side = int(cell) * 2
+    tile = np.empty((side, side, 4), dtype=np.uint8)
+    yy, xx = np.indices((side, side))
+    is_dark = ((xx // int(cell)) + (yy // int(cell))) % 2 == 1
+    tile[is_dark] = np.array(dark, dtype=np.uint8)
+    tile[~is_dark] = np.array(light, dtype=np.uint8)
+    return tile
+
+
 def clamp_zoom(value: float) -> float:
     """Clamp a zoom factor into the allowed canvas range."""
     return max(ZOOM_MIN, min(ZOOM_MAX, float(value)))
@@ -200,6 +237,10 @@ class PaintCanvas(QOpenGLWidget):
         # the user having to Tab onto it.
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(QCursor(cursor_for_tool("brush")))
+        # Custom context menu — the workspace listens to this signal
+        # via ``customContextMenuRequested`` and pops a Photoshop-
+        # style quick-actions menu (undo / redo / select all / fit).
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # Drag-and-drop target for the materials dock — drop a tile to
         # spawn a new layer with the material pasted under the cursor.
         # The accept logic lives in :meth:`dragEnterEvent`.
@@ -216,6 +257,18 @@ class PaintCanvas(QOpenGLWidget):
             self._on_document_changed,
         )
         self._texture: int | None = None
+        # Tiled checker texture rendered behind the layer composite so
+        # alpha=0 areas read as the standard "transparency checker"
+        # pattern (Photoshop / Krita / MediBang convention) instead
+        # of either the editor's dark backdrop or a flat white sheet.
+        # Built lazily on first paint because the GL context isn't
+        # current during ``__init__``.
+        self._checker_texture: int | None = None
+        # ``True`` while a material / file drag is hovering over the
+        # canvas. Drives the blue tint + thick border ``paintGL``
+        # overlay so the user sees that the canvas is the active
+        # drop target before they release the mouse.
+        self._drag_overlay_active = False
         self._needs_upload = False
         # Pending damage rect — when non-empty and not full-frame the
         # next paint uses ``glTexSubImage2D`` for that region instead
@@ -479,7 +532,49 @@ class PaintCanvas(QOpenGLWidget):
         self.update()
 
     def set_cursor_for_tool(self, tool: str) -> None:
+        """Pick the most descriptive cursor available for ``tool``.
+
+        Tool-icon QPixmaps come first (eyedropper, fill, gradient,
+        bezier pen, the four selection variants, zoom) so the user
+        gets a Medibang-style hint at a glance. Tools without a
+        custom icon fall through to the per-tool ``Qt.CursorShape``
+        from :data:`_TOOL_CURSORS`.
+        """
+        from Imervue.paint.brush_cursor import make_tool_cursor
+        custom = make_tool_cursor(tool)
+        if custom is not None:
+            pixmap, hot_x, hot_y = custom
+            self.setCursor(QCursor(pixmap, hot_x, hot_y))
+            return
         self.setCursor(QCursor(cursor_for_tool(tool)))
+
+    def set_brush_size_cursor(
+        self, brush_size: int, zoom: float, *, kind: str = "brush",
+    ) -> None:
+        """Show a Medibang-style ring at the brush's screen-pixel size.
+
+        ``brush_size`` is the brush diameter in canvas pixels;
+        multiplying by ``zoom`` gives the on-screen diameter the ring
+        should match. Out-of-range diameters fall back to the
+        per-tool :func:`cursor_for_tool` shape — a 1-pixel brush at
+        100 % zoom is unreadable as a ring, and a 1024-pixel brush
+        at 4× zoom would need a 4096-pixel cursor bitmap. ``kind``
+        lets the eraser get a slash-marked variant; everything else
+        gets the plain brush ring.
+        """
+        from Imervue.paint.brush_cursor import (
+            BRUSH_CURSOR_MAX_PX,
+            BRUSH_CURSOR_MIN_PX,
+            make_brush_cursor,
+        )
+        diameter = max(1, int(round(float(brush_size) * float(zoom))))
+        if not BRUSH_CURSOR_MIN_PX <= diameter <= BRUSH_CURSOR_MAX_PX:
+            self.setCursor(QCursor(cursor_for_tool(kind)))
+            return
+        pixmap, hot_x, hot_y = make_brush_cursor(
+            diameter, eraser=(kind == "eraser"),
+        )
+        self.setCursor(QCursor(pixmap, hot_x, hot_y))
 
     def reset_view(self) -> None:
         # Explicit "fit to window" — re-enable auto-fit so subsequent
@@ -757,20 +852,7 @@ class PaintCanvas(QOpenGLWidget):
             glRotatef(self._rotation_deg, 0.0, 0.0, 1.0)
             glTranslatef(-w / 2.0, -h / 2.0, 0.0)
 
-        # White paper underneath the document texture so erased
-        # (alpha=0) areas show the paint-app-standard "white paper"
-        # rather than the editor's dark backdrop. Drawn UNTEXTURED
-        # so the rest of the GL widget (outside the canvas extent)
-        # keeps the dark grey backdrop set by ``glClearColor``.
-        glDisable(GL_TEXTURE_2D)
-        glColor4f(1.0, 1.0, 1.0, 1.0)
-        glBegin(GL_QUADS)
-        glVertex2f(0.0, 0.0)
-        glVertex2f(w, 0.0)
-        glVertex2f(w, h)
-        glVertex2f(0.0, h)
-        glEnd()
-        glEnable(GL_TEXTURE_2D)
+        self._draw_transparency_backdrop(w, h)
         glBindTexture(GL_TEXTURE_2D, self._texture)
         glColor4f(1.0, 1.0, 1.0, 1.0)
         glBegin(GL_QUADS)
@@ -789,6 +871,8 @@ class PaintCanvas(QOpenGLWidget):
         self._draw_marquee()
         if self._tool_overlay is not None:
             self._draw_tool_overlay()
+        if self._drag_overlay_active:
+            self._draw_drop_target_overlay(w, h)
         glPopMatrix()
         # HUD overlay sits in widget-space (un-rotated) so the user
         # always sees a circular ring at the canvas centre regardless
@@ -833,6 +917,76 @@ class PaintCanvas(QOpenGLWidget):
     def _tick_marquee(self) -> None:
         self._marquee_phase = (self._marquee_phase + 1) % 8
         self.update()
+
+    def _draw_transparency_backdrop(  # pragma: no cover - GL needs display
+        self, w: int, h: int,
+    ) -> None:
+        """Render the checker pattern behind the layer composite.
+
+        Falls back to a flat white quad when the checker texture is
+        unavailable (driver edge cases) so alpha=0 areas never reveal
+        the editor's dark backdrop. Pulled out of ``paintGL`` to keep
+        that method's cyclomatic complexity under the project cap.
+        """
+        if self._checker_texture is None:
+            self._upload_checker_texture()
+        if self._checker_texture is not None:
+            tile = float(_CHECKER_TILE_PX)
+            glBindTexture(GL_TEXTURE_2D, self._checker_texture)
+            glColor4f(1.0, 1.0, 1.0, 1.0)
+            glBegin(GL_QUADS)
+            glTexCoord2f(0.0, 0.0); glVertex2f(0.0, 0.0)
+            glTexCoord2f(w / tile, 0.0); glVertex2f(w, 0.0)
+            glTexCoord2f(w / tile, h / tile); glVertex2f(w, h)
+            glTexCoord2f(0.0, h / tile); glVertex2f(0.0, h)
+            glEnd()
+            glBindTexture(GL_TEXTURE_2D, 0)
+            return
+        # Fallback: legacy plain-white quad.
+        glDisable(GL_TEXTURE_2D)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glBegin(GL_QUADS)
+        glVertex2f(0.0, 0.0)
+        glVertex2f(w, 0.0)
+        glVertex2f(w, h)
+        glVertex2f(0.0, h)
+        glEnd()
+        glEnable(GL_TEXTURE_2D)
+
+    def _draw_drop_target_overlay(  # pragma: no cover - GL needs display
+        self, w: int, h: int,
+    ) -> None:
+        """Render a translucent blue tint + thick border over the canvas.
+
+        Active while a material / file drag is hovering over the
+        widget so the user gets a clear "this is where the drop will
+        land" affordance before they release the mouse. The colour
+        and alpha values are chosen to read as "highlight" without
+        obscuring the underlying composite — the user still wants
+        to see what they're dropping onto.
+        """
+        glDisable(GL_TEXTURE_2D)
+        # Soft fill — drives the "this region accepts the drop" signal.
+        glColor4f(0.30, 0.60, 1.00, 0.18)
+        glBegin(GL_QUADS)
+        glVertex2f(0.0, 0.0)
+        glVertex2f(float(w), 0.0)
+        glVertex2f(float(w), float(h))
+        glVertex2f(0.0, float(h))
+        glEnd()
+        # Thick border — width is zoom-compensated so the line stays
+        # ~4 screen pixels regardless of canvas zoom.
+        border_px = max(1.0, 4.0 / max(self._zoom, 1e-3))
+        glLineWidth(border_px)
+        glColor4f(0.30, 0.60, 1.00, 0.95)
+        glBegin(GL_LINE_LOOP)
+        glVertex2f(0.0, 0.0)
+        glVertex2f(float(w), 0.0)
+        glVertex2f(float(w), float(h))
+        glVertex2f(0.0, float(h))
+        glEnd()
+        glLineWidth(1.0)
+        glEnable(GL_TEXTURE_2D)
 
     def _draw_tool_overlay(self) -> None:  # pragma: no cover - GL needs display
         """Stroke the drag-preview shape set by the active tool.
@@ -1240,7 +1394,30 @@ class PaintCanvas(QOpenGLWidget):
             tilt_x=max(-1.0, min(1.0, tilt_x)),
             tilt_y=max(-1.0, min(1.0, tilt_y)),
         )
-        if self._dispatcher(evt):
+        # GPU brush rasterisation needs this widget's GL context bound
+        # for the duration of the dispatcher call. Qt only auto-binds
+        # during ``paintGL`` / ``resizeGL`` / ``initializeGL``; pointer
+        # events arrive without a current context. The ``suppress``
+        # wrappers cover the early-test path where the widget has no
+        # platform handle yet (``makeCurrent`` raises in that state);
+        # the gpu-session flag tells the brush factory that the
+        # context is freshly bound (vs leaked from an earlier test).
+        import contextlib
+        from Imervue.paint.gpu_brush import set_gpu_session_active
+        gpu_active = False
+        with contextlib.suppress(RuntimeError, AttributeError):  # pragma: no cover - Qt edge
+            self.makeCurrent()
+            gpu_active = True
+        if gpu_active:
+            set_gpu_session_active(True)
+        try:
+            handled = self._dispatcher(evt)
+        finally:
+            if gpu_active:
+                set_gpu_session_active(False)
+            with contextlib.suppress(RuntimeError, AttributeError):  # pragma: no cover - Qt edge
+                self.doneCurrent()
+        if handled:
             # The dispatcher mutated the active layer in place. When it
             # reports a bounded ``last_damage`` rect we can let the
             # document patch only that region of the cached composite —
@@ -1273,6 +1450,7 @@ class PaintCanvas(QOpenGLWidget):
             return
         if mime.hasFormat(MATERIAL_MIME_TYPE) or mime.hasUrls():
             event.acceptProposedAction()
+            self.set_drag_overlay_active(True)
         else:
             event.ignore()
 
@@ -1280,12 +1458,22 @@ class PaintCanvas(QOpenGLWidget):
         # Re-affirm on every move so Qt keeps showing the move cursor.
         event.acceptProposedAction()
 
+    def dragLeaveEvent(self, event) -> None:  # pragma: no cover - Qt UI
+        # Cursor left the canvas without dropping — clear the overlay
+        # so the visual matches the actual drop-target state.
+        self.set_drag_overlay_active(False)
+        event.accept()
+
     def dropEvent(self, event) -> None:  # pragma: no cover - Qt UI
         from Imervue.paint.material_drop import (
             MATERIAL_MIME_TYPE,
             commit_material_to_document,
             load_material_image,
         )
+        # Always clear the highlight when the drag completes, even on
+        # ignore paths — leaving it on after a rejected drop would
+        # mislead the user into thinking the drop succeeded.
+        self.set_drag_overlay_active(False)
         mime = event.mimeData()
         if mime is None:
             event.ignore()
@@ -1322,6 +1510,19 @@ class PaintCanvas(QOpenGLWidget):
         self._needs_upload = True
         self.update()
         event.acceptProposedAction()
+
+    def set_drag_overlay_active(self, active: bool) -> None:
+        """Toggle the drag-target highlight and request a repaint.
+
+        Pulled out of the Qt drag handlers so unit tests can flip
+        the flag and assert the canvas re-renders with / without
+        the blue overlay.
+        """
+        new_state = bool(active)
+        if self._drag_overlay_active == new_state:
+            return
+        self._drag_overlay_active = new_state
+        self.update()
 
     def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
         if self._zoom <= 0:
@@ -1415,6 +1616,37 @@ class PaintCanvas(QOpenGLWidget):
         self._pan_y = (widget_h - h * self._zoom) * 0.5
         self._fit_pending = False
         self._fitted_widget_size = (widget_w, widget_h)
+
+    def _upload_checker_texture(self) -> None:  # pragma: no cover - GL only
+        """Build / upload the transparency-checker tile to the GPU.
+
+        Called from ``paintGL`` the first time the canvas paints. The
+        tile is tiny (``2 * _CHECKER_CELL_PX`` square) so we don't
+        bother with sub-uploads — a single ``glTexImage2D`` plus the
+        wrap / filter state is enough. ``GL_REPEAT`` makes the same
+        tile cover the entire canvas via the texcoord scaling in
+        ``paintGL``; ``GL_NEAREST`` keeps the cell edges crisp under
+        any zoom.
+        """
+        try:
+            tile = build_checker_pattern()
+            tex = int(glGenTextures(1))
+            glBindTexture(GL_TEXTURE_2D, tex)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGBA,
+                tile.shape[1], tile.shape[0], 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, tile.tobytes(),
+            )
+            glBindTexture(GL_TEXTURE_2D, 0)
+            self._checker_texture = tex
+        except Exception:   # noqa: BLE001 - GL/driver dependent
+            # Fallback path in paintGL renders the legacy white quad
+            # if this stays None.
+            self._checker_texture = None
 
     def _upload_texture(  # pragma: no cover - GL needs display server
         self, composite: np.ndarray,

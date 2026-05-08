@@ -217,6 +217,41 @@ Press ``E`` from Deep Zoom to send the current image straight into a new Paint t
 - Plugin system with online plugin downloader
 - Toast notification system (info, success, warning, error levels)
 
+### Recent UX Refinements
+
+A long sweep of UX-quality work covering the Paint workspace, the image
+browser, and the Develop / dialog surfaces:
+
+- **Paint visual feedback** — Medibang-style brush-size cursor that
+  scales with zoom, distinct cursor icons per tool, transparency
+  checker pattern under the canvas, drag-drop highlight overlay,
+  per-tab modified asterisk, undo / redo toast confirmations, autosave
+  status segment in the status bar, autosave-recovery prompt on launch
+  surfacing snapshots from the previous session.
+- **Paint power-user hotkeys** — Tab toggles all docks for
+  distraction-free painting, `Ctrl+Tab` cycles tabs, `,` / `.` cycles
+  brush kinds, `0–9` set brush opacity in 10% steps, `Alt+[` / `Alt+]`
+  step the active layer, right-click on the canvas opens a quick
+  Undo / Redo / Select All / Deselect / Fit / 100% menu.
+- **Paint colour controls** — `transparent / no colour` slot in the
+  colour dock (default BG = transparent), proper alpha-aware fill +
+  magic-wand so erased pixels stop bleeding into a re-paint.
+- **Image browser** — empty-state hint on the file list, breadcrumb
+  segments now carry full-path tooltips, `Ctrl+C` copies selected
+  paths, right-click context menu (Open / Copy path / Reveal),
+  filename label shows position `(i/n)` in the folder, status-bar
+  zoom indicator click toggles between Fit and 100%.
+- **Tooltip coverage sweep** — every interactive control on the
+  brush / colour / fill / navigator / animation / page / pose / stamp
+  / reference / histogram docks, the brush options bar, and the
+  Levels / Tone Curve / Channel Mixer / AI Upscale / Batch Convert /
+  Contact Sheet / Slideshow MP4 dialogs now carries a descriptive
+  tooltip explaining each control's role and shortcut.
+- **Window-level safety** — closing the Paint window with unsaved
+  tabs prompts before discarding; tab middle-click closes (with the
+  same dirty protection); tab tooltips show the full title, canvas
+  size, and modified state.
+
 ---
 
 ## Supported Image Formats

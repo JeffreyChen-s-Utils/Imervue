@@ -125,6 +125,27 @@ def flood_fill(
     seed = sample[sy, sx].astype(np.int16)
     diff = np.abs(sample.astype(np.int16) - seed[None, None, :])
     candidates = diff.max(axis=-1) <= tolerance
+    # Alpha boundary is a hard wall when the bucket reads the canvas
+    # directly (no separate reference image). The eraser preserves
+    # RGB on the pixels it clears, so without this gate a fill seeded
+    # on an opaque pixel would bleed across the alpha=0 region whose
+    # lingering RGB matches the seed — the same shape of bug that
+    # used to let the magic wand re-select erased strokes. Two cases:
+    #
+    #   * seed visible (alpha > 0)  → keep only visible candidates,
+    #   * seed transparent          → keep only transparent candidates.
+    #
+    # Either way the fill stays on the side of the alpha boundary the
+    # user clicked on. ``reference_image`` keeps its existing
+    # behaviour where the reference's own alpha already participates
+    # in the diff so we don't double-gate.
+    if reference_image is None:
+        seed_visible = int(canvas[sy, sx, 3]) > 0
+        pixel_visible = canvas[..., 3] > 0
+        if seed_visible:
+            candidates &= pixel_visible
+        else:
+            candidates &= ~pixel_visible
     if gap_close_px > 0:
         # Thicken the *ink* (not-candidates) by ``gap_close_px`` so
         # that small broken-line gaps bridge for the duration of this

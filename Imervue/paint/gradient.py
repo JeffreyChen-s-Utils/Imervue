@@ -24,14 +24,22 @@ def render_gradient(
     canvas: np.ndarray,
     p0: tuple[float, float],
     p1: tuple[float, float],
-    fg: tuple[int, int, int],
-    bg: tuple[int, int, int],
+    fg: tuple[int, int, int] | None,
+    bg: tuple[int, int, int] | None,
     *,
     kind: str = DEFAULT_GRADIENT_KIND,
     reverse: bool = False,
     selection: np.ndarray | None = None,
 ) -> bool:
     """Fill ``canvas`` with a gradient between ``p0`` (fg) and ``p1`` (bg).
+
+    ``fg`` or ``bg`` may be ``None`` to mean "transparent at this
+    endpoint" — the per-pixel alpha then fades from 1.0 at the
+    opaque side to 0.0 at the transparent side. With both endpoints
+    set to a colour the alpha stays opaque (legacy behaviour). Both
+    endpoints ``None`` produces a fully-transparent fill, which the
+    user usually doesn't want; we still write so the selection /
+    bounding-box behaviour is consistent with the coloured cases.
 
     Returns ``True`` if any pixel was written, ``False`` if the drag
     collapsed to a point (start == end) or the kind is unknown.
@@ -69,15 +77,25 @@ def render_gradient(
     if reverse:
         t = 1.0 - t
 
-    fg_arr = np.array(fg, dtype=np.float32)
-    bg_arr = np.array(bg, dtype=np.float32)
+    # Treat ``None`` endpoints as "transparent there" — substitute
+    # the *other* endpoint's colour so the rgb mix stays meaningful
+    # (no NaN / no jump-to-black) while the alpha mix below carries
+    # the actual fade-to-transparent.
+    fg_color = fg if fg is not None else (bg if bg is not None else (0, 0, 0))
+    bg_color = bg if bg is not None else (fg if fg is not None else (0, 0, 0))
+    fg_alpha = 0.0 if fg is None else 1.0
+    bg_alpha = 0.0 if bg is None else 1.0
+    fg_arr = np.array(fg_color, dtype=np.float32)
+    bg_arr = np.array(bg_color, dtype=np.float32)
     rgb = fg_arr[None, None, :] * (1.0 - t[..., None]) + bg_arr[None, None, :] * t[..., None]
     rgb = np.clip(rgb, 0.0, 255.0).astype(np.uint8)
+    alpha_field = fg_alpha * (1.0 - t) + bg_alpha * t
+    alpha_u8 = np.clip(alpha_field * 255.0, 0.0, 255.0).astype(np.uint8)
 
     mask = selection if selection is not None else np.ones((h, w), dtype=np.bool_)
 
     canvas[mask, :3] = rgb[mask]
-    canvas[mask, 3] = 255
+    canvas[mask, 3] = alpha_u8[mask]
     return True
 
 

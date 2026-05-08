@@ -59,7 +59,12 @@ class StampDock(QDockWidget):
         btn.setIcon(_thumbnail_icon(stamp))
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         lang = language_wrapper.language_word_dict
-        btn.setText(lang.get(stamp.key, stamp.fallback_name))
+        name = lang.get(stamp.key, stamp.fallback_name)
+        btn.setText(name)
+        btn.setToolTip(lang.get(
+            f"{stamp.key}_tooltip",
+            f"{name} — drop into a new layer near the cursor",
+        ))
         btn.setAutoRaise(True)
         btn.clicked.connect(
             lambda _checked=False, key=stamp.key: self.stamp_chosen.emit(key),

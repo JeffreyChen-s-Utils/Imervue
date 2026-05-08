@@ -60,7 +60,11 @@ class TextTool:
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
             return False
-        dialog = TextToolDialog(initial_color=self._state.foreground, parent=self._parent)
+        # Text needs a concrete colour — fall back to black when the
+        # foreground slot is "transparent" so the dialog opens with a
+        # visible default rather than a None.
+        seed_color = self._state.foreground or (0, 0, 0)
+        dialog = TextToolDialog(initial_color=seed_color, parent=self._parent)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return False
         options = dialog.options()

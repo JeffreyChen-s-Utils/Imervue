@@ -58,10 +58,18 @@ class PoseDock(QDockWidget):
             lang.get("paint_pose_reset", "Reset pose"),
         )
         reset_btn.clicked.connect(self._on_reset)
+        reset_btn.setToolTip(lang.get(
+            "paint_pose_reset_tooltip",
+            "Restore the skeleton to its default neutral pose",
+        ))
         insert_btn = QPushButton(
             lang.get("paint_pose_insert", "Insert into canvas"),
         )
         insert_btn.clicked.connect(self._on_insert)
+        insert_btn.setToolTip(lang.get(
+            "paint_pose_insert_tooltip",
+            "Render the skeleton into a new layer at canvas size",
+        ))
         button_row.addWidget(reset_btn)
         button_row.addWidget(insert_btn)
         layout.addLayout(button_row)

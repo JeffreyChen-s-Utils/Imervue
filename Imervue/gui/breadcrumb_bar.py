@@ -82,6 +82,10 @@ class BreadcrumbBar(QScrollArea):
             btn.setFlat(True)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setStyleSheet(_SEGMENT_STYLE)
+            # Tooltip carries the full absolute path of the segment
+            # so a hover surfaces the destination even when the
+            # button label is truncated to just the directory name.
+            btn.setToolTip(seg_path)
             btn.clicked.connect(lambda _=False, sp=seg_path: self._navigate(sp))
             # Insert before the trailing stretch
             self._layout.insertWidget(self._layout.count() - 1, btn)

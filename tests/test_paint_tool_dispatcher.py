@@ -657,3 +657,46 @@ def test_blur_tool_dab_changes_canvas_pixels(state, canvas):
         button=0, modifiers=0, pressure=1.0,
     ))
     assert (canvas != before).any(), "blur dab did not modify the canvas"
+
+
+# ---------------------------------------------------------------------------
+# Transparent foreground — paint / fill / shape tools become no-ops so
+# the user can leave the colour slot empty without the tool exploding.
+# ---------------------------------------------------------------------------
+
+
+def test_brush_no_ops_when_foreground_transparent():
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.tool_dispatcher import BrushTool
+    from Imervue.paint.canvas import PointerEvent
+    ts.reset_tool_state()
+    state = ts.load_tool_state()
+    state.set_tool("brush")
+    state.set_foreground(None)
+    tool = BrushTool(state)
+    canvas = np.full((16, 16, 4), 255, dtype=np.uint8)
+    before = canvas.copy()
+    evt = PointerEvent(
+        phase="press", x=8, y=8, button=1, modifiers=0, pressure=1.0,
+    )
+    handled = tool.handle(evt, canvas)
+    assert handled is False
+    np.testing.assert_array_equal(canvas, before)
+
+
+def test_fill_no_ops_when_foreground_transparent():
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.tool_dispatcher import FillTool
+    from Imervue.paint.canvas import PointerEvent
+    ts.reset_tool_state()
+    state = ts.load_tool_state()
+    state.set_tool("fill")
+    state.set_foreground(None)
+    tool = FillTool(state)
+    canvas = np.full((8, 8, 4), 255, dtype=np.uint8)
+    evt = PointerEvent(
+        phase="press", x=4, y=4, button=1, modifiers=0, pressure=1.0,
+    )
+    assert tool.handle(evt, canvas) is False
+    # Canvas untouched.
+    assert (canvas == 255).all()

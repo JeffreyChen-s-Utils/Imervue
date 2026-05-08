@@ -75,16 +75,23 @@ class PageDock(QDockWidget):
         layout.addWidget(self._list, stretch=1)
 
         controls = QHBoxLayout()
-        for key, fallback, slot in (
-            ("paint_pages_add", "+", self._on_add),
-            ("paint_pages_remove", "−", self._on_remove),
-            ("paint_pages_duplicate", "⧉", self._on_duplicate),
-            ("paint_pages_up", "↑", lambda: self._on_move(up=True)),
-            ("paint_pages_down", "↓", lambda: self._on_move(up=False)),
+        for key, fallback, slot, tip_key, tip_fallback in (
+            ("paint_pages_add", "+", self._on_add,
+             "paint_pages_add_tooltip", "Append a new blank page"),
+            ("paint_pages_remove", "−", self._on_remove,
+             "paint_pages_remove_tooltip", "Remove the selected page"),
+            ("paint_pages_duplicate", "⧉", self._on_duplicate,
+             "paint_pages_duplicate_tooltip",
+             "Duplicate the selected page below it"),
+            ("paint_pages_up", "↑", lambda: self._on_move(up=True),
+             "paint_pages_up_tooltip", "Move the selected page up"),
+            ("paint_pages_down", "↓", lambda: self._on_move(up=False),
+             "paint_pages_down_tooltip", "Move the selected page down"),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
             btn.clicked.connect(slot)
+            btn.setToolTip(lang.get(tip_key, tip_fallback))
             controls.addWidget(btn)
 
         # "Apply template" — popup of available page templates that

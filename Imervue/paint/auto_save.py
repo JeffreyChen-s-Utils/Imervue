@@ -35,6 +35,7 @@ AUTOSAVE_FILE_PREFIX = "snapshot-"
 AUTOSAVE_META_SUFFIX = ".json"
 AUTOSAVE_KEEP_MAX = 8       # keep at most N recent snapshots per directory
 AUTOSAVE_STALE_AGE_S = 86400 * 7   # 7 days; older snapshots are silently dropped
+DEFAULT_INTERVAL_SEC = 120  # workspace's periodic snapshot cadence
 
 
 @dataclass(frozen=True)
@@ -228,6 +229,7 @@ def directory_size_bytes(directory: str | Path | None = None) -> int:
 __all__ = [
     "AUTOSAVE_KEEP_MAX",
     "AUTOSAVE_STALE_AGE_S",
+    "DEFAULT_INTERVAL_SEC",
     "AutoSaveSnapshot",
     "clear_directory",
     "default_autosave_dir",

@@ -447,6 +447,12 @@ class AIUpscaleDialog(QDialog):
             self._model_combo.addItem(label, key)
         self._model_combo.currentIndexChanged.connect(
             self._on_method_changed)
+        self._model_combo.setToolTip(self._lang.get(
+            "upscale_model_tooltip",
+            "AI models reconstruct detail; traditional methods do "
+            "high-quality interpolation. AI is slower but recovers "
+            "fine texture and edges that resampling can't.",
+        ))
         model_row.addWidget(self._model_combo, 1)
         layout.addLayout(model_row)
 
@@ -458,6 +464,10 @@ class AIUpscaleDialog(QDialog):
         self._scale_spin = QSpinBox()
         self._scale_spin.setRange(2, 8)
         self._scale_spin.setValue(2)
+        self._scale_spin.setToolTip(self._lang.get(
+            "upscale_scale_tooltip",
+            "Output multiplier — 2 doubles each side, 4 quadruples, etc.",
+        ))
         self._scale_row.addWidget(self._scale_spin)
         self._scale_row.addStretch()
         layout.addLayout(self._scale_row)
@@ -468,6 +478,11 @@ class AIUpscaleDialog(QDialog):
                            "Overwrite original files"))
         self._overwrite_check.setChecked(False)
         self._overwrite_check.toggled.connect(self._on_overwrite_toggled)
+        self._overwrite_check.setToolTip(self._lang.get(
+            "upscale_overwrite_tooltip",
+            "Replace each source file in place. Off (default) writes "
+            "to the chosen output folder so the originals are safe.",
+        ))
         layout.addWidget(self._overwrite_check)
 
         # Output directory

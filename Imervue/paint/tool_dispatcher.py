@@ -535,6 +535,13 @@ class BrushTool:
         )
         from Imervue.paint.stabilizer import StrokeStabilizer
         import time
+        # No foreground colour → brush is in the "transparent / no
+        # colour" state set from the colour dock. Painting with no
+        # colour is a no-op rather than an error so the user can
+        # leave the slot transparent without having to flip back to
+        # a different tool to stop deposition.
+        if self._state.foreground is None:
+            return False
         brush = self._state.brush
         # Stroke begins → user has committed to this colour. Record
         # it in recents now so subsequent slider tweaks don't re-bump
@@ -574,9 +581,17 @@ class BrushTool:
             tip_path=brush.tip_path,
             pixel_art=self._state.snap_to_pixel,
         )
+        from Imervue.paint.gpu_brush import make_brush_stroke
+        # GPU stroke uses a per-stroke FBO that can't see sibling
+        # strokes' updates without an expensive per-extend re-upload —
+        # so the symmetry path stays on the CPU brush. Single
+        # (un-mirrored) strokes go through the factory which picks
+        # GPU when GL is current and the options qualify.
+        mirror_positions = list(self._mirror(sx, sy))
+        prefer_gpu = len(mirror_positions) == 1
         self._strokes = []
-        for px, py in self._mirror(sx, sy):
-            stroke = BrushStroke(options)
+        for px, py in mirror_positions:
+            stroke = make_brush_stroke(options, prefer_gpu=prefer_gpu)
             stroke.begin(canvas, px, py)
             self._strokes.append(stroke)
         return True
@@ -676,6 +691,10 @@ class FillTool:
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
+            return False
+        # No foreground colour to deposit — fill is a no-op so the
+        # user can leave the slot transparent without surprises.
+        if self._state.foreground is None:
             return False
         fill = self._state.fill
         reference = (
@@ -1523,7 +1542,12 @@ class _SpeechBubbleTool:
 # ---------------------------------------------------------------------------
 
 
-def _shape_color(state: ToolState) -> tuple[int, int, int, int]:
+def _shape_color(state: ToolState) -> tuple[int, int, int, int] | None:
+    """Return the shape's fill colour, or ``None`` if the foreground
+    is the "transparent" slot — shape tools then no-op rather than
+    deposit a phantom black fill."""
+    if state.foreground is None:
+        return None
     fg = tuple(int(c) for c in state.foreground)
     return (fg[0], fg[1], fg[2], 255)
 

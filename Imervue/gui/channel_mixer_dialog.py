@@ -55,8 +55,18 @@ class ChannelMixerDialog(QDialog):
 
         self._enable = QCheckBox(lang.get("channel_mixer_enable", "Enable channel mixer"))
         self._enable.setChecked(opts.enabled)
+        self._enable.setToolTip(lang.get(
+            "channel_mixer_enable_tooltip",
+            "Apply the matrix when previewing / exporting",
+        ))
         self._monochrome = QCheckBox(lang.get("channel_mixer_monochrome", "Monochrome"))
         self._monochrome.setChecked(opts.monochrome)
+        self._monochrome.setToolTip(lang.get(
+            "channel_mixer_monochrome_tooltip",
+            "Force the green / blue rows to mirror the red row's "
+            "weights — produces a single luma channel for high-"
+            "quality black-and-white conversion",
+        ))
 
         self._red_inputs = self._build_row(opts.red, WEIGHT_MIN, WEIGHT_MAX)
         self._green_inputs = self._build_row(opts.green, WEIGHT_MIN, WEIGHT_MAX)

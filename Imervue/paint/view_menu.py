@@ -61,6 +61,8 @@ def populate_view_menu(workspace: PaintWorkspace) -> None:
         ("paint_view_bleed_guides", "Bleed Guides",
          bridge.toggle_bleed_guides, "", True,
          bridge.bleed_guides_active()),
+        ("paint_view_toggle_all_docks", "Hide / Show All Docks",
+         bridge.toggle_all_docks, "Tab", False, False),
         (None, None, None, None, None, None),
         ("paint_view_rotate_ccw", "Rotate Canvas CCW",
          bridge.rotate_canvas_ccw, "Ctrl+Shift+H", False, False),
@@ -271,6 +273,13 @@ class _ViewMenuBridge:
             canvas.set_bleed_guides_visible(bool(checked))
         else:   # pragma: no cover - older canvas builds
             canvas.update()
+
+    def toggle_all_docks(self) -> None:
+        """Show / hide every right-side dock for distraction-free
+        painting. The action carries no checkable state — it's a
+        pure toggle, like Photoshop's Tab key."""
+        if hasattr(self._workspace, "toggle_all_docks"):
+            self._workspace.toggle_all_docks()
 
     # ---- canvas rotation ----------------------------------------------
 

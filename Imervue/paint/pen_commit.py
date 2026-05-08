@@ -28,11 +28,10 @@ def commit_pen_path(workspace: PaintWorkspace) -> bool:
     """Rasterise the workspace's active bezier path onto the layer.
 
     Returns ``True`` if anything was actually committed; ``False``
-    when there's no active path, no active layer, or the path has
-    fewer than two anchors (a single click never produces a stroke).
-    Caller is responsible for refreshing the canvas widget after
-    this returns ``True`` — we touch the document state but don't
-    pull the canvas in.
+    when there's no active path, no active layer, the path has
+    fewer than two anchors (a single click never produces a stroke),
+    or the foreground slot is set to "transparent" — there's no
+    colour to deposit so the commit is a no-op.
     """
     path = getattr(workspace, "_bezier_pen_path", None)
     if path is None or len(path.nodes) < 2:
@@ -42,6 +41,8 @@ def commit_pen_path(workspace: PaintWorkspace) -> bool:
     if layer is None:
         return False
     state = workspace.state()
+    if state.foreground is None:
+        return False
     # Vector layer → record the path as a non-destructive VectorStroke
     # so the user can edit width / colour / per-node geometry later
     # rather than baking pixels in.

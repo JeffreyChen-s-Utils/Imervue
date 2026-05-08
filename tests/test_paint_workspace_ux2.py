@@ -149,13 +149,19 @@ def test_status_line_includes_zoom_size_and_layer(qapp):
         ws.deleteLater()
 
 
-def test_status_line_clears_when_cursor_leaves(qapp):
+def test_status_line_drops_cursor_segment_when_cursor_leaves(qapp):
+    """Cursor x/y segment disappears when the pointer leaves the
+    canvas, but the always-on tool segment keeps the line populated
+    so the user still has a hint of what the active tool is."""
     ws = PaintWorkspace()
     try:
         ws._on_hover_changed(10, 20)  # noqa: SLF001
-        assert ws._status.currentMessage()  # noqa: SLF001
+        with_hover = ws._status.currentMessage()  # noqa: SLF001
+        assert "10" in with_hover and "20" in with_hover
         ws._on_hover_changed(-1, -1)  # noqa: SLF001
-        assert ws._status.currentMessage() == ""  # noqa: SLF001
+        without_hover = ws._status.currentMessage()  # noqa: SLF001
+        assert "x:" not in without_hover and "y:" not in without_hover
+        assert without_hover, "tool segment must persist after hover leaves"
     finally:
         ws.deleteLater()
 
@@ -201,5 +207,94 @@ def test_collect_shortcut_rows_dedupes(qapp):
         rows = collect_shortcut_rows(ws)
         # Same (label, key) tuple should never appear twice.
         assert len(rows) == len(set(rows))
+    finally:
+        ws.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — richer status line (tool / brush opacity / layer index /
+# selection pixel count). Each segment is independent: the line should
+# render the parts whose data is available even when others aren't.
+# ---------------------------------------------------------------------------
+
+
+def test_status_line_includes_tool_segment(qapp):
+    """The active tool name is always in the status line so the user
+    can verify which tool is selected without consulting the toolbar."""
+    ws = PaintWorkspace()
+    try:
+        ws.state().set_tool("brush")
+        ws._refresh_status_line()  # noqa: SLF001
+        assert "brush" in ws._status.currentMessage().lower()  # noqa: SLF001
+        ws.state().set_tool("eyedropper")
+        ws._refresh_status_line()  # noqa: SLF001
+        assert "eyedropper" in ws._status.currentMessage().lower()  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_status_line_brush_segment_carries_opacity(qapp):
+    """Brushed tools show ``Brush: <size>px <opacity>%`` so the user
+    knows the live opacity without opening the brush dock."""
+    ws = PaintWorkspace()
+    try:
+        ws.state().set_tool("brush")
+        ws.state().set_brush(size=44, opacity=0.5)
+        ws._on_hover_changed(10, 10)  # noqa: SLF001
+        msg = ws._status.currentMessage()  # noqa: SLF001
+        assert "44" in msg
+        assert "50" in msg
+
+
+    finally:
+        ws.deleteLater()
+
+
+def test_status_line_refreshes_on_brush_size_change(qapp):
+    """Changing brush size from the dock must update the status line
+    without waiting for the next pointer hover."""
+    ws = PaintWorkspace()
+    try:
+        ws.state().set_tool("brush")
+        ws.state().set_brush(size=10)
+        ws._on_hover_changed(1, 1)  # noqa: SLF001
+        assert "10" in ws._status.currentMessage()  # noqa: SLF001
+        ws.state().set_brush(size=99)   # _on_state_event refreshes the line
+        assert "99" in ws._status.currentMessage()  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_status_line_layer_segment_includes_index_and_count(qapp):
+    """The active-layer segment carries ``name (i/n)`` so the user
+    sees where they are in the stack at a glance."""
+    ws = PaintWorkspace()
+    try:
+        document = ws.canvas().document()
+        document.add_layer(name="Highlight")
+        # Two layers now (default Background + Highlight) — active is
+        # the new one (index 1, 1-based "2/2").
+        ws._on_hover_changed(1, 1)  # noqa: SLF001
+        msg = ws._status.currentMessage()  # noqa: SLF001
+        assert "Highlight" in msg
+        assert "2/2" in msg
+    finally:
+        ws.deleteLater()
+
+
+def test_status_line_selection_segment_pixel_count(qapp):
+    """When a selection is active the line surfaces its pixel count
+    so the user can sanity-check how big the selection is."""
+    import numpy as np
+    ws = PaintWorkspace()
+    try:
+        document = ws.canvas().document()
+        h, w = document.shape
+        mask = np.zeros((h, w), dtype=bool)
+        mask[0:5, 0:8] = True   # 40 selected pixels
+        document.set_selection(mask)
+        ws._refresh_status_line()  # noqa: SLF001
+        msg = ws._status.currentMessage()  # noqa: SLF001
+        assert "40" in msg
     finally:
         ws.deleteLater()

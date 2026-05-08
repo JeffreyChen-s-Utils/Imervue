@@ -30,7 +30,7 @@ MIN_SHAPE_DIM = 1
 def rasterise_rect(
     canvas: np.ndarray,
     x: float, y: float, w: float, h: float,
-    color: tuple[int, int, int, int],
+    color: tuple[int, int, int, int] | None,
     *, mode: str = DEFAULT_MODE,
     stroke_width: int = DEFAULT_STROKE_WIDTH,
 ) -> bool:
@@ -38,8 +38,13 @@ def rasterise_rect(
 
     Returns ``True`` if any pixel was written. ``w``/``h`` may be
     negative (the helper normalises to a positive rect). Bounding
-    box is clipped to the canvas.
+    box is clipped to the canvas. ``color=None`` is the workspace's
+    "transparent slot" sentinel — the call is a no-op so the user
+    can leave their foreground transparent without having to dodge
+    the shape tools.
     """
+    if color is None:
+        return False
     _validate_canvas(canvas)
     _validate_mode(mode)
     rect = _normalise_rect(x, y, w, h, canvas.shape[:2])
@@ -57,7 +62,7 @@ def rasterise_rect(
 def rasterise_ellipse(
     canvas: np.ndarray,
     cx: float, cy: float, rx: float, ry: float,
-    color: tuple[int, int, int, int],
+    color: tuple[int, int, int, int] | None,
     *, mode: str = DEFAULT_MODE,
     stroke_width: int = DEFAULT_STROKE_WIDTH,
 ) -> bool:
@@ -65,8 +70,10 @@ def rasterise_ellipse(
 
     A circle is just ``rx == ry``. Both radii are forced to a minimum
     of half a pixel so a zero-size drag can't divide-by-zero in the
-    ellipse equation.
+    ellipse equation. ``color=None`` no-ops — see :func:`rasterise_rect`.
     """
+    if color is None:
+        return False
     _validate_canvas(canvas)
     _validate_mode(mode)
     rx = max(0.5, abs(float(rx)))
@@ -83,15 +90,17 @@ def rasterise_ellipse(
 def rasterise_line(
     canvas: np.ndarray,
     x0: float, y0: float, x1: float, y1: float,
-    color: tuple[int, int, int, int],
+    color: tuple[int, int, int, int] | None,
     *, width: int = DEFAULT_STROKE_WIDTH,
 ) -> bool:
     """Paint a line of thickness ``width`` between two points.
 
     Implemented as a stamped disk along the segment — same kernel as
     the brush tool but a hard-edged disc so the stroke matches the
-    other shape tools' visual style.
+    other shape tools' visual style. ``color=None`` no-ops.
     """
+    if color is None:
+        return False
     _validate_canvas(canvas)
     if width < MIN_SHAPE_DIM:
         raise ValueError(f"width must be >= {MIN_SHAPE_DIM}, got {width}")
@@ -120,7 +129,7 @@ def rasterise_line(
 def rasterise_polygon(
     canvas: np.ndarray,
     points: Sequence[tuple[float, float]],
-    color: tuple[int, int, int, int],
+    color: tuple[int, int, int, int] | None,
     *, mode: str = DEFAULT_MODE,
     stroke_width: int = DEFAULT_STROKE_WIDTH,
 ) -> bool:
@@ -129,7 +138,10 @@ def rasterise_polygon(
     Polygons with fewer than three points fall back to a line (two
     points) or a single dot (one point) — matches the user gesture:
     clicking once and committing should still leave a visible dab.
+    ``color=None`` no-ops.
     """
+    if color is None:
+        return False
     _validate_canvas(canvas)
     _validate_mode(mode)
     if not points:

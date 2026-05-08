@@ -95,7 +95,16 @@ BRUSH_DENSITY_MAX = 1.0
 
 COLOR_HISTORY_MAX = 12
 DEFAULT_FG = (0, 0, 0)
-DEFAULT_BG = (255, 255, 255)
+# ``None`` denotes "transparent / no colour" — the user-facing
+# affordance is the swatch dock's "Transparent" button. The brush
+# tool no-ops when foreground is ``None``; the gradient tool fades
+# its endpoint alpha to zero. Defaulting BG to ``None`` matches the
+# MediBang "BG slot starts empty" convention so a fresh
+# ``foreground → background`` gradient produces a clean alpha fade
+# without the user having to clear a stale white BG first.
+DEFAULT_BG: tuple[int, int, int] | None = None
+# Type alias for "either an RGB triple or transparent".
+Color = "tuple[int, int, int] | None"
 
 
 # ---------------------------------------------------------------------------
@@ -199,8 +208,8 @@ class ToolState:
     """
 
     tool: str = DEFAULT_TOOL
-    foreground: tuple[int, int, int] = DEFAULT_FG
-    background: tuple[int, int, int] = DEFAULT_BG
+    foreground: tuple[int, int, int] | None = DEFAULT_FG
+    background: tuple[int, int, int] | None = DEFAULT_BG
     brush: BrushSettings = field(default_factory=BrushSettings)
     fill: FillSettings = field(default_factory=FillSettings)
     selection_mode: str = "replace"
@@ -263,34 +272,40 @@ class ToolState:
     # ---- colours ---------------------------------------------------------
 
     def set_foreground(
-        self, rgb: tuple[int, int, int], *, commit: bool = False,
+        self,
+        rgb: tuple[int, int, int] | None,
+        *,
+        commit: bool = False,
     ) -> bool:
         """Set the active foreground colour.
+
+        ``rgb`` may be a 3-tuple of 0..255 ints or ``None`` to mark
+        the foreground as "transparent / no colour". A transparent
+        foreground turns the brush tool into a no-op (paint deposits
+        nothing) so the user can pick "no colour" without first
+        switching to the eraser.
 
         ``commit=True`` also records the colour in the recents history.
         Default is ``False`` so live-preview adjustments (slider drags,
         wheel scrolls) don't pollute "recently used" with every
         intermediate value — only colours the user actually paints
         with, picks via the colour dialog, or clicks from a swatch
-        should land in recents. The dispatcher / brush tools call
-        :meth:`record_foreground_in_history` at stroke-start to
-        commit the value the user is about to paint with.
+        should land in recents. The transparent value is never pushed
+        to history (recents are for *colours*).
         """
-        rgb = _clamp_rgb(rgb)
+        rgb = _clamp_color(rgb)
         if rgb == self.foreground:
-            if commit:
-                # Same colour, but the caller still wants this use to
-                # bump it to the front of recents.
+            if commit and rgb is not None:
                 self._push_color_history(rgb)
                 self._persist()
                 self._emit(EVENT_HISTORY)
             return False
         self.foreground = rgb
-        if commit:
+        if commit and rgb is not None:
             self._push_color_history(rgb)
         self._persist()
         self._emit(EVENT_COLOR)
-        if commit:
+        if commit and rgb is not None:
             self._emit(EVENT_HISTORY)
         return True
 
@@ -298,13 +313,16 @@ class ToolState:
         """Push the current foreground onto the recents stack without
         otherwise changing state. Called by the brush dispatcher when
         a stroke begins so "recents" reflects colours actually used
-        for paint."""
+        for paint. ``None`` (transparent) is skipped — there's no
+        opaque colour to recall."""
+        if self.foreground is None:
+            return
         self._push_color_history(self.foreground)
         self._persist()
         self._emit(EVENT_HISTORY)
 
-    def set_background(self, rgb: tuple[int, int, int]) -> bool:
-        rgb = _clamp_rgb(rgb)
+    def set_background(self, rgb: tuple[int, int, int] | None) -> bool:
+        rgb = _clamp_color(rgb)
         if rgb == self.background:
             return False
         self.background = rgb
@@ -558,8 +576,12 @@ class ToolState:
     def to_dict(self) -> dict:
         return {
             "tool": self.tool,
-            "foreground": list(self.foreground),
-            "background": list(self.background),
+            "foreground": (
+                list(self.foreground) if self.foreground is not None else None
+            ),
+            "background": (
+                list(self.background) if self.background is not None else None
+            ),
             "brush": {
                 "kind": self.brush.kind,
                 "size": self.brush.size,
@@ -605,8 +627,12 @@ class ToolState:
         tool = raw.get("tool")
         if tool not in TOOLS:
             tool = DEFAULT_TOOL
-        fg = _safe_rgb(raw.get("foreground"), DEFAULT_FG)
-        bg = _safe_rgb(raw.get("background"), DEFAULT_BG)
+        fg = _safe_color(
+            raw.get("foreground", DEFAULT_FG), DEFAULT_FG,
+        )
+        bg = _safe_color(
+            raw.get("background", DEFAULT_BG), DEFAULT_BG,
+        )
         brush = _brush_from_dict(raw.get("brush"))
         fill = _fill_from_dict(raw.get("fill"))
         selection_mode = raw.get("selection_mode", "replace")
@@ -674,6 +700,19 @@ def _clamp_rgb(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
     return tuple(max(0, min(255, int(c))) for c in rgb)  # type: ignore[return-value]
 
 
+def _clamp_color(
+    color: tuple[int, int, int] | None,
+) -> tuple[int, int, int] | None:
+    """Like :func:`_clamp_rgb` but lets ``None`` pass through unchanged.
+
+    The setters use this so callers can pass ``None`` to mean
+    "transparent" without raising on the 3-tuple check.
+    """
+    if color is None:
+        return None
+    return _clamp_rgb(color)
+
+
 def _clamp_fill_attr(key: str, value: Any) -> Any:
     if key == "tolerance":
         return max(FILL_TOLERANCE_MIN, min(FILL_TOLERANCE_MAX, int(value)))
@@ -722,6 +761,27 @@ def _clamp_brush_attr(key: str, value: Any) -> Any:
 
 
 def _safe_rgb(value: Any, default: tuple[int, int, int]) -> tuple[int, int, int]:
+    if isinstance(value, (list, tuple)) and len(value) == 3:
+        try:
+            return _clamp_rgb(tuple(int(c) for c in value))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return default
+    return default
+
+
+def _safe_color(
+    value: Any,
+    default: tuple[int, int, int] | None,
+) -> tuple[int, int, int] | None:
+    """Same as :func:`_safe_rgb` but ``None`` round-trips through the
+    on-disk JSON representation.
+
+    Stored as ``null`` in the user-settings dict; reading back ``None``
+    or a missing key both yield the supplied ``default`` (which itself
+    may be ``None``). Anything else is forwarded to ``_safe_rgb``.
+    """
+    if value is None:
+        return default if default is None else _clamp_rgb(default)
     if isinstance(value, (list, tuple)) and len(value) == 3:
         try:
             return _clamp_rgb(tuple(int(c) for c in value))  # type: ignore[arg-type]

@@ -173,16 +173,28 @@ class ReferenceDock(QDockWidget):
             "paint_reference_open", "Open…",
         ))
         self._open_btn.clicked.connect(self._on_open_clicked)
+        self._open_btn.setToolTip(lang.get(
+            "paint_reference_open_tooltip",
+            "Pick an image to pin in this reference panel",
+        ))
         controls.addWidget(self._open_btn)
         self._clear_btn = QPushButton(lang.get(
             "paint_reference_clear", "Clear",
         ))
         self._clear_btn.clicked.connect(self._on_clear_clicked)
+        self._clear_btn.setToolTip(lang.get(
+            "paint_reference_clear_tooltip",
+            "Drop the reference image and free its memory",
+        ))
         controls.addWidget(self._clear_btn)
         self._reset_btn = QPushButton(lang.get(
             "paint_reference_reset_zoom", "100%",
         ))
         self._reset_btn.clicked.connect(self._on_reset_clicked)
+        self._reset_btn.setToolTip(lang.get(
+            "paint_reference_reset_zoom_tooltip",
+            "Reset the reference's zoom + pan to actual size",
+        ))
         controls.addWidget(self._reset_btn)
         controls.addStretch(1)
         layout.addLayout(controls)

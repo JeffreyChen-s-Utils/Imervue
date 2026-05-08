@@ -108,6 +108,11 @@ class HistogramDock(QDockWidget):
         self._channel_combo.currentIndexChanged.connect(
             self._on_channel_changed,
         )
+        self._channel_combo.setToolTip(lang.get(
+            "paint_histogram_channel_tooltip",
+            "Pick which channel to plot — luminance is the perceived "
+            "brightness, R / G / B isolate each colour channel",
+        ))
         controls.addWidget(self._channel_combo)
         controls.addStretch(1)
         layout.addLayout(controls)
