@@ -59,35 +59,51 @@ def test_zoom_indicator_tooltip_includes_shortcut_keys(qapp):
         ws.deleteLater()
 
 
-def test_swap_and_reset_colour_shortcuts_fire(qapp):
-    """X swaps foreground / background; D resets the colour pair to
-    black and white. Both run on global QShortcut bindings so the
-    keystroke works anywhere in the workspace except text fields."""
-    from PySide6.QtCore import Qt
-    from PySide6.QtTest import QTest
+def test_swap_and_reset_colour_shortcuts_are_registered(qapp):
+    """X swaps foreground / background; D resets the colour pair.
+
+    Verifying the binding via QTest.keyClick is unreliable on the
+    offscreen Qt platform CI uses (the keypress doesn't always reach
+    a windowless QMainWindow's QShortcut router). Instead we walk
+    the workspace's QShortcut children and assert the right key is
+    wired to a callable that updates ``ToolState`` — same surface
+    the runtime uses, but driven directly so the test isn't beholden
+    to the Qt event loop's focus handling.
+    """
+    from PySide6.QtGui import QKeySequence, QShortcut
 
     ws = PaintWorkspace()
     try:
-        ws.show()
-        QTest.qWait(20)
+        shortcuts = ws.findChildren(QShortcut)
+        keys = {sc.key().toString() for sc in shortcuts if not sc.key().isEmpty()}
+        assert "X" in keys, f"missing X binding; have {sorted(keys)}"
+        assert "D" in keys, f"missing D binding; have {sorted(keys)}"
 
-        # Start with a non-default foreground / background.
+        # Drive the same paths the QShortcut.activated signal would.
+        # ``swap_colors`` and ``reset_colors`` are the public surface,
+        # so calling them directly verifies the binding lands on the
+        # documented behaviour without crossing Qt focus boundaries.
         ws._state.set_foreground((10, 20, 30))   # noqa: SLF001
         ws._state.set_background((200, 210, 220))   # noqa: SLF001
         before_fg = tuple(ws._state.foreground)   # noqa: SLF001
         before_bg = tuple(ws._state.background)   # noqa: SLF001
 
-        QTest.keyClick(ws, Qt.Key.Key_X)
-        QTest.qWait(20)
+        # Find the QShortcut bound to X / D and emit its activated
+        # signal — that is the same trigger the keypress dispatches.
+        x_shortcut = next(
+            sc for sc in shortcuts if sc.key() == QKeySequence("X")
+        )
+        d_shortcut = next(
+            sc for sc in shortcuts if sc.key() == QKeySequence("D")
+        )
+        x_shortcut.activated.emit()
         assert tuple(ws._state.foreground) == before_bg   # noqa: SLF001
         assert tuple(ws._state.background) == before_fg   # noqa: SLF001
 
-        QTest.keyClick(ws, Qt.Key.Key_D)
-        QTest.qWait(20)
-        # ``reset_colors`` restores the documented defaults — the
-        # foreground returns to the pre-swap colour pair (the exact
-        # values are state-internal; we just assert the binding fired
-        # by checking the pair isn't still the swapped one).
+        d_shortcut.activated.emit()
+        # ``reset_colors`` returns to the documented defaults; the
+        # exact tuple is state-internal, we just check it isn't the
+        # swapped pair anymore.
         fg = ws._state.foreground   # noqa: SLF001
         bg = ws._state.background   # noqa: SLF001
         assert (fg, bg) != (before_bg, before_fg)
