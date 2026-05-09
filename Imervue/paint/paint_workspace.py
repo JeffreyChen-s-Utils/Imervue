@@ -1740,10 +1740,25 @@ class PaintWorkspace(QMainWindow):
         self._zoom_btn.setText(
             lang.get("paint_status_zoom_initial", "100%"),
         )
-        self._zoom_btn.setToolTip(lang.get(
+        # Pull the live keybinds for fit / actual-size so the tooltip
+        # stays in sync if the user remaps either action.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        shortcuts = load_shortcuts()
+        try:
+            fit_key = shortcuts.get("paint.view.fit")
+        except KeyError:
+            fit_key = ""
+        try:
+            actual_key = shortcuts.get("paint.view.actual_size")
+        except KeyError:
+            actual_key = ""
+        base_tip = lang.get(
             "paint_status_zoom_tooltip",
             "Click to toggle between Fit to window and 100 %",
-        ))
+        )
+        if fit_key and actual_key:
+            base_tip = f"{base_tip} ({fit_key} / {actual_key})"
+        self._zoom_btn.setToolTip(base_tip)
         self._zoom_btn.clicked.connect(self._on_zoom_indicator_clicked)
         self._status.addPermanentWidget(self._zoom_btn)
 
@@ -1794,6 +1809,23 @@ class PaintWorkspace(QMainWindow):
         size_big_dec.activated.connect(lambda: self.step_brush_size(-5))
         size_big_inc = QShortcut(QKeySequence("Shift+]"), self)
         size_big_inc.activated.connect(lambda: self.step_brush_size(+5))
+        # View shortcuts — Ctrl+0 fits, Ctrl+1 jumps to 100 % (mirrors
+        # Photoshop / browser convention so the artist can re-anchor
+        # without leaving the canvas).
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        registry = load_shortcuts()
+        try:
+            fit_key = registry.get("paint.view.fit")
+        except KeyError:
+            fit_key = "Ctrl+0"
+        try:
+            actual_key = registry.get("paint.view.actual_size")
+        except KeyError:
+            actual_key = "Ctrl+1"
+        fit_shortcut = QShortcut(QKeySequence(fit_key), self)
+        fit_shortcut.activated.connect(self._fit_view)
+        actual_shortcut = QShortcut(QKeySequence(actual_key), self)
+        actual_shortcut.activated.connect(self._actual_size_view)
         # Tab navigation — Ctrl+Tab cycles forward, Ctrl+Shift+Tab
         # backward. Standard browser / IDE convention so users with
         # several open documents don't need to reach for the mouse.
@@ -1801,6 +1833,16 @@ class PaintWorkspace(QMainWindow):
         next_tab.activated.connect(lambda: self.cycle_active_tab(+1))
         prev_tab = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
         prev_tab.activated.connect(lambda: self.cycle_active_tab(-1))
+
+    def _fit_view(self) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "reset_view"):
+            canvas.reset_view()
+
+    def _actual_size_view(self) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "set_zoom"):
+            canvas.set_zoom(1.0)
 
     BRUSH_SIZE_MIN = 1
     BRUSH_SIZE_MAX = 500
