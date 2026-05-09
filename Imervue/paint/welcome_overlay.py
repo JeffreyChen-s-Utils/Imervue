@@ -102,7 +102,11 @@ class WelcomeHint(QFrame):
         self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._new_btn = QPushButton("New tab", self)
+        self._new_btn.setToolTip("Open an empty canvas in a new tab (Ctrl+T)")
         self._open_btn = QPushButton("Open file…", self)
+        self._open_btn.setToolTip(
+            "Pick an image or .psd from disk to open in this workspace",
+        )
         self._new_btn.clicked.connect(self.new_requested)
         self._open_btn.clicked.connect(self.open_requested)
 
@@ -127,6 +131,8 @@ class WelcomeHint(QFrame):
         new_label: str | None = None,
         open_label: str | None = None,
         recent_label: str | None = None,
+        new_tooltip: str | None = None,
+        open_tooltip: str | None = None,
     ) -> None:
         """Allow the workspace to push localised strings in.
 
@@ -145,6 +151,10 @@ class WelcomeHint(QFrame):
             self._open_btn.setText(open_label)
         if recent_label is not None:
             self._recent_label.setText(recent_label)
+        if new_tooltip is not None:
+            self._new_btn.setToolTip(new_tooltip)
+        if open_tooltip is not None:
+            self._open_btn.setToolTip(open_tooltip)
 
     def set_recent_paths(self, paths: list[str]) -> None:
         """Re-populate the "Recent" section with up to N paths.
