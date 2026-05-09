@@ -321,3 +321,75 @@ def test_open_with_default_app_failure_emits_error_toast(
     msgs = tree_view._main_window.toast.calls   # noqa: SLF001
     assert msgs and msgs[0][0] == "error"
     assert "broken.png" in msgs[0][1]
+
+
+# ---------------------------------------------------------------------------
+# Tab "Reveal in File Tree" — phase 35d
+# ---------------------------------------------------------------------------
+
+
+class _RevealHost:
+    """Mounts ``_reveal_path_in_tree`` onto a tiny stand-in so we can
+    drive it without booting the full ImervueMainWindow."""
+
+    def __init__(self, qapp):
+        self.toast = _StubToast()
+        self.tree = self._FakeTree()
+        self.model = self._FakeModel()
+
+    class _FakeTree:
+        def __init__(self):
+            self.scroll_to_calls = []
+            self.current_set = None
+            self.focused = False
+
+        def scrollTo(self, index):
+            self.scroll_to_calls.append(index)
+
+        def setCurrentIndex(self, index):
+            self.current_set = index
+
+        def setFocus(self):
+            self.focused = True
+
+    class _FakeModel:
+        def index(self, path):
+            self.last_path = path
+            # The helper checks ``.isValid()`` on the returned index;
+            # we hand back a dummy that reports True so the call
+            # progresses to scrollTo / setCurrentIndex.
+            return _ValidIndex()
+
+    from Imervue.Imervue_main_window import ImervueMainWindow as _RealMW
+    _reveal_path_in_tree = _RealMW._reveal_path_in_tree
+
+
+class _ValidIndex:
+    def isValid(self):
+        return True
+
+
+def test_reveal_path_in_tree_selects_row(qapp, tmp_path):
+    src = tmp_path / "shot.png"
+    src.write_bytes(b"")
+    host = _RevealHost(qapp)
+    host._reveal_path_in_tree(str(src))   # noqa: SLF001
+    assert host.tree.scroll_to_calls
+    assert host.tree.current_set is not None
+    assert host.tree.focused
+    assert host.toast.calls == []
+
+
+def test_reveal_path_in_tree_missing_file_emits_warning(qapp, tmp_path):
+    host = _RevealHost(qapp)
+    host._reveal_path_in_tree(str(tmp_path / "ghost.png"))   # noqa: SLF001
+    assert host.toast.calls and host.toast.calls[0][0] == "warning"
+    # The warning includes the basename so the user knows which tab.
+    assert "ghost.png" in host.toast.calls[0][1]
+
+
+def test_reveal_path_in_tree_empty_path_is_noop(qapp):
+    host = _RevealHost(qapp)
+    host._reveal_path_in_tree("")   # noqa: SLF001
+    assert host.tree.scroll_to_calls == []
+    assert host.toast.calls == []

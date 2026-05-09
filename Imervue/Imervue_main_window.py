@@ -1294,13 +1294,24 @@ class ImervueMainWindow(QMainWindow):
             self._on_tab_close(idx)
 
     def _on_tab_context_menu(self, pos) -> None:
-        """Right-click on a tab → close-others / close-to-right / close-all."""
+        """Right-click on a tab → reveal / copy path / close family."""
         idx = self._tab_bar.tabAt(pos)
         if idx < 0:
             return
         from PySide6.QtWidgets import QMenu
         lang = language_wrapper.language_word_dict
         menu = QMenu(self._tab_bar)
+        tab_path = self._image_tabs[idx].get("path", "") if 0 <= idx < len(self._image_tabs) else ""
+
+        reveal_act = None
+        copy_path_act = None
+        if tab_path:
+            reveal_act = menu.addAction(
+                lang.get("tab_reveal_in_tree", "Reveal in File Tree"),
+            )
+            copy_path_act = menu.addAction(lang.get("tab_copy_path", "Copy Path"))
+            menu.addSeparator()
+
         close_act = menu.addAction(lang.get("tab_close", "Close"))
         close_others = menu.addAction(lang.get("tab_close_others", "Close Other Tabs"))
         close_right = menu.addAction(
@@ -1309,7 +1320,13 @@ class ImervueMainWindow(QMainWindow):
         menu.addSeparator()
         close_all = menu.addAction(lang.get("tab_close_all", "Close All Tabs"))
         chosen = menu.exec(self._tab_bar.mapToGlobal(pos))
-        if chosen is close_act:
+        if chosen is None:
+            return
+        if chosen is reveal_act:
+            self._reveal_path_in_tree(tab_path)
+        elif chosen is copy_path_act:
+            QApplication.clipboard().setText(tab_path)
+        elif chosen is close_act:
             self._on_tab_close(idx)
         elif chosen is close_others:
             self._close_tabs_except(idx)
@@ -1317,6 +1334,28 @@ class ImervueMainWindow(QMainWindow):
             self._close_tabs_after(idx)
         elif chosen is close_all:
             self._close_all_tabs()
+
+    def _reveal_path_in_tree(self, path: str) -> None:
+        """Scroll the file tree to ``path`` and select that row, so the
+        user has a one-click bridge from "this tab's image" back to its
+        location on disk. Falls back silently if the path is gone."""
+        if not path:
+            return
+        if not Path(path).exists():
+            if hasattr(self, "toast"):
+                lang = language_wrapper.language_word_dict
+                self.toast.warning(
+                    lang.get(
+                        "tab_reveal_missing", "{name} is no longer on disk",
+                    ).format(name=Path(path).name or path),
+                )
+            return
+        index = self.model.index(path)
+        if not index.isValid():
+            return
+        self.tree.scrollTo(index)
+        self.tree.setCurrentIndex(index)
+        self.tree.setFocus()
 
     def _close_tabs_except(self, keep_idx: int) -> None:
         """Close every tab whose index is not ``keep_idx``."""
