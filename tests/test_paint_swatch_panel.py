@@ -50,12 +50,44 @@ def test_panel_refreshes_on_history_event(qapp, state_with_history):
         panel.deleteLater()
 
 
-def test_panel_clear_drops_every_swatch(qapp, state_with_history):
+def test_panel_clear_drops_every_swatch(qapp, state_with_history, monkeypatch):
     panel = SwatchPanel(state_with_history)
     try:
+        # Phase 36p — _on_clear now confirms first; bypass the modal.
+        monkeypatch.setattr(panel, "_confirm_clear", lambda: True)
         panel._on_clear()  # noqa: SLF001
         assert panel._grid.count() == 0  # noqa: SLF001
         assert state_with_history.color_history == []
+    finally:
+        panel.deleteLater()
+
+
+def test_panel_clear_cancel_keeps_swatches(qapp, state_with_history, monkeypatch):
+    panel = SwatchPanel(state_with_history)
+    try:
+        before = list(state_with_history.color_history)
+        monkeypatch.setattr(panel, "_confirm_clear", lambda: False)
+        panel._on_clear()  # noqa: SLF001
+        assert state_with_history.color_history == before
+    finally:
+        panel.deleteLater()
+
+
+def test_panel_clear_skips_prompt_on_empty_history(qapp, monkeypatch):
+    """When the history is already empty, the confirmation isn't
+    worth running — nothing would be lost. Use a sentinel raise to
+    fail the test if the prompt fires."""
+    from Imervue.paint import tool_state as ts
+    state = ts.load_tool_state()
+    state.color_history.clear()
+    panel = SwatchPanel(state)
+    try:
+        def _should_not_run():
+            raise AssertionError("confirm prompt fired on empty history")
+
+        monkeypatch.setattr(panel, "_confirm_clear", _should_not_run)
+        panel._on_clear()   # noqa: SLF001
+        assert state.color_history == []
     finally:
         panel.deleteLater()
 

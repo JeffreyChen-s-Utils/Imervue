@@ -154,9 +154,31 @@ class SwatchPanel(QDockWidget):
         self.color_chosen.emit(int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
     def _on_clear(self) -> None:
+        # Clearing wipes the entire colour history — confirm first so
+        # a misclick on the small "Clear" button doesn't drop a long
+        # session's worth of saved palette colours.
+        if self._state.color_history and not self._confirm_clear():
+            return
         self._state.color_history.clear()
         self._state._emit("color_history")  # noqa: SLF001
         self.refresh()
+
+    def _confirm_clear(self) -> bool:  # pragma: no cover - Qt UI
+        """Ask before wiping the entire swatch history."""
+        from PySide6.QtWidgets import QMessageBox
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_swatch_clear", "Clear"),
+            lang.get(
+                "paint_swatch_clear_confirm",
+                "Drop every recent colour from the history? "
+                "This cannot be undone.",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _clear_grid(self) -> None:
         while self._grid.count():
