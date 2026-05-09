@@ -172,19 +172,34 @@ class ColorDock(QDockWidget):
             self._state.set_background(None)
 
     def _show_swatch_menu(self, swatch, *, fg: bool) -> None:  # pragma: no cover - Qt UI
-        """Right-click context menu on either swatch — currently just
-        the "Transparent" toggle for whichever slot was clicked."""
-        from PySide6.QtWidgets import QMenu
+        """Right-click context menu — Transparent toggle plus Copy hex
+        for the slot's current colour. Copy stays disabled when the
+        slot is already transparent so we don't put the literal string
+        ``None`` on the clipboard."""
+        from PySide6.QtWidgets import QApplication, QMenu
+        lang = language_wrapper.language_word_dict
         menu = QMenu(swatch)
-        label = "Transparent"
-        action = menu.addAction(label)
-        action.setCheckable(True)
+        transparent_action = menu.addAction(
+            lang.get("paint_color_transparent", "Transparent"),
+        )
+        transparent_action.setCheckable(True)
+        slot_value = self._state.foreground if fg else self._state.background
+        transparent_action.setChecked(slot_value is None)
         if fg:
-            action.setChecked(self._state.foreground is None)
-            action.triggered.connect(self._toggle_fg_transparent)
+            transparent_action.triggered.connect(self._toggle_fg_transparent)
         else:
-            action.setChecked(self._state.background is None)
-            action.triggered.connect(self._toggle_bg_transparent)
+            transparent_action.triggered.connect(self._toggle_bg_transparent)
+        menu.addSeparator()
+        copy_action = menu.addAction(
+            lang.get("paint_color_copy_hex", "Copy as #RRGGBB"),
+        )
+        copy_action.setEnabled(slot_value is not None)
+        if slot_value is not None:
+            copy_action.triggered.connect(
+                lambda _checked=False, rgb=slot_value: QApplication.clipboard().setText(
+                    f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+                ),
+            )
         menu.exec(swatch.mapToGlobal(swatch.rect().bottomLeft()))
 
     def _toggle_fg_transparent(self) -> None:
