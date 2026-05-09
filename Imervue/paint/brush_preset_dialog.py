@@ -130,9 +130,33 @@ class BrushPresetDialog(QDialog):
                 ),
             )
             return
+        # Prevent silent overwrite — add_sub_tool replaces same-name
+        # entries without prompting, which is a foot-gun when the user
+        # picks a recently-suggested name and forgets there's already a
+        # hand-tuned preset there.
+        existing_names = {
+            s.name for s in self._state.list_sub_tools(self._state.tool)
+        }
+        if name in existing_names and not self._confirm_overwrite(name):
+            return
         self._state.add_sub_tool(self._state.tool, name)
         self._refresh_list()
         self._select_by_name(name)
+
+    def _confirm_overwrite(self, name: str) -> bool:  # pragma: no cover - Qt UI
+        """Ask before replacing an existing brush preset."""
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_brush_presets_save_title", "Save preset"),
+            lang.get(
+                "paint_brush_presets_overwrite_confirm",
+                "A preset named '{name}' already exists. Overwrite it?",
+            ).format(name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _on_apply(self) -> None:
         name = self._selected_name()

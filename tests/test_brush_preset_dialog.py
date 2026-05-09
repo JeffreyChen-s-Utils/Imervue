@@ -162,3 +162,56 @@ def test_dialog_delete_cancel_keeps_preset(qapp, monkeypatch):
         assert "fat-marker" in names
     finally:
         dialog.deleteLater()
+
+
+def test_dialog_save_with_existing_name_confirms_overwrite(qapp, monkeypatch):
+    """Phase 36o — saving with a name that already exists in the
+    sub-tool bucket should prompt before overwriting; rejecting the
+    prompt must leave the original preset's settings untouched."""
+    state = ts.load_tool_state()
+    state.set_brush(size=10, hardness=0.5)
+    state.add_sub_tool(state.tool, "shared-name")
+    state.set_brush(size=99, hardness=0.99)
+
+    dialog = BrushPresetDialog(state)
+    try:
+        monkeypatch.setattr(
+            QInputDialog, "getText",
+            staticmethod(lambda *_a, **_k: ("shared-name", True)),
+        )
+        # Decline the overwrite prompt — original preset's settings
+        # should survive.
+        monkeypatch.setattr(dialog, "_confirm_overwrite", lambda name: False)
+        dialog._on_save()   # noqa: SLF001
+        snapshot = next(
+            s for s in state.list_sub_tools(state.tool)
+            if s.name == "shared-name"
+        )
+        assert snapshot.brush.size == 10
+        assert snapshot.brush.hardness == pytest.approx(0.5)
+    finally:
+        dialog.deleteLater()
+
+
+def test_dialog_save_with_existing_name_overwrites_when_confirmed(qapp, monkeypatch):
+    state = ts.load_tool_state()
+    state.set_brush(size=10, hardness=0.5)
+    state.add_sub_tool(state.tool, "shared-name")
+    state.set_brush(size=99, hardness=0.99)
+
+    dialog = BrushPresetDialog(state)
+    try:
+        monkeypatch.setattr(
+            QInputDialog, "getText",
+            staticmethod(lambda *_a, **_k: ("shared-name", True)),
+        )
+        monkeypatch.setattr(dialog, "_confirm_overwrite", lambda name: True)
+        dialog._on_save()   # noqa: SLF001
+        snapshot = next(
+            s for s in state.list_sub_tools(state.tool)
+            if s.name == "shared-name"
+        )
+        assert snapshot.brush.size == 99
+        assert snapshot.brush.hardness == pytest.approx(0.99)
+    finally:
+        dialog.deleteLater()
