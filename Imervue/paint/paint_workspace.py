@@ -21,6 +21,7 @@ not yet a paint operation — Phase 2 plugs the brush engine into
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -33,6 +34,7 @@ from Imervue.paint import tool_state as ts
 from Imervue.paint.canvas import PaintCanvas, cursor_for_tool
 from Imervue.paint.dock_panels import (
     BrushDock,
+    FillDock,
     ColorDock,
     HistoryDock,
     LayerDock,
@@ -71,31 +73,59 @@ def _safe_set_checked(action, value: bool) -> None:
         return
 
 
+logger = logging.getLogger("Imervue.paint.workspace")
+
+
 class PaintWorkspace(QMainWindow):
     """Assembles the Paint tab from the toolbar + canvas + dock pieces."""
 
     def __init__(self, state: ToolState | None = None, parent=None):
         super().__init__(parent)
+        # Accept image / PSD drops on the workspace itself so users
+        # can drag a file from the OS file manager into the canvas.
+        self.setAcceptDrops(True)
         self._state = state if state is not None else ts.load_tool_state()
+        # Seed the MediBang-style default brush preset pack on first
+        # workspace launch. Idempotent: when the user already has at
+        # least one brush sub-tool the seeder bails out, so existing
+        # users keep their saved presets and tests that build their
+        # own state are unaffected.
+        from Imervue.paint.default_brush_presets import (
+            seed_default_brush_presets,
+        )
+        seed_default_brush_presets(self._state)
 
         # The embedded main window has its own menu bar so File / Edit
         # / Layer / View / Tools / Filter / Settings / Window all live
         # together — :func:`build_paint_menu_bar` populates the Filter
         # menu and stashes the others on the workspace as
         # ``_<key>_menu`` for the 21b–21g sub-phases to fill.
-        self.setMenuBar(build_paint_menu_bar(self))
-        populate_file_menu(self)
-        populate_edit_menu(self)
-        populate_image_menu(self)
-        populate_layer_menu(self)
-        populate_view_menu(self)
-        populate_tools_menu(self)
-        populate_manga_menu(self)
-        populate_settings_menu(self)
+        self._build_menu_bar()
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)
         self.setStatusBar(self._status)
+        self._build_zoom_indicator()
+        # Cached most-recent cursor position in image space so
+        # ``_refresh_status_line`` can re-render after a tool / brush
+        # / selection change without waiting for the next hover.
+        self._last_hover: tuple[int, int] | None = None
+        # Per-tab "modified since last save" flag, keyed by canvas
+        # widget. Drives the ``" *"`` tab title suffix and the
+        # close-prompt protection.
+        self._tab_dirty: dict = {}
+        # ``time.monotonic()`` value of the most recent successful
+        # autosave snapshot, or ``None`` while the workspace has
+        # never run an autosave. Drives the "Last autosaved Xs ago"
+        # status segment so the user always knows whether their
+        # work is captured.
+        self._last_autosave_at: float | None = None
+        # Toast manager for non-blocking feedback (save / restore /
+        # plugin install / file errors) — same widget the main image
+        # viewer uses, scoped to this workspace as the parent so the
+        # toast positions itself at the bottom of the paint area.
+        from Imervue.gui.toast import ToastManager
+        self.toast = ToastManager(self)
 
         # Central canvas tab strip — each tab owns one PaintCanvas + its
         # own PaintDocument so the user can keep multiple drawings open
@@ -107,6 +137,9 @@ class PaintWorkspace(QMainWindow):
         self._tabs.setTabsClosable(True)
         self._tabs.setMovable(True)
         self._tabs.tabCloseRequested.connect(self._on_tab_close_requested)
+        # Middle-click on the tab bar should close the clicked tab —
+        # cheap power-user convenience that mirrors browsers / IDEs.
+        self._tabs.tabBar().installEventFilter(self)
         # ``currentChanged`` is wired AFTER ``_dispatcher`` is built —
         # otherwise the signal fires during ``addTab`` below and the
         # handler trips over the missing dispatcher attribute.
@@ -128,6 +161,8 @@ class PaintWorkspace(QMainWindow):
         # changes (tool that adds a layer, file load) refresh the panel.
         self._color_dock = ColorDock(self._state, self)
         self._brush_dock = BrushDock(self._state, self)
+        self._fill_dock = FillDock(self._state, self)
+        self._fill_dock.set_auto_fill_callback(self._auto_fill_closed_regions)
         self._layer_dock = LayerDock(self._canvas.document(), self)
         self._navigator_dock = NavigatorDock(self)
         self._history_dock = HistoryDock(self)
@@ -171,34 +206,93 @@ class PaintWorkspace(QMainWindow):
             self._on_animation_frame_selected,
         )
 
-        # Tabify every right-side dock into a single column. Without
-        # tabification each dock contributes its full minimum height to
-        # the QMainWindow's sizeHint, which on a 1080p screen drives
-        # the embedded workspace taller than the visible area and
-        # forces the central canvas to inherit that excess height —
-        # the document then ends up centred well below the viewport.
-        # With a single tabbed group the column only needs the
-        # tallest dock's minimum, leaving the canvas free to fill the
-        # remaining vertical space.
-        all_right_docks = (
+        # Comic-project page browser. The dock binds to
+        # ``self._paint_project`` (None until File ▸ New Project), so
+        # every action degrades gracefully when no project is loaded.
+        # Selecting a page swaps the active canvas's document with
+        # that page's document.
+        from Imervue.paint.page_dock import PageDock
+        self._page_dock = PageDock(self, parent=self)
+        self._page_dock.page_selected.connect(self._on_page_selected)
+
+        # Comic stamp library — speech balloons / shouts / panel
+        # borders inserted as new raster layers on click.
+        from Imervue.paint.stamp_dock import StampDock
+        self._stamp_dock = StampDock(parent=self)
+        self._stamp_dock.stamp_chosen.connect(self._on_stamp_chosen)
+
+        # Pose reference — interactive 2D stick figure the user can
+        # drag joints on; "Insert" stamps the skeleton into the
+        # active canvas as a guides layer.
+        from Imervue.paint.pose_dock import PoseDock
+        self._pose_dock = PoseDock(parent=self)
+        self._pose_dock.insert_requested.connect(self._on_pose_insert)
+
+        # Tabify every right-side dock into THREE logical clusters
+        # rather than one 14-tab pile. The original single-cluster
+        # layout met the sizeHint constraint (only the tallest dock
+        # drives the column's minimum) but left the user picking
+        # through fourteen tabs to find anything. Splitting into
+        # three workflow-oriented groups keeps the same vertical
+        # budget while giving each cluster a small, scannable tab
+        # row matching MediBang's "drawing tools / canvas data /
+        # libraries" mental model.
+        drawing_cluster = (
             self._color_dock,
             self._brush_dock,
+            self._fill_dock,
+            self._swatch_dock,
+        )
+        canvas_cluster = (
             self._layer_dock,
             self._navigator_dock,
-            self._material_dock,
             self._history_dock,
-            self._swatch_dock,
-            self._reference_dock,
+            self._page_dock,
             self._animation_dock,
             self._histogram_dock,
         )
-        anchor = all_right_docks[0]
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
-        for dock in all_right_docks[1:]:
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-            self.tabifyDockWidget(anchor, dock)
-        anchor.raise_()
+        library_cluster = (
+            self._material_dock,
+            self._stamp_dock,
+            self._pose_dock,
+            self._reference_dock,
+        )
+        all_right_docks = drawing_cluster + canvas_cluster + library_cluster
+        self._install_dock_clusters(
+            (drawing_cluster, canvas_cluster, library_cluster),
+        )
+
+        # Cache the cluster mapping so tool→dock-raise can find the
+        # right anchor without re-deriving the layout each time.
+        self._dock_clusters = {
+            "drawing": drawing_cluster,
+            "canvas": canvas_cluster,
+            "library": library_cluster,
+        }
+
+        # Stable objectName per dock so QMainWindow.saveState()/
+        # restoreState() can match docks across launches. Without
+        # this Qt has no reliable identifier (windowTitle is
+        # locale-translated and changes), and restoreState silently
+        # produces undefined results.
+        dock_object_names = {
+            id(self._color_dock): "paint_dock_color",
+            id(self._brush_dock): "paint_dock_brush",
+            id(self._fill_dock): "paint_dock_fill",
+            id(self._layer_dock): "paint_dock_layers",
+            id(self._navigator_dock): "paint_dock_navigator",
+            id(self._material_dock): "paint_dock_material",
+            id(self._history_dock): "paint_dock_history",
+            id(self._swatch_dock): "paint_dock_swatches",
+            id(self._reference_dock): "paint_dock_reference",
+            id(self._animation_dock): "paint_dock_animation",
+            id(self._page_dock): "paint_dock_pages",
+            id(self._stamp_dock): "paint_dock_stamps",
+            id(self._pose_dock): "paint_dock_pose",
+            id(self._histogram_dock): "paint_dock_histogram",
+        }
         for dock in all_right_docks:
+            dock.setObjectName(dock_object_names[id(dock)])
             dock.setFeatures(
                 dock.features()
                 | dock.DockWidgetFeature.DockWidgetMovable
@@ -209,6 +303,13 @@ class PaintWorkspace(QMainWindow):
         # workspace's menu bar so the user can hide / show panels
         # without right-clicking the toolbar.
         self._populate_window_menu()
+
+        # Restore the user's saved dock layout (which docks are
+        # tabbed, which are floating, which are hidden, etc.) from
+        # ``user_setting_dict``. Safe to call after the default
+        # cluster layout above — ``restoreState`` overwrites the
+        # default when a saved blob exists, otherwise falls through.
+        self._restore_dock_state()
 
         # Brush-size HUD overlay — bracket-key bindings flash a ring
         # at the canvas centre via the SizeHudState helper.
@@ -223,6 +324,13 @@ class PaintWorkspace(QMainWindow):
         self._navigator_dock.zoom_changed.connect(self._canvas.set_zoom)
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
         self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
+        # Zoom change → resize the brush-ring cursor so its on-screen
+        # diameter keeps tracking size × zoom (Medibang-style preview).
+        self._canvas.zoom_changed.connect(self._on_zoom_changed_refresh_cursor)
+        # Right-click anywhere on the canvas → quick-actions menu.
+        self._canvas.customContextMenuRequested.connect(
+            self._show_canvas_context_menu,
+        )
 
         # MaterialDock thumbnail clicks → drop the chosen tile onto a
         # fresh layer. Categories beyond ``pose`` (texture / pattern /
@@ -315,6 +423,21 @@ class PaintWorkspace(QMainWindow):
         # dispatcher have been constructed above.
         self._tabs.currentChanged.connect(self._on_tab_changed)
 
+        # Welcome hint — translucent panel that overlays a fresh,
+        # untouched canvas with drag-drop affordance + new / open /
+        # recent shortcuts. Shown until the first real edit, then
+        # dismissed for the rest of the workspace lifetime.
+        self._build_welcome_hint()
+        # Surface any autosave snapshots left behind by a previous
+        # crash before the user starts a fresh stroke. The prompt
+        # suppresses itself on a clean launch so the boot path stays
+        # silent in the common case.
+        self._maybe_offer_autosave_recovery()
+        # Brush-kind cycle shortcuts — Comma cycles backwards,
+        # Period forwards. Mirrors the Photoshop convention so users
+        # coming from PS land with familiar keys.
+        self._build_brush_kind_shortcuts()
+
     # ---- public ----------------------------------------------------------
 
     def canvas(self) -> PaintCanvas:
@@ -322,6 +445,295 @@ class PaintWorkspace(QMainWindow):
 
     def state(self) -> ToolState:
         return self._state
+
+    # ---- dock layout persistence ---------------------------------------
+
+    DOCK_STATE_SETTING_KEY = "paint_workspace_dock_state"
+
+    def _save_dock_state(self) -> None:
+        """Serialise the current dock layout into ``user_setting_dict``.
+
+        ``QMainWindow.saveState`` returns a QByteArray that captures
+        which docks are tabbed together, which are floating, where
+        they sit, and their visibility. We base64-encode it so the
+        JSON-serialised settings file can carry the binary blob.
+        """
+        from base64 import b64encode
+
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        blob = bytes(self.saveState().data())
+        user_setting_dict[self.DOCK_STATE_SETTING_KEY] = b64encode(blob).decode("ascii")
+
+    def _restore_dock_state(self) -> None:
+        """Apply the saved dock layout from ``user_setting_dict``.
+
+        Returns silently when no saved layout exists (first run) or
+        when ``restoreState`` rejects the blob (after a dock was
+        added / removed in a newer build, the saved state references
+        unknown objects and Qt skips it). Either way the default
+        cluster layout configured in ``__init__`` stays in place.
+
+        Wrapped in try/except so a corrupt blob never crashes the
+        workspace constructor — broken state is the user's local
+        settings file, not a bug to surface to a fresh launch.
+        """
+        from base64 import b64decode
+
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        encoded = user_setting_dict.get(self.DOCK_STATE_SETTING_KEY)
+        if not encoded:
+            return
+        try:
+            blob = b64decode(encoded)
+        except (ValueError, TypeError):
+            return
+        try:
+            from PySide6.QtCore import QByteArray
+            self.restoreState(QByteArray(blob))
+        except (RuntimeError, ValueError, TypeError):
+            return
+
+    def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Save the dock layout before the window goes away, and block
+        the close on unsaved tabs.
+
+        The per-tab close handler already protects single-tab discards;
+        this branch covers the wider "user clicks the window X with
+        five modified tabs" case where each tab would otherwise be
+        thrown away silently.
+        """
+        if self._has_unsaved_tabs() and not self._confirm_discard_all_unsaved():
+            event.ignore()
+            return
+        import contextlib
+        with contextlib.suppress(RuntimeError, OSError):
+            self._save_dock_state()
+        super().closeEvent(event)
+
+    def _has_unsaved_tabs(self) -> bool:
+        """Return True if any of the open tabs has the dirty flag set.
+
+        Iterates over the live ``_tab_dirty`` map rather than the
+        QTabWidget so a stale entry that was never cleaned up doesn't
+        accidentally claim an unsaved tab. Closed tabs are popped from
+        the map at close time, so anything in here is real.
+        """
+        return any(self._tab_dirty.get(w, False) for w in self._tab_dirty)
+
+    def _unsaved_tab_titles(self) -> list[str]:
+        """Return the titles of every tab carrying unsaved edits.
+
+        Pulled out of the close prompt so a future "save all" command
+        can surface the same list without re-walking the dirty map.
+        """
+        names: list[str] = []
+        for i in range(self._tabs.count()):
+            widget = self._tabs.widget(i)
+            if not self._tab_dirty.get(widget, False):
+                continue
+            names.append(self._tabs.tabText(i).rstrip(" *"))
+        return names
+
+    def _confirm_discard_all_unsaved(self) -> bool:
+        """Prompt the user before tearing down a window with dirty tabs.
+
+        Returns ``True`` for "Discard all" or "Save…"-then-clean,
+        ``False`` for cancel. Lists the titles inline so the user
+        can see exactly which tabs are about to be lost.
+        """
+        from PySide6.QtWidgets import QMessageBox
+        lang = language_wrapper.language_word_dict
+        names = self._unsaved_tab_titles()
+        title = lang.get(
+            "paint_close_window_unsaved_title",
+            "Close with unsaved changes?",
+        )
+        body_template = lang.get(
+            "paint_close_window_unsaved_body",
+            "{count} tab(s) with unsaved edits:\n• {names}",
+        )
+        body = body_template.format(
+            count=len(names), names="\n• ".join(names),
+        )
+        box = QMessageBox(self)
+        box.setWindowTitle(title)
+        box.setText(body)
+        box.setIcon(QMessageBox.Icon.Warning)
+        save = box.addButton(
+            lang.get("paint_close_window_save_active", "Save active…"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        discard = box.addButton(
+            lang.get("paint_close_window_discard_all", "Discard all"),
+            QMessageBox.ButtonRole.DestructiveRole,
+        )
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save:
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "export_active_image"):
+                bridge.export_active_image()
+            # If export marked the active tab clean and that was the
+            # only dirty one, allow the close. Otherwise the user has
+            # to invoke close again — the message box doesn't loop.
+            return not self._has_unsaved_tabs()
+        return clicked is discard
+
+    # ---- drag-and-drop file open ---------------------------------------
+
+    SUPPORTED_DROP_EXTS = (
+        ".psd", ".png", ".jpg", ".jpeg", ".tif", ".tiff",
+        ".bmp", ".webp",
+    )
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Accept file URL drops the workspace knows how to open."""
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            event.ignore()
+            return
+        for url in mime.urls():
+            if url.isLocalFile() and self._is_supported_drop(url.toLocalFile()):
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
+    def dragMoveEvent(self, event) -> None:  # noqa: N802 - Qt override
+        # Mirror dragEnter — Qt requires both for a clean drop visual.
+        self.dragEnterEvent(event)
+
+    def dropEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Open every supported file the user dropped.
+
+        PSDs route through the file-menu bridge so the open feeds
+        the recent-files list. Plain raster files are loaded into
+        the active canvas via load_image — same path as the existing
+        File ▸ Open flow for non-PSDs.
+        """
+        mime = event.mimeData()
+        if not mime.hasUrls():
+            event.ignore()
+            return
+        opened_any = False
+        for url in mime.urls():
+            if not url.isLocalFile():
+                continue
+            path = url.toLocalFile()
+            if not self._is_supported_drop(path):
+                continue
+            self._open_dropped_path(path)
+            opened_any = True
+        if opened_any:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _is_supported_drop(self, path: str) -> bool:
+        lowered = path.lower()
+        return any(lowered.endswith(ext) for ext in self.SUPPORTED_DROP_EXTS)
+
+    def _open_dropped_path(self, path: str) -> None:
+        if path.lower().endswith(".psd"):
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "open_psd_at"):
+                bridge.open_psd_at(path)
+                return
+        # Plain raster: load via Pillow, push into the active canvas.
+        try:
+            from PIL import Image
+            import numpy as np
+            with Image.open(path) as img:
+                rgba = np.array(img.convert("RGBA"), dtype=np.uint8)
+            self._canvas.load_image(rgba)
+            from Imervue.paint import recent_files
+            recent_files.add(path)
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "refresh_recent_menu"):
+                bridge.refresh_recent_menu()
+        except (OSError, ValueError) as exc:
+            logger.warning("dropped file %r could not be opened: %s", path, exc)
+
+    def toggle_all_docks(self) -> bool:
+        """Hide every right-side dock for distraction-free painting,
+        or restore them when called again.
+
+        Industry-standard "Tab" key behaviour — Photoshop / Krita /
+        MediBang all bind it. Returns the new visibility state so
+        callers can update menu check-marks if needed.
+
+        State is tracked per-call via :attr:`_docks_collapsed` so
+        the second invocation restores the exact set of docks that
+        were visible before; a dock the user had already hidden via
+        its corner X stays hidden after the un-toggle, matching the
+        Photoshop convention.
+        """
+        clusters = getattr(self, "_dock_clusters", None)
+        if not clusters:
+            return False
+        all_docks = (
+            clusters.get("drawing", ()) + clusters.get("canvas", ())
+            + clusters.get("library", ())
+        )
+        collapsed = getattr(self, "_docks_collapsed", None)
+        if collapsed is None:
+            # Capture the current visibility set, then hide everything
+            # the user hadn't already manually hidden. ``isHidden`` is
+            # the local "explicitly setVisible(False)" flag — independent
+            # of parent visibility, which matters because the workspace
+            # may not be shown yet (tests, deferred boot).
+            self._docks_collapsed = {
+                dock: (not dock.isHidden()) for dock in all_docks
+            }
+            for dock in all_docks:
+                if not dock.isHidden():
+                    dock.setVisible(False)
+            return False
+        # Restore exactly the set that was visible at collapse time.
+        for dock, was_visible in collapsed.items():
+            dock.setVisible(was_visible)
+        self._docks_collapsed = None
+        return True
+
+    def reset_workspace_layout(self) -> None:
+        """Re-apply the default three-cluster layout.
+
+        Drops any saved state (so the next launch also starts on
+        the default), removes every right-side dock from its
+        current home, then re-tabifies the three clusters in their
+        canonical order. Useful when the user has shuffled docks
+        into corners or floated everything and wants a clean slate.
+        """
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        user_setting_dict.pop(self.DOCK_STATE_SETTING_KEY, None)
+        clusters = getattr(self, "_dock_clusters", None)
+        if not clusters:
+            return
+        ordered = (
+            clusters.get("drawing", ()) + clusters.get("canvas", ())
+            + clusters.get("library", ())
+        )
+        # Remove every dock from the main window first; addDockWidget
+        # then puts each into the right area and tabifyDockWidget
+        # pairs them. Without the explicit remove pass docks that
+        # the user floated stay floated through the reset.
+        for dock in ordered:
+            self.removeDockWidget(dock)
+        for cluster_name in ("drawing", "canvas", "library"):
+            cluster = clusters.get(cluster_name, ())
+            if not cluster:
+                continue
+            anchor = cluster[0]
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+            anchor.show()
+            for dock in cluster[1:]:
+                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+                self.tabifyDockWidget(anchor, dock)
+                dock.show()
+            anchor.raise_()
 
     # ---- secondary views -----------------------------------------------
 
@@ -332,20 +744,85 @@ class PaintWorkspace(QMainWindow):
         for brushes, single-click commits for fill / wand / shape) so
         a long brush stroke counts as one undoable action rather than
         every dab. The actual capture happens inside the UndoStack.
+        Also flips the active tab to "modified" so the title shows
+        an asterisk and the close handler knows to prompt before
+        discarding unsaved work.
         """
         self._undo_stack.commit()
+        self._set_tab_dirty(self._canvas, True)
 
     def undo(self) -> None:
-        """Undo the most recent committed stroke if there is one."""
+        """Undo the most recent committed stroke if there is one.
+
+        Pops a non-blocking toast on success so keyboard users
+        (Ctrl+Z) get a visible confirmation that the action landed,
+        and surfaces a "nothing to undo" hint when the stack is
+        already at the bottom — otherwise repeated Ctrl+Z taps with
+        no audible / visible feedback feel like the binding is broken.
+        """
         if self._undo_stack.undo():
             self._canvas.invalidate_texture()
             self._canvas.update()
+            self._notify_history_action("undo")
+        else:
+            self._notify_history_empty("undo")
 
     def redo(self) -> None:
         """Re-apply the most recently undone stroke."""
         if self._undo_stack.redo():
             self._canvas.invalidate_texture()
             self._canvas.update()
+            self._notify_history_action("redo")
+        else:
+            self._notify_history_empty("redo")
+
+    def _notify_history_action(self, kind: str) -> None:
+        """Toast a confirmation after a successful undo / redo.
+
+        Falls back to the status bar's transient message when the
+        toast isn't wired (legacy embedders / minimal test stubs).
+        Both paths surface the action *and* the remaining depth so
+        the user can pace their Ctrl+Z taps without overshooting.
+        """
+        lang = language_wrapper.language_word_dict
+        verb = lang.get(f"paint_history_{kind}", kind.title())
+        depth = self._history_depth_for(kind)
+        msg = lang.get(
+            "paint_history_done", "{verb} ({depth} left)",
+        ).format(verb=verb, depth=depth)
+        self._broadcast_history_msg(msg, level="info")
+
+    def _notify_history_empty(self, kind: str) -> None:
+        lang = language_wrapper.language_word_dict
+        msg = lang.get(
+            f"paint_history_{kind}_empty",
+            "Nothing to {kind}",
+        ).format(kind=kind)
+        self._broadcast_history_msg(msg, level="warning")
+
+    def _history_depth_for(self, kind: str) -> int:
+        """Return how many steps remain in the requested direction.
+
+        Falls back to ``0`` rather than crashing if the underlying
+        :class:`UndoStack` doesn't expose the queried side (older
+        embedders or future refactors).
+        """
+        if kind == "undo":
+            stack = getattr(self._undo_stack, "_undo", ())
+        else:
+            stack = getattr(self._undo_stack, "_redo", ())
+        return len(stack) if stack is not None else 0
+
+    def _broadcast_history_msg(self, msg: str, *, level: str) -> None:
+        toast = getattr(self, "toast", None)
+        if toast is not None:
+            target = getattr(toast, level, None)
+            if callable(target):
+                target(msg)
+                return
+        status = getattr(self, "_status", None)
+        if status is not None:
+            status.showMessage(msg, 2000)
 
     def open_secondary_view(self):
         """Spawn an independent overview window onto the same composite.
@@ -425,7 +902,7 @@ class PaintWorkspace(QMainWindow):
         explicit method (not ctor wiring) so tests can opt out and
         keep workspace construction cheap.
         """
-        from Imervue.paint.autosave import DEFAULT_INTERVAL_SEC
+        from Imervue.paint.auto_save import DEFAULT_INTERVAL_SEC
         seconds = int(interval_sec or DEFAULT_INTERVAL_SEC)
         self._autosave_target_dir = target_dir
         if not hasattr(self, "_autosave_timer"):
@@ -438,34 +915,68 @@ class PaintWorkspace(QMainWindow):
             self._autosave_timer.stop()
 
     def take_autosave_snapshot_now(self):
-        """Force an immediate snapshot — returns the snapshot path or
-        ``None`` if there's nothing to save yet."""
-        from Imervue.paint.autosave import take_snapshot
-        composite = self._canvas.document().composite()
-        if composite is None:
-            return None
+        """Force an immediate document snapshot.
+
+        Writes the full :class:`PaintDocument` (layers, masks, vectors,
+        animation) through :mod:`auto_save` so a crash restore brings
+        back the project — not just a flat composite. Returns the
+        bundle path or ``None`` if there is nothing to save (empty
+        document) or the write failed. On success records the wall-
+        clock timestamp so the status line can render
+        "Last autosaved Xs ago" — that hint is what tells the user
+        their work is captured even when no file has been picked.
+        """
+        import time
+        from Imervue.paint.auto_save import write_snapshot
+        document = self._canvas.document()
         target = getattr(self, "_autosave_target_dir", None)
         try:
-            return take_snapshot(composite, target_dir=target)
+            snapshot = write_snapshot(document, directory=target)
         except (OSError, ValueError):
             return None
+        if snapshot is None:
+            return None
+        self._last_autosave_at = time.monotonic()
+        self._refresh_status_line()
+        return snapshot.bundle_path
 
-    def restore_latest_autosave(self, *, target_dir=None) -> bool:
-        """Load the most-recent autosave PNG into the active canvas.
+    def pending_autosaves(self, *, target_dir=None):
+        """Return non-stale recovery candidates for ``target_dir``.
 
-        Returns ``True`` when a snapshot was found and pasted; the
-        caller drives the user-visible "restore?" prompt around this.
+        Thin pass-through over :func:`auto_save.pending_recovery_snapshots`
+        so the recovery prompt UI can call into the workspace without
+        importing the autosave module directly.
         """
-        from Imervue.paint.autosave import latest_snapshot, load_snapshot
-        path = latest_snapshot(target_dir=target_dir)
-        if path is None:
-            return False
+        from Imervue.paint.auto_save import pending_recovery_snapshots
+        return pending_recovery_snapshots(target_dir)
+
+    def restore_snapshot(self, snapshot) -> bool:
+        """Install ``snapshot``'s document on the canvas.
+
+        Uses :meth:`PaintCanvas.set_document` so layers, masks, vector
+        layers, and selections all survive the restore. Returns
+        ``False`` when the bundle is unreadable; ``True`` on success.
+        """
+        from Imervue.paint.auto_save import recover_snapshot
         try:
-            arr = load_snapshot(path)
+            document = recover_snapshot(snapshot)
         except (OSError, ValueError):
             return False
-        self.load_image(arr)
+        self._canvas.set_document(document)
+        if hasattr(self, "_layer_dock"):
+            self._layer_dock.set_document(document)
         return True
+
+    def restore_latest_autosave(self, *, target_dir=None) -> bool:
+        """Load the most-recent recovery snapshot onto the canvas.
+
+        Returns ``True`` when a snapshot was found and installed; the
+        caller drives the user-visible "restore?" prompt around this.
+        """
+        snapshots = self.pending_autosaves(target_dir=target_dir)
+        if not snapshots:
+            return False
+        return self.restore_snapshot(snapshots[0])
 
     def _on_autosave_tick(self) -> None:
         self.take_autosave_snapshot_now()
@@ -509,6 +1020,131 @@ class PaintWorkspace(QMainWindow):
         document.invalidate_composite()
         self._canvas.update()
         self._refresh_onion_skin_source()
+
+    # ---- pose reference --------------------------------------------------
+
+    def _on_pose_insert(self, skeleton) -> None:
+        """User clicked "Insert" on the pose dock. Render the
+        skeleton into a fresh layer at canvas size."""
+        from Imervue.paint.pose_skeleton import render_skeleton
+
+        document = self._canvas.document()
+        shape = document.shape
+        if shape is None:
+            return
+        h, w = shape
+        rendered = render_skeleton(skeleton, height=h, width=w)
+        layer = document.add_layer(name="Pose")
+        np.copyto(layer.image, rendered)
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
+    # ---- stamp library ---------------------------------------------------
+
+    def _on_stamp_chosen(self, key: str) -> None:
+        """User clicked a stamp thumbnail. Render it at ~1/3 of the
+        canvas size and paste it into a new layer at canvas centre."""
+        from Imervue.paint.comic_stamps import render_stamp
+
+        document = self._canvas.document()
+        shape = document.shape
+        if shape is None:
+            return
+        h, w = shape
+        target_w = max(64, int(w * 0.35))
+        target_h = max(64, int(h * 0.30))
+        stamp = render_stamp(key, target_w, target_h)
+        sh, sw = stamp.shape[:2]
+        # Add a transparent layer at the document's size, then paint
+        # the stamp into its centre. Going through ``add_layer`` keeps
+        # the document's invariants (active-index update, reference
+        # shift, listener notify) intact.
+        layer = document.add_layer(name=key)
+        x0 = max(0, (w - sw) // 2)
+        y0 = max(0, (h - sh) // 2)
+        x1 = min(w, x0 + sw)
+        y1 = min(h, y0 + sh)
+        layer.image[y0:y1, x0:x1] = stamp[: y1 - y0, : x1 - x0]
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
+    # ---- auto-region fill ------------------------------------------------
+
+    def _auto_fill_closed_regions(self) -> None:
+        """Paint the foreground colour into every enclosed region of
+        the document's reference layer (or the active layer when no
+        reference layer is set). Pushes one undo entry on success."""
+        from Imervue.paint.auto_region_fill import auto_region_fill
+
+        document = self._canvas.document()
+        target = document.active_layer()
+        if target is None:
+            return
+        ref_idx = document.reference_layer_index()
+        line_art = (
+            target.image if ref_idx is None
+            else document.layer_at(ref_idx).image
+        )
+        if self._state.foreground is None:
+            return
+        result = auto_region_fill(
+            target.image,
+            line_art,
+            self._state.foreground,
+        )
+        if result.is_empty:
+            return
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+
+    # ---- comic-project page browser --------------------------------------
+
+    def set_paint_project(self, project) -> None:
+        """Bind ``project`` (a :class:`PaintProject` or ``None``) to the
+        workspace and refresh the page dock. The dock degrades to its
+        empty state when ``project`` is ``None``."""
+        self._paint_project = project
+        page_dock = getattr(self, "_page_dock", None)
+        if page_dock is not None:
+            page_dock.refresh()
+        # If a project just bound, swap the active canvas to the
+        # project's active page so the user sees the right document
+        # immediately.
+        if project is not None and project.active_page() is not None:
+            self._swap_canvas_document(project.active_page().document)
+
+    def _on_page_selected(self, index: int) -> None:
+        """Page-list click — swap the active canvas's document with
+        the selected page's document. The canvas keeps its tab name
+        but shows the new document; ``current_image()`` and the layer
+        dock auto-refresh because the dock subscribes to the new
+        document's listeners."""
+        project = getattr(self, "_paint_project", None)
+        if project is None:
+            return
+        try:
+            page = project.page_at(index)
+        except IndexError:
+            return
+        self._swap_canvas_document(page.document)
+
+    def _swap_canvas_document(self, document) -> None:
+        """Replace the active canvas's PaintDocument with ``document``.
+
+        Re-binds the layer dock + the dispatcher's image / selection
+        providers so they read from the new document. The canvas's
+        own ``_document`` reference is updated through the public
+        ``set_document`` setter.
+        """
+        if not hasattr(self._canvas, "set_document"):
+            return
+        self._canvas.set_document(document)
+        if hasattr(self._layer_dock, "set_document"):
+            self._layer_dock.set_document(document)
+        self._canvas.update()
 
     def _refresh_onion_skin_source(self) -> None:
         """Point the canvas onion-skin overlay at the previous frame."""
@@ -600,26 +1236,78 @@ class PaintWorkspace(QMainWindow):
         self._tabs.setCurrentIndex(idx)
         return canvas
 
-    def close_tab(self, index: int) -> bool:
+    def close_tab(self, index: int, *, force: bool = False) -> bool:
         """Close the tab at ``index``. Returns ``True`` on success.
 
         Refuses to close the last remaining tab — the workspace
         always needs at least one paintable canvas, mirroring the
-        single-tab invariant from before tabs existed.
+        single-tab invariant from before tabs existed. ``force=True``
+        bypasses the unsaved-work prompt; the tabCloseRequested
+        handler uses it after the user explicitly confirms discard.
         """
         if index < 0 or index >= self._tabs.count():
             return False
         if self._tabs.count() <= 1:
             return False
         widget = self._tabs.widget(index)
+        needs_prompt = (
+            not force and self._tab_dirty.get(widget, False)
+        )
+        if needs_prompt and not self._confirm_discard_unsaved(widget):
+            return False
+        self._tab_dirty.pop(widget, None)
         self._tabs.removeTab(index)
         if widget is not None:
             widget.deleteLater()
         return True
 
+    def _confirm_discard_unsaved(self, widget) -> bool:
+        """Prompt the user before closing a tab with unsaved edits.
+
+        Returns ``True`` when the user picks "Discard"; ``False``
+        when they cancel. ``Save`` is offered as a third option that
+        triggers the active export and re-checks the dirty flag.
+        """
+        from PySide6.QtWidgets import QMessageBox
+        lang = language_wrapper.language_word_dict
+        title = lang.get(
+            "paint_close_unsaved_title", "Close tab with unsaved changes?",
+        )
+        body = lang.get(
+            "paint_close_unsaved_body",
+            "This tab has unsaved edits. Close anyway?",
+        )
+        box = QMessageBox(self)
+        box.setWindowTitle(title)
+        box.setText(body)
+        box.setIcon(QMessageBox.Icon.Question)
+        save = box.addButton(
+            lang.get("paint_close_unsaved_save", "Save…"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        discard = box.addButton(
+            lang.get("paint_close_unsaved_discard", "Discard"),
+            QMessageBox.ButtonRole.DestructiveRole,
+        )
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save:
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "export_active_image"):
+                bridge.export_active_image()
+            # If the export marked clean, the next discard branch
+            # below would happily proceed; otherwise the user can
+            # invoke close again with the new state.
+            return not self._tab_dirty.get(widget, False)
+        return clicked is discard
+
     def _next_untitled_tab_name(self) -> str:
         """Generate a unique 'Untitled-N' name for a new tab."""
-        existing = {self._tabs.tabText(i) for i in range(self._tabs.count())}
+        existing = {
+            self._tabs.tabText(i).rstrip(" *")
+            for i in range(self._tabs.count())
+        }
         n = self._tabs.count() + 1
         while f"Untitled-{n}" in existing:
             n += 1
@@ -627,6 +1315,67 @@ class PaintWorkspace(QMainWindow):
 
     def _on_tab_close_requested(self, index: int) -> None:
         self.close_tab(index)
+
+    # ---- per-tab dirty tracking ------------------------------------------
+
+    def _set_tab_dirty(self, canvas, dirty: bool) -> None:
+        """Update the per-tab modified flag + tab title.
+
+        Tab titles end with a trailing ``" *"`` while dirty so the
+        user sees at a glance which tabs carry unsaved edits. The
+        flag map is keyed by the canvas widget itself so closing a
+        tab cleans up the entry without leaking references.
+        """
+        if canvas is None:
+            return
+        prev = self._tab_dirty.get(canvas, False)
+        if prev == dirty:
+            return
+        self._tab_dirty[canvas] = dirty
+        self._refresh_tab_title(canvas)
+
+    def _refresh_tab_title(self, canvas) -> None:
+        index = self._tabs.indexOf(canvas)
+        if index < 0:
+            return
+        base = self._tabs.tabText(index).rstrip(" *")
+        suffix = " *" if self._tab_dirty.get(canvas, False) else ""
+        self._tabs.setTabText(index, f"{base}{suffix}")
+        self._refresh_tab_tooltip(canvas, base)
+
+    def _refresh_tab_tooltip(self, canvas, base_title: str) -> None:
+        """Populate the per-tab hover tooltip with the full title +
+        canvas dimensions + dirty state.
+
+        Tab text gets truncated by Qt when the bar is full; the
+        tooltip is the only place we can guarantee the full label
+        is reachable. We also surface size / modified state so a
+        user with several tabs can compare at a glance which one
+        is the WIP.
+        """
+        index = self._tabs.indexOf(canvas)
+        if index < 0:
+            return
+        lang = language_wrapper.language_word_dict
+        lines: list[str] = [base_title]
+        document = (
+            canvas.document() if hasattr(canvas, "document") else None
+        )
+        shape = getattr(document, "shape", None) if document is not None else None
+        if shape is not None:
+            h, w = shape
+            lines.append(
+                lang.get("paint_tab_tooltip_size", "{w}×{h}").format(w=w, h=h),
+            )
+        if self._tab_dirty.get(canvas, False):
+            lines.append(
+                lang.get("paint_tab_tooltip_modified", "Modified — unsaved"),
+            )
+        self._tabs.setTabToolTip(index, "\n".join(lines))
+
+    def mark_active_tab_clean(self) -> None:
+        """Public hook called by file-menu save / export actions."""
+        self._set_tab_dirty(self._canvas, False)
 
     def _on_tab_changed(self, index: int) -> None:
         """Reassign ``self._canvas`` to the new active tab and rebind
@@ -644,6 +1393,7 @@ class PaintWorkspace(QMainWindow):
                 old_canvas.hover_changed.disconnect(self._on_hover_changed)
                 old_canvas.image_loaded.disconnect(self._on_image_loaded)
                 old_canvas.zoom_changed.disconnect(self._navigator_dock.set_zoom)
+                old_canvas.zoom_changed.disconnect(self._on_zoom_changed_refresh_cursor)
                 old_canvas.document_changed.disconnect(self._on_document_changed)
             except (RuntimeError, TypeError):
                 # Signal might already be disconnected (e.g. on shutdown).
@@ -653,6 +1403,7 @@ class PaintWorkspace(QMainWindow):
         self._canvas.hover_changed.connect(self._on_hover_changed)
         self._canvas.image_loaded.connect(self._on_image_loaded)
         self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
+        self._canvas.zoom_changed.connect(self._on_zoom_changed_refresh_cursor)
         self._canvas.document_changed.connect(self._on_document_changed)
         # Docks bound to the previous document need to point at the new one.
         if hasattr(self, "_layer_dock"):
@@ -681,44 +1432,70 @@ class PaintWorkspace(QMainWindow):
     # ---- window menu ----------------------------------------------------
 
     def _populate_window_menu(self) -> None:
-        """One checkable Window-menu entry per dock — toggles visibility.
+        """Checkable dock toggles grouped into three cluster submenus.
 
-        Each entry's check state mirrors the dock's
-        :meth:`isVisible` so closing a dock via its corner X also
-        unchecks the menu item.
+        Window menu structure:
+          ▸ Drawing       (Color / Brush / Bucket / Swatches)
+          ▸ Canvas        (Layer / Navigator / History / Pages / …)
+          ▸ Library       (Material / Stamps / Pose / Reference)
+          ─────
+          New View / Mirror Preview / Tile Preview
+          ─────
+          Reset Workspace Layout
+
+        Each toggle's check state mirrors the dock's ``isVisible``
+        so closing a dock via its corner X also unchecks the entry.
         """
         from Imervue.paint.paint_menu_bar import menu_for
         lang = language_wrapper.language_word_dict
         menu = menu_for(self, "window")
-        entries = (
-            ("paint_dock_color", "Color", self._color_dock),
-            ("paint_dock_brush", "Brush", self._brush_dock),
-            ("paint_dock_layers", "Layers", self._layer_dock),
-            ("paint_dock_navigator", "Navigator", self._navigator_dock),
-            ("paint_dock_material", "Materials", self._material_dock),
-            ("paint_dock_history", "History", self._history_dock),
-            ("paint_dock_swatches", "Swatches", self._swatch_dock),
-            ("paint_dock_reference", "Reference", self._reference_dock),
-            ("paint_dock_animation", "Animation", self._animation_dock),
-            ("paint_dock_histogram", "Histogram", self._histogram_dock),
-        )
+        cluster_entries = {
+            "drawing": (
+                ("paint_dock_color", "Color", self._color_dock),
+                ("paint_dock_brush", "Brush", self._brush_dock),
+                ("paint_dock_fill", "Bucket", self._fill_dock),
+                ("paint_dock_swatches", "Swatches", self._swatch_dock),
+            ),
+            "canvas": (
+                ("paint_dock_layers", "Layers", self._layer_dock),
+                ("paint_dock_navigator", "Navigator", self._navigator_dock),
+                ("paint_dock_history", "History", self._history_dock),
+                ("paint_dock_pages", "Pages", self._page_dock),
+                ("paint_dock_animation", "Animation", self._animation_dock),
+                ("paint_dock_histogram", "Histogram", self._histogram_dock),
+            ),
+            "library": (
+                ("paint_dock_material", "Materials", self._material_dock),
+                ("paint_dock_stamps", "Stamps", self._stamp_dock),
+                ("paint_dock_pose", "Pose", self._pose_dock),
+                ("paint_dock_reference", "Reference", self._reference_dock),
+            ),
+        }
+        cluster_titles = {
+            "drawing": ("paint_window_group_drawing", "Drawing"),
+            "canvas": ("paint_window_group_canvas", "Canvas"),
+            "library": ("paint_window_group_library", "Library"),
+        }
         self._window_dock_actions = {}
-        for key, fallback, dock in entries:
-            action = menu.addAction(lang.get(key, fallback))
-            action.setCheckable(True)
-            action.setChecked(dock.isVisible() or True)
-            action.triggered.connect(
-                lambda checked, d=dock: d.setVisible(bool(checked)),
-            )
-            # Reflect external close (dock corner X). Wrap the
-            # ``setChecked`` call so a teardown that frees the
-            # QAction's C++ side before the dock's signal fully
-            # disconnects doesn't leave a dangling
-            # RuntimeError-raising slot in the queue.
-            dock.visibilityChanged.connect(
-                lambda visible, a=action: _safe_set_checked(a, visible),
-            )
-            self._window_dock_actions[key] = action
+        for cluster_key in ("drawing", "canvas", "library"):
+            title_key, title_fallback = cluster_titles[cluster_key]
+            submenu = menu.addMenu(lang.get(title_key, title_fallback))
+            for key, fallback, dock in cluster_entries[cluster_key]:
+                action = submenu.addAction(lang.get(key, fallback))
+                action.setCheckable(True)
+                action.setChecked(dock.isVisible() or True)
+                action.triggered.connect(
+                    lambda checked, d=dock: d.setVisible(bool(checked)),
+                )
+                # Reflect external close (dock corner X). Wrap the
+                # ``setChecked`` call so a teardown that frees the
+                # QAction's C++ side before the dock's signal fully
+                # disconnects doesn't leave a dangling
+                # RuntimeError-raising slot in the queue.
+                dock.visibilityChanged.connect(
+                    lambda visible, a=action: _safe_set_checked(a, visible),
+                )
+                self._window_dock_actions[key] = action
         # "New View" — spawn an independent overview window onto the
         # active document. Placed after the dock toggles so the
         # menu structure stays "all docks, then standalone windows".
@@ -735,30 +1512,734 @@ class PaintWorkspace(QMainWindow):
             "paint_window_tile_preview", "Tile Preview",
         ))
         tile_action.triggered.connect(self.open_tile_preview)
+        # Reset Layout — escape hatch for a user who shuffled docks
+        # off-screen or floated everything. Drops the saved state
+        # blob from user_setting_dict and re-applies the canonical
+        # cluster layout the constructor uses on a fresh install.
+        menu.addSeparator()
+        reset_action = menu.addAction(lang.get(
+            "paint_window_reset_layout", "Reset Workspace Layout",
+        ))
+        reset_action.triggered.connect(self.reset_workspace_layout)
 
     # ---- handlers --------------------------------------------------------
+
+    # Tools whose cursor is the Medibang-style brush ring (diameter
+    # tracks size × zoom). All five paint with ``state.brush.size``
+    # so the ring is a meaningful preview for every one of them;
+    # other tools (eyedropper, fill, gradient, …) get tool-specific
+    # icons via :func:`make_tool_cursor`.
+    _BRUSH_RING_TOOLS = frozenset({
+        "brush", "eraser", "smudge", "blur", "clone_stamp",
+    })
 
     def _on_state_event(self, channel: str) -> None:
         if channel == ts.EVENT_TOOL:
             self._refresh_cursor_for_tool()
+            self._raise_dock_for_tool()
+            self._refresh_status_line()
+        elif channel == ts.EVENT_BRUSH:
+            # Brush size / kind change — refresh the size-preview ring
+            # so the cursor reflects the new diameter immediately.
+            if self._state.tool in self._BRUSH_RING_TOOLS:
+                self._refresh_cursor_for_tool()
+            self._refresh_status_line()
 
     def _refresh_cursor_for_tool(self) -> None:
-        self._canvas.set_cursor_for_tool(self._state.tool)
+        tool = self._state.tool
+        if tool in self._BRUSH_RING_TOOLS:
+            self._canvas.set_brush_size_cursor(
+                self._state.brush.size,
+                self._canvas.zoom_factor(),
+                kind=tool,
+            )
+        else:
+            self._canvas.set_cursor_for_tool(tool)
+
+    def _on_zoom_changed_refresh_cursor(self, zoom: float) -> None:
+        """Connect-target for ``canvas.zoom_changed`` — re-draws the
+        brush ring at the new screen-pixel diameter when the active
+        tool uses it, and updates the status-bar zoom indicator so
+        the chip stays in sync with whatever wheel / pinch / View
+        menu action just landed."""
+        if self._state.tool in self._BRUSH_RING_TOOLS:
+            self._refresh_cursor_for_tool()
+        self._refresh_zoom_indicator(zoom)
+
+    # Tool ID → dock to raise so the relevant settings panel pops to
+    # the front of its tab cluster. Tools whose options live in a
+    # dock not in this map (selection, transform, hand, zoom) leave
+    # the current tab untouched.
+    _TOOL_DOCK_MAP_ATTR = "_TOOL_DOCK_MAP"
+
+    def _raise_dock_for_tool(self) -> None:
+        """Bring the dock holding the active tool's options to the
+        front of its tab cluster on tool switch."""
+        tool = self._state.tool
+        targets = {
+            "brush": self._brush_dock,
+            "eraser": self._brush_dock,
+            "fill": self._fill_dock,
+            "eyedropper": self._color_dock,
+            "text": self._brush_dock,   # text shares the brush cluster slot
+        }
+        dock = targets.get(tool)
+        if dock is None:
+            return
+        # raise_() is a no-op for a non-tabbed (top-level) dock, so
+        # safe to call regardless of whether the cluster is currently
+        # tabified or split apart by a custom user layout.
+        dock.raise_()
 
     def _on_hover_changed(self, x: int, y: int) -> None:
         if x < 0 or y < 0:
-            self._status.clearMessage()
+            self._last_hover = None
+        else:
+            self._last_hover = (int(x), int(y))
+        self._refresh_status_line()
+
+    def _show_canvas_context_menu(self, pos) -> None:
+        """Pop a Photoshop-style quick-actions menu at the right-click
+        position on the canvas. Construction is delegated to
+        :meth:`_build_canvas_context_menu` so unit tests can verify
+        the action set without driving Qt's modal loop."""
+        menu = self._build_canvas_context_menu()
+        menu.exec(self._canvas.mapToGlobal(pos))
+
+    def _build_canvas_context_menu(self):
+        """Return the QMenu that ``_show_canvas_context_menu`` pops.
+
+        Surfaces the actions users hit most often via the keyboard
+        (undo / redo / select all / deselect / fit / 100 %) so they
+        can be reached without a trip to the menu bar. Each entry is
+        wired to the same workspace methods the menu / shortcut
+        invokes — there's no duplicate dispatcher path.
+        """
+        from PySide6.QtWidgets import QMenu
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self._canvas)
+        undo_action = menu.addAction(lang.get("paint_edit_undo", "Undo"))
+        undo_action.triggered.connect(self.undo)
+        undo_action.setEnabled(self._undo_stack.can_undo())
+        redo_action = menu.addAction(lang.get("paint_edit_redo", "Redo"))
+        redo_action.triggered.connect(self.redo)
+        redo_action.setEnabled(self._undo_stack.can_redo())
+        menu.addSeparator()
+        select_all = menu.addAction(
+            lang.get("paint_edit_select_all", "Select All"),
+        )
+        select_all.triggered.connect(self._select_all_canvas)
+        deselect = menu.addAction(
+            lang.get("paint_edit_deselect", "Deselect"),
+        )
+        deselect.triggered.connect(self._deselect_canvas)
+        deselect.setEnabled(self._has_active_selection())
+        menu.addSeparator()
+        fit = menu.addAction(lang.get("paint_view_fit", "Fit to Window"))
+        fit.triggered.connect(self._canvas.reset_view)
+        zoom_100 = menu.addAction(lang.get("paint_view_100", "100 %"))
+        zoom_100.triggered.connect(lambda: self._canvas.set_zoom(1.0))
+        return menu
+
+    def _select_all_canvas(self) -> None:
+        document = self._canvas.document()
+        shape = getattr(document, "shape", None)
+        if shape is None:
             return
-        msg = language_wrapper.language_word_dict.get(
-            "paint_status_cursor", "x: {x}  y: {y}",
-        ).format(x=x, y=y)
-        self._status.showMessage(msg)
+        h, w = shape
+        mask = np.ones((h, w), dtype=bool)
+        if hasattr(document, "set_selection"):
+            document.set_selection(mask)
+            self._canvas.update()
+
+    def _deselect_canvas(self) -> None:
+        document = self._canvas.document()
+        if hasattr(document, "set_selection"):
+            document.set_selection(None)
+            self._canvas.update()
+
+    def _has_active_selection(self) -> bool:
+        document = self._canvas.document()
+        if not hasattr(document, "selection"):
+            return False
+        sel = document.selection()
+        return sel is not None and bool(sel.any())
+
+    def _install_dock_clusters(self, clusters: tuple) -> None:
+        """Anchor each cluster's first dock on the right edge and tabify
+        the rest behind it. Pulled out of ``__init__`` so the constructor
+        stays under the cognitive-complexity budget."""
+        for cluster in clusters:
+            anchor = cluster[0]
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+            for dock in cluster[1:]:
+                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+                self.tabifyDockWidget(anchor, dock)
+            anchor.raise_()
+
+    def _build_menu_bar(self) -> None:
+        """Construct the embedded menu bar and populate every section.
+
+        Extracted from ``__init__`` so the constructor stays under the
+        cognitive-complexity budget; ordering matches the original
+        File → Edit → Image → Layer → View → Tools → Manga → Settings
+        layout the artists are used to.
+        """
+        self.setMenuBar(build_paint_menu_bar(self))
+        populate_file_menu(self)
+        populate_edit_menu(self)
+        populate_image_menu(self)
+        populate_layer_menu(self)
+        populate_view_menu(self)
+        populate_tools_menu(self)
+        populate_manga_menu(self)
+        populate_settings_menu(self)
+
+    def _build_zoom_indicator(self) -> None:
+        """Add a clickable zoom % chip to the right side of the status bar.
+
+        Click toggles between "Fit to window" (when current zoom is
+        close to 1.0) and 100 % zoom (when it's anything else) so
+        the user has a one-click view-reset path that doesn't
+        require the View menu.
+        """
+        from PySide6.QtWidgets import QToolButton
+        lang = language_wrapper.language_word_dict
+        self._zoom_btn = QToolButton(self)
+        self._zoom_btn.setAutoRaise(True)
+        self._zoom_btn.setText(
+            lang.get("paint_status_zoom_initial", "100%"),
+        )
+        self._zoom_btn.setToolTip(lang.get(
+            "paint_status_zoom_tooltip",
+            "Click to toggle between Fit to window and 100 %",
+        ))
+        self._zoom_btn.clicked.connect(self._on_zoom_indicator_clicked)
+        self._status.addPermanentWidget(self._zoom_btn)
+
+    def _refresh_zoom_indicator(self, zoom: float | None = None) -> None:
+        if not hasattr(self, "_zoom_btn"):
+            return
+        if zoom is None:
+            canvas = getattr(self, "_canvas", None)
+            zoom = canvas.zoom_factor() if canvas is not None else 1.0
+        self._zoom_btn.setText(f"{int(round(float(zoom) * 100))}%")
+
+    def _on_zoom_indicator_clicked(self) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is None:
+            return
+        if abs(canvas.zoom_factor() - 1.0) < 0.01:
+            canvas.reset_view()
+        else:
+            canvas.set_zoom(1.0)
+
+    def _build_brush_kind_shortcuts(self) -> None:
+        """Bind ``,`` / ``.`` to cycle the active brush kind, the
+        digit row to set opacity in Photoshop's 10 % grid, and
+        ``Alt+[`` / ``Alt+]`` to step the active layer down / up."""
+        from PySide6.QtGui import QKeySequence, QShortcut
+        prev_shortcut = QShortcut(QKeySequence(","), self)
+        prev_shortcut.activated.connect(lambda: self.cycle_brush_kind(-1))
+        next_shortcut = QShortcut(QKeySequence("."), self)
+        next_shortcut.activated.connect(lambda: self.cycle_brush_kind(+1))
+        for digit in range(10):
+            shortcut = QShortcut(QKeySequence(str(digit)), self)
+            shortcut.activated.connect(
+                lambda d=digit: self.set_brush_opacity_from_digit(d),
+            )
+        layer_down = QShortcut(QKeySequence("Alt+["), self)
+        layer_down.activated.connect(lambda: self.cycle_active_layer(-1))
+        layer_up = QShortcut(QKeySequence("Alt+]"), self)
+        layer_up.activated.connect(lambda: self.cycle_active_layer(+1))
+        # Tab navigation — Ctrl+Tab cycles forward, Ctrl+Shift+Tab
+        # backward. Standard browser / IDE convention so users with
+        # several open documents don't need to reach for the mouse.
+        next_tab = QShortcut(QKeySequence("Ctrl+Tab"), self)
+        next_tab.activated.connect(lambda: self.cycle_active_tab(+1))
+        prev_tab = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
+        prev_tab.activated.connect(lambda: self.cycle_active_tab(-1))
+
+    def cycle_active_tab(self, direction: int) -> int:
+        """Step the active paint tab by ``direction`` (+1 / -1).
+
+        Wraps around at both ends — the workspace has a small,
+        bounded set of tabs and wrapping is the friendlier behaviour
+        when keyboard-cycling.
+        """
+        count = self._tabs.count()
+        if count <= 1:
+            return self._tabs.currentIndex()
+        new_index = (self._tabs.currentIndex() + int(direction)) % count
+        self._tabs.setCurrentIndex(new_index)
+        return new_index
+
+    def cycle_active_layer(self, direction: int) -> int | None:
+        """Step the document's active layer index by ``direction``.
+
+        Returns the new index (clamped, never wraps — wrapping at
+        the bottom would loop the user back to the top layer with
+        no warning, which is jarring) or ``None`` if no document is
+        loaded. Toasts the new layer's name so the user has a
+        visible signal that the keystroke registered.
+        """
+        document = self._canvas.document() if self._canvas else None
+        if document is None or not hasattr(document, "set_active_layer"):
+            return None
+        count = getattr(document, "layer_count", 0)
+        if count <= 0:
+            return None
+        current = document.active_layer_index()
+        new_idx = max(0, min(count - 1, current + int(direction)))
+        if new_idx == current:
+            return current
+        document.set_active_layer(new_idx)
+        if hasattr(self, "_layer_dock"):
+            self._layer_dock.set_document(document)
+        layer = (
+            document.active_layer()
+            if hasattr(document, "active_layer") else None
+        )
+        if layer is not None:
+            lang = language_wrapper.language_word_dict
+            toast = getattr(self, "toast", None)
+            if toast is not None:
+                toast.info(
+                    lang.get(
+                        "paint_layer_active_changed", "Layer: {name}",
+                    ).format(name=str(getattr(layer, "name", ""))),
+                    duration_ms=1500,
+                )
+        self._refresh_status_line()
+        return new_idx
+
+    def set_brush_opacity_from_digit(self, digit: int) -> float:
+        """Map a 0-9 keystroke to a brush opacity value.
+
+        Photoshop convention — ``1`` → 10 %, ``2`` → 20 %, …, ``9``
+        → 90 %, ``0`` → 100 %. Returns the resulting opacity in
+        ``[0, 1]`` so callers / tests can verify the mapping.
+        """
+        digit = int(digit) % 10
+        opacity = 1.0 if digit == 0 else digit / 10.0
+        self._state.set_brush(opacity=opacity)
+        lang = language_wrapper.language_word_dict
+        msg = lang.get(
+            "paint_brush_opacity_changed", "Opacity: {pct}%",
+        ).format(pct=int(round(opacity * 100)))
+        toast = getattr(self, "toast", None)
+        if toast is not None:
+            toast.info(msg, duration_ms=1200)
+        return opacity
+
+    def cycle_brush_kind(self, direction: int) -> str:
+        """Cycle the brush kind by ``direction`` (+1 forward, -1 back).
+
+        Returns the resulting kind so callers / tests can verify the
+        cycle landed on the expected entry. Toasts a confirmation
+        with the new kind's display name so the user has a visible
+        signal that the keystroke registered.
+        """
+        kinds = list(ts.BRUSH_KINDS)
+        try:
+            idx = kinds.index(self._state.brush.kind)
+        except ValueError:
+            idx = 0
+        new_idx = (idx + int(direction)) % len(kinds)
+        new_kind = kinds[new_idx]
+        self._state.set_brush(kind=new_kind)
+        lang = language_wrapper.language_word_dict
+        label = lang.get(f"paint_brush_kind_{new_kind}", new_kind.title())
+        toast = getattr(self, "toast", None)
+        if toast is not None:
+            toast.info(
+                lang.get("paint_brush_kind_changed", "Brush: {kind}").format(
+                    kind=label,
+                ),
+                duration_ms=1500,
+            )
+        return new_kind
+
+    def _maybe_offer_autosave_recovery(self) -> None:
+        """Probe the autosave directory and prompt if anything is there.
+
+        Pulled out as a method so a unit test can stub the snapshot
+        list (instead of writing real bundles to ``~``) and verify
+        the prompt routing. The prompt itself is a non-blocking
+        toast — users in a hurry can ignore it; users who lost
+        work can act on it via the recovery dialog.
+        """
+        try:
+            snapshots = self.pending_autosaves()
+        except (OSError, ValueError):
+            return
+        if not snapshots:
+            return
+        toast = getattr(self, "toast", None)
+        lang = language_wrapper.language_word_dict
+        msg = lang.get(
+            "paint_autosave_recovery_available",
+            "{n} autosave snapshot(s) available — File ▸ Restore",
+        ).format(n=len(snapshots))
+        if toast is not None:
+            toast.warning(msg, duration_ms=6000)
+            return
+        status = getattr(self, "_status", None)
+        if status is not None:
+            status.showMessage(msg, 6000)
 
     def _on_image_loaded(self, w: int, h: int) -> None:
         msg = language_wrapper.language_word_dict.get(
             "paint_status_image_loaded", "Canvas: {w} × {h}",
         ).format(w=w, h=h)
         self._status.showMessage(msg, 3000)
+        # First image landed on the canvas → the welcome hint has
+        # done its job; tear it down so the user has clear sightlines
+        # to whatever they just opened.
+        self._dismiss_welcome_hint()
+        # Image just landed → fresh content, no edits yet, so the
+        # tab is clean. Setting this here covers both the File ▸ Open
+        # path and any tool that calls ``canvas.load_image`` directly.
+        self._set_tab_dirty(self._canvas, False)
+
+    # ---- welcome hint -----------------------------------------------------
+
+    def _build_welcome_hint(self) -> None:
+        """Construct + parent the centred welcome panel.
+
+        Built once and re-parented across tabs as the active canvas
+        changes; the same widget is reused so signal wiring stays
+        cheap. Visibility is toggled via :meth:`_dismiss_welcome_hint`
+        on first real edit / image load.
+        """
+        from Imervue.paint.welcome_overlay import WelcomeHint
+        lang = language_wrapper.language_word_dict
+        self._welcome_hint = WelcomeHint(self._canvas)
+        self._welcome_hint.set_translations(
+            title=lang.get(
+                "paint_welcome_title", "Drag an image or PSD here",
+            ),
+            subtitle=lang.get(
+                "paint_welcome_subtitle", "or pick a starting point",
+            ),
+            new_label=lang.get("paint_welcome_new", "New tab"),
+            open_label=lang.get("paint_welcome_open", "Open file…"),
+            recent_label=lang.get("paint_welcome_recent", "Recent"),
+        )
+        self._welcome_hint.new_requested.connect(self._welcome_new_tab)
+        self._welcome_hint.open_requested.connect(self._welcome_open_file)
+        self._welcome_hint.recent_requested.connect(self._welcome_open_recent)
+        self._refresh_welcome_recent()
+        self._welcome_dismissed = False
+        self._show_welcome_hint()
+        # Keep the hint centred whenever the canvas widget changes
+        # size — :class:`PaintCanvas` already emits resizes via Qt's
+        # event chain so the eventFilter below picks them up.
+        self._canvas.installEventFilter(self)
+
+    def _refresh_welcome_recent(self) -> None:
+        from Imervue.paint import recent_files
+        if not hasattr(self, "_welcome_hint"):
+            return
+        self._welcome_hint.set_recent_paths(recent_files.paths())
+
+    def _show_welcome_hint(self) -> None:
+        if self._welcome_dismissed or not hasattr(self, "_welcome_hint"):
+            return
+        if self._welcome_hint.parent() is not self._canvas:
+            self._welcome_hint.setParent(self._canvas)
+        self._welcome_hint.position_centred(
+            self._canvas.width(), self._canvas.height(),
+        )
+        self._welcome_hint.setVisible(True)
+        self._welcome_hint.raise_()
+
+    def _dismiss_welcome_hint(self) -> None:
+        if not hasattr(self, "_welcome_hint"):
+            return
+        self._welcome_dismissed = True
+        self._welcome_hint.setVisible(False)
+
+    def _welcome_new_tab(self) -> None:
+        self.new_tab()
+        self._dismiss_welcome_hint()
+
+    def _welcome_open_file(self) -> None:
+        bridge = getattr(self, "_file_menu_bridge", None)
+        if bridge is None:
+            return
+        if hasattr(bridge, "open_psd"):
+            bridge.open_psd()
+        self._dismiss_welcome_hint()
+
+    def _welcome_open_recent(self, path: str) -> None:
+        bridge = getattr(self, "_file_menu_bridge", None)
+        if bridge is None:
+            return
+        if hasattr(bridge, "open_psd_at"):
+            bridge.open_psd_at(path)
+        self._dismiss_welcome_hint()
+
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt override
+        if (
+            hasattr(self, "_welcome_hint")
+            and obj is self._canvas
+            and event.type() == event.Type.Resize
+            and self._welcome_hint.isVisible()
+        ):
+            self._welcome_hint.position_centred(
+                self._canvas.width(), self._canvas.height(),
+            )
+        if obj is self._tabs.tabBar() and self._handle_tab_bar_event(event):
+            return True
+        return super().eventFilter(obj, event)
+
+    def _handle_tab_bar_event(self, event) -> bool:
+        """Forward middle-click on the tab bar to ``close_tab``.
+
+        Returns ``True`` when the event is consumed so Qt doesn't
+        also dispatch it as a tab activate. Other event types fall
+        through unchanged.
+        """
+        from PySide6.QtCore import Qt
+        if event.type() != event.Type.MouseButtonRelease:
+            return False
+        if event.button() != Qt.MouseButton.MiddleButton:
+            return False
+        pos = event.position() if hasattr(event, "position") else event.pos()
+        index = self._tabs.tabBar().tabAt(pos.toPoint())
+        if index < 0:
+            return False
+        self.close_tab(index)
+        return True
+
+    def _refresh_status_line(self) -> None:
+        """Re-build the status bar from the latest hover + state.
+
+        Called both from the hover signal and from
+        :meth:`_on_state_event` so the line stays current when the
+        user changes tool, brush size / opacity, or active layer
+        without moving the cursor.
+        """
+        line = self._compose_status_line(self._last_hover)
+        if not line:
+            self._status.clearMessage()
+            return
+        self._status.showMessage(line)
+
+    # Tools whose options live on BrushSettings and therefore want
+    # the brush-size segment surfaced in the status bar.
+    _BRUSHED_TOOLS = frozenset(
+        {"brush", "eraser", "blur", "smudge", "clone_stamp"},
+    )
+
+    def _compose_status_line(self, hover: tuple[int, int] | None) -> str:
+        """Build the rich status-bar string.
+
+        Layout (left → right):
+        ``Tool · x,y · Zoom% · CanvasW×H · Layer (i/n) · Opacity · Brush · Selection``.
+
+        Each segment is omitted gracefully when its source is
+        unavailable so a freshly-booted workspace with no document
+        and no hover still renders a useful "Tool: brush" line.
+        """
+        lang = language_wrapper.language_word_dict
+        segments: list[str] = []
+        state = getattr(self, "_state", None)
+        self._append_tool_segment(segments, state, lang)
+        self._append_hover_segment(segments, hover, lang)
+        self._append_canvas_segments(segments, lang)
+        self._append_brush_segment(segments, state, lang)
+        self._append_eyedropper_segment(segments, state, hover, lang)
+        autosave_segment = self._format_autosave_segment(lang)
+        if autosave_segment:
+            segments.append(autosave_segment)
+        return "    ".join(segments)
+
+    @staticmethod
+    def _append_tool_segment(segments, state, lang) -> None:
+        if state is None:
+            return
+        tool_name = lang.get(
+            f"paint_tool_{state.tool}",
+            state.tool.replace("_", " ").title(),
+        )
+        segments.append(
+            lang.get("paint_status_tool", "Tool: {name}").format(name=tool_name),
+        )
+
+    @staticmethod
+    def _append_hover_segment(segments, hover, lang) -> None:
+        if hover is None:
+            return
+        x, y = hover
+        segments.append(
+            lang.get("paint_status_cursor", "x: {x}  y: {y}").format(x=x, y=y),
+        )
+
+    def _append_canvas_segments(self, segments, lang) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is None:
+            return
+        zoom = getattr(canvas, "_zoom", None)
+        if zoom is not None:
+            segments.append(
+                lang.get("paint_status_zoom", "{pct}%").format(
+                    pct=int(round(float(zoom) * 100)),
+                ),
+            )
+        document = canvas.document() if hasattr(canvas, "document") else None
+        if document is not None:
+            self._append_document_segments(segments, document, lang)
+
+    def _append_brush_segment(self, segments, state, lang) -> None:
+        if state is None or state.tool not in self._BRUSHED_TOOLS:
+            return
+        segments.append(
+            lang.get(
+                "paint_status_brush",
+                "Brush: {size}px {opacity}%",
+            ).format(
+                size=int(state.brush.size),
+                opacity=int(round(state.brush.opacity * 100)),
+            ),
+        )
+
+    def _append_eyedropper_segment(self, segments, state, hover, lang) -> None:
+        if state is None or state.tool != "eyedropper" or hover is None:
+            return
+        sampled = self._sample_eyedropper_at(hover)
+        if sampled is None:
+            return
+        segments.append(
+            lang.get(
+                "paint_status_eyedrop", "Hover: #{hex} ({r},{g},{b})",
+            ).format(
+                hex=f"{sampled[0]:02X}{sampled[1]:02X}{sampled[2]:02X}",
+                r=sampled[0], g=sampled[1], b=sampled[2],
+            ),
+        )
+
+    def _sample_eyedropper_at(
+        self, hover: tuple[int, int],
+    ) -> tuple[int, int, int] | None:
+        """Sample the colour under ``hover`` for the eyedropper preview.
+
+        Honours :attr:`ToolState.eyedropper_sample_all_layers` — when
+        on, reads the document composite (matches what the user sees
+        on screen); when off, falls back to the active layer only,
+        same as the click-commit behaviour.
+        """
+        canvas = getattr(self, "_canvas", None)
+        if canvas is None or not hasattr(canvas, "document"):
+            return None
+        document = canvas.document()
+        sample_all = getattr(
+            self._state, "eyedropper_sample_all_layers", False,
+        )
+        if sample_all and hasattr(document, "composite"):
+            arr = document.composite()
+        else:
+            active = (
+                document.active_layer()
+                if hasattr(document, "active_layer") else None
+            )
+            arr = active.image if active is not None else None
+        if arr is None:
+            return None
+        x, y = hover
+        h, w = arr.shape[:2]
+        if not (0 <= x < w and 0 <= y < h):
+            return None
+        pixel = arr[int(y), int(x)]
+        return (int(pixel[0]), int(pixel[1]), int(pixel[2]))
+
+    def _format_autosave_segment(self, lang: dict) -> str | None:
+        """Build the "Last autosaved Xs ago" status segment.
+
+        Returns ``None`` when no autosave has ever fired in this
+        session — the segment shouldn't pretend a snapshot exists.
+        Picks the coarsest unit that fits ("just now" / "Xs ago" /
+        "Xm ago" / "Xh ago") so the line stays compact at every age.
+        """
+        if self._last_autosave_at is None:
+            return None
+        import time
+        elapsed = max(0.0, time.monotonic() - self._last_autosave_at)
+        if elapsed < 5:
+            label = lang.get(
+                "paint_status_autosaved_just_now", "Saved just now",
+            )
+        elif elapsed < 60:
+            label = lang.get(
+                "paint_status_autosaved_seconds", "Saved {n}s ago",
+            ).format(n=int(elapsed))
+        elif elapsed < 3600:
+            label = lang.get(
+                "paint_status_autosaved_minutes", "Saved {n}m ago",
+            ).format(n=int(elapsed // 60))
+        else:
+            label = lang.get(
+                "paint_status_autosaved_hours", "Saved {n}h ago",
+            ).format(n=int(elapsed // 3600))
+        return label
+
+    @staticmethod
+    def _append_document_segments(
+        segments: list[str], document, lang: dict,
+    ) -> None:
+        """Add the canvas-size / layer / selection segments in place."""
+        shape = getattr(document, "shape", None)
+        if shape is not None:
+            h, w = shape
+            segments.append(
+                lang.get("paint_status_size", "{w}×{h}").format(w=w, h=h),
+            )
+        active = (
+            document.active_layer() if hasattr(document, "active_layer") else None
+        )
+        if active is not None:
+            PaintWorkspace._append_active_layer_segments(
+                segments, document, active, lang,
+            )
+        if hasattr(document, "selection"):
+            sel = document.selection()
+            if sel is not None and bool(sel.any()):
+                segments.append(
+                    lang.get(
+                        "paint_status_selection", "Sel {n}px",
+                    ).format(n=int(sel.sum())),
+                )
+
+    @staticmethod
+    def _append_active_layer_segments(
+        segments: list[str], document, active, lang: dict,
+    ) -> None:
+        """Append the layer-name (with index/count) and per-layer opacity
+        segments — split out so the parent method stays under the cognitive
+        complexity threshold."""
+        name = str(getattr(active, "name", "") or "")
+        count = getattr(document, "layer_count", None)
+        idx = (
+            document.active_layer_index() + 1
+            if hasattr(document, "active_layer_index") else None
+        )
+        if name and idx is not None and count:
+            segments.append(
+                lang.get(
+                    "paint_status_layer",
+                    "{name} ({i}/{n})",
+                ).format(name=name, i=idx, n=count),
+            )
+        elif name:
+            segments.append(name)
+        opacity = getattr(active, "opacity", None)
+        if opacity is not None and float(opacity) < 0.999:
+            segments.append(
+                lang.get(
+                    "paint_status_layer_opacity", "Op {pct}%",
+                ).format(pct=int(round(float(opacity) * 100))),
+            )
 
     def _on_material_chosen(self, path: str) -> None:
         """Drop a material onto the canvas based on its category.
@@ -877,10 +2358,20 @@ class PaintWorkspace(QMainWindow):
         return tile
 
     def _on_document_changed(self) -> None:
-        """Mark the navigator preview dirty and start the coalesce timer."""
+        """Mark the navigator preview dirty and start the coalesce timer.
+
+        Also refreshes the status line so layer-level changes
+        (rename, opacity slider, active-layer switch, selection edit)
+        update the layer + selection segments without waiting for
+        the next hover event, and tears down the welcome hint on
+        the first real edit so it doesn't linger on top of the
+        user's strokes.
+        """
         self._nav_dirty = True
         if not self._nav_timer.isActive():
             self._nav_timer.start()
+        self._refresh_status_line()
+        self._dismiss_welcome_hint()
 
     def _refresh_navigator_preview(self) -> None:
         """Build a QPixmap of the current composite and push it to the dock.

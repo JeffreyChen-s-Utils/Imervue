@@ -190,6 +190,17 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 - 外掛系統，附帶線上外掛下載器
 - Toast 通知系統（資訊、成功、警告、錯誤層級）
 
+### 近期 UX 改進
+
+橫跨 Paint 工作區、影像瀏覽器、Develop / 對話框介面的 UX 體質提升：
+
+- **Paint 視覺回饋** — Medibang 風格、會跟著 zoom 縮放的筆刷大小游標、每個工具獨立的游標圖示、畫布底層透明格紋、拖放高亮覆蓋、每個 tab 的「已修改」星號、undo / redo toast 確認、status bar 的 autosave 狀態段、開啟時自動偵測前次 session 的 autosave 並提示還原。
+- **Paint 進階快捷鍵** — `Tab` 一鍵隱藏 / 還原所有 docks 進入專心模式、`Ctrl+Tab` 切換分頁、`,` / `.` 循環筆刷種類、`0–9` 數字鍵以 10 % 為單位設定不透明度、`Alt+[` / `Alt+]` 切換 active 圖層、畫布右鍵彈出 Undo / Redo / Select All / Deselect / Fit / 100 % 快捷選單。
+- **Paint 顏色控制** — 顏色 dock 加入「透明 / 無顏色」槽（背景預設為透明），fill 與魔棒會尊重 alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
+- **影像瀏覽器** — 空資料夾顯示提示而非空白表格、麵包屑各段帶完整路徑 tooltip、`Ctrl+C` 複製選中檔案路徑、右鍵 context menu（Open / Copy path / Reveal）、檔名標籤顯示 `(i/n)` 位置、status bar 的 zoom 指示器點一下在 Fit 與 100 % 之間切換。
+- **Tooltip 覆蓋大幅提升** — Brush / Color / Fill / Navigator / Animation / Page / Pose / Stamp / Reference / Histogram dock、筆刷選項列、以及 Levels / Tone Curve / Channel Mixer / AI Upscale / Batch Convert / Contact Sheet / Slideshow MP4 對話框上每個互動控件都加上說明性 tooltip。
+- **視窗層級安全機制** — 關閉視窗時若有未存的 paint tab 會先列出受影響清單詢問；tab 中鍵關閉沿用同一套保護；tab tooltip 顯示完整標題、畫布尺寸與已修改狀態。
+
 ---
 
 ## 支援的圖片格式

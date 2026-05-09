@@ -68,23 +68,39 @@ class AnimationDock(QDockWidget):
             "paint_animation_add_frame", "+ Frame",
         ))
         self._add_btn.clicked.connect(lambda: self.add_frame_requested.emit())
+        self._add_btn.setToolTip(lang.get(
+            "paint_animation_add_frame_tooltip",
+            "Snapshot the current canvas as a new animation frame",
+        ))
         controls.addWidget(self._add_btn)
 
         self._remove_btn = QPushButton(lang.get(
             "paint_animation_remove_frame", "− Frame",
         ))
         self._remove_btn.clicked.connect(self._on_remove_clicked)
+        self._remove_btn.setToolTip(lang.get(
+            "paint_animation_remove_frame_tooltip",
+            "Remove the selected frame from the timeline",
+        ))
         controls.addWidget(self._remove_btn)
 
         self._play_btn = QPushButton(lang.get(
             "paint_animation_play", "▶ Play",
         ))
         self._play_btn.clicked.connect(self.toggle_playback)
+        self._play_btn.setToolTip(lang.get(
+            "paint_animation_play_tooltip",
+            "Cycle the timeline at the chosen FPS",
+        ))
         controls.addWidget(self._play_btn)
 
         self._fps_spin = QSpinBox()
         self._fps_spin.setRange(FPS_MIN, FPS_MAX)
         self._fps_spin.setValue(self._timeline.fps)
+        self._fps_spin.setToolTip(lang.get(
+            "paint_animation_fps_tooltip",
+            "Playback frames per second",
+        ))
         self._fps_spin.setSuffix(" fps")
         self._fps_spin.valueChanged.connect(self._on_fps_changed)
         controls.addWidget(self._fps_spin)

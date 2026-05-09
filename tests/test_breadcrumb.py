@@ -59,3 +59,35 @@ class TestBreadcrumbBar:
         after = _count_segment_buttons(bar)
         # Sub has one more segment than tmp_path
         assert after == before + 1
+
+
+# ---------------------------------------------------------------------------
+# Phase 22 — segment tooltip carries the full path so a truncated
+# label still tells the user where the breadcrumb leads.
+# ---------------------------------------------------------------------------
+
+
+def test_segment_buttons_have_full_path_tooltips(qapp, tmp_path):
+    """Each breadcrumb button's tooltip is the absolute folder
+    path so users can hover to see where a click would land."""
+    from PySide6.QtWidgets import QPushButton
+    from Imervue.gui.breadcrumb_bar import BreadcrumbBar
+    deep = tmp_path / "alpha" / "beta" / "gamma"
+    deep.mkdir(parents=True)
+    bar = BreadcrumbBar(main_window=None)
+    try:
+        bar.set_path(str(deep))
+        buttons = [
+            bar._layout.itemAt(i).widget()  # noqa: SLF001
+            for i in range(bar._layout.count())  # noqa: SLF001
+            if isinstance(bar._layout.itemAt(i).widget(), QPushButton)  # noqa: SLF001
+        ]
+        tips = [btn.toolTip() for btn in buttons]
+        assert tips
+        # Trailing segment points at the deep path the bar shows.
+        assert tips[-1] == str(deep)
+        # Every tip is a non-empty path string.
+        for tip in tips:
+            assert tip
+    finally:
+        bar.deleteLater()

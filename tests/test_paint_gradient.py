@@ -242,3 +242,34 @@ def test_set_gradient_idempotent_returns_false(state):
 
 def test_gradient_kinds_listed():
     assert GRADIENT_KINDS == ("linear", "radial", "angle", "diamond")
+
+
+# ---------------------------------------------------------------------------
+# Transparent endpoints — fade-to-transparent gradients (BG=None / FG=None)
+# ---------------------------------------------------------------------------
+
+
+def test_render_gradient_bg_none_fades_alpha_to_zero():
+    """A foreground→None gradient must fade alpha from 255 at the
+    foreground end to 0 at the (transparent) background end."""
+    canvas = np.zeros((4, 16, 4), dtype=np.uint8)
+    render_gradient(canvas, (0.0, 2.0), (15.0, 2.0), fg=(255, 0, 0), bg=None)
+    # Start of the line is opaque red; end is fully transparent.
+    assert int(canvas[2, 0, 3]) >= 250
+    assert int(canvas[2, 15, 3]) == 0
+
+
+def test_render_gradient_fg_none_fades_alpha_from_zero():
+    canvas = np.zeros((4, 16, 4), dtype=np.uint8)
+    render_gradient(canvas, (0.0, 2.0), (15.0, 2.0), fg=None, bg=(0, 0, 255))
+    assert int(canvas[2, 0, 3]) == 0
+    assert int(canvas[2, 15, 3]) >= 250
+
+
+def test_render_gradient_both_endpoints_opaque_keeps_alpha_255():
+    """Backwards-compat — when both endpoints are real colours the
+    whole filled region stays fully opaque (the legacy behaviour
+    before transparent endpoints were supported)."""
+    canvas = np.zeros((4, 8, 4), dtype=np.uint8)
+    render_gradient(canvas, (0.0, 2.0), (7.0, 2.0), fg=(255, 0, 0), bg=(0, 255, 0))
+    assert (canvas[..., 3] == 255).all()

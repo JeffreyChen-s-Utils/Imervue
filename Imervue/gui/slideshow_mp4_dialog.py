@@ -71,16 +71,29 @@ class SlideshowMp4Dialog(QDialog):
         self._width_spin = QSpinBox()
         self._width_spin.setRange(160, 7680)
         self._width_spin.setValue(1920)
+        self._width_spin.setToolTip(lang.get(
+            "slideshow_width_tooltip",
+            "Output video width in pixels (default 1920 = HD)",
+        ))
         form.addRow(lang.get("slideshow_width", "Width"), self._width_spin)
 
         self._height_spin = QSpinBox()
         self._height_spin.setRange(120, 4320)
         self._height_spin.setValue(1080)
+        self._height_spin.setToolTip(lang.get(
+            "slideshow_height_tooltip",
+            "Output video height in pixels (default 1080 = HD)",
+        ))
         form.addRow(lang.get("slideshow_height", "Height"), self._height_spin)
 
         self._fps_spin = QSpinBox()
         self._fps_spin.setRange(10, 60)
         self._fps_spin.setValue(24)
+        self._fps_spin.setToolTip(lang.get(
+            "slideshow_fps_tooltip",
+            "Frames per second — 24 is cinematic, 30 / 60 are common "
+            "for screen playback",
+        ))
         form.addRow(lang.get("slideshow_fps", "FPS"), self._fps_spin)
 
         self._hold_spin = QDoubleSpinBox()
@@ -88,6 +101,10 @@ class SlideshowMp4Dialog(QDialog):
         self._hold_spin.setValue(3.0)
         self._hold_spin.setSingleStep(0.1)
         self._hold_spin.setSuffix(" s")
+        self._hold_spin.setToolTip(lang.get(
+            "slideshow_hold_tooltip",
+            "Seconds each image stays on-screen before the fade",
+        ))
         form.addRow(lang.get("slideshow_hold", "Hold per image"), self._hold_spin)
 
         self._fade_spin = QDoubleSpinBox()
@@ -95,11 +112,20 @@ class SlideshowMp4Dialog(QDialog):
         self._fade_spin.setValue(0.5)
         self._fade_spin.setSingleStep(0.1)
         self._fade_spin.setSuffix(" s")
+        self._fade_spin.setToolTip(lang.get(
+            "slideshow_fade_seconds_tooltip",
+            "Cross-fade duration between consecutive images. Set to "
+            "0 for hard cuts.",
+        ))
         form.addRow(lang.get("slideshow_fade_seconds", "Fade duration"), self._fade_spin)
 
         self._quality_spin = QSpinBox()
         self._quality_spin.setRange(1, 10)
         self._quality_spin.setValue(8)
+        self._quality_spin.setToolTip(lang.get(
+            "slideshow_quality_tooltip",
+            "Encoder quality (1 worst / smallest, 10 best / largest)",
+        ))
         form.addRow(lang.get("slideshow_quality", "Quality"), self._quality_spin)
 
         layout.addLayout(form)

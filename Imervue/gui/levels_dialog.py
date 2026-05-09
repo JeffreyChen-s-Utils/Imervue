@@ -52,11 +52,27 @@ class LevelsDialog(QDialog):
 
         self._enable = QCheckBox(lang.get("levels_enable", "Enable levels"))
         self._enable.setChecked(opts.enabled)
+        self._enable.setToolTip(lang.get(
+            "levels_enable_tooltip",
+            "Apply the levels adjustment when previewing / exporting",
+        ))
 
         self._black = self._make_int_slider(LEVELS_MIN, LEVELS_MAX - 1, opts.black)
+        self._black.setToolTip(lang.get(
+            "levels_black_tooltip",
+            "Black point — pixel input mapped to pure black (0)",
+        ))
         self._white = self._make_int_slider(LEVELS_MIN + 1, LEVELS_MAX, opts.white)
+        self._white.setToolTip(lang.get(
+            "levels_white_tooltip",
+            "White point — pixel input mapped to pure white (255)",
+        ))
         self._gamma = self._make_int_slider(0, _GAMMA_STEPS,
                                             self._gamma_to_step(opts.gamma))
+        self._gamma.setToolTip(lang.get(
+            "levels_gamma_tooltip",
+            "Gamma — < 1 darkens midtones, > 1 brightens midtones",
+        ))
 
         self._black_label = QLabel(str(opts.black))
         self._white_label = QLabel(str(opts.white))

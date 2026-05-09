@@ -298,16 +298,113 @@ def test_empty_document_emits_no_pending_recovery(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Pytest hygiene — make sure the autouse user-settings fixture
-# (which writes nothing here) doesn't interfere.
+# Workspace integration
 # ---------------------------------------------------------------------------
 
 
-def test_marker_used_only_for_collection(tmp_path):
-    """Sanity check that the test file itself imports and runs."""
-    assert tmp_path.is_dir()
-
-
 @pytest.fixture
-def _autosave_dir(tmp_path):
-    return tmp_path / "autosaves"
+def workspace(qapp):
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.paint_workspace import PaintWorkspace
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    user_setting_dict.pop("paint_state", None)
+    ts.reset_tool_state()
+    ws = PaintWorkspace()
+    yield ws
+    ws.stop_autosave()
+    ws.deleteLater()
+    user_setting_dict.pop("paint_state", None)
+    ts.reset_tool_state()
+
+
+def test_take_snapshot_now_writes_bundle(workspace, tmp_path):
+    layer = workspace.canvas().document().active_layer()
+    layer.image[..., :3] = (123, 45, 67)
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    bundle = workspace.take_autosave_snapshot_now()
+    assert bundle is not None
+    assert Path(bundle).exists()
+    # Sidecar metadata is written next to the bundle.
+    assert any(tmp_path.glob("snapshot-*.json"))
+
+
+def test_take_snapshot_now_returns_none_for_blank_document(workspace, tmp_path):
+    document = workspace.canvas().document()
+    document._layers.clear()  # noqa: SLF001
+    document._composite_cache = None  # noqa: SLF001
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    assert workspace.take_autosave_snapshot_now() is None
+
+
+def test_restore_latest_pastes_full_document_into_canvas(workspace, tmp_path):
+    """Recovery must reinstall the document — not just a flat composite —
+    so layers, masks, and vector data survive a crash."""
+    document = workspace.canvas().document()
+    base = document.active_layer()
+    base.image[..., :3] = (180, 90, 45)
+    document.add_layer(name="Second Layer")
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    workspace.take_autosave_snapshot_now()
+
+    # Mutate the workspace so a successful restore is observable.
+    workspace.load_image(None)
+    assert workspace.canvas().document().layer_count == 1
+
+    ok = workspace.restore_latest_autosave(target_dir=tmp_path)
+    assert ok is True
+    restored = workspace.canvas().document()
+    assert restored.layer_count == 2
+    # The painted base layer survives the restore round-trip; the
+    # second (newer, blank) layer is on top so the active-layer
+    # check uses the bottom layer explicitly.
+    assert int(restored.layer_at(0).image[0, 0, 0]) == 180
+
+
+def test_restore_latest_with_no_snapshot_returns_false(workspace, tmp_path):
+    ok = workspace.restore_latest_autosave(target_dir=tmp_path)
+    assert ok is False
+
+
+def test_pending_autosaves_passes_through(workspace, tmp_path):
+    layer = workspace.canvas().document().active_layer()
+    layer.image[..., :3] = (10, 20, 30)
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    workspace.take_autosave_snapshot_now()
+    snaps = workspace.pending_autosaves(target_dir=tmp_path)
+    assert len(snaps) == 1
+
+
+def test_restore_snapshot_returns_false_for_corrupt_bundle(workspace, tmp_path):
+    layer = workspace.canvas().document().active_layer()
+    layer.image[..., :3] = (10, 20, 30)
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    workspace.take_autosave_snapshot_now()
+    snap = workspace.pending_autosaves(target_dir=tmp_path)[0]
+    snap.bundle_path.write_bytes(b"not an npz bundle")
+    ok = workspace.restore_snapshot(snap)
+    assert ok is False
+
+
+def test_start_autosave_creates_timer(workspace, tmp_path):
+    workspace.start_autosave(interval_sec=60, target_dir=tmp_path)
+    assert hasattr(workspace, "_autosave_timer")
+    assert workspace._autosave_timer.isActive()  # noqa: SLF001
+    workspace.stop_autosave()
+    assert not workspace._autosave_timer.isActive()  # noqa: SLF001
+
+
+def test_start_autosave_replaces_existing_timer_interval(workspace, tmp_path):
+    workspace.start_autosave(interval_sec=60, target_dir=tmp_path)
+    first_interval = workspace._autosave_timer.interval()  # noqa: SLF001
+    workspace.start_autosave(interval_sec=30, target_dir=tmp_path)
+    second_interval = workspace._autosave_timer.interval()  # noqa: SLF001
+    assert second_interval != first_interval
+
+
+def test_start_autosave_uses_default_interval_when_unspecified(workspace, tmp_path):
+    """Calling start_autosave without an explicit interval falls back
+    to :data:`auto_save.DEFAULT_INTERVAL_SEC`."""
+    from Imervue.paint.auto_save import DEFAULT_INTERVAL_SEC
+    workspace.start_autosave(target_dir=tmp_path)
+    assert workspace._autosave_timer.interval() == DEFAULT_INTERVAL_SEC * 1000  # noqa: SLF001

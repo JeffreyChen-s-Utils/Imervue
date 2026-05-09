@@ -143,3 +143,22 @@ def test_options_bar_refreshes_when_brush_changes(qapp, state):
         assert bar._brush_hardness.value() == 50
     finally:
         bar.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 tooltip coverage on the options bar — the brush strip is
+# the always-visible default, so every control has to advertise what
+# it does on hover. The other strips (fill / selection / text /
+# gradient) are stamped out on demand and so verified via their own
+# builders rather than the live bar.
+# ---------------------------------------------------------------------------
+
+
+def test_options_bar_brush_strip_widgets_have_tooltips(qapp, state):
+    bar = PaintOptionsBar(state)
+    try:
+        assert bar._brush_size.toolTip()
+        assert bar._brush_opacity.toolTip()
+        assert bar._brush_hardness.toolTip()
+    finally:
+        bar.deleteLater()

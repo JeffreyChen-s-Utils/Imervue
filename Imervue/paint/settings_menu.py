@@ -32,6 +32,8 @@ def populate_settings_menu(workspace: PaintWorkspace) -> None:
          bridge.open_pressure_curve),
         ("paint_settings_shortcuts", "Shortcuts…",
          bridge.open_shortcuts),
+        ("paint_settings_shortcut_cheatsheet", "Shortcut Cheat Sheet…",
+         bridge.open_shortcut_cheatsheet),
         ("paint_settings_workspace_layouts", "Workspace Layouts…",
          bridge.open_workspace_presets),
         (None, None, None),
@@ -76,6 +78,13 @@ class _SettingsMenuBridge:
         dialog = ShortcutDialog(registry=registry, parent=self._workspace)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             save_shortcuts(dialog.registry())
+
+    def open_shortcut_cheatsheet(self) -> None:
+        """Read-only listing of every menu shortcut bound on the
+        workspace. Discoverability fix — most shortcuts live in
+        the menus and would otherwise stay invisible."""
+        from Imervue.paint.shortcuts_dialog import open_shortcuts_dialog
+        open_shortcuts_dialog(self._workspace, parent=self._workspace)
 
     def open_workspace_presets(self) -> None:
         from Imervue.paint.workspace_preset_dialog import (

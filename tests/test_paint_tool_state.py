@@ -675,3 +675,95 @@ def test_eyedropper_sample_all_round_trips_via_from_dict():
 def test_eyedropper_sample_all_default_when_key_missing():
     rebuilt = ts.ToolState.from_dict({})
     assert rebuilt.eyedropper_sample_all_layers is False
+
+
+# ---------------------------------------------------------------------------
+# Transparent / "no colour" foreground & background
+# ---------------------------------------------------------------------------
+
+
+def test_default_background_is_transparent():
+    """Fresh workspace boots with the BG slot at "no colour" so a
+    foreground→background gradient produces a clean fade-to-
+    transparent without the user clearing a stale white BG first."""
+    assert ts.DEFAULT_BG is None
+    state = ts.load_tool_state()
+    assert state.background is None
+
+
+def test_set_foreground_accepts_none():
+    state = ts.load_tool_state()
+    assert state.set_foreground(None) is True
+    assert state.foreground is None
+
+
+def test_set_background_accepts_none():
+    state = ts.load_tool_state()
+    state.set_background((10, 20, 30))
+    assert state.set_background(None) is True
+    assert state.background is None
+
+
+def test_set_foreground_none_idempotent():
+    state = ts.load_tool_state()
+    state.set_foreground(None)
+    assert state.set_foreground(None) is False
+
+
+def test_record_foreground_skips_transparent():
+    """Pushing ``None`` into the recents stack would leave a hole
+    that no swatch could re-pick. The history is colour-only."""
+    state = ts.load_tool_state()
+    state.set_foreground(None)
+    history_before = list(state.color_history)
+    state.record_foreground_in_history()
+    assert state.color_history == history_before
+
+
+def test_set_foreground_with_commit_skips_transparent_history():
+    """``commit=True`` records into recents — but only for real
+    colours; transparent stays out of the swatch grid."""
+    state = ts.load_tool_state()
+    state.set_foreground((10, 20, 30), commit=True)
+    state.set_foreground(None, commit=True)
+    assert (10, 20, 30) in state.color_history
+    assert None not in state.color_history
+
+
+def test_swap_colors_handles_transparent_bg():
+    state = ts.load_tool_state()
+    state.set_foreground((100, 50, 25))
+    state.set_background(None)
+    state.swap_colors()
+    assert state.foreground is None
+    assert state.background == (100, 50, 25)
+
+
+def test_to_dict_round_trips_transparent_bg():
+    state = ts.load_tool_state()
+    state.set_background(None)
+    raw = state.to_dict()
+    assert raw["background"] is None
+    rebuilt = ts.ToolState.from_dict(raw)
+    assert rebuilt.background is None
+
+
+def test_from_dict_treats_missing_background_as_default():
+    """An older settings file without a ``background`` key still
+    boots — falls back to ``DEFAULT_BG`` (now ``None``)."""
+    rebuilt = ts.ToolState.from_dict({"tool": "brush"})
+    assert rebuilt.background is None
+
+
+def test_from_dict_preserves_explicit_color_background():
+    rebuilt = ts.ToolState.from_dict({"background": [200, 150, 100]})
+    assert rebuilt.background == (200, 150, 100)
+
+
+def test_reset_colors_restores_documented_defaults():
+    state = ts.load_tool_state()
+    state.set_foreground((50, 50, 50))
+    state.set_background((1, 2, 3))
+    state.reset_colors()
+    assert state.foreground == ts.DEFAULT_FG
+    assert state.background == ts.DEFAULT_BG

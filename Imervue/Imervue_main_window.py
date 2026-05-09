@@ -205,8 +205,23 @@ class _FileTreeView(QTreeView):
         })
         tex = viewer.tile_textures.pop(path, None)
         if tex is not None:
+            # The delete fires from a menu-action event handler, not
+            # from within ``paintGL``, so the viewer's GL context may
+            # not be current. Make it current before freeing the
+            # texture and swallow the GLError if the context is gone
+            # entirely (window already destroyed during shutdown).
             from OpenGL.GL import glDeleteTextures
-            glDeleteTextures([tex])
+            from PySide6.QtGui import QOpenGLContext
+            try:
+                if hasattr(viewer, "makeCurrent"):
+                    viewer.makeCurrent()
+                if QOpenGLContext.currentContext() is not None:
+                    glDeleteTextures([tex])
+            except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
+                pass
+            finally:
+                if hasattr(viewer, "doneCurrent"):
+                    viewer.doneCurrent()
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
         self._notify_deleted(path)
@@ -249,15 +264,7 @@ class ImervueMainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Imervue")
-
-        # Windows 平台設定 AppUserModelID
-        # Set AppUserModelID for Windows platform
-        self.id = "Imervue"
-        try:
-            from ctypes import windll
-            windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
-        except (ImportError, AttributeError):
-            pass
+        self._set_app_user_model_id()
 
         read_user_setting()
         last_folder = user_setting_dict.get("user_last_folder", "")
@@ -398,8 +405,23 @@ class ImervueMainWindow(QMainWindow):
         right_layout.addWidget(viewer_row, stretch=1)
 
         def _on_name_changed(name):
+            base_template = language_wrapper.language_word_dict.get(
+                "main_window_current_filename_format",
+            ).format(name=name)
+            # Append "(i/n)" position info when the viewer knows its
+            # spot in the folder so the user can pace their browsing
+            # without hunting through the file list. Keep the
+            # baseline label so any locale that already localised
+            # the prefix stays untouched.
+            extras: list[str] = []
+            with contextlib.suppress(Exception):
+                images = self.viewer.model.images or []
+                idx = self.viewer.current_index
+                if 0 <= idx < len(images):
+                    extras.append(f"({idx + 1}/{len(images)})")
             self.filename_label.setText(
-                language_wrapper.language_word_dict.get("main_window_current_filename_format").format(name=name))
+                base_template + ("  " + " ".join(extras) if extras else ""),
+            )
             self.exif_sidebar.update_info()
             # Keep the tab bar in lockstep with whatever image the viewer
             # now shows. Only sync in deep-zoom mode — tile grid / folder
@@ -990,6 +1012,17 @@ class ImervueMainWindow(QMainWindow):
         except Exception:
             import logging
             logging.getLogger("Imervue").exception("clipboard annotation dialog failed")
+
+    def _set_app_user_model_id(self) -> None:
+        """Tag the process with an AppUserModelID so Windows shows the
+        right icon / groups taskbar entries. Silently no-op everywhere
+        else (Linux / macOS lack the ctypes shell32 surface)."""
+        self.id = "Imervue"
+        try:
+            from ctypes import windll
+            windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
+        except (ImportError, AttributeError):
+            pass
 
     def _open_startup_folder(self, folder: str):
         self.model.setRootPath(folder)

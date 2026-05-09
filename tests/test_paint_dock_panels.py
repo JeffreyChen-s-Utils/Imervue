@@ -182,3 +182,45 @@ def test_history_dock_empty_state_shows_hint(qapp):
         assert dock._hint.isVisible() is True or dock._list.count() == 0
     finally:
         dock.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 tooltip coverage — every interactive widget on the highly-
+# trafficked docks (Color, Brush) carries a non-empty tooltip so a
+# new user can discover what each control does without hunting in
+# the docs.
+# ---------------------------------------------------------------------------
+
+
+def test_color_dock_swatches_have_tooltips(qapp):
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.dock_panels import ColorDock
+    state = ts.load_tool_state()
+    dock = ColorDock(state)
+    try:
+        assert dock._fg_swatch.toolTip()
+        assert dock._bg_swatch.toolTip()
+        assert dock._hex_edit.toolTip()
+        for slider in (
+            dock._r_slider, dock._g_slider, dock._b_slider,
+            dock._h_slider, dock._s_slider, dock._v_slider,
+        ):
+            assert slider.toolTip()
+    finally:
+        dock.deleteLater()
+
+
+def test_brush_dock_widgets_have_tooltips(qapp):
+    from Imervue.paint import tool_state as ts
+    from Imervue.paint.dock_panels import BrushDock
+    state = ts.load_tool_state()
+    dock = BrushDock(state)
+    try:
+        for widget in (
+            dock._kind, dock._size, dock._opacity, dock._hardness,
+            dock._density, dock._stabilizer, dock._scatter,
+            dock._color_jitter, dock._follow_tilt, dock._blend,
+        ):
+            assert widget.toolTip(), f"{type(widget).__name__} missing tooltip"
+    finally:
+        dock.deleteLater()

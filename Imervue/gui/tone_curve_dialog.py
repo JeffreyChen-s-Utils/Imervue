@@ -209,12 +209,26 @@ class ToneCurveDialog(QDialog):
         for _field, key, fallback in _CURVE_CHOICES:
             self._channel_combo.addItem(lang.get(key, fallback))
         self._channel_combo.currentIndexChanged.connect(self._reload_canvas)
+        self._channel_combo.setToolTip(lang.get(
+            "tone_curve_channel_tooltip",
+            "Pick a curve to edit — RGB drives all channels, "
+            "individual R/G/B drive each one alone",
+        ))
 
         self._canvas = _CurveCanvas(self._curves["tone_curve_rgb"])
         self._canvas.points_changed.connect(self._on_points_changed)
+        self._canvas.setToolTip(lang.get(
+            "tone_curve_canvas_tooltip",
+            "Click to add a control point, drag to move, "
+            "right-click a point to remove it",
+        ))
 
         self._reset_btn = QPushButton(lang.get("tone_curve_reset", "Reset Channel"))
         self._reset_btn.clicked.connect(self._reset_channel)
+        self._reset_btn.setToolTip(lang.get(
+            "tone_curve_reset_tooltip",
+            "Restore the active channel's curve to a straight identity line",
+        ))
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,

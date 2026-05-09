@@ -33,6 +33,7 @@ from Imervue.paint.brush_engine import (
     spacing_from_brush,
 )
 from Imervue.paint.canvas import PointerEvent
+from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
 from Imervue.paint.fill import flood_fill
 from Imervue.paint.gradient import render_gradient
 from Imervue.paint.selection import (
@@ -222,7 +223,7 @@ class ToolDispatcher:
     # Tools that mutate canvas pixels — used to gate undo snapshots
     # so a hover / hand / eyedropper interaction never burns a slot.
     _MUTATING_TOOLS = frozenset({
-        "brush", "eraser", "fill", "smudge", "gradient",
+        "brush", "eraser", "fill", "smudge", "blur", "gradient",
         "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
         "speech_bubble", "clone_stamp",
         "select_rect", "select_lasso", "select_wand", "select_quick",
@@ -332,6 +333,7 @@ class ToolDispatcher:
             ),
             "gradient": GradientTool(self._state, self._selection_provider),
             "smudge": SmudgeTool(self._state, self._selection_provider),
+            "blur": _BlurTool(self._state, self._selection_provider),
             "bezier_pen": _BezierPenTool(self._state, self._overlay_setter),
             "clone_stamp": _CloneStampTool(self._state, self._overlay_setter),
             "transform": _TransformHandleTool(self._state),
@@ -533,6 +535,13 @@ class BrushTool:
         )
         from Imervue.paint.stabilizer import StrokeStabilizer
         import time
+        # No foreground colour → brush is in the "transparent / no
+        # colour" state set from the colour dock. Painting with no
+        # colour is a no-op rather than an error so the user can
+        # leave the slot transparent without having to flip back to
+        # a different tool to stop deposition.
+        if self._state.foreground is None:
+            return False
         brush = self._state.brush
         # Stroke begins → user has committed to this colour. Record
         # it in recents now so subsequent slider tweaks don't re-bump
@@ -572,9 +581,17 @@ class BrushTool:
             tip_path=brush.tip_path,
             pixel_art=self._state.snap_to_pixel,
         )
+        from Imervue.paint.gpu_brush import make_brush_stroke
+        # GPU stroke uses a per-stroke FBO that can't see sibling
+        # strokes' updates without an expensive per-extend re-upload —
+        # so the symmetry path stays on the CPU brush. Single
+        # (un-mirrored) strokes go through the factory which picks
+        # GPU when GL is current and the options qualify.
+        mirror_positions = list(self._mirror(sx, sy))
+        prefer_gpu = len(mirror_positions) == 1
         self._strokes = []
-        for px, py in self._mirror(sx, sy):
-            stroke = BrushStroke(options)
+        for px, py in mirror_positions:
+            stroke = make_brush_stroke(options, prefer_gpu=prefer_gpu)
             stroke.begin(canvas, px, py)
             self._strokes.append(stroke)
         return True
@@ -674,6 +691,10 @@ class FillTool:
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
+            return False
+        # No foreground colour to deposit — fill is a no-op so the
+        # user can leave the slot transparent without surprises.
+        if self._state.foreground is None:
             return False
         fill = self._state.fill
         reference = (
@@ -1074,6 +1095,95 @@ class SmudgeTool:
         return True
 
 
+class _BlurTool:
+    """Local Gaussian blur on each dab — same pointer protocol as brush."""
+
+    def __init__(self, state: ToolState, selection_provider=None):
+        self._state = state
+        self._selection_provider = selection_provider or (lambda: None)
+        self._kernel = None
+        self._spacing = 1.0
+        self._last: tuple[float, float] | None = None
+        self._selection_snapshot = None
+        self._active = False
+        self._damage = _EMPTY_DAMAGE
+
+    @property
+    def last_damage(self):
+        return self._damage
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            return self._begin(evt, canvas)
+        if evt.phase == "move" and self._active:
+            return self._extend(evt, canvas)
+        if evt.phase in ("release", "leave") and self._active:
+            self._extend(evt, canvas)
+            self._active = False
+            self._last = None
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._active = False
+        self._last = None
+        self._damage = _EMPTY_DAMAGE
+
+    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.blur import blur_dab
+        brush = self._state.brush
+        self._kernel = round_brush_kernel(brush.size, brush.hardness)
+        self._spacing = spacing_from_brush(brush.size, brush.hardness)
+        self._selection_snapshot = self._selection_provider()
+        self._last = (evt.x, evt.y)
+        self._active = True
+        rect = blur_dab(
+            canvas, evt.x, evt.y, self._kernel,
+            strength=max(0.05, brush.opacity),
+            selection=self._selection_snapshot,
+        )
+        self._damage = _damage_from_rect(rect)
+        return rect[2] > 0 and rect[3] > 0
+
+    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.blur import blur_dab
+        from Imervue.paint.brush_engine import stroke_dab_positions
+        if self._last is None or self._kernel is None:
+            return False
+        brush = self._state.brush
+        strength = max(0.05, brush.opacity)
+        union = (0, 0, 0, 0)
+        for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
+            rect = blur_dab(
+                canvas, px, py, self._kernel,
+                strength=strength,
+                selection=self._selection_snapshot,
+            )
+            union = _union_rects(union, rect)
+        self._last = (evt.x, evt.y)
+        self._damage = _damage_from_rect(union)
+        return union[2] > 0 and union[3] > 0
+
+
+def _union_rects(a, b):
+    if a[2] <= 0 or a[3] <= 0:
+        return b
+    if b[2] <= 0 or b[3] <= 0:
+        return a
+    x0 = min(a[0], b[0])
+    y0 = min(a[1], b[1])
+    x1 = max(a[0] + a[2], b[0] + b[2])
+    y1 = max(a[1] + a[3], b[1] + b[3])
+    return (x0, y0, x1 - x0, y1 - y0)
+
+
+def _damage_from_rect(rect):
+    from Imervue.paint.damage import DamageRect
+    if rect[2] <= 0 or rect[3] <= 0:
+        return _EMPTY_DAMAGE
+    return DamageRect(x=rect[0], y=rect[1], w=rect[2], h=rect[3])
+
+
 class MoveTool:
     """Drag the active selection (or the whole canvas) to a new location.
 
@@ -1432,7 +1542,12 @@ class _SpeechBubbleTool:
 # ---------------------------------------------------------------------------
 
 
-def _shape_color(state: ToolState) -> tuple[int, int, int, int]:
+def _shape_color(state: ToolState) -> tuple[int, int, int, int] | None:
+    """Return the shape's fill colour, or ``None`` if the foreground
+    is the "transparent" slot — shape tools then no-op rather than
+    deposit a phantom black fill."""
+    if state.foreground is None:
+        return None
     fg = tuple(int(c) for c in state.foreground)
     return (fg[0], fg[1], fg[2], 255)
 

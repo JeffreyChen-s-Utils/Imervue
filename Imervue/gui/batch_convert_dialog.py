@@ -186,6 +186,12 @@ class BatchConvertDialog(QDialog):
         self._fmt_combo.addItems(FORMAT_OPTIONS)
         self._fmt_combo.setCurrentText("WebP")
         self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
+        self._fmt_combo.setToolTip(self._lang.get(
+            "batch_convert_format_tooltip",
+            "Output container — WebP is the highest-quality lossy "
+            "modern format; PNG is lossless; JPEG smallest at the "
+            "cost of compression artefacts.",
+        ))
         fmt_row.addWidget(self._fmt_combo, 1)
         layout.addLayout(fmt_row)
 
@@ -199,6 +205,11 @@ class BatchConvertDialog(QDialog):
             lambda v: self._quality_label.setText(
                 self._lang.get("export_quality", "Quality:") + f" {v}")
         )
+        self._quality_slider.setToolTip(self._lang.get(
+            "batch_convert_quality_tooltip",
+            "Compression quality (0 worst / smallest, 100 best / "
+            "largest). Ignored for lossless formats like PNG.",
+        ))
         layout.addWidget(self._quality_label)
         layout.addWidget(self._quality_slider)
 
@@ -207,12 +218,23 @@ class BatchConvertDialog(QDialog):
             self._lang.get("batch_convert_skip_same",
                            "Skip images already in target format"))
         self._skip_same.setChecked(True)
+        self._skip_same.setToolTip(self._lang.get(
+            "batch_convert_skip_same_tooltip",
+            "Don't re-encode files that already use the chosen format "
+            "— saves time and avoids quality loss from a re-encode.",
+        ))
         layout.addWidget(self._skip_same)
 
         self._delete_orig = QCheckBox(
             self._lang.get("batch_convert_delete_orig",
                            "Delete original files after conversion"))
         self._delete_orig.setChecked(False)
+        self._delete_orig.setToolTip(self._lang.get(
+            "batch_convert_delete_orig_tooltip",
+            "Move originals to recycle bin after a successful "
+            "convert. Off (default) keeps them so a botched convert "
+            "doesn't lose data.",
+        ))
         layout.addWidget(self._delete_orig)
 
         # Output folder

@@ -476,6 +476,12 @@ class DevelopPanel(QWidget):
         slider.setValue(0)
         slider.valueChanged.connect(on_change)
         slider.setProperty("_title", title)
+        # Tooltip carries the title + range so hover surfaces the
+        # adjustment direction even when narrow panels clip the
+        # surrounding label.
+        slider.setToolTip(
+            f"{title} — drag left for −{limit}, right for +{limit}",
+        )
         self._interactive_widgets.append(slider)
         return slider, label
 

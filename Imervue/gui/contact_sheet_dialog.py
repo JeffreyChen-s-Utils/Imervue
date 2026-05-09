@@ -74,27 +74,48 @@ class ContactSheetDialog(QDialog):
         self._rows_spin = QSpinBox()
         self._rows_spin.setRange(1, 20)
         self._rows_spin.setValue(5)
+        self._rows_spin.setToolTip(lang.get(
+            "contact_sheet_rows_tooltip",
+            "Number of image rows per page",
+        ))
         form.addRow(lang.get("contact_sheet_rows", "Rows"), self._rows_spin)
 
         self._cols_spin = QSpinBox()
         self._cols_spin.setRange(1, 20)
         self._cols_spin.setValue(4)
+        self._cols_spin.setToolTip(lang.get(
+            "contact_sheet_cols_tooltip",
+            "Number of image columns per page",
+        ))
         form.addRow(lang.get("contact_sheet_cols", "Columns"), self._cols_spin)
 
         self._page_combo = QComboBox()
         for key in PAGE_SIZES:
             self._page_combo.addItem(key)
+        self._page_combo.setToolTip(lang.get(
+            "contact_sheet_page_size_tooltip",
+            "Page format used for the output PDF",
+        ))
         form.addRow(lang.get("contact_sheet_page_size", "Page Size"), self._page_combo)
 
         self._margin_spin = QSpinBox()
         self._margin_spin.setRange(0, 50)
         self._margin_spin.setValue(10)
         self._margin_spin.setSuffix(" mm")
+        self._margin_spin.setToolTip(lang.get(
+            "contact_sheet_margin_tooltip",
+            "Page margin in millimetres on every side",
+        ))
         form.addRow(lang.get("contact_sheet_margin", "Margin"), self._margin_spin)
 
         self._caption_check = QCheckBox(lang.get(
             "contact_sheet_caption", "Show filename under each image"))
         self._caption_check.setChecked(True)
+        self._caption_check.setToolTip(lang.get(
+            "contact_sheet_caption_tooltip",
+            "Print the filename under each thumbnail — useful for "
+            "client deliverables, off for clean print proofs",
+        ))
         form.addRow("", self._caption_check)
 
         self._title_edit = QLineEdit()

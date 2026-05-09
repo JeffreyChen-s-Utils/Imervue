@@ -474,6 +474,23 @@ with multi-tab documents, vector and raster layers, manga tools, animation
 frames, and PSD import/export. Switch to it from the tab bar or press ``E``
 from Deep Zoom mode to send the current image straight into a new Paint tab.
 
+UX-affordance highlights — the Paint workspace ships with a Medibang-style
+brush-size cursor that scales with zoom, distinct cursor icons per tool,
+a transparency-checker pattern under the canvas, drag-drop highlight
+overlay, per-tab modified asterisk, undo / redo toast confirmations, an
+autosave status segment in the status bar, and an autosave-recovery
+prompt on launch that surfaces snapshots from a previous crashed session.
+
+Power-user hotkeys: ``Tab`` toggles all docks for distraction-free
+painting, ``Ctrl+Tab`` cycles tabs, ``,`` / ``.`` cycle brush kinds,
+``0–9`` set brush opacity in 10 % steps, ``Alt+[`` / ``Alt+]`` step
+the active layer, and right-clicking the canvas opens a quick
+Undo / Redo / Select-All / Deselect / Fit / 100 % menu.
+
+The colour dock now exposes a "transparent / no colour" slot (default
+BG = transparent), and fill + magic-wand both respect alpha boundaries
+so erased pixels stop bleeding into a re-paint.
+
 ::
 
    +------+----------------------+----------------+

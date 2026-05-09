@@ -130,6 +130,21 @@ def magic_wand_mask(
     Internally re-uses the same candidate-mask + 4-connected dilation
     that the fill bucket uses (so the wand and the bucket agree on what
     "the same colour as this pixel" means).
+
+    The eraser preserves the RGB channels of every pixel it clears so
+    that re-painting over an erased region doesn't show a colour halo
+    — only the alpha drops to zero. The wand therefore has to look at
+    the alpha channel too, otherwise clicking on a freshly-erased
+    "empty" area would still match (and re-select) the strokes that
+    were just erased. Two rules:
+
+    * If the seed pixel is fully transparent (``alpha == 0``) the
+      result is an empty mask — selecting "nothing" is more useful
+      than selecting every pixel that happens to share the lingering
+      RGB of the erased strokes.
+    * Otherwise, candidate pixels must additionally have ``alpha > 0``
+      to be eligible. Pixels the eraser cleared therefore don't
+      survive the candidate filter even when their RGB matches.
     """
     from Imervue.paint.fill import _contiguous_region
 
@@ -141,10 +156,13 @@ def magic_wand_mask(
     sx, sy = int(round(seed_x)), int(round(seed_y))
     if not (0 <= sx < w and 0 <= sy < h):
         return np.zeros((h, w), dtype=np.bool_)
+    if int(canvas[sy, sx, 3]) == 0:
+        return np.zeros((h, w), dtype=np.bool_)
 
     seed = canvas[sy, sx, :3].astype(np.int16)
     diff = np.abs(canvas[..., :3].astype(np.int16) - seed[None, None, :])
     candidates = diff.max(axis=-1) <= max(0, min(255, int(tolerance)))
+    candidates &= canvas[..., 3] > 0
     if contiguous:
         return _contiguous_region(candidates, sx, sy)
     return candidates

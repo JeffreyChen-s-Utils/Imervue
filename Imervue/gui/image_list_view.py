@@ -320,7 +320,13 @@ class _RowDelegate(QStyledItemDelegate):
 
 
 class ImageListView(QTableView):
-    """QTableView configured for image browsing."""
+    """QTableView configured for image browsing.
+
+    Renders an "empty state" hint overlay when the model carries no
+    rows so users opening a fresh / image-less folder don't stare at
+    a blank table — they get a one-line cue confirming the folder is
+    empty (rather than e.g. broken).
+    """
 
     image_activated = Signal(str)  # emitted on double-click / Enter
 
@@ -379,4 +385,88 @@ class ImageListView(QTableView):
                 if path:
                     self.image_activated.emit(path)
                     return
+        # Ctrl+C copies the selected paths to the clipboard so the
+        # user can paste them into a terminal / file dialog without
+        # round-tripping through the OS file manager.
+        if (
+            event.key() == Qt.Key.Key_C
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            paths = self.selected_paths()
+            if paths:
+                from PySide6.QtWidgets import QApplication
+                QApplication.clipboard().setText("\n".join(paths))
+                event.accept()
+                return
         super().keyPressEvent(event)
+
+    def contextMenuEvent(self, event):  # noqa: N802 - Qt override
+        """Right-click → quick actions: Open / Reveal / Copy path.
+
+        The menu mirrors what users expect from a file browser
+        (Finder / Explorer / Nautilus) so we don't make them leave
+        the app to perform housekeeping verbs."""
+        from PySide6.QtWidgets import QApplication, QMenu
+        paths = self.selected_paths()
+        if not paths:
+            return
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+        open_action = menu.addAction(
+            lang.get("image_list_action_open", "Open"),
+        )
+        copy_action = menu.addAction(
+            lang.get("image_list_action_copy_path", "Copy path"),
+        )
+        reveal_action = menu.addAction(
+            lang.get("image_list_action_reveal", "Reveal in folder"),
+        )
+        chosen = menu.exec(event.globalPos())
+        if chosen is open_action:
+            self.image_activated.emit(paths[0])
+        elif chosen is copy_action:
+            QApplication.clipboard().setText("\n".join(paths))
+        elif chosen is reveal_action:
+            self._reveal_path(paths[0])
+
+    def _reveal_path(self, path: str) -> None:
+        """Open the OS file manager at ``path``'s containing folder.
+
+        Falls back gracefully when the platform has no opener so a
+        kiosk-style deployment doesn't crash the table view.
+        """
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        folder = str(Path(path).parent)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+
+    def paintEvent(self, event):  # noqa: N802 - Qt override
+        """Draw an empty-state hint when the model has no rows.
+
+        Paint after the base class so the hint sits on top of the
+        empty viewport. The same widget paints a populated table
+        normally — the hint only shows when ``rowCount`` is 0.
+        """
+        super().paintEvent(event)
+        if self._model.rowCount() > 0:
+            return
+        from PySide6.QtGui import QPainter, QColor, QFont
+        lang = language_wrapper.language_word_dict
+        msg = lang.get(
+            "image_list_empty_hint",
+            "No images in this folder",
+        )
+        painter = QPainter(self.viewport())
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(QColor(120, 120, 120))
+            font = QFont(painter.font())
+            font.setPointSize(font.pointSize() + 2)
+            painter.setFont(font)
+            painter.drawText(
+                self.viewport().rect(),
+                Qt.AlignmentFlag.AlignCenter,
+                msg,
+            )
+        finally:
+            painter.end()

@@ -213,6 +213,47 @@ def test_magic_wand_rejects_non_rgba(sample_rgb_array):
         magic_wand_mask(sample_rgb_array, 0, 0)
 
 
+def test_magic_wand_skips_erased_pixels_with_lingering_rgb():
+    """The eraser preserves RGB so re-painting over the cleared region
+    has no halo. The wand must still treat those pixels as "not
+    there" — clicking on them must not re-select the strokes that
+    were just erased."""
+    arr = np.zeros((8, 8, 4), dtype=np.uint8)
+    arr[..., :3] = (200, 50, 50)
+    arr[..., 3] = 255              # opaque red square
+    # Erase a 4x4 corner: alpha drops to 0 but RGB stays.
+    arr[0:4, 0:4, 3] = 0
+    # Seed inside the still-opaque area.
+    mask = magic_wand_mask(arr, 6, 6, tolerance=0, contiguous=False)
+    # 8*8 = 64 pixels total, 4*4 = 16 erased, 48 still opaque.
+    assert mask.sum() == 64 - 16
+    assert not mask[0:4, 0:4].any()
+    assert mask[4:8, 4:8].all()
+
+
+def test_magic_wand_seed_on_erased_pixel_returns_empty():
+    """Clicking an alpha=0 pixel must yield no selection — the seed
+    has no meaningful colour to match against."""
+    arr = np.zeros((6, 6, 4), dtype=np.uint8)
+    arr[..., :3] = (10, 20, 30)    # RGB present everywhere
+    arr[..., 3] = 0                # but fully transparent
+    mask = magic_wand_mask(arr, 3, 3, tolerance=255)
+    assert mask.sum() == 0
+
+
+def test_magic_wand_partially_transparent_seed_still_works():
+    """A pixel with non-zero alpha is "visible enough" — the wand
+    should still select around it, just clipping out fully-erased
+    neighbours."""
+    arr = np.zeros((6, 6, 4), dtype=np.uint8)
+    arr[..., :3] = (100, 100, 100)
+    arr[..., 3] = 200
+    arr[0, 0, 3] = 0               # one erased pixel
+    mask = magic_wand_mask(arr, 3, 3, tolerance=0, contiguous=False)
+    assert mask.sum() == 35        # 6*6 - 1 erased
+    assert not mask[0, 0]
+
+
 # ---------------------------------------------------------------------------
 # Selection tool dispatchers
 # ---------------------------------------------------------------------------

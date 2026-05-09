@@ -38,13 +38,15 @@ def test_workspace_owns_swatch_dock(qapp):
         ws.deleteLater()
 
 
-def test_workspace_now_has_ten_docks(qapp):
-    """Was nine before 25d — adding the histogram dock makes ten."""
+def test_workspace_now_has_fourteen_docks(qapp):
+    """Was nine before 25d (histogram), then ten through 32, eleven
+    after 33b, twelve after 33c, thirteen after 33e's stamp dock;
+    33f's pose-reference dock makes fourteen."""
     from PySide6.QtWidgets import QDockWidget
     ws = PaintWorkspace()
     try:
         docks = ws.findChildren(QDockWidget)
-        assert len(docks) == 10
+        assert len(docks) == 14
     finally:
         ws.deleteLater()
 
@@ -64,29 +66,46 @@ def test_swatch_dock_click_updates_foreground(qapp):
 # ---------------------------------------------------------------------------
 
 
-def test_window_menu_populates_one_entry_per_dock(qapp):
+def test_window_menu_top_level_structure(qapp):
+    """Top-level Window menu entries: Drawing / Canvas / Library
+    submenus, separator, three standalone-window actions, separator,
+    Reset Layout."""
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        # Ten dock toggles + separator + the 26f "New View" entry +
-        # the 28d "Mirror Preview" entry + the 28f "Tile Preview"
-        # entry = 14.
-        assert len(window_menu.actions()) == 14
+        actions = window_menu.actions()
+        # 3 submenus + sep + 3 standalone + sep + 1 reset = 9.
+        assert len(actions) == 9
+        # Every submenu carries dock toggles inside.
+        submenus = [a.menu() for a in actions if a.menu() is not None]
+        assert len(submenus) == 3
     finally:
         ws.deleteLater()
 
 
-def test_window_menu_actions_are_checkable(qapp):
-    """Every dock-toggle is checkable; the trailing separator + the
-    "New View" command after it intentionally are not."""
+def test_window_menu_dock_toggles_live_in_cluster_submenus(qapp):
+    """Every dock toggle is reachable via one of the cluster submenus.
+
+    Loose count assertion — the workspace adds new docks over time
+    (animation, histogram, reference, etc.) and locking in an exact
+    number turns every dock addition into a CI failure. Action text
+    is read up front so a later GC of the QAction wrapper doesn't
+    invalidate the assertion.
+    """
     ws = PaintWorkspace()
     try:
         window_menu = menu_for(ws, "window")
-        toggles = [
-            a for a in window_menu.actions()
-            if not a.isSeparator() and a.isCheckable()
-        ]
-        assert len(toggles) == 10
+        labels: list[str] = []
+        for top in window_menu.actions():
+            sub = top.menu()
+            if sub is None:
+                continue
+            for sub_action in sub.actions():
+                if sub_action.isCheckable():
+                    labels.append(sub_action.text())
+        assert len(labels) >= 10
+        for label in labels:
+            assert label
     finally:
         ws.deleteLater()
 

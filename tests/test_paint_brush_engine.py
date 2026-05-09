@@ -12,6 +12,7 @@ from Imervue.paint.brush_engine import (
     BrushStrokeOptions,
     DabResult,
     apply_dab,
+    apply_erase_dab,
     round_brush_kernel,
     spacing_from_brush,
     stroke_dab_positions,
@@ -148,6 +149,67 @@ def test_apply_dab_alpha_accumulates(blank_canvas):
     apply_dab(blank_canvas, 32, 32, k, (255, 0, 0))
     after_two = int(blank_canvas[32, 32, 3])
     assert after_two >= after_one
+
+
+def test_apply_erase_dab_clears_rgb_on_full_alpha_drop():
+    """An eraser pass that fully clears alpha must also wipe RGB —
+    a later soft brush over the erased pixel would otherwise pull
+    the previous colour into its anti-aliased edge."""
+    canvas = np.zeros((11, 11, 4), dtype=np.uint8)
+    canvas[..., 0] = 0
+    canvas[..., 1] = 0
+    canvas[..., 2] = 200
+    canvas[..., 3] = 255
+    k = round_brush_kernel(7, hardness=1.0)   # solid disc → alpha drops to 0
+    apply_erase_dab(canvas, 5, 5, k, opacity=1.0)
+    # Every pixel inside the disc has alpha 0 AND every channel zero.
+    centre = canvas[5, 5]
+    assert int(centre[3]) == 0
+    assert int(centre[0]) == 0
+    assert int(centre[1]) == 0
+    assert int(centre[2]) == 0
+
+
+def test_apply_erase_dab_keeps_rgb_when_alpha_drops_partially():
+    """A soft eraser that leaves alpha > 0 must keep RGB — those
+    pixels are still partially visible so the colour still matters."""
+    canvas = np.zeros((11, 11, 4), dtype=np.uint8)
+    canvas[..., :3] = (200, 50, 50)
+    canvas[..., 3] = 255
+    k = round_brush_kernel(7, hardness=0.0)   # soft falloff
+    apply_erase_dab(canvas, 5, 5, k, opacity=0.4)   # only partial drop
+    # Find a pixel inside the dab whose alpha is still non-zero — its
+    # RGB must still be the original red.
+    inside = canvas[5, 8]   # away from centre, soft edge → partial drop
+    if int(inside[3]) > 0:
+        assert int(inside[0]) == 200
+        assert int(inside[1]) == 50
+        assert int(inside[2]) == 50
+
+
+def test_apply_dab_over_transparent_pixel_uses_fg_color(blank_canvas):
+    """Painting onto an alpha=0 pixel that still carries lingering
+    RGB (left over from a previous erase) must deposit the
+    foreground colour directly — not a low-alpha mix of fg with the
+    stale RGB. Otherwise the soft edges of a new stroke would show
+    a halo of whatever colour used to be there."""
+    # Stage: lingering blue at full RGB, alpha=0 (post-erase state).
+    blank_canvas[..., 0] = 0
+    blank_canvas[..., 1] = 0
+    blank_canvas[..., 2] = 200
+    blank_canvas[..., 3] = 0
+    k = round_brush_kernel(11, hardness=0.0)   # soft brush — edges are partial
+    apply_dab(blank_canvas, 32, 32, k, (255, 0, 0))
+    # Edge of the dab — partial alpha. Without the fix the result
+    # would pull blue (lingering) toward red (fg) and produce a
+    # purple halo. With the fix, the deposited colour is pure red
+    # because bg was substituted with fg before the mix.
+    centre = blank_canvas[32, 32]
+    edge = blank_canvas[32, 28]
+    for px in (centre, edge):
+        if px[3] > 0:
+            assert int(px[0]) > 200, f"red channel low at {px}"
+            assert int(px[2]) <= 50, f"blue contamination at {px}"
 
 
 # ---------------------------------------------------------------------------
