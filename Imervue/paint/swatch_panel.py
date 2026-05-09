@@ -177,15 +177,49 @@ class SwatchPanel(QDockWidget):
         painter.end()
         btn.setIcon(pix)
         btn.setIconSize(pix.size())
-        btn.setToolTip(f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}")
-        # Right-click → remove from history.
+        btn.setToolTip(
+            f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}  ({rgb[0]},{rgb[1]},{rgb[2]})",
+        )
         btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         btn.customContextMenuRequested.connect(
-            lambda *_, c=rgb: self._on_swatch_remove_requested(c),
+            lambda pos, c=rgb, b=btn: self._on_swatch_context_menu(c, b, pos),
         )
         return btn
 
-    def _on_swatch_remove_requested(self, rgb: tuple[int, int, int]) -> None:
-        history = list(self._state.color_history)
-        if rgb in history:
-            self.remove_at(history.index(rgb))
+    def _on_swatch_context_menu(
+        self, rgb: tuple[int, int, int], button, pos,
+    ) -> None:
+        """Right-click → small menu with copy / move-to-top / remove
+        affordances. Keeps the previous remove behaviour reachable
+        without forcing the user to memorise a specific gesture."""
+        from PySide6.QtWidgets import QApplication, QMenu
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(button)
+        copy_act = menu.addAction(
+            lang.get("paint_swatch_copy_hex", "Copy as #RRGGBB"),
+        )
+        as_bg_act = menu.addAction(
+            lang.get("paint_swatch_set_bg", "Set as Background"),
+        )
+        move_top_act = menu.addAction(
+            lang.get("paint_swatch_move_top", "Move to Front"),
+        )
+        menu.addSeparator()
+        remove_act = menu.addAction(
+            lang.get("paint_swatch_remove", "Remove from History"),
+        )
+        chosen = menu.exec(button.mapToGlobal(pos))
+        if chosen is copy_act:
+            QApplication.clipboard().setText(
+                f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+            )
+        elif chosen is as_bg_act:
+            self._state.set_background(rgb)
+        elif chosen is move_top_act:
+            history = list(self._state.color_history)
+            if rgb in history:
+                self.reorder(history.index(rgb), 0)
+        elif chosen is remove_act:
+            history = list(self._state.color_history)
+            if rgb in history:
+                self.remove_at(history.index(rgb))
