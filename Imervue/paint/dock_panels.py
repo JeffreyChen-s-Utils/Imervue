@@ -1171,10 +1171,18 @@ class NavigatorDock(QDockWidget):
 
         fit_btn = QPushButton(lang.get("paint_navigator_fit", "Fit"))
         fit_btn.clicked.connect(self.fit_requested.emit)
-        fit_btn.setToolTip(lang.get(
+        # Pull the live binding from the registry so the tooltip stays
+        # in sync if the user remaps Fit View.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        try:
+            fit_key = load_shortcuts().get("paint.view.fit")
+        except KeyError:
+            fit_key = ""
+        base_tip = lang.get(
             "paint_navigator_fit_tooltip",
             "Reset the canvas to fit the viewport",
-        ))
+        )
+        fit_btn.setToolTip(f"{base_tip} ({fit_key})" if fit_key else base_tip)
         zoom_row.addWidget(fit_btn)
 
         layout.addLayout(zoom_row)
