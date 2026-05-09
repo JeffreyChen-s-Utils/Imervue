@@ -823,6 +823,13 @@ class LayerDock(QDockWidget):
         self._search.setPlaceholderText(
             lang.get("paint_layers_search", "Search layers…"),
         )
+        self._search.setClearButtonEnabled(True)
+        self._search.setToolTip(
+            lang.get(
+                "paint_layers_search_tooltip",
+                "Filter the layer list by name — case-insensitive substring match",
+            ),
+        )
         self._search.textChanged.connect(self._on_search_changed)
         layout.addWidget(self._search)
 
@@ -1435,6 +1442,13 @@ class MaterialDock(QDockWidget):
         self._search = QLineEdit()
         self._search.setPlaceholderText(
             lang.get("paint_material_search", "Search materials…"),
+        )
+        self._search.setClearButtonEnabled(True)
+        self._search.setToolTip(
+            lang.get(
+                "paint_material_search_tooltip",
+                "Filter materials by name — Esc clears the field",
+            ),
         )
         self._search.textChanged.connect(self._refresh_grid)
         layout.addWidget(self._search)

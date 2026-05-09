@@ -108,6 +108,7 @@ class CommandPaletteDialog(QDialog):
         self._input = QLineEdit()
         self._input.setPlaceholderText(
             lang.get("command_palette_placeholder", "Type a command…"))
+        self._input.setClearButtonEnabled(True)
         self._input.textChanged.connect(self._refresh)
         layout.addWidget(self._input)
 

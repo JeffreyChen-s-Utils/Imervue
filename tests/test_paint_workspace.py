@@ -335,9 +335,16 @@ def test_workspace_layer_dock_plus_button_adds_layer(qapp):
         dock = ws._layer_dock  # noqa: SLF001
         before_count = dock._document.layer_count  # noqa: SLF001
 
-        buttons = dock.findChildren(QToolButton)
-        # Seven buttons in order: add / remove / up / down / duplicate /
-        # add-adjustment / lock-alpha. Index 0 is the add ('+') button.
+        # The dock hosts a Qt-provided clear-button (an internal
+        # QToolButton inside the search QLineEdit) on top of the
+        # add / remove / up / down / duplicate / add-adjustment /
+        # lock-alpha row. Filter by the visible glyphs so the test
+        # stays robust to Qt's internal extras.
+        action_glyphs = {"+", "−", "↑", "↓", "⧉", "+◐"}
+        buttons = [
+            b for b in dock.findChildren(QToolButton)
+            if b.text() in action_glyphs or "α" in b.text()
+        ]
         assert len(buttons) == 7
         buttons[0].click()
         QTest.qWait(20)
