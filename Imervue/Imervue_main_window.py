@@ -140,6 +140,17 @@ class _FileTreeView(QTreeView):
                 lambda: self._open_in_explorer(str(Path(path).parent), select=False)
             )
 
+        # Open with system default application — useful when the user
+        # wants to bounce a file to its associated editor without
+        # leaving the tree.
+        if Path(path).is_file():
+            action_open_default = menu.addAction(
+                lang.get("tree_open_with_default", "Open with Default App"),
+            )
+            action_open_default.triggered.connect(
+                lambda: self._open_with_default_app(path),
+            )
+
         menu.addSeparator()
 
         # Copy path
@@ -298,6 +309,25 @@ class _FileTreeView(QTreeView):
             else:
                 target = path if Path(path).is_dir() else str(Path(path).parent)
                 subprocess.Popen(["xdg-open", target])
+
+    def _open_with_default_app(self, path: str) -> None:
+        """Open ``path`` with the OS's default application via Qt's
+        QDesktopServices, which is more portable than rolling per-OS
+        subprocess calls. Surfaces a toast on failure so the artist
+        knows whether the launch worked."""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        url = QUrl.fromLocalFile(path)
+        if QDesktopServices.openUrl(url):
+            return
+        if hasattr(self._main_window, "toast"):
+            lang = language_wrapper.language_word_dict
+            self._main_window.toast.error(
+                lang.get(
+                    "tree_open_with_failed",
+                    "Couldn't open {name} with the default application",
+                ).format(name=Path(path).name),
+            )
 
     def _delete_path(self, path: str):
         if not Path(path).exists():

@@ -284,3 +284,40 @@ def test_create_new_folder_existing_emits_warning(qapp, tmp_path, tree_view, mon
     tree_view._create_new_folder(str(tmp_path))   # noqa: SLF001
     msgs = tree_view._main_window.toast.calls   # noqa: SLF001
     assert msgs and msgs[0][0] == "warning"
+
+
+# ---------------------------------------------------------------------------
+# Open with default app — phase 34h
+# ---------------------------------------------------------------------------
+
+
+def test_open_with_default_app_calls_qdesktopservices(qapp, tmp_path, tree_view, monkeypatch):
+    src = tmp_path / "doc.png"
+    src.write_bytes(b"")
+    captured = {}
+
+    def fake_open_url(url):
+        captured["url"] = url
+        return True   # success — toast suppressed
+
+    from PySide6.QtGui import QDesktopServices
+    monkeypatch.setattr(QDesktopServices, "openUrl", fake_open_url)
+    tree_view._open_with_default_app(str(src))   # noqa: SLF001
+    assert "url" in captured
+    # Qt normalises the URL's local-file path to forward slashes; both
+    # representations point at the same file.
+    assert Path(captured["url"].toLocalFile()) == src
+    assert tree_view._main_window.toast.calls == []   # noqa: SLF001
+
+
+def test_open_with_default_app_failure_emits_error_toast(
+    qapp, tmp_path, tree_view, monkeypatch,
+):
+    src = tmp_path / "broken.png"
+    src.write_bytes(b"")
+    from PySide6.QtGui import QDesktopServices
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: False)
+    tree_view._open_with_default_app(str(src))   # noqa: SLF001
+    msgs = tree_view._main_window.toast.calls   # noqa: SLF001
+    assert msgs and msgs[0][0] == "error"
+    assert "broken.png" in msgs[0][1]
