@@ -835,15 +835,39 @@ class LayerDock(QDockWidget):
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()
-        for key, fallback, slot in (
-            ("paint_layers_add", "+", self._on_add),
-            ("paint_layers_remove", "−", self._on_remove),
-            ("paint_layers_up", "↑", lambda: self._on_move(up=True)),
-            ("paint_layers_down", "↓", lambda: self._on_move(up=False)),
-            ("paint_layers_duplicate", "⧉", self._on_duplicate),
+        # Tooltip text appends the keybind from the shortcut registry so
+        # the affordance is discoverable: hovering "+" reveals
+        # ``Add layer (Ctrl+Shift+N)`` rather than just the glyph.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        shortcuts = load_shortcuts()
+
+        def _tooltip_with_shortcut(key: str, fallback: str, action_id: str) -> str:
+            label = lang.get(key, fallback)
+            try:
+                hotkey = shortcuts.get(action_id)
+            except KeyError:
+                return label
+            return f"{label} ({hotkey})" if hotkey else label
+
+        for key, fallback, slot, tooltip_key, tooltip_fallback, action_id in (
+            ("paint_layers_add", "+", self._on_add,
+             "paint_layers_add_tooltip", "Add layer", "paint.layer.add"),
+            ("paint_layers_remove", "−", self._on_remove,
+             "paint_layers_remove_tooltip", "Delete layer", ""),
+            ("paint_layers_up", "↑", lambda: self._on_move(up=True),
+             "paint_layers_up_tooltip", "Move layer up", "paint.layer.move_up"),
+            ("paint_layers_down", "↓", lambda: self._on_move(up=False),
+             "paint_layers_down_tooltip", "Move layer down", "paint.layer.move_down"),
+            ("paint_layers_duplicate", "⧉", self._on_duplicate,
+             "paint_layers_duplicate_tooltip", "Duplicate layer",
+             "paint.layer.duplicate"),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
+            btn.setToolTip(
+                _tooltip_with_shortcut(tooltip_key, tooltip_fallback, action_id)
+                if action_id else lang.get(tooltip_key, tooltip_fallback),
+            )
             btn.clicked.connect(slot)
             row.addWidget(btn)
         # Dedicated "add adjustment layer" entry — MediBang's Layer
