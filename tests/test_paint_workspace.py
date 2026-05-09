@@ -336,9 +336,9 @@ def test_workspace_layer_dock_plus_button_adds_layer(qapp):
         before_count = dock._document.layer_count  # noqa: SLF001
 
         buttons = dock.findChildren(QToolButton)
-        # Six buttons in order: add / remove / up / down / duplicate /
-        # add-adjustment-layer. Index 0 is the add ('+') button.
-        assert len(buttons) == 6
+        # Seven buttons in order: add / remove / up / down / duplicate /
+        # add-adjustment / lock-alpha. Index 0 is the add ('+') button.
+        assert len(buttons) == 7
         buttons[0].click()
         QTest.qWait(20)
 

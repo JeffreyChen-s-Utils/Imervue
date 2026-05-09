@@ -140,6 +140,7 @@ class PaintWorkspace(QMainWindow):
         # Middle-click on the tab bar should close the clicked tab —
         # cheap power-user convenience that mirrors browsers / IDEs.
         self._tabs.tabBar().installEventFilter(self)
+        self._install_new_tab_corner_button()
         # ``currentChanged`` is wired AFTER ``_dispatcher`` is built —
         # otherwise the signal fires during ``addTab`` below and the
         # handler trips over the missing dispatcher attribute.
@@ -1664,6 +1665,21 @@ class PaintWorkspace(QMainWindow):
             return False
         sel = document.selection()
         return sel is not None and bool(sel.any())
+
+    def _install_new_tab_corner_button(self) -> None:
+        """Mount a small "+" button in the tab strip's right corner so
+        the artist has a one-click affordance for ``new_tab`` without
+        memorising Ctrl+T or hunting in the File menu."""
+        from PySide6.QtWidgets import QToolButton
+        lang = language_wrapper.language_word_dict
+        self._new_tab_btn = QToolButton(self._tabs)
+        self._new_tab_btn.setText("+")
+        self._new_tab_btn.setAutoRaise(True)
+        self._new_tab_btn.setToolTip(
+            lang.get("paint_tab_new_tooltip", "New tab (Ctrl+T)"),
+        )
+        self._new_tab_btn.clicked.connect(self.new_tab)
+        self._tabs.setCornerWidget(self._new_tab_btn, Qt.Corner.TopRightCorner)
 
     def _install_dock_clusters(self, clusters: tuple) -> None:
         """Anchor each cluster's first dock on the right edge and tabify

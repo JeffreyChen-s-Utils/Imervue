@@ -890,6 +890,28 @@ class LayerDock(QDockWidget):
         row.addStretch(1)
         layout.addLayout(row)
 
+        # Per-layer locks — alpha lock is the most-requested affordance
+        # (Photoshop's "Transparency" lock) so we surface it on the
+        # active layer alongside opacity / blend rather than buried in
+        # a context menu.
+        lock_row = QHBoxLayout()
+        self._lock_alpha_btn = QToolButton()
+        self._lock_alpha_btn.setText(
+            lang.get("paint_layers_lock_alpha", "🔒α"),
+        )
+        self._lock_alpha_btn.setCheckable(True)
+        self._lock_alpha_btn.setToolTip(
+            lang.get(
+                "paint_layers_lock_alpha_tooltip",
+                "Lock transparency — paint only where the active layer "
+                "already has pixels (Photoshop ⊠ Transparency)",
+            ),
+        )
+        self._lock_alpha_btn.toggled.connect(self._on_lock_alpha_toggled)
+        lock_row.addWidget(self._lock_alpha_btn)
+        lock_row.addStretch(1)
+        layout.addLayout(lock_row)
+
         layout.addWidget(QLabel(lang.get("paint_layers_opacity", "Opacity:")))
         self._opacity = _slider(0, 100, 100)
         self._opacity.valueChanged.connect(self._on_opacity_changed)
@@ -970,6 +992,11 @@ class LayerDock(QDockWidget):
             if active is not None:
                 self._opacity.setValue(int(round(active.opacity * 100)))
                 self._blend.setCurrentIndex(self._blend.findData(active.blend_mode))
+                self._lock_alpha_btn.setChecked(bool(active.lock_alpha))
+                self._lock_alpha_btn.setEnabled(True)
+            else:
+                self._lock_alpha_btn.setChecked(False)
+                self._lock_alpha_btn.setEnabled(False)
         finally:
             self._suspend = False
 
@@ -1091,6 +1118,13 @@ class LayerDock(QDockWidget):
             self._document.set_layer_attribute(
                 active_idx, blend_mode=self._blend.currentData(),
             )
+
+    def _on_lock_alpha_toggled(self, checked: bool) -> None:
+        if self._suspend or self._document is None:
+            return
+        active_idx = self._document.active_layer_index()
+        if active_idx >= 0:
+            self._document.set_layer_lock_alpha(active_idx, lock_alpha=checked)
 
     def _row_to_layer_index(self, row: int) -> int:
         if self._document is None:
