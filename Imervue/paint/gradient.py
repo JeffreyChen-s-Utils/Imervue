@@ -20,6 +20,49 @@ GRADIENT_KINDS = ("linear", "radial", "angle", "diamond")
 DEFAULT_GRADIENT_KIND = "linear"
 
 
+_T_FIELD_BUILDERS = {
+    "linear": lambda xx, yy, x0, y0, x1, y1: _linear_t(xx, yy, x0, y0, x1, y1),
+    "radial": lambda xx, yy, x0, y0, x1, y1: _radial_t(xx, yy, x0, y0, x1, y1),
+    "angle": lambda xx, yy, x0, y0, x1, y1: _angle_t(xx, yy, x0, y0, x1, y1),
+    "diamond": lambda xx, yy, x0, y0, x1, y1: _diamond_t(xx, yy, x0, y0, x1, y1),
+}
+
+
+def _validate_gradient_inputs(
+    canvas: np.ndarray,
+    kind: str,
+    selection: np.ndarray | None,
+) -> None:
+    if canvas.ndim != 3 or canvas.shape[2] != 4 or canvas.dtype != np.uint8:
+        raise ValueError(
+            f"canvas must be HxWx4 uint8 RGBA, got {canvas.shape} {canvas.dtype}",
+        )
+    if kind not in GRADIENT_KINDS:
+        raise ValueError(
+            f"unknown gradient kind {kind!r}; expected one of {GRADIENT_KINDS}",
+        )
+    h, w = canvas.shape[:2]
+    if selection is not None and selection.shape != (h, w):
+        raise ValueError(
+            f"selection shape {selection.shape} does not match canvas {(h, w)}",
+        )
+
+
+def _resolve_endpoint_colors(
+    fg: tuple[int, int, int] | None,
+    bg: tuple[int, int, int] | None,
+) -> tuple[tuple[int, int, int], tuple[int, int, int], float, float]:
+    """Resolve ``None`` endpoints into a colour pair plus alpha
+    factors. The substitution keeps the rgb mix meaningful while the
+    alpha factors carry the fade-to-transparent."""
+    fallback = (0, 0, 0)
+    fg_color = fg if fg is not None else (bg if bg is not None else fallback)
+    bg_color = bg if bg is not None else (fg if fg is not None else fallback)
+    fg_alpha = 0.0 if fg is None else 1.0
+    bg_alpha = 0.0 if bg is None else 1.0
+    return fg_color, bg_color, fg_alpha, bg_alpha
+
+
 def render_gradient(
     canvas: np.ndarray,
     p0: tuple[float, float],
@@ -44,19 +87,8 @@ def render_gradient(
     Returns ``True`` if any pixel was written, ``False`` if the drag
     collapsed to a point (start == end) or the kind is unknown.
     """
-    if canvas.ndim != 3 or canvas.shape[2] != 4 or canvas.dtype != np.uint8:
-        raise ValueError(
-            f"canvas must be HxWx4 uint8 RGBA, got {canvas.shape} {canvas.dtype}",
-        )
-    if kind not in GRADIENT_KINDS:
-        raise ValueError(
-            f"unknown gradient kind {kind!r}; expected one of {GRADIENT_KINDS}",
-        )
+    _validate_gradient_inputs(canvas, kind, selection)
     h, w = canvas.shape[:2]
-    if selection is not None and selection.shape != (h, w):
-        raise ValueError(
-            f"selection shape {selection.shape} does not match canvas {(h, w)}",
-        )
 
     x0, y0 = float(p0[0]), float(p0[1])
     x1, y1 = float(p1[0]), float(p1[1])
@@ -64,27 +96,12 @@ def render_gradient(
         return False
 
     yy, xx = np.indices((h, w), dtype=np.float32)
-    if kind == "linear":
-        t = _linear_t(xx, yy, x0, y0, x1, y1)
-    elif kind == "radial":
-        t = _radial_t(xx, yy, x0, y0, x1, y1)
-    elif kind == "angle":
-        t = _angle_t(xx, yy, x0, y0, x1, y1)
-    else:  # diamond
-        t = _diamond_t(xx, yy, x0, y0, x1, y1)
-
+    t = _T_FIELD_BUILDERS[kind](xx, yy, x0, y0, x1, y1)
     t = np.clip(t, 0.0, 1.0)
     if reverse:
         t = 1.0 - t
 
-    # Treat ``None`` endpoints as "transparent there" — substitute
-    # the *other* endpoint's colour so the rgb mix stays meaningful
-    # (no NaN / no jump-to-black) while the alpha mix below carries
-    # the actual fade-to-transparent.
-    fg_color = fg if fg is not None else (bg if bg is not None else (0, 0, 0))
-    bg_color = bg if bg is not None else (fg if fg is not None else (0, 0, 0))
-    fg_alpha = 0.0 if fg is None else 1.0
-    bg_alpha = 0.0 if bg is None else 1.0
+    fg_color, bg_color, fg_alpha, bg_alpha = _resolve_endpoint_colors(fg, bg)
     fg_arr = np.array(fg_color, dtype=np.float32)
     bg_arr = np.array(bg_color, dtype=np.float32)
     rgb = fg_arr[None, None, :] * (1.0 - t[..., None]) + bg_arr[None, None, :] * t[..., None]

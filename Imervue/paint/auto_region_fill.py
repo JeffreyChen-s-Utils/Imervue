@@ -164,35 +164,56 @@ def _flood_label(
         x, y = stack.pop()
         if labels[y, x] != 0 or not mask[y, x]:
             continue
-        x_left = x
-        while (
-            x_left > 0
-            and mask[y, x_left - 1]
-            and labels[y, x_left - 1] == 0
-        ):
-            x_left -= 1
-        x_right = x
-        while (
-            x_right < w - 1
-            and mask[y, x_right + 1]
-            and labels[y, x_right + 1] == 0
-        ):
-            x_right += 1
+        x_left, x_right = _label_run_bounds(mask, labels, x, y, w)
         labels[y, x_left : x_right + 1] = label
         for ny in (y - 1, y + 1):
-            if not (0 <= ny < h):
-                continue
-            row_mask = mask[ny, x_left : x_right + 1]
-            row_open = row_mask & (labels[ny, x_left : x_right + 1] == 0)
-            i = 0
-            row_len = row_open.shape[0]
-            while i < row_len:
-                if row_open[i]:
-                    stack.append((x_left + i, ny))
-                    while i < row_len and row_open[i]:
-                        i += 1
-                else:
-                    i += 1
+            if 0 <= ny < h:
+                _enqueue_label_neighbour_runs(
+                    mask, labels, x_left, x_right, ny, stack,
+                )
+
+
+def _label_run_bounds(
+    mask: np.ndarray, labels: np.ndarray, x: int, y: int, w: int,
+) -> tuple[int, int]:
+    """Walk the row at ``y`` outward from ``x`` while the mask stays
+    open and the cell is unlabelled. Returns the inclusive run."""
+    x_left = x
+    while x_left > 0 and mask[y, x_left - 1] and labels[y, x_left - 1] == 0:
+        x_left -= 1
+    x_right = x
+    while (
+        x_right < w - 1
+        and mask[y, x_right + 1]
+        and labels[y, x_right + 1] == 0
+    ):
+        x_right += 1
+    return x_left, x_right
+
+
+def _enqueue_label_neighbour_runs(
+    mask: np.ndarray,
+    labels: np.ndarray,
+    x_left: int,
+    x_right: int,
+    ny: int,
+    stack: list[tuple[int, int]],
+) -> None:
+    """Push the leftmost cell of every contiguous open run on the
+    neighbour row so the outer loop labels it on a later pop."""
+    row_open = (
+        mask[ny, x_left : x_right + 1]
+        & (labels[ny, x_left : x_right + 1] == 0)
+    )
+    i = 0
+    row_len = row_open.shape[0]
+    while i < row_len:
+        if row_open[i]:
+            stack.append((x_left + i, ny))
+            while i < row_len and row_open[i]:
+                i += 1
+        else:
+            i += 1
 
 
 def _select_fillable_regions(

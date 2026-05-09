@@ -57,7 +57,7 @@ def test_drawing_submenu_holds_drawing_dock_toggles(qapp):
         drawing_sub = drawing_action.menu()
         if drawing_sub is None:
             pytest.skip("drawing cluster submenu not constructed")
-        labels = [a.text() for a in list(drawing_sub.actions())]
+        labels = [a.text() for a in drawing_sub.actions()]
         # All four drawing-cluster docks must surface.
         assert any("Color" in label or "顏色" in label for label in labels)
         assert any("Brush" in label or "筆刷" in label for label in labels)

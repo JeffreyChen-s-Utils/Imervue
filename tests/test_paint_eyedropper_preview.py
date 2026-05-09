@@ -40,7 +40,9 @@ def test_segment_present_for_eyedropper_with_hover(workspace):
     workspace.state().set_tool("eyedropper")
     workspace._on_hover_changed(20, 10)  # noqa: SLF001
     line = workspace._status.currentMessage()  # noqa: SLF001
-    assert "#C86432" in line   # 200=0xC8, 100=0x64, 50=0x32
+    # The hex segment encodes (200, 100, 50) — verifies the
+    # eyedropper sample lands on the painted pixel.
+    assert "#C86432" in line
 
 
 def test_segment_dropped_when_cursor_leaves_canvas(workspace):

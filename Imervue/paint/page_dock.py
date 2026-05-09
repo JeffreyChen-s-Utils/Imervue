@@ -163,7 +163,7 @@ class PageDock(QDockWidget):
         if self._suspend or row < 0:
             return
         project = self._project()
-        if project is None or not (0 <= row < project.page_count):
+        if project is None or row >= project.page_count:
             return
         if project.active_page_index != row:
             project.active_page_index = row

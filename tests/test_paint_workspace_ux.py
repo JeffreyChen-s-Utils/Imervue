@@ -46,13 +46,13 @@ def test_workspace_exposes_three_dock_clusters(qapp):
 def test_drawing_cluster_groups_color_brush_bucket_swatches(qapp):
     ws = PaintWorkspace()
     try:
-        names = [d.windowTitle() for d in ws._dock_clusters["drawing"]]   # noqa: SLF001
-        assert ws._color_dock in ws._dock_clusters["drawing"]   # noqa: SLF001
-        assert ws._brush_dock in ws._dock_clusters["drawing"]   # noqa: SLF001
-        assert ws._fill_dock in ws._dock_clusters["drawing"]    # noqa: SLF001
-        assert ws._swatch_dock in ws._dock_clusters["drawing"]  # noqa: SLF001
+        cluster = ws._dock_clusters["drawing"]   # noqa: SLF001
+        assert ws._color_dock in cluster   # noqa: SLF001
+        assert ws._brush_dock in cluster   # noqa: SLF001
+        assert ws._fill_dock in cluster    # noqa: SLF001
+        assert ws._swatch_dock in cluster  # noqa: SLF001
         # All four titles non-empty so the tab labels render.
-        assert all(names)
+        assert all(d.windowTitle() for d in cluster)
     finally:
         ws.deleteLater()
 

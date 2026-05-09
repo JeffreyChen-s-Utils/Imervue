@@ -264,15 +264,7 @@ class ImervueMainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Imervue")
-
-        # Windows 平台設定 AppUserModelID
-        # Set AppUserModelID for Windows platform
-        self.id = "Imervue"
-        try:
-            from ctypes import windll
-            windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
-        except (ImportError, AttributeError):
-            pass
+        self._set_app_user_model_id()
 
         read_user_setting()
         last_folder = user_setting_dict.get("user_last_folder", "")
@@ -1020,6 +1012,17 @@ class ImervueMainWindow(QMainWindow):
         except Exception:
             import logging
             logging.getLogger("Imervue").exception("clipboard annotation dialog failed")
+
+    def _set_app_user_model_id(self) -> None:
+        """Tag the process with an AppUserModelID so Windows shows the
+        right icon / groups taskbar entries. Silently no-op everywhere
+        else (Linux / macOS lack the ctypes shell32 surface)."""
+        self.id = "Imervue"
+        try:
+            from ctypes import windll
+            windll.shell32.SetCurrentProcessExplicitAppUserModelID(self.id)
+        except (ImportError, AttributeError):
+            pass
 
     def _open_startup_folder(self, folder: str):
         self.model.setRootPath(folder)

@@ -11,7 +11,7 @@ workspace wiring live in :mod:`Imervue.paint.pose_dock`.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from collections.abc import Iterable
 
 import numpy as np
@@ -43,7 +43,7 @@ class Joint:
 
     def with_xy(self, x: float, y: float) -> Joint:
         """Return a copy with the position updated."""
-        return replace(self, x=float(x), y=float(y))
+        return Joint(name=self.name, x=float(x), y=float(y), radius_px=self.radius_px)
 
 
 @dataclass(frozen=True)

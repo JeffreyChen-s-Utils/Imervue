@@ -56,7 +56,7 @@ def test_layout_guide_rendering_writes_bleed_line():
         name="bleed", width_mm=50.0, height_mm=50.0, dpi=72, bleed_mm=5.0,
     )
     arr = render_layout_guides(tpl)
-    h, w = arr.shape[:2]
+    w = arr.shape[1]
     inset = int(round(5.0 * 72 / 25.4))
     # Right at the bleed inset on the top edge.
     sample = arr[inset, w // 2, :3]

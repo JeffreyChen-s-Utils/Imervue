@@ -158,7 +158,8 @@ def test_file_menu_notify_success_marks_active_tab_clean(qapp):
 
     class _StubToast:
         def success(self, text, duration_ms=2500):
-            pass
+            """No-op — the test only checks that the bridge tries to
+            mark the active tab clean, not that a toast renders."""
 
     class _StubWorkspace:
         toast = _StubToast()

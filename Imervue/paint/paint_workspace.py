@@ -100,15 +100,7 @@ class PaintWorkspace(QMainWindow):
         # together — :func:`build_paint_menu_bar` populates the Filter
         # menu and stashes the others on the workspace as
         # ``_<key>_menu`` for the 21b–21g sub-phases to fill.
-        self.setMenuBar(build_paint_menu_bar(self))
-        populate_file_menu(self)
-        populate_edit_menu(self)
-        populate_image_menu(self)
-        populate_layer_menu(self)
-        populate_view_menu(self)
-        populate_tools_menu(self)
-        populate_manga_menu(self)
-        populate_settings_menu(self)
+        self._build_menu_bar()
 
         # Status bar shows the cursor's image-space coordinates while painting.
         self._status = QStatusBar(self)
@@ -1680,6 +1672,24 @@ class PaintWorkspace(QMainWindow):
         sel = document.selection()
         return sel is not None and bool(sel.any())
 
+    def _build_menu_bar(self) -> None:
+        """Construct the embedded menu bar and populate every section.
+
+        Extracted from ``__init__`` so the constructor stays under the
+        cognitive-complexity budget; ordering matches the original
+        File → Edit → Image → Layer → View → Tools → Manga → Settings
+        layout the artists are used to.
+        """
+        self.setMenuBar(build_paint_menu_bar(self))
+        populate_file_menu(self)
+        populate_edit_menu(self)
+        populate_image_menu(self)
+        populate_layer_menu(self)
+        populate_view_menu(self)
+        populate_tools_menu(self)
+        populate_manga_menu(self)
+        populate_settings_menu(self)
+
     def _build_zoom_indicator(self) -> None:
         """Add a clickable zoom % chip to the right side of the status bar.
 
@@ -2031,60 +2041,79 @@ class PaintWorkspace(QMainWindow):
         lang = language_wrapper.language_word_dict
         segments: list[str] = []
         state = getattr(self, "_state", None)
-        if state is not None:
-            tool_name = lang.get(
-                f"paint_tool_{state.tool}",
-                state.tool.replace("_", " ").title(),
-            )
-            segments.append(
-                lang.get("paint_status_tool", "Tool: {name}").format(name=tool_name),
-            )
-        if hover is not None:
-            x, y = hover
-            segments.append(
-                lang.get("paint_status_cursor", "x: {x}  y: {y}").format(x=x, y=y),
-            )
-        canvas = getattr(self, "_canvas", None)
-        if canvas is not None:
-            zoom = getattr(canvas, "_zoom", None)
-            if zoom is not None:
-                segments.append(
-                    lang.get("paint_status_zoom", "{pct}%").format(
-                        pct=int(round(float(zoom) * 100)),
-                    ),
-                )
-            document = canvas.document() if hasattr(canvas, "document") else None
-            if document is not None:
-                self._append_document_segments(segments, document, lang)
-        if state is not None and state.tool in self._BRUSHED_TOOLS:
-            segments.append(
-                lang.get(
-                    "paint_status_brush",
-                    "Brush: {size}px {opacity}%",
-                ).format(
-                    size=int(state.brush.size),
-                    opacity=int(round(state.brush.opacity * 100)),
-                ),
-            )
-        if (
-            state is not None
-            and state.tool == "eyedropper"
-            and hover is not None
-        ):
-            sampled = self._sample_eyedropper_at(hover)
-            if sampled is not None:
-                segments.append(
-                    lang.get(
-                        "paint_status_eyedrop", "Hover: #{hex} ({r},{g},{b})",
-                    ).format(
-                        hex=f"{sampled[0]:02X}{sampled[1]:02X}{sampled[2]:02X}",
-                        r=sampled[0], g=sampled[1], b=sampled[2],
-                    ),
-                )
+        self._append_tool_segment(segments, state, lang)
+        self._append_hover_segment(segments, hover, lang)
+        self._append_canvas_segments(segments, lang)
+        self._append_brush_segment(segments, state, lang)
+        self._append_eyedropper_segment(segments, state, hover, lang)
         autosave_segment = self._format_autosave_segment(lang)
         if autosave_segment:
             segments.append(autosave_segment)
         return "    ".join(segments)
+
+    @staticmethod
+    def _append_tool_segment(segments, state, lang) -> None:
+        if state is None:
+            return
+        tool_name = lang.get(
+            f"paint_tool_{state.tool}",
+            state.tool.replace("_", " ").title(),
+        )
+        segments.append(
+            lang.get("paint_status_tool", "Tool: {name}").format(name=tool_name),
+        )
+
+    @staticmethod
+    def _append_hover_segment(segments, hover, lang) -> None:
+        if hover is None:
+            return
+        x, y = hover
+        segments.append(
+            lang.get("paint_status_cursor", "x: {x}  y: {y}").format(x=x, y=y),
+        )
+
+    def _append_canvas_segments(self, segments, lang) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is None:
+            return
+        zoom = getattr(canvas, "_zoom", None)
+        if zoom is not None:
+            segments.append(
+                lang.get("paint_status_zoom", "{pct}%").format(
+                    pct=int(round(float(zoom) * 100)),
+                ),
+            )
+        document = canvas.document() if hasattr(canvas, "document") else None
+        if document is not None:
+            self._append_document_segments(segments, document, lang)
+
+    def _append_brush_segment(self, segments, state, lang) -> None:
+        if state is None or state.tool not in self._BRUSHED_TOOLS:
+            return
+        segments.append(
+            lang.get(
+                "paint_status_brush",
+                "Brush: {size}px {opacity}%",
+            ).format(
+                size=int(state.brush.size),
+                opacity=int(round(state.brush.opacity * 100)),
+            ),
+        )
+
+    def _append_eyedropper_segment(self, segments, state, hover, lang) -> None:
+        if state is None or state.tool != "eyedropper" or hover is None:
+            return
+        sampled = self._sample_eyedropper_at(hover)
+        if sampled is None:
+            return
+        segments.append(
+            lang.get(
+                "paint_status_eyedrop", "Hover: #{hex} ({r},{g},{b})",
+            ).format(
+                hex=f"{sampled[0]:02X}{sampled[1]:02X}{sampled[2]:02X}",
+                r=sampled[0], g=sampled[1], b=sampled[2],
+            ),
+        )
 
     def _sample_eyedropper_at(
         self, hover: tuple[int, int],
@@ -2165,28 +2194,9 @@ class PaintWorkspace(QMainWindow):
             document.active_layer() if hasattr(document, "active_layer") else None
         )
         if active is not None:
-            name = str(getattr(active, "name", "") or "")
-            count = getattr(document, "layer_count", None)
-            idx = (
-                document.active_layer_index() + 1
-                if hasattr(document, "active_layer_index") else None
+            PaintWorkspace._append_active_layer_segments(
+                segments, document, active, lang,
             )
-            if name and idx is not None and count:
-                segments.append(
-                    lang.get(
-                        "paint_status_layer",
-                        "{name} ({i}/{n})",
-                    ).format(name=name, i=idx, n=count),
-                )
-            elif name:
-                segments.append(name)
-            opacity = getattr(active, "opacity", None)
-            if opacity is not None and float(opacity) < 0.999:
-                segments.append(
-                    lang.get(
-                        "paint_status_layer_opacity", "Op {pct}%",
-                    ).format(pct=int(round(float(opacity) * 100))),
-                )
         if hasattr(document, "selection"):
             sel = document.selection()
             if sel is not None and bool(sel.any()):
@@ -2195,6 +2205,36 @@ class PaintWorkspace(QMainWindow):
                         "paint_status_selection", "Sel {n}px",
                     ).format(n=int(sel.sum())),
                 )
+
+    @staticmethod
+    def _append_active_layer_segments(
+        segments: list[str], document, active, lang: dict,
+    ) -> None:
+        """Append the layer-name (with index/count) and per-layer opacity
+        segments — split out so the parent method stays under the cognitive
+        complexity threshold."""
+        name = str(getattr(active, "name", "") or "")
+        count = getattr(document, "layer_count", None)
+        idx = (
+            document.active_layer_index() + 1
+            if hasattr(document, "active_layer_index") else None
+        )
+        if name and idx is not None and count:
+            segments.append(
+                lang.get(
+                    "paint_status_layer",
+                    "{name} ({i}/{n})",
+                ).format(name=name, i=idx, n=count),
+            )
+        elif name:
+            segments.append(name)
+        opacity = getattr(active, "opacity", None)
+        if opacity is not None and float(opacity) < 0.999:
+            segments.append(
+                lang.get(
+                    "paint_status_layer_opacity", "Op {pct}%",
+                ).format(pct=int(round(float(opacity) * 100))),
+            )
 
     def _on_material_chosen(self, path: str) -> None:
         """Drop a material onto the canvas based on its category.

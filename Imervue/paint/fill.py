@@ -108,68 +108,22 @@ def flood_fill(
     sx, sy = int(round(seed_x)), int(round(seed_y))
     if not (0 <= sx < w and 0 <= sy < h):
         return FillResult(0, 0, 0, 0, 0)
-    if selection is not None:
-        if selection.shape != (h, w):
-            raise ValueError(
-                f"selection mask shape {selection.shape} does not match "
-                f"canvas {(h, w)}",
-            )
-        if not selection[sy, sx]:
-            # Seed lies outside the selection — fill never starts.
-            return FillResult(0, 0, 0, 0, 0)
+    if not _seed_in_selection(selection, (h, w), sx, sy):
+        return FillResult(0, 0, 0, 0, 0)
+
     tolerance = max(0, min(255, int(tolerance)))
     expand_px = _validate_expand(expand)
     gap_close_px = _validate_gap_close(gap_close)
 
-    sample = _resolve_sample_buffer(reference_image, canvas, (h, w))
-    seed = sample[sy, sx].astype(np.int16)
-    diff = np.abs(sample.astype(np.int16) - seed[None, None, :])
-    candidates = diff.max(axis=-1) <= tolerance
-    # Alpha boundary is a hard wall when the bucket reads the canvas
-    # directly (no separate reference image). The eraser preserves
-    # RGB on the pixels it clears, so without this gate a fill seeded
-    # on an opaque pixel would bleed across the alpha=0 region whose
-    # lingering RGB matches the seed — the same shape of bug that
-    # used to let the magic wand re-select erased strokes. Two cases:
-    #
-    #   * seed visible (alpha > 0)  → keep only visible candidates,
-    #   * seed transparent          → keep only transparent candidates.
-    #
-    # Either way the fill stays on the side of the alpha boundary the
-    # user clicked on. ``reference_image`` keeps its existing
-    # behaviour where the reference's own alpha already participates
-    # in the diff so we don't double-gate.
-    if reference_image is None:
-        seed_visible = int(canvas[sy, sx, 3]) > 0
-        pixel_visible = canvas[..., 3] > 0
-        if seed_visible:
-            candidates &= pixel_visible
-        else:
-            candidates &= ~pixel_visible
-    if gap_close_px > 0:
-        # Thicken the *ink* (not-candidates) by ``gap_close_px`` so
-        # that small broken-line gaps bridge for the duration of this
-        # flood. Pure dilation rather than closing: closing-then-erode
-        # leaves 1-px gaps in 1-px lines unbridged because the eroded
-        # bridge has no surviving neighbour. Pure dilation matches
-        # MediBang's "Close gap" slider — gaps up to ``2 * gap_close``
-        # pixels wide bridge from each side; legitimate corridors of
-        # that width also disappear, so the user picks the radius for
-        # the largest gap they want to bridge.
-        from Imervue.paint.selection_ops import expand as dilate
-        ink = ~candidates
-        ink_thickened = dilate(ink, gap_close_px)
-        candidates = ~ink_thickened
+    candidates = _build_candidate_mask(
+        canvas, reference_image, (h, w), sx, sy,
+        tolerance=tolerance, gap_close_px=gap_close_px,
+    )
     if selection is not None:
         candidates = candidates & selection
 
     mask = _contiguous_region(candidates, sx, sy) if contiguous else candidates
-
-    if expand_px > 0 and mask.any():
-        from Imervue.paint.selection_ops import expand as expand_mask
-        mask = expand_mask(mask, expand_px)
-        if selection is not None:
-            mask = mask & selection
+    mask = _apply_expand(mask, expand_px, selection)
 
     pixels_filled = int(mask.sum())
     if pixels_filled == 0:
@@ -187,6 +141,80 @@ def flood_fill(
         int(ys.max() - ys.min() + 1),
         pixels_filled,
     )
+
+
+def _seed_in_selection(
+    selection: np.ndarray | None,
+    shape: tuple[int, int],
+    sx: int,
+    sy: int,
+) -> bool:
+    """Check that the seed lies inside the selection mask if one is
+    supplied. Raises if the mask shape doesn't match the canvas."""
+    if selection is None:
+        return True
+    if selection.shape != shape:
+        raise ValueError(
+            f"selection mask shape {selection.shape} does not match "
+            f"canvas {shape}",
+        )
+    return bool(selection[sy, sx])
+
+
+def _build_candidate_mask(
+    canvas: np.ndarray,
+    reference_image: np.ndarray | None,
+    shape: tuple[int, int],
+    sx: int,
+    sy: int,
+    *,
+    tolerance: int,
+    gap_close_px: int,
+) -> np.ndarray:
+    """Build the per-pixel "may be filled" mask: tolerance match against
+    the seed, alpha-boundary gate, plus optional gap-close ink dilation.
+
+    The alpha gate fires only when there is no separate reference
+    image — the eraser preserves RGB on alpha=0 pixels, so without it
+    a flood seeded on visible paint would bleed across erased pixels
+    that happen to share the seed's RGB. With a reference image, that
+    buffer's own alpha already participates in the tolerance diff, so
+    re-gating would double-count the boundary.
+    """
+    sample = _resolve_sample_buffer(reference_image, canvas, shape)
+    seed = sample[sy, sx].astype(np.int16)
+    diff = np.abs(sample.astype(np.int16) - seed[None, None, :])
+    candidates = diff.max(axis=-1) <= tolerance
+    if reference_image is None:
+        pixel_visible = canvas[..., 3] > 0
+        candidates &= pixel_visible if int(canvas[sy, sx, 3]) > 0 else ~pixel_visible
+    if gap_close_px > 0:
+        # Pure dilation of the ink (not-candidates) by ``gap_close_px``
+        # bridges broken-line gaps up to ``2 * gap_close_px`` wide for
+        # the duration of this flood. Closing-then-erode would leave
+        # 1-px gaps in 1-px lines unbridged because the eroded bridge
+        # has no surviving neighbour, so we keep pure dilation to match
+        # MediBang's "Close gap" slider.
+        from Imervue.paint.selection_ops import expand as dilate
+        ink_thickened = dilate(~candidates, gap_close_px)
+        candidates = ~ink_thickened
+    return candidates
+
+
+def _apply_expand(
+    mask: np.ndarray,
+    expand_px: int,
+    selection: np.ndarray | None,
+) -> np.ndarray:
+    """Optionally dilate the fill mask by ``expand_px`` and re-clip to
+    the selection. ``expand_px == 0`` returns the mask unchanged."""
+    if expand_px <= 0 or not mask.any():
+        return mask
+    from Imervue.paint.selection_ops import expand as expand_mask
+    grown = expand_mask(mask, expand_px)
+    if selection is not None:
+        grown = grown & selection
+    return grown
 
 
 # ---------------------------------------------------------------------------

@@ -176,17 +176,21 @@ def test_factory_returns_gpu_stroke_when_both_supported(monkeypatch):
     from Imervue.paint import gpu_brush
 
     class _StubSession:
+        """No-op stand-in for the GL-backed session — the factory
+        only checks the attribute surface, not the side effects."""
+
         def __init__(self, layer):
             self.layer = layer
 
         def stamp(self, *args, **kwargs):
-            pass
+            """Pretend to stamp a dab — nothing to do without GL."""
 
         def read_back(self, into):
-            pass
+            """Pretend to read back — the test verifies the call,
+            not the resulting pixels."""
 
         def dispose(self):
-            pass
+            """Pretend to free GL objects — none were allocated."""
 
     monkeypatch.setattr(gpu_brush, "gpu_available", lambda: True)
     monkeypatch.setattr(gpu_brush, "GPUDabSession", _StubSession)

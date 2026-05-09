@@ -1545,10 +1545,8 @@ def _paint_swatch(
                 if ((x // cell) + (y // cell)) % 2 == 0:
                     painter.drawRect(x, y, cell, cell)
         # Red slash for the universal "no colour" affordance.
-        slash_pen = painter.pen()
-        slash_pen = QColor(220, 40, 40)
         from PySide6.QtGui import QPen
-        pen = QPen(slash_pen)
+        pen = QPen(QColor(220, 40, 40))
         pen.setWidth(2)
         painter.setPen(pen)
         painter.drawLine(2, _SWATCH_PX - 3, _SWATCH_PX - 3, 2)

@@ -36,8 +36,7 @@ def test_settings_menu_lists_documented_actions(qapp):
         # actually care about is the canonical entries are present.
         actions = settings_menu.actions()
         assert len(actions) >= 5
-        labels = [a.text() for a in actions if not a.isSeparator()]
-        assert all(labels)
+        assert all(a.text() for a in actions if not a.isSeparator())
     finally:
         ws.deleteLater()
 
