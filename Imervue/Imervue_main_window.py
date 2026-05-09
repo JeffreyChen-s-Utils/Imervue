@@ -217,7 +217,7 @@ class _FileTreeView(QTreeView):
                     viewer.makeCurrent()
                 if QOpenGLContext.currentContext() is not None:
                     glDeleteTextures([tex])
-            except Exception:   # noqa: BLE001, S110 — GL context torn down; nothing to log
+            except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
                 pass
             finally:
                 if hasattr(viewer, "doneCurrent"):

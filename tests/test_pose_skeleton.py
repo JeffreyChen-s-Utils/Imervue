@@ -36,8 +36,8 @@ def test_move_joint_clamps_into_unit_square():
     skel = default_skeleton()
     skel.move_joint("head", -0.5, 1.7)
     head = skel.joint("head")
-    assert head.x == 0.0
-    assert head.y == 1.0
+    assert head.x == pytest.approx(0.0)
+    assert head.y == pytest.approx(1.0)
 
 
 def test_round_trip_through_dict_preserves_joint_positions():
@@ -68,11 +68,11 @@ def test_render_skeleton_rejects_zero_size():
 def test_joint_with_xy_returns_new_instance():
     j = Joint(name="head", x=0.5, y=0.5, radius_px=10)
     moved = j.with_xy(0.4, 0.6)
-    assert moved.x == 0.4
-    assert moved.y == 0.6
+    assert moved.x == pytest.approx(0.4)
+    assert moved.y == pytest.approx(0.6)
     # Original is unchanged because Joint is frozen.
-    assert j.x == 0.5
-    assert j.y == 0.5
+    assert j.x == pytest.approx(0.5)
+    assert j.y == pytest.approx(0.5)
 
 
 def test_skeleton_with_missing_bone_endpoints_renders_quietly():
@@ -119,7 +119,7 @@ def test_pose_dock_reset_restores_default(qapp):
     dock = PoseDock()
     try:
         dock.skeleton().move_joint("head", 0.0, 0.0)
-        assert dock.skeleton().joint("head").x == 0.0
+        assert dock.skeleton().joint("head").x == pytest.approx(0.0)
         dock._on_reset()    # noqa: SLF001
         assert dock.skeleton().joint("head").x == pytest.approx(0.50)
     finally:

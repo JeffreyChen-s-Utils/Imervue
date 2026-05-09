@@ -284,7 +284,10 @@ def test_file_menu_notify_success_calls_toast(qapp):
         toast = _StubToast()
 
     bridge = _FileMenuBridge(_StubWorkspace())
-    fake_path = "/tmp/out.png"  # noqa: S108  # label only, no file write
+    # A pure label, never written to — avoid /tmp so Sonar's
+    # "publicly writable directory" check (python:S5443) doesn't
+    # flag a path that's only used for its basename.
+    fake_path = "exports/out.png"
     bridge._notify_success(  # noqa: SLF001
         "paint_file_export_image_done", "Exported", fake_path,
     )
