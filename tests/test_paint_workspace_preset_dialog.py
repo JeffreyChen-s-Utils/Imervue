@@ -207,6 +207,57 @@ def test_dialog_delete_button_skips_built_in(qapp):
         dialog.deleteLater()
 
 
+def test_dialog_delete_user_preset_confirms_before_dropping(qapp, monkeypatch):
+    """Phase 36l — deleting a user preset is irreversible, so the
+    dialog now asks for confirmation. Cancel must keep the preset
+    in place; Yes deletes."""
+    from Imervue.paint.workspace_preset_dialog import WorkspacePresetDialog
+    from Imervue.paint.workspace_presets import (
+        WorkspacePreset,
+        save_workspace_presets,
+    )
+
+    save_workspace_presets([
+        WorkspacePreset(name="Cancellable"),
+        WorkspacePreset(name="Confirmed"),
+    ])
+
+    dialog = WorkspacePresetDialog()
+    try:
+        # Find the rows for our two user presets.
+        cancellable_row = next(
+            i for i in range(dialog._list.count())   # noqa: SLF001
+            if dialog._list.item(i).text() == "Cancellable"   # noqa: SLF001
+        )
+        confirmed_row = next(
+            i for i in range(dialog._list.count())   # noqa: SLF001
+            if dialog._list.item(i).text() == "Confirmed"   # noqa: SLF001
+        )
+
+        # Cancel branch.
+        monkeypatch.setattr(dialog, "_confirm_delete", lambda name: False)
+        dialog._list.setCurrentRow(cancellable_row)   # noqa: SLF001
+        dialog._on_delete()   # noqa: SLF001
+        # Both still in the list.
+        labels = [
+            dialog._list.item(i).text()   # noqa: SLF001
+            for i in range(dialog._list.count())   # noqa: SLF001
+        ]
+        assert "Cancellable" in labels
+
+        # Confirm branch.
+        monkeypatch.setattr(dialog, "_confirm_delete", lambda name: True)
+        dialog._list.setCurrentRow(confirmed_row)   # noqa: SLF001
+        dialog._on_delete()   # noqa: SLF001
+        labels = [
+            dialog._list.item(i).text()   # noqa: SLF001
+            for i in range(dialog._list.count())   # noqa: SLF001
+        ]
+        assert "Confirmed" not in labels
+    finally:
+        dialog.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # apply_workspace_preset
 # ---------------------------------------------------------------------------

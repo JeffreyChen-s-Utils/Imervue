@@ -289,5 +289,29 @@ class WorkspacePresetDialog(QDialog):
         name = self.selected_name()
         if not name or is_built_in(name):
             return
+        # Built-ins are already filtered out, but a user preset may
+        # represent a complex hand-tuned layout. Confirm before drop
+        # so a misclick on Delete doesn't silently lose the work.
+        if not self._confirm_delete(name):
+            return
         delete_user_preset(name)
         self._refresh_list()
+
+    def _confirm_delete(self, name: str) -> bool:  # pragma: no cover - Qt UI
+        """Show a small confirmation dialog naming the preset.
+
+        Pulled into its own method so tests can drive the delete path
+        by monkey-patching the prompt rather than running QMessageBox.
+        """
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_workspace_preset_delete", "Delete preset"),
+            lang.get(
+                "paint_workspace_preset_delete_confirm",
+                "Delete preset '{name}'? This cannot be undone.",
+            ).format(name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
