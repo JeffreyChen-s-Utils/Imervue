@@ -183,20 +183,22 @@ def test_rename_path_missing_source_silent(qapp, tmp_path, tree_view, monkeypatc
 
 class _FakeTabBar:
     """Minimal ``QTabBar`` stand-in. The close helpers call ``removeTab``
-    and ``currentIndex`` only, which we mirror with a simple list."""
+    and ``currentIndex`` only, which we mirror with a simple list. Method
+    names mirror Qt's camelCase API on purpose so the production code
+    can call them as if they were real ``QTabBar`` instances."""
 
     def __init__(self):
         self.tabs: list[str] = []
 
-    def addTab(self, label: str) -> int:
+    def addTab(self, label: str) -> int:   # noqa: N802 — Qt API name
         self.tabs.append(label)
         return len(self.tabs) - 1
 
-    def removeTab(self, idx: int) -> None:
+    def removeTab(self, idx: int) -> None:   # noqa: N802 — Qt API name
         if 0 <= idx < len(self.tabs):
             self.tabs.pop(idx)
 
-    def currentIndex(self) -> int:
+    def currentIndex(self) -> int:   # noqa: N802 — Qt API name
         return -1 if not self.tabs else 0
 
     def count(self) -> int:
@@ -338,18 +340,21 @@ class _RevealHost:
         self.model = self._FakeModel()
 
     class _FakeTree:
+        """Method names mirror QTreeView's camelCase API so the helper
+        under test can call them verbatim."""
+
         def __init__(self):
             self.scroll_to_calls = []
             self.current_set = None
             self.focused = False
 
-        def scrollTo(self, index):
+        def scrollTo(self, index):   # noqa: N802 — Qt API name
             self.scroll_to_calls.append(index)
 
-        def setCurrentIndex(self, index):
+        def setCurrentIndex(self, index):   # noqa: N802 — Qt API name
             self.current_set = index
 
-        def setFocus(self):
+        def setFocus(self):   # noqa: N802 — Qt API name
             self.focused = True
 
     class _FakeModel:
@@ -365,7 +370,7 @@ class _RevealHost:
 
 
 class _ValidIndex:
-    def isValid(self):
+    def isValid(self):   # noqa: N802 — Qt API name
         return True
 
 
@@ -419,13 +424,13 @@ def test_f2_keypress_invokes_rename(qapp, tmp_path, tree_view, monkeypatch):
         pass
 
     class _SelectionModel:
-        def selectedIndexes(self):
+        def selectedIndexes(self):   # noqa: N802 — Qt API name
             return [_Idx()]
 
     monkeypatch.setattr(tree_view, "selectionModel", lambda: _SelectionModel())
 
     class _Model:
-        def filePath(self, _idx):
+        def filePath(self, _idx):   # noqa: N802 — Qt API name
             return str(src)
 
     monkeypatch.setattr(tree_view, "model", lambda: _Model())

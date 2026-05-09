@@ -417,12 +417,17 @@ def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma:
 
 
 def _notify_filter_failed(
-    workspace: PaintWorkspace, spec: FilterSpec, exc: Exception,
+    workspace: object, spec: FilterSpec, exc: Exception,
 ) -> None:  # pragma: no cover - Qt UI
     """Surface a filter failure as a non-blocking toast so the artist
     sees *why* nothing changed, instead of staring at an unchanged
     canvas. Falls back silently when the workspace lacks a toast
-    manager (legacy embedders / minimal stubs)."""
+    manager (legacy embedders / minimal stubs).
+
+    ``workspace`` is annotated as ``object`` so duck-typed stubs (and
+    the real :class:`PaintWorkspace`) both type-check; the only attribute
+    accessed is ``.toast``.
+    """
     toast = getattr(workspace, "toast", None)
     if toast is None:
         return

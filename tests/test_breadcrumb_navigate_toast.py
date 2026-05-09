@@ -70,7 +70,7 @@ def test_navigate_runtime_failure_emits_error(qapp, tmp_path, monkeypatch):
 
     class _Viewer:
         def clear_tile_grid(self):
-            pass
+            """No-op — the test only asserts on toast, not GL state."""
 
     main.viewer = _Viewer()
 

@@ -79,20 +79,28 @@ class _ToastSpy:
 
 class _StubViewer:
     def clear_tile_grid(self):
-        pass
+        """No-op — the rebuild path doesn't actually paint."""
 
 
 class _StubModel:
-    def fileIcon(self, _index):
+    """Stand-in for ``QFileSystemModel`` — names mirror Qt's API on
+    purpose so the production code can call them as if they were real."""
+
+    def fileIcon(self, _index):   # noqa: N802 — Qt API name
+        """Return a blank icon — tests don't compare icon pixels."""
         from PySide6.QtGui import QIcon
         return QIcon()
 
     def index(self, _path):
+        """Return a default QModelIndex — invalid is fine for the
+        rebuild path which only needs ``valid()``-style fallthrough."""
         from PySide6.QtCore import QModelIndex
         return QModelIndex()
 
-    def setRootPath(self, _path):
-        pass
+    def setRootPath(self, _path):   # noqa: N802 — Qt API name
+        """No-op — open_recent calls this on real models to switch
+        the tree root, but the test stub only records side effects
+        elsewhere."""
 
 
 class _StubMainWindow:
@@ -109,8 +117,9 @@ class _StubMainWindow:
 
 
 class _StubTree:
-    def setRootIndex(self, _index):
-        pass
+    def setRootIndex(self, _index):   # noqa: N802 — Qt API name
+        """No-op — the test asserts on settings + toast, not on
+        the tree's selection state."""
 
 
 def test_open_recent_missing_path_emits_warning_toast(qapp, tmp_path):

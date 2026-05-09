@@ -32,6 +32,12 @@ from PySide6.QtWidgets import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
 
+# Translation key + fallback for the Save-preset dialog title; reused
+# across the save flow, the too-long-name warning, and the overwrite
+# confirmation so the three windows share one banner.
+_SAVE_PRESET_TITLE_KEY = "paint_brush_presets_save_title"
+_SAVE_PRESET_TITLE_FALLBACK = "Save preset"
+
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
@@ -111,7 +117,7 @@ class BrushPresetDialog(QDialog):
         lang = language_wrapper.language_word_dict
         name, ok = QInputDialog.getText(
             self,
-            lang.get("paint_brush_presets_save_title", "Save preset"),
+            lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
             lang.get("paint_brush_presets_save_label", "Preset name:"),
             text=self._suggest_name(),
         )
@@ -123,7 +129,7 @@ class BrushPresetDialog(QDialog):
         if len(name) > ts.SUB_TOOL_NAME_MAX_LEN:
             QMessageBox.warning(
                 self,
-                lang.get("paint_brush_presets_save_title", "Save preset"),
+                lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
                 lang.get(
                     "paint_brush_presets_too_long",
                     "Preset name is too long.",
@@ -148,7 +154,7 @@ class BrushPresetDialog(QDialog):
         lang = language_wrapper.language_word_dict
         reply = QMessageBox.question(
             self,
-            lang.get("paint_brush_presets_save_title", "Save preset"),
+            lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
             lang.get(
                 "paint_brush_presets_overwrite_confirm",
                 "A preset named '{name}' already exists. Overwrite it?",
