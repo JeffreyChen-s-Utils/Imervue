@@ -68,3 +68,23 @@ def test_remove_tooltip_has_no_shortcut_suffix(layer_dock):
     with an empty bracket pair."""
     minus = next(b for b in _row_buttons(layer_dock) if b.text() == "−")
     assert "(" not in minus.toolTip()
+
+
+# ---------------------------------------------------------------------------
+# PageNavigatorDock action buttons — phase 34i continuation
+# ---------------------------------------------------------------------------
+
+
+def test_page_navigator_action_buttons_have_tooltips(qapp):
+    from Imervue.paint.dock_panels import PageNavigatorDock
+    dock = PageNavigatorDock()
+    try:
+        glyph_buttons = [
+            b for b in dock.findChildren(QToolButton)
+            if b.text() in ("+", "−", "↑", "↓")
+        ]
+        assert len(glyph_buttons) == 4
+        for btn in glyph_buttons:
+            assert btn.toolTip(), f"page button {btn.text()!r} missing tooltip"
+    finally:
+        dock.deleteLater()

@@ -1241,14 +1241,19 @@ class PageNavigatorDock(QDockWidget):
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()
-        for key, fallback, slot in (
-            ("paint_pages_add", "+", self._on_add),
-            ("paint_pages_remove", "−", self._on_remove),
-            ("paint_pages_up", "↑", lambda: self._on_move(up=True)),
-            ("paint_pages_down", "↓", lambda: self._on_move(up=False)),
+        for key, fallback, slot, tooltip_key, tooltip_fallback in (
+            ("paint_pages_add", "+", self._on_add,
+             "paint_pages_add_tooltip", "Add page"),
+            ("paint_pages_remove", "−", self._on_remove,
+             "paint_pages_remove_tooltip", "Delete page"),
+            ("paint_pages_up", "↑", lambda: self._on_move(up=True),
+             "paint_pages_up_tooltip", "Move page up"),
+            ("paint_pages_down", "↓", lambda: self._on_move(up=False),
+             "paint_pages_down_tooltip", "Move page down"),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
+            btn.setToolTip(lang.get(tooltip_key, tooltip_fallback))
             btn.clicked.connect(slot)
             row.addWidget(btn)
         row.addStretch(1)
