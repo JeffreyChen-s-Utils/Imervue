@@ -412,52 +412,66 @@ def _layout_runs(text: StyledText) -> dict:
     plus a ``placements`` list of ``{run, x, y}`` entries.
     """
     placements: list[dict] = []
-    ruby_top_offset = _ruby_height_for_first_line(text)
-    pen_x = 0
-    pen_y = ruby_top_offset
-    line_height = 0
-    max_width = 0
+    cursor = _LayoutCursor(
+        pen_x=0,
+        pen_y=_ruby_height_for_first_line(text),
+        line_height=0,
+        max_width=0,
+    )
     for run in text.runs:
-        if not run.text:
-            continue
-        font = _load_font(run.style)
-        # Split the run on newlines so each segment lays out on its
-        # own line (multi-line bubble support).
-        segments = run.text.split("\n")
-        for i, segment in enumerate(segments):
-            if i > 0:
-                pen_x = 0
-                pen_y += int(line_height) if line_height else int(
-                    run.style.font_size * LINE_HEIGHT_RATIO,
-                )
-                line_height = 0
-            if not segment:
-                continue
-            placements.append({
-                "run": StyledRun(
-                    text=segment, style=run.style, ruby_text=run.ruby_text,
-                ),
-                "x": pen_x,
-                "y": pen_y,
-            })
-            seg_w, seg_h = _measure(font, segment)
-            pen_x += seg_w
-            line_height = max(
-                line_height,
-                seg_h,
-                int(run.style.font_size * LINE_HEIGHT_RATIO),
-            )
-            max_width = max(max_width, pen_x)
-    total_height = pen_y + (
-        int(line_height) if line_height else DEFAULT_FONT_SIZE
+        if run.text:
+            _lay_out_run(run, placements, cursor)
+    total_height = cursor.pen_y + (
+        int(cursor.line_height) if cursor.line_height else DEFAULT_FONT_SIZE
     )
     if text.alignment != "left" and placements:
-        _apply_alignment(placements, text.alignment, int(max_width))
+        _apply_alignment(placements, text.alignment, int(cursor.max_width))
     return {
         "placements": placements,
-        "width": int(max_width),
+        "width": int(cursor.max_width),
         "height": int(total_height),
     }
+
+
+@dataclass
+class _LayoutCursor:
+    """Mutable pen position used while laying out runs across newlines."""
+
+    pen_x: int
+    pen_y: int
+    line_height: int
+    max_width: int
+
+
+def _lay_out_run(run, placements: list[dict], cursor: _LayoutCursor) -> None:
+    """Place one run's segments — split on ``\\n`` so each segment opens
+    a new line — into the placements list, advancing the cursor."""
+    font = _load_font(run.style)
+    segments = run.text.split("\n")
+    for i, segment in enumerate(segments):
+        if i > 0:
+            cursor.pen_x = 0
+            cursor.pen_y += int(cursor.line_height) if cursor.line_height else int(
+                run.style.font_size * LINE_HEIGHT_RATIO,
+            )
+            cursor.line_height = 0
+        if not segment:
+            continue
+        placements.append({
+            "run": StyledRun(
+                text=segment, style=run.style, ruby_text=run.ruby_text,
+            ),
+            "x": cursor.pen_x,
+            "y": cursor.pen_y,
+        })
+        seg_w, seg_h = _measure(font, segment)
+        cursor.pen_x += seg_w
+        cursor.line_height = max(
+            cursor.line_height,
+            seg_h,
+            int(run.style.font_size * LINE_HEIGHT_RATIO),
+        )
+        cursor.max_width = max(cursor.max_width, cursor.pen_x)
 
 
 def _apply_alignment(
@@ -471,8 +485,20 @@ def _apply_alignment(
     output always falls back to ``left`` so a one-word last line
     isn't stretched into the canvas margins).
     """
-    # Group by y, preserving insertion order so the last group is
-    # the last line.
+    groups = _group_placements_by_line(placements)
+    for line_index, (_y, line_runs) in enumerate(groups):
+        slack = content_width - _line_width(line_runs)
+        if slack <= 0:
+            continue
+        is_last_line = line_index == len(groups) - 1
+        _shift_line(line_runs, alignment, slack, is_last_line)
+
+
+def _group_placements_by_line(
+    placements: list[dict],
+) -> list[tuple[int, list[dict]]]:
+    """Group placements by their ``y`` value, preserving insertion order
+    so the final group is the last visual line."""
     groups: list[tuple[int, list[dict]]] = []
     for placement in placements:
         y = int(placement["y"])
@@ -480,26 +506,27 @@ def _apply_alignment(
             groups[-1][1].append(placement)
         else:
             groups.append((y, [placement]))
-    for line_index, (_y, line_runs) in enumerate(groups):
-        line_width = _line_width(line_runs)
-        slack = content_width - line_width
-        if slack <= 0:
-            continue
-        if alignment == "center":
-            offset = slack // 2
-            for placement in line_runs:
-                placement["x"] += offset
-        elif alignment == "right":
-            for placement in line_runs:
-                placement["x"] += slack
-        elif alignment == "justify":
-            # Justify all but the last line — print typography
-            # convention so the trailing word doesn't stretch.
-            if line_index == len(groups) - 1 or len(line_runs) < 2:
-                continue
-            extra_per_gap = slack // (len(line_runs) - 1)
-            for i, placement in enumerate(line_runs):
-                placement["x"] += extra_per_gap * i
+    return groups
+
+
+def _shift_line(
+    line_runs: list[dict], alignment: str, slack: int, is_last_line: bool,
+) -> None:
+    """Apply the per-alignment horizontal shift to a single line's runs."""
+    if alignment == "center":
+        offset = slack // 2
+        for placement in line_runs:
+            placement["x"] += offset
+    elif alignment == "right":
+        for placement in line_runs:
+            placement["x"] += slack
+    elif alignment == "justify":
+        # Print convention: don't stretch the last line.
+        if is_last_line or len(line_runs) < 2:
+            return
+        extra_per_gap = slack // (len(line_runs) - 1)
+        for i, placement in enumerate(line_runs):
+            placement["x"] += extra_per_gap * i
 
 
 def _line_width(line_runs: list[dict]) -> int:

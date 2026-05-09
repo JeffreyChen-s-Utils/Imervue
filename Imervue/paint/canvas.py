@@ -792,45 +792,12 @@ class PaintCanvas(QOpenGLWidget):
             self._reset_view_to_fit(widget_size=(log_w, log_h))
 
     def paintGL(self) -> None:  # pragma: no cover - GL needs display server
-        # Bail out early when no GL context is current — happens on
-        # teardown when a queued paint event fires after the canvas
-        # has been detached. Without this guard ``glClear`` returns
-        # ``GL_INVALID_OPERATION`` which PyOpenGL turns into a
-        # GLError that can take other tests down with it.
-        from PySide6.QtGui import QOpenGLContext
-        if QOpenGLContext.currentContext() is None:
-            return
-        try:
-            glClear(GL_COLOR_BUFFER_BIT)
-        except Exception:   # noqa: BLE001 - GL context may be torn down
+        if not self._gl_context_alive():
             return
         composite = self._document.composite()
         if composite is None:
             return
-        # Recovery path for the deferred-fit case: when ``new_blank_document``
-        # was called before Qt sized the widget, ``_fit_pending`` stayed
-        # True. Some Qt builds don't fire a follow-up ``resizeGL`` between
-        # the first valid layout and the first paint, leaving the canvas
-        # off-centre. Also re-fit when the widget grew between the last
-        # fit and now while the user hasn't taken view control — handles
-        # the QTabWidget intermediate-size scenario where the first
-        # resizeGL fired before the tab page reached its real width.
-        # The auto-refit reads from ``_last_resize_size`` so it never
-        # disagrees with whatever GL was last told (and what ortho was
-        # set to in ``resizeGL``).
-        widget_w, widget_h = self._last_resize_size
-        if (widget_w, widget_h) == (0, 0):
-            widget_w = self.width()
-            widget_h = self.height()
-        needs_refit = widget_w > 0 and widget_h > 0 and (
-            self._fit_pending
-            or (
-                not self._user_view_locked
-                and self._fitted_widget_size != (widget_w, widget_h)
-            )
-        )
-        if needs_refit:
-            self._reset_view_to_fit(widget_size=(widget_w, widget_h))
+        self._maybe_refit_view()
         if self._needs_upload:
             self._upload_texture(composite)
             self._needs_upload = False
@@ -862,6 +829,54 @@ class PaintCanvas(QOpenGLWidget):
         glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
         glEnd()
         glBindTexture(GL_TEXTURE_2D, 0)
+        self._draw_overlays(w, h)
+        glPopMatrix()
+        # HUD overlay sits in widget-space (un-rotated) so the user
+        # always sees a circular ring at the canvas centre regardless
+        # of the canvas rotation. Drawn AFTER popping the modelview.
+        if self._size_hud is not None:
+            self._draw_size_hud()
+
+    @staticmethod
+    def _gl_context_alive() -> bool:  # pragma: no cover - GL needs display server
+        """Return False (and clear safely) when no GL context is current.
+
+        Happens on teardown when a queued paint event fires after the
+        canvas was detached. Without this guard ``glClear`` returns
+        ``GL_INVALID_OPERATION`` which PyOpenGL turns into a GLError
+        that can take other tests down with it.
+        """
+        from PySide6.QtGui import QOpenGLContext
+        if QOpenGLContext.currentContext() is None:
+            return False
+        try:
+            glClear(GL_COLOR_BUFFER_BIT)
+        except Exception:   # noqa: BLE001 - GL context may be torn down
+            return False
+        return True
+
+    def _maybe_refit_view(self) -> None:  # pragma: no cover - GL needs display server
+        """Recovery path for the deferred-fit case: re-fit when the
+        widget grew between the last fit and now while the user hasn't
+        taken view control. Handles the QTabWidget intermediate-size
+        scenario where the first ``resizeGL`` fired before the tab
+        page reached its real width.
+        """
+        widget_w, widget_h = self._last_resize_size
+        if (widget_w, widget_h) == (0, 0):
+            widget_w = self.width()
+            widget_h = self.height()
+        if widget_w <= 0 or widget_h <= 0:
+            return
+        needs_refit = self._fit_pending or (
+            not self._user_view_locked
+            and self._fitted_widget_size != (widget_w, widget_h)
+        )
+        if needs_refit:
+            self._reset_view_to_fit(widget_size=(widget_w, widget_h))
+
+    def _draw_overlays(self, w: int, h: int) -> None:  # pragma: no cover - GL needs display server
+        """Paint optional overlays on top of the composite quad."""
         if self._onion_skin_visible:
             self._draw_onion_skin(w, h)
         if self.should_paint_pixel_grid():
@@ -873,12 +888,6 @@ class PaintCanvas(QOpenGLWidget):
             self._draw_tool_overlay()
         if self._drag_overlay_active:
             self._draw_drop_target_overlay(w, h)
-        glPopMatrix()
-        # HUD overlay sits in widget-space (un-rotated) so the user
-        # always sees a circular ring at the canvas centre regardless
-        # of the canvas rotation. Drawn AFTER popping the modelview.
-        if self._size_hud is not None:
-            self._draw_size_hud()
 
     def _draw_marquee(self) -> None:  # pragma: no cover - GL needs display server
         """Draw the active selection outline as marching ants.

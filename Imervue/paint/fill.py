@@ -239,48 +239,66 @@ def _contiguous_region(candidates: np.ndarray, sx: int, sy: int) -> np.ndarray:
         return np.zeros_like(candidates)
 
     mask = np.zeros_like(candidates)
-    # Stack of starting points; each pop runs a full horizontal scan.
     stack: list[tuple[int, int]] = [(int(sx), int(sy))]
     while stack:
         x, y = stack.pop()
-        if not (0 <= y < h):
+        if not (0 <= y < h) or mask[y, x] or not candidates[y, x]:
             continue
-        if mask[y, x] or not candidates[y, x]:
-            continue
-        # Walk left along this row until we hit a non-candidate cell
-        # or a previously-visited one.
-        x_left = x
-        while x_left > 0 and candidates[y, x_left - 1] and not mask[y, x_left - 1]:
-            x_left -= 1
-        # And right from the seed.
-        x_right = x
-        while (
-            x_right < w - 1
-            and candidates[y, x_right + 1]
-            and not mask[y, x_right + 1]
-        ):
-            x_right += 1
-        # Mark the run.
+        x_left, x_right = _flood_run_bounds(candidates, mask, x, y, w)
         mask[y, x_left : x_right + 1] = True
-        # Walk the row above and below; any candidate-but-unvisited
-        # pixel on those rows seeds a new run.
         for ny in (y - 1, y + 1):
-            if not (0 <= ny < h):
-                continue
-            row_open = candidates[ny, x_left : x_right + 1] & ~mask[ny, x_left : x_right + 1]
-            # Find the start of every contiguous "True" run on the
-            # neighbour row by walking the boolean array; push only
-            # the leftmost cell of each run so we don't redo work.
-            i = 0
-            row_len = row_open.shape[0]
-            while i < row_len:
-                if row_open[i]:
-                    stack.append((x_left + i, ny))
-                    while i < row_len and row_open[i]:
-                        i += 1
-                else:
-                    i += 1
+            if 0 <= ny < h:
+                _enqueue_neighbour_runs(
+                    candidates, mask, x_left, x_right, ny, stack,
+                )
     return mask
+
+
+def _flood_run_bounds(
+    candidates: np.ndarray,
+    mask: np.ndarray,
+    x: int,
+    y: int,
+    w: int,
+) -> tuple[int, int]:
+    """Walk the row at ``y`` outward from ``x`` while the candidate
+    is open and unmarked. Returns the inclusive run bounds."""
+    x_left = x
+    while x_left > 0 and candidates[y, x_left - 1] and not mask[y, x_left - 1]:
+        x_left -= 1
+    x_right = x
+    while (
+        x_right < w - 1
+        and candidates[y, x_right + 1]
+        and not mask[y, x_right + 1]
+    ):
+        x_right += 1
+    return x_left, x_right
+
+
+def _enqueue_neighbour_runs(
+    candidates: np.ndarray,
+    mask: np.ndarray,
+    x_left: int,
+    x_right: int,
+    ny: int,
+    stack: list[tuple[int, int]],
+) -> None:
+    """Push the leftmost cell of every open run on the neighbour row
+    onto the stack so the outer loop fills it on a later pop."""
+    row_open = (
+        candidates[ny, x_left : x_right + 1]
+        & ~mask[ny, x_left : x_right + 1]
+    )
+    i = 0
+    row_len = row_open.shape[0]
+    while i < row_len:
+        if row_open[i]:
+            stack.append((x_left + i, ny))
+            while i < row_len and row_open[i]:
+                i += 1
+        else:
+            i += 1
 
 
 def _check_canvas(canvas: np.ndarray) -> None:

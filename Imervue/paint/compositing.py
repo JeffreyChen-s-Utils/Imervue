@@ -178,84 +178,106 @@ def composite_stack(
     # of the stack has nothing to clip to and is rendered unclipped).
     clip_base_alpha: np.ndarray | None = None
     for layer in layer_list:
-        layer_group = getattr(layer, "group", None)
-        group_opacity = 1.0
-        if layer_group is not None and layer_group in groups:
-            grp = groups[layer_group]
-            if not grp.visible or grp.opacity <= 0:
-                continue
-            group_opacity = float(grp.opacity)
-        if not layer.visible or layer.opacity <= 0:
+        result = _composite_one_layer(out, layer, base_shape, clip_base_alpha, groups)
+        if result is None:
             continue
-        adjustment = getattr(layer, "adjustment", None)
-        if adjustment is not None:
-            from Imervue.paint.adjustments import apply_adjustment
-            # An adjustment layer applies its transform to everything
-            # composited so far — subsequent layers paint on top of the
-            # adjusted buffer.
-            adjusted = apply_adjustment(out, adjustment)
-            effective_opacity = layer.opacity * group_opacity
-            if effective_opacity >= 1.0:
-                out = adjusted
-            else:
-                # Blend partially — useful for "this curve only at
-                # 50% strength".
-                base_f = out.astype(np.float32)
-                adjusted_f = adjusted.astype(np.float32)
-                mixed = base_f * (1.0 - effective_opacity) + adjusted_f * effective_opacity
-                out = np.clip(mixed, 0.0, 255.0).astype(np.uint8)
-            continue
-        if layer.image.shape[:2] != (h, w):
-            raise ValueError(
-                f"layer {layer.name!r} shape {layer.image.shape[:2]} "
-                f"does not match document {base_shape}",
-            )
-        # Vector layers store the canonical state in ``vector_data``;
-        # the rasterised image is a cache that must be refreshed when
-        # strokes change. ``realise_vector_layer`` is a no-op for raster
-        # layers so the dispatch is cheap regardless.
-        if getattr(layer, "vector_data", None) is not None:
-            from Imervue.paint.vector_layer import realise_vector_layer
-            realise_vector_layer(layer)
-        layer_image = _layer_image_with_tone(layer)
-        effects = getattr(layer, "effects", ())
-        if effects:
-            from Imervue.paint.layer_effects import apply_effects
-            layer_image = apply_effects(layer_image, effects)
-
-        # Combine the layer's effective mask with any blend-if mask.
-        effective_mask = getattr(layer, "effective_mask", layer.mask)
-        effective_mask = _apply_clip(layer, effective_mask, clip_base_alpha)
-        blend_if = getattr(layer, "blend_if", None)
-        if blend_if is not None:
-            from Imervue.paint.blend_if import compute_blend_if_mask
-            blend_if_alpha = compute_blend_if_mask(
-                layer_image, out, blend_if,
-            )
-            blend_if_mask = (blend_if_alpha * 255.0).clip(0, 255).astype(np.uint8)
-            if effective_mask is None:
-                effective_mask = blend_if_mask
-            else:
-                combined = (
-                    effective_mask.astype(np.float32) / 255.0
-                ) * blend_if_alpha
-                effective_mask = (
-                    combined * 255.0
-                ).clip(0, 255).astype(np.uint8)
-
-        out = composite_layer_pair(
-            out, layer_image,
-            opacity=layer.opacity * group_opacity,
-            blend_mode=layer.blend_mode,
-            mask=effective_mask,
-        )
-        # A non-clipped layer becomes the new clip base for any
-        # clipping layers that come above it in the stack. Clipping
-        # layers do NOT update the base — they're masked by the
-        # base, not contributors to it.
-        if not getattr(layer, "clip", False):
-            clip_base_alpha = layer.image[..., 3].copy()
+        out, clip_base_alpha = result
     return out
+
+
+def _composite_one_layer(
+    out: np.ndarray,
+    layer,
+    base_shape: tuple[int, int],
+    clip_base_alpha: np.ndarray | None,
+    groups: dict,
+) -> tuple[np.ndarray, np.ndarray | None] | None:
+    """Composite a single layer onto ``out`` and return the updated buffer
+    + new clip base. Returns ``None`` to mean "skip this layer" (hidden,
+    out of group, fully transparent)."""
+    group_opacity = _resolve_group_opacity(layer, groups)
+    if group_opacity is None:
+        return None
+    if not layer.visible or layer.opacity <= 0:
+        return None
+    adjustment = getattr(layer, "adjustment", None)
+    if adjustment is not None:
+        out = _apply_adjustment_layer(out, adjustment, layer.opacity * group_opacity)
+        return out, clip_base_alpha
+    if layer.image.shape[:2] != base_shape:
+        raise ValueError(
+            f"layer {layer.name!r} shape {layer.image.shape[:2]} "
+            f"does not match document {base_shape}",
+        )
+    # Vector layers store the canonical state in ``vector_data``;
+    # the rasterised image is a cache that must be refreshed when
+    # strokes change. ``realise_vector_layer`` is a no-op for raster
+    # layers so the dispatch is cheap regardless.
+    if getattr(layer, "vector_data", None) is not None:
+        from Imervue.paint.vector_layer import realise_vector_layer
+        realise_vector_layer(layer)
+    layer_image = _layer_image_with_tone(layer)
+    effects = getattr(layer, "effects", ())
+    if effects:
+        from Imervue.paint.layer_effects import apply_effects
+        layer_image = apply_effects(layer_image, effects)
+
+    effective_mask = getattr(layer, "effective_mask", layer.mask)
+    effective_mask = _apply_clip(layer, effective_mask, clip_base_alpha)
+    effective_mask = _merge_blend_if(layer, layer_image, out, effective_mask)
+
+    out = composite_layer_pair(
+        out, layer_image,
+        opacity=layer.opacity * group_opacity,
+        blend_mode=layer.blend_mode,
+        mask=effective_mask,
+    )
+    if not getattr(layer, "clip", False):
+        clip_base_alpha = layer.image[..., 3].copy()
+    return out, clip_base_alpha
+
+
+def _resolve_group_opacity(layer, groups: dict) -> float | None:
+    """Return the multiplier the layer's group contributes, or ``None``
+    if the group is hidden / zero-opacity (skip the layer entirely)."""
+    layer_group = getattr(layer, "group", None)
+    if layer_group is None or layer_group not in groups:
+        return 1.0
+    grp = groups[layer_group]
+    if not grp.visible or grp.opacity <= 0:
+        return None
+    return float(grp.opacity)
+
+
+def _apply_adjustment_layer(
+    out: np.ndarray, adjustment, effective_opacity: float,
+) -> np.ndarray:
+    """Apply an adjustment layer's transform to the composite-so-far,
+    blending partial opacity when the layer isn't fully opaque."""
+    from Imervue.paint.adjustments import apply_adjustment
+    adjusted = apply_adjustment(out, adjustment)
+    if effective_opacity >= 1.0:
+        return adjusted
+    base_f = out.astype(np.float32)
+    adjusted_f = adjusted.astype(np.float32)
+    mixed = base_f * (1.0 - effective_opacity) + adjusted_f * effective_opacity
+    return np.clip(mixed, 0.0, 255.0).astype(np.uint8)
+
+
+def _merge_blend_if(layer, layer_image: np.ndarray, out: np.ndarray, effective_mask):
+    """Combine the layer's existing mask with any blend-if mask the
+    layer carries. Returns the merged uint8 mask, or the original
+    when no blend-if rule is active."""
+    blend_if = getattr(layer, "blend_if", None)
+    if blend_if is None:
+        return effective_mask
+    from Imervue.paint.blend_if import compute_blend_if_mask
+    blend_if_alpha = compute_blend_if_mask(layer_image, out, blend_if)
+    blend_if_mask = (blend_if_alpha * 255.0).clip(0, 255).astype(np.uint8)
+    if effective_mask is None:
+        return blend_if_mask
+    combined = (effective_mask.astype(np.float32) / 255.0) * blend_if_alpha
+    return (combined * 255.0).clip(0, 255).astype(np.uint8)
 
 
 def _layer_supports_region_composite(layer) -> bool:

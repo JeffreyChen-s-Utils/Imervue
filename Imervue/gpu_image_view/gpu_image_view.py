@@ -667,26 +667,37 @@ class GPUImageView(QOpenGLWidget):
         scale_x = self.zoom * (base_image.shape[1] / level_image.shape[1])
         scale_y = self.zoom * (base_image.shape[0] / level_image.shape[0])
 
+        self._apply_deep_zoom_transform(scale_x, scale_y)
+        self._draw_visible_deep_zoom_tiles(level, level_image, scale_x, scale_y)
+
+        # 恢復 ortho MVP for other rendering
         if self.renderer.use_shaders:
-            # 建立 scale+translate MVP
+            self.renderer.set_ortho(self.width(), self.height())
+
+    def _apply_deep_zoom_transform(self, scale_x: float, scale_y: float) -> None:
+        """Push the scale+translate matrix that maps deep-zoom tile
+        coordinates into widget pixels — shader path or fixed-function."""
+        if self.renderer.use_shaders:
             import numpy as _np
             from Imervue.gpu_image_view.gl_renderer import _ortho
             base_ortho = _ortho(0, self.width(), self.height(), 0, -1, 1)
-            # 先 translate 再 scale
             trans = _np.eye(4, dtype=_np.float32)
             trans[3, 0] = self.dz_offset_x / scale_x
             trans[3, 1] = self.dz_offset_y / scale_y
             scl = _np.eye(4, dtype=_np.float32)
             scl[0, 0] = scale_x
             scl[1, 1] = scale_y
-            mvp = trans @ scl @ base_ortho
-            self.renderer.set_mvp(mvp)
-        else:
-            glLoadIdentity()
-            glScalef(scale_x, scale_y, 1)
-            glTranslatef(self.dz_offset_x / scale_x, self.dz_offset_y / scale_y, 0)
+            self.renderer.set_mvp(trans @ scl @ base_ortho)
+            return
+        glLoadIdentity()
+        glScalef(scale_x, scale_y, 1)
+        glTranslatef(self.dz_offset_x / scale_x, self.dz_offset_y / scale_y, 0)
 
-        # 計算 viewport 內 tiles
+    def _draw_visible_deep_zoom_tiles(
+        self, level: int, level_image, scale_x: float, scale_y: float,
+    ) -> None:
+        """Walk the deep-zoom level and draw every tile that overlaps
+        the current viewport, fetching textures lazily."""
         tile_size = self.deep_zoom_tile_size
         h, w = level_image.shape[:2]
 
@@ -702,20 +713,25 @@ class GPUImageView(QOpenGLWidget):
 
         for tx in range(tx0, tx1 + 1):
             for ty in range(ty0, ty1 + 1):
-                if 0 <= tx * tile_size < w and 0 <= ty * tile_size < h:
-                    tex = self.tile_manager.get_tile(level, tx, ty, tile_size)
-                    if tex is None:
-                        continue
-                    tile_w = min(tile_size, w - tx * tile_size)
-                    tile_h = min(tile_size, h - ty * tile_size)
-                    x = tx * tile_size
-                    y = ty * tile_size
-                    self.renderer.draw_textured_quad(x, y, x + tile_w, y + tile_h, tex,
-                                                      self._slideshow_opacity)
+                self._draw_one_deep_zoom_tile(level, tx, ty, tile_size, w, h)
 
-        # 恢復 ortho MVP for other rendering
-        if self.renderer.use_shaders:
-            self.renderer.set_ortho(self.width(), self.height())
+    def _draw_one_deep_zoom_tile(
+        self, level: int, tx: int, ty: int, tile_size: int, w: int, h: int,
+    ) -> None:
+        """Draw a single deep-zoom tile if it lies inside the level's
+        bounds and its texture is ready."""
+        if not (0 <= tx * tile_size < w and 0 <= ty * tile_size < h):
+            return
+        tex = self.tile_manager.get_tile(level, tx, ty, tile_size)
+        if tex is None:
+            return
+        tile_w = min(tile_size, w - tx * tile_size)
+        tile_h = min(tile_size, h - ty * tile_size)
+        x = tx * tile_size
+        y = ty * tile_size
+        self.renderer.draw_textured_quad(
+            x, y, x + tile_w, y + tile_h, tex, self._slideshow_opacity,
+        )
 
     # ---------------------------
     # 小地圖（Deep Zoom）
@@ -2081,41 +2097,48 @@ class GPUImageView(QOpenGLWidget):
     # ===========================
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
-
         if self.tile_grid_mode:
             # 滾輪 → 上下捲動縮圖列表
             scroll_amount = delta / 2  # angleDelta 通常 ±120，/2 → ±60 px
             self.grid_offset_y += scroll_amount
             self.update()
+            return
+        if self.deep_zoom:
+            self._handle_deep_zoom_wheel(event, delta)
 
-        elif self.deep_zoom:
-            _ZOOM_MIN, _ZOOM_MAX = 0.05, 50.0
-            factor = 1.1 if delta > 0 else 0.9
-            old_zoom = self.zoom
-            new_zoom = old_zoom * factor
-            new_zoom = max(_ZOOM_MIN, min(_ZOOM_MAX, new_zoom))
-            if new_zoom == old_zoom:
-                # 已達縮放極限，顯示提示（節流：不重複觸發）
-                if not getattr(self, '_zoom_limit_shown', False):
-                    self._zoom_limit_shown = True
-                    if hasattr(self.main_window, 'toast'):
-                        limit = "5000%" if new_zoom >= _ZOOM_MAX else "5%"
-                        self.main_window.toast.info(f"Zoom limit: {limit}")
-                    from PySide6.QtCore import QTimer
-                    QTimer.singleShot(2000, lambda: setattr(self, '_zoom_limit_shown', False))
-                return
-            self.zoom = new_zoom
+    _ZOOM_MIN = 0.05
+    _ZOOM_MAX = 50.0
 
-            # 以滑鼠游標為中心縮放
-            mx = event.position().x()
-            my = event.position().y()
-            ratio = self.zoom / old_zoom
-            self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
-            self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
+    def _handle_deep_zoom_wheel(self, event, delta) -> None:
+        """Apply a wheel zoom step to the deep-zoom view and re-anchor
+        the offset around the cursor. At the zoom limit, surface a
+        throttled toast instead of zooming."""
+        factor = 1.1 if delta > 0 else 0.9
+        old_zoom = self.zoom
+        new_zoom = max(self._ZOOM_MIN, min(self._ZOOM_MAX, old_zoom * factor))
+        if new_zoom == old_zoom:
+            self._notify_zoom_limit_once(new_zoom)
+            return
+        self.zoom = new_zoom
+        mx = event.position().x()
+        my = event.position().y()
+        ratio = self.zoom / old_zoom
+        self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
+        self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
+        self._user_locked_view = True
+        self._update_status_info()
+        self.update()
 
-            self._user_locked_view = True
-            self._update_status_info()
-            self.update()
+    def _notify_zoom_limit_once(self, new_zoom: float) -> None:
+        """Toast the zoom-limit hint once and rearm 2 s later."""
+        if getattr(self, '_zoom_limit_shown', False):
+            return
+        self._zoom_limit_shown = True
+        if hasattr(self.main_window, 'toast'):
+            limit = "5000%" if new_zoom >= self._ZOOM_MAX else "5%"
+            self.main_window.toast.info(f"Zoom limit: {limit}")
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(2000, lambda: setattr(self, '_zoom_limit_shown', False))
 
     def mousePressEvent(self, event):
         self.last_pos = event.position()
