@@ -111,6 +111,10 @@ class BreadcrumbBar(QScrollArea):
 
         mw = self._main_window
         if not Path(folder).is_dir():
+            # The folder vanished between the breadcrumb being built
+            # and the click landing — surface a toast so the user
+            # knows why the navigation didn't happen.
+            self._toast_navigation_failure(folder, missing=True)
             return
         try:
             mw.model.setRootPath(folder)
@@ -126,8 +130,30 @@ class BreadcrumbBar(QScrollArea):
             mw.watch_folder(folder)
             from Imervue.user_settings.user_setting_dict import user_setting_dict
             user_setting_dict["user_last_folder"] = folder
-        except Exception:
+        except Exception:   # noqa: BLE001 — open_path raises across many types
             import logging
             logging.getLogger("Imervue").exception(
                 "breadcrumb navigate to %s failed", folder
+            )
+            self._toast_navigation_failure(folder, missing=False)
+
+    def _toast_navigation_failure(self, folder: str, *, missing: bool) -> None:
+        """Surface a non-blocking warning for a failed breadcrumb click."""
+        toast = getattr(self._main_window, "toast", None)
+        if toast is None:
+            return
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        lang = language_wrapper.language_word_dict
+        name = Path(folder).name or folder
+        if missing:
+            toast.warning(
+                lang.get(
+                    "breadcrumb_missing", "{name} is no longer available",
+                ).format(name=name),
+            )
+        else:
+            toast.error(
+                lang.get(
+                    "breadcrumb_navigate_failed", "Couldn't open {name}",
+                ).format(name=name),
             )
