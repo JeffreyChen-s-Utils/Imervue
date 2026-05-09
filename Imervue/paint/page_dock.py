@@ -72,6 +72,15 @@ class PageDock(QDockWidget):
         self._list.currentRowChanged.connect(self._on_row_changed)
         self._list.itemChanged.connect(self._on_item_changed)
         self._list.itemDoubleClicked.connect(self._on_double_clicked)
+        # F2 enters inline rename on the selected page — matches the
+        # file-tree convention so artists who learned the gesture there
+        # don't have to memorise a different one for the page list.
+        # ``EditKeyPressed`` is Qt's "F2 enters edit mode" trigger.
+        from PySide6.QtWidgets import QAbstractItemView
+        self._list.setEditTriggers(
+            QAbstractItemView.EditTrigger.EditKeyPressed
+            | QAbstractItemView.EditTrigger.SelectedClicked,
+        )
         layout.addWidget(self._list, stretch=1)
 
         controls = QHBoxLayout()

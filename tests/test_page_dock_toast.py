@@ -95,3 +95,29 @@ def test_find_toast_walks_parent_chain(qapp, workspace_with_toast):
     finally:
         dock.deleteLater()
         intermediate.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Inline-rename trigger configuration — phase 36j
+# ---------------------------------------------------------------------------
+
+
+def test_page_list_supports_f2_inline_rename(qapp, workspace_with_toast):
+    """The page list must accept F2 (EditKeyPressed) as the trigger
+    for inline rename so the gesture matches the file-tree convention.
+
+    Selected-click is also enabled so a slow second click on the
+    already-active row enters edit mode — Windows Explorer parity.
+    """
+    from PySide6.QtWidgets import QAbstractItemView
+
+    dock = PageDock(workspace_with_toast, parent=workspace_with_toast)
+    try:
+        triggers = dock._list.editTriggers()    # noqa: SLF001
+        assert triggers & QAbstractItemView.EditTrigger.EditKeyPressed
+        assert triggers & QAbstractItemView.EditTrigger.SelectedClicked
+        # Editing must NOT fire on a simple double-click — that gesture
+        # is reserved for "switch to this page".
+        assert not (triggers & QAbstractItemView.EditTrigger.DoubleClicked)
+    finally:
+        dock.deleteLater()
