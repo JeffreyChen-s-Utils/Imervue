@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -371,6 +372,10 @@ class ImervueMainWindow(QMainWindow):
 
         self.setWindowTitle("Imervue")
         self._set_app_user_model_id()
+        # Accept image / folder drops anywhere on the window — not just
+        # on the canvas — so artists can drop a file on the file tree
+        # or status bar and have it open.
+        self.setAcceptDrops(True)
 
         read_user_setting()
         last_folder = user_setting_dict.get("user_last_folder", "")
@@ -1292,6 +1297,64 @@ class ImervueMainWindow(QMainWindow):
     def _close_all_tabs(self) -> None:
         for idx in reversed(range(len(self._image_tabs))):
             self._on_tab_close(idx)
+
+    # ===== Drag-and-drop on the main window =====
+
+    _SUPPORTED_DROP_EXTS = (
+        ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp",
+        ".gif", ".apng", ".svg",
+        ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
+    )
+
+    @classmethod
+    def _is_supported_drop(cls, path: str) -> bool:
+        """Return True iff the dropped path is a folder or an image with
+        a recognised extension."""
+        p = Path(path)
+        if p.is_dir():
+            return True
+        return p.suffix.lower() in cls._SUPPORTED_DROP_EXTS
+
+    def dragEnterEvent(self, event):  # noqa: N802 — Qt naming
+        urls = event.mimeData().urls() if event.mimeData() else []
+        if any(self._is_supported_drop(u.toLocalFile()) for u in urls if u.isLocalFile()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):  # noqa: N802 — Qt naming
+        urls = event.mimeData().urls() if event.mimeData() else []
+        for url in urls:
+            if not url.isLocalFile():
+                continue
+            path = url.toLocalFile()
+            if self._is_supported_drop(path):
+                self._open_dropped_path(path)
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
+    def _open_dropped_path(self, path: str) -> None:
+        """Open a dropped file or folder via the viewer's existing
+        load path. Folders re-root the file tree; image files load
+        into the deep-zoom viewer."""
+        target = Path(path)
+        if target.is_dir():
+            self._open_startup_folder(str(target))
+            return
+        if target.is_file():
+            try:
+                open_path(main_gui=self.viewer, path=str(target))
+            except Exception:   # noqa: BLE001 — load surface raises a wide variety
+                logger = logging.getLogger("Imervue")
+                logger.exception("drop-load failed: %s", target)
+                if hasattr(self, "toast"):
+                    lang = language_wrapper.language_word_dict
+                    self.toast.error(
+                        lang.get("drop_load_failed", "Couldn't open {name}").format(
+                            name=target.name,
+                        ),
+                    )
 
     def _next_tab(self) -> None:
         count = self._tab_bar.count()

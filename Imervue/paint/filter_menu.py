@@ -411,5 +411,25 @@ def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma:
         logging.getLogger("Imervue.paint.filter_menu").warning(
             "filter %r failed: %s", spec.key, exc,
         )
+        _notify_filter_failed(workspace, spec, exc)
         return
     document.invalidate_composite()
+
+
+def _notify_filter_failed(
+    workspace: PaintWorkspace, spec: FilterSpec, exc: Exception,
+) -> None:  # pragma: no cover - Qt UI
+    """Surface a filter failure as a non-blocking toast so the artist
+    sees *why* nothing changed, instead of staring at an unchanged
+    canvas. Falls back silently when the workspace lacks a toast
+    manager (legacy embedders / minimal stubs)."""
+    toast = getattr(workspace, "toast", None)
+    if toast is None:
+        return
+    lang = language_wrapper.language_word_dict
+    label = lang.get(spec.label_key, spec.label_fallback)
+    toast.error(
+        lang.get(
+            "paint_filter_failed", "Filter '{name}' failed: {reason}",
+        ).format(name=label, reason=exc),
+    )
