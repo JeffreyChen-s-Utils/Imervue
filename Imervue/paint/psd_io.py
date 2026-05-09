@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import contextlib
 import struct
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -467,49 +468,77 @@ def _parse_layer_and_mask_section(
     #   └── group header (lsct=1 or 2, name = group name)
     layers: list[Layer] = []
     groups: dict[str, LayerGroup] = {}
-    pending_group_members: list[Layer] = []
-    in_group_depth = 0
+    state = _GroupAssemblyState()
     for record in records:
-        section_type = record.get("section_type")
-        if section_type == _SECTION_END:
-            # The next regular records belong to a group whose header
-            # we'll see later. Just consume the empty record's (lack of)
-            # channel data and bump the depth.
-            _read_layer_channel_data(cursor, record, h, w)
-            in_group_depth += 1
-        elif section_type in (_SECTION_OPEN_GROUP, _SECTION_CLOSED_GROUP):
-            _read_layer_channel_data(cursor, record, h, w)
-            group_name = record["name"]
-            blend_mode = _PSD_TO_BLEND_MODE.get(record["blend_key"], "normal")
-            grp_blend = blend_mode if blend_mode in LAYER_BLEND_MODES else "normal"
-            # Skip a corrupt group (bad name / opacity) rather than
-            # fail the whole load.
-            with contextlib.suppress(ValueError):
-                groups[group_name] = LayerGroup(
-                    name=group_name,
-                    visible=not bool(
-                        record["flags"] & _LAYER_FLAG_HIDDEN,
-                    ),
-                    opacity=record["opacity"] / 255.0,
-                    blend_mode=grp_blend if grp_blend != "normal"
-                    else "pass_through",
-                    expanded=section_type == _SECTION_OPEN_GROUP,
-                )
-            for member in pending_group_members:
-                member.group = group_name
-            pending_group_members = []
-            in_group_depth = max(0, in_group_depth - 1)
-        else:
-            layer = _read_layer_channel_data(cursor, record, h, w)
-            if layer is None:
-                continue
-            if in_group_depth > 0:
-                pending_group_members.append(layer)
-            layers.append(layer)
+        _consume_record(cursor, record, h, w, layers, groups, state)
 
     cursor.seek(layer_info_end)
     cursor.seek(section_end)
     return layers, groups
+
+
+@dataclass
+class _GroupAssemblyState:
+    """Mutable bookkeeping while walking PSD layer records bottom→top."""
+
+    pending_group_members: list[Layer] = field(default_factory=list)
+    in_group_depth: int = 0
+
+
+def _consume_record(
+    cursor, record, h: int, w: int,
+    layers: list[Layer],
+    groups: dict[str, LayerGroup],
+    state: _GroupAssemblyState,
+) -> None:
+    """Dispatch one PSD layer record to the section-divider /
+    group-header / regular-layer handler. Pulled out of
+    ``_parse_layer_and_mask_section`` so that function stays under the
+    cognitive-complexity budget."""
+    section_type = record.get("section_type")
+    if section_type == _SECTION_END:
+        # The next regular records belong to a group whose header
+        # we'll see later. Consume the empty record's channel data
+        # and bump the depth.
+        _read_layer_channel_data(cursor, record, h, w)
+        state.in_group_depth += 1
+        return
+    if section_type in (_SECTION_OPEN_GROUP, _SECTION_CLOSED_GROUP):
+        _consume_group_header(cursor, record, h, w, groups, state)
+        return
+    layer = _read_layer_channel_data(cursor, record, h, w)
+    if layer is None:
+        return
+    if state.in_group_depth > 0:
+        state.pending_group_members.append(layer)
+    layers.append(layer)
+
+
+def _consume_group_header(
+    cursor, record, h: int, w: int,
+    groups: dict[str, LayerGroup],
+    state: _GroupAssemblyState,
+) -> None:
+    """Materialise the LayerGroup for a section divider record and
+    bind its pending member layers."""
+    _read_layer_channel_data(cursor, record, h, w)
+    group_name = record["name"]
+    blend_mode = _PSD_TO_BLEND_MODE.get(record["blend_key"], "normal")
+    grp_blend = blend_mode if blend_mode in LAYER_BLEND_MODES else "normal"
+    # Skip a corrupt group (bad name / opacity) rather than fail
+    # the whole load.
+    with contextlib.suppress(ValueError):
+        groups[group_name] = LayerGroup(
+            name=group_name,
+            visible=not bool(record["flags"] & _LAYER_FLAG_HIDDEN),
+            opacity=record["opacity"] / 255.0,
+            blend_mode=grp_blend if grp_blend != "normal" else "pass_through",
+            expanded=record["section_type"] == _SECTION_OPEN_GROUP,
+        )
+    for member in state.pending_group_members:
+        member.group = group_name
+    state.pending_group_members = []
+    state.in_group_depth = max(0, state.in_group_depth - 1)
 
 
 def _parse_layer_record(cursor) -> dict:
@@ -570,19 +599,23 @@ def _parse_additional_info(cursor, *, end: int) -> dict:
         key = cursor.read(4)
         length = cursor.read_u32()
         block_start = cursor.pos
-        block_end = block_start + length
-        if key == b"luni" and length >= 4:
-            char_count = cursor.read_u32()
-            chars_bytes = cursor.read(char_count * 2)
-            out["luni"] = chars_bytes.decode("utf-16-be", errors="replace")
-        elif key == b"lsct" and length >= 4:
-            out["lsct"] = cursor.read_u32()
-        cursor.seek(block_end)
+        _read_additional_info_block(cursor, key, length, out)
+        cursor.seek(block_start + length)
         # Many additional-info payloads are padded to a 2-byte
         # boundary; account for it.
         if (cursor.pos - block_start) % 2:
             cursor.skip(1)
     return out
+
+
+def _read_additional_info_block(cursor, key: bytes, length: int, out: dict) -> None:
+    """Decode the payload of a single additional-info block in place."""
+    if key == b"luni" and length >= 4:
+        char_count = cursor.read_u32()
+        chars_bytes = cursor.read(char_count * 2)
+        out["luni"] = chars_bytes.decode("utf-16-be", errors="replace")
+    elif key == b"lsct" and length >= 4:
+        out["lsct"] = cursor.read_u32()
 
 
 def _read_layer_channel_data(
@@ -598,36 +631,70 @@ def _read_layer_channel_data(
     layer_h = max(0, bottom - top)
     layer_w = max(0, right - left)
 
-    channels_raw: dict[int, np.ndarray] = {}
-    for ch_id, ch_size in record["channels"]:
-        ch_end = cursor.pos + ch_size
-        if layer_h > 0 and layer_w > 0:
-            compression = cursor.read_u16()
-            if compression == _COMPRESSION_RAW:
-                channels_raw[ch_id] = np.frombuffer(
-                    cursor.read(layer_h * layer_w),
-                    dtype=np.uint8,
-                ).reshape((layer_h, layer_w))
-            elif compression == _COMPRESSION_RLE:
-                row_lengths = struct.unpack(
-                    f">{layer_h}H", cursor.read(layer_h * 2),
-                )
-                planes: list[np.ndarray] = []
-                for row_len in row_lengths:
-                    raw = cursor.read(row_len)
-                    planes.append(_packbits_decode(raw, layer_w))
-                channels_raw[ch_id] = np.stack(planes, axis=0)
-            else:
-                raise ValueError(
-                    f"unsupported PSD compression {compression}",
-                )
-        cursor.seek(ch_end)
+    channels_raw = _read_layer_channels(cursor, record["channels"], layer_h, layer_w)
 
     if layer_h == 0 or layer_w == 0:
         return None
 
-    # Build full-canvas RGBA image — start fully transparent black,
-    # then paste the layer at (top, left).
+    image = _assemble_layer_image(channels_raw, h, w, top, left, bottom, right)
+
+    blend_mode = _PSD_TO_BLEND_MODE.get(record["blend_key"], "normal")
+    if blend_mode not in LAYER_BLEND_MODES:
+        blend_mode = "normal"
+    flags = record["flags"]
+    return Layer(
+        name=record["name"],
+        image=image,
+        opacity=record["opacity"] / 255.0,
+        blend_mode=blend_mode,
+        visible=not bool(flags & _LAYER_FLAG_HIDDEN),
+        lock_alpha=bool(flags & _LAYER_FLAG_TRANSPARENCY_PROTECTED),
+    )
+
+
+def _read_layer_channels(
+    cursor, channels: list[tuple[int, int]], layer_h: int, layer_w: int,
+) -> dict[int, np.ndarray]:
+    """Read every channel plane for one layer record. Empty bounds are
+    tolerated (section dividers ride the same record shape) — the
+    cursor is advanced past each channel either way."""
+    channels_raw: dict[int, np.ndarray] = {}
+    for ch_id, ch_size in channels:
+        ch_end = cursor.pos + ch_size
+        if layer_h > 0 and layer_w > 0:
+            channels_raw[ch_id] = _read_one_channel_plane(
+                cursor, layer_h, layer_w,
+            )
+        cursor.seek(ch_end)
+    return channels_raw
+
+
+def _read_one_channel_plane(cursor, layer_h: int, layer_w: int) -> np.ndarray:
+    """Decode a single channel plane (raw or PackBits RLE)."""
+    compression = cursor.read_u16()
+    if compression == _COMPRESSION_RAW:
+        return np.frombuffer(
+            cursor.read(layer_h * layer_w),
+            dtype=np.uint8,
+        ).reshape((layer_h, layer_w))
+    if compression == _COMPRESSION_RLE:
+        row_lengths = struct.unpack(
+            f">{layer_h}H", cursor.read(layer_h * 2),
+        )
+        planes = [_packbits_decode(cursor.read(row_len), layer_w)
+                  for row_len in row_lengths]
+        return np.stack(planes, axis=0)
+    raise ValueError(f"unsupported PSD compression {compression}")
+
+
+def _assemble_layer_image(
+    channels_raw: dict[int, np.ndarray],
+    h: int, w: int,
+    top: int, left: int, bottom: int, right: int,
+) -> np.ndarray:
+    """Build a full-canvas RGBA image and paste the layer's channels at
+    the recorded ``(top, left)`` offset. Missing alpha → fully opaque
+    inside the bounds (matches PSDs from older Photoshops)."""
     image = np.zeros((h, w, 4), dtype=np.uint8)
     if 0 in channels_raw:
         image[top:bottom, left:right, 0] = channels_raw[0]
@@ -635,25 +702,8 @@ def _read_layer_channel_data(
         image[top:bottom, left:right, 1] = channels_raw[1]
     if 2 in channels_raw:
         image[top:bottom, left:right, 2] = channels_raw[2]
-    # No alpha channel — fully opaque inside the bounds.
     image[top:bottom, left:right, 3] = channels_raw.get(-1, 255)
-
-    blend_mode = _PSD_TO_BLEND_MODE.get(
-        record["blend_key"], "normal",
-    )
-    if blend_mode not in LAYER_BLEND_MODES:
-        blend_mode = "normal"
-    flags = record["flags"]
-    visible = not bool(flags & _LAYER_FLAG_HIDDEN)
-    lock_alpha = bool(flags & _LAYER_FLAG_TRANSPARENCY_PROTECTED)
-    return Layer(
-        name=record["name"],
-        image=image,
-        opacity=record["opacity"] / 255.0,
-        blend_mode=blend_mode,
-        visible=visible,
-        lock_alpha=lock_alpha,
-    )
+    return image
 
 
 def _parse_image_data_section(cursor, h: int, w: int) -> np.ndarray:

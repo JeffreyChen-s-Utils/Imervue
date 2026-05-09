@@ -1197,14 +1197,28 @@ class PaintDocument:
             # Nothing to merge — single visible layer is already the
             # composite of the visible set.
             return False
-        # Was the active layer one of the visibles? Track its identity
-        # so the active pointer survives the rebuild.
+        kept_layers, new_active, new_ref = self._rebuild_after_merge(
+            visible_idx, merged,
+        )
+        self._layers = kept_layers
+        self._active_index = max(0, new_active)
+        self._reference_layer_index = new_ref if new_ref >= 0 else None
+        self._notify()
+        return True
+
+    def _rebuild_after_merge(
+        self, visible_idx: list[int], merged,
+    ) -> tuple[list, int, int]:
+        """Walk the layer list once, replacing the lowest visible slot
+        with ``merged`` and dropping the other visible layers. Returns
+        the new layer list and the (re-mapped) active / reference indices.
+        """
         active_was_visible = self._active_index in visible_idx
+        ref_was_visible = self._reference_layer_index in visible_idx
         kept_layers: list = []
         new_active = -1
-        merged_slot = -1
-        ref_was_visible = self._reference_layer_index in visible_idx
         new_ref = -1
+        merged_slot = -1
         merged_inserted = False
         for i, layer in enumerate(self._layers):
             if i in visible_idx:
@@ -1214,22 +1228,17 @@ class PaintDocument:
                     if active_was_visible:
                         new_active = merged_slot
                     merged_inserted = True
-                # All other visible layers are absorbed.
-            else:
-                kept_layers.append(layer)
-                if i == self._active_index:
-                    new_active = len(kept_layers) - 1
-                if i == self._reference_layer_index:
-                    new_ref = len(kept_layers) - 1
+                continue
+            kept_layers.append(layer)
+            if i == self._active_index:
+                new_active = len(kept_layers) - 1
+            if i == self._reference_layer_index:
+                new_ref = len(kept_layers) - 1
         if ref_was_visible:
-            # Reference was one of the absorbed layers — fold it onto
-            # the merged stand-in so the bucket keeps a coherent target.
+            # Fold the reference onto the merged stand-in so the bucket
+            # keeps a coherent target after the merge.
             new_ref = merged_slot
-        self._layers = kept_layers
-        self._active_index = max(0, new_active)
-        self._reference_layer_index = new_ref if new_ref >= 0 else None
-        self._notify()
-        return True
+        return kept_layers, new_active, new_ref
 
     def flatten(self) -> bool:
         """Replace the entire stack with one ``Background`` layer.
