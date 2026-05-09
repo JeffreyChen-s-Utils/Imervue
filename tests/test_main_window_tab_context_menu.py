@@ -393,3 +393,46 @@ def test_reveal_path_in_tree_empty_path_is_noop(qapp):
     host._reveal_path_in_tree("")   # noqa: SLF001
     assert host.tree.scroll_to_calls == []
     assert host.toast.calls == []
+
+
+# ---------------------------------------------------------------------------
+# F2 rename keypress on the tree view
+# ---------------------------------------------------------------------------
+
+
+def test_f2_keypress_invokes_rename(qapp, tmp_path, tree_view, monkeypatch):
+    """Pressing F2 with a selection should call _rename_path so users
+    don't have to right-click to rename. The tree view's keyPressEvent
+    routes F2 through a dedicated helper."""
+    src = tmp_path / "before.txt"
+    src.write_text("x")
+
+    captured = {}
+
+    def fake_rename(path):
+        captured["path"] = path
+
+    monkeypatch.setattr(tree_view, "_rename_path", fake_rename)
+
+    # _rename_selected reads selectedIndexes from the model — stub it.
+    class _Idx:
+        pass
+
+    class _SelectionModel:
+        def selectedIndexes(self):
+            return [_Idx()]
+
+    monkeypatch.setattr(tree_view, "selectionModel", lambda: _SelectionModel())
+
+    class _Model:
+        def filePath(self, _idx):
+            return str(src)
+
+    monkeypatch.setattr(tree_view, "model", lambda: _Model())
+
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QKeyEvent
+
+    evt = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier)
+    tree_view.keyPressEvent(evt)
+    assert captured.get("path") == str(src)
