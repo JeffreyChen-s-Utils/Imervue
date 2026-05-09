@@ -1826,6 +1826,23 @@ class PaintWorkspace(QMainWindow):
         fit_shortcut.activated.connect(self._fit_view)
         actual_shortcut = QShortcut(QKeySequence(actual_key), self)
         actual_shortcut.activated.connect(self._actual_size_view)
+        # Photoshop / MediBang colour shortcuts — X swaps FG↔BG, D
+        # resets to black-on-white. The default WidgetWithChildren
+        # shortcut context skips these when focus is inside a
+        # QLineEdit / QTextEdit so typing the letter into a text
+        # field still goes through to the field.
+        try:
+            swap_key = registry.get("paint.color.swap")
+        except KeyError:
+            swap_key = "X"
+        try:
+            reset_key = registry.get("paint.color.reset")
+        except KeyError:
+            reset_key = "D"
+        swap_shortcut = QShortcut(QKeySequence(swap_key), self)
+        swap_shortcut.activated.connect(self._state.swap_colors)
+        reset_shortcut = QShortcut(QKeySequence(reset_key), self)
+        reset_shortcut.activated.connect(self._state.reset_colors)
         # Tab navigation — Ctrl+Tab cycles forward, Ctrl+Shift+Tab
         # backward. Standard browser / IDE convention so users with
         # several open documents don't need to reach for the mouse.
