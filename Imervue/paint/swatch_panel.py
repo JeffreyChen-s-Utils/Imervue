@@ -65,6 +65,11 @@ class SwatchPanel(QDockWidget):
         clear_btn = QPushButton(lang.get(
             "paint_swatch_clear", "Clear",
         ))
+        clear_btn.setToolTip(lang.get(
+            "paint_swatch_clear_tooltip",
+            "Drop every recent colour from the history — irreversible "
+            "but the swatches repopulate as soon as new colours are committed",
+        ))
         clear_btn.clicked.connect(self._on_clear)
         bottom.addWidget(clear_btn)
         bottom.addStretch(1)
