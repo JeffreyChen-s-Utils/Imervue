@@ -26,14 +26,19 @@ class ToastSpy:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
 
-    def info(self, text: str, duration_ms: int = 2500) -> None:
+    # ``duration_ms`` is part of ToastManager's signature so callers
+    # can pass it positionally or by keyword (paint_workspace fires
+    # ``toast.info(msg, duration_ms=1200)`` etc.). The spy ignores
+    # the value but must keep the keyword name stable so production
+    # call sites still resolve under test.
+    def info(self, text: str, duration_ms: int = 2500) -> None:  # NOSONAR S1172 - Qt API parity
         self.calls.append(("info", text))
 
-    def success(self, text: str, duration_ms: int = 2500) -> None:
+    def success(self, text: str, duration_ms: int = 2500) -> None:  # NOSONAR S1172 - Qt API parity
         self.calls.append(("success", text))
 
-    def warning(self, text: str, duration_ms: int = 4000) -> None:
+    def warning(self, text: str, duration_ms: int = 4000) -> None:  # NOSONAR S1172 - Qt API parity
         self.calls.append(("warning", text))
 
-    def error(self, text: str, duration_ms: int = 4000) -> None:
+    def error(self, text: str, duration_ms: int = 4000) -> None:  # NOSONAR S1172 - Qt API parity
         self.calls.append(("error", text))
