@@ -580,7 +580,21 @@ class PaintWorkspace(QMainWindow):
             # If export marked the active tab clean and that was the
             # only dirty one, allow the close. Otherwise the user has
             # to invoke close again — the message box doesn't loop.
-            return not self._has_unsaved_tabs()
+            still_dirty = self._has_unsaved_tabs()
+            if still_dirty:
+                # The export was cancelled or didn't cover every dirty
+                # tab. Surface a toast so the user knows the close was
+                # aborted (the workspace just stays open silently
+                # otherwise, which felt like the action was eaten).
+                toast = getattr(self, "toast", None)
+                if toast is not None:
+                    toast.warning(
+                        lang.get(
+                            "paint_close_still_dirty",
+                            "Close cancelled — some tabs are still unsaved",
+                        ),
+                    )
+            return not still_dirty
         return clicked is discard
 
     # ---- drag-and-drop file open ---------------------------------------
