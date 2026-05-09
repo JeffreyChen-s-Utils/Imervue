@@ -33,6 +33,23 @@ from Imervue.user_settings.user_setting_dict import (
 import contextlib
 
 
+def _next_duplicate_name(source: Path) -> Path:
+    """Pick a sibling path for ``source`` that does not exist yet, in
+    the form ``stem (copy).ext``, ``stem (copy 2).ext``, …"""
+    parent = source.parent
+    stem = source.stem
+    suffix = source.suffix
+    candidate = parent / f"{stem} (copy){suffix}"
+    if not candidate.exists():
+        return candidate
+    n = 2
+    while True:
+        candidate = parent / f"{stem} (copy {n}){suffix}"
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
 class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
@@ -52,7 +69,19 @@ class _FileTreeView(QTreeView):
         if key == Qt.Key.Key_F5:
             self._refresh_tree()
             return
+        if key == Qt.Key.Key_F2:
+            self._rename_selected()
+            return
         super().keyPressEvent(event)
+
+    def _rename_selected(self) -> None:
+        indexes = self.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        model: QFileSystemModel = self.model()
+        path = model.filePath(indexes[0])
+        if path:
+            self._rename_path(path)
 
     def _refresh_tree(self) -> None:
         """Force QFileSystemModel to re-scan the current root.
@@ -138,6 +167,18 @@ class _FileTreeView(QTreeView):
 
         menu.addSeparator()
 
+        # Rename
+        action_rename = menu.addAction(lang.get("tree_rename", "Rename"))
+        action_rename.setShortcut("F2")
+        action_rename.triggered.connect(lambda: self._rename_path(path))
+
+        # Duplicate
+        if Path(path).is_file():
+            action_dup = menu.addAction(lang.get("tree_duplicate", "Duplicate"))
+            action_dup.triggered.connect(lambda: self._duplicate_file(path))
+
+        menu.addSeparator()
+
         # Delete
         action_del = menu.addAction(lang.get("tree_delete", "Delete"))
         action_del.triggered.connect(lambda: self._delete_path(path))
@@ -169,6 +210,71 @@ class _FileTreeView(QTreeView):
                 self._main_window.toast.error(
                     f"{lang.get('tree_new_folder_failed', 'Create failed')}: {exc}"
                 )
+
+    def _rename_path(self, path: str) -> None:
+        """Prompt for a new basename and rename the file or folder."""
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        target = Path(path)
+        if not target.exists():
+            return
+        new_name, ok = QInputDialog.getText(
+            self,
+            lang.get("tree_rename", "Rename"),
+            lang.get("tree_rename_prompt", "New name:"),
+            text=target.name,
+        )
+        if not ok:
+            return
+        new_name = new_name.strip()
+        if not new_name or new_name == target.name:
+            return
+        new_path = target.with_name(new_name)
+        if new_path.exists():
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.warning(
+                    lang.get("tree_rename_exists", "A file with that name already exists"),
+                )
+            return
+        try:
+            target.rename(new_path)
+        except OSError as exc:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.error(
+                    f"{lang.get('tree_rename_failed', 'Rename failed')}: {exc}",
+                )
+            return
+        self._refresh_tree()
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_rename_done", "Renamed to {name}").format(
+                    name=new_path.name,
+                ),
+            )
+
+    def _duplicate_file(self, path: str) -> None:
+        """Copy ``path`` to a sibling with a "(copy)" suffix."""
+        import shutil
+        lang = language_wrapper.language_word_dict
+        source = Path(path)
+        if not source.is_file():
+            return
+        candidate = _next_duplicate_name(source)
+        try:
+            shutil.copy2(source, candidate)
+        except OSError as exc:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.error(
+                    f"{lang.get('tree_duplicate_failed', 'Duplicate failed')}: {exc}",
+                )
+            return
+        self._refresh_tree()
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_duplicate_done", "Duplicated to {name}").format(
+                    name=candidate.name,
+                ),
+            )
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
@@ -356,6 +462,8 @@ class ImervueMainWindow(QMainWindow):
         self._tab_bar.currentChanged.connect(self._on_tab_changed)
         self._tab_bar.tabCloseRequested.connect(self._on_tab_close)
         self._tab_bar.tabMoved.connect(self._on_tab_moved)
+        self._tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         right_layout.addWidget(self._tab_bar)
 
         # ===== 麵包屑路徑列 =====
@@ -1140,6 +1248,49 @@ class ImervueMainWindow(QMainWindow):
     def _close_current_tab(self) -> None:
         idx = self._tab_bar.currentIndex()
         if idx >= 0:
+            self._on_tab_close(idx)
+
+    def _on_tab_context_menu(self, pos) -> None:
+        """Right-click on a tab → close-others / close-to-right / close-all."""
+        idx = self._tab_bar.tabAt(pos)
+        if idx < 0:
+            return
+        from PySide6.QtWidgets import QMenu
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self._tab_bar)
+        close_act = menu.addAction(lang.get("tab_close", "Close"))
+        close_others = menu.addAction(lang.get("tab_close_others", "Close Other Tabs"))
+        close_right = menu.addAction(
+            lang.get("tab_close_to_right", "Close Tabs to the Right"),
+        )
+        menu.addSeparator()
+        close_all = menu.addAction(lang.get("tab_close_all", "Close All Tabs"))
+        chosen = menu.exec(self._tab_bar.mapToGlobal(pos))
+        if chosen is close_act:
+            self._on_tab_close(idx)
+        elif chosen is close_others:
+            self._close_tabs_except(idx)
+        elif chosen is close_right:
+            self._close_tabs_after(idx)
+        elif chosen is close_all:
+            self._close_all_tabs()
+
+    def _close_tabs_except(self, keep_idx: int) -> None:
+        """Close every tab whose index is not ``keep_idx``."""
+        if not (0 <= keep_idx < len(self._image_tabs)):
+            return
+        # Walk highest-to-lowest so popping doesn't shift the kept index.
+        for idx in reversed(range(len(self._image_tabs))):
+            if idx != keep_idx:
+                self._on_tab_close(idx)
+
+    def _close_tabs_after(self, idx: int) -> None:
+        """Close every tab whose index is greater than ``idx``."""
+        for closing in reversed(range(idx + 1, len(self._image_tabs))):
+            self._on_tab_close(closing)
+
+    def _close_all_tabs(self) -> None:
+        for idx in reversed(range(len(self._image_tabs))):
             self._on_tab_close(idx)
 
     def _next_tab(self) -> None:
