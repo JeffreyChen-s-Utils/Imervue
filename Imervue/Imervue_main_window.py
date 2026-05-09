@@ -206,11 +206,19 @@ class _FileTreeView(QTreeView):
                 self._main_window.toast.warning(
                     lang.get("tree_folder_exists", "Folder already exists")
                 )
+            return
         except OSError as exc:
             if hasattr(self._main_window, "toast"):
                 self._main_window.toast.error(
                     f"{lang.get('tree_new_folder_failed', 'Create failed')}: {exc}"
                 )
+            return
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_new_folder_done", "Created folder {name}").format(
+                    name=target.name,
+                ),
+            )
 
     def _rename_path(self, path: str) -> None:
         """Prompt for a new basename and rename the file or folder."""

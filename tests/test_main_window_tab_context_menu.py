@@ -256,3 +256,31 @@ def test_close_all_tabs_empties_the_strip(qapp):
     host = _CloseHelperHost(4)
     host._close_all_tabs()   # noqa: SLF001
     assert host._image_tabs == []   # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# New-folder success toast — phase 34f
+# ---------------------------------------------------------------------------
+
+
+def test_create_new_folder_emits_success_toast(qapp, tmp_path, tree_view, monkeypatch):
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QInputDialog.getText",
+        lambda *a, **k: ("snaps", True),
+    )
+    tree_view._create_new_folder(str(tmp_path))   # noqa: SLF001
+    assert (tmp_path / "snaps").is_dir()
+    msgs = tree_view._main_window.toast.calls   # noqa: SLF001
+    assert msgs and msgs[0][0] == "success"
+    assert "snaps" in msgs[0][1]
+
+
+def test_create_new_folder_existing_emits_warning(qapp, tmp_path, tree_view, monkeypatch):
+    (tmp_path / "exists").mkdir()
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QInputDialog.getText",
+        lambda *a, **k: ("exists", True),
+    )
+    tree_view._create_new_folder(str(tmp_path))   # noqa: SLF001
+    msgs = tree_view._main_window.toast.calls   # noqa: SLF001
+    assert msgs and msgs[0][0] == "warning"
