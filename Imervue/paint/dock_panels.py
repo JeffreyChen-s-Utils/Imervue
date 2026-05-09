@@ -839,6 +839,15 @@ class LayerDock(QDockWidget):
         )
         self._list.currentRowChanged.connect(self._on_row_changed)
         self._list.itemChanged.connect(self._on_item_changed)
+        # F2 enters inline rename on the active layer — the page dock
+        # uses the same trigger pair so the muscle memory transfers.
+        # Double-click stays free for layer-mask edit so we don't add
+        # DoubleClicked here.
+        from PySide6.QtWidgets import QAbstractItemView
+        self._list.setEditTriggers(
+            QAbstractItemView.EditTrigger.EditKeyPressed
+            | QAbstractItemView.EditTrigger.SelectedClicked,
+        )
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()

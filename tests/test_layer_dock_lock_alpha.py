@@ -96,3 +96,17 @@ def test_toggle_emits_through_set_layer_lock_alpha(dock, doc, monkeypatch):
     btn.setChecked(True)
     assert captured["lock_alpha"] is True
     assert captured["index"] >= 0
+
+
+def test_layer_list_supports_inline_rename(dock):
+    """F2 / slow-second-click should put the selected layer's row
+    into rename mode so the artist can change the layer name without
+    digging through a dialog."""
+    from PySide6.QtWidgets import QAbstractItemView
+
+    triggers = dock._list.editTriggers()    # noqa: SLF001
+    assert triggers & QAbstractItemView.EditTrigger.EditKeyPressed
+    assert triggers & QAbstractItemView.EditTrigger.SelectedClicked
+    # DoubleClicked stays unused so the gesture remains free for any
+    # future layer-mask / layer-fx editor.
+    assert not (triggers & QAbstractItemView.EditTrigger.DoubleClicked)
