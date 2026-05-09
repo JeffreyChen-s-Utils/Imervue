@@ -1752,6 +1752,18 @@ class PaintWorkspace(QMainWindow):
         layer_down.activated.connect(lambda: self.cycle_active_layer(-1))
         layer_up = QShortcut(QKeySequence("Alt+]"), self)
         layer_up.activated.connect(lambda: self.cycle_active_layer(+1))
+        # Brush size step — Photoshop / MediBang convention. Bracket
+        # keys without a modifier so the artist can keep one hand on
+        # the canvas. Step amount is multiplicative when held with
+        # Shift so artists can resize quickly across orders of magnitude.
+        size_dec = QShortcut(QKeySequence("["), self)
+        size_dec.activated.connect(lambda: self.step_brush_size(-1))
+        size_inc = QShortcut(QKeySequence("]"), self)
+        size_inc.activated.connect(lambda: self.step_brush_size(+1))
+        size_big_dec = QShortcut(QKeySequence("Shift+["), self)
+        size_big_dec.activated.connect(lambda: self.step_brush_size(-5))
+        size_big_inc = QShortcut(QKeySequence("Shift+]"), self)
+        size_big_inc.activated.connect(lambda: self.step_brush_size(+5))
         # Tab navigation — Ctrl+Tab cycles forward, Ctrl+Shift+Tab
         # backward. Standard browser / IDE convention so users with
         # several open documents don't need to reach for the mouse.
@@ -1759,6 +1771,24 @@ class PaintWorkspace(QMainWindow):
         next_tab.activated.connect(lambda: self.cycle_active_tab(+1))
         prev_tab = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
         prev_tab.activated.connect(lambda: self.cycle_active_tab(-1))
+
+    BRUSH_SIZE_MIN = 1
+    BRUSH_SIZE_MAX = 500
+
+    def step_brush_size(self, delta: int) -> int:
+        """Adjust the brush size by ``delta`` pixels and clamp to the
+        documented range. Returns the new size so tests + the status
+        bar can read back without re-querying state.
+        """
+        state = getattr(self, "_state", None)
+        if state is None:
+            return 0
+        current = int(state.brush.size)
+        new_size = max(self.BRUSH_SIZE_MIN, min(self.BRUSH_SIZE_MAX, current + int(delta)))
+        if new_size != current:
+            state.set_brush(size=new_size)
+            self._refresh_status_line()
+        return new_size
 
     def cycle_active_tab(self, direction: int) -> int:
         """Step the active paint tab by ``direction`` (+1 / -1).
