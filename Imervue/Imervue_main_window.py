@@ -774,6 +774,34 @@ class ImervueMainWindow(QMainWindow):
         build_tip_menu(self)
         # 「修改」選單 — 建立時隱藏，deep zoom 進入時由 viewer 顯示。
         build_modify_menu(self)
+        # QMenu hides per-action tooltips by default; enable on every
+        # top-level menu so any setToolTip() on its actions surfaces
+        # on hover. Walks the bar once at construction time so future
+        # builders don't have to remember the flag.
+        self._enable_tooltips_on_all_menus()
+
+    def _enable_tooltips_on_all_menus(self) -> None:
+        """Enable per-action tooltips on every top-level menu and any
+        submenus reachable from them. Safe to call repeatedly — Qt's
+        ``setToolTipsVisible`` is idempotent."""
+        from PySide6.QtWidgets import QMenu
+        bar = self.menuBar()
+        if bar is None:
+            return
+        seen: set[int] = set()
+        pending: list[QMenu] = [
+            action.menu() for action in bar.actions() if action.menu() is not None
+        ]
+        while pending:
+            menu = pending.pop()
+            if id(menu) in seen:
+                continue
+            seen.add(id(menu))
+            menu.setToolTipsVisible(True)
+            pending.extend(
+                action.menu() for action in menu.actions()
+                if action.menu() is not None
+            )
 
     # ==========================
     # 狀態列
