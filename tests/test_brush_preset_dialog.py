@@ -125,11 +125,14 @@ def test_dialog_rename_keeps_settings_intact(qapp, monkeypatch):
         dialog.deleteLater()
 
 
-def test_dialog_delete_removes_selected_preset(qapp):
+def test_dialog_delete_removes_selected_preset(qapp, monkeypatch):
     state = ts.load_tool_state()
     _seed_two_presets(state)
     dialog = BrushPresetDialog(state)
     try:
+        # Phase 36m — _on_delete now confirms first; bypass the modal
+        # by monkey-patching the confirmation method to "Yes".
+        monkeypatch.setattr(dialog, "_confirm_delete", lambda name: True)
         for row in range(dialog._list.count()):                 # noqa: SLF001
             if dialog._list.item(row).text() == "fine-liner":   # noqa: SLF001
                 dialog._list.setCurrentRow(row)                 # noqa: SLF001
@@ -137,5 +140,25 @@ def test_dialog_delete_removes_selected_preset(qapp):
         dialog._on_delete()                                      # noqa: SLF001
         names = [s.name for s in state.list_sub_tools(state.tool)]
         assert names == ["fat-marker"]
+    finally:
+        dialog.deleteLater()
+
+
+def test_dialog_delete_cancel_keeps_preset(qapp, monkeypatch):
+    """Phase 36m — answering No to the confirmation must leave the
+    preset in place."""
+    state = ts.load_tool_state()
+    _seed_two_presets(state)
+    dialog = BrushPresetDialog(state)
+    try:
+        monkeypatch.setattr(dialog, "_confirm_delete", lambda name: False)
+        for row in range(dialog._list.count()):                 # noqa: SLF001
+            if dialog._list.item(row).text() == "fine-liner":   # noqa: SLF001
+                dialog._list.setCurrentRow(row)                 # noqa: SLF001
+                break
+        dialog._on_delete()                                      # noqa: SLF001
+        names = [s.name for s in state.list_sub_tools(state.tool)]
+        assert "fine-liner" in names
+        assert "fat-marker" in names
     finally:
         dialog.deleteLater()

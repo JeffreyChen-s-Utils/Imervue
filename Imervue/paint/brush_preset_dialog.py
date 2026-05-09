@@ -183,8 +183,30 @@ class BrushPresetDialog(QDialog):
         name = self._selected_name()
         if name is None:
             return
+        if not self._confirm_delete(name):
+            return
         self._state.remove_sub_tool(self._state.tool, name)
         self._refresh_list()
+
+    def _confirm_delete(self, name: str) -> bool:  # pragma: no cover - Qt UI
+        """Ask the user before dropping a brush preset.
+
+        Brush presets often capture hours of stylus tuning; an accidental
+        Delete should surface a Yes/No dialog so a misclick doesn't lose
+        the work. Tests bypass the modal by monkeypatching this method.
+        """
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_brush_presets_delete", "Delete preset"),
+            lang.get(
+                "paint_brush_presets_delete_confirm",
+                "Delete preset '{name}'? This cannot be undone.",
+            ).format(name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _on_double_clicked(self, _item: QListWidgetItem) -> None:
         self._on_apply()
