@@ -258,16 +258,9 @@ class PaintWorkspace(QMainWindow):
             self._reference_dock,
         )
         all_right_docks = drawing_cluster + canvas_cluster + library_cluster
-
-        # Place anchors top → middle → bottom so the dock area
-        # naturally splits into three rows of tabs.
-        for cluster in (drawing_cluster, canvas_cluster, library_cluster):
-            anchor = cluster[0]
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
-            for dock in cluster[1:]:
-                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-                self.tabifyDockWidget(anchor, dock)
-            anchor.raise_()
+        self._install_dock_clusters(
+            (drawing_cluster, canvas_cluster, library_cluster),
+        )
 
         # Cache the cluster mapping so tool→dock-raise can find the
         # right anchor without re-deriving the layout each time.
@@ -1671,6 +1664,18 @@ class PaintWorkspace(QMainWindow):
             return False
         sel = document.selection()
         return sel is not None and bool(sel.any())
+
+    def _install_dock_clusters(self, clusters: tuple) -> None:
+        """Anchor each cluster's first dock on the right edge and tabify
+        the rest behind it. Pulled out of ``__init__`` so the constructor
+        stays under the cognitive-complexity budget."""
+        for cluster in clusters:
+            anchor = cluster[0]
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
+            for dock in cluster[1:]:
+                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+                self.tabifyDockWidget(anchor, dock)
+            anchor.raise_()
 
     def _build_menu_bar(self) -> None:
         """Construct the embedded menu bar and populate every section.

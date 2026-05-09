@@ -48,6 +48,19 @@ def _validate_gradient_inputs(
         )
 
 
+def _pick_endpoint_color(
+    primary: tuple[int, int, int] | None,
+    other: tuple[int, int, int] | None,
+) -> tuple[int, int, int]:
+    """Return ``primary`` when present, falling back to ``other`` and
+    finally to opaque black so the rgb mix never sees ``None``."""
+    if primary is not None:
+        return primary
+    if other is not None:
+        return other
+    return (0, 0, 0)
+
+
 def _resolve_endpoint_colors(
     fg: tuple[int, int, int] | None,
     bg: tuple[int, int, int] | None,
@@ -55,9 +68,8 @@ def _resolve_endpoint_colors(
     """Resolve ``None`` endpoints into a colour pair plus alpha
     factors. The substitution keeps the rgb mix meaningful while the
     alpha factors carry the fade-to-transparent."""
-    fallback = (0, 0, 0)
-    fg_color = fg if fg is not None else (bg if bg is not None else fallback)
-    bg_color = bg if bg is not None else (fg if fg is not None else fallback)
+    fg_color = _pick_endpoint_color(fg, bg)
+    bg_color = _pick_endpoint_color(bg, fg)
     fg_alpha = 0.0 if fg is None else 1.0
     bg_alpha = 0.0 if bg is None else 1.0
     return fg_color, bg_color, fg_alpha, bg_alpha
