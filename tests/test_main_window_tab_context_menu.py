@@ -190,15 +190,15 @@ class _FakeTabBar:
     def __init__(self):
         self.tabs: list[str] = []
 
-    def addTab(self, label: str) -> int:   # noqa: N802 — Qt API name
+    def addTab(self, label: str) -> int:   # noqa: N802  # NOSONAR — mirrors QTabBar.addTab
         self.tabs.append(label)
         return len(self.tabs) - 1
 
-    def removeTab(self, idx: int) -> None:   # noqa: N802 — Qt API name
+    def removeTab(self, idx: int) -> None:   # noqa: N802  # NOSONAR — mirrors QTabBar.removeTab
         if 0 <= idx < len(self.tabs):
             self.tabs.pop(idx)
 
-    def currentIndex(self) -> int:   # noqa: N802 — Qt API name
+    def currentIndex(self) -> int:   # noqa: N802  # NOSONAR — mirrors QTabBar.currentIndex
         return -1 if not self.tabs else 0
 
     def count(self) -> int:
@@ -348,13 +348,13 @@ class _RevealHost:
             self.current_set = None
             self.focused = False
 
-        def scrollTo(self, index):   # noqa: N802 — Qt API name
+        def scrollTo(self, index):   # noqa: N802  # NOSONAR — mirrors QTreeView.scrollTo
             self.scroll_to_calls.append(index)
 
-        def setCurrentIndex(self, index):   # noqa: N802 — Qt API name
+        def setCurrentIndex(self, index):   # noqa: N802  # NOSONAR — mirrors QTreeView.setCurrentIndex
             self.current_set = index
 
-        def setFocus(self):   # noqa: N802 — Qt API name
+        def setFocus(self):   # noqa: N802  # NOSONAR — mirrors QWidget.setFocus
             self.focused = True
 
     class _FakeModel:
@@ -370,7 +370,7 @@ class _RevealHost:
 
 
 class _ValidIndex:
-    def isValid(self):   # noqa: N802 — Qt API name
+    def isValid(self):   # noqa: N802  # NOSONAR — mirrors QModelIndex.isValid
         return True
 
 
@@ -424,13 +424,13 @@ def test_f2_keypress_invokes_rename(qapp, tmp_path, tree_view, monkeypatch):
         pass
 
     class _SelectionModel:
-        def selectedIndexes(self):   # noqa: N802 — Qt API name
+        def selectedIndexes(self):   # noqa: N802  # NOSONAR — mirrors QItemSelectionModel.selectedIndexes
             return [_Idx()]
 
     monkeypatch.setattr(tree_view, "selectionModel", lambda: _SelectionModel())
 
     class _Model:
-        def filePath(self, _idx):   # noqa: N802 — Qt API name
+        def filePath(self, _idx):   # noqa: N802  # NOSONAR — mirrors QFileSystemModel.filePath
             return str(src)
 
     monkeypatch.setattr(tree_view, "model", lambda: _Model())

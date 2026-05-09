@@ -86,7 +86,7 @@ class _StubModel:
     """Stand-in for ``QFileSystemModel`` — names mirror Qt's API on
     purpose so the production code can call them as if they were real."""
 
-    def fileIcon(self, _index):   # noqa: N802 — Qt API name
+    def fileIcon(self, _index):   # noqa: N802  # NOSONAR — mirrors QFileSystemModel.fileIcon
         """Return a blank icon — tests don't compare icon pixels."""
         from PySide6.QtGui import QIcon
         return QIcon()
@@ -97,7 +97,7 @@ class _StubModel:
         from PySide6.QtCore import QModelIndex
         return QModelIndex()
 
-    def setRootPath(self, _path):   # noqa: N802 — Qt API name
+    def setRootPath(self, _path):   # noqa: N802  # NOSONAR — mirrors QFileSystemModel.setRootPath
         """No-op — open_recent calls this on real models to switch
         the tree root, but the test stub only records side effects
         elsewhere."""
@@ -117,7 +117,7 @@ class _StubMainWindow:
 
 
 class _StubTree:
-    def setRootIndex(self, _index):   # noqa: N802 — Qt API name
+    def setRootIndex(self, _index):   # noqa: N802  # NOSONAR — mirrors QTreeView.setRootIndex
         """No-op — the test asserts on settings + toast, not on
         the tree's selection state."""
 
