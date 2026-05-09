@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from Imervue.Imervue_main_window import _FileTreeView, _next_duplicate_name
+from tests._toast_spy import ToastSpy as _StubToast
 
 
 # ---------------------------------------------------------------------------
@@ -53,25 +54,6 @@ def test_next_duplicate_name_handles_no_extension(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # _FileTreeView rename / duplicate happy paths
 # ---------------------------------------------------------------------------
-
-
-class _StubToast:
-    """Minimal toast stand-in that records every notification."""
-
-    def __init__(self):
-        self.calls: list[tuple[str, str]] = []
-
-    def info(self, text, duration_ms=2500):
-        self.calls.append(("info", text))
-
-    def success(self, text, duration_ms=2500):
-        self.calls.append(("success", text))
-
-    def warning(self, text, duration_ms=4000):
-        self.calls.append(("warning", text))
-
-    def error(self, text, duration_ms=4000):
-        self.calls.append(("error", text))
 
 
 class _StubMainWindow:

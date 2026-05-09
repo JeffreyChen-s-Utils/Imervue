@@ -11,23 +11,7 @@ import pytest
 from PySide6.QtWidgets import QWidget
 
 from Imervue.paint.page_dock import PageDock
-
-
-class _ToastSpy:
-    def __init__(self):
-        self.calls: list[tuple[str, str]] = []
-
-    def info(self, text, duration_ms=2500):
-        self.calls.append(("info", text))
-
-    def success(self, text, duration_ms=2500):
-        self.calls.append(("success", text))
-
-    def warning(self, text, duration_ms=4000):
-        self.calls.append(("warning", text))
-
-    def error(self, text, duration_ms=4000):
-        self.calls.append(("error", text))
+from tests._toast_spy import ToastSpy as _ToastSpy
 
 
 class _StubWorkspace(QWidget):

@@ -7,25 +7,7 @@ at an unchanged canvas while the failure is buried in the log.
 from __future__ import annotations
 
 from Imervue.paint.filter_menu import FilterSpec, _notify_filter_failed
-
-
-class _ToastSpy:
-    """Records every toast call so the test can assert on the surface."""
-
-    def __init__(self):
-        self.calls: list[tuple[str, str]] = []
-
-    def info(self, text, duration_ms=2500):
-        self.calls.append(("info", text))
-
-    def success(self, text, duration_ms=2500):
-        self.calls.append(("success", text))
-
-    def warning(self, text, duration_ms=4000):
-        self.calls.append(("warning", text))
-
-    def error(self, text, duration_ms=4000):
-        self.calls.append(("error", text))
+from tests._toast_spy import ToastSpy as _ToastSpy
 
 
 class _WorkspaceWithToast:

@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from Imervue.Imervue_main_window import ImervueMainWindow
+from tests._toast_spy import ToastSpy as _ToastSpy
 
 
 # ---------------------------------------------------------------------------
@@ -54,23 +55,6 @@ def test_supported_drop_extension_is_case_insensitive(tmp_path: Path):
 
 class _FakeViewer:
     """Stand-in for ``GPUImageView`` so we don't need GL."""
-
-
-class _ToastSpy:
-    def __init__(self):
-        self.calls: list[tuple[str, str]] = []
-
-    def info(self, text, duration_ms=2500):
-        self.calls.append(("info", text))
-
-    def success(self, text, duration_ms=2500):
-        self.calls.append(("success", text))
-
-    def warning(self, text, duration_ms=4000):
-        self.calls.append(("warning", text))
-
-    def error(self, text, duration_ms=4000):
-        self.calls.append(("error", text))
 
 
 class _StubMainWindow:
