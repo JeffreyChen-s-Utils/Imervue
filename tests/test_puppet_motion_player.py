@@ -199,6 +199,42 @@ def test_dock_select_motion_drives_player(qapp):
         canvas.deleteLater()
 
 
+def test_dock_single_click_binds_and_plays(qapp):
+    """Clicking a motion in the list (not double-clicking) must bind
+    the motion to the player and start playback — that's the UX
+    users instinctively reach for."""
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_motion())
+    dock = MotionDock(canvas)
+    try:
+        item = dock._list.item(0)   # noqa: SLF001
+        # Drive the slot directly — itemClicked emits with the QListWidgetItem.
+        dock._on_item_clicked(item)   # noqa: SLF001
+        assert dock.player().motion() is not None
+        assert dock.player().is_playing() is True
+        dock.player().stop()
+    finally:
+        dock.deleteLater()
+        canvas.deleteLater()
+
+
+def test_dock_single_click_ignores_disabled_placeholder(qapp):
+    """The empty-state placeholder is disabled — clicking it must not
+    bind anything to the player."""
+    canvas = PuppetCanvas()
+    doc = _doc_with_motion()
+    doc.motions = []
+    canvas.load_document(doc)
+    dock = MotionDock(canvas)
+    try:
+        placeholder = dock._list.item(0)   # noqa: SLF001
+        dock._on_item_clicked(placeholder)   # noqa: SLF001
+        assert dock.player().motion() is None
+    finally:
+        dock.deleteLater()
+        canvas.deleteLater()
+
+
 def test_dock_select_unknown_motion_returns_false(qapp):
     canvas = PuppetCanvas()
     canvas.load_document(_doc_with_motion())

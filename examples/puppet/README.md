@@ -28,8 +28,8 @@ A fully-rigged single-drawable demo:
 3. The face appears centred on the canvas.
 4. Drag the `ParamAngleX` slider in the right-hand **Parameters** dock —
    the head turns left and right.
-5. In the bottom **Motions** dock, double-click `idle` and press **Play**
-   to see the head swing on its own.
+5. In the bottom **Motions** dock, click `idle` to start playing.
+   Press **Stop** to silence it.
 
 Press **Auto-blink** in the toolbar to make the demo (more accurately,
 the rig you build that follows the same parameter conventions) blink.
@@ -77,7 +77,7 @@ multi-deformer rig looks like end-to-end:
 ```bash
 # Open Puppet tab → Open Puppet… → demo_amiya.puppet
 # In the Parameters dock on the right: drag any of the 4 sliders.
-# In the Motions dock at the bottom: double-click `wave` then press Play.
+# In the Motions dock at the bottom: click `wave` to start playing it.
 ```
 
 Toggle **Drag-track head** in the toolbar to drive `ParamHeadX` /
@@ -146,9 +146,10 @@ deformer, each parameter swinging up to ±80 ° — every motion looks
 
 ```bash
 # Open Puppet tab → Open Puppet… → demo_tpose.puppet
-# In the Motions dock at the bottom, double-click any of the five
-# motions and press Play. Each one plainly moves a different combination
-# of body parts — none of them look the same.
+# In the Motions dock at the bottom, click any of the five motions —
+# it binds to the player and starts playing immediately. Press Stop
+# in the transport bar to silence it. Each motion plainly moves a
+# different combination of body parts — none of them look the same.
 ```
 
 In the **Parameters** dock you'll see all six sliders; drag them

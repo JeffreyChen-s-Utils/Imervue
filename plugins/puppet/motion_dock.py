@@ -52,6 +52,12 @@ class MotionDock(QDockWidget):
         layout.setSpacing(6)
 
         self._list = QListWidget()
+        # Single-click binds the motion to the player and starts playback
+        # right away — the most-asked-for UX in animation tools, matches
+        # MediBang's brush-preset list / Lightroom's preset preview /
+        # most DAWs. Double-click is harmless because binding +
+        # play is idempotent on the live motion.
+        self._list.itemClicked.connect(self._on_item_clicked)
         self._list.itemDoubleClicked.connect(self._on_item_double_clicked)
         layout.addWidget(self._list, stretch=1)
 
@@ -134,10 +140,22 @@ class MotionDock(QDockWidget):
 
     # ---- slots --------------------------------------------------------
 
-    def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
+    def _on_item_clicked(self, item: QListWidgetItem) -> None:
+        """Single-click handler — bind the picked motion and start
+        playing so users see the motion immediately. The dock's Stop
+        button is the way to silence playback."""
         if not (item.flags() & Qt.ItemFlag.ItemIsEnabled):
             return
         self._activate_motion(item.text())
+        self._player.play()
+
+    def _on_item_double_clicked(self, item: QListWidgetItem) -> None:
+        """Double-click runs the same path as single-click. Kept for
+        users with muscle memory from the old behaviour."""
+        if not (item.flags() & Qt.ItemFlag.ItemIsEnabled):
+            return
+        self._activate_motion(item.text())
+        self._player.play()
 
     def _activate_motion(self, name: str) -> None:
         document = self._canvas.document()

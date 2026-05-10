@@ -749,7 +749,8 @@ between -1..+1 with three keys, and a 4-second looping ``idle`` motion.
 
 Open the Puppet tab, click **Open Puppet…**, point at ``demo_face.puppet`` —
 the face appears centred. Drag the ``ParamAngleX`` slider to see it turn,
-or double-click ``idle`` in the Motions dock and press **Play**.
+or click ``idle`` in the Motions dock — single-click binds the
+motion and starts playback immediately.
 
 ``.puppet`` file format (v1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
