@@ -3,6 +3,11 @@
 Drop-in `.puppet` files you can import into the **Puppet** tab of
 Imervue (the third top-level tab, slotted right after Paint).
 
+| File | Subject | Drawables | Deformers | Parameters | Motions |
+|---|---|---|---|---|---|
+| `demo_face.puppet` | procedural smiley face | 1 | 1 (rotation) | 1 | 1 (idle sine) |
+| `demo_amiya.puppet` | Amiya from Arknights | 1 | 4 (region warps) | 4 | 3 (idle / wave / greet) |
+
 ## `demo_face.puppet`
 
 A fully-rigged single-drawable demo:
@@ -42,6 +47,65 @@ The script regenerates `demo_face.puppet` end-to-end with no external
 assets — the face PNG is rendered with Pillow's `ImageDraw` and the
 rest of the rig is wired with the same `puppet.operations` API the
 in-app authoring toolbar uses.
+
+## `demo_amiya.puppet` — multi-region rig with three motions
+
+A richer demo built on a real character illustration to show what a
+multi-deformer rig looks like end-to-end:
+
+* **Drawable:** Amiya (Arknights) full body, auto-meshed at cell-size
+  24 → ~500 vertices, ~900 triangles
+* **Four region-bound warp deformers** so each parameter only affects
+  its slice of the canvas:
+    * `head_warp` — top 30 % of the canvas
+    * `body_warp` — middle 28 – 62 % band
+    * `arm_left_warp` — left half of that band
+    * `arm_right_warp` — right half of that band
+* **Four parameters** with key forms shifting the relevant warp lattice:
+    * `ParamHeadX` ∈ [-1, 1] — head turn left / right
+    * `ParamBodySway` ∈ [-1, 1] — body lean
+    * `ParamArmLeftUp` ∈ [0, 1] — left arm raise
+    * `ParamArmRightUp` ∈ [0, 1] — right arm raise
+* **Three looping motions:**
+    * `idle` (4 s) — body sways while the head counter-bobs
+    * `wave` (2 s) — right arm waves up + down twice; head bobs along
+    * `greet` (3 s) — both arms raise then drop, body bows slightly
+
+### Try it
+
+```bash
+# Open Puppet tab → Open Puppet… → demo_amiya.puppet
+# In the Parameters dock on the right: drag any of the 4 sliders.
+# In the Motions dock at the bottom: double-click `wave` then press Play.
+```
+
+Toggle **Drag-track head** in the toolbar to drive `ParamHeadX` /
+`ParamBodySway` from the cursor (cursor offset → both
+``ParamAngleX/Y`` and these per-region warps if you remap them).
+
+### Build a fresh copy
+
+```bash
+py examples/puppet/build_amiya_puppet.py
+```
+
+The script reads `assets/amiya_source.jpg` (the cached source image),
+down-scales to 600 px on the long edge to keep the `.puppet` zip
+under ~300 KB, runs `puppet_from_png` → `add_warp_deformer` × 4
+→ key form shifts → `_idle / _wave / _greet` motion factories →
+`save_puppet`. All in pure Python with no Qt or GL.
+
+### Source-image attribution
+
+`assets/amiya_source.jpg` was cached from
+[Danbooru post #11344502](https://danbooru.donmai.us/posts/11344502)
+(rating: g, no `do_not_post` flag at fetch time). Artist:
+`mowang_xiao_lajiao`. See `assets/CREDITS.md` for full provenance.
+
+If you'd rather build the demo against your own art, replace
+`assets/amiya_source.jpg` with any full-body PNG / JPG and rerun the
+builder — the warp bounds are computed from the loaded image's
+dimensions so the rig adapts to whatever proportions you give it.
 
 ## Authoring your own from scratch
 
