@@ -968,6 +968,9 @@ spanish_word_dict.update({
     "style_transfer_failed": "Fallo de la transferencia de estilo",
     # Paint workspace (MediBang-style)
     "paint_tab_title": 'Pintar',
+    # Puppet tab (2D rigged animation, plugin-contributed)
+    "puppet_tab_title": 'Marioneta',
+    "puppet_placeholder_subtitle": 'Animación 2D con rig propia — próximamente.',
     "paint_status_cursor": 'x: {x}  y: {y}',
     "paint_status_image_loaded": 'Lienzo: {w} × {h}',
     "paint_dock_color": 'Color',

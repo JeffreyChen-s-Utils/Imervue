@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PySide6.QtWidgets import QMenu
+    from PySide6.QtWidgets import QMenu, QTabWidget
     from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
@@ -76,6 +76,26 @@ class ImervuePlugin:
 
             action = menu.addAction("My Action")
             action.triggered.connect(self.my_action)
+        """
+        pass
+
+    # ===========================
+    # Tab Hooks
+    # ===========================
+
+    def on_build_main_tabs(self, tabs: QTabWidget) -> None:
+        """Called once after the built-in tabs (Imervue / Modify / Paint)
+        are added to the main window's top-level QTabWidget.
+
+        Append your own tab here via ``tabs.addTab(widget, label)``. Plugin
+        tabs are appended in plugin discovery order, after the built-in
+        tabs. The host wraps each call in ``try / except RuntimeError`` so
+        a misbehaving plugin can't abort startup.
+
+        Example::
+
+            from PySide6.QtWidgets import QLabel
+            tabs.addTab(QLabel("My Plugin"), "My Plugin")
         """
         pass
 

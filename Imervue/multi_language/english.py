@@ -490,6 +490,9 @@ english_word_dict = {
     "modify_menu_title": "Modify",
     # Paint workspace
     "paint_tab_title": 'Paint',
+    # Puppet tab (2D rigged animation, plugin-contributed)
+    "puppet_tab_title": 'Puppet',
+    "puppet_placeholder_subtitle": 'From-scratch 2D rigged animation — coming soon.',
     "paint_status_cursor": 'x: {x}  y: {y}',
     "paint_status_image_loaded": 'Canvas: {w} × {h}',
     "paint_dock_color": 'Color',

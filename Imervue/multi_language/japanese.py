@@ -478,6 +478,9 @@ japanese_word_dict = {
     "modify_menu_title": "修正",
     # ペイント作業領域
     "paint_tab_title": 'ペイント',
+    # Puppet タブ（2D リグアニメーション、プラグイン提供）
+    "puppet_tab_title": 'パペット',
+    "puppet_placeholder_subtitle": '自作 2D リグアニメーション — 近日公開。',
     "paint_status_cursor": 'x: {x}  y: {y}',
     "paint_status_image_loaded": 'キャンバス: {w} × {h}',
     "paint_dock_color": 'カラー',

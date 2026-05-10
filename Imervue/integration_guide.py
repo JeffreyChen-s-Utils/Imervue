@@ -40,9 +40,40 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
     if language_wrapper.plugin_languages and hasattr(main_window, "language_menu"):
         _append_plugin_languages(main_window)
 
+    # Let plugins contribute top-level tabs to the main window's tab strip.
+    # ``_main_tabs`` is the QTabWidget owned by ImervueMainWindow that already
+    # carries Imervue / Modify / Paint; plugin tabs append after Paint in
+    # plugin discovery order. Each call is wrapped so a single bad plugin
+    # can't tear down construction.
+    tabs = getattr(main_window, "_main_tabs", None)
+    if tabs is not None:
+        _dispatch_main_tab_hook(manager, tabs)
+
     # Build the plugin management menu first, then let plugins add items into it
     plugin_menu = build_plugin_menu(main_window)
     manager.dispatch_build_menu_bar(plugin_menu)
+
+
+def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
+    """Walk loaded plugins and let each contribute a top-level tab.
+
+    Same defensive pattern as ``_append_plugin_languages``: a RuntimeError
+    from a stale shiboken wrapper or a buggy plugin is logged and skipped
+    so the rest of plugin init keeps running.
+    """
+    for plugin in manager.plugins:
+        try:
+            plugin.on_build_main_tabs(tabs)
+        except RuntimeError:
+            logger.warning(
+                "plugin %r raised RuntimeError in on_build_main_tabs; skipping",
+                getattr(plugin, "plugin_name", type(plugin).__name__),
+            )
+        except Exception:  # noqa: BLE001 - plugin sandboxing
+            logger.exception(
+                "plugin %r raised in on_build_main_tabs",
+                getattr(plugin, "plugin_name", type(plugin).__name__),
+            )
 
 
 def _append_plugin_languages(main_window: ImervueMainWindow) -> None:

@@ -467,6 +467,9 @@ chinese_word_dict = {
     "modify_menu_title": "修改",
     # 绘图工作区
     "paint_tab_title": '绘图',
+    # Puppet 分页（2D 偶动画，插件提供）
+    "puppet_tab_title": '偶动画',
+    "puppet_placeholder_subtitle": '自制 2D 绑骨动画 — 即将推出。',
     "paint_status_cursor": 'x：{x}  y：{y}',
     "paint_status_image_loaded": '画布：{w} × {h}',
     "paint_dock_color": '颜色',

@@ -475,6 +475,9 @@ korean_word_dict = {
     "modify_menu_title": "수정",
     # 페인트 작업 공간
     "paint_tab_title": '페인트',
+    # Puppet 탭 (2D 리깅 애니메이션, 플러그인 제공)
+    "puppet_tab_title": '퍼펫',
+    "puppet_placeholder_subtitle": '직접 만든 2D 리깅 애니메이션 — 곧 출시.',
     "paint_status_cursor": 'x: {x}  y: {y}',
     "paint_status_image_loaded": '캔버스: {w} × {h}',
     "paint_dock_color": '색상',

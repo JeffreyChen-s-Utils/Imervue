@@ -467,6 +467,9 @@ traditional_chinese_word_dict = {
     "modify_menu_title": "修改",
     # 繪圖工作區
     "paint_tab_title": '繪圖',
+    # Puppet 分頁（2D 偶動畫，插件提供）
+    "puppet_tab_title": '偶動畫',
+    "puppet_placeholder_subtitle": '自製 2D 綁骨動畫 — 即將推出。',
     "paint_status_cursor": 'x：{x}  y：{y}',
     "paint_status_image_loaded": '畫布：{w} × {h}',
     "paint_dock_color": '顏色',
