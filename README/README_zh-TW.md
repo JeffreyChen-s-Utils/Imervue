@@ -33,6 +33,7 @@
 - [鍵盤與滑鼠快捷鍵](#鍵盤與滑鼠快捷鍵)
 - [選單結構](#選單結構)
 - [繪圖工作區](#繪圖工作區)
+- [偶動畫工作區](#偶動畫工作區)
 - [外掛系統](#外掛系統)
 - [多語言支援](#多語言支援)
 - [使用者設定](#使用者設定)
@@ -181,6 +182,27 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 - **其他** — Image Size 對話框 · 液化 · 修復 / 仿製印章 · 每分頁的復原 / 重做（Ctrl+Z / Ctrl+Y），並透過歷史 dock 進行非線性跳轉 · 多個次要視窗（鏡像 / 平鋪預覽）
 
 在大圖模式下按 ``E`` 可將目前圖片直接送入新繪圖分頁。
+
+### 偶動畫工作區
+
+**Puppet（偶動畫）** 分頁是位於 Paint 之後的第四個頂層分頁，從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D / Inochi2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但**不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `plugins/puppet/FORMAT.md`。
+
+- **工作流** — 匯入 PNG → 自動產生對齊 alpha 的三角網格 → 加變形器（旋轉 / Warp 點陣）→ 加參數 → 在 slider 極值處 Set key 記錄變形 → 存成 `.puppet` zip
+- **`.puppet` 格式 (v1)** — Zip 容器：`puppet.json` 主檔、`textures/` 下的 PNG 紋理、可選的 `motions/*.json`、`expressions/*.json`、`physics.json`。JSON-based、git diff 友善、無專利 binary
+- **渲染器** — `QOpenGLWidget`：依 draw_order 畫貼圖三角形、每個 drawable 可選混合模式（normal / additive / multiply）、Pose 群組互斥、image-space 正交投影、透明度棋盤底、滾輪縮放 + 中鍵拖移
+- **變形器（Phase 4）** — `RotationDeformer`（錨點 + 角度）與 `WarpDeformer`（rows × cols 貝茲點陣）。皆為純 numpy、向量化 — 5000 頂點偶在 CPU 上仍可 60 FPS
+- **參數綁骨（Phase 4–5）** — 每個參數持有一張關鍵格清單，把 slider 值對應到變形器形狀 snapshot；runtime 取相鄰兩鍵作 per-field 線性內插。右側 dock 為每個參數顯示一條 slider，按「設定鍵」即捕捉當下變形器形狀
+- **動作播放（Phase 6）** — 底部 dock 顯示動作清單 + Play / Pause / Stop / Loop / 進度滑桿。曲線 sampler 支援所有四種 `.puppet` 段型：`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`（牛頓迭代解時間→參數）
+- **表情（Phase 7）** — 在 slider / 動作值上疊加 additive / multiply / overwrite 參數覆蓋
+- **姿勢群組（Phase 7）** — 互斥 drawable 顯示（武器切換、嘴型變體）；renderer 自動隱藏群組中其他成員
+- **物理（Phase 8）** — Verlet 鐘擺鏈（頭髮 / 衣服 / 緞帶）。輸入參數帶動鏈頂錨點；重力 + 阻尼 + 每粒子彈簧拉回靜止位置；尾端橫向位移寫回輸出參數
+- **即時輸入（Phase 9–10）** — 滑鼠拖曳 → 頭部角度參數；自動眨眼採餘弦開→閉→開曲線；麥克風對嘴透過 `sounddevice` RMS → `ParamMouthOpenY`（選用相依）；攝影機臉部追蹤透過 OpenCV + MediaPipe FaceMesh → 頭部 yaw/pitch/roll + 眼/嘴開合（選用相依）
+- **編輯器（Phase 5）** — 工具列 `加入旋轉變形器` / `加入扭曲變形器` / `加入參數`、每個參數的「設定鍵」按鈕、**另存為…** 把整個綁骨寫成 `.puppet` zip
+- **網格編輯（Phase 12）** — 切換「編輯網格」後可在畫布上拖曳頂點；點擊在 8 px 內吸附最近頂點，拖曳即時更新文件
+- **錄製自訂動作（Phase 13）** — 切換「錄製動作」開始以 30 Hz 取樣參數值；停止後自動烘焙為 `Motion`，每個變動的參數一條 linear-segment 軌（保持不變的軌會被丟棄），加進文件並立即出現在動作 dock，可播放 / 循環 / 存檔
+- **截圖 / 錄製（Phase 11）** — `擷取畫面…` 透過 `glReadPixels` 存 PNG；`錄製…` 切換 30 FPS 影格迴圈，透過 `imageio` 寫成 GIF / WebM / MP4
+
+範例檔在 [`examples/puppet/demo_face.puppet`](examples/puppet/demo_face.puppet)（建檔 script：`examples/puppet/build_demo_puppet.py`）。在 Puppet 分頁按「開啟偶動畫…」匯入即可看到一個已綁好參數與 idle 動作的臉。
 
 ### 系統整合
 
