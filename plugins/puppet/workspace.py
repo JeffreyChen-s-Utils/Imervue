@@ -30,7 +30,15 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 from puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
 from puppet.canvas import PuppetCanvas
-from puppet.document_io import PuppetFormatError, load_puppet
+from puppet.document_io import PuppetFormatError, load_puppet, save_puppet
+from puppet.operations import (
+    add_parameter,
+    add_rotation_deformer,
+    add_warp_deformer,
+    remove_key,
+    set_key_at_value,
+    snapshot_current_forms,
+)
 from puppet.parameter_dock import ParameterDock
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
@@ -58,7 +66,7 @@ class PuppetWorkspace(QMainWindow):
 
         self.addToolBar(self._build_toolbar())
 
-        self._parameter_dock = ParameterDock(self._canvas, self)
+        self._parameter_dock = ParameterDock(self._canvas, self, workspace=self)
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_dock,
         )
@@ -96,6 +104,32 @@ class PuppetWorkspace(QMainWindow):
         self._recent_button.setMenu(self._recent_menu)
         self._recent_menu.aboutToShow.connect(self._rebuild_recent_menu)
         bar.addWidget(self._recent_button)
+
+        bar.addSeparator()
+
+        save_action = QAction(lang.get("puppet_save_as", "Save As…"), self)
+        save_action.triggered.connect(self._save_via_dialog)
+        bar.addAction(save_action)
+
+        bar.addSeparator()
+
+        add_rot_action = QAction(
+            lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
+        )
+        add_rot_action.triggered.connect(self._add_rotation_deformer)
+        bar.addAction(add_rot_action)
+
+        add_warp_action = QAction(
+            lang.get("puppet_add_warp", "Add Warp Deformer"), self,
+        )
+        add_warp_action.triggered.connect(self._add_warp_deformer)
+        bar.addAction(add_warp_action)
+
+        add_param_action = QAction(
+            lang.get("puppet_add_parameter", "Add Parameter"), self,
+        )
+        add_param_action.triggered.connect(self._add_parameter)
+        bar.addAction(add_param_action)
 
         bar.addSeparator()
 
@@ -148,6 +182,149 @@ class PuppetWorkspace(QMainWindow):
 
     def _canvas_reset_view(self) -> None:
         self._canvas.reset_view()
+
+    # ---- save -----------------------------------------------------------
+
+    def _save_via_dialog(self) -> None:
+        doc = self._canvas.document()
+        if doc is None:
+            return
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            lang.get("puppet_save_dialog_title", "Save Puppet As"),
+            "",
+            "Puppet (*.puppet)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".puppet"):
+            path = f"{path}.puppet"
+        self.save_puppet(path)
+
+    def save_puppet(self, path: str | Path) -> bool:
+        doc = self._canvas.document()
+        if doc is None:
+            return False
+        try:
+            save_puppet(doc, path)
+        except OSError as exc:
+            logger.warning("puppet save failed: %s", exc)
+            self._status_label.setText(
+                language_wrapper.language_word_dict.get(
+                    "puppet_save_failed", "Save failed: {error}",
+                ).format(error=str(exc)),
+            )
+            return False
+        self._status_label.setText(
+            language_wrapper.language_word_dict.get(
+                "puppet_save_done", "Saved to {name}",
+            ).format(name=Path(str(path)).name),
+        )
+        _push_recent(str(path))
+        return True
+
+    # ---- editor authoring ----------------------------------------------
+
+    def _add_rotation_deformer(self) -> None:
+        doc = self._canvas.document()
+        if doc is None:
+            return
+        deformer_id = self._unique_deformer_id("rotation")
+        if add_rotation_deformer(doc, deformer_id):
+            self._canvas.load_document(doc)
+            self._announce(
+                "puppet_added_deformer", "Added deformer {id}",
+                id=deformer_id,
+            )
+
+    def _add_warp_deformer(self) -> None:
+        doc = self._canvas.document()
+        if doc is None:
+            return
+        deformer_id = self._unique_deformer_id("warp")
+        if add_warp_deformer(doc, deformer_id):
+            self._canvas.load_document(doc)
+            self._announce(
+                "puppet_added_deformer", "Added deformer {id}",
+                id=deformer_id,
+            )
+
+    def _add_parameter(self) -> None:
+        doc = self._canvas.document()
+        if doc is None:
+            return
+        param_id = self._unique_parameter_id("Param")
+        if add_parameter(doc, param_id):
+            # Force the dock to rebuild itself by replaying load_document
+            self._canvas.load_document(doc)
+            self._announce(
+                "puppet_added_parameter", "Added parameter {id}",
+                id=param_id,
+            )
+
+    def set_key_at_current_slider(self, param_id: str) -> bool:
+        """Snapshot current deformer forms at the slider's current
+        value and write them as a key on ``param_id``. Wired by the
+        parameter dock's per-row Set Key button."""
+        doc = self._canvas.document()
+        if doc is None:
+            return False
+        value = self._canvas.parameter_values().get(param_id)
+        if value is None:
+            return False
+        forms = snapshot_current_forms(doc)
+        ok = set_key_at_value(doc, param_id, value, forms)
+        if ok:
+            self._announce(
+                "puppet_key_set", "Set key on {id} at {value:.2f}",
+                id=param_id, value=value,
+            )
+        return ok
+
+    def remove_key_at_current_slider(self, param_id: str) -> bool:
+        doc = self._canvas.document()
+        if doc is None:
+            return False
+        value = self._canvas.parameter_values().get(param_id)
+        if value is None:
+            return False
+        ok = remove_key(doc, param_id, value)
+        if ok:
+            self._canvas.load_document(doc)   # re-evaluate at neutral keys
+            self._canvas.set_parameter_value(param_id, value)
+            self._announce(
+                "puppet_key_removed", "Removed key from {id} at {value:.2f}",
+                id=param_id, value=value,
+            )
+        return ok
+
+    # ---- helpers --------------------------------------------------------
+
+    def _unique_deformer_id(self, prefix: str) -> str:
+        doc = self._canvas.document()
+        existing = {d.id for d in (doc.deformers if doc else [])}
+        i = 1
+        while True:
+            candidate = f"{prefix}_{i}"
+            if candidate not in existing:
+                return candidate
+            i += 1
+
+    def _unique_parameter_id(self, prefix: str) -> str:
+        doc = self._canvas.document()
+        existing = {p.id for p in (doc.parameters if doc else [])}
+        i = 1
+        while True:
+            candidate = f"{prefix}{i}"
+            if candidate not in existing:
+                return candidate
+            i += 1
+
+    def _announce(self, key: str, fallback: str, **fmt) -> None:
+        self._status_label.setText(
+            language_wrapper.language_word_dict.get(key, fallback).format(**fmt),
+        )
 
     # ---- import PNG -----------------------------------------------------
 

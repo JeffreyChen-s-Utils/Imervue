@@ -45,10 +45,11 @@ class ParameterDock(QDockWidget):
     who only care about the rendered output don't need to subscribe.
     """
 
-    def __init__(self, canvas: PuppetCanvas, parent=None):
+    def __init__(self, canvas: PuppetCanvas, parent=None, *, workspace=None):
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("puppet_parameters_dock", "Parameters"), parent)
         self._canvas = canvas
+        self._workspace = workspace
         self._sliders: dict[str, QSlider] = {}
         self._value_labels: dict[str, QLabel] = {}
         self._inner = QWidget()
@@ -115,6 +116,7 @@ class ParameterDock(QDockWidget):
     def _build_row(
         self, param: Parameter, value: float,
     ) -> tuple[QWidget, QSlider, QLabel]:
+        lang = language_wrapper.language_word_dict
         row = QWidget()
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
@@ -137,7 +139,25 @@ class ParameterDock(QDockWidget):
         value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row_layout.addWidget(value_label)
 
+        if self._workspace is not None:
+            set_key_btn = QPushButton(lang.get("puppet_set_key", "Set key"))
+            set_key_btn.setToolTip(
+                lang.get(
+                    "puppet_set_key_tip",
+                    "Snapshot current deformer forms as a key on this parameter",
+                ),
+            )
+            set_key_btn.clicked.connect(
+                lambda _checked=False, p=param: self._set_key(p),
+            )
+            row_layout.addWidget(set_key_btn)
+
         return row, slider, value_label
+
+    def _set_key(self, param: Parameter) -> None:
+        if self._workspace is None:
+            return
+        self._workspace.set_key_at_current_slider(param.id)
 
     def _build_reset_button(self) -> QPushButton:
         lang = language_wrapper.language_word_dict
