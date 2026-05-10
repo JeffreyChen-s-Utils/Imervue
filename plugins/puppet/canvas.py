@@ -69,6 +69,7 @@ from puppet.render_prep import (
     build_draw_list,
     fit_view,
 )
+from puppet.physics import PhysicsEngine
 from puppet.runtime import (
     apply_expressions,
     compose_all_drawables,
@@ -132,6 +133,8 @@ class PuppetCanvas(QOpenGLWidget):
         # without re-running the composer per call.
         self._deformed_vertices: dict[str, np.ndarray] = {}
         self._visibility: dict[str, bool] = {}
+        self._physics = PhysicsEngine()
+        self._physics_outputs: dict[str, float] = {}
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -154,6 +157,8 @@ class PuppetCanvas(QOpenGLWidget):
         )
         self._active_expressions = []
         self._active_pose = {}
+        self._physics.bind_document(document)
+        self._physics_outputs = {}
         self._recompute_deformed_vertices()
         self.document_loaded.emit()
         self.parameters_changed.emit()
@@ -201,6 +206,11 @@ class PuppetCanvas(QOpenGLWidget):
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
+        # Physics outputs are layered last so an authored slider /
+        # motion / expression still wins where they explicitly set
+        # the same parameter, but the physics rig drives whichever
+        # parameter the rig nominated.
+        active_values = {**active_values, **self._physics_outputs}
         if active_values:
             self._deformed_vertices = compose_all_drawables(
                 self._document, active_values,
@@ -212,6 +222,22 @@ class PuppetCanvas(QOpenGLWidget):
         self._visibility = resolve_pose_visibility(
             self._document, self._active_pose,
         )
+
+    def step_physics(self, dt: float) -> None:
+        """Advance the physics chains by ``dt`` seconds and re-fold
+        their outputs into the deformed-vertex cache. Workspace's
+        frame timer calls this once per tick."""
+        if self._document is None:
+            return
+        active_values = apply_expressions(
+            self._parameter_values, self._active_expressions,
+        )
+        self._physics_outputs = self._physics.step(dt, active_values)
+        self._recompute_deformed_vertices()
+        self.update()
+
+    def physics(self) -> PhysicsEngine:
+        return self._physics
 
     # ---- expression / pose API -----------------------------------------
 
