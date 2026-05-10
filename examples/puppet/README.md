@@ -8,6 +8,7 @@ Imervue (the third top-level tab, slotted right after Paint).
 | `demo_face.puppet` | procedural smiley face | 1 | 1 (rotation) | 1 | 1 (idle sine) |
 | `demo_amiya.puppet` | Amiya from Arknights | 1 | 4 (region warps) | 4 | 3 (idle / wave / greet) |
 | `demo_tpose.puppet` | procedural T-pose figure (recommended) | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / jumping_jacks / bow / stretch) |
+| `demo_rossi.puppet` | Rossi from Arknights, sliced into limbs | 6 | 6 (joint rotations) | 6 | 4 (idle / head_shake / bow / wave) |
 
 ## `demo_face.puppet`
 
@@ -176,6 +177,53 @@ py examples/puppet/preview_tpose.py
 A pure-Pillow software rasteriser samples every motion at three
 phases and dumps PNGs into `tpose_previews/` so you can confirm the
 poses look right before opening the GL canvas.
+
+## `demo_rossi.puppet` — same rig topology, real character image
+
+Same six-drawable / six-rotation-deformer architecture as
+`demo_tpose`, but the body parts are sliced out of a real Rossi
+illustration ([Danbooru post #11311021](https://danbooru.donmai.us/posts/11311021)
+by `odmised`, rating: g, no `do_not_post` flag at fetch time —
+provenance in `assets/CREDITS.md`).
+
+The slicing is rectangular alpha masks aligned to Rossi's actual
+joints, so each rotation deformer rotates only its slice of the
+canvas. Motions are tuned for this character's pose:
+
+* `idle` (4 s) — body sway + counter head bob
+* `head_shake` (2 s) — head shakes side-to-side at 1 Hz
+* `bow` (2.4 s) — upper body leans forward
+* `wave` (2 s) — right arm + head bob
+
+`cheer` and `step_left` (which work cleanly on the T-pose figure)
+are intentionally omitted because Rossi's source pose has her arms
+folded across her body and only one leg fully visible — rectangular
+masks of those regions catch mostly cape / dress pixels, so the
+motions don't read.
+
+### Try it
+
+```bash
+# Open Puppet tab → Open Puppet… → demo_rossi.puppet
+# Click any motion in the bottom Motions dock (single-click plays it
+# immediately). All four motions visibly differ from neutral.
+```
+
+### Build a fresh copy
+
+```bash
+py examples/puppet/build_rossi_puppet.py        # → demo_rossi.puppet
+py examples/puppet/preview_rossi.py             # → rossi_previews/*.png
+```
+
+### Building from your own art
+
+If you have a different illustration of any character with arms at
+their sides and both legs visible, point `SOURCE_IMAGE` at it and
+re-tune the body-part rectangles + joint pivot fractions at the top
+of `build_rossi_puppet.py`. The padding ratio (`PAD_RATIO = 0.75`)
+keeps rotated limbs visible so you don't need to widen the canvas
+manually.
 
 ## Authoring your own from scratch
 

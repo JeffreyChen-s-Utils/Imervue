@@ -66,7 +66,10 @@ python_functions = ["test_*"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-extend-exclude = ["build", "dist", ".venv", "venv", "docs/_build"]
+# ``examples/`` is exempt — demo scripts live there and aren't part
+# of the shipped package; tuning ruff for procedural-art helpers
+# would just add noise without affecting production code.
+extend-exclude = ["build", "dist", ".venv", "venv", "docs/_build", "examples"]
 
 [tool.ruff.lint]
 select = [
