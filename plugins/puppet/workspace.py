@@ -39,6 +39,7 @@ from puppet.operations import (
     set_key_at_value,
     snapshot_current_forms,
 )
+from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
 from puppet.parameter_dock import ParameterDock
 
@@ -76,6 +77,8 @@ class PuppetWorkspace(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.BottomDockWidgetArea, self._motion_dock,
         )
+
+        self._input_engine = InputEngine(self._canvas, self)
 
         self._status_label = QLabel("")
         bar = QStatusBar()
@@ -136,6 +139,29 @@ class PuppetWorkspace(QMainWindow):
         )
         add_param_action.triggered.connect(self._add_parameter)
         bar.addAction(add_param_action)
+
+        bar.addSeparator()
+
+        self._drag_toggle = QAction(
+            lang.get("puppet_drag_track", "Drag-track head"), self,
+        )
+        self._drag_toggle.setCheckable(True)
+        self._drag_toggle.toggled.connect(self._toggle_drag)
+        bar.addAction(self._drag_toggle)
+
+        self._blink_toggle = QAction(
+            lang.get("puppet_auto_blink", "Auto-blink"), self,
+        )
+        self._blink_toggle.setCheckable(True)
+        self._blink_toggle.toggled.connect(self._toggle_blink)
+        bar.addAction(self._blink_toggle)
+
+        self._lipsync_toggle = QAction(
+            lang.get("puppet_lipsync", "Mic lip-sync"), self,
+        )
+        self._lipsync_toggle.setCheckable(True)
+        self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
+        bar.addAction(self._lipsync_toggle)
 
         bar.addSeparator()
 
@@ -331,6 +357,29 @@ class PuppetWorkspace(QMainWindow):
         self._status_label.setText(
             language_wrapper.language_word_dict.get(key, fallback).format(**fmt),
         )
+
+    # ---- live input toggles --------------------------------------------
+
+    def _toggle_drag(self, enabled: bool) -> None:
+        self._input_engine.set_drag_enabled(enabled)
+
+    def _toggle_blink(self, enabled: bool) -> None:
+        self._input_engine.set_blink_enabled(enabled)
+
+    def _toggle_lipsync(self, enabled: bool) -> None:
+        ok = self._input_engine.set_lipsync_enabled(enabled)
+        if enabled and not ok:
+            # sounddevice missing or mic open failed — bounce the toggle
+            self._lipsync_toggle.blockSignals(True)
+            self._lipsync_toggle.setChecked(False)
+            self._lipsync_toggle.blockSignals(False)
+            self._announce(
+                "puppet_lipsync_unavailable",
+                "Lip-sync unavailable (install sounddevice for mic input)",
+            )
+
+    def input_engine(self) -> InputEngine:
+        return self._input_engine
 
     # ---- import PNG -----------------------------------------------------
 
