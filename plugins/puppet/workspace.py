@@ -41,8 +41,10 @@ from puppet.operations import (
 )
 from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
+from puppet.motion_recorder import MotionRecorder, append_motion
 from puppet.parameter_dock import ParameterDock
 from puppet.recorder import RecordingSession, save_canvas_png
+from puppet.webcam_tracker import WebcamTracker
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
@@ -83,6 +85,9 @@ class PuppetWorkspace(QMainWindow):
         self._recorder = RecordingSession(self._canvas, self)
         self._recorder.finished.connect(self._on_recording_finished)
         self._recorder.failed.connect(self._on_recording_failed)
+        self._webcam = WebcamTracker(self._canvas, self)
+        self._motion_recorder = MotionRecorder(self._canvas, self)
+        self._motion_recorder.finished.connect(self._on_motion_recorded)
 
         self._status_label = QLabel("")
         bar = QStatusBar()
@@ -166,6 +171,29 @@ class PuppetWorkspace(QMainWindow):
         self._lipsync_toggle.setCheckable(True)
         self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
         bar.addAction(self._lipsync_toggle)
+
+        self._webcam_toggle = QAction(
+            lang.get("puppet_webcam", "Webcam tracking"), self,
+        )
+        self._webcam_toggle.setCheckable(True)
+        self._webcam_toggle.toggled.connect(self._toggle_webcam)
+        bar.addAction(self._webcam_toggle)
+
+        bar.addSeparator()
+
+        self._mesh_edit_toggle = QAction(
+            lang.get("puppet_mesh_edit", "Edit mesh"), self,
+        )
+        self._mesh_edit_toggle.setCheckable(True)
+        self._mesh_edit_toggle.toggled.connect(self._toggle_mesh_edit)
+        bar.addAction(self._mesh_edit_toggle)
+
+        self._motion_record_toggle = QAction(
+            lang.get("puppet_record_motion", "Record motion"), self,
+        )
+        self._motion_record_toggle.setCheckable(True)
+        self._motion_record_toggle.toggled.connect(self._toggle_motion_record)
+        bar.addAction(self._motion_record_toggle)
 
         bar.addSeparator()
 
@@ -465,6 +493,66 @@ class PuppetWorkspace(QMainWindow):
         self._record_action.blockSignals(True)
         self._record_action.setChecked(False)
         self._record_action.blockSignals(False)
+
+    # ---- webcam tracking ----------------------------------------------
+
+    def _toggle_webcam(self, enabled: bool) -> None:
+        ok = self._webcam.set_enabled(enabled)
+        if enabled and not ok:
+            self._webcam_toggle.blockSignals(True)
+            self._webcam_toggle.setChecked(False)
+            self._webcam_toggle.blockSignals(False)
+            self._announce(
+                "puppet_webcam_unavailable",
+                "Webcam tracking unavailable (install opencv-python + mediapipe)",
+            )
+
+    # ---- mesh-edit toggle ---------------------------------------------
+
+    def _toggle_mesh_edit(self, enabled: bool) -> None:
+        self._canvas.set_mesh_edit_enabled(enabled)
+        self._announce(
+            "puppet_mesh_edit_on" if enabled else "puppet_mesh_edit_off",
+            "Mesh editing on" if enabled else "Mesh editing off",
+        )
+
+    # ---- motion recording ---------------------------------------------
+
+    def _toggle_motion_record(self, enabled: bool) -> None:
+        if enabled:
+            if not self._start_motion_recording():
+                self._motion_record_toggle.blockSignals(True)
+                self._motion_record_toggle.setChecked(False)
+                self._motion_record_toggle.blockSignals(False)
+        else:
+            self._motion_recorder.stop()
+
+    def _start_motion_recording(self) -> bool:
+        if self._canvas.document() is None:
+            return False
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        name, ok = QInputDialog.getText(
+            self,
+            lang.get("puppet_record_motion_title", "Record motion"),
+            lang.get("puppet_record_motion_prompt", "Motion name:"),
+            text="user_motion",
+        )
+        if not ok or not name.strip():
+            return False
+        return self._motion_recorder.start(name.strip())
+
+    def _on_motion_recorded(self, motion) -> None:
+        if motion is None:
+            return
+        if append_motion(self._canvas, motion):
+            self._announce(
+                "puppet_motion_recorded",
+                "Recorded motion '{name}' ({duration:.1f}s, {tracks} tracks)",
+                name=motion.name,
+                duration=motion.duration,
+                tracks=len(motion.tracks),
+            )
 
     # ---- import PNG -----------------------------------------------------
 

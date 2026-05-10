@@ -69,6 +69,7 @@ from puppet.render_prep import (
     build_draw_list,
     fit_view,
 )
+from puppet.mesh_edit import find_drawable_at, move_vertex
 from puppet.physics import PhysicsEngine
 from puppet.runtime import (
     apply_expressions,
@@ -135,6 +136,9 @@ class PuppetCanvas(QOpenGLWidget):
         self._visibility: dict[str, bool] = {}
         self._physics = PhysicsEngine()
         self._physics_outputs: dict[str, float] = {}
+        # Mesh-edit mode lets the user drag vertices; off by default.
+        self._mesh_edit_enabled: bool = False
+        self._mesh_edit_target: tuple[str, int] | None = None
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -238,6 +242,49 @@ class PuppetCanvas(QOpenGLWidget):
 
     def physics(self) -> PhysicsEngine:
         return self._physics
+
+    # ---- mesh-edit mode --------------------------------------------------
+
+    def set_mesh_edit_enabled(self, enabled: bool) -> None:
+        """Toggle the click-to-drag vertex editor. Switching off also
+        clears any active drag target."""
+        self._mesh_edit_enabled = bool(enabled)
+        if not enabled:
+            self._mesh_edit_target = None
+
+    def mesh_edit_enabled(self) -> bool:
+        return self._mesh_edit_enabled
+
+    def begin_mesh_edit_at(self, image_x: float, image_y: float) -> bool:
+        """Pick the topmost vertex within the snap radius of ``(image_x,
+        image_y)`` and start a drag. Returns ``True`` if a vertex was
+        grabbed."""
+        if not self._mesh_edit_enabled or self._document is None:
+            return False
+        hit = find_drawable_at(self._document, image_x, image_y)
+        self._mesh_edit_target = hit
+        return hit is not None
+
+    def update_mesh_edit_drag(self, image_x: float, image_y: float) -> bool:
+        """Move the grabbed vertex to ``(image_x, image_y)`` and rebuild
+        the draw list so the renderer picks up the change."""
+        if not self._mesh_edit_enabled or self._mesh_edit_target is None:
+            return False
+        if self._document is None:
+            return False
+        drawable_id, vertex_idx = self._mesh_edit_target
+        drawable = self._document.drawable(drawable_id)
+        if drawable is None:
+            return False
+        if not move_vertex(drawable, vertex_idx, image_x, image_y):
+            return False
+        self._draw_list = build_draw_list(self._document)
+        self._recompute_deformed_vertices()
+        self.update()
+        return True
+
+    def end_mesh_edit_drag(self) -> None:
+        self._mesh_edit_target = None
 
     # ---- expression / pose API -----------------------------------------
 
@@ -446,22 +493,44 @@ class PuppetCanvas(QOpenGLWidget):
             self._panning = True
             self._pan_anchor = (event.position().x(), event.position().y())
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            return
+        if (
+            self._mesh_edit_enabled
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            ix, iy = self._screen_to_image(
+                event.position().x(), event.position().y(),
+            )
+            self.begin_mesh_edit_at(ix, iy)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
-        if not self._panning:
+        if self._panning:
+            dx = event.position().x() - self._pan_anchor[0]
+            dy = event.position().y() - self._pan_anchor[1]
+            self._pan_anchor = (event.position().x(), event.position().y())
+            self._pan_x += dx
+            self._pan_y += dy
+            self._user_view_locked = True
+            self.update()
             return
-        dx = event.position().x() - self._pan_anchor[0]
-        dy = event.position().y() - self._pan_anchor[1]
-        self._pan_anchor = (event.position().x(), event.position().y())
-        self._pan_x += dx
-        self._pan_y += dy
-        self._user_view_locked = True
-        self.update()
+        if self._mesh_edit_enabled and self._mesh_edit_target is not None:
+            ix, iy = self._screen_to_image(
+                event.position().x(), event.position().y(),
+            )
+            self.update_mesh_edit_drag(ix, iy)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:
             self._panning = False
             self.setCursor(Qt.CursorShape.ArrowCursor)
+            return
+        if self._mesh_edit_enabled and event.button() == Qt.MouseButton.LeftButton:
+            self.end_mesh_edit_drag()
+
+    def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:   # pragma: no cover - Qt UI
+        if self._zoom == 0:
+            return 0.0, 0.0
+        return (sx - self._pan_x) / self._zoom, (sy - self._pan_y) / self._zoom
 
     def _apply_zoom(self, factor: float, sx: float, sy: float) -> None:   # pragma: no cover - Qt UI
         new_zoom = max(_MIN_ZOOM, min(_MAX_ZOOM, self._zoom * factor))
