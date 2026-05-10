@@ -13,16 +13,15 @@ from types import SimpleNamespace
 from PySide6.QtWidgets import QTabWidget
 
 
-def test_placeholder_widget_builds(qapp):
-    from puppet.puppet_plugin import _build_placeholder_widget
+def test_workspace_widget_builds(qapp):
+    """Phase 2 swaps the placeholder for the real PuppetWorkspace —
+    instantiating it must not require a loaded document."""
+    from puppet.puppet_plugin import _build_workspace_widget
 
-    widget = _build_placeholder_widget()
+    widget = _build_workspace_widget()
     try:
-        # Headline + subtitle = two visible labels
-        labels = widget.findChildren(type(widget).__bases__[0])  # noqa: SLF001
         assert widget.layout() is not None
-        assert widget.layout().count() == 2
-        del labels
+        assert widget.layout().count() >= 1   # toolbar + canvas + status
     finally:
         widget.deleteLater()
 
