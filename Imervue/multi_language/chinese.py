@@ -637,7 +637,7 @@ chinese_word_dict = {
     "paint_view_bleed_guides": '出血/安全区指示',
     "paint_view_rotate_ccw": '画布逆时针旋转',
     "paint_view_reset_rotation": '重置旋转',
-    "paint_tool_bezier_pen": '钢笔',
+    "paint_tool_bezier_pen": '贝兹钢笔',
     "paint_tool_clone_stamp": '仿制图章',
     "paint_tool_transform": '变形',
     "paint_tool_speech_bubble": '对话框',

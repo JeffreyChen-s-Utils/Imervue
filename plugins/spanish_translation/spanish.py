@@ -1045,7 +1045,7 @@ spanish_word_dict.update({
     "paint_view_bleed_guides": 'Guías de sangrado',
     "paint_view_rotate_ccw": 'Girar lienzo CCW',
     "paint_view_reset_rotation": 'Restablecer rotación',
-    "paint_tool_bezier_pen": 'Pluma',
+    "paint_tool_bezier_pen": 'Pluma Bézier',
     "paint_tool_clone_stamp": 'Sello',
     "paint_settings_pressure_curve": 'Curva de presión…',
     "paint_settings_shortcuts": 'Atajos…',

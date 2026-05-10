@@ -660,7 +660,7 @@ english_word_dict = {
     "paint_view_bleed_guides": 'Bleed Guides',
     "paint_view_rotate_ccw": 'Rotate Canvas CCW',
     "paint_view_reset_rotation": 'Reset Rotation',
-    "paint_tool_bezier_pen": 'Pen',
+    "paint_tool_bezier_pen": 'Bezier Pen',
     "paint_tool_clone_stamp": 'Clone Stamp',
     "paint_tool_transform": 'Transform',
     "paint_tool_speech_bubble": 'Speech Bubble',

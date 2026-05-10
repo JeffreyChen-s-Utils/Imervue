@@ -637,7 +637,7 @@ traditional_chinese_word_dict = {
     "paint_view_bleed_guides": '出血/安全區指示',
     "paint_view_rotate_ccw": '畫布逆時針旋轉',
     "paint_view_reset_rotation": '重設旋轉',
-    "paint_tool_bezier_pen": '鋼筆',
+    "paint_tool_bezier_pen": '貝茲鋼筆',
     "paint_tool_clone_stamp": '仿製圖章',
     "paint_tool_transform": '變形',
     "paint_tool_speech_bubble": '對話框',

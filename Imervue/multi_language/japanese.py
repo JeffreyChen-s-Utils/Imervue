@@ -648,7 +648,7 @@ japanese_word_dict = {
     "paint_view_bleed_guides": '裁ち落とし/安全エリア',
     "paint_view_rotate_ccw": 'キャンバスを左回転',
     "paint_view_reset_rotation": '回転をリセット',
-    "paint_tool_bezier_pen": 'ペン',
+    "paint_tool_bezier_pen": 'ベジェペン',
     "paint_tool_clone_stamp": 'スタンプ',
     "paint_tool_transform": '変形',
     "paint_tool_speech_bubble": '吹き出し',

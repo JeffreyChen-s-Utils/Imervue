@@ -645,7 +645,7 @@ korean_word_dict = {
     "paint_view_bleed_guides": '재단/안전 영역 가이드',
     "paint_view_rotate_ccw": '캔버스 반시계 회전',
     "paint_view_reset_rotation": '회전 초기화',
-    "paint_tool_bezier_pen": '펜',
+    "paint_tool_bezier_pen": '베지어 펜',
     "paint_tool_clone_stamp": '복제 도장',
     "paint_tool_transform": '변형',
     "paint_tool_speech_bubble": '말풍선',
