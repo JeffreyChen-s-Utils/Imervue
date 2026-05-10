@@ -70,8 +70,10 @@ from puppet.render_prep import (
     fit_view,
 )
 from puppet.runtime import (
+    apply_expressions,
     compose_all_drawables,
     default_parameter_values,
+    resolve_pose_visibility,
 )
 
 if TYPE_CHECKING:
@@ -117,10 +119,19 @@ class PuppetCanvas(QOpenGLWidget):
         self._panning: bool = False
         self._pan_anchor: tuple[float, float] = (0.0, 0.0)
         self._parameter_values: dict[str, float] = {}
+        # Active expressions in priority order — last item wins on
+        # overlapping parameter overrides. Editor toggles set / clear
+        # entries via add_expression / remove_expression.
+        self._active_expressions: list = []
+        # Pose group → active drawable id. The render path hides every
+        # other member of the group so users can flip between weapon
+        # variants / mouth shapes / etc. without juggling visibility.
+        self._active_pose: dict[str, str] = {}
         # Cache of deformed vertex arrays keyed by drawable id; rebuilt
         # whenever parameter values change so paintGL can read it
         # without re-running the composer per call.
         self._deformed_vertices: dict[str, np.ndarray] = {}
+        self._visibility: dict[str, bool] = {}
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -141,6 +152,8 @@ class PuppetCanvas(QOpenGLWidget):
         self._parameter_values = (
             default_parameter_values(document) if document is not None else {}
         )
+        self._active_expressions = []
+        self._active_pose = {}
         self._recompute_deformed_vertices()
         self.document_loaded.emit()
         self.parameters_changed.emit()
@@ -181,12 +194,77 @@ class PuppetCanvas(QOpenGLWidget):
         return self._zoom
 
     def _recompute_deformed_vertices(self) -> None:
-        if self._document is None or not self._parameter_values:
+        if self._document is None:
             self._deformed_vertices = {}
+            self._visibility = {}
             return
-        self._deformed_vertices = compose_all_drawables(
-            self._document, self._parameter_values,
+        active_values = apply_expressions(
+            self._parameter_values, self._active_expressions,
         )
+        if active_values:
+            self._deformed_vertices = compose_all_drawables(
+                self._document, active_values,
+            )
+        else:
+            self._deformed_vertices = {}
+        # Pose visibility applies even when there are no parameters —
+        # users may have a static rig with weapon-swap pose groups.
+        self._visibility = resolve_pose_visibility(
+            self._document, self._active_pose,
+        )
+
+    # ---- expression / pose API -----------------------------------------
+
+    def add_expression(self, name: str) -> bool:
+        """Push an expression by name onto the active stack. No-op if
+        the document doesn't have that expression or it's already on."""
+        if self._document is None:
+            return False
+        match = next(
+            (e for e in self._document.expressions if e.name == name), None,
+        )
+        if match is None:
+            return False
+        if any(e.name == name for e in self._active_expressions):
+            return False
+        self._active_expressions.append(match)
+        self._recompute_deformed_vertices()
+        self.update()
+        return True
+
+    def remove_expression(self, name: str) -> bool:
+        before = len(self._active_expressions)
+        self._active_expressions = [
+            e for e in self._active_expressions if e.name != name
+        ]
+        if len(self._active_expressions) == before:
+            return False
+        self._recompute_deformed_vertices()
+        self.update()
+        return True
+
+    def active_expressions(self) -> list[str]:
+        return [e.name for e in self._active_expressions]
+
+    def set_pose_active(self, group_id: str, drawable_id: str) -> bool:
+        """Pick which drawable in a pose group is currently visible."""
+        if self._document is None:
+            return False
+        group = next(
+            (g for g in self._document.pose_groups if g.id == group_id), None,
+        )
+        if group is None or drawable_id not in group.drawables:
+            return False
+        self._active_pose[group_id] = drawable_id
+        self._recompute_deformed_vertices()
+        self.update()
+        return True
+
+    def active_pose(self) -> dict[str, str]:
+        return dict(self._active_pose)
+
+    def visibility(self) -> dict[str, bool]:
+        return dict(self._visibility)
 
     # ---- GL lifecycle ---------------------------------------------------
 
@@ -253,7 +331,8 @@ class PuppetCanvas(QOpenGLWidget):
 
     def _draw_drawables(self) -> None:  # pragma: no cover - GL needs display
         for cmd in self._draw_list:
-            if not cmd.visible:
+            visible = self._visibility.get(cmd.drawable_id, cmd.visible)
+            if not visible:
                 continue
             tex_id = self._texture_for(cmd.texture)
             if tex_id is None:
