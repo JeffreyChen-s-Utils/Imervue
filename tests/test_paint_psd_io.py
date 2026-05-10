@@ -8,7 +8,12 @@ import pytest
 
 from Imervue.paint.document import PaintDocument
 from Imervue.paint.psd_io import (
+    _COMPRESSION_RAW,
+    _COMPRESSION_RLE,
+    _Cursor,
+    _assign_composite_channel,
     _packbits_decode,
+    _parse_image_data_section,
     load_psd,
     save_psd,
 )
@@ -307,3 +312,121 @@ def test_groups_outside_layer_unaffected(tmp_path):
     above = [layer for layer in loaded.layers() if layer.name == "Above"]
     assert above
     assert above[0].group is None
+
+
+# ---------------------------------------------------------------------------
+# Composite image-data section — focused coverage of the parser's branches
+# (the writer always emits RAW, so RLE / alpha-fallback / unsupported-compression
+# are otherwise untested by the round-trip tests).
+# ---------------------------------------------------------------------------
+
+
+def test_assign_composite_channel_routes_alpha_to_slot_3():
+    image = np.zeros((2, 2, 4), dtype=np.uint8)
+    plane = np.full((2, 2), 99, dtype=np.uint8)
+    _assign_composite_channel(image, plane, ch_id=-1)
+    assert (image[..., 3] == 99).all()
+    assert (image[..., :3] == 0).all()
+
+
+def test_assign_composite_channel_routes_rgb_to_indexed_slot():
+    image = np.zeros((2, 2, 4), dtype=np.uint8)
+    plane = np.full((2, 2), 42, dtype=np.uint8)
+    _assign_composite_channel(image, plane, ch_id=1)
+    assert (image[..., 1] == 42).all()
+    assert (image[..., 0] == 0).all()
+    assert (image[..., 2] == 0).all()
+    assert (image[..., 3] == 0).all()
+
+
+def _build_raw_composite(h: int, w: int, planes: dict[int, np.ndarray]) -> bytes:
+    """Compose a composite image-data section using RAW compression.
+
+    ``planes`` maps channel ids (0=R, 1=G, 2=B, -1=A) to HxW uint8 planes.
+    Channels not present default to a zero plane.
+    """
+    out = bytearray(struct.pack(">H", _COMPRESSION_RAW))
+    for ch_id in (0, 1, 2, -1):
+        plane = planes.get(ch_id, np.zeros((h, w), dtype=np.uint8))
+        out.extend(plane.tobytes())
+    return bytes(out)
+
+
+def test_parse_image_data_section_raw_orders_channels_rgba():
+    h, w = 2, 3
+    planes = {
+        0: np.full((h, w), 10, dtype=np.uint8),
+        1: np.full((h, w), 20, dtype=np.uint8),
+        2: np.full((h, w), 30, dtype=np.uint8),
+        -1: np.full((h, w), 40, dtype=np.uint8),
+    }
+    cursor = _Cursor(_build_raw_composite(h, w, planes))
+    out = _parse_image_data_section(cursor, h, w)
+    assert (out[..., 0] == 10).all()
+    assert (out[..., 1] == 20).all()
+    assert (out[..., 2] == 30).all()
+    assert (out[..., 3] == 40).all()
+
+
+def test_parse_image_data_section_falls_back_to_opaque_alpha():
+    """When the stored alpha plane is all zeros the decoder must paint
+    fully opaque so the pixels actually render — older PSDs from
+    Photoshop omitted the alpha plane entirely."""
+    h, w = 2, 2
+    cursor = _Cursor(_build_raw_composite(h, w, {0: np.full((h, w), 5, dtype=np.uint8)}))
+    out = _parse_image_data_section(cursor, h, w)
+    assert (out[..., 3] == 255).all()
+
+
+def test_parse_image_data_section_rejects_unknown_compression():
+    cursor = _Cursor(struct.pack(">H", 99))
+    with pytest.raises(ValueError, match="unsupported composite compression"):
+        _parse_image_data_section(cursor, 2, 2)
+
+
+def test_parse_image_data_section_returns_blank_when_cursor_exhausted():
+    cursor = _Cursor(b"")
+    out = _parse_image_data_section(cursor, 4, 5)
+    assert out.shape == (4, 5, 4)
+    assert (out == 0).all()
+
+
+def _packbits_encode(plane: np.ndarray) -> tuple[list[int], bytes]:
+    """Encode ``plane`` (HxW uint8) row-by-row using a literal-only
+    PackBits stream — minimal but valid input for ``_packbits_decode``."""
+    h, w = plane.shape
+    row_lengths: list[int] = []
+    body = bytearray()
+    for row in range(h):
+        # literal run header: w-1 (n in [0,127] means "next n+1 bytes literal")
+        body.append(w - 1)
+        body.extend(plane[row].tobytes())
+        row_lengths.append(1 + w)
+    return row_lengths, bytes(body)
+
+
+def test_parse_image_data_section_decodes_rle_compression():
+    h, w = 2, 4
+    planes = {
+        0: np.array([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=np.uint8),
+        1: np.array([[9, 10, 11, 12], [13, 14, 15, 16]], dtype=np.uint8),
+        2: np.array([[17, 18, 19, 20], [21, 22, 23, 24]], dtype=np.uint8),
+        -1: np.full((h, w), 200, dtype=np.uint8),
+    }
+    payload = bytearray(struct.pack(">H", _COMPRESSION_RLE))
+    all_row_lengths: list[int] = []
+    bodies = bytearray()
+    for ch_id in (0, 1, 2, -1):
+        rl, body = _packbits_encode(planes[ch_id])
+        all_row_lengths.extend(rl)
+        bodies.extend(body)
+    payload.extend(struct.pack(f">{len(all_row_lengths)}H", *all_row_lengths))
+    payload.extend(bodies)
+
+    cursor = _Cursor(bytes(payload))
+    out = _parse_image_data_section(cursor, h, w)
+
+    assert np.array_equal(out[..., 0], planes[0])
+    assert np.array_equal(out[..., 1], planes[1])
+    assert np.array_equal(out[..., 2], planes[2])
+    assert np.array_equal(out[..., 3], planes[-1])

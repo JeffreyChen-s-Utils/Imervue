@@ -713,29 +713,9 @@ def _parse_image_data_section(cursor, h: int, w: int) -> np.ndarray:
     compression = cursor.read_u16()
     image = np.zeros((h, w, 4), dtype=np.uint8)
     if compression == _COMPRESSION_RAW:
-        for ch_id in CHANNEL_ORDER:
-            plane_bytes = cursor.read(h * w)
-            plane = np.frombuffer(plane_bytes, dtype=np.uint8).reshape((h, w))
-            if ch_id == -1:
-                image[..., 3] = plane
-            else:
-                image[..., ch_id] = plane
+        _read_composite_raw(cursor, image, h, w)
     elif compression == _COMPRESSION_RLE:
-        # Total channels in composite = 4 (RGBA) — read row-length tables
-        # for all channels first, then the packed data.
-        total_rows = h * PSD_CHANNELS_RGBA
-        row_lengths = struct.unpack(
-            f">{total_rows}H", cursor.read(total_rows * 2),
-        )
-        for ch_pos, ch_id in enumerate(CHANNEL_ORDER):
-            plane = np.zeros((h, w), dtype=np.uint8)
-            for row in range(h):
-                row_len = row_lengths[ch_pos * h + row]
-                plane[row] = _packbits_decode(cursor.read(row_len), w)
-            if ch_id == -1:
-                image[..., 3] = plane
-            else:
-                image[..., ch_id] = plane
+        _read_composite_rle(cursor, image, h, w)
     else:
         raise ValueError(f"unsupported composite compression {compression}")
     if not image[..., 3].any():
@@ -743,6 +723,37 @@ def _parse_image_data_section(cursor, h: int, w: int) -> np.ndarray:
         # actually render.
         image[..., 3] = 255
     return image
+
+
+def _assign_composite_channel(image: np.ndarray, plane: np.ndarray, ch_id: int) -> None:
+    """Drop ``plane`` into the alpha slot when ``ch_id == -1``, otherwise
+    into the RGB slot indexed by ``ch_id``."""
+    if ch_id == -1:
+        image[..., 3] = plane
+    else:
+        image[..., ch_id] = plane
+
+
+def _read_composite_raw(cursor, image: np.ndarray, h: int, w: int) -> None:
+    for ch_id in CHANNEL_ORDER:
+        plane_bytes = cursor.read(h * w)
+        plane = np.frombuffer(plane_bytes, dtype=np.uint8).reshape((h, w))
+        _assign_composite_channel(image, plane, ch_id)
+
+
+def _read_composite_rle(cursor, image: np.ndarray, h: int, w: int) -> None:
+    # Total channels in composite = 4 (RGBA) — read row-length tables
+    # for all channels first, then the packed data.
+    total_rows = h * PSD_CHANNELS_RGBA
+    row_lengths = struct.unpack(
+        f">{total_rows}H", cursor.read(total_rows * 2),
+    )
+    for ch_pos, ch_id in enumerate(CHANNEL_ORDER):
+        plane = np.zeros((h, w), dtype=np.uint8)
+        for row in range(h):
+            row_len = row_lengths[ch_pos * h + row]
+            plane[row] = _packbits_decode(cursor.read(row_len), w)
+        _assign_composite_channel(image, plane, ch_id)
 
 
 # ---------------------------------------------------------------------------
