@@ -79,12 +79,26 @@ def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
 def _append_plugin_languages(main_window: ImervueMainWindow) -> None:
     from Imervue.menu.language_menu import set_language
     from PySide6.QtGui import QAction
-    menu = main_window.language_menu
+    # ``main_window.language_menu`` is the wrapper captured during
+    # ``build_language_menu`` — on some PySide6 builds the C++ peer
+    # gets re-allocated by the menubar before plugin init runs, so the
+    # cached wrapper points at a freed pointer. Re-resolve via the
+    # menubar so we always have a live wrapper, then refresh the
+    # cached attribute so subsequent code sees the same one we used.
+    menu = _resolve_language_menu(main_window)
+    if menu is None:
+        logger.debug(
+            "language menu not reachable from menubar; skipping plugin "
+            "language entries (rare shiboken teardown — handled)"
+        )
+        return
+    main_window.language_menu = menu
     try:
         menu.addSeparator()
     except RuntimeError:
-        logger.warning(
-            "language_menu C++ wrapper already deleted; skipping plugin language entries"
+        logger.debug(
+            "fresh language_menu wrapper still raised RuntimeError on "
+            "addSeparator; skipping plugin language entries"
         )
         return
     for lang_code, display_name in language_wrapper.plugin_languages.items():
@@ -95,7 +109,66 @@ def _append_plugin_languages(main_window: ImervueMainWindow) -> None:
         try:
             menu.addAction(action)
         except RuntimeError:
-            logger.warning(
-                "language_menu wrapper went stale mid-append; stopping plugin language entries"
+            logger.debug(
+                "language_menu wrapper went stale mid-append; "
+                "stopping plugin language entries"
             )
             return
+
+
+def _resolve_language_menu(main_window: ImervueMainWindow):
+    """Return a live :class:`QMenu` for the Language menu by walking
+    the menubar's actions, falling back to the cached
+    ``main_window.language_menu`` if the walk fails.
+
+    The menubar walk is the load-bearing path: each call to
+    ``action.menu()`` produces a *fresh* shiboken wrapper around the
+    underlying ``QMenu*``, so even if the cached attribute holds a
+    dead wrapper the menubar can hand us a live one.
+    """
+    cached = getattr(main_window, "language_menu", None)
+    bar = main_window.menuBar()
+    try:
+        actions = bar.actions()
+    except RuntimeError:
+        return _verify_alive(cached)
+    # Prefer matching by identity against the cached pointer so we
+    # always pick the same menu the user already saw.
+    for action in actions:
+        try:
+            sub = action.menu()
+        except RuntimeError:
+            continue
+        if sub is None:
+            continue
+        if sub is cached:
+            return sub
+    # Fallback — match by visible title against the localised
+    # ``menu_bar_language`` string so a stale cached wrapper doesn't
+    # block us.
+    expected_title = language_wrapper.language_word_dict.get(
+        "menu_bar_language", "Language",
+    )
+    for action in actions:
+        try:
+            sub = action.menu()
+            if sub is None:
+                continue
+            if action.text() == expected_title:
+                return sub
+        except RuntimeError:
+            continue
+    return _verify_alive(cached)
+
+
+def _verify_alive(menu):
+    """Return ``menu`` only if its C++ peer answers a cheap method
+    without raising — anything else returns ``None`` so the caller
+    can take the skip path."""
+    if menu is None:
+        return None
+    try:
+        menu.actions()
+    except RuntimeError:
+        return None
+    return menu

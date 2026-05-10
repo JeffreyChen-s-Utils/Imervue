@@ -49,9 +49,15 @@ def test_append_plugin_languages_appends_when_menu_is_live(qapp, monkeypatch):
 
 
 def test_append_plugin_languages_skips_when_wrapper_is_dead(qapp, monkeypatch, caplog):
-    """If the C++ QMenu has been freed, the helper must skip silently
-    rather than abort plugin init — the previous crash blocked the
-    main window from finishing construction."""
+    """If the cached ``main_window.language_menu`` wrapper points at a
+    freed C++ object the helper must either recover by re-resolving
+    the menu from the menubar, or skip cleanly. Either way, it must
+    not raise — the previous crash blocked main-window construction.
+
+    With the resolver path now in place the function may *recover*
+    rather than skip when the menubar still carries a live menu
+    action; the assertion is that neither outcome aborts startup.
+    """
     from Imervue.integration_guide import _append_plugin_languages
     from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -64,12 +70,52 @@ def test_append_plugin_languages_skips_when_wrapper_is_dead(qapp, monkeypatch, c
         )
         shiboken6.delete(win.language_menu)
 
-        with caplog.at_level(logging.WARNING, logger="Imervue.integration"):
-            _append_plugin_languages(win)  # must not raise
+        with caplog.at_level(logging.DEBUG, logger="Imervue.integration"):
+            _append_plugin_languages(win)   # must not raise
+    finally:
+        win.deleteLater()
 
-        assert any(
-            "language_menu" in rec.message and "deleted" in rec.message
-            for rec in caplog.records
-        )
+
+def test_resolve_language_menu_returns_fresh_wrapper_when_cached_is_dead(qapp):
+    """The resolver should walk the menubar and recover a live wrapper
+    even if ``main_window.language_menu`` points at a freed peer —
+    that's what makes the warning go away in normal operation."""
+    from Imervue.integration_guide import _resolve_language_menu
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    from PySide6.QtWidgets import QMenu
+
+    win = QMainWindow()
+    bar = win.menuBar()
+    title = language_wrapper.language_word_dict.get("menu_bar_language", "Language")
+    live_menu = QMenu(title, win)
+    bar.addMenu(live_menu)
+    win.language_menu = live_menu
+    try:
+        # Stash a dead wrapper in the cached attribute, then make sure
+        # the resolver still hands us back something live.
+        dead = QMenu("Dead", win)
+        bar.addMenu(dead)
+        win.language_menu = dead
+        shiboken6.delete(dead)
+
+        resolved = _resolve_language_menu(win)
+        assert resolved is not None
+        # Should be the live menu we authored under the language title.
+        assert resolved.title() == title
+    finally:
+        win.deleteLater()
+
+
+def test_resolve_language_menu_returns_none_when_menubar_has_no_match(qapp):
+    """If neither the cached attribute nor the menubar yields a live
+    Language menu, the resolver returns None so the caller can take
+    the skip path without iterating a dead pointer."""
+    from Imervue.integration_guide import _resolve_language_menu
+
+    win = QMainWindow()
+    win.menuBar()   # bare menubar, no menus
+    try:
+        win.language_menu = None
+        assert _resolve_language_menu(win) is None
     finally:
         win.deleteLater()
