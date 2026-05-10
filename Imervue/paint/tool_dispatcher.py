@@ -1780,7 +1780,10 @@ class _PolygonShapeTool:
             if self._vertices:
                 self._cursor = (x, y)
                 self._refresh_overlay()
-                return True
+                # The overlay setter triggers its own ``canvas.update()``
+                # so returning ``False`` here keeps the dispatcher from
+                # firing a redundant composite invalidation for an event
+                # that didn't touch any layer pixels.
             return False
         if evt.phase != "press":
             return False
@@ -1816,19 +1819,31 @@ class _PolygonShapeTool:
         return False
 
     def _refresh_overlay(self) -> None:
-        points = list(self._vertices)
-        if self._cursor is not None and points and points[-1] != self._cursor:
-            points.append(self._cursor)
-        # Close-loop hint: when the cursor is near vertex 0, draw the
-        # closing edge so the user sees the polygon shape they're
-        # about to commit.
-        if self._cursor is not None and len(self._vertices) >= 2:
+        if not self._vertices:
+            self._overlay_setter(None)
+            return
+        cursor = self._cursor
+        snapping_to_close = False
+        if cursor is not None and len(self._vertices) >= 2:
             sx, sy = self._vertices[0]
-            cx, cy = self._cursor
-            close_sq = (cx - sx) ** 2 + (cy - sy) ** 2
-            if close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS:
-                points.append(self._vertices[0])
-        self._overlay_setter({"kind": "polyline", "points": points})
+            close_sq = (cursor[0] - sx) ** 2 + (cursor[1] - sy) ** 2
+            snapping_to_close = (
+                close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS
+            )
+        # Structured polygon-preview overlay: confirmed vertices
+        # rendered as solid edges, the live cursor segment, the
+        # closing edge back to vertex 0, and a ring marker on
+        # vertex 0 that highlights when the cursor is inside the
+        # snap radius. The previous open ``polyline`` overlay made
+        # in-progress polygons read like a pen-line and hid the
+        # close affordance.
+        self._overlay_setter({
+            "kind": "polygon_preview",
+            "vertices": list(self._vertices),
+            "cursor": cursor,
+            "snapping_to_close": snapping_to_close,
+            "close_radius": self.CLOSE_RADIUS,
+        })
 
     def cancel(self) -> None:
         self._vertices = []

@@ -197,6 +197,70 @@ def test_polygon_cancel_clears_vertices(state, canvas):
     assert tool._vertices == []  # noqa: SLF001
 
 
+# ---------------------------------------------------------------------------
+# Polygon preview overlay — closed-loop affordance + first-vertex marker
+# ---------------------------------------------------------------------------
+
+
+def _move(x, y):
+    return PointerEvent(
+        phase="move", x=x, y=y, button=0, modifiers=0, pressure=0.0,
+    )
+
+
+def test_polygon_press_emits_polygon_preview_overlay(state, canvas):
+    captured = []
+    tool = _PolygonShapeTool(state, overlay_setter=captured.append)
+    tool.handle(_press(10, 10), canvas)
+    overlay = captured[-1]
+    assert overlay["kind"] == "polygon_preview"
+    assert overlay["vertices"] == [(10.0, 10.0)]
+    assert overlay["snapping_to_close"] is False
+
+
+def test_polygon_move_does_not_claim_pixel_mutation(state, canvas):
+    """``move`` events update the overlay but never paint pixels —
+    returning ``True`` would force a redundant composite invalidation
+    on every cursor sample."""
+    tool = _PolygonShapeTool(state)
+    tool.handle(_press(10, 10), canvas)
+    handled = tool.handle(_move(15, 15), canvas)
+    assert handled is False
+    assert canvas.sum() == 0
+
+
+def test_polygon_overlay_flags_snapping_inside_close_radius(state, canvas):
+    captured = []
+    tool = _PolygonShapeTool(state, overlay_setter=captured.append)
+    tool.handle(_press(10, 10), canvas)
+    tool.handle(_press(40, 10), canvas)
+    # Cursor far from vertex 0 → not snapping
+    tool.handle(_move(40, 40), canvas)
+    assert captured[-1]["snapping_to_close"] is False
+    # Cursor inside CLOSE_RADIUS of vertex 0 → snapping
+    tool.handle(_move(11, 11), canvas)
+    last = captured[-1]
+    assert last["snapping_to_close"] is True
+    assert last["close_radius"] == _PolygonShapeTool.CLOSE_RADIUS
+
+
+def test_polygon_commit_clears_overlay(state, canvas):
+    captured = []
+    tool = _PolygonShapeTool(state, overlay_setter=captured.append)
+    tool.handle(_press(10, 10), canvas)
+    tool.handle(_press(40, 10), canvas)
+    tool.handle(_press(25, 35), canvas)
+    tool.handle(_press(11, 11), canvas)   # closes near vertex 0
+    assert captured[-1] is None
+
+
+def test_polygon_overlay_cleared_when_no_vertices(state):
+    captured = []
+    tool = _PolygonShapeTool(state, overlay_setter=captured.append)
+    tool._refresh_overlay()  # noqa: SLF001
+    assert captured == [None]
+
+
 @pytest.mark.parametrize("tool_cls", [
     _RectShapeTool, _EllipseShapeTool, _LineShapeTool,
 ])
