@@ -42,6 +42,7 @@ from puppet.operations import (
 from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
 from puppet.parameter_dock import ParameterDock
+from puppet.recorder import RecordingSession, save_canvas_png
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
@@ -79,6 +80,9 @@ class PuppetWorkspace(QMainWindow):
         )
 
         self._input_engine = InputEngine(self._canvas, self)
+        self._recorder = RecordingSession(self._canvas, self)
+        self._recorder.finished.connect(self._on_recording_finished)
+        self._recorder.failed.connect(self._on_recording_failed)
 
         self._status_label = QLabel("")
         bar = QStatusBar()
@@ -162,6 +166,17 @@ class PuppetWorkspace(QMainWindow):
         self._lipsync_toggle.setCheckable(True)
         self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
         bar.addAction(self._lipsync_toggle)
+
+        bar.addSeparator()
+
+        capture_action = QAction(lang.get("puppet_capture", "Capture frame…"), self)
+        capture_action.triggered.connect(self._capture_via_dialog)
+        bar.addAction(capture_action)
+
+        self._record_action = QAction(lang.get("puppet_record", "Record…"), self)
+        self._record_action.setCheckable(True)
+        self._record_action.toggled.connect(self._toggle_recording)
+        bar.addAction(self._record_action)
 
         bar.addSeparator()
 
@@ -380,6 +395,76 @@ class PuppetWorkspace(QMainWindow):
 
     def input_engine(self) -> InputEngine:
         return self._input_engine
+
+    # ---- capture / record ----------------------------------------------
+
+    def _capture_via_dialog(self) -> None:
+        if self._canvas.document() is None:
+            return
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            lang.get("puppet_capture_dialog_title", "Capture Frame"),
+            "",
+            "PNG (*.png)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".png"):
+            path = f"{path}.png"
+        ok = save_canvas_png(self._canvas, path)
+        if ok:
+            self._announce(
+                "puppet_capture_saved", "Saved frame to {name}",
+                name=Path(path).name,
+            )
+        else:
+            self._announce(
+                "puppet_capture_failed",
+                "Capture failed (canvas not yet rendered)",
+            )
+
+    def _toggle_recording(self, enabled: bool) -> None:
+        if enabled:
+            self._start_recording()
+        else:
+            self._recorder.stop()
+
+    def _start_recording(self) -> None:
+        if self._canvas.document() is None:
+            self._record_action.setChecked(False)
+            return
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            lang.get("puppet_record_dialog_title", "Record Animation"),
+            "",
+            "GIF (*.gif);;WebM (*.webm);;MP4 (*.mp4)",
+        )
+        if not path:
+            self._record_action.setChecked(False)
+            return
+        ok = self._recorder.start(path)
+        if not ok:
+            self._record_action.setChecked(False)
+
+    def _on_recording_finished(self, path: str) -> None:
+        self._announce(
+            "puppet_record_saved", "Recording saved to {name}",
+            name=Path(path).name,
+        )
+        self._record_action.blockSignals(True)
+        self._record_action.setChecked(False)
+        self._record_action.blockSignals(False)
+
+    def _on_recording_failed(self, reason: str) -> None:
+        self._announce(
+            "puppet_record_failed", "Recording failed: {error}",
+            error=reason,
+        )
+        self._record_action.blockSignals(True)
+        self._record_action.setChecked(False)
+        self._record_action.blockSignals(False)
 
     # ---- import PNG -----------------------------------------------------
 
