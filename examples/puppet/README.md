@@ -8,7 +8,7 @@ Imervue (the third top-level tab, slotted right after Paint).
 | `demo_face.puppet` | procedural smiley face | 1 | 1 (rotation) | 1 | 1 (idle sine) |
 | `demo_amiya.puppet` | Amiya from Arknights | 1 | 4 (region warps) | 4 | 3 (idle / wave / greet) |
 | `demo_tpose.puppet` | procedural T-pose figure (recommended) | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / jumping_jacks / bow / stretch) |
-| `demo_rossi.puppet` | Rossi from Arknights, sliced into limbs | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / cheer / bow / step_right) |
+| `demo_rossi.puppet` | Rossi from Arknights, base layer + feathered slices | 7 | 6 (joint rotations) | 6 | 5 (idle / wave / cheer / bow / step_right) |
 
 ## `demo_face.puppet`
 
@@ -178,18 +178,34 @@ A pure-Pillow software rasteriser samples every motion at three
 phases and dumps PNGs into `tpose_previews/` so you can confirm the
 poses look right before opening the GL canvas.
 
-## `demo_rossi.puppet` — same rig topology, real character image
+## `demo_rossi.puppet` — base layer + alpha-feathered slices, real character image
 
-Same six-drawable / six-rotation-deformer architecture as
-`demo_tpose`, but the body parts are sliced out of a real Rossi
-illustration ([Danbooru post #11043219](https://danbooru.donmai.us/posts/11043219)
+The Rossi rig stacks **seven drawables**: a static **base layer** of
+the full illustration at draw_order 0, then six body-part **slices**
+(head, torso, left arm, right arm, left leg, right leg) on top with
+their own rotation deformers. Each slice's alpha is **feathered**
+along its rectangle edges so it fades smoothly into the base
+underneath. Result:
+
+* At neutral the slice exactly overlays its region of the base — same
+  source pixels, same colour — so the feather zone composites part
+  on base without washout and **the slice rectangle is invisible**.
+* When a slice rotates, the base under it stays put, providing a
+  fallback colour wherever the rotated slice no longer covers.
+  Combined with the soft slice edges, **no hard cut appears** along
+  the rectangle — the figure looks continuous through the motion.
+* Each slice still rotates as a **rigid piece** around its joint
+  pivot, so the limb moves cleanly without the smearing you'd get
+  from a soft-warp lattice.
+
+Source: [Danbooru post #11043219](https://danbooru.donmai.us/posts/11043219)
 by `tntl_nemui`, rating: g, no `do_not_post` flag at fetch time —
-provenance in `assets/CREDITS.md`).
+provenance in `assets/CREDITS.md`.
 
-This is a standing front-facing pose with the **left arm raised in
-a wave** + the **right arm hanging at the side** + **both legs
-visible**, which lets every body-part deformer move pixels users
-can actually see. Motions tuned for this pose:
+The pose is standing front-facing with the **left arm raised in a
+wave** + the **right arm hanging at the side** + **both legs
+visible**, which gives each slice a body part with visible pixels to
+move. Motions tuned for this pose:
 
 * `idle` (4 s) — body sway + counter head bob
 * `wave` (2 s) — left arm wobbles in the raised position; head turn
@@ -198,17 +214,21 @@ can actually see. Motions tuned for this pose:
 * `bow` (2.4 s) — upper body leans forward
 * `step_right` (1.6 s) — right leg lifts out to the side
 
-A swap from an earlier pose where the arms were folded across the
-body — that pose made `cheer` and `step` invisible because the
-rectangular slices caught mostly cape / dress pixels rather than
-limbs.
+**Trade-off:** because the base shows through behind a rotated slice,
+large swings would expose the un-rotated body part as a duplicate
+"ghost". The rig keeps angles modest (≤14° per joint) so that ghost
+stays inside the feather band and reads as a soft fade, not a second
+limb. For cartoon-style large swings the T-pose demo
+(`demo_tpose.puppet`) is still the cleaner reference. Use the Rossi
+rig when you want subtle, seam-free motion on a real illustration.
 
 ### Try it
 
 ```bash
 # Open Puppet tab → Open Puppet… → demo_rossi.puppet
 # Click any motion in the bottom Motions dock (single-click plays it
-# immediately). All four motions visibly differ from neutral.
+# immediately). All five motions visibly differ from neutral with no
+# visible seam between body parts.
 ```
 
 ### Build a fresh copy
@@ -220,12 +240,13 @@ py examples/puppet/preview_rossi.py             # → rossi_previews/*.png
 
 ### Building from your own art
 
-If you have a different illustration of any character with arms at
-their sides and both legs visible, point `SOURCE_IMAGE` at it and
+If you have a different illustration, point `SOURCE_IMAGE` at it and
 re-tune the body-part rectangles + joint pivot fractions at the top
-of `build_rossi_puppet.py`. The padding ratio (`PAD_RATIO = 0.75`)
-keeps rotated limbs visible so you don't need to widen the canvas
-manually.
+of `build_rossi_puppet.py`. The bounds are non-overlapping fractions
+of the padded canvas, so as long as your source has a clear
+head / torso / arms / legs layout the rig adapts to whatever
+proportions you give it. The padding ratio (`PAD_RATIO = 0.75`) keeps
+rotated limbs inside the visible frame.
 
 ## Authoring your own from scratch
 

@@ -12,11 +12,15 @@
   `waving`.
 
 Used by `build_rossi_puppet.py` as the source illustration for the
-six-drawable rig in `demo_rossi.puppet`. The pose has the left arm
-raised in a wave and the right arm at the side, so each rotation
-deformer reaches a body part with visible pixels — every motion in
-the demo produces a clear visual change rather than a subtle
-unchanged-looking frame.
+base-layer + alpha-feathered-slice rig in `demo_rossi.puppet`. The
+full image sits at draw_order 0 as a static base; six body-part
+slices (head, torso, arms, legs) stack on top with feathered alpha
+edges and their own rotation deformers. The feather hides the slice
+rectangles, the base fills any gap behind a rotated slice, and the
+modest joint angles keep the un-rotated base from peeking through as
+a duplicate. The pose has the left arm raised in a wave and the
+right arm at the side, so each slice reaches a body part with
+visible pixels — every motion produces a clear visual change.
 
 ## `amiya_source.jpg`
 
