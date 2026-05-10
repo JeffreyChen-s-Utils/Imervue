@@ -31,18 +31,40 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
     # Store on main_window so other parts of the app can access it
     main_window.plugin_manager = manager
 
-    # If plugins registered new languages, append them to the existing language menu
+    # If plugins registered new languages, append them to the existing language menu.
+    # The QMenu wrapper stored on ``main_window.language_menu`` can outlive its C++
+    # peer in some PySide6 / Python combinations (same shiboken-teardown hazard
+    # handled in ``Imervue_main_window._safe_submenus_of`` and
+    # ``paint_workspace._safe_set_checked``); skip the plugin entries instead of
+    # aborting plugin init when that happens.
     if language_wrapper.plugin_languages and hasattr(main_window, "language_menu"):
-        from Imervue.menu.language_menu import set_language
-        from PySide6.QtGui import QAction
-        main_window.language_menu.addSeparator()
-        for lang_code, display_name in language_wrapper.plugin_languages.items():
-            action = QAction(display_name, main_window.language_menu)
-            action.triggered.connect(
-                lambda _, code=lang_code: set_language(code, main_window)
-            )
-            main_window.language_menu.addAction(action)
+        _append_plugin_languages(main_window)
 
     # Build the plugin management menu first, then let plugins add items into it
     plugin_menu = build_plugin_menu(main_window)
     manager.dispatch_build_menu_bar(plugin_menu)
+
+
+def _append_plugin_languages(main_window: ImervueMainWindow) -> None:
+    from Imervue.menu.language_menu import set_language
+    from PySide6.QtGui import QAction
+    menu = main_window.language_menu
+    try:
+        menu.addSeparator()
+    except RuntimeError:
+        logger.warning(
+            "language_menu C++ wrapper already deleted; skipping plugin language entries"
+        )
+        return
+    for lang_code, display_name in language_wrapper.plugin_languages.items():
+        action = QAction(display_name, menu)
+        action.triggered.connect(
+            lambda _, code=lang_code: set_language(code, main_window)
+        )
+        try:
+            menu.addAction(action)
+        except RuntimeError:
+            logger.warning(
+                "language_menu wrapper went stale mid-append; stopping plugin language entries"
+            )
+            return
