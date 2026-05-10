@@ -69,6 +69,10 @@ from puppet.render_prep import (
     build_draw_list,
     fit_view,
 )
+from puppet.runtime import (
+    compose_all_drawables,
+    default_parameter_values,
+)
 
 if TYPE_CHECKING:
     from PySide6.QtGui import QMouseEvent, QWheelEvent
@@ -99,6 +103,7 @@ class PuppetCanvas(QOpenGLWidget):
 
     document_loaded = Signal()
     zoom_changed = Signal(float)
+    parameters_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -111,6 +116,11 @@ class PuppetCanvas(QOpenGLWidget):
         self._user_view_locked: bool = False
         self._panning: bool = False
         self._pan_anchor: tuple[float, float] = (0.0, 0.0)
+        self._parameter_values: dict[str, float] = {}
+        # Cache of deformed vertex arrays keyed by drawable id; rebuilt
+        # whenever parameter values change so paintGL can read it
+        # without re-running the composer per call.
+        self._deformed_vertices: dict[str, np.ndarray] = {}
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -121,17 +131,46 @@ class PuppetCanvas(QOpenGLWidget):
 
         Texture cache is invalidated on every document swap; the next
         ``paintGL`` re-uploads everything against the bound document's
-        ``textures`` map.
+        ``textures`` map. Parameter values reset to each parameter's
+        ``default``.
         """
         self._document = document
         self._draw_list = build_draw_list(document) if document is not None else []
         self._invalidate_texture_cache()
         self._user_view_locked = False
+        self._parameter_values = (
+            default_parameter_values(document) if document is not None else {}
+        )
+        self._recompute_deformed_vertices()
         self.document_loaded.emit()
+        self.parameters_changed.emit()
         self.update()
 
     def document(self) -> PuppetDocument | None:
         return self._document
+
+    def parameter_values(self) -> dict[str, float]:
+        return dict(self._parameter_values)
+
+    def set_parameter_value(self, param_id: str, value: float) -> None:
+        """Push a slider / motion / physics output into the parameter
+        bag. Triggers a per-frame vertex recomposition + redraw."""
+        if self._document is None:
+            return
+        if param_id not in self._parameter_values:
+            return
+        self._parameter_values[param_id] = float(value)
+        self._recompute_deformed_vertices()
+        self.update()
+
+    def reset_parameters(self) -> None:
+        """Restore every parameter to its authored default."""
+        if self._document is None:
+            return
+        self._parameter_values = default_parameter_values(self._document)
+        self._recompute_deformed_vertices()
+        self.parameters_changed.emit()
+        self.update()
 
     def reset_view(self) -> None:
         """Recompute fit-to-window pan/zoom on the next paint."""
@@ -140,6 +179,14 @@ class PuppetCanvas(QOpenGLWidget):
 
     def zoom_factor(self) -> float:
         return self._zoom
+
+    def _recompute_deformed_vertices(self) -> None:
+        if self._document is None or not self._parameter_values:
+            self._deformed_vertices = {}
+            return
+        self._deformed_vertices = compose_all_drawables(
+            self._document, self._parameter_values,
+        )
 
     # ---- GL lifecycle ---------------------------------------------------
 
@@ -215,7 +262,8 @@ class PuppetCanvas(QOpenGLWidget):
             glBlendFunc(sfactor, dfactor)
             glColor4f(1.0, 1.0, 1.0, cmd.opacity)
             glBindTexture(GL_TEXTURE_2D, tex_id)
-            self._draw_indexed(cmd.vertices, cmd.uvs, cmd.indices)
+            verts = self._deformed_vertices.get(cmd.drawable_id, cmd.vertices)
+            self._draw_indexed(verts, cmd.uvs, cmd.indices)
 
     @staticmethod
     def _draw_indexed(  # pragma: no cover - GL needs display
