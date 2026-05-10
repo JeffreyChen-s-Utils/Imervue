@@ -166,17 +166,37 @@ class PreferencesDialog(QDialog):
     def _build_button_box(self) -> QDialogButtonBox:
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
+            | QDialogButtonBox.StandardButton.Cancel
+            | QDialogButtonBox.StandardButton.RestoreDefaults,
             Qt.Orientation.Horizontal,
             self,
         )
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
+        restore_btn = buttons.button(QDialogButtonBox.StandardButton.RestoreDefaults)
+        if restore_btn is not None:
+            restore_btn.clicked.connect(self.restore_defaults)
         return buttons
 
     # ------------------------------------------------------------------
     # Persistence
     # ------------------------------------------------------------------
+
+    def restore_defaults(self) -> None:
+        """Reset every editable widget to its built-in default value.
+
+        Cancel-revert is implicit: the dialog is transactional already
+        (values aren't persisted until ``_accept``), so the user can
+        click Restore Defaults, look at the form, then dismiss with
+        Cancel and nothing on disk changes.
+        """
+        self._auto_vram.setChecked(True)
+        self._vram_spin.setValue(VRAM_DEFAULT_MB)
+        self._vram_spin.setEnabled(False)
+        self._ui_scale_spin.setValue(UI_SCALE_DEFAULT_PERCENT)
+        idx = self._theme_combo.findData(DEFAULT_THEME_NAME)
+        if idx >= 0:
+            self._theme_combo.setCurrentIndex(idx)
 
     def _accept(self) -> None:
         user_setting_dict["vram_limit_auto"] = bool(self._auto_vram.isChecked())

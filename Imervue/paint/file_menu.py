@@ -253,7 +253,16 @@ class _FileMenuBridge:
         )
         if not path:
             return
-        commit_save_psd(self._workspace, path)
+        try:
+            from Imervue.paint.psd_io import save_psd
+            document = self._workspace.canvas().document()
+            if document.shape is None:
+                return
+            save_psd(document, path)
+        except (OSError, ValueError) as exc:
+            self._warn("paint_file_save_psd", exc)
+            return
+        self._notify_success("paint_file_save_psd_done", "Saved PSD", path)
 
     # ---- import paths ----------------------------------------------------
 

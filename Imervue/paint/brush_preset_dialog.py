@@ -32,6 +32,12 @@ from PySide6.QtWidgets import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
 
+# Translation key + fallback for the Save-preset dialog title; reused
+# across the save flow, the too-long-name warning, and the overwrite
+# confirmation so the three windows share one banner.
+_SAVE_PRESET_TITLE_KEY = "paint_brush_presets_save_title"
+_SAVE_PRESET_TITLE_FALLBACK = "Save preset"
+
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
@@ -111,7 +117,7 @@ class BrushPresetDialog(QDialog):
         lang = language_wrapper.language_word_dict
         name, ok = QInputDialog.getText(
             self,
-            lang.get("paint_brush_presets_save_title", "Save preset"),
+            lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
             lang.get("paint_brush_presets_save_label", "Preset name:"),
             text=self._suggest_name(),
         )
@@ -123,16 +129,40 @@ class BrushPresetDialog(QDialog):
         if len(name) > ts.SUB_TOOL_NAME_MAX_LEN:
             QMessageBox.warning(
                 self,
-                lang.get("paint_brush_presets_save_title", "Save preset"),
+                lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
                 lang.get(
                     "paint_brush_presets_too_long",
                     "Preset name is too long.",
                 ),
             )
             return
+        # Prevent silent overwrite — add_sub_tool replaces same-name
+        # entries without prompting, which is a foot-gun when the user
+        # picks a recently-suggested name and forgets there's already a
+        # hand-tuned preset there.
+        existing_names = {
+            s.name for s in self._state.list_sub_tools(self._state.tool)
+        }
+        if name in existing_names and not self._confirm_overwrite(name):
+            return
         self._state.add_sub_tool(self._state.tool, name)
         self._refresh_list()
         self._select_by_name(name)
+
+    def _confirm_overwrite(self, name: str) -> bool:  # pragma: no cover - Qt UI
+        """Ask before replacing an existing brush preset."""
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
+            lang.get(
+                "paint_brush_presets_overwrite_confirm",
+                "A preset named '{name}' already exists. Overwrite it?",
+            ).format(name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _on_apply(self) -> None:
         name = self._selected_name()
@@ -183,8 +213,30 @@ class BrushPresetDialog(QDialog):
         name = self._selected_name()
         if name is None:
             return
+        if not self._confirm_delete(name):
+            return
         self._state.remove_sub_tool(self._state.tool, name)
         self._refresh_list()
+
+    def _confirm_delete(self, name: str) -> bool:  # pragma: no cover - Qt UI
+        """Ask the user before dropping a brush preset.
+
+        Brush presets often capture hours of stylus tuning; an accidental
+        Delete should surface a Yes/No dialog so a misclick doesn't lose
+        the work. Tests bypass the modal by monkeypatching this method.
+        """
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_brush_presets_delete", "Delete preset"),
+            lang.get(
+                "paint_brush_presets_delete_confirm",
+                "Delete preset '{name}'? This cannot be undone.",
+            ).format(name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _on_double_clicked(self, _item: QListWidgetItem) -> None:
         self._on_apply()

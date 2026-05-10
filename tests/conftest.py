@@ -36,6 +36,54 @@ def _bootstrap_plugin_imports() -> None:
 _bootstrap_plugin_imports()
 
 
+# ---------------------------------------------------------------------------
+# Stale tmp_path cleanup
+# ---------------------------------------------------------------------------
+# Pytest's tmp_path stores per-session dirs under
+# ``%TMP%/pytest-of-<user>/pytest-<N>/`` and *intends* to retain only the
+# last three. On Windows the cleanup silently skips entries it can't
+# delete (open file handles, denied permissions, antivirus scan locks),
+# so the directory drifts upward over time and the user ends up with
+# dozens of dead session dirs.
+#
+# This hook walks ``pytest-of-<user>/`` once at session start, sorts by
+# numeric suffix, and removes everything older than the most-recent
+# three. Each removal is best-effort — the same lock conditions that
+# bit pytest's own retention can bite us, but at least we keep trying.
+
+def _prune_old_pytest_basetemps(retain: int = 3) -> None:
+    import re
+    import shutil
+    import tempfile
+
+    base = Path(tempfile.gettempdir())
+    if not base.is_dir():
+        return
+    candidates: list[Path] = []
+    for parent in base.iterdir():
+        if not parent.name.startswith("pytest-of-"):
+            continue
+        candidates.extend(
+            child for child in parent.iterdir()
+            if child.is_dir() and re.match(r"pytest-\d+$", child.name)
+        )
+    if not candidates:
+        return
+
+    def _suffix(p: Path) -> int:
+        try:
+            return int(p.name.rsplit("-", 1)[1])
+        except (ValueError, IndexError):
+            return -1
+
+    candidates.sort(key=_suffix)
+    for old in candidates[:-retain]:
+        shutil.rmtree(old, ignore_errors=True)
+
+
+_prune_old_pytest_basetemps()
+
+
 # ===========================
 # User-settings isolation (autouse)
 # ===========================

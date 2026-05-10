@@ -65,6 +65,11 @@ class SwatchPanel(QDockWidget):
         clear_btn = QPushButton(lang.get(
             "paint_swatch_clear", "Clear",
         ))
+        clear_btn.setToolTip(lang.get(
+            "paint_swatch_clear_tooltip",
+            "Drop every recent colour from the history — irreversible "
+            "but the swatches repopulate as soon as new colours are committed",
+        ))
         clear_btn.clicked.connect(self._on_clear)
         bottom.addWidget(clear_btn)
         bottom.addStretch(1)
@@ -149,9 +154,31 @@ class SwatchPanel(QDockWidget):
         self.color_chosen.emit(int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
     def _on_clear(self) -> None:
+        # Clearing wipes the entire colour history — confirm first so
+        # a misclick on the small "Clear" button doesn't drop a long
+        # session's worth of saved palette colours.
+        if self._state.color_history and not self._confirm_clear():
+            return
         self._state.color_history.clear()
         self._state._emit("color_history")  # noqa: SLF001
         self.refresh()
+
+    def _confirm_clear(self) -> bool:  # pragma: no cover - Qt UI
+        """Ask before wiping the entire swatch history."""
+        from PySide6.QtWidgets import QMessageBox
+        lang = language_wrapper.language_word_dict
+        reply = QMessageBox.question(
+            self,
+            lang.get("paint_swatch_clear", "Clear"),
+            lang.get(
+                "paint_swatch_clear_confirm",
+                "Drop every recent colour from the history? "
+                "This cannot be undone.",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
 
     def _clear_grid(self) -> None:
         while self._grid.count():
@@ -172,15 +199,49 @@ class SwatchPanel(QDockWidget):
         painter.end()
         btn.setIcon(pix)
         btn.setIconSize(pix.size())
-        btn.setToolTip(f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}")
-        # Right-click → remove from history.
+        btn.setToolTip(
+            f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}  ({rgb[0]},{rgb[1]},{rgb[2]})",
+        )
         btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         btn.customContextMenuRequested.connect(
-            lambda *_, c=rgb: self._on_swatch_remove_requested(c),
+            lambda pos, c=rgb, b=btn: self._on_swatch_context_menu(c, b, pos),
         )
         return btn
 
-    def _on_swatch_remove_requested(self, rgb: tuple[int, int, int]) -> None:
-        history = list(self._state.color_history)
-        if rgb in history:
-            self.remove_at(history.index(rgb))
+    def _on_swatch_context_menu(
+        self, rgb: tuple[int, int, int], button, pos,
+    ) -> None:
+        """Right-click → small menu with copy / move-to-top / remove
+        affordances. Keeps the previous remove behaviour reachable
+        without forcing the user to memorise a specific gesture."""
+        from PySide6.QtWidgets import QApplication, QMenu
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(button)
+        copy_act = menu.addAction(
+            lang.get("paint_swatch_copy_hex", "Copy as #RRGGBB"),
+        )
+        as_bg_act = menu.addAction(
+            lang.get("paint_swatch_set_bg", "Set as Background"),
+        )
+        move_top_act = menu.addAction(
+            lang.get("paint_swatch_move_top", "Move to Front"),
+        )
+        menu.addSeparator()
+        remove_act = menu.addAction(
+            lang.get("paint_swatch_remove", "Remove from History"),
+        )
+        chosen = menu.exec(button.mapToGlobal(pos))
+        if chosen is copy_act:
+            QApplication.clipboard().setText(
+                f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+            )
+        elif chosen is as_bg_act:
+            self._state.set_background(rgb)
+        elif chosen is move_top_act:
+            history = list(self._state.color_history)
+            if rgb in history:
+                self.reorder(history.index(rgb), 0)
+        elif chosen is remove_act:
+            history = list(self._state.color_history)
+            if rgb in history:
+                self.remove_at(history.index(rgb))

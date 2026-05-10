@@ -213,3 +213,32 @@ def test_workspace_seeds_welcome_recent_from_user_settings(qapp):
         assert labels[1] == "canvas-a.psd"
     finally:
         ws.deleteLater()
+
+
+def test_welcome_buttons_have_tooltips(qapp):
+    """The New / Open buttons in the welcome panel surface a tooltip
+    so the artist sees the action's keystroke / what the button does
+    on hover, not only via the bare label."""
+    panel = WelcomeHint()
+    try:
+        # Pre-translation tooltips are populated at construction time.
+        assert panel._new_btn.toolTip()        # noqa: SLF001
+        assert panel._open_btn.toolTip()       # noqa: SLF001
+    finally:
+        panel.deleteLater()
+
+
+def test_welcome_set_translations_updates_tooltips(qapp):
+    """A localiser pushing translated tooltips through set_translations
+    must reach the underlying buttons so the panel speaks the user's
+    language end-to-end."""
+    panel = WelcomeHint()
+    try:
+        panel.set_translations(
+            new_tooltip="新分頁 (Ctrl+T)",
+            open_tooltip="開啟檔案",
+        )
+        assert "新分頁" in panel._new_btn.toolTip()       # noqa: SLF001
+        assert "開啟檔案" in panel._open_btn.toolTip()    # noqa: SLF001
+    finally:
+        panel.deleteLater()

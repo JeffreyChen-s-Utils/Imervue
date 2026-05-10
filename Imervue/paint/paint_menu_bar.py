@@ -65,6 +65,11 @@ def build_paint_menu_bar(workspace: PaintWorkspace) -> QMenuBar:
         else:
             label = lang.get(label_key, _MENU_FALLBACKS[key])
             menu = QMenu(label, workspace)
+        # QMenu hides per-action tooltips by default; flipping this
+        # makes any setToolTip() on an action surface on hover so
+        # users see "Save as PSD (Ctrl+S)" rather than only seeing
+        # the keystroke if they happen to read the action's gutter.
+        menu.setToolTipsVisible(True)
         bar.addMenu(menu)
         setattr(workspace, f"_{key}_menu", menu)
     return bar

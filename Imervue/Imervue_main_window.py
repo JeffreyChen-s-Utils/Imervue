@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -33,6 +34,23 @@ from Imervue.user_settings.user_setting_dict import (
 import contextlib
 
 
+def _next_duplicate_name(source: Path) -> Path:
+    """Pick a sibling path for ``source`` that does not exist yet, in
+    the form ``stem (copy).ext``, ``stem (copy 2).ext``, …"""
+    parent = source.parent
+    stem = source.stem
+    suffix = source.suffix
+    candidate = parent / f"{stem} (copy){suffix}"
+    if not candidate.exists():
+        return candidate
+    n = 2
+    while True:
+        candidate = parent / f"{stem} (copy {n}){suffix}"
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
 class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
@@ -52,7 +70,19 @@ class _FileTreeView(QTreeView):
         if key == Qt.Key.Key_F5:
             self._refresh_tree()
             return
+        if key == Qt.Key.Key_F2:
+            self._rename_selected()
+            return
         super().keyPressEvent(event)
+
+    def _rename_selected(self) -> None:
+        indexes = self.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        model: QFileSystemModel = self.model()
+        path = model.filePath(indexes[0])
+        if path:
+            self._rename_path(path)
 
     def _refresh_tree(self) -> None:
         """Force QFileSystemModel to re-scan the current root.
@@ -110,6 +140,17 @@ class _FileTreeView(QTreeView):
                 lambda: self._open_in_explorer(str(Path(path).parent), select=False)
             )
 
+        # Open with system default application — useful when the user
+        # wants to bounce a file to its associated editor without
+        # leaving the tree.
+        if Path(path).is_file():
+            action_open_default = menu.addAction(
+                lang.get("tree_open_with_default", "Open with Default App"),
+            )
+            action_open_default.triggered.connect(
+                lambda: self._open_with_default_app(path),
+            )
+
         menu.addSeparator()
 
         # Copy path
@@ -135,6 +176,18 @@ class _FileTreeView(QTreeView):
             action_expand.triggered.connect(lambda: self.expandRecursively(index))
             action_collapse = menu.addAction(lang.get("tree_collapse_all", "Collapse All"))
             action_collapse.triggered.connect(lambda: self.collapse(index))
+
+        menu.addSeparator()
+
+        # Rename
+        action_rename = menu.addAction(lang.get("tree_rename", "Rename"))
+        action_rename.setShortcut("F2")
+        action_rename.triggered.connect(lambda: self._rename_path(path))
+
+        # Duplicate
+        if Path(path).is_file():
+            action_dup = menu.addAction(lang.get("tree_duplicate", "Duplicate"))
+            action_dup.triggered.connect(lambda: self._duplicate_file(path))
 
         menu.addSeparator()
 
@@ -164,11 +217,84 @@ class _FileTreeView(QTreeView):
                 self._main_window.toast.warning(
                     lang.get("tree_folder_exists", "Folder already exists")
                 )
+            return
         except OSError as exc:
             if hasattr(self._main_window, "toast"):
                 self._main_window.toast.error(
                     f"{lang.get('tree_new_folder_failed', 'Create failed')}: {exc}"
                 )
+            return
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_new_folder_done", "Created folder {name}").format(
+                    name=target.name,
+                ),
+            )
+
+    def _rename_path(self, path: str) -> None:
+        """Prompt for a new basename and rename the file or folder."""
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        target = Path(path)
+        if not target.exists():
+            return
+        new_name, ok = QInputDialog.getText(
+            self,
+            lang.get("tree_rename", "Rename"),
+            lang.get("tree_rename_prompt", "New name:"),
+            text=target.name,
+        )
+        if not ok:
+            return
+        new_name = new_name.strip()
+        if not new_name or new_name == target.name:
+            return
+        new_path = target.with_name(new_name)
+        if new_path.exists():
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.warning(
+                    lang.get("tree_rename_exists", "A file with that name already exists"),
+                )
+            return
+        try:
+            target.rename(new_path)
+        except OSError as exc:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.error(
+                    f"{lang.get('tree_rename_failed', 'Rename failed')}: {exc}",
+                )
+            return
+        self._refresh_tree()
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_rename_done", "Renamed to {name}").format(
+                    name=new_path.name,
+                ),
+            )
+
+    def _duplicate_file(self, path: str) -> None:
+        """Copy ``path`` to a sibling with a "(copy)" suffix."""
+        import shutil
+        lang = language_wrapper.language_word_dict
+        source = Path(path)
+        if not source.is_file():
+            return
+        candidate = _next_duplicate_name(source)
+        try:
+            shutil.copy2(source, candidate)
+        except OSError as exc:
+            if hasattr(self._main_window, "toast"):
+                self._main_window.toast.error(
+                    f"{lang.get('tree_duplicate_failed', 'Duplicate failed')}: {exc}",
+                )
+            return
+        self._refresh_tree()
+        if hasattr(self._main_window, "toast"):
+            self._main_window.toast.success(
+                lang.get("tree_duplicate_done", "Duplicated to {name}").format(
+                    name=candidate.name,
+                ),
+            )
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
@@ -183,6 +309,25 @@ class _FileTreeView(QTreeView):
             else:
                 target = path if Path(path).is_dir() else str(Path(path).parent)
                 subprocess.Popen(["xdg-open", target])
+
+    def _open_with_default_app(self, path: str) -> None:
+        """Open ``path`` with the OS's default application via Qt's
+        QDesktopServices, which is more portable than rolling per-OS
+        subprocess calls. Surfaces a toast on failure so the artist
+        knows whether the launch worked."""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        url = QUrl.fromLocalFile(path)
+        if QDesktopServices.openUrl(url):
+            return
+        if hasattr(self._main_window, "toast"):
+            lang = language_wrapper.language_word_dict
+            self._main_window.toast.error(
+                lang.get(
+                    "tree_open_with_failed",
+                    "Couldn't open {name} with the default application",
+                ).format(name=Path(path).name),
+            )
 
     def _delete_path(self, path: str):
         if not Path(path).exists():
@@ -265,6 +410,10 @@ class ImervueMainWindow(QMainWindow):
 
         self.setWindowTitle("Imervue")
         self._set_app_user_model_id()
+        # Accept image / folder drops anywhere on the window — not just
+        # on the canvas — so artists can drop a file on the file tree
+        # or status bar and have it open.
+        self.setAcceptDrops(True)
 
         read_user_setting()
         last_folder = user_setting_dict.get("user_last_folder", "")
@@ -356,6 +505,8 @@ class ImervueMainWindow(QMainWindow):
         self._tab_bar.currentChanged.connect(self._on_tab_changed)
         self._tab_bar.tabCloseRequested.connect(self._on_tab_close)
         self._tab_bar.tabMoved.connect(self._on_tab_moved)
+        self._tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         right_layout.addWidget(self._tab_bar)
 
         # ===== 麵包屑路徑列 =====
@@ -623,6 +774,34 @@ class ImervueMainWindow(QMainWindow):
         build_tip_menu(self)
         # 「修改」選單 — 建立時隱藏，deep zoom 進入時由 viewer 顯示。
         build_modify_menu(self)
+        # QMenu hides per-action tooltips by default; enable on every
+        # top-level menu so any setToolTip() on its actions surfaces
+        # on hover. Walks the bar once at construction time so future
+        # builders don't have to remember the flag.
+        self._enable_tooltips_on_all_menus()
+
+    def _enable_tooltips_on_all_menus(self) -> None:
+        """Enable per-action tooltips on every top-level menu and any
+        submenus reachable from them. Safe to call repeatedly — Qt's
+        ``setToolTipsVisible`` is idempotent."""
+        from PySide6.QtWidgets import QMenu
+        bar = self.menuBar()
+        if bar is None:
+            return
+        seen: set[int] = set()
+        pending: list[QMenu] = [
+            action.menu() for action in bar.actions() if action.menu() is not None
+        ]
+        while pending:
+            menu = pending.pop()
+            if id(menu) in seen:
+                continue
+            seen.add(id(menu))
+            menu.setToolTipsVisible(True)
+            pending.extend(
+                action.menu() for action in menu.actions()
+                if action.menu() is not None
+            )
 
     # ==========================
     # 狀態列
@@ -1141,6 +1320,146 @@ class ImervueMainWindow(QMainWindow):
         idx = self._tab_bar.currentIndex()
         if idx >= 0:
             self._on_tab_close(idx)
+
+    def _on_tab_context_menu(self, pos) -> None:
+        """Right-click on a tab → reveal / copy path / close family."""
+        idx = self._tab_bar.tabAt(pos)
+        if idx < 0:
+            return
+        from PySide6.QtWidgets import QMenu
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self._tab_bar)
+        tab_path = self._image_tabs[idx].get("path", "") if 0 <= idx < len(self._image_tabs) else ""
+
+        reveal_act = None
+        copy_path_act = None
+        if tab_path:
+            reveal_act = menu.addAction(
+                lang.get("tab_reveal_in_tree", "Reveal in File Tree"),
+            )
+            copy_path_act = menu.addAction(lang.get("tab_copy_path", "Copy Path"))
+            menu.addSeparator()
+
+        close_act = menu.addAction(lang.get("tab_close", "Close"))
+        close_others = menu.addAction(lang.get("tab_close_others", "Close Other Tabs"))
+        close_right = menu.addAction(
+            lang.get("tab_close_to_right", "Close Tabs to the Right"),
+        )
+        menu.addSeparator()
+        close_all = menu.addAction(lang.get("tab_close_all", "Close All Tabs"))
+        chosen = menu.exec(self._tab_bar.mapToGlobal(pos))
+        if chosen is None:
+            return
+        if chosen is reveal_act:
+            self._reveal_path_in_tree(tab_path)
+        elif chosen is copy_path_act:
+            QApplication.clipboard().setText(tab_path)
+        elif chosen is close_act:
+            self._on_tab_close(idx)
+        elif chosen is close_others:
+            self._close_tabs_except(idx)
+        elif chosen is close_right:
+            self._close_tabs_after(idx)
+        elif chosen is close_all:
+            self._close_all_tabs()
+
+    def _reveal_path_in_tree(self, path: str) -> None:
+        """Scroll the file tree to ``path`` and select that row, so the
+        user has a one-click bridge from "this tab's image" back to its
+        location on disk. Falls back silently if the path is gone."""
+        if not path:
+            return
+        if not Path(path).exists():
+            if hasattr(self, "toast"):
+                lang = language_wrapper.language_word_dict
+                self.toast.warning(
+                    lang.get(
+                        "tab_reveal_missing", "{name} is no longer on disk",
+                    ).format(name=Path(path).name or path),
+                )
+            return
+        index = self.model.index(path)
+        if not index.isValid():
+            return
+        self.tree.scrollTo(index)
+        self.tree.setCurrentIndex(index)
+        self.tree.setFocus()
+
+    def _close_tabs_except(self, keep_idx: int) -> None:
+        """Close every tab whose index is not ``keep_idx``."""
+        if not (0 <= keep_idx < len(self._image_tabs)):
+            return
+        # Walk highest-to-lowest so popping doesn't shift the kept index.
+        for idx in reversed(range(len(self._image_tabs))):
+            if idx != keep_idx:
+                self._on_tab_close(idx)
+
+    def _close_tabs_after(self, idx: int) -> None:
+        """Close every tab whose index is greater than ``idx``."""
+        for closing in reversed(range(idx + 1, len(self._image_tabs))):
+            self._on_tab_close(closing)
+
+    def _close_all_tabs(self) -> None:
+        for idx in reversed(range(len(self._image_tabs))):
+            self._on_tab_close(idx)
+
+    # ===== Drag-and-drop on the main window =====
+
+    _SUPPORTED_DROP_EXTS = (
+        ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp",
+        ".gif", ".apng", ".svg",
+        ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
+    )
+
+    @classmethod
+    def _is_supported_drop(cls, path: str) -> bool:
+        """Return True iff the dropped path is a folder or an image with
+        a recognised extension."""
+        p = Path(path)
+        if p.is_dir():
+            return True
+        return p.suffix.lower() in cls._SUPPORTED_DROP_EXTS
+
+    def dragEnterEvent(self, event):  # noqa: N802 — Qt naming
+        urls = event.mimeData().urls() if event.mimeData() else []
+        if any(self._is_supported_drop(u.toLocalFile()) for u in urls if u.isLocalFile()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):  # noqa: N802 — Qt naming
+        urls = event.mimeData().urls() if event.mimeData() else []
+        for url in urls:
+            if not url.isLocalFile():
+                continue
+            path = url.toLocalFile()
+            if self._is_supported_drop(path):
+                self._open_dropped_path(path)
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
+    def _open_dropped_path(self, path: str) -> None:
+        """Open a dropped file or folder via the viewer's existing
+        load path. Folders re-root the file tree; image files load
+        into the deep-zoom viewer."""
+        target = Path(path)
+        if target.is_dir():
+            self._open_startup_folder(str(target))
+            return
+        if target.is_file():
+            try:
+                open_path(main_gui=self.viewer, path=str(target))
+            except Exception:   # noqa: BLE001 — load surface raises a wide variety
+                logger = logging.getLogger("Imervue")
+                logger.exception("drop-load failed: %s", target)
+                if hasattr(self, "toast"):
+                    lang = language_wrapper.language_word_dict
+                    self.toast.error(
+                        lang.get("drop_load_failed", "Couldn't open {name}").format(
+                            name=target.name,
+                        ),
+                    )
 
     def _next_tab(self) -> None:
         count = self._tab_bar.count()

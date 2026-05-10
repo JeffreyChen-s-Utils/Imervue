@@ -140,6 +140,7 @@ class PaintWorkspace(QMainWindow):
         # Middle-click on the tab bar should close the clicked tab —
         # cheap power-user convenience that mirrors browsers / IDEs.
         self._tabs.tabBar().installEventFilter(self)
+        self._install_new_tab_corner_button()
         # ``currentChanged`` is wired AFTER ``_dispatcher`` is built —
         # otherwise the signal fires during ``addTab`` below and the
         # handler trips over the missing dispatcher attribute.
@@ -579,7 +580,21 @@ class PaintWorkspace(QMainWindow):
             # If export marked the active tab clean and that was the
             # only dirty one, allow the close. Otherwise the user has
             # to invoke close again — the message box doesn't loop.
-            return not self._has_unsaved_tabs()
+            still_dirty = self._has_unsaved_tabs()
+            if still_dirty:
+                # The export was cancelled or didn't cover every dirty
+                # tab. Surface a toast so the user knows the close was
+                # aborted (the workspace just stays open silently
+                # otherwise, which felt like the action was eaten).
+                toast = getattr(self, "toast", None)
+                if toast is not None:
+                    toast.warning(
+                        lang.get(
+                            "paint_close_still_dirty",
+                            "Close cancelled — some tabs are still unsaved",
+                        ),
+                    )
+            return not still_dirty
         return clicked is discard
 
     # ---- drag-and-drop file open ---------------------------------------
@@ -1665,6 +1680,21 @@ class PaintWorkspace(QMainWindow):
         sel = document.selection()
         return sel is not None and bool(sel.any())
 
+    def _install_new_tab_corner_button(self) -> None:
+        """Mount a small "+" button in the tab strip's right corner so
+        the artist has a one-click affordance for ``new_tab`` without
+        memorising Ctrl+T or hunting in the File menu."""
+        from PySide6.QtWidgets import QToolButton
+        lang = language_wrapper.language_word_dict
+        self._new_tab_btn = QToolButton(self._tabs)
+        self._new_tab_btn.setText("+")
+        self._new_tab_btn.setAutoRaise(True)
+        self._new_tab_btn.setToolTip(
+            lang.get("paint_tab_new_tooltip", "New tab (Ctrl+T)"),
+        )
+        self._new_tab_btn.clicked.connect(self.new_tab)
+        self._tabs.setCornerWidget(self._new_tab_btn, Qt.Corner.TopRightCorner)
+
     def _install_dock_clusters(self, clusters: tuple) -> None:
         """Anchor each cluster's first dock on the right edge and tabify
         the rest behind it. Pulled out of ``__init__`` so the constructor
@@ -1710,10 +1740,25 @@ class PaintWorkspace(QMainWindow):
         self._zoom_btn.setText(
             lang.get("paint_status_zoom_initial", "100%"),
         )
-        self._zoom_btn.setToolTip(lang.get(
+        # Pull the live keybinds for fit / actual-size so the tooltip
+        # stays in sync if the user remaps either action.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        shortcuts = load_shortcuts()
+        try:
+            fit_key = shortcuts.get("paint.view.fit")
+        except KeyError:
+            fit_key = ""
+        try:
+            actual_key = shortcuts.get("paint.view.actual_size")
+        except KeyError:
+            actual_key = ""
+        base_tip = lang.get(
             "paint_status_zoom_tooltip",
             "Click to toggle between Fit to window and 100 %",
-        ))
+        )
+        if fit_key and actual_key:
+            base_tip = f"{base_tip} ({fit_key} / {actual_key})"
+        self._zoom_btn.setToolTip(base_tip)
         self._zoom_btn.clicked.connect(self._on_zoom_indicator_clicked)
         self._status.addPermanentWidget(self._zoom_btn)
 
@@ -1752,6 +1797,52 @@ class PaintWorkspace(QMainWindow):
         layer_down.activated.connect(lambda: self.cycle_active_layer(-1))
         layer_up = QShortcut(QKeySequence("Alt+]"), self)
         layer_up.activated.connect(lambda: self.cycle_active_layer(+1))
+        # Brush size step — Photoshop / MediBang convention. Bracket
+        # keys without a modifier so the artist can keep one hand on
+        # the canvas. Step amount is multiplicative when held with
+        # Shift so artists can resize quickly across orders of magnitude.
+        size_dec = QShortcut(QKeySequence("["), self)
+        size_dec.activated.connect(lambda: self.step_brush_size(-1))
+        size_inc = QShortcut(QKeySequence("]"), self)
+        size_inc.activated.connect(lambda: self.step_brush_size(+1))
+        size_big_dec = QShortcut(QKeySequence("Shift+["), self)
+        size_big_dec.activated.connect(lambda: self.step_brush_size(-5))
+        size_big_inc = QShortcut(QKeySequence("Shift+]"), self)
+        size_big_inc.activated.connect(lambda: self.step_brush_size(+5))
+        # View shortcuts — Ctrl+0 fits, Ctrl+1 jumps to 100 % (mirrors
+        # Photoshop / browser convention so the artist can re-anchor
+        # without leaving the canvas).
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        registry = load_shortcuts()
+        try:
+            fit_key = registry.get("paint.view.fit")
+        except KeyError:
+            fit_key = "Ctrl+0"
+        try:
+            actual_key = registry.get("paint.view.actual_size")
+        except KeyError:
+            actual_key = "Ctrl+1"
+        fit_shortcut = QShortcut(QKeySequence(fit_key), self)
+        fit_shortcut.activated.connect(self._fit_view)
+        actual_shortcut = QShortcut(QKeySequence(actual_key), self)
+        actual_shortcut.activated.connect(self._actual_size_view)
+        # Photoshop / MediBang colour shortcuts — X swaps FG↔BG, D
+        # resets to black-on-white. The default WidgetWithChildren
+        # shortcut context skips these when focus is inside a
+        # QLineEdit / QTextEdit so typing the letter into a text
+        # field still goes through to the field.
+        try:
+            swap_key = registry.get("paint.color.swap")
+        except KeyError:
+            swap_key = "X"
+        try:
+            reset_key = registry.get("paint.color.reset")
+        except KeyError:
+            reset_key = "D"
+        swap_shortcut = QShortcut(QKeySequence(swap_key), self)
+        swap_shortcut.activated.connect(self._state.swap_colors)
+        reset_shortcut = QShortcut(QKeySequence(reset_key), self)
+        reset_shortcut.activated.connect(self._state.reset_colors)
         # Tab navigation — Ctrl+Tab cycles forward, Ctrl+Shift+Tab
         # backward. Standard browser / IDE convention so users with
         # several open documents don't need to reach for the mouse.
@@ -1759,6 +1850,34 @@ class PaintWorkspace(QMainWindow):
         next_tab.activated.connect(lambda: self.cycle_active_tab(+1))
         prev_tab = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
         prev_tab.activated.connect(lambda: self.cycle_active_tab(-1))
+
+    def _fit_view(self) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "reset_view"):
+            canvas.reset_view()
+
+    def _actual_size_view(self) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "set_zoom"):
+            canvas.set_zoom(1.0)
+
+    BRUSH_SIZE_MIN = 1
+    BRUSH_SIZE_MAX = 500
+
+    def step_brush_size(self, delta: int) -> int:
+        """Adjust the brush size by ``delta`` pixels and clamp to the
+        documented range. Returns the new size so tests + the status
+        bar can read back without re-querying state.
+        """
+        state = getattr(self, "_state", None)
+        if state is None:
+            return 0
+        current = int(state.brush.size)
+        new_size = max(self.BRUSH_SIZE_MIN, min(self.BRUSH_SIZE_MAX, current + int(delta)))
+        if new_size != current:
+            state.set_brush(size=new_size)
+            self._refresh_status_line()
+        return new_size
 
     def cycle_active_tab(self, direction: int) -> int:
         """Step the active paint tab by ``direction`` (+1 / -1).

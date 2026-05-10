@@ -72,6 +72,15 @@ class PageDock(QDockWidget):
         self._list.currentRowChanged.connect(self._on_row_changed)
         self._list.itemChanged.connect(self._on_item_changed)
         self._list.itemDoubleClicked.connect(self._on_double_clicked)
+        # F2 enters inline rename on the selected page — matches the
+        # file-tree convention so artists who learned the gesture there
+        # don't have to memorise a different one for the page list.
+        # ``EditKeyPressed`` is Qt's "F2 enters edit mode" trigger.
+        from PySide6.QtWidgets import QAbstractItemView
+        self._list.setEditTriggers(
+            QAbstractItemView.EditTrigger.EditKeyPressed
+            | QAbstractItemView.EditTrigger.SelectedClicked,
+        )
         layout.addWidget(self._list, stretch=1)
 
         controls = QHBoxLayout()
@@ -284,16 +293,38 @@ class PageDock(QDockWidget):
         self.refresh()
 
     def _warn_no_project(self) -> None:
+        # Prefer the workspace's toast manager (non-blocking) so the
+        # artist isn't forced to dismiss a modal just to learn that the
+        # action requires a project. Fall back to QMessageBox for
+        # legacy embedders that don't construct a toast surface.
+        lang = language_wrapper.language_word_dict
+        message = lang.get(
+            "paint_pages_no_project_msg",
+            "No project bound — start one via File ▸ New Project.",
+        )
+        toast = self._find_toast()
+        if toast is not None:
+            toast.info(message)
+            return
         QMessageBox.information(
             self,
-            language_wrapper.language_word_dict.get(
-                "paint_pages_add_title", "Add page",
-            ),
-            language_wrapper.language_word_dict.get(
-                "paint_pages_no_project_msg",
-                "No project bound — start one via File ▸ New Project.",
-            ),
+            lang.get("paint_pages_add_title", "Add page"),
+            message,
         )
+
+    def _find_toast(self):
+        """Walk the parent chain looking for a workspace that owns a
+        ``ToastManager`` so the warning surfaces non-blockingly. The
+        page dock is created with the workspace as parent, but tests
+        sometimes embed it under a bare QWidget — falling back to None
+        keeps the QMessageBox path alive."""
+        widget = self.parent()
+        while widget is not None:
+            toast = getattr(widget, "toast", None)
+            if toast is not None:
+                return toast
+            widget = widget.parent() if hasattr(widget, "parent") else None
+        return None
 
 
 def _thumbnail_icon(page) -> QIcon:   # pragma: no cover - Qt icon

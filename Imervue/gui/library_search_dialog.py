@@ -88,6 +88,7 @@ class LibrarySearchDialog(QDialog):
         self._name_edit.setPlaceholderText(
             lang.get("library_search_name", "Filename contains…")
         )
+        self._name_edit.setClearButtonEnabled(True)
         col.addWidget(self._name_edit)
 
         form_row = QHBoxLayout()

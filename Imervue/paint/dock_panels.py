@@ -172,19 +172,34 @@ class ColorDock(QDockWidget):
             self._state.set_background(None)
 
     def _show_swatch_menu(self, swatch, *, fg: bool) -> None:  # pragma: no cover - Qt UI
-        """Right-click context menu on either swatch — currently just
-        the "Transparent" toggle for whichever slot was clicked."""
-        from PySide6.QtWidgets import QMenu
+        """Right-click context menu — Transparent toggle plus Copy hex
+        for the slot's current colour. Copy stays disabled when the
+        slot is already transparent so we don't put the literal string
+        ``None`` on the clipboard."""
+        from PySide6.QtWidgets import QApplication, QMenu
+        lang = language_wrapper.language_word_dict
         menu = QMenu(swatch)
-        label = "Transparent"
-        action = menu.addAction(label)
-        action.setCheckable(True)
+        transparent_action = menu.addAction(
+            lang.get("paint_color_transparent", "Transparent"),
+        )
+        transparent_action.setCheckable(True)
+        slot_value = self._state.foreground if fg else self._state.background
+        transparent_action.setChecked(slot_value is None)
         if fg:
-            action.setChecked(self._state.foreground is None)
-            action.triggered.connect(self._toggle_fg_transparent)
+            transparent_action.triggered.connect(self._toggle_fg_transparent)
         else:
-            action.setChecked(self._state.background is None)
-            action.triggered.connect(self._toggle_bg_transparent)
+            transparent_action.triggered.connect(self._toggle_bg_transparent)
+        menu.addSeparator()
+        copy_action = menu.addAction(
+            lang.get("paint_color_copy_hex", "Copy as #RRGGBB"),
+        )
+        copy_action.setEnabled(slot_value is not None)
+        if slot_value is not None:
+            copy_action.triggered.connect(
+                lambda _checked=False, rgb=slot_value: QApplication.clipboard().setText(
+                    f"#{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}",
+                ),
+            )
         menu.exec(swatch.mapToGlobal(swatch.rect().bottomLeft()))
 
     def _toggle_fg_transparent(self) -> None:
@@ -823,6 +838,13 @@ class LayerDock(QDockWidget):
         self._search.setPlaceholderText(
             lang.get("paint_layers_search", "Search layers…"),
         )
+        self._search.setClearButtonEnabled(True)
+        self._search.setToolTip(
+            lang.get(
+                "paint_layers_search_tooltip",
+                "Filter the layer list by name — case-insensitive substring match",
+            ),
+        )
         self._search.textChanged.connect(self._on_search_changed)
         layout.addWidget(self._search)
 
@@ -832,18 +854,51 @@ class LayerDock(QDockWidget):
         )
         self._list.currentRowChanged.connect(self._on_row_changed)
         self._list.itemChanged.connect(self._on_item_changed)
+        # F2 enters inline rename on the active layer — the page dock
+        # uses the same trigger pair so the muscle memory transfers.
+        # Double-click stays free for layer-mask edit so we don't add
+        # DoubleClicked here.
+        from PySide6.QtWidgets import QAbstractItemView
+        self._list.setEditTriggers(
+            QAbstractItemView.EditTrigger.EditKeyPressed
+            | QAbstractItemView.EditTrigger.SelectedClicked,
+        )
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()
-        for key, fallback, slot in (
-            ("paint_layers_add", "+", self._on_add),
-            ("paint_layers_remove", "−", self._on_remove),
-            ("paint_layers_up", "↑", lambda: self._on_move(up=True)),
-            ("paint_layers_down", "↓", lambda: self._on_move(up=False)),
-            ("paint_layers_duplicate", "⧉", self._on_duplicate),
+        # Tooltip text appends the keybind from the shortcut registry so
+        # the affordance is discoverable: hovering "+" reveals
+        # ``Add layer (Ctrl+Shift+N)`` rather than just the glyph.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        shortcuts = load_shortcuts()
+
+        def _tooltip_with_shortcut(key: str, fallback: str, action_id: str) -> str:
+            label = lang.get(key, fallback)
+            try:
+                hotkey = shortcuts.get(action_id)
+            except KeyError:
+                return label
+            return f"{label} ({hotkey})" if hotkey else label
+
+        for key, fallback, slot, tooltip_key, tooltip_fallback, action_id in (
+            ("paint_layers_add", "+", self._on_add,
+             "paint_layers_add_tooltip", "Add layer", "paint.layer.add"),
+            ("paint_layers_remove", "−", self._on_remove,
+             "paint_layers_remove_tooltip", "Delete layer", ""),
+            ("paint_layers_up", "↑", lambda: self._on_move(up=True),
+             "paint_layers_up_tooltip", "Move layer up", "paint.layer.move_up"),
+            ("paint_layers_down", "↓", lambda: self._on_move(up=False),
+             "paint_layers_down_tooltip", "Move layer down", "paint.layer.move_down"),
+            ("paint_layers_duplicate", "⧉", self._on_duplicate,
+             "paint_layers_duplicate_tooltip", "Duplicate layer",
+             "paint.layer.duplicate"),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
+            btn.setToolTip(
+                _tooltip_with_shortcut(tooltip_key, tooltip_fallback, action_id)
+                if action_id else lang.get(tooltip_key, tooltip_fallback),
+            )
             btn.clicked.connect(slot)
             row.addWidget(btn)
         # Dedicated "add adjustment layer" entry — MediBang's Layer
@@ -865,6 +920,28 @@ class LayerDock(QDockWidget):
         row.addWidget(adj_btn)
         row.addStretch(1)
         layout.addLayout(row)
+
+        # Per-layer locks — alpha lock is the most-requested affordance
+        # (Photoshop's "Transparency" lock) so we surface it on the
+        # active layer alongside opacity / blend rather than buried in
+        # a context menu.
+        lock_row = QHBoxLayout()
+        self._lock_alpha_btn = QToolButton()
+        self._lock_alpha_btn.setText(
+            lang.get("paint_layers_lock_alpha", "🔒α"),
+        )
+        self._lock_alpha_btn.setCheckable(True)
+        self._lock_alpha_btn.setToolTip(
+            lang.get(
+                "paint_layers_lock_alpha_tooltip",
+                "Lock transparency — paint only where the active layer "
+                "already has pixels (Photoshop ⊠ Transparency)",
+            ),
+        )
+        self._lock_alpha_btn.toggled.connect(self._on_lock_alpha_toggled)
+        lock_row.addWidget(self._lock_alpha_btn)
+        lock_row.addStretch(1)
+        layout.addLayout(lock_row)
 
         layout.addWidget(QLabel(lang.get("paint_layers_opacity", "Opacity:")))
         self._opacity = _slider(0, 100, 100)
@@ -946,6 +1023,11 @@ class LayerDock(QDockWidget):
             if active is not None:
                 self._opacity.setValue(int(round(active.opacity * 100)))
                 self._blend.setCurrentIndex(self._blend.findData(active.blend_mode))
+                self._lock_alpha_btn.setChecked(bool(active.lock_alpha))
+                self._lock_alpha_btn.setEnabled(True)
+            else:
+                self._lock_alpha_btn.setChecked(False)
+                self._lock_alpha_btn.setEnabled(False)
         finally:
             self._suspend = False
 
@@ -1068,6 +1150,13 @@ class LayerDock(QDockWidget):
                 active_idx, blend_mode=self._blend.currentData(),
             )
 
+    def _on_lock_alpha_toggled(self, checked: bool) -> None:
+        if self._suspend or self._document is None:
+            return
+        active_idx = self._document.active_layer_index()
+        if active_idx >= 0:
+            self._document.set_layer_lock_alpha(active_idx, lock_alpha=checked)
+
     def _row_to_layer_index(self, row: int) -> int:
         if self._document is None:
             return -1
@@ -1113,10 +1202,18 @@ class NavigatorDock(QDockWidget):
 
         fit_btn = QPushButton(lang.get("paint_navigator_fit", "Fit"))
         fit_btn.clicked.connect(self.fit_requested.emit)
-        fit_btn.setToolTip(lang.get(
+        # Pull the live binding from the registry so the tooltip stays
+        # in sync if the user remaps Fit View.
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        try:
+            fit_key = load_shortcuts().get("paint.view.fit")
+        except KeyError:
+            fit_key = ""
+        base_tip = lang.get(
             "paint_navigator_fit_tooltip",
             "Reset the canvas to fit the viewport",
-        ))
+        )
+        fit_btn.setToolTip(f"{base_tip} ({fit_key})" if fit_key else base_tip)
         zoom_row.addWidget(fit_btn)
 
         layout.addLayout(zoom_row)
@@ -1217,14 +1314,19 @@ class PageNavigatorDock(QDockWidget):
         layout.addWidget(self._list, stretch=1)
 
         row = QHBoxLayout()
-        for key, fallback, slot in (
-            ("paint_pages_add", "+", self._on_add),
-            ("paint_pages_remove", "−", self._on_remove),
-            ("paint_pages_up", "↑", lambda: self._on_move(up=True)),
-            ("paint_pages_down", "↓", lambda: self._on_move(up=False)),
+        for key, fallback, slot, tooltip_key, tooltip_fallback in (
+            ("paint_pages_add", "+", self._on_add,
+             "paint_pages_add_tooltip", "Add page"),
+            ("paint_pages_remove", "−", self._on_remove,
+             "paint_pages_remove_tooltip", "Delete page"),
+            ("paint_pages_up", "↑", lambda: self._on_move(up=True),
+             "paint_pages_up_tooltip", "Move page up"),
+            ("paint_pages_down", "↓", lambda: self._on_move(up=False),
+             "paint_pages_down_tooltip", "Move page down"),
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
+            btn.setToolTip(lang.get(tooltip_key, tooltip_fallback))
             btn.clicked.connect(slot)
             row.addWidget(btn)
         row.addStretch(1)
@@ -1364,6 +1466,13 @@ class MaterialDock(QDockWidget):
         self._search = QLineEdit()
         self._search.setPlaceholderText(
             lang.get("paint_material_search", "Search materials…"),
+        )
+        self._search.setClearButtonEnabled(True)
+        self._search.setToolTip(
+            lang.get(
+                "paint_material_search_tooltip",
+                "Filter materials by name — Esc clears the field",
+            ),
         )
         self._search.textChanged.connect(self._refresh_grid)
         layout.addWidget(self._search)
