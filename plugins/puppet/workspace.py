@@ -39,6 +39,7 @@ from puppet.operations import (
     set_key_at_value,
     snapshot_current_forms,
 )
+from puppet.motion_dock import MotionDock
 from puppet.parameter_dock import ParameterDock
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
@@ -69,6 +70,11 @@ class PuppetWorkspace(QMainWindow):
         self._parameter_dock = ParameterDock(self._canvas, self, workspace=self)
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_dock,
+        )
+
+        self._motion_dock = MotionDock(self._canvas, self)
+        self.addDockWidget(
+            Qt.DockWidgetArea.BottomDockWidgetArea, self._motion_dock,
         )
 
         self._status_label = QLabel("")
