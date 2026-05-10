@@ -20,6 +20,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMenu,
     QPushButton,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+from puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
 from puppet.canvas import PuppetCanvas
 from puppet.document_io import PuppetFormatError, load_puppet
 
@@ -67,6 +69,10 @@ class PuppetWorkspace(QWidget):
         open_action = QAction(lang.get("puppet_open", "Open Puppet…"), self)
         open_action.triggered.connect(self._open_via_dialog)
         bar.addAction(open_action)
+
+        import_action = QAction(lang.get("puppet_import_png", "Import PNG…"), self)
+        import_action.triggered.connect(self._import_png_via_dialog)
+        bar.addAction(import_action)
 
         self._recent_button = QPushButton(lang.get("puppet_recent", "Recent"))
         self._recent_button.setFlat(True)
@@ -126,6 +132,65 @@ class PuppetWorkspace(QWidget):
 
     def _canvas_reset_view(self) -> None:
         self._canvas.reset_view()
+
+    # ---- import PNG -----------------------------------------------------
+
+    def _import_png_via_dialog(self) -> None:
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            lang.get("puppet_import_png_title", "Import PNG"),
+            "",
+            "PNG (*.png);;Images (*.png *.jpg *.jpeg *.bmp *.tiff)",
+        )
+        if not path:
+            return
+        cell_size = self._prompt_cell_size()
+        if cell_size is None:
+            return
+        self.import_png(path, cell_size=cell_size)
+
+    def _prompt_cell_size(self) -> int | None:
+        lang = language_wrapper.language_word_dict
+        value, ok = QInputDialog.getInt(
+            self,
+            lang.get("puppet_cell_size_title", "Mesh density"),
+            lang.get(
+                "puppet_cell_size_prompt",
+                "Cell size in pixels (smaller = denser mesh):",
+            ),
+            DEFAULT_CELL_SIZE, 4, 1024, 4,
+        )
+        return value if ok else None
+
+    def import_png(self, path: str | Path, *, cell_size: int = DEFAULT_CELL_SIZE) -> bool:
+        """Build a single-drawable puppet from ``path``'s PNG and load
+        it into the canvas. Returns ``True`` on success."""
+        try:
+            doc = puppet_from_png(path, cell_size=cell_size)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            logger.warning("PNG import failed for %s: %s", path, exc)
+            self._status.setText(
+                language_wrapper.language_word_dict.get(
+                    "puppet_import_failed",
+                    "PNG import failed: {error}",
+                ).format(error=str(exc)),
+            )
+            return False
+        self._canvas.load_document(doc)
+        n_verts = len(doc.drawables[0].vertices)
+        n_tris = len(doc.drawables[0].indices) // 3
+        self._status.setText(
+            language_wrapper.language_word_dict.get(
+                "puppet_status_imported",
+                "Imported {name} ({w}×{h}, {v} vertices, {t} triangles)",
+            ).format(
+                name=Path(str(path)).name,
+                w=doc.size[0], h=doc.size[1],
+                v=n_verts, t=n_tris,
+            ),
+        )
+        return True
 
     # ---- recent menu ----------------------------------------------------
 
