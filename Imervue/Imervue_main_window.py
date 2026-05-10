@@ -34,6 +34,26 @@ from Imervue.user_settings.user_setting_dict import (
 import contextlib
 
 
+def _safe_submenus_of(parent) -> list:
+    """Return live submenus reachable from ``parent`` (a QMenuBar or
+    QMenu). Wrappers whose underlying C++ object has been freed are
+    skipped silently — see ``ImervueMainWindow._enable_tooltips_on_all_menus``.
+    Mirrors the shiboken-teardown pattern in ``paint_workspace._safe_set_checked``."""
+    out: list = []
+    try:
+        actions = parent.actions()
+    except RuntimeError:
+        return out
+    for action in actions:
+        try:
+            submenu = action.menu()
+        except RuntimeError:
+            continue
+        if submenu is not None:
+            out.append(submenu)
+    return out
+
+
 def _next_duplicate_name(source: Path) -> Path:
     """Pick a sibling path for ``source`` that does not exist yet, in
     the form ``stem (copy).ext``, ``stem (copy 2).ext``, …"""
@@ -783,25 +803,25 @@ class ImervueMainWindow(QMainWindow):
     def _enable_tooltips_on_all_menus(self) -> None:
         """Enable per-action tooltips on every top-level menu and any
         submenus reachable from them. Safe to call repeatedly — Qt's
-        ``setToolTipsVisible`` is idempotent."""
+        ``setToolTipsVisible`` is idempotent. Defensive against shiboken
+        wrappers whose C++ peer has been freed; skipping them costs at
+        most one menu's tooltip flag, missing them aborts startup."""
         from PySide6.QtWidgets import QMenu
         bar = self.menuBar()
         if bar is None:
             return
         seen: set[int] = set()
-        pending: list[QMenu] = [
-            action.menu() for action in bar.actions() if action.menu() is not None
-        ]
+        pending: list[QMenu] = list(_safe_submenus_of(bar))
         while pending:
             menu = pending.pop()
             if id(menu) in seen:
                 continue
             seen.add(id(menu))
-            menu.setToolTipsVisible(True)
-            pending.extend(
-                action.menu() for action in menu.actions()
-                if action.menu() is not None
-            )
+            try:
+                menu.setToolTipsVisible(True)
+            except RuntimeError:
+                continue
+            pending.extend(_safe_submenus_of(menu))
 
     # ==========================
     # 狀態列

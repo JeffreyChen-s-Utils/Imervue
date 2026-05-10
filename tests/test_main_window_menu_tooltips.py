@@ -6,6 +6,7 @@ hover, without each builder having to remember to flip the flag.
 """
 from __future__ import annotations
 
+import shiboken6
 from PySide6.QtWidgets import QMainWindow, QMenu
 
 
@@ -57,5 +58,54 @@ def test_helper_is_safe_when_no_menubar(qapp, monkeypatch):
     try:
         bound_helper = ImervueMainWindow._enable_tooltips_on_all_menus
         bound_helper(win)   # must not raise even on an empty bar
+    finally:
+        win.deleteLater()
+
+
+def test_helper_skips_deleted_qmenu_wrappers(qapp):
+    """If a menubar-reachable QMenu's C++ side has already been freed
+    (a shiboken teardown hazard observed in the wild on PySide6), the
+    walker must skip the dangling wrapper and still flip the flag on
+    the surviving menus rather than aborting window construction."""
+    from Imervue.Imervue_main_window import ImervueMainWindow
+
+    win = QMainWindow()
+    try:
+        bar = win.menuBar()
+        live_menu = QMenu("Live", win)
+        bar.addMenu(live_menu)
+        dead_menu = QMenu("Dead", win)
+        bar.addMenu(dead_menu)
+        # Force shiboken to treat the wrapper as pointing at a freed
+        # C++ object — this is the exact failure mode reported in the
+        # field crash trace.
+        shiboken6.delete(dead_menu)
+
+        ImervueMainWindow._enable_tooltips_on_all_menus(win)
+
+        assert live_menu.toolTipsVisible(), "live menu should still be flipped"
+    finally:
+        win.deleteLater()
+
+
+def test_safe_submenus_of_skips_deleted_actions(qapp):
+    """Direct unit coverage for the submenu-listing helper so we have
+    a focused regression test for the guard, independent of the
+    public walker."""
+    from Imervue.Imervue_main_window import _safe_submenus_of
+
+    win = QMainWindow()
+    try:
+        bar = win.menuBar()
+        live_menu = QMenu("Live", win)
+        bar.addMenu(live_menu)
+        dead_menu = QMenu("Dead", win)
+        bar.addMenu(dead_menu)
+        shiboken6.delete(dead_menu)
+
+        submenus = _safe_submenus_of(bar)
+
+        assert live_menu in submenus
+        assert all(shiboken6.isValid(m) for m in submenus)
     finally:
         win.deleteLater()
