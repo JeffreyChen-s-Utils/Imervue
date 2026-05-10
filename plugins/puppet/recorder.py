@@ -35,7 +35,13 @@ class CaptureError(RuntimeError):
 
 
 def capture_canvas_image(canvas: PuppetCanvas) -> QImage:
-    """Return the current GL framebuffer of ``canvas`` as a QImage."""
+    """Return the current GL framebuffer of ``canvas`` as a QImage.
+
+    May raise :class:`CaptureError` for the empty / null wrapper case
+    *or* propagate ``OpenGL.error.GLError`` / ``RuntimeError`` if the
+    underlying GL context isn't current — both happen on CI machines
+    that don't have a live display. Callers wrap accordingly.
+    """
     image = canvas.grabFramebuffer()
     if image is None or image.isNull():
         raise CaptureError("canvas has no captured framebuffer yet")
@@ -43,15 +49,26 @@ def capture_canvas_image(canvas: PuppetCanvas) -> QImage:
 
 
 def save_canvas_png(canvas: PuppetCanvas, path: str | Path) -> bool:
-    """Capture ``canvas`` and save as PNG. Returns ``True`` on success."""
+    """Capture ``canvas`` and save as PNG. Returns ``True`` on success.
+
+    Catches everything the GL stack might throw — CaptureError,
+    OpenGL.error.GLError (no active context on headless CI),
+    RuntimeError (shiboken-style teardown), and generic Exception (PIL
+    / image-save backends raise mixed types). The user will retry
+    after a real paint cycle anyway.
+    """
     try:
         image = capture_canvas_image(canvas)
-    except CaptureError as exc:
+    except (CaptureError, RuntimeError, Exception) as exc:   # noqa: BLE001
         logger.warning("capture failed: %s", exc)
         return False
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    return bool(image.save(str(p), "PNG"))
+    try:
+        return bool(image.save(str(p), "PNG"))
+    except Exception as exc:   # noqa: BLE001
+        logger.warning("png save failed: %s", exc)
+        return False
 
 
 class RecordingSession(QObject):
@@ -126,7 +143,10 @@ class RecordingSession(QObject):
             return
         try:
             image = capture_canvas_image(self._canvas)
-        except CaptureError:
+        except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
+            # GL not ready yet on this tick — skip the frame; the
+            # writer keeps running so the next ready frame extends the
+            # clip naturally.
             return
         frame = _qimage_to_rgb_array(image)
         if frame is None:
