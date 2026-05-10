@@ -1290,6 +1290,25 @@ class _BezierPenTool:
         self._dragging_anchor_index = None
         self._press_pos = None
         self._overlay_setter(None)
+        # Auto-commit any in-progress path so the user's clicks aren't
+        # silently dropped when they switch tools — without this the
+        # path stays attached to the workspace and only re-renders on
+        # the next pen click, which reads as "the drawing disappeared
+        # and only comes back next time I use the pen". Single-anchor
+        # paths can't rasterise (``commit_pen_path`` rejects them); we
+        # discard those so a fresh pen session starts clean.
+        workspace = self._workspace
+        if workspace is None:
+            return
+        path = getattr(workspace, "_bezier_pen_path", None)
+        if path is None:
+            return
+        if len(path.nodes) >= 2:
+            from Imervue.paint.pen_commit import commit_pen_path
+            commit_pen_path(workspace)
+        else:
+            path.nodes.clear()
+            path.closed = False
 
     def _refresh_overlay(self, path) -> None:
         """Draw the path's anchor polyline so the user sees what they
