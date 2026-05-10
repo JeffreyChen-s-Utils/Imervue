@@ -3,16 +3,20 @@
 ## `rossi_source.jpg`
 
 * **Character:** Rossi — Arknights
-* **Artist:** odmised
-* **Reposted on:** [Danbooru post #11311021](https://danbooru.donmai.us/posts/11311021)
+* **Artist:** tntl_nemui
+* **Reposted on:** [Danbooru post #11043219](https://danbooru.donmai.us/posts/11043219)
 * **Danbooru rating:** g (general)
 * **Date fetched:** 2026-05-10
 * **Status at fetch time:** no `do_not_post`, `no_repost`, or DNP-list
-  artist tags on the post.
+  artist tags on the post; tagged `full_body`, `solo`, `simple_background`,
+  `waving`.
 
 Used by `build_rossi_puppet.py` as the source illustration for the
-six-drawable rig in `demo_rossi.puppet`. The chibi companion figure
-on the right side of the original post is cropped out before slicing.
+six-drawable rig in `demo_rossi.puppet`. The pose has the left arm
+raised in a wave and the right arm at the side, so each rotation
+deformer reaches a body part with visible pixels — every motion in
+the demo produces a clear visual change rather than a subtle
+unchanged-looking frame.
 
 ## `amiya_source.jpg`
 

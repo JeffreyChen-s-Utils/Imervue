@@ -59,7 +59,7 @@ OUTPUT_PATH = Path(__file__).with_name("demo_rossi.puppet")
 # parts.
 # ---------------------------------------------------------------------------
 
-CROP_BOX = (50, 0, 540, 1952)   # (left, top, right, bottom) — drops the chibi
+CROP_BOX = (50, 0, 620, 1807)   # crops the rightmost margin / floating text
 TARGET_HEIGHT = 900             # downscale long edge to keep the .puppet small
 
 # After padding, the figure occupies the central 40% of the canvas — these
@@ -70,19 +70,23 @@ TARGET_HEIGHT = 900             # downscale long edge to keep the .puppet small
 PAD_RATIO = 0.75    # padding on each side as a fraction of figure width
 FIGURE_FRAC_WIDTH = 1.0 / (1.0 + 2 * PAD_RATIO)   # → 0.40
 
-HEAD_FRAC = (0.00, 0.00, 1.00, 0.16)
-TORSO_FRAC = (0.10, 0.16, 0.90, 0.78)
-ARM_LEFT_FRAC = (0.00, 0.18, 0.40, 0.46)
-ARM_RIGHT_FRAC = (0.60, 0.18, 1.00, 0.46)
-LEG_LEFT_FRAC = (0.28, 0.78, 0.55, 1.00)
-LEG_RIGHT_FRAC = (0.55, 0.78, 0.78, 1.00)
+# Body-part rectangles tuned to the standing-with-left-arm-raised pose
+# in Danbooru #11043219. The left arm + hand sit in the upper-left
+# corner of the cropped figure, so the head rectangle is narrowed to
+# the central column to avoid double-claiming the same pixels.
+HEAD_FRAC = (0.30, 0.00, 0.75, 0.22)
+TORSO_FRAC = (0.20, 0.22, 0.85, 0.66)
+ARM_LEFT_FRAC = (0.00, 0.05, 0.42, 0.34)
+ARM_RIGHT_FRAC = (0.78, 0.22, 1.00, 0.55)
+LEG_LEFT_FRAC = (0.30, 0.66, 0.55, 1.00)
+LEG_RIGHT_FRAC = (0.55, 0.66, 0.78, 1.00)
 
-NECK_FRAC = (0.50, 0.16)
-WAIST_FRAC = (0.50, 0.76)
-SHOULDER_LEFT_FRAC = (0.30, 0.20)
-SHOULDER_RIGHT_FRAC = (0.70, 0.20)
-HIP_LEFT_FRAC = (0.40, 0.78)
-HIP_RIGHT_FRAC = (0.60, 0.78)
+NECK_FRAC = (0.52, 0.22)
+WAIST_FRAC = (0.52, 0.64)
+SHOULDER_LEFT_FRAC = (0.42, 0.28)
+SHOULDER_RIGHT_FRAC = (0.78, 0.28)
+HIP_LEFT_FRAC = (0.48, 0.66)
+HIP_RIGHT_FRAC = (0.60, 0.66)
 
 
 def _padded_frac_box(box: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
@@ -258,13 +262,13 @@ def _build_doc() -> PuppetDocument:
         _three_key("ParamLegRightSwing", "leg_right_rot", hip_r, LEG_SWING_MAX),
     ])
 
-    # Motion set is chosen so every entry produces a visibly different
-    # frame in this character's pose. Rossi's source pose has her arms
-    # folded across her body and only one leg fully visible, so cheer /
-    # step-leg-only motions barely affect the canvas — they're omitted
-    # in favour of motions driven by the head + body + dominant arm.
+    # Motion set tuned for Rossi's standing-with-left-arm-raised pose:
+    # the left arm is already up, the right arm hangs at the side, and
+    # both legs / boots are visible — every entry below moves a
+    # different combination of those parts so the user can tell them
+    # apart at a glance.
     doc.motions.extend([
-        _idle(), _head_shake(), _bow(), _wave(),
+        _idle(), _wave(), _cheer(), _bow(), _step_right(),
     ])
     return doc
 
@@ -296,20 +300,51 @@ def _idle() -> Motion:
 
 
 def _wave() -> Motion:
-    """Right arm raised + waving."""
+    """Left arm is already up in the source pose; oscillate it back
+    and forth a few times so it looks like an actual wave."""
     dur = 2.0
-    n = 32
+    n = 48
     segs: list[MotionSegment] = []
     for i in range(n):
         t0 = dur * i / n
         t1 = dur * (i + 1) / n
-        base = -0.85
-        wob0 = 0.15 * math.sin(2.0 * math.pi * 4 * t0 / dur)
-        wob1 = 0.15 * math.sin(2.0 * math.pi * 4 * t1 / dur)
-        segs.append(MotionSegment(type="linear", p0=(t0, base + wob0), p1=(t1, base + wob1)))
+        v0 = 0.5 * math.sin(2.0 * math.pi * 3 * t0 / dur)
+        v1 = 0.5 * math.sin(2.0 * math.pi * 3 * t1 / dur)
+        segs.append(MotionSegment(type="linear", p0=(t0, v0), p1=(t1, v1)))
     return Motion(name="wave", duration=dur, loop=True, tracks=[
-        MotionTrack(param_id="ParamArmRightSwing", segments=segs),
+        MotionTrack(param_id="ParamArmLeftSwing", segments=segs),
         _sine_track("ParamHeadYaw", dur, 0.3),
+    ])
+
+
+def _cheer() -> Motion:
+    """Bring the right arm up to match the left arm — both-arms-up
+    cheer pose. Mirrored signs so the right arm rotates the right
+    direction (negative angle) to swing upward."""
+    dur = 2.4
+    return Motion(name="cheer", duration=dur, loop=True, tracks=[
+        MotionTrack(param_id="ParamArmRightSwing", segments=[
+            MotionSegment(type="linear", p0=(0.0, 0.0), p1=(0.8, -1.0)),
+            MotionSegment(type="linear", p0=(0.8, -1.0), p1=(1.6, -1.0)),
+            MotionSegment(type="linear", p0=(1.6, -1.0), p1=(2.4, 0.0)),
+        ]),
+        # Left arm wobbles a little while the right arm joins it.
+        _sine_track("ParamArmLeftSwing", dur, 0.3),
+        _sine_track("ParamHeadYaw", dur, 0.4, phase=math.pi),
+    ])
+
+
+def _step_right() -> Motion:
+    """Lift the right leg out to the side then put it back down. Pure
+    leg motion; no body counter-lean — adding ParamBodyLean here
+    rotates the upper half too aggressively for the tall canvas."""
+    dur = 1.6
+    return Motion(name="step_right", duration=dur, loop=True, tracks=[
+        MotionTrack(param_id="ParamLegRightSwing", segments=[
+            MotionSegment(type="linear", p0=(0.0, 0.0), p1=(0.5, 1.0)),
+            MotionSegment(type="linear", p0=(0.5, 1.0), p1=(1.0, 1.0)),
+            MotionSegment(type="linear", p0=(1.0, 1.0), p1=(1.6, 0.0)),
+        ]),
     ])
 
 
@@ -325,13 +360,6 @@ def _bow() -> Motion:
     ])
 
 
-def _head_shake() -> Motion:
-    """Head shakes side-to-side at 1 Hz. Drives only ParamHeadYaw so
-    every viewer can see the head turn cleanly without other body
-    parts confusing the picture."""
-    return Motion(name="head_shake", duration=2.0, loop=True, tracks=[
-        _sine_track("ParamHeadYaw", 2.0, 1.0, n=64),
-    ])
 
 
 def main() -> None:

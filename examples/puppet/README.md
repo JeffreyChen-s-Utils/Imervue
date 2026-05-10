@@ -8,7 +8,7 @@ Imervue (the third top-level tab, slotted right after Paint).
 | `demo_face.puppet` | procedural smiley face | 1 | 1 (rotation) | 1 | 1 (idle sine) |
 | `demo_amiya.puppet` | Amiya from Arknights | 1 | 4 (region warps) | 4 | 3 (idle / wave / greet) |
 | `demo_tpose.puppet` | procedural T-pose figure (recommended) | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / jumping_jacks / bow / stretch) |
-| `demo_rossi.puppet` | Rossi from Arknights, sliced into limbs | 6 | 6 (joint rotations) | 6 | 4 (idle / head_shake / bow / wave) |
+| `demo_rossi.puppet` | Rossi from Arknights, sliced into limbs | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / cheer / bow / step_right) |
 
 ## `demo_face.puppet`
 
@@ -182,24 +182,26 @@ poses look right before opening the GL canvas.
 
 Same six-drawable / six-rotation-deformer architecture as
 `demo_tpose`, but the body parts are sliced out of a real Rossi
-illustration ([Danbooru post #11311021](https://danbooru.donmai.us/posts/11311021)
-by `odmised`, rating: g, no `do_not_post` flag at fetch time —
+illustration ([Danbooru post #11043219](https://danbooru.donmai.us/posts/11043219)
+by `tntl_nemui`, rating: g, no `do_not_post` flag at fetch time —
 provenance in `assets/CREDITS.md`).
 
-The slicing is rectangular alpha masks aligned to Rossi's actual
-joints, so each rotation deformer rotates only its slice of the
-canvas. Motions are tuned for this character's pose:
+This is a standing front-facing pose with the **left arm raised in
+a wave** + the **right arm hanging at the side** + **both legs
+visible**, which lets every body-part deformer move pixels users
+can actually see. Motions tuned for this pose:
 
 * `idle` (4 s) — body sway + counter head bob
-* `head_shake` (2 s) — head shakes side-to-side at 1 Hz
+* `wave` (2 s) — left arm wobbles in the raised position; head turn
+* `cheer` (2.4 s) — right arm raises to match the left for a
+  both-arms-up cheer
 * `bow` (2.4 s) — upper body leans forward
-* `wave` (2 s) — right arm + head bob
+* `step_right` (1.6 s) — right leg lifts out to the side
 
-`cheer` and `step_left` (which work cleanly on the T-pose figure)
-are intentionally omitted because Rossi's source pose has her arms
-folded across her body and only one leg fully visible — rectangular
-masks of those regions catch mostly cape / dress pixels, so the
-motions don't read.
+A swap from an earlier pose where the arms were folded across the
+body — that pose made `cheer` and `step` invisible because the
+rectangular slices caught mostly cape / dress pixels rather than
+limbs.
 
 ### Try it
 
