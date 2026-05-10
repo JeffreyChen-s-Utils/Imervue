@@ -1,6 +1,6 @@
-"""Preview the Rossi rig at a few motion phases — same software
-rasteriser as ``preview_tpose.py`` but pointed at demo_rossi.puppet.
-"""
+"""Render preview PNGs of the anime-girl puppet at neutral plus three
+phases per motion. Reuses ``preview_tpose``'s software rasteriser so
+no Qt or OpenGL is required."""
 from __future__ import annotations
 
 import sys
@@ -9,20 +9,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "plugins"))
-
-from preview_tpose import render_frame   # noqa: E402 - reuse rasteriser
-from puppet.document_io import load_puppet   # noqa: E402
-from puppet.motion_sampler import sample_motion   # noqa: E402
-
-# Make ``preview_tpose`` importable from the same directory.
 sys.path.insert(0, str(Path(__file__).parent))
-from preview_tpose import render_frame   # noqa: E402, F811
+
+from preview_tpose import render_frame    # noqa: E402
+from puppet.document_io import load_puppet    # noqa: E402
+from puppet.motion_sampler import sample_motion    # noqa: E402
 
 
 def main() -> None:
     here = Path(__file__).parent
-    doc = load_puppet(here / "demo_rossi.puppet")
-    out_dir = here / "rossi_previews"
+    doc = load_puppet(here / "demo_anime_girl.puppet")
+    out_dir = here / "anime_girl_previews"
     out_dir.mkdir(exist_ok=True)
     snapshots = [("neutral", {p.id: p.default for p in doc.parameters})]
     for motion in doc.motions:

@@ -6,9 +6,12 @@ Imervue (the third top-level tab, slotted right after Paint).
 | File | Subject | Drawables | Deformers | Parameters | Motions |
 |---|---|---|---|---|---|
 | `demo_face.puppet` | procedural smiley face | 1 | 1 (rotation) | 1 | 1 (idle sine) |
-| `demo_amiya.puppet` | Amiya from Arknights | 1 | 4 (region warps) | 4 | 3 (idle / wave / greet) |
-| `demo_tpose.puppet` | procedural T-pose figure (recommended) | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / jumping_jacks / bow / stretch) |
-| `demo_rossi.puppet` | Rossi from Arknights, base layer + feathered slices | 7 | 6 (joint rotations) | 6 | 5 (idle / wave / cheer / bow / step_right) |
+| `demo_tpose.puppet` | procedural T-pose figure | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / jumping_jacks / bow / stretch) |
+| `demo_anime_girl.puppet` | procedural anime-style girl ★ recommended | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / curtsy / cheer / step_right) |
+
+All three demos are painted procedurally with PIL — no external
+illustrations, no licence concerns, fully reproducible from the
+`build_*` scripts in this directory.
 
 ## `demo_face.puppet`
 
@@ -38,9 +41,6 @@ the rig you build that follows the same parameter conventions) blink.
 
 ### Build a fresh copy
 
-If the binary file gets corrupted or you want to tweak the procedural
-face, rebuild from source:
-
 ```bash
 py examples/puppet/build_demo_puppet.py
 ```
@@ -50,81 +50,13 @@ assets — the face PNG is rendered with Pillow's `ImageDraw` and the
 rest of the rig is wired with the same `puppet.operations` API the
 in-app authoring toolbar uses.
 
-## `demo_amiya.puppet` — multi-region rig with three motions
+## `demo_tpose.puppet` — six-drawable rig with five motions
 
-A richer demo built on a real character illustration to show what a
-multi-deformer rig looks like end-to-end:
-
-* **Drawable:** Amiya (Arknights) full body, auto-meshed at cell-size
-  24 → ~500 vertices, ~900 triangles
-* **Four region-bound warp deformers** so each parameter only affects
-  its slice of the canvas:
-    * `head_warp` — top 30 % of the canvas
-    * `body_warp` — middle 28 – 62 % band
-    * `arm_left_warp` — left half of that band
-    * `arm_right_warp` — right half of that band
-* **Four parameters** with key forms shifting the relevant warp lattice:
-    * `ParamHeadX` ∈ [-1, 1] — head turn left / right
-    * `ParamBodySway` ∈ [-1, 1] — body lean
-    * `ParamArmLeftUp` ∈ [0, 1] — left arm raise
-    * `ParamArmRightUp` ∈ [0, 1] — right arm raise
-* **Three looping motions:**
-    * `idle` (4 s) — body sways while the head counter-bobs
-    * `wave` (2 s) — right arm waves up + down twice; head bobs along
-    * `greet` (3 s) — both arms raise then drop, body bows slightly
-
-### Try it
-
-```bash
-# Open Puppet tab → Open Puppet… → demo_amiya.puppet
-# In the Parameters dock on the right: drag any of the 4 sliders.
-# In the Motions dock at the bottom: click `wave` to start playing it.
-```
-
-Toggle **Drag-track head** in the toolbar to drive `ParamHeadX` /
-`ParamBodySway` from the cursor (cursor offset → both
-``ParamAngleX/Y`` and these per-region warps if you remap them).
-
-### Build a fresh copy
-
-```bash
-py examples/puppet/build_amiya_puppet.py
-```
-
-The script reads `assets/amiya_source.jpg` (the cached source image),
-down-scales to 600 px on the long edge to keep the `.puppet` zip
-under ~300 KB, runs `puppet_from_png` → `add_warp_deformer` × 4
-→ key form shifts → `_idle / _wave / _greet` motion factories →
-`save_puppet`. All in pure Python with no Qt or GL.
-
-### Source-image attribution
-
-`assets/amiya_source.jpg` was cached from
-[Danbooru post #11344502](https://danbooru.donmai.us/posts/11344502)
-(rating: g, no `do_not_post` flag at fetch time). Artist:
-`mowang_xiao_lajiao`. See `assets/CREDITS.md` for full provenance.
-
-If you'd rather build the demo against your own art, replace
-`assets/amiya_source.jpg` with any full-body PNG / JPG and rerun the
-builder — the warp bounds are computed from the loaded image's
-dimensions so the rig adapts to whatever proportions you give it.
-
-## `demo_tpose.puppet` — six-drawable rig with five motions ★ recommended
-
-The clearest motion demo. A procedurally-painted T-pose figure with
-each body part on its own drawable, each joint with its own rotation
-deformer, each parameter swinging up to ±80 ° — every motion looks
-*dramatically* different from neutral.
-
-**Why T-pose + multi-drawable:**
-
-* Standing-pose illustrations make the limbs hang against the torso;
-  rectangular warp bounds can't isolate "the arm" without also catching
-  torso pixels, so motions look like muddy blobs.
-* T-pose puts the limbs out along the X axis, completely separate from
-  the torso. Each body part on its own PNG with the joint pivot at a
-  known canvas position lets one rotation deformer rotate exactly its
-  body part — clean separation, dramatic visible motion.
+A T-pose figure with each body part on its own drawable, each joint
+with its own rotation deformer, parameters swinging up to ±80 ° at
+the shoulders. T-pose puts the limbs out along the X axis so each
+rotation deformer rotates exactly its body part — clean separation,
+dramatic visible motion.
 
 **Rig:**
 
@@ -149,8 +81,7 @@ deformer, each parameter swinging up to ±80 ° — every motion looks
 # Open Puppet tab → Open Puppet… → demo_tpose.puppet
 # In the Motions dock at the bottom, click any of the five motions —
 # it binds to the player and starts playing immediately. Press Stop
-# in the transport bar to silence it. Each motion plainly moves a
-# different combination of body parts — none of them look the same.
+# in the transport bar to silence it.
 ```
 
 In the **Parameters** dock you'll see all six sliders; drag them
@@ -160,97 +91,70 @@ individually to verify each joint rotates exactly its body part.
 
 ```bash
 py examples/puppet/build_tpose_puppet.py
+py examples/puppet/preview_tpose.py    # → tpose_previews/*.png
 ```
 
-The whole figure is painted procedurally — no external assets needed,
-no copyright concerns. To customise: tweak the canvas constants
-(`HEAD_RADIUS`, `TORSO_TOP_LEFT`, etc.) or the rotation extremes
-(`HEAD_YAW_MAX`, `ARM_SWING_MAX`, …) at the top of the script.
+A pure-Pillow software rasteriser samples every motion at three phases
+and dumps PNGs into `tpose_previews/` so you can confirm the poses
+look right before opening the GL canvas.
 
-### Verify renders without launching Imervue
+## `demo_anime_girl.puppet` — natural-pose anime girl ★ recommended
 
-```bash
-py examples/puppet/preview_tpose.py
-# wrote tpose_previews/neutral.png + p25/p50/p75 of every motion
-```
+The friendliest demo to look at and the most complete to play with.
+A procedurally-painted anime-style schoolgirl: round face, large
+sky-blue eyes with iris highlights, pink twin-tail hair, sailor-style
+top with a navy collar and red ribbon, pleated skirt, knee socks +
+Mary Jane shoes. Standing relaxed with arms slightly out from the
+torso so each shoulder rotation has room to swing without colliding
+with the body.
 
-A pure-Pillow software rasteriser samples every motion at three
-phases and dumps PNGs into `tpose_previews/` so you can confirm the
-poses look right before opening the GL canvas.
+**Why pick this over `demo_tpose`?** Same six-drawable / six-rotation
+rig, but the pose looks like a character instead of a stick figure,
+the joint angles are tuned for a natural standing pose (smaller body
+lean, larger arm swing), and the motion set leans toward
+character-y gestures (wave, curtsy, cheer) rather than calisthenics.
 
-## `demo_rossi.puppet` — base layer + alpha-feathered slices, real character image
+**Rig:**
 
-The Rossi rig stacks **seven drawables**: a static **base layer** of
-the full illustration at draw_order 0, then six body-part **slices**
-(head, torso, left arm, right arm, left leg, right leg) on top with
-their own rotation deformers. Each slice's alpha is **feathered**
-along its rectangle edges so it fades smoothly into the base
-underneath. Result:
-
-* At neutral the slice exactly overlays its region of the base — same
-  source pixels, same colour — so the feather zone composites part
-  on base without washout and **the slice rectangle is invisible**.
-* When a slice rotates, the base under it stays put, providing a
-  fallback colour wherever the rotated slice no longer covers.
-  Combined with the soft slice edges, **no hard cut appears** along
-  the rectangle — the figure looks continuous through the motion.
-* Each slice still rotates as a **rigid piece** around its joint
-  pivot, so the limb moves cleanly without the smearing you'd get
-  from a soft-warp lattice.
-
-Source: [Danbooru post #11043219](https://danbooru.donmai.us/posts/11043219)
-by `tntl_nemui`, rating: g, no `do_not_post` flag at fetch time —
-provenance in `assets/CREDITS.md`.
-
-The pose is standing front-facing with the **left arm raised in a
-wave** + the **right arm hanging at the side** + **both legs
-visible**, which gives each slice a body part with visible pixels to
-move. Motions tuned for this pose:
-
-* `idle` (4 s) — body sway + counter head bob
-* `wave` (2 s) — left arm wobbles in the raised position; head turn
-* `cheer` (2.4 s) — right arm raises to match the left for a
-  both-arms-up cheer
-* `bow` (2.4 s) — upper body leans forward
-* `step_right` (1.6 s) — right leg lifts out to the side
-
-**Trade-off:** because the base shows through behind a rotated slice,
-large swings would expose the un-rotated body part as a duplicate
-"ghost". The rig keeps angles modest (≤14° per joint) so that ghost
-stays inside the feather band and reads as a soft fade, not a second
-limb. For cartoon-style large swings the T-pose demo
-(`demo_tpose.puppet`) is still the cleaner reference. Use the Rossi
-rig when you want subtle, seam-free motion on a real illustration.
+* **6 drawables** painted with PIL — head (face + hair + bangs +
+  twin tails), torso (uniform top + collar + ribbon + pleated skirt
+  + belt), left/right arm (sleeve + skin-tone forearm + hand), left/
+  right leg (skin thigh + sock band + Mary Jane shoe)
+* **6 rotation deformers** anchored at the joints
+* **6 parameters** in [-1, 1], extreme = ±75 ° for arms, ±35 ° for
+  head, ±28 ° for legs, ±20 ° for body
+* **5 motions** that each feature a different body region:
+    * `idle` — gentle body sway + counter head turn (4 s, loop)
+    * `wave` — right arm up, hand wobbling side to side (2 s, loop)
+    * `curtsy` — body bows forward + head dips (2.4 s, loop)
+    * `cheer` — both arms swing up to the sides like jumping jacks (2 s, loop)
+    * `step_right` — right leg lifts out to the side and returns (1.6 s, loop)
 
 ### Try it
 
 ```bash
-# Open Puppet tab → Open Puppet… → demo_rossi.puppet
-# Click any motion in the bottom Motions dock (single-click plays it
-# immediately). All five motions visibly differ from neutral with no
-# visible seam between body parts.
+# Open Puppet tab → Open Puppet… → demo_anime_girl.puppet
+# Click any of the five motions in the bottom Motions dock — they all
+# play instantly on single-click. Drag the sliders in the Parameters
+# dock to drive each joint manually.
 ```
 
 ### Build a fresh copy
 
 ```bash
-py examples/puppet/build_rossi_puppet.py        # → demo_rossi.puppet
-py examples/puppet/preview_rossi.py             # → rossi_previews/*.png
+py examples/puppet/build_anime_girl_puppet.py    # → demo_anime_girl.puppet
+py examples/puppet/preview_anime_girl.py         # → anime_girl_previews/*.png
 ```
 
-### Building from your own art
-
-If you have a different illustration, point `SOURCE_IMAGE` at it and
-re-tune the body-part rectangles + joint pivot fractions at the top
-of `build_rossi_puppet.py`. The bounds are non-overlapping fractions
-of the padded canvas, so as long as your source has a clear
-head / torso / arms / legs layout the rig adapts to whatever
-proportions you give it. The padding ratio (`PAD_RATIO = 0.75`) keeps
-rotated limbs inside the visible frame.
+The whole figure is painted with Pillow's `ImageDraw` — no external
+assets, no licence concerns, fully reproducible. Tweak the canvas
+constants at the top of `build_anime_girl_puppet.py` (palette,
+joint pivots, body-part rectangles, swing extremes) to retheme the
+demo without touching the rig wiring.
 
 ## Authoring your own from scratch
 
-The demo is the smallest non-trivial puppet you can build. The same
+The demos are the smallest non-trivial puppets you can build. The same
 shape extends to richer rigs:
 
 1. **Drawable** — start from any PNG via **Import PNG…** (the auto-mesh
