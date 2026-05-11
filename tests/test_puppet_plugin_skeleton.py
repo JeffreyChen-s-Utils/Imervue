@@ -1,40 +1,54 @@
-"""Smoke tests for the built-in Puppet workspace.
+"""Skeleton coverage for the Puppet plugin.
 
-The Puppet feature shipped first as a plugin (``plugins/puppet/``) and
-later moved into the main package as ``Imervue.puppet``. This module
-keeps the integration-surface coverage that the original plugin
-skeleton tests provided: the workspace widget builds without a loaded
-document, exposes a meaningful layout, and survives multiple
-construction calls.
+The plugin lives under ``plugins/puppet/`` and contributes the Puppet
+top-level tab via ``on_build_main_tabs``. These tests guard the
+integration surface (plugin adds tab, workspace widget builds) so
+later phases can extend without breaking the contract.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
+from PySide6.QtWidgets import QTabWidget
 
 
 @pytest.mark.usefixtures("qapp")
 def test_workspace_widget_builds():
-    """Constructing :class:`PuppetWorkspace` with no arguments must
-    succeed and produce a widget with a non-empty layout."""
-    from Imervue.puppet.workspace import PuppetWorkspace
+    """Instantiating the workspace widget must succeed with no
+    arguments and produce a layout with at least one child."""
+    from puppet.puppet_plugin import _build_workspace_widget
 
-    workspace = PuppetWorkspace()
+    widget = _build_workspace_widget()
     try:
-        layout = workspace.layout()
-        if layout is not None:
-            assert layout.count() >= 1
         # PuppetWorkspace is a QMainWindow — central widget must exist.
-        assert workspace.centralWidget() is not None
+        assert widget.centralWidget() is not None
     finally:
-        workspace.deleteLater()
+        widget.deleteLater()
+
+
+@pytest.mark.usefixtures("qapp")
+def test_plugin_adds_tab_to_main_tabs():
+    """``on_build_main_tabs`` must add exactly one non-empty tab."""
+    from puppet.puppet_plugin import PuppetPlugin
+
+    fake_main = SimpleNamespace(viewer=SimpleNamespace())
+    plugin = PuppetPlugin(fake_main)
+    tabs = QTabWidget()
+    try:
+        plugin.on_build_main_tabs(tabs)
+        assert tabs.count() == 1
+        # Tab title is locale-dependent (Puppet / 偶動畫 / etc.); only
+        # require it to resolve to non-empty.
+        assert tabs.tabText(0)
+    finally:
+        tabs.deleteLater()
 
 
 @pytest.mark.usefixtures("qapp")
 def test_workspace_can_be_built_twice():
-    """A repeated build pass must not leave residual state behind — the
-    main window builds a single shared instance, but tests construct
-    multiple to verify clean teardown."""
-    from Imervue.puppet.workspace import PuppetWorkspace
+    """A repeated build pass must not leave residual state behind."""
+    from puppet.workspace import PuppetWorkspace
 
     first = PuppetWorkspace()
     second = PuppetWorkspace()

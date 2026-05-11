@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.puppet.input_drivers import (
+from puppet.input_drivers import (
     DEFAULT_DRAG_X_PARAM,
     DEFAULT_DRAG_Y_PARAM,
     audio_rms_to_mouth,

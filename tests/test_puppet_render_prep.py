@@ -7,8 +7,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.puppet.document import Drawable, PuppetDocument
-from Imervue.puppet.render_prep import (
+from puppet.document import Drawable, PuppetDocument
+from puppet.render_prep import (
     build_draw_list,
     collect_required_textures,
     fit_view,

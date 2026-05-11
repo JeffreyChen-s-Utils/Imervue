@@ -1,13 +1,13 @@
 """Tests for the motion recorder + bake_to_motion helper."""
 from __future__ import annotations
 
-from Imervue.puppet.canvas import PuppetCanvas
-from Imervue.puppet.document import (
+from puppet.canvas import PuppetCanvas
+from puppet.document import (
     Drawable,
     Parameter,
     PuppetDocument,
 )
-from Imervue.puppet.motion_recorder import (
+from puppet.motion_recorder import (
     MotionRecorder,
     append_motion,
     bake_to_motion,

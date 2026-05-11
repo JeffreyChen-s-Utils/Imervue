@@ -13,7 +13,7 @@ import zipfile
 
 import pytest
 
-from Imervue.puppet.document import (
+from puppet.document import (
     Deformer,
     Drawable,
     Expression,
@@ -28,7 +28,7 @@ from Imervue.puppet.document import (
     PoseGroup,
     PuppetDocument,
 )
-from Imervue.puppet.document_io import (
+from puppet.document_io import (
     PuppetFormatError,
     SCHEMA_VERSION,
     from_zip_bytes,
@@ -479,3 +479,194 @@ def test_optional_blocks_omitted_when_empty():
         manifest = json.loads(zf.read("puppet.json"))
     for absent in ("motions", "expressions", "physics", "pose"):
         assert absent not in manifest, f"empty {absent} should be omitted"
+
+
+# ---------------------------------------------------------------------------
+# Bone weights round-trip
+# ---------------------------------------------------------------------------
+
+
+def _drawable_with_bone_weights(bone_weights):
+    return Drawable(
+        id="d", texture="textures/x.png",
+        vertices=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        indices=[0, 1, 2],
+        uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        draw_order=0,
+        bone_weights=bone_weights,
+    )
+
+
+def test_bone_weights_round_trip():
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_bone_weights({
+        "arm": [1.0, 0.6, 0.0],
+        "torso": [0.0, 0.4, 1.0],
+    })]
+    restored = from_zip_bytes(to_zip_bytes(doc))
+    assert restored.drawables[0].bone_weights == {
+        "arm": [1.0, 0.6, 0.0],
+        "torso": [0.0, 0.4, 1.0],
+    }
+
+
+def test_drawable_without_bone_weights_omits_field_in_json():
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_bone_weights(None)]
+    raw = to_zip_bytes(doc)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+    assert "bone_weights" not in manifest["drawables"][0]
+
+
+def test_load_rejects_bone_weights_with_wrong_length(tmp_path):
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_bone_weights({"arm": [1.0, 0.0, 0.5]})]
+    raw = to_zip_bytes(doc)
+    # Hand-edit the manifest to break the weight count, then re-zip.
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+        png = zf.read("textures/x.png")
+    manifest["drawables"][0]["bone_weights"]["arm"] = [1.0, 0.0]  # too short
+    bad_path = tmp_path / "bad.puppet"
+    with zipfile.ZipFile(bad_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("puppet.json", json.dumps(manifest))
+        zf.writestr("textures/x.png", png)
+    with pytest.raises(PuppetFormatError, match="bone_weights"):
+        load_puppet(bad_path)
+
+
+# ---------------------------------------------------------------------------
+# opacity_keys round-trip (parameter-driven cross-fade)
+# ---------------------------------------------------------------------------
+
+
+def _drawable_with_opacity_keys(opacity_keys):
+    return Drawable(
+        id="d", texture="textures/x.png",
+        vertices=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        indices=[0, 1, 2],
+        uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        draw_order=0,
+        opacity_keys=opacity_keys,
+    )
+
+
+def test_opacity_keys_round_trip():
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_opacity_keys([
+        {"parameter": "arm_swing", "stops": [
+            {"value": -1.5, "alpha": 1.0},
+            {"value": 0.0, "alpha": 0.0},
+        ]},
+    ])]
+    restored = from_zip_bytes(to_zip_bytes(doc))
+    keys = restored.drawables[0].opacity_keys
+    assert keys is not None
+    assert len(keys) == 1
+    assert keys[0]["parameter"] == "arm_swing"
+    assert keys[0]["stops"] == [
+        {"value": -1.5, "alpha": 1.0},
+        {"value": 0.0, "alpha": 0.0},
+    ]
+
+
+def test_drawable_without_opacity_keys_omits_field_in_json():
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_opacity_keys(None)]
+    raw = to_zip_bytes(doc)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+    assert "opacity_keys" not in manifest["drawables"][0]
+
+
+def test_load_rejects_opacity_keys_not_a_list(tmp_path):
+    """opacity_keys must be a list — a dict typo should raise early."""
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_opacity_keys([
+        {"parameter": "swing", "stops": [
+            {"value": 0.0, "alpha": 1.0},
+            {"value": 1.0, "alpha": 0.0},
+        ]},
+    ])]
+    raw = to_zip_bytes(doc)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+        png = zf.read("textures/x.png")
+    manifest["drawables"][0]["opacity_keys"] = {"not": "a list"}
+    bad_path = tmp_path / "bad.puppet"
+    with zipfile.ZipFile(bad_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("puppet.json", json.dumps(manifest))
+        zf.writestr("textures/x.png", png)
+    with pytest.raises(PuppetFormatError, match="opacity_keys"):
+        load_puppet(bad_path)
+
+
+def test_load_rejects_opacity_keys_with_too_few_stops(tmp_path):
+    """A curve with fewer than 2 stops has nothing to interpolate."""
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_opacity_keys([
+        {"parameter": "swing", "stops": [
+            {"value": 0.0, "alpha": 1.0},
+            {"value": 1.0, "alpha": 0.0},
+        ]},
+    ])]
+    raw = to_zip_bytes(doc)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+        png = zf.read("textures/x.png")
+    manifest["drawables"][0]["opacity_keys"][0]["stops"] = [
+        {"value": 0.0, "alpha": 1.0},
+    ]
+    bad_path = tmp_path / "bad.puppet"
+    with zipfile.ZipFile(bad_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("puppet.json", json.dumps(manifest))
+        zf.writestr("textures/x.png", png)
+    with pytest.raises(PuppetFormatError, match="stops"):
+        load_puppet(bad_path)
+
+
+def test_load_rejects_opacity_keys_with_missing_alpha(tmp_path):
+    """A stop missing its alpha field is malformed."""
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_opacity_keys([
+        {"parameter": "swing", "stops": [
+            {"value": 0.0, "alpha": 1.0},
+            {"value": 1.0, "alpha": 0.0},
+        ]},
+    ])]
+    raw = to_zip_bytes(doc)
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("puppet.json"))
+        png = zf.read("textures/x.png")
+    manifest["drawables"][0]["opacity_keys"][0]["stops"][1] = {"value": 1.0}
+    bad_path = tmp_path / "bad.puppet"
+    with zipfile.ZipFile(bad_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("puppet.json", json.dumps(manifest))
+        zf.writestr("textures/x.png", png)
+    with pytest.raises(PuppetFormatError, match="alpha"):
+        load_puppet(bad_path)
+
+
+def test_bone_rotation_deformer_round_trips():
+    doc = new_blank((64, 64))
+    doc.textures["textures/x.png"] = _TINY_PNG
+    doc.drawables = [_drawable_with_bone_weights({"arm": [1.0, 1.0, 1.0]})]
+    doc.deformers = [Deformer(
+        id="arm_bone", type="bone_rotation", parent=None,
+        drawables=["d"],
+        form={"bone_id": "arm", "anchor": [10.0, 20.0], "angle": 0.0},
+    )]
+    restored = from_zip_bytes(to_zip_bytes(doc))
+    deformer = restored.deformers[0]
+    assert deformer.type == "bone_rotation"
+    assert deformer.form["bone_id"] == "arm"
+    assert deformer.form["anchor"] == [10.0, 20.0]

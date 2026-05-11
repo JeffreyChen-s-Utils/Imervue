@@ -8,8 +8,9 @@ import math
 import numpy as np
 import pytest
 
-from Imervue.puppet.deformers import (
+from puppet.deformers import (
     apply_rotation,
+    apply_skeleton_lbs,
     apply_warp,
     blend_forms,
     default_rotation_form,
@@ -161,3 +162,93 @@ def test_blend_forms_preserves_non_numeric_when_types_differ():
     b = {"label": 42}
     # non-matching numeric/non-numeric → keep a's value
     assert blend_forms(a, b, 0.5)["label"] == "x"
+
+
+# ---------------------------------------------------------------------------
+# Skeletal LBS
+# ---------------------------------------------------------------------------
+
+
+def test_lbs_no_bones_returns_rest():
+    rest = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
+    out = apply_skeleton_lbs(rest, [], {})
+    assert np.allclose(out, rest)
+
+
+def test_lbs_single_bone_full_weight_matches_rigid_rotation():
+    rest = np.array([[1.0, 0.0], [0.0, 1.0], [3.0, 4.0]], dtype=np.float64)
+    angle = math.pi / 3
+    anchor = (0.0, 0.0)
+    bones = [{"bone_id": "only", "anchor": anchor, "angle": angle}]
+    weights = {"only": np.ones(3, dtype=np.float64)}
+    out = apply_skeleton_lbs(rest, bones, weights)
+    rigid = apply_rotation(rest, {"anchor": list(anchor), "angle": angle})
+    assert np.allclose(out, rigid)
+
+
+def test_lbs_symmetric_bones_cancel_at_midpoint():
+    # Vertex at the midpoint of two symmetric anchors, both rotating in
+    # the same direction. Rotation A pulls the vertex up-left; B pulls
+    # it down-right; with 0.5/0.5 weights they cancel and the vertex
+    # stays at the midpoint. This is the correctness property that
+    # depends on a single LBS pass — sequential composition of the two
+    # rotations would not give (0, 0).
+    rest = np.array([[0.0, 0.0]], dtype=np.float64)
+    angle = math.radians(30)
+    bones = [
+        {"bone_id": "a", "anchor": (-1.0, 0.0), "angle": angle},
+        {"bone_id": "b", "anchor": (1.0, 0.0), "angle": angle},
+    ]
+    weights = {"a": np.array([0.5]), "b": np.array([0.5])}
+    out = apply_skeleton_lbs(rest, bones, weights)
+    assert out[0, 0] == pytest.approx(0.0, abs=1e-9)
+    assert out[0, 1] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_lbs_partial_weights_blend_proportionally():
+    rest = np.array([[2.0, 0.0]], dtype=np.float64)
+    angle = math.pi / 2  # 90°
+    bones = [{"bone_id": "rotor", "anchor": (0.0, 0.0), "angle": angle}]
+    # 0.25 weight rotor + 0.75 weight to a no-op "still" bone (identity).
+    weights = {
+        "rotor": np.array([0.25]),
+        "still": np.array([0.75]),
+    }
+    bones.append({"bone_id": "still", "anchor": (0.0, 0.0), "angle": 0.0})
+    out = apply_skeleton_lbs(rest, bones, weights)
+    # Blended position = 0.25 * (0, 2) + 0.75 * (2, 0) = (1.5, 0.5)
+    assert out[0, 0] == pytest.approx(1.5, abs=1e-9)
+    assert out[0, 1] == pytest.approx(0.5, abs=1e-9)
+
+
+def test_lbs_zero_weight_vertex_keeps_rest_position():
+    rest = np.array([[5.0, 5.0]], dtype=np.float64)
+    bones = [{"bone_id": "active", "anchor": (0.0, 0.0), "angle": math.pi}]
+    weights = {"active": np.array([0.0])}  # vertex untouched by any bone
+    out = apply_skeleton_lbs(rest, bones, weights)
+    assert np.allclose(out, rest)
+
+
+def test_lbs_unnormalised_weights_are_renormalised():
+    rest = np.array([[1.0, 0.0]], dtype=np.float64)
+    angle = math.pi / 2
+    bones = [{"bone_id": "rotor", "anchor": (0.0, 0.0), "angle": angle}]
+    # Weight 2.0 (over 1.0) — runtime should normalise so the result
+    # is the same as weight 1.0 with one bone.
+    weights = {"rotor": np.array([2.0])}
+    out = apply_skeleton_lbs(rest, bones, weights)
+    assert out[0, 0] == pytest.approx(0.0, abs=1e-9)
+    assert out[0, 1] == pytest.approx(1.0, abs=1e-9)
+
+
+def test_lbs_missing_bone_in_weights_is_skipped():
+    rest = np.array([[1.0, 0.0]], dtype=np.float64)
+    bones = [
+        {"bone_id": "present", "anchor": (0.0, 0.0), "angle": math.pi / 2},
+        {"bone_id": "absent", "anchor": (0.0, 0.0), "angle": math.pi},
+    ]
+    weights = {"present": np.array([1.0])}  # 'absent' not provided
+    out = apply_skeleton_lbs(rest, bones, weights)
+    # Only 'present' should contribute → 90° rotation of (1, 0) → (0, 1)
+    assert out[0, 0] == pytest.approx(0.0, abs=1e-9)
+    assert out[0, 1] == pytest.approx(1.0, abs=1e-9)

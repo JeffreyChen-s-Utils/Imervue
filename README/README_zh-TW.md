@@ -202,7 +202,7 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 - **錄製自訂動作（Phase 13）** — 切換「錄製動作」開始以 30 Hz 取樣參數值；停止後自動烘焙為 `Motion`，每個變動的參數一條 linear-segment 軌（保持不變的軌會被丟棄），加進文件並立即出現在動作 dock，可播放 / 循環 / 存檔
 - **截圖 / 錄製（Phase 11）** — `擷取畫面…` 透過 `glReadPixels` 存 PNG；`錄製…` 切換 30 FPS 影格迴圈，透過 `imageio` 寫成 GIF / WebM / MP4
 
-範例檔在 [`examples/puppet/demo_face.puppet`](examples/puppet/demo_face.puppet)（建檔 script：`examples/puppet/build_demo_puppet.py`）。在 Puppet 分頁按「開啟偶動畫…」匯入即可看到一個已綁好參數與 idle 動作的臉。
+範例檔在 [`examples/puppet/puppet_procedural.puppet`](examples/puppet/puppet_procedural.puppet)（建檔 script：`examples/puppet/puppet_procedural_example.py`）。每個身體部位都用 PIL 直接畫到自己的透明畫布上 — 沒有原始圖片、沒有去背、沒有切割 — 旋轉時不會產生邊緣偽影。在 Puppet 分頁按「開啟偶動畫…」匯入即可看到一個六部件的 Q 版角色，已綁好六個參數和五個動作（idle / wave / curtsy / cheer / step_right）。
 
 ### 系統整合
 

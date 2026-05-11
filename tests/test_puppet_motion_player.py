@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.puppet.canvas import PuppetCanvas
-from Imervue.puppet.document import (
+from puppet.canvas import PuppetCanvas
+from puppet.document import (
     Deformer,
     Drawable,
     Motion,
@@ -15,8 +15,8 @@ from Imervue.puppet.document import (
     Parameter,
     PuppetDocument,
 )
-from Imervue.puppet.motion_dock import MotionDock
-from Imervue.puppet.motion_player import MotionPlayer
+from puppet.motion_dock import MotionDock
+from puppet.motion_player import MotionPlayer
 
 
 def _doc_with_motion() -> PuppetDocument:

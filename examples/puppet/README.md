@@ -1,41 +1,44 @@
 # Puppet examples
 
 Drop-in `.puppet` file you can import into the **Puppet** tab of
-Imervue (now a built-in top-level tab, slotted right after Paint).
+Imervue (contributed by the `plugins/puppet/` plugin — enable it from
+the plugin manager if the tab isn't already showing).
 
 | File | Subject | Drawables | Deformers | Parameters | Motions |
 |---|---|---|---|---|---|
-| `demo_anime_girl.puppet` | anime-girl rig built from `puppet_char.png` | 7 | 6 (joint rotations) | 6 | 5 (idle / wave / curtsy / cheer / step_right) |
+| `puppet_procedural.puppet` | procedurally-drawn chibi rig | 6 | 6 (joint rotations) | 6 | 5 (idle / wave / curtsy / cheer / step_right) |
 
-## `demo_anime_girl.puppet`
+## `puppet_procedural.puppet`
 
-Single feature-complete demo built from the bundled
-`puppet_char.png`. The figure is split into seven drawables: a
-**static base layer** at draw_order 0 (the full character) plus six
-body-part **slices** (head, torso, two arms, two legs) on top with
-their own rotation deformers. Each slice's alpha is feathered along
-its rectangle edges so the cut blends into the base; the modest
-joint angles keep the un-rotated base from peeking through behind a
-rotated slice.
+A fully procedural demo: every body part is drawn directly with PIL
+primitives onto its own transparent canvas, then triangulated into a
+mesh. No source image, no chroma-key, no segmentation — each drawable
+starts life with a clean anti-aliased silhouette, so rotations can
+never expose the white edges, ghost overlaps, or "cut" artefacts that
+come from slicing a single hand-drawn image into parts.
 
-**Pipeline (run by `build_anime_girl_puppet.py`):**
+The rig has six drawables: torso, two legs, two arms, head. Each
+rotates around its joint anchor independently (head at the neck,
+arms at the shoulders, legs at the hips), and a parent `body_rot`
+leans the whole figure for the `curtsy` motion.
 
-1. Chroma-key the off-white backdrop in `puppet_char.png` so the
-   silhouette goes transparent.
-2. Crop to the figure bbox + 60 % padding on each side so rotated
-   limbs stay inside the canvas.
-3. Build the base drawable from the full canvas.
-4. Crop six rectangular body-part slices, multiply each by a
-   soft-edge alpha mask, and stack them with their own rotation
-   deformers anchored at the joints.
+**Pipeline (run by `puppet_procedural_example.py`):**
+
+1. Pick canvas size + figure-frac anchors for the head, neck,
+   shoulders, hips, and feet.
+2. Render each body part onto a transparent canvas with `PIL.ImageDraw`
+   at 4× supersample, downscaled with LANCZOS for anti-aliasing.
+3. Wrap each layer in a `Drawable` via `triangulate_alpha_grid`, wire
+   one rotation deformer per joint, and bind the five motions.
+4. Save as `puppet_procedural.puppet` next to the script.
 
 **Parameters & motions:**
 
-* `ParamHeadYaw` — head tilt left/right (±7°)
-* `ParamBodyLean` — torso lean (±4°)
-* `ParamArm{Left,Right}Swing` — shoulder swing (±15°)
-* `ParamLeg{Left,Right}Swing` — hip swing (±9°)
-* Motions: `idle` (4 s body sway + head bob), `wave` (right arm up,
+* `ParamHeadYaw` — head tilt left/right (±12°)
+* `ParamBodyLean` — torso lean (±6°)
+* `ParamArm{Left,Right}Swing` — shoulder swing (±80°)
+* `ParamLeg{Left,Right}Swing` — hip swing (±14°)
+* Motions: `idle` (4 s body sway + arm swing), `wave` (right arm up,
   hand wobbling), `curtsy` (body bow + head dip), `cheer` (both
   arms up), `step_right` (right leg sideways).
 
@@ -43,7 +46,7 @@ rotated slice.
 
 ```bash
 # Launch Imervue, switch to the Puppet tab, click Open Puppet…,
-# pick examples/puppet/demo_anime_girl.puppet.
+# pick examples/puppet/puppet_procedural.puppet.
 # Click any of the five motions in the bottom Motions dock — each
 # plays on single-click. Drag sliders in the Parameters dock to
 # drive each joint manually.
@@ -52,20 +55,19 @@ rotated slice.
 ### Build a fresh copy
 
 ```bash
-py examples/puppet/build_anime_girl_puppet.py    # → demo_anime_girl.puppet
-py examples/puppet/preview_anime_girl.py         # → anime_girl_previews/*.png
+py examples/puppet/puppet_procedural_example.py    # → puppet_procedural.puppet
+py examples/puppet/puppet_procedural_preview.py    # → puppet_procedural_previews/*.png
 ```
 
-The build is fully reproducible from `puppet_char.png` plus the
-script — no other assets are needed. To re-target the rig at a
-different illustration, drop a new image in next to the script and
-re-tune the body-part rectangles + joint pivot fractions at the top
-of `build_anime_girl_puppet.py` (look for `*_FRAC` constants).
+To retarget the rig — different palette, proportions, or new body
+parts — edit the constants at the top of `puppet_procedural_example.py`
+(`*_RGB` for colours, `HEAD_RADIUS` / `LIMB_THICKNESS` / `SHOULDER_*`
+etc. for geometry) and add or remove `_Part` entries in `_build_doc`.
 
 ## Authoring your own from scratch
 
-The demo is the smallest non-trivial puppet you can build. The same
-shape extends to richer rigs:
+The procedural demo is one path; the more typical path is to start
+from your own illustration:
 
 1. **Drawable** — start from any PNG via **Import PNG…** (the
    auto-mesh step replaces the manual vertex / index arrays).
@@ -84,4 +86,4 @@ shape extends to richer rigs:
 6. **Save** — **Save As…** writes the whole rig to a `.puppet` zip
    you can share.
 
-See `Imervue/puppet/FORMAT.md` for the full file-format reference.
+See `plugins/puppet/FORMAT.md` for the full file-format reference.

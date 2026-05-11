@@ -654,24 +654,6 @@ class ImervueMainWindow(QMainWindow):
             lang.get("paint_tab_title", "Paint"),
         )
 
-        # --------------------------------------------------------
-        # Tab 3: Puppet workspace — 2D rigged-puppet animation
-        # --------------------------------------------------------
-        try:
-            from Imervue.puppet.workspace import PuppetWorkspace
-            self.puppet_workspace = PuppetWorkspace()
-            self._main_tabs.addTab(
-                self.puppet_workspace,
-                lang.get("puppet_tab_title", "Puppet"),
-            )
-        except (ImportError, RuntimeError) as exc:
-            # Optional GL deps may be missing on some headless setups;
-            # log + drop the tab rather than block startup.
-            logging.getLogger("Imervue").warning(
-                "Puppet tab failed to initialise: %s", exc,
-            )
-            self.puppet_workspace = None
-
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)

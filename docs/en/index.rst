@@ -742,15 +742,25 @@ Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
 The repository ships a fully-rigged demo at
-``examples/puppet/demo_face.puppet`` (rebuild source:
-``examples/puppet/build_demo_puppet.py``). It contains a procedurally-painted
-face PNG with auto-mesh, a head-rotation deformer, ``ParamAngleX`` rigged
-between -1..+1 with three keys, and a 4-second looping ``idle`` motion.
+``examples/puppet/puppet_procedural.puppet`` (rebuild source:
+``examples/puppet/puppet_procedural_example.py``). Every body part is
+drawn procedurally with PIL primitives onto its own transparent canvas
+at 4× supersample — no source image, no chroma-key, no segmentation —
+so rotations never expose the white edges or "cut" artefacts that
+come from slicing a single hand-drawn image into parts.
 
-Open the Puppet tab, click **Open Puppet…**, point at ``demo_face.puppet`` —
-the face appears centred. Drag the ``ParamAngleX`` slider to see it turn,
-or click ``idle`` in the Motions dock — single-click binds the
-motion and starts playback immediately.
+The rig has six drawables (torso, two legs, two arms, head), six
+rotation deformers (parent ``body_rot`` plus head / shoulders / hips),
+six parameters (``ParamHeadYaw``, ``ParamBodyLean``,
+``ParamArm{Left,Right}Swing``, ``ParamLeg{Left,Right}Swing``), and
+five looping motions (``idle``, ``wave``, ``curtsy``, ``cheer``,
+``step_right``).
+
+Open the Puppet tab, click **Open Puppet…**, point at
+``puppet_procedural.puppet`` — the figure appears centred. Drag any
+parameter slider to drive a joint, or click one of the five motions
+in the Motions dock — single-click binds the motion and starts
+playback immediately.
 
 ``.puppet`` file format (v1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

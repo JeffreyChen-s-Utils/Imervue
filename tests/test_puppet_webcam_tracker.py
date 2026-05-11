@@ -5,8 +5,8 @@ when imports fail.
 """
 from __future__ import annotations
 
-from Imervue.puppet.canvas import PuppetCanvas
-from Imervue.puppet.webcam_tracker import WebcamTracker
+from puppet.canvas import PuppetCanvas
+from puppet.webcam_tracker import WebcamTracker
 
 
 def test_tracker_starts_disabled(qapp):
