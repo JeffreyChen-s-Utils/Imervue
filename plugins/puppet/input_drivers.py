@@ -18,8 +18,24 @@ import numpy as np
 
 DEFAULT_DRAG_X_PARAM: str = "ParamAngleX"
 DEFAULT_DRAG_Y_PARAM: str = "ParamAngleY"
+DEFAULT_DRAG_EYE_X_PARAM: str = "ParamEyeBallX"
+DEFAULT_DRAG_EYE_Y_PARAM: str = "ParamEyeBallY"
 DEFAULT_EYE_PARAMS: tuple[str, str] = ("ParamEyeLOpen", "ParamEyeROpen")
 DEFAULT_MOUTH_PARAM: str = "ParamMouthOpenY"
+DEFAULT_MOUTH_FORM_PARAM: str = "ParamMouthForm"
+
+_EYEBALL_LEAD: float = 1.5
+"""Eyes lead the head's turn — when the cursor is at the canvas edge,
+``ParamEyeBallX/Y`` saturate even sooner than ``ParamAngleX/Y``. The
+extra gain (clamped to ``[-1, 1]``) reads as the puppet glancing
+toward the cursor before turning its whole head."""
+
+# Vowel-band frequency edges (Hz). The low band captures the formant
+# energy of round-mouth vowels (ㄛ / ㄨ — "oh / oo"); the high band
+# captures the bright formants of wide-mouth vowels (ㄧ / ㄝ —
+# "ee / ay"). The ratio of energy between them maps to mouth form.
+_VISEME_LOW_BAND_HZ: tuple[float, float] = (200.0, 700.0)
+_VISEME_HIGH_BAND_HZ: tuple[float, float] = (2000.0, 4000.0)
 
 _DEFAULT_BLINK_INTERVAL: float = 4.5   # seconds between blinks (mean)
 _DEFAULT_BLINK_DURATION: float = 0.18   # seconds per close+open cycle
@@ -33,21 +49,39 @@ def cursor_to_angle_params(
     *,
     sensitivity: float = 1.0,
 ) -> dict[str, float]:
-    """Map a cursor position (image-space pixels) to angle parameter
-    values in ``[-1, 1]`` centred on the canvas midpoint.
+    """Map a cursor position (image-space pixels) to angle and
+    eye-ball parameter values in ``[-1, 1]`` centred on the canvas
+    midpoint.
 
-    ``sensitivity`` (1.0 default) scales how aggressively the puppet
-    follows — values >1 amplify motion, <1 dampen.
-    """
+    Returns four values:
+
+    * ``ParamAngleX`` / ``ParamAngleY`` — head rotation following the
+      cursor.
+    * ``ParamEyeBallX`` / ``ParamEyeBallY`` — eyes following the
+      cursor with a ``_EYEBALL_LEAD`` gain so they saturate slightly
+      ahead of the head, giving the "looking toward where you'll soon
+      face" feel that Live2D rigs use for cursor tracking.
+
+    ``sensitivity`` (1.0 default) scales the head response. Eye-ball
+    gain is multiplied on top of it, then clamped — that way a low
+    sensitivity still produces visible eye motion when the cursor is
+    near the edge of the canvas."""
     if canvas_w <= 0 or canvas_h <= 0:
-        return {DEFAULT_DRAG_X_PARAM: 0.0, DEFAULT_DRAG_Y_PARAM: 0.0}
-    nx = (cursor_x - canvas_w * 0.5) / (canvas_w * 0.5)
-    ny = (cursor_y - canvas_h * 0.5) / (canvas_h * 0.5)
-    nx = max(-1.0, min(1.0, nx * sensitivity))
-    ny = max(-1.0, min(1.0, ny * sensitivity))
+        return {
+            DEFAULT_DRAG_X_PARAM: 0.0, DEFAULT_DRAG_Y_PARAM: 0.0,
+            DEFAULT_DRAG_EYE_X_PARAM: 0.0, DEFAULT_DRAG_EYE_Y_PARAM: 0.0,
+        }
+    nx_raw = (cursor_x - canvas_w * 0.5) / (canvas_w * 0.5)
+    ny_raw = (cursor_y - canvas_h * 0.5) / (canvas_h * 0.5)
+    nx = max(-1.0, min(1.0, nx_raw * sensitivity))
+    ny = max(-1.0, min(1.0, ny_raw * sensitivity))
+    eye_x = max(-1.0, min(1.0, nx_raw * sensitivity * _EYEBALL_LEAD))
+    eye_y = max(-1.0, min(1.0, ny_raw * sensitivity * _EYEBALL_LEAD))
     return {
         DEFAULT_DRAG_X_PARAM: nx,
         DEFAULT_DRAG_Y_PARAM: ny,
+        DEFAULT_DRAG_EYE_X_PARAM: eye_x,
+        DEFAULT_DRAG_EYE_Y_PARAM: eye_y,
     }
 
 
@@ -100,6 +134,72 @@ def audio_rms_to_mouth(
     if rms >= ceiling:
         return 1.0
     return (rms - floor) / max(ceiling - floor, 1e-9)
+
+
+def audio_to_viseme(
+    samples: np.ndarray | bytes,
+    *,
+    sample_rate: int = 22050,
+    floor: float = 0.005,
+    ceiling: float = 0.2,
+) -> dict[str, float]:
+    """Compute mouth-open + mouth-form values from one audio block.
+
+    Returns ``{ParamMouthOpenY: open_y, ParamMouthForm: form}``.
+
+    ``open_y`` reuses the same RMS-vs-floor/ceiling ramp as
+    :func:`audio_rms_to_mouth`. ``form`` lives in ``[-1, 1]`` and is
+    negative for back-vowel sounds (round mouth — "oh / oo") and
+    positive for front-vowel sounds (wide mouth — "ee / ay"),
+    computed from the ratio of spectral energy between a low and
+    high formant band. Below the floor RMS the form drops to zero
+    so silence reads as a neutral mouth, not whichever direction
+    background noise happens to bias the spectrum.
+    """
+    arr = _to_float32(samples)
+    out = {DEFAULT_MOUTH_PARAM: 0.0, DEFAULT_MOUTH_FORM_PARAM: 0.0}
+    if arr.size == 0:
+        return out
+    rms = float(np.sqrt(np.mean(np.square(arr))))
+    if rms <= floor:
+        return out
+    span = max(ceiling - floor, 1e-9)
+    out[DEFAULT_MOUTH_PARAM] = float(min(1.0, (rms - floor) / span))
+    out[DEFAULT_MOUTH_FORM_PARAM] = _spectral_form(arr, sample_rate)
+    return out
+
+
+def _spectral_form(arr: np.ndarray, sample_rate: int) -> float:
+    """Map a single audio block to ``ParamMouthForm`` in ``[-1, 1]``.
+
+    Bandpass-energy ratio: ``+1`` when all energy is in the high band
+    (wide vowels), ``-1`` when all energy is in the low band (round
+    vowels), ``0`` when balanced or the spectrum lacks both bands.
+
+    A Hann window is applied before the FFT to suppress sidelobe
+    leakage; without it, a strong tone outside both bands still bleeds
+    enough energy into them to bias the form output."""
+    if arr.size < 4 or sample_rate <= 0:
+        return 0.0
+    window = np.hanning(arr.size).astype(arr.dtype)
+    spectrum = np.abs(np.fft.rfft(arr * window))
+    freqs = np.fft.rfftfreq(arr.size, d=1.0 / float(sample_rate))
+    low_mask = (freqs >= _VISEME_LOW_BAND_HZ[0]) & (freqs <= _VISEME_LOW_BAND_HZ[1])
+    high_mask = (freqs >= _VISEME_HIGH_BAND_HZ[0]) & (freqs <= _VISEME_HIGH_BAND_HZ[1])
+    low_energy = float(spectrum[low_mask].sum())
+    high_energy = float(spectrum[high_mask].sum())
+    band_total = low_energy + high_energy
+    spectrum_total = float(spectrum.sum())
+    if spectrum_total < 1e-9 or band_total < 1e-9:
+        return 0.0
+    # Gate on band relevance: when most of the spectrum sits outside
+    # both viseme bands (e.g. a 6 kHz whistle), the band ratio is
+    # dominated by FFT sidelobe leakage rather than real formant
+    # content, so we treat the form as neutral. 0.25 is a conservative
+    # cut-off — real speech with formants in F1 / F2 easily clears it.
+    if band_total / spectrum_total < 0.25:
+        return 0.0
+    return float(2.0 * (high_energy / band_total) - 1.0)
 
 
 def _to_float32(samples: np.ndarray | bytes) -> np.ndarray:

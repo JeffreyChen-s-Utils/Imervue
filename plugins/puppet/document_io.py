@@ -18,15 +18,19 @@ from puppet.document import (
     EXPRESSION_MODES,
     SCHEMA_VERSION,
     SEGMENT_TYPES,
+    BlendKey,
     Deformer,
     Drawable,
     Expression,
     ExpressionParam,
+    HitArea,
     Motion,
     MotionSegment,
     MotionTrack,
     Parameter,
+    ParameterBlend,
     ParameterKey,
+    Part,
     PhysicsParticle,
     PhysicsRig,
     PoseGroup,
@@ -116,6 +120,14 @@ def _load_from_zip(zf: zipfile.ZipFile) -> PuppetDocument:
     doc.expressions = _load_expressions(zf, manifest.get("expressions") or [])
     if manifest.get("physics"):
         doc.physics_rigs = _load_physics(zf, manifest["physics"])
+    doc.hit_areas = [_parse_hit_area(h) for h in manifest.get("hit_areas") or []]
+    doc.parameter_blends = [
+        _parse_parameter_blend(b) for b in manifest.get("parameter_blends") or []
+    ]
+    doc.parts = [_parse_part(p) for p in manifest.get("parts") or []]
+    display = manifest.get("display_names") or {}
+    if isinstance(display, dict):
+        doc.display_names = {str(k): str(v) for k, v in display.items()}
     return doc
 
 
@@ -151,6 +163,10 @@ def _parse_drawable(raw: dict) -> Drawable:
         raw.get("bone_weights"), len(raw["vertices"]), raw["id"],
     )
     opacity_keys = _parse_opacity_keys(raw.get("opacity_keys"), raw["id"])
+    multiply_color = _parse_color3(raw.get("multiply_color"), default=(1.0, 1.0, 1.0))
+    multiply_color_keys = _parse_color_keys(
+        raw.get("multiply_color_keys"), raw["id"],
+    )
     return Drawable(
         id=str(raw["id"]),
         texture=str(raw["texture"]),
@@ -164,6 +180,8 @@ def _parse_drawable(raw: dict) -> Drawable:
         opacity=float(raw.get("opacity", 1.0)),
         bone_weights=bone_weights,
         opacity_keys=opacity_keys,
+        multiply_color=multiply_color,
+        multiply_color_keys=multiply_color_keys,
     )
 
 
@@ -226,6 +244,57 @@ def _parse_opacity_keys(raw: Any, drawable_id: str) -> list[dict] | None:
                 "alpha": float(stop["alpha"]),
             })
         out.append({"parameter": param, "stops": parsed_stops})
+    return out
+
+
+def _parse_color3(
+    raw: Any, *, default: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    if raw is None:
+        return default
+    if not isinstance(raw, list) or len(raw) != 3:
+        raise PuppetFormatError(f"color must be [r, g, b], got {raw!r}")
+    return (float(raw[0]), float(raw[1]), float(raw[2]))
+
+
+def _parse_color_keys(raw: Any, drawable_id: str) -> list[dict] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} multiply_color_keys must be a list",
+        )
+    out: list[dict] = []
+    for idx, entry in enumerate(raw):
+        if not isinstance(entry, dict):
+            raise PuppetFormatError(
+                f"drawable {drawable_id!r} multiply_color_keys[{idx}] must be a dict"
+            )
+        param = entry.get("parameter")
+        stops = entry.get("stops")
+        if not isinstance(param, str) or not param:
+            raise PuppetFormatError(
+                f"drawable {drawable_id!r} multiply_color_keys[{idx}] missing 'parameter'"
+            )
+        if not isinstance(stops, list) or len(stops) < 2:
+            raise PuppetFormatError(
+                f"drawable {drawable_id!r} multiply_color_keys[{idx}] needs >=2 stops"
+            )
+        parsed = []
+        for s_idx, stop in enumerate(stops):
+            if (
+                not isinstance(stop, dict)
+                or "value" not in stop or "color" not in stop
+            ):
+                raise PuppetFormatError(
+                    f"drawable {drawable_id!r} multiply_color_keys[{idx}]"
+                    f".stops[{s_idx}] must have 'value' and 'color'"
+                )
+            parsed.append({
+                "value": float(stop["value"]),
+                "color": _parse_color3(stop["color"], default=(1.0, 1.0, 1.0)),
+            })
+        out.append({"parameter": param, "stops": parsed})
     return out
 
 
@@ -298,6 +367,10 @@ def _parse_motion(name: str, raw: dict) -> Motion:
         duration=float(raw["duration"]),
         loop=bool(raw.get("loop", False)),
         tracks=[_parse_track(t) for t in raw["tracks"]],
+        fade_in_duration=float(raw.get("fade_in_duration", 0.0)),
+        fade_out_duration=float(raw.get("fade_out_duration", 0.0)),
+        sound_path=raw.get("sound_path"),
+        group=raw.get("group"),
     )
 
 
@@ -396,6 +469,16 @@ def _puppet_json_bytes(doc: PuppetDocument) -> bytes:
         payload["expressions"] = [e.name for e in doc.expressions]
     if doc.physics_rigs:
         payload["physics"] = _PHYSICS_JSON
+    if doc.hit_areas:
+        payload["hit_areas"] = [_hit_area_to_json(h) for h in doc.hit_areas]
+    if doc.parameter_blends:
+        payload["parameter_blends"] = [
+            _parameter_blend_to_json(b) for b in doc.parameter_blends
+        ]
+    if doc.parts:
+        payload["parts"] = [_part_to_json(p) for p in doc.parts]
+    if doc.display_names:
+        payload["display_names"] = dict(doc.display_names)
     return _dumps(payload)
 
 
@@ -429,6 +512,19 @@ def _drawable_to_json(d: Drawable) -> dict:
             }
             for entry in d.opacity_keys
         ]
+    if d.multiply_color != (1.0, 1.0, 1.0):
+        out["multiply_color"] = list(d.multiply_color)
+    if d.multiply_color_keys:
+        out["multiply_color_keys"] = [
+            {
+                "parameter": entry["parameter"],
+                "stops": [
+                    {"value": float(s["value"]), "color": list(s["color"])}
+                    for s in entry["stops"]
+                ],
+            }
+            for entry in d.multiply_color_keys
+        ]
     return out
 
 
@@ -459,6 +555,85 @@ def _pose_to_json(g: PoseGroup) -> dict:
     return {"id": g.id, "drawables": list(g.drawables)}
 
 
+def _parse_hit_area(raw: dict) -> HitArea:
+    _require_keys(raw, ("id", "drawables"), "hit area")
+    return HitArea(
+        id=str(raw["id"]),
+        drawables=[str(d) for d in raw["drawables"]],
+        motion=str(raw["motion"]) if raw.get("motion") else None,
+        expression=str(raw["expression"]) if raw.get("expression") else None,
+    )
+
+
+def _hit_area_to_json(h: HitArea) -> dict:
+    out: dict = {"id": h.id, "drawables": list(h.drawables)}
+    if h.motion is not None:
+        out["motion"] = h.motion
+    if h.expression is not None:
+        out["expression"] = h.expression
+    return out
+
+
+def _parse_parameter_blend(raw: dict) -> ParameterBlend:
+    _require_keys(raw, ("id", "parameters", "keys"), "parameter blend")
+    parameters = [str(p) for p in raw["parameters"]]
+    if not parameters:
+        raise PuppetFormatError(
+            f"parameter blend {raw['id']!r} needs at least one parameter id",
+        )
+    keys: list[BlendKey] = []
+    for k_idx, key_raw in enumerate(raw["keys"]):
+        coords_raw = key_raw.get("coords")
+        if not isinstance(coords_raw, list) or len(coords_raw) != len(parameters):
+            raise PuppetFormatError(
+                f"parameter blend {raw['id']!r} keys[{k_idx}].coords length "
+                f"must match parameters length ({len(parameters)})",
+            )
+        forms_raw = key_raw.get("forms") or {}
+        keys.append(
+            BlendKey(
+                coords=[float(c) for c in coords_raw],
+                forms={str(d): dict(f) for d, f in forms_raw.items()},
+            ),
+        )
+    return ParameterBlend(id=str(raw["id"]), parameters=parameters, keys=keys)
+
+
+def _parse_part(raw: dict) -> Part:
+    _require_keys(raw, ("id",), "part")
+    return Part(
+        id=str(raw["id"]),
+        drawables=[str(d) for d in raw.get("drawables") or []],
+        children=[str(c) for c in raw.get("children") or []],
+        visible=bool(raw.get("visible", True)),
+        opacity=float(raw.get("opacity", 1.0)),
+    )
+
+
+def _part_to_json(p: Part) -> dict:
+    return {
+        "id": p.id,
+        "drawables": list(p.drawables),
+        "children": list(p.children),
+        "visible": p.visible,
+        "opacity": p.opacity,
+    }
+
+
+def _parameter_blend_to_json(b: ParameterBlend) -> dict:
+    return {
+        "id": b.id,
+        "parameters": list(b.parameters),
+        "keys": [
+            {
+                "coords": [float(c) for c in k.coords],
+                "forms": {d: dict(f) for d, f in k.forms.items()},
+            }
+            for k in b.keys
+        ],
+    }
+
+
 def _motion_json_bytes(motion: Motion) -> bytes:
     payload = {
         "version": SCHEMA_VERSION,
@@ -472,6 +647,14 @@ def _motion_json_bytes(motion: Motion) -> bytes:
             for t in motion.tracks
         ],
     }
+    if motion.fade_in_duration > 0.0:
+        payload["fade_in_duration"] = motion.fade_in_duration
+    if motion.fade_out_duration > 0.0:
+        payload["fade_out_duration"] = motion.fade_out_duration
+    if motion.sound_path:
+        payload["sound_path"] = motion.sound_path
+    if motion.group:
+        payload["group"] = motion.group
     return _dumps(payload)
 
 

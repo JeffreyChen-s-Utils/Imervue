@@ -32,10 +32,13 @@ from puppet.deformers import (
     blend_forms,
 )
 from puppet.document import (
+    BlendKey,
     Deformer,
     Drawable,
     Expression,
     Parameter,
+    ParameterBlend,
+    Part,
     PuppetDocument,
 )
 
@@ -88,18 +91,184 @@ def merge_parameter_samples(
     deformer the later parameter (in document.parameters order) wins.
     Most rigs avoid this by keying disjoint deformers per parameter,
     but the runtime stays defined either way.
+
+    Multi-axis :class:`ParameterBlend` groups are sampled after the
+    single-parameter keys so a blend can override the per-axis result
+    when both target the same deformer — matches Live2D's "the more
+    specific keyform wins" intuition.
     """
     out: dict[str, dict[str, Any]] = {}
     for param in document.parameters:
         if param.id not in values:
             continue
         sampled = sample_parameter_forms(param, float(values[param.id]))
-        for def_id, form in sampled.items():
-            existing = out.get(def_id)
-            if existing is None:
-                out[def_id] = dict(form)
+        _merge_form_dicts_into(out, sampled)
+    for blend in document.parameter_blends:
+        sampled = sample_blend_forms(blend, values)
+        _merge_form_dicts_into(out, sampled)
+    return out
+
+
+def _merge_form_dicts_into(
+    target: dict[str, dict[str, Any]],
+    additions: dict[str, dict[str, Any]],
+) -> None:
+    for def_id, form in additions.items():
+        existing = target.get(def_id)
+        if existing is None:
+            target[def_id] = dict(form)
+        else:
+            existing.update(form)
+
+
+def sample_blend_forms(
+    blend: ParameterBlend, values: dict[str, float],
+) -> dict[str, dict[str, Any]]:
+    """N-D linear sample of ``blend`` at the current parameter values.
+
+    Returns ``{deformer_id: form_override}``. Empty when the blend has
+    no keys or no parameters, when none of the named parameters have
+    values, or when no axis has at least one key value to interpolate
+    against (e.g. all keys share the same coord on every axis).
+
+    Algorithm: for each axis, find the bracketing pair of distinct key
+    coords around the current parameter value (clamping to the edge
+    coord when out of range). Build the ``2 ** N`` corner keys at the
+    cartesian product of those brackets, then progressively reduce
+    along each axis using :func:`blend_forms`.
+    """
+    if not blend.parameters or not blend.keys:
+        return {}
+    coords_by_axis = [sorted({k.coords[i] for k in blend.keys})
+                      for i in range(len(blend.parameters))]
+    brackets = _bracket_per_axis(blend, values, coords_by_axis)
+    if brackets is None:
+        return {}
+    return _reduce_corners(blend, brackets)
+
+
+def _bracket_per_axis(
+    blend: ParameterBlend,
+    values: dict[str, float],
+    coords_by_axis: list[list[float]],
+) -> list[tuple[float, float, float]] | None:
+    """For each axis, return ``(lo, hi, t)`` where ``t in [0, 1]`` is
+    the position of the parameter value between ``lo`` and ``hi``.
+
+    Returns ``None`` when there isn't enough information to sample (an
+    axis with no keys or with all-equal coords yields no interpolation
+    direction; ``None`` lets the caller bail cleanly)."""
+    out: list[tuple[float, float, float]] = []
+    for axis_index, axis_coords in enumerate(coords_by_axis):
+        if not axis_coords:
+            return None
+        param_id = blend.parameters[axis_index]
+        value = float(values.get(param_id, axis_coords[0]))
+        if value <= axis_coords[0]:
+            out.append((axis_coords[0], axis_coords[0], 0.0))
+            continue
+        if value >= axis_coords[-1]:
+            out.append((axis_coords[-1], axis_coords[-1], 1.0))
+            continue
+        lo, hi = axis_coords[0], axis_coords[-1]
+        for i in range(len(axis_coords) - 1):
+            if axis_coords[i] <= value <= axis_coords[i + 1]:
+                lo, hi = axis_coords[i], axis_coords[i + 1]
+                break
+        span = hi - lo
+        t = 0.0 if span == 0 else (value - lo) / span
+        out.append((lo, hi, t))
+    return out
+
+
+def _reduce_corners(
+    blend: ParameterBlend,
+    brackets: list[tuple[float, float, float]],
+) -> dict[str, dict[str, Any]]:
+    """Walk the ``2 ** N`` cartesian-product corners of the bracket box
+    and N-D-linearly blend the deformer forms into a single override
+    dict. Missing corners are skipped — their absence shows up as
+    "no override for that deformer at that corner", which the rest of
+    the pipeline already tolerates.
+    """
+    corners = _collect_corner_keys(blend, brackets)
+    if not corners:
+        return {}
+    # Walk axes from last to first so the early reductions collapse the
+    # innermost varying dimension first — the order of axis reduction
+    # doesn't change the result for linear interpolation but doing
+    # high-to-low keeps the integer-key arithmetic obvious.
+    n_axes = len(brackets)
+    for axis in range(n_axes - 1, -1, -1):
+        t = brackets[axis][2]
+        next_corners: dict[tuple[int, ...], dict[str, dict[str, Any]]] = {}
+        for key, form_map in corners.items():
+            head, tail = key[:axis], key[axis + 1:]
+            sub_key = head + tail
+            if key[axis] == 0:
+                pair_key = head + (1,) + tail
+                pair_form = corners.get(pair_key)
+                blended = (
+                    _blend_form_maps(form_map, pair_form, t)
+                    if pair_form is not None else form_map
+                )
             else:
-                existing.update(form)
+                pair_key = head + (0,) + tail
+                if pair_key in corners:
+                    # Already merged when we processed the 0-side key.
+                    continue
+                blended = form_map
+            next_corners[sub_key] = blended
+        corners = next_corners
+    return next(iter(corners.values()))
+
+
+def _collect_corner_keys(
+    blend: ParameterBlend,
+    brackets: list[tuple[float, float, float]],
+) -> dict[tuple[int, ...], dict[str, dict[str, Any]]]:
+    """Find the :class:`BlendKey` for every cartesian-product corner of
+    the bracket. Returns ``{(0|1, 0|1, ...): forms}``.
+    """
+    coord_lookup: dict[tuple[float, ...], BlendKey] = {}
+    for key in blend.keys:
+        coord_lookup[tuple(float(c) for c in key.coords)] = key
+    n_axes = len(brackets)
+    out: dict[tuple[int, ...], dict[str, dict[str, Any]]] = {}
+    for mask in range(1 << n_axes):
+        coords = tuple(
+            brackets[axis][1 if (mask >> axis) & 1 else 0]
+            for axis in range(n_axes)
+        )
+        match = coord_lookup.get(coords)
+        if match is None:
+            continue
+        bits = tuple((mask >> axis) & 1 for axis in range(n_axes))
+        out[bits] = _copy_forms(match.forms)
+    return out
+
+
+def _blend_form_maps(
+    a: dict[str, dict[str, Any]],
+    b: dict[str, dict[str, Any]] | None,
+    t: float,
+) -> dict[str, dict[str, Any]]:
+    """Pairwise blend of two ``{deformer_id: form}`` maps at parameter
+    ``t``. Forms missing from one side pass through unchanged from the
+    other — so a corner that only covers some deformers still
+    contributes its overrides at the appropriate weight."""
+    if b is None:
+        return {k: dict(v) for k, v in a.items()}
+    out: dict[str, dict[str, Any]] = {}
+    for def_id, form_a in a.items():
+        form_b = b.get(def_id)
+        if form_b is None:
+            out[def_id] = dict(form_a)
+        else:
+            out[def_id] = blend_forms(form_a, form_b, t)
+    for def_id, form_b in b.items():
+        if def_id not in out:
+            out[def_id] = dict(form_b)
     return out
 
 
@@ -230,6 +399,55 @@ def resolve_drawable_opacity(
     return max(0.0, min(1.0, out))
 
 
+def resolve_drawable_color(
+    drawable: Drawable, values: dict[str, float],
+) -> tuple[float, float, float]:
+    """Return the per-frame ``(r, g, b)`` multiply tint for ``drawable``.
+
+    Combines the static :attr:`Drawable.multiply_color` with every
+    :attr:`Drawable.multiply_color_keys` curve sampled at its parameter
+    value. Multiple curves multiply channel-wise so two curves each
+    tinting by ``(1, 0.5, 0.5)`` compose to ``(1, 0.25, 0.25)``.
+
+    Mirrors :func:`resolve_drawable_opacity` so the canvas applies one
+    consistent pattern for parameter-driven channel multipliers."""
+    r, g, b = drawable.multiply_color
+    if not drawable.multiply_color_keys:
+        return (r, g, b)
+    for entry in drawable.multiply_color_keys:
+        param = entry.get("parameter")
+        stops = entry.get("stops") or []
+        if not isinstance(param, str) or not param or not stops:
+            continue
+        sample = float(values.get(param, 0.0))
+        sr, sg, sb = _sample_color_stops(stops, sample)
+        r *= sr
+        g *= sg
+        b *= sb
+    return (max(0.0, r), max(0.0, g), max(0.0, b))
+
+
+def _sample_color_stops(
+    stops: list[dict], value: float,
+) -> tuple[float, float, float]:
+    sorted_stops = sorted(stops, key=lambda s: float(s["value"]))
+    if value <= float(sorted_stops[0]["value"]):
+        return tuple(float(c) for c in sorted_stops[0]["color"])
+    if value >= float(sorted_stops[-1]["value"]):
+        return tuple(float(c) for c in sorted_stops[-1]["color"])
+    for i in range(len(sorted_stops) - 1):
+        a, b = sorted_stops[i], sorted_stops[i + 1]
+        av, bv = float(a["value"]), float(b["value"])
+        if av <= value <= bv:
+            if bv == av:
+                return tuple(float(c) for c in a["color"])
+            t = (value - av) / (bv - av)
+            ac = [float(c) for c in a["color"]]
+            bc = [float(c) for c in b["color"]]
+            return tuple(ac[i] * (1.0 - t) + bc[i] * t for i in range(3))
+    return tuple(float(c) for c in sorted_stops[-1]["color"])
+
+
 def _sample_opacity_stops(stops: list[dict], value: float) -> float:
     sorted_stops = sorted(stops, key=lambda s: float(s["value"]))
     if value <= float(sorted_stops[0]["value"]):
@@ -291,6 +509,80 @@ def apply_expressions(
 # ---------------------------------------------------------------------------
 # Pose visibility
 # ---------------------------------------------------------------------------
+
+
+def resolve_part_state(
+    document: PuppetDocument,
+) -> dict[str, tuple[bool, float]]:
+    """Walk the Part tree and return ``{drawable_id: (visible, opacity)}``.
+
+    A drawable inherits the AND of every ancestor's ``visible`` flag
+    and the product of every ancestor's ``opacity``. Drawables not
+    listed under any Part get ``(True, 1.0)`` so a document without a
+    Part tree behaves exactly like before.
+
+    Each drawable's own ``visible`` and ``opacity`` are *not* combined
+    here — those live on the drawable itself and the caller still
+    consults them. ``resolve_part_state`` only contributes the
+    hierarchy-level multiplier."""
+    out: dict[str, tuple[bool, float]] = {
+        d.id: (True, 1.0) for d in document.drawables
+    }
+    if not document.parts:
+        return out
+    by_id = {part.id: part for part in document.parts}
+    parents = _find_root_parts(document.parts)
+    for root in parents:
+        _walk_part(root, by_id, parent_visible=True, parent_opacity=1.0, out=out)
+    return out
+
+
+def _find_root_parts(parts: list[Part]) -> list[Part]:
+    """Roots are Parts not referenced as a child of any other Part —
+    they sit at the top of the tree."""
+    referenced: set[str] = set()
+    for part in parts:
+        referenced.update(part.children)
+    return [p for p in parts if p.id not in referenced]
+
+
+def _walk_part(
+    part: Part,
+    by_id: dict[str, Part],
+    *,
+    parent_visible: bool,
+    parent_opacity: float,
+    out: dict[str, tuple[bool, float]],
+    visited: set[str] | None = None,
+) -> None:
+    """Depth-first traverse. ``visited`` guards against cycles (a
+    malformed document where Part A lists Part B as a child and vice
+    versa would otherwise stack-overflow)."""
+    if visited is None:
+        visited = set()
+    if part.id in visited:
+        return
+    visited.add(part.id)
+    effective_visible = parent_visible and bool(part.visible)
+    effective_opacity = float(parent_opacity) * float(part.opacity)
+    for drawable_id in part.drawables:
+        if drawable_id not in out:
+            continue
+        prev_visible, prev_opacity = out[drawable_id]
+        out[drawable_id] = (
+            prev_visible and effective_visible,
+            prev_opacity * effective_opacity,
+        )
+    for child_id in part.children:
+        child = by_id.get(child_id)
+        if child is None:
+            continue
+        _walk_part(
+            child, by_id,
+            parent_visible=effective_visible,
+            parent_opacity=effective_opacity,
+            out=out, visited=visited,
+        )
 
 
 def resolve_pose_visibility(

@@ -33,6 +33,16 @@ LANDMARK_MOUTH_TOP: int = 13
 LANDMARK_MOUTH_BOTTOM: int = 14
 LANDMARK_LEFT_TEMPLE: int = 234
 LANDMARK_RIGHT_TEMPLE: int = 454
+# Iris landmarks (only present when FaceMesh is constructed with
+# refine_landmarks=True — bumps the landmark count from 468 to 478).
+LANDMARK_RIGHT_IRIS_CENTER: int = 468
+LANDMARK_LEFT_IRIS_CENTER: int = 473
+
+_IRIS_GAIN: float = 3.0
+"""Iris offset relative to eye corners is small — a fully sideways
+glance covers roughly a third of the eye's horizontal span. The gain
+amplifies that into something close to the parameter's full range so
+the puppet's eyes visibly track the user's gaze."""
 
 # Open / closed reference distances (normalised against face width).
 _EYE_OPEN_THRESHOLD: float = 0.04
@@ -51,7 +61,7 @@ def landmarks_to_params(landmarks: np.ndarray) -> dict[str, float]:
     """
     if landmarks.ndim != 2 or landmarks.shape[1] < 2 or landmarks.shape[0] < 468:
         return {}
-    return {
+    out = {
         "ParamAngleX": _head_yaw(landmarks),
         "ParamAngleY": _head_pitch(landmarks),
         "ParamAngleZ": _head_roll(landmarks),
@@ -63,6 +73,12 @@ def landmarks_to_params(landmarks: np.ndarray) -> dict[str, float]:
         ),
         "ParamMouthOpenY": _mouth_open(landmarks),
     }
+    # Iris landmarks are only present when refine_landmarks=True is
+    # passed to FaceMesh; consume them when available so the puppet's
+    # eyeballs track the user's gaze independently of head turn.
+    if landmarks.shape[0] >= 478:
+        out["ParamEyeBallX"], out["ParamEyeBallY"] = _eyeball_target(landmarks)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +143,65 @@ def _eye_open(
         return 1.0
     span = max(_EYE_OPEN_THRESHOLD - _EYE_CLOSED_THRESHOLD, 1e-9)
     return (norm - _EYE_CLOSED_THRESHOLD) / span
+
+
+def _eyeball_target(landmarks: np.ndarray) -> tuple[float, float]:
+    """Average the two iris-centre offsets (relative to each eye's
+    inner/outer corners horizontally and top/bottom vertically) into a
+    single ``(eyeball_x, eyeball_y)`` pair in ``[-1, 1]``.
+
+    Cubism convention: positive X means looking screen-right; positive
+    Y means looking up. We negate the raw Y offset accordingly because
+    image space is y-down."""
+    left = _single_iris_offset(
+        landmarks,
+        iris=LANDMARK_LEFT_IRIS_CENTER,
+        outer=LANDMARK_LEFT_EYE_OUTER,
+        inner=LANDMARK_LEFT_EYE_INNER,
+        top=LANDMARK_LEFT_EYE_TOP,
+        bottom=LANDMARK_LEFT_EYE_BOTTOM,
+    )
+    right = _single_iris_offset(
+        landmarks,
+        iris=LANDMARK_RIGHT_IRIS_CENTER,
+        outer=LANDMARK_RIGHT_EYE_OUTER,
+        inner=LANDMARK_RIGHT_EYE_INNER,
+        top=LANDMARK_RIGHT_EYE_TOP,
+        bottom=LANDMARK_RIGHT_EYE_BOTTOM,
+    )
+    avg_x = (left[0] + right[0]) / 2.0
+    avg_y = (left[1] + right[1]) / 2.0
+    gained_x = float(np.clip(avg_x * _IRIS_GAIN, -1.0, 1.0))
+    gained_y = float(np.clip(-avg_y * _IRIS_GAIN, -1.0, 1.0))
+    return gained_x, gained_y
+
+
+def _single_iris_offset(
+    landmarks: np.ndarray,
+    *,
+    iris: int, outer: int, inner: int, top: int, bottom: int,
+) -> tuple[float, float]:
+    """Iris position relative to its eye box, expressed in image-space
+    direction so both eyes contribute the same sign for a given gaze.
+
+    Using the signed ``(outer - inner) / 2`` as the half-width flips
+    when comparing left and right eyes (the outer corner sits on
+    opposite sides of the face), which would make the average cancel
+    out. Normalising by ``abs(outer - inner) / 2`` keeps the basis
+    consistent: ``+1`` is image-right, ``-1`` is image-left."""
+    iris_pt = landmarks[iris]
+    outer_pt = landmarks[outer]
+    inner_pt = landmarks[inner]
+    top_pt = landmarks[top]
+    bottom_pt = landmarks[bottom]
+    mid_x = (outer_pt[0] + inner_pt[0]) / 2.0
+    half_w = abs(outer_pt[0] - inner_pt[0]) / 2.0 or 1e-6
+    mid_y = (top_pt[1] + bottom_pt[1]) / 2.0
+    half_h = abs(bottom_pt[1] - top_pt[1]) / 2.0 or 1e-6
+    return (
+        float((iris_pt[0] - mid_x) / half_w),
+        float((iris_pt[1] - mid_y) / half_h),
+    )
 
 
 def _mouth_open(landmarks: np.ndarray) -> float:

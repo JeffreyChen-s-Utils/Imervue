@@ -39,9 +39,24 @@ from puppet.operations import (
     set_key_at_value,
     snapshot_current_forms,
 )
+from puppet.cubism_import import (
+    CubismFormatError,
+    apply_bundle,
+    load_cdi3,
+    load_exp3,
+    load_model3,
+    load_motion3,
+    load_physics3,
+    load_pose3,
+)
+from puppet.expression_dock import ExpressionDock
+from puppet.idle_driver import IdleDriver
+from puppet.psd_import import puppet_from_psd
+from puppet.vts_api import VTubeStudioServer
 from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
 from puppet.motion_recorder import MotionRecorder, append_motion
+from puppet.motion_timeline import MotionTimelineDialog
 from puppet.parameter_dock import ParameterDock
 from puppet.recorder import RecordingSession, save_canvas_png
 from puppet.webcam_tracker import WebcamTracker
@@ -76,18 +91,34 @@ class PuppetWorkspace(QMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_dock,
         )
 
+        self._expression_dock = ExpressionDock(self._canvas, self)
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, self._expression_dock,
+        )
+        # Tabify so the user gets Parameters/Expressions as two tabs in
+        # the same right pane instead of a cramped split. Parameters is
+        # the more-frequently-used one so it stays on top.
+        self.tabifyDockWidget(self._expression_dock, self._parameter_dock)
+
         self._motion_dock = MotionDock(self._canvas, self)
+        # Live2D-style transition feel: when the user switches motions
+        # we ease across 0.5s rather than snap. Per-motion fade fields
+        # (e.g. from a Cubism .motion3.json import) override this.
+        self._motion_dock.player().set_default_fade(0.5, 0.5)
         self.addDockWidget(
             Qt.DockWidgetArea.BottomDockWidgetArea, self._motion_dock,
         )
 
         self._input_engine = InputEngine(self._canvas, self)
+        self._idle_driver = IdleDriver(self._canvas, self)
+        self._vts_server = VTubeStudioServer(self._canvas, self)
         self._recorder = RecordingSession(self._canvas, self)
         self._recorder.finished.connect(self._on_recording_finished)
         self._recorder.failed.connect(self._on_recording_failed)
         self._webcam = WebcamTracker(self._canvas, self)
         self._motion_recorder = MotionRecorder(self._canvas, self)
         self._motion_recorder.finished.connect(self._on_motion_recorded)
+        self._canvas.hit_area_triggered.connect(self._on_hit_area_triggered)
 
         self._status_label = QLabel("")
         bar = QStatusBar()
@@ -100,6 +131,12 @@ class PuppetWorkspace(QMainWindow):
 
     def parameter_dock(self) -> ParameterDock:
         return self._parameter_dock
+
+    def expression_dock(self) -> ExpressionDock:
+        return self._expression_dock
+
+    def idle_driver(self) -> IdleDriver:
+        return self._idle_driver
 
     # ---- toolbar --------------------------------------------------------
 
@@ -115,6 +152,18 @@ class PuppetWorkspace(QMainWindow):
         import_action = QAction(lang.get("puppet_import_png", "Import PNG…"), self)
         import_action.triggered.connect(self._import_png_via_dialog)
         bar.addAction(import_action)
+
+        import_psd_action = QAction(
+            lang.get("puppet_import_psd", "Import PSD…"), self,
+        )
+        import_psd_action.triggered.connect(self._import_psd_via_dialog)
+        bar.addAction(import_psd_action)
+
+        import_cubism_action = QAction(
+            lang.get("puppet_import_cubism", "Import Cubism…"), self,
+        )
+        import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
+        bar.addAction(import_cubism_action)
 
         self._recent_button = QPushButton(lang.get("puppet_recent", "Recent"))
         self._recent_button.setFlat(True)
@@ -179,6 +228,20 @@ class PuppetWorkspace(QMainWindow):
         self._webcam_toggle.toggled.connect(self._toggle_webcam)
         bar.addAction(self._webcam_toggle)
 
+        self._idle_toggle = QAction(
+            lang.get("puppet_auto_idle", "Auto idle"), self,
+        )
+        self._idle_toggle.setCheckable(True)
+        self._idle_toggle.toggled.connect(self._toggle_idle)
+        bar.addAction(self._idle_toggle)
+
+        self._vts_toggle = QAction(
+            lang.get("puppet_vts_api", "VTS API"), self,
+        )
+        self._vts_toggle.setCheckable(True)
+        self._vts_toggle.toggled.connect(self._toggle_vts_api)
+        bar.addAction(self._vts_toggle)
+
         bar.addSeparator()
 
         self._mesh_edit_toggle = QAction(
@@ -194,6 +257,12 @@ class PuppetWorkspace(QMainWindow):
         self._motion_record_toggle.setCheckable(True)
         self._motion_record_toggle.toggled.connect(self._toggle_motion_record)
         bar.addAction(self._motion_record_toggle)
+
+        edit_motion_action = QAction(
+            lang.get("puppet_edit_motion", "Edit motion…"), self,
+        )
+        edit_motion_action.triggered.connect(self._edit_active_motion)
+        bar.addAction(edit_motion_action)
 
         bar.addSeparator()
 
@@ -507,6 +576,34 @@ class PuppetWorkspace(QMainWindow):
                 "Webcam tracking unavailable (install opencv-python + mediapipe)",
             )
 
+    # ---- idle driver ---------------------------------------------------
+
+    def _toggle_idle(self, enabled: bool) -> None:
+        self._idle_driver.set_enabled(enabled)
+        self._announce(
+            "puppet_idle_on" if enabled else "puppet_idle_off",
+            "Auto idle on" if enabled else "Auto idle off",
+        )
+
+    # ---- VTube Studio API ---------------------------------------------
+
+    def _toggle_vts_api(self, enabled: bool) -> None:
+        ok = self._vts_server.set_enabled(enabled)
+        if enabled and not ok:
+            self._vts_toggle.blockSignals(True)
+            self._vts_toggle.setChecked(False)
+            self._vts_toggle.blockSignals(False)
+            self._announce(
+                "puppet_vts_unavailable",
+                "VTS API unavailable (install PySide6 with QtWebSockets)",
+            )
+            return
+        self._announce(
+            "puppet_vts_on" if enabled else "puppet_vts_off",
+            "VTS API listening on 127.0.0.1:{port}"
+            if enabled else "VTS API stopped",
+        )
+
     # ---- mesh-edit toggle ---------------------------------------------
 
     def _toggle_mesh_edit(self, enabled: bool) -> None:
@@ -515,6 +612,30 @@ class PuppetWorkspace(QMainWindow):
             "puppet_mesh_edit_on" if enabled else "puppet_mesh_edit_off",
             "Mesh editing on" if enabled else "Mesh editing off",
         )
+
+    # ---- motion timeline editor ---------------------------------------
+
+    def _edit_active_motion(self) -> None:
+        player = self._motion_dock.player()
+        motion = player.motion()
+        if motion is None:
+            self._announce(
+                "puppet_no_active_motion",
+                "Pick a motion from the dock before editing.",
+            )
+            return
+        dialog = MotionTimelineDialog(motion, self)
+        dialog.widget().track_modified.connect(self._on_timeline_edit_committed)
+        dialog.exec()
+
+    def _on_timeline_edit_committed(self) -> None:
+        """Force the player to re-apply the (now edited) motion at the
+        current playhead so the canvas reflects the new curve without
+        needing the user to press Play."""
+        player = self._motion_dock.player()
+        if player.motion() is None:
+            return
+        player.seek(player.elapsed())
 
     # ---- motion recording ---------------------------------------------
 
@@ -541,6 +662,37 @@ class PuppetWorkspace(QMainWindow):
         if not ok or not name.strip():
             return False
         return self._motion_recorder.start(name.strip())
+
+    # ---- hit areas ------------------------------------------------------
+
+    def _on_hit_area_triggered(self, area_id: str) -> None:
+        """Canvas → workspace bridge. Looks up the hit area, plays its
+        motion through the motion dock's player (if any), and toggles
+        its expression on the canvas (if any). Either is optional —
+        a hit area can fire only one of the two."""
+        doc = self._canvas.document()
+        if doc is None:
+            return
+        area = next((h for h in doc.hit_areas if h.id == area_id), None)
+        if area is None:
+            return
+        if area.motion:
+            if any(m.group == area.motion for m in doc.motions):
+                # Treat the HitArea.motion field as a group name when
+                # any motion is tagged with it — matches Cubism's
+                # "TapHead" / "TapBody" convention.
+                self._motion_dock.player().play_group(area.motion, doc.motions)
+            else:
+                self._motion_dock.select_motion(area.motion)
+        if area.expression:
+            if area.expression in self._canvas.active_expressions():
+                self._canvas.remove_expression(area.expression)
+            else:
+                self._canvas.add_expression(area.expression)
+        self._announce(
+            "puppet_hit_area_triggered", "Hit area '{id}' triggered",
+            id=area_id,
+        )
 
     def _on_motion_recorded(self, motion) -> None:
         if motion is None:
@@ -583,6 +735,112 @@ class PuppetWorkspace(QMainWindow):
             DEFAULT_CELL_SIZE, 4, 1024, 4,
         )
         return value if ok else None
+
+    # ---- import PSD -----------------------------------------------------
+
+    def _import_psd_via_dialog(self) -> None:
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            lang.get("puppet_import_psd_title", "Import PSD"),
+            "",
+            "PSD (*.psd)",
+        )
+        if not path:
+            return
+        self.import_psd(path)
+
+    def import_psd(self, path: str | Path) -> bool:
+        """Load ``path`` (a PSD) as a multi-drawable puppet. Returns
+        ``True`` on success."""
+        try:
+            doc = puppet_from_psd(path)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            logger.warning("PSD import failed for %s: %s", path, exc)
+            self._status_label.setText(
+                language_wrapper.language_word_dict.get(
+                    "puppet_psd_import_failed",
+                    "PSD import failed: {error}",
+                ).format(error=str(exc)),
+            )
+            return False
+        self._canvas.load_document(doc)
+        self._status_label.setText(
+            language_wrapper.language_word_dict.get(
+                "puppet_status_psd_imported",
+                "Imported {name} ({w}×{h}, {n} drawables)",
+            ).format(
+                name=Path(str(path)).name,
+                w=doc.size[0], h=doc.size[1],
+                n=len(doc.drawables),
+            ),
+        )
+        return True
+
+    # ---- import Cubism ------------------------------------------------
+
+    def _import_cubism_via_dialog(self) -> None:
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            lang.get("puppet_import_cubism_title", "Import Cubism file"),
+            "",
+            "Cubism (*.model3.json *.motion3.json *.exp3.json "
+            "*.physics3.json *.pose3.json *.cdi3.json)",
+        )
+        if not path:
+            return
+        self.import_cubism(path)
+
+    def import_cubism(self, path: str | Path) -> bool:
+        """Route by filename suffix: ``.model3.json`` loads the bundle
+        and merges everything; ``.motion3.json`` and ``.exp3.json``
+        append a single motion or expression. The active document is
+        required — there's no rig to attach the imported assets to
+        without one. Returns ``True`` on success."""
+        doc = self._canvas.document()
+        if doc is None:
+            self._announce(
+                "puppet_cubism_no_document",
+                "Open or import a puppet first before adding Cubism assets.",
+            )
+            return False
+        path_str = str(path)
+        try:
+            self._dispatch_cubism_import(doc, path_str)
+        except (FileNotFoundError, CubismFormatError, OSError) as exc:
+            logger.warning("Cubism import failed for %s: %s", path_str, exc)
+            self._status_label.setText(
+                language_wrapper.language_word_dict.get(
+                    "puppet_cubism_failed", "Cubism import failed: {error}",
+                ).format(error=str(exc)),
+            )
+            return False
+        self._canvas.load_document(doc)
+        self._announce(
+            "puppet_cubism_imported", "Imported Cubism asset {name}",
+            name=Path(path_str).name,
+        )
+        return True
+
+    def _dispatch_cubism_import(self, doc, path_str: str) -> None:
+        lower = path_str.lower()
+        if lower.endswith(".model3.json"):
+            apply_bundle(doc, load_model3(path_str))
+        elif lower.endswith(".motion3.json"):
+            doc.motions.append(load_motion3(path_str))
+        elif lower.endswith(".exp3.json"):
+            doc.expressions.append(load_exp3(path_str))
+        elif lower.endswith(".physics3.json"):
+            doc.physics_rigs.extend(load_physics3(path_str))
+        elif lower.endswith(".pose3.json"):
+            doc.pose_groups.extend(load_pose3(path_str))
+        elif lower.endswith(".cdi3.json"):
+            doc.display_names.update(load_cdi3(path_str))
+        else:
+            raise CubismFormatError(
+                f"unrecognised Cubism file extension on {path_str}",
+            )
 
     def import_png(self, path: str | Path, *, cell_size: int = DEFAULT_CELL_SIZE) -> bool:
         """Build a single-drawable puppet from ``path``'s PNG and load

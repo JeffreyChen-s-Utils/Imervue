@@ -63,6 +63,17 @@ class Drawable:
     drawable can be transparent at neutral swing and opaque at full drop,
     while an ``arm_neutral`` drawable does the opposite, giving a smooth
     blend through the parameter's range."""
+    multiply_color: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    """Static per-channel multiplier applied before any
+    ``multiply_color_keys`` curves. ``(1, 1, 1)`` is the no-tint
+    default; ``(1, 0.6, 0.6)`` tints the drawable rosy."""
+    multiply_color_keys: list[dict] | None = None
+    """Parameter-driven multiply-color curves. Each entry has the form
+    ``{"parameter": str, "stops": [{"value": float, "color": [r, g, b]}, ...]}``.
+    Multiple entries multiply channel-wise (so two curves each tinting
+    by ``(1, 0.5, 0.5)`` yield ``(1, 0.25, 0.25)``). Used for
+    parameter-driven blush (``ParamCheek``), skin flush, hover glow,
+    etc."""
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +125,73 @@ class Parameter:
 
 
 # ---------------------------------------------------------------------------
+# Parameter blends (multi-axis keyforms)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class BlendKey:
+    """One key inside a :class:`ParameterBlend`. ``coords`` lines up
+    with the blend's ``parameters`` list: e.g. for a blend across
+    ``(ParamAngleX, ParamAngleY)`` a key at ``coords=[-1.0, 1.0]``
+    captures the deformer forms with the head fully tilted up-left.
+    """
+
+    coords: list[float]
+    forms: dict[str, dict] = field(default_factory=dict)
+
+
+@dataclass
+class ParameterBlend:
+    """Multi-axis keyform group — N-D linear interpolation across the
+    cartesian product of ``parameters``.
+
+    Live2D's "ParamAngleX × ParamAngleY → bilinear blend" feature lives
+    here: pick N parameters, place keys on a regular grid in their
+    cartesian product, and the runtime samples by finding the
+    surrounding cell and N-D-linearly interpolating between its
+    ``2 ** N`` corners. Most rigs use 2 axes; N is unrestricted in the
+    schema.
+
+    Keys whose grid is incomplete (missing a corner) still work — the
+    sampler treats unfilled corners as identity (no override), so a
+    sparse blend degrades gracefully instead of refusing to sample.
+    """
+
+    id: str
+    parameters: list[str]
+    keys: list[BlendKey] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Part tree (hierarchical drawable organization)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Part:
+    """One node in the Part tree.
+
+    Live2D Cubism groups drawables into a tree of Parts (Photoshop
+    folders, basically) where every Part has its own visibility +
+    opacity and the values cascade to descendants — hiding a "hair"
+    Part hides every hair drawable underneath regardless of their
+    individual ``visible`` flag.
+
+    Children can be drawable ids (leaves) or other Part ids (branches);
+    the two id namespaces don't collide because the runtime resolver
+    cross-checks against :attr:`PuppetDocument.parts` and
+    :attr:`PuppetDocument.drawables` separately.
+    """
+
+    id: str
+    drawables: list[str] = field(default_factory=list)
+    children: list[str] = field(default_factory=list)
+    visible: bool = True
+    opacity: float = 1.0
+
+
+# ---------------------------------------------------------------------------
 # Pose
 # ---------------------------------------------------------------------------
 
@@ -160,6 +238,25 @@ class Motion:
     duration: float
     loop: bool = False
     tracks: list[MotionTrack] = field(default_factory=list)
+    fade_in_duration: float = 0.0
+    """Seconds to ease the previous parameter values into this motion's
+    sampled values when this motion is bound to the player. ``0.0``
+    keeps the legacy snap behaviour; Cubism imports populate this from
+    the ``.motion3.json`` Meta block."""
+    fade_out_duration: float = 0.0
+    """Seconds to ease parameter values back toward their defaults
+    when the player stops on this motion."""
+    sound_path: str | None = None
+    """Absolute path to a WAV file that plays in sync with this motion.
+    Cubism ``.model3.json`` imports populate it from the motion entry's
+    ``Sound`` field. The player loads it through ``QSoundEffect`` and
+    degrades silently when ``PySide6.QtMultimedia`` isn't available."""
+    group: str | None = None
+    """Name of the motion group this belongs to (Cubism ``Idle`` /
+    ``TapHead`` / ``Shake`` …). When a HitArea or idle ticker fires
+    for a group, the workspace picks a random motion among those that
+    share this tag — matches Cubism's "random idle / tap response"
+    convention."""
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +301,33 @@ class PhysicsRig:
 
 
 # ---------------------------------------------------------------------------
+# Hit areas
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class HitArea:
+    """A named clickable region on the puppet.
+
+    The region is the axis-aligned bounding box of every drawable in
+    ``drawables`` at its current (possibly deformed) vertex positions.
+    Clicking inside the box fires whichever of ``motion`` /
+    ``expression`` is set — motions play through the workspace's motion
+    player, expressions toggle on/off through the canvas's expression
+    stack.
+
+    Both action fields are optional so a hit area can serve purely as a
+    discoverability hint (the editor surfaces them in the UI) without
+    necessarily triggering anything.
+    """
+
+    id: str
+    drawables: list[str]
+    motion: str | None = None
+    expression: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Top-level document
 # ---------------------------------------------------------------------------
 
@@ -226,6 +350,13 @@ class PuppetDocument:
     motions: list[Motion] = field(default_factory=list)
     expressions: list[Expression] = field(default_factory=list)
     physics_rigs: list[PhysicsRig] = field(default_factory=list)
+    hit_areas: list[HitArea] = field(default_factory=list)
+    parameter_blends: list[ParameterBlend] = field(default_factory=list)
+    parts: list[Part] = field(default_factory=list)
+    display_names: dict[str, str] = field(default_factory=dict)
+    """Friendly labels for parameters and parts, keyed by their id.
+    Sourced from a Cubism ``.cdi3.json`` or authored by hand; the
+    parameter dock prefers this over the raw id when present."""
     textures: dict[str, bytes] = field(default_factory=dict)
 
     # ---- helpers ---------------------------------------------------------

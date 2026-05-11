@@ -17,29 +17,39 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from OpenGL.GL import (
+    GL_ALWAYS,
     GL_BLEND,
     GL_CLAMP_TO_EDGE,
     GL_COLOR_BUFFER_BIT,
     GL_DST_COLOR,
+    GL_EQUAL,
+    GL_FALSE,
+    GL_KEEP,
     GL_LINEAR,
     GL_ONE,
     GL_ONE_MINUS_SRC_ALPHA,
     GL_QUADS,
+    GL_REPLACE,
     GL_RGBA,
     GL_SRC_ALPHA,
+    GL_STENCIL_BUFFER_BIT,
+    GL_STENCIL_TEST,
     GL_TEXTURE_2D,
     GL_TEXTURE_MAG_FILTER,
     GL_TEXTURE_MIN_FILTER,
     GL_TEXTURE_WRAP_S,
     GL_TEXTURE_WRAP_T,
     GL_TRIANGLES,
+    GL_TRUE,
     GL_UNSIGNED_BYTE,
     glBegin,
     glBindTexture,
     glBlendFunc,
     glClear,
     glClearColor,
+    glClearStencil,
     glColor4f,
+    glColorMask,
     glDeleteTextures,
     glDisable,
     glEnable,
@@ -51,6 +61,8 @@ from OpenGL.GL import (
     glPopMatrix,
     glPushMatrix,
     glScalef,
+    glStencilFunc,
+    glStencilOp,
     glTexCoord2f,
     glTexImage2D,
     glTexParameteri,
@@ -61,9 +73,12 @@ from OpenGL.GL import (
     GL_PROJECTION,
 )
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
+from puppet.clip_masks import resolve_masks
 from puppet.document import PuppetDocument
+from puppet.hit_test import hit_test
 from puppet.render_prep import (
     DrawCommand,
     build_draw_list,
@@ -75,6 +90,8 @@ from puppet.runtime import (
     apply_expressions,
     compose_all_drawables,
     default_parameter_values,
+    resolve_drawable_color,
+    resolve_part_state,
     resolve_pose_visibility,
 )
 
@@ -108,9 +125,22 @@ class PuppetCanvas(QOpenGLWidget):
     document_loaded = Signal()
     zoom_changed = Signal(float)
     parameters_changed = Signal()
+    hit_area_triggered = Signal(str)
+    """Emitted with the hit-area id when the user left-clicks inside
+    one. Only fires when mesh-edit mode is off — when it's on, the
+    left-click is consumed by the vertex drag instead."""
 
     def __init__(self, parent=None):
+        # Request a stencil buffer so clip_mask drawing can use it.
+        # Done before super().__init__() so the underlying GL surface
+        # picks up the format on creation; Qt silently downgrades on
+        # drivers that can't provide stencil, which is fine because
+        # the stencil pass short-circuits when no drawable has a mask.
+        fmt = QSurfaceFormat()
+        fmt.setStencilBufferSize(8)
+        QSurfaceFormat.setDefaultFormat(fmt)
         super().__init__(parent)
+        self.setFormat(fmt)
         self._document: PuppetDocument | None = None
         self._draw_list: list[DrawCommand] = []
         self._texture_cache: dict[str, int] = {}
@@ -134,6 +164,8 @@ class PuppetCanvas(QOpenGLWidget):
         # without re-running the composer per call.
         self._deformed_vertices: dict[str, np.ndarray] = {}
         self._visibility: dict[str, bool] = {}
+        self._part_opacity: dict[str, float] = {}
+        self._drawable_tint: dict[str, tuple[float, float, float]] = {}
         self._physics = PhysicsEngine()
         self._physics_outputs: dict[str, float] = {}
         # Mesh-edit mode lets the user drag vertices; off by default.
@@ -206,6 +238,8 @@ class PuppetCanvas(QOpenGLWidget):
         if self._document is None:
             self._deformed_vertices = {}
             self._visibility = {}
+            self._part_opacity = {}
+            self._drawable_tint = {}
             return
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
@@ -223,9 +257,29 @@ class PuppetCanvas(QOpenGLWidget):
             self._deformed_vertices = {}
         # Pose visibility applies even when there are no parameters —
         # users may have a static rig with weapon-swap pose groups.
-        self._visibility = resolve_pose_visibility(
+        pose_visibility = resolve_pose_visibility(
             self._document, self._active_pose,
         )
+        # Layer the Part tree's cascading visibility/opacity on top.
+        # The renderer reads ``self._visibility`` and the per-drawable
+        # opacity, so we fold Part visibility AND with pose visibility
+        # and cache the part-opacity multiplier separately.
+        part_state = resolve_part_state(self._document)
+        merged_visibility: dict[str, bool] = {}
+        merged_opacity: dict[str, float] = {}
+        for drawable in self._document.drawables:
+            pose_vis = pose_visibility.get(drawable.id, bool(drawable.visible))
+            part_vis, part_op = part_state.get(drawable.id, (True, 1.0))
+            merged_visibility[drawable.id] = pose_vis and part_vis
+            merged_opacity[drawable.id] = part_op
+        self._visibility = merged_visibility
+        self._part_opacity = merged_opacity
+        # Pre-compute the per-drawable multiply tint so paintGL just
+        # reads it without rerunning the curves per frame.
+        self._drawable_tint = {
+            drawable.id: resolve_drawable_color(drawable, active_values)
+            for drawable in self._document.drawables
+        }
 
     def step_physics(self, dt: float) -> None:
         """Advance the physics chains by ``dt`` seconds and re-fold
@@ -403,6 +457,7 @@ class PuppetCanvas(QOpenGLWidget):
         glEnable(GL_TEXTURE_2D)
 
     def _draw_drawables(self) -> None:  # pragma: no cover - GL needs display
+        masks = resolve_masks(self._draw_list)
         for cmd in self._draw_list:
             visible = self._visibility.get(cmd.drawable_id, cmd.visible)
             if not visible:
@@ -412,10 +467,48 @@ class PuppetCanvas(QOpenGLWidget):
                 continue
             sfactor, dfactor = _BLEND_FUNCS.get(cmd.blend_mode, _BLEND_FUNCS["normal"])
             glBlendFunc(sfactor, dfactor)
-            glColor4f(1.0, 1.0, 1.0, cmd.opacity)
+            effective_opacity = cmd.opacity * self._part_opacity.get(
+                cmd.drawable_id, 1.0,
+            )
+            tint_r, tint_g, tint_b = self._drawable_tint.get(
+                cmd.drawable_id, (1.0, 1.0, 1.0),
+            )
+            glColor4f(tint_r, tint_g, tint_b, effective_opacity)
             glBindTexture(GL_TEXTURE_2D, tex_id)
             verts = self._deformed_vertices.get(cmd.drawable_id, cmd.vertices)
-            self._draw_indexed(verts, cmd.uvs, cmd.indices)
+            mask_cmd = masks.get(cmd.drawable_id)
+            if mask_cmd is None:
+                self._draw_indexed(verts, cmd.uvs, cmd.indices)
+                continue
+            self._draw_with_stencil(mask_cmd, verts, cmd.uvs, cmd.indices)
+
+    def _draw_with_stencil(  # pragma: no cover - GL needs display
+        self, mask_cmd, verts, uvs, indices,
+    ) -> None:
+        """Render ``verts/uvs/indices`` clipped to ``mask_cmd``'s shape
+        using the stencil buffer. The mask drawable's deformed vertices
+        are used (so a hair mask follows the head's deformation), and
+        the stencil buffer is wiped at the end so the next clipped pair
+        starts clean."""
+        mask_verts = self._deformed_vertices.get(
+            mask_cmd.drawable_id, mask_cmd.vertices,
+        )
+        glEnable(GL_STENCIL_TEST)
+        glClearStencil(0)
+        glClear(GL_STENCIL_BUFFER_BIT)
+        # Stencil-only pass — write 1 wherever the mask drew. Disable
+        # color writes so the mask shape doesn't appear on screen here;
+        # its own pass in the main loop is responsible for showing it.
+        glStencilFunc(GL_ALWAYS, 1, 0xFF)
+        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE)
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
+        self._draw_indexed(mask_verts, mask_cmd.uvs, mask_cmd.indices)
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+        # Target draws only where stencil == 1.
+        glStencilFunc(GL_EQUAL, 1, 0xFF)
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
+        self._draw_indexed(verts, uvs, indices)
+        glDisable(GL_STENCIL_TEST)
 
     @staticmethod
     def _draw_indexed(  # pragma: no cover - GL needs display
@@ -495,14 +588,31 @@ class PuppetCanvas(QOpenGLWidget):
             self._pan_anchor = (event.position().x(), event.position().y())
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             return
-        if (
-            self._mesh_edit_enabled
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            ix, iy = self._screen_to_image(
-                event.position().x(), event.position().y(),
-            )
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+        ix, iy = self._screen_to_image(
+            event.position().x(), event.position().y(),
+        )
+        if self._mesh_edit_enabled:
             self.begin_mesh_edit_at(ix, iy)
+            return
+        self.try_trigger_hit_area_at(ix, iy)
+
+    def try_trigger_hit_area_at(self, image_x: float, image_y: float) -> str | None:
+        """Run hit-testing at ``(image_x, image_y)`` and, if a hit area
+        contains the point, emit :attr:`hit_area_triggered`. Returns the
+        triggered id (or ``None``) so callers can act without going
+        through the signal. Exposed as a method so tests can exercise
+        the hit path without a real Qt mouse event."""
+        if self._document is None or not self._document.hit_areas:
+            return None
+        hit = hit_test(
+            self._document, image_x, image_y,
+            deformed_vertices=self._deformed_vertices or None,
+        )
+        if hit is not None:
+            self.hit_area_triggered.emit(hit)
+        return hit
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
         if self._panning:

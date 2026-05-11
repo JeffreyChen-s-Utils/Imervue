@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from puppet.document import Drawable, PuppetDocument
+from puppet.standard_params import standard_parameters
 
 DEFAULT_CELL_SIZE: int = 64
 """Image-pixel side length of one grid cell. Smaller = denser mesh +
@@ -107,6 +108,7 @@ def puppet_from_png(
     drawable_id: str = "main",
     texture_path: str = "textures/main.png",
     cell_size: int = DEFAULT_CELL_SIZE,
+    seed_standard_parameters: bool = True,
 ) -> PuppetDocument:
     """Build a single-drawable :class:`PuppetDocument` around ``source``.
 
@@ -114,6 +116,13 @@ def puppet_from_png(
     resulting document carries one drawable named ``drawable_id`` whose
     mesh is the alpha-bounded grid triangulation, and one texture
     entry under ``texture_path``.
+
+    When ``seed_standard_parameters`` is true (default) the document
+    also gets the full Cubism-style parameter catalogue from
+    :mod:`puppet.standard_params`. Live drivers (webcam, drag, blink,
+    lip-sync) look up parameters by these ids, so seeding the catalogue
+    means a freshly-imported PNG can be driven immediately — the user
+    only has to author deformer keys, not the parameter list itself.
     """
     png_bytes = _load_png_bytes(source)
     rgba = _decode_rgba(png_bytes)
@@ -132,6 +141,8 @@ def puppet_from_png(
             draw_order=0,
         ),
     ]
+    if seed_standard_parameters:
+        doc.parameters = standard_parameters()
     return doc
 
 

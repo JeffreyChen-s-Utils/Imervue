@@ -15,8 +15,9 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from puppet.input_drivers import (
     DEFAULT_EYE_PARAMS,
+    DEFAULT_MOUTH_FORM_PARAM,
     DEFAULT_MOUTH_PARAM,
-    audio_rms_to_mouth,
+    audio_to_viseme,
     blink_curve_value,
     cursor_to_angle_params,
 )
@@ -128,7 +129,9 @@ class InputEngine(QObject):
     def _reset_drag_params(self) -> None:
         if self._canvas.document() is None:
             return
-        for param_id in ("ParamAngleX", "ParamAngleY"):
+        for param_id in (
+            "ParamAngleX", "ParamAngleY", "ParamEyeBallX", "ParamEyeBallY",
+        ):
             self._canvas.set_parameter_value(param_id, 0.0)
 
     # ---- microphone -----------------------------------------------------
@@ -164,19 +167,26 @@ class InputEngine(QObject):
             logger.warning("mic stream close failed: %s", exc)
         if self._canvas.document() is not None:
             self._canvas.set_parameter_value(DEFAULT_MOUTH_PARAM, 0.0)
+            self._canvas.set_parameter_value(DEFAULT_MOUTH_FORM_PARAM, 0.0)
 
     def _on_audio_block(self, indata, frames, time_info, status) -> None:  # noqa: ARG002
         if status:
             logger.debug("mic status %s", status)
         if self._canvas.document() is None:
             return
-        value = audio_rms_to_mouth(indata)
-        # Defer the parameter write to the Qt thread — Qt slots aren't
+        viseme = audio_to_viseme(indata, sample_rate=_AUDIO_SAMPLE_RATE)
+        # Defer the parameter writes to the Qt thread — Qt slots aren't
         # thread-safe to call from sounddevice's callback. ``QTimer.singleShot``
         # with a 0 ms delay queues the work onto the GUI loop.
-        QTimer.singleShot(0, lambda v=value: self._apply_mouth(v))
+        QTimer.singleShot(0, lambda v=viseme: self._apply_viseme(v))
 
-    def _apply_mouth(self, value: float) -> None:
+    def _apply_viseme(self, viseme: dict[str, float]) -> None:
         if not self._lipsync_enabled or self._canvas.document() is None:
             return
-        self._canvas.set_parameter_value(DEFAULT_MOUTH_PARAM, float(value))
+        self._canvas.set_parameter_value(
+            DEFAULT_MOUTH_PARAM, float(viseme.get(DEFAULT_MOUTH_PARAM, 0.0)),
+        )
+        self._canvas.set_parameter_value(
+            DEFAULT_MOUTH_FORM_PARAM,
+            float(viseme.get(DEFAULT_MOUTH_FORM_PARAM, 0.0)),
+        )
