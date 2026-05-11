@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from puppet.document import Drawable, PuppetDocument
-from puppet.document_io import save_puppet
-from puppet.workspace import PuppetWorkspace, _push_recent
+from Imervue.puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.document_io import save_puppet
+from Imervue.puppet.workspace import PuppetWorkspace, _push_recent
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 

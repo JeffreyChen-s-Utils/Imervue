@@ -22,7 +22,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 if TYPE_CHECKING:
     from PySide6.QtGui import QImage
 
-    from puppet.canvas import PuppetCanvas
+    from Imervue.puppet.canvas import PuppetCanvas
 
 logger = logging.getLogger("Imervue.plugin.puppet.recorder")
 

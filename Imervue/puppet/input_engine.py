@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from puppet.input_drivers import (
+from Imervue.puppet.input_drivers import (
     DEFAULT_EYE_PARAMS,
     DEFAULT_MOUTH_PARAM,
     audio_rms_to_mouth,
@@ -22,7 +22,7 @@ from puppet.input_drivers import (
 )
 
 if TYPE_CHECKING:
-    from puppet.canvas import PuppetCanvas
+    from Imervue.puppet.canvas import PuppetCanvas
 
 logger = logging.getLogger("Imervue.plugin.puppet.input_engine")
 

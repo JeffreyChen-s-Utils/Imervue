@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from puppet.document import Motion
-from puppet.motion_sampler import sample_motion
+from Imervue.puppet.document import Motion
+from Imervue.puppet.motion_sampler import sample_motion
 
 if TYPE_CHECKING:
-    from puppet.canvas import PuppetCanvas
+    from Imervue.puppet.canvas import PuppetCanvas
 
 
 _PLAYBACK_FPS: int = 60

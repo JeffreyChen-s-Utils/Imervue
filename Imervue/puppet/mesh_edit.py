@@ -7,7 +7,7 @@ Qt-free; the actual mouse handling lives in the canvas widget.
 """
 from __future__ import annotations
 
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.document import Drawable, PuppetDocument
 
 
 def find_vertex_at(

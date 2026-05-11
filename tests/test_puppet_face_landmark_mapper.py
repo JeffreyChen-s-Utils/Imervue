@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from puppet.face_landmark_mapper import (
+from Imervue.puppet.face_landmark_mapper import (
     LANDMARK_LEFT_EYE_BOTTOM,
     LANDMARK_LEFT_EYE_OUTER,
     LANDMARK_LEFT_EYE_TOP,

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.document import Drawable, PuppetDocument
 
 
 @dataclass(frozen=True)

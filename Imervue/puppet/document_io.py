@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from puppet.document import (
+from Imervue.puppet.document import (
     BLEND_MODES,
     DEFORMER_TYPES,
     EXPRESSION_MODES,

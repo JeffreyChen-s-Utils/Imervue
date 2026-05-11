@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import Motion, MotionSegment, MotionTrack
-from puppet.motion_sampler import (
+from Imervue.puppet.document import Motion, MotionSegment, MotionTrack
+from Imervue.puppet.motion_sampler import (
     find_motion_gaps,
     sample_motion,
     sample_track,

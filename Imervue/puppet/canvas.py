@@ -63,15 +63,15 @@ from OpenGL.GL import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from puppet.document import PuppetDocument
-from puppet.render_prep import (
+from Imervue.puppet.document import PuppetDocument
+from Imervue.puppet.render_prep import (
     DrawCommand,
     build_draw_list,
     fit_view,
 )
-from puppet.mesh_edit import find_drawable_at, move_vertex
-from puppet.physics import PhysicsEngine
-from puppet.runtime import (
+from Imervue.puppet.mesh_edit import find_drawable_at, move_vertex
+from Imervue.puppet.physics import PhysicsEngine
+from Imervue.puppet.runtime import (
     apply_expressions,
     compose_all_drawables,
     default_parameter_values,
@@ -449,7 +449,8 @@ class PuppetCanvas(QOpenGLWidget):
             self._texture_cache[path] = tex
         return tex
 
-    def _upload_texture(self, png_bytes: bytes) -> int | None:  # pragma: no cover - GL needs display
+    # pragma: no cover - GL needs display
+    def _upload_texture(self, png_bytes: bytes) -> int | None:
         from PIL import Image
         import io
         try:
@@ -527,7 +528,8 @@ class PuppetCanvas(QOpenGLWidget):
         if self._mesh_edit_enabled and event.button() == Qt.MouseButton.LeftButton:
             self.end_mesh_edit_drag()
 
-    def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:   # pragma: no cover - Qt UI
+    # pragma: no cover - Qt UI
+    def _screen_to_image(self, sx: float, sy: float) -> tuple[float, float]:
         if self._zoom == 0:
             return 0.0, 0.0
         return (sx - self._pan_x) / self._zoom, (sy - self._pan_y) / self._zoom

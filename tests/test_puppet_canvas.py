@@ -6,8 +6,8 @@ and the pure-Python view state without forcing a paint cycle.
 """
 from __future__ import annotations
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, PuppetDocument
 
 
 def _doc_with_one_drawable() -> PuppetDocument:

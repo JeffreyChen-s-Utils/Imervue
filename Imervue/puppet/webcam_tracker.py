@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from puppet.face_landmark_mapper import landmarks_to_params
+from Imervue.puppet.face_landmark_mapper import landmarks_to_params
 
 if TYPE_CHECKING:
-    from puppet.canvas import PuppetCanvas
+    from Imervue.puppet.canvas import PuppetCanvas
 
 logger = logging.getLogger("Imervue.plugin.puppet.webcam_tracker")
 

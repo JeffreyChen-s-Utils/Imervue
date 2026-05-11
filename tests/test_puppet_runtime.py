@@ -12,14 +12,14 @@ import math
 import numpy as np
 import pytest
 
-from puppet.document import (
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     Parameter,
     ParameterKey,
     PuppetDocument,
 )
-from puppet.runtime import (
+from Imervue.puppet.runtime import (
     compose_all_drawables,
     compose_drawable_vertices,
     default_parameter_values,

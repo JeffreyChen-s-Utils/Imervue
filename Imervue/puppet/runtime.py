@@ -25,12 +25,12 @@ from typing import Any
 
 import numpy as np
 
-from puppet.deformers import (
+from Imervue.puppet.deformers import (
     apply_rotation,
     apply_warp,
     blend_forms,
 )
-from puppet.document import (
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     Expression,

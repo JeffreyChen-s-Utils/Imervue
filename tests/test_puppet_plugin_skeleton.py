@@ -1,79 +1,47 @@
-"""Phase 0 skeleton coverage for the Puppet plugin.
+"""Smoke tests for the built-in Puppet workspace.
 
-The plugin currently ships a placeholder tab; later phases fill in the
-file format, renderer, mesh editor, parameter rig, motion timeline,
-physics, and runtime tracking. These tests guard the integration
-surface (tab installs, title resolves, placeholder widget builds) so
-later phases can extend without breaking the contract.
+The Puppet feature shipped first as a plugin (``plugins/puppet/``) and
+later moved into the main package as ``Imervue.puppet``. This module
+keeps the integration-surface coverage that the original plugin
+skeleton tests provided: the workspace widget builds without a loaded
+document, exposes a meaningful layout, and survives multiple
+construction calls.
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-from PySide6.QtWidgets import QTabWidget
+import pytest
 
 
-def test_workspace_widget_builds(qapp):
-    """Phase 2 swaps the placeholder for the real PuppetWorkspace —
-    instantiating it must not require a loaded document."""
-    from puppet.puppet_plugin import _build_workspace_widget
+@pytest.mark.usefixtures("qapp")
+def test_workspace_widget_builds():
+    """Constructing :class:`PuppetWorkspace` with no arguments must
+    succeed and produce a widget with a non-empty layout."""
+    from Imervue.puppet.workspace import PuppetWorkspace
 
-    widget = _build_workspace_widget()
+    workspace = PuppetWorkspace()
     try:
-        assert widget.layout() is not None
-        assert widget.layout().count() >= 1   # toolbar + canvas + status
+        layout = workspace.layout()
+        if layout is not None:
+            assert layout.count() >= 1
+        # PuppetWorkspace is a QMainWindow — central widget must exist.
+        assert workspace.centralWidget() is not None
     finally:
-        widget.deleteLater()
+        workspace.deleteLater()
 
 
-def test_plugin_adds_tab_to_main_tabs(qapp):
-    from puppet.puppet_plugin import PuppetPlugin
+@pytest.mark.usefixtures("qapp")
+def test_workspace_can_be_built_twice():
+    """A repeated build pass must not leave residual state behind — the
+    main window builds a single shared instance, but tests construct
+    multiple to verify clean teardown."""
+    from Imervue.puppet.workspace import PuppetWorkspace
 
-    fake_main = SimpleNamespace(viewer=SimpleNamespace())
-    plugin = PuppetPlugin(fake_main)
-    tabs = QTabWidget()
+    first = PuppetWorkspace()
+    second = PuppetWorkspace()
     try:
-        plugin.on_build_main_tabs(tabs)
-        assert tabs.count() == 1
-        assert tabs.tabText(0)   # non-empty (Polygon / 偶動畫 / etc. — locale dependent)
+        assert first is not second
+        assert first.centralWidget() is not None
+        assert second.centralWidget() is not None
     finally:
-        tabs.deleteLater()
-
-
-def test_plugin_uses_localised_tab_title(qapp, monkeypatch):
-    """When ``puppet_tab_title`` is registered for the active locale the
-    tab adopts that label; no key → fallback to ``Puppet``."""
-    from Imervue.multi_language.language_wrapper import language_wrapper
-    from puppet.puppet_plugin import PuppetPlugin
-
-    monkeypatch.setitem(
-        language_wrapper.language_word_dict, "puppet_tab_title", "TestPuppet",
-    )
-    fake_main = SimpleNamespace(viewer=SimpleNamespace())
-    plugin = PuppetPlugin(fake_main)
-    tabs = QTabWidget()
-    try:
-        plugin.on_build_main_tabs(tabs)
-        assert tabs.tabText(0) == "TestPuppet"
-    finally:
-        tabs.deleteLater()
-
-
-def test_plugin_metadata_present():
-    """plugin_name / version / description / author must be set so the
-    plugin manager UI can list this plugin meaningfully."""
-    from puppet.puppet_plugin import PuppetPlugin
-
-    assert PuppetPlugin.plugin_name == "Puppet"
-    assert PuppetPlugin.plugin_version
-    assert PuppetPlugin.plugin_description
-    assert PuppetPlugin.plugin_author
-
-
-def test_plugin_class_export():
-    """``plugins/puppet/__init__.py`` must expose ``plugin_class`` so the
-    plugin manager can instantiate it via the standard discovery path."""
-    import puppet
-    from puppet.puppet_plugin import PuppetPlugin
-
-    assert puppet.plugin_class is PuppetPlugin
+        first.deleteLater()
+        second.deleteLater()

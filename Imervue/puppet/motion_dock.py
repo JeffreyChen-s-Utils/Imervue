@@ -27,10 +27,10 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from puppet.motion_player import MotionPlayer
+from Imervue.puppet.motion_player import MotionPlayer
 
 if TYPE_CHECKING:
-    from puppet.canvas import PuppetCanvas
+    from Imervue.puppet.canvas import PuppetCanvas
 
 
 _SCRUB_STEPS: int = 1000

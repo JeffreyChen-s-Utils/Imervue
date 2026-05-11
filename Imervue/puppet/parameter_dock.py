@@ -26,8 +26,8 @@ from PySide6.QtWidgets import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
-    from puppet.canvas import PuppetCanvas
-    from puppet.document import Parameter
+    from Imervue.puppet.canvas import PuppetCanvas
+    from Imervue.puppet.document import Parameter
 
 
 # How many integer steps each slider holds — finer than the slider's

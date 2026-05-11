@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.document import Drawable, PuppetDocument
 
 DEFAULT_CELL_SIZE: int = 64
 """Image-pixel side length of one grid cell. Smaller = denser mesh +

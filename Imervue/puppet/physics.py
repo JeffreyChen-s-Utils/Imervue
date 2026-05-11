@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from puppet.document import PhysicsRig, PuppetDocument
+from Imervue.puppet.document import PhysicsRig, PuppetDocument
 
 REST_LENGTH: float = 30.0
 """Distance between adjacent particles at rest, in image-space pixels."""

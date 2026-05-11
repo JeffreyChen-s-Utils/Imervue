@@ -28,10 +28,10 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
-from puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
-from puppet.canvas import PuppetCanvas
-from puppet.document_io import PuppetFormatError, load_puppet, save_puppet
-from puppet.operations import (
+from Imervue.puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document_io import PuppetFormatError, load_puppet, save_puppet
+from Imervue.puppet.operations import (
     add_parameter,
     add_rotation_deformer,
     add_warp_deformer,
@@ -39,12 +39,12 @@ from puppet.operations import (
     set_key_at_value,
     snapshot_current_forms,
 )
-from puppet.input_engine import InputEngine
-from puppet.motion_dock import MotionDock
-from puppet.motion_recorder import MotionRecorder, append_motion
-from puppet.parameter_dock import ParameterDock
-from puppet.recorder import RecordingSession, save_canvas_png
-from puppet.webcam_tracker import WebcamTracker
+from Imervue.puppet.input_engine import InputEngine
+from Imervue.puppet.motion_dock import MotionDock
+from Imervue.puppet.motion_recorder import MotionRecorder, append_motion
+from Imervue.puppet.parameter_dock import ParameterDock
+from Imervue.puppet.recorder import RecordingSession, save_canvas_png
+from Imervue.puppet.webcam_tracker import WebcamTracker
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
