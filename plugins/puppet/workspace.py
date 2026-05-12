@@ -52,6 +52,12 @@ from puppet.cubism_import import (
 from puppet.expression_dock import ExpressionDock
 from puppet.idle_driver import IdleDriver
 from puppet.psd_import import puppet_from_psd
+from puppet.requirements import (
+    LIPSYNC_PACKAGES,
+    WEBCAM_PACKAGES,
+    all_optional_packages,
+    missing_packages,
+)
 from puppet.vts_api import VTubeStudioServer
 from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
@@ -164,6 +170,12 @@ class PuppetWorkspace(QMainWindow):
         )
         import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
         bar.addAction(import_cubism_action)
+
+        install_deps_action = QAction(
+            lang.get("puppet_install_deps", "Install dependencies…"), self,
+        )
+        install_deps_action.triggered.connect(self._install_all_optional_deps)
+        bar.addAction(install_deps_action)
 
         self._recent_button = QPushButton(lang.get("puppet_recent", "Recent"))
         self._recent_button.setFlat(True)
@@ -479,12 +491,20 @@ class PuppetWorkspace(QMainWindow):
         self._input_engine.set_blink_enabled(enabled)
 
     def _toggle_lipsync(self, enabled: bool) -> None:
+        if enabled and missing_packages(LIPSYNC_PACKAGES):
+            self._prompt_install(
+                LIPSYNC_PACKAGES,
+                on_ready=lambda: self._lipsync_toggle.setChecked(True),
+            )
+            self._reset_toggle(self._lipsync_toggle)
+            return
         ok = self._input_engine.set_lipsync_enabled(enabled)
         if enabled and not ok:
-            # sounddevice missing or mic open failed — bounce the toggle
-            self._lipsync_toggle.blockSignals(True)
-            self._lipsync_toggle.setChecked(False)
-            self._lipsync_toggle.blockSignals(False)
+            # sounddevice is importable but mic open failed (no device,
+            # permission denied …) — bounce the toggle with the
+            # existing diagnostic so the user knows the install isn't
+            # the issue.
+            self._reset_toggle(self._lipsync_toggle)
             self._announce(
                 "puppet_lipsync_unavailable",
                 "Lip-sync unavailable (install sounddevice for mic input)",
@@ -492,6 +512,44 @@ class PuppetWorkspace(QMainWindow):
 
     def input_engine(self) -> InputEngine:
         return self._input_engine
+
+    # ---- optional-dep install --------------------------------------
+
+    def _prompt_install(
+        self,
+        packages: list[tuple[str, str]],
+        *,
+        on_ready=None,
+    ) -> None:
+        """Open the main app's pip-installer dialog for ``packages``.
+        Imported lazily so test environments without the full Imervue
+        UI stack can still construct the workspace."""
+        from Imervue.plugin.pip_installer import ensure_dependencies
+        ensure_dependencies(self, packages, on_ready or (lambda: None))
+
+    def _reset_toggle(self, action: QAction) -> None:
+        """Bounce a checkable QAction back to off without re-firing the
+        ``toggled`` signal — used when a toggle's prerequisite fails."""
+        action.blockSignals(True)
+        action.setChecked(False)
+        action.blockSignals(False)
+
+    def _install_all_optional_deps(self) -> None:
+        """Toolbar action — install every optional puppet dependency
+        in one batch so the user can prepare a machine for offline use
+        without exercising each feature individually."""
+        packages = all_optional_packages()
+        missing = missing_packages(packages)
+        if not missing:
+            self._announce(
+                "puppet_deps_already_installed",
+                "All optional puppet dependencies are already installed.",
+            )
+            return
+        self._prompt_install(packages, on_ready=lambda: self._announce(
+            "puppet_deps_installed",
+            "Optional puppet dependencies installed.",
+        ))
 
     # ---- capture / record ----------------------------------------------
 
@@ -566,11 +624,19 @@ class PuppetWorkspace(QMainWindow):
     # ---- webcam tracking ----------------------------------------------
 
     def _toggle_webcam(self, enabled: bool) -> None:
+        if enabled and missing_packages(WEBCAM_PACKAGES):
+            self._prompt_install(
+                WEBCAM_PACKAGES,
+                # Re-fire the toggle once pip is done; the dependency
+                # check on the second pass returns an empty list, so we
+                # fall through into the real enable path.
+                on_ready=lambda: self._webcam_toggle.setChecked(True),
+            )
+            self._reset_toggle(self._webcam_toggle)
+            return
         ok = self._webcam.set_enabled(enabled)
         if enabled and not ok:
-            self._webcam_toggle.blockSignals(True)
-            self._webcam_toggle.setChecked(False)
-            self._webcam_toggle.blockSignals(False)
+            self._reset_toggle(self._webcam_toggle)
             self._announce(
                 "puppet_webcam_unavailable",
                 "Webcam tracking unavailable (install opencv-python + mediapipe)",
