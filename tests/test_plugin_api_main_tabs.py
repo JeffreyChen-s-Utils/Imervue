@@ -73,7 +73,7 @@ def test_dispatcher_calls_each_plugin_hook(qapp):
     manager = SimpleNamespace(plugins=[plugin])
     tabs = QTabWidget()
     try:
-        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655: SimpleNamespace duck-types PluginManager for the test
+        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert plugin._calls == 1   # noqa: SLF001
         assert tabs.count() == 1
         assert tabs.tabText(0) == "Good"
@@ -88,7 +88,7 @@ def test_dispatcher_preserves_plugin_order(qapp):
     manager = SimpleNamespace(plugins=[a, b])
     tabs = QTabWidget()
     try:
-        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655: SimpleNamespace duck-types PluginManager for the test
+        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert tabs.count() == 2
     finally:
         tabs.deleteLater()
@@ -104,7 +104,7 @@ def test_dispatcher_swallows_runtime_error(qapp, caplog):
     tabs = QTabWidget()
     try:
         with caplog.at_level(logging.WARNING, logger="Imervue.integration"):
-            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655: SimpleNamespace duck-types PluginManager for the test
+            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert tabs.count() == 1   # only healthy one contributed
         assert any(
             "RuntimeError" in rec.message and "Raising" in rec.message
@@ -123,7 +123,7 @@ def test_dispatcher_swallows_arbitrary_exceptions(qapp, caplog):
     tabs = QTabWidget()
     try:
         with caplog.at_level(logging.ERROR, logger="Imervue.integration"):
-            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655: SimpleNamespace duck-types PluginManager for the test
+            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert tabs.count() == 1
         assert any(
             "on_build_main_tabs" in rec.message and "Exploding" in rec.message
@@ -137,9 +137,8 @@ def test_dispatcher_handles_empty_plugin_list(qapp):
     manager = SimpleNamespace(plugins=[])
     tabs = QTabWidget()
     try:
-        # Must not raise. NOSONAR S5655: SimpleNamespace duck-types
-        # PluginManager for the test.
-        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655
+        # Must not raise.
+        _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert tabs.count() == 0
     finally:
         tabs.deleteLater()
@@ -155,7 +154,7 @@ def test_warning_uses_plugin_name_when_available(qapp, caplog, plugin_name):
     tabs = QTabWidget()
     try:
         with caplog.at_level(logging.WARNING, logger="Imervue.integration"):
-            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR S5655: SimpleNamespace duck-types PluginManager for the test
+            _dispatch_main_tab_hook(manager, tabs)  # NOSONAR — SimpleNamespace duck-types PluginManager here
         assert any(plugin_name in rec.message for rec in caplog.records)
     finally:
         tabs.deleteLater()
