@@ -34,9 +34,19 @@ LIPSYNC_PACKAGES: list[tuple[str, str]] = [
     ("sounddevice", "sounddevice"),
 ]
 
+VIRTUAL_CAMERA_PACKAGES: list[tuple[str, str]] = [
+    ("pyvirtualcam", "pyvirtualcam"),
+]
+
+NDI_PACKAGES: list[tuple[str, str]] = [
+    ("NDIlib", "ndi-python"),
+]
+
 FEATURE_PACKAGES: dict[str, list[tuple[str, str]]] = {
     "webcam": WEBCAM_PACKAGES,
     "lipsync": LIPSYNC_PACKAGES,
+    "virtual_camera": VIRTUAL_CAMERA_PACKAGES,
+    "ndi": NDI_PACKAGES,
 }
 
 

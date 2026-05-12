@@ -294,12 +294,15 @@ def compose_drawable_vertices(
     aggregated into a single LBS pass that runs against the rest
     vertices — that's what makes opposing-bone weights cancel correctly
     instead of stacking sequentially. Other deformer types are then
-    applied in author order on top of the LBS result.
+    applied in FK order: a topological sort by ``Deformer.parent``
+    ensures a parent rotation/warp always runs before its children,
+    even when the document lists them in a different order.
     """
     rest = np.asarray(drawable.vertices, dtype=np.float64)
     bone_deformers: list[Deformer] = []
     other_deformers: list[Deformer] = []
-    for deformer in deformers:
+    sorted_deformers = topologically_sorted_deformers(deformers)
+    for deformer in sorted_deformers:
         if drawable.id not in deformer.drawables:
             continue
         if deformer.type == "bone_rotation":
@@ -311,6 +314,37 @@ def compose_drawable_vertices(
         form = _form_for(deformer, overrides)
         verts = _apply_deformer(deformer.type, verts, form)
     return verts.astype(np.float32, copy=False)
+
+
+def topologically_sorted_deformers(
+    deformers: list[Deformer],
+) -> list[Deformer]:
+    """Return ``deformers`` in an order where each deformer appears
+    after its :attr:`Deformer.parent`.
+
+    Cycles (a malformed document where two deformers list each other
+    as parent) are broken by stopping the walk at the second visit —
+    the first-seen order wins, the runtime stays defined.
+    """
+    by_id = {d.id: d for d in deformers}
+    visited: set[str] = set()
+    ordered: list[Deformer] = []
+
+    def _visit(deformer: Deformer, in_progress: set[str]) -> None:
+        if deformer.id in visited or deformer.id in in_progress:
+            return
+        in_progress.add(deformer.id)
+        parent_id = deformer.parent
+        if parent_id and parent_id in by_id:
+            _visit(by_id[parent_id], in_progress)
+        in_progress.discard(deformer.id)
+        if deformer.id not in visited:
+            visited.add(deformer.id)
+            ordered.append(deformer)
+
+    for deformer in deformers:
+        _visit(deformer, set())
+    return ordered
 
 
 def _compose_bone_lbs(

@@ -52,13 +52,21 @@ from puppet.cubism_import import (
 from puppet.expression_dock import ExpressionDock
 from puppet.idle_driver import IdleDriver
 from puppet.idle_motion_cycler import IdleMotionCycler
+from puppet.batch_export import BatchMotionExporter, SUPPORTED_EXTENSIONS
+from puppet.bone_tree_dock import BoneTreeDock
+from puppet.ndi_output import NDIOutput
 from puppet.psd_import import puppet_from_psd
 from puppet.requirements import (
     LIPSYNC_PACKAGES,
+    NDI_PACKAGES,
+    VIRTUAL_CAMERA_PACKAGES,
     WEBCAM_PACKAGES,
     all_optional_packages,
     missing_packages,
 )
+from puppet.symmetrize import auto_mirror_pair, mirror_id
+from puppet.validator import severity_counts, validate
+from puppet.virtual_camera import VirtualCameraOutput
 from puppet.vts_api import VTubeStudioServer
 from puppet.input_engine import InputEngine
 from puppet.motion_dock import MotionDock
@@ -102,10 +110,18 @@ class PuppetWorkspace(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._expression_dock,
         )
-        # Tabify so the user gets Parameters/Expressions as two tabs in
-        # the same right pane instead of a cramped split. Parameters is
-        # the more-frequently-used one so it stays on top.
+        self._bone_tree_dock = BoneTreeDock(self._canvas, self)
+        self._bone_tree_dock.hierarchy_changed.connect(
+            self._on_bone_hierarchy_changed,
+        )
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, self._bone_tree_dock,
+        )
+        # Tabify so the user gets Parameters/Expressions/Bones as
+        # three tabs in the same right pane instead of a cramped split.
+        # Parameters is the most-frequent one so it stays on top.
         self.tabifyDockWidget(self._expression_dock, self._parameter_dock)
+        self.tabifyDockWidget(self._expression_dock, self._bone_tree_dock)
 
         self._motion_dock = MotionDock(self._canvas, self)
         # Live2D-style transition feel: when the user switches motions
@@ -122,6 +138,14 @@ class PuppetWorkspace(QMainWindow):
             self._motion_dock.player(), self._canvas, self,
         )
         self._vts_server = VTubeStudioServer(self._canvas, self)
+        self._virtual_camera = VirtualCameraOutput(self._canvas, self)
+        self._ndi_output = NDIOutput(self._canvas, self)
+        self._batch_exporter = BatchMotionExporter(
+            self._canvas, self._motion_dock.player(), self,
+        )
+        self._batch_exporter.progress.connect(self._on_batch_progress)
+        self._batch_exporter.finished.connect(self._on_batch_finished)
+        self._batch_exporter.failed.connect(self._on_batch_failed)
         self._recorder = RecordingSession(self._canvas, self)
         self._recorder.finished.connect(self._on_recording_finished)
         self._recorder.failed.connect(self._on_recording_failed)
@@ -180,6 +204,40 @@ class PuppetWorkspace(QMainWindow):
         )
         install_deps_action.triggered.connect(self._install_all_optional_deps)
         bar.addAction(install_deps_action)
+
+        bar.addSeparator()
+
+        validate_action = QAction(
+            lang.get("puppet_validate", "Validate"), self,
+        )
+        validate_action.triggered.connect(self._run_validator)
+        bar.addAction(validate_action)
+
+        mirror_action = QAction(
+            lang.get("puppet_mirror_drawable", "Mirror drawable…"), self,
+        )
+        mirror_action.triggered.connect(self._mirror_drawable_via_dialog)
+        bar.addAction(mirror_action)
+
+        batch_export_action = QAction(
+            lang.get("puppet_batch_export", "Export all motions…"), self,
+        )
+        batch_export_action.triggered.connect(self._batch_export_via_dialog)
+        bar.addAction(batch_export_action)
+
+        self._virtual_camera_toggle = QAction(
+            lang.get("puppet_virtual_camera", "Virtual camera"), self,
+        )
+        self._virtual_camera_toggle.setCheckable(True)
+        self._virtual_camera_toggle.toggled.connect(self._toggle_virtual_camera)
+        bar.addAction(self._virtual_camera_toggle)
+
+        self._ndi_toggle = QAction(
+            lang.get("puppet_ndi_output", "NDI output"), self,
+        )
+        self._ndi_toggle.setCheckable(True)
+        self._ndi_toggle.toggled.connect(self._toggle_ndi)
+        bar.addAction(self._ndi_toggle)
 
         self._recent_button = QPushButton(lang.get("puppet_recent", "Recent"))
         self._recent_button.setFlat(True)
@@ -675,6 +733,207 @@ class PuppetWorkspace(QMainWindow):
 
     def idle_motion_cycler(self) -> IdleMotionCycler:
         return self._idle_motion_cycler
+
+    # ---- bone tree -----------------------------------------------------
+
+    def _on_bone_hierarchy_changed(self) -> None:
+        """Re-render the canvas after a reparent so the new FK order
+        is reflected on screen without a manual reload."""
+        doc = self._canvas.document()
+        if doc is not None:
+            self._canvas.load_document(doc)
+
+    # ---- validator -----------------------------------------------------
+
+    def _run_validator(self) -> None:
+        doc = self._canvas.document()
+        if doc is None:
+            self._announce(
+                "puppet_validate_no_doc",
+                "Load a puppet first before validating.",
+            )
+            return
+        issues = validate(doc)
+        counts = severity_counts(issues)
+        if not issues:
+            self._announce(
+                "puppet_validate_clean",
+                "Validation clean — no issues found.",
+            )
+            return
+        self._show_validator_dialog(issues, counts)
+
+    def _show_validator_dialog(self, issues, counts) -> None:
+        from PySide6.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout
+        lang = language_wrapper.language_word_dict
+        dialog = QDialog(self)
+        dialog.setWindowTitle(
+            lang.get("puppet_validate_title", "Validation report"),
+        )
+        dialog.resize(720, 480)
+        layout = QVBoxLayout(dialog)
+        summary = QLabel(
+            lang.get(
+                "puppet_validate_summary",
+                "{errors} errors, {warnings} warnings, {info} info",
+            ).format(
+                errors=counts.get("error", 0),
+                warnings=counts.get("warning", 0),
+                info=counts.get("info", 0),
+            ),
+        )
+        layout.addWidget(summary)
+        body = QPlainTextEdit()
+        body.setReadOnly(True)
+        body.setPlainText("\n".join(
+            f"[{issue.severity.upper()}] {issue.code}  {issue.location}\n  {issue.message}"
+            for issue in issues
+        ))
+        layout.addWidget(body)
+        dialog.exec()
+
+    # ---- mirror drawable ----------------------------------------------
+
+    def _mirror_drawable_via_dialog(self) -> None:
+        doc = self._canvas.document()
+        if doc is None or not doc.drawables:
+            self._announce(
+                "puppet_mirror_no_drawables",
+                "Load a puppet with drawables first.",
+            )
+            return
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        names = [d.id for d in doc.drawables]
+        source, ok = QInputDialog.getItem(
+            self,
+            lang.get("puppet_mirror_title", "Mirror drawable"),
+            lang.get("puppet_mirror_prompt", "Source drawable:"),
+            names, 0, False,
+        )
+        if not ok or not source:
+            return
+        suggested = mirror_id(source)
+        target, ok = QInputDialog.getText(
+            self,
+            lang.get("puppet_mirror_title", "Mirror drawable"),
+            lang.get("puppet_mirror_target", "Mirrored id:"),
+            text=suggested,
+        )
+        if not ok or not target.strip():
+            return
+        created = auto_mirror_pair(doc, source, new_id=target.strip())
+        if created is None:
+            self._announce(
+                "puppet_mirror_failed",
+                "Mirror failed — id {target!r} already exists.",
+                target=target,
+            )
+            return
+        self._canvas.load_document(doc)
+        self._announce(
+            "puppet_mirror_done",
+            "Mirrored {source} → {target}.",
+            source=source, target=created.id,
+        )
+
+    # ---- batch export -------------------------------------------------
+
+    def _batch_export_via_dialog(self) -> None:
+        doc = self._canvas.document()
+        if doc is None or not doc.motions:
+            self._announce(
+                "puppet_batch_no_motions",
+                "Document has no motions to export.",
+            )
+            return
+        lang = language_wrapper.language_word_dict
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            lang.get("puppet_batch_dir_title", "Export motions to…"),
+            "",
+        )
+        if not directory:
+            return
+        # Format pick — use a simple input dialog rather than a custom
+        # dialog so the workspace stays small. Defaults to MP4.
+        from PySide6.QtWidgets import QInputDialog
+        ext_choices = list(SUPPORTED_EXTENSIONS)
+        ext, ok = QInputDialog.getItem(
+            self,
+            lang.get("puppet_batch_format_title", "Output format"),
+            lang.get("puppet_batch_format_prompt", "Container:"),
+            ext_choices, 0, False,
+        )
+        if not ok:
+            return
+        self._batch_exporter.start(directory, extension=ext)
+
+    def _on_batch_progress(self, index: int, total: int, name: str) -> None:
+        self._announce(
+            "puppet_batch_progress",
+            "Exporting motion {index}/{total}: {name}",
+            index=index + 1, total=total, name=name,
+        )
+
+    def _on_batch_finished(self, paths: list) -> None:
+        self._announce(
+            "puppet_batch_done",
+            "Exported {count} motions.",
+            count=len(paths),
+        )
+
+    def _on_batch_failed(self, reason: str) -> None:
+        self._announce(
+            "puppet_batch_failed", "Batch export failed: {error}",
+            error=reason,
+        )
+
+    # ---- virtual camera ------------------------------------------------
+
+    def _toggle_virtual_camera(self, enabled: bool) -> None:
+        if enabled and missing_packages(VIRTUAL_CAMERA_PACKAGES):
+            self._prompt_install(
+                VIRTUAL_CAMERA_PACKAGES,
+                on_ready=lambda: self._virtual_camera_toggle.setChecked(True),
+            )
+            self._reset_toggle(self._virtual_camera_toggle)
+            return
+        ok = self._virtual_camera.set_enabled(enabled)
+        if enabled and not ok:
+            self._reset_toggle(self._virtual_camera_toggle)
+            self._announce(
+                "puppet_virtual_camera_failed",
+                "Virtual camera unavailable (install pyvirtualcam + OBS Virtual Camera).",
+            )
+            return
+        self._announce(
+            "puppet_virtual_camera_on" if enabled else "puppet_virtual_camera_off",
+            "Virtual camera on" if enabled else "Virtual camera off",
+        )
+
+    # ---- NDI output ----------------------------------------------------
+
+    def _toggle_ndi(self, enabled: bool) -> None:
+        if enabled and missing_packages(NDI_PACKAGES):
+            self._prompt_install(
+                NDI_PACKAGES,
+                on_ready=lambda: self._ndi_toggle.setChecked(True),
+            )
+            self._reset_toggle(self._ndi_toggle)
+            return
+        ok = self._ndi_output.set_enabled(enabled)
+        if enabled and not ok:
+            self._reset_toggle(self._ndi_toggle)
+            self._announce(
+                "puppet_ndi_failed",
+                "NDI unavailable (install ndi-python + the NDI Runtime).",
+            )
+            return
+        self._announce(
+            "puppet_ndi_on" if enabled else "puppet_ndi_off",
+            "NDI broadcasting" if enabled else "NDI stopped",
+        )
 
     # ---- VTube Studio API ---------------------------------------------
 
