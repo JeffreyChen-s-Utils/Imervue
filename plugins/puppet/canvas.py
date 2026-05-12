@@ -126,6 +126,10 @@ class PuppetCanvas(QOpenGLWidget):
     document_loaded = Signal()
     zoom_changed = Signal(float)
     parameters_changed = Signal()
+    selection_cleared = Signal()
+    """Emitted after a right-click drops the bone-selection overlay.
+    The workspace wires this to ``BoneTreeDock.clear_selection`` so
+    the tree row un-highlights alongside the canvas marker."""
     hit_area_triggered = Signal(str)
     """Emitted with the hit-area id when the user left-clicks inside
     one. Only fires when mesh-edit mode is off — when it's on, the
@@ -246,12 +250,26 @@ class PuppetCanvas(QOpenGLWidget):
         """Pick which deformer the editor wants highlighted on canvas.
         The selection overlay draws an anchor marker plus a bounding
         box around the targeted drawables so the user can see what
-        the bone tree click referred to."""
-        new_value = deformer_id if isinstance(deformer_id, str) else None
+        the bone tree click referred to. An empty string is treated
+        the same as ``None`` so callers that pump signal payloads
+        through can clear via either spelling."""
+        new_value = (
+            deformer_id if isinstance(deformer_id, str) and deformer_id else None
+        )
         if new_value == self._selected_deformer:
             return
         self._selected_deformer = new_value
         self.update()
+
+    def clear_selection(self) -> None:
+        """Drop the selection overlay. Convenience wrapper used by the
+        right-click clear path; equivalent to ``set_selected_deformer(None)``
+        followed by emitting :attr:`selection_cleared`."""
+        if self._selected_deformer is None:
+            return
+        self._selected_deformer = None
+        self.update()
+        self.selection_cleared.emit()
 
     def _recompute_deformed_vertices(self) -> None:
         if self._document is None:
@@ -680,6 +698,13 @@ class PuppetCanvas(QOpenGLWidget):
             self._panning = True
             self._pan_anchor = (event.position().x(), event.position().y())
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            return
+        if event.button() == Qt.MouseButton.RightButton:
+            # Right-click anywhere on the canvas clears the bone
+            # selection overlay. Cheap shortcut for the user — the
+            # tree dock's row picks up the deselect through the
+            # ``selection_cleared`` signal.
+            self.clear_selection()
             return
         if event.button() != Qt.MouseButton.LeftButton:
             return

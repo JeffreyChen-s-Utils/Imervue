@@ -123,6 +123,12 @@ class PuppetWorkspace(QMainWindow):
         self._bone_tree_dock.deformer_selected.connect(
             self._canvas.set_selected_deformer,
         )
+        # Right-click on canvas clears overlay → tree-row deselects in
+        # lockstep so the user can't end up with one side highlighted
+        # and the other not.
+        self._canvas.selection_cleared.connect(
+            self._bone_tree_dock.clear_selection,
+        )
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._bone_tree_dock,
         )

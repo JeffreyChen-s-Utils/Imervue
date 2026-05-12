@@ -196,6 +196,74 @@ def test_canvas_selection_round_trips(qapp):
         canvas.deleteLater()
 
 
+def test_canvas_clear_selection_emits_signal(qapp):
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    fired: list[int] = []
+    canvas.selection_cleared.connect(lambda: fired.append(1))
+    try:
+        canvas.set_selected_deformer("a")
+        canvas.clear_selection()
+        assert canvas.selected_deformer() is None
+        assert fired == [1]
+        # Calling again should be a no-op — no double-fire.
+        canvas.clear_selection()
+        assert fired == [1]
+    finally:
+        canvas.deleteLater()
+
+
+def test_canvas_set_selection_empty_string_is_clear(qapp):
+    """Workspace connects ``deformer_selected(str)`` to
+    ``set_selected_deformer`` directly. When the dock emits ``""`` to
+    clear, set_selected_deformer must drop the overlay rather than
+    leaving an empty-string selection in place."""
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    try:
+        canvas.set_selected_deformer("a")
+        canvas.set_selected_deformer("")
+        assert canvas.selected_deformer() is None
+    finally:
+        canvas.deleteLater()
+
+
+def test_dock_clear_selection_drops_tree_row(qapp):
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    dock = BoneTreeDock(canvas)
+    try:
+        # Select a row first
+        first = dock.tree().topLevelItem(0)
+        first.setSelected(True)
+        assert dock.tree().selectedItems()
+        dock.clear_selection()
+        assert not dock.tree().selectedItems()
+    finally:
+        dock.deleteLater()
+        canvas.deleteLater()
+
+
+def test_dock_context_request_emits_empty_selection(qapp):
+    """Right-clicking the tree should clear the row AND emit an
+    empty deformer_selected so the canvas overlay clears too."""
+    from PySide6.QtCore import QPoint
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    dock = BoneTreeDock(canvas)
+    seen: list[str] = []
+    dock.deformer_selected.connect(seen.append)
+    try:
+        # Pre-select something
+        dock.tree().topLevelItem(0).setSelected(True)
+        dock._on_tree_context_request(QPoint(0, 0))   # noqa: SLF001
+        assert not dock.tree().selectedItems()
+        assert "" in seen
+    finally:
+        dock.deleteLater()
+        canvas.deleteLater()
+
+
 def test_dock_selection_signal_drives_canvas(qapp):
     """Clicking a row in the dock emits ``deformer_selected`` —
     when the workspace wires that to ``canvas.set_selected_deformer``

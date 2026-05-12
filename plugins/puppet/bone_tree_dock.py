@@ -75,6 +75,14 @@ class BoneTreeDock(QDockWidget):
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self._tree.setDefaultDropAction(Qt.DropAction.MoveAction)
         self._tree.itemClicked.connect(self._on_item_clicked)
+        # Right-click anywhere on the tree clears the selection. We
+        # use the customContextMenuRequested signal rather than
+        # overriding mousePressEvent so the default drag-and-drop path
+        # stays untouched.
+        self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._tree.customContextMenuRequested.connect(
+            self._on_tree_context_request,
+        )
         layout.addWidget(self._tree)
 
         self._empty_state = QLabel(
@@ -104,6 +112,20 @@ class BoneTreeDock(QDockWidget):
         """Public re-entry point — workspace calls this after toolbar
         actions add / remove deformers."""
         self._rebuild()
+
+    def clear_selection(self) -> None:
+        """Drop the tree-row highlight without emitting
+        ``deformer_selected`` — used when the canvas already cleared
+        its overlay (e.g. via a right-click) and we just need the
+        tree state to match."""
+        self._tree.clearSelection()
+
+    def _on_tree_context_request(self, _pos) -> None:
+        """Right-click in the tree clears the selection on both
+        sides. Emits an empty ``deformer_selected`` so the canvas
+        overlay drops in lockstep."""
+        self._tree.clearSelection()
+        self.deformer_selected.emit("")
 
     # ---- rebuild -------------------------------------------------------
 
