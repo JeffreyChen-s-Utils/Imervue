@@ -62,7 +62,7 @@ _FALLBACKS: dict[str, str] = {
     "paint_tool_text": "Text",
     "paint_tool_gradient": "Gradient",
     "paint_tool_smudge": "Smudge",
-    "paint_tool_bezier_pen": "Pen",
+    "paint_tool_bezier_pen": "Bezier Pen",
     "paint_tool_clone_stamp": "Clone Stamp",
     "paint_tool_speech_bubble": "Speech Bubble",
     "paint_tool_shape_rect": "Rectangle",

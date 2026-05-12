@@ -700,6 +700,176 @@ prominent and a "Compositing" layout with the Layer + History docks expanded.
 
 ----
 
+Puppet Workspace (Puppet Tab)
+-----------------------------
+
+The fourth top-level tab — **Puppet** — is a from-scratch 2D rigged-puppet
+animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs,
+parameters, motions, physics, expressions, pose groups, lip-sync, webcam
+tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully
+open ``.puppet`` file format.
+
+::
+
+   +-----------+----------------------+----------------+
+   |  Toolbar  |                      |  Parameters    |
+   +-----------+   GL Canvas          |    dock        |
+   |           |                      |                |
+   +-----------+----------------------+                |
+   |               Motions dock                        |
+   +---------------------------------------------------+
+
+End-to-end workflow
+^^^^^^^^^^^^^^^^^^^
+
+1. **Import a PNG** — toolbar ``Import PNG…`` runs
+   ``puppet.auto_mesh.puppet_from_png``: alpha-bounded triangulated grid,
+   one drawable, ready to render.
+2. **Add a deformer** — ``Add Rotation Deformer`` (anchor + angle) or
+   ``Add Warp Deformer`` (rows × cols Bezier lattice; vertices outside the
+   bounds pass through unchanged).
+3. **Add a parameter** — ``Add Parameter`` adds a slider to the right-hand
+   **Parameters** dock with auto-named id (``Param1``, ``Param2``, …).
+4. **Set keys** — drag the slider to one extreme, edit the deformer's form
+   in code or via mesh edit, press **Set key**. Repeat at neutral and the
+   opposite extreme. The runtime now lerps deformer fields between adjacent
+   keys whenever the slider moves.
+5. **Save** — ``Save As…`` writes the rig + textures + motions + expressions
+   + physics into a single ``.puppet`` zip you can share or open later via
+   ``Open Puppet…``.
+
+Try a worked example
+^^^^^^^^^^^^^^^^^^^^
+
+The repository ships a fully-rigged demo at
+``examples/puppet/puppet_procedural.puppet`` (rebuild source:
+``examples/puppet/puppet_procedural_example.py``). Every body part is
+drawn procedurally with PIL primitives onto its own transparent canvas
+at 4× supersample — no source image, no chroma-key, no segmentation —
+so rotations never expose the white edges or "cut" artefacts that
+come from slicing a single hand-drawn image into parts.
+
+The rig has six drawables (torso, two legs, two arms, head), six
+rotation deformers (parent ``body_rot`` plus head / shoulders / hips),
+six parameters (``ParamHeadYaw``, ``ParamBodyLean``,
+``ParamArm{Left,Right}Swing``, ``ParamLeg{Left,Right}Swing``), and
+five looping motions (``idle``, ``wave``, ``curtsy``, ``cheer``,
+``step_right``).
+
+Open the Puppet tab, click **Open Puppet…**, point at
+``puppet_procedural.puppet`` — the figure appears centred. Drag any
+parameter slider to drive a joint, or click one of the five motions
+in the Motions dock — single-click binds the motion and starts
+playback immediately.
+
+``.puppet`` file format (v1)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``.puppet`` file is a zip archive:
+
+::
+
+   my_character.puppet
+   ├── puppet.json              # required — manifest, drawables, deformers, parameters
+   ├── textures/
+   │   ├── face.png             # referenced by drawables[].texture
+   │   └── body.png
+   ├── motions/                 # optional
+   │   ├── idle.json
+   │   └── wave.json
+   ├── expressions/             # optional
+   │   └── smile.json
+   └── physics.json             # optional
+
+Top-level ``puppet.json`` example::
+
+   {
+     "version": 1,
+     "size": [2048, 2048],
+     "drawables": [ ... ],
+     "deformers": [ ... ],
+     "parameters": [ ... ],
+     "motions": ["idle", "wave"],
+     "expressions": ["smile"],
+     "pose": {"groups": [ ... ]},
+     "physics": "physics.json"
+   }
+
+The full schema (drawables, deformers, parameters, motions, expressions,
+pose, physics) lives at ``plugins/puppet/FORMAT.md`` in the repo. JSON +
+PNG only — no proprietary binary, fully diffable through git.
+
+Toolbar reference
+^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Action
+     - Purpose
+   * - Open Puppet…
+     - Load a ``.puppet`` zip into the canvas
+   * - Import PNG…
+     - Auto-mesh a PNG into a single-drawable puppet
+   * - Recent
+     - Quickly reopen a recent puppet
+   * - Save As…
+     - Write the current rig out as a ``.puppet`` zip
+   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
+     - Author the rig from the toolbar
+   * - Drag-track head
+     - Cursor offset → ``ParamAngleX`` / ``ParamAngleY``
+   * - Auto-blink
+     - Cosine close→open cycle on ``ParamEyeLOpen`` / ``ParamEyeROpen``
+   * - Mic lip-sync
+     - Microphone RMS → ``ParamMouthOpenY`` (requires ``sounddevice``)
+   * - Webcam tracking
+     - MediaPipe FaceMesh → head yaw / pitch / roll + eye + mouth
+       (requires ``opencv-python`` + ``mediapipe``)
+   * - Edit mesh
+     - Click-and-drag canvas vertices to refine the mesh
+   * - Record motion
+     - Capture parameter changes into a new ``Motion`` and add it to the
+       document — bake-from-take, no manual key authoring
+   * - Capture frame…
+     - Save a PNG of the current canvas
+   * - Record…
+     - Toggle GIF / WebM / MP4 recording via ``imageio``
+   * - Fit to Window
+     - Re-centre + re-scale the puppet in the canvas
+
+Recording your own motions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To capture a custom take rather than authoring keyframes by hand:
+
+1. Toggle **Record motion** in the toolbar — a name dialog appears.
+2. While recording, drag sliders, enable **Webcam tracking**, let physics
+   run, anything that writes parameter values.
+3. Toggle **Record motion** off — the recorder bakes the captured 30 Hz
+   stream into a ``Motion`` with one linear-segment track per parameter
+   that actually moved (parameters that stayed flat are dropped). The
+   new motion appears in the bottom **Motions** dock immediately, ready
+   to play / loop / save.
+
+Custom motions saved this way round-trip through the same JSON
+``motions/<name>.json`` payload as authored ones.
+
+Optional dependencies
+^^^^^^^^^^^^^^^^^^^^^
+
+* ``sounddevice`` — microphone capture for lip-sync
+* ``opencv-python`` + ``mediapipe`` — webcam face tracking
+* ``imageio-ffmpeg`` — MP4 / WebM recording (already shipped for
+  Slideshow Video)
+
+The plugin degrades gracefully when any of these are missing — the
+matching toolbar toggle bounces back off and shows an "install
+<package>" hint.
+
+----
+
 Rotation & Flipping
 --------------------
 
@@ -1547,3 +1717,112 @@ Command-Line Usage
    imervue /path/to/folder        # Open a specific folder
    imervue --debug                # Enable debug mode
    imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+
+----
+
+MCP Server
+----------
+
+Imervue ships a built-in `Model Context Protocol <https://modelcontextprotocol.io>`_
+server that lets AI assistants (Claude Code, Claude Desktop, Cursor,
+Cline, …) call into the project's pure-logic helpers without a
+running GUI. Start it with::
+
+   python -m Imervue.mcp_server
+
+The server is Qt-free and only loads what each tool needs at call
+time.
+
+Available Tools
+^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Tool
+     - Purpose
+   * - ``list_images``
+     - List image files in a folder (path, size, mtime). Pass
+       ``recursive=true`` to walk subfolders.
+   * - ``read_image_metadata``
+     - Dimensions, format, EXIF tags and XMP sidecar fields for one
+       image. Missing data is reported as the appropriate empty value
+       rather than raising.
+   * - ``read_xmp_tags``
+     - Fast path that only reads the XMP sidecar — rating, color
+       label, keywords, title, description.
+   * - ``convert_format``
+     - Convert one image to another format. Destination format is
+       inferred from the destination suffix (``png`` / ``jpg`` /
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). Optional
+       ``quality`` (1–100) applies to JPEG/WebP.
+   * - ``puppet_from_png``
+     - Build a ``.puppet`` rig from a PNG using the puppet plugin's
+       auto-mesh. Seeds the Cubism-standard parameter catalogue so
+       the rig is immediately drivable.
+   * - ``puppet_inspect``
+     - Open a ``.puppet`` archive and return a structured inventory:
+       drawables, deformers, parameters, motions, expressions, hit
+       areas, parts, parameter blends and physics rigs.
+
+All tools return JSON-serialised payloads in the MCP ``content`` /
+``text`` envelope; structured payloads can be parsed back from the
+``text`` field on the client side.
+
+Claude Code (Project-Level)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The repository ships a project-level ``.mcp.json`` at the repo root:
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "imervue": {
+         "type": "stdio",
+         "command": "python",
+         "args": ["-m", "Imervue.mcp_server"]
+       }
+     }
+   }
+
+Opening any subdirectory of the repo in Claude Code auto-discovers
+this server. Claude Code prompts before enabling project servers the
+first time — accept the prompt to use it.
+
+Claude Desktop
+^^^^^^^^^^^^^^
+
+Add the same entry to your Claude Desktop config:
+
+* macOS: ``~/Library/Application Support/Claude/claude_desktop_config.json``
+* Windows: ``%APPDATA%\Claude\claude_desktop_config.json``
+
+Use an absolute working directory or activate a virtualenv in which
+Imervue is installed; the ``python`` invocation must resolve to an
+interpreter that can ``import Imervue``.
+
+Protocol Surface
+^^^^^^^^^^^^^^^^
+
+The server implements the stdio JSON-RPC 2.0 transport of MCP
+version ``2025-03-26``:
+
+* ``initialize`` — handshake; advertises ``capabilities.tools``.
+* ``tools/list`` — enumerate the registered tools with their
+  JSON-Schema input definitions.
+* ``tools/call`` — invoke a tool with ``{"name", "arguments"}``;
+  results come back inside the ``content`` array.
+* ``notifications/*`` — silently accepted (no response).
+
+The implementation lives in ``Imervue/mcp_server/``:
+
+* ``server.py`` — protocol loop + tool registry.
+* ``tools.py`` — handler functions and the default tool definitions.
+* ``__main__.py`` — ``python -m Imervue.mcp_server`` entry point.
+
+Custom tools can be registered by constructing :class:`MCPServer`
+manually, calling :meth:`MCPServer.register`, and feeding messages
+through :meth:`MCPServer.handle_message` (or driving the stdio loop
+with the built-in :func:`run` helper).

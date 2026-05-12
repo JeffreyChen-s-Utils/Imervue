@@ -1044,7 +1044,64 @@ class PaintCanvas(QOpenGLWidget):
                 for x, y in points:
                     glVertex2f(float(x), float(y))
                 glEnd()
+        elif kind == "polygon_preview":
+            self._draw_polygon_preview(overlay)
         glEnable(GL_TEXTURE_2D)
+
+    def _draw_polygon_preview(self, overlay: dict) -> None:  # pragma: no cover - GL needs display
+        """Stroke the in-progress polygon outline so the user sees a
+        closed shape rather than an open pen-line.
+
+        Confirmed segments are solid; the cursor segment is solid; the
+        closing edge back to vertex 0 is rendered at half intensity so
+        it reads as tentative. A ring marker over vertex 0 highlights
+        green when the cursor is inside the snap radius so the close
+        affordance is discoverable.
+        """
+        vertices = overlay.get("vertices", ())
+        if not vertices:
+            return
+        cursor = overlay.get("cursor")
+        snapping = bool(overlay.get("snapping_to_close", False))
+        close_radius = float(overlay.get("close_radius", 12.0))
+        # Confirmed edges between successive vertices.
+        if len(vertices) >= 2:
+            glColor4f(0.0, 0.0, 0.0, 0.7)
+            glBegin(GL_LINE_STRIP)
+            for x, y in vertices:
+                glVertex2f(float(x), float(y))
+            glEnd()
+        # Live segment from the last confirmed vertex to the cursor.
+        if cursor is not None and not snapping:
+            glColor4f(0.0, 0.0, 0.0, 0.7)
+            lx, ly = vertices[-1]
+            glBegin(GL_LINES)
+            glVertex2f(float(lx), float(ly))
+            glVertex2f(float(cursor[0]), float(cursor[1]))
+            glEnd()
+        # Closing edge back to vertex 0 — half intensity so the user
+        # reads it as tentative until they actually close the shape.
+        if len(vertices) >= 2:
+            glColor4f(0.0, 0.0, 0.0, 0.35)
+            tail = cursor if (cursor is not None and not snapping) else vertices[-1]
+            glBegin(GL_LINES)
+            glVertex2f(float(tail[0]), float(tail[1]))
+            glVertex2f(float(vertices[0][0]), float(vertices[0][1]))
+            glEnd()
+        # Ring marker over vertex 0 — turns green when the cursor is
+        # inside the snap radius so users learn where to click to close.
+        if snapping:
+            glColor4f(0.2, 0.85, 0.2, 0.95)
+        else:
+            glColor4f(0.0, 0.0, 0.0, 0.7)
+        sx, sy = vertices[0]
+        ring_radius = max(3.0, close_radius * 0.5)
+        segments = 24
+        glBegin(GL_LINE_LOOP)
+        for i in range(segments):
+            theta = 2.0 * math.pi * i / segments
+            glVertex2f(sx + ring_radius * math.cos(theta), sy + ring_radius * math.sin(theta))
+        glEnd()
 
     def _draw_bleed_guides(self) -> None:  # pragma: no cover - GL needs display
         """Stroke the trim / bleed / safe rects from the active

@@ -1290,6 +1290,25 @@ class _BezierPenTool:
         self._dragging_anchor_index = None
         self._press_pos = None
         self._overlay_setter(None)
+        # Auto-commit any in-progress path so the user's clicks aren't
+        # silently dropped when they switch tools — without this the
+        # path stays attached to the workspace and only re-renders on
+        # the next pen click, which reads as "the drawing disappeared
+        # and only comes back next time I use the pen". Single-anchor
+        # paths can't rasterise (``commit_pen_path`` rejects them); we
+        # discard those so a fresh pen session starts clean.
+        workspace = self._workspace
+        if workspace is None:
+            return
+        path = getattr(workspace, "_bezier_pen_path", None)
+        if path is None:
+            return
+        if len(path.nodes) >= 2:
+            from Imervue.paint.pen_commit import commit_pen_path
+            commit_pen_path(workspace)
+        else:
+            path.nodes.clear()
+            path.closed = False
 
     def _refresh_overlay(self, path) -> None:
         """Draw the path's anchor polyline so the user sees what they
@@ -1780,7 +1799,10 @@ class _PolygonShapeTool:
             if self._vertices:
                 self._cursor = (x, y)
                 self._refresh_overlay()
-                return True
+                # The overlay setter triggers its own ``canvas.update()``
+                # so returning ``False`` here keeps the dispatcher from
+                # firing a redundant composite invalidation for an event
+                # that didn't touch any layer pixels.
             return False
         if evt.phase != "press":
             return False
@@ -1816,19 +1838,31 @@ class _PolygonShapeTool:
         return False
 
     def _refresh_overlay(self) -> None:
-        points = list(self._vertices)
-        if self._cursor is not None and points and points[-1] != self._cursor:
-            points.append(self._cursor)
-        # Close-loop hint: when the cursor is near vertex 0, draw the
-        # closing edge so the user sees the polygon shape they're
-        # about to commit.
-        if self._cursor is not None and len(self._vertices) >= 2:
+        if not self._vertices:
+            self._overlay_setter(None)
+            return
+        cursor = self._cursor
+        snapping_to_close = False
+        if cursor is not None and len(self._vertices) >= 2:
             sx, sy = self._vertices[0]
-            cx, cy = self._cursor
-            close_sq = (cx - sx) ** 2 + (cy - sy) ** 2
-            if close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS:
-                points.append(self._vertices[0])
-        self._overlay_setter({"kind": "polyline", "points": points})
+            close_sq = (cursor[0] - sx) ** 2 + (cursor[1] - sy) ** 2
+            snapping_to_close = (
+                close_sq <= self.CLOSE_RADIUS * self.CLOSE_RADIUS
+            )
+        # Structured polygon-preview overlay: confirmed vertices
+        # rendered as solid edges, the live cursor segment, the
+        # closing edge back to vertex 0, and a ring marker on
+        # vertex 0 that highlights when the cursor is inside the
+        # snap radius. The previous open ``polyline`` overlay made
+        # in-progress polygons read like a pen-line and hid the
+        # close affordance.
+        self._overlay_setter({
+            "kind": "polygon_preview",
+            "vertices": list(self._vertices),
+            "cursor": cursor,
+            "snapping_to_close": snapping_to_close,
+            "close_radius": self.CLOSE_RADIUS,
+        })
 
     def cancel(self) -> None:
         self._vertices = []

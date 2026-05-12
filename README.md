@@ -34,7 +34,9 @@
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
 - [Paint Workspace](#paint-workspace)
+- [Puppet Workspace](#puppet-workspace)
 - [Plugin System](#plugin-system)
+- [MCP Server](#mcp-server)
 - [Multi-Language Support](#multi-language-support)
 - [User Settings](#user-settings)
 - [Architecture](#architecture)
@@ -208,6 +210,27 @@ A MediBang-style **Paint** tab embedded as a third top-level tab (alongside Imer
 - **Other** — Image Size dialog · Liquify · Healing / Clone Stamp · per-tab undo / redo (Ctrl+Z / Ctrl+Y) with the History dock for non-linear jumps · multiple secondary view windows (mirror / tile preview)
 
 Press ``E`` from Deep Zoom to send the current image straight into a new Paint tab.
+
+### Puppet Workspace
+
+A **Puppet** tab — the fourth top-level tab, slotted after Paint — is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `plugins/puppet/FORMAT.md`.
+
+- **Workflow** — Import a PNG → auto-generate a triangulated grid mesh that respects alpha → add deformers (rotation / warp lattice) → add parameters → set key forms at slider extremes → save as `.puppet` zip
+- **`.puppet` format (v1)** — Zip container with `puppet.json` manifest, PNG textures under `textures/`, plus optional `motions/*.json`, `expressions/*.json`, and `physics.json` sidecars. JSON-based, humanly diffable, no proprietary binary
+- **Renderer** — `QOpenGLWidget` with textured-triangle drawing in draw_order, per-drawable blend modes (normal / additive / multiply), pose-group exclusivity, ortho projection in image-space, transparency-checker backdrop, wheel zoom + middle-drag pan
+- **Deformers (Phase 4)** — `RotationDeformer` (anchor + angle) and `WarpDeformer` (rows × cols bezier lattice). Both pure-numpy, vectorised — a 5000-vertex puppet stays at 60 FPS on CPU
+- **Parameter rig (Phase 4–5)** — Each parameter holds a key list mapping a slider value to a partial deformer-form snapshot; runtime samples the parameter, finds adjacent keys, and per-field-lerps. Right-dock slider panel with one row per parameter and a "Set key" button that snapshots current deformer forms
+- **Motion playback (Phase 6)** — Bottom dock with motion list + Play / Pause / Stop / Loop / scrub. Curve sampler honours all four `.puppet` segment types: `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` (Newton-iterated time→param solve)
+- **Expressions (Phase 7)** — Stack of additive / multiply / overwrite parameter overlays applied on top of slider / motion values
+- **Pose groups (Phase 7)** — Mutually-exclusive drawable visibility (weapon swaps, mouth-shape variants); the renderer hides every other member of the active group
+- **Physics (Phase 8)** — Verlet pendulum chains for hair / cloth / ribbons. Input parameter moves chain anchor; gravity + damping + per-particle springs pull the chain back to rest; tip lateral displacement maps back to an output parameter
+- **Live input (Phase 9–10)** — Cursor drag → head-angle parameters; auto-blink on a cosine open→close→open curve; mic lip-sync via `sounddevice` RMS → `ParamMouthOpenY` (optional dep); webcam face tracking via OpenCV + MediaPipe FaceMesh → head yaw / pitch / roll + eye / mouth open (optional deps)
+- **Editor authoring (Phase 5)** — `Add Rotation Deformer` / `Add Warp Deformer` / `Add Parameter` toolbar actions, per-parameter `Set key` button, **Save As…** writes the whole rig to a `.puppet` zip
+- **Mesh editor (Phase 12)** — Toggle **Edit mesh** to drag vertices on the canvas; clicks within 8 px snap to the nearest vertex, mouse drag updates the document immediately
+- **Custom motion recording (Phase 13)** — **Record motion** captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; on stop, bakes the take into a `Motion` with one linear-segment track per parameter that actually changed (flat tracks dropped) and adds it to the document. The new motion appears in the **Motions** dock immediately, ready to play / loop / save
+- **Capture / record (Phase 11)** — `Capture frame…` saves a PNG of the current canvas via `glReadPixels`; `Record…` toggles a 30 FPS frame loop into a GIF / WebM / MP4 via `imageio` (an existing project dep)
+
+A drop-in demo lives at [`examples/puppet/puppet_procedural.puppet`](examples/puppet/puppet_procedural.puppet) (build script: `examples/puppet/puppet_procedural_example.py`). Each body part is drawn procedurally with PIL primitives on its own transparent canvas — no source image, no chroma-key, no segmentation — so rotations stay artefact-free. Open it via the Puppet tab's **Open Puppet…** action to see a six-part chibi rig with six parameters and five motions (idle / wave / curtsy / cheer / step_right) already wired up.
 
 ### System Integration
 
@@ -625,6 +648,47 @@ Imervue supports a plugin system for extending functionality. See the full [Plug
 ### Plugin Downloader
 
 Plugins can be downloaded from the official repository via **Plugins > Download Plugins**. The downloader fetches from [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) on GitHub.
+
+---
+
+## MCP Server
+
+Imervue ships with a built-in [Model Context Protocol](https://modelcontextprotocol.io) server so AI assistants (Claude Code, Claude Desktop, Cursor, Cline, …) can call into the project's pure-logic helpers without a running GUI. The server is Qt-free and starts with one command:
+
+```sh
+python -m Imervue.mcp_server
+```
+
+### Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_images` | List image files in a folder (path, size, mtime) — supports recursion |
+| `read_image_metadata` | Dimensions, format, EXIF, and XMP sidecar for one image |
+| `read_xmp_tags` | XMP-only fast path: rating, label, keywords, title, description |
+| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP |
+| `puppet_from_png` | Build a `.puppet` rig from a PNG (auto-mesh + standard parameters) |
+| `puppet_inspect` | Open a `.puppet` and return its inventory (drawables, deformers, parameters, motions, expressions, hit areas, parts, blends, physics) |
+
+### Wiring it up
+
+**Claude Code (project-level)** — the repository ships a `.mcp.json` at the root. Opening any directory under the repo with Claude Code auto-discovers the server:
+
+```json
+{
+  "mcpServers": {
+    "imervue": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "Imervue.mcp_server"]
+    }
+  }
+}
+```
+
+**Claude Desktop / other MCP clients** — add the same entry to your client's `claude_desktop_config.json` (or equivalent). On macOS that lives at `~/Library/Application Support/Claude/claude_desktop_config.json`; on Windows it's `%APPDATA%\Claude\claude_desktop_config.json`. Use an absolute working directory or activate the venv where Imervue is installed.
+
+The full protocol surface and per-tool argument reference is in the **MCP Server** section of [docs/en/index.rst](docs/en/index.rst).
 
 ---
 

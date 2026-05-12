@@ -105,6 +105,100 @@ def test_commit_invalidates_composite(qapp):
 
 
 # ---------------------------------------------------------------------------
+# _BezierPenTool.cancel — auto-commit on tool switch
+#
+# Without this, switching tools mid-pen-session left the path attached to
+# the workspace; the layer never received the rasterised stroke so users
+# saw the drawing "disappear" until they clicked another anchor (which
+# revived the overlay because ``_refresh_overlay`` reads the saved path).
+# ---------------------------------------------------------------------------
+
+
+def test_cancel_auto_commits_path_with_two_or_more_anchors(qapp):
+    from Imervue.paint.tool_dispatcher import _BezierPenTool
+
+    ws = PaintWorkspace()
+    try:
+        ws._bezier_pen_path = BezierPath(  # noqa: SLF001
+            nodes=[
+                PathNode(anchor=(10.0, 30.0)),
+                PathNode(anchor=(50.0, 30.0)),
+            ],
+        )
+        ws.state().set_brush(size=8)
+        ws.state().set_foreground((255, 0, 0))
+        layer = ws.canvas().document().active_layer()
+        before = layer.image.copy()
+
+        tool = _BezierPenTool(ws.state())
+        tool.attach_workspace(ws)
+        tool.cancel()
+
+        assert (layer.image != before).any()
+        assert ws._bezier_pen_path.nodes == []  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_cancel_discards_lone_anchor_without_painting(qapp):
+    from Imervue.paint.tool_dispatcher import _BezierPenTool
+
+    ws = PaintWorkspace()
+    try:
+        ws._bezier_pen_path = BezierPath(  # noqa: SLF001
+            nodes=[PathNode(anchor=(10.0, 30.0))],
+        )
+        ws.state().set_brush(size=8)
+        ws.state().set_foreground((255, 0, 0))
+        layer = ws.canvas().document().active_layer()
+        before = layer.image.copy()
+
+        tool = _BezierPenTool(ws.state())
+        tool.attach_workspace(ws)
+        tool.cancel()
+
+        # No segment to rasterise, but the lingering anchor must be
+        # cleared so the next pen session starts clean.
+        assert (layer.image == before).all()
+        assert ws._bezier_pen_path.nodes == []  # noqa: SLF001
+        assert ws._bezier_pen_path.closed is False  # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_cancel_clears_overlay(qapp):
+    from Imervue.paint.tool_dispatcher import _BezierPenTool
+
+    ws = PaintWorkspace()
+    try:
+        captured: list = []
+        tool = _BezierPenTool(ws.state(), overlay_setter=captured.append)
+        tool.attach_workspace(ws)
+        ws._bezier_pen_path = BezierPath(  # noqa: SLF001
+            nodes=[
+                PathNode(anchor=(10.0, 30.0)),
+                PathNode(anchor=(50.0, 30.0)),
+            ],
+        )
+        tool.cancel()
+        assert captured[-1] is None
+    finally:
+        ws.deleteLater()
+
+
+def test_cancel_without_workspace_is_safe(qapp):
+    """When the dispatcher constructs the pen tool but the workspace
+    hasn't called ``attach_workspace`` yet (early-init paths in tests),
+    ``cancel`` must not raise — it just clears its own state."""
+    from Imervue.paint.tool_dispatcher import _BezierPenTool
+    from Imervue.paint import tool_state as ts
+
+    state = ts.load_tool_state()
+    tool = _BezierPenTool(state)
+    tool.cancel()  # must not raise
+
+
+# ---------------------------------------------------------------------------
 # _options_from_state
 # ---------------------------------------------------------------------------
 
