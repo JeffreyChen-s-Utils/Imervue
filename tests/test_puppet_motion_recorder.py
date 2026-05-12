@@ -1,6 +1,8 @@
 """Tests for the motion recorder + bake_to_motion helper."""
 from __future__ import annotations
 
+import pytest
+
 from puppet.canvas import PuppetCanvas
 from puppet.document import (
     Drawable,
@@ -38,7 +40,7 @@ def _doc_with_params() -> PuppetDocument:
 def test_bake_empty_samples_yields_zero_duration_motion():
     motion = bake_to_motion("idle", [])
     assert motion.name == "idle"
-    assert motion.duration == 0.0
+    assert motion.duration == pytest.approx(0.0)
     assert motion.tracks == []
 
 
@@ -76,9 +78,9 @@ def test_bake_uses_relative_time_starting_from_zero():
     ]
     motion = bake_to_motion("late", samples)
     track = motion.tracks[0]
-    assert track.segments[0].p0[0] == 0.0
-    assert track.segments[0].p1[0] == 0.5
-    assert motion.duration == 0.5
+    assert track.segments[0].p0[0] == pytest.approx(0.0)
+    assert track.segments[0].p1[0] == pytest.approx(0.5)
+    assert motion.duration == pytest.approx(0.5)
 
 
 def test_bake_preserves_loop_flag():

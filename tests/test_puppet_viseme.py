@@ -36,8 +36,8 @@ def test_silence_returns_zero_for_both_params():
 
 def test_empty_array_returns_zeros():
     out = audio_to_viseme(np.empty((0,), dtype=np.float32), sample_rate=_SAMPLE_RATE)
-    assert out[DEFAULT_MOUTH_PARAM] == 0.0
-    assert out[DEFAULT_MOUTH_FORM_PARAM] == 0.0
+    assert out[DEFAULT_MOUTH_PARAM] == pytest.approx(0.0)
+    assert out[DEFAULT_MOUTH_FORM_PARAM] == pytest.approx(0.0)
 
 
 def test_low_frequency_tone_skews_form_negative():

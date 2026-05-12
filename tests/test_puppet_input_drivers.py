@@ -71,7 +71,7 @@ def test_blink_open_outside_blink_window():
     duration = 0.2
     interval = 4.0
     # Mid-cycle outside the blink window → fully open
-    assert blink_curve_value(2.0, interval=interval, duration=duration) == 1.0
+    assert blink_curve_value(2.0, interval=interval, duration=duration) == pytest.approx(1.0)
 
 
 def test_blink_loops_with_interval():
@@ -83,8 +83,8 @@ def test_blink_loops_with_interval():
 
 
 def test_blink_invalid_inputs_return_open():
-    assert blink_curve_value(0.5, interval=0, duration=0.2) == 1.0
-    assert blink_curve_value(0.5, interval=4.0, duration=0) == 1.0
+    assert blink_curve_value(0.5, interval=0, duration=0.2) == pytest.approx(1.0)
+    assert blink_curve_value(0.5, interval=4.0, duration=0) == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ def test_blink_invalid_inputs_return_open():
 
 def test_silence_returns_zero():
     arr = np.zeros(1024, dtype=np.float32)
-    assert audio_rms_to_mouth(arr) == 0.0
+    assert audio_rms_to_mouth(arr) == pytest.approx(0.0)
 
 
 def test_loud_signal_saturates_at_one():
@@ -124,4 +124,4 @@ def test_bytes_input_decoded_as_int16():
 
 
 def test_empty_input_returns_zero():
-    assert audio_rms_to_mouth(np.array([], dtype=np.float32)) == 0.0
+    assert audio_rms_to_mouth(np.array([], dtype=np.float32)) == pytest.approx(0.0)

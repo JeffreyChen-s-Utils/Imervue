@@ -73,8 +73,8 @@ def test_drift_phase_offset_shifts_curve():
 
 
 def test_drift_non_positive_period_returns_zero():
-    assert idle_drift_value(1.0, period=0.0) == 0.0
-    assert idle_drift_value(1.0, period=-1.0) == 0.0
+    assert idle_drift_value(1.0, period=0.0) == pytest.approx(0.0)
+    assert idle_drift_value(1.0, period=-1.0) == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

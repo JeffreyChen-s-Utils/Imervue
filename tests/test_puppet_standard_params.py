@@ -100,7 +100,7 @@ def test_standard_parameters_returns_independent_instances():
     first = standard_parameters()
     first[0].default = 99.0
     second = standard_parameters()
-    assert second[0].default != 99.0
+    assert second[0].default != pytest.approx(99.0)
 
 
 # ---------------------------------------------------------------------------

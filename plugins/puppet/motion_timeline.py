@@ -120,7 +120,11 @@ class MotionTimelineWidget(QGraphicsView):
         )
 
     def _draw_segments(self) -> None:
-        assert self._track is not None
+        # _rebuild() gates on ``self._track is None`` before calling this,
+        # so the early-return keeps the runtime defined on the ``-O`` path
+        # (which strips asserts) without a NotImplementedError surface.
+        if self._track is None:
+            return
         curve_pen = QPen(QColor(150, 200, 255), 2)
         ctrl_pen = QPen(QColor(160, 120, 200), 1, Qt.PenStyle.DashLine)
         for index, segment in enumerate(self._track.segments):

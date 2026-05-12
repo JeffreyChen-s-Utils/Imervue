@@ -47,7 +47,7 @@ def test_add_rotation_deformer_targets_all_drawables_by_default():
     assert d is not None
     assert d.type == "rotation"
     assert d.drawables == ["x"]
-    assert d.form["angle"] == 0.0
+    assert d.form["angle"] == pytest.approx(0.0)
     # anchor defaults to canvas centre
     assert d.form["anchor"] == [50.0, 50.0]
 
@@ -105,9 +105,9 @@ def test_add_parameter_defaults():
     doc = _doc_with_drawable()
     assert add_parameter(doc, "ParamAngleX") is True
     p = doc.parameter("ParamAngleX")
-    assert p.min == -1.0
-    assert p.max == 1.0
-    assert p.default == 0.0
+    assert p.min == pytest.approx(-1.0)
+    assert p.max == pytest.approx(1.0)
+    assert p.default == pytest.approx(0.0)
     assert p.keys == []
 
 
@@ -202,7 +202,7 @@ def test_snapshot_returns_independent_copies():
     snap = snapshot_current_forms(doc)
     assert "rot" in snap
     snap["rot"]["angle"] = 999.0
-    assert doc.deformer("rot").form["angle"] == 0.0   # unaffected by mutation
+    assert doc.deformer("rot").form["angle"] == pytest.approx(0.0)   # unaffected by mutation
 
 
 def test_snapshot_empty_for_no_deformers():

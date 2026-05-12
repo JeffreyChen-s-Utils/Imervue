@@ -6,6 +6,8 @@ and the pure-Python view state without forcing a paint cycle.
 """
 from __future__ import annotations
 
+import pytest
+
 from puppet.canvas import PuppetCanvas
 from puppet.document import Drawable, PuppetDocument
 
@@ -29,7 +31,7 @@ def test_canvas_constructs_without_document(qapp):
     c = PuppetCanvas()
     try:
         assert c.document() is None
-        assert c.zoom_factor() == 1.0
+        assert c.zoom_factor() == pytest.approx(1.0)
     finally:
         c.deleteLater()
 

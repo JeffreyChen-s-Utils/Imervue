@@ -128,7 +128,7 @@ def test_default_fade_in_kicks_in_for_motion_without_field(qapp):
     player = MotionPlayer(canvas)
     player.set_default_fade(0.5, 0.5)
     try:
-        ramp, hold = canvas.document().motions
+        ramp, _ = canvas.document().motions
         # Bind ramp first so the next bind has a "previous motion"
         player.set_motion(ramp)
         canvas.set_parameter_value("ParamX", 0.8)
@@ -172,7 +172,7 @@ def test_stop_with_fade_out_enters_fading_state(qapp):
     canvas.load_document(_two_motion_doc())
     player = MotionPlayer(canvas)
     try:
-        ramp, hold = canvas.document().motions
+        _, hold = canvas.document().motions
         # First-bind suppresses fade-in; bind hold and step past its window
         player.set_motion(hold)
         player.seek(0.9)

@@ -258,7 +258,11 @@ class MotionPlayer(QObject):
         )
 
     def _start_fade_out(self) -> None:
-        assert self._motion is not None
+        # ``_can_start_fade_out`` is the only caller and gates on
+        # ``self._motion is not None``; defensively re-check so
+        # ``python -O`` (which strips asserts) still bails safely.
+        if self._motion is None:
+            return
         self._fade_out_total = self._effective_fade_out(self._motion)
         self._fade_out_anchor = time.monotonic()
         self._fade_out_source = dict(self._canvas.parameter_values())

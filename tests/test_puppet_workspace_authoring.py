@@ -3,6 +3,8 @@ deformers / parameters / keys + Save Puppet As… end-to-end.
 """
 from __future__ import annotations
 
+import pytest
+
 from puppet.auto_mesh import puppet_from_png
 from puppet.document_io import load_puppet
 from puppet.workspace import PuppetWorkspace
@@ -101,7 +103,7 @@ def test_set_key_at_current_slider_records_form_snapshot(qapp):
         assert ws.set_key_at_current_slider("Param1") is True
         param = ws._canvas.document().parameter("Param1")   # noqa: SLF001
         assert len(param.keys) == 1
-        assert param.keys[0].value == 0.0
+        assert param.keys[0].value == pytest.approx(0.0)
         assert "rotation_1" in param.keys[0].forms
     finally:
         ws.deleteLater()

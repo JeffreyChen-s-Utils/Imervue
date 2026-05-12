@@ -175,8 +175,8 @@ def test_round_trip_preserves_all_fields(tmp_path):
     assert loaded.deformers[0].form == {"anchor": [5.0, 5.0], "angle": 0.0}
 
     p = loaded.parameters[0]
-    assert p.min == -30.0
-    assert p.max == 30.0
+    assert p.min == pytest.approx(-30.0)
+    assert p.max == pytest.approx(30.0)
     assert len(p.keys) == 3
     assert p.keys[0].forms == {"head_rotation": {"angle": -0.5}}
 

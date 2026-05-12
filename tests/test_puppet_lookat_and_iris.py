@@ -41,8 +41,8 @@ def test_eyeballs_saturate_before_head():
 
 def test_eyeballs_zero_when_canvas_is_zero():
     out = cursor_to_angle_params(50.0, 50.0, 0.0, 0.0)
-    assert out[DEFAULT_DRAG_EYE_X_PARAM] == 0.0
-    assert out[DEFAULT_DRAG_EYE_Y_PARAM] == 0.0
+    assert out[DEFAULT_DRAG_EYE_X_PARAM] == pytest.approx(0.0)
+    assert out[DEFAULT_DRAG_EYE_Y_PARAM] == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

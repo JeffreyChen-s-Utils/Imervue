@@ -6,6 +6,8 @@ server wrapper is covered indirectly by the same handler.
 """
 from __future__ import annotations
 
+import pytest
+
 from puppet.canvas import PuppetCanvas
 from puppet.document import Drawable, Parameter, PuppetDocument
 from puppet.vts_api import (
@@ -176,7 +178,7 @@ def test_parameter_value_returns_current_after_auth(qapp):
         resp = handler.handle_message(_request(
             "ParameterValueRequest", {"name": "ParamAngleX"},
         ))
-        assert resp["data"]["value"] == 0.42
+        assert resp["data"]["value"] == pytest.approx(0.42)
     finally:
         canvas.deleteLater()
 
@@ -219,8 +221,8 @@ def test_inject_writes_parameter_values_into_canvas(qapp):
         ))
         assert resp["data"]["parameterValuesApplied"] == 2
         values = canvas.parameter_values()
-        assert values["ParamAngleX"] == 0.75
-        assert values["ParamMouthOpenY"] == 1.0
+        assert values["ParamAngleX"] == pytest.approx(0.75)
+        assert values["ParamMouthOpenY"] == pytest.approx(1.0)
     finally:
         canvas.deleteLater()
 
@@ -236,7 +238,7 @@ def test_inject_requires_authentication(qapp):
         ))
         assert resp["messageType"] == "APIError"
         # Canvas wasn't touched.
-        assert canvas.parameter_values()["ParamAngleX"] == 0.0
+        assert canvas.parameter_values()["ParamAngleX"] == pytest.approx(0.0)
     finally:
         canvas.deleteLater()
 

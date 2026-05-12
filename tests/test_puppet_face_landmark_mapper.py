@@ -69,7 +69,7 @@ def test_eye_open_near_zero_for_closed_eye():
     arr[LANDMARK_LEFT_EYE_TOP] = (0.62, 0.40, 0.0)
     arr[LANDMARK_LEFT_EYE_BOTTOM] = (0.62, 0.40, 0.0)   # zero gap
     out = landmarks_to_params(arr)
-    assert out["ParamEyeLOpen"] == 0.0
+    assert out["ParamEyeLOpen"] == pytest.approx(0.0)
 
 
 def test_eye_open_max_for_wide_open_eye():

@@ -95,8 +95,8 @@ def test_image_smaller_than_cell_clamps_to_one_cell():
     # Bottom-right vertex sits at the image edge, not at cell-size 100
     xs = [x for x, _ in vertices]
     ys = [y for _, y in vertices]
-    assert max(xs) == 50.0
-    assert max(ys) == 50.0
+    assert max(xs) == pytest.approx(50.0)
+    assert max(ys) == pytest.approx(50.0)
 
 
 def test_non_rgba_input_raises():
