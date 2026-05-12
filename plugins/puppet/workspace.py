@@ -51,6 +51,7 @@ from puppet.cubism_import import (
 )
 from puppet.expression_dock import ExpressionDock
 from puppet.idle_driver import IdleDriver
+from puppet.idle_motion_cycler import IdleMotionCycler
 from puppet.psd_import import puppet_from_psd
 from puppet.requirements import (
     LIPSYNC_PACKAGES,
@@ -117,6 +118,9 @@ class PuppetWorkspace(QMainWindow):
 
         self._input_engine = InputEngine(self._canvas, self)
         self._idle_driver = IdleDriver(self._canvas, self)
+        self._idle_motion_cycler = IdleMotionCycler(
+            self._motion_dock.player(), self._canvas, self,
+        )
         self._vts_server = VTubeStudioServer(self._canvas, self)
         self._recorder = RecordingSession(self._canvas, self)
         self._recorder.finished.connect(self._on_recording_finished)
@@ -246,6 +250,13 @@ class PuppetWorkspace(QMainWindow):
         self._idle_toggle.setCheckable(True)
         self._idle_toggle.toggled.connect(self._toggle_idle)
         bar.addAction(self._idle_toggle)
+
+        self._idle_motion_toggle = QAction(
+            lang.get("puppet_idle_motions", "Idle motions"), self,
+        )
+        self._idle_motion_toggle.setCheckable(True)
+        self._idle_motion_toggle.toggled.connect(self._toggle_idle_motions)
+        bar.addAction(self._idle_motion_toggle)
 
         self._vts_toggle = QAction(
             lang.get("puppet_vts_api", "VTS API"), self,
@@ -650,6 +661,20 @@ class PuppetWorkspace(QMainWindow):
             "puppet_idle_on" if enabled else "puppet_idle_off",
             "Auto idle on" if enabled else "Auto idle off",
         )
+
+    def _toggle_idle_motions(self, enabled: bool) -> None:
+        """Toggle the Idle motion cycler. Independent of ``_toggle_idle``:
+        the breath/drift driver runs at parameter level, the cycler at
+        motion level — both can be enabled together for the fullest
+        Live2D-style "alive" feel."""
+        self._idle_motion_cycler.set_enabled(enabled)
+        self._announce(
+            "puppet_idle_motions_on" if enabled else "puppet_idle_motions_off",
+            "Idle motions on" if enabled else "Idle motions off",
+        )
+
+    def idle_motion_cycler(self) -> IdleMotionCycler:
+        return self._idle_motion_cycler
 
     # ---- VTube Studio API ---------------------------------------------
 
