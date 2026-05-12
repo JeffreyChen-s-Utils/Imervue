@@ -1426,3 +1426,100 @@ GPS 地理標記
    imervue 資料夾路徑             # 直接開啟指定資料夾
    imervue --debug                # 啟用除錯模式
    imervue --software_opengl      # 使用軟體渲染（顯卡不支援時）
+
+----
+
+MCP 伺服器
+----------
+
+Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
+伺服器,讓 AI 助理(Claude Code、Claude Desktop、Cursor、Cline …)
+可以直接呼叫專案的純邏輯輔助函式,而不需要啟動 GUI。一行指令啟動::
+
+   python -m Imervue.mcp_server
+
+伺服器不依賴 Qt,各工具按需懶載入。
+
+可用工具
+^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 工具
+     - 用途
+   * - ``list_images``
+     - 列出資料夾內的圖片(路徑、大小、修改時間)。傳
+       ``recursive=true`` 可遞迴遍歷子資料夾。
+   * - ``read_image_metadata``
+     - 單張圖片的尺寸、格式、EXIF、XMP sidecar。缺資料就回對應的
+       空值,不會 raise。
+   * - ``read_xmp_tags``
+     - 僅讀 XMP 的快速路徑 — 評等、色標、關鍵字、標題、描述。
+   * - ``convert_format``
+     - 圖片格式轉換。目標格式由目標檔案的副檔名決定(``png`` /
+       ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``)。
+       JPEG/WebP 可選擇 ``quality``(1–100)。
+   * - ``puppet_from_png``
+     - 用 puppet 插件的 auto-mesh 從 PNG 建出 ``.puppet`` 動畫檔。
+       自動帶入 Cubism 標準參數,匯入後可直接被驅動。
+   * - ``puppet_inspect``
+     - 開啟 ``.puppet`` 並回傳結構化盤點:drawables、deformers、
+       parameters、motions、expressions、hit areas、parts、
+       parameter blends、physics rigs。
+
+所有工具的回傳會 JSON 序列化後包進 MCP 的 ``content`` / ``text``
+信封;客戶端可從 ``text`` 欄位再 parse 回結構化資料。
+
+Claude Code(專案層級)
+^^^^^^^^^^^^^^^^^^^^^^
+
+repo 根目錄已附專案層級的 ``.mcp.json``:
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "imervue": {
+         "type": "stdio",
+         "command": "python",
+         "args": ["-m", "Imervue.mcp_server"]
+       }
+     }
+   }
+
+用 Claude Code 開啟 repo 任何子目錄都會自動探索到這個伺服器。
+首次使用時 Claude Code 會詢問是否啟用專案 MCP 伺服器,接受即可。
+
+Claude Desktop
+^^^^^^^^^^^^^^
+
+把同樣那段加進 Claude Desktop 的設定檔:
+
+* macOS:``~/Library/Application Support/Claude/claude_desktop_config.json``
+* Windows:``%APPDATA%\Claude\claude_desktop_config.json``
+
+請使用絕對工作目錄,或啟用裝了 Imervue 的 venv —
+``python`` 必須能解析到能 ``import Imervue`` 的直譯器。
+
+通訊協定
+^^^^^^^^
+
+伺服器走 MCP ``2025-03-26`` 版的 stdio JSON-RPC 2.0:
+
+* ``initialize`` — 握手,廣告 ``capabilities.tools``。
+* ``tools/list`` — 列出已註冊工具與其 JSON-Schema 輸入定義。
+* ``tools/call`` — 用 ``{"name", "arguments"}`` 呼叫工具,結果回
+  在 ``content`` 陣列。
+* ``notifications/*`` — 靜默接受(不回應)。
+
+實作在 ``Imervue/mcp_server/``:
+
+* ``server.py`` — 協定迴圈 + 工具註冊表
+* ``tools.py`` — 各工具的 handler 與預設工具集
+* ``__main__.py`` — ``python -m Imervue.mcp_server`` 進入點
+
+自訂工具可以直接 :class:`MCPServer` 然後 :meth:`MCPServer.register`,
+透過 :meth:`MCPServer.handle_message` 餵訊息(或直接呼叫
+:func:`run` 跑 stdio 迴圈)。

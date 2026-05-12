@@ -1717,3 +1717,112 @@ Command-Line Usage
    imervue /path/to/folder        # Open a specific folder
    imervue --debug                # Enable debug mode
    imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+
+----
+
+MCP Server
+----------
+
+Imervue ships a built-in `Model Context Protocol <https://modelcontextprotocol.io>`_
+server that lets AI assistants (Claude Code, Claude Desktop, Cursor,
+Cline, …) call into the project's pure-logic helpers without a
+running GUI. Start it with::
+
+   python -m Imervue.mcp_server
+
+The server is Qt-free and only loads what each tool needs at call
+time.
+
+Available Tools
+^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Tool
+     - Purpose
+   * - ``list_images``
+     - List image files in a folder (path, size, mtime). Pass
+       ``recursive=true`` to walk subfolders.
+   * - ``read_image_metadata``
+     - Dimensions, format, EXIF tags and XMP sidecar fields for one
+       image. Missing data is reported as the appropriate empty value
+       rather than raising.
+   * - ``read_xmp_tags``
+     - Fast path that only reads the XMP sidecar — rating, color
+       label, keywords, title, description.
+   * - ``convert_format``
+     - Convert one image to another format. Destination format is
+       inferred from the destination suffix (``png`` / ``jpg`` /
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). Optional
+       ``quality`` (1–100) applies to JPEG/WebP.
+   * - ``puppet_from_png``
+     - Build a ``.puppet`` rig from a PNG using the puppet plugin's
+       auto-mesh. Seeds the Cubism-standard parameter catalogue so
+       the rig is immediately drivable.
+   * - ``puppet_inspect``
+     - Open a ``.puppet`` archive and return a structured inventory:
+       drawables, deformers, parameters, motions, expressions, hit
+       areas, parts, parameter blends and physics rigs.
+
+All tools return JSON-serialised payloads in the MCP ``content`` /
+``text`` envelope; structured payloads can be parsed back from the
+``text`` field on the client side.
+
+Claude Code (Project-Level)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The repository ships a project-level ``.mcp.json`` at the repo root:
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "imervue": {
+         "type": "stdio",
+         "command": "python",
+         "args": ["-m", "Imervue.mcp_server"]
+       }
+     }
+   }
+
+Opening any subdirectory of the repo in Claude Code auto-discovers
+this server. Claude Code prompts before enabling project servers the
+first time — accept the prompt to use it.
+
+Claude Desktop
+^^^^^^^^^^^^^^
+
+Add the same entry to your Claude Desktop config:
+
+* macOS: ``~/Library/Application Support/Claude/claude_desktop_config.json``
+* Windows: ``%APPDATA%\Claude\claude_desktop_config.json``
+
+Use an absolute working directory or activate a virtualenv in which
+Imervue is installed; the ``python`` invocation must resolve to an
+interpreter that can ``import Imervue``.
+
+Protocol Surface
+^^^^^^^^^^^^^^^^
+
+The server implements the stdio JSON-RPC 2.0 transport of MCP
+version ``2025-03-26``:
+
+* ``initialize`` — handshake; advertises ``capabilities.tools``.
+* ``tools/list`` — enumerate the registered tools with their
+  JSON-Schema input definitions.
+* ``tools/call`` — invoke a tool with ``{"name", "arguments"}``;
+  results come back inside the ``content`` array.
+* ``notifications/*`` — silently accepted (no response).
+
+The implementation lives in ``Imervue/mcp_server/``:
+
+* ``server.py`` — protocol loop + tool registry.
+* ``tools.py`` — handler functions and the default tool definitions.
+* ``__main__.py`` — ``python -m Imervue.mcp_server`` entry point.
+
+Custom tools can be registered by constructing :class:`MCPServer`
+manually, calling :meth:`MCPServer.register`, and feeding messages
+through :meth:`MCPServer.handle_message` (or driving the stdio loop
+with the built-in :func:`run` helper).

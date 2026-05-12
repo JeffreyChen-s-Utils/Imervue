@@ -36,6 +36,7 @@
 - [Paint Workspace](#paint-workspace)
 - [Puppet Workspace](#puppet-workspace)
 - [Plugin System](#plugin-system)
+- [MCP Server](#mcp-server)
 - [Multi-Language Support](#multi-language-support)
 - [User Settings](#user-settings)
 - [Architecture](#architecture)
@@ -647,6 +648,47 @@ Imervue supports a plugin system for extending functionality. See the full [Plug
 ### Plugin Downloader
 
 Plugins can be downloaded from the official repository via **Plugins > Download Plugins**. The downloader fetches from [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) on GitHub.
+
+---
+
+## MCP Server
+
+Imervue ships with a built-in [Model Context Protocol](https://modelcontextprotocol.io) server so AI assistants (Claude Code, Claude Desktop, Cursor, Cline, …) can call into the project's pure-logic helpers without a running GUI. The server is Qt-free and starts with one command:
+
+```sh
+python -m Imervue.mcp_server
+```
+
+### Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_images` | List image files in a folder (path, size, mtime) — supports recursion |
+| `read_image_metadata` | Dimensions, format, EXIF, and XMP sidecar for one image |
+| `read_xmp_tags` | XMP-only fast path: rating, label, keywords, title, description |
+| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP |
+| `puppet_from_png` | Build a `.puppet` rig from a PNG (auto-mesh + standard parameters) |
+| `puppet_inspect` | Open a `.puppet` and return its inventory (drawables, deformers, parameters, motions, expressions, hit areas, parts, blends, physics) |
+
+### Wiring it up
+
+**Claude Code (project-level)** — the repository ships a `.mcp.json` at the root. Opening any directory under the repo with Claude Code auto-discovers the server:
+
+```json
+{
+  "mcpServers": {
+    "imervue": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "Imervue.mcp_server"]
+    }
+  }
+}
+```
+
+**Claude Desktop / other MCP clients** — add the same entry to your client's `claude_desktop_config.json` (or equivalent). On macOS that lives at `~/Library/Application Support/Claude/claude_desktop_config.json`; on Windows it's `%APPDATA%\Claude\claude_desktop_config.json`. Use an absolute working directory or activate the venv where Imervue is installed.
+
+The full protocol surface and per-tool argument reference is in the **MCP Server** section of [docs/en/index.rst](docs/en/index.rst).
 
 ---
 

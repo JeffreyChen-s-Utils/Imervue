@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "imervue": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "Imervue.mcp_server"]
+    }
+  }
+}
