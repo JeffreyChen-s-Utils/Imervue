@@ -26,6 +26,7 @@ from OpenGL.GL import (
     GL_FALSE,
     GL_KEEP,
     GL_LINEAR,
+    GL_LINE_LOOP,
     GL_ONE,
     GL_ONE_MINUS_SRC_ALPHA,
     GL_QUADS,
@@ -166,6 +167,10 @@ class PuppetCanvas(QOpenGLWidget):
         self._visibility: dict[str, bool] = {}
         self._part_opacity: dict[str, float] = {}
         self._drawable_tint: dict[str, tuple[float, float, float]] = {}
+        # Editor selection — when the bone tree dock picks a deformer
+        # we draw a highlight overlay so the user can see which one
+        # they targeted without trying to interpret the canvas blind.
+        self._selected_deformer: str | None = None
         self._physics = PhysicsEngine()
         self._physics_outputs: dict[str, float] = {}
         # Mesh-edit mode lets the user drag vertices; off by default.
@@ -233,6 +238,20 @@ class PuppetCanvas(QOpenGLWidget):
 
     def zoom_factor(self) -> float:
         return self._zoom
+
+    def selected_deformer(self) -> str | None:
+        return self._selected_deformer
+
+    def set_selected_deformer(self, deformer_id: str | None) -> None:
+        """Pick which deformer the editor wants highlighted on canvas.
+        The selection overlay draws an anchor marker plus a bounding
+        box around the targeted drawables so the user can see what
+        the bone tree click referred to."""
+        new_value = deformer_id if isinstance(deformer_id, str) else None
+        if new_value == self._selected_deformer:
+            return
+        self._selected_deformer = new_value
+        self.update()
 
     def _recompute_deformed_vertices(self) -> None:
         if self._document is None:
@@ -419,6 +438,7 @@ class PuppetCanvas(QOpenGLWidget):
         glScalef(self._zoom, self._zoom, 1.0)
         self._draw_transparency_backdrop()
         self._draw_drawables()
+        self._draw_selection_overlay()
         glPopMatrix()
 
     # ---- rendering ------------------------------------------------------
@@ -509,6 +529,79 @@ class PuppetCanvas(QOpenGLWidget):
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
         self._draw_indexed(verts, uvs, indices)
         glDisable(GL_STENCIL_TEST)
+
+    def _draw_selection_overlay(self) -> None:   # pragma: no cover - GL needs display
+        """If a bone-tree row is selected, draw a marker so the user
+        can see which deformer the dock referred to. Two pieces:
+
+        * Yellow ring at the deformer's anchor (rotation only — warp
+          deformers have no single anchor; their grid bounds become
+          the bbox below).
+        * Yellow bounding rectangle around the union of the
+          deformer's target drawables (using their *deformed* vertex
+          positions, so the box follows the live rig).
+        """
+        if self._document is None or self._selected_deformer is None:
+            return
+        deformer = self._document.deformer(self._selected_deformer)
+        if deformer is None:
+            return
+        bbox = self._selection_bbox(deformer)
+        glDisable(GL_TEXTURE_2D)
+        glColor4f(1.0, 0.92, 0.20, 0.85)
+        if bbox is not None:
+            x0, y0, x1, y1 = bbox
+            glBegin(GL_LINE_LOOP)
+            glVertex2f(x0, y0)
+            glVertex2f(x1, y0)
+            glVertex2f(x1, y1)
+            glVertex2f(x0, y1)
+            glEnd()
+        anchor = deformer.form.get("anchor") if deformer.type == "rotation" else None
+        if isinstance(anchor, (list, tuple)) and len(anchor) == 2:
+            self._draw_anchor_ring(float(anchor[0]), float(anchor[1]))
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+
+    def _selection_bbox(   # pragma: no cover - GL needs display
+        self, deformer,
+    ) -> tuple[float, float, float, float] | None:
+        if self._document is None:
+            return None
+        xs: list[float] = []
+        ys: list[float] = []
+        for drawable_id in deformer.drawables:
+            drawable = self._document.drawable(drawable_id)
+            if drawable is None:
+                continue
+            verts = self._deformed_vertices.get(drawable.id)
+            if verts is None or len(verts) == 0:
+                if not drawable.vertices:
+                    continue
+                arr = np.asarray(drawable.vertices, dtype=np.float64)
+            else:
+                arr = np.asarray(verts, dtype=np.float64).reshape(-1, 2)
+            if arr.size == 0:
+                continue
+            xs.append(float(arr[:, 0].min()))
+            xs.append(float(arr[:, 0].max()))
+            ys.append(float(arr[:, 1].min()))
+            ys.append(float(arr[:, 1].max()))
+        if not xs or not ys:
+            return None
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    def _draw_anchor_ring(  # pragma: no cover - GL needs display
+        self, ax: float, ay: float,
+    ) -> None:
+        import math as _math
+        segments = 24
+        radius = 8.0 / max(self._zoom, 0.05)
+        glBegin(GL_LINE_LOOP)
+        for i in range(segments):
+            theta = 2.0 * _math.pi * i / segments
+            glVertex2f(ax + radius * _math.cos(theta), ay + radius * _math.sin(theta))
+        glEnd()
 
     @staticmethod
     def _draw_indexed(  # pragma: no cover - GL needs display

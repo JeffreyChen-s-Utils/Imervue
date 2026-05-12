@@ -181,6 +181,41 @@ def test_dock_reparent_rejects_cycle(qapp):
         canvas.deleteLater()
 
 
+def test_canvas_selection_round_trips(qapp):
+    """``set_selected_deformer`` stores the id and clears on ``None``,
+    and ignores a redundant set so paintGL doesn't re-render for free."""
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    try:
+        assert canvas.selected_deformer() is None
+        canvas.set_selected_deformer("a")
+        assert canvas.selected_deformer() == "a"
+        canvas.set_selected_deformer(None)
+        assert canvas.selected_deformer() is None
+    finally:
+        canvas.deleteLater()
+
+
+def test_dock_selection_signal_drives_canvas(qapp):
+    """Clicking a row in the dock emits ``deformer_selected`` —
+    when the workspace wires that to ``canvas.set_selected_deformer``
+    the canvas picks the same id up. We connect the signal manually
+    here to mirror what the workspace does."""
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_two_deformers())
+    dock = BoneTreeDock(canvas)
+    try:
+        dock.deformer_selected.connect(canvas.set_selected_deformer)
+        # Simulate a click via the public signal — itemClicked needs a
+        # QTreeWidgetItem we'd have to dig out of the model, so emit
+        # the signal directly instead.
+        dock.deformer_selected.emit("a")
+        assert canvas.selected_deformer() == "a"
+    finally:
+        dock.deleteLater()
+        canvas.deleteLater()
+
+
 def test_dock_reparent_clears_parent_when_new_parent_is_none(qapp):
     canvas = PuppetCanvas()
     doc = _doc_with_two_deformers()

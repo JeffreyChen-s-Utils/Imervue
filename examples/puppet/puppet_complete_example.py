@@ -124,27 +124,13 @@ MOUTH_CENTRE = (CANVAS_W // 2, 220)
 LIMB_THICKNESS = 38
 LEG_THICKNESS = 46
 
-# Palette — chibi anime style. No pure black so the rig doesn't look
-# like a logo; warm skin, soft lavender hair, navy + white sailor top.
-SKIN_RGB = (252, 220, 195)
-SKIN_SHADOW = (228, 188, 165)
-HAIR_RGB = (155, 130, 200)
-HAIR_SHADOW = (122, 100, 168)
-JACKET_RGB = (72, 95, 162)
-COLLAR_RGB = (250, 250, 252)
-COLLAR_TRIM = (60, 80, 145)
-SCARF_RGB = (208, 78, 92)
-SKIRT_RGB = (92, 72, 132)
-SKIRT_SHADOW = (66, 50, 100)
-SHOE_RGB = (60, 56, 72)
-SOCK_RGB = (250, 250, 252)
-EYE_WHITE = (252, 252, 252)
-EYE_IRIS = (110, 175, 220)
-EYE_IRIS_SHADOW = (78, 138, 188)
-EYE_PUPIL = (38, 48, 72)
-EYE_OUTLINE = (52, 40, 68)
-MOUTH_RGB = (216, 110, 130)
-BLUSH_RGB = (255, 180, 188, 130)
+# Palette — deliberately minimal. Five colours total; the rig is a
+# demonstration of the engine, not a character-design exercise.
+SKIN_RGB = (244, 207, 178)
+HAIR_RGB = (104, 88, 132)
+BODY_RGB = (88, 108, 152)
+EYE_RGB = (45, 38, 60)
+MOUTH_RGB = (172, 92, 110)
 
 
 # ---------------------------------------------------------------------------
@@ -190,367 +176,126 @@ def _png_bytes(image: Image.Image) -> bytes:
 
 
 def _draw_head() -> Image.Image:
-    """Chibi-style face: skin oval slightly taller than wide, two ear
-    blobs, three-clump bangs across the forehead, blush dots, and a
-    soft nose hint. The eyes and mouth are separate drawables so they
-    can cross-fade via opacity keys."""
+    """Plain skin circle with a wide hair cap sitting on top — no
+    bangs, ears, or blush. Five primitives total."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         cx, cy = _scale_point(HEAD_CENTRE)
         r = _scale(HEAD_RADIUS)
-        # Slight chin taper — head is taller than it is wide
-        d.ellipse(
-            (cx - r, cy - int(r * 1.08),
-             cx + r, cy + int(r * 1.02)),
-            fill=SKIN_RGB,
-        )
-        # Ears — small ovals tucked at the sides
-        ear_w, ear_h = _scale(14), _scale(22)
-        d.ellipse(
-            (cx - r - ear_w // 2 + _scale(4), cy - ear_h // 2,
-             cx - r + ear_w // 2 + _scale(4), cy + ear_h // 2),
-            fill=SKIN_RGB,
-        )
-        d.ellipse(
-            (cx + r - ear_w // 2 - _scale(4), cy - ear_h // 2,
-             cx + r + ear_w // 2 - _scale(4), cy + ear_h // 2),
-            fill=SKIN_RGB,
-        )
-        # Bangs — wide cap covering the forehead to the eyebrow line,
-        # then three small clumps poking just below it as bang tips,
-        # plus a small wisp between the eyes. Cap_bot stays well above
-        # the eye centres so the eyes never disappear under the hair.
-        cap_top = cy - int(r * 1.10)
-        cap_bot = cy - int(r * 0.35)
-        d.ellipse(
-            (cx - int(r * 1.02), cap_top,
-             cx + int(r * 1.02), cap_bot),
-            fill=HAIR_RGB,
-        )
-        # Bang tips — small ellipses overlapping the cap's lower edge
-        for cx_frac, c_r_frac in [(-0.55, 0.22), (0.05, 0.26), (0.60, 0.20)]:
-            ccx = cx + int(r * cx_frac)
-            cr = int(r * c_r_frac)
-            tip_centre_y = cap_bot - int(cr * 0.35)
-            d.ellipse(
-                (ccx - int(cr * 0.85), tip_centre_y - cr,
-                 ccx + int(cr * 0.85), tip_centre_y + int(cr * 0.55)),
-                fill=HAIR_RGB,
-            )
-        # Centre wisp — small triangular bang pointing between the eyes
-        wisp_top_y = cap_bot - _scale(6)
-        wisp_tip_y = cap_bot + _scale(10)
-        d.polygon(
-            [
-                (cx - _scale(8), wisp_top_y),
-                (cx + _scale(8), wisp_top_y),
-                (cx, wisp_tip_y),
-            ],
-            fill=HAIR_RGB,
-        )
-        # Cheek blush dots
-        blush_r = _scale(14)
-        blush_y = cy + int(r * 0.30)
-        for sign in (-1, 1):
-            blush_x = cx + sign * int(r * 0.60)
-            d.ellipse(
-                (blush_x - blush_r, blush_y - blush_r,
-                 blush_x + blush_r, blush_y + blush_r),
-                fill=BLUSH_RGB,
-            )
-        # Nose — single soft tick
-        nose_x = cx
-        nose_y = cy + int(r * 0.08)
-        d.line(
-            (nose_x, nose_y, nose_x, nose_y + _scale(8)),
-            fill=SKIN_SHADOW, width=_scale(2),
+        # Skin circle
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=SKIN_RGB)
+        # Hair cap — sits over the top of the head, ending above the
+        # eye line so the eyes always read clearly.
+        d.chord(
+            (cx - int(r * 1.02), cy - int(r * 1.05),
+             cx + int(r * 1.02), cy + int(r * 0.05)),
+            start=180, end=360, fill=HAIR_RGB,
         )
     return _supersampled(paint)
 
 
 def _draw_body() -> Image.Image:
-    """Sailor-style top with white V-collar over a navy jacket, red
-    scarf knot, and a pleated skirt below the hip line."""
+    """Single trapezoidal torso — one shape, one colour."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         neck = _scale_point(NECK_XY)
         hip_l = _scale_point(HIP_LEFT)
         hip_r = _scale_point(HIP_RIGHT)
-        # Jacket trapezoid — slightly tapered at the waist
         d.polygon(
             [
-                (neck[0] - _scale(48), neck[1]),
-                (neck[0] + _scale(48), neck[1]),
-                (hip_r[0] + _scale(22), hip_r[1]),
-                (hip_l[0] - _scale(22), hip_l[1]),
+                (neck[0] - _scale(42), neck[1]),
+                (neck[0] + _scale(42), neck[1]),
+                (hip_r[0] + _scale(20), hip_r[1]),
+                (hip_l[0] - _scale(20), hip_l[1]),
             ],
-            fill=JACKET_RGB,
+            fill=BODY_RGB,
         )
-        # Sailor collar — wraps around the shoulders, drops to a V
-        collar_top = neck[1] - _scale(4)
-        collar_v_y = neck[1] + _scale(50)
-        d.polygon(
-            [
-                (neck[0] - _scale(55), collar_top),
-                (neck[0] - _scale(32), collar_top + _scale(8)),
-                (neck[0] - _scale(28), collar_v_y - _scale(6)),
-                (neck[0], collar_v_y),
-                (neck[0] + _scale(28), collar_v_y - _scale(6)),
-                (neck[0] + _scale(32), collar_top + _scale(8)),
-                (neck[0] + _scale(55), collar_top),
-                (neck[0] + _scale(48), collar_top + _scale(40)),
-                (neck[0] - _scale(48), collar_top + _scale(40)),
-            ],
-            fill=COLLAR_RGB,
-        )
-        # Collar trim — two narrow lines along the V
-        d.line(
-            (neck[0] - _scale(48), collar_top + _scale(40),
-             neck[0], collar_v_y),
-            fill=COLLAR_TRIM, width=_scale(3),
-        )
-        d.line(
-            (neck[0] + _scale(48), collar_top + _scale(40),
-             neck[0], collar_v_y),
-            fill=COLLAR_TRIM, width=_scale(3),
-        )
-        # Scarf knot at the V tip
-        d.polygon(
-            [
-                (neck[0] - _scale(10), collar_v_y),
-                (neck[0] + _scale(10), collar_v_y),
-                (neck[0] + _scale(7), collar_v_y + _scale(20)),
-                (neck[0] - _scale(7), collar_v_y + _scale(20)),
-            ],
-            fill=SCARF_RGB,
-        )
-        # Skirt — pleats hinted with vertical shadow lines
-        skirt_top_y = hip_l[1] + _scale(2)
-        skirt_bot_y = hip_l[1] + _scale(60)
-        skirt_l = hip_l[0] - _scale(50)
-        skirt_r = hip_r[0] + _scale(50)
-        d.polygon(
-            [
-                (hip_l[0] - _scale(18), skirt_top_y),
-                (hip_r[0] + _scale(18), skirt_top_y),
-                (skirt_r, skirt_bot_y),
-                (skirt_l, skirt_bot_y),
-            ],
-            fill=SKIRT_RGB,
-        )
-        # Pleat shadow lines
-        n_pleats = 5
-        pleat_span = skirt_r - skirt_l
-        for i in range(1, n_pleats):
-            t = i / n_pleats
-            x_top = (hip_l[0] - _scale(18)) + int(
-                t * (hip_r[0] + _scale(18) - (hip_l[0] - _scale(18))),
-            )
-            x_bot = skirt_l + int(t * pleat_span)
-            d.line(
-                (x_top, skirt_top_y + _scale(6), x_bot, skirt_bot_y),
-                fill=SKIRT_SHADOW, width=_scale(2),
-            )
     return _supersampled(paint)
 
 
 def _draw_arm(start: tuple[int, int], tip: tuple[int, int]) -> Image.Image:
-    """Tapered sleeve + skin forearm + small round hand. Two-segment
-    construction so the arm has visible "elbow taper" instead of a
-    uniform cylinder."""
+    """Tapered limb in one piece — shoulder slightly wider than the
+    hand. No sleeve, no cuff."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         sx, sy = _scale_point(start)
         tx, ty = _scale_point(tip)
         dx, dy = tx - sx, ty - sy
         length = max(1.0, math.hypot(dx, dy))
         nx, ny = -dy / length, dx / length
-        shoulder_w = _scale(LIMB_THICKNESS // 2 + 4)
-        elbow_w = _scale(LIMB_THICKNESS // 2 - 2)
-        wrist_w = _scale(LIMB_THICKNESS // 2 - 10)
-        # Elbow point — 60% down the arm
-        ex = sx + dx * 0.60
-        ey = sy + dy * 0.60
-        # Sleeve (shoulder → elbow): jacket colour
+        shoulder_w = _scale(LIMB_THICKNESS // 2 + 2)
+        hand_w = _scale(LIMB_THICKNESS // 2 - 6)
         d.polygon(
             [
                 (sx + nx * shoulder_w, sy + ny * shoulder_w),
                 (sx - nx * shoulder_w, sy - ny * shoulder_w),
-                (ex - nx * elbow_w, ey - ny * elbow_w),
-                (ex + nx * elbow_w, ey + ny * elbow_w),
-            ],
-            fill=JACKET_RGB,
-        )
-        # Sleeve cuff — white collar trim band right at the elbow
-        cuff_inner = 0.55
-        ix = sx + dx * cuff_inner
-        iy = sy + dy * cuff_inner
-        cw = _scale(LIMB_THICKNESS // 2 - 1)
-        d.polygon(
-            [
-                (ix + nx * cw, iy + ny * cw),
-                (ix - nx * cw, iy - ny * cw),
-                (ex - nx * elbow_w, ey - ny * elbow_w),
-                (ex + nx * elbow_w, ey + ny * elbow_w),
-            ],
-            fill=COLLAR_RGB,
-        )
-        # Forearm (elbow → wrist): skin
-        d.polygon(
-            [
-                (ex + nx * elbow_w, ey + ny * elbow_w),
-                (ex - nx * elbow_w, ey - ny * elbow_w),
-                (tx - nx * wrist_w, ty - ny * wrist_w),
-                (tx + nx * wrist_w, ty + ny * wrist_w),
+                (tx - nx * hand_w, ty - ny * hand_w),
+                (tx + nx * hand_w, ty + ny * hand_w),
             ],
             fill=SKIN_RGB,
         )
-        # Hand (round disc, slightly larger than the wrist)
-        hand_r = _scale(17)
+        # Round hand cap
+        hand_r = _scale(16)
         d.ellipse(
-            (tx - hand_r, ty - hand_r + _scale(2),
-             tx + hand_r, ty + hand_r + _scale(2)),
+            (tx - hand_r, ty - hand_r, tx + hand_r, ty + hand_r),
             fill=SKIN_RGB,
         )
     return _supersampled(paint)
 
 
 def _draw_leg(hip: tuple[int, int], foot: tuple[int, int]) -> Image.Image:
-    """Skin leg with white knee-high sock + dark shoe."""
+    """Tapered limb in one piece — no sock, no shoe."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         hx, hy = _scale_point(hip)
         fx, fy = _scale_point(foot)
-        # Bare-skin upper leg
-        upper_w = _scale(LEG_THICKNESS // 2 + 2)
-        knee_y = (hy + fy) // 2
-        knee_x = (hx + fx) // 2
+        hip_w = _scale(LEG_THICKNESS // 2 + 2)
+        foot_w = _scale(LEG_THICKNESS // 2 - 8)
         d.polygon(
             [
-                (hx - upper_w, hy),
-                (hx + upper_w, hy),
-                (knee_x + upper_w - _scale(4), knee_y),
-                (knee_x - upper_w + _scale(4), knee_y),
+                (hx - hip_w, hy),
+                (hx + hip_w, hy),
+                (fx + foot_w, fy),
+                (fx - foot_w, fy),
             ],
-            fill=SKIN_RGB,
+            fill=BODY_RGB,
         )
-        # White knee-high sock from the knee down to the shoe
-        sock_top_w = _scale(LEG_THICKNESS // 2 - 2)
-        sock_bot_w = _scale(LEG_THICKNESS // 2 - 8)
-        d.polygon(
-            [
-                (knee_x - sock_top_w, knee_y),
-                (knee_x + sock_top_w, knee_y),
-                (fx + sock_bot_w, fy - _scale(8)),
-                (fx - sock_bot_w, fy - _scale(8)),
-            ],
-            fill=SOCK_RGB,
-        )
-        # Sock band — narrow shadow line at the top of the sock
-        d.line(
-            (knee_x - sock_top_w, knee_y + _scale(4),
-             knee_x + sock_top_w, knee_y + _scale(4)),
-            fill=(220, 220, 226), width=_scale(2),
-        )
-        # Shoe — squat oval at the foot
+        # Simple foot oval
         d.ellipse(
-            (fx - _scale(28), fy - _scale(12),
-             fx + _scale(28), fy + _scale(20)),
-            fill=SHOE_RGB,
+            (fx - _scale(22), fy - _scale(8),
+             fx + _scale(22), fy + _scale(16)),
+            fill=EYE_RGB,
         )
     return _supersampled(paint)
 
 
 def _draw_eye(centre: tuple[int, int], *, open_: bool) -> Image.Image:
-    """Anime-style eye when open: rounded outline + sclera + iris +
-    pupil + highlight + lower-lash hint. The closed variant is a
-    single curved lash arc — the workspace cross-fades between the
-    two via ``ParamEyeLOpen`` / ``ParamEyeROpen`` opacity keys."""
+    """Open eye = filled circle. Closed eye = single arc. The
+    workspace cross-fades the two via ``ParamEyeLOpen`` / ``ParamEyeROpen``."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         cx, cy = _scale_point(centre)
         r = _scale(EYE_RADIUS)
         if open_:
-            # Outer lid (slightly almond, taller than wide)
-            d.ellipse(
-                (cx - r, cy - int(r * 1.15),
-                 cx + r, cy + int(r * 1.15)),
-                fill=EYE_OUTLINE,
-            )
-            # Sclera — slightly smaller than the lid so the outline shows
-            d.ellipse(
-                (cx - int(r * 0.85), cy - int(r * 0.95),
-                 cx + int(r * 0.85), cy + int(r * 0.95)),
-                fill=EYE_WHITE,
-            )
-            # Iris — fills most of the visible eye
-            d.ellipse(
-                (cx - int(r * 0.75), cy - int(r * 0.65),
-                 cx + int(r * 0.75), cy + int(r * 0.85)),
-                fill=EYE_IRIS,
-            )
-            # Iris shadow at the bottom — adds depth
-            d.chord(
-                (cx - int(r * 0.75), cy - int(r * 0.65),
-                 cx + int(r * 0.75), cy + int(r * 0.85)),
-                start=200, end=340,
-                fill=EYE_IRIS_SHADOW,
-            )
-            # Pupil
-            d.ellipse(
-                (cx - int(r * 0.35), cy - int(r * 0.25),
-                 cx + int(r * 0.35), cy + int(r * 0.45)),
-                fill=EYE_PUPIL,
-            )
-            # Catchlight — bright spot upper-left
-            d.ellipse(
-                (cx - int(r * 0.45), cy - int(r * 0.55),
-                 cx - int(r * 0.05), cy - int(r * 0.10)),
-                fill=EYE_WHITE,
-            )
-            # Secondary tiny catchlight lower-right
-            d.ellipse(
-                (cx + int(r * 0.15), cy + int(r * 0.20),
-                 cx + int(r * 0.40), cy + int(r * 0.50)),
-                fill=EYE_WHITE,
-            )
+            d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=EYE_RGB)
         else:
-            # Closed eyelash arc — sweeps in a happy "u" shape
             d.arc(
                 (cx - r, cy - int(r * 0.5),
                  cx + r, cy + int(r * 0.5)),
                 start=200, end=340,
-                fill=EYE_OUTLINE, width=_scale(4),
+                fill=EYE_RGB, width=_scale(3),
             )
-            # Tiny lash flick at each end
-            for sign in (-1, 1):
-                lash_x = cx + sign * r
-                d.line(
-                    (lash_x, cy - _scale(2),
-                     lash_x + sign * _scale(5), cy - _scale(6)),
-                    fill=EYE_OUTLINE, width=_scale(2),
-                )
     return _supersampled(paint)
 
 
 def _draw_mouth(open_: bool) -> Image.Image:
-    """Closed mouth = small upward arc (smile). Open mouth = small
-    oval with a tongue-pink lower-lip highlight."""
+    """Closed = single smile arc. Open = small filled oval."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         cx, cy = _scale_point(MOUTH_CENTRE)
         if open_:
             r = _scale(10)
-            # Mouth interior
             d.ellipse(
-                (cx - r, cy - int(r * 0.8),
-                 cx + r, cy + int(r * 1.4)),
+                (cx - r, cy - int(r * 0.7),
+                 cx + r, cy + int(r * 1.1)),
                 fill=MOUTH_RGB,
             )
-            # Lower-lip highlight curve
-            d.arc(
-                (cx - int(r * 0.7), cy - int(r * 0.0),
-                 cx + int(r * 0.7), cy + int(r * 1.1)),
-                start=15, end=165,
-                fill=(245, 165, 180), width=_scale(2),
-            )
         else:
-            r = _scale(14)
-            # Smile arc — corners turn up
+            r = _scale(13)
             d.arc(
                 (cx - r, cy - int(r * 0.4),
                  cx + r, cy + int(r * 0.6)),
@@ -561,40 +306,24 @@ def _draw_mouth(open_: bool) -> Image.Image:
 
 
 def _draw_hair_strand(side: int) -> Image.Image:
-    """Side-hair strand. ``side`` is ``-1`` for left or ``+1`` for
-    right. Each strand starts wide at the temple, tapers as it falls
-    past the shoulder, with a soft inner-shadow stripe so the volume
-    reads even at small angles."""
+    """Single side-strand polygon. ``side`` is ``-1`` (left) or
+    ``+1`` (right). Each strand hangs behind the body so the physics
+    rig has something to wag."""
     def paint(d: ImageDraw.ImageDraw) -> None:
         cx, cy = _scale_point(HEAD_CENTRE)
         r = _scale(HEAD_RADIUS)
         anchor_x = cx + side * int(r * 0.88)
-        anchor_y = cy - int(r * 0.15)
-        mid_x = anchor_x + side * _scale(14)
-        mid_y = anchor_y + _scale(100)
-        tip_x = anchor_x + side * _scale(28)
-        tip_y = anchor_y + _scale(220)
-        # Main strand silhouette
+        anchor_y = cy - int(r * 0.10)
+        tip_x = anchor_x + side * _scale(20)
+        tip_y = anchor_y + _scale(180)
         d.polygon(
             [
-                (anchor_x - _scale(14), anchor_y - _scale(8)),
-                (anchor_x + _scale(14), anchor_y - _scale(2)),
-                (mid_x + _scale(11), mid_y),
-                (tip_x + _scale(4), tip_y),
-                (tip_x - _scale(4), tip_y),
-                (mid_x - _scale(11), mid_y),
+                (anchor_x - _scale(10), anchor_y),
+                (anchor_x + _scale(10), anchor_y),
+                (tip_x + _scale(5), tip_y),
+                (tip_x - _scale(5), tip_y),
             ],
             fill=HAIR_RGB,
-        )
-        # Inner shadow stripe — darker hair colour, ~60% of the strand
-        d.polygon(
-            [
-                (anchor_x - _scale(6), anchor_y),
-                (anchor_x + _scale(2), anchor_y),
-                (mid_x - _scale(2), mid_y - _scale(20)),
-                (mid_x - _scale(8), mid_y - _scale(15)),
-            ],
-            fill=HAIR_SHADOW,
         )
     return _supersampled(paint)
 
