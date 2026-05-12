@@ -99,7 +99,7 @@ class PuppetWorkspace(QMainWindow):
         self._canvas = PuppetCanvas(self)
         self.setCentralWidget(self._canvas)
 
-        self.addToolBar(self._build_toolbar())
+        self._build_toolbars()
 
         self._parameter_dock = ParameterDock(self._canvas, self, workspace=self)
         self.addDockWidget(
@@ -172,196 +172,201 @@ class PuppetWorkspace(QMainWindow):
     def idle_driver(self) -> IdleDriver:
         return self._idle_driver
 
-    # ---- toolbar --------------------------------------------------------
+    # ---- toolbars ------------------------------------------------------
 
-    def _build_toolbar(self) -> QToolBar:
+    def _build_toolbars(self) -> None:
+        """Build four themed toolbars stacked at the top.
+
+        Splitting into themed bars avoids the single-toolbar overflow
+        chevron — 28 actions on one bar made Qt collapse them into a
+        ``≫`` popup that closed mid-click. Multiple toolbars wrap to
+        multiple rows naturally as the window narrows."""
         lang = language_wrapper.language_word_dict
-        bar = QToolBar(lang.get("puppet_toolbar_title", "Puppet"), self)
-        bar.setMovable(False)
+        self.addToolBar(
+            Qt.ToolBarArea.TopToolBarArea,
+            self._build_file_toolbar(lang),
+        )
+        self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        self.addToolBar(
+            Qt.ToolBarArea.TopToolBarArea,
+            self._build_edit_toolbar(lang),
+        )
+        self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        self.addToolBar(
+            Qt.ToolBarArea.TopToolBarArea,
+            self._build_live_toolbar(lang),
+        )
+        self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        self.addToolBar(
+            Qt.ToolBarArea.TopToolBarArea,
+            self._build_output_toolbar(lang),
+        )
 
+    def _new_bar(self, title: str) -> QToolBar:
+        bar = QToolBar(title, self)
+        bar.setMovable(False)
+        return bar
+
+    def _build_file_toolbar(self, lang: dict) -> QToolBar:
+        bar = self._new_bar(lang.get("puppet_toolbar_file", "File"))
         open_action = QAction(lang.get("puppet_open", "Open Puppet…"), self)
         open_action.triggered.connect(self._open_via_dialog)
         bar.addAction(open_action)
-
-        import_action = QAction(lang.get("puppet_import_png", "Import PNG…"), self)
-        import_action.triggered.connect(self._import_png_via_dialog)
-        bar.addAction(import_action)
-
-        import_psd_action = QAction(
-            lang.get("puppet_import_psd", "Import PSD…"), self,
-        )
-        import_psd_action.triggered.connect(self._import_psd_via_dialog)
-        bar.addAction(import_psd_action)
-
-        import_cubism_action = QAction(
-            lang.get("puppet_import_cubism", "Import Cubism…"), self,
-        )
-        import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
-        bar.addAction(import_cubism_action)
-
-        install_deps_action = QAction(
-            lang.get("puppet_install_deps", "Install dependencies…"), self,
-        )
-        install_deps_action.triggered.connect(self._install_all_optional_deps)
-        bar.addAction(install_deps_action)
-
-        bar.addSeparator()
-
-        validate_action = QAction(
-            lang.get("puppet_validate", "Validate"), self,
-        )
-        validate_action.triggered.connect(self._run_validator)
-        bar.addAction(validate_action)
-
-        mirror_action = QAction(
-            lang.get("puppet_mirror_drawable", "Mirror drawable…"), self,
-        )
-        mirror_action.triggered.connect(self._mirror_drawable_via_dialog)
-        bar.addAction(mirror_action)
-
-        batch_export_action = QAction(
-            lang.get("puppet_batch_export", "Export all motions…"), self,
-        )
-        batch_export_action.triggered.connect(self._batch_export_via_dialog)
-        bar.addAction(batch_export_action)
-
-        self._virtual_camera_toggle = QAction(
-            lang.get("puppet_virtual_camera", "Virtual camera"), self,
-        )
-        self._virtual_camera_toggle.setCheckable(True)
-        self._virtual_camera_toggle.toggled.connect(self._toggle_virtual_camera)
-        bar.addAction(self._virtual_camera_toggle)
-
-        self._ndi_toggle = QAction(
-            lang.get("puppet_ndi_output", "NDI output"), self,
-        )
-        self._ndi_toggle.setCheckable(True)
-        self._ndi_toggle.toggled.connect(self._toggle_ndi)
-        bar.addAction(self._ndi_toggle)
-
         self._recent_button = QPushButton(lang.get("puppet_recent", "Recent"))
         self._recent_button.setFlat(True)
         self._recent_menu = QMenu(self._recent_button)
         self._recent_button.setMenu(self._recent_menu)
         self._recent_menu.aboutToShow.connect(self._rebuild_recent_menu)
         bar.addWidget(self._recent_button)
-
-        bar.addSeparator()
-
         save_action = QAction(lang.get("puppet_save_as", "Save As…"), self)
         save_action.triggered.connect(self._save_via_dialog)
         bar.addAction(save_action)
-
         bar.addSeparator()
+        import_action = QAction(lang.get("puppet_import_png", "Import PNG…"), self)
+        import_action.triggered.connect(self._import_png_via_dialog)
+        bar.addAction(import_action)
+        import_psd_action = QAction(
+            lang.get("puppet_import_psd", "Import PSD…"), self,
+        )
+        import_psd_action.triggered.connect(self._import_psd_via_dialog)
+        bar.addAction(import_psd_action)
+        import_cubism_action = QAction(
+            lang.get("puppet_import_cubism", "Import Cubism…"), self,
+        )
+        import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
+        bar.addAction(import_cubism_action)
+        bar.addSeparator()
+        install_deps_action = QAction(
+            lang.get("puppet_install_deps", "Install dependencies…"), self,
+        )
+        install_deps_action.triggered.connect(self._install_all_optional_deps)
+        bar.addAction(install_deps_action)
+        return bar
 
+    def _build_edit_toolbar(self, lang: dict) -> QToolBar:
+        bar = self._new_bar(lang.get("puppet_toolbar_edit", "Edit"))
         add_rot_action = QAction(
             lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
         )
         add_rot_action.triggered.connect(self._add_rotation_deformer)
         bar.addAction(add_rot_action)
-
         add_warp_action = QAction(
             lang.get("puppet_add_warp", "Add Warp Deformer"), self,
         )
         add_warp_action.triggered.connect(self._add_warp_deformer)
         bar.addAction(add_warp_action)
-
         add_param_action = QAction(
             lang.get("puppet_add_parameter", "Add Parameter"), self,
         )
         add_param_action.triggered.connect(self._add_parameter)
         bar.addAction(add_param_action)
-
         bar.addSeparator()
-
-        self._drag_toggle = QAction(
-            lang.get("puppet_drag_track", "Drag-track head"), self,
+        mirror_action = QAction(
+            lang.get("puppet_mirror_drawable", "Mirror drawable…"), self,
         )
-        self._drag_toggle.setCheckable(True)
-        self._drag_toggle.toggled.connect(self._toggle_drag)
-        bar.addAction(self._drag_toggle)
-
-        self._blink_toggle = QAction(
-            lang.get("puppet_auto_blink", "Auto-blink"), self,
+        mirror_action.triggered.connect(self._mirror_drawable_via_dialog)
+        bar.addAction(mirror_action)
+        edit_motion_action = QAction(
+            lang.get("puppet_edit_motion", "Edit motion…"), self,
         )
-        self._blink_toggle.setCheckable(True)
-        self._blink_toggle.toggled.connect(self._toggle_blink)
-        bar.addAction(self._blink_toggle)
-
-        self._lipsync_toggle = QAction(
-            lang.get("puppet_lipsync", "Mic lip-sync"), self,
-        )
-        self._lipsync_toggle.setCheckable(True)
-        self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
-        bar.addAction(self._lipsync_toggle)
-
-        self._webcam_toggle = QAction(
-            lang.get("puppet_webcam", "Webcam tracking"), self,
-        )
-        self._webcam_toggle.setCheckable(True)
-        self._webcam_toggle.toggled.connect(self._toggle_webcam)
-        bar.addAction(self._webcam_toggle)
-
-        self._idle_toggle = QAction(
-            lang.get("puppet_auto_idle", "Auto idle"), self,
-        )
-        self._idle_toggle.setCheckable(True)
-        self._idle_toggle.toggled.connect(self._toggle_idle)
-        bar.addAction(self._idle_toggle)
-
-        self._idle_motion_toggle = QAction(
-            lang.get("puppet_idle_motions", "Idle motions"), self,
-        )
-        self._idle_motion_toggle.setCheckable(True)
-        self._idle_motion_toggle.toggled.connect(self._toggle_idle_motions)
-        bar.addAction(self._idle_motion_toggle)
-
-        self._vts_toggle = QAction(
-            lang.get("puppet_vts_api", "VTS API"), self,
-        )
-        self._vts_toggle.setCheckable(True)
-        self._vts_toggle.toggled.connect(self._toggle_vts_api)
-        bar.addAction(self._vts_toggle)
-
-        bar.addSeparator()
-
+        edit_motion_action.triggered.connect(self._edit_active_motion)
+        bar.addAction(edit_motion_action)
         self._mesh_edit_toggle = QAction(
             lang.get("puppet_mesh_edit", "Edit mesh"), self,
         )
         self._mesh_edit_toggle.setCheckable(True)
         self._mesh_edit_toggle.toggled.connect(self._toggle_mesh_edit)
         bar.addAction(self._mesh_edit_toggle)
+        bar.addSeparator()
+        validate_action = QAction(
+            lang.get("puppet_validate", "Validate"), self,
+        )
+        validate_action.triggered.connect(self._run_validator)
+        bar.addAction(validate_action)
+        fit_action = QAction(lang.get("puppet_fit_view", "Fit to Window"), self)
+        fit_action.triggered.connect(self._canvas_reset_view)
+        bar.addAction(fit_action)
+        return bar
 
+    def _build_live_toolbar(self, lang: dict) -> QToolBar:
+        bar = self._new_bar(lang.get("puppet_toolbar_live", "Live"))
+        self._drag_toggle = QAction(
+            lang.get("puppet_drag_track", "Drag-track head"), self,
+        )
+        self._drag_toggle.setCheckable(True)
+        self._drag_toggle.toggled.connect(self._toggle_drag)
+        bar.addAction(self._drag_toggle)
+        self._blink_toggle = QAction(
+            lang.get("puppet_auto_blink", "Auto-blink"), self,
+        )
+        self._blink_toggle.setCheckable(True)
+        self._blink_toggle.toggled.connect(self._toggle_blink)
+        bar.addAction(self._blink_toggle)
+        self._lipsync_toggle = QAction(
+            lang.get("puppet_lipsync", "Mic lip-sync"), self,
+        )
+        self._lipsync_toggle.setCheckable(True)
+        self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
+        bar.addAction(self._lipsync_toggle)
+        self._webcam_toggle = QAction(
+            lang.get("puppet_webcam", "Webcam tracking"), self,
+        )
+        self._webcam_toggle.setCheckable(True)
+        self._webcam_toggle.toggled.connect(self._toggle_webcam)
+        bar.addAction(self._webcam_toggle)
+        self._idle_toggle = QAction(
+            lang.get("puppet_auto_idle", "Auto idle"), self,
+        )
+        self._idle_toggle.setCheckable(True)
+        self._idle_toggle.toggled.connect(self._toggle_idle)
+        bar.addAction(self._idle_toggle)
+        self._idle_motion_toggle = QAction(
+            lang.get("puppet_idle_motions", "Idle motions"), self,
+        )
+        self._idle_motion_toggle.setCheckable(True)
+        self._idle_motion_toggle.toggled.connect(self._toggle_idle_motions)
+        bar.addAction(self._idle_motion_toggle)
+        return bar
+
+    def _build_output_toolbar(self, lang: dict) -> QToolBar:
+        bar = self._new_bar(lang.get("puppet_toolbar_output", "Output"))
+        capture_action = QAction(lang.get("puppet_capture", "Capture frame…"), self)
+        capture_action.triggered.connect(self._capture_via_dialog)
+        bar.addAction(capture_action)
+        self._record_action = QAction(lang.get("puppet_record", "Record…"), self)
+        self._record_action.setCheckable(True)
+        self._record_action.toggled.connect(self._toggle_recording)
+        bar.addAction(self._record_action)
         self._motion_record_toggle = QAction(
             lang.get("puppet_record_motion", "Record motion"), self,
         )
         self._motion_record_toggle.setCheckable(True)
         self._motion_record_toggle.toggled.connect(self._toggle_motion_record)
         bar.addAction(self._motion_record_toggle)
-
-        edit_motion_action = QAction(
-            lang.get("puppet_edit_motion", "Edit motion…"), self,
+        batch_export_action = QAction(
+            lang.get("puppet_batch_export", "Export all motions…"), self,
         )
-        edit_motion_action.triggered.connect(self._edit_active_motion)
-        bar.addAction(edit_motion_action)
-
+        batch_export_action.triggered.connect(self._batch_export_via_dialog)
+        bar.addAction(batch_export_action)
         bar.addSeparator()
-
-        capture_action = QAction(lang.get("puppet_capture", "Capture frame…"), self)
-        capture_action.triggered.connect(self._capture_via_dialog)
-        bar.addAction(capture_action)
-
-        self._record_action = QAction(lang.get("puppet_record", "Record…"), self)
-        self._record_action.setCheckable(True)
-        self._record_action.toggled.connect(self._toggle_recording)
-        bar.addAction(self._record_action)
-
-        bar.addSeparator()
-
-        fit_action = QAction(lang.get("puppet_fit_view", "Fit to Window"), self)
-        fit_action.triggered.connect(self._canvas_reset_view)
-        bar.addAction(fit_action)
-
+        self._virtual_camera_toggle = QAction(
+            lang.get("puppet_virtual_camera", "Virtual camera"), self,
+        )
+        self._virtual_camera_toggle.setCheckable(True)
+        self._virtual_camera_toggle.toggled.connect(self._toggle_virtual_camera)
+        bar.addAction(self._virtual_camera_toggle)
+        self._ndi_toggle = QAction(
+            lang.get("puppet_ndi_output", "NDI output"), self,
+        )
+        self._ndi_toggle.setCheckable(True)
+        self._ndi_toggle.toggled.connect(self._toggle_ndi)
+        bar.addAction(self._ndi_toggle)
+        self._vts_toggle = QAction(
+            lang.get("puppet_vts_api", "VTS API"), self,
+        )
+        self._vts_toggle.setCheckable(True)
+        self._vts_toggle.toggled.connect(self._toggle_vts_api)
+        bar.addAction(self._vts_toggle)
         return bar
 
     # ---- file ops -------------------------------------------------------
