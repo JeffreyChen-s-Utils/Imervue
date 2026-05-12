@@ -284,6 +284,11 @@ def test_read_image_metadata_raises_for_missing_file():
 
 
 def test_read_xmp_tags_empty_for_new_image(sample_image):
+    # XMP parsing routes through ``defusedxml`` — when the optional
+    # dep isn't installed the tool will raise ModuleNotFoundError on
+    # the underlying ``xmp_sidecar.load`` call. Skip rather than fail
+    # so CI environments without the optional dep stay green.
+    pytest.importorskip("defusedxml")
     result = read_xmp_tags(str(sample_image))
     assert result["rating"] == 0
     assert result["keywords"] == []
