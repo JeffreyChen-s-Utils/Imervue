@@ -1131,7 +1131,7 @@ japanese_word_dict = {
     "keyboard_osd_tip": "F8 で右上に情報オーバーレイ（ファイル名/サイズ/形式）; Ctrl+F8 は Debug HUD（VRAM/キャッシュ/スレッド）",
     "keyboard_pixel_view_tip": "Shift+P でピクセル表示 \u2014 400% 以上でグリッドとカーソル下の RGB 値を表示",
     "keyboard_color_mode_tip": "Shift+M で ノーマル / グレースケール / 反転 / セピア を循環（非破壊）",
-    "keyboard_cull_pick_tip": "P で現在の画像（または選択中の全タイル）を Pick に — Lightroom 風のキープフラグ",
+    "keyboard_cull_pick_tip": "P で現在の画像（または選択中の全タイル）を Pick に — XMP-aware photo managers 風のキープフラグ",
     "keyboard_cull_reject_tip": "Shift+X で現在の画像（または選択中の全タイル）を Reject に；その後 Extra Tools > Culling からまとめて削除できます",
     "keyboard_cull_unflag_tip": "U で現在の画像または選択の Pick / Reject セレクトフラグを解除",
     "keyboard_command_palette_tip": "Ctrl+Shift+P でコマンドパレットを開き、あらゆるメニュー操作を 1 つのダイアログで曖昧検索",
@@ -1200,9 +1200,9 @@ japanese_word_dict = {
     # XMP サイドカー
     "xmp_title": "XMP サイドカー",
     "xmp_explain": (
-        "Lightroom 互換の .xmp サイドカーを読み書きし、評価 / タイトル / "
-        "説明 / キーワード（タグ）/ カラーラベルを Lightroom / Bridge / "
-        "Capture One と相互交換します。"
+        "XMP-aware photo managers 互換の .xmp サイドカーを読み書きし、評価 / タイトル / "
+        "説明 / キーワード（タグ）/ カラーラベルを XMP-aware photo managers / Bridge / "
+        "XMP-aware photo managers と相互交換します。"
     ),
     "xmp_count": "現在のビューに {n} 枚。",
     "xmp_export": "サイドカー書き出し",

@@ -1,4 +1,4 @@
-"""MediBang-style dock panels for the Paint workspace.
+"""full-featured dock panels for the Paint workspace.
 
 Five docks, each in its own class so they can be added independently to
 the QMainWindow. Every panel subscribes to the shared
@@ -466,7 +466,7 @@ class BrushDock(QDockWidget):
 
         # Stabilizer / scatter / colour-jitter / follow-tilt — engine
         # already supports these via brush_dynamics + brush_random;
-        # surfacing them as live controls here matches MediBang's
+        # surfacing them as live controls here matches raster paint apps's
         # brush-options panel.
         self._stabilizer = _slider(0, 100, 0)
         self._stabilizer.valueChanged.connect(self._on_stabilizer_changed)
@@ -530,7 +530,7 @@ class BrushDock(QDockWidget):
         form.addRow("", self._follow_tilt)
         form.addRow(lang.get("paint_brush_blend", "Blend:"), self._blend)
 
-        # MediBang-style sub-tool / preset manager. The button opens a
+        # full-featured sub-tool / preset manager. The button opens a
         # modal dialog that drives ``state.add_sub_tool`` /
         # ``apply_sub_tool`` / ``remove_sub_tool`` for the active main
         # tool, so brush + fill snapshots round-trip through the
@@ -640,7 +640,7 @@ class FillDock(QDockWidget):
     """Surfaces every :class:`FillSettings` knob for the bucket tool.
 
     Tabified next to BrushDock so the user flips between brush and
-    bucket option panels the way MediBang Paint Pro does. Updates
+    bucket option panels the way raster paint apps Pro does. Updates
     flow both ways: state-event subscription mirrors the singleton
     when the user changes settings via shortcut or another panel,
     and edits here go through ``state.set_fill(...)`` so persistence
@@ -731,7 +731,7 @@ class FillDock(QDockWidget):
             self._gap_close,
         )
 
-        # MediBang-style "fill every closed region in one click". Goes
+        # full-featured "fill every closed region in one click". Goes
         # to a workspace-level action so it can read the active layer
         # + the reference layer through the document API. The button
         # surfaces a no-op + status message when no callback is wired.
@@ -901,7 +901,7 @@ class LayerDock(QDockWidget):
             )
             btn.clicked.connect(slot)
             row.addWidget(btn)
-        # Dedicated "add adjustment layer" entry — MediBang's Layer
+        # Dedicated "add adjustment layer" entry — raster paint apps's Layer
         # palette has the same affordance under a separate icon. The
         # ``+◐`` glyph (plus + half-tone disc) marks it as an
         # adjustment-only insert vs the plain ``+`` raster add.
@@ -987,7 +987,7 @@ class LayerDock(QDockWidget):
                 if idx not in visible_indices:
                     continue
                 # Stack drawn top-down — most-recently-added layer at the
-                # top of the visual list, matching MediBang / Photoshop.
+                # top of the visual list, matching raster paint apps / Photoshop.
                 # The displayed row index ignores filtered-out rows so
                 # the search produces a tight list rather than gappy.
                 item = QListWidgetItem(_label_with_color_chip(layer))
@@ -1638,7 +1638,7 @@ def _paint_swatch(
 
     ``rgb=None`` represents "transparent / no colour" and renders a
     grey checker pattern with a red diagonal slash — the same idiom
-    Photoshop / Krita / MediBang use for "no fill" so users can
+    Photoshop /  / raster paint apps use for "no fill" so users can
     spot the transparent slot at a glance.
     """
     pix = QPixmap(_SWATCH_PX, _SWATCH_PX)

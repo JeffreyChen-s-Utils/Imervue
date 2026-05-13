@@ -1,6 +1,6 @@
 """1-bit binary "ink" layer rendering.
 
-MediBang exposes a layer type whose pixels are either fully-opaque ink
+raster paint apps exposes a layer type whose pixels are either fully-opaque ink
 or fully-transparent — no grey in between. It saves space, avoids
 edge halos around inks, and matches the print convention for line art
 that goes to a black-and-white plate.

@@ -123,7 +123,7 @@ def cursor_bbox(
 
 
 # ---------------------------------------------------------------------------
-# Qt-aware QPixmap cursor — used by ``PaintCanvas`` to render a Medibang-style
+# Qt-aware QPixmap cursor — used by ``PaintCanvas`` to render a full-featured
 # size preview on the system mouse cursor.
 # ---------------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ def make_brush_cursor(
     The pixmap holds a transparent canvas with a thin ring at the
     requested screen diameter and a small ``+`` at the centre. Eraser
     cursors get the same ring plus a diagonal slash to distinguish
-    them from the brush at a glance — Medibang does the same. The
+    them from the brush at a glance — raster paint apps does the same. The
     hot-spot is the centre of the ring (where the next dab lands).
 
     ``diameter_px`` must be in
@@ -224,7 +224,7 @@ def make_brush_cursor(
 
 
 # ---------------------------------------------------------------------------
-# Per-tool QPixmap icons — Medibang-style "every tool gets its own cursor"
+# Per-tool QPixmap icons — full-featured "every tool gets its own cursor"
 # ---------------------------------------------------------------------------
 
 _TOOL_ICON_SIZE = 24

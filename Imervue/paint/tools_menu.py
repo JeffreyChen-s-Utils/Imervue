@@ -29,7 +29,7 @@ class ToolEntry:
     shortcut: str
 
 
-# Conventional MediBang / Photoshop keybindings. ``bezier_pen`` and
+# Conventional raster paint apps / Photoshop keybindings. ``bezier_pen`` and
 # ``clone_stamp`` follow the same convention (P for pen, S for stamp).
 TOOL_ENTRIES: tuple[ToolEntry, ...] = (
     ToolEntry("brush", "paint_tool_brush", "B"),

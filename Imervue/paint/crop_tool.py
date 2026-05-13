@@ -10,7 +10,7 @@ Aspect ratios are expressed as ``(w_units, h_units)`` tuples — e.g.
 """
 from __future__ import annotations
 
-# Built-in aspect-ratio presets. The dropdown order matches MediBang
+# Built-in aspect-ratio presets. The dropdown order matches raster paint apps
 # (widest first, then square, then portrait). ``None`` is the
 # "Freeform" entry.
 ASPECT_PRESETS: tuple[tuple[str, tuple[int, int] | None], ...] = (

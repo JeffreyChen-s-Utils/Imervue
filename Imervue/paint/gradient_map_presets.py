@@ -15,7 +15,7 @@ from __future__ import annotations
 
 # Each preset is an (id, label_key, fallback, stops) row. The label_key
 # routes through the i18n dict; the fallback shows up when the key is
-# missing. Stops are MediBang-friendly defaults — start dark, end
+# missing. Stops are raster paint apps-friendly defaults — start dark, end
 # light — so a default-grey image converted by the preset reads as
 # the named tone.
 GRADIENT_MAP_PRESETS: tuple[tuple[str, str, str, list[dict]], ...] = (

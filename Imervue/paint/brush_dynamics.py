@@ -136,7 +136,7 @@ def _sumi(kernel: np.ndarray, rng: np.random.Generator) -> np.ndarray:
 def pressure_size_factor(pressure: float) -> float:
     """Scale the brush size by pen pressure with a documented floor.
 
-    MediBang scales size by roughly ``0.3 + 0.7 * pressure`` so light
+    raster paint apps scales size by roughly ``0.3 + 0.7 * pressure`` so light
     pressure still draws a thin line rather than vanishing. The floor
     keeps cheap mice (which always report 1.0) at full size.
     """

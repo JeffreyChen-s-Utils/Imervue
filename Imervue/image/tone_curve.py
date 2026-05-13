@@ -1,5 +1,5 @@
 """
-Tone curve — Lightroom-style RGB/per-channel curve.
+Tone curve — flag-based RGB/per-channel curve.
 
 Given a list of control points (x, y) in [0, 1] the curve is expanded
 to a 256-entry uint8 lookup table using monotone cubic interpolation

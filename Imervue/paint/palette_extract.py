@@ -1,6 +1,6 @@
 """Palette extraction — median-cut quantisation on an RGBA layer.
 
-MediBang's "color theme from image" workflow. Given the active layer
+raster paint apps's "color theme from image" workflow. Given the active layer
 (or composite), produce a small ordered palette that spans the
 image's colour range. The classic algorithm is *median cut*:
 

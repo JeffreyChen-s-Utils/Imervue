@@ -24,9 +24,9 @@ from Imervue.paint.compositing import LAYER_BLEND_MODES, composite_stack
 DEFAULT_LAYER_NAME = "Layer"
 BACKGROUND_LAYER_NAME = "Background"
 
-# Eight Photoshop-style colour labels artists use to triage layers.
+# Eight raster-editor colour labels artists use to triage layers.
 # ``None`` is the "no label" default; the seven named values match the
-# colours MediBang / Photoshop tint the row chip with.
+# colours raster paint apps / Photoshop tint the row chip with.
 LAYER_LABELS = ("red", "orange", "yellow", "green", "blue", "violet", "grey")
 
 # Layer-group blend modes — ``pass_through`` keeps each member layer's
@@ -144,7 +144,7 @@ class PaintDocument:
         self._groups: dict[str, LayerGroup] = {}
         self._named_selections: dict[str, np.ndarray] = {}
         # Index of the layer the bucket fill samples for connectivity /
-        # tolerance — MediBang's "Reference Layer" toggle. ``None`` means
+        # tolerance — raster paint apps's "Reference Layer" toggle. ``None`` means
         # the bucket samples its own target layer (the legacy default).
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
@@ -542,7 +542,7 @@ class PaintDocument:
         """Replace the active selection with one derived from a layer's alpha.
 
         Pixels with alpha strictly greater than ``threshold`` become
-        selected. ``threshold=0`` matches MediBang's "Select Layer"
+        selected. ``threshold=0`` matches raster paint apps's "Select Layer"
         command. Returns ``True`` if the selection actually changed.
         """
         from Imervue.paint.selection_ops import from_layer_alpha

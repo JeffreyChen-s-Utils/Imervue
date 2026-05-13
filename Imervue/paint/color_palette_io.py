@@ -2,7 +2,7 @@
 
 Three formats:
 
-* ``.gpl`` — GIMP Palette: line-oriented ASCII, the easiest to write
+* ``.gpl`` — external image editors Palette: line-oriented ASCII, the easiest to write
   a parser for (one ``R G B name`` row per colour).
 * ``.aco`` — Adobe Color Swatch: binary, big-endian. v1 is plain RGB
   rows, v2 prepends a Pascal-string colour name to each row. The
@@ -23,7 +23,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
-GIMP_PALETTE_EXTENSION = ".gpl"
+GPL_PALETTE_EXTENSION = ".gpl"
 ADOBE_COLOR_EXTENSION = ".aco"
 ADOBE_SWATCH_EXCHANGE_EXTENSION = ".ase"
 
@@ -50,20 +50,20 @@ class PaletteColor:
 
 
 # ---------------------------------------------------------------------------
-# .gpl — GIMP Palette (ASCII)
+# .gpl — external image editors Palette (ASCII)
 # ---------------------------------------------------------------------------
 
 
 def import_gimp_palette(path: str | Path) -> list[PaletteColor]:
-    """Read a GIMP ``.gpl`` palette file."""
+    """Read a external image editors ``.gpl`` palette file."""
     raw = Path(path).read_text(encoding="utf-8", errors="replace")
     out: list[PaletteColor] = []
     for line in raw.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        # Skip the "GIMP Palette" header / metadata lines.
-        if stripped.startswith(("GIMP", "Name:", "Columns:")):
+        # Skip the "external image editors Palette" header / metadata lines.
+        if stripped.startswith(("external image editors", "Name:", "Columns:")):
             continue
         parts = stripped.split(maxsplit=3)
         if len(parts) < 3:
@@ -290,7 +290,7 @@ def _clamp_unit_to_byte(value: float) -> int:
 def import_palette(path: str | Path) -> list[PaletteColor]:
     """Pick the right reader based on file extension."""
     suffix = Path(path).suffix.lower()
-    if suffix == GIMP_PALETTE_EXTENSION:
+    if suffix == GPL_PALETTE_EXTENSION:
         return import_gimp_palette(path)
     if suffix == ADOBE_COLOR_EXTENSION:
         return import_adobe_color(path)
@@ -298,6 +298,6 @@ def import_palette(path: str | Path) -> list[PaletteColor]:
         return import_adobe_swatch_exchange(path)
     raise ValueError(
         f"unknown palette extension {suffix!r}; "
-        f"expected one of {{{GIMP_PALETTE_EXTENSION}, "
+        f"expected one of {{{GPL_PALETTE_EXTENSION}, "
         f"{ADOBE_COLOR_EXTENSION}, {ADOBE_SWATCH_EXCHANGE_EXTENSION}}}",
     )

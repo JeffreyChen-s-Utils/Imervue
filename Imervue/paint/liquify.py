@@ -1,6 +1,6 @@
 """Liquify / warp brushes — push / pinch / bloat / twirl.
 
-Pure-numpy implementations of the four MediBang / Photoshop liquify
+Pure-numpy implementations of the four raster paint apps / Photoshop liquify
 brushes. Each call mutates a single brush stroke worth of pixels:
 the caller passes the brush centre + radius, plus the per-brush
 parameters, and the helper returns a fresh layer image with the

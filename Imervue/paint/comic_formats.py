@@ -3,7 +3,7 @@
 Bridges the existing :mod:`Imervue.paint.canvas_presets` (canvas
 dimensions in pixels) and :mod:`Imervue.paint.bleed_guides` (trim /
 bleed / safe in millimetres) into one named preset for the
-"New Manga Page" / "New Doujinshi Page" workflow MediBang ships in
+"New Manga Page" / "New Doujinshi Page" workflow raster paint apps ships in
 its New-Document dialog.
 
 The user picks one entry from :data:`COMIC_FORMATS` and the

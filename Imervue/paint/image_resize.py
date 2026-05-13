@@ -97,7 +97,7 @@ def resize_selection(
 
     Always uses nearest-neighbour — interpolating a bool mask to
     floats and re-thresholding produces a soft selection that
-    surprises users. The convention matches Photoshop / MediBang.
+    surprises users. The convention matches Photoshop / raster paint apps.
     """
     if selection.ndim != 2 or selection.dtype != np.bool_:
         raise ValueError(

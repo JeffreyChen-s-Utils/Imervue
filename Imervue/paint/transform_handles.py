@@ -15,7 +15,7 @@ Conventions
 -----------
 
 * The transform box sits in image-space pixels. Its ``rotation_deg``
-  rotates clockwise around the box centre (matching MediBang /
+  rotates clockwise around the box centre (matching raster paint apps /
   Photoshop's display).
 * Eight bounding handles + one rotation handle:
 

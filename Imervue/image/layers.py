@@ -32,7 +32,7 @@ logger = logging.getLogger("Imervue.layers")
 LAYER_KINDS = ("text", "image", "lut")
 BLEND_MODES = ("normal", "multiply", "screen", "overlay")
 DEFAULT_OPACITY = 1.0
-MAX_LAYERS = 8  # safety cap; matches Photoshop-style "few overlays" use case
+MAX_LAYERS = 8  # safety cap; matches raster-editor "few overlays" use case
 
 
 # ---------------------------------------------------------------------------

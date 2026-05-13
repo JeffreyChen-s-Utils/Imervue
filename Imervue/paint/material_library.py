@@ -2,7 +2,7 @@
 
 A "material" is any small reusable image the user wants to drop onto
 a layer: a screentone, a paper texture, a fabric pattern, a brush
-tip, a 3D-pose silhouette. MediBang ships a large built-in library;
+tip, a 3D-pose silhouette. raster paint apps ships a large built-in library;
 Imervue mirrors the same model with a folder-backed index so users
 can drop their own tiles into a configured directory and get them
 listed automatically.

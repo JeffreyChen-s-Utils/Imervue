@@ -4,7 +4,7 @@ Pure-numpy: takes a HxW bool selection + an HxWx4 layer canvas
 and writes a coloured rim of configurable thickness around the
 selection's edge into the canvas.
 
-Three placements mirror Photoshop / MediBang:
+Three placements mirror Photoshop / raster paint apps:
 
 * ``"outside"`` — the rim sits entirely outside the selection
   (selection grows by ``width`` pixels).

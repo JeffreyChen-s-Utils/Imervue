@@ -82,7 +82,7 @@ BLEND_MODES = (
 )
 DEFAULT_BLEND_MODE = "normal"
 
-# Brush parameter ranges — identical to MediBang's UI sliders. Settings are
+# Brush parameter ranges — identical to raster paint apps's UI sliders. Settings are
 # stored as plain ints/floats; clamping happens on assignment.
 BRUSH_SIZE_MIN = 1
 BRUSH_SIZE_MAX = 500
@@ -99,7 +99,7 @@ DEFAULT_FG = (0, 0, 0)
 # affordance is the swatch dock's "Transparent" button. The brush
 # tool no-ops when foreground is ``None``; the gradient tool fades
 # its endpoint alpha to zero. Defaulting BG to ``None`` matches the
-# MediBang "BG slot starts empty" convention so a fresh
+# raster paint apps "BG slot starts empty" convention so a fresh
 # ``foreground → background`` gradient produces a clean alpha fade
 # without the user having to clear a stale white BG first.
 DEFAULT_BG: tuple[int, int, int] | None = None
@@ -168,7 +168,7 @@ class FillSettings:
 # Each entry in :attr:`ToolState.sub_tools` is a frozen snapshot of the
 # brush + fill settings the user wants to recall under ``name`` for a
 # given main tool. Stored under the tool id as the dict key — matching
-# MediBang / Clip Studio's "sub-tool" tabs that hang under each main
+# raster paint apps / Clip Studio's "sub-tool" tabs that hang under each main
 # tool. Only the slices relevant to the tool are remembered; switching
 # tools re-applies the named preset's full snapshot.
 SUB_TOOL_NAME_MAX_LEN = 80
@@ -222,14 +222,14 @@ class ToolState:
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
     # registered, the brush clips strokes to the interior of the
-    # panel containing the press point. Matches MediBang's
+    # panel containing the press point. Matches raster paint apps's
     # "コマ内描画制限" toggle. Default off so the existing brush
     # behaviour is unchanged.
     snap_to_panel: bool = False
     quick_mask_active: bool = False
     # When ``True`` the eyedropper samples from the document composite
     # (every visible layer flattened) instead of the active layer
-    # only. Matches MediBang / PS's "Sample All Layers" eyedropper
+    # only. Matches raster paint apps / PS's "Sample All Layers" eyedropper
     # toggle. False keeps the historical "active layer only" behaviour
     # so existing workflows are unchanged.
     eyedropper_sample_all_layers: bool = False
@@ -331,7 +331,7 @@ class ToolState:
         return True
 
     def swap_colors(self) -> None:
-        """Exchange foreground and background — MediBang's X shortcut."""
+        """Exchange foreground and background — raster paint apps's X shortcut."""
         if self.foreground == self.background:
             return
         self.foreground, self.background = self.background, self.foreground
@@ -339,7 +339,7 @@ class ToolState:
         self._emit(EVENT_COLOR)
 
     def reset_colors(self) -> None:
-        """Reset to black/white — MediBang's D shortcut."""
+        """Reset to black/white — raster paint apps's D shortcut."""
         changed = False
         if self.foreground != DEFAULT_FG:
             self.foreground = DEFAULT_FG

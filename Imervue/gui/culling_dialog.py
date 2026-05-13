@@ -1,7 +1,7 @@
 """
 Culling dialog — filter by pick/reject/unflagged state and bulk-delete rejects.
 
-Lightroom-style cull flow: user marks images P (pick) or Shift+X (reject), then
+flag-based cull flow: user marks images P (pick) or Shift+X (reject), then
 opens this dialog to isolate one group or trash all rejects in a single step.
 """
 from __future__ import annotations

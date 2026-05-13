@@ -9,7 +9,7 @@ have them automatically rendered as the correct halftone density.
 Why bother
 ----------
 
-MediBang (and Clip Studio) expose this as the "Tone Curve" feature:
+raster paint apps (and Clip Studio) expose this as the "Tone Curve" feature:
 you paint with grey, hit the convert button, and your soft grey
 shading turns into a sharp black-and-white dot pattern that prints
 cleanly on cheap manga paper. That is what
@@ -26,7 +26,7 @@ Tone-layer property
 -------------------
 
 :class:`ToneSettings` packages the per-layer "render this layer as a
-halftone at composite time" hint MediBang exposes as the *Tone* layer
+halftone at composite time" hint raster paint apps exposes as the *Tone* layer
 type. The compositor in :mod:`Imervue.paint.compositing` consults
 ``layer.tone`` and, when set, runs the layer's RGBA through
 :func:`render_tone_layer` to produce the dot pattern that gets
@@ -42,7 +42,7 @@ import numpy as np
 
 # Density of dots / lines is tied to the per-pixel value through a
 # global "lpi" (lines per inch) parameter — same convention as
-# Photoshop / MediBang. The range below covers the practical print
+# Photoshop / raster paint apps. The range below covers the practical print
 # range (10 LPI = chunky tone, 85 LPI = magazine grade). A canvas-
 # space conversion happens inside the renderer (lpi → cell pixels).
 HALFTONE_LPI_MIN = 10
@@ -299,7 +299,7 @@ def render_tone_layer(
     Density source = ``(1 - luminance) * alpha`` so painting with a
     soft grey brush on a transparent layer yields proportional dot
     density, exactly like :func:`apply_halftone_to_image`. The output
-    inherits the tone's ink colour (instead of MediBang's hard-coded
+    inherits the tone's ink colour (instead of raster paint apps's hard-coded
     black) and is rotated by ``tone.angle_deg``. Returns a fresh
     HxWx4 uint8 RGBA buffer — the input is not mutated.
     """

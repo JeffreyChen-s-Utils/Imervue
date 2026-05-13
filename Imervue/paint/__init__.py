@@ -1,4 +1,4 @@
-"""Paint workspace — MediBang-style painting tab.
+"""Paint workspace — full-featured painting tab.
 
 The package is intentionally split so each sub-module has one
 responsibility:

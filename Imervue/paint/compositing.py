@@ -173,7 +173,7 @@ def composite_stack(
     out = np.zeros((h, w, 4), dtype=np.uint8)
     # Tracks the alpha of the most-recent non-clipped (visible) layer.
     # Clipping-mask layers above it use this to mask their output —
-    # mirroring Photoshop / MediBang's "clip to layer below" model.
+    # mirroring Photoshop / raster paint apps's "clip to layer below" model.
     # ``None`` means there is no base yet (a clip layer at the bottom
     # of the stack has nothing to clip to and is rendered unclipped).
     clip_base_alpha: np.ndarray | None = None

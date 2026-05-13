@@ -105,7 +105,7 @@ class _MangaMenuBridge:
 
         The dialog lets the user place the flash off-centre, adjust
         the spike count / radii / colour, or cancel out without
-        spawning any layer — matching MediBang's "every effect is
+        spawning any layer — matching raster paint apps's "every effect is
         configurable before commit" UX.
         """
         document = self._workspace.canvas().document()
@@ -312,7 +312,7 @@ def _pick_color(btn: QPushButton) -> None:  # pragma: no cover - Qt UI
 class SpeedlineConfigDialog(QDialog):
     """Configure a :class:`SpeedlineOptions` before render.
 
-    Mirrors MediBang's effect-property dialog: every parameter is
+    Mirrors raster paint apps's effect-property dialog: every parameter is
     exposed, the user can re-centre the focus point, kind-specific
     fields show conditionally, and Cancel walks away without a layer.
     """

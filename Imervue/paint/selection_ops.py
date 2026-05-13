@@ -223,7 +223,7 @@ def from_layer_alpha(layer_image: np.ndarray, threshold: int = 0) -> np.ndarray:
 
     Pixels with alpha strictly greater than ``threshold`` are
     selected. ``threshold=0`` (the default) selects everything that
-    has any opacity at all, matching MediBang's "Select Layer" command.
+    has any opacity at all, matching raster paint apps's "Select Layer" command.
     ``threshold=127`` selects the predominantly-opaque half of a
     semi-transparent layer.
     """

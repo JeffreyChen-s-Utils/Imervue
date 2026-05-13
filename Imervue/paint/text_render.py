@@ -60,7 +60,7 @@ def render_text(options: TextRenderOptions) -> np.ndarray:
 
     With ``options.vertical`` set, glyphs stack top-to-bottom
     centred on a single column whose width is the widest glyph plus
-    padding — matching MediBang's manga vertical text mode.
+    padding — matching raster paint apps's manga vertical text mode.
     """
     text = options.text
     if not text:

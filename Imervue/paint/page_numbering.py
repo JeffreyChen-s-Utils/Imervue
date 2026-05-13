@@ -1,6 +1,6 @@
 """Auto page-number stamper for multi-page projects.
 
-MediBang's "Comic Project" workflow lets the artist drop a page-
+raster paint apps's "Comic Project" workflow lets the artist drop a page-
 number stamp onto every page in one shot. This module is the pure
 logic: take a :class:`PaintProject`, render the page index into a
 small text layer at the requested corner of each page, and add that

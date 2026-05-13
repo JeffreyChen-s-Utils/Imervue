@@ -83,7 +83,7 @@ class Recipe:
     contrast: float = 0.0          # -1..+1
     saturation: float = 0.0        # -1..+1
     exposure: float = 0.0          # -2..+2 (stops)
-    # Advanced develop sliders (Lightroom-style). All -1..+1 and default to
+    # Advanced develop sliders (flag-based). All -1..+1 and default to
     # zero so existing recipes deserialise unchanged (see `from_dict`).
     temperature: float = 0.0       # warm (+) / cool (-) white balance
     tint: float = 0.0              # magenta (+) / green (-)

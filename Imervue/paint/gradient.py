@@ -1,6 +1,6 @@
 """Pure-numpy gradient rasterisation.
 
-Four MediBang-style gradient kinds, parameterised by two image-space
+Four full-featured gradient kinds, parameterised by two image-space
 points and the foreground / background colours. The drag start point
 holds the foreground; the drag end holds the background. A ``reverse``
 flag swaps the role of the two colours without re-issuing the drag.

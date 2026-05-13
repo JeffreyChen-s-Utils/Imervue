@@ -202,7 +202,7 @@ def test_tool_state_quick_mask_active_default_when_missing():
 
 
 # ---------------------------------------------------------------------------
-# QPixmap brush cursor — Medibang-style size preview
+# QPixmap brush cursor — -style size preview
 # ---------------------------------------------------------------------------
 
 

@@ -1120,7 +1120,7 @@ chinese_word_dict = {
     "keyboard_osd_tip": "F8 切换右上角 OSD 叠加层（文件名/尺寸/大小）；Ctrl+F8 显示 Debug HUD（显存/缓存/线程）",
     "keyboard_pixel_view_tip": "Shift+P 启用像素查看，在 \u2265400% 缩放下显示像素网格与光标下的 RGB 值",
     "keyboard_color_mode_tip": "Shift+M 循环 正常 / 灰阶 / 反相 / 怀旧 色彩渲染（非破坏性）",
-    "keyboard_cull_pick_tip": "P 将当前图片（或所有选中的 tile）标为 Pick — Lightroom 风格的保留旗标",
+    "keyboard_cull_pick_tip": "P 将当前图片（或所有选中的 tile）标为 Pick — XMP-aware photo managers 风格的保留旗标",
     "keyboard_cull_reject_tip": "Shift+X 将当前图片（或所有选中的 tile）标为 Reject；之后在 Extra Tools > Culling 可一键删除所有 Reject",
     "keyboard_cull_unflag_tip": "U 清除当前图片或选中项的 Pick / Reject 分拣旗标",
     "keyboard_command_palette_tip": "Ctrl+Shift+P 打开命令面板 — 在单一对话框中模糊搜索并执行任何菜单操作",
@@ -1189,9 +1189,9 @@ chinese_word_dict = {
     # XMP 伴随文件
     "xmp_title": "XMP 伴随文件",
     "xmp_explain": (
-        "读取或写入与 Lightroom 兼容的 .xmp 伴随文件，保存评分、标题、"
-        "描述、关键字（标签）与颜色标签，可与 Lightroom / Bridge / "
-        "Capture One 互通。"
+        "读取或写入与 XMP-aware photo managers 兼容的 .xmp 伴随文件，保存评分、标题、"
+        "描述、关键字（标签）与颜色标签，可与 XMP-aware photo managers / Bridge / "
+        "XMP-aware photo managers 互通。"
     ),
     "xmp_count": "当前视图中有 {n} 张图片。",
     "xmp_export": "导出伴随文件",

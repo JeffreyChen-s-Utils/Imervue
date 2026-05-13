@@ -3,7 +3,7 @@
 A *workspace* captures the parts of the main window that the user might want
 to flip between — root folder, window geometry, dock / toolbar state, and
 the current splitter sizes. Users can save the current layout under a name
-and restore it later (think Lightroom workspaces or VS Code profiles).
+and restore it later (think other XMP-aware photo managers workspaces or VS Code profiles).
 
 The data is persisted in ``user_setting_dict`` under the ``workspaces`` key
 so workspaces survive across sessions without a separate config file.

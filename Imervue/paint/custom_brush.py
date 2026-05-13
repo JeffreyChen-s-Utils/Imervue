@@ -2,7 +2,7 @@
 
 Lets the user supply their own PNG / JPEG / TIFF as a brush kernel.
 The image's alpha channel (if present) is preferred — that's how
-exported MediBang and Photoshop brush tips encode the stamp shape —
+exported raster paint apps and Photoshop brush tips encode the stamp shape —
 otherwise the grayscale luminance is used so plain black-on-white
 stamps still work.
 

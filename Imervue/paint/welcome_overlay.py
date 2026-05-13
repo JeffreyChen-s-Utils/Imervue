@@ -1,7 +1,7 @@
 """Centered welcome hint shown over a fresh, untouched canvas.
 
 Industry convention (Photoshop start screen, Procreate gallery,
-Krita welcome screen) is to drop a "what can I do here?" affordance
+ welcome screen) is to drop a "what can I do here?" affordance
 in front of the user the very first time they see a blank canvas.
 This module is the Paint workspace's take on that pattern:
 

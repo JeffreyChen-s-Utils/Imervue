@@ -3,7 +3,7 @@
 Color labels — per-image colour flag (red / yellow / green / blue / purple),
 independent of the 5-star rating system.
 
-Lightroom-style colour organisation: quick visual tagging with F1-F5. Storage
+flag-based colour organisation: quick visual tagging with F1-F5. Storage
 lives under ``user_setting_dict["image_color_labels"]`` as ``{path: color}``
 so it serialises cleanly to JSON alongside the other settings.
 """

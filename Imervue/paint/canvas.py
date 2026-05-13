@@ -170,7 +170,7 @@ def cursor_for_tool(tool: str) -> Qt.CursorShape:
 # ---------------------------------------------------------------------------
 # Transparency checker — drawn behind the document so alpha=0 areas
 # read as the universal "no pixel" pattern. Two greys, 8-pixel cells;
-# matches Photoshop / MediBang / Krita's default transparency grid.
+# matches Photoshop / raster paint apps / 's default transparency grid.
 # ---------------------------------------------------------------------------
 _CHECKER_CELL_PX = 8
 _CHECKER_TILE_PX = _CHECKER_CELL_PX * 2
@@ -259,7 +259,7 @@ class PaintCanvas(QOpenGLWidget):
         self._texture: int | None = None
         # Tiled checker texture rendered behind the layer composite so
         # alpha=0 areas read as the standard "transparency checker"
-        # pattern (Photoshop / Krita / MediBang convention) instead
+        # pattern (Photoshop /  / raster paint apps convention) instead
         # of either the editor's dark backdrop or a flat white sheet.
         # Built lazily on first paint because the GL context isn't
         # current during ``__init__``.
@@ -369,7 +369,7 @@ class PaintCanvas(QOpenGLWidget):
         layers, so :meth:`current_image` returns ``None`` and the tool
         dispatcher silently no-ops on the first brush stroke. The
         workspace calls this from ``__init__`` so the user can paint
-        immediately, matching MediBang's "open with a blank canvas"
+        immediately, matching raster paint apps's "open with a blank canvas"
         behaviour.
         """
         if width <= 0 or height <= 0:
@@ -536,7 +536,7 @@ class PaintCanvas(QOpenGLWidget):
 
         Tool-icon QPixmaps come first (eyedropper, fill, gradient,
         bezier pen, the four selection variants, zoom) so the user
-        gets a Medibang-style hint at a glance. Tools without a
+        gets a full-featured hint at a glance. Tools without a
         custom icon fall through to the per-tool ``Qt.CursorShape``
         from :data:`_TOOL_CURSORS`.
         """
@@ -551,7 +551,7 @@ class PaintCanvas(QOpenGLWidget):
     def set_brush_size_cursor(
         self, brush_size: int, zoom: float, *, kind: str = "brush",
     ) -> None:
-        """Show a Medibang-style ring at the brush's screen-pixel size.
+        """Show a full-featured ring at the brush's screen-pixel size.
 
         ``brush_size`` is the brush diameter in canvas pixels;
         multiplying by ``zoom`` gives the on-screen diameter the ring
@@ -1343,7 +1343,7 @@ class PaintCanvas(QOpenGLWidget):
             and event.button() == Qt.MouseButton.LeftButton
         ):
             # Click zooms in 1.25×; Alt+click zooms out, mirroring
-            # the Photoshop / MediBang convention.
+            # the Photoshop / raster paint apps convention.
             factor = 1.0 / 1.25 if (
                 event.modifiers() & Qt.KeyboardModifier.AltModifier
             ) else 1.25

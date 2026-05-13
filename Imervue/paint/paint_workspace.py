@@ -4,7 +4,7 @@ A QMainWindow used as the centralWidget of a QTabWidget page. Embedding
 a QMainWindow inside another QMainWindow is unusual but well-supported
 by Qt and is the simplest way to host real QDockWidgets — the alternative
 (plain QSplitter layout) loses floating / re-docking / collapse-arrow
-behaviour that users expect from MediBang and PS-style apps.
+behaviour that users expect from raster paint apps and PS-style apps.
 
 Layout:
 
@@ -85,7 +85,7 @@ class PaintWorkspace(QMainWindow):
         # can drag a file from the OS file manager into the canvas.
         self.setAcceptDrops(True)
         self._state = state if state is not None else ts.load_tool_state()
-        # Seed the MediBang-style default brush preset pack on first
+        # Seed the full-featured default brush preset pack on first
         # workspace launch. Idempotent: when the user already has at
         # least one brush sub-tool the seeder bails out, so existing
         # users keep their saved presets and tests that build their
@@ -157,7 +157,7 @@ class PaintWorkspace(QMainWindow):
         self._tool_bar = PaintToolBar(self._state, self)
         self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, self._tool_bar)
 
-        # Right dock column — order matches MediBang's defaults. The
+        # Right dock column — order matches raster paint apps's defaults. The
         # layer dock is bound to the canvas's PaintDocument so external
         # changes (tool that adds a layer, file load) refresh the panel.
         self._color_dock = ColorDock(self._state, self)
@@ -236,7 +236,7 @@ class PaintWorkspace(QMainWindow):
         # through fourteen tabs to find anything. Splitting into
         # three workflow-oriented groups keeps the same vertical
         # budget while giving each cluster a small, scannable tab
-        # row matching MediBang's "drawing tools / canvas data /
+        # row matching raster paint apps's "drawing tools / canvas data /
         # libraries" mental model.
         drawing_cluster = (
             self._color_dock,
@@ -326,7 +326,7 @@ class PaintWorkspace(QMainWindow):
         self._navigator_dock.fit_requested.connect(self._canvas.reset_view)
         self._canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
         # Zoom change → resize the brush-ring cursor so its on-screen
-        # diameter keeps tracking size × zoom (Medibang-style preview).
+        # diameter keeps tracking size × zoom (full-featured preview).
         self._canvas.zoom_changed.connect(self._on_zoom_changed_refresh_cursor)
         # Right-click anywhere on the canvas → quick-actions menu.
         self._canvas.customContextMenuRequested.connect(
@@ -675,8 +675,8 @@ class PaintWorkspace(QMainWindow):
         """Hide every right-side dock for distraction-free painting,
         or restore them when called again.
 
-        Industry-standard "Tab" key behaviour — Photoshop / Krita /
-        MediBang all bind it. Returns the new visibility state so
+        Industry-standard "Tab" key behaviour — Photoshop /  /
+        raster paint apps all bind it. Returns the new visibility state so
         callers can update menu check-marks if needed.
 
         State is tracked per-call via :attr:`_docks_collapsed` so
@@ -863,7 +863,7 @@ class PaintWorkspace(QMainWindow):
 
         The composite is rendered as a tiled grid so the artist can
         verify the canvas wraps cleanly on every edge — the texture-
-        artist workflow MediBang lacks but Photoshop / Krita expose.
+        artist workflow raster paint apps lacks but Photoshop /  expose.
         """
         return self._open_secondary_view(tile_preview=True)
 
@@ -1539,7 +1539,7 @@ class PaintWorkspace(QMainWindow):
 
     # ---- handlers --------------------------------------------------------
 
-    # Tools whose cursor is the Medibang-style brush ring (diameter
+    # Tools whose cursor is the full-featured brush ring (diameter
     # tracks size × zoom). All five paint with ``state.brush.size``
     # so the ring is a meaningful preview for every one of them;
     # other tools (eyedropper, fill, gradient, …) get tool-specific
@@ -1614,7 +1614,7 @@ class PaintWorkspace(QMainWindow):
         self._refresh_status_line()
 
     def _show_canvas_context_menu(self, pos) -> None:
-        """Pop a Photoshop-style quick-actions menu at the right-click
+        """Pop a raster-editor quick-actions menu at the right-click
         position on the canvas. Construction is delegated to
         :meth:`_build_canvas_context_menu` so unit tests can verify
         the action set without driving Qt's modal loop."""
@@ -1797,7 +1797,7 @@ class PaintWorkspace(QMainWindow):
         layer_down.activated.connect(lambda: self.cycle_active_layer(-1))
         layer_up = QShortcut(QKeySequence("Alt+]"), self)
         layer_up.activated.connect(lambda: self.cycle_active_layer(+1))
-        # Brush size step — Photoshop / MediBang convention. Bracket
+        # Brush size step — Photoshop / raster paint apps convention. Bracket
         # keys without a modifier so the artist can keep one hand on
         # the canvas. Step amount is multiplicative when held with
         # Shift so artists can resize quickly across orders of magnitude.
@@ -1826,7 +1826,7 @@ class PaintWorkspace(QMainWindow):
         fit_shortcut.activated.connect(self._fit_view)
         actual_shortcut = QShortcut(QKeySequence(actual_key), self)
         actual_shortcut.activated.connect(self._actual_size_view)
-        # Photoshop / MediBang colour shortcuts — X swaps FG↔BG, D
+        # Photoshop / raster paint apps colour shortcuts — X swaps FG↔BG, D
         # resets to black-on-white. The default WidgetWithChildren
         # shortcut context skips these when focus is inside a
         # QLineEdit / QTextEdit so typing the letter into a text

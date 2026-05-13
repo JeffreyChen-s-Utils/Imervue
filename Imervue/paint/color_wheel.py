@@ -1,6 +1,6 @@
 """Pure-math helpers for a hue-ring + saturation/value-triangle picker.
 
-The classic Photoshop / MediBang colour picker is an outer hue ring
+The classic Photoshop / raster paint apps colour picker is an outer hue ring
 with an inner SV (saturation / value) triangle that rotates with the
 selected hue. This module owns the geometry — hit testing, region
 classification, and forward / inverse colour conversions — so the
@@ -116,7 +116,7 @@ def triangle_vertices(
     The triangle inscribes in a circle of ``triangle_radius`` and
     rotates so the saturated-hue corner points outward at the
     current hue's ring position. Vertex order is (saturated_hue,
-    white, black) — matches MediBang's layout where pulling toward
+    white, black) — matches raster paint apps's layout where pulling toward
     the corner shifts S/V accordingly.
     """
     base_angle = hue_to_ring_angle(hue)

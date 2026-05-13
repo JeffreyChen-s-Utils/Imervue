@@ -8,7 +8,7 @@ ready for composite onto the active layer.
 
 Used by the Manga ▸ "Text on selection path" verb so the user can
 draw a curve / shape with the marquee, type text, and have the
-glyphs follow the contour the way MediBang's text-on-path tool does.
+glyphs follow the contour the way raster paint apps's text-on-path tool does.
 """
 from __future__ import annotations
 

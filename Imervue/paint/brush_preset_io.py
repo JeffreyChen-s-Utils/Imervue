@@ -7,7 +7,7 @@ Two file shapes are supported:
   the same dict :meth:`BrushPreset.from_dict` accepts plus a small
   envelope (``format`` / ``version``) so future format upgrades can
   detect old files cleanly.
-* ``.mdp`` — MediBang's brush-preset format. The on-disk layout is
+* ``.mdp`` — raster paint apps's brush-preset format. The on-disk layout is
   proprietary and undocumented in detail, but enough fields appear in
   ASCII near the file header to extract the brush name, size, and
   hardness for a useful round-trip. Anything we can't parse falls
@@ -140,11 +140,11 @@ def import_bundle(path: str | Path) -> list[BrushPreset]:
 
 
 # ---------------------------------------------------------------------------
-# .mdp — MediBang brush preset (read-only, best-effort)
+# .mdp — raster paint apps brush preset (read-only, best-effort)
 # ---------------------------------------------------------------------------
 
 
-# MediBang's format puts ASCII strings near the header for the brush
+# raster paint apps's format puts ASCII strings near the header for the brush
 # name and tag; numeric parameters are sprinkled between length-
 # prefixed records. We sniff for a handful of tag tokens and pull the
 # associated values out by regex. Anything we can't find is replaced
@@ -155,8 +155,8 @@ _MDP_HARDNESS_PATTERN = re.compile(rb"hardness[\x00- ]+(\d+(?:\.\d+)?)")
 _MDP_OPACITY_PATTERN = re.compile(rb"opacity[\x00- ]+(\d+(?:\.\d+)?)")
 
 
-def import_medibang_preset(path: str | Path) -> BrushPreset:
-    """Best-effort read of a MediBang ``.mdp`` brush preset.
+def import_mdp_preset(path: str | Path) -> BrushPreset:
+    """Best-effort read of a ``.mdp`` brush preset.
 
     Returns a :class:`BrushPreset` with whatever fields could be
     recovered. The format isn't fully documented; callers should
@@ -212,7 +212,7 @@ def load_directory(root: str | Path) -> list[BrushPreset]:
             if path.suffix == IMERVUE_BRUSH_EXTENSION:
                 out.extend(import_bundle(path))
             elif path.suffix == MEDIBANG_BRUSH_EXTENSION:
-                out.append(import_medibang_preset(path))
+                out.append(import_mdp_preset(path))
         except (OSError, ValueError) as exc:
             logger.warning("skipping %s: %s", path, exc)
     return out

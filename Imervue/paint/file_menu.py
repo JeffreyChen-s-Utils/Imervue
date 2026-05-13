@@ -23,7 +23,7 @@ from Imervue.paint.brush_presets import save_brush_presets
 from Imervue.paint.color_palette_io import (
     ADOBE_COLOR_EXTENSION,
     ADOBE_SWATCH_EXCHANGE_EXTENSION,
-    GIMP_PALETTE_EXTENSION,
+    GPL_PALETTE_EXTENSION,
     import_palette,
 )
 from Imervue.paint.export_presets import (
@@ -272,7 +272,7 @@ class _FileMenuBridge:
             title_fallback="Import brush preset",
             filters=[
                 f"Imervue brush (*{IMERVUE_BRUSH_EXTENSION})",
-                f"MediBang brush (*{MEDIBANG_BRUSH_EXTENSION})",
+                f"raster paint apps brush (*{MEDIBANG_BRUSH_EXTENSION})",
             ],
         )
         if not path:
@@ -290,7 +290,7 @@ class _FileMenuBridge:
             title_key="paint_file_import_palette",
             title_fallback="Import palette",
             filters=[
-                f"GIMP palette (*{GIMP_PALETTE_EXTENSION})",
+                f"external image editors palette (*{GPL_PALETTE_EXTENSION})",
                 f"Adobe Swatch (*{ADOBE_COLOR_EXTENSION})",
                 f"Adobe Swatch Exchange (*{ADOBE_SWATCH_EXCHANGE_EXTENSION})",
             ],

@@ -1,7 +1,7 @@
 """Multi-stop gradient editor.
 
 The Phase 3c gradient tool only handled two-colour gradients (foreground
-→ background). MediBang's gradient editor lets the user place multiple
+→ background). raster paint apps's gradient editor lets the user place multiple
 colour stops along the gradient and tune each one's position and
 alpha — much more useful for sky gradients, neon glows, etc.
 

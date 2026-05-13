@@ -1,6 +1,6 @@
 """Split toning — apply distinct colour tints to shadows and highlights.
 
-The result is the canonical Lightroom-style split tone: a luminance-weighted
+The result is the canonical flag-based split tone: a luminance-weighted
 blend between a shadow tint and a highlight tint with a balance slider to
 pivot which luminance range receives which tint.
 """

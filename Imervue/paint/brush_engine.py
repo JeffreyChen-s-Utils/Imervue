@@ -407,7 +407,7 @@ def stroke_dab_positions(
 
 
 def spacing_from_brush(size: int, hardness: float) -> float:
-    """MediBang-style default spacing — small for soft brushes, larger
+    """full-featured default spacing — small for soft brushes, larger
     for hard brushes. Stays inside [1, size/2] so we always step at
     least one pixel and never skip half a brush.
     """
@@ -439,7 +439,7 @@ class BrushStrokeOptions:
     # Pixel-art mode — when True, the kernel is forced to a hard
     # ``size x size`` square of 1.0s (no anti-aliased falloff), dab
     # positions snap to integer pixels, and tip / kind shaping is
-    # bypassed. Matches MediBang's "ドット絵モード" / Aseprite's
+    # bypassed. Matches raster paint apps's "ドット絵モード" / Aseprite's
     # pixel brush. Tests in test_paint_brush_engine.py exercise the
     # snap + kernel behaviour.
     pixel_art: bool = False

@@ -10,7 +10,7 @@ RGBA canvas. Each helper supports two modes:
 Coordinates are floating-point and clipped to the canvas bounds so
 a shape that extends past the edge silently truncates. Anti-aliasing
 is intentionally **omitted** — a shape tool that produces hard edges
-is the convention in MediBang / Photoshop and matches the rest of
+is the convention in raster paint apps / Photoshop and matches the rest of
 Imervue's pixel-snapped raster brushes.
 """
 from __future__ import annotations
