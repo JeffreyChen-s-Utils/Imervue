@@ -48,39 +48,70 @@ class CubismBridgeError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-def _candidate_dll_paths() -> list[Path]:
-    """Return the ordered list of paths we'll probe for the Core DLL.
-    Env var wins; otherwise we sweep common ``Downloads`` install
-    locations on Windows."""
+def _dll_filename() -> str:
+    """Platform-specific file name the bridge searches for."""
+    if sys.platform == "win32":
+        return "Live2DCubismCore.dll"
+    if sys.platform == "darwin":
+        return "libLive2DCubismCore.dylib"
+    return "libLive2DCubismCore.so"
+
+
+def _arch_hint() -> str:
+    """Path substring that marks the right-arch build. Used to sort
+    multiple matches so an ``rglob`` that finds both ``x86`` and
+    ``x86_64`` doesn't pick the 32-bit one."""
+    if sys.platform == "darwin":
+        return "macos"
+    return "x86_64"
+
+
+def _scan_sdk_root(root: Path) -> list[Path]:
+    """Find every Live2DCubismCore library under ``root``. The SDK
+    layout is ``Core/dll/<platform>/<arch>/Live2DCubismCore.*`` but
+    we ``rglob`` so the user can extract the zip at any depth (or
+    rename the wrapping folder) and the bridge still finds it.
+
+    Returns ``[]`` when ``root`` doesn't exist — keeps the candidate
+    list short rather than raising on a missing folder."""
+    if not root.is_dir():
+        return []
+    name = _dll_filename()
+    hint = _arch_hint()
+    results = list(root.rglob(name))
+    results.sort(key=lambda p: 0 if hint in str(p) else 1)
+    return results
+
+
+def _candidate_dll_paths(explicit: str | Path | None = None) -> list[Path]:
+    """Return the ordered list of paths to probe.
+
+    Priority:
+
+    1. ``explicit`` — caller-supplied path (e.g. the workspace UI
+       dialog or a test fixture).
+    2. ``<cwd>/sdk/`` — scanned recursively. Drop the unzipped Cubism
+       SDK under ``<project>/sdk/`` and the bridge picks it up with
+       zero configuration.
+    3. ``CUBISM_CORE_DLL`` environment variable.
+
+    No hardcoded user-profile / Downloads sweep — placement decisions
+    stay with the user, not the source tree.
+    """
     candidates: list[Path] = []
+    if explicit is not None:
+        candidates.append(Path(explicit))
+    candidates.extend(_scan_sdk_root(Path.cwd() / "sdk"))
     env = os.environ.get(LIBRARY_ENV_VAR)
     if env:
         candidates.append(Path(env))
-    if sys.platform == "win32":
-        home = Path(os.environ.get("USERPROFILE", str(Path.home())))
-        downloads = home / "Downloads"
-        # Sweep every CubismSdkForNative* folder we find — version
-        # bumps shouldn't require code changes.
-        if downloads.is_dir():
-            for sdk_root in sorted(downloads.glob("CubismSdkForNative-*")):
-                core_dll = sdk_root / "Core" / "dll" / "windows" / "x86_64" / "Live2DCubismCore.dll"
-                candidates.append(core_dll)
-    elif sys.platform == "darwin":
-        # macOS uses .dylib; user puts SDK in ~/Downloads or /Applications.
-        for root in (Path.home() / "Downloads", Path("/Applications")):
-            for sdk_root in sorted(root.glob("CubismSdkForNative-*")):
-                candidates.append(sdk_root / "Core" / "dll" / "macos" / "libLive2DCubismCore.dylib")
-    else:
-        # Linux — .so file. Same Downloads convention.
-        for sdk_root in sorted((Path.home() / "Downloads").glob("CubismSdkForNative-*")):
-            candidates.append(sdk_root / "Core" / "dll" / "linux" / "x86_64" / "libLive2DCubismCore.so")
     return candidates
 
 
-def find_dll() -> Path | None:
+def find_dll(explicit: str | Path | None = None) -> Path | None:
     """Return the first existing candidate path, or ``None`` when the
     user hasn't placed the SDK anywhere we know about."""
-    for candidate in _candidate_dll_paths():
+    for candidate in _candidate_dll_paths(explicit):
         if candidate.is_file():
             return candidate
     return None
@@ -89,22 +120,21 @@ def find_dll() -> Path | None:
 def load_library(path: str | Path | None = None) -> ctypes.CDLL:
     """Load the Cubism Core DLL and wire up the argument / return
     types for every function we wrap. Raises
-    :class:`CubismBridgeError` when the DLL isn't where we expected."""
-    if path is None:
-        found = find_dll()
-        if found is None:
-            raise CubismBridgeError(
-                f"Live2DCubismCore.dll not found. Set the {LIBRARY_ENV_VAR} "
-                f"environment variable to the absolute path of the DLL.",
-            )
-        path = found
-    path = Path(path)
-    if not path.is_file():
-        raise CubismBridgeError(f"DLL path {path} does not exist")
+    :class:`CubismBridgeError` when no candidate path resolves."""
+    found = find_dll(path)
+    if found is None:
+        raise CubismBridgeError(
+            "Live2DCubismCore library not found. Either:\n"
+            "  • drop the extracted Cubism SDK under <cwd>/sdk/ (e.g. "
+            "<cwd>/sdk/CubismSdkForNative-5-r.5/),\n"
+            f"  • set the {LIBRARY_ENV_VAR} environment variable to "
+            "the library file's absolute path, or\n"
+            "  • pass the path explicitly to load_library(path).",
+        )
     try:
-        lib = ctypes.CDLL(str(path))
+        lib = ctypes.CDLL(str(found))
     except OSError as exc:
-        raise CubismBridgeError(f"failed to load {path}: {exc}") from exc
+        raise CubismBridgeError(f"failed to load {found}: {exc}") from exc
     _bind_signatures(lib)
     return lib
 

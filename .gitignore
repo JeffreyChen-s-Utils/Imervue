@@ -212,3 +212,6 @@ march_7th.puppet
 
 # March 7th character drop — proprietary Hoyoverse content
 examples/puppet/char/
+
+# Cubism SDK drop folder — local-only
+/sdk/
