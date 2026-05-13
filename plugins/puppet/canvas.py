@@ -102,6 +102,7 @@ from puppet.runtime import (
     compose_all_drawables,
     default_parameter_values,
     resolve_drawable_color,
+    resolve_drawable_opacity,
     resolve_part_state,
     resolve_pose_visibility,
 )
@@ -180,6 +181,7 @@ class PuppetCanvas(QOpenGLWidget):
         self._deformed_vertices: dict[str, np.ndarray] = {}
         self._visibility: dict[str, bool] = {}
         self._part_opacity: dict[str, float] = {}
+        self._drawable_opacity: dict[str, float] = {}
         self._drawable_tint: dict[str, tuple[float, float, float]] = {}
         # Editor selection — when the bone tree dock picks a deformer
         # we draw a highlight overlay so the user can see which one
@@ -313,6 +315,7 @@ class PuppetCanvas(QOpenGLWidget):
             self._deformed_vertices = {}
             self._visibility = {}
             self._part_opacity = {}
+            self._drawable_opacity = {}
             self._drawable_tint = {}
             return
         active_values = apply_expressions(
@@ -348,8 +351,16 @@ class PuppetCanvas(QOpenGLWidget):
             merged_opacity[drawable.id] = part_op
         self._visibility = merged_visibility
         self._part_opacity = merged_opacity
-        # Pre-compute the per-drawable multiply tint so paintGL just
-        # reads it without rerunning the curves per frame.
+        # Pre-compute the per-drawable multiply tint and parameter-driven
+        # alpha so paintGL just reads them without rerunning the curves
+        # per frame. ``resolve_drawable_opacity`` folds the authored
+        # base opacity with every ``opacity_keys`` curve — that's what
+        # lets a hidden alternate-pose mesh fade in when its driving
+        # parameter (e.g. a wave gesture) fires.
+        self._drawable_opacity = {
+            drawable.id: resolve_drawable_opacity(drawable, active_values)
+            for drawable in self._document.drawables
+        }
         self._drawable_tint = {
             drawable.id: resolve_drawable_color(drawable, active_values)
             for drawable in self._document.drawables
@@ -582,9 +593,12 @@ class PuppetCanvas(QOpenGLWidget):
                 continue
             sfactor, dfactor = _BLEND_FUNCS.get(cmd.blend_mode, _BLEND_FUNCS["normal"])
             glBlendFunc(sfactor, dfactor)
-            effective_opacity = cmd.opacity * self._part_opacity.get(
-                cmd.drawable_id, 1.0,
-            )
+            # ``_drawable_opacity`` folds ``cmd.opacity`` with parameter-
+            # driven ``opacity_keys`` curves; ``_part_opacity`` carries
+            # the cascading Part-tree multiplier on top.
+            effective_opacity = self._drawable_opacity.get(
+                cmd.drawable_id, cmd.opacity,
+            ) * self._part_opacity.get(cmd.drawable_id, 1.0)
             tint_r, tint_g, tint_b = self._drawable_tint.get(
                 cmd.drawable_id, (1.0, 1.0, 1.0),
             )
