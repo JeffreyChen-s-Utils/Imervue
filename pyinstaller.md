@@ -111,6 +111,7 @@ pyinstaller ^
   --collect-data qt_material ^
   --add-data "Imervue\multi_language;Imervue\multi_language" ^
   --add-data "plugins;plugins" ^
+  --add-data "examples;examples" ^
   --add-data "exe;exe" ^
   --add-data "THIRD_PARTY_LICENSES.md;." ^
   --add-data "LICENSE;." ^
@@ -132,6 +133,7 @@ pyinstaller `
   --collect-data qt_material `
   --add-data "Imervue\multi_language;Imervue\multi_language" `
   --add-data "plugins;plugins" `
+  --add-data "examples;examples" `
   --add-data "exe;exe" `
   --add-data "THIRD_PARTY_LICENSES.md;." `
   --add-data "LICENSE;." `
@@ -141,7 +143,7 @@ pyinstaller `
 **一行版**（任何 shell 都能用）：
 
 ```
-pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" --add-data "exe;exe" --add-data "THIRD_PARTY_LICENSES.md;." --add-data "LICENSE;." Imervue\__main__.py
+pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" --add-data "examples;examples" --add-data "exe;exe" --add-data "THIRD_PARTY_LICENSES.md;." --add-data "LICENSE;." Imervue\__main__.py
 ```
 
 產物：`dist\Imervue\Imervue.exe`。
@@ -161,6 +163,7 @@ pyinstaller \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
+  --add-data "examples:examples" \
   --add-data "exe:exe" \
   --add-data "THIRD_PARTY_LICENSES.md:." \
   --add-data "LICENSE:." \
@@ -197,6 +200,7 @@ pyinstaller \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
+  --add-data "examples:examples" \
   --add-data "exe:exe" \
   --add-data "THIRD_PARTY_LICENSES.md:." \
   --add-data "LICENSE:." \
@@ -240,7 +244,8 @@ xcrun stapler staple dist/Imervue.app
 - `--collect-all imageio`、`--collect-all rawpy`：這兩個套件內含動態載入的 plugin / 原生函式庫，必須整包收集。
 - `--collect-submodules PySide6`：避免少數 Qt 子模組漏掉。
 - `--collect-data qt_material`：qt-material 的 QSS / 資源。
-- `--add-data`：語言檔和 plugins 目錄。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。
+- `--add-data`：語言檔、`plugins/`（外部 plugin 目錄）、`examples/`（內附 `examples/puppet/march_7th.puppet` 示範 rig 讓使用者第一次點 Puppet 分頁的「Open Puppet…」就有東西可開）。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。**注意**：Puppet 從 plugin 升格為內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一起被 PyInstaller 的靜態分析自動帶進來，不需要任何 `--add-data` 或 `--collect-all=Imervue.puppet`。
+- **Cubism Native SDK DLL 永遠不打包**：Live2D 的 Free Material License 禁止散佈 SDK 二進位。`Imervue/puppet/cubism_native_bridge.py` 執行期會探測 `<cwd>/sdk/` 與 `CUBISM_CORE_DLL` 環境變數，使用者自備 DLL；找不到時 `.moc3 → .puppet` 的轉換功能會優雅停用，但已轉好的 `.puppet` rig 還是能正常播放。
 - `defusedxml`：`Imervue/image/xmp_sidecar.py` 會用 `defusedxml` 做 XMP sidecar 的安全 XML 解析（bandit `B405`–`B411`）。PyInstaller 的靜態 import 分析會自動把它收進來，不需要額外 `--collect-all defusedxml`。但**務必確認 venv 已 `pip install defusedxml`**——沒裝的話 XMP 讀寫功能在 frozen 產物中會拋 `ModuleNotFoundError: defusedxml` 而非 silent fallback。
 
 ## 3. 使用 auto-py-to-exe（僅 Windows，GUI 方式）
@@ -294,6 +299,7 @@ datas = [
     (os.path.join('Imervue', 'multi_language'),
      os.path.join('Imervue', 'multi_language')),
     ('plugins', 'plugins'),
+    ('examples', 'examples'),
     ('exe', 'exe'),
     ('THIRD_PARTY_LICENSES.md', '.'),
     ('LICENSE', '.'),
@@ -350,7 +356,7 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 2. 開啟 RAW（CR2 / NEF / ARW）——驗證 `rawpy`
 3. 播放 GIF / APNG——驗證 `imageio`
 4. 切換語言——驗證 `multi_language` 資料夾
-5. 載入至少一個 plugin（例如 `plugins/object_splitter`）——驗證 plugin 目錄與 `models/` 子目錄
+5. 載入至少一個 plugin（例如 `plugins/object_splitter`）——驗證 `plugins/` 目錄與 `models/` 子目錄（**Puppet 已不在這裡，現為內建第四分頁**）
 6. 新增 / 列出書籤——驗證 `user_setting.json` 讀寫路徑
 7. 執行期 pip 安裝：跑一個帶依賴的 plugin（如 AI 背景移除），安裝成功後 **關閉 app → 重開 → 不用再安裝就能用** ⇒ 代表 `lib/site-packages` 有正確被加進 `sys.path`
 8. 修改面板（Develop）：調整曝光 / 亮度 / **白平衡（色溫、色調）/ 色調分區（Shadows、Midtones、Highlights）/ Vibrance** 滑桿——畫布即時預覽，不修改原檔；儲存後才寫入磁碟
@@ -369,3 +375,6 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 21. **浮水印疊加**：開啟浮水印對話框，套用文字 / 圖片浮水印於輸出——驗證 PIL 的 `ImageDraw` / `ImageFont` 在 frozen 下能載入字型資源
 22. **Export presets**：用 Web 1600px / Print 300dpi / Instagram 1080×1080 三種預設匯出——驗證 PIL 的 resample / DPI metadata 寫入正常
 23. **XMP sidecar**：載入含 Lightroom／Capture One 產生的 `.xmp` 圖片，確認星等 / 色彩標籤 / 開發參數被讀取；編輯後存檔再用 LR/C1 開啟，確認 sidecar 能被對方讀回——驗證 `defusedxml` 被打包進產物
+24. **Puppet 內建分頁**：切到 Puppet 分頁 → **Open Puppet…** → 選 `examples/puppet/march_7th.puppet`（隨產物內附）→ rig 居中載入；點 Motions dock 任一動作（idle / wave / peace / face_cover …）即播放。驗證 `Imervue.puppet.*` 子套件被 PyInstaller 自動收進、`examples/` 透過 `--add-data` 帶上、`QOpenGLWidget` 在 frozen 環境的 vertex-array 繪製路徑正常
+25. **Puppet 即時輸入（選用）**：開啟 Drag-Track（滑鼠拖動頭部）、Auto-Blink（自動眨眼）；裝有 `sounddevice` 時開 Mic Lip-Sync、裝有 OpenCV + MediaPipe 時開 Webcam Tracking——驗證這幾條選用依賴在 frozen 環境的 `try / except ImportError` fallback 正確（沒裝時不該 crash，只是該選項不可勾選）
+26. **Cubism `.moc3` 轉換器（需自備 SDK）**：把 Live2D Cubism Native SDK 解壓到 `<app_dir>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 → File > Convert `.moc3`… → 任意 Cubism 模型 → 確認產出的 `.puppet` 能播放。驗證 ctypes 對 `Live2DCubismCore.dll` 的動態載入在 frozen 環境下走得通；沒裝 SDK 時這個 menu 項應該 disabled / 提示

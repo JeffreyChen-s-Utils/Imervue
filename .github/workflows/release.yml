@@ -21,6 +21,22 @@
 #                              GitHub Release with the wheel + EXE zip
 #                              attached.
 #
+# Bundling notes:
+#   - The four built-in tabs (Imervue / Modify / Paint / Puppet) all
+#     live under ``Imervue/`` and are picked up automatically by
+#     Nuitka's package walk — there's no per-tab include arg.
+#   - ``--include-data-dir=plugins=plugins`` still ships the third-
+#     party plugin directory so users can drop in / download plugins
+#     without rebuilding. The Puppet tab is no longer here (it was
+#     promoted to a built-in subpackage at Imervue/puppet/).
+#   - ``--include-data-dir=examples=examples`` ships the demo
+#     ``examples/puppet/march_7th.puppet`` rig so the Puppet tab has
+#     something to open the first time a user clicks **Open Puppet…**.
+#   - The Cubism Native SDK DLL is **never** bundled (Live2D's Free
+#     Material License forbids redistribution). The runtime probes
+#     ``<cwd>/sdk/`` and the ``CUBISM_CORE_DLL`` env var; users supply
+#     the DLL themselves.
+#
 # Branch protection note: the release job pushes a `Bump version`
 # commit and a tag directly to main. If main has required-PR
 # protection, allow ``github-actions[bot]`` to bypass, or swap the
@@ -185,7 +201,9 @@ jobs:
             --include-package-data=imageio ^
             --include-package-data=rawpy ^
             --include-data-dir=plugins=plugins ^
+            --include-data-dir=examples=examples ^
             --noinclude-data-files=plugins/*/models/* ^
+            --noinclude-data-files=examples/**/__pycache__/* ^
             --noinclude-data-files=*.onnx ^
             --noinclude-data-files=*.pt ^
             --noinclude-data-files=*.pth ^
