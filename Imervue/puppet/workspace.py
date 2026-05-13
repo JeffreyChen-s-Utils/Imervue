@@ -221,6 +221,12 @@ class PuppetWorkspace(QMainWindow):
         self._recent_menu = QMenu(lang.get("puppet_recent", "Recent"), self)
         self._recent_menu.aboutToShow.connect(self._rebuild_recent_menu)
 
+        # Examples submenu — auto-populated from <app_dir>/examples/puppet/*.puppet
+        self._examples_menu = QMenu(
+            lang.get("puppet_examples", "Examples"), self,
+        )
+        self._examples_menu.aboutToShow.connect(self._rebuild_examples_menu)
+
         # Edit
         self._add_rot_action = QAction(
             lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
@@ -332,6 +338,7 @@ class PuppetWorkspace(QMainWindow):
 
         file_menu = bar.addMenu(lang.get("puppet_menu_file", "File"))
         file_menu.addAction(self._open_action)
+        file_menu.addMenu(self._examples_menu)
         file_menu.addMenu(self._recent_menu)
         file_menu.addAction(self._save_action)
         file_menu.addSeparator()
@@ -1252,6 +1259,37 @@ class PuppetWorkspace(QMainWindow):
             ),
         )
         return True
+
+    # ---- examples menu --------------------------------------------------
+
+    def _rebuild_examples_menu(self) -> None:
+        """Scan ``<app_dir>/examples/puppet/*.puppet`` and rebuild the
+        Examples submenu with one entry per bundled rig.
+
+        Re-scanned every time the menu opens so the user can drop new
+        ``.puppet`` files into the examples directory without
+        restarting Imervue. ``app_dir()`` is frozen-safe — it returns
+        the EXE's containing directory under PyInstaller / Nuitka and
+        the project root in dev."""
+        from Imervue.system.app_paths import examples_dir
+
+        self._examples_menu.clear()
+        lang = language_wrapper.language_word_dict
+        root = examples_dir() / "puppet"
+        bundled = sorted(root.glob("*.puppet")) if root.is_dir() else []
+        if not bundled:
+            empty = self._examples_menu.addAction(
+                lang.get("puppet_examples_empty", "(No bundled examples)"),
+            )
+            empty.setEnabled(False)
+            return
+        for path in bundled:
+            label = path.stem.replace("_", " ").title()
+            action = self._examples_menu.addAction(label)
+            action.setToolTip(str(path))
+            action.triggered.connect(
+                lambda _checked=False, p=str(path): self.open_puppet(p),
+            )
 
     # ---- recent menu ----------------------------------------------------
 

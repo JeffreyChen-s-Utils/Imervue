@@ -484,6 +484,8 @@ korean_word_dict = {
     "puppet_open_failed": '열기 실패: {error}',
     "puppet_recent": '최근 항목',
     "puppet_recent_empty": '(최근 퍼펫 없음)',
+    "puppet_examples": '예제',
+    "puppet_examples_empty": '(번들 예제 없음)',
     "puppet_fit_view": '창에 맞추기',
     "puppet_status_empty": '퍼펫 미로드 — 열기 또는 PNG 가져오기로 시작하세요.',
     "puppet_status_loaded": '{name} 로드됨 ({w}×{h}, 드로어블 {n}개)',

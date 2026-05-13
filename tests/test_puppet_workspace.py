@@ -173,3 +173,89 @@ def test_recent_menu_lists_existing_files(qapp, tmp_path):
         assert actions[0].isEnabled()
     finally:
         ws.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Examples submenu — auto-populated from <app_dir>/examples/puppet/
+# ---------------------------------------------------------------------------
+
+
+def test_examples_menu_lists_bundled_puppets(qapp, tmp_path, monkeypatch):
+    """``_rebuild_examples_menu`` must scan
+    ``<examples_dir>/puppet/*.puppet`` and add one action per file.
+    File names are pretty-printed (underscores → spaces, title-cased)
+    so ``march_7th.puppet`` shows as ``March 7Th``."""
+    import Imervue.puppet.workspace as ws_mod
+    examples_root = tmp_path / "examples"
+    (examples_root / "puppet").mkdir(parents=True)
+    _write_minimal_puppet(examples_root / "puppet" / "march_7th.puppet")
+    _write_minimal_puppet(examples_root / "puppet" / "demo_rig.puppet")
+    monkeypatch.setattr(
+        "Imervue.system.app_paths.app_dir",
+        lambda: tmp_path,
+    )
+
+    ws = ws_mod.PuppetWorkspace()
+    try:
+        ws._rebuild_examples_menu()   # noqa: SLF001
+        actions = ws._examples_menu.actions()   # noqa: SLF001
+        labels = [a.text() for a in actions if a.isEnabled()]
+        # Sorted alphabetically by stem, pretty-printed.
+        assert labels == ["Demo Rig", "March 7Th"]
+        # Tooltip carries the absolute path.
+        assert "march_7th.puppet" in actions[1].toolTip()
+    finally:
+        ws.deleteLater()
+
+
+def test_examples_menu_shows_disabled_placeholder_when_empty(
+    qapp, tmp_path, monkeypatch,
+):
+    """When the examples directory is missing or empty, the menu
+    contains a single disabled placeholder so the user understands
+    that nothing was bundled rather than silently showing no menu."""
+    import Imervue.puppet.workspace as ws_mod
+    # No examples/puppet/ directory at all under tmp_path.
+    monkeypatch.setattr(
+        "Imervue.system.app_paths.app_dir",
+        lambda: tmp_path,
+    )
+
+    ws = ws_mod.PuppetWorkspace()
+    try:
+        ws._rebuild_examples_menu()   # noqa: SLF001
+        actions = ws._examples_menu.actions()   # noqa: SLF001
+        assert len(actions) == 1
+        assert not actions[0].isEnabled()
+    finally:
+        ws.deleteLater()
+
+
+def test_examples_menu_action_loads_via_open_puppet(
+    qapp, tmp_path, monkeypatch,
+):
+    """Clicking an entry must call ``open_puppet(path)`` with the
+    absolute path of the bundled file. The shipped rig should then
+    end up bound to the canvas."""
+    import Imervue.puppet.workspace as ws_mod
+    examples_root = tmp_path / "examples"
+    (examples_root / "puppet").mkdir(parents=True)
+    target = examples_root / "puppet" / "tiny.puppet"
+    _write_minimal_puppet(target)
+    monkeypatch.setattr(
+        "Imervue.system.app_paths.app_dir",
+        lambda: tmp_path,
+    )
+
+    ws = ws_mod.PuppetWorkspace()
+    try:
+        ws._rebuild_examples_menu()   # noqa: SLF001
+        actions = [
+            a for a in ws._examples_menu.actions()   # noqa: SLF001
+            if a.isEnabled()
+        ]
+        assert len(actions) == 1
+        actions[0].trigger()
+        assert ws.canvas().document() is not None
+    finally:
+        ws.deleteLater()

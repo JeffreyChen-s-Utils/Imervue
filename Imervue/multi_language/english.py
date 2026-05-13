@@ -499,6 +499,8 @@ english_word_dict = {
     "puppet_open_failed": 'Failed to open puppet: {error}',
     "puppet_recent": 'Recent',
     "puppet_recent_empty": '(No recent puppets)',
+    "puppet_examples": 'Examples',
+    "puppet_examples_empty": '(No bundled examples)',
     "puppet_fit_view": 'Fit to Window',
     "puppet_status_empty": 'No puppet loaded — use Open or Import PNG to start.',
     "puppet_status_loaded": 'Loaded {name} ({w}×{h}, {n} drawables)',

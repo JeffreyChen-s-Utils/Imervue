@@ -476,6 +476,8 @@ chinese_word_dict = {
     "puppet_open_failed": '打开失败：{error}',
     "puppet_recent": '最近打开',
     "puppet_recent_empty": '（没有最近文件）',
+    "puppet_examples": '示例',
+    "puppet_examples_empty": '（没有内置示例）',
     "puppet_fit_view": '适应窗口',
     "puppet_status_empty": '尚未载入 — 请用"打开"或"导入 PNG"开始。',
     "puppet_status_loaded": '已载入 {name}（{w}×{h}，{n} 个图层）',

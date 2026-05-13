@@ -487,6 +487,8 @@ japanese_word_dict = {
     "puppet_open_failed": '開けませんでした：{error}',
     "puppet_recent": '最近使用',
     "puppet_recent_empty": '（最近のパペットなし）',
+    "puppet_examples": 'サンプル',
+    "puppet_examples_empty": '（同梱サンプルなし）',
     "puppet_fit_view": 'ウィンドウに合わせる',
     "puppet_status_empty": 'パペット未読み込み — 「開く」または「PNG 取り込み」で開始。',
     "puppet_status_loaded": '{name} を読み込みました（{w}×{h}、{n} 個のドローアブル）',
