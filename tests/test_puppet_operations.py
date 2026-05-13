@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import (
+from Imervue.puppet.document import (
     Drawable,
     PuppetDocument,
 )
-from puppet.operations import (
+from Imervue.puppet.operations import (
     add_parameter,
     add_rotation_deformer,
     add_warp_deformer,

@@ -13,7 +13,7 @@ import pytest
 
 from Imervue.paint.document import PaintDocument
 from Imervue.paint.psd_io import save_psd
-from puppet.psd_import import puppet_from_psd
+from Imervue.puppet.psd_import import puppet_from_psd
 
 
 def _make_psd_with_three_layers(path) -> None:

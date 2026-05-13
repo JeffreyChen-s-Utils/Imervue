@@ -205,17 +205,17 @@ def puppet_from_png(
     *,
     cell_size: int = 64,
 ) -> dict[str, Any]:
-    """Run the puppet plugin's PNG → ``.puppet`` import on ``source``
+    """Run the built-in puppet PNG → ``.puppet`` import on ``source``
     and save the resulting document to ``destination``.
 
-    Wraps :func:`puppet.auto_mesh.puppet_from_png` + :func:`puppet.document_io.save_puppet`."""
+    Wraps :func:`Imervue.puppet.auto_mesh.puppet_from_png` +
+    :func:`Imervue.puppet.document_io.save_puppet`."""
     src = _validated_file(source)
     dst = Path(destination)
     if not dst.parent.exists():
         raise ValueError(f"destination parent {dst.parent} does not exist")
-    _ensure_puppet_on_path()
-    from puppet.auto_mesh import puppet_from_png as build_puppet
-    from puppet.document_io import save_puppet
+    from Imervue.puppet.auto_mesh import puppet_from_png as build_puppet
+    from Imervue.puppet.document_io import save_puppet
     doc = build_puppet(src, cell_size=int(cell_size))
     save_puppet(doc, dst)
     drawable = doc.drawables[0]
@@ -237,8 +237,7 @@ def puppet_inspect(path: str) -> dict[str, Any]:
     """Open a ``.puppet`` archive and return its top-level inventory:
     parameters, deformers, motions, expressions, hit areas, parts."""
     src = _validated_file(path)
-    _ensure_puppet_on_path()
-    from puppet.document_io import load_puppet
+    from Imervue.puppet.document_io import load_puppet
     doc = load_puppet(src)
     return {
         "path": str(src),
@@ -328,9 +327,9 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "puppet_from_png",
         "description": (
-            "Build a .puppet rig from a PNG using the puppet plugin's auto-mesh. "
+            "Build a .puppet rig from a PNG using the built-in puppet auto-mesh. "
             "Seeds the Cubism-standard parameter catalogue so the rig is "
-            "immediately drivable by the puppet plugin's input drivers."
+            "immediately drivable by the puppet input drivers."
         ),
         "input_schema": {
             "type": "object",
@@ -419,19 +418,5 @@ def _json_safe(value: Any) -> Any:
     if num is not None and den:
         return float(num) / float(den)
     return str(value)
-
-
-def _ensure_puppet_on_path() -> None:
-    """Plugin packages live under ``plugins/`` and aren't on the
-    default sys.path. Mirror what ``plugin_manager`` does at runtime
-    so the MCP server can ``import puppet`` without spinning up the
-    full Imervue main window."""
-    import sys
-    plugin_root = Path(__file__).resolve().parent.parent.parent / "plugins"
-    if not plugin_root.is_dir():
-        return
-    plugin_root_str = str(plugin_root)
-    if plugin_root_str not in sys.path:
-        sys.path.insert(0, plugin_root_str)
 
 

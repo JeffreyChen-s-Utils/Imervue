@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.auto_mesh import puppet_from_png
-from puppet.document_io import load_puppet
-from puppet.workspace import PuppetWorkspace
+from Imervue.puppet.auto_mesh import puppet_from_png
+from Imervue.puppet.document_io import load_puppet
+from Imervue.puppet.workspace import PuppetWorkspace
 
 
 def _import_demo_puppet(ws: PuppetWorkspace) -> bool:

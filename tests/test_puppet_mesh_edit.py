@@ -2,9 +2,9 @@
 toggle / drag plumbing."""
 from __future__ import annotations
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, PuppetDocument
-from puppet.mesh_edit import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.mesh_edit import (
     delete_vertex,
     find_drawable_at,
     find_vertex_at,

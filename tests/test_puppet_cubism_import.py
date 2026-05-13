@@ -10,14 +10,14 @@ import json
 
 import pytest
 
-from puppet.cubism_import import (
+from Imervue.puppet.cubism_import import (
     CubismFormatError,
     apply_bundle,
     load_exp3,
     load_model3,
     load_motion3,
 )
-from puppet.document import PuppetDocument
+from Imervue.puppet.document import PuppetDocument
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +261,7 @@ def test_load_model3_resolves_referenced_files(tmp_path):
 
 
 def test_apply_bundle_dedupes_by_name(tmp_path):
-    from puppet.cubism_import import CubismBundle
+    from Imervue.puppet.cubism_import import CubismBundle
     motion_path = tmp_path / "idle.motion3.json"
     _write_minimal_motion3(motion_path)
     doc = PuppetDocument(size=(64, 64))

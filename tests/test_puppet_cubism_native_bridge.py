@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from puppet.cubism_native_bridge import (
+from Imervue.puppet.cubism_native_bridge import (
     LIBRARY_ENV_VAR,
     _candidate_dll_paths,
     _dll_filename,
@@ -110,7 +110,7 @@ def test_scan_handles_arbitrary_nesting(tmp_path):
 
 
 def test_load_library_raises_with_actionable_message(tmp_path, monkeypatch):
-    from puppet.cubism_native_bridge import CubismBridgeError, load_library
+    from Imervue.puppet.cubism_native_bridge import CubismBridgeError, load_library
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(LIBRARY_ENV_VAR, raising=False)
     with pytest.raises(CubismBridgeError, match="<cwd>/sdk/"):

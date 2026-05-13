@@ -1,8 +1,8 @@
 # Puppet examples
 
 Drop-in `.puppet` file you can import into the **Puppet** tab of
-Imervue (contributed by the `plugins/puppet/` plugin — enable it from
-the plugin manager if the tab isn't already showing).
+Imervue. The Puppet tab is built-in (see `Imervue/puppet/`) — no
+plugin enable step needed.
 
 | File | Subject | Drawables | Parameters | Motions |
 |---|---|---|---|---|
@@ -71,4 +71,4 @@ Toggle the toolbar features to drive the rig live:
 6. **Save** — **Save As…** writes the whole rig to a `.puppet` zip
    you can share.
 
-See `plugins/puppet/FORMAT.md` for the full file-format reference.
+See `Imervue/puppet/FORMAT.md` for the full file-format reference.

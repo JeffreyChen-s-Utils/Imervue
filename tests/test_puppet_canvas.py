@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, Parameter, PuppetDocument
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
 
 
 def _doc_with_one_drawable() -> PuppetDocument:

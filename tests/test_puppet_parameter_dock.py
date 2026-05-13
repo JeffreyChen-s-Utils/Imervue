@@ -11,15 +11,15 @@ import math
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     Parameter,
     ParameterKey,
     PuppetDocument,
 )
-from puppet.parameter_dock import ParameterDock
+from Imervue.puppet.parameter_dock import ParameterDock
 
 
 def _rigged_doc() -> PuppetDocument:

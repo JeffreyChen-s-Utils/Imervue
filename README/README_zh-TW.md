@@ -186,7 +186,7 @@ Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量
 
 ### 偶動畫工作區
 
-**Puppet（偶動畫）** 分頁是位於 Paint 之後的第四個頂層分頁，從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D / Inochi2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但**不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `plugins/puppet/FORMAT.md`。
+**Puppet（偶動畫）** 分頁是位於 Paint 之後的第四個頂層分頁，從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D / Inochi2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但**不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
 
 - **工作流** — 匯入 PNG → 自動產生對齊 alpha 的三角網格 → 加變形器（旋轉 / Warp 點陣）→ 加參數 → 在 slider 極值處 Set key 記錄變形 → 存成 `.puppet` zip
 - **`.puppet` 格式 (v1)** — Zip 容器：`puppet.json` 主檔、`textures/` 下的 PNG 紋理、可選的 `motions/*.json`、`expressions/*.json`、`physics.json`。JSON-based、git diff 友善、無專利 binary

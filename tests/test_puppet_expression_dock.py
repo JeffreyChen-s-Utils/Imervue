@@ -8,9 +8,9 @@ PuppetWorkspace so the wiring is exercised end-to-end.
 """
 from __future__ import annotations
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, Expression, ExpressionParam, PuppetDocument
-from puppet.expression_dock import ExpressionDock
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, Expression, ExpressionParam, PuppetDocument
+from Imervue.puppet.expression_dock import ExpressionDock
 
 
 def _doc_with_expressions(names: tuple[str, ...]) -> PuppetDocument:

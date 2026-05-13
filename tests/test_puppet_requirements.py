@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 
-from puppet.requirements import (
+from Imervue.puppet.requirements import (
     FEATURE_PACKAGES,
     LIPSYNC_PACKAGES,
     WEBCAM_PACKAGES,

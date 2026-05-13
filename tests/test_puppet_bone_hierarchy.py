@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from puppet.bone_tree_dock import BoneTreeDock
-from puppet.canvas import PuppetCanvas
-from puppet.document import (
+from Imervue.puppet.bone_tree_dock import BoneTreeDock
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     PuppetDocument,
 )
-from puppet.runtime import (
+from Imervue.puppet.runtime import (
     compose_drawable_vertices,
     topologically_sorted_deformers,
 )

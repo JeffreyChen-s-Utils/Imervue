@@ -8,7 +8,7 @@ import math
 import numpy as np
 import pytest
 
-from puppet.deformers import (
+from Imervue.puppet.deformers import (
     apply_rotation,
     apply_skeleton_lbs,
     apply_warp,

@@ -793,7 +793,7 @@ Top-level ``puppet.json`` example::
    }
 
 The full schema (drawables, deformers, parameters, motions, expressions,
-pose, physics) lives at ``plugins/puppet/FORMAT.md`` in the repo. JSON +
+pose, physics) lives at ``Imervue/puppet/FORMAT.md`` in the repo. JSON +
 PNG only — no proprietary binary, fully diffable through git.
 
 Toolbar reference

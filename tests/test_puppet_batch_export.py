@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.batch_export import (
+from Imervue.puppet.batch_export import (
     SUPPORTED_EXTENSIONS,
     BatchMotionExporter,
     _safe_filename,
 )
-from puppet.canvas import PuppetCanvas
-from puppet.document import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import (
     Drawable,
     Motion,
     MotionSegment,
@@ -23,7 +23,7 @@ from puppet.document import (
     Parameter,
     PuppetDocument,
 )
-from puppet.motion_player import MotionPlayer
+from Imervue.puppet.motion_player import MotionPlayer
 
 
 def _motion(name: str) -> Motion:

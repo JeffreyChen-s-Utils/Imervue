@@ -195,6 +195,9 @@ plugins/ai_background_remover/models/u2net_human_seg.onnx
 /user_setting.json
 /build_nuitka/
 /plugins/
+# Puppet was a plugin; it's now built-in under Imervue/puppet/. The
+# entry above still gitignores the third-party plugin tree, but the
+# moved package should track normally — no exclusion needed.
 sonar_issues.txt
 sonar_remaining.txt
 

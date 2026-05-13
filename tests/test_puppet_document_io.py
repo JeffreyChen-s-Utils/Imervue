@@ -13,7 +13,7 @@ import zipfile
 
 import pytest
 
-from puppet.document import (
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     Expression,
@@ -28,7 +28,7 @@ from puppet.document import (
     PoseGroup,
     PuppetDocument,
 )
-from puppet.document_io import (
+from Imervue.puppet.document_io import (
     PuppetFormatError,
     SCHEMA_VERSION,
     from_zip_bytes,

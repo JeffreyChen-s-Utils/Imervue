@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import Drawable, PuppetDocument
-from puppet.document_io import from_zip_bytes, to_zip_bytes
-from puppet.runtime import resolve_drawable_color
+from Imervue.puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
+from Imervue.puppet.runtime import resolve_drawable_color
 
 
 def _drawable_with_tint(

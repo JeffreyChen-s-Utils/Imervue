@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, Parameter, PuppetDocument
-from puppet.vts_api import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
+from Imervue.puppet.vts_api import (
     API_NAME,
     API_VERSION,
     VTubeStudioHandler,

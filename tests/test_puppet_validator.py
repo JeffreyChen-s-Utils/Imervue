@@ -6,7 +6,7 @@ covered as the document schema grows. Reuses the dataclasses
 directly — no Qt fixture needed."""
 from __future__ import annotations
 
-from puppet.document import (
+from Imervue.puppet.document import (
     Deformer,
     Drawable,
     Expression,
@@ -20,7 +20,7 @@ from puppet.document import (
     PoseGroup,
     PuppetDocument,
 )
-from puppet.validator import Issue, severity_counts, validate
+from Imervue.puppet.validator import Issue, severity_counts, validate
 
 
 def _empty_drawable(id_: str = "x") -> Drawable:

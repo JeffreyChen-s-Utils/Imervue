@@ -12,7 +12,7 @@ import math
 
 import pytest
 
-from puppet.idle_driver import (
+from Imervue.puppet.idle_driver import (
     BREATH_PERIOD_S,
     DRIFT_AMPLITUDE,
     DRIFT_PERIODS,
@@ -21,7 +21,7 @@ from puppet.idle_driver import (
     idle_drift_value,
     idle_parameter_values,
 )
-from puppet.standard_params import PARAM_ANGLE_X, PARAM_BREATH
+from Imervue.puppet.standard_params import PARAM_ANGLE_X, PARAM_BREATH
 
 
 # ---------------------------------------------------------------------------

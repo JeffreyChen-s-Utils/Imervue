@@ -13,9 +13,9 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from puppet.cubism_native_bridge import DrawableInfo, ParameterInfo
-from puppet.cubism_native_convert import _attach_visibility_keys
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.cubism_native_bridge import DrawableInfo, ParameterInfo
+from Imervue.puppet.cubism_native_convert import _attach_visibility_keys
+from Imervue.puppet.document import Drawable, PuppetDocument
 
 
 @dataclass

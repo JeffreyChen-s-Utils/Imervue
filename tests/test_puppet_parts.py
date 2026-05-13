@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import Drawable, Part, PuppetDocument
-from puppet.document_io import from_zip_bytes, to_zip_bytes
-from puppet.runtime import resolve_part_state
+from Imervue.puppet.document import Drawable, Part, PuppetDocument
+from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
+from Imervue.puppet.runtime import resolve_part_state
 
 
 def _drawable(id_: str) -> Drawable:

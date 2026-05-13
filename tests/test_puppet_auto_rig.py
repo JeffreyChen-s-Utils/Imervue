@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.auto_rig import (
+from Imervue.puppet.auto_rig import (
     auto_rig,
     detect_eye,
     detect_hair,
     detect_head,
     detect_mouth_variant,
 )
-from puppet.document import Drawable, PuppetDocument
-from puppet.standard_params import standard_parameters
+from Imervue.puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.standard_params import standard_parameters
 
 
 def _doc_with(ids: tuple[str, ...]) -> PuppetDocument:

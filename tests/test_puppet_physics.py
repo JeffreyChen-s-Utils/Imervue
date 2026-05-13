@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import (
     Drawable,
     Parameter,
     PhysicsParticle,
     PhysicsRig,
     PuppetDocument,
 )
-from puppet.physics import PhysicsEngine, REST_LENGTH
+from Imervue.puppet.physics import PhysicsEngine, REST_LENGTH
 
 
 def _hair_rig() -> PhysicsRig:

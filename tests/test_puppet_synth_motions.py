@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import Parameter, PuppetDocument
-from puppet.synth_motions import synthesise_idle_motions
-from puppet.standard_params import (
+from Imervue.puppet.document import Parameter, PuppetDocument
+from Imervue.puppet.synth_motions import synthesise_idle_motions
+from Imervue.puppet.standard_params import (
     PARAM_ANGLE_X,
     PARAM_ANGLE_Z,
     PARAM_BODY_ANGLE_X,

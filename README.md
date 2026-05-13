@@ -213,7 +213,7 @@ Press ``E`` from Deep Zoom to send the current image straight into a new Paint t
 
 ### Puppet Workspace
 
-A **Puppet** tab — the fourth top-level tab, slotted after Paint — is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `plugins/puppet/FORMAT.md`.
+A **Puppet** tab — the fourth top-level tab, slotted after Paint — is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
 
 - **Workflow** — Import a PNG → auto-generate a triangulated grid mesh that respects alpha → add deformers (rotation / warp lattice) → add parameters → set key forms at slider extremes → save as `.puppet` zip
 - **`.puppet` format (v1)** — Zip container with `puppet.json` manifest, PNG textures under `textures/`, plus optional `motions/*.json`, `expressions/*.json`, and `physics.json` sidecars. JSON-based, humanly diffable, no proprietary binary
