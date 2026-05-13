@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Image + Immerse + View</strong><br>
-  基於 PySide6 和 OpenGL 的 GPU 加速圖片瀏覽器
+  基於 PySide6 和 OpenGL 的 GPU 加速影像瀏覽器 / 顯影器 / 繪圖工作室 / 偶動畫編輯器
 </p>
 
 <p align="center">
@@ -25,15 +25,14 @@
 ## 目錄
 
 - [概述](#概述)
-- [功能特色](#功能特色)
-- [支援的圖片格式](#支援的圖片格式)
 - [安裝](#安裝)
 - [使用方式](#使用方式)
-- [瀏覽模式](#瀏覽模式)
+- [Imervue — 圖片瀏覽與圖庫](#imervue--圖片瀏覽與圖庫)
+- [Modify — 非破壞顯影](#modify--非破壞顯影)
+- [Paint — MediBang 風格繪圖](#paint--medibang-風格繪圖)
+- [Puppet — 2D 綁骨偶動畫](#puppet--2d-綁骨偶動畫)
 - [鍵盤與滑鼠快捷鍵](#鍵盤與滑鼠快捷鍵)
 - [選單結構](#選單結構)
-- [繪圖工作區](#繪圖工作區)
-- [偶動畫工作區](#偶動畫工作區)
 - [外掛系統](#外掛系統)
 - [MCP 伺服器](#mcp-伺服器)
 - [多語言支援](#多語言支援)
@@ -45,228 +44,31 @@
 
 ## 概述
 
-Imervue 是一款高效能圖片瀏覽器，專為流暢的瀏覽體驗和大量圖片集合的高效處理而設計。透過 OpenGL 的 GPU 加速，為縮圖網格和深度縮放圖片檢視提供快速渲染。
+Imervue 是一款 GPU 加速的影像工作站，提供 **四個頂層分頁**：
 
-核心設計原則：
+| 分頁 | 功能 |
+|---|---|
+| **Imervue** | 瀏覽、檢視、整理、搜尋、批次處理你的圖庫 |
+| **Modify** | 非破壞顯影管線 — 滑桿、曲線、LUT、遮罩、修圖、多影像合成 |
+| **Paint** | MediBang 風格的點陣繪圖工作室，含筆刷、圖層、動畫、漫畫工具、PSD I/O |
+| **Puppet** | 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理 |
+
+設計原則：
 
 - **效能優先** — 使用現代 GLSL 著色器和 VBO 進行 GPU 加速渲染
 - **支援大量集合** — 虛擬化磁磚網格僅載入可見縮圖
 - **流暢體驗** — 非同步多執行緒圖片載入與預取機制
-- **可擴展** — 完整的外掛系統，支援生命週期、選單、圖片和輸入鉤子
-
----
-
-## 功能特色
-
-### 核心功能
-
-- 透過 OpenGL 的 GPU 加速渲染（GLSL 1.20 著色器 + VBO）
-- 深度縮放圖片檢視，使用多層圖片金字塔（512×512 磁磚）
-- 虛擬化磁磚縮圖網格，支援延遲載入
-- 非同步多執行緒圖片載入
-- 縮圖磁碟快取系統（壓縮 PNG 格式，MD5 快取金鑰）
-- 預載入前後各 ±3 張相鄰圖片
-- 復原/重做系統（QUndoStack 用於編輯，傳統堆疊用於刪除）
-
-### 導航與檢視
-
-- 資料夾瀏覽和單張圖片檢視
-- **縮圖格 / 清單（詳細）瀏覽模式** — Ctrl+L 切換；清單模式顯示名稱、大小、修改日期、尺寸，並新增星等專欄
-- **麵包屑路徑列** — viewer 上方可點擊分段路徑
-- 全螢幕 + **劇場模式**（Shift+Tab 隱藏所有外殼）
-- 深度縮放模式下的小地圖覆蓋層
-- RGB 直方圖覆蓋層
-- **F8 OSD**（檔案資訊疊加層）/ **Ctrl+F8 Debug HUD**（VRAM / 快取 / 執行緒）
-- **像素檢視**（Shift+P）— 縮放 ≥ 400% 顯示網格與每個像素的 RGB/HEX
-- **色彩模式**（Shift+M）— 正常 / 灰階 / 反相 / 懷舊（GLSL 實作，非破壞性）
-- 圖片旋轉（包括透過 piexif 的無損 JPEG 旋轉）
-- 動態 GIF/APNG 播放，支援逐幀控制
-- 幻燈片模式，可自訂間隔時間
-- **增強的比對視窗** — 並排 / 重疊（alpha 滑桿）/ 差異（增益滑桿）/ **A|B 分割**（before/after 分頁，可拖曳分割線）
-- **分割檢視**（Shift+S）/ **雙頁閱讀**（Shift+D；Ctrl+Shift+D 右至左）
-- **多螢幕視窗**（Ctrl+Shift+M）在副螢幕鏡像顯示當前圖片
-- **Hover 預覽彈窗** — 縮圖懸停 500 ms 後顯示大預覽
-- **觸控板手勢** — 捏合縮放、水平滑動切換圖片
-- **瀏覽歷史**（Alt+←/→）+ **隨機圖片**（X）
-- **跨資料夾導航**（Ctrl+Shift+←/→）— 跳至前/下一個兄弟資料夾
-- 模糊搜尋，子字串高亮（Ctrl+F / `/`）
-- **跳至圖片** 對話框（Ctrl+G）— 依編號跳轉
-- **命令面板**（Ctrl+Shift+P）— 依指令名稱模糊搜尋並立即執行
-- 末端自動循環
-
-### 整理功能
-
-- 書籤系統（最多 5000 個書籤）
-- 評分系統（1–5 星）和最愛功能
-- **色彩標籤**（F1–F5 → 紅/黃/綠/藍/紫）— 獨立於星等的 Lightroom 風格 flag
-- 標籤與相簿，支援**多標籤過濾**（AND / OR 布林邏輯）
-- 依名稱、修改日期、建立日期、檔案大小或解析度排序
-- 依副檔名、評分、色彩標籤、標籤/相簿篩選
-- **進階過濾器** — 解析度 / 檔案大小 / 方向 / 修改日期範圍
-- 最近資料夾和最近圖片追蹤
-- 啟動時自動恢復上次開啟的資料夾
-- **縮圖狀態徽章** — 左緣色條、最愛愛心、書籤星、評分星
-- **縮圖排列密度** — 緊湊 / 標準 / 寬鬆
-- **檔案樹增強** — F5 刷新、新增資料夾、全部展開/收合
-- **RAW+JPEG 堆疊** — 同名的 RAW/JPEG 對自動折疊顯示，保留優先級
-- **Session 儲存/還原** — 儲存目前資料夾、選取、縮放與檢視狀態，可日後載入
-- **巨集錄製/重播** — 錄製評分、色彩、標籤、最愛等操作並批次套用到多張圖片（Alt+M 重播上次巨集）
-
-### 編輯與匯出
-
-- 內建圖片編輯器（裁切、亮度、對比、飽和度、曝光、旋轉、翻轉），支援非破壞性預覽 — 編輯即時顯示在畫布上，僅在明確儲存時才寫入磁碟
-- **Develop 調整面板** — 白平衡（色溫 / 色調）、色階區（陰影 / 中間調 / 高光）、鮮豔度（Vibrance），與傳統曝光 / 對比 / 飽和度並列；所有調整皆透過 per-image recipe 非破壞性保存
-- **浮水印疊加** — 可設定文字或圖片浮水印，支援 9 個錨點位置、不透明度與縮放比例；僅在匯出時套用，原圖不受影響
-- **匯出預設組合** — 一鍵套用常用輸出設定：Web 1600（長邊 1600 px JPEG）、Print 300 dpi（全解析度、色彩管理）、Instagram 1080（正方或直式 1080 px）
-- 匯出/另存新檔，支援格式轉換（PNG、JPEG、WebP、BMP、TIFF）
-- 有損格式品質滑桿（JPEG、WebP）
-- 批次操作（重新命名、移動/複製、旋轉選取的圖片）
-- 設為桌面桌布
-- 複製圖片/圖片路徑到剪貼簿
-- **聯絡表（Contact Sheet）PDF 匯出** — 可自訂列/行、頁面大小、標題、檔名說明
-- **Web Gallery HTML 匯出** — 產生自含式 HTML 藝廊（縮圖 + Lightbox），可選擇複製原始圖片
-- **幻燈片 MP4 匯出** — 匯出影片幻燈片（可設解析度、fps、停留秒數、淡入淡出）
-- **外部編輯器整合** — 登錄任意外部編輯器並從選單直接以當前圖片開啟
-
-### 中繼資料
-
-- EXIF 資料顯示於可摺疊側邊欄，內含 **星等快速條**，可直接點擊設定 0–5 星
-- EXIF 編輯器對話框
-- 圖片資訊對話框（尺寸、檔案大小、日期）
-- **XMP sidecar**（`.xmp` 檔）— 讀寫星等、標題、描述、關鍵字與色彩標籤，與 Adobe Lightroom / Capture One 互通（透過 `defusedxml` 安全解析 XML）
-
-### 額外功能
-
-- **圖片淨化重繪** — 從原始像素重新繪製圖片，徹底移除所有隱藏資料（EXIF、中繼資料、隱寫內容、尾部位元組），以日期 + 隨機字串重新命名，可選使用傳統方法（Lanczos、Bicubic、Nearest Neighbor）或 AI（Real-ESRGAN）放大至常用解析度（1080p / 2K / 4K / 5K / 8K），保持比例
-- **批次格式轉換** — 批次轉換圖片格式（PNG、JPEG、WebP、BMP、TIFF），支援品質控制
-- **AI 圖片放大** — 使用 Real-ESRGAN 超解析度放大（x2 / x4 一般、x4 動漫），支援 CUDA / DML / CPU；另有傳統無損方法（Lanczos、Bicubic、Nearest Neighbor）；支援資料夾選擇與遞迴掃描
-- **重複圖片偵測** — 使用精確雜湊或感知比對找出重複圖片
-- **圖片整理工具** — 依日期、解析度、類型、大小或數量自動分類到子資料夾
-- **EXIF 批次清除** — 移除資料夾中所有圖片的 EXIF、GPS 及其他中繼資料
-- **裁剪工具** — 互動式裁剪，支援比例預設（自由 / 1:1 / 4:3 / 3:2 / 16:9 / 9:16）與三分法參考線
-- **色調曲線編輯器** — 可拖曳控制點的 RGB 與 R/G/B 個別通道曲線（monotone cubic 內插），存在 recipe 裡非破壞性套用
-- **.cube LUT 套用** — 匯入任何 Adobe 3D LUT（最高 64³），三線性插值並可用強度滑桿混合
-- **Virtual Copies（虛擬副本）** — 為同一張圖儲存多組命名 recipe 快照，隨時切換；副本與主 recipe 同儲存
-- **HDR 合成** — 透過 OpenCV Mertens 曝光融合（可選 AlignMTB 對齊）合併多張不同曝光
-- **全景接圖** — 以 OpenCV `Stitcher` 接合重疊影像（Panorama / Scans 兩種模式），可自動裁去黑邊
-- **Focus Stacking（景深合成）** — 融合不同對焦距離的多張影像（Laplacian 清晰度圖 + Gaussian 混合），可選 ECC 對齊
-- **修復筆刷 / 斑點移除** — 點擊新增圓形修復區，使用 OpenCV inpainting（Telea / Navier-Stokes）輸出清理後的圖片
-- **鏡頭校正** — 純 numpy 的徑向失真（桶型 / 枕型）、暗角補光、紅 / 藍色差校正，附 4 個滑桿
-- **地圖檢視** — 用 Leaflet + OpenStreetMap（需 QtWebEngine）顯示具 GPS 的照片；未安裝時降級為座標列表
-- **行事曆檢視** — 以拍攝日期瀏覽圖庫，`QCalendarWidget` 會標示有照片的日期
-- **人臉偵測** — OpenCV Haar 正面臉部分類器偵測臉部區域，名稱保存到 recipe 的 `extra`
-- **局部調整遮罩** — 筆刷 / 放射 / 線性漸層三種遮罩，每個遮罩有曝光、亮度、對比、飽和度、白平衡等局部 delta，含羽化滑桿並以非破壞方式混入 recipe
-- **色調分離** — Lightroom 風格的陰影 / 高光色相+飽和度與平衡樞紐，寫入 recipe.extra 並進入 develop pipeline
-- **複製印章** — Shift+點擊設定來源、點擊目的地即完成羽化複製，彌補修復筆刷無法精準搬移內容的場景
-- **裁切 / 拉直** — 0..1 的正規化裁切矩形，加上任意角度的自動裁切拉直（不留黑角）
-- **自動拉直** — 以 Hough line 偵測地平線 / 垂直線，一鍵算出應該旋轉的角度並套用
-- **降噪 / 銳化** — 邊緣保留 bilateral 降噪（可選僅亮度通道），搭配 amount / radius / threshold 的 unsharp mask 銳化
-- **天空 / 背景** — 以漸層取代偵測到的天空，或把背景去除成透明 / 白底；安裝 rembg (U²-Net) 時自動升級
-- **螢幕校樣** — 載入 ICC 描述檔模擬輸出色域，並把超出色域的像素以洋紅疊色顯示
-- **GPS 地理標記** — 讀寫 EXIF GPS 座標（piexif，支援 JPEG）
-- **列印排版** — 可設定 A4/A3/Letter/Legal 頁面、方向、格線、邊界、內距、裁切標記，匯出多頁 PDF 列印排版
-
-### 繪圖工作區
-
-第三個頂層分頁（與 Imervue / 修改 並列）— MediBang 風格的 **繪圖** 工作區，自身是 QMainWindow，含選單、左側工具列、上下文敏感的選項列、以及右側的分頁化 dock 欄位。多分頁文件編輯，每個分頁有獨立的復原堆疊與 recipe。
-
-- **工具列（24 種工具）** — 筆刷 · 橡皮擦 · 油漆桶 · 滴管 · 矩形 / 套索 / 魔棒 / 快速選取 · 移動 · 文字 · 漸層 · 模糊 · 塗抹 · 鋼筆 · 仿製印章 · 對話框 · 矩形 · 橢圓 · 直線 · 多邊形 · 裁切 · 變形 · 手形 · 縮放（單鍵：B / E / G / I / V / T / U / R / P / S / C / Z / H，形狀類用 Shift+R/E/I/P）
-- **筆刷** — 鋼筆 / 麥克筆 / 鉛筆 / 螢光筆 / 噴霧 / 書法 / 水彩 / 炭筆 / 蠟筆，可調 大小 / 不透明度 / 硬度 / 密度 / 混合模式；壓力曲線編輯器；從選取區擷取筆刷尖端；筆刷預設集匯入/匯出
-- **圖層** — 完整圖層面板，含縮圖、可見性切換、拖曳排序、混合模式、不透明度、搜尋、向量圖層、1-bit 圖層、圖層遮罩（新增 / 由選取區 / 反向 / 套用）、剪裁遮罩、圖層效果（投影 / 外光暈 / 描邊）；依顏色拆分圖層、漸層映射預設集
-- **選取** — 矩形 / 套索 / 魔棒 / 快速選取，含 替換 / 加入 / 減去 / 交集 模式與羽化；**快速遮罩模式**（Q）支援筆刷精修選取；**描邊選取區** 對話框
-- **動畫** — 影格時間軸 dock，含快照、播放、洋蔥皮疊加、MP4/GIF 匯出
-- **漫畫工具** — 分鏡切割 · 網點圖層 · 蓋印頁碼 · 集中線（放射 / 平行 / 爆破）· 動作閃光 · 對話框工具
-- **濾鏡** — 色階 · 曲線 · 色調分離 · 臨界值 · 自動色彩平衡 · 底片顆粒 · 網點化（每個都有即時預覽對話框）
-- **檢視輔助** — 像素網格 · 吸附像素 · 吸附邊緣 · 洋蔥皮 · 出血標示 · 畫布旋轉（Ctrl+Shift+H 逆時針）
-- **右側 dock（10 個，分頁進單一欄位）** — 顏色 · 筆刷 · 圖層 · 縮覽圖 · 素材庫 · 歷史 · 色票 · 參考 · 直方圖 · 動畫；每個 dock 可移動 / 浮動，使用 **設定 > 工作區排版** 儲存命名版面
-- **檔案 I/O** — 開啟 / 儲存 **PSD**（Photoshop）含圖層往返；匯出 PNG / JPEG / WebP，多頁漫畫匯出 **CBZ** 或 **PDF**；自動儲存快照與最新版還原
-- **其他** — Image Size 對話框 · 液化 · 修復 / 仿製印章 · 每分頁的復原 / 重做（Ctrl+Z / Ctrl+Y），並透過歷史 dock 進行非線性跳轉 · 多個次要視窗（鏡像 / 平鋪預覽）
-
-在大圖模式下按 ``E`` 可將目前圖片直接送入新繪圖分頁。
-
-### 偶動畫工作區
-
-**Puppet（偶動畫）** 分頁是位於 Paint 之後的第四個頂層分頁，從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D / Inochi2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但**不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
-
-- **工作流** — 匯入 PNG → 自動產生對齊 alpha 的三角網格 → 加變形器（旋轉 / Warp 點陣）→ 加參數 → 在 slider 極值處 Set key 記錄變形 → 存成 `.puppet` zip
-- **`.puppet` 格式 (v1)** — Zip 容器：`puppet.json` 主檔、`textures/` 下的 PNG 紋理、可選的 `motions/*.json`、`expressions/*.json`、`physics.json`。JSON-based、git diff 友善、無專利 binary
-- **渲染器** — `QOpenGLWidget`：依 draw_order 畫貼圖三角形、每個 drawable 可選混合模式（normal / additive / multiply）、Pose 群組互斥、image-space 正交投影、透明度棋盤底、滾輪縮放 + 中鍵拖移
-- **變形器（Phase 4）** — `RotationDeformer`（錨點 + 角度）與 `WarpDeformer`（rows × cols 貝茲點陣）。皆為純 numpy、向量化 — 5000 頂點偶在 CPU 上仍可 60 FPS
-- **參數綁骨（Phase 4–5）** — 每個參數持有一張關鍵格清單，把 slider 值對應到變形器形狀 snapshot；runtime 取相鄰兩鍵作 per-field 線性內插。右側 dock 為每個參數顯示一條 slider，按「設定鍵」即捕捉當下變形器形狀
-- **動作播放（Phase 6）** — 底部 dock 顯示動作清單 + Play / Pause / Stop / Loop / 進度滑桿。曲線 sampler 支援所有四種 `.puppet` 段型：`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`（牛頓迭代解時間→參數）
-- **表情（Phase 7）** — 在 slider / 動作值上疊加 additive / multiply / overwrite 參數覆蓋
-- **姿勢群組（Phase 7）** — 互斥 drawable 顯示（武器切換、嘴型變體）；renderer 自動隱藏群組中其他成員
-- **物理（Phase 8）** — Verlet 鐘擺鏈（頭髮 / 衣服 / 緞帶）。輸入參數帶動鏈頂錨點；重力 + 阻尼 + 每粒子彈簧拉回靜止位置；尾端橫向位移寫回輸出參數
-- **即時輸入（Phase 9–10）** — 滑鼠拖曳 → 頭部角度參數；自動眨眼採餘弦開→閉→開曲線；麥克風對嘴透過 `sounddevice` RMS → `ParamMouthOpenY`（選用相依）；攝影機臉部追蹤透過 OpenCV + MediaPipe FaceMesh → 頭部 yaw/pitch/roll + 眼/嘴開合（選用相依）
-- **編輯器（Phase 5）** — 工具列 `加入旋轉變形器` / `加入扭曲變形器` / `加入參數`、每個參數的「設定鍵」按鈕、**另存為…** 把整個綁骨寫成 `.puppet` zip
-- **網格編輯（Phase 12）** — 切換「編輯網格」後可在畫布上拖曳頂點；點擊在 8 px 內吸附最近頂點，拖曳即時更新文件
-- **錄製自訂動作（Phase 13）** — 切換「錄製動作」開始以 30 Hz 取樣參數值；停止後自動烘焙為 `Motion`，每個變動的參數一條 linear-segment 軌（保持不變的軌會被丟棄），加進文件並立即出現在動作 dock，可播放 / 循環 / 存檔
-- **截圖 / 錄製（Phase 11）** — `擷取畫面…` 透過 `glReadPixels` 存 PNG；`錄製…` 切換 30 FPS 影格迴圈，透過 `imageio` 寫成 GIF / WebM / MP4
-
-範例檔在 [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet)。這是一個倉庫內轉換好的 Cubism Live2D 角色：307 個 drawable、紋理與每個參數採樣得到的 vertex morphs 都已烘焙進 `.puppet` zip，因此只需預設 `requirements.txt` 即可開啟，無需附帶 Cubism SDK。在 Puppet 分頁點「開啟偶動畫…」匯入後，單擊 Motions dock 裡的任意動作即可綁定並立即播放。
-
-### 系統整合
-
-- Windows 右鍵「以 Imervue 開啟」內容選單（透過登錄檔進行檔案關聯）
-- 使用 QFileSystemWatcher 進行資料夾監控（變更時自動重新整理）
-- 多語言支援（5 種內建語言）
-- 外掛系統，附帶線上外掛下載器
-- Toast 通知系統（資訊、成功、警告、錯誤層級）
-
-### 近期 UX 改進
-
-橫跨 Paint 工作區、影像瀏覽器、Develop / 對話框介面的 UX 體質提升：
-
-- **Paint 視覺回饋** — Medibang 風格、會跟著 zoom 縮放的筆刷大小游標、每個工具獨立的游標圖示、畫布底層透明格紋、拖放高亮覆蓋、每個 tab 的「已修改」星號、undo / redo toast 確認、status bar 的 autosave 狀態段、開啟時自動偵測前次 session 的 autosave 並提示還原。
-- **Paint 進階快捷鍵** — `Tab` 一鍵隱藏 / 還原所有 docks 進入專心模式、`Ctrl+Tab` 切換分頁、`,` / `.` 循環筆刷種類、`0–9` 數字鍵以 10 % 為單位設定不透明度、`Alt+[` / `Alt+]` 切換 active 圖層、畫布右鍵彈出 Undo / Redo / Select All / Deselect / Fit / 100 % 快捷選單。
-- **Paint 顏色控制** — 顏色 dock 加入「透明 / 無顏色」槽（背景預設為透明），fill 與魔棒會尊重 alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
-- **影像瀏覽器** — 空資料夾顯示提示而非空白表格、麵包屑各段帶完整路徑 tooltip、`Ctrl+C` 複製選中檔案路徑、右鍵 context menu（Open / Copy path / Reveal）、檔名標籤顯示 `(i/n)` 位置、status bar 的 zoom 指示器點一下在 Fit 與 100 % 之間切換。
-- **Tooltip 覆蓋大幅提升** — Brush / Color / Fill / Navigator / Animation / Page / Pose / Stamp / Reference / Histogram dock、筆刷選項列、以及 Levels / Tone Curve / Channel Mixer / AI Upscale / Batch Convert / Contact Sheet / Slideshow MP4 對話框上每個互動控件都加上說明性 tooltip。
-- **視窗層級安全機制** — 關閉視窗時若有未存的 paint tab 會先列出受影響清單詢問；tab 中鍵關閉沿用同一套保護；tab tooltip 顯示完整標題、畫布尺寸與已修改狀態。
-
----
-
-## 支援的圖片格式
-
-### 點陣圖格式
-
-| 格式 | 副檔名 |
-|------|--------|
-| PNG | `.png` |
-| JPEG | `.jpg`、`.jpeg` |
-| BMP | `.bmp` |
-| TIFF | `.tiff`、`.tif` |
-| WebP | `.webp` |
-| GIF | `.gif`（動態） |
-| APNG | `.apng`（動態） |
-
-### 向量圖格式
-
-| 格式 | 副檔名 |
-|------|--------|
-| SVG | `.svg`（透過 QSvgRenderer 渲染，縮圖縮小至最大 512px） |
-
-### RAW 相機格式
-
-| 格式 | 副檔名 | 相機品牌 |
-|------|--------|---------|
-| CR2 | `.cr2` | Canon |
-| NEF | `.nef` | Nikon |
-| ARW | `.arw` | Sony |
-| DNG | `.dng` | Adobe Digital Negative |
-| RAF | `.raf` | Fujifilm |
-| ORF | `.orf` | Olympus |
-
-RAW 檔案支援嵌入式預覽擷取，並在無法擷取時退回使用半尺寸處理。
+- **非破壞顯影** — 每次調整都儲存在每張影像的 recipe 中，原始檔案直到明確匯出才會被覆寫
+- **可擴展** — 完整外掛系統（生命週期 / 選單 / 圖片 / 輸入鉤子）；MCP 伺服器將純邏輯工具暴露給 AI 助手使用
 
 ---
 
 ## 安裝
 
-### 系統需求
+### 需求
 
 - Python >= 3.10
-- 支援 OpenGL 的 GPU（可使用軟體渲染作為備援）
+- 支援 OpenGL 的 GPU（也提供軟體渲染備援）
 
 ### 從原始碼安裝
 
@@ -282,19 +84,30 @@ pip install -r requirements.txt
 pip install .
 ```
 
-### 相依套件
+### 依賴套件
 
 | 套件 | 用途 |
-|------|------|
+|---------|---------|
 | PySide6 | Qt6 GUI 框架 |
 | qt-material | Material Design 主題 |
 | Pillow | 圖片處理 |
-| PyOpenGL | OpenGL 繫結 |
+| PyOpenGL | OpenGL 綁定 |
 | PyOpenGL_accelerate | OpenGL 效能最佳化 |
-| numpy | 陣列操作與縮圖快取 |
-| rawpy | RAW 圖片解碼 |
-| imageio | 圖片輸入/輸出 |
-| imageio-ffmpeg | 幻燈片 MP4 匯出（ffmpeg 後端） |
+| numpy | 陣列運算與縮圖快取 |
+| rawpy | RAW 影像解碼 |
+| imageio | 圖片 I/O |
+| imageio-ffmpeg | 幻燈片 MP4 匯出（H.264 透過 ffmpeg） |
+| defusedxml | 安全 XML 解析（XMP 邊車檔） |
+
+選用（feature-gated；不裝就停用該功能）：
+
+| 套件 | 用途 |
+|---------|---------|
+| open_clip_torch + torch | CLIP 語意搜尋 |
+| onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自動標籤 |
+| opencv-python | HDR 合成、全景拼接、焦點堆疊、人臉偵測、修復筆刷 |
+| sounddevice | Puppet 麥克風對嘴 |
+| mediapipe | Puppet 攝影機臉部追蹤 |
 
 ---
 
@@ -306,307 +119,488 @@ pip install .
 python -m Imervue
 ```
 
-### 開啟特定圖片
+### 開啟指定圖片或資料夾
 
 ```bash
 python -m Imervue /path/to/image.jpg
-```
-
-### 開啟資料夾
-
-```bash
 python -m Imervue /path/to/folder
 ```
 
 ### 命令列選項
 
 | 選項 | 說明 |
-|------|------|
+|--------|-------------|
 | `--debug` | 啟用除錯模式 |
-| `--software_opengl` | 使用軟體 OpenGL 渲染（設定 `QT_OPENGL=software` 和 `QT_ANGLE_PLATFORM=warp`）。當 GPU 驅動不可用或有問題時使用。 |
-| `file` | （位置引數）啟動時開啟的圖片或資料夾 |
+| `--software_opengl` | 使用軟體 OpenGL 渲染（設定 `QT_OPENGL=software` 和 `QT_ANGLE_PLATFORM=warp`） |
+| `file` | （位置參數）啟動時要開啟的圖片或資料夾 |
 
 ---
 
-## 瀏覽模式
+## Imervue — 圖片瀏覽與圖庫
 
-### 網格模式（磁磚網格）
+**Imervue** 分頁是預設的著陸頁，整合圖片檢視器與資料夾樹、EXIF 側邊欄、圖庫整理工具。
 
-開啟資料夾時，圖片會以虛擬化縮圖網格顯示：
+### 檢視器
 
-- **延遲載入** — 僅渲染和載入可見的縮圖
-- **動態縮圖大小** — 可設定為 128×128、256×256、512×512、1024×1024 或自動
-- **捲動和縮放** — 流暢瀏覽大量集合
-- **多選** — 拖曳框選或長按進入選取模式
-- **批次操作** — 重新命名、移動/複製、旋轉或刪除選取的圖片
-- **磁碟快取** — 縮圖以壓縮 PNG 檔案快取，使用 MD5 失效機制
+- **GPU 加速渲染** — OpenGL（GLSL 1.20 著色器 + VBO）
+- **深度縮放金字塔** — 512×512 磁磚多層 LANCZOS 縮放，LRU 快取上限 256 磁磚 / 1.5 GB VRAM 預算，最高 8× 各向異性過濾
+- **非同步載入** — 多執行緒解碼 + ±3 張預取
+- **虛擬化縮圖網格** — 只渲染可見磁磚；縮圖尺寸可選（128 / 256 / 512 / 1024 / 自動）
+- **磁碟快取** — MD5 失效檢測的壓縮 PNG 縮圖，存於 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
+- **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制
 
-### 單張圖片模式（深度縮放）
+### 瀏覽模式
 
-開啟單張圖片或雙擊縮圖時：
+- **網格**（預設）— 虛擬化磁磚網格，懸停預覽（500 ms 延遲）
+- **清單（詳細）** — `Ctrl+L` 切換；欄位：預覽 · 標籤 · 名稱 · 解析度 · 大小 · 類型 · 修改時間
+- **深度縮放** — 雙擊磁磚；GPU 流暢平移 / 縮放 + 小地圖
+- **分割檢視**（`Shift+S`）— 兩張影像並列
+- **雙頁閱讀**（`Shift+D`、`Ctrl+Shift+D` 為漫畫右至左）— 對開頁閱讀器
+- **多螢幕鏡射**（`Ctrl+Shift+M`）— 副螢幕視窗
+- **劇場模式**（`Shift+Tab`）— 隱藏所有外殼
+- **比較對話框** — 並列 / 重疊（alpha 滑桿）/ 差異（增益滑桿）/ A|B 拖曳分割
+- **Timeline / Calendar / Map** 檢視 — 按拍攝日期分組、日曆瀏覽、Leaflet + OpenStreetMap 地理座標
 
-- **多層圖片金字塔** — 512×512 像素磁磚，使用 LANCZOS 降取樣
-- **LRU 磁磚快取** — GPU 上最多快取 256 個磁磚（1.5 GB VRAM 上限）
-- **流暢平移和縮放** — GPU 加速，支援各向異性過濾（最高 8x）
-- **小地圖覆蓋層** — 顯示目前視窗位置
-- **RGB 直方圖** — 按 `H` 鍵切換
-- **像素檢視**（Shift+P）— 縮放 ≥ 400% 顯示像素網格與游標下的 RGB/HEX
-- **色彩模式**（Shift+M）— 正常 / 灰階 / 反相 / 懷舊（GLSL，非破壞性）
-- **載入時置中** — 預設適應視窗大小
-- **相鄰圖片預載入** — 預載入前後各 ±3 張相鄰圖片
+### 螢幕疊加層
 
-### 清單模式（詳細）
+- RGB 直方圖（`H`）
+- F8 OSD（檔名 / 大小 / 類型）、Ctrl+F8 除錯 HUD（VRAM / 快取 / 執行緒）
+- 像素檢視（`Shift+P`）— ≥ 400 % 縮放顯示網格 + 每像素 RGB / HEX
+- 色彩模式（`Shift+M`）— Normal / Grayscale / Invert / Sepia（GLSL）
 
-**Ctrl+L** 切換。以可排序的表格取代縮圖格：
+### 導航
 
-- 欄位：預覽 · 標籤 · 名稱 · 解析度 · 大小 · 類型 · 修改時間
-- 任一欄皆可排序（包含色彩標籤）
-- 雙擊列開啟深度縮放；Esc 回到清單
-- 縮圖 / 元資料在背景執行緒惰性載入
+- 方向鍵、瀏覽器式歷史（`Alt+←/→`）、隨機跳轉（`X`）
+- 跨資料夾導航（`Ctrl+Shift+←/→`）
+- 跳到第 N 張（`Ctrl+G`）
+- 模糊搜尋（`Ctrl+F` / `/`）
+- **命令面板**（`Ctrl+Shift+P`）— 模糊搜尋所有選單動作
+- 資料夾末端自動循環
+- 觸控板捏合縮放 + 水平滑動切換影像
 
-### 分割檢視 & 雙頁閱讀
+### 整理
 
-- **分割檢視**（Shift+S）— 在主視窗並排顯示兩張圖片
-- **雙頁閱讀**（Shift+D）— 連續圖片以跨頁顯示；方向鍵一次走 2 張
-- **漫畫右至左**（Ctrl+Shift+D）— 雙頁閱讀採右至左順序
-- Esc 返回先前模式（縮圖格或清單）
+- **書籤** — 最多 5000 個路徑
+- **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）
+- **顏色標籤** — Lightroom 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
+- **挑片**（Culling）— Lightroom 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕
+- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫
+- **Tags & Albums** 含多標籤 AND / OR 過濾
+- **智慧相簿** — 儲存規則式查詢（副檔名 / 解析度 / 評等 / 顏色 / 挑片 / 標籤）並一鍵重新套用
+- **疊合 RAW+JPEG 對** — 將同檔名擷取折疊成單一磁磚；RAW 仍可從手足存取
+- **每圖筆記** — 在 EXIF 側欄，自動防抖儲存，跨工作階段持久
+- **暫存盤** — 跨資料夾籃，重啟後保留；批次移動 / 複製 / 匯出
+- **雙窗格檔案管理員** — Total Commander 風格的雙樹檢視
+- **Session / 工作區佈局** — 將分頁 / 選取 / 過濾 / 浮動座標快照成 `.imervue-session.json`；可儲存命名佈局（Browse / Develop / Export 排列）
+- **巨集** — 錄製 / 重放評等 / 收藏 / 顏色 / 標籤動作批次（`Alt+M` 重放上一個巨集）
+- **縮圖徽章 + 密度** — 顏色條 / 收藏 / 書籤 / 評等星；Compact / Standard / Relaxed 內邊距
+- **拖出到外部 App** — 直接把磁磚拖進 Explorer / Chrome / Discord
+- **最近資料夾 / 圖片** 追蹤；上次資料夾啟動時自動還原
 
-### 多螢幕視窗
+### 排序與過濾
 
-**Ctrl+Shift+M** 開啟無邊框第二視窗，於副螢幕最大化，鏡像顯示主
-viewer 當前的圖片。主視窗可繼續獨立瀏覽。
+- 按名稱 / 修改時間 / 建立時間 / 大小 / 解析度排序（升 / 降）
+- 按副檔名、顏色標籤、評等、標籤 / 相簿、挑片狀態過濾
+- **進階過濾** — 解析度 / 檔案大小 / 方向 / 修改日期範圍
+- **多標籤過濾** 對話框含 AND / OR
+
+### 搜尋
+
+- **模糊檔名搜尋** 含子字串高亮
+- **找相似** — pHash（64-bit DCT）含可調 Hamming 距離
+- **圖庫搜尋** — SQLite 多根索引；查詢副檔名 / 大小 / 尺寸 / 檔名
+- **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」）透過快取的 embedding；`open_clip_torch` + `torch` 未安裝時優雅停用
+- **自動標籤** — 啟發式分類 + 選用 CLIP ONNX 升級
+
+### 元資料
+
+- **EXIF 側欄** 含可折疊群組 + 內嵌 0-5 星評等列
+- **EXIF 編輯器** 對話框
+- **影像資訊** 對話框（尺寸 / 大小 / 日期）
+- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 Lightroom / Capture One（透過 `defusedxml` 安全解析）
+- **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度（JPEG）
+- **權杖批次重新命名** — 即時預覽範本 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
+- **匯出元資料 CSV / JSON** — 每張影像一列含挑片 / 評等 / 標籤 / 筆記
+
+### 額外工具（Imervue 分頁 — 批次處理）
+
+從 **Tools** 選單存取；分為功能群組子選單：
+
+- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器（重新渲染移除所有隱藏資料）· 影像整理器 · 權杖批次重命名
+- **AI / 啟發式** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 找重複 · 找相似 · 自動標籤 · 人臉偵測
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
+
+### 系統整合
+
+- Windows 右鍵 **以 Imervue 開啟**（透過登錄檔註冊）
+- 資料夾監控（`QFileSystemWatcher` 自動重新整理）
+- Toast 通知系統（info / success / warning / error）
+- 外掛系統含線上下載器（見 [外掛系統](#外掛系統)）
+
+---
+
+## Modify — 非破壞顯影
+
+**Modify** 分頁是顯影工作站。每次調整都儲存在每張影像的 **recipe** 中 — 原始檔案直到你明確 **匯出** 或 **另存新檔** 才會被覆寫。
+
+### 顯影滑桿
+
+- 白平衡 — 色溫 / 色調
+- 色調區段 — 陰影 / 中間調 / 高光
+- 曝光 / 對比 / 飽和度 / 鮮豔度
+- 裁切、旋轉、水平 / 垂直翻轉
+- 所有調整透過 recipe 儲存，全程非破壞
+
+### 曲線與 LUT
+
+- **色調曲線編輯器** — 可拖曳 RGB 曲線 + 個別 R / G / B 通道，含 monotone cubic 插值
+- **套用 .cube LUT** — 載入任何 Adobe 3D LUT（最高 64³），trilinear 插值，混合強度滑桿
+- **分離色調** — Lightroom 風格陰影 / 高光色相 + 飽和度，含平衡樞紐
+
+### 局部調整
+
+- **筆刷 / 放射 / 線性漸層遮罩**，含每遮罩的曝光 / 亮度 / 對比 / 飽和度 / 白平衡偏移 + 羽化滑桿
+- 遮罩透過顯影管線非破壞混合
+
+### 修圖與變形
+
+- **修復筆刷** — 圓形點，OpenCV inpainting（Telea 或 Navier-Stokes）
+- **仿製圖章** — Shift+點擊來源、羽化貼至目標
+- **裁切 / 拉直** — 標準化裁切矩形 + 任意角度拉直，自動裁到最大內接矩形
+- **自動拉直** — Hough-line 地平線 / 垂直線偵測
+- **鏡頭校正** — 純 numpy 徑向畸變（桶狀 / 枕狀）、暈影提升、各通道色差校正
+- **雜訊抑制 / 銳化** — 邊緣保留雙邊去噪 + unsharp mask 銳化
+- **天空 / 背景** — 偵測天空換成漸層或去除背景（透明或白色填色）；可選 `rembg` / U²-Net 升級
+
+### 多影像
+
+- **HDR 合成** — 透過 OpenCV Mertens fusion 合併包圍曝光（含 AlignMTB 預先對齊）
+- **全景拼接** — OpenCV `Stitcher`（panorama 或 scans 模式），黑邊自動裁切
+- **焦點堆疊** — Laplacian 焦點圖 + Gaussian 混合 + 選用 ECC 對齊
+
+### 輸出
+
+- **浮水印疊加** — 文字或圖片，9 個錨點、不透明度、縮放；只在匯出時套用
+- **匯出預設** — Web 1600 / Print 300 dpi / Instagram 1080 一鍵流水線
+- **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF，有損格式提供品質滑桿
+- **批次操作** — 重命名、移動 / 複製、旋轉選取影像
+- **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
+- **網頁圖庫 HTML** — 自包含資料夾含 `index.html` + JPEG 縮圖 + 內嵌燈箱
+- **幻燈片 MP4** — H.264 影片，FPS / 每張保留秒數 / 淡入淡出可設（`imageio-ffmpeg`）
+- **列印佈局** — 多頁 PDF（A4/A3/Letter/Legal）含網格 / 邊距 / 裝訂溝 / 裁切標記
+- **軟校樣** — 載入 ICC profile、模擬目標色域、用洋紅色標示超出色域的像素
+- **虛擬副本** — 每影像命名的 recipe 快照；可切換不同風格而不弄丟主本
+
+### 外部編輯器
+
+從 **File > External Editors…** 註冊程式（GIMP / Photoshop / Affinity / …），再從 **File > Open in External Editor** 啟動。
+
+---
+
+## Paint — MediBang 風格繪圖
+
+**Paint** 分頁是完整功能的點陣繪圖工作室，以獨立 `QMainWindow` 嵌入，含選單、左工具列、上下文敏感的選項列、右側分頁式擺放欄。多文件編輯 — 同時開多張圖，每張有獨立復原堆疊。
+
+### 工具（24）
+
+筆刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速選取 · 移動 · 文字 · 漸層 · 模糊 · 塗抹 · 鋼筆 · 仿製圖章 · 對話框 · 矩形 · 橢圓 · 線條 · 多邊形 · 裁切 · 變形 · 抓手 · 縮放
+
+單鍵快捷：`B / E / G / I / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形狀變體。
+
+### 筆刷
+
+鋼筆 / 麥克筆 / 鉛筆 / 螢光筆 / 噴漆 / 書法 / 水彩 / 木炭 / 蠟筆，含大小 / 不透明度 / 硬度 / 密度 / 混合模式。壓力曲線編輯器、選取捕獲筆尖、筆刷預設匯入 / 匯出。
+
+### 圖層
+
+完整圖層面板含縮圖、可見性、拖曳重排、混合模式、不透明度、搜尋、向量圖層、1-bit 圖層、**圖層遮罩**（新增 / 從選取 / 反轉 / 套用）、**剪裁遮罩**、**圖層效果**（陰影 / 外發光 / 描邊）。按顏色分割圖層、漸層映射預設。
+
+### 選取
+
+矩形 / 套索 / 魔棒 / 快選 含 **取代 / 加 / 減 / 交集** 模式 + 羽化。**快速遮罩模式**（`Q`）。**描邊選取** 對話框。
+
+### 動畫與漫畫
+
+- **動畫** — 影格時間軸停泊含快照、播放、洋蔥皮、MP4 / GIF 匯出
+- **漫畫工具** — 分鏡切割 · 網點層 · 蓋頁碼 · 速度線（放射 / 平行 / 爆發）· 動作閃光 · 對話框工具
+
+### 濾鏡與檢視輔助
+
+- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone（每個含即時預覽對話框）
+- **檢視輔助** — 像素格 · 對齊像素 · 對齊邊緣 · 洋蔥皮 · 出血指引 · 畫布旋轉（`Ctrl+Shift+H` CCW 旋轉）
+
+### 擺放欄（10 個，分頁式）
+
+色彩 · 筆刷 · 圖層 · 導航 · 素材庫 · 歷史 · 色票 · 參考 · 直方圖 · 動畫。每個擺放欄可移動 / 浮動。**Settings > Workspace Layouts** 儲存與召回命名排列。
+
+### 檔案 I/O
+
+- 開啟 / 儲存 **PSD**（Photoshop）含完整圖層往返
+- 匯出 PNG / JPEG / WebP，多頁漫畫匯出 **CBZ** 或 **PDF**
+- 自動儲存快照 + 還原最新
+
+### 強化使用者體驗
+
+- **Tab** 切換所有擺放欄（無干擾繪圖）
+- `Ctrl+Tab` 循環 Paint 分頁
+- `,` / `.` 切換筆刷種類
+- `0`-`9` 筆刷不透明度 10 % 步進
+- `Alt+[` / `Alt+]` 下 / 上切換作用圖層
+- 畫布右鍵打開快速 Undo / Redo / 全選 / 取消選 / Fit / 100 %
+- 每分頁修改星號、復原 / 重做 toast、啟動時還原自動儲存對話框
+
+從深度縮放按 `E` 把目前圖片直接送入新的 Paint 分頁。
+
+---
+
+## Puppet — 2D 綁骨偶動畫
+
+**Puppet** 分頁是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D / Inochi2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但 **不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
+
+### 檔案格式
+
+`.puppet` 是 zip 容器：
+
+- `puppet.json` — manifest（drawables、deformers、parameters、motions、pose groups、parts、hit areas）
+- `textures/*.png` — atlas 紋理
+- `motions/*.json` — keyframe tracks
+- `expressions/*.json` — 參數疊加
+- `physics.json` — Verlet 物理配置
+
+JSON 為主，人類可 diff，沒有專利二進位。
+
+### 渲染器
+
+`QOpenGLWidget` 含 vertex-array textured-triangle 繪製（依 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、影像空間正交投影、GL_REPEAT 平鋪的透明度棋盤背景、滾輪縮放 + 中鍵拖曳平移。針對大型 rig 最佳化 — March 7th（307 drawables / 2965 vertex morphs）在 CPU 上達 60 FPS。
+
+### 編輯
+
+- **匯入 PNG** → 自動產生考慮 alpha 的三角網格
+- **新增旋轉變形器**（anchor + angle）/ **新增 warp 變形器**（rows × cols bezier lattice）工具列動作
+- **新增參數** → 在滑桿端點按 **Set Key** 在參數擺放欄記錄關鍵形狀
+- **網格編輯器** — 切換 Edit Mesh 拖曳頂點；點擊 8 px 內吸附到最近頂點
+- **另存新檔…** 把整個 rig 寫成 `.puppet` zip
+
+### 執行
+
+- **參數綁定** — 每個參數保有 key 清單，將滑桿值對應到部分 deformer-form 快照；執行時採樣並逐欄位線性插值
+- **動作播放** — 底部擺放欄含動作清單 + 播放 / 暫停 / 停止 / 循環 / 拖曳；曲線取樣器支援 `linear`、`stepped`、`inverse-stepped`、`cubic-bezier` 段（牛頓迭代 time → param）；每動作淡入 / 淡出
+- **表情** — `additive` / `multiply` / `overwrite` 參數疊加堆疊
+- **姿勢群組** — 互斥 drawable 可見性（武器切換、嘴形變體）
+- **物理** — Verlet 鐘擺鏈用於頭髮 / 衣物 / 緞帶；輸入參數移動鏈錨點，重力 + 阻尼 + 每粒子彈簧回復靜止
+- **頂點 morph** — Cubism 式線性混合於 rest 與 ±extreme deltas；每幀向量化 numpy，60 FPS
+- **不透明度 keys** — 參數驅動的 alpha 曲線；讓替代姿勢 mesh 隨手勢參數淡入 / 淡出
+
+### 即時輸入
+
+- 滑鼠拖曳 → 頭部角度參數
+- 自動眨眼，cosine open → close → open 曲線
+- 麥克風對嘴 via `sounddevice` RMS → `ParamMouthOpenY`（選用依賴）
+- 攝影機臉部追蹤 via OpenCV + MediaPipe FaceMesh → 頭部 yaw / pitch / roll + 眼 / 嘴開合（選用依賴）
+- 自訂動作錄製 — 滑動滑桿 / 對攝影機 / 物理運行時以 30 Hz 擷取參數值；停止時烘焙成線性段 Motion
+
+### Cubism 互通
+
+可插入 **Cubism Native SDK**（使用者自備 DLL — Live2D 的 Free Material License 禁止重新散佈）將任何 `.moc3` 模型轉成 `.puppet` zip。轉換器執行 sample-and-reconstruct 掃描，同時擷取 vertex-morph delta 與參數驅動的可見度切換，所以手勢切換（比耶 / 捂臉 / 照相 …）能完整保留。
+
+### 輸出
+
+- **擷取畫面…** 透過 `glReadPixels` 存 PNG
+- **錄製…** 切換 30 FPS 影格循環，透過 `imageio` 寫成 GIF / WebM / MP4
+- **NDI 輸出** 用於串流到 OBS / Zoom（選用 `ndi-python`）
+- **VTube Studio API 伺服器** — 可選 OBS 友善的遠端控制
+- **虛擬攝影機** 串流
+
+### 範例
+
+範例 rig 在 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — 307 drawable 的 Cubism Live2D 角色倉庫內轉換。從 **開啟 puppet…** 開啟，rig 居中載入；點擊 18 個動作（Idle 群組 + Gesture 群組）任意一個即播放。手勢涵蓋比耶、捂臉、照相、臉紅、黑臉、哭、流汗、星星、流星 — rig 定義的所有命名手勢。
 
 ---
 
 ## 鍵盤與滑鼠快捷鍵
 
-### 導航（兩種模式通用）
+### 導航（所有模式）
 
 | 快捷鍵 | 動作 |
-|--------|------|
-| 方向鍵 | 捲動網格 / 切換圖片（深度縮放模式下左右切換） |
-| Shift + 方向鍵 | 精細捲動（半步） |
-| Ctrl+Shift+←/→ | 跳至前/下一個含圖片的兄弟資料夾 |
-| Alt+← / Alt+→ | 瀏覽歷史 返回 / 前進（類似瀏覽器） |
-| Ctrl+G | 依編號跳至圖片 |
-| X | 隨機跳到一張圖片 |
-| Home | 重設縮放和平移至原點 |
-| Ctrl+F 或 / | 開啟模糊搜尋對話框 |
+|----------|--------|
+| 方向鍵 | 滾動網格 / 切換影像（深度縮放中左 / 右） |
+| Shift + 方向 | 細微滾動（半步） |
+| Ctrl+Shift+←/→ | 跳到前 / 下個含影像的手足資料夾 |
+| Alt+← / Alt+→ | 歷史返回 / 前進 |
+| Ctrl+G | 跳到第 N 張 |
+| X | 隨機跳轉 |
+| Home | 重設縮放與平移 |
+| Ctrl+F 或 / | 模糊搜尋對話框 |
 | Ctrl+Shift+P | 開啟命令面板 |
-| Alt+M | 重播上次執行的巨集 |
+| Alt+M | 在目前選取重放上一個巨集 |
 | S | 開啟幻燈片對話框 |
 | Ctrl+Z | 復原 |
 | Ctrl+Shift+Z / Ctrl+Y | 重做 |
 
-### 深度縮放 / 單張圖片模式
+### 深度縮放 / 單張影像
 
 | 快捷鍵 | 動作 |
-|--------|------|
+|----------|--------|
 | F | 切換全螢幕 |
-| Shift+Tab | 切換**劇場模式**（隱藏所有外殼） |
-| R | 順時針旋轉 |
-| Shift+R | 逆時針旋轉 |
-| E | 開啟圖片編輯器 |
-| W | 適應寬度 |
-| Shift+W | 適應高度 |
-| H | 切換 RGB 直方圖覆蓋層 |
-| F8 | 切換 OSD 資訊疊加層（檔名 / 尺寸 / 類型） |
-| Ctrl+F8 | 切換 Debug HUD（VRAM / 快取 / 執行緒） |
-| Shift+P | 切換像素檢視（≥ 400 % 顯示網格與 RGB 值） |
-| Shift+M | 循環色彩模式（正常 / 灰階 / 反相 / 懷舊） |
-| B | 切換目前圖片的書籤 |
-| Ctrl+C | 複製圖片到剪貼簿 |
-| Ctrl+V | 從剪貼簿貼上圖片 |
-| 0 | 切換最愛（愛心） |
-| 1–5 | 快速評分（1–5 星） |
-| F1–F5 | 快速**色彩標籤**（紅 / 黃 / 綠 / 藍 / 紫） |
-| Shift+S | 開啟分割檢視（並排兩張圖片） |
-| Shift+D | 開啟雙頁閱讀（漫畫/寫真集） |
-| Ctrl+Shift+D | 雙頁閱讀（右至左順序） |
-| Ctrl+Shift+M | 切換副螢幕鏡像視窗 |
-| Delete | 將目前圖片移至垃圾桶（可復原） |
-| Escape | 離開深度縮放 / 離開全螢幕 / 關閉雙圖或清單模式 |
+| Shift+Tab | 切換劇場模式 |
+| R / Shift+R | 順時針 / 逆時針旋轉 |
+| E | 開啟影像編輯器（Modify 分頁） |
+| W / Shift+W | 適合寬度 / 高度 |
+| H | 切換 RGB 直方圖 |
+| F8 / Ctrl+F8 | OSD 疊加層 / 除錯 HUD |
+| Shift+P | 切換像素檢視（≥ 400 % 顯示網格 + RGB） |
+| Shift+M | 循環色彩模式 |
+| B | 切換書籤 |
+| Ctrl+C / Ctrl+V | 複製 / 貼上影像至 / 自剪貼簿 |
+| 0 / 1-5 | 切換收藏 / 快速評等 |
+| F1-F5 | 快速顏色標籤 |
+| P / Shift+X / U | 挑片：保留 / 拒絕 / 取消 |
+| Shift+S | 分割檢視 |
+| Shift+D / Ctrl+Shift+D | 雙頁（LTR / RTL） |
+| Ctrl+Shift+M | 多螢幕鏡射視窗 |
+| Delete | 移到資源回收筒（可復原） |
+| Escape | 結束深度縮放 / 全螢幕 |
 
 ### 動畫播放（GIF / APNG）
 
 | 快捷鍵 | 動作 |
-|--------|------|
-| Space | 播放 / 暫停 |
-| ,（逗號） | 上一幀 |
-| .（句號） | 下一幀 |
-| [ | 降低播放速度 |
-| ] | 提高播放速度 |
+|----------|--------|
+| 空白鍵 | 播放 / 暫停 |
+| ,（逗號）/ .（句號）| 前一影格 / 下一影格 |
+| [ / ] | 降低 / 提高播放速度 |
 
-### 磁磚網格模式
+### 磁磚網格
 
 | 快捷鍵 | 動作 |
-|--------|------|
-| 方向鍵 | 捲動網格 |
-| Ctrl+L | 切換 縮圖格 ↔ 清單（詳細）瀏覽模式 |
-| Hover (500 ms) | 顯示較大的 Hover 預覽彈窗 |
-| Delete | 刪除選取的磁磚 |
-| Escape | 取消全部選取 |
+|----------|--------|
+| Ctrl+L | 切換網格 ↔ 清單 |
+| 懸停（500 ms） | 懸停預覽彈窗 |
+| Delete | 刪除選取磁磚 |
+| Escape | 取消全選 |
 
-### 滑鼠控制
+### 滑鼠 / 觸控板
 
 | 動作 | 行為 |
-|------|------|
-| 左鍵點擊 | 選取磁磚或開啟圖片 |
-| 左鍵拖曳 | 網格中框選多張圖片 |
-| 長按（500ms） | 進入磁磚選取模式 |
-| 中鍵拖曳 | 深度縮放中平移/捲動 |
-| 滾輪 | 放大/縮小或捲動 |
-| 右鍵 | 開啟右鍵選單 |
+|--------|----------|
+| 左鍵點擊 | 選取磁磚或開啟影像 |
+| 左鍵拖曳 | 網格矩形多選 |
+| 長按（500 ms） | 進入磁磚選取模式 |
+| 中鍵拖曳 | 深度縮放中平移 |
+| 滾輪 | 縮放或滾動 |
+| 右鍵點擊 | 上下文選單 |
+| 捏合 | 深度縮放中縮放 |
+| 水平滑動 | 上一張 / 下一張 |
 
-### 觸控板手勢
+### Paint 分頁（額外）
 
-| 手勢 | 動作 |
-|------|------|
-| 捏合 | 在深度縮放中放大/縮小（以捏合中心為錨點） |
-| 水平滑動 | 上一張 / 下一張圖片 |
+| 快捷鍵 | 動作 |
+|----------|--------|
+| B / E / G / I | 筆刷 / 橡皮擦 / 填色 / 滴管 |
+| V / T / U / R | 移動 / 文字 / 漸層 / 矩形選取 |
+| P / S / C / Z / H | 鋼筆 / 塗抹 / 仿製 / 縮放 / 抓手 |
+| Q | 切換快速遮罩模式 |
+| Tab | 切換所有擺放欄 |
+| Ctrl+Tab | 循環 Paint 分頁 |
+| , / . | 循環筆刷種類 |
+| 0-9 | 筆刷不透明度 10% 步進 |
+| Alt+[ / Alt+] | 下 / 上切換作用圖層 |
 
 ---
 
 ## 選單結構
 
-### 檔案
+### File
 
-- 新視窗
-- 開啟圖片
-- 開啟資料夾
-- 最近（子選單：最近資料夾和圖片）
-- 書籤（管理已加入書籤的圖片）
-- **Session**（子選單：儲存 Session / 載入 Session）
-- **以外部編輯器開啟**（子選單：已註冊的外部編輯器）
-- **外部編輯器設定…**
-- 確認待處理的刪除（確認復原堆疊）
-- 快捷鍵設定（自訂鍵盤快捷鍵）
-- 檔案關聯（僅限 Windows — 註冊/取消註冊右鍵內容選單）
-- 結束
+- New Window
+- Open Image / Open Folder
+- Recent（資料夾 + 影像）
+- Bookmarks / Tags & Albums
+- Commit Pending Deletions
+- Paste from Clipboard / Auto-annotate Clipboard Images
+- File Association（Windows）
+- **Session** — Save / Load
+- **Workspaces…** — 儲存 / 載入 / 重命名命名視窗佈局
+- **External Editors…** + **Open in External Editor**
+- Keyboard Shortcuts（可自訂綁定）
+- Exit
 
-### 額外功能
+### Tools（額外工具 — 分為 8 個群組子選單）
 
-依功能分為 8 個子選單：
+- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似 / 重複 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
+- **檢視** — Timeline · Calendar · Map
+- **工作流程** — 挑片 · 暫存盤 · 虛擬副本 · 雙窗格 FM · 巨集
+- **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局
+- **顯影（非破壞）** — 色調曲線 · .cube LUT · 分離色調 · 局部調整遮罩 · 軟校樣
+- **修圖與變形** — AI 影像放大 · 雜訊抑制 / 銳化 · 修復筆刷 · 仿製圖章 · 人臉偵測 · 天空 / 背景 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正
+- **多影像** — HDR 合成 · 全景拼接 · 焦點堆疊
 
-- **批次** — 批次格式轉換 · EXIF 批次清除 · 圖片淨化重繪 · 圖片整理工具 · Token 批次重新命名
-- **圖庫與中繼資料** — 圖庫搜尋（SQLite 多根索引）· 智慧相簿 · 相似圖片搜尋（pHash）· 重複圖片偵測 · 自動標記（啟發式 + 可選 CLIP ONNX）· 階層式標籤 · 中繼資料匯出（CSV / JSON）· XMP sidecar · GPS 地理標記
-- **檢視** — 時間軸檢視 ▸（依日 / 月 / 年）· 行事曆檢視 · 地圖檢視
-- **工作流程** — 分揀（Pick / Reject）· 暫存籃 · 虛擬複本 · 雙窗格檔案管理 · 巨集
-- **匯出** — 聯絡表（Contact Sheet）PDF · Web Gallery · 幻燈片影片（MP4）· 列印版面
-- **調整（非破壞性）** — 色調曲線 · 套用 .cube LUT · 分離色調（Split Toning）· 局部遮罩 · 軟打樣
-- **修復與變形** — AI 圖片放大 · 降噪 / 銳化 · 修復筆刷 · 仿製圖章 · 人臉偵測 · 天空／背景替換 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正
-- **多張合成** — HDR 合成 · 全景拼接 · 焦點堆疊
+### 檢視 / 排序 / 過濾 / 語言 / 外掛 / 說明
 
-### 檢視
+（標準選單 — 完整選項見應用程式內。）
 
-- 磁磚大小：128×128 / 256×256 / 512×512 / 1024×1024 / 自動
-- **瀏覽模式**：縮圖格 / 清單（Ctrl+L 切換）
-- **縮圖排列密度**：緊湊 / 標準 / 寬鬆
+### 右鍵上下文選單
 
-### 排序
-
-- 依名稱 / 依修改日期 / 依建立日期 / 依檔案大小 / 依解析度
-- 遞增 / 遞減
-
-### 篩選
-
-- 依副檔名：全部、JPG、PNG、BMP、TIFF、SVG、RAW
-- **依色彩標籤**：全部 / 任一色 / 無標籤 / 紅 / 黃 / 綠 / 藍 / 紫
-- 依評分：全部、已加入最愛、1–5 星
-- 依標籤（單選）/ 依相簿（單選）
-- **多標籤過濾…** — 多選標籤或相簿，支援 AND / OR 布林邏輯
-- **進階過濾…** — 解析度 / 檔案大小 / 方向 / 修改日期範圍
-- **堆疊 RAW+JPEG 對** — 勾選時同名的 RAW/JPEG 對折疊成單一項目
-- 清除篩選
-
-### 語言
-
-- English / 繁體中文 / 简体中文 / 한국어 / 日本語
-
-### 外掛
-
-- 已載入的外掛（顯示各外掛名稱和版本）
-- 下載外掛（開啟線上外掛下載器）
-- 開啟外掛資料夾
-
-### 說明
-
-- 鍵盤與滑鼠快捷鍵（詳細的快捷鍵參考對話框）
-
-### 右鍵選單
-
-- 導航（上層資料夾、下一張/上一張圖片）
-- 快速操作（在檔案總管中顯示、複製路徑、複製圖片）
-- 變形（順時針/逆時針旋轉、編輯圖片）
-- 批次操作（批次重新命名、移動/複製、全部旋轉）
-- 刪除（刪除目前/選取的項目）
-- 設為桌布
-- 比較 / 幻燈片
-- 匯出（另存新檔，可選擇格式）
-- 無損 JPEG 旋轉
-- 額外功能（批次轉換、AI 放大、重複偵測、圖片整理、EXIF 清除、圖片淨化重繪）
-- 書籤（新增/移除書籤）
-- 圖片資訊
-- 最近選單
-- 外掛貢獻的項目
+導航 · 快速動作（顯示 / 複製路徑 / 複製影像）· 變形 · 批次操作 · 刪除 · 桌布 · 比較 / 幻燈片 · 匯出 · 額外工具 · 書籤 · 影像資訊 · 外掛貢獻項目。
 
 ---
 
 ## 外掛系統
 
-Imervue 支援外掛系統以擴展功能。完整說明請參閱[外掛開發指南](../PLUGIN_DEV_GUIDE.md)。
+Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
 
 ### 快速開始
 
-1. 在專案根目錄的 `plugins/` 資料夾中建立一個資料夾
-2. 定義一個繼承 `ImervuePlugin` 的類別
-3. 在 `__init__.py` 中以 `plugin_class = YourPlugin` 註冊
-4. 重新啟動 Imervue
+1. 在專案根目錄的 `plugins/` 建立資料夾
+2. 定義繼承 `ImervuePlugin` 的類別
+3. 在 `__init__.py` 用 `plugin_class = YourPlugin` 註冊
+4. 重啟 Imervue
 
-### 可用的鉤子
+### 鉤子
 
-| 鉤子 | 觸發時機 |
+| 鉤子 | 觸發 |
 |------|---------|
 | `on_plugin_loaded()` | 外掛實例化後 |
-| `on_plugin_unloaded()` | 應用程式關閉時 |
-| `on_build_menu_bar(menu_bar)` | 預設選單列建立完成後 |
+| `on_plugin_unloaded()` | App 關閉時 |
+| `on_build_menu_bar(menu_bar)` | 預設選單列建好後 |
+| `on_build_main_tabs(tabs)` | 內建 4 個分頁加完之後 |
 | `on_build_context_menu(menu, viewer)` | 右鍵選單開啟時 |
-| `on_image_loaded(path, viewer)` | 圖片在深度縮放中載入後 |
-| `on_folder_opened(path, images, viewer)` | 資料夾在網格中開啟後 |
-| `on_image_switched(path, viewer)` | 在圖片間導航時 |
-| `on_image_deleted(paths, viewer)` | 圖片被軟刪除後 |
-| `on_key_press(key, modifiers, viewer)` | 按鍵時（回傳 True 以消耗事件） |
-| `on_app_closing(main_window)` | 應用程式關閉前 |
-| `get_translations()` | 提供國際化字串 |
+| `on_image_loaded(path, viewer)` | 影像在深度縮放載入後 |
+| `on_folder_opened(path, images, viewer)` | 資料夾在網格開啟後 |
+| `on_image_switched(path, viewer)` | 切換影像時 |
+| `on_image_deleted(paths, viewer)` | 影像被軟刪除後 |
+| `on_key_press(key, modifiers, viewer)` | 按鍵時（回傳 True 消費事件） |
+| `on_app_closing(main_window)` | App 關閉前 |
+| `get_translations()` | 提供 i18n 字串 |
 
 ### 外掛下載器
 
-可透過 **外掛 > 下載外掛** 從官方倉庫下載外掛。下載器從 GitHub 上的 [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) 取得。
+**Plugins > Download Plugins** 開啟線上下載器。來源倉庫：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。
 
 ---
 
 ## MCP 伺服器
 
-Imervue 內建一個 [Model Context Protocol](https://modelcontextprotocol.io) 伺服器,讓 AI 助理(Claude Code、Claude Desktop、Cursor、Cline …)可以直接呼叫專案的純邏輯輔助函式,而不需要啟動 GUI。伺服器不依賴 Qt,一行指令即可啟動:
+Imervue 內建 [Model Context Protocol](https://modelcontextprotocol.io) 伺服器，讓 AI 助手（Claude Code / Desktop、Cursor、Cline …）能在沒有 GUI 的情況下呼叫專案的純邏輯工具。Qt-free；一個命令啟動：
 
 ```sh
 python -m Imervue.mcp_server
 ```
 
-### 可用工具
+### 工具
 
 | 工具 | 用途 |
-|------|------|
-| `list_images` | 列出資料夾內的圖片(路徑、大小、修改時間)— 支援遞迴 |
-| `read_image_metadata` | 單張圖片的尺寸、格式、EXIF 與 XMP sidecar |
-| `read_xmp_tags` | 僅讀 XMP 的快速路徑:評等、色標、關鍵字、標題、描述 |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 互轉 |
-| `puppet_from_png` | 從 PNG 自動建出 `.puppet` 動畫檔(auto-mesh + 標準參數) |
-| `puppet_inspect` | 開啟 `.puppet` 並回傳完整盤點:drawables、deformers、parameters、motions、expressions、hit areas、parts、blends、physics |
+|------|---------|
+| `list_images` | 列出資料夾中的影像（可選遞迴） |
+| `read_image_metadata` | 尺寸 / 格式 / EXIF / XMP 邊車檔 |
+| `read_xmp_tags` | XMP-only 快路徑：評等、標籤、關鍵字 |
+| `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP |
+| `puppet_from_png` | 從 PNG 建構 `.puppet` rig（auto-mesh + 標準參數） |
+| `puppet_inspect` | 開啟 `.puppet` 回傳清單 |
 
-### 設定方式
+### 配置
 
-**Claude Code(專案層級)** — repo 根目錄已附 `.mcp.json`,使用 Claude Code 開啟 repo 的任何子目錄就會自動探索到伺服器:
+倉庫根目錄附帶 `.mcp.json` 供 Claude Code 自動探索。對於 Desktop / 其他客戶端，加入 `claude_desktop_config.json`（或等效）：
 
 ```json
 {
@@ -620,59 +614,45 @@ python -m Imervue.mcp_server
 }
 ```
 
-**Claude Desktop / 其他 MCP 客戶端** — 把同一段加進客戶端的 `claude_desktop_config.json`(或對應檔案)。macOS 路徑是 `~/Library/Application Support/Claude/claude_desktop_config.json`;Windows 是 `%APPDATA%\Claude\claude_desktop_config.json`。請使用絕對工作目錄或啟用安裝了 Imervue 的 venv。
-
-完整協定介面與各工具的參數說明,見 [docs/zh-tw/index.rst](../docs/zh-tw/index.rst) 的 **MCP 伺服器** 章節。
+完整協議介面見 [docs/en/index.rst](../docs/en/index.rst) 的 MCP 章節。
 
 ---
 
 ## 多語言支援
 
-### 內建語言
-
 | 語言 | 代碼 |
-|------|------|
+|----------|------|
 | English | `English` |
 | 繁體中文 | `Traditional_Chinese` |
 | 简体中文 | `Chinese` |
 | 한국어 | `Korean` |
 | 日本語 | `Japanese` |
 
-可從 **語言** 選單變更語言。變更後需要重新啟動才會生效。
+從 **Language** 選單切換。需重啟。
 
-### 透過外掛新增語言
-
-外掛可以使用 `language_wrapper.register_language()` 註冊全新的語言，或透過 `get_translations()` 為現有語言新增翻譯。詳情請參閱[外掛開發指南](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+外掛可透過 `language_wrapper.register_language()` 註冊全新語言，或透過 `get_translations()` 提供翻譯。詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 
 ## 使用者設定
 
-設定儲存在工作目錄的 `user_setting.json` 中。
+儲存在工作目錄的 `user_setting.json`。關鍵欄位：
 
-| 設定 | 型別 | 說明 |
-|------|------|------|
-| `language` | 字串 | 目前語言代碼 |
-| `user_recent_folders` | 列表 | 最近開啟的資料夾 |
-| `user_recent_images` | 列表 | 最近開啟的圖片 |
-| `user_last_folder` | 字串 | 上次開啟的資料夾（啟動時自動恢復） |
-| `bookmarks` | 列表 | 已加入書籤的圖片路徑（最多 5000 個） |
-| `sort_by` | 字串 | 排序方式（name/modified/created/size/resolution） |
-| `sort_ascending` | 布林 | 排序順序 |
-| `image_ratings` | 字典 | 圖片路徑 → 評分（1–5）對應 |
-| `image_favorites` | 集合 | 已加入最愛的圖片路徑 |
-| `image_color_labels` | 字典 | 圖片路徑 → 色彩名（`red`/`yellow`/`green`/`blue`/`purple`） |
-| `thumbnail_size` | 整數/null | 網格縮圖大小（128/256/512/1024/null 為自動） |
-| `tile_padding` | 整數 | 縮圖格邊距像素（0 緊湊 / 8 標準 / 16 寬鬆） |
-| `navigation_auto_loop` | 布林 | 末端按 →/← 是否自動循環（預設 `true`） |
-| `keyboard_shortcuts` | 字典 | 自訂 `action_id → [key, modifiers]` 覆寫 |
-| `window_geometry` | 字串 | Base64 編碼的視窗幾何位置（關閉時儲存） |
-| `window_state` | 字串 | Base64 編碼的視窗狀態（dock / 工具列配置） |
-| `window_maximized` | 布林 | 上次關閉時視窗是否為最大化 |
-| `stack_raw_jpeg_pairs` | 布林 | 是否將同名的 RAW/JPEG 對折疊顯示 |
-| `external_editors` | 列表 | 已註冊的外部編輯器（`name`、`executable`、`arguments`） |
-| `macros` | 列表 | 已儲存的巨集（步驟陣列 + 建立時間） |
-| `macro_last_name` | 字串 | Alt+M 重播時使用的最後巨集名稱 |
+| 設定 | 類型 | 說明 |
+|---------|------|-------------|
+| `language` | string | 目前語言代碼 |
+| `user_recent_folders` / `user_recent_images` | list | 最近開啟 |
+| `user_last_folder` | string | 啟動時自動還原 |
+| `bookmarks` | list | 書籤路徑（最多 5000） |
+| `sort_by` / `sort_ascending` | string / bool | 排序方法 + 順序 |
+| `image_ratings` / `image_favorites` / `image_color_labels` | dict / set / dict | 每影像整理 |
+| `thumbnail_size` / `tile_padding` | int | 網格配置 |
+| `navigation_auto_loop` | bool | 資料夾末端自動循環 |
+| `keyboard_shortcuts` | dict | 自訂鍵綁定 |
+| `window_geometry` / `window_state` / `window_maximized` | string / string / bool | 視窗佈局持久化 |
+| `stack_raw_jpeg_pairs` | bool | RAW+JPEG 疊合切換 |
+| `external_editors` | list | 已配置編輯器 |
+| `macros` / `macro_last_name` | list / string | 已儲存巨集 + Alt+M 目標 |
 
 ---
 
@@ -681,112 +661,52 @@ python -m Imervue.mcp_server
 ```
 Imervue/
 ├── __main__.py              # 應用程式進入點
-├── Imervue_main_window.py   # 主視窗（QMainWindow）
-├── gpu_image_view/          # GPU 加速檢視器
-│   ├── gpu_image_view.py    # 主要檢視器元件（QOpenGLWidget）
-│   ├── gl_renderer.py       # OpenGL 著色器渲染器
-│   ├── actions/             # 檢視器操作（縮放、平移、旋轉等）
-│   └── images/              # 圖片載入、金字塔、磁磚管理
-├── external/                # 外部編輯器整合
-│   └── editors.py           # 編輯器登錄與啟動（subprocess）
-├── export/                  # 匯出子系統
-│   ├── contact_sheet.py     # 聯絡表 PDF 匯出（QPdfWriter）
-│   ├── web_gallery.py       # Web Gallery HTML 匯出
-│   └── slideshow_mp4.py     # 幻燈片 MP4 匯出（imageio-ffmpeg）
-├── macros/                  # 巨集錄製/重播
-│   └── macro_manager.py     # 巨集管理員（ACTION_REGISTRY）
-├── sessions/                # Session 儲存/還原
-├── library/                 # 圖庫聚合工具
-├── gui/                     # UI 元件
-│   ├── ai_upscale_dialog.py # AI 圖片放大對話框
-│   ├── annotation_dialog.py # 裁剪工具對話框
-│   ├── batch_convert_dialog.py # 批次格式轉換對話框
-│   ├── bookmark_dialog.py   # 書籤管理對話框
-│   ├── command_palette.py   # 命令面板（Ctrl+Shift+P）
-│   ├── contact_sheet_dialog.py  # 聯絡表 PDF 對話框
-│   ├── develop_panel.py     # 開發面板
-│   ├── duplicate_detection_dialog.py # 重複圖片偵測對話框
-│   ├── exif_editor.py       # EXIF 中繼資料編輯器
-│   ├── exif_sidebar.py      # 可摺疊 EXIF 側邊欄
-│   ├── exif_strip_dialog.py # EXIF 批次清除對話框
-│   ├── export_dialog.py     # 匯出/另存新檔對話框
-│   ├── external_editors_settings.py # 外部編輯器設定對話框
-│   ├── image_editor.py      # 圖片編輯器（裁切、調整、旋轉）
-│   ├── image_organizer_dialog.py # 圖片整理工具對話框
-│   ├── image_sanitize_dialog.py  # 圖片淨化重繪對話框
-│   ├── macro_manager_dialog.py  # 巨集管理員對話框
-│   ├── shortcut_settings_dialog.py # 自訂快捷鍵設定
-│   ├── slideshow_mp4_dialog.py  # 幻燈片 MP4 對話框
-│   ├── web_gallery_dialog.py    # Web Gallery 對話框
-│   └── toast.py             # Toast 通知系統
-├── image/                   # 圖片工具
-│   ├── info.py              # 圖片資訊擷取
-│   ├── pyramid.py           # 深度縮放圖片金字塔
-│   ├── thumbnail_disk_cache.py  # 縮圖快取（MD5 + PNG）
-│   └── tile_manager.py      # 磁磚網格管理
+├── Imervue_main_window.py   # 主視窗（QMainWindow）— 掛載 4 個分頁
+├── gpu_image_view/          # IMERVUE 分頁 — GPU viewer + 深度縮放
+├── gui/                     # 對話框與側邊欄（顯影、EXIF 等）
+├── paint/                   # PAINT 分頁 — MediBang 風格點陣編輯器
+├── puppet/                  # PUPPET 分頁 — 2D 綁骨偶動畫器
+├── export/                  # 匯出產生器（聯絡單、網頁圖庫、MP4）
+├── image/                   # 影像工具（金字塔、磁磚管理、資訊）
+├── library/                 # 圖庫輔助（RAW+JPEG 疊合、索引）
+├── macros/                  # 巨集錄製 / 重放
 ├── menu/                    # 選單定義
-│   ├── extra_tools_menu.py  # 額外功能選單
-│   ├── file_menu.py         # 檔案選單
-│   ├── filter_menu.py       # 篩選選單
-│   ├── language_menu.py     # 語言選單
-│   ├── plugin_menu.py       # 外掛選單
-│   ├── recent_menu.py       # 最近項目子選單
-│   ├── right_click_menu.py  # 右鍵選單
-│   ├── sort_menu.py         # 排序選單
-│   └── tip_menu.py          # 說明選單
-├── multi_language/          # 國際化
-│   ├── language_wrapper.py  # 語言單例管理器
-│   ├── english.py           # 英文翻譯
-│   ├── chinese.py           # 简体中文
-│   ├── traditional_chinese.py  # 繁體中文
-│   ├── korean.py            # 韓文
-│   └── japanese.py          # 日文
-├── paint/                   # 繪圖工作區（MediBang 風格編輯器）
-│   ├── paint_workspace.py   # 嵌入的 QMainWindow，組合工具與 dock
-│   ├── canvas.py            # PaintCanvas（QOpenGLWidget）— 平移 / 縮放 / 指標分派
-│   ├── document.py          # PaintDocument — 圖層、選取、合成
-│   ├── tool_dispatcher.py   # 將指標事件路由到當前工具
-│   ├── brush_engine.py      # 筆刷點繪合成（壓力 / 動態 / 隨機）
-│   ├── layers.py            # 圖層模型 + 混合模式 + 遮罩
-│   ├── undo_stack.py        # 每分頁的復原 / 重做（手勢提交時快照）
-│   ├── dock_panels.py       # 顏色 / 筆刷 / 圖層 / 縮覽 / 素材 / 歷史
-│   ├── animation_dock.py    # 含播放轉軸的影格時間軸
-│   ├── manga_menu.py        # 分鏡切割、集中線、網點圖層、動作閃光
-│   ├── filter_menu.py       # 色階 / 曲線 / 色調分離 / 臨界值 / 網點
-│   ├── document_io.py       # PSD 載入 / 儲存（Photoshop 互通）
-│   └── …                    # 80+ 子模組：工具、對話框、輔助
-├── plugin/                  # 外掛系統
-│   ├── plugin_base.py       # ImervuePlugin 基底類別
-│   ├── plugin_manager.py    # 外掛探索與生命週期
-│   └── plugin_downloader.py # 線上外掛下載器
-├── system/                  # 系統整合
-│   └── file_association.py  # Windows 檔案關聯（登錄檔）
-└── user_settings/           # 使用者設定
-    ├── user_setting_dict.py # 設定讀寫（執行緒安全）
-    ├── bookmark.py          # 書籤管理
-    └── recent_image.py      # 最近圖片追蹤
+├── mcp_server/              # Model Context Protocol stdio 伺服器
+├── multi_language/          # i18n（en / zh-tw / zh-cn / ja / ko）
+├── external/                # 外部編輯器整合
+├── plugin/                  # 外掛系統（base / manager / downloader）
+├── sessions/                # 工作區序列化
+├── system/                  # Windows 檔案關聯
+└── user_settings/           # 持久使用者設定
 ```
 
-### 渲染管線
+### 渲染管線（Imervue 分頁）
 
-1. **OpenGL 上下文** — `GPUImageView` 繼承 `QOpenGLWidget`
-2. **著色器程式** — 兩個 GLSL 1.20 程式（材質四邊形 + 純色矩形）
-3. **材質管理** — LRU 快取，256 磁磚上限，1.5 GB VRAM 預算
-4. **深度縮放金字塔** — 多層磁磚金字塔，使用 LANCZOS 重新取樣，512×512 磁磚大小
-5. **各向異性過濾** — 硬體支援時最高 8x
-6. **備援** — 著色器編譯失敗時使用立即模式渲染
+1. `GPUImageView` 繼承 `QOpenGLWidget`
+2. 兩個 GLSL 1.20 程式（textured quads + solid color rectangles）
+3. LRU 紋理快取 — 256-磁磚上限、1.5 GB VRAM 預算
+4. 多層磁磚金字塔以 LANCZOS 在 512 × 512 磁磚尺寸建構
+5. 硬體支援時最高 8× 各向異性過濾
+6. 著色器編譯失敗時軟體渲染備援
 
 ### 縮圖快取
 
-- **金鑰**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}` 的 MD5 雜湊
-- **格式**：壓縮 PNG（`compress_level=1` — 寫入快速、佔用空間小；舊版 `.npy` 於首次存取時自動清除）
-- **位置**：`%LOCALAPPDATA%/Imervue/cache/thumbnails`（Windows）或 `~/.cache/imervue/thumbnails`（Linux/macOS）
-- **失效機制**：檔案中繼資料變更時自動失效
+- **鍵**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}` 的 MD5
+- **格式**：壓縮 PNG（`compress_level=1` — 寫入快、佔用小）
+- **位置**：`%LOCALAPPDATA%/Imervue/cache/thumbnails`（Win）或 `~/.cache/imervue/thumbnails`（Linux/macOS）
+- **失效**：檔案元資料變動時自動
+
+### Puppet 渲染（Puppet 分頁）
+
+- `QOpenGLWidget` 含 `glDrawElements` + 客戶端 vertex array
+- 每 drawable：rest vertices 快取為 float32 numpy；vertex morphs 向量化；topological deformer sort 提升出 per-drawable 迴圈
+- 透明度背景是 2×2 GL_REPEAT 平鋪紋理（最佳化前是 100k+ 立即模式 quads）
+- Cubism 轉換器同時產生 opacity_keys 曲線與 vertex-morph deltas，所以參數驅動的可見度切換能存活 `.moc3 → .puppet` 轉換
 
 ---
 
 ## 授權
 
-本專案採用 [MIT 授權](../LICENSE)。
+本專案使用 [MIT License](../LICENSE)。
 
 Copyright (c) 2026 JE-Chen

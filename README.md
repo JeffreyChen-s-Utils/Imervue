@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Image + Immerse + View</strong><br>
-  A GPU-accelerated image viewer built with PySide6 and OpenGL
+  A GPU-accelerated image viewer / developer / paint studio / puppet animator built with PySide6 and OpenGL
 </p>
 
 <p align="center">
@@ -26,15 +26,14 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
-- [Supported Image Formats](#supported-image-formats)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Browsing Modes](#browsing-modes)
+- [Imervue — Image viewer & library](#imervue--image-viewer--library)
+- [Modify — Non-destructive develop](#modify--non-destructive-develop)
+- [Paint — MediBang-style raster editor](#paint--medibang-style-raster-editor)
+- [Puppet — 2D rigged animation](#puppet--2d-rigged-animation)
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
-- [Paint Workspace](#paint-workspace)
-- [Puppet Workspace](#puppet-workspace)
 - [Plugin System](#plugin-system)
 - [MCP Server](#mcp-server)
 - [Multi-Language Support](#multi-language-support)
@@ -46,269 +45,22 @@
 
 ## Overview
 
-Imervue is a high-performance image viewer designed for smooth navigation and efficient handling of large image collections. It leverages GPU acceleration through OpenGL to deliver fast rendering for both thumbnail grids and deep zoom image viewing.
+Imervue is a GPU-accelerated image workstation that ships **four top-level tabs**:
 
-Key design principles:
+| Tab | What it does |
+|---|---|
+| **Imervue** | Browse, view, organize, search, and batch-process your image library |
+| **Modify** | Non-destructive develop pipeline — sliders, curves, LUTs, masks, retouch, multi-image |
+| **Paint** | MediBang-style raster paint studio with brushes, layers, animation, manga tools, PSD I/O |
+| **Puppet** | From-scratch 2D rigged-puppet animator — meshes, deformers, parameters, motions, physics |
+
+Design principles:
 
 - **Performance first** — GPU-accelerated rendering with modern GLSL shaders and VBO
 - **Large collection support** — Virtualized tile grid loads only visible thumbnails
 - **Smooth experience** — Asynchronous multi-threaded image loading with prefetching
-- **Extensible** — Full plugin system with lifecycle, menu, image, and input hooks
-
----
-
-## Features
-
-### Core
-
-- GPU-accelerated rendering via OpenGL (GLSL 1.20 shaders with VBO)
-- Deep zoom image viewing with multi-level image pyramid (512×512 tiles)
-- Virtualized tile-based thumbnail grid with lazy loading
-- Asynchronous multi-threaded image loading
-- Thumbnail disk cache system (compressed PNG with MD5-based cache keys)
-- Prefetching of ±3 adjacent images for smooth browsing
-- Undo/Redo system (QUndoStack for edits, legacy stack for deletions)
-
-### Navigation & Viewing
-
-- Folder-based browsing and single image viewing
-- **Grid / List (detail) browse modes** — toggle with Ctrl+L; the list view shows name, size, modified date, dimensions, and a dedicated star-rating column
-- **Breadcrumb path bar** — clickable segments above the viewer
-- Fullscreen + **Theater mode** (Shift+Tab hides all chrome)
-- Minimap overlay in deep zoom mode
-- RGB histogram overlay
-- **F8 OSD** (file info overlay) / **Ctrl+F8 Debug HUD** (VRAM / cache / threads)
-- **Pixel view** (Shift+P) — zoom ≥ 400% shows grid + per-pixel RGB/HEX
-- **Color modes** (Shift+M) — Normal / Grayscale / Invert / Sepia via GLSL
-- Image rotation (including lossless JPEG rotation via piexif)
-- Animated GIF/APNG playback with frame-by-frame controls
-- Slideshow mode with configurable interval
-- **Enhanced compare dialog** — Side-by-side / Overlay (alpha slider) / Difference (gain slider) / **A|B Split** before/after tab with a draggable divider
-- **Split view** (Shift+S) / **Dual-page reading** (Shift+D, Ctrl+Shift+D for RTL/manga)
-- **Multi-monitor window** (Ctrl+Shift+M) mirrors current image on secondary display
-- **Hover preview popup** — larger preview on tile hover (500 ms delay)
-- **Touchpad gestures** — pinch-to-zoom, horizontal swipe to navigate
-- **Browsing history** (Alt+←/→) + **Random image** (X)
-- **Cross-folder navigation** (Ctrl+Shift+←/→) — jump to next/prev sibling folder
-- Fuzzy search with substring highlighting (Ctrl+F / `/`)
-- **Go to image** dialog (Ctrl+G) — jump by index
-- **Command Palette** (Ctrl+Shift+P) — fuzzy-search every menu action in one dialog
-- Auto-loop at folder ends
-
-### Organization
-
-- Bookmark system (up to 5000 bookmarks)
-- Rating system (1–5 stars) and favorites
-- **Color labels** (F1–F5 → red/yellow/green/blue/purple) — Lightroom-style flags independent of star rating
-- **Culling workflow** (P / Shift+X / U → Pick / Reject / Unflag) — Lightroom-style 3-state flag with Filter > By Cull State and bulk delete-rejects
-- **Hierarchical tags** — tree-structured paths like `animal/cat/british`, descendants searched automatically
-- Tags & Albums with **multi-tag filter** (AND/OR boolean logic)
-- **Smart Albums** — save rule-based filter queries (extensions, min resolution, rating, color, cull, tags…) and reapply them in one click
-- **Timeline view** — Google-Photos-style grouping by day / month / year (EXIF DateTimeOriginal falling back to mtime)
-- **Similar-image search** via 64-bit DCT pHash with Hamming distance threshold
-- **Per-image notes** in the EXIF sidebar — free-text, debounced save, persisted across sessions
-- **Staging tray** — cross-folder basket that survives restarts; bulk move/copy/export
-- **Dual-pane file manager** — Total Commander-style two-tree view with move/copy between panes
-- Sort by name, modified date, created date, file size, or resolution
-- Filter by file extension, rating, color label, cull state, or tag/album
-- **Advanced filter** — resolution / file size / orientation / modified date range
-- **Stack RAW+JPEG pairs** — collapse shoot-in-RAW+JPEG captures into one tile; the preview is shown while the RAW stays accessible as a sibling
-- **Session / Workspace save & restore** — snapshot current tabs, active image, selection, and filter state to a `.imervue-session.json` file and reload later
-- **Workspace layout presets** — save named window layouts (geometry, dock / toolbar state, splitter sizes, active folder) via File > Workspaces… and flip between Browse / Develop / Export arrangements without rearranging panels every time
-- **Macro record / replay** — capture rating / favorite / color / tag actions and reapply them to any selection (Alt+M replays the last macro)
-- Recent folders and recent images tracking
-- Automatic restore of last opened folder on startup
-- **Thumbnail status badges** — left-edge colour strip, favorite heart, bookmark star, rating stars
-- **Thumbnail density** — Compact / Standard / Relaxed padding
-- **File tree extras** — F5 refresh, New Folder, Expand/Collapse All
-- **Drag-out to external apps** — press and drag a selected tile into Explorer / Chrome / Discord
-
-### Editing & Export
-
-- Built-in image editor (crop, brightness, contrast, saturation, exposure, rotation, flip) with non-destructive preview — edits are previewed live on canvas and only written to disk on explicit Save
-- **Develop panel sliders** — white balance (temperature / tint), tonal regions (shadows / midtones / highlights), and vibrance in addition to the classic exposure / contrast / saturation controls; every edit remains non-destructive via per-image recipes
-- **Watermark overlay** — place a text or image watermark with configurable position (9 anchors), opacity, and scale; applied on export without touching the original pixels
-- **Export presets** — one-click pipelines for common targets: Web 1600 (long-edge 1600 px JPEG), Print 300 dpi (full-resolution, color-managed), Instagram 1080 (square / portrait crop at 1080 px)
-- Export/Save As with format conversion (PNG, JPEG, WebP, BMP, TIFF)
-- Quality slider for lossy formats (JPEG, WebP)
-- Batch operations (rename, move/copy, rotate selected images)
-- **Contact Sheet PDF** — grid of thumbnails with captions, configurable rows/columns and page size (A4 / A3 / Letter / Legal)
-- **Web Gallery HTML** — self-contained folder with `index.html`, JPEG thumbnails, inline lightbox; optional copy-originals for portability
-- **Slideshow MP4** — render image sequences to H.264 video with configurable FPS, hold-per-image, and fade transitions (requires `imageio-ffmpeg`)
-- **External editor integration** — register programs (e.g. GIMP, Photoshop) and launch them on the current image from File > Open in External Editor
-- Set image as desktop wallpaper
-- Copy image / image path to clipboard
-
-### Metadata
-
-- EXIF data display in collapsible sidebar, including a **star-rating strip** that edits the image's 0–5 rating in place
-- EXIF editor dialog
-- Image info dialog (dimensions, file size, dates)
-- **XMP sidecar** (`.xmp` companion files) — import / export ratings, title, description, keywords, and color labels for round-trip interop with Adobe Lightroom and Capture One (safe XML parsing via `defusedxml`)
-
-### Extra Tools
-
-- **Image Sanitizer** — Re-render images from raw pixels to strip ALL hidden data (EXIF, metadata, steganographic content, trailing bytes); rename with date + random string; optionally upscale to common resolutions (1080p / 2K / 4K / 5K / 8K) using traditional methods (Lanczos, Bicubic, Nearest Neighbor) or AI (Real-ESRGAN) while preserving aspect ratio
-- **Batch Format Conversion** — Convert images between PNG, JPEG, WebP, BMP, TIFF with quality control
-- **AI Image Upscale** — Super-resolution via Real-ESRGAN (x2 / x4 general, x4 anime) with ONNX Runtime (CUDA/DML/CPU), plus traditional lossless methods (Lanczos, Bicubic, Nearest Neighbor); supports folder selection with recursive scanning
-- **Duplicate Detection** — Find duplicate images by exact hash or perceptual similarity
-- **Image Organizer** — Sort images into subfolders by date, resolution, type, size, or fixed count
-- **Batch EXIF Strip** — Remove EXIF, GPS, and metadata from all images in a folder
-- **Crop Tool** — Interactive crop with aspect ratio presets (Free / 1:1 / 4:3 / 3:2 / 16:9 / 9:16), rule-of-thirds overlay, and drag handles
-- **Library Search** — SQLite index with multi-root scanning; query by extension, size, dimensions, filename
-- **Smart Albums** — save & reapply rule-based filter queries
-- **Find Similar Images** — pHash-based search with adjustable Hamming distance
-- **Semantic Search (CLIP)** — query the library with natural language ("golden retriever in snow", "neon street at night") via a CLIP text/image embedding index; embeddings are cached to an `.npz` archive and queried with an O(N) cosine scan. Requires optional dependencies `open_clip_torch` + `torch`; the feature degrades gracefully when they are absent.
-- **Auto-Tag Images** — heuristic (photo / document / screenshot / landscape / portrait) with optional CLIP ONNX upgrade
-- **Hierarchical Tags** manager — tree-structured tag paths with bulk assign/untag
-- **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
-- **Export Metadata (CSV / JSON)** — one row per image with EXIF, cull, rating, tags, notes
-- **Culling** dialog — filter by Pick / Reject / Unflagged, bulk delete all rejects
-- **Staging Tray** — cross-folder basket for batch move/copy/export
-- **Dual-Pane File Manager** — Total Commander-style two-tree view
-- **Timeline View** — day / month / year groupings of the current image set
-- **Macros** — record/replay batches of rating / favorite / color-label / tag actions across selections
-- **Contact Sheet PDF** — multi-page PDF with grid layout and filename captions
-- **Web Gallery** — static HTML gallery with thumbnails + lightbox
-- **Slideshow Video** — MP4 export with fade transitions
-- **Tone Curve editor** — draggable-points RGB and per-channel (R/G/B) curves with monotone cubic interpolation; stored on the recipe so curves apply non-destructively
-- **Apply .cube LUT** — pick any Adobe 3D LUT (up to 64³), trilinear-interpolate, and blend with an intensity slider; results persist on the recipe
-- **Virtual Copies** — named recipe snapshots per image. Try a look, snap it, continue editing, and swap back any time — all variants live in the recipe store alongside the master
-- **HDR Merge** — combine 2+ bracketed exposures via OpenCV's Mertens exposure fusion (with optional AlignMTB pre-alignment); writes a single merged image
-- **Panorama Stitch** — stitch overlapping frames via OpenCV's `Stitcher` in panorama or scans mode, with black-border auto-crop
-- **Focus Stacking** — fuse shots at different focus distances (Laplacian-variance focus map + Gaussian blending) for macro / product work, with optional ECC alignment
-- **Healing Brush** — click-to-add circular spots over the image; applies OpenCV inpainting (Telea or Navier-Stokes) and saves a cleaned copy
-- **Lens Correction** — pure-numpy radial distortion (barrel / pincushion), vignette lift, and per-channel chromatic-aberration correction with a 4-slider preview
-- **Map View** — plot geotagged images on an interactive Leaflet + OpenStreetMap map (QtWebEngine); falls back to a coordinate list when WebEngine is absent
-- **Calendar View** — browse the library by capture date; days with photos are highlighted on a `QCalendarWidget`, selecting a day lists its shots
-- **Face Detection** — OpenCV Haar frontal-face cascade surfaces faces in the current image; naming each face persists into the recipe's `extra` blob
-- **Local Adjustment Masks** — brush / radial / linear gradient masks with per-mask exposure, brightness, contrast, saturation, white-balance deltas and a feather slider; stored on the recipe and blended non-destructively
-- **Split Toning** — Lightroom-style shadow/highlight hue + saturation with a balance pivot; writes to recipe.extra and applies in the develop pipeline
-- **Clone Stamp** — shift+click source, click destination with a feathered source-to-destination blit (complements the healing brush)
-- **Crop / Straighten** — normalised crop rectangle plus arbitrary-angle straighten that auto-crops to the largest inner rect (no black corners)
-- **Auto-Straighten** — Hough-line horizon/vertical detection computes the rotation to level tilted horizons or buildings, with one click to apply
-- **Noise Reduction / Sharpening** — edge-preserving bilateral denoise (optionally luminance-only) plus unsharp-mask sharpening with amount/radius/threshold
-- **Sky / Background** — replace detected sky with a gradient or remove the background (transparent or white fill); optional rembg/U²-Net when installed
-- **Soft Proof** — load an ICC profile, simulate the destination gamut, and highlight out-of-gamut pixels in magenta
-- **GPS Geotag editor** — read existing EXIF GPS coordinates and write new lat/lon back via piexif (JPEG)
-- **Print Layout** — compose multiple images onto a multi-page PDF sheet with configurable page size (A4/A3/Letter/Legal), orientation, grid, margins, gutter, and crop marks
-
-### Paint Workspace
-
-A MediBang-style **Paint** tab embedded as a third top-level tab (alongside Imervue / Modify). The workspace is its own QMainWindow with menus, a left tool strip, a context-sensitive options bar, and a tabbed dock column on the right. Multi-tab document editing — open many drawings at once, each with its own undo stack and recipe.
-
-- **Tool palette (24 tools)** — Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom (single-letter shortcuts: B / E / G / I / V / T / U / R / P / S / C / Z / H, Shift+R/E/I/P for shapes)
-- **Brushes** — pen / marker / pencil / highlighter / spray / calligraphy / watercolor / charcoal / crayon, with Size / Opacity / Hardness / Density / Blend-mode controls; pressure curve editor; brush-tip capture from a selection; import/export brush presets
-- **Layers** — full layer panel with thumbnails, visibility toggles, drag-to-reorder, blend modes, opacity, search, vector layers, 1-bit layers, layer masks (add / from selection / invert / apply), clipping masks, and layer effects (drop shadow / outer glow / stroke); divide-layer-by-colour, gradient-map presets
-- **Selection** — Rect / Lasso / Wand / Quick-select, with Replace / Add / Subtract / Intersect modes and Feather; **Quick Mask Mode** (Q) for paint-the-mask workflows; **Stroke Selection** dialog
-- **Animation** — frame timeline dock with snapshots, playback, onion skin overlay, and MP4/GIF export
-- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech Bubble tool
-- **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (each with a live-preview dialog)
-- **View aids** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (Ctrl+Shift+H to rotate CCW)
-- **Right-side docks (10, tabbed into one column)** — Color · Brush · Layer · Navigator · Material library · History · Swatch · Reference · Histogram · Animation. Each dock is movable / floatable; use **Settings > Workspace Layouts** to save and recall named arrangements
-- **File I/O** — open / save **PSD** (Photoshop) with layer round-trip; export to PNG / JPEG / WebP, plus multi-page comic export to **CBZ** or **PDF**; autosave snapshots with restore-latest
-- **Other** — Image Size dialog · Liquify · Healing / Clone Stamp · per-tab undo / redo (Ctrl+Z / Ctrl+Y) with the History dock for non-linear jumps · multiple secondary view windows (mirror / tile preview)
-
-Press ``E`` from Deep Zoom to send the current image straight into a new Paint tab.
-
-### Puppet Workspace
-
-A **Puppet** tab — the fourth top-level tab, slotted after Paint — is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
-
-- **Workflow** — Import a PNG → auto-generate a triangulated grid mesh that respects alpha → add deformers (rotation / warp lattice) → add parameters → set key forms at slider extremes → save as `.puppet` zip
-- **`.puppet` format (v1)** — Zip container with `puppet.json` manifest, PNG textures under `textures/`, plus optional `motions/*.json`, `expressions/*.json`, and `physics.json` sidecars. JSON-based, humanly diffable, no proprietary binary
-- **Renderer** — `QOpenGLWidget` with textured-triangle drawing in draw_order, per-drawable blend modes (normal / additive / multiply), pose-group exclusivity, ortho projection in image-space, transparency-checker backdrop, wheel zoom + middle-drag pan
-- **Deformers (Phase 4)** — `RotationDeformer` (anchor + angle) and `WarpDeformer` (rows × cols bezier lattice). Both pure-numpy, vectorised — a 5000-vertex puppet stays at 60 FPS on CPU
-- **Parameter rig (Phase 4–5)** — Each parameter holds a key list mapping a slider value to a partial deformer-form snapshot; runtime samples the parameter, finds adjacent keys, and per-field-lerps. Right-dock slider panel with one row per parameter and a "Set key" button that snapshots current deformer forms
-- **Motion playback (Phase 6)** — Bottom dock with motion list + Play / Pause / Stop / Loop / scrub. Curve sampler honours all four `.puppet` segment types: `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` (Newton-iterated time→param solve)
-- **Expressions (Phase 7)** — Stack of additive / multiply / overwrite parameter overlays applied on top of slider / motion values
-- **Pose groups (Phase 7)** — Mutually-exclusive drawable visibility (weapon swaps, mouth-shape variants); the renderer hides every other member of the active group
-- **Physics (Phase 8)** — Verlet pendulum chains for hair / cloth / ribbons. Input parameter moves chain anchor; gravity + damping + per-particle springs pull the chain back to rest; tip lateral displacement maps back to an output parameter
-- **Live input (Phase 9–10)** — Cursor drag → head-angle parameters; auto-blink on a cosine open→close→open curve; mic lip-sync via `sounddevice` RMS → `ParamMouthOpenY` (optional dep); webcam face tracking via OpenCV + MediaPipe FaceMesh → head yaw / pitch / roll + eye / mouth open (optional deps)
-- **Editor authoring (Phase 5)** — `Add Rotation Deformer` / `Add Warp Deformer` / `Add Parameter` toolbar actions, per-parameter `Set key` button, **Save As…** writes the whole rig to a `.puppet` zip
-- **Mesh editor (Phase 12)** — Toggle **Edit mesh** to drag vertices on the canvas; clicks within 8 px snap to the nearest vertex, mouse drag updates the document immediately
-- **Custom motion recording (Phase 13)** — **Record motion** captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; on stop, bakes the take into a `Motion` with one linear-segment track per parameter that actually changed (flat tracks dropped) and adds it to the document. The new motion appears in the **Motions** dock immediately, ready to play / loop / save
-- **Capture / record (Phase 11)** — `Capture frame…` saves a PNG of the current canvas via `glReadPixels`; `Record…` toggles a 30 FPS frame loop into a GIF / WebM / MP4 via `imageio` (an existing project dep)
-
-A drop-in demo lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet). It's a 307-drawable Cubism Live2D rig converted in-tree (textures + sampled vertex morphs baked into the `.puppet` zip; the Cubism SDK is not redistributed). Open it via the Puppet tab's **Open Puppet…** action to see the rig come up centred, then click any of the nine motions in the Motions dock — single-click binds and plays.
-
-### System Integration
-
-- Windows right-click "Open with Imervue" context menu (file association via registry)
-- Folder monitoring with QFileSystemWatcher (auto-refresh on changes)
-- Multi-language support (5 built-in languages)
-- Plugin system with online plugin downloader
-- Toast notification system (info, success, warning, error levels)
-
-### Recent UX Refinements
-
-A long sweep of UX-quality work covering the Paint workspace, the image
-browser, and the Develop / dialog surfaces:
-
-- **Paint visual feedback** — Medibang-style brush-size cursor that
-  scales with zoom, distinct cursor icons per tool, transparency
-  checker pattern under the canvas, drag-drop highlight overlay,
-  per-tab modified asterisk, undo / redo toast confirmations, autosave
-  status segment in the status bar, autosave-recovery prompt on launch
-  surfacing snapshots from the previous session.
-- **Paint power-user hotkeys** — Tab toggles all docks for
-  distraction-free painting, `Ctrl+Tab` cycles tabs, `,` / `.` cycles
-  brush kinds, `0–9` set brush opacity in 10% steps, `Alt+[` / `Alt+]`
-  step the active layer, right-click on the canvas opens a quick
-  Undo / Redo / Select All / Deselect / Fit / 100% menu.
-- **Paint colour controls** — `transparent / no colour` slot in the
-  colour dock (default BG = transparent), proper alpha-aware fill +
-  magic-wand so erased pixels stop bleeding into a re-paint.
-- **Image browser** — empty-state hint on the file list, breadcrumb
-  segments now carry full-path tooltips, `Ctrl+C` copies selected
-  paths, right-click context menu (Open / Copy path / Reveal),
-  filename label shows position `(i/n)` in the folder, status-bar
-  zoom indicator click toggles between Fit and 100%.
-- **Tooltip coverage sweep** — every interactive control on the
-  brush / colour / fill / navigator / animation / page / pose / stamp
-  / reference / histogram docks, the brush options bar, and the
-  Levels / Tone Curve / Channel Mixer / AI Upscale / Batch Convert /
-  Contact Sheet / Slideshow MP4 dialogs now carries a descriptive
-  tooltip explaining each control's role and shortcut.
-- **Window-level safety** — closing the Paint window with unsaved
-  tabs prompts before discarding; tab middle-click closes (with the
-  same dirty protection); tab tooltips show the full title, canvas
-  size, and modified state.
-
----
-
-## Supported Image Formats
-
-### Raster Formats
-
-| Format | Extensions |
-|--------|-----------|
-| PNG | `.png` |
-| JPEG | `.jpg`, `.jpeg` |
-| BMP | `.bmp` |
-| TIFF | `.tiff`, `.tif` |
-| WebP | `.webp` |
-| GIF | `.gif` (animated) |
-| APNG | `.apng` (animated) |
-
-### Vector Formats
-
-| Format | Extensions |
-|--------|-----------|
-| SVG | `.svg` (rendered via QSvgRenderer, thumbnails downscaled to max 512px) |
-
-### RAW Camera Formats
-
-| Format | Extensions | Camera |
-|--------|-----------|--------|
-| CR2 | `.cr2` | Canon |
-| NEF | `.nef` | Nikon |
-| ARW | `.arw` | Sony |
-| DNG | `.dng` | Adobe Digital Negative |
-| RAF | `.raf` | Fujifilm |
-| ORF | `.orf` | Olympus |
-
-RAW files support embedded preview extraction with fallback to half-size processing.
+- **Non-destructive develop** — Every adjustment lives on a per-image recipe; the file on disk is never overwritten until you explicitly export
+- **Extensible** — Full plugin system with lifecycle / menu / image / input hooks; MCP server exposes Qt-free pure-logic tools to AI assistants
 
 ---
 
@@ -346,6 +98,7 @@ pip install .
 | rawpy | RAW image decoding |
 | imageio | Image I/O |
 | imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
+| defusedxml | Safe XML parsing (XMP sidecars) |
 
 Optional (feature-gated; omit to disable the feature cleanly):
 
@@ -353,179 +106,405 @@ Optional (feature-gated; omit to disable the feature cleanly):
 |---------|---------|
 | open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
 | onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
+| opencv-python | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
+| sounddevice | Puppet lip-sync from microphone |
+| mediapipe | Puppet webcam face tracking |
 
 ---
 
 ## Usage
 
-### Basic Launch
+### Basic launch
 
 ```bash
 python -m Imervue
 ```
 
-### Open a specific image
+### Open a specific image or folder
 
 ```bash
 python -m Imervue /path/to/image.jpg
-```
-
-### Open a folder
-
-```bash
 python -m Imervue /path/to/folder
 ```
 
-### Command-Line Options
+### Command-line options
 
 | Option | Description |
 |--------|-------------|
 | `--debug` | Enable debug mode |
-| `--software_opengl` | Use software OpenGL rendering (sets `QT_OPENGL=software` and `QT_ANGLE_PLATFORM=warp`). Useful when GPU drivers are unavailable or problematic. |
+| `--software_opengl` | Use software OpenGL rendering (sets `QT_OPENGL=software` and `QT_ANGLE_PLATFORM=warp`) |
 | `file` | (positional) Image file or folder to open at startup |
 
 ---
 
-## Browsing Modes
+## Imervue — Image viewer & library
 
-### Grid Mode (Tile Grid)
+The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, EXIF sidebar, and library/organization tools.
 
-When opening a folder, images are displayed in a virtualized thumbnail grid:
+### Viewer
 
-- **Lazy loading** — Only visible thumbnails are rendered and loaded
-- **Dynamic thumbnail size** — Configurable at 128×128, 256×256, 512×512, 1024×1024, or auto
-- **Scroll and zoom** — Navigate large collections smoothly
-- **Multi-select** — Click-drag rectangle selection or long-press to enter selection mode
-- **Batch operations** — Rename, move/copy, rotate, or delete selected images
-- **Disk cache** — Thumbnails cached as `.npy` files with MD5-based invalidation
+- **GPU-accelerated rendering** via OpenGL (GLSL 1.20 shaders with VBO)
+- **Deep-zoom pyramid** — multi-level tiles at 512×512 with LANCZOS resampling, LRU cache up to 256 tiles / 1.5 GB VRAM budget, anisotropic filtering up to 8×
+- **Asynchronous loading** — multi-threaded decode with ±3-image prefetch
+- **Virtualized thumbnail grid** — only visible tiles are rendered; thumbnail size is configurable (128 / 256 / 512 / 1024 / auto)
+- **Disk cache** — compressed PNG thumbnails with MD5-based invalidation under `%LOCALAPPDATA%/Imervue/cache/thumbnails` (or `~/.cache/imervue/thumbnails`)
+- **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls
 
-### Single Image Mode (Deep Zoom)
+### Browsing modes
 
-When opening a single image or double-clicking a thumbnail:
+- **Grid** (default) — virtualized tile grid with hover-preview popup (500 ms delay)
+- **List (detail)** — toggle with `Ctrl+L`; columns: Preview · Label · Name · Resolution · Size · Type · Modified
+- **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay
+- **Split View** (`Shift+S`) — two images side by side
+- **Dual-Page Reading** (`Shift+D`, `Ctrl+Shift+D` for right-to-left manga) — facing-page reader
+- **Multi-Monitor mirror** (`Ctrl+Shift+M`) — secondary-display window
+- **Theater Mode** (`Shift+Tab`) — hide all chrome
+- **Compare dialog** — Side-by-side / Overlay (alpha slider) / Difference (gain slider) / A|B split with draggable divider
+- **Timeline / Calendar / Map** views — group library by capture date, browse on a calendar, plot geotagged shots on Leaflet + OpenStreetMap
 
-- **Multi-level image pyramid** — Tiles at 512×512 pixels with LANCZOS downsampling
-- **LRU tile cache** — Up to 256 tiles cached on GPU (1.5 GB VRAM limit)
-- **Smooth pan and zoom** — GPU-accelerated with anisotropic filtering (up to 8x)
-- **Minimap overlay** — Shows current viewport position
-- **RGB histogram** — Toggle with `H` key
-- **Pixel view** (Shift+P) — at ≥ 400 % zoom shows pixel grid and per-pixel RGB / HEX under the cursor
-- **Color modes** (Shift+M) — Normal / Grayscale / Invert / Sepia (GLSL, non-destructive)
-- **Centered on load** — Fit-to-window by default
-- **Adjacent image prefetch** — Preloads ±3 neighboring images
+### On-screen overlays
 
-### List Mode (Detail)
+- RGB histogram (`H`)
+- F8 OSD (filename / size / type), Ctrl+F8 debug HUD (VRAM / cache / threads)
+- Pixel view (`Shift+P`) — ≥ 400 % zoom shows pixel grid + per-pixel RGB / HEX
+- Color modes (`Shift+M`) — Normal / Grayscale / Invert / Sepia via GLSL
 
-Toggle with **Ctrl+L**. Replaces the tile grid with a sortable table:
+### Navigation
 
-- Columns: Preview · Label · Name · Resolution · Size · Type · Modified
-- Sortable by any column (including colour label)
-- Double-click a row to open deep zoom; Esc returns to the list
-- Thumbnail / metadata loaded lazily off the UI thread
+- Arrow keys, browser-style history (`Alt+←/→`), random jump (`X`)
+- Cross-folder navigation (`Ctrl+Shift+←/→`)
+- Go-to-image-by-index (`Ctrl+G`)
+- Fuzzy search (`Ctrl+F` / `/`)
+- **Command Palette** (`Ctrl+Shift+P`) — fuzzy-search every menu action
+- Auto-loop at folder ends
+- Touchpad pinch-zoom + horizontal-swipe-to-navigate
 
-### Split View & Dual-Page Reading
+### Organization
 
-- **Split View** (Shift+S) — displays two images side by side in the main window
-- **Dual Page** (Shift+D) — shows consecutive images as facing pages; arrow keys advance by 2
-- **Manga (RTL)** (Ctrl+Shift+D) — dual-page with right-to-left reading order
-- Esc returns to the previous mode (Grid or List)
+- **Bookmarks** — up to 5000 paths
+- **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`)
+- **Color labels** — Lightroom-style red/yellow/green/blue/purple (`F1`–`F5`)
+- **Culling** — Lightroom 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects
+- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically
+- **Tags & Albums** with multi-tag AND/OR filtering
+- **Smart Albums** — save rule-based queries (extension / resolution / rating / color / cull / tags) and reapply with one click
+- **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling
+- **Per-image notes** in the EXIF sidebar — debounced save, persists across sessions
+- **Staging Tray** — cross-folder basket that survives restarts; bulk move / copy / export
+- **Dual-Pane File Manager** — Total Commander-style two-tree view
+- **Sessions / Workspace Layouts** — snapshot tabs / selection / filter / dock geometry to `.imervue-session.json`; save named layouts for Browse / Develop / Export arrangements
+- **Macros** — record / replay batches of rating / favorite / color / tag actions (`Alt+M` replays the last macro)
+- **Thumbnail badges + density** — colour strip, favorite, bookmark, rating stars; Compact / Standard / Relaxed padding
+- **Drag-out to external apps** — drag a tile straight into Explorer / Chrome / Discord
+- **Recent folders / images** tracked; last folder auto-restored on startup
 
-### Multi-Monitor Window
+### Sort & filter
 
-**Ctrl+Shift+M** opens a frameless second top-level window that maximizes onto your
-secondary screen and mirrors whichever image the main viewer is showing. The main
-window keeps browsing independently.
+- Sort by name / modified / created / size / resolution (asc or desc)
+- Filter by extension, color label, rating, tag/album, cull state
+- **Advanced filter** — resolution / file size / orientation / modified-date range
+- **Multi-tag filter** dialog with AND / OR boolean logic
+
+### Search
+
+- **Fuzzy filename search** with substring highlighting
+- **Find Similar Images** — pHash (64-bit DCT) with adjustable Hamming distance
+- **Library Search** — SQLite multi-root index queryable by extension / size / dimensions / filename
+- **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings; gracefully unavailable when `open_clip_torch` + `torch` aren't installed
+- **Auto-Tag** — heuristic classification with optional CLIP ONNX upgrade
+
+### Metadata
+
+- **EXIF sidebar** with collapsible groups + inline 0-5 star strip
+- **EXIF editor** dialog
+- **Image info** dialog (dimensions / size / dates)
+- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for Lightroom / Capture One interop (safe XML via `defusedxml`)
+- **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon via piexif (JPEG)
+- **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
+- **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes
+
+### Extra Tools (Imervue tab — batch processing)
+
+Accessed from **Tools** menu; organised into function-grouped submenus:
+
+- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer (re-render to strip hidden data) · Image Organizer (sort into subfolders by date / resolution / type / size) · Token Batch Rename
+- **AI / Heuristic** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Find Duplicate Images · Find Similar Images · Auto-Tag · Face Detection (Haar cascade)
+- **Library & Metadata** — Library Search · Smart Albums · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
+
+### System integration
+
+- Windows right-click **Open with Imervue** context menu (registry-based file association)
+- Folder monitoring with `QFileSystemWatcher` (auto-refresh on change)
+- Toast notification system (info / success / warning / error)
+- Plugin system with online plugin downloader (see [Plugin System](#plugin-system))
+
+---
+
+## Modify — Non-destructive develop
+
+The **Modify** tab is the develop workstation. Every adjustment lives on a per-image **recipe** stored alongside the file — the original pixels on disk are never overwritten until you explicitly **Export** or **Save As**.
+
+### Develop sliders
+
+- White balance — temperature / tint
+- Tonal regions — shadows / midtones / highlights
+- Exposure / contrast / saturation / vibrance
+- Crop, rotation, horizontal / vertical flip
+- All edits remain non-destructive and round-trip through the recipe store
+
+### Curves & LUTs
+
+- **Tone Curve editor** — draggable RGB curve plus per-channel R / G / B with monotone cubic interpolation
+- **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³), trilinear-interpolate, blend with an intensity slider
+- **Split Toning** — Lightroom-style shadow / highlight hue + saturation with a balance pivot
+
+### Local adjustments
+
+- **Brush / radial / linear gradient masks** with per-mask exposure / brightness / contrast / saturation / white-balance deltas + feather slider
+- Masks blend non-destructively through the develop pipeline
+
+### Retouch & transform
+
+- **Healing Brush** — circular spots, OpenCV inpainting (Telea or Navier-Stokes)
+- **Clone Stamp** — Shift+click source, feathered blit to destination
+- **Crop / Straighten** — normalised crop rectangle plus arbitrary-angle straighten that auto-crops to the largest inner rect
+- **Auto-Straighten** — Hough-line horizon / vertical detection
+- **Lens Correction** — pure-numpy radial distortion (barrel / pincushion), vignette lift, per-channel chromatic-aberration
+- **Noise Reduction / Sharpening** — edge-preserving bilateral denoise + unsharp-mask sharpening
+- **Sky / Background** — replace detected sky with gradient or remove background (transparent or white fill); optional `rembg` / U²-Net upgrade
+
+### Multi-image
+
+- **HDR Merge** — combine bracketed exposures via OpenCV Mertens fusion (with AlignMTB pre-alignment)
+- **Panorama Stitch** — OpenCV `Stitcher` in panorama or scans mode, black-border auto-crop
+- **Focus Stacking** — Laplacian-variance focus map + Gaussian blend with optional ECC alignment
+
+### Output
+
+- **Watermark overlay** — text or image, 9 anchor positions, opacity, scale; applied on export only
+- **Export presets** — Web 1600 / Print 300 dpi / Instagram 1080 one-click pipelines
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF with quality slider for lossy formats
+- **Batch operations** — rename, move/copy, rotate selected images
+- **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
+- **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox
+- **Slideshow MP4** — H.264 video with configurable FPS / hold-per-image / fade transitions (`imageio-ffmpeg`)
+- **Print Layout** — multi-page PDF sheet with configurable page size / orientation / grid / margins / gutter / crop marks
+- **Soft Proof** — load an ICC profile, simulate destination gamut, highlight out-of-gamut pixels in magenta
+- **Virtual Copies** — named recipe snapshots per image; flip between looks without losing the master
+
+### External editors
+
+Register programs (GIMP / Photoshop / Affinity / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**.
+
+---
+
+## Paint — MediBang-style raster editor
+
+The **Paint** tab is a full-featured raster paint studio embedded as its own `QMainWindow` with menus, left tool strip, context-sensitive options bar, and a tabbed right-side dock column. Multi-tab document editing — open many drawings at once, each with its own undo stack.
+
+### Tools (24)
+
+Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
+
+Single-letter shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
+
+### Brushes
+
+Pen / marker / pencil / highlighter / spray / calligraphy / watercolor / charcoal / crayon, with Size / Opacity / Hardness / Density / Blend-mode controls. Pressure-curve editor, brush-tip capture from a selection, import / export brush presets.
+
+### Layers
+
+Full layer panel with thumbnails, visibility toggles, drag-to-reorder, blend modes, opacity, search, vector layers, 1-bit layers, **layer masks** (add / from selection / invert / apply), **clipping masks**, **layer effects** (drop shadow / outer glow / stroke). Divide-layer-by-colour, gradient-map presets.
+
+### Selection
+
+Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect** modes and Feather. **Quick Mask Mode** (`Q`) for paint-the-mask workflows. **Stroke Selection** dialog.
+
+### Animation & manga
+
+- **Animation** — frame timeline dock with snapshots, playback, onion-skin overlay, MP4 / GIF export
+- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech Bubble tool
+
+### Filters & view aids
+
+- **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (each with a live-preview dialog)
+- **View aids** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` rotates CCW)
+
+### Docks (10, tabbed)
+
+Color · Brush · Layer · Navigator · Material library · History · Swatch · Reference · Histogram · Animation. Each dock is movable / floatable. **Settings > Workspace Layouts** saves and recalls named arrangements.
+
+### File I/O
+
+- Open / save **PSD** (Photoshop) with full layer round-trip
+- Export PNG / JPEG / WebP, plus multi-page comic export to **CBZ** or **PDF**
+- Autosave snapshots with restore-latest
+
+### Power-user UX
+
+- **Tab** toggles all docks for distraction-free painting
+- `Ctrl+Tab` cycles tabs
+- `,` / `.` cycles brush kinds
+- `0`-`9` set brush opacity in 10 % steps
+- `Alt+[` / `Alt+]` step the active layer
+- Right-click on canvas opens a quick Undo / Redo / Select All / Deselect / Fit / 100 % menu
+- Per-tab modified asterisk, undo / redo toast confirmations, autosave-recovery prompt on launch
+
+Press `E` from Deep Zoom to send the current image straight into a new Paint tab.
+
+---
+
+## Puppet — 2D rigged animation
+
+The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
+
+### File format
+
+`.puppet` is a zip container:
+
+- `puppet.json` — manifest (drawables, deformers, parameters, motions, pose groups, parts, hit areas)
+- `textures/*.png` — atlas textures
+- `motions/*.json` — keyframe tracks
+- `expressions/*.json` — parameter overlays
+- `physics.json` — Verlet rig configuration
+
+JSON-based, humanly diffable, no proprietary binary.
+
+### Renderer
+
+`QOpenGLWidget` with vertex-array textured-triangle drawing in draw_order, per-drawable blend modes (normal / additive / multiply), pose-group exclusivity, ortho projection in image-space, GL_REPEAT-tiled transparency-checker backdrop, wheel zoom + middle-drag pan. Optimised for large rigs — March 7th (307 drawables / 2965 vertex morphs) runs at 60 FPS on CPU.
+
+### Authoring
+
+- **Import PNG** → auto-generate a triangulated grid mesh that respects alpha
+- **Add Rotation Deformer** (anchor + angle) / **Add Warp Deformer** (rows × cols bezier lattice) toolbar actions
+- **Add Parameter** → set key forms at slider extremes via **Set Key** in the parameter dock
+- **Mesh editor** — toggle Edit Mesh to drag vertices; clicks within 8 px snap to the nearest
+- **Save As…** writes the whole rig to a `.puppet` zip
+
+### Runtime
+
+- **Parameter rig** — each parameter holds a key list mapping a slider value to a partial deformer-form snapshot; runtime samples and per-field-lerps
+- **Motion playback** — bottom dock with motion list + Play / Pause / Stop / Loop / scrub; curve sampler honours `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` segments (Newton-iterated time → param solve); per-motion fade-in / fade-out
+- **Expressions** — stack of `additive` / `multiply` / `overwrite` parameter overlays
+- **Pose groups** — mutually-exclusive drawable visibility (weapon swaps, mouth-shape variants)
+- **Physics** — Verlet pendulum chains for hair / cloth / ribbons; input param moves chain anchor, gravity + damping + per-particle springs pull back to rest
+- **Vertex morphs** — Cubism-style linear blend between rest and ±extreme deltas; vectorised numpy per-frame at 60 FPS
+- **Opacity keys** — parameter-driven alpha curves; lets alternate-pose meshes fade in / out as a gesture parameter fires
+
+### Live input
+
+- Cursor drag → head-angle parameters
+- Auto-blink on a cosine open → close → open curve
+- Mic lip-sync via `sounddevice` RMS → `ParamMouthOpenY` (optional dep)
+- Webcam face tracking via OpenCV + MediaPipe FaceMesh → head yaw / pitch / roll + eye / mouth open (optional deps)
+- Custom motion recording — captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; bakes into a linear-segment Motion ready to play / loop / save
+
+### Cubism interop
+
+The **Cubism Native SDK** can be plugged in (user-supplied DLL — Live2D's Free Material License forbids redistribution) to convert any `.moc3` model into a `.puppet` zip. The converter runs a sample-and-reconstruct sweep that captures both vertex-morph deltas and parameter-driven visibility transitions, so gesture toggles (peace sign / face cover / photo …) survive the conversion intact.
+
+### Output
+
+- **Capture frame…** saves a PNG of the current canvas via `glReadPixels`
+- **Record…** toggles a 30 FPS frame loop into GIF / WebM / MP4 via `imageio`
+- **NDI output** for streaming into OBS / Zoom (optional `ndi-python` dep)
+- **VTube Studio API server** — opt-in OBS-friendly remote control
+- **Virtual camera** stream
+
+### Demo
+
+A drop-in rig lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet) — a 307-drawable Cubism Live2D character converted in-tree. Open via **Open Puppet…** to see the rig come up centred; click any of the 18 motions (Idle group + Gesture group) to play. Gestures cover peace sign, face cover, photo, blush, dark face, cry, sweat, stars, shooting star — every named gesture the rig defines.
 
 ---
 
 ## Keyboard & Mouse Shortcuts
 
-### Navigation (Both Modes)
+### Navigation (all modes)
 
 | Shortcut | Action |
 |----------|--------|
 | Arrow Keys | Scroll grid / Switch images (Left/Right in deep zoom) |
 | Shift + Arrow | Fine-grained scrolling (half step) |
 | Ctrl+Shift+←/→ | Jump to previous / next sibling folder with images |
-| Alt+← / Alt+→ | History back / forward (browser-style) |
+| Alt+← / Alt+→ | History back / forward |
 | Ctrl+G | Go to image by index |
 | X | Jump to a random image |
 | Home | Reset zoom and pan to origin |
 | Ctrl+F or / | Open fuzzy search dialog |
-| Ctrl+Shift+P | Open **Command Palette** (fuzzy-search menu actions) |
+| Ctrl+Shift+P | Open Command Palette |
 | Alt+M | Replay last macro on current selection |
 | S | Open slideshow dialog |
 | Ctrl+Z | Undo |
 | Ctrl+Shift+Z / Ctrl+Y | Redo |
 
-### Deep Zoom / Single Image Mode
+### Deep Zoom / single image
 
 | Shortcut | Action |
 |----------|--------|
 | F | Toggle fullscreen |
-| Shift+Tab | Toggle **theater mode** (hide all chrome) |
-| R | Rotate clockwise |
-| Shift+R | Rotate counter-clockwise |
-| E | Open image editor |
-| W | Fit to width |
-| Shift+W | Fit to height |
+| Shift+Tab | Toggle theater mode (hide all chrome) |
+| R / Shift+R | Rotate CW / CCW |
+| E | Open image editor (Modify tab) |
+| W / Shift+W | Fit to width / height |
 | H | Toggle RGB histogram overlay |
-| F8 | Toggle OSD info overlay (filename / size / type) |
-| Ctrl+F8 | Toggle debug HUD (VRAM / cache / threads) |
+| F8 / Ctrl+F8 | OSD overlay / debug HUD |
 | Shift+P | Toggle pixel view (≥ 400 % zoom shows grid + RGB) |
 | Shift+M | Cycle color modes (Normal / Grayscale / Invert / Sepia) |
-| B | Toggle bookmark for current image |
-| Ctrl+C | Copy image to clipboard |
-| Ctrl+V | Paste image from clipboard |
-| 0 | Toggle favorite (heart) |
-| 1–5 | Quick rating (1–5 stars) |
-| F1–F5 | Quick **color label** (red / yellow / green / blue / purple) |
-| P | **Cull: Pick** (flag for keep) |
-| Shift+X | **Cull: Reject** |
-| U | **Cull: Unflag** |
-| Shift+S | Open split view (two images side-by-side) |
-| Shift+D | Open dual-page reading (manga/comic) |
-| Ctrl+Shift+D | Open dual-page reading in right-to-left order |
-| Ctrl+Shift+M | Toggle secondary-display mirror window |
-| Delete | Move current image to trash (undoable) |
-| Escape | Exit deep zoom / Exit fullscreen / Close dual/list mode |
+| B | Toggle bookmark |
+| Ctrl+C / Ctrl+V | Copy / paste image to/from clipboard |
+| 0 / 1-5 | Toggle favorite / quick rating |
+| F1-F5 | Quick color label (red / yellow / green / blue / purple) |
+| P / Shift+X / U | Cull: Pick / Reject / Unflag |
+| Shift+S | Split view |
+| Shift+D / Ctrl+Shift+D | Dual-page (LTR / RTL) |
+| Ctrl+Shift+M | Multi-monitor mirror window |
+| Delete | Move to trash (undoable) |
+| Escape | Exit deep zoom / Exit fullscreen |
 
-### Animation Playback (GIF / APNG)
+### Animation playback (GIF / APNG)
 
 | Shortcut | Action |
 |----------|--------|
 | Space | Play / Pause |
-| , (comma) | Previous frame |
-| . (period) | Next frame |
-| [ | Decrease playback speed |
-| ] | Increase playback speed |
+| , (comma) / . (period) | Previous / next frame |
+| [ / ] | Decrease / increase playback speed |
 
-### Tile Grid Mode
+### Tile Grid
 
 | Shortcut | Action |
 |----------|--------|
-| Arrow Keys | Scroll grid |
-| Ctrl+L | Toggle Grid ↔ List (detail) browse mode |
-| Hover (500 ms) | Show larger hover preview popup |
+| Ctrl+L | Toggle Grid ↔ List |
+| Hover (500 ms) | Hover preview popup |
 | Delete | Delete selected tiles |
 | Escape | Deselect all |
 
-### Mouse Controls
+### Mouse / touchpad
 
 | Action | Behavior |
 |--------|----------|
 | Left Click | Select tile or open image |
 | Left Drag | Rectangle multi-select in grid |
-| Long Press (500ms) | Enter tile selection mode |
-| Middle Mouse Drag | Pan/scroll in deep zoom |
+| Long Press (500 ms) | Enter tile selection mode |
+| Middle Drag | Pan in deep zoom |
 | Scroll Wheel | Zoom in/out or scroll |
-| Right Click | Open context menu |
-
-### Touchpad Gestures
-
-| Gesture | Action |
-|---------|--------|
-| Pinch | Zoom in / out in deep zoom (anchored at pinch centre) |
+| Right Click | Context menu |
+| Pinch | Zoom in/out in deep zoom |
 | Horizontal Swipe | Previous / next image |
+
+### Paint tab (in addition to the above)
+
+| Shortcut | Action |
+|----------|--------|
+| B / E / G / I | Brush / Eraser / Fill / Eyedropper |
+| V / T / U / R | Move / Text / Gradient / Rectangle select |
+| P / S / C / Z / H | Pen / Smudge / Clone / Zoom / Hand |
+| Q | Toggle Quick Mask Mode |
+| Tab | Toggle all docks |
+| Ctrl+Tab | Cycle Paint tabs |
+| , / . | Cycle brush kinds |
+| 0-9 | Brush opacity 10% steps |
+| Alt+[ / Alt+] | Step active layer down / up |
 
 ---
 
@@ -534,108 +513,58 @@ window keeps browsing independently.
 ### File
 
 - New Window
-- Open Image
-- Open Folder
-- Recent (submenu: recent folders and images)
-- Bookmarks (manage bookmarked images)
-- Tags & Albums
-- Commit Pending Deletions (finalize undo stack)
+- Open Image / Open Folder
+- Recent (folders + images)
+- Bookmarks / Tags & Albums
+- Commit Pending Deletions
 - Paste from Clipboard / Auto-annotate Clipboard Images
-- File Association (Windows only — register/unregister right-click context menu)
-- **Session** (submenu: Save Session… / Load Session…)
-- **Workspaces…** — save / load / rename / delete named window layouts
-- **External Editors…** — configure executables (name, path, arguments)
-- **Open in External Editor** — submenu listing configured editors
-- Keyboard Shortcuts (customizable key bindings)
+- File Association (Windows)
+- **Session** — Save / Load
+- **Workspaces…** — save / load / rename named window layouts
+- **External Editors…** + **Open in External Editor**
+- Keyboard Shortcuts (customisable bindings)
 - Exit
 
-### Extra Tools
+### Tools (extra tools — organised into 8 grouped submenus)
 
-Organised into 8 function-grouped submenus:
-
-- **Batch** — Batch Format Conversion · Batch EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
-- **Library & Metadata** — Library Search (SQLite multi-root index) · Smart Albums · Find Similar Images (pHash) · Find Duplicate Images · Auto-Tag Images (heuristic + optional CLIP ONNX) · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag
-- **Views** — Timeline View ▸ (by day / month / year) · Calendar View · Map View
+- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar / Duplicate · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
+- **Views** — Timeline · Calendar · Map
 - **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · Apply .cube LUT · Split Toning · Local Adjustment Masks · Soft Proof
+- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Soft Proof
 - **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
 - **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
 
-### View
+### View / Sort / Filter / Language / Plugins / Instructions
 
-- Tile Size: 128×128 / 256×256 / 512×512 / 1024×1024 / Auto
-- **Browse Mode**: Grid / List (toggle with Ctrl+L)
-- **Thumbnail Density**: Compact / Standard / Relaxed
-
-### Sort
-
-- By Name / By Modified Date / By Created Date / By File Size / By Resolution
-- Ascending / Descending
-
-### Filter
-
-- By Extension: All, JPG, PNG, BMP, TIFF, SVG, RAW
-- **By Color Label**: All / Any label / No label / Red / Yellow / Green / Blue / Purple
-- By Rating: All, Favorited, 1–5 stars
-- By Tag (single) / By Album (single)
-- **Multi-Tag Filter…** — multi-select tags or albums with AND / OR boolean logic
-- **Advanced Filter…** — resolution / file size / orientation / modified-date range
-- **By Cull State**: All / Picks only / Rejects only / Unflagged only
-- **Stack RAW+JPEG pairs** (toggle) — collapse same-stem RAW/preview captures into one tile
-- Clear Filter
-
-### Language
-
-- English / 繁體中文 / 简体中文 / 한국어 / 日本語
-
-### Plugins
-
-- Loaded Plugins (shows each plugin name and version)
-- Download Plugins (opens online plugin downloader)
-- Open Plugin Folder
-
-### Instructions
-
-- Keyboard & Mouse Shortcuts (detailed shortcut reference dialog)
+(Standard menus — see in-app for full options.)
 
 ### Right-Click Context Menu
 
-- Navigation (parent folder, next/previous image)
-- Quick actions (show in explorer, copy path, copy image)
-- Transformations (rotate CW/CCW, edit image)
-- Batch operations (batch rename, move/copy, rotate all)
-- Deletion (delete current/selected)
-- Set as wallpaper
-- Compare / Slideshow
-- Export (Save As with format selection)
-- Lossless JPEG rotate
-- Extra Tools (batch convert, AI upscale, duplicate detection, image organizer, EXIF strip, image sanitizer)
-- Bookmarks (add/remove)
-- Image info
-- Recent menu
-- Plugin-contributed items
+Navigation · Quick actions (reveal / copy path / copy image) · Transformations · Batch ops · Delete · Wallpaper · Compare / Slideshow · Export · Extra tools · Bookmarks · Image info · Plugin-contributed items.
 
 ---
 
 ## Plugin System
 
-Imervue supports a plugin system for extending functionality. See the full [Plugin Development Guide](PLUGIN_DEV_GUIDE.md) for details.
+Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md) for the full reference.
 
-### Quick Start
+### Quick start
 
 1. Create a folder inside `plugins/` at the project root
 2. Define a class extending `ImervuePlugin`
 3. Register it in `__init__.py` with `plugin_class = YourPlugin`
 4. Restart Imervue
 
-### Available Hooks
+### Hooks
 
 | Hook | Trigger |
 |------|---------|
 | `on_plugin_loaded()` | After plugin is instantiated |
 | `on_plugin_unloaded()` | At app shutdown |
 | `on_build_menu_bar(menu_bar)` | After default menu bar is built |
+| `on_build_main_tabs(tabs)` | After the four built-in tabs are added |
 | `on_build_context_menu(menu, viewer)` | When right-click menu opens |
 | `on_image_loaded(path, viewer)` | After image loads in deep zoom |
 | `on_folder_opened(path, images, viewer)` | After folder opens in grid |
@@ -647,32 +576,32 @@ Imervue supports a plugin system for extending functionality. See the full [Plug
 
 ### Plugin Downloader
 
-Plugins can be downloaded from the official repository via **Plugins > Download Plugins**. The downloader fetches from [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) on GitHub.
+**Plugins > Download Plugins** opens the online downloader. Source repo: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
 
 ---
 
 ## MCP Server
 
-Imervue ships with a built-in [Model Context Protocol](https://modelcontextprotocol.io) server so AI assistants (Claude Code, Claude Desktop, Cursor, Cline, …) can call into the project's pure-logic helpers without a running GUI. The server is Qt-free and starts with one command:
+Imervue ships a built-in [Model Context Protocol](https://modelcontextprotocol.io) server so AI assistants (Claude Code / Desktop, Cursor, Cline, …) can call into the project's pure-logic helpers without a running GUI. Qt-free; one command:
 
 ```sh
 python -m Imervue.mcp_server
 ```
 
-### Available Tools
+### Tools
 
 | Tool | Purpose |
 |------|---------|
-| `list_images` | List image files in a folder (path, size, mtime) — supports recursion |
-| `read_image_metadata` | Dimensions, format, EXIF, and XMP sidecar for one image |
-| `read_xmp_tags` | XMP-only fast path: rating, label, keywords, title, description |
+| `list_images` | List image files in a folder (recursive optional) |
+| `read_image_metadata` | Dimensions, format, EXIF, and XMP sidecar |
+| `read_xmp_tags` | XMP-only fast path: rating, label, keywords |
 | `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP |
 | `puppet_from_png` | Build a `.puppet` rig from a PNG (auto-mesh + standard parameters) |
-| `puppet_inspect` | Open a `.puppet` and return its inventory (drawables, deformers, parameters, motions, expressions, hit areas, parts, blends, physics) |
+| `puppet_inspect` | Open a `.puppet` and return its inventory |
 
-### Wiring it up
+### Wiring
 
-**Claude Code (project-level)** — the repository ships a `.mcp.json` at the root. Opening any directory under the repo with Claude Code auto-discovers the server:
+The repository ships a `.mcp.json` at the root for Claude Code auto-discovery. For Desktop / other clients, add this to `claude_desktop_config.json` (or equivalent):
 
 ```json
 {
@@ -686,15 +615,11 @@ python -m Imervue.mcp_server
 }
 ```
 
-**Claude Desktop / other MCP clients** — add the same entry to your client's `claude_desktop_config.json` (or equivalent). On macOS that lives at `~/Library/Application Support/Claude/claude_desktop_config.json`; on Windows it's `%APPDATA%\Claude\claude_desktop_config.json`. Use an absolute working directory or activate the venv where Imervue is installed.
-
-The full protocol surface and per-tool argument reference is in the **MCP Server** section of [docs/en/index.rst](docs/en/index.rst).
+Full protocol surface in the MCP section of [docs/en/index.rst](docs/en/index.rst).
 
 ---
 
 ## Multi-Language Support
-
-### Built-In Languages
 
 | Language | Code |
 |----------|------|
@@ -704,41 +629,31 @@ The full protocol surface and per-tool argument reference is in the **MCP Server
 | 한국어 (Korean) | `Korean` |
 | 日本語 (Japanese) | `Japanese` |
 
-Language can be changed from the **Language** menu. A restart is required for the change to take effect.
+Change via the **Language** menu. Restart required.
 
-### Adding Languages via Plugins
-
-Plugins can register entirely new languages using `language_wrapper.register_language()`, or add translations for existing languages via `get_translations()`. See the [Plugin Development Guide](PLUGIN_DEV_GUIDE.md#internationalization-i18n) for details.
+Plugins can register entirely new languages via `language_wrapper.register_language()`, or contribute translations via `get_translations()`. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 
 ## User Settings
 
-Settings are stored in `user_setting.json` in the working directory.
+Stored in `user_setting.json` in the working directory. Key entries:
 
 | Setting | Type | Description |
 |---------|------|-------------|
 | `language` | string | Current language code |
-| `user_recent_folders` | list | Recently opened folders |
-| `user_recent_images` | list | Recently opened images |
-| `user_last_folder` | string | Last opened folder (auto-restored on startup) |
+| `user_recent_folders` / `user_recent_images` | list | Recently opened |
+| `user_last_folder` | string | Auto-restored on startup |
 | `bookmarks` | list | Bookmarked image paths (max 5000) |
-| `sort_by` | string | Sort method (name/modified/created/size/resolution) |
-| `sort_ascending` | bool | Sort order |
-| `image_ratings` | dict | Image path → rating (1–5) mapping |
-| `image_favorites` | set | Favorited image paths |
-| `image_color_labels` | dict | Image path → color name (`red`/`yellow`/`green`/`blue`/`purple`) |
-| `thumbnail_size` | int/null | Grid thumbnail size (128/256/512/1024/null for auto) |
-| `tile_padding` | int | Thumbnail grid padding in px (0 compact / 8 standard / 16 relaxed) |
-| `navigation_auto_loop` | bool | Wrap around when pressing Right/Left at folder ends (default `true`) |
-| `keyboard_shortcuts` | dict | Custom `action_id → [key, modifiers]` overrides |
-| `window_geometry` | string | Base64-encoded window geometry (saved on close) |
-| `window_state` | string | Base64-encoded window state (dock / toolbar layout) |
-| `window_maximized` | bool | Whether the window was maximized on last close |
-| `stack_raw_jpeg_pairs` | bool | Collapse RAW+JPEG pairs sharing a filename stem into one tile |
-| `external_editors` | list | Configured editors (`[{name, executable, arguments}]`) |
-| `macros` | list | Saved macros (`[{name, steps[], created_at}]`) |
-| `macro_last_name` | string | Name of the most recently saved macro (used by Alt+M) |
+| `sort_by` / `sort_ascending` | string / bool | Sort method + order |
+| `image_ratings` / `image_favorites` / `image_color_labels` | dict / set / dict | Per-image organization |
+| `thumbnail_size` / `tile_padding` | int | Grid configuration |
+| `navigation_auto_loop` | bool | Wrap at folder ends |
+| `keyboard_shortcuts` | dict | Custom key bindings |
+| `window_geometry` / `window_state` / `window_maximized` | string / string / bool | Layout persistence |
+| `stack_raw_jpeg_pairs` | bool | RAW+JPEG stack toggle |
+| `external_editors` | list | Configured editors |
+| `macros` / `macro_last_name` | list / string | Saved macros + Alt+M target |
 
 ---
 
@@ -747,109 +662,47 @@ Settings are stored in `user_setting.json` in the working directory.
 ```
 Imervue/
 ├── __main__.py              # Application entry point
-├── Imervue_main_window.py   # Main window (QMainWindow)
-├── gpu_image_view/          # GPU-accelerated viewer
-│   ├── gpu_image_view.py    # Main viewer widget (QOpenGLWidget)
-│   ├── gl_renderer.py       # OpenGL shader-based renderer
-│   ├── actions/             # Viewer actions (zoom, pan, rotate, etc.)
-│   └── images/              # Image loading, pyramid, tile management
-├── gui/                     # UI components
-│   ├── ai_upscale_dialog.py # AI super-resolution (Real-ESRGAN)
-│   ├── annotation_dialog.py # Annotation canvas + crop tool
-│   ├── batch_convert_dialog.py # Batch format conversion
-│   ├── bookmark_dialog.py   # Bookmark manager dialog
-│   ├── command_palette.py   # Ctrl+Shift+P fuzzy action finder
-│   ├── contact_sheet_dialog.py # Contact sheet PDF export dialog
-│   ├── develop_panel.py     # Edit/develop panel
-│   ├── duplicate_detection_dialog.py # Duplicate image finder
-│   ├── exif_editor.py       # EXIF metadata editor
-│   ├── exif_sidebar.py      # Collapsible EXIF sidebar
-│   ├── exif_strip_dialog.py # Batch EXIF strip
-│   ├── export_dialog.py     # Export/Save As dialog
-│   ├── external_editors_settings.py # External editor config dialog
-│   ├── image_editor.py      # Image editor (crop, adjust, rotate)
-│   ├── image_organizer_dialog.py # Image sorter/organizer
-│   ├── image_sanitize_dialog.py  # Image sanitizer + AI upscale
-│   ├── macro_manager_dialog.py # Macro record/compose/replay dialog
-│   ├── shortcut_settings_dialog.py # Custom keyboard shortcuts
-│   ├── slideshow_mp4_dialog.py # Slideshow MP4 export dialog
-│   ├── web_gallery_dialog.py # Web gallery HTML export dialog
-│   └── toast.py             # Toast notification system
-├── external/                # External tool integration
-│   └── editors.py           # Editor config + subprocess launcher
-├── export/                  # Export generators (non-Qt logic)
-│   ├── contact_sheet.py     # PDF contact sheet (QPdfWriter + QPainter)
-│   ├── web_gallery.py       # Static HTML gallery + thumbnails
-│   └── slideshow_mp4.py     # MP4 slideshow via imageio-ffmpeg
+├── Imervue_main_window.py   # Main window (QMainWindow) — mounts the 4 tabs
+├── gpu_image_view/          # IMERVUE TAB — GPU viewer + deep zoom
+├── gui/                     # Dialogs and side panels (develop, EXIF, etc.)
+├── paint/                   # PAINT TAB — MediBang-style raster editor
+├── puppet/                  # PUPPET TAB — 2D rigged-puppet animator
+├── export/                  # Export generators (contact sheet, web gallery, MP4)
+├── image/                   # Image utilities (pyramid, tile manager, info)
+├── library/                 # Library helpers (RAW+JPEG stacks, indexing)
 ├── macros/                  # Macro record / replay
-│   └── macro_manager.py     # Singleton manager + action registry
+├── menu/                    # Menu definitions (file / tools / filter / …)
+├── mcp_server/              # Model Context Protocol stdio server
+├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko)
+├── external/                # External editor integration
+├── plugin/                  # Plugin system (base / manager / downloader)
 ├── sessions/                # Workspace serialization
-│   └── session_manager.py   # Capture / save / restore session snapshot
-├── library/                 # Library helpers
-│   └── stacks.py            # RAW+JPEG stack grouping
-├── image/                   # Image utilities
-│   ├── info.py              # Image info extraction
-│   ├── pyramid.py           # Deep zoom image pyramid
-│   ├── thumbnail_disk_cache.py  # Thumbnail cache (MD5 + .npy)
-│   └── tile_manager.py      # Tile grid management
-├── menu/                    # Menu definitions
-│   ├── extra_tools_menu.py  # Extra Tools menu
-│   ├── file_menu.py         # File menu
-│   ├── filter_menu.py       # Filter menu
-│   ├── language_menu.py     # Language menu
-│   ├── plugin_menu.py       # Plugins menu
-│   ├── recent_menu.py       # Recent items submenu
-│   ├── right_click_menu.py  # Context menu
-│   ├── sort_menu.py         # Sort menu
-│   └── tip_menu.py          # Instructions menu
-├── multi_language/          # i18n
-│   ├── language_wrapper.py  # Language singleton manager
-│   ├── english.py           # English translations
-│   ├── chinese.py           # Simplified Chinese
-│   ├── traditional_chinese.py  # Traditional Chinese
-│   ├── korean.py            # Korean
-│   └── japanese.py          # Japanese
-├── paint/                   # Paint workspace (MediBang-style editor)
-│   ├── paint_workspace.py   # Embedded QMainWindow assembling tools + docks
-│   ├── canvas.py            # PaintCanvas (QOpenGLWidget) — pan / zoom / pointer dispatch
-│   ├── document.py          # PaintDocument — layers, selection, composite
-│   ├── tool_dispatcher.py   # Routes pointer events to the active tool
-│   ├── brush_engine.py      # Brush dab synthesis (pressure / dynamics / random)
-│   ├── layers.py            # Layer model + blend modes + masks
-│   ├── undo_stack.py        # Per-tab undo / redo (snapshot on gesture commit)
-│   ├── dock_panels.py       # Color / Brush / Layer / Navigator / Material / History
-│   ├── animation_dock.py    # Frame timeline with playback transport
-│   ├── manga_menu.py        # Panel cutter, speedlines, tone layers, action flash
-│   ├── filter_menu.py       # Levels / Curves / Posterize / Threshold / Halftone
-│   ├── document_io.py       # PSD load / save (Photoshop interop)
-│   └── …                    # 80+ submodules: tools, dialogs, helpers
-├── plugin/                  # Plugin system
-│   ├── plugin_base.py       # ImervuePlugin base class
-│   ├── plugin_manager.py    # Plugin discovery and lifecycle
-│   └── plugin_downloader.py # Online plugin downloader
-├── system/                  # System integration
-│   └── file_association.py  # Windows file association (registry)
-└── user_settings/           # User configuration
-    ├── user_setting_dict.py # Settings I/O (thread-safe)
-    ├── bookmark.py          # Bookmark management
-    └── recent_image.py      # Recent images tracking
+├── system/                  # Windows file association
+└── user_settings/           # Persistent user config
 ```
 
-### Rendering Pipeline
+### Rendering pipeline (Imervue tab)
 
-1. **OpenGL Context** — `GPUImageView` extends `QOpenGLWidget`
-2. **Shader Programs** — Two GLSL 1.20 programs (textured quads + solid color rectangles)
-3. **Texture Management** — LRU cache with 256-tile limit and 1.5 GB VRAM budget
-4. **Deep Zoom Pyramid** — Multi-level tile pyramid built with LANCZOS resampling at 512×512 tile size
-5. **Anisotropic Filtering** — Up to 8x when hardware supports it
-6. **Fallback** — Immediate mode rendering if shader compilation fails
+1. `GPUImageView` extends `QOpenGLWidget`
+2. Two GLSL 1.20 programs (textured quads + solid color rectangles)
+3. LRU texture cache — 256-tile limit, 1.5 GB VRAM budget
+4. Multi-level tile pyramid built with LANCZOS at 512 × 512 tile size
+5. Anisotropic filtering up to 8× when hardware supports it
+6. Software-rendering fallback if shader compilation fails
 
-### Thumbnail Cache
+### Thumbnail cache
 
-- **Key**: MD5 hash of `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`
-- **Format**: Compressed PNG (`compress_level=1` — fast write, small footprint, migrated from legacy `.npy` which is cleaned up on first access)
-- **Location**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Windows) or `~/.cache/imervue/thumbnails` (Linux/macOS)
-- **Invalidation**: Automatic when file metadata changes
+- **Key**: MD5 of `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`
+- **Format**: Compressed PNG (`compress_level=1` — fast write, small footprint)
+- **Location**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Win) or `~/.cache/imervue/thumbnails` (Linux/macOS)
+- **Invalidation**: Automatic on file metadata change
+
+### Puppet rendering (Puppet tab)
+
+- `QOpenGLWidget` with `glDrawElements` + client-side vertex arrays
+- Per-drawable: rest vertices cached as float32 numpy; vertex morphs vectorised; topological deformer sort hoisted out of the per-drawable loop
+- Transparency backdrop is a 2×2 GL_REPEAT-tiled texture (was 100k+ immediate-mode quads pre-optimisation)
+- Cubism converter produces opacity_keys curves alongside vertex-morph deltas so parameter-driven visibility transitions survive the `.moc3 → .puppet` conversion
 
 ---
 

@@ -1,7 +1,30 @@
 Imervue User Guide
 ==================
 
-A lightweight, GPU-accelerated image viewer with browsing, editing, annotation, and batch processing.
+A GPU-accelerated image workstation that ships **four top-level tabs**.
+Most of this guide is organised around those four sections.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 82
+
+   * - Tab
+     - What it does
+   * - **Imervue**
+     - Browse, view, organise, search, and batch-process your image library.
+       See *Imervue Tab — Image Viewer & Library*.
+   * - **Modify**
+     - Non-destructive develop pipeline — sliders, curves, LUTs, masks,
+       retouch, multi-image. See *Modify Tab — Non-destructive Develop*.
+   * - **Paint**
+     - MediBang-style raster paint studio with brushes, layers, animation,
+       manga tools, PSD I/O. See *Paint Tab — MediBang-style Raster Editor*.
+   * - **Puppet**
+     - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
+       motions, physics. See *Puppet Tab — 2D Rigged Animation*.
+
+The *Getting Started*, *Reference*, *Plugin System*, and *MCP Server* sections
+that follow are cross-cutting — they apply across all four tabs.
 
 .. contents:: Table of Contents
    :depth: 2

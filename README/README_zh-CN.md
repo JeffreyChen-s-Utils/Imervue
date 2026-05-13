@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Image + Immerse + View</strong><br>
-  基于 PySide6 和 OpenGL 的 GPU 加速图片浏览器
+  基于 PySide6 和 OpenGL 的 GPU 加速图像浏览器 / 显影器 / 绘图工作室 / 偶动画编辑器
 </p>
 
 <p align="center">
@@ -25,248 +25,50 @@
 ## 目录
 
 - [概述](#概述)
-- [功能特色](#功能特色)
-- [支持的图片格式](#支持的图片格式)
 - [安装](#安装)
 - [使用方式](#使用方式)
-- [浏览模式](#浏览模式)
+- [Imervue — 图片浏览与图库](#imervue--图片浏览与图库)
+- [Modify — 非破坏显影](#modify--非破坏显影)
+- [Paint — MediBang 风格绘图](#paint--medibang-风格绘图)
+- [Puppet — 2D 绑骨偶动画](#puppet--2d-绑骨偶动画)
 - [键盘与鼠标快捷键](#键盘与鼠标快捷键)
 - [菜单结构](#菜单结构)
-- [绘图工作区](#绘图工作区)
-- [偶动画工作区](#偶动画工作区)
 - [插件系统](#插件系统)
 - [MCP 服务器](#mcp-服务器)
 - [多语言支持](#多语言支持)
 - [用户设置](#用户设置)
 - [架构](#架构)
-- [许可证](#许可证)
+- [许可](#许可)
 
 ---
 
 ## 概述
 
-Imervue 是一款高性能图片浏览器，专为流畅的浏览体验和大量图片集合的高效处理而设计。通过 OpenGL 的 GPU 加速，为缩略图网格和深度缩放图片查看提供快速渲染。
+Imervue 是一款 GPU 加速的图像工作站，提供 **四个顶层标签**：
 
-核心设计原则：
+| 标签 | 功能 |
+|---|---|
+| **Imervue** | 浏览、查看、整理、搜索、批量处理你的图库 |
+| **Modify** | 非破坏显影管线 — 滑块、曲线、LUT、蒙版、修图、多图合成 |
+| **Paint** | MediBang 风格的栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O |
+| **Puppet** | 从零打造的 2D 绑骨偶动画器 — 网格、变形器、参数、动作、物理 |
+
+设计原则：
 
 - **性能优先** — 使用现代 GLSL 着色器和 VBO 进行 GPU 加速渲染
-- **支持大量集合** — 虚拟化磁贴网格仅加载可见缩略图
+- **支持大量集合** — 虚拟化磁砖网格仅加载可见缩图
 - **流畅体验** — 异步多线程图片加载与预取机制
-- **可扩展** — 完整的插件系统，支持生命周期、菜单、图片和输入钩子
-
----
-
-## 功能特色
-
-### 核心功能
-
-- 通过 OpenGL 的 GPU 加速渲染（GLSL 1.20 着色器 + VBO）
-- 深度缩放图片查看，使用多层图片金字塔（512×512 磁贴）
-- 虚拟化磁贴缩略图网格，支持延迟加载
-- 异步多线程图片加载
-- 缩略图磁盘缓存系统（压缩 PNG 格式，MD5 缓存键）
-- 预加载前后各 ±3 张相邻图片
-- 撤销/重做系统（QUndoStack 用于编辑，传统堆栈用于删除）
-
-### 导航与查看
-
-- 文件夹浏览和单张图片查看
-- **缩略图格 / 列表（详细）浏览模式** — Ctrl+L 切换；列表模式显示名称、大小、修改日期、尺寸，并新增星级专栏
-- **面包屑路径栏** — viewer 上方可点击分段路径
-- 全屏 + **剧场模式**（Shift+Tab 隐藏所有外壳）
-- 深度缩放模式下的小地图覆盖层
-- RGB 直方图覆盖层
-- **F8 OSD**（文件信息叠加层）/ **Ctrl+F8 Debug HUD**（VRAM / 缓存 / 线程）
-- **像素查看**（Shift+P）— 缩放 ≥ 400% 显示网格与每个像素的 RGB/HEX
-- **色彩模式**（Shift+M）— 正常 / 灰阶 / 反相 / 怀旧（GLSL 实作，非破坏性）
-- 图片旋转（包括通过 piexif 的无损 JPEG 旋转）
-- 动态 GIF/APNG 播放，支持逐帧控制
-- 幻灯片模式，可自定义间隔时间
-- **增强的对比窗口** — 并排 / 叠加（alpha 滑块）/ 差异（增益滑块）/ **A|B 分割**（before/after 选项卡，可拖动分割线）
-- **分割视图**（Shift+S）/ **双页阅读**（Shift+D；Ctrl+Shift+D 右至左）
-- **多屏幕窗口**（Ctrl+Shift+M）在副屏镜像显示当前图片
-- **Hover 预览弹窗** — 缩略图悬停 500 ms 后显示大预览
-- **触控板手势** — 捏合缩放、水平滑动切换图片
-- **浏览历史**（Alt+←/→）+ **随机图片**（X）
-- **跨文件夹导航**（Ctrl+Shift+←/→）— 跳至前/下一个同级文件夹
-- 模糊搜索，子字符串高亮（Ctrl+F / `/`）
-- **跳至图片** 对话框（Ctrl+G）— 按编号跳转
-- **命令面板**（Ctrl+Shift+P）— 按指令名称模糊搜索并立即执行
-- 末端自动循环
-
-### 整理功能
-
-- 书签系统（最多 5000 个书签）
-- 评分系统（1–5 星）和收藏功能
-- **颜色标签**（F1–F5 → 红/黄/绿/蓝/紫）— 独立于星级的 Lightroom 风格 flag
-- 标签与相册，支持**多标签过滤**（AND / OR 布尔逻辑）
-- 按名称、修改日期、创建日期、文件大小或分辨率排序
-- 按扩展名、评分、颜色标签、标签/相册筛选
-- **高级过滤器** — 分辨率 / 文件大小 / 方向 / 修改日期范围
-- 最近文件夹和最近图片追踪
-- 启动时自动恢复上次打开的文件夹
-- **缩略图状态徽章** — 左缘色条、收藏心形、书签星、评分星
-- **缩略图排列密度** — 紧凑 / 标准 / 宽松
-- **文件树增强** — F5 刷新、新建文件夹、全部展开/折叠
-- **RAW+JPEG 堆叠** — 同名的 RAW/JPEG 对自动折叠显示，保留优先级
-- **Session 保存/恢复** — 保存当前文件夹、选择、缩放与视图状态，可稍后加载
-- **宏录制/回放** — 录制评分、颜色、标签、收藏等操作并批量应用到多张图片（Alt+M 回放上次宏）
-
-### 编辑与导出
-
-- 内置图片编辑器（裁切、亮度、对比度、饱和度、曝光、旋转、翻转），支持非破坏性预览 — 编辑即时显示在画布上，仅在明确保存时才写入磁盘
-- **Develop 调整面板** — 白平衡（色温 / 色调）、色阶区域（阴影 / 中间调 / 高光）、鲜艳度（Vibrance），与传统曝光 / 对比度 / 饱和度并列；所有调整均通过 per-image recipe 非破坏性保存
-- **水印叠加** — 可设置文字或图片水印，支持 9 个锚点位置、不透明度与缩放比例；仅在导出时应用，原图不受影响
-- **导出预设组合** — 一键套用常用输出设置：Web 1600（长边 1600 px JPEG）、Print 300 dpi（全分辨率、色彩管理）、Instagram 1080（方形或竖式 1080 px）
-- 导出/另存为，支持格式转换（PNG、JPEG、WebP、BMP、TIFF）
-- 有损格式质量滑块（JPEG、WebP）
-- 批量操作（重命名、移动/复制、旋转选中的图片）
-- 设为桌面壁纸
-- 复制图片/图片路径到剪贴板
-- **联系表（Contact Sheet）PDF 导出** — 可自定义行/列、页面大小、标题、文件名说明
-- **Web Gallery HTML 导出** — 生成自包含 HTML 画廊（缩略图 + Lightbox），可选择复制原始图片
-- **幻灯片 MP4 导出** — 导出视频幻灯片（可设分辨率、fps、停留秒数、淡入淡出）
-- **外部编辑器集成** — 注册任意外部编辑器并从菜单直接以当前图片打开
-
-### 元数据
-
-- EXIF 数据显示于可折叠侧边栏，内含 **星级快速条**，可直接点击设置 0–5 星
-- EXIF 编辑器对话框
-- 图片信息对话框（尺寸、文件大小、日期）
-- **XMP sidecar**（`.xmp` 文件）— 读写星级、标题、描述、关键字与色彩标签，与 Adobe Lightroom / Capture One 互通（通过 `defusedxml` 安全解析 XML）
-
-### 额外功能
-
-- **图片净化重绘** — 从原始像素重新绘制图片，彻底移除所有隐藏数据（EXIF、元数据、隐写内容、尾部字节），以日期 + 随机字符串重新命名，可选使用传统方法（Lanczos、Bicubic、Nearest Neighbor）或 AI（Real-ESRGAN）放大至常用分辨率（1080p / 2K / 4K / 5K / 8K），保持比例
-- **批量格式转换** — 批量转换图片格式（PNG、JPEG、WebP、BMP、TIFF），支持质量控制
-- **AI 图片放大** — 使用 Real-ESRGAN 超分辨率放大（x2 / x4 通用、x4 动漫），支持 CUDA / DML / CPU；另有传统无损方法（Lanczos、Bicubic、Nearest Neighbor）；支持文件夹选择与递归扫描
-- **重复图片检测** — 使用精确哈希或感知比对找出重复图片
-- **图片整理工具** — 按日期、分辨率、类型、大小或数量自动分类到子文件夹
-- **EXIF 批量清除** — 移除文件夹中所有图片的 EXIF、GPS 及其他元数据
-- **裁剪工具** — 交互式裁剪，支持比例预设（自由 / 1:1 / 4:3 / 3:2 / 16:9 / 9:16）与三分法参考线
-- **色调曲线编辑器** — 可拖拽控制点的 RGB 与 R/G/B 单通道曲线（单调三次插值），写入 recipe 非破坏性生效
-- **.cube LUT 应用** — 载入任意 Adobe 3D LUT（最高 64³），三线性插值并以强度滑块混合
-- **虚拟副本** — 为同一张图保存多个命名 recipe 快照，随时切换；副本与主 recipe 同存
-- **HDR 合成** — 通过 OpenCV Mertens 曝光融合（可选 AlignMTB 对齐）合并多张不同曝光
-- **全景拼接** — 基于 OpenCV `Stitcher`（Panorama / Scans 两种模式），可自动裁去黑边
-- **景深合成（Focus Stacking）** — 融合不同对焦距离的多张图像（Laplacian 清晰度图 + 高斯混合），可选 ECC 对齐
-- **修复画笔 / 斑点移除** — 点击添加圆形修复区，使用 OpenCV inpainting（Telea / Navier-Stokes）输出清理后的图片
-- **镜头校正** — 纯 numpy 的径向畸变（桶形 / 枕形）、暗角补偿、红 / 蓝色差校正，四个滑块
-- **地图视图** — 基于 Leaflet + OpenStreetMap（需 QtWebEngine）显示含 GPS 的照片；未安装时降级为坐标列表
-- **日历视图** — 按拍摄日期浏览图库，`QCalendarWidget` 会高亮有照片的日期
-- **人脸检测** — OpenCV Haar 正脸分类器检测脸部区域，命名后保存到 recipe 的 `extra`
-- **局部调整蒙版** — 画笔 / 放射 / 线性渐变三类蒙版，每个蒙版有曝光、亮度、对比、饱和度、白平衡的局部 delta，含羽化滑块，以非破坏方式混合到 recipe
-- **色调分离** — Lightroom 风格的阴影 / 高光色相+饱和度与平衡枢纽，写入 recipe.extra 并进入 develop pipeline
-- **仿制图章** — Shift+点击设定源点，点击目标点完成带羽化的复制，弥补修复画笔无法精确搬运内容的情况
-- **裁剪 / 拉直** — 0..1 归一化裁剪矩形，任意角度的自动裁剪拉直（不留黑角）
-- **自动拉直** — 使用 Hough line 检测地平线 / 垂直线，一键得出旋转角度并应用
-- **降噪 / 锐化** — 边缘保留 bilateral 降噪（可选仅亮度通道），搭配 amount / radius / threshold 的 unsharp mask 锐化
-- **天空 / 背景** — 用渐变替换检测到的天空，或把背景抹成透明 / 白色；安装 rembg (U²-Net) 时自动启用更精细的分割
-- **屏幕校样** — 加载 ICC 描述文件模拟输出色域，并用洋红叠色显示超出色域的像素
-- **GPS 地理标记** — 读写 EXIF GPS 坐标（piexif，支持 JPEG）
-- **打印排版** — 可设定 A4/A3/Letter/Legal 页面、方向、网格、边距、间隔、裁切标记，导出多页 PDF 打印排版
-
-### 绘图工作区
-
-第三个顶层标签（与 Imervue / 修改 并列）— MediBang 风格的 **绘图** 工作区，自身是 QMainWindow，含菜单、左侧工具栏、上下文敏感的选项栏、以及右侧的标签化 dock 列。多文档标签编辑，每个标签有独立的撤销栈与 recipe。
-
-- **工具栏（24 种工具）** — 笔刷 · 橡皮擦 · 油漆桶 · 吸管 · 矩形 / 套索 / 魔棒 / 快速选择 · 移动 · 文字 · 渐变 · 模糊 · 涂抹 · 钢笔 · 仿制图章 · 对话框 · 矩形 · 椭圆 · 直线 · 多边形 · 裁切 · 变换 · 抓手 · 缩放（单键：B / E / G / I / V / T / U / R / P / S / C / Z / H，形状类用 Shift+R/E/I/P）
-- **笔刷** — 钢笔 / 马克笔 / 铅笔 / 荧光笔 / 喷雾 / 书法 / 水彩 / 炭笔 / 蜡笔，可调 大小 / 不透明度 / 硬度 / 密度 / 混合模式；压力曲线编辑器；从选区捕获笔刷尖端；笔刷预设导入/导出
-- **图层** — 完整图层面板，含缩略图、可见性切换、拖动排序、混合模式、不透明度、搜索、矢量图层、1-bit 图层、图层蒙版（添加 / 由选区 / 反相 / 应用）、剪贴蒙版、图层效果（投影 / 外发光 / 描边）；按颜色拆分图层、渐变映射预设
-- **选区** — 矩形 / 套索 / 魔棒 / 快速选择，含 替换 / 添加 / 减去 / 相交 模式与羽化；**快速蒙版模式**（Q）支持笔刷精修选区；**描边选区** 对话框
-- **动画** — 帧时间轴 dock，含快照、播放、洋葱皮叠加、MP4/GIF 导出
-- **漫画工具** — 分镜切割 · 网点图层 · 加盖页码 · 集中线（放射 / 平行 / 爆破）· 动作闪光 · 对话框工具
-- **滤镜** — 色阶 · 曲线 · 色调分离 · 阈值 · 自动色彩平衡 · 胶片颗粒 · 网点化（每个都有实时预览对话框）
-- **视图辅助** — 像素网格 · 吸附像素 · 吸附边缘 · 洋葱皮 · 出血指示 · 画布旋转（Ctrl+Shift+H 逆时针）
-- **右侧 dock（10 个，标签化进单一列）** — 颜色 · 笔刷 · 图层 · 缩览图 · 素材库 · 历史 · 色板 · 参考 · 直方图 · 动画；每个 dock 可移动 / 浮动，使用 **设置 > 工作区布局** 保存命名版面
-- **文件 I/O** — 打开 / 保存 **PSD**（Photoshop）含图层往返；导出 PNG / JPEG / WebP，多页漫画导出 **CBZ** 或 **PDF**；自动保存快照与最新版恢复
-- **其他** — Image Size 对话框 · 液化 · 修复 / 仿制图章 · 每标签的撤销 / 重做（Ctrl+Z / Ctrl+Y），并通过历史 dock 进行非线性跳转 · 多个次级视图窗口（镜像 / 平铺预览）
-
-在深度缩放模式下按 ``E`` 可将当前图像直接送入新绘图标签。
-
-### 偶动画工作区
-
-**Puppet（偶动画）** 标签是位于 Paint 之后的第四个顶层标签，从零打造的 2D 绑骨偶动画系统。功能对标 Live2D / Inochi2D（网格变形绑骨、参数、动作、物理、表情、姿势、对嘴、摄像头脸部追踪），但**不依赖任何专利 SDK**、**不使用 `live2d-py`**，采用完全开放的 `.puppet` 文件格式，规格完整记录于 `Imervue/puppet/FORMAT.md`。
-
-- **工作流** — 导入 PNG → 自动生成对齐 alpha 的三角网格 → 加变形器（旋转 / Warp 网格）→ 加参数 → 在 slider 极值处 Set key 记录变形 → 存成 `.puppet` zip
-- **`.puppet` 格式 (v1)** — Zip 容器：`puppet.json` 主档、`textures/` 下的 PNG 纹理、可选的 `motions/*.json`、`expressions/*.json`、`physics.json`。JSON-based、git diff 友好、无专利二进制
-- **渲染器** — `QOpenGLWidget`：按 draw_order 画贴图三角形、每个 drawable 可选混合模式（normal / additive / multiply）、Pose 群组互斥、image-space 正交投影、透明度棋盘底、滚轮缩放 + 中键拖移
-- **变形器（Phase 4）** — `RotationDeformer`（锚点 + 角度）与 `WarpDeformer`（rows × cols 贝塞尔点阵）。皆为纯 numpy、向量化 — 5000 顶点偶在 CPU 上仍可 60 FPS
-- **参数绑骨（Phase 4–5）** — 每个参数持有一张关键帧清单，把 slider 值对应到变形器形状 snapshot；runtime 取相邻两键作 per-field 线性插值。右侧 dock 为每个参数显示一条 slider，按"设置键"即捕捉当下变形器形状
-- **动作播放（Phase 6）** — 底部 dock 显示动作清单 + Play / Pause / Stop / Loop / 进度条。曲线 sampler 支持所有四种 `.puppet` 段型：`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`（牛顿迭代解时间→参数）
-- **表情（Phase 7）** — 在 slider / 动作值上叠加 additive / multiply / overwrite 参数覆盖
-- **姿势群组（Phase 7）** — 互斥 drawable 显示（武器切换、嘴型变体）；renderer 自动隐藏群组中其他成员
-- **物理（Phase 8）** — Verlet 钟摆链（头发 / 衣服 / 缎带）。输入参数带动链顶锚点；重力 + 阻尼 + 每粒子弹簧拉回静止位置；尾端横向位移写回输出参数
-- **实时输入（Phase 9–10）** — 鼠标拖曳 → 头部角度参数；自动眨眼采余弦开→闭→开曲线；麦克风对嘴透过 `sounddevice` RMS → `ParamMouthOpenY`（可选依赖）；摄像头脸部追踪透过 OpenCV + MediaPipe FaceMesh → 头部 yaw/pitch/roll + 眼/嘴开合（可选依赖）
-- **编辑器（Phase 5）** — 工具栏 `添加旋转变形器` / `添加扭曲变形器` / `添加参数`、每个参数的"设置键"按钮、**另存为…** 把整个绑骨写成 `.puppet` zip
-- **网格编辑（Phase 12）** — 切换"编辑网格"后可在画布上拖曳顶点；点击在 8 px 内吸附最近顶点，拖曳即时更新文件
-- **录制自定义动作（Phase 13）** — 切换"录制动作"开始以 30 Hz 取样参数值；停止后自动烘焙为 `Motion`，每个变动的参数一条 linear-segment 轨（保持不变的轨会被丢弃），加进文件并立即出现在动作 dock，可播放 / 循环 / 存档
-- **截图 / 录制（Phase 11）** — `截取画面…` 透过 `glReadPixels` 存 PNG；`录制…` 切换 30 FPS 影格循环，透过 `imageio` 写成 GIF / WebM / MP4
-
-示例文件在 [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet)。这是一个仓库内转换好的 Cubism Live2D 角色：307 个 drawable、纹理与每个参数采样得到的 vertex morphs 都已烘焙进 `.puppet` zip，因此只需默认 `requirements.txt` 即可打开，无需附带 Cubism SDK。在 Puppet 标签点"打开偶动画…"导入后，单击 Motions dock 里的任意动作即可绑定并立即播放。
-
-### 系统集成
-
-- Windows 右键"用 Imervue 打开"上下文菜单（通过注册表进行文件关联）
-- 使用 QFileSystemWatcher 进行文件夹监控（变更时自动刷新）
-- 多语言支持（5 种内置语言）
-- 插件系统，附带在线插件下载器
-- Toast 通知系统（信息、成功、警告、错误级别）
-
-### 近期 UX 改进
-
-横跨 Paint 工作区、图片浏览器、Develop / 对话框界面的 UX 体质提升：
-
-- **Paint 视觉反馈** — Medibang 风格、会跟着 zoom 缩放的笔刷大小光标、每个工具独立的光标图标、画布底层透明格纹、拖放高亮覆盖、每个 tab 的"已修改"星号、undo / redo toast 确认、状态栏的 autosave 状态段、启动时自动检测前次会话的 autosave 并提示还原。
-- **Paint 高级快捷键** — `Tab` 一键隐藏 / 恢复所有 docks 进入专注模式、`Ctrl+Tab` 切换分页、`,` / `.` 循环笔刷种类、`0–9` 数字键以 10 % 为单位设置不透明度、`Alt+[` / `Alt+]` 切换 active 图层、画布右键弹出 Undo / Redo / Select All / Deselect / Fit / 100 % 快捷菜单。
-- **Paint 颜色控制** — 颜色 dock 加入"透明 / 无颜色"槽（背景默认为透明），fill 与魔棒会尊重 alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
-- **图片浏览器** — 空文件夹显示提示而非空白表格、面包屑各段带完整路径 tooltip、`Ctrl+C` 复制选中文件路径、右键 context menu（Open / Copy path / Reveal）、文件名标签显示 `(i/n)` 位置、状态栏的 zoom 指示器点一下在 Fit 与 100 % 之间切换。
-- **Tooltip 覆盖大幅提升** — Brush / Color / Fill / Navigator / Animation / Page / Pose / Stamp / Reference / Histogram dock、笔刷选项栏、以及 Levels / Tone Curve / Channel Mixer / AI Upscale / Batch Convert / Contact Sheet / Slideshow MP4 对话框上每个交互控件都加上说明性 tooltip。
-- **窗口级安全机制** — 关闭窗口时若有未存的 paint tab 会先列出受影响清单询问；tab 中键关闭沿用同一套保护；tab tooltip 显示完整标题、画布尺寸与已修改状态。
-
----
-
-## 支持的图片格式
-
-### 位图格式
-
-| 格式 | 扩展名 |
-|------|--------|
-| PNG | `.png` |
-| JPEG | `.jpg`、`.jpeg` |
-| BMP | `.bmp` |
-| TIFF | `.tiff`、`.tif` |
-| WebP | `.webp` |
-| GIF | `.gif`（动态） |
-| APNG | `.apng`（动态） |
-
-### 矢量图格式
-
-| 格式 | 扩展名 |
-|------|--------|
-| SVG | `.svg`（通过 QSvgRenderer 渲染，缩略图缩小至最大 512px） |
-
-### RAW 相机格式
-
-| 格式 | 扩展名 | 相机品牌 |
-|------|--------|---------|
-| CR2 | `.cr2` | Canon |
-| NEF | `.nef` | Nikon |
-| ARW | `.arw` | Sony |
-| DNG | `.dng` | Adobe Digital Negative |
-| RAF | `.raf` | Fujifilm |
-| ORF | `.orf` | Olympus |
-
-RAW 文件支持嵌入式预览提取，并在无法提取时回退使用半尺寸处理。
+- **非破坏显影** — 每次调整都存储在每张图片的 recipe 中，原始文件直到明确导出才会被覆写
+- **可扩展** — 完整插件系统（生命周期 / 菜单 / 图片 / 输入钩子）；MCP 服务器将纯逻辑工具暴露给 AI 助手使用
 
 ---
 
 ## 安装
 
-### 系统要求
+### 需求
 
 - Python >= 3.10
-- 支持 OpenGL 的 GPU（可使用软件渲染作为后备）
+- 支持 OpenGL 的 GPU（也提供软件渲染备援）
 
 ### 从源码安装
 
@@ -282,19 +84,30 @@ pip install -r requirements.txt
 pip install .
 ```
 
-### 依赖包
+### 依赖
 
 | 包 | 用途 |
-|---|------|
+|---------|---------|
 | PySide6 | Qt6 GUI 框架 |
 | qt-material | Material Design 主题 |
 | Pillow | 图片处理 |
 | PyOpenGL | OpenGL 绑定 |
 | PyOpenGL_accelerate | OpenGL 性能优化 |
-| numpy | 数组操作与缩略图缓存 |
-| rawpy | RAW 图片解码 |
-| imageio | 图片输入/输出 |
-| imageio-ffmpeg | 幻灯片 MP4 导出（ffmpeg 后端） |
+| numpy | 数组运算与缩图缓存 |
+| rawpy | RAW 图像解码 |
+| imageio | 图片 I/O |
+| imageio-ffmpeg | 幻灯片 MP4 导出（H.264 通过 ffmpeg） |
+| defusedxml | 安全 XML 解析（XMP 边车文件） |
+
+可选（feature-gated；不装就停用该功能）：
+
+| 包 | 用途 |
+|---------|---------|
+| open_clip_torch + torch | CLIP 语义搜索 |
+| onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自动标签 |
+| opencv-python | HDR 合成、全景拼接、焦点堆叠、人脸检测、修复笔刷 |
+| sounddevice | Puppet 麦克风对嘴 |
+| mediapipe | Puppet 摄像头脸部追踪 |
 
 ---
 
@@ -306,307 +119,488 @@ pip install .
 python -m Imervue
 ```
 
-### 打开特定图片
+### 打开指定图片或文件夹
 
 ```bash
 python -m Imervue /path/to/image.jpg
-```
-
-### 打开文件夹
-
-```bash
 python -m Imervue /path/to/folder
 ```
 
 ### 命令行选项
 
 | 选项 | 说明 |
-|------|------|
+|--------|-------------|
 | `--debug` | 启用调试模式 |
-| `--software_opengl` | 使用软件 OpenGL 渲染（设置 `QT_OPENGL=software` 和 `QT_ANGLE_PLATFORM=warp`）。当 GPU 驱动不可用或有问题时使用。 |
-| `file` | （位置参数）启动时打开的图片或文件夹 |
+| `--software_opengl` | 使用软件 OpenGL 渲染（设置 `QT_OPENGL=software` 和 `QT_ANGLE_PLATFORM=warp`） |
+| `file` | （位置参数）启动时要打开的图片或文件夹 |
 
 ---
 
-## 浏览模式
+## Imervue — 图片浏览与图库
 
-### 网格模式（磁贴网格）
+**Imervue** 标签是默认登陆界面，整合图片查看器与文件夹树、EXIF 侧边栏、图库整理工具。
 
-打开文件夹时，图片会以虚拟化缩略图网格显示：
+### 查看器
 
-- **延迟加载** — 仅渲染和加载可见的缩略图
-- **动态缩略图大小** — 可设置为 128×128、256×256、512×512、1024×1024 或自动
-- **滚动和缩放** — 流畅浏览大量集合
-- **多选** — 拖拽框选或长按进入选择模式
-- **批量操作** — 重命名、移动/复制、旋转或删除选中的图片
-- **磁盘缓存** — 缩略图以压缩 PNG 文件缓存，使用 MD5 失效机制
+- **GPU 加速渲染** — OpenGL（GLSL 1.20 着色器 + VBO）
+- **深度缩放金字塔** — 512×512 磁砖多层 LANCZOS 缩放，LRU 缓存上限 256 磁砖 / 1.5 GB VRAM 预算，最高 8× 各向异性过滤
+- **异步加载** — 多线程解码 + ±3 张预取
+- **虚拟化缩图网格** — 只渲染可见磁砖；缩图尺寸可选（128 / 256 / 512 / 1024 / 自动）
+- **磁盘缓存** — MD5 失效检测的压缩 PNG 缩图，存于 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
+- **动画播放** — GIF / APNG，含播放 / 暂停 / 逐帧 / 速度控制
 
-### 单张图片模式（深度缩放）
+### 浏览模式
 
-打开单张图片或双击缩略图时：
+- **网格**（默认）— 虚拟化磁砖网格，悬停预览（500 ms 延迟）
+- **列表（详细）** — `Ctrl+L` 切换；列：预览 · 标签 · 名称 · 分辨率 · 大小 · 类型 · 修改时间
+- **深度缩放** — 双击磁砖；GPU 流畅平移 / 缩放 + 小地图
+- **分割视图**（`Shift+S`）— 两张图并列
+- **双页阅读**（`Shift+D`、`Ctrl+Shift+D` 为漫画从右至左）— 对页阅读器
+- **多屏镜像**（`Ctrl+Shift+M`）— 副屏窗口
+- **剧场模式**（`Shift+Tab`）— 隐藏所有外壳
+- **对比对话框** — 并排 / 重叠（alpha 滑块）/ 差异（增益滑块）/ A|B 拖曳分隔
+- **Timeline / Calendar / Map** 视图 — 按拍摄日期分组、日历浏览、Leaflet + OpenStreetMap 地理坐标
 
-- **多层图片金字塔** — 512×512 像素磁贴，使用 LANCZOS 下采样
-- **LRU 磁贴缓存** — GPU 上最多缓存 256 个磁贴（1.5 GB VRAM 上限）
-- **流畅平移和缩放** — GPU 加速，支持各向异性过滤（最高 8x）
-- **小地图覆盖层** — 显示当前视口位置
-- **RGB 直方图** — 按 `H` 键切换
-- **像素查看**（Shift+P）— 缩放 ≥ 400% 显示像素网格与光标下的 RGB/HEX
-- **色彩模式**（Shift+M）— 正常 / 灰阶 / 反相 / 怀旧（GLSL，非破坏性）
-- **加载时居中** — 默认适应窗口大小
-- **相邻图片预加载** — 预加载前后各 ±3 张相邻图片
+### 屏幕叠加层
 
-### 列表模式（详细）
+- RGB 直方图（`H`）
+- F8 OSD（文件名 / 大小 / 类型）、Ctrl+F8 调试 HUD（VRAM / 缓存 / 线程）
+- 像素视图（`Shift+P`）— ≥ 400 % 缩放显示网格 + 每像素 RGB / HEX
+- 色彩模式（`Shift+M`）— Normal / Grayscale / Invert / Sepia（GLSL）
 
-**Ctrl+L** 切换。以可排序的表格取代缩略图格：
+### 导航
 
-- 列：预览 · 标签 · 名称 · 分辨率 · 大小 · 类型 · 修改时间
-- 任一列皆可排序（包含颜色标签）
-- 双击行打开深度缩放；Esc 返回列表
-- 缩略图 / 元数据在后台线程懒加载
+- 方向键、浏览器式历史（`Alt+←/→`）、随机跳转（`X`）
+- 跨文件夹导航（`Ctrl+Shift+←/→`）
+- 跳到第 N 张（`Ctrl+G`）
+- 模糊搜索（`Ctrl+F` / `/`）
+- **命令面板**（`Ctrl+Shift+P`）— 模糊搜索所有菜单动作
+- 文件夹末端自动循环
+- 触控板捏合缩放 + 水平滑动切换图片
 
-### 分割视图 & 双页阅读
+### 整理
 
-- **分割视图**（Shift+S）— 在主窗口并排显示两张图片
-- **双页阅读**（Shift+D）— 连续图片以跨页显示；方向键一次走 2 张
-- **漫画右至左**（Ctrl+Shift+D）— 双页阅读采用从右到左顺序
-- Esc 返回先前模式（缩略图格或列表）
+- **书签** — 最多 5000 个路径
+- **评级** — 0-5 星（`1`-`5`）+ 收藏爱心（`0`）
+- **颜色标签** — Lightroom 式 红 / 黄 / 绿 / 蓝 / 紫（`F1`-`F5`）
+- **挑片**（Culling）— Lightroom 三状态旗标（`P` = 保留、`Shift+X` = 拒绝、`U` = 取消）；按状态过滤；批量删除拒绝
+- **层级标签** — 树状路径如 `animal/cat/british`；自动匹配子孙
+- **Tags & Albums** 含多标签 AND / OR 过滤
+- **智能相册** — 保存规则式查询（扩展名 / 分辨率 / 评级 / 颜色 / 挑片 / 标签）并一键重新应用
+- **堆叠 RAW+JPEG 对** — 将同档名采集折叠成单一磁砖；RAW 仍可从同级访问
+- **每图笔记** — 在 EXIF 侧栏，自动防抖保存，跨会话持久
+- **暂存盘** — 跨文件夹篮子，重启后保留；批量移动 / 复制 / 导出
+- **双面板文件管理器** — Total Commander 风格的双树视图
+- **Session / 工作区布局** — 将标签 / 选择 / 过滤 / 浮动坐标快照成 `.imervue-session.json`；可保存命名布局（Browse / Develop / Export 排列）
+- **宏** — 录制 / 重放评级 / 收藏 / 颜色 / 标签动作批次（`Alt+M` 重放上一个宏）
+- **缩图徽章 + 密度** — 颜色条 / 收藏 / 书签 / 评级星；Compact / Standard / Relaxed 内边距
+- **拖出到外部 App** — 直接把磁砖拖进 Explorer / Chrome / Discord
+- **最近文件夹 / 图片** 追踪；上次文件夹启动时自动还原
 
-### 多屏幕窗口
+### 排序与过滤
 
-**Ctrl+Shift+M** 打开无边框第二窗口，于副屏最大化，镜像显示主
-viewer 当前的图片。主窗口可继续独立浏览。
+- 按名称 / 修改时间 / 创建时间 / 大小 / 分辨率排序（升 / 降）
+- 按扩展名、颜色标签、评级、标签 / 相册、挑片状态过滤
+- **高级过滤** — 分辨率 / 文件大小 / 方向 / 修改日期范围
+- **多标签过滤** 对话框含 AND / OR
+
+### 搜索
+
+- **模糊文件名搜索** 含子字符串高亮
+- **找相似** — pHash（64-bit DCT）含可调 Hamming 距离
+- **图库搜索** — SQLite 多根索引；查询扩展名 / 大小 / 尺寸 / 文件名
+- **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"）通过缓存的 embedding；`open_clip_torch` + `torch` 未安装时优雅停用
+- **自动标签** — 启发式分类 + 可选 CLIP ONNX 升级
+
+### 元数据
+
+- **EXIF 侧栏** 含可折叠组 + 内嵌 0-5 星评级行
+- **EXIF 编辑器** 对话框
+- **图像信息** 对话框（尺寸 / 大小 / 日期）
+- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 Lightroom / Capture One（通过 `defusedxml` 安全解析）
+- **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度（JPEG）
+- **令牌批量重命名** — 实时预览模板 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
+- **导出元数据 CSV / JSON** — 每张图一行含挑片 / 评级 / 标签 / 笔记
+
+### 额外工具（Imervue 标签 — 批量处理）
+
+从 **Tools** 菜单访问；分为功能组子菜单：
+
+- **批次** — 格式转换 · EXIF 清除 · 图像清洗器（重新渲染移除所有隐藏数据）· 图像整理器 · 令牌批量重命名
+- **AI / 启发式** — AI 图像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 找重复 · 找相似 · 自动标签 · 人脸检测
+- **图库与元数据** — 图库搜索 · 智能相册 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
+
+### 系统集成
+
+- Windows 右键 **用 Imervue 打开**（通过注册表）
+- 文件夹监控（`QFileSystemWatcher` 自动刷新）
+- Toast 通知系统（info / success / warning / error）
+- 插件系统含在线下载器（见 [插件系统](#插件系统)）
+
+---
+
+## Modify — 非破坏显影
+
+**Modify** 标签是显影工作站。每次调整都存储在每张图片的 **recipe** 中 — 原始文件直到你明确 **导出** 或 **另存为** 才会被覆写。
+
+### 显影滑块
+
+- 白平衡 — 色温 / 色调
+- 色调区段 — 阴影 / 中间调 / 高光
+- 曝光 / 对比 / 饱和度 / 鲜艳度
+- 裁切、旋转、水平 / 垂直翻转
+- 所有调整通过 recipe 存储，全程非破坏
+
+### 曲线与 LUT
+
+- **色调曲线编辑器** — 可拖曳 RGB 曲线 + 单独 R / G / B 通道，含 monotone cubic 插值
+- **应用 .cube LUT** — 加载任何 Adobe 3D LUT（最高 64³），trilinear 插值，混合强度滑块
+- **分离色调** — Lightroom 风格阴影 / 高光色相 + 饱和度，含平衡枢纽
+
+### 局部调整
+
+- **笔刷 / 径向 / 线性渐变蒙版**，含每蒙版的曝光 / 亮度 / 对比 / 饱和度 / 白平衡偏移 + 羽化滑块
+- 蒙版通过显影管线非破坏混合
+
+### 修图与变形
+
+- **修复笔刷** — 圆形点，OpenCV inpainting（Telea 或 Navier-Stokes）
+- **仿制图章** — Shift+点击源、羽化贴至目标
+- **裁切 / 拉直** — 标准化裁切矩形 + 任意角度拉直，自动裁到最大内接矩形
+- **自动拉直** — Hough-line 水平线 / 垂直线检测
+- **镜头校正** — 纯 numpy 径向畸变（桶形 / 枕形）、暗角提升、各通道色差校正
+- **降噪 / 锐化** — 边缘保留双边降噪 + unsharp mask 锐化
+- **天空 / 背景** — 检测天空换成渐变或去除背景（透明或白色填色）；可选 `rembg` / U²-Net 升级
+
+### 多图
+
+- **HDR 合成** — 通过 OpenCV Mertens fusion 合并包围曝光（含 AlignMTB 预先对齐）
+- **全景拼接** — OpenCV `Stitcher`（panorama 或 scans 模式），黑边自动裁切
+- **焦点堆叠** — Laplacian 焦点图 + Gaussian 混合 + 可选 ECC 对齐
+
+### 输出
+
+- **水印叠加** — 文字或图片，9 个锚点、不透明度、缩放；只在导出时套用
+- **导出预设** — Web 1600 / Print 300 dpi / Instagram 1080 一键流水线
+- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF，有损格式提供质量滑块
+- **批量操作** — 重命名、移动 / 复制、旋转选中图片
+- **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
+- **网页画廊 HTML** — 自包含文件夹含 `index.html` + JPEG 缩图 + 内嵌灯箱
+- **幻灯片 MP4** — H.264 视频，FPS / 每张保留秒数 / 淡入淡出可设（`imageio-ffmpeg`）
+- **打印布局** — 多页 PDF（A4/A3/Letter/Legal）含网格 / 边距 / 装订槽 / 裁切标记
+- **软打样** — 加载 ICC profile、模拟目标色域、用洋红色标示超出色域的像素
+- **虚拟副本** — 每图命名的 recipe 快照；可切换不同风格而不丢失原图
+
+### 外部编辑器
+
+从 **File > External Editors…** 注册程序（GIMP / Photoshop / Affinity / …），再从 **File > Open in External Editor** 启动。
+
+---
+
+## Paint — MediBang 风格绘图
+
+**Paint** 标签是完整功能的栅格绘图工作室，以独立 `QMainWindow` 嵌入，含菜单、左工具栏、上下文敏感的选项栏、右侧分页式停靠列。多文档编辑 — 同时打开多张图，每张有独立撤销栈。
+
+### 工具（24）
+
+笔刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速选择 · 移动 · 文字 · 渐变 · 模糊 · 涂抹 · 钢笔 · 仿制图章 · 对话框 · 矩形 · 椭圆 · 直线 · 多边形 · 裁切 · 变形 · 抓手 · 缩放
+
+单键快捷：`B / E / G / I / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形状变体。
+
+### 笔刷
+
+钢笔 / 马克笔 / 铅笔 / 荧光笔 / 喷漆 / 书法 / 水彩 / 木炭 / 蜡笔，含大小 / 不透明度 / 硬度 / 密度 / 混合模式。压感曲线编辑器、选择捕获笔尖、笔刷预设导入 / 导出。
+
+### 图层
+
+完整图层面板含缩图、可见性、拖曳重排、混合模式、不透明度、搜索、矢量图层、1-bit 图层、**图层蒙版**（新建 / 从选择 / 反转 / 应用）、**剪切蒙版**、**图层效果**（投影 / 外发光 / 描边）。按颜色分割图层、渐变映射预设。
+
+### 选择
+
+矩形 / 套索 / 魔棒 / 快选 含 **替换 / 加 / 减 / 交集** 模式 + 羽化。**快速蒙版模式**（`Q`）。**描边选择** 对话框。
+
+### 动画与漫画
+
+- **动画** — 帧时间轴停靠含快照、播放、洋葱皮、MP4 / GIF 导出
+- **漫画工具** — 分镜切割 · 网点层 · 盖页码 · 速度线（径向 / 平行 / 爆发）· 动作闪光 · 对话框工具
+
+### 滤镜与查看辅助
+
+- **滤镜** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone（每个含实时预览对话框）
+- **查看辅助** — 像素格 · 对齐像素 · 对齐边缘 · 洋葱皮 · 出血指引 · 画布旋转（`Ctrl+Shift+H` CCW 旋转）
+
+### 停靠（10 个，分页式）
+
+色彩 · 笔刷 · 图层 · 导航 · 素材库 · 历史 · 色板 · 参考 · 直方图 · 动画。每个停靠可移动 / 浮动。**Settings > Workspace Layouts** 保存与召回命名排列。
+
+### 文件 I/O
+
+- 打开 / 保存 **PSD**（Photoshop）含完整图层往返
+- 导出 PNG / JPEG / WebP，多页漫画导出 **CBZ** 或 **PDF**
+- 自动保存快照 + 还原最新
+
+### 强化用户体验
+
+- **Tab** 切换所有停靠（无干扰绘图）
+- `Ctrl+Tab` 循环 Paint 标签
+- `,` / `.` 切换笔刷种类
+- `0`-`9` 笔刷不透明度 10 % 步进
+- `Alt+[` / `Alt+]` 下 / 上切换作用图层
+- 画布右键打开快速 Undo / Redo / 全选 / 取消选 / Fit / 100 %
+- 每标签修改星号、撤销 / 重做 toast、启动时还原自动保存对话框
+
+从深度缩放按 `E` 把当前图片直接送入新的 Paint 标签。
+
+---
+
+## Puppet — 2D 绑骨偶动画
+
+**Puppet** 标签是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D / Inochi2D（网格变形绑骨、参数、动作、物理、表情、姿势、对嘴、摄像头脸部追踪），但**不依赖任何专利 SDK**、**不使用 `live2d-py`**，采用完全开放的 `.puppet` 文件格式，规格完整记录于 `Imervue/puppet/FORMAT.md`。
+
+### 文件格式
+
+`.puppet` 是 zip 容器：
+
+- `puppet.json` — manifest（drawables、deformers、parameters、motions、pose groups、parts、hit areas）
+- `textures/*.png` — atlas 纹理
+- `motions/*.json` — keyframe tracks
+- `expressions/*.json` — 参数叠加
+- `physics.json` — Verlet 物理配置
+
+JSON 为主，人类可 diff，没有专利二进制。
+
+### 渲染器
+
+`QOpenGLWidget` 含 vertex-array textured-triangle 绘制（按 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、图像空间正交投影、GL_REPEAT 平铺的透明度棋盘背景、滚轮缩放 + 中键拖曳平移。针对大型 rig 优化 — March 7th（307 drawables / 2965 vertex morphs）在 CPU 上达 60 FPS。
+
+### 编辑
+
+- **导入 PNG** → 自动生成考虑 alpha 的三角网格
+- **添加旋转变形器**（anchor + angle）/ **添加 warp 变形器**（rows × cols bezier lattice）工具栏动作
+- **添加参数** → 在滑块端点按 **Set Key** 在参数停靠记录关键形状
+- **网格编辑器** — 切换 Edit Mesh 拖曳顶点；点击 8 px 内吸附到最近顶点
+- **另存为…** 把整个 rig 写成 `.puppet` zip
+
+### 运行
+
+- **参数绑定** — 每个参数保有 key 列表，将滑块值对应到部分 deformer-form 快照；运行时采样并逐字段线性插值
+- **动作播放** — 底部停靠含动作列表 + 播放 / 暂停 / 停止 / 循环 / 拖曳；曲线采样器支持 `linear`、`stepped`、`inverse-stepped`、`cubic-bezier` 段（牛顿迭代 time → param）；每动作淡入 / 淡出
+- **表情** — `additive` / `multiply` / `overwrite` 参数叠加堆栈
+- **姿势组** — 互斥 drawable 可见性（武器切换、嘴形变体）
+- **物理** — Verlet 钟摆链用于头发 / 衣物 / 缎带；输入参数移动链锚点，重力 + 阻尼 + 每粒子弹簧回复静止
+- **顶点 morph** — Cubism 式线性混合于 rest 与 ±extreme deltas；每帧向量化 numpy，60 FPS
+- **不透明度 keys** — 参数驱动的 alpha 曲线；让替代姿势 mesh 随手势参数淡入 / 淡出
+
+### 实时输入
+
+- 鼠标拖曳 → 头部角度参数
+- 自动眨眼，cosine open → close → open 曲线
+- 麦克风对嘴 via `sounddevice` RMS → `ParamMouthOpenY`（可选依赖）
+- 摄像头脸部追踪 via OpenCV + MediaPipe FaceMesh → 头部 yaw / pitch / roll + 眼 / 嘴开合（可选依赖）
+- 自定义动作录制 — 滑动滑块 / 对摄像头 / 物理运行时以 30 Hz 抓取参数值；停止时烘焙成线性段 Motion
+
+### Cubism 互通
+
+可插入 **Cubism Native SDK**（用户自备 DLL — Live2D 的 Free Material License 禁止重新散布）将任何 `.moc3` 模型转成 `.puppet` zip。转换器执行 sample-and-reconstruct 扫描，同时抓取 vertex-morph delta 与参数驱动的可见度切换，所以手势切换（比耶 / 捂脸 / 拍照 …）能完整保留。
+
+### 输出
+
+- **截取画面…** 通过 `glReadPixels` 存 PNG
+- **录制…** 切换 30 FPS 帧循环，通过 `imageio` 写成 GIF / WebM / MP4
+- **NDI 输出** 用于推流到 OBS / Zoom（可选 `ndi-python`）
+- **VTube Studio API 服务器** — 可选 OBS 友好的远程控制
+- **虚拟摄像头** 推流
+
+### 示例
+
+示例 rig 在 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — 307 drawable 的 Cubism Live2D 角色仓库内转换。从 **打开 puppet…** 打开，rig 居中加载；点击 18 个动作（Idle 组 + Gesture 组）任意一个即播放。手势涵盖比耶、捂脸、拍照、脸红、黑脸、哭、流汗、星星、流星 — rig 定义的所有命名手势。
 
 ---
 
 ## 键盘与鼠标快捷键
 
-### 导航（两种模式通用）
+### 导航（所有模式）
 
 | 快捷键 | 动作 |
-|--------|------|
-| 方向键 | 滚动网格 / 切换图片（深度缩放模式下左右切换） |
-| Shift + 方向键 | 精细滚动（半步） |
-| Ctrl+Shift+←/→ | 跳至前/下一个含图片的同级文件夹 |
-| Alt+← / Alt+→ | 浏览历史 返回 / 前进（类似浏览器） |
-| Ctrl+G | 按编号跳至图片 |
-| X | 随机跳到一张图片 |
-| Home | 重置缩放和平移至原点 |
-| Ctrl+F 或 / | 打开模糊搜索对话框 |
+|----------|--------|
+| 方向键 | 滚动网格 / 切换图片（深度缩放中左 / 右） |
+| Shift + 方向 | 细微滚动（半步） |
+| Ctrl+Shift+←/→ | 跳到前 / 下个含图片的同级文件夹 |
+| Alt+← / Alt+→ | 历史后退 / 前进 |
+| Ctrl+G | 跳到第 N 张 |
+| X | 随机跳转 |
+| Home | 重置缩放与平移 |
+| Ctrl+F 或 / | 模糊搜索对话框 |
 | Ctrl+Shift+P | 打开命令面板 |
-| Alt+M | 回放上次执行的宏 |
+| Alt+M | 在当前选择重放上一个宏 |
 | S | 打开幻灯片对话框 |
 | Ctrl+Z | 撤销 |
 | Ctrl+Shift+Z / Ctrl+Y | 重做 |
 
-### 深度缩放 / 单张图片模式
+### 深度缩放 / 单张图片
 
 | 快捷键 | 动作 |
-|--------|------|
+|----------|--------|
 | F | 切换全屏 |
-| Shift+Tab | 切换**剧场模式**（隐藏所有外壳） |
-| R | 顺时针旋转 |
-| Shift+R | 逆时针旋转 |
-| E | 打开图片编辑器 |
-| W | 适应宽度 |
-| Shift+W | 适应高度 |
-| H | 切换 RGB 直方图覆盖层 |
-| F8 | 切换 OSD 信息叠加层（文件名 / 尺寸 / 类型） |
-| Ctrl+F8 | 切换 Debug HUD（显存 / 缓存 / 线程） |
-| Shift+P | 切换像素查看（≥ 400 % 显示网格与 RGB 值） |
-| Shift+M | 循环色彩模式（正常 / 灰阶 / 反相 / 怀旧） |
-| B | 切换当前图片的书签 |
-| Ctrl+C | 复制图片到剪贴板 |
-| Ctrl+V | 从剪贴板粘贴图片 |
-| 0 | 切换收藏（爱心） |
-| 1–5 | 快速评分（1–5 星） |
-| F1–F5 | 快速**颜色标签**（红 / 黄 / 绿 / 蓝 / 紫） |
-| Shift+S | 打开分割视图（并排两张图片） |
-| Shift+D | 打开双页阅读（漫画/写真集） |
-| Ctrl+Shift+D | 双页阅读（从右到左顺序） |
-| Ctrl+Shift+M | 切换副屏镜像窗口 |
-| Delete | 将当前图片移至回收站（可撤销） |
-| Escape | 退出深度缩放 / 退出全屏 / 关闭双图或列表模式 |
+| Shift+Tab | 切换剧场模式 |
+| R / Shift+R | 顺时针 / 逆时针旋转 |
+| E | 打开图像编辑器（Modify 标签） |
+| W / Shift+W | 适合宽度 / 高度 |
+| H | 切换 RGB 直方图 |
+| F8 / Ctrl+F8 | OSD 叠加层 / 调试 HUD |
+| Shift+P | 切换像素视图（≥ 400 % 显示网格 + RGB） |
+| Shift+M | 循环色彩模式 |
+| B | 切换书签 |
+| Ctrl+C / Ctrl+V | 复制 / 粘贴图片至 / 自剪贴板 |
+| 0 / 1-5 | 切换收藏 / 快速评级 |
+| F1-F5 | 快速颜色标签 |
+| P / Shift+X / U | 挑片：保留 / 拒绝 / 取消 |
+| Shift+S | 分割视图 |
+| Shift+D / Ctrl+Shift+D | 双页（LTR / RTL） |
+| Ctrl+Shift+M | 多屏镜像窗口 |
+| Delete | 移到回收站（可撤销） |
+| Escape | 退出深度缩放 / 全屏 |
 
 ### 动画播放（GIF / APNG）
 
 | 快捷键 | 动作 |
-|--------|------|
-| Space | 播放 / 暂停 |
-| ,（逗号） | 上一帧 |
-| .（句号） | 下一帧 |
-| [ | 降低播放速度 |
-| ] | 提高播放速度 |
+|----------|--------|
+| 空格 | 播放 / 暂停 |
+| ,（逗号）/ .（句号）| 上一帧 / 下一帧 |
+| [ / ] | 降低 / 提高播放速度 |
 
-### 磁贴网格模式
+### 磁砖网格
 
 | 快捷键 | 动作 |
-|--------|------|
-| 方向键 | 滚动网格 |
-| Ctrl+L | 切换 缩略图格 ↔ 列表（详细）浏览模式 |
-| Hover (500 ms) | 显示较大的 Hover 预览弹窗 |
-| Delete | 删除选中的磁贴 |
-| Escape | 取消全部选择 |
+|----------|--------|
+| Ctrl+L | 切换网格 ↔ 列表 |
+| 悬停（500 ms） | 悬停预览弹窗 |
+| Delete | 删除选中磁砖 |
+| Escape | 取消全选 |
 
-### 触控板手势
-
-| 手势 | 动作 |
-|------|------|
-| 捏合 | 在深度缩放中放大/缩小（以捏合中心为锚点） |
-| 水平滑动 | 上一张 / 下一张图片 |
-
-### 鼠标控制
+### 鼠标 / 触控板
 
 | 动作 | 行为 |
-|------|------|
-| 左键点击 | 选择磁贴或打开图片 |
-| 左键拖拽 | 网格中框选多张图片 |
-| 长按（500ms） | 进入磁贴选择模式 |
-| 中键拖拽 | 深度缩放中平移/滚动 |
-| 滚轮 | 放大/缩小或滚动 |
-| 右键 | 打开上下文菜单 |
+|--------|----------|
+| 左键单击 | 选中磁砖或打开图片 |
+| 左键拖曳 | 网格矩形多选 |
+| 长按（500 ms） | 进入磁砖选择模式 |
+| 中键拖曳 | 深度缩放中平移 |
+| 滚轮 | 缩放或滚动 |
+| 右键单击 | 上下文菜单 |
+| 捏合 | 深度缩放中缩放 |
+| 水平滑动 | 上一张 / 下一张 |
+
+### Paint 标签（额外）
+
+| 快捷键 | 动作 |
+|----------|--------|
+| B / E / G / I | 笔刷 / 橡皮擦 / 填色 / 滴管 |
+| V / T / U / R | 移动 / 文字 / 渐变 / 矩形选择 |
+| P / S / C / Z / H | 钢笔 / 涂抹 / 仿制 / 缩放 / 抓手 |
+| Q | 切换快速蒙版模式 |
+| Tab | 切换所有停靠 |
+| Ctrl+Tab | 循环 Paint 标签 |
+| , / . | 循环笔刷种类 |
+| 0-9 | 笔刷不透明度 10% 步进 |
+| Alt+[ / Alt+] | 下 / 上切换作用图层 |
 
 ---
 
 ## 菜单结构
 
-### 文件
+### File
 
-- 新窗口
-- 打开图片
-- 打开文件夹
-- 最近（子菜单：最近文件夹和图片）
-- 书签（管理已添加书签的图片）
-- **Session**（子菜单：保存 Session / 加载 Session）
-- **以外部编辑器打开**（子菜单：已注册的外部编辑器）
-- **外部编辑器设置…**
-- 确认待处理的删除（确认撤销堆栈）
-- 快捷键设置（自定义键盘快捷键）
-- 文件关联（仅限 Windows — 注册/取消注册右键上下文菜单）
-- 退出
+- New Window
+- Open Image / Open Folder
+- Recent（文件夹 + 图片）
+- Bookmarks / Tags & Albums
+- Commit Pending Deletions
+- Paste from Clipboard / Auto-annotate Clipboard Images
+- File Association（Windows）
+- **Session** — Save / Load
+- **Workspaces…** — 保存 / 加载 / 重命名命名窗口布局
+- **External Editors…** + **Open in External Editor**
+- Keyboard Shortcuts（可自定义绑定）
+- Exit
 
-### 额外功能
+### Tools（额外工具 — 分为 8 个组子菜单）
 
-按功能分为 8 个子菜单：
+- **批次** — 格式转换 · EXIF 清除 · 图像清洗器 · 图像整理器 · 令牌批量重命名
+- **图库与元数据** — 图库搜索 · 智能相册 · 找相似 / 重复 · 自动标签 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
+- **视图** — Timeline · Calendar · Map
+- **工作流** — 挑片 · 暂存盘 · 虚拟副本 · 双面板 FM · 宏
+- **导出** — 联系表 PDF · 网页画廊 · 幻灯片视频（MP4）· 打印布局
+- **显影（非破坏）** — 色调曲线 · .cube LUT · 分离色调 · 局部调整蒙版 · 软打样
+- **修图与变形** — AI 图像放大 · 降噪 / 锐化 · 修复笔刷 · 仿制图章 · 人脸检测 · 天空 / 背景 · 裁切 / 拉直 · 自动拉直 · 镜头校正
+- **多图** — HDR 合成 · 全景拼接 · 焦点堆叠
 
-- **批量** — 批量格式转换 · EXIF 批量清除 · 图片净化重绘 · 图片整理工具 · Token 批量重命名
-- **图库与元数据** — 图库搜索（SQLite 多根索引）· 智能相册 · 相似图片搜索（pHash）· 重复图片检测 · 自动标记（启发式 + 可选 CLIP ONNX）· 分层标签 · 元数据导出（CSV / JSON）· XMP sidecar · GPS 地理标记
-- **视图** — 时间轴视图 ▸（按日 / 月 / 年）· 日历视图 · 地图视图
-- **工作流程** — 筛选（Pick / Reject）· 暂存篮 · 虚拟副本 · 双窗格文件管理 · 宏
-- **导出** — 联系表（Contact Sheet）PDF · Web Gallery · 幻灯片视频（MP4）· 打印版面
-- **调整（非破坏性）** — 色调曲线 · 应用 .cube LUT · 分离色调（Split Toning）· 局部蒙版 · 软打样
-- **修复与变形** — AI 图片放大 · 降噪 / 锐化 · 修复笔刷 · 仿制图章 · 人脸检测 · 天空／背景替换 · 裁剪 / 拉直 · 自动拉直 · 镜头校正
-- **多张合成** — HDR 合成 · 全景拼接 · 焦点堆叠
+### 视图 / 排序 / 过滤 / 语言 / 插件 / 说明
 
-### 查看
+（标准菜单 — 完整选项见应用内。）
 
-- 磁贴大小：128×128 / 256×256 / 512×512 / 1024×1024 / 自动
-- **浏览模式**：缩略图格 / 列表（Ctrl+L 切换）
-- **缩略图排列密度**：紧凑 / 标准 / 宽松
+### 右键上下文菜单
 
-### 排序
-
-- 按名称 / 按修改日期 / 按创建日期 / 按文件大小 / 按分辨率
-- 升序 / 降序
-
-### 筛选
-
-- 按扩展名：全部、JPG、PNG、BMP、TIFF、SVG、RAW
-- **按颜色标签**：全部 / 任一色 / 无标签 / 红 / 黄 / 绿 / 蓝 / 紫
-- 按评分：全部、已收藏、1–5 星
-- 按标签（单选）/ 按相册（单选）
-- **多标签过滤…** — 多选标签或相册，支持 AND / OR 布尔逻辑
-- **高级过滤…** — 分辨率 / 文件大小 / 方向 / 修改日期范围
-- **堆叠 RAW+JPEG 对** — 勾选时同名的 RAW/JPEG 对折叠成单一项目
-- 清除筛选
-
-### 语言
-
-- English / 繁體中文 / 简体中文 / 한국어 / 日本語
-
-### 插件
-
-- 已加载的插件（显示各插件名称和版本）
-- 下载插件（打开在线插件下载器）
-- 打开插件文件夹
-
-### 说明
-
-- 键盘与鼠标快捷键（详细的快捷键参考对话框）
-
-### 右键菜单
-
-- 导航（上层文件夹、下一张/上一张图片）
-- 快速操作（在资源管理器中显示、复制路径、复制图片）
-- 变换（顺时针/逆时针旋转、编辑图片）
-- 批量操作（批量重命名、移动/复制、全部旋转）
-- 删除（删除当前/选中的项目）
-- 设为壁纸
-- 比较 / 幻灯片
-- 导出（另存为，可选择格式）
-- 无损 JPEG 旋转
-- 额外功能（批量转换、AI 放大、重复检测、图片整理、EXIF 清除、图片净化重绘）
-- 书签（添加/移除书签）
-- 图片信息
-- 最近菜单
-- 插件贡献的项目
+导航 · 快速动作（显示 / 复制路径 / 复制图片）· 变形 · 批量操作 · 删除 · 桌面壁纸 · 对比 / 幻灯片 · 导出 · 额外工具 · 书签 · 图像信息 · 插件贡献项目。
 
 ---
 
 ## 插件系统
 
-Imervue 支持插件系统以扩展功能。完整说明请参阅[插件开发指南](../PLUGIN_DEV_GUIDE.md)。
+Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
 
 ### 快速开始
 
-1. 在项目根目录的 `plugins/` 文件夹中创建一个文件夹
-2. 定义一个继承 `ImervuePlugin` 的类
-3. 在 `__init__.py` 中以 `plugin_class = YourPlugin` 注册
-4. 重新启动 Imervue
+1. 在项目根目录的 `plugins/` 建文件夹
+2. 定义继承 `ImervuePlugin` 的类
+3. 在 `__init__.py` 用 `plugin_class = YourPlugin` 注册
+4. 重启 Imervue
 
-### 可用的钩子
+### 钩子
 
-| 钩子 | 触发时机 |
+| 钩子 | 触发 |
 |------|---------|
 | `on_plugin_loaded()` | 插件实例化后 |
-| `on_plugin_unloaded()` | 应用程序关闭时 |
-| `on_build_menu_bar(menu_bar)` | 默认菜单栏构建完成后 |
+| `on_plugin_unloaded()` | App 关闭时 |
+| `on_build_menu_bar(menu_bar)` | 默认菜单栏建好后 |
+| `on_build_main_tabs(tabs)` | 内置 4 个标签加完之后 |
 | `on_build_context_menu(menu, viewer)` | 右键菜单打开时 |
-| `on_image_loaded(path, viewer)` | 图片在深度缩放中加载后 |
-| `on_folder_opened(path, images, viewer)` | 文件夹在网格中打开后 |
-| `on_image_switched(path, viewer)` | 在图片间导航时 |
+| `on_image_loaded(path, viewer)` | 图片在深度缩放加载后 |
+| `on_folder_opened(path, images, viewer)` | 文件夹在网格打开后 |
+| `on_image_switched(path, viewer)` | 切换图片时 |
 | `on_image_deleted(paths, viewer)` | 图片被软删除后 |
-| `on_key_press(key, modifiers, viewer)` | 按键时（返回 True 以消费事件） |
-| `on_app_closing(main_window)` | 应用程序关闭前 |
-| `get_translations()` | 提供国际化字符串 |
+| `on_key_press(key, modifiers, viewer)` | 按键时（返回 True 消费事件） |
+| `on_app_closing(main_window)` | App 关闭前 |
+| `get_translations()` | 提供 i18n 字符串 |
 
 ### 插件下载器
 
-可通过 **插件 > 下载插件** 从官方仓库下载插件。下载器从 GitHub 上的 [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) 获取。
+**Plugins > Download Plugins** 打开在线下载器。源仓库：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。
 
 ---
 
 ## MCP 服务器
 
-Imervue 内置一个 [Model Context Protocol](https://modelcontextprotocol.io) 服务器，让 AI 助手（Claude Code、Claude Desktop、Cursor、Cline …）可以直接调用项目的纯逻辑辅助函数，而无需启动 GUI。服务器不依赖 Qt，一行命令即可启动：
+Imervue 内置 [Model Context Protocol](https://modelcontextprotocol.io) 服务器，让 AI 助手（Claude Code / Desktop、Cursor、Cline …）能在没有 GUI 的情况下调用项目的纯逻辑工具。Qt-free；一条命令启动：
 
 ```sh
 python -m Imervue.mcp_server
 ```
 
-### 可用工具
+### 工具
 
 | 工具 | 用途 |
-|------|------|
-| `list_images` | 列出文件夹内的图片（路径、大小、修改时间）— 支持递归 |
-| `read_image_metadata` | 单张图片的尺寸、格式、EXIF 与 XMP sidecar |
-| `read_xmp_tags` | 仅读 XMP 的快速路径：评级、色标、关键字、标题、描述 |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 互转 |
-| `puppet_from_png` | 从 PNG 自动构建 `.puppet` 动画文件（auto-mesh + 标准参数） |
-| `puppet_inspect` | 打开 `.puppet` 并返回完整清单：drawables、deformers、parameters、motions、expressions、hit areas、parts、blends、physics |
+|------|---------|
+| `list_images` | 列出文件夹中的图片（可选递归） |
+| `read_image_metadata` | 尺寸 / 格式 / EXIF / XMP 边车 |
+| `read_xmp_tags` | XMP-only 快路径：评级、标签、关键字 |
+| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP |
+| `puppet_from_png` | 从 PNG 构建 `.puppet` rig（auto-mesh + 标准参数） |
+| `puppet_inspect` | 打开 `.puppet` 返回清单 |
 
-### 接入方式
+### 配置
 
-**Claude Code（项目级）** — repo 根目录附带 `.mcp.json`，用 Claude Code 打开 repo 任何子目录就会自动发现服务器：
+仓库根目录附带 `.mcp.json` 供 Claude Code 自动发现。对于 Desktop / 其他客户端，添加到 `claude_desktop_config.json`（或等效）：
 
 ```json
 {
@@ -620,59 +614,45 @@ python -m Imervue.mcp_server
 }
 ```
 
-**Claude Desktop / 其他 MCP 客户端** — 把同一段加进客户端的 `claude_desktop_config.json`（或对应文件）。macOS 路径是 `~/Library/Application Support/Claude/claude_desktop_config.json`；Windows 是 `%APPDATA%\Claude\claude_desktop_config.json`。请使用绝对工作目录或激活安装了 Imervue 的 venv。
-
-完整协议接口与各工具的参数说明，见 [docs/zh-cn/index.rst](../docs/zh-cn/index.rst) 的 **MCP 服务器** 章节。
+完整协议接口见 [docs/en/index.rst](../docs/en/index.rst) 的 MCP 章节。
 
 ---
 
 ## 多语言支持
 
-### 内置语言
-
 | 语言 | 代码 |
-|------|------|
+|----------|------|
 | English | `English` |
 | 繁體中文 | `Traditional_Chinese` |
 | 简体中文 | `Chinese` |
 | 한국어 | `Korean` |
 | 日本語 | `Japanese` |
 
-可从 **语言** 菜单更改语言。更改后需要重新启动才会生效。
+从 **Language** 菜单切换。需重启。
 
-### 通过插件添加语言
-
-插件可以使用 `language_wrapper.register_language()` 注册全新的语言，或通过 `get_translations()` 为现有语言添加翻译。详情请参阅[插件开发指南](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+插件可通过 `language_wrapper.register_language()` 注册全新语言，或通过 `get_translations()` 提供翻译。详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 
 ## 用户设置
 
-设置存储在工作目录的 `user_setting.json` 中。
+存储在工作目录的 `user_setting.json`。关键字段：
 
 | 设置 | 类型 | 说明 |
-|------|------|------|
-| `language` | 字符串 | 当前语言代码 |
-| `user_recent_folders` | 列表 | 最近打开的文件夹 |
-| `user_recent_images` | 列表 | 最近打开的图片 |
-| `user_last_folder` | 字符串 | 上次打开的文件夹（启动时自动恢复） |
-| `bookmarks` | 列表 | 已添加书签的图片路径（最多 5000 个） |
-| `sort_by` | 字符串 | 排序方式（name/modified/created/size/resolution） |
-| `sort_ascending` | 布尔 | 排序顺序 |
-| `image_ratings` | 字典 | 图片路径 → 评分（1–5）映射 |
-| `image_favorites` | 集合 | 已收藏的图片路径 |
-| `image_color_labels` | 字典 | 图片路径 → 颜色名（`red`/`yellow`/`green`/`blue`/`purple`） |
-| `thumbnail_size` | 整数/null | 网格缩略图大小（128/256/512/1024/null 为自动） |
-| `tile_padding` | 整数 | 缩略图格边距像素（0 紧凑 / 8 标准 / 16 宽松） |
-| `navigation_auto_loop` | 布尔 | 末端按 →/← 是否自动循环（默认 `true`） |
-| `keyboard_shortcuts` | 字典 | 自定义 `action_id → [key, modifiers]` 覆盖 |
-| `window_geometry` | 字符串 | Base64 编码的窗口几何位置（关闭时保存） |
-| `window_state` | 字符串 | Base64 编码的窗口状态（dock / 工具栏布局） |
-| `window_maximized` | 布尔 | 上次关闭时窗口是否最大化 |
-| `stack_raw_jpeg_pairs` | 布尔 | 是否将同名的 RAW/JPEG 对折叠显示 |
-| `external_editors` | 列表 | 已注册的外部编辑器（`name`、`executable`、`arguments`） |
-| `macros` | 列表 | 已保存的宏（步骤数组 + 创建时间） |
-| `macro_last_name` | 字符串 | Alt+M 回放时使用的上次宏名称 |
+|---------|------|-------------|
+| `language` | string | 当前语言代码 |
+| `user_recent_folders` / `user_recent_images` | list | 最近打开 |
+| `user_last_folder` | string | 启动时自动还原 |
+| `bookmarks` | list | 书签路径（最多 5000） |
+| `sort_by` / `sort_ascending` | string / bool | 排序方法 + 顺序 |
+| `image_ratings` / `image_favorites` / `image_color_labels` | dict / set / dict | 每图整理 |
+| `thumbnail_size` / `tile_padding` | int | 网格配置 |
+| `navigation_auto_loop` | bool | 文件夹末端自动循环 |
+| `keyboard_shortcuts` | dict | 自定义键绑定 |
+| `window_geometry` / `window_state` / `window_maximized` | string / string / bool | 窗口布局持久化 |
+| `stack_raw_jpeg_pairs` | bool | RAW+JPEG 堆叠切换 |
+| `external_editors` | list | 已配置编辑器 |
+| `macros` / `macro_last_name` | list / string | 已保存宏 + Alt+M 目标 |
 
 ---
 
@@ -680,113 +660,53 @@ python -m Imervue.mcp_server
 
 ```
 Imervue/
-├── __main__.py              # 应用程序入口点
-├── Imervue_main_window.py   # 主窗口（QMainWindow）
-├── gpu_image_view/          # GPU 加速查看器
-│   ├── gpu_image_view.py    # 主要查看器组件（QOpenGLWidget）
-│   ├── gl_renderer.py       # OpenGL 着色器渲染器
-│   ├── actions/             # 查看器操作（缩放、平移、旋转等）
-│   └── images/              # 图片加载、金字塔、磁贴管理
-├── external/                # 外部编辑器集成
-│   └── editors.py           # 编辑器注册与启动（subprocess）
-├── export/                  # 导出子系统
-│   ├── contact_sheet.py     # 联系表 PDF 导出（QPdfWriter）
-│   ├── web_gallery.py       # Web Gallery HTML 导出
-│   └── slideshow_mp4.py     # 幻灯片 MP4 导出（imageio-ffmpeg）
-├── macros/                  # 宏录制/回放
-│   └── macro_manager.py     # 宏管理器（ACTION_REGISTRY）
-├── sessions/                # Session 保存/恢复
-├── library/                 # 图库聚合工具
-├── gui/                     # UI 组件
-│   ├── ai_upscale_dialog.py # AI 图片放大对话框
-│   ├── annotation_dialog.py # 裁剪工具对话框
-│   ├── batch_convert_dialog.py # 批量格式转换对话框
-│   ├── bookmark_dialog.py   # 书签管理对话框
-│   ├── command_palette.py   # 命令面板（Ctrl+Shift+P）
-│   ├── contact_sheet_dialog.py  # 联系表 PDF 对话框
-│   ├── develop_panel.py     # 开发面板
-│   ├── duplicate_detection_dialog.py # 重复图片检测对话框
-│   ├── exif_editor.py       # EXIF 元数据编辑器
-│   ├── exif_sidebar.py      # 可折叠 EXIF 侧边栏
-│   ├── exif_strip_dialog.py # EXIF 批量清除对话框
-│   ├── export_dialog.py     # 导出/另存为对话框
-│   ├── external_editors_settings.py # 外部编辑器设置对话框
-│   ├── image_editor.py      # 图片编辑器（裁切、调整、旋转）
-│   ├── image_organizer_dialog.py # 图片整理工具对话框
-│   ├── image_sanitize_dialog.py  # 图片净化重绘对话框
-│   ├── macro_manager_dialog.py  # 宏管理器对话框
-│   ├── shortcut_settings_dialog.py # 自定义快捷键设置
-│   ├── slideshow_mp4_dialog.py  # 幻灯片 MP4 对话框
-│   ├── web_gallery_dialog.py    # Web Gallery 对话框
-│   └── toast.py             # Toast 通知系统
-├── image/                   # 图片工具
-│   ├── info.py              # 图片信息提取
-│   ├── pyramid.py           # 深度缩放图片金字塔
-│   ├── thumbnail_disk_cache.py  # 缩略图缓存（MD5 + PNG）
-│   └── tile_manager.py      # 磁贴网格管理
+├── __main__.py              # 应用程序入口
+├── Imervue_main_window.py   # 主窗口（QMainWindow）— 挂载 4 个标签
+├── gpu_image_view/          # IMERVUE 标签 — GPU viewer + 深度缩放
+├── gui/                     # 对话框与侧栏（显影、EXIF 等）
+├── paint/                   # PAINT 标签 — MediBang 风格栅格编辑器
+├── puppet/                  # PUPPET 标签 — 2D 绑骨偶动画器
+├── export/                  # 导出生成器（联系表、网页画廊、MP4）
+├── image/                   # 图像工具（金字塔、磁砖管理、信息）
+├── library/                 # 图库辅助（RAW+JPEG 堆叠、索引）
+├── macros/                  # 宏录制 / 重放
 ├── menu/                    # 菜单定义
-│   ├── extra_tools_menu.py  # 额外功能菜单
-│   ├── file_menu.py         # 文件菜单
-│   ├── filter_menu.py       # 筛选菜单
-│   ├── language_menu.py     # 语言菜单
-│   ├── plugin_menu.py       # 插件菜单
-│   ├── recent_menu.py       # 最近项目子菜单
-│   ├── right_click_menu.py  # 右键菜单
-│   ├── sort_menu.py         # 排序菜单
-│   └── tip_menu.py          # 说明菜单
-├── multi_language/          # 国际化
-│   ├── language_wrapper.py  # 语言单例管理器
-│   ├── english.py           # 英文翻译
-│   ├── chinese.py           # 简体中文
-│   ├── traditional_chinese.py  # 繁体中文
-│   ├── korean.py            # 韩文
-│   └── japanese.py          # 日文
-├── paint/                   # 绘图工作区（MediBang 风格编辑器）
-│   ├── paint_workspace.py   # 嵌入的 QMainWindow，组合工具与 dock
-│   ├── canvas.py            # PaintCanvas（QOpenGLWidget）— 平移 / 缩放 / 指针分发
-│   ├── document.py          # PaintDocument — 图层、选区、合成
-│   ├── tool_dispatcher.py   # 将指针事件路由到当前工具
-│   ├── brush_engine.py      # 笔刷点绘合成（压力 / 动态 / 随机）
-│   ├── layers.py            # 图层模型 + 混合模式 + 蒙版
-│   ├── undo_stack.py        # 每标签的撤销 / 重做（手势提交时快照）
-│   ├── dock_panels.py       # 颜色 / 笔刷 / 图层 / 缩览 / 素材 / 历史
-│   ├── animation_dock.py    # 含播放转轴的帧时间轴
-│   ├── manga_menu.py        # 分镜切割、集中线、网点图层、动作闪光
-│   ├── filter_menu.py       # 色阶 / 曲线 / 色调分离 / 阈值 / 网点
-│   ├── document_io.py       # PSD 加载 / 保存（Photoshop 互通）
-│   └── …                    # 80+ 子模块：工具、对话框、辅助
-├── plugin/                  # 插件系统
-│   ├── plugin_base.py       # ImervuePlugin 基类
-│   ├── plugin_manager.py    # 插件发现与生命周期
-│   └── plugin_downloader.py # 在线插件下载器
-├── system/                  # 系统集成
-│   └── file_association.py  # Windows 文件关联（注册表）
-└── user_settings/           # 用户配置
-    ├── user_setting_dict.py # 设置读写（线程安全）
-    ├── bookmark.py          # 书签管理
-    └── recent_image.py      # 最近图片追踪
+├── mcp_server/              # Model Context Protocol stdio 服务器
+├── multi_language/          # i18n（en / zh-tw / zh-cn / ja / ko）
+├── external/                # 外部编辑器集成
+├── plugin/                  # 插件系统（base / manager / downloader）
+├── sessions/                # 工作区序列化
+├── system/                  # Windows 文件关联
+└── user_settings/           # 持久用户配置
 ```
 
-### 渲染管线
+### 渲染管线（Imervue 标签）
 
-1. **OpenGL 上下文** — `GPUImageView` 继承 `QOpenGLWidget`
-2. **着色器程序** — 两个 GLSL 1.20 程序（纹理四边形 + 纯色矩形）
-3. **纹理管理** — LRU 缓存，256 磁贴上限，1.5 GB VRAM 预算
-4. **深度缩放金字塔** — 多层磁贴金字塔，使用 LANCZOS 重采样，512×512 磁贴大小
-5. **各向异性过滤** — 硬件支持时最高 8x
-6. **后备** — 着色器编译失败时使用立即模式渲染
+1. `GPUImageView` 继承 `QOpenGLWidget`
+2. 两个 GLSL 1.20 程序（textured quads + solid color rectangles）
+3. LRU 纹理缓存 — 256-磁砖上限、1.5 GB VRAM 预算
+4. 多层磁砖金字塔以 LANCZOS 在 512 × 512 磁砖尺寸构建
+5. 硬件支持时最高 8× 各向异性过滤
+6. 着色器编译失败时软件渲染备援
 
-### 缩略图缓存
+### 缩图缓存
 
-- **键**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}` 的 MD5 哈希
-- **格式**：压缩 PNG（`compress_level=1` — 写入快速、占用空间小；旧版 `.npy` 于首次访问时自动清除）
-- **位置**：`%LOCALAPPDATA%/Imervue/cache/thumbnails`（Windows）或 `~/.cache/imervue/thumbnails`（Linux/macOS）
-- **失效机制**：文件元数据变更时自动失效
+- **键**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}` 的 MD5
+- **格式**：压缩 PNG（`compress_level=1` — 写入快、占用小）
+- **位置**：`%LOCALAPPDATA%/Imervue/cache/thumbnails`（Win）或 `~/.cache/imervue/thumbnails`（Linux/macOS）
+- **失效**：文件元数据变动时自动
+
+### Puppet 渲染（Puppet 标签）
+
+- `QOpenGLWidget` 含 `glDrawElements` + 客户端 vertex array
+- 每 drawable：rest vertices 缓存为 float32 numpy；vertex morphs 向量化；topological deformer sort 提升出 per-drawable 循环
+- 透明度背景是 2×2 GL_REPEAT 平铺纹理（优化前是 100k+ 立即模式 quads）
+- Cubism 转换器同时生成 opacity_keys 曲线与 vertex-morph deltas，所以参数驱动的可见度切换能存活 `.moc3 → .puppet` 转换
 
 ---
 
-## 许可证
+## 许可
 
-本项目采用 [MIT 许可证](../LICENSE)。
+本项目使用 [MIT License](../LICENSE)。
 
 Copyright (c) 2026 JE-Chen
