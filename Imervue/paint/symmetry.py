@@ -1,7 +1,7 @@
 """Pure-numpy symmetry helper for the brush tool.
 
 The Paint workspace mirrors live brush strokes across one or more
-axes — MediBang exposes this as the symmetry tool. Each mirror mode
+axes — raster paint apps exposes this as the symmetry tool. Each mirror mode
 maps a single pointer position to a list of points that the brush
 dispatcher then stamps in lock-step.
 

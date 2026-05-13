@@ -1,6 +1,6 @@
 """Pure-numpy affine transform for selected pixels.
 
-Photoshop / MediBang's "free transform on a selection" operation —
+Photoshop / raster paint apps's "free transform on a selection" operation —
 scale, rotate, and translate the pixels under the active selection
 without resampling the rest of the layer.
 

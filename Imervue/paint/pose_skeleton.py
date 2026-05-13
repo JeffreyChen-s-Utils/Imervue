@@ -1,6 +1,6 @@
 """2D stick-figure pose reference.
 
-A simplified stand-in for MediBang's 3D pose model: a fixed set of
+A simplified stand-in for raster paint apps's 3D pose model: a fixed set of
 twelve joints connected by named bones, posed in normalised image
 coordinates so the same skeleton renders cleanly at any canvas
 size. Joints carry an optional radius so the head reads as a disc

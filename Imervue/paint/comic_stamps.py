@@ -1,6 +1,6 @@
 """Programmatic stamp generators for comic / manga elements.
 
-MediBang Paint Pro ships a stamp library of speech balloons, sound
+raster paint apps Pro ships a stamp library of speech balloons, sound
 bursts, and panel borders so a comic artist can drop a pre-built
 shape onto the page in one click. We mirror the affordance with a
 small set of *generators* — pure functions that return RGBA uint8

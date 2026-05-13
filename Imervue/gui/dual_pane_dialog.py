@@ -1,5 +1,5 @@
 """
-Dual-pane file manager dialog — Total Commander style.
+Dual-pane file manager dialog — dual-pane.
 
 Two QTreeView panels over QFileSystemModel with buttons to move or copy the
 selection between panes. Aimed at power users sorting large photo archives

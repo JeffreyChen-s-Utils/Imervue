@@ -1,6 +1,6 @@
 """Quick mask — render the active selection as a translucent overlay.
 
-In MediBang's "Quick Mask" mode, the user toggles a button and the
+In raster paint apps's "Quick Mask" mode, the user toggles a button and the
 selection visualisation flips into a paintable overlay: red over
 everything that's NOT in the selection. The user can then paint
 additions / subtractions on the overlay with the brush, and toggling
@@ -52,7 +52,7 @@ def quick_mask_overlay(
     """Build an HxWx4 RGBA overlay marking the (un)selected region.
 
     By default ``invert=True`` paints over the *unselected* region —
-    matching Photoshop / MediBang's "anywhere outside the selection"
+    matching Photoshop / raster paint apps's "anywhere outside the selection"
     quick-mask convention. ``invert=False`` paints over the selected
     region instead, useful for "show what's selected" previews.
 

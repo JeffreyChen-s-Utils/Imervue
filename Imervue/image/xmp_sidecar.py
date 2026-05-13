@@ -1,11 +1,11 @@
 """
-XMP sidecar read/write for Lightroom / Capture One interoperability.
+XMP sidecar read/write for cross-editor interoperability.
 
 An XMP sidecar is a ``<image>.xmp`` XML file stored next to the image that
-holds ratings, keywords, titles, descriptions, and colour labels. Adobe
-Camera Raw / Lightroom write one automatically; Capture One and most raw
-developers can read them. Exchanging these lets Imervue round-trip
-metadata with other editors without touching the image file itself.
+holds ratings, keywords, titles, descriptions, and colour labels. Most
+XMP-aware photo managers write one automatically and most raw developers
+can read them. Exchanging these lets Imervue round-trip metadata with
+other editors without touching the image file itself.
 
 Only four fields are round-tripped — the ones Imervue tracks and that map
 cleanly to Adobe's XMP schema:
@@ -37,7 +37,7 @@ from defusedxml import ElementTree as DefusedET
 # a vocabulary; by convention they look like http(s) URIs but are never
 # dereferenced. The specific strings below are defined by the W3C and Adobe
 # XMP specifications and MUST be reproduced verbatim for sidecars to be
-# readable by Lightroom / Capture One. Flagging them as insecure HTTP is a
+# readable by other XMP-aware photo managers. Flagging them as insecure HTTP is a
 # false positive for SonarQube python:S5332 / bandit B113.
 _NS = {
     "x": "adobe:ns:meta/",

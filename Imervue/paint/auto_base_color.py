@@ -13,7 +13,7 @@ The algorithm:
    luma-based — same source semantics as
    :class:`Imervue.paint.binary_layer.BinarySettings`).
 2. Optionally dilate the ink to close small gaps in the linework
-   (same MediBang "Color Drop" trick exposed in 28a).
+   (same raster paint apps "Color Drop" trick exposed in 28a).
 3. Walk the non-ink pixels and run a 4-connected flood from every
    unvisited cell. Each flood produces one region mask.
 4. Drop regions smaller than ``min_region_size`` (anti-aliased
@@ -57,7 +57,7 @@ def auto_base_fill(
 
     ``reference`` is the lineart — HxWx4 uint8 RGBA. Pixels with
     alpha greater than ``ink_alpha_threshold`` count as ink (the
-    standard MediBang line-on-transparent convention). When the
+    standard raster paint apps line-on-transparent convention). When the
     lineart is drawn dark on white instead, callers can use
     :func:`apply_white_background_to_alpha` first or pre-threshold
     the reference themselves.

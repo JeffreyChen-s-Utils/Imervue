@@ -2,7 +2,7 @@
 
 Selections are HxW boolean numpy arrays — ``True`` means "pixel is part
 of the active selection". Combination modes ('replace' / 'add' /
-'subtract' / 'intersect') mirror MediBang's selection-modifier strip.
+'subtract' / 'intersect') mirror raster paint apps's selection-modifier strip.
 
 The pure-logic primitives here are Qt-free so the selection-tool
 dispatchers can be unit-tested without a display server.
@@ -74,7 +74,7 @@ def polygon_mask(h: int, w: int, points: list[tuple[float, float]]) -> np.ndarra
 
     Uses the standard even-odd fill rule. Self-intersecting polygons
     therefore have alternating filled / hole regions, matching Photoshop
-    and MediBang's lasso behaviour.
+    and raster paint apps's lasso behaviour.
     """
     if h <= 0 or w <= 0:
         raise ValueError(f"canvas dimensions must be positive, got {h}x{w}")

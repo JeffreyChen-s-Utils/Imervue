@@ -93,7 +93,7 @@ def _options_from_state(state) -> BrushStrokeOptions:
     """Build a :class:`BrushStrokeOptions` from the workspace state.
 
     The pen tool reuses the brush settings rather than introducing
-    a separate "pen size / pen colour" axis — matches MediBang's
+    a separate "pen size / pen colour" axis — matches raster paint apps's
     "your active brush is your pen ink" convention.
     """
     brush = state.brush

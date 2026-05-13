@@ -1,4 +1,4 @@
-"""Tests for XMP sidecar read/write (Lightroom interop)."""
+"""Tests for XMP sidecar read/write (XMP-aware photo manager interop)."""
 from __future__ import annotations
 
 from pathlib import Path

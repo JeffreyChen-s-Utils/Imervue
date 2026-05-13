@@ -3,7 +3,7 @@
 The classic comic-colourist workflow leaves a single layer of flat
 colour blocks (the bucket-fill output) that the artist later wants to
 shade. Shading a single mixed-colour layer is awkward — every brush
-stroke risks bleeding past a colour boundary. MediBang exposes a
+stroke risks bleeding past a colour boundary. raster paint apps exposes a
 "Divide Layer" command that walks the flat layer, gathers the
 distinct colours, and produces a layer per colour with each painted
 only where that colour was. Shading then targets one layer at a time.

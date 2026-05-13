@@ -235,7 +235,7 @@ class AnnotationCanvas(QWidget):
     annotation_changed = Signal()
     # Emitted whenever the mouse moves over the canvas, in image coordinates.
     # Used by the dialog's status bar to show a live cursor readout just like
-    # a professional editor does (Photoshop / GIMP / Krita all have this).
+    # a professional editor does (Photoshop / external image editors /  all have this).
     cursor_image_pos = Signal(int, int)
     # Emitted when the active tool changes so the status bar / properties
     # panel can mirror it without reaching into private state.
@@ -1665,7 +1665,7 @@ class AnnotationEditorWidget(QWidget):
         self._left_toolbox = self._build_left_toolbox()
         body.addWidget(self._left_toolbox)
 
-        # Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / GIMP
+        # Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / external image editors
         # 在 canvas 四周的 "workspace" 深灰空間感。
         canvas_frame = QFrame(self)
         canvas_frame.setObjectName("annotationCanvasFrame")
@@ -1748,7 +1748,7 @@ class AnnotationEditorWidget(QWidget):
 
     # ========================================================================
     # Professional editor layout — menubar / left toolbox / right panel /
-    # status bar. Designed to look like Photoshop / GIMP / Krita: narrow
+    # status bar. Designed to look like Photoshop / external image editors / : narrow
     # vertical tool column on the left, dockable-looking properties on the
     # right, dark workspace around the canvas, status bar with live readouts.
     # ========================================================================
@@ -1793,7 +1793,7 @@ class AnnotationEditorWidget(QWidget):
     # ---------- Menu bar ----------
 
     def _build_menu_bar(self) -> QMenuBar:
-        """File / Edit menu bar, Photoshop-style.
+        """File / Edit menu bar, raster-editor.
 
         Actions previously living in the bottom button row (Save, Save As,
         Copy, Save Project, Load Project) are moved here; Edit holds

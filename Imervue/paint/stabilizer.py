@@ -3,7 +3,7 @@
 A jittery hand or a low-resolution mouse produces noisy pointer
 events. The stabiliser runs each event through an exponential moving
 average so the brush follows a smoothed cursor rather than the raw
-input. MediBang exposes this as the "stabiliser" slider; we mirror
+input. raster paint apps exposes this as the "stabiliser" slider; we mirror
 it as a per-brush setting in :class:`Imervue.paint.tool_state.BrushSettings`.
 
 Strength 0 means no smoothing (alpha=1, output equals input). Strength

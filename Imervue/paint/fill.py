@@ -6,7 +6,7 @@ Two modes:
   through 4-connected steps that all stay within the colour-tolerance
   band. The classic paint-bucket behaviour.
 * global — fill every pixel that matches the seed within tolerance,
-  regardless of connectivity. MediBang's "all matching pixels" mode.
+  regardless of connectivity. raster paint apps's "all matching pixels" mode.
 
 Tolerance is the maximum per-channel absolute RGB difference allowed
 versus the seed. ``tolerance=0`` requires an exact match; ``tolerance=255``
@@ -14,7 +14,7 @@ matches everything. Alpha on the *write* canvas is always set to 255
 on filled pixels (otherwise the bucket would deposit translucent paint
 that's a foot-gun to debug).
 
-Two MediBang-flavour extensions ride on top:
+Two raster paint apps-flavour extensions ride on top:
 
 * ``reference_image`` — when supplied, connectivity / tolerance are
   evaluated against this *other* HxWx3 or HxWx4 uint8 buffer instead
@@ -26,7 +26,7 @@ Two MediBang-flavour extensions ride on top:
 * ``expand`` — after the contiguous / global mask is computed, dilate
   it by N pixels (4-connectivity) before painting. Bridges the
   anti-aliased halo around lineart so colour creeps under the ink
-  edge — MediBang's "Close Gap" / "縮放" slider.
+  edge — raster paint apps's "Close Gap" / "縮放" slider.
 
 The contiguous flood uses iterative 4-connectivity dilation against
 a precomputed candidate mask. This is vectorised so it stays fast on
@@ -91,7 +91,7 @@ def flood_fill(
     under the anti-aliased halo of the reference lineart. ``expand=0``
     is a no-op.
 
-    ``gap_close`` (0..``MAX_GAP_CLOSE``) is MediBang's "Color Drop"
+    ``gap_close`` (0..``MAX_GAP_CLOSE``) is raster paint apps's "Color Drop"
     feature — temporarily dilate the ink mask by ``gap_close`` 4-
     connected pixels before flooding so small gaps in the lineart
     (broken pen strokes, AA leaks) bridge for the duration of the
@@ -194,7 +194,7 @@ def _build_candidate_mask(
         # the duration of this flood. Closing-then-erode would leave
         # 1-px gaps in 1-px lines unbridged because the eroded bridge
         # has no surviving neighbour, so we keep pure dilation to match
-        # MediBang's "Close gap" slider.
+        # raster paint apps's "Close gap" slider.
         from Imervue.paint.selection_ops import expand as dilate
         ink_thickened = dilate(~candidates, gap_close_px)
         candidates = ~ink_thickened

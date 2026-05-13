@@ -100,7 +100,7 @@ def apply_vibrance(arr: np.ndarray, vibrance: float) -> np.ndarray:
     """Saturation-aware colour boost \u2014 leaves already-saturated pixels alone.
 
     Converts to HSV, multiplies saturation by a factor that falls off as
-    the pixel is already saturated. This is the classic Lightroom vibrance
+    the pixel is already saturated. This is the classic other XMP-aware photo managers vibrance
     trick \u2014 it protects skin tones and highly-coloured regions from the
     harsh over-saturation you'd get from the plain saturation slider.
     """

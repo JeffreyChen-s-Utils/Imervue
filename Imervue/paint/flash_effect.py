@@ -1,7 +1,7 @@
 """Comic action-flash / explosion effect.
 
 The classic "BOOM!" frame: a starburst silhouette filled solid with
-a radial-gradient halo around it. MediBang / CSP ship this as a
+a radial-gradient halo around it. raster paint apps / CSP ship this as a
 preset; here it's a pure-numpy rasteriser that returns an HxWx4
 RGBA layer ready to drop above the lineart.
 

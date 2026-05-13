@@ -1,4 +1,4 @@
-"""Tests for the dock extensions that close MediBang feature gaps.
+"""Tests for the dock extensions that close  feature gaps.
 
 Three flows:
 

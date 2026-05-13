@@ -645,7 +645,7 @@ class ImervueMainWindow(QMainWindow):
         )
 
         # --------------------------------------------------------
-        # Tab 2: Paint workspace — MediBang-style painting surface
+        # Tab 2: Paint workspace — full-featured painting surface
         # --------------------------------------------------------
         from Imervue.paint.paint_workspace import PaintWorkspace
         self.paint_workspace = PaintWorkspace(parent=self)

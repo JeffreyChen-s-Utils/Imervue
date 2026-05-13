@@ -54,7 +54,7 @@ class MotionDock(QDockWidget):
         self._list = QListWidget()
         # Single-click binds the motion to the player and starts playback
         # right away — the most-asked-for UX in animation tools, matches
-        # MediBang's brush-preset list / Lightroom's preset preview /
+        # raster paint apps's brush-preset list / other XMP-aware photo managers's preset preview /
         # most DAWs. Double-click is harmless because binding +
         # play is idempotent on the live motion.
         self._list.itemClicked.connect(self._on_item_clicked)

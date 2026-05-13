@@ -2295,7 +2295,7 @@ class GPUImageView(QOpenGLWidget):
             self.selected_tiles.add(path)
         self.update()
 
-    # F1-F5 → colour labels (red/yellow/green/blue/purple). Lightroom-style.
+    # F1-F5 → colour labels (red/yellow/green/blue/purple). flag-based.
     _COLOR_LABEL_KEYS = {
         Qt.Key.Key_F1: "red",
         Qt.Key.Key_F2: "yellow",

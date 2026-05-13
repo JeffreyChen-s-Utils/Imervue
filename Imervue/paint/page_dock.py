@@ -1,6 +1,6 @@
 """Comic-project page browser dock.
 
-Mirrors MediBang Paint Pro's "Comic Project" page list. The dock
+Mirrors raster paint apps Pro's "Comic Project" page list. The dock
 binds to ``workspace._paint_project`` (a :class:`PaintProject`) and
 presents one row per page with a thumbnail, a name, and the usual
 add / remove / duplicate / move-up / move-down / apply-template

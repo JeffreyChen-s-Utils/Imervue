@@ -652,13 +652,13 @@ def test_integration_brush_preset_bundle_round_trip(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 18. Color palette .gpl import — the GIMP-format reader returns the colours
+# 18. Color palette .gpl import — the ``.gpl``-format reader returns the colours
 #     in declaration order with the right RGB triples.
 # ---------------------------------------------------------------------------
 
 
 def test_integration_palette_gimp_import_preserves_color_order(tmp_path):
-    """A minimal GIMP palette has ``GIMP Palette`` header + per-line
+    """A minimal ``.gpl`` palette has ``GIMP Palette`` header + per-line
     ``R G B name`` rows. The importer must yield colours in the
     same order with the right RGB and (optionally) name."""
     from Imervue.paint.color_palette_io import import_gimp_palette

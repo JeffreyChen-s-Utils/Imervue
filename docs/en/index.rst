@@ -17,8 +17,8 @@ Most of this guide is organised around those four sections.
      - Non-destructive develop pipeline — sliders, curves, LUTs, masks,
        retouch, multi-image. See *Modify Tab — Non-destructive Develop*.
    * - **Paint**
-     - MediBang-style raster paint studio with brushes, layers, animation,
-       manga tools, PSD I/O. See *Paint Tab — MediBang-style Raster Editor*.
+     - full-featured raster paint studio with brushes, layers, animation,
+       manga tools, PSD I/O. See *Paint Tab — full-featured Raster Editor*.
    * - **Puppet**
      - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
        motions, physics. See *Puppet Tab — 2D Rigged Animation*.
@@ -223,7 +223,7 @@ In Deep Zoom mode you can quickly rate images:
 Colour Labels (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Independent Lightroom-style colour flags, stored separately from the 1 -- 5 star rating. Useful for
+Independent flag-based colour flags, stored separately from the 1 -- 5 star rating. Useful for
 quick categorisation (e.g. red = reject candidates, green = selects, blue = to retouch).
 
 .. list-table::
@@ -492,12 +492,12 @@ Save & Undo
 Paint Workspace (Paint Tab)
 ---------------------------
 
-The third top-level tab — **Paint** — is a MediBang-style painting workspace
+The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
 frames, and PSD import/export. Switch to it from the tab bar or press ``E``
 from Deep Zoom mode to send the current image straight into a new Paint tab.
 
-UX-affordance highlights — the Paint workspace ships with a Medibang-style
+UX-affordance highlights — the Paint workspace ships with a full-featured
 brush-size cursor that scales with zoom, distinct cursor icons per tool,
 a transparency-checker pattern under the canvas, drag-drop highlight
 overlay, per-tab modified asterisk, undo / redo toast confirmations, an
@@ -727,7 +727,7 @@ Puppet Workspace (Puppet Tab)
 -----------------------------
 
 The fourth top-level tab — **Puppet** — is a from-scratch 2D rigged-puppet
-animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs,
+animation system. It does what Live2D do (mesh-deformation rigs,
 parameters, motions, physics, expressions, pose groups, lip-sync, webcam
 tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully
 open ``.puppet`` file format.
@@ -1158,7 +1158,7 @@ Workspace Layout Presets
 
 ``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
 arrangement, splitter sizes, and active root folder under a name — then lets
-you flip between saved layouts the same way Lightroom switches *Library* /
+you flip between saved layouts the same way other XMP-aware photo managers switches *Library* /
 *Develop* / *Export* or Adobe Bridge switches *Metadata* / *Filmstrip*. The
 dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
 ``user_settings.json`` (under the ``workspaces`` key) and survive across
@@ -1476,12 +1476,12 @@ the current view covering EXIF, dimensions, color label, rating, favourite,
 hierarchical tags, cull state, and notes. Useful for feeding cull decisions
 into a spreadsheet or external workflow.
 
-XMP Sidecar (Lightroom / Capture One Interop)
+XMP Sidecar (other XMP-aware photo managers Interop)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 ``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
-labels round-trip cleanly with Lightroom, Capture One, Bridge, and other
+labels round-trip cleanly with other XMP-aware photo managers, other XMP-aware photo managers, Bridge, and other
 XMP-aware tools.
 
 - **Import XMP for current image** — pulls rating / title / keywords /
@@ -1501,7 +1501,7 @@ rating it sets is what XMP export will write.
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Lightroom-style three-state cull flag. Press ``P`` to pick the current image
+flag-based three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
 ``Culling`` applies the filter via a dialog and also exposes a **Delete all
@@ -1518,7 +1518,7 @@ many shoots before export.
 Dual-Pane File Manager
 ^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` opens a Total Commander-style
+``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` opens a dual-pane
 two-tree view. Choose a folder in each pane and move/copy the selection
 between them without leaving Imervue.
 
@@ -1526,7 +1526,7 @@ Timeline View
 ^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` groups the current image set by day,
-month, or year (Google Photos style). Date is taken from EXIF
+month, or year (date-grouped). Date is taken from EXIF
 ``DateTimeOriginal`` when present, otherwise from the file modification time.
 Double-click any image to open it in Deep Zoom.
 

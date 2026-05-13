@@ -364,7 +364,7 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 10. 圖片淨化重繪：選擇傳統放大方法搭配目標解析度，確認輸出圖片尺寸正確且 EXIF 已清除
 11. 命令面板（`Ctrl+Shift+P`）：鍵入動作名稱、模糊匹配並執行——驗證快捷鍵對照表與動作註冊表在 frozen 環境載入完整
 12. 巨集錄製／回放、Session 儲存／還原：錄一段巨集並存檔、開幾張圖存 session → 關 app → 重開後回放／載入——驗證使用者設定目錄下 JSON 的讀寫路徑
-13. 外部編輯器：設定系統上的 Photoshop／GIMP／Krita → 右鍵「在外部編輯器開啟」——驗證 `subprocess` 在 frozen 環境下能 spawn 外部程式
+13. 外部編輯器：設定系統上的 你的影像編輯器 → 右鍵「在外部編輯器開啟」——驗證 `subprocess` 在 frozen 環境下能 spawn 外部程式
 14. 匯出 Contact sheet（PNG／PDF）／ HTML gallery／MP4 投影片——驗證 `imageio-ffmpeg` 的 ffmpeg binary 能被找到，且 PIL 字型資源被完整收集
 15. Library 索引與智慧相簿：重建索引、建一個規則式相簿（例如「ISO ≥ 800」）——驗證 sqlite 檔寫入使用者設定目錄、EXIF 讀取正常
 16. Culling 標記（`P` / `X` / `U`）、色彩標籤（`F1`-`F5`）、**星等評分（`1`-`5` 在 list view 欄位與 EXIF 側欄星條顯示）**、重複圖片偵測、EXIF 剝除——驗證 sidecar（`.imervue.json`）讀寫與 `imagehash` / `piexif` 被打包
@@ -374,7 +374,7 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 20. 歷史返回／前進（`Alt+←` / `Alt+→`）、裁切工具、非破壞性 develop：裁切＋調整後關閉並重開，狀態保留——驗證 `.imervue.json` recipe 寫回
 21. **浮水印疊加**：開啟浮水印對話框，套用文字 / 圖片浮水印於輸出——驗證 PIL 的 `ImageDraw` / `ImageFont` 在 frozen 下能載入字型資源
 22. **Export presets**：用 Web 1600px / Print 300dpi / Instagram 1080×1080 三種預設匯出——驗證 PIL 的 resample / DPI metadata 寫入正常
-23. **XMP sidecar**：載入含 Lightroom／Capture One 產生的 `.xmp` 圖片，確認星等 / 色彩標籤 / 開發參數被讀取；編輯後存檔再用 LR/C1 開啟，確認 sidecar 能被對方讀回——驗證 `defusedxml` 被打包進產物
+23. **XMP sidecar**：載入含 其他相容 XMP 的照片管理工具 產生的 `.xmp` 圖片，確認星等 / 色彩標籤 / 開發參數被讀取；編輯後存檔再用 其他相容 XMP 的照片管理工具 開啟，確認 sidecar 能被對方讀回——驗證 `defusedxml` 被打包進產物
 24. **Puppet 內建分頁**：切到 Puppet 分頁 → **Open Puppet…** → 選 `examples/puppet/march_7th.puppet`（隨產物內附）→ rig 居中載入；點 Motions dock 任一動作（idle / wave / peace / face_cover …）即播放。驗證 `Imervue.puppet.*` 子套件被 PyInstaller 自動收進、`examples/` 透過 `--add-data` 帶上、`QOpenGLWidget` 在 frozen 環境的 vertex-array 繪製路徑正常
 25. **Puppet 即時輸入（選用）**：開啟 Drag-Track（滑鼠拖動頭部）、Auto-Blink（自動眨眼）；裝有 `sounddevice` 時開 Mic Lip-Sync、裝有 OpenCV + MediaPipe 時開 Webcam Tracking——驗證這幾條選用依賴在 frozen 環境的 `try / except ImportError` fallback 正確（沒裝時不該 crash，只是該選項不可勾選）
 26. **Cubism `.moc3` 轉換器（需自備 SDK）**：把 Live2D Cubism Native SDK 解壓到 `<app_dir>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 → File > Convert `.moc3`… → 任意 Cubism 模型 → 確認產出的 `.puppet` 能播放。驗證 ctypes 對 `Live2DCubismCore.dll` 的動態載入在 frozen 環境下走得通；沒裝 SDK 時這個 menu 項應該 disabled / 提示

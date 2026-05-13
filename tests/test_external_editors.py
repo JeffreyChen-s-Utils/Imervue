@@ -15,9 +15,9 @@ def editors_mod():
 class TestEditorEntry:
     def test_from_dict_valid(self, editors_mod):
         e = editors_mod.EditorEntry.from_dict(
-            {"name": "GIMP", "executable": "/usr/bin/gimp"})
+            {"name": "external editor", "executable": "/usr/bin/gimp"})
         assert e is not None
-        assert e.name == "GIMP"
+        assert e.name == "external editor"
         assert e.executable == "/usr/bin/gimp"
         assert e.arguments == ""
 
@@ -65,25 +65,25 @@ class TestBuildArgv:
 class TestLoadSaveRoundTrip:
     def test_save_then_load(self, editors_mod):
         entries = [
-            editors_mod.EditorEntry("GIMP", "/usr/bin/gimp"),
-            editors_mod.EditorEntry("Krita", "/usr/bin/krita", "--canvas-only"),
+            editors_mod.EditorEntry("Editor A", "/usr/bin/editor-a"),
+            editors_mod.EditorEntry("Editor B", "/usr/bin/editor-b", "--canvas-only"),
         ]
         editors_mod.save_editors(entries)
         loaded = editors_mod.load_editors()
         assert len(loaded) == 2
-        assert loaded[0].name == "GIMP"
+        assert loaded[0].name == "Editor A"
         assert loaded[1].arguments == "--canvas-only"
 
     def test_load_drops_invalid_entries(self, editors_mod):
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         user_setting_dict["external_editors"] = [
-            {"name": "GIMP", "executable": "/usr/bin/gimp"},
+            {"name": "external editor", "executable": "/usr/bin/gimp"},
             {"name": "", "executable": "/bad"},  # invalid
             "garbage",
             {"nope": True},
         ]
         loaded = editors_mod.load_editors()
-        assert len(loaded) == 1 and loaded[0].name == "GIMP"
+        assert len(loaded) == 1 and loaded[0].name == "external editor"
 
 
 class TestLaunchGuards:

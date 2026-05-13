@@ -1,6 +1,6 @@
 """Default brush presets seeded into ``ToolState.sub_tools`` on first run.
 
-MediBang Paint Pro ships a stock library of named brushes (G-pen,
+raster paint apps Pro ships a stock library of named brushes (G-pen,
 mapping pen, sumi, watercolor, airbrush, ...) so a new user has a
 useful tool palette without spending time tuning sliders. We mirror
 that affordance with a small set of preset :class:`BrushSettings`

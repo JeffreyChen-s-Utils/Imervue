@@ -8,7 +8,7 @@ import pytest
 
 from Imervue.paint import tool_state as ts
 from Imervue.paint.brush_preset_io import IMERVUE_FORMAT_TAG
-from Imervue.paint.color_palette_io import GIMP_PALETTE_EXTENSION
+from Imervue.paint.color_palette_io import GPL_PALETTE_EXTENSION
 from Imervue.paint.file_menu import _FileMenuBridge
 from Imervue.paint.paint_menu_bar import menu_for
 from Imervue.paint.paint_workspace import PaintWorkspace
@@ -223,7 +223,7 @@ def test_image_filter_for_unknown_format_falls_back():
 
 # Pull in unused imports so ruff doesn't flag them — these prove the
 # tests actually exercise the documented engine surface.
-_USED = (struct, GIMP_PALETTE_EXTENSION)
+_USED = (struct, GPL_PALETTE_EXTENSION)
 
 
 # ---------------------------------------------------------------------------

@@ -57,7 +57,7 @@ def compute_histogram(image: np.ndarray) -> Histogram:
     Pixels with alpha 0 are treated like any other pixel — they
     still contribute to the bin counts. (A future refinement could
     exclude transparent pixels, but the convention in Photoshop /
-    MediBang is to count them too.)
+    raster paint apps is to count them too.)
     """
     if (
         image.ndim != 3

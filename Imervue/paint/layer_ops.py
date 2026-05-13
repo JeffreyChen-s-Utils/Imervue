@@ -23,7 +23,7 @@ When merging ``above`` down onto ``below``, the merged pixels are::
 
 The merged Layer adopts BELOW's blend_mode, opacity, name, visible,
 locked and clip flags; the layer mask is dropped because the above
-layer's mask has been baked into the pixels. This matches MediBang's
+layer's mask has been baked into the pixels. This matches raster paint apps's
 behaviour: the merged result still composites against the canvas
 through the lower layer's blend mode, while the upper layer's
 contribution is incorporated as flat pixels.

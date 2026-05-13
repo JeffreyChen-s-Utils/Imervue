@@ -1,6 +1,6 @@
 """Tests for the ``[`` / ``]`` brush-size shortcut and its helper.
 
-Phase 34e wires Photoshop / MediBang-style bracket-key brush sizing.
+Phase 34e wires Photoshop / -style bracket-key brush sizing.
 ``step_brush_size`` clamps to the documented range, no-ops at the
 boundary, and refreshes the status line so the change is visible.
 """

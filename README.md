@@ -30,7 +30,7 @@
 - [Usage](#usage)
 - [Imervue — Image viewer & library](#imervue--image-viewer--library)
 - [Modify — Non-destructive develop](#modify--non-destructive-develop)
-- [Paint — MediBang-style raster editor](#paint--medibang-style-raster-editor)
+- [Paint — full-featured raster editor](#paint--full-featured-raster-editor)
 - [Puppet — 2D rigged animation](#puppet--2d-rigged-animation)
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
@@ -51,7 +51,7 @@ Imervue is a GPU-accelerated image workstation that ships **four top-level tabs*
 |---|---|
 | **Imervue** | Browse, view, organize, search, and batch-process your image library |
 | **Modify** | Non-destructive develop pipeline — sliders, curves, LUTs, masks, retouch, multi-image |
-| **Paint** | MediBang-style raster paint studio with brushes, layers, animation, manga tools, PSD I/O |
+| **Paint** | full-featured raster paint studio with brushes, layers, animation, manga tools, PSD I/O |
 | **Puppet** | From-scratch 2D rigged-puppet animator — meshes, deformers, parameters, motions, physics |
 
 Design principles:
@@ -183,15 +183,15 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Bookmarks** — up to 5000 paths
 - **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`)
-- **Color labels** — Lightroom-style red/yellow/green/blue/purple (`F1`–`F5`)
-- **Culling** — Lightroom 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects
+- **Color labels** — flag-based red/yellow/green/blue/purple (`F1`–`F5`)
+- **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects
 - **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically
 - **Tags & Albums** with multi-tag AND/OR filtering
 - **Smart Albums** — save rule-based queries (extension / resolution / rating / color / cull / tags) and reapply with one click
 - **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling
 - **Per-image notes** in the EXIF sidebar — debounced save, persists across sessions
 - **Staging Tray** — cross-folder basket that survives restarts; bulk move / copy / export
-- **Dual-Pane File Manager** — Total Commander-style two-tree view
+- **Dual-Pane File Manager** — dual-pane two-tree view
 - **Sessions / Workspace Layouts** — snapshot tabs / selection / filter / dock geometry to `.imervue-session.json`; save named layouts for Browse / Develop / Export arrangements
 - **Macros** — record / replay batches of rating / favorite / color / tag actions (`Alt+M` replays the last macro)
 - **Thumbnail badges + density** — colour strip, favorite, bookmark, rating stars; Compact / Standard / Relaxed padding
@@ -218,7 +218,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **EXIF sidebar** with collapsible groups + inline 0-5 star strip
 - **EXIF editor** dialog
 - **Image info** dialog (dimensions / size / dates)
-- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for Lightroom / Capture One interop (safe XML via `defusedxml`)
+- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`)
 - **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon via piexif (JPEG)
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes
@@ -256,7 +256,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Tone Curve editor** — draggable RGB curve plus per-channel R / G / B with monotone cubic interpolation
 - **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³), trilinear-interpolate, blend with an intensity slider
-- **Split Toning** — Lightroom-style shadow / highlight hue + saturation with a balance pivot
+- **Split Toning** — flag-based shadow / highlight hue + saturation with a balance pivot
 
 ### Local adjustments
 
@@ -294,11 +294,11 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 ### External editors
 
-Register programs (GIMP / Photoshop / Affinity / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**.
+Register programs (your image editor /  / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**.
 
 ---
 
-## Paint — MediBang-style raster editor
+## Paint — full-featured raster editor
 
 The **Paint** tab is a full-featured raster paint studio embedded as its own `QMainWindow` with menus, left tool strip, context-sensitive options bar, and a tabbed right-side dock column. Multi-tab document editing — open many drawings at once, each with its own undo stack.
 
@@ -356,7 +356,7 @@ Press `E` from Deep Zoom to send the current image straight into a new Paint tab
 
 ## Puppet — 2D rigged animation
 
-The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D / Inochi2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
+The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
 
 ### File format
 
@@ -665,7 +665,7 @@ Imervue/
 ├── Imervue_main_window.py   # Main window (QMainWindow) — mounts the 4 tabs
 ├── gpu_image_view/          # IMERVUE TAB — GPU viewer + deep zoom
 ├── gui/                     # Dialogs and side panels (develop, EXIF, etc.)
-├── paint/                   # PAINT TAB — MediBang-style raster editor
+├── paint/                   # PAINT TAB — full-featured raster editor
 ├── puppet/                  # PUPPET TAB — 2D rigged-puppet animator
 ├── export/                  # Export generators (contact sheet, web gallery, MP4)
 ├── image/                   # Image utilities (pyramid, tile manager, info)

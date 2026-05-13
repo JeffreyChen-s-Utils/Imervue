@@ -1,6 +1,6 @@
 """Clone-stamp tool — copy a region of the canvas via brush stamps.
 
-Workflow mirrors Photoshop / MediBang's stamp tool:
+Workflow mirrors Photoshop / raster paint apps's stamp tool:
 
 1. Alt-click on the canvas to set the source point.
 2. Subsequent strokes paint pixels copied from the source area

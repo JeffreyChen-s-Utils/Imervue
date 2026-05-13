@@ -1,6 +1,6 @@
 """Drop-a-material-onto-canvas helper.
 
-MediBang lets the artist drag a tile out of the materials dock onto
+raster paint apps lets the artist drag a tile out of the materials dock onto
 the canvas; the drop creates a new raster layer with the material
 pasted in at the drop position. This module is the pure-numpy logic
 that performs the paste plus the constants the Qt drag-source and

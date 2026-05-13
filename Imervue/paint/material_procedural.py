@@ -1,6 +1,6 @@
 """Procedural material generators — pure-numpy tile factories.
 
-MediBang ships hundreds of bundled tones / textures / patterns; the
+raster paint apps ships hundreds of bundled tones / textures / patterns; the
 shipping size is one of its biggest selling points. Imervue takes
 the opposite tack: every built-in material is generated on demand
 from a tiny pure-numpy function, so the library is "alive" out of

@@ -560,7 +560,7 @@ class BrushTool:
             self._stabilizer.begin(sx, sy)
         else:
             self._stabilizer = None
-        # Pen pressure scales BOTH size and opacity — MediBang uses both
+        # Pen pressure scales BOTH size and opacity — raster paint apps uses both
         # axes so a pen line tapers in width as well as ink density.
         size_scaled = max(1, int(round(brush.size * pressure_size_factor(evt.pressure))))
         opacity_scaled = brush.opacity * pressure_opacity_factor(evt.pressure)
@@ -675,7 +675,7 @@ class FillTool:
     ``selection_provider`` returns the active selection mask (or
     ``None``) at click time. ``reference_provider`` is optional and
     returns the HxWx4 RGBA buffer of the document's reference layer
-    when MediBang's "Reference Layer" mode is on; ``None`` falls the
+    when raster paint apps's "Reference Layer" mode is on; ``None`` falls the
     fill back to sampling its own target.
     """
 
@@ -720,10 +720,10 @@ class EyedropperTool:
 
     Move events while the button is held also update the colour so the
     user can scrub across the canvas to find the right shade — a
-    MediBang convention. Modifier-aware: holding Alt picks BG instead.
+    raster paint apps convention. Modifier-aware: holding Alt picks BG instead.
 
     ``composite_provider`` returns the document's flattened RGBA buffer
-    when MediBang's "Sample All Layers" mode is on. ``None`` falls
+    when raster paint apps's "Sample All Layers" mode is on. ``None`` falls
     the sample back to the active layer only — the legacy default.
     """
 

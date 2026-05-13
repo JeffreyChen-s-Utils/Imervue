@@ -12,7 +12,7 @@ from Imervue.paint.brush_preset_io import (
     export_bundle,
     export_preset,
     import_bundle,
-    import_medibang_preset,
+    import_mdp_preset,
     import_preset,
     load_directory,
 )
@@ -144,7 +144,7 @@ def test_import_medibang_recovers_name_and_size(tmp_path):
     target = tmp_path / f"sample{MEDIBANG_BRUSH_EXTENSION}"
     blob = b"\x00\x00\x05name\x00My Brush\x00\x00size\x00 24\x00"
     target.write_bytes(blob)
-    rebuilt = import_medibang_preset(target)
+    rebuilt = import_mdp_preset(target)
     assert rebuilt.name == "My Brush"
     assert rebuilt.size == 24
 
@@ -154,7 +154,7 @@ def test_import_medibang_falls_back_to_filename(tmp_path):
     name so the import never fails on missing fields."""
     target = tmp_path / "fallback.mdp"
     target.write_bytes(b"\x00\x00size\x00 12\x00\x00")
-    rebuilt = import_medibang_preset(target)
+    rebuilt = import_mdp_preset(target)
     assert rebuilt.name == "fallback"
 
 
@@ -164,14 +164,14 @@ def test_import_medibang_clamps_size_to_valid_range(tmp_path):
     from Imervue.paint.tool_state import BRUSH_SIZE_MAX
     target = tmp_path / "huge.mdp"
     target.write_bytes(b"name\x00 huge\x00 size\x00 9999")
-    rebuilt = import_medibang_preset(target)
+    rebuilt = import_mdp_preset(target)
     assert rebuilt.size == BRUSH_SIZE_MAX
 
 
 def test_import_medibang_clamps_hardness_to_unit_range(tmp_path):
     target = tmp_path / "h.mdp"
     target.write_bytes(b"name\x00 h\x00 hardness\x00 5.5")
-    rebuilt = import_medibang_preset(target)
+    rebuilt = import_mdp_preset(target)
     assert rebuilt.hardness == pytest.approx(1.0)
 
 
@@ -180,7 +180,7 @@ def test_import_medibang_clamps_opacity(tmp_path):
     unsigned decimals so a high value is the realistic clamp case."""
     target = tmp_path / "o.mdp"
     target.write_bytes(b"name\x00 o\x00 opacity\x00 5.5")
-    rebuilt = import_medibang_preset(target)
+    rebuilt = import_mdp_preset(target)
     assert rebuilt.opacity == pytest.approx(1.0)
 
 

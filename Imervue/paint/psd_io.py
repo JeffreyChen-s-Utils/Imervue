@@ -7,7 +7,7 @@ PaintDocuments cleanly:
 * Flat layer stack with names, opacity, visibility, blend mode
 * Raw uncompressed channel data on write; raw + PackBits RLE on read
   (PackBits is the most common compression in PSDs from Photoshop /
-  MediBang / Procreate, so reads from those tools work)
+  raster paint apps / Procreate, so reads from those tools work)
 * Composite image rebuilt on save and stored in the trailing image
   data section so non-layered viewers can still display the file
 

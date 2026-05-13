@@ -13,7 +13,7 @@ pure-numpy heavy lifting:
 The grid is regular: source control points always sit on the
 ``rows × cols`` lattice that subdivides the image; only the
 destination grid moves. That keeps the maths cheap (no Delaunay
-triangulation needed) and matches MediBang's mesh-warp UI.
+triangulation needed) and matches raster paint apps's mesh-warp UI.
 
 Pure numpy / Qt-free; the canvas widget will paint the editable
 destination grid as small handles and route mouse drags to

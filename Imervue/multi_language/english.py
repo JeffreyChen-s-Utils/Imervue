@@ -1143,7 +1143,7 @@ english_word_dict = {
     "keyboard_osd_tip": "F8 toggles an on-screen overlay with file info; Ctrl+F8 shows a debug HUD with GPU / cache stats",
     "keyboard_pixel_view_tip": "Shift+P enables pixel view \u2014 at \u2265400% zoom, shows a grid and the RGB value of each pixel under the cursor",
     "keyboard_color_mode_tip": "Shift+M cycles Normal / Grayscale / Invert / Sepia color rendering (non-destructive)",
-    "keyboard_cull_pick_tip": "P flags the current image (or all selected tiles) as a Pick \u2014 Lightroom-style keeper flag",
+    "keyboard_cull_pick_tip": "P flags the current image (or all selected tiles) as a Pick \u2014 flag-based keeper flag",
     "keyboard_cull_reject_tip": "Shift+X flags the current image (or all selected tiles) as Reject \u2014 then Extra Tools > Culling can delete every reject at once",
     "keyboard_cull_unflag_tip": "U clears any Pick / Reject cull flag from the current image or selection",
     "keyboard_command_palette_tip": "Ctrl+Shift+P opens the Command Palette \u2014 fuzzy-search every menu action in one dialog",
@@ -1212,9 +1212,9 @@ english_word_dict = {
     # XMP sidecar
     "xmp_title": "XMP Sidecars",
     "xmp_explain": (
-        "Read or write Lightroom-compatible .xmp sidecar files alongside each "
+        "Read or write XMP-aware photo managers-compatible .xmp sidecar files alongside each "
         "image. Stores rating, title, description, keywords (tags) and colour "
-        "label so edits round-trip with Lightroom, Bridge, Capture One."
+        "label so edits round-trip with XMP-aware photo managers, Bridge, XMP-aware photo managers."
     ),
     "xmp_count": "{n} image(s) in this view.",
     "xmp_export": "Export sidecars",

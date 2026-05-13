@@ -1,4 +1,4 @@
-"""MediBang-style tool bars for the Paint workspace.
+"""full-featured tool bars for the Paint workspace.
 
 Two pieces:
 
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Tool ordering — the left bar walks this list in order so additions slot in
 # without breaking layout. Separators are inserted at the documented
-# breakpoints to mirror MediBang's visual grouping.
+# breakpoints to mirror raster paint apps's visual grouping.
 # ---------------------------------------------------------------------------
 TOOL_ORDER = (
     ("brush",         "B"),

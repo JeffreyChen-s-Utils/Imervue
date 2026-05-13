@@ -1,6 +1,6 @@
 """Save a canvas region into the material library as a PNG.
 
-The "make my own material" workflow MediBang exposes via the
+The "make my own material" workflow raster paint apps exposes via the
 materials panel's right-click menu: pick a region of the current
 canvas (via the active selection or an explicit rect), and the
 selected pixels become a fresh tile saved into the library folder.

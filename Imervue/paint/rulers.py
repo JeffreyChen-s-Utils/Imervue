@@ -2,7 +2,7 @@
 
 A ruler constrains the brush cursor to a geometric track — line,
 ellipse, concentric ring, or parallel grid — so the user can lay down
-a perfectly straight or curved stroke without a steady hand. MediBang
+a perfectly straight or curved stroke without a steady hand. raster paint apps
 exposes this as the "Snap" panel; Imervue mirrors the same five
 common modes plus an explicit ``off`` no-op.
 

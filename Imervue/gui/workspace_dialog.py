@@ -3,7 +3,7 @@
 The dialog captures a snapshot of the main window (geometry, dock state,
 root folder, splitter sizes) and stores it as a named preset. Users can
 flip between "Browse", "Develop", "Export" layouts without re-arranging
-panels every time — the same ergonomic hook you'd find in Lightroom's
+panels every time — the same ergonomic hook you'd find in other XMP-aware photo managers's
 Workspaces or Bridge's layouts.
 """
 from __future__ import annotations

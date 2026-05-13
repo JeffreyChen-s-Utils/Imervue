@@ -1,5 +1,5 @@
 """
-Timeline view — images grouped by year / month / day, Google-Photos style.
+Timeline view — images grouped by year / month / day, date-grouped.
 
 Implemented as a QListView over a custom model that interleaves separator
 rows between date groups. Double-click opens deep zoom; date source is EXIF

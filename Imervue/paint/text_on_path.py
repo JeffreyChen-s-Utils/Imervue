@@ -8,7 +8,7 @@ Two layers:
   at a given distance along the polyline.
 * :func:`render_text_on_path` (Qt) walks the path placing each
   glyph rotated to the local tangent, mirroring Photoshop /
-  MediBang's Text-on-Path tool.
+  raster paint apps's Text-on-Path tool.
 
 The renderer takes a target canvas size + the path points + font
 parameters and returns an HxWx4 RGBA buffer the caller can
