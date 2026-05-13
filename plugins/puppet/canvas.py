@@ -20,6 +20,7 @@ from OpenGL.GL import (
     GL_ALWAYS,
     GL_BLEND,
     GL_CLAMP_TO_EDGE,
+    GL_REPEAT,
     GL_COLOR_BUFFER_BIT,
     GL_DST_COLOR,
     GL_EQUAL,
@@ -71,6 +72,7 @@ from OpenGL.GL import (
     glScalef,
     glStencilFunc,
     glStencilOp,
+    glTexCoord2f,
     glTexCoordPointer,
     glTexImage2D,
     glTexParameteri,
@@ -188,6 +190,12 @@ class PuppetCanvas(QOpenGLWidget):
         # Mesh-edit mode lets the user drag vertices; off by default.
         self._mesh_edit_enabled: bool = False
         self._mesh_edit_target: tuple[str, int] | None = None
+        # The transparency-checker backdrop used to render as a grid of
+        # immediate-mode quads — one per 16-pixel tile. On the March 7th
+        # canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
+        # and the dominant playback bottleneck. Cache a 2×2 RGBA texture
+        # once and tile it with GL_REPEAT instead.
+        self._checker_texture: int | None = None
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -505,23 +513,63 @@ class PuppetCanvas(QOpenGLWidget):
         return int(self.width() * ratio), int(self.height() * ratio)
 
     def _draw_transparency_backdrop(self) -> None:  # pragma: no cover - GL needs display
+        """Draw the checker backdrop as one repeating-textured quad.
+
+        The old immediate-mode grid hit ~107k glBegin/glEnd cycles per
+        frame on the March 7th canvas (3503×7777 / 16-pixel tile). Now
+        the canvas-wide quad samples a cached 2×2 RGBA texture with
+        ``GL_REPEAT``, so the entire backdrop is one draw call no
+        matter how large the rig."""
         if self._document is None:
             return
         w, h = self._document.size
-        glDisable(GL_TEXTURE_2D)
-        light = (0.18, 0.18, 0.20, 1.0)
-        dark = (0.13, 0.13, 0.15, 1.0)
-        for y in range(0, h, _CHECKER_TILE):
-            for x in range(0, w, _CHECKER_TILE):
-                tile_dark = ((x // _CHECKER_TILE) + (y // _CHECKER_TILE)) % 2 == 0
-                glColor4f(*(dark if tile_dark else light))
-                glBegin(GL_QUADS)
-                glVertex2f(x, y)
-                glVertex2f(min(x + _CHECKER_TILE, w), y)
-                glVertex2f(min(x + _CHECKER_TILE, w), min(y + _CHECKER_TILE, h))
-                glVertex2f(x, min(y + _CHECKER_TILE, h))
-                glEnd()
-        glEnable(GL_TEXTURE_2D)
+        tex_id = self._ensure_checker_texture()
+        glBindTexture(GL_TEXTURE_2D, tex_id)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        # Each texel covers one tile; tile_size pixels per texel gives
+        # the visible checker scale.
+        u_repeat = w / (2.0 * _CHECKER_TILE)
+        v_repeat = h / (2.0 * _CHECKER_TILE)
+        glBegin(GL_QUADS)
+        glTexCoord2f(0.0, 0.0)
+        glVertex2f(0.0, 0.0)
+        glTexCoord2f(u_repeat, 0.0)
+        glVertex2f(w, 0.0)
+        glTexCoord2f(u_repeat, v_repeat)
+        glVertex2f(w, h)
+        glTexCoord2f(0.0, v_repeat)
+        glVertex2f(0.0, h)
+        glEnd()
+
+    def _ensure_checker_texture(self) -> int:  # pragma: no cover - GL needs display
+        """Lazy-build a 2×2 RGBA texture carrying the checker pattern.
+
+        Stored on the canvas, kept across document swaps (the pattern
+        is document-independent). Wrap mode is ``GL_REPEAT`` so the
+        backdrop quad can tile it across an arbitrarily-sized canvas
+        in one draw call. Filter mode is ``GL_NEAREST`` so the tiles
+        stay crisp at any zoom."""
+        if self._checker_texture is not None:
+            return self._checker_texture
+        from OpenGL.GL import GL_NEAREST
+        dark = (33, 33, 38, 255)
+        light = (46, 46, 51, 255)
+        pixels = np.array(
+            [[dark, light], [light, dark]], dtype=np.uint8,
+        )
+        tex = int(glGenTextures(1))
+        glBindTexture(GL_TEXTURE_2D, tex)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA,
+            2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.tobytes(),
+        )
+        self._checker_texture = tex
+        return tex
 
     def _draw_drawables(self) -> None:  # pragma: no cover - GL needs display
         masks = resolve_masks(self._draw_list)
