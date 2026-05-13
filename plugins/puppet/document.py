@@ -74,6 +74,21 @@ class Drawable:
     by ``(1, 0.5, 0.5)`` yield ``(1, 0.25, 0.25)``). Used for
     parameter-driven blush (``ParamCheek``), skin flush, hover glow,
     etc."""
+    vertex_morphs: list[dict] | None = None
+    """Per-vertex morph targets driven by a parameter. Each entry has
+    the form
+    ``{"parameter": str, "delta_at_min": [(dx, dy), ...], "delta_at_max": [(dx, dy), ...]}``.
+
+    The deltas are vertex-by-vertex offsets at the parameter's min /
+    max value, expressed relative to the drawable's rest vertices.
+    When the parameter sits at its default the morph contributes
+    nothing; values between default and min/max blend linearly.
+
+    Used by the Cubism-native conversion path
+    (:mod:`puppet.cubism_native_convert`) to capture the deformation
+    that the Cubism runtime applies to each drawable — keyform data
+    that .moc3 doesn't expose introspectably gets reconstructed as
+    per-vertex offsets here."""
 
 
 # ---------------------------------------------------------------------------

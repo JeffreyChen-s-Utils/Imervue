@@ -277,10 +277,63 @@ def _blend_form_maps(
 # ---------------------------------------------------------------------------
 
 
+def apply_vertex_morphs(
+    rest_vertices: np.ndarray,
+    morphs: list[dict] | None,
+    parameter_values: dict[str, float],
+    parameters_by_id: dict[str, Parameter],
+) -> np.ndarray:
+    """Apply :attr:`Drawable.vertex_morphs` linearly between the
+    parameter's default and its min / max extremes.
+
+    For each morph: when the parameter sits at its default value the
+    morph contributes zero; values between default and the relevant
+    extreme blend linearly toward ``delta_at_min`` or ``delta_at_max``.
+    Out-of-range values clamp to the corresponding extreme. Missing
+    parameters (or morphs targeting unknown parameters) silently
+    skip — keeps a partial document well-defined."""
+    if not morphs:
+        return rest_vertices
+    out = rest_vertices.copy()
+    for morph in morphs:
+        param_id = morph.get("parameter")
+        if not isinstance(param_id, str):
+            continue
+        parameter = parameters_by_id.get(param_id)
+        if parameter is None:
+            continue
+        value = float(parameter_values.get(param_id, parameter.default))
+        if value < parameter.default:
+            span = parameter.default - parameter.min
+            if span <= 0:
+                continue
+            t = max(0.0, min(1.0, (parameter.default - value) / span))
+            deltas = morph.get("delta_at_min") or []
+        elif value > parameter.default:
+            span = parameter.max - parameter.default
+            if span <= 0:
+                continue
+            t = max(0.0, min(1.0, (value - parameter.default) / span))
+            deltas = morph.get("delta_at_max") or []
+        else:
+            continue
+        if not deltas:
+            continue
+        n = min(len(deltas), out.shape[0])
+        for i in range(n):
+            dx, dy = deltas[i]
+            out[i, 0] += float(dx) * t
+            out[i, 1] += float(dy) * t
+    return out
+
+
 def compose_drawable_vertices(
     drawable: Drawable,
     deformers: list[Deformer],
     overrides: dict[str, dict[str, Any]],
+    *,
+    parameter_values: dict[str, float] | None = None,
+    parameters_by_id: dict[str, Parameter] | None = None,
 ) -> np.ndarray:
     """Apply every deformer that targets ``drawable`` to its neutral
     vertices and return the deformed Nx2 array.
@@ -299,6 +352,12 @@ def compose_drawable_vertices(
     even when the document lists them in a different order.
     """
     rest = np.asarray(drawable.vertices, dtype=np.float64)
+    # Cubism-style vertex morphs run *before* any deformer pipeline —
+    # they replace the rest pose with the parameter-deformed pose
+    # that .moc3 conversion captured, then deformers (if any) layer on
+    # top.
+    if drawable.vertex_morphs and parameter_values is not None and parameters_by_id is not None:
+        rest = apply_vertex_morphs(rest, drawable.vertex_morphs, parameter_values, parameters_by_id)
     bone_deformers: list[Deformer] = []
     other_deformers: list[Deformer] = []
     sorted_deformers = topologically_sorted_deformers(deformers)
@@ -387,8 +446,12 @@ def compose_all_drawables(
     drawable in ``document``, returning a ``{drawable_id: verts}`` map.
     Caller is the canvas's per-frame paint."""
     overrides = merge_parameter_samples(document, values)
+    parameters_by_id = {p.id: p for p in document.parameters}
     return {
-        d.id: compose_drawable_vertices(d, document.deformers, overrides)
+        d.id: compose_drawable_vertices(
+            d, document.deformers, overrides,
+            parameter_values=values, parameters_by_id=parameters_by_id,
+        )
         for d in document.drawables
     }
 

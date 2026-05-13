@@ -167,6 +167,7 @@ def _parse_drawable(raw: dict) -> Drawable:
     multiply_color_keys = _parse_color_keys(
         raw.get("multiply_color_keys"), raw["id"],
     )
+    vertex_morphs = _parse_vertex_morphs(raw.get("vertex_morphs"), raw["id"])
     return Drawable(
         id=str(raw["id"]),
         texture=str(raw["texture"]),
@@ -182,6 +183,7 @@ def _parse_drawable(raw: dict) -> Drawable:
         opacity_keys=opacity_keys,
         multiply_color=multiply_color,
         multiply_color_keys=multiply_color_keys,
+        vertex_morphs=vertex_morphs,
     )
 
 
@@ -295,6 +297,38 @@ def _parse_color_keys(raw: Any, drawable_id: str) -> list[dict] | None:
                 "color": _parse_color3(stop["color"], default=(1.0, 1.0, 1.0)),
             })
         out.append({"parameter": param, "stops": parsed})
+    return out
+
+
+def _parse_vertex_morphs(raw: Any, drawable_id: str) -> list[dict] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} vertex_morphs must be a list",
+        )
+    out: list[dict] = []
+    for idx, entry in enumerate(raw):
+        if not isinstance(entry, dict):
+            raise PuppetFormatError(
+                f"drawable {drawable_id!r} vertex_morphs[{idx}] must be a dict",
+            )
+        param = entry.get("parameter")
+        if not isinstance(param, str) or not param:
+            raise PuppetFormatError(
+                f"drawable {drawable_id!r} vertex_morphs[{idx}] missing 'parameter'",
+            )
+        out.append({
+            "parameter": param,
+            "delta_at_min": [
+                (float(dx), float(dy))
+                for dx, dy in entry.get("delta_at_min") or []
+            ],
+            "delta_at_max": [
+                (float(dx), float(dy))
+                for dx, dy in entry.get("delta_at_max") or []
+            ],
+        })
     return out
 
 
@@ -524,6 +558,21 @@ def _drawable_to_json(d: Drawable) -> dict:
                 ],
             }
             for entry in d.multiply_color_keys
+        ]
+    if d.vertex_morphs:
+        out["vertex_morphs"] = [
+            {
+                "parameter": entry["parameter"],
+                "delta_at_min": [
+                    [float(dx), float(dy)]
+                    for dx, dy in entry.get("delta_at_min") or []
+                ],
+                "delta_at_max": [
+                    [float(dx), float(dy)]
+                    for dx, dy in entry.get("delta_at_max") or []
+                ],
+            }
+            for entry in d.vertex_morphs
         ]
     return out
 
