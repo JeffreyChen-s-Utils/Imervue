@@ -435,6 +435,18 @@ class CubismModel:
             out.append([float(ptr[j]) for j in range(vc * 2)])
         return out
 
+    def visibility_flags(self) -> list[bool]:
+        """Per-drawable ``IsVisible`` bit at the current parameter
+        state. Used by the converter to detect parameter-driven
+        visibility transitions that vertex sampling alone misses —
+        e.g. hand-gesture poses Cubism toggles via dynamic flags
+        rather than vertex deltas. One C call regardless of drawable
+        count, so cheap enough to call in the sample-and-reconstruct
+        inner loop."""
+        count = self.drawable_count()
+        flags = self._lib.csmGetDrawableDynamicFlags(self._model_ptr)
+        return [bool(int(flags[i]) & CSM_IS_VISIBLE) for i in range(count)]
+
     # ---- canvas ------------------------------------------------------
 
     def canvas_info(self) -> dict[str, float]:

@@ -122,6 +122,7 @@ def _build_document_from_model(
         document, model, parameters, drawables_rest,
         morph_epsilon=morph_epsilon, transform=transform,
     )
+    _attach_visibility_keys(document, model, parameters, drawables_rest)
     _attach_cubism_bundle(document, manifest, base_dir)
     _attach_synthetic_motions(document)
     return document
@@ -347,6 +348,90 @@ def _sample_at(
     model.set_parameter_values(values)
     model.update()
     return model.vertex_positions()
+
+
+def _sample_visibility_at(
+    model: CubismModel,
+    base_values: list[float],
+    param_index: int,
+    value: float,
+) -> list[bool]:
+    """Set one parameter to ``value`` and read the per-drawable
+    ``IsVisible`` bit. Used by :func:`_attach_visibility_keys` to
+    capture parameter-driven part-tree exclusion that vertex
+    sampling alone can't see."""
+    values = list(base_values)
+    values[param_index] = float(value)
+    model.set_parameter_values(values)
+    model.update()
+    return model.visibility_flags()
+
+
+def _attach_visibility_keys(
+    document: PuppetDocument,
+    model: CubismModel,
+    parameters: list[ParameterInfo],
+    drawables_rest: list[DrawableInfo],
+) -> None:
+    """Sweep each parameter and detect per-drawable visibility flips.
+
+    Cubism rigs toggle alternate-pose meshes (hand gestures, camera
+    objects, expression overlays) via dynamic ``IsVisible`` flags
+    that the deformation pipeline never touches — so the
+    sample-and-reconstruct vertex sweep alone reduces those meshes
+    to invisible-and-stationary. Catch the transition by reading
+    :meth:`CubismModel.visibility_flags` at each parameter's min,
+    default, and max; when a drawable's visibility differs across
+    those points, emit a three-stop ``opacity_keys`` curve so the
+    runtime fades the mesh in/out as the parameter moves.
+
+    Drawables that get a visibility curve are forced to
+    ``visible=True`` and ``opacity=1.0`` so the curve has authority
+    over the renderer — :func:`resolve_drawable_opacity` multiplies
+    authored opacity by the curve, and the renderer hard-skips
+    drawables flagged ``visible=False``, so leaving either at its
+    rest value would nullify the curve.
+    """
+    default_values = [p.default for p in parameters]
+    default_vis = [d.is_visible for d in drawables_rest]
+    for param_index, parameter in enumerate(parameters):
+        if parameter.minimum == parameter.maximum:
+            continue
+        vis_min = _sample_visibility_at(
+            model, default_values, param_index, parameter.minimum,
+        )
+        vis_max = _sample_visibility_at(
+            model, default_values, param_index, parameter.maximum,
+        )
+        for d_index, drawable in enumerate(document.drawables):
+            vd = default_vis[d_index]
+            vmin = vis_min[d_index]
+            vmax = vis_max[d_index]
+            if vd == vmin == vmax:
+                continue
+            stops = [
+                {"value": parameter.minimum, "alpha": 1.0 if vmin else 0.0},
+                {"value": parameter.default, "alpha": 1.0 if vd else 0.0},
+                {"value": parameter.maximum, "alpha": 1.0 if vmax else 0.0},
+            ]
+            if drawable.opacity_keys is None:
+                drawable.opacity_keys = []
+            drawable.opacity_keys.append({
+                "parameter": parameter.id,
+                "stops": stops,
+            })
+            # The curve must be the gate, not the authored base. A
+            # drawable hidden at rest gets opacity=0.0 from the
+            # converter; resolve_drawable_opacity multiplies that by
+            # the curve, so 0 * 1 = 0 and the curve does nothing.
+            # Force visible + opaque so the curve has the only say.
+            drawable.visible = True
+            drawable.opacity = 1.0
+    # Restore the rest pose before any downstream caller reads the
+    # model — _attach_morphs already does this for its own sweep, but
+    # we may be the last sweep so be defensive.
+    model.set_parameter_values(default_values)
+    model.update()
 
 
 def _vertex_deltas(
