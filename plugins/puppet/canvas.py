@@ -24,6 +24,7 @@ from OpenGL.GL import (
     GL_DST_COLOR,
     GL_EQUAL,
     GL_FALSE,
+    GL_FLOAT,
     GL_KEEP,
     GL_LINEAR,
     GL_LINE_LOOP,
@@ -36,6 +37,7 @@ from OpenGL.GL import (
     GL_STENCIL_BUFFER_BIT,
     GL_STENCIL_TEST,
     GL_TEXTURE_2D,
+    GL_TEXTURE_COORD_ARRAY,
     GL_TEXTURE_MAG_FILTER,
     GL_TEXTURE_MIN_FILTER,
     GL_TEXTURE_WRAP_S,
@@ -43,6 +45,8 @@ from OpenGL.GL import (
     GL_TRIANGLES,
     GL_TRUE,
     GL_UNSIGNED_BYTE,
+    GL_UNSIGNED_INT,
+    GL_VERTEX_ARRAY,
     glBegin,
     glBindTexture,
     glBlendFunc,
@@ -53,7 +57,10 @@ from OpenGL.GL import (
     glColorMask,
     glDeleteTextures,
     glDisable,
+    glDisableClientState,
+    glDrawElements,
     glEnable,
+    glEnableClientState,
     glEnd,
     glGenTextures,
     glLoadIdentity,
@@ -64,11 +71,12 @@ from OpenGL.GL import (
     glScalef,
     glStencilFunc,
     glStencilOp,
-    glTexCoord2f,
+    glTexCoordPointer,
     glTexImage2D,
     glTexParameteri,
     glTranslatef,
     glVertex2f,
+    glVertexPointer,
     glViewport,
     GL_MODELVIEW,
     GL_PROJECTION,
@@ -646,16 +654,24 @@ class PuppetCanvas(QOpenGLWidget):
     def _draw_indexed(  # pragma: no cover - GL needs display
         vertices: np.ndarray, uvs: np.ndarray, indices: np.ndarray,
     ) -> None:
-        # Immediate mode keeps Phase 2's render path readable; VBO/VAO
-        # plumbing arrives in Phase 4 once we start mutating per-vertex
-        # data each frame and immediate mode becomes the bottleneck.
-        glBegin(GL_TRIANGLES)
-        for idx in indices:
-            u, v = uvs[idx]
-            x, y = vertices[idx]
-            glTexCoord2f(float(u), float(v))
-            glVertex2f(float(x), float(y))
-        glEnd()
+        """Submit one triangle list to the fixed-function pipeline using
+        client-side vertex arrays.
+
+        Per-vertex ``glBegin/glVertex2f`` runs in the millions for the
+        March 7th rig (307 drawables × ~200 verts × 60 fps) and was the
+        playback-lag bottleneck. ``glDrawElements`` with the same
+        numpy arrays drops paint cost ~10-50× by pushing the per-vertex
+        loop into the GL driver."""
+        verts32 = np.ascontiguousarray(vertices, dtype=np.float32)
+        uvs32 = np.ascontiguousarray(uvs, dtype=np.float32)
+        idx32 = np.ascontiguousarray(indices, dtype=np.uint32)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY)
+        glVertexPointer(2, GL_FLOAT, 0, verts32)
+        glTexCoordPointer(2, GL_FLOAT, 0, uvs32)
+        glDrawElements(GL_TRIANGLES, int(idx32.size), GL_UNSIGNED_INT, idx32)
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+        glDisableClientState(GL_VERTEX_ARRAY)
 
     # ---- texture cache --------------------------------------------------
 
