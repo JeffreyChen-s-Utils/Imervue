@@ -1,6 +1,6 @@
-"""Optional-dependency manifest for the puppet plugin.
+"""Optional-dependency manifest for the built-in puppet tab.
 
-The plugin's core (rendering, parameter system, motion playback,
+The tab's core (rendering, parameter system, motion playback,
 PSD/Cubism import) runs on the default ``requirements.txt`` set. A
 handful of input modalities pull in heavier third-party packages
 that we keep optional so users who never touch them aren't forced
