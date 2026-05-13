@@ -230,7 +230,7 @@ A **Puppet** tab — the fourth top-level tab, slotted after Paint — is a from
 - **Custom motion recording (Phase 13)** — **Record motion** captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; on stop, bakes the take into a `Motion` with one linear-segment track per parameter that actually changed (flat tracks dropped) and adds it to the document. The new motion appears in the **Motions** dock immediately, ready to play / loop / save
 - **Capture / record (Phase 11)** — `Capture frame…` saves a PNG of the current canvas via `glReadPixels`; `Record…` toggles a 30 FPS frame loop into a GIF / WebM / MP4 via `imageio` (an existing project dep)
 
-A drop-in demo lives at [`examples/puppet/puppet_procedural.puppet`](examples/puppet/puppet_procedural.puppet) (build script: `examples/puppet/puppet_procedural_example.py`). Each body part is drawn procedurally with PIL primitives on its own transparent canvas — no source image, no chroma-key, no segmentation — so rotations stay artefact-free. Open it via the Puppet tab's **Open Puppet…** action to see a six-part chibi rig with six parameters and five motions (idle / wave / curtsy / cheer / step_right) already wired up.
+A drop-in demo lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet). It's a 307-drawable Cubism Live2D rig converted in-tree (textures + sampled vertex morphs baked into the `.puppet` zip; the Cubism SDK is not redistributed). Open it via the Puppet tab's **Open Puppet…** action to see the rig come up centred, then click any of the nine motions in the Motions dock — single-click binds and plays.
 
 ### System Integration
 

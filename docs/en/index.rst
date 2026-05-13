@@ -742,25 +742,22 @@ Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
 The repository ships a fully-rigged demo at
-``examples/puppet/puppet_procedural.puppet`` (rebuild source:
-``examples/puppet/puppet_procedural_example.py``). Every body part is
-drawn procedurally with PIL primitives onto its own transparent canvas
-at 4× supersample — no source image, no chroma-key, no segmentation —
-so rotations never expose the white edges or "cut" artefacts that
-come from slicing a single hand-drawn image into parts.
+``examples/puppet/march_7th.puppet`` — a 307-drawable Cubism Live2D
+rig converted in-tree. Textures and per-parameter vertex morphs are
+baked into the ``.puppet`` zip, so the demo opens on the default
+``requirements.txt`` without redistributing the Cubism SDK.
 
-The rig has six drawables (torso, two legs, two arms, head), six
-rotation deformers (parent ``body_rot`` plus head / shoulders / hips),
-six parameters (``ParamHeadYaw``, ``ParamBodyLean``,
-``ParamArm{Left,Right}Swing``, ``ParamLeg{Left,Right}Swing``), and
-five looping motions (``idle``, ``wave``, ``curtsy``, ``cheer``,
-``step_right``).
+The rig carries 203 Cubism-standard parameters (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), so
+every standard input driver (webcam, blink, lip-sync, cursor look-at)
+drives it without per-rig configuration. Nine looping motions ship in
+the bundle — author-converted Cubism idle loops plus reference
+gesture loops in the ``Idle`` and ``TapHead`` groups.
 
 Open the Puppet tab, click **Open Puppet…**, point at
-``puppet_procedural.puppet`` — the figure appears centred. Drag any
-parameter slider to drive a joint, or click one of the five motions
-in the Motions dock — single-click binds the motion and starts
-playback immediately.
+``march_7th.puppet`` — the figure appears centred. Drag any parameter
+slider to drive a joint, or click one of the motions in the Motions
+dock — single-click binds the motion and starts playback immediately.
 
 ``.puppet`` file format (v1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -203,7 +203,7 @@ Imervue 是一款高性能图片浏览器，专为流畅的浏览体验和大量
 - **录制自定义动作（Phase 13）** — 切换"录制动作"开始以 30 Hz 取样参数值；停止后自动烘焙为 `Motion`，每个变动的参数一条 linear-segment 轨（保持不变的轨会被丢弃），加进文件并立即出现在动作 dock，可播放 / 循环 / 存档
 - **截图 / 录制（Phase 11）** — `截取画面…` 透过 `glReadPixels` 存 PNG；`录制…` 切换 30 FPS 影格循环，透过 `imageio` 写成 GIF / WebM / MP4
 
-示例文件在 [`examples/puppet/puppet_procedural.puppet`](examples/puppet/puppet_procedural.puppet)（构建脚本：`examples/puppet/puppet_procedural_example.py`）。每个身体部位都用 PIL 直接画到自己的透明画布上 — 没有原始图片、没有去背、没有切割 — 旋转时不会产生边缘伪影。在 Puppet 标签按"打开偶动画…"导入即可看到一个六部件的 Q 版角色，已绑好六个参数和五个动作（idle / wave / curtsy / cheer / step_right）。
+示例文件在 [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet)。这是一个仓库内转换好的 Cubism Live2D 角色：307 个 drawable、纹理与每个参数采样得到的 vertex morphs 都已烘焙进 `.puppet` zip，因此只需默认 `requirements.txt` 即可打开，无需附带 Cubism SDK。在 Puppet 标签点"打开偶动画…"导入后，单击 Motions dock 里的任意动作即可绑定并立即播放。
 
 ### 系统集成
 
