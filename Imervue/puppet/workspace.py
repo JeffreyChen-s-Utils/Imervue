@@ -329,6 +329,16 @@ class PuppetWorkspace(QMainWindow):
         )
         self._fit_action.triggered.connect(self._canvas_reset_view)
 
+        # Reset-to-rest — single shortcut for "wipe every live-state
+        # toggle, stop the motion player, clear expressions / pose
+        # group overrides, and snap parameters back to their authored
+        # defaults". Without this the rig stays frozen in whatever
+        # pose the last motion finished on.
+        self._reset_action = QAction(
+            lang.get("puppet_reset_to_rest", "Reset to rest"), self,
+        )
+        self._reset_action.triggered.connect(self._reset_to_rest)
+
     def _build_menu_bar(self) -> QMenuBar:
         """Move every non-toggle (and the toggles themselves, for
         keyboard discoverability) into a proper QMenuBar so the
@@ -356,6 +366,8 @@ class PuppetWorkspace(QMainWindow):
         edit_menu.addAction(self._mirror_action)
         edit_menu.addAction(self._edit_motion_action)
         edit_menu.addAction(self._mesh_edit_toggle)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self._reset_action)
 
         live_menu = bar.addMenu(lang.get("puppet_menu_live", "Live"))
         live_menu.addAction(self._drag_toggle)
@@ -383,13 +395,34 @@ class PuppetWorkspace(QMainWindow):
         return bar
 
     def _build_toggle_toolbar(self) -> QToolBar:
-        """A single slim toolbar carrying just the live on/off
-        toggles. Eight buttons total — no overflow chevron, no
-        themed groups, and the user sees the live state without
-        opening a menu."""
+        """Slim toolbar carrying the live on/off toggles plus two
+        affordances that needed surfacing out of the File / Edit
+        menus: a one-click "Reset" (snap the rig back to neutral)
+        and an "Examples" dropdown that exposes the bundled demo
+        rigs without forcing the user to dig through File >
+        Examples."""
+        from PySide6.QtWidgets import QToolButton
+
         lang = language_wrapper.language_word_dict
         bar = QToolBar(lang.get("puppet_toolbar_title", "Puppet"), self)
         bar.setMovable(False)
+
+        # Examples — QToolButton with an attached menu so a single
+        # click pops the bundled-puppet list right next to the
+        # toolbar instead of buried under the File menu.
+        examples_btn = QToolButton(bar)
+        examples_btn.setText(lang.get("puppet_examples", "Examples"))
+        examples_btn.setMenu(self._examples_menu)
+        examples_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        examples_btn.setToolTip(
+            lang.get(
+                "puppet_examples_tooltip",
+                "Open one of the bundled example rigs",
+            ),
+        )
+        bar.addWidget(examples_btn)
+        bar.addSeparator()
+
         for action in (
             self._drag_toggle,
             self._blink_toggle,
@@ -401,6 +434,9 @@ class PuppetWorkspace(QMainWindow):
             self._record_action,
         ):
             bar.addAction(action)
+
+        bar.addSeparator()
+        bar.addAction(self._reset_action)
         return bar
 
     # ---- file ops -------------------------------------------------------
@@ -446,6 +482,64 @@ class PuppetWorkspace(QMainWindow):
 
     def _canvas_reset_view(self) -> None:
         self._canvas.reset_view()
+
+    # ---- reset-to-rest --------------------------------------------------
+
+    def _reset_to_rest(self) -> None:
+        """Snap the rig back to its authored neutral pose.
+
+        Motions don't auto-rewind on stop — when a clip finishes (or
+        the user pauses one mid-play) the rig stays frozen wherever
+        the last sample landed. Combined with the live-input toggles
+        (auto-blink, drag-track, lip-sync, webcam …) the user can
+        easily end up with the puppet stuck in a weird half-pose with
+        no obvious "go back to neutral" button. This method is that
+        button.
+
+        Order is deliberate: stop the *producers* first (motion
+        player, live drivers, recorder, idle cycler) so they can't
+        immediately overwrite the values we're about to reset; then
+        clear the *state* (expressions, pose groups, physics outputs);
+        finally restore the parameter dict to authored defaults.
+        """
+        # 1. Stop the motion player without playing out its fade.
+        player = self._motion_dock.player() if hasattr(self, "_motion_dock") else None
+        if player is not None and (player.is_playing() or player.is_fading_out()):
+            player._snap_stop()   # noqa: SLF001 — bypass fade for a hard reset
+        # 2. Untoggle every live-input action. setChecked(False) fires
+        #    the connected ``_toggle_*`` slot which is exactly the
+        #    teardown path we want.
+        for toggle in (
+            getattr(self, "_drag_toggle", None),
+            getattr(self, "_blink_toggle", None),
+            getattr(self, "_lipsync_toggle", None),
+            getattr(self, "_webcam_toggle", None),
+            getattr(self, "_idle_toggle", None),
+            getattr(self, "_idle_motion_toggle", None),
+            getattr(self, "_motion_record_toggle", None),
+        ):
+            if toggle is not None and toggle.isChecked():
+                toggle.setChecked(False)
+        # 3. Drop expressions + pose-group overrides + physics outputs.
+        for name in list(self._canvas.active_expressions()):
+            self._canvas.remove_expression(name)
+        # The canvas's pose-group dict is exposed via active_pose();
+        # call set_pose_active with the empty default for each group.
+        doc = self._canvas.document()
+        if doc is not None:
+            for group in doc.pose_groups:
+                if group.drawables:
+                    # Restore the group's first drawable as the visible
+                    # member — matches resolve_pose_visibility's
+                    # "default to first member" semantics.
+                    self._canvas.set_pose_active(group.id, group.drawables[0])
+        # 4. Snap parameters back to their authored defaults.
+        self._canvas.reset_parameters()
+        # 5. Status feedback so the user sees the action took effect.
+        lang = language_wrapper.language_word_dict
+        self._status.setText(
+            lang.get("puppet_status_reset", "Rig reset to neutral pose."),
+        )
 
     # ---- save -----------------------------------------------------------
 

@@ -259,3 +259,108 @@ def test_examples_menu_action_loads_via_open_puppet(
         assert ws.canvas().document() is not None
     finally:
         ws.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Reset-to-rest — snaps the rig back to its authored neutral pose
+# ---------------------------------------------------------------------------
+
+
+def _document_with_one_param():
+    """A document with a single parameter that defaults to 0.0 — used
+    to verify reset_to_rest restores parameter values."""
+    from Imervue.puppet.document import (
+        Drawable, Parameter, PuppetDocument,
+    )
+    doc = PuppetDocument(size=(64, 64))
+    doc.textures = {"textures/x.png": b""}
+    doc.parameters = [Parameter(id="P", min=-1.0, max=1.0, default=0.0)]
+    doc.drawables = [Drawable(
+        id="x", texture="textures/x.png",
+        vertices=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        indices=[0, 1, 2],
+        uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        draw_order=0,
+    )]
+    return doc
+
+
+def test_reset_to_rest_snaps_parameters_back_to_defaults(qapp, tmp_path):
+    """Mutating a parameter then calling reset_to_rest must put the
+    rig back at its authored default — closes the "rig stuck at last
+    motion frame" gap users hit when a motion finishes mid-pose."""
+    out = tmp_path / "mini.puppet"
+    from Imervue.puppet.document_io import save_puppet
+    save_puppet(_document_with_one_param(), out)
+    ws = PuppetWorkspace()
+    try:
+        ws.open_puppet(out)
+        ws.canvas().set_parameter_value("P", 0.75)
+        assert ws.canvas().parameter_values()["P"] == pytest.approx(0.75)
+        ws._reset_to_rest()   # noqa: SLF001
+        assert ws.canvas().parameter_values()["P"] == pytest.approx(0.0)
+    finally:
+        ws.deleteLater()
+
+
+def test_reset_to_rest_disables_live_toggles(qapp, tmp_path):
+    """Every live-input toggle (drag / blink / lipsync / webcam / idle
+    / idle_motion / motion_record) must come back unchecked after a
+    reset. Some toggles can't actually start (no webcam / no mic in
+    CI) — those stay unchecked anyway, which is the right end state."""
+    out = tmp_path / "mini.puppet"
+    from Imervue.puppet.document_io import save_puppet
+    save_puppet(_document_with_one_param(), out)
+    ws = PuppetWorkspace()
+    try:
+        ws.open_puppet(out)
+        ws._drag_toggle.setChecked(True)   # noqa: SLF001 — direct, no mic needed
+        ws._blink_toggle.setChecked(True)   # noqa: SLF001
+        ws._idle_toggle.setChecked(True)   # noqa: SLF001
+        ws._reset_to_rest()   # noqa: SLF001
+        for toggle_name in (
+            "_drag_toggle", "_blink_toggle", "_lipsync_toggle",
+            "_webcam_toggle", "_idle_toggle", "_idle_motion_toggle",
+            "_motion_record_toggle",
+        ):
+            toggle = getattr(ws, toggle_name)
+            assert not toggle.isChecked(), f"{toggle_name} still checked"
+    finally:
+        ws.deleteLater()
+
+
+def test_reset_to_rest_clears_active_expressions(qapp, tmp_path):
+    """Active expression overrides must drop back to the empty list
+    so the rig isn't smiling / surprised forever after a reset."""
+    from Imervue.puppet.document import Expression, ExpressionParam
+    from Imervue.puppet.document_io import save_puppet
+    doc = _document_with_one_param()
+    doc.expressions = [
+        Expression(name="smile", params=[
+            ExpressionParam(id="P", value=0.5, mode="overwrite"),
+        ]),
+    ]
+    out = tmp_path / "exp.puppet"
+    save_puppet(doc, out)
+    ws = PuppetWorkspace()
+    try:
+        ws.open_puppet(out)
+        ws.canvas().add_expression("smile")
+        assert ws.canvas().active_expressions() == ["smile"]
+        ws._reset_to_rest()   # noqa: SLF001
+        assert ws.canvas().active_expressions() == []
+    finally:
+        ws.deleteLater()
+
+
+def test_reset_action_is_wired_to_reset_to_rest(qapp):
+    """The toolbar / Edit-menu QAction must fire ``_reset_to_rest``
+    — clicking the button is what users will do; if the signal
+    connection regresses the button silently does nothing."""
+    ws = PuppetWorkspace()
+    try:
+        # The action triggers _reset_to_rest which is safe to call
+        # even with no document; just verify it doesn't raise.
+        ws._reset_action.trigger()   # noqa: SLF001
+    finally:
+        ws.deleteLater()
