@@ -843,6 +843,40 @@ class PuppetWorkspace(QMainWindow):
                 "puppet_webcam_unavailable",
                 "Webcam tracking unavailable (install opencv-python + mediapipe)",
             )
+            return
+        # Pop a live preview window so the user can see what the
+        # camera is producing. The dialog polls the tracker via timer;
+        # we keep one instance around to avoid re-creating it every
+        # time the user re-toggles.
+        if enabled:
+            self._show_webcam_preview()
+        else:
+            self._hide_webcam_preview()
+
+    def _show_webcam_preview(self) -> None:
+        from Imervue.puppet.webcam_preview_dialog import WebcamPreviewDialog
+        if getattr(self, "_webcam_preview_dialog", None) is None:
+            dlg = WebcamPreviewDialog(self._webcam, self)
+            # Closing the dialog (X button or "Stop tracking") needs to
+            # also untick the toolbar toggle — otherwise the toggle
+            # stays "on" while the tracker is actually stopped.
+            dlg.finished.connect(self._on_webcam_preview_finished)
+            self._webcam_preview_dialog = dlg
+        self._webcam_preview_dialog.show()
+        self._webcam_preview_dialog.raise_()
+        self._webcam_preview_dialog.activateWindow()
+
+    def _hide_webcam_preview(self) -> None:
+        dlg = getattr(self, "_webcam_preview_dialog", None)
+        if dlg is not None:
+            dlg.hide()
+
+    def _on_webcam_preview_finished(self, _result: int) -> None:
+        # User closed the preview dialog directly. ``set_enabled`` is
+        # idempotent so the back-and-forth between this slot and the
+        # dialog's ``closeEvent`` settles after one round.
+        if self._webcam_toggle.isChecked():
+            self._reset_toggle(self._webcam_toggle)
 
     # ---- idle driver ---------------------------------------------------
 

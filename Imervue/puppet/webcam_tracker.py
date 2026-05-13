@@ -42,6 +42,18 @@ class WebcamTracker(QObject):
         self._stop_evt = threading.Event()
         self._latest_params: dict[str, float] = {}
         self._params_lock = threading.Lock()
+        # Preview snapshot — shared with the preview dialog so the user
+        # can see what the camera is producing without staring at a
+        # frozen-looking puppet. Frame is BGR (cv2's native format),
+        # landmarks are in mediapipe's normalised [0, 1] coords so the
+        # dialog can paint them at whatever zoom it ends up using.
+        self._latest_frame_bgr: np.ndarray | None = None
+        self._latest_landmarks_norm: np.ndarray | None = None
+        self._face_detected: bool = False
+        self._fps: float = 0.0
+        self._camera_open: bool = False
+        self._error_message: str | None = None
+        self._preview_lock = threading.Lock()
         self._pump_timer = QTimer(self)
         self._pump_timer.setInterval(int(1000 / _TARGET_FPS))
         self._pump_timer.timeout.connect(self._pump_to_canvas)
@@ -71,6 +83,36 @@ class WebcamTracker(QObject):
 
     def shutdown(self) -> None:
         self._stop()
+
+    def current_preview_state(self) -> dict:
+        """Snapshot of the most recent capture for the preview dialog.
+
+        Returns a fresh ``dict`` (no shared references) safe to use on
+        the GUI thread:
+
+        ``frame_bgr`` — latest cv2 frame (H×W×3 uint8) or ``None``
+        ``landmarks_norm`` — N×3 array in mediapipe's normalised
+        coords, or ``None`` when no face is detected
+        ``face_detected`` — bool, mirrors the last frame's outcome
+        ``fps`` — measured capture FPS (EMA over recent frames)
+        ``camera_open`` — True once VideoCapture(0) opened cleanly
+        ``error`` — optional one-line error string from the worker
+        """
+        with self._preview_lock:
+            return {
+                "frame_bgr": (
+                    None if self._latest_frame_bgr is None
+                    else self._latest_frame_bgr.copy()
+                ),
+                "landmarks_norm": (
+                    None if self._latest_landmarks_norm is None
+                    else self._latest_landmarks_norm.copy()
+                ),
+                "face_detected": self._face_detected,
+                "fps": self._fps,
+                "camera_open": self._camera_open,
+                "error": self._error_message,
+            }
 
     # ---- start / stop --------------------------------------------------
 
@@ -109,11 +151,20 @@ class WebcamTracker(QObject):
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             logger.warning("webcam open failed")
+            with self._preview_lock:
+                self._camera_open = False
+                self._error_message = "VideoCapture(0) returned no device"
             return
+        with self._preview_lock:
+            self._camera_open = True
+            self._error_message = None
         mesh = mp.solutions.face_mesh.FaceMesh(
             max_num_faces=1, refine_landmarks=True,
             min_detection_confidence=0.5, min_tracking_confidence=0.5,
         )
+        # EMA-smoothed FPS so the preview status doesn't jitter every
+        # frame; alpha 0.1 gives a ~10-frame window.
+        fps_ema = 0.0
         try:
             while not self._stop_evt.is_set():
                 start = time.monotonic()
@@ -123,18 +174,31 @@ class WebcamTracker(QObject):
                     continue
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 result = mesh.process(rgb)
+                landmarks_norm = None
                 if result.multi_face_landmarks:
                     landmarks = _landmarks_to_array(result.multi_face_landmarks[0])
+                    landmarks_norm = landmarks
                     params = landmarks_to_params(landmarks)
                     with self._params_lock:
                         self._latest_params = params
                 elapsed = time.monotonic() - start
+                inst_fps = 1.0 / elapsed if elapsed > 0 else 0.0
+                fps_ema = inst_fps if fps_ema == 0.0 else (0.9 * fps_ema + 0.1 * inst_fps)
+                # Mirror the latest capture under the preview lock so
+                # the dialog (running on the GUI thread) can paint it.
+                with self._preview_lock:
+                    self._latest_frame_bgr = frame
+                    self._latest_landmarks_norm = landmarks_norm
+                    self._face_detected = landmarks_norm is not None
+                    self._fps = float(fps_ema)
                 remaining = _FRAME_INTERVAL_S - elapsed
                 if remaining > 0:
                     time.sleep(remaining)
         finally:
             cap.release()
             mesh.close()
+            with self._preview_lock:
+                self._camera_open = False
 
     # ---- GUI thread pump -----------------------------------------------
 
