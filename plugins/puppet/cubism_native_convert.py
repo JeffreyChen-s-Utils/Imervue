@@ -123,7 +123,28 @@ def _build_document_from_model(
         morph_epsilon=morph_epsilon, transform=transform,
     )
     _attach_cubism_bundle(document, manifest, base_dir)
+    _attach_synthetic_motions(document)
     return document
+
+
+# Minimum number of authored motions before we stop adding synth ones.
+# A Cubism drop with fewer than this gets a small idle pack appended so
+# the workspace's motion picker isn't empty — the March 7th bundle, for
+# example, ships zero motions and would otherwise look broken to the user.
+_SYNTH_MOTION_THRESHOLD: int = 3
+
+
+def _attach_synthetic_motions(document: PuppetDocument) -> None:
+    """When the document is motion-sparse, append a small ``synth_*``
+    idle pack so the converted rig has something to play out of the
+    box. Names use a ``synth_`` prefix so authors can recognise + delete
+    them once they record their own loops."""
+    from puppet.synth_motions import synthesise_idle_motions
+
+    if len(document.motions) >= _SYNTH_MOTION_THRESHOLD:
+        return
+    for motion in synthesise_idle_motions(document):
+        document.motions.append(motion)
 
 
 class _CanvasTransform:

@@ -67,8 +67,7 @@ class InputEngine(QObject):
             return
         size = self._canvas.document().size
         values = cursor_to_angle_params(image_x, image_y, size[0], size[1])
-        for param_id, value in values.items():
-            self._canvas.set_parameter_value(param_id, value)
+        self._canvas.set_parameter_values(values)
 
     def set_blink_enabled(self, enabled: bool) -> None:
         if enabled == self._blink_enabled:
@@ -117,22 +116,26 @@ class InputEngine(QObject):
             return
         elapsed = time.monotonic() - self._blink_anchor
         value = blink_curve_value(elapsed)
-        for eye_param in DEFAULT_EYE_PARAMS:
-            self._canvas.set_parameter_value(eye_param, value)
+        self._canvas.set_parameter_values(
+            {eye_param: value for eye_param in DEFAULT_EYE_PARAMS},
+        )
 
     def _reset_blink_params(self) -> None:
         if self._canvas.document() is None:
             return
-        for eye_param in DEFAULT_EYE_PARAMS:
-            self._canvas.set_parameter_value(eye_param, 1.0)
+        self._canvas.set_parameter_values(
+            {eye_param: 1.0 for eye_param in DEFAULT_EYE_PARAMS},
+        )
 
     def _reset_drag_params(self) -> None:
         if self._canvas.document() is None:
             return
-        for param_id in (
-            "ParamAngleX", "ParamAngleY", "ParamEyeBallX", "ParamEyeBallY",
-        ):
-            self._canvas.set_parameter_value(param_id, 0.0)
+        self._canvas.set_parameter_values({
+            "ParamAngleX": 0.0,
+            "ParamAngleY": 0.0,
+            "ParamEyeBallX": 0.0,
+            "ParamEyeBallY": 0.0,
+        })
 
     # ---- microphone -----------------------------------------------------
 
@@ -166,8 +169,10 @@ class InputEngine(QObject):
         except Exception as exc:   # noqa: BLE001 - same; never want to crash teardown
             logger.warning("mic stream close failed: %s", exc)
         if self._canvas.document() is not None:
-            self._canvas.set_parameter_value(DEFAULT_MOUTH_PARAM, 0.0)
-            self._canvas.set_parameter_value(DEFAULT_MOUTH_FORM_PARAM, 0.0)
+            self._canvas.set_parameter_values({
+                DEFAULT_MOUTH_PARAM: 0.0,
+                DEFAULT_MOUTH_FORM_PARAM: 0.0,
+            })
 
     def _on_audio_block(self, indata, frames, time_info, status) -> None:  # noqa: ARG002
         if status:
@@ -183,10 +188,9 @@ class InputEngine(QObject):
     def _apply_viseme(self, viseme: dict[str, float]) -> None:
         if not self._lipsync_enabled or self._canvas.document() is None:
             return
-        self._canvas.set_parameter_value(
-            DEFAULT_MOUTH_PARAM, float(viseme.get(DEFAULT_MOUTH_PARAM, 0.0)),
-        )
-        self._canvas.set_parameter_value(
-            DEFAULT_MOUTH_FORM_PARAM,
-            float(viseme.get(DEFAULT_MOUTH_FORM_PARAM, 0.0)),
-        )
+        self._canvas.set_parameter_values({
+            DEFAULT_MOUTH_PARAM: float(viseme.get(DEFAULT_MOUTH_PARAM, 0.0)),
+            DEFAULT_MOUTH_FORM_PARAM: float(
+                viseme.get(DEFAULT_MOUTH_FORM_PARAM, 0.0),
+            ),
+        })

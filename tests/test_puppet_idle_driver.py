@@ -122,6 +122,16 @@ class _FakeCanvas:
         self._params[param_id] = float(value)
         self.writes.append((param_id, float(value)))
 
+    def set_parameter_values(self, values: dict[str, float]) -> None:
+        """Batch counterpart used by the perf-optimised idle tick.
+        Mirrors the canvas's contract: silently drops ids the fake
+        doesn't know about."""
+        for param_id, value in values.items():
+            if param_id not in self._params:
+                continue
+            self._params[param_id] = float(value)
+            self.writes.append((param_id, float(value)))
+
 
 def test_idle_driver_starts_disabled(qapp):
     canvas = _FakeCanvas()

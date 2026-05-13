@@ -235,18 +235,20 @@ class MotionPlayer(QObject):
         sampled = sample_motion(self._motion, t_sec, loop=self._loop)
         if self._fade_in_total > 0.0 and t_sec < self._fade_in_total:
             progress = max(0.0, min(1.0, t_sec / self._fade_in_total))
-            for param_id, value in sampled.items():
-                source = self._fade_source.get(param_id, value)
-                blended = source + (value - source) * progress
-                self._canvas.set_parameter_value(param_id, blended)
+            batch = {
+                pid: self._fade_source.get(pid, value) + (
+                    value - self._fade_source.get(pid, value)
+                ) * progress
+                for pid, value in sampled.items()
+            }
+            self._canvas.set_parameter_values(batch)
             return
         if self._fade_in_total > 0.0 and t_sec >= self._fade_in_total:
             # First post-fade application — clear the fade so future
             # seeks back into the fade window don't reintroduce it.
             self._fade_in_total = 0.0
             self._fade_source = {}
-        for param_id, value in sampled.items():
-            self._canvas.set_parameter_value(param_id, value)
+        self._canvas.set_parameter_values(sampled)
 
     # ---- fade-out helpers ----------------------------------------------
 
@@ -279,10 +281,13 @@ class MotionPlayer(QObject):
             min(1.0, elapsed / self._fade_out_total)
             if self._fade_out_total > 0.0 else 1.0
         )
-        for param_id, source in self._fade_out_source.items():
-            target = self._fade_out_target.get(param_id, source)
-            blended = source + (target - source) * progress
-            self._canvas.set_parameter_value(param_id, blended)
+        batch = {
+            pid: source + (
+                self._fade_out_target.get(pid, source) - source
+            ) * progress
+            for pid, source in self._fade_out_source.items()
+        }
+        self._canvas.set_parameter_values(batch)
         if progress >= 1.0:
             self._snap_stop()
 

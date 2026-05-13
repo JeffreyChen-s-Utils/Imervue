@@ -138,6 +138,6 @@ class IdleDriver(QObject):
         elapsed = time.monotonic() - self._anchor
         values = idle_parameter_values(elapsed)
         canvas_values = self._canvas.parameter_values()
-        for param_id, value in values.items():
-            if param_id in canvas_values:
-                self._canvas.set_parameter_value(param_id, value)
+        batch = {pid: v for pid, v in values.items() if pid in canvas_values}
+        if batch:
+            self._canvas.set_parameter_values(batch)

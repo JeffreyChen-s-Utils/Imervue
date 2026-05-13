@@ -226,6 +226,27 @@ class PuppetCanvas(QOpenGLWidget):
         self._recompute_deformed_vertices()
         self.update()
 
+    def set_parameter_values(self, values: dict[str, float]) -> None:
+        """Batch-update many parameters in one go, recomputing the
+        rig only once at the end. Big perf win for motion playback
+        on Cubism-converted rigs where each frame writes 3+ tracks —
+        per-call recompute was paying the full 307-drawable
+        composition once per track instead of once per frame."""
+        if self._document is None or not values:
+            return
+        changed = False
+        for param_id, value in values.items():
+            if param_id not in self._parameter_values:
+                continue
+            float_value = float(value)
+            if self._parameter_values[param_id] != float_value:
+                self._parameter_values[param_id] = float_value
+                changed = True
+        if not changed:
+            return
+        self._recompute_deformed_vertices()
+        self.update()
+
     def reset_parameters(self) -> None:
         """Restore every parameter to its authored default."""
         if self._document is None:
