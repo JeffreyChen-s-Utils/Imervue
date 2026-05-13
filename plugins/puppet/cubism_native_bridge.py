@@ -35,6 +35,14 @@ logger = logging.getLogger("Imervue.plugin.puppet.cubism_native_bridge")
 CSM_ALIGNOF_MOC: int = 64
 CSM_ALIGNOF_MODEL: int = 16
 
+# Dynamic-flag bits from Live2DCubismCore.h. We only need IsVisible
+# for the converter — every other bit drives renderer internals.
+CSM_IS_VISIBLE: int = 1 << 0
+# Constant-flag bits we care about. Bit 2 is the only one that maps
+# to a concept our schema keeps (double-sided is informational only).
+CSM_BLEND_ADDITIVE: int = 1 << 0
+CSM_BLEND_MULTIPLICATIVE: int = 1 << 1
+
 # Env var the user can set so the bridge doesn't have to guess.
 LIBRARY_ENV_VAR: str = "CUBISM_CORE_DLL"
 
@@ -198,6 +206,10 @@ def _bind_signatures(lib: ctypes.CDLL) -> None:
     lib.csmGetDrawableTextureIndices.argtypes = [ctypes.c_void_p]
     lib.csmGetDrawableDrawOrders.restype = ctypes.POINTER(ctypes.c_int)
     lib.csmGetDrawableDrawOrders.argtypes = [ctypes.c_void_p]
+    lib.csmGetRenderOrders.restype = ctypes.POINTER(ctypes.c_int)
+    lib.csmGetRenderOrders.argtypes = [ctypes.c_void_p]
+    lib.csmGetDrawableDynamicFlags.restype = ctypes.POINTER(ctypes.c_ubyte)
+    lib.csmGetDrawableDynamicFlags.argtypes = [ctypes.c_void_p]
     lib.csmGetDrawableVertexCounts.restype = ctypes.POINTER(ctypes.c_int)
     lib.csmGetDrawableVertexCounts.argtypes = [ctypes.c_void_p]
     lib.csmGetDrawableVertexPositions.restype = ctypes.POINTER(
@@ -275,6 +287,8 @@ class DrawableInfo:
     id: str
     texture_index: int
     draw_order: int
+    render_order: int
+    is_visible: bool
     opacity: float
     blend_mode: int
     constant_flags: int
@@ -368,6 +382,8 @@ class CubismModel:
         ids = self._lib.csmGetDrawableIds(self._model_ptr)
         textures = self._lib.csmGetDrawableTextureIndices(self._model_ptr)
         draw_orders = self._lib.csmGetDrawableDrawOrders(self._model_ptr)
+        render_orders = self._lib.csmGetRenderOrders(self._model_ptr)
+        dynamic_flags = self._lib.csmGetDrawableDynamicFlags(self._model_ptr)
         opacities = self._lib.csmGetDrawableOpacities(self._model_ptr)
         blend_modes = self._lib.csmGetDrawableBlendModes(self._model_ptr)
         const_flags = self._lib.csmGetDrawableConstantFlags(self._model_ptr)
@@ -391,6 +407,8 @@ class CubismModel:
                 id=ids[i].decode("utf-8", errors="replace"),
                 texture_index=int(textures[i]),
                 draw_order=int(draw_orders[i]),
+                render_order=int(render_orders[i]),
+                is_visible=bool(int(dynamic_flags[i]) & CSM_IS_VISIBLE),
                 opacity=float(opacities[i]),
                 blend_mode=int(blend_modes[i]),
                 constant_flags=int(const_flags[i]),

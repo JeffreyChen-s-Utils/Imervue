@@ -188,8 +188,15 @@ def _attach_drawables(
 ) -> None:
     """Turn each Cubism drawable into a :class:`Drawable`. Vertex
     positions captured at the model's default parameter values give
-    the rest pose."""
+    the rest pose.
+
+    Drawables that Cubism marks as not-visible at the rest pose get
+    ``visible=False`` so e.g. back-of-body fragments don't render on
+    top of their front-of-body counterparts. The atlases pack both
+    sides of every part — without the visibility filter the result
+    is an unreadable mash of mixed-orientation pieces."""
     n_textures = len(file_refs.get("Textures") or [])
+    id_by_index = {i: info.id for i, info in enumerate(drawables_rest)}
     for info in drawables_rest:
         vertices = [
             transform.position(info.positions[i], info.positions[i + 1])
@@ -201,23 +208,34 @@ def _attach_drawables(
             (info.uvs[i], 1.0 - info.uvs[i + 1])
             for i in range(0, len(info.uvs), 2)
         ]
-        # Triangle indices come from Cubism as a flat unsigned-short
-        # array — already in the format our runtime expects.
         tex_index = info.texture_index
         if 0 <= tex_index < n_textures:
             texture = f"textures/texture_{tex_index:02d}.png"
         else:
             texture = ""
+        # Cubism allows multiple mask drawables per drawable but our
+        # schema is single-mask. Take the first available — most rigs
+        # only define one anyway.
+        clip_mask = (
+            id_by_index.get(info.mask_drawable_indices[0])
+            if info.mask_drawable_indices else None
+        )
         document.drawables.append(Drawable(
             id=info.id,
             texture=texture,
             vertices=vertices,
             indices=list(info.indices),
             uvs=uvs,
-            draw_order=info.draw_order,
+            # csmGetRenderOrders gives the actual per-frame paint
+            # order; csmGetDrawableDrawOrders is the authoring-time
+            # baseline that often comes back as a flat 500 for every
+            # drawable. Use render order so the .puppet renders in
+            # the same back-to-front sequence Cubism would.
+            draw_order=info.render_order,
             blend_mode=_translate_blend_mode(info.blend_mode),
             opacity=info.opacity,
-            visible=bool(info.constant_flags & 0x01) or True,
+            visible=info.is_visible,
+            clip_mask=clip_mask,
         ))
 
 
@@ -355,10 +373,11 @@ def _attach_cubism_bundle(
 
     file_refs = manifest.get("FileReferences") or {}
     bundle = CubismBundle()
-    # Motions
+    referenced_motion_paths: set[Path] = set()
+    # Motions explicitly referenced by the model3 manifest first.
     motions_raw = file_refs.get("Motions") or {}
     for group_name, entries in motions_raw.items():
-        for index, entry in enumerate(entries or []):
+        for entry in entries or []:
             if not isinstance(entry, dict):
                 continue
             file_ref = entry.get("File")
@@ -375,6 +394,22 @@ def _attach_cubism_bundle(
                 motion.fade_in_duration = float(entry["FadeInTime"])
             if isinstance(entry.get("FadeOutTime"), (int, float)):
                 motion.fade_out_duration = float(entry["FadeOutTime"])
+            bundle.motions.append(motion)
+            referenced_motion_paths.add(path.resolve())
+    # Sweep the conventional ``motions/`` sibling folder for any
+    # un-referenced .motion3.json files — real-world bundles often
+    # ship motions the model3 forgot to wire up. Skip duplicates we
+    # already picked up via FileReferences.
+    extra_root = base_dir / "motions"
+    if extra_root.is_dir():
+        for path in sorted(extra_root.glob("*.motion3.json")):
+            if path.resolve() in referenced_motion_paths:
+                continue
+            stem = path.stem.removesuffix(".motion3")
+            motion = load_motion3(path, name=stem)
+            motion.group = "Idle"
+            motion.fade_in_duration = 0.5
+            motion.fade_out_duration = 0.5
             bundle.motions.append(motion)
     # Expressions — broken paths in real-world bundles are common,
     # so we recover by looking under base_dir / "exp" too.
