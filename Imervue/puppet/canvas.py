@@ -298,6 +298,29 @@ class PuppetCanvas(QOpenGLWidget):
         self._recompute_deformed_vertices()
         self.update()
 
+    def force_parameter_values(self, values: dict[str, float]) -> None:
+        """Batch-update parameters and recompute even when the values
+        already match the cached state.
+
+        Use case: a periodic driver (the auto-blink loop) needs to
+        own the eye parameter every tick — without ``force``, another
+        driver (motion player / webcam tracker) could write the same
+        numeric value between blink ticks and the equality check
+        below would skip the recompute, making the blink appear to
+        stall after the first cycle."""
+        if self._document is None or not values:
+            return
+        wrote_any = False
+        for param_id, value in values.items():
+            if param_id not in self._parameter_values:
+                continue
+            self._parameter_values[param_id] = float(value)
+            wrote_any = True
+        if not wrote_any:
+            return
+        self._recompute_deformed_vertices()
+        self.update()
+
     def reset_parameters(self) -> None:
         """Restore every parameter to its authored default."""
         if self._document is None:
