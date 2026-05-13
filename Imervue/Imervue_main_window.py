@@ -654,6 +654,21 @@ class ImervueMainWindow(QMainWindow):
             lang.get("paint_tab_title", "Paint"),
         )
 
+        # --------------------------------------------------------
+        # Tab 3: Puppet workspace — 2D rigged-puppet animation.
+        # Was a plugin; pulled in-tree as a built-in tab since the
+        # core viewer / GL / mesh path runs on the default
+        # requirements.txt. The Cubism Native SDK is the only
+        # heavy optional dep and it gracefully unavailable when
+        # the user hasn't supplied the DLL.
+        # --------------------------------------------------------
+        from Imervue.puppet import PuppetWorkspace
+        self.puppet_workspace = PuppetWorkspace()
+        self._main_tabs.addTab(
+            self.puppet_workspace,
+            lang.get("puppet_tab_title", "Puppet"),
+        )
+
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)

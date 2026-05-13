@@ -1,5 +1,5 @@
 """Tests for the Qt-free render-prep helpers in
-``plugins/puppet/render_prep.py`` — sorting drawables for paint, mapping
+``Imervue/puppet/render_prep.py`` — sorting drawables for paint, mapping
 texture references, fit-to-window math, and screen→image inverse.
 """
 from __future__ import annotations
@@ -7,8 +7,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from puppet.document import Drawable, PuppetDocument
-from puppet.render_prep import (
+from Imervue.puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.render_prep import (
     build_draw_list,
     collect_required_textures,
     fit_view,

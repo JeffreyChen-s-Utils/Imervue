@@ -17,7 +17,7 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QWidget
 
-from puppet.recorder import RecordingSession, save_canvas_png
+from Imervue.puppet.recorder import RecordingSession, save_canvas_png
 
 
 class _StubCanvas(QWidget):

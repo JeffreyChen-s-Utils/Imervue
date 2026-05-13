@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, HitArea, PuppetDocument
-from puppet.document_io import from_zip_bytes, to_zip_bytes
-from puppet.hit_test import hit_area_bbox, hit_test
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, HitArea, PuppetDocument
+from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
+from Imervue.puppet.hit_test import hit_area_bbox, hit_test
 
 
 def _square_drawable(

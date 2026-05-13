@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 
-from puppet.cubism_import import load_physics3
+from Imervue.puppet.cubism_import import load_physics3
 
 
 def _write_physics3(path, vertex_props: list[dict]) -> None:

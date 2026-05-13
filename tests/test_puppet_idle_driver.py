@@ -12,7 +12,7 @@ import math
 
 import pytest
 
-from puppet.idle_driver import (
+from Imervue.puppet.idle_driver import (
     BREATH_PERIOD_S,
     DRIFT_AMPLITUDE,
     DRIFT_PERIODS,
@@ -21,7 +21,7 @@ from puppet.idle_driver import (
     idle_drift_value,
     idle_parameter_values,
 )
-from puppet.standard_params import PARAM_ANGLE_X, PARAM_BREATH
+from Imervue.puppet.standard_params import PARAM_ANGLE_X, PARAM_BREATH
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +121,16 @@ class _FakeCanvas:
     def set_parameter_value(self, param_id: str, value: float) -> None:
         self._params[param_id] = float(value)
         self.writes.append((param_id, float(value)))
+
+    def set_parameter_values(self, values: dict[str, float]) -> None:
+        """Batch counterpart used by the perf-optimised idle tick.
+        Mirrors the canvas's contract: silently drops ids the fake
+        doesn't know about."""
+        for param_id, value in values.items():
+            if param_id not in self._params:
+                continue
+            self._params[param_id] = float(value)
+            self.writes.append((param_id, float(value)))
 
 
 def test_idle_driver_starts_disabled(qapp):

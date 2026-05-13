@@ -1,25 +1,24 @@
-"""Skeleton coverage for the Puppet plugin.
+"""Skeleton coverage for the built-in Puppet tab.
 
-The plugin lives under ``plugins/puppet/`` and contributes the Puppet
-top-level tab via ``on_build_main_tabs``. These tests guard the
-integration surface (plugin adds tab, workspace widget builds) so
-later phases can extend without breaking the contract.
+The Puppet workspace used to ship as a plugin under
+``plugins/puppet/``; it now lives in-tree under ``Imervue/puppet/``
+and the main window mounts it directly. These tests guard the
+construction surface so later phases can extend without breaking
+the contract.
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 from PySide6.QtWidgets import QTabWidget
+
+from Imervue.puppet import PuppetWorkspace
 
 
 @pytest.mark.usefixtures("qapp")
 def test_workspace_widget_builds():
     """Instantiating the workspace widget must succeed with no
-    arguments and produce a layout with at least one child."""
-    from puppet.puppet_plugin import _build_workspace_widget
-
-    widget = _build_workspace_widget()
+    arguments and have a central widget."""
+    widget = PuppetWorkspace()
     try:
         # PuppetWorkspace is a QMainWindow — central widget must exist.
         assert widget.centralWidget() is not None
@@ -28,19 +27,15 @@ def test_workspace_widget_builds():
 
 
 @pytest.mark.usefixtures("qapp")
-def test_plugin_adds_tab_to_main_tabs():
-    """``on_build_main_tabs`` must add exactly one non-empty tab."""
-    from puppet.puppet_plugin import PuppetPlugin
-
-    fake_main = SimpleNamespace(viewer=SimpleNamespace())
-    plugin = PuppetPlugin(fake_main)
+def test_workspace_mounts_into_qtabwidget():
+    """The main window adds the workspace via ``QTabWidget.addTab``;
+    that integration must succeed and leave a single, named tab."""
+    workspace = PuppetWorkspace()
     tabs = QTabWidget()
     try:
-        plugin.on_build_main_tabs(tabs)
+        tabs.addTab(workspace, "Puppet")
         assert tabs.count() == 1
-        # Tab title is locale-dependent (Puppet / 偶動畫 / etc.); only
-        # require it to resolve to non-empty.
-        assert tabs.tabText(0)
+        assert tabs.tabText(0) == "Puppet"
     finally:
         tabs.deleteLater()
 
@@ -48,8 +43,6 @@ def test_plugin_adds_tab_to_main_tabs():
 @pytest.mark.usefixtures("qapp")
 def test_workspace_can_be_built_twice():
     """A repeated build pass must not leave residual state behind."""
-    from puppet.workspace import PuppetWorkspace
-
     first = PuppetWorkspace()
     second = PuppetWorkspace()
     try:

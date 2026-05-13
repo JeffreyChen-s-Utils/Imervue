@@ -13,15 +13,15 @@ import io
 import numpy as np
 import pytest
 
-from puppet.auto_mesh import puppet_from_png
-from puppet.document import Parameter
-from puppet.input_drivers import (
+from Imervue.puppet.auto_mesh import puppet_from_png
+from Imervue.puppet.document import Parameter
+from Imervue.puppet.input_drivers import (
     DEFAULT_DRAG_X_PARAM,
     DEFAULT_DRAG_Y_PARAM,
     DEFAULT_EYE_PARAMS,
     DEFAULT_MOUTH_PARAM,
 )
-from puppet.standard_params import (
+from Imervue.puppet.standard_params import (
     PARAM_ANGLE_X,
     PARAM_ANGLE_Y,
     PARAM_ANGLE_Z,

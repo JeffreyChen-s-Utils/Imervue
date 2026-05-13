@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.document import (
+from Imervue.puppet.document import (
     BlendKey,
     Drawable,
     ParameterBlend,
     PuppetDocument,
 )
-from puppet.document_io import from_zip_bytes, to_zip_bytes
-from puppet.runtime import sample_blend_forms
+from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
+from Imervue.puppet.runtime import sample_blend_forms
 
 
 def _bilinear_blend() -> ParameterBlend:

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, PuppetDocument
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
 
 
 def _doc_with_one_drawable() -> PuppetDocument:
@@ -23,6 +23,18 @@ def _doc_with_one_drawable() -> PuppetDocument:
             uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
             draw_order=0,
         ),
+    ]
+    return doc
+
+
+def _doc_with_two_parameters() -> PuppetDocument:
+    """Document carrying two parameters so the batch setter has
+    something to bind to. No drawables needed for batch-API tests —
+    the canvas only checks that the parameter ids exist."""
+    doc = _doc_with_one_drawable()
+    doc.parameters = [
+        Parameter(id="ParamA", min=-1.0, max=1.0, default=0.0),
+        Parameter(id="ParamB", min=0.0, max=2.0, default=1.0),
     ]
     return doc
 
@@ -66,6 +78,73 @@ def test_load_document_emits_signal(qapp):
         c.document_loaded.connect(lambda: captured.append(True))
         c.load_document(_doc_with_one_drawable())
         assert captured == [True]
+    finally:
+        c.deleteLater()
+
+
+def test_set_parameter_values_batch_updates_all(qapp):
+    """Batch setter writes every recognised id in one go. The canvas
+    runs only ONE vertex recompute regardless of how many params changed
+    — that's the perf-relevant promise; the test here verifies the
+    end-state values."""
+    c = PuppetCanvas()
+    try:
+        c.load_document(_doc_with_two_parameters())
+        c.set_parameter_values({"ParamA": 0.5, "ParamB": 1.5})
+        values = c.parameter_values()
+        assert values["ParamA"] == pytest.approx(0.5)
+        assert values["ParamB"] == pytest.approx(1.5)
+    finally:
+        c.deleteLater()
+
+
+def test_set_parameter_values_skips_unknown_keys(qapp):
+    """Unknown parameter ids are silently dropped — matches the
+    single-value setter's behaviour. The known ids still land."""
+    c = PuppetCanvas()
+    try:
+        c.load_document(_doc_with_two_parameters())
+        c.set_parameter_values({"ParamA": 0.25, "DoesNotExist": 9.0})
+        values = c.parameter_values()
+        assert values["ParamA"] == pytest.approx(0.25)
+        assert "DoesNotExist" not in values
+    finally:
+        c.deleteLater()
+
+
+def test_set_parameter_values_with_empty_dict_is_noop(qapp):
+    """No values → no recompute, no signal, no state change."""
+    c = PuppetCanvas()
+    try:
+        c.load_document(_doc_with_two_parameters())
+        before = c.parameter_values()
+        c.set_parameter_values({})
+        assert c.parameter_values() == before
+    finally:
+        c.deleteLater()
+
+
+def test_set_parameter_values_without_document_is_safe(qapp):
+    """Called before load_document the batch setter must not raise."""
+    c = PuppetCanvas()
+    try:
+        c.set_parameter_values({"ParamA": 1.0})   # must not throw
+        assert c.parameter_values() == {}
+    finally:
+        c.deleteLater()
+
+
+def test_set_parameter_values_no_op_when_unchanged(qapp):
+    """Re-pushing the current values should not trigger another vertex
+    recompute. We can't observe the internal counter directly, but we
+    can sanity-check that the second call leaves state untouched."""
+    c = PuppetCanvas()
+    try:
+        c.load_document(_doc_with_two_parameters())
+        c.set_parameter_values({"ParamA": 0.4})
+        snapshot = c.parameter_values()
+        c.set_parameter_values({"ParamA": 0.4})
+        assert c.parameter_values() == snapshot
     finally:
         c.deleteLater()
 

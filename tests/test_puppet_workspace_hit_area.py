@@ -7,7 +7,7 @@ directly so the test doesn't depend on Qt mouse events.
 """
 from __future__ import annotations
 
-from puppet.document import (
+from Imervue.puppet.document import (
     Drawable,
     Expression,
     ExpressionParam,
@@ -17,7 +17,7 @@ from puppet.document import (
     MotionTrack,
     PuppetDocument,
 )
-from puppet.workspace import PuppetWorkspace
+from Imervue.puppet.workspace import PuppetWorkspace
 
 
 def _doc_with_motion_and_expression() -> PuppetDocument:

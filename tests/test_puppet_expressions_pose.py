@@ -5,15 +5,15 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import (
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import (
     Drawable,
     Expression,
     ExpressionParam,
     PoseGroup,
     PuppetDocument,
 )
-from puppet.runtime import (
+from Imervue.puppet.runtime import (
     apply_expression,
     apply_expressions,
     resolve_pose_visibility,

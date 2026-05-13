@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from puppet.input_drivers import (
+from Imervue.puppet.input_drivers import (
     DEFAULT_MOUTH_FORM_PARAM,
     DEFAULT_MOUTH_PARAM,
     audio_to_viseme,

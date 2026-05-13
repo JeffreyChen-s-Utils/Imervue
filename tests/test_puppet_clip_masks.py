@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from puppet.clip_masks import needs_stencil_buffer, resolve_masks
-from puppet.render_prep import DrawCommand
+from Imervue.puppet.clip_masks import needs_stencil_buffer, resolve_masks
+from Imervue.puppet.render_prep import DrawCommand
 
 
 def _cmd(drawable_id: str, *, clip_mask: str | None = None) -> DrawCommand:

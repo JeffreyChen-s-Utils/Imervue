@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import pytest
 
-from puppet.canvas import PuppetCanvas
-from puppet.document import Drawable, Parameter, PuppetDocument
-from puppet.input_engine import InputEngine
+from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
+from Imervue.puppet.input_engine import InputEngine
 
 
 def _doc_with_face_params() -> PuppetDocument:
