@@ -442,19 +442,51 @@ Cubism-native canvases (March 7th is 3503×7777) don't get rejected
 by the DirectShow virtual-camera driver. Aspect ratio is
 preserved; OBS can scale further if needed.
 
-The puppet is rendered to an off-screen framebuffer (no checker
-backdrop, no editor chrome) before being handed to the camera, so
-the streamed frame is just the character on a solid magenta
-background. To drop the magenta in OBS:
+##### Why is the background magenta? (and how to remove it)
 
-1. Right-click the Video Capture Device source → **Filters**
-2. **Effect Filters → + → Color Key**
-3. Key Color Type: **Custom Color**, hex `#FF00FF`
-4. Bump *Similarity* if any magenta edges leak through
+Virtual cameras run over **DirectShow** (Windows) / **AVFoundation**
+(macOS) / **v4l2loopback** (Linux). All three transports are
+**RGB-only — no alpha channel**. OBS's *Video Capture Device*
+source treats whatever the camera sends as opaque RGB, so whatever
+colour Imervue puts behind the character is what OBS displays.
 
-If the character has magenta in its colour palette (unusual but
-possible), see the NDI path below — NDI carries the alpha channel
-directly so no chroma keying is needed.
+Imervue picks **magenta `#FF00FF`** as that background because
+it's the industry-standard chroma-key colour: it almost never
+appears in skin tones, hair, or eye colours, so the chroma-key
+threshold can be wide open without eating into the character.
+
+To drop the magenta in OBS:
+
+1. Right-click the *Video Capture Device* source you added → **Filters**
+2. In the bottom-left **Effect Filters** panel → **+** → **Color Key**
+3. Configure:
+   - **Key Color Type**: `Custom Color`
+   - **Custom Color**: HEX `FF00FF` (or R = 255 / G = 0 / B = 255)
+   - **Similarity**: start at `80`, raise toward `200–300` if any
+     magenta edges still show. Higher = more aggressive removal.
+   - **Smoothness**: `30–50` softens the edge so the cut doesn't
+     look hard / pixelated.
+4. Close the dialog. OBS attaches the filter to the source, so
+   the next time you enable the virtual camera the chroma-key
+   is automatically applied.
+
+If the character has magenta in its palette (unusual but possible
+on costume / prop art), the chroma key will eat those pixels too.
+Switch to the NDI path below — NDI carries the alpha channel
+directly so no chroma-keying is needed.
+
+**Troubleshooting: I still see magenta in OBS**
+
+- Verify the Color Key filter is attached to the **Video Capture
+  Device** source, not to a Scene. Filters on the source travel
+  with it; filters on the Scene apply on top after the source
+  rendered.
+- Check the hex is `FF00FF` exactly — `FF00FE` or similar won't
+  catch all the magenta pixels.
+- Bump *Similarity* up to `300` if there's a thin halo of magenta
+  pixels at the character's outline. The edges come from
+  GL_LINEAR interpolation against the magenta backdrop; a wider
+  similarity tolerance eats them.
 
 #### B. NDI (lowest latency, pro-grade)
 

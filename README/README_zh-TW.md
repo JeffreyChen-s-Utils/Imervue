@@ -429,14 +429,32 @@ JSON 為主，人類可 diff，沒有專利二進位。
 
 Imervue 會把輸出影格的長邊強制壓到 1080 px，所以 Cubism 原生畫布（March 7th 是 3503×7777）不會被 DirectShow 虛擬攝影機驅動拒絕。長寬比保留，OBS 端可以再縮。
 
-每一幀都會用 off-screen framebuffer 重畫 — 只渲染角色本身、不含棋盤格背景與編輯器外殼。所以 OBS 看到的就是「角色 + 一張純洋紅色背景」。OBS 端去背：
+每一幀都會用 off-screen framebuffer 重畫 — 只渲染角色本身、不含棋盤格背景與編輯器外殼。所以 OBS 看到的就是「角色 + 一張純洋紅色背景」。
 
-1. 視訊擷取裝置來源右鍵 → **濾鏡（Filters）**
-2. **效果濾鏡 → + → 色彩鍵（Color Key）**
-3. Key Color Type 選 **Custom Color**，HEX `#FF00FF`
-4. 邊緣若有殘留洋紅色可以調整 *Similarity* 容差
+##### 為什麼是洋紅色背景？（以及怎麼去掉）
 
-若你的角色配色裡剛好有洋紅色（罕見但可能），改走 NDI — 直接帶 alpha 通道，不用色鍵。
+虛擬攝影機走的是 **DirectShow**（Windows）/ **AVFoundation**（macOS）/ **v4l2loopback**（Linux），這三種傳輸格式**只有 RGB、沒有 alpha 通道**。OBS 的「視訊擷取裝置」來源把進來的影像當成不透明 RGB，所以 Imervue 在角色以外填什麼顏色，OBS 就顯示什麼顏色。
+
+選 **洋紅色 `#FF00FF`** 是業界標準的 chroma-key 色：它幾乎不會出現在自然膚色、髮色、瞳色裡，去背容差可以開很寬而不誤傷角色。
+
+OBS 端去背步驟：
+
+1. 加進來的「視訊擷取裝置」來源右鍵 → **濾鏡（Filters）**
+2. 左下角 **效果濾鏡（Effect Filters）** 區塊 → **+** → **色彩鍵（Color Key）**
+3. 設定：
+   - **Key Color Type**：`Custom Color`
+   - **Custom Color**：HEX 輸入 `FF00FF`（或 R = 255 / G = 0 / B = 255）
+   - **Similarity**：從 `80` 開始，邊緣若有殘留洋紅色拉到 `200–300`。數值越大去得越乾淨
+   - **Smoothness**：`30–50`，讓邊緣不要太硬、不會像 pixel art
+4. 關閉對話框。OBS 把這條濾鏡跟來源綁在一起，之後啟用虛擬攝影機都自動套用
+
+若你的角色配色裡剛好有洋紅色（罕見、costume / 道具上可能），色鍵會把那些像素也吃掉。改走下面的 NDI — 帶 alpha 通道，不用色鍵。
+
+**疑難排解：OBS 還是看得到洋紅色**
+
+- 確認 Color Key 濾鏡是加在**視訊擷取裝置來源本身**，不是加在 Scene 上。加在來源上的濾鏡跟著走；加在 Scene 的會晚一步、在來源繪製完之後才作用。
+- HEX 確認是 `FF00FF` 一字不差 — `FF00FE` 之類捕不到全部洋紅色像素。
+- 角色輪廓邊緣若有一圈薄薄的洋紅色 halo，把 *Similarity* 拉到 `300`。那一圈是 GL_LINEAR 在角色邊緣跟洋紅色背景內插出來的，容差放寬就能蓋掉。
 
 #### B. NDI（低延遲、專業）
 
