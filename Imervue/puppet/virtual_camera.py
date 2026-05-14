@@ -39,6 +39,23 @@ DEFAULT_FPS: int = 30
 MAX_OUTPUT_DIMENSION: int = 1080
 
 
+def _widget_capture_size(widget) -> tuple[int, int]:
+    """Pixel-space size of ``widget`` (Qt logical size × devicePixelRatio).
+
+    The QOpenGLWidget framebuffer ``grabFramebuffer`` hands back is
+    at this *physical* size, not the logical Qt size — failing to
+    apply the DPR scale on HiDPI screens would also produce stretched
+    output. Pure helper so the streaming-outputs scaler can be
+    unit-tested with a stand-in widget."""
+    if widget is None:
+        return 0, 0
+    ratio = (
+        widget.devicePixelRatioF()
+        if hasattr(widget, "devicePixelRatioF") else 1.0
+    )
+    return int(widget.width() * ratio), int(widget.height() * ratio)
+
+
 def _scale_for_streaming(width: int, height: int) -> tuple[int, int]:
     """Scale ``(width, height)`` so the longest side is at most
     :data:`MAX_OUTPUT_DIMENSION`, preserving aspect ratio.
@@ -122,7 +139,18 @@ class VirtualCameraOutput(QObject):
         except ImportError:
             logger.info("pyvirtualcam not installed; virtual camera unavailable")
             return False
-        width, height = _scale_for_streaming(*document.size)
+        # Match the camera's aspect ratio to what's actually on the
+        # screen — the GL framebuffer we capture each tick is at the
+        # widget's pixel size, not the document's logical canvas
+        # size. Opening the camera at the document aspect (e.g. the
+        # 3503×7777 portrait Cubism canvas) while the user is looking
+        # at a 1200×800 landscape widget would force IgnoreAspectRatio
+        # scaling and visibly stretch the puppet. "Stream what you
+        # see" is also the mental model most users expect.
+        src_w, src_h = _widget_capture_size(self._canvas)
+        if src_w <= 0 or src_h <= 0:
+            src_w, src_h = document.size
+        width, height = _scale_for_streaming(src_w, src_h)
         try:
             self._camera = pyvirtualcam.Camera(
                 width=int(width), height=int(height), fps=self._fps,
@@ -172,15 +200,26 @@ class VirtualCameraOutput(QObject):
 
 def _qimage_to_rgb_array(image, target_width: int, target_height: int):
     """Convert a QImage to an HxWx3 uint8 numpy array sized to
-    ``(target_height, target_width)``. Returns ``None`` for degenerate
-    inputs."""
+    exactly ``(target_height, target_width)``.
+
+    Aspect ratio is **preserved** — the source image is scaled to
+    fit within the target box (Qt's KeepAspectRatio), then the
+    result is centred onto a black-filled buffer of the target size
+    if the aspect ratios don't match. This is the fix for the
+    "puppet looks stretched in OBS" report: the camera is opened
+    at the widget's aspect ratio at start, but if the user resizes
+    the window mid-stream the captured framebuffer no longer
+    matches; preserving aspect prevents the distortion at the cost
+    of black bars on resize."""
     import numpy as np
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QImage as _QImage
+    if target_width <= 0 or target_height <= 0:
+        return None
     if image.width() != target_width or image.height() != target_height:
         image = image.scaled(
             target_width, target_height,
-            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
     if image.format() != _QImage.Format.Format_RGB888:
@@ -192,7 +231,19 @@ def _qimage_to_rgb_array(image, target_width: int, target_height: int):
     ptr = image.constBits()
     if hasattr(ptr, "setsize"):
         ptr.setsize(image.sizeInBytes())
-    arr = np.frombuffer(bytes(ptr), dtype=np.uint8).reshape(
+    scaled = np.frombuffer(bytes(ptr), dtype=np.uint8).reshape(
         (height, image.bytesPerLine()),
     )
-    return arr[:, : width * 3].reshape((height, width, 3)).copy()
+    scaled = scaled[:, : width * 3].reshape((height, width, 3)).copy()
+    if width == target_width and height == target_height:
+        return scaled
+    # Aspect didn't match — centre the scaled image on a black canvas
+    # at the camera's target size. Streamers who want a chroma-key
+    # background can run an OBS Color Key filter on the matte
+    # colour, OR resize the puppet workspace tab before enabling
+    # the virtual camera so the aspects line up.
+    canvas = np.zeros((target_height, target_width, 3), dtype=np.uint8)
+    off_x = (target_width - width) // 2
+    off_y = (target_height - height) // 2
+    canvas[off_y:off_y + height, off_x:off_x + width] = scaled
+    return canvas

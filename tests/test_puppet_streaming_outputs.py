@@ -91,3 +91,85 @@ def test_ndi_output_reuses_virtual_camera_scaler():
     from Imervue.puppet import ndi_output
     from Imervue.puppet.virtual_camera import _scale_for_streaming as src
     assert ndi_output._scale_for_streaming is src   # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Aspect ratio fix — widget-aspect camera, KeepAspectRatio + pad scaler
+# ---------------------------------------------------------------------------
+
+
+class _FakeWidget:
+    """Stand-in for QOpenGLWidget exposing only the attributes
+    ``_widget_capture_size`` reads."""
+
+    def __init__(self, w, h, dpr=1.0):
+        self._w = w
+        self._h = h
+        self._dpr = dpr
+
+    def width(self): return self._w
+    def height(self): return self._h
+    def devicePixelRatioF(self): return self._dpr
+
+
+def test_widget_capture_size_applies_device_pixel_ratio():
+    """HiDPI screens render the QOpenGLWidget at logical-size ×
+    DPR physical pixels. Without DPR scaling the camera would open
+    at the logical size, mismatching the framebuffer."""
+    from Imervue.puppet.virtual_camera import _widget_capture_size
+    assert _widget_capture_size(_FakeWidget(800, 600, dpr=1.0)) == (800, 600)
+    assert _widget_capture_size(_FakeWidget(800, 600, dpr=2.0)) == (1600, 1200)
+    assert _widget_capture_size(_FakeWidget(1200, 800, dpr=1.5)) == (1800, 1200)
+
+
+def test_widget_capture_size_handles_none():
+    """Defensive: caller may pass ``None`` if the canvas isn't
+    attached yet."""
+    from Imervue.puppet.virtual_camera import _widget_capture_size
+    assert _widget_capture_size(None) == (0, 0)
+
+
+def test_qimage_to_rgb_array_preserves_aspect_on_match(qapp):
+    """When source and target dimensions match exactly, the helper
+    should not introduce any padding."""
+    import numpy as np
+    from PySide6.QtGui import QImage
+    from Imervue.puppet.virtual_camera import _qimage_to_rgb_array
+
+    src = QImage(640, 360, QImage.Format.Format_RGB888)
+    src.fill(0xFF8080)   # solid red
+    arr = _qimage_to_rgb_array(src, 640, 360)
+    assert arr.shape == (360, 640, 3)
+    # All pixels carry the source colour — no padding bars.
+    assert np.unique(arr.reshape(-1, 3), axis=0).shape == (1, 3)
+
+
+def test_qimage_to_rgb_array_pads_on_aspect_mismatch(qapp):
+    """When the source is wider than the target, the helper should
+    letterbox the result on a black canvas — not stretch."""
+    import numpy as np
+    from PySide6.QtGui import QImage
+    from Imervue.puppet.virtual_camera import _qimage_to_rgb_array
+
+    src = QImage(1920, 1080, QImage.Format.Format_RGB888)
+    src.fill(0xFF0000)
+    # Target is a tall portrait box — source must letterbox
+    # (centred horizontally) with black bars top and bottom.
+    arr = _qimage_to_rgb_array(src, 540, 1080)
+    assert arr.shape == (1080, 540, 3)
+    # Centre column has the source colour somewhere — the scaled
+    # image is letterboxed inside the target.
+    has_source_color = np.any((arr == [255, 0, 0]).all(axis=-1))
+    has_black_padding = np.any((arr == [0, 0, 0]).all(axis=-1))
+    assert has_source_color, "source colour disappeared after pad-to-fit"
+    assert has_black_padding, "expected black bars in aspect-mismatch case"
+
+
+def test_qimage_to_rgb_array_rejects_zero_target(qapp):
+    """Defensive: zero target dimensions return ``None`` so the
+    caller can refuse the frame rather than crash."""
+    from PySide6.QtGui import QImage
+    from Imervue.puppet.virtual_camera import _qimage_to_rgb_array
+    src = QImage(640, 360, QImage.Format.Format_RGB888)
+    assert _qimage_to_rgb_array(src, 0, 100) is None
+    assert _qimage_to_rgb_array(src, 100, 0) is None
