@@ -1495,6 +1495,16 @@ Puppet 작업 공간 (Puppet 탭)
 
 Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7Th 또는 자신의 ``.puppet`` 을 열 수 있습니다. 하단 **Motions** 도크의 모션을 클릭하면 재생됩니다.
 
+**동봉 예제 실행 — 단계별 가이드:**
+
+1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 wheel 과 Nuitka EXE 양쪽에 번들되어 있어 설치 경로 어디에서나 rig 파일을 사용할 수 있습니다.
+2. 창 상단의 **Puppet** 탭을 클릭.
+3. 도구 모음 → **File > Examples > March 7Th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
+4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 정지, 다른 모션 선택 시 크로스페이드.
+5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서 추적), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
+6. 도구 모음의 **Reset to rest** 는 모든 모션 중지, 모든 실시간 드라이버 끄기, expressions / pose 오버라이드 제거, 모든 매개변수를 기본값으로 되돌리기 — 표준 "처음부터 다시" 버튼.
+7. 나중에 다른 rig 열기: **File > Open Puppet…** 디스크에서 임의의 ``.puppet`` zip 선택; **File > Examples ▾** 은 항상 동봉 목록에 바인딩됩니다.
+
 OBS 라이브 스트리밍
 ^^^^^^^^^^^^^^^^^^^
 
@@ -1539,7 +1549,7 @@ DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음*
    * - Open Puppet… / Examples ▾
      - 디스크에서 ``.puppet`` 로드, 또는 ``examples/puppet/`` 의 동봉 rig 를 도구 모음에서 직접 선택
    * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 자동 메시, PSD 레이어 분할, Cubism ``.moc3`` sample-and-reconstruct (SDK 는 사용자 제공)
+     - PNG 자동 메시, PSD 레이어 분할, Cubism rig 의 sample-and-reconstruct. Cubism 파일 선택기는 ``.moc3`` 와 ``.model3.json`` 둘 다 받으며, 작업 공간에 rig 가 열려 있지 않을 때는 어느 경로든 완전한 ``.moc3 → .puppet`` 변환이 실행됩니다 (SDK 는 사용자 제공). rig 가 이미 열려 있는 상태에서 ``.model3.json`` 을 고르면 JSON 메타데이터 (motions / expressions / physics) 가 활성 문서에 병합됩니다
    * - Save As…
      - 현재 rig 을 ``.puppet`` zip 으로 출력
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter

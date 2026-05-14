@@ -49,6 +49,8 @@ from Imervue.puppet.cubism_import import (
     load_physics3,
     load_pose3,
 )
+from Imervue.puppet.cubism_native_bridge import CubismBridgeError
+from Imervue.puppet.cubism_native_convert import cubism_to_puppet
 from Imervue.puppet.expression_dock import ExpressionDock
 from Imervue.puppet.idle_driver import IdleDriver
 from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
@@ -1319,7 +1321,7 @@ class PuppetWorkspace(QMainWindow):
             self,
             lang.get("puppet_import_cubism_title", "Import Cubism file"),
             "",
-            "Cubism (*.model3.json *.motion3.json *.exp3.json "
+            "Cubism (*.moc3 *.model3.json *.motion3.json *.exp3.json "
             "*.physics3.json *.pose3.json *.cdi3.json)",
         )
         if not path:
@@ -1327,22 +1329,45 @@ class PuppetWorkspace(QMainWindow):
         self.import_cubism(path)
 
     def import_cubism(self, path: str | Path) -> bool:
-        """Route by filename suffix: ``.model3.json`` loads the bundle
-        and merges everything; ``.motion3.json`` and ``.exp3.json``
-        append a single motion or expression. The active document is
-        required — there's no rig to attach the imported assets to
-        without one. Returns ``True`` on success."""
+        """Route by filename suffix.
+
+        ``.moc3`` always triggers a full conversion via the Cubism
+        Native SDK — drawables, textures, parameter morphs are sampled
+        and a fresh :class:`PuppetDocument` is built. Any existing
+        document is replaced.
+
+        ``.model3.json`` behaves the same way when no document is
+        active (full conversion through the bundled ``.moc3``); when a
+        document is already loaded, it merges the JSON-only metadata
+        (motions, expressions, physics, …) onto it.
+
+        Other Cubism JSON files (``.motion3.json``, ``.exp3.json``,
+        ``.physics3.json``, ``.pose3.json``, ``.cdi3.json``) append a
+        single asset to the active document; without an active
+        document they bail with a friendly status message.
+
+        Returns ``True`` on success."""
+        path_str = str(path)
         doc = self._canvas.document()
-        if doc is None:
+        lower = path_str.lower()
+        wants_full_conversion = (
+            lower.endswith(".moc3")
+            or (lower.endswith(".model3.json") and doc is None)
+        )
+        if doc is None and not wants_full_conversion:
             self._announce(
                 "puppet_cubism_no_document",
                 "Open or import a puppet first before adding Cubism assets.",
             )
             return False
-        path_str = str(path)
         try:
-            self._dispatch_cubism_import(doc, path_str)
-        except (FileNotFoundError, CubismFormatError, OSError) as exc:
+            new_doc = self._dispatch_cubism_import(doc, path_str)
+        except (
+            FileNotFoundError,
+            CubismFormatError,
+            CubismBridgeError,
+            OSError,
+        ) as exc:
             logger.warning("Cubism import failed for %s: %s", path_str, exc)
             self._status_label.setText(
                 language_wrapper.language_word_dict.get(
@@ -1350,18 +1375,29 @@ class PuppetWorkspace(QMainWindow):
                 ).format(error=str(exc)),
             )
             return False
-        self._canvas.load_document(doc)
+        target_doc = new_doc if new_doc is not None else doc
+        self._canvas.load_document(target_doc)
         self._announce(
             "puppet_cubism_imported", "Imported Cubism asset {name}",
             name=Path(path_str).name,
         )
         return True
 
-    def _dispatch_cubism_import(self, doc, path_str: str) -> None:
+    def _dispatch_cubism_import(self, doc, path_str: str):
+        """Apply one Cubism file. Returns a fresh :class:`PuppetDocument`
+        when the import built one from scratch (``.moc3``, or
+        ``.model3.json`` without an active document); otherwise mutates
+        ``doc`` in place and returns ``None``."""
         lower = path_str.lower()
+        if lower.endswith(".moc3"):
+            model3 = self._guess_model3_for_moc3(path_str)
+            return cubism_to_puppet(model3)
         if lower.endswith(".model3.json"):
+            if doc is None:
+                return cubism_to_puppet(path_str)
             apply_bundle(doc, load_model3(path_str))
-        elif lower.endswith(".motion3.json"):
+            return None
+        if lower.endswith(".motion3.json"):
             doc.motions.append(load_motion3(path_str))
         elif lower.endswith(".exp3.json"):
             doc.expressions.append(load_exp3(path_str))
@@ -1375,6 +1411,27 @@ class PuppetWorkspace(QMainWindow):
             raise CubismFormatError(
                 f"unrecognised Cubism file extension on {path_str}",
             )
+        return None
+
+    @staticmethod
+    def _guess_model3_for_moc3(moc3_path: str) -> str:
+        """Cubism's full-conversion entry point reads ``.model3.json``
+        (it carries the texture list, hit areas, group metadata …),
+        not the raw ``.moc3``. Most Cubism distributions ship the two
+        side-by-side: ``Foo.moc3`` next to ``Foo.model3.json``. Find
+        that sibling — or raise ``CubismFormatError`` so the caller
+        can surface a readable message."""
+        moc = Path(moc3_path)
+        base = moc.stem  # strips just ``.moc3``
+        candidate = moc.with_name(f"{base}.model3.json")
+        if candidate.is_file():
+            return str(candidate)
+        for sibling in moc.parent.glob("*.model3.json"):
+            return str(sibling)
+        raise CubismFormatError(
+            f"no .model3.json sibling next to {moc.name} — Cubism's "
+            "full-model import needs the manifest, not just the .moc3",
+        )
 
     def import_png(self, path: str | Path, *, cell_size: int = DEFAULT_CELL_SIZE) -> bool:
         """Build a single-drawable puppet from ``path``'s PNG and load

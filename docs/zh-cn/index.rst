@@ -1458,6 +1458,16 @@ Puppet 工作区（Puppet 标签）
 
 Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7Th 或自己的 ``.puppet`` 打开。下方 **Motions** 停靠栏点任一个动作即播。
 
+**执行内置示例 — 分步演示：**
+
+1. **启动 Imervue**。源码运行：``python -m Imervue``；安装版：直接执行 ``Imervue`` 可执行文件 / app bundle。``examples/`` 目录已打包进 wheel 与 Nuitka EXE，rig 文件位于安装目录下。
+2. 点窗口顶部的 **Puppet** 标签。
+3. 工具栏 → **File > Examples > March 7Th**（或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
+4. 在底部 **Motions** 停靠栏单击任一个动作条目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即开始播放；再点一次停止，或选别的动作交叉淡入。
+5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**（头跟光标）、**Auto-blink**（自动眨眼）、**Auto idle** + **Idle motions**（呼吸 + 随机 idle 动作）、**Mic lip-sync**（麦克风 RMS 带动嘴型）、**Webcam tracking**（MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
+6. 工具栏 **Reset to rest** 停掉所有动作、取消勾所有实时驱动、清掉 expressions / pose 覆盖，所有参数复位 — 标准的「从头开始」按钮。
+7. 之后要打开别的 rig：**File > Open Puppet…** 从磁盘挑任何 ``.puppet`` zip；**File > Examples ▾** 始终连到内置清单。
+
 OBS 直播整合
 ^^^^^^^^^^^^
 
@@ -1502,7 +1512,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
    * - Open Puppet… / Examples ▾
      - 从磁盘加载 ``.puppet``，或从工具栏直接挑 ``examples/puppet/`` 下内置的 rig
    * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 自动 mesh、PSD 分层拆 drawable、Cubism ``.moc3`` sample-and-reconstruct（SDK 用户自备）
+     - PNG 自动 mesh、PSD 分层拆 drawable、Cubism rig sample-and-reconstruct。Cubism 文件选择器同时接受 ``.moc3`` 和 ``.model3.json``；工作区还没开 rig 时两条路径都跑完整 ``.moc3 → .puppet`` 转换（SDK 用户自备）。已经开了 rig 时选 ``.model3.json`` 会把 JSON 部分（motions / expressions / physics）叠加到既有文档
    * - Save As…
      - 把当前 rig 写成 ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter

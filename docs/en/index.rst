@@ -790,6 +790,34 @@ Open the Puppet tab, click **Open Puppet…**, point at
 slider to drive a joint, or click one of the motions in the Motions
 dock — single-click binds the motion and starts playback immediately.
 
+**Running the bundled example, step by step:**
+
+1. Launch Imervue. From source: ``python -m Imervue``. From the
+   packaged build: run the ``Imervue`` executable / app bundle. The
+   ``examples/`` directory is bundled into both the wheel and the
+   Nuitka EXE, so the rig is on disk wherever you installed.
+2. Click the **Puppet** tab at the top of the window.
+3. Toolbar → **File > Examples > March 7Th** (or the toolbar's
+   **Examples ▾** dropdown). The 307-drawable rig loads centred and
+   the parameter dock fills with the 203 Cubism-standard sliders.
+4. In the bottom **Motions** dock, single-click any motion entry
+   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
+   Playback starts immediately; click again to stop, or pick a
+   different motion to cross-fade into it.
+5. Toggle the live-input switches on the toolbar to drive the rig
+   from your own inputs — **Drag-track head** for cursor look-at,
+   **Auto-blink** for cyclic eye-close, **Auto idle** + **Idle
+   motions** for breath + random Idle clips, **Mic lip-sync** for
+   mouth-open from microphone RMS, **Webcam tracking** for full
+   head + eyes + mouth from MediaPipe FaceLandmarker.
+6. **Reset to rest** on the toolbar stops every motion, untoggles
+   every live driver, clears expressions / pose overrides, and snaps
+   every parameter back to its default — the canonical "start over"
+   action.
+7. To open a different rig later: **File > Open Puppet…** picks any
+   ``.puppet`` zip from disk; **File > Examples ▾** stays bound to
+   the bundled list.
+
 ``.puppet`` file format (v1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -841,7 +869,12 @@ Toolbar reference
        bundled under ``examples/puppet/`` directly from the toolbar
    * - Import PNG… / Import PSD… / Import Cubism…
      - Auto-mesh a PNG, layer-split a PSD, or sample-and-reconstruct
-       a Cubism ``.moc3`` (Cubism Native SDK user-supplied)
+       a Cubism rig. The Cubism picker accepts both ``.moc3`` and
+       ``.model3.json``; with no rig open either path runs the full
+       ``.moc3 → .puppet`` conversion (user-supplied Cubism Native
+       SDK). Picking ``.model3.json`` while a rig is loaded merges
+       its JSON-only metadata (motions / expressions / physics) onto
+       the active document instead.
    * - Recent
      - Quickly reopen a recently-opened puppet
    * - Save As…

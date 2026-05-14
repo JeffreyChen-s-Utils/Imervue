@@ -339,12 +339,16 @@ Good for: artist-supplied multi-layer character files.
 
 ### From a Cubism `.moc3`
 
-**File > Import Cubism…** runs the sample-and-reconstruct
-converter:
+**File > Import Cubism…** accepts both raw `.moc3` files and the
+matching `.model3.json` manifest — whichever the user picks, when
+the workspace has no rig open yet the importer runs the
+sample-and-reconstruct conversion end-to-end:
 
 1. Loads `.moc3` via the Cubism Native SDK (user-supplied — drop
    the SDK under `<cwd>/sdk/` or point `CUBISM_CORE_DLL` env var
-   at the DLL).
+   at the DLL). Picking the raw `.moc3` works as long as the
+   matching `.model3.json` sits next to it; the workspace looks
+   the manifest up automatically.
 2. Sweeps every Cubism parameter through its min / max values
    and records the deformed vertex positions per drawable.
 3. Captures parameter-driven *visibility* transitions too — so
@@ -356,6 +360,15 @@ converter:
 Output: a self-contained `.puppet` zip you can ship without
 redistributing the Cubism SDK (the SDK is never bundled — that's
 required by Live2D's Free Material License).
+
+> **Merging onto an existing rig.** When a `.puppet` is already
+> loaded, picking a `.model3.json` instead layers its JSON-only
+> metadata (motions, expressions, physics, hit areas, display
+> names) onto the active document — useful for retargeting a
+> Cubism motion library onto a hand-authored PSD rig. The raw
+> `.moc3` path always builds a fresh document; if you want to
+> add motions to an existing rig, pick the `.model3.json` or one
+> of the per-asset `.motion3.json` / `.exp3.json` files instead.
 
 ---
 
