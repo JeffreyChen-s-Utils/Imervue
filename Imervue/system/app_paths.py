@@ -75,6 +75,13 @@ def user_settings_path() -> Path:
     return app_dir() / "user_setting.json"
 
 
+def examples_dir() -> Path:
+    """``<app_dir>/examples/`` — bundled example assets (e.g. demo
+    ``.puppet`` rigs the user can open from the Puppet tab's
+    *File > Examples* submenu without leaving the app)."""
+    return app_dir() / "examples"
+
+
 def frozen_site_packages() -> Path:
     """``<app_dir>/lib/site-packages/`` — where plugin pip-installs land in frozen builds."""
     return app_dir() / "lib" / "site-packages"

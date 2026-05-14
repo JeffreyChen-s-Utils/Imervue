@@ -358,6 +358,13 @@ Press `E` from Deep Zoom to send the current image straight into a new Paint tab
 
 The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
 
+> **Full walkthrough**: [`puppet_guide.md`](puppet_guide.md) covers the
+> end-to-end flow for both live streaming (OBS / NDI / virtual camera)
+> and animation production (recording / timeline editing / MP4
+> export). Chinese versions at
+> [`puppet_guide.zh-TW.md`](puppet_guide.zh-TW.md) and
+> [`puppet_guide.zh-CN.md`](puppet_guide.zh-CN.md).
+
 ### File format
 
 `.puppet` is a zip container:
@@ -408,9 +415,113 @@ The **Cubism Native SDK** can be plugged in (user-supplied DLL — Live2D's Free
 
 - **Capture frame…** saves a PNG of the current canvas via `glReadPixels`
 - **Record…** toggles a 30 FPS frame loop into GIF / WebM / MP4 via `imageio`
-- **NDI output** for streaming into OBS / Zoom (optional `ndi-python` dep)
-- **VTube Studio API server** — opt-in OBS-friendly remote control
-- **Virtual camera** stream
+- **Virtual camera** — exposes the puppet canvas as a system webcam
+- **NDI output** — broadcasts the puppet as an NDI source on the LAN
+- **VTube Studio API server** — opt-in WebSocket API for VTS-compatible clients
+
+### Live streaming to OBS
+
+Two supported paths. Pick A for "just works", B if you want the
+lowest latency and best quality on a fast LAN.
+
+#### A. Virtual camera (easiest)
+
+The puppet canvas appears as a webcam OBS picks up via its standard
+Video Capture Device source.
+
+1. `pip install pyvirtualcam`
+2. Install the platform driver:
+   - **Windows**: OBS Studio 26+ ships the *OBS Virtual Camera*
+     driver. After installing OBS, open it once and click **Start
+     Virtual Camera** in the bottom-right panel — that registers
+     the driver system-wide so `pyvirtualcam` can find it.
+   - **macOS**: OBS for Mac ships an OBS Virtual Camera system
+     extension. First run will prompt to enable it under
+     System Settings → Privacy & Security.
+   - **Linux**: `sudo modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"` (install `v4l2loopback-dkms` first).
+3. In the Puppet tab, open your rig, then toggle **Output > Virtual
+   camera**. The status bar shows the exact device name to pick.
+4. In OBS: **Sources > + > Video Capture Device**, pick the device
+   named in step 3 (typically *OBS Virtual Camera*).
+
+Imervue caps the streaming output's longest side at 1080 px so
+Cubism-native canvases (March 7th is 3503×7777) don't get rejected
+by the DirectShow virtual-camera driver. Aspect ratio is
+preserved; OBS can scale further if needed.
+
+##### Why is the background magenta? (and how to remove it)
+
+Virtual cameras run over **DirectShow** (Windows) / **AVFoundation**
+(macOS) / **v4l2loopback** (Linux). All three transports are
+**RGB-only — no alpha channel**. OBS's *Video Capture Device*
+source treats whatever the camera sends as opaque RGB, so whatever
+colour Imervue puts behind the character is what OBS displays.
+
+Imervue picks **magenta `#FF00FF`** as that background because
+it's the industry-standard chroma-key colour: it almost never
+appears in skin tones, hair, or eye colours, so the chroma-key
+threshold can be wide open without eating into the character.
+
+To drop the magenta in OBS:
+
+1. Right-click the *Video Capture Device* source you added → **Filters**
+2. In the bottom-left **Effect Filters** panel → **+** → **Color Key**
+3. Configure:
+   - **Key Color Type**: `Custom Color`
+   - **Custom Color**: HEX `FF00FF` (or R = 255 / G = 0 / B = 255)
+   - **Similarity**: start at `80`, raise toward `200–300` if any
+     magenta edges still show. Higher = more aggressive removal.
+   - **Smoothness**: `30–50` softens the edge so the cut doesn't
+     look hard / pixelated.
+4. Close the dialog. OBS attaches the filter to the source, so
+   the next time you enable the virtual camera the chroma-key
+   is automatically applied.
+
+If the character has magenta in its palette (unusual but possible
+on costume / prop art), the chroma key will eat those pixels too.
+Switch to the NDI path below — NDI carries the alpha channel
+directly so no chroma-keying is needed.
+
+**Troubleshooting: I still see magenta in OBS**
+
+- Verify the Color Key filter is attached to the **Video Capture
+  Device** source, not to a Scene. Filters on the source travel
+  with it; filters on the Scene apply on top after the source
+  rendered.
+- Check the hex is `FF00FF` exactly — `FF00FE` or similar won't
+  catch all the magenta pixels.
+- Bump *Similarity* up to `300` if there's a thin halo of magenta
+  pixels at the character's outline. The edges come from
+  GL_LINEAR interpolation against the magenta backdrop; a wider
+  similarity tolerance eats them.
+
+#### B. NDI (lowest latency, pro-grade)
+
+NDI (Newtek's Network Device Interface) carries the puppet over
+the LAN at sub-50 ms latency with the alpha channel intact.
+
+1. Download and install **NDI Tools** from
+   <https://ndi.video/tools/> (includes the NDI runtime).
+2. `pip install ndi-python`
+3. Install the **obs-ndi** plugin into OBS:
+   <https://github.com/obs-ndi/obs-ndi/releases>
+4. In the Puppet tab, toggle **Output > NDI output**. The status
+   bar reports the NDI source name (default *Imervue Puppet*).
+5. In OBS: **Sources > + > NDI Source**, pick the source from
+   step 4.
+
+NDI broadcasts at the same 1080-capped resolution as path A, but
+delivers RGBA — the off-screen render produces a transparent
+background outside the character, NDI ships the alpha channel
+intact, and OBS / vMix composite the puppet directly over your
+scene without any chroma-key pass.
+
+#### C. Window capture (fallback)
+
+OBS **Sources > + > Window Capture** can grab the Imervue window
+directly, no extra dependencies needed. Lower quality and you have
+to crop the chrome out yourself, but it works on locked-down
+machines where you can't install drivers.
 
 ### Demo
 

@@ -184,3 +184,94 @@ def test_shutdown_safe_when_nothing_running(qapp):
     finally:
         engine.deleteLater()
         canvas.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Blink robustness — must fire repeatedly even when other drivers write
+# the same eye-param value between blink ticks
+# ---------------------------------------------------------------------------
+
+
+def test_blink_runs_multiple_cycles_against_competing_writer(qapp):
+    """Reproduces the "blink only fires once" bug. Simulate 10 s of
+    blink ticks against a canvas that also has a competing driver
+    (a stand-in for motion player / webcam tracker) writing the
+    eye-param back to 1.0 between every blink tick. Without
+    ``force_parameter_values`` the canvas's equality check would
+    mask every blink curve transition after the first one.
+
+    We expect to see ≥ 2 distinct "eye closed" windows (value < 0.5)
+    spaced ~4.5 s apart — proof that the blink driver isn't getting
+    stomped by the competing writes."""
+    from unittest.mock import patch
+    from Imervue.puppet.canvas import PuppetCanvas
+    from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
+    from Imervue.puppet.input_engine import InputEngine
+
+    doc = PuppetDocument(size=(64, 64))
+    doc.parameters = [
+        Parameter(id="ParamEyeLOpen", min=0.0, max=1.0, default=1.0),
+        Parameter(id="ParamEyeROpen", min=0.0, max=1.0, default=1.0),
+    ]
+    doc.drawables = [Drawable(
+        id="x", texture="textures/x.png",
+        vertices=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        indices=[0, 1, 2],
+        uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        draw_order=0,
+    )]
+
+    canvas = PuppetCanvas()
+    canvas.load_document(doc)
+    try:
+        engine = InputEngine(canvas)
+        engine.set_blink_enabled(True)
+
+        # Sample what blink wrote IMMEDIATELY after its tick — before
+        # the competing writer stomps it. This mirrors what the
+        # renderer would have painted between ticks.
+        writes = []
+        anchor = engine._blink_anchor   # noqa: SLF001
+        for tick in range(300):  # 10 s at 30 Hz
+            fake_t = anchor + tick / 30.0
+            with patch("time.monotonic", return_value=fake_t):
+                engine._on_blink_tick()   # noqa: SLF001
+            writes.append(canvas.parameter_values()["ParamEyeLOpen"])
+            # Competing writer pushes the eye back to 1.0 *after*
+            # blink fires — simulates motion player / webcam tracker
+            # racing the blink driver. Without force_parameter_values
+            # the next blink tick's open-window 1.0 write would match
+            # the existing 1.0 and the canvas would skip the
+            # recompute. The bug surfaces inside the downward-sweep
+            # window: blink writes 0.69, canvas has 1.0, but the
+            # WRITE is skipped if value matches what's there at the
+            # nanosecond the competing writer fired.
+            canvas.set_parameter_values({"ParamEyeLOpen": 1.0})
+
+        closes = [t for t, v in enumerate(writes) if v < 0.5]
+        # First blink ~tick 1-4; second ~tick 136-139 (4.5 s later)
+        assert len(closes) >= 6, (
+            f"expected ≥ 6 closed-eye frames across two blinks, "
+            f"got {len(closes)}: {closes}"
+        )
+        early = [t for t in closes if t < 100]
+        late = [t for t in closes if t > 100]
+        assert early and late, (
+            f"only one blink fired: early={early}, late={late}"
+        )
+    finally:
+        canvas.deleteLater()
+
+
+def test_blink_timer_is_repeating(qapp):
+    """Defensive: the blink QTimer must be configured as repeating —
+    a future PySide6 default change to single-shot would silently
+    cause exactly one blink and then radio silence."""
+    from Imervue.puppet.canvas import PuppetCanvas
+    from Imervue.puppet.input_engine import InputEngine
+    canvas = PuppetCanvas()
+    engine = InputEngine(canvas)
+    try:
+        assert engine._blink_timer.isSingleShot() is False   # noqa: SLF001
+    finally:
+        canvas.deleteLater()

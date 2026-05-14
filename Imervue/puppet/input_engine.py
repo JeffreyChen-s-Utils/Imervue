@@ -46,6 +46,9 @@ class InputEngine(QObject):
         self._blink_anchor: float = time.monotonic()
         self._blink_timer = QTimer(self)
         self._blink_timer.setInterval(int(1000 / _BLINK_TICK_HZ))
+        # Default is repeating, but be explicit — a future PySide6
+        # default change would silently break the periodic blink.
+        self._blink_timer.setSingleShot(False)
         self._blink_timer.timeout.connect(self._on_blink_tick)
         self._mic_stream = None
 
@@ -116,7 +119,13 @@ class InputEngine(QObject):
             return
         elapsed = time.monotonic() - self._blink_anchor
         value = blink_curve_value(elapsed)
-        self._canvas.set_parameter_values(
+        # ``force_parameter_values`` bypasses the canvas's no-change
+        # optimisation: when motion player / webcam tracker / face-
+        # landmark mapper write the same eye-param value in between
+        # blink ticks, the equality check would otherwise mask the
+        # blink curve's downward sweep and the user only sees the
+        # very first blink before everything looks frozen.
+        self._canvas.force_parameter_values(
             {eye_param: value for eye_param in DEFAULT_EYE_PARAMS},
         )
 

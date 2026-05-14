@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from Imervue.puppet.recorder import CaptureError, capture_canvas_image
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -28,6 +27,41 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.plugin.puppet.virtual_camera")
 
 DEFAULT_FPS: int = 30
+
+# Magenta backdrop for RGB-only virtual cameras. The user adds an
+# OBS Color Key filter to the source and the background drops out
+# cleanly — magenta was picked because it never appears in skin
+# tones or natural hair / eye colours so the key threshold is
+# extremely forgiving. NDI uses transparent alpha instead.
+CHROMA_KEY_MAGENTA_RGBA: tuple[float, float, float, float] = (1.0, 0.0, 1.0, 1.0)
+
+# Cap the longest side of the virtual-camera frame. Live2D source
+# canvases are routinely 3000–8000 px tall (March 7th is 3503×7777),
+# which DirectShow virtual-camera drivers reject outright and which
+# wastes downstream bandwidth in any streaming pipeline. 1080 covers
+# every common streaming aspect (1080p landscape, 1920×1080 portrait,
+# 1080×1920 for vertical platforms) — anything taller gets scaled
+# down proportionally before the camera is opened.
+MAX_OUTPUT_DIMENSION: int = 1080
+
+
+def _scale_for_streaming(width: int, height: int) -> tuple[int, int]:
+    """Scale ``(width, height)`` so the longest side is at most
+    :data:`MAX_OUTPUT_DIMENSION`, preserving aspect ratio.
+
+    Pure helper so the resolution cap can be unit-tested without the
+    pyvirtualcam dep. Returns ``(width, height)`` unchanged when both
+    are already within the limit; rounds the smaller dimension to an
+    even integer (some virtual-camera drivers reject odd widths)."""
+    if width <= 0 or height <= 0:
+        return width, height
+    longest = max(width, height)
+    if longest <= MAX_OUTPUT_DIMENSION:
+        return width, height
+    scale = MAX_OUTPUT_DIMENSION / longest
+    new_w = max(2, int(round(width * scale)) & ~1)
+    new_h = max(2, int(round(height * scale)) & ~1)
+    return new_w, new_h
 
 
 class VirtualCameraOutput(QObject):
@@ -94,7 +128,12 @@ class VirtualCameraOutput(QObject):
         except ImportError:
             logger.info("pyvirtualcam not installed; virtual camera unavailable")
             return False
-        width, height = document.size
+        # Open the camera at the document's aspect ratio (capped to
+        # 1080 longest side). We render the puppet into an off-screen
+        # FBO each tick so the streamed image is just the character
+        # at native aspect — no checker backdrop, no chrome, no
+        # dependency on what size the workspace tab happens to be.
+        width, height = _scale_for_streaming(*document.size)
         try:
             self._camera = pyvirtualcam.Camera(
                 width=int(width), height=int(height), fps=self._fps,
@@ -127,9 +166,19 @@ class VirtualCameraOutput(QObject):
     def _on_tick(self) -> None:  # pragma: no cover - needs pyvirtualcam + display
         if self._camera is None:
             return
+        # Off-screen FBO render: character only, no backdrop, no
+        # overlay. Magenta fills the area outside the puppet — RGB-
+        # only virtual cameras can't carry alpha, and magenta is the
+        # classic "won't appear naturally" chroma-key colour the user
+        # can drop with OBS's Color Key filter.
         try:
-            image = capture_canvas_image(self._canvas)
-        except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
+            image = self._canvas.render_offscreen_puppet(
+                self._camera.width, self._camera.height,
+                background_rgba=CHROMA_KEY_MAGENTA_RGBA,
+            )
+        except Exception:   # noqa: BLE001 - GL surfaces vary
+            return
+        if image is None:
             return
         frame = _qimage_to_rgb_array(image, self._camera.width, self._camera.height)
         if frame is None:
@@ -144,15 +193,26 @@ class VirtualCameraOutput(QObject):
 
 def _qimage_to_rgb_array(image, target_width: int, target_height: int):
     """Convert a QImage to an HxWx3 uint8 numpy array sized to
-    ``(target_height, target_width)``. Returns ``None`` for degenerate
-    inputs."""
+    exactly ``(target_height, target_width)``.
+
+    Aspect ratio is **preserved** — the source image is scaled to
+    fit within the target box (Qt's KeepAspectRatio), then the
+    result is centred onto a black-filled buffer of the target size
+    if the aspect ratios don't match. This is the fix for the
+    "puppet looks stretched in OBS" report: the camera is opened
+    at the widget's aspect ratio at start, but if the user resizes
+    the window mid-stream the captured framebuffer no longer
+    matches; preserving aspect prevents the distortion at the cost
+    of black bars on resize."""
     import numpy as np
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QImage as _QImage
+    if target_width <= 0 or target_height <= 0:
+        return None
     if image.width() != target_width or image.height() != target_height:
         image = image.scaled(
             target_width, target_height,
-            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
     if image.format() != _QImage.Format.Format_RGB888:
@@ -164,7 +224,19 @@ def _qimage_to_rgb_array(image, target_width: int, target_height: int):
     ptr = image.constBits()
     if hasattr(ptr, "setsize"):
         ptr.setsize(image.sizeInBytes())
-    arr = np.frombuffer(bytes(ptr), dtype=np.uint8).reshape(
+    scaled = np.frombuffer(bytes(ptr), dtype=np.uint8).reshape(
         (height, image.bytesPerLine()),
     )
-    return arr[:, : width * 3].reshape((height, width, 3)).copy()
+    scaled = scaled[:, : width * 3].reshape((height, width, 3)).copy()
+    if width == target_width and height == target_height:
+        return scaled
+    # Aspect didn't match — centre the scaled image on a black canvas
+    # at the camera's target size. Streamers who want a chroma-key
+    # background can run an OBS Color Key filter on the matte
+    # colour, OR resize the puppet workspace tab before enabling
+    # the virtual camera so the aspects line up.
+    canvas = np.zeros((target_height, target_width, 3), dtype=np.uint8)
+    off_x = (target_width - width) // 2
+    off_y = (target_height - height) // 2
+    canvas[off_y:off_y + height, off_x:off_x + width] = scaled
+    return canvas

@@ -355,6 +355,8 @@ python -m Imervue /path/to/folder
 
 ## Puppet — 2D 绑骨偶动画
 
+> **完整教程**：[`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md) 涵盖直播（OBS / NDI / 虚拟摄像头）与动画制作（录制 / 时间轴编辑 / MP4 导出）的端到端流程。英文版于 [`puppet_guide.md`](../puppet_guide.md)、繁体中文于 [`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md)。
+
 **Puppet** 标签是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势、对嘴、摄像头脸部追踪），但**不依赖任何专利 SDK**、**不使用 `live2d-py`**，采用完全开放的 `.puppet` 文件格式，规格完整记录于 `Imervue/puppet/FORMAT.md`。
 
 ### 文件格式
@@ -407,9 +409,70 @@ JSON 为主，人类可 diff，没有专利二进制。
 
 - **截取画面…** 通过 `glReadPixels` 存 PNG
 - **录制…** 切换 30 FPS 帧循环，通过 `imageio` 写成 GIF / WebM / MP4
-- **NDI 输出** 用于推流到 OBS / Zoom（可选 `ndi-python`）
-- **VTube Studio API 服务器** — 可选 OBS 友好的远程控制
-- **虚拟摄像头** 推流
+- **虚拟摄像头** — 把 puppet canvas 暴露成系统的 webcam
+- **NDI 输出** — 在局域网广播 puppet 作为 NDI 源
+- **VTube Studio API 服务器** — 可选 WebSocket API，给 VTS 兼容客户端读参数
+
+### OBS 直播整合
+
+两条路：A 是"开箱即用"，B 是低延迟、高画质、需要局域网。
+
+#### A. 虚拟摄像头（最简单）
+
+把 puppet canvas 变成假的 webcam，OBS 用标准"视频捕获设备"源即可拿到。
+
+1. `pip install pyvirtualcam`
+2. 各平台对应驱动：
+   - **Windows**：装 OBS Studio 26+，自带 *OBS Virtual Camera* 驱动。第一次打开 OBS、右下角点 **Start Virtual Camera** 注册驱动，之后 `pyvirtualcam` 才找得到它。
+   - **macOS**：OBS for Mac 自带 system extension，首次运行会要求在"系统设置 → 隐私与安全性"启用。
+   - **Linux**：`sudo modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"`（要先 `apt install v4l2loopback-dkms` 之类）。
+3. Puppet 标签打开 rig，工具栏 / **Output > Virtual camera** 打勾。状态栏会打印出实际设备名。
+4. OBS：**Sources > + > Video Capture Device**，下拉选步骤 3 打印的设备名（通常是 *OBS Virtual Camera*）。
+
+Imervue 会把输出帧的长边强制压到 1080 px，所以 Cubism 原生画布（March 7th 是 3503×7777）不会被 DirectShow 虚拟摄像头驱动拒绝。长宽比保留，OBS 端可以再缩。
+
+每一帧都会用 off-screen framebuffer 重画 — 只渲染角色本身、不含棋盘格背景与编辑器外壳。所以 OBS 看到的就是"角色 + 一张纯洋红色背景"。
+
+##### 为什么是洋红色背景？（以及怎么去掉）
+
+虚拟摄像头走的是 **DirectShow**（Windows）/ **AVFoundation**（macOS）/ **v4l2loopback**（Linux），这三种传输格式**只有 RGB、没有 alpha 通道**。OBS 的"视频捕获设备"源把进来的图像当成不透明 RGB，所以 Imervue 在角色以外填什么颜色，OBS 就显示什么颜色。
+
+选 **洋红色 `#FF00FF`** 是业界标准的 chroma-key 色：它几乎不会出现在自然肤色、发色、瞳色里，去背容差可以开很宽而不误伤角色。
+
+OBS 端去背步骤：
+
+1. 加进来的"视频捕获设备"源右键 → **滤镜（Filters）**
+2. 左下角 **效果滤镜（Effect Filters）** 区块 → **+** → **色键（Color Key）**
+3. 设置：
+   - **Key Color Type**：`Custom Color`
+   - **Custom Color**：HEX 输入 `FF00FF`（或 R = 255 / G = 0 / B = 255）
+   - **Similarity**：从 `80` 开始，边缘若有残留洋红色拉到 `200–300`。数值越大去得越干净
+   - **Smoothness**：`30–50`，让边缘不要太硬、不会像 pixel art
+4. 关闭对话框。OBS 把这条滤镜跟源绑在一起，之后启用虚拟摄像头都自动套用
+
+若你的角色配色里刚好有洋红色（罕见、costume / 道具上可能），色键会把那些像素也吃掉。改走下面的 NDI — 带 alpha 通道，不用色键。
+
+**疑难排解：OBS 还是看得到洋红色**
+
+- 确认 Color Key 滤镜是加在**视频捕获设备源本身**，不是加在 Scene 上。加在源上的滤镜跟着走；加在 Scene 的会晚一步、在源绘制完之后才作用。
+- HEX 确认是 `FF00FF` 一字不差 — `FF00FE` 之类捕不到全部洋红色像素。
+- 角色轮廓边缘若有一圈薄薄的洋红色 halo，把 *Similarity* 拉到 `300`。那一圈是 GL_LINEAR 在角色边缘跟洋红色背景内插出来的，容差放宽就能盖掉。
+
+#### B. NDI（低延迟、专业）
+
+NDI（Newtek 的 Network Device Interface）以 < 50 ms 的延迟在 LAN 上传递 puppet 画面、保留 alpha 通道。
+
+1. 从 <https://ndi.video/tools/> 下载安装 **NDI Tools**（包含 NDI runtime）。
+2. `pip install ndi-python`
+3. OBS 端安装 **obs-ndi** 插件：<https://github.com/obs-ndi/obs-ndi/releases>
+4. Puppet 标签工具栏 / **Output > NDI output** 打勾。状态栏会打印 NDI 源名（默认 *Imervue Puppet*）。
+5. OBS：**Sources > + > NDI Source**，下拉选步骤 4 的源名。
+
+NDI 也吃 1080 上限的缩放，但传输 RGBA — off-screen render 把角色外的区域填成完全透明，alpha 通道原样传出去，OBS / vMix 端直接把角色叠到自己的场景上，完全不用做色键。
+
+#### C. 窗口捕获（保底）
+
+OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖。画质较差、要自己 crop 掉外壳，但在不能装驱动的锁定机器上能跑。
 
 ### 示例
 

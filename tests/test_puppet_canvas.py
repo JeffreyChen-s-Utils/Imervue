@@ -161,3 +161,49 @@ def test_reset_view_unlocks_user_view(qapp):
         assert c._user_view_locked is False   # noqa: SLF001
     finally:
         c.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Premultiplied-alpha texture upload helper
+# ---------------------------------------------------------------------------
+
+
+def test_premultiply_alpha_zeros_rgb_on_fully_transparent_pixels():
+    """A pixel with alpha=0 should end up with RGB=0 regardless of its
+    authored colour. This is the fix for the Cubism-atlas white halo —
+    transparent edge pixels stop leaking their white background into
+    GL_LINEAR interpolation."""
+    import numpy as np
+    from Imervue.puppet.canvas import _premultiply_alpha
+    src = np.array([[
+        [255, 255, 255, 0],   # white but fully transparent → must zero out
+        [200, 100,  50, 255], # fully opaque → unchanged
+    ]], dtype=np.uint8)
+    out = _premultiply_alpha(src)
+    assert tuple(out[0, 0]) == (0, 0, 0, 0)
+    assert tuple(out[0, 1]) == (200, 100, 50, 255)
+
+
+def test_premultiply_alpha_scales_partial_alpha_correctly():
+    """Mid-alpha pixels should have RGB scaled by alpha/255 with
+    proper rounding (``(rgb * alpha + 127) // 255``)."""
+    import numpy as np
+    from Imervue.puppet.canvas import _premultiply_alpha
+    src = np.array([[[200, 100, 50, 128]]], dtype=np.uint8)   # alpha ~ 0.5
+    out = _premultiply_alpha(src)
+    # Expected: 200 * 128 / 255 ≈ 100, 100 * 128 / 255 ≈ 50, 50 * 128/255 ≈ 25
+    assert tuple(out[0, 0]) == (100, 50, 25, 128)
+
+
+def test_premultiply_alpha_rejects_wrong_shape():
+    """Helper is documented as H×W×4 uint8; other shapes / dtypes must
+    raise rather than silently corrupt the texture upload."""
+    import numpy as np
+    import pytest
+    from Imervue.puppet.canvas import _premultiply_alpha
+    with pytest.raises(ValueError):
+        _premultiply_alpha(np.zeros((4, 4), dtype=np.uint8))
+    with pytest.raises(ValueError):
+        _premultiply_alpha(np.zeros((4, 4, 3), dtype=np.uint8))
+    with pytest.raises(ValueError):
+        _premultiply_alpha(np.zeros((4, 4, 4), dtype=np.float32))

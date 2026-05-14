@@ -732,6 +732,14 @@ parameters, motions, physics, expressions, pose groups, lip-sync, webcam
 tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully
 open ``.puppet`` file format.
 
+.. note::
+
+   The full end-to-end tutorial — going from a fresh install to either
+   a live OBS stream or a baked MP4 — lives at ``puppet_guide.md`` at
+   the repo root (with ``puppet_guide.zh-TW.md`` and
+   ``puppet_guide.zh-CN.md`` mirrors). This section is the reference;
+   the guide is the walkthrough.
+
 ::
 
    +-----------+----------------------+----------------+
@@ -828,34 +836,48 @@ Toolbar reference
 
    * - Action
      - Purpose
-   * - Open Puppet…
-     - Load a ``.puppet`` zip into the canvas
-   * - Import PNG…
-     - Auto-mesh a PNG into a single-drawable puppet
+   * - Open Puppet… / Examples ▾
+     - Load a ``.puppet`` from disk, or pick one of the rigs
+       bundled under ``examples/puppet/`` directly from the toolbar
+   * - Import PNG… / Import PSD… / Import Cubism…
+     - Auto-mesh a PNG, layer-split a PSD, or sample-and-reconstruct
+       a Cubism ``.moc3`` (Cubism Native SDK user-supplied)
    * - Recent
-     - Quickly reopen a recent puppet
+     - Quickly reopen a recently-opened puppet
    * - Save As…
      - Write the current rig out as a ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
      - Author the rig from the toolbar
    * - Drag-track head
-     - Cursor offset → ``ParamAngleX`` / ``ParamAngleY``
+     - Cursor offset → ``ParamAngleX`` / ``ParamAngleY`` +
+       ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - Cosine close→open cycle on ``ParamEyeLOpen`` / ``ParamEyeROpen``
+       every ~4.5 s (force-write path bypasses canvas no-change-skip
+       so competing drivers can't stall the blink)
    * - Mic lip-sync
      - Microphone RMS → ``ParamMouthOpenY`` (requires ``sounddevice``)
    * - Webcam tracking
-     - MediaPipe FaceMesh → head yaw / pitch / roll + eye + mouth
-       (requires ``opencv-python`` + ``mediapipe``)
+     - MediaPipe Tasks API FaceLandmarker → head yaw / pitch / roll +
+       eye + mouth (requires ``opencv-python`` + ``mediapipe``;
+       opens a live preview dialog with detected landmarks)
+   * - Auto idle / Idle motions
+     - Breath cycle + drift on standard params, plus optional random
+       cycler through Idle-group motions
    * - Edit mesh
      - Click-and-drag canvas vertices to refine the mesh
    * - Record motion
      - Capture parameter changes into a new ``Motion`` and add it to the
        document — bake-from-take, no manual key authoring
-   * - Capture frame…
-     - Save a PNG of the current canvas
-   * - Record…
-     - Toggle GIF / WebM / MP4 recording via ``imageio``
+   * - Capture frame… / Record… / Export all motions…
+     - Save a single PNG, toggle a GIF / WebM / MP4 recording, or
+       batch-render every motion in the rig to its own file (all via
+       the same character-only off-screen render path used for streaming)
+   * - Output > Virtual camera / NDI output
+     - Live streaming surfaces — see *Live streaming to OBS* above
+   * - Reset to rest
+     - Snap-stop the motion player, untoggle every live driver,
+       clear expressions / pose groups, restore parameter defaults
    * - Fit to Window
      - Re-centre + re-scale the puppet in the canvas
 
@@ -876,6 +898,56 @@ To capture a custom take rather than authoring keyframes by hand:
 Custom motions saved this way round-trip through the same JSON
 ``motions/<name>.json`` payload as authored ones.
 
+Live streaming to OBS
+^^^^^^^^^^^^^^^^^^^^^
+
+Two output paths, both rendering the puppet alone (no checker
+backdrop, no editor chrome) into an off-screen framebuffer before
+handing it to the streaming surface. Output longest side caps at
+1080 px so Cubism-native canvases (March 7th is 3503×7777) don't
+get rejected by DirectShow virtual-camera drivers.
+
+**A. Virtual Camera** — appears as a webcam in OBS's *Video Capture
+Device* source list. ``pip install pyvirtualcam`` plus the
+platform driver: OBS Studio 26+ ships the *OBS Virtual Camera*
+driver on Windows / macOS (click *Start Virtual Camera* in OBS
+once to register it); Linux uses ``v4l2loopback-dkms`` +
+``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``.
+Toolbar **Output > Virtual camera** opens the stream.
+
+DirectShow / AVFoundation / v4l2loopback are RGB-only — no alpha
+channel — so Imervue fills the area outside the character with
+**magenta `#FF00FF`** as a chroma key. Remove it in OBS via the
+Color Key filter:
+
+1. Right-click the Video Capture Device source > **Filters**
+2. **Effect Filters > + > Color Key**
+3. Set **Key Color Type** = ``Custom Color``,
+   **Custom Color** = HEX ``FF00FF``,
+   **Similarity** = ``80–300``,
+   **Smoothness** = ``30–50``
+
+The filter sticks to the source so the chroma key automatically
+re-applies whenever the virtual camera resumes.
+
+**B. NDI output** — sub-50 ms LAN broadcast carrying RGBA, so
+OBS / vMix composite directly over their own scenes with no
+chroma-key pass. ``pip install ndi-python`` + the
+`NDI Tools <https://ndi.video/tools/>`_ runtime + the
+`obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ plugin.
+Toolbar **Output > NDI output** broadcasts the source (default
+name *Imervue Puppet*).
+
+``ndi-python`` ships only a source distribution; pip builds it
+from C++ at install time. Windows users need Visual Studio Build
+Tools 2022 (with C++ workload), CMake on PATH, and the NDI SDK
+from <https://ndi.video/for-developers/ndi-sdk/> installed at the
+default location with ``NDI_SDK_DIR`` env var pointing at it.
+
+See ``puppet_guide.md`` § 1.2 for the full step-by-step plus the
+troubleshooting list (camera shows magenta, ndi-python cmake
+failure, virtual camera stretch, etc.).
+
 Optional dependencies
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -883,10 +955,17 @@ Optional dependencies
 * ``opencv-python`` + ``mediapipe`` — webcam face tracking
 * ``imageio-ffmpeg`` — MP4 / WebM recording (already shipped for
   Slideshow Video)
+* ``pyvirtualcam`` — virtual-camera output (see *Live streaming*)
+* ``ndi-python`` — NDI output (see *Live streaming*)
+* User-supplied Cubism Native SDK DLL — ``.moc3 → .puppet``
+  conversion (Live2D's Free Material License forbids
+  redistribution; users drop the SDK under ``<cwd>/sdk/`` or set
+  ``CUBISM_CORE_DLL`` env var)
 
 The plugin degrades gracefully when any of these are missing — the
 matching toolbar toggle bounces back off and shows an "install
-<package>" hint.
+<package>" hint. ``File > Install dependencies…`` batch-installs
+every Python optional package in one go.
 
 ----
 

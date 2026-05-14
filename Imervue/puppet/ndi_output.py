@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from Imervue.puppet.recorder import CaptureError, capture_canvas_image
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -31,6 +30,12 @@ logger = logging.getLogger("Imervue.plugin.puppet.ndi_output")
 
 DEFAULT_FPS: int = 30
 DEFAULT_SOURCE_NAME: str = "Imervue Puppet"
+
+# Same cap as the virtual-camera output for the same reason — see
+# ``virtual_camera.MAX_OUTPUT_DIMENSION``. NDI itself doesn't reject
+# huge frames, but a Cubism-native 3503×7777 source saturates a
+# 1 Gbps LAN and chokes any downstream OBS receiver.
+from Imervue.puppet.virtual_camera import _scale_for_streaming   # noqa: E402
 
 
 class NDIOutput(QObject):
@@ -154,11 +159,25 @@ class NDIOutput(QObject):
     def _on_tick(self) -> None:  # pragma: no cover - needs NDI runtime
         if self._sender is None or self._ndi is None:
             return
-        try:
-            image = capture_canvas_image(self._canvas)
-        except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
+        document = self._canvas.document()
+        if document is None:
             return
-        frame = _qimage_to_rgba_array(image)
+        # Off-screen FBO render at document aspect — character only,
+        # transparent background. NDI carries RGBA so the alpha
+        # channel reaches receivers as-is and OBS / vMix can
+        # composite the puppet over their own scene without a
+        # chroma-key pass.
+        target_w, target_h = _scale_for_streaming(*document.size)
+        try:
+            image = self._canvas.render_offscreen_puppet(
+                target_w, target_h,
+                background_rgba=(0.0, 0.0, 0.0, 0.0),
+            )
+        except Exception:   # noqa: BLE001 - GL surfaces vary
+            return
+        if image is None:
+            return
+        frame = _qimage_to_rgba_array(image, target_w, target_h)
         if frame is None:
             return
         try:
@@ -171,12 +190,24 @@ class NDIOutput(QObject):
             self._stop()
 
 
-def _qimage_to_rgba_array(image):
-    """QImage → HxWx4 uint8 numpy. NDI expects RGBA frames — the
-    alpha channel is preserved so receivers downstream can composite
-    the puppet over their own backgrounds."""
+def _qimage_to_rgba_array(image, target_width: int, target_height: int):
+    """QImage → HxWx4 uint8 numpy scaled to ``(target_height,
+    target_width)``. NDI expects RGBA frames — the alpha channel is
+    preserved so receivers downstream can composite the puppet over
+    their own backgrounds.
+
+    Scaling happens here (rather than in ``_on_tick``) so a future
+    fps / quality knob can swap the transformation mode without
+    touching the rest of the pipeline."""
     import numpy as np
+    from PySide6.QtCore import Qt
     from PySide6.QtGui import QImage as _QImage
+    if image.width() != target_width or image.height() != target_height:
+        image = image.scaled(
+            target_width, target_height,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
     if image.format() != _QImage.Format.Format_RGBA8888:
         image = image.convertToFormat(_QImage.Format.Format_RGBA8888)
     width = image.width()

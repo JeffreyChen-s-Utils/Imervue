@@ -221,6 +221,12 @@ class PuppetWorkspace(QMainWindow):
         self._recent_menu = QMenu(lang.get("puppet_recent", "Recent"), self)
         self._recent_menu.aboutToShow.connect(self._rebuild_recent_menu)
 
+        # Examples submenu — auto-populated from <app_dir>/examples/puppet/*.puppet
+        self._examples_menu = QMenu(
+            lang.get("puppet_examples", "Examples"), self,
+        )
+        self._examples_menu.aboutToShow.connect(self._rebuild_examples_menu)
+
         # Edit
         self._add_rot_action = QAction(
             lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
@@ -323,6 +329,16 @@ class PuppetWorkspace(QMainWindow):
         )
         self._fit_action.triggered.connect(self._canvas_reset_view)
 
+        # Reset-to-rest — single shortcut for "wipe every live-state
+        # toggle, stop the motion player, clear expressions / pose
+        # group overrides, and snap parameters back to their authored
+        # defaults". Without this the rig stays frozen in whatever
+        # pose the last motion finished on.
+        self._reset_action = QAction(
+            lang.get("puppet_reset_to_rest", "Reset to rest"), self,
+        )
+        self._reset_action.triggered.connect(self._reset_to_rest)
+
     def _build_menu_bar(self) -> QMenuBar:
         """Move every non-toggle (and the toggles themselves, for
         keyboard discoverability) into a proper QMenuBar so the
@@ -332,6 +348,7 @@ class PuppetWorkspace(QMainWindow):
 
         file_menu = bar.addMenu(lang.get("puppet_menu_file", "File"))
         file_menu.addAction(self._open_action)
+        file_menu.addMenu(self._examples_menu)
         file_menu.addMenu(self._recent_menu)
         file_menu.addAction(self._save_action)
         file_menu.addSeparator()
@@ -349,6 +366,8 @@ class PuppetWorkspace(QMainWindow):
         edit_menu.addAction(self._mirror_action)
         edit_menu.addAction(self._edit_motion_action)
         edit_menu.addAction(self._mesh_edit_toggle)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self._reset_action)
 
         live_menu = bar.addMenu(lang.get("puppet_menu_live", "Live"))
         live_menu.addAction(self._drag_toggle)
@@ -376,13 +395,34 @@ class PuppetWorkspace(QMainWindow):
         return bar
 
     def _build_toggle_toolbar(self) -> QToolBar:
-        """A single slim toolbar carrying just the live on/off
-        toggles. Eight buttons total — no overflow chevron, no
-        themed groups, and the user sees the live state without
-        opening a menu."""
+        """Slim toolbar carrying the live on/off toggles plus two
+        affordances that needed surfacing out of the File / Edit
+        menus: a one-click "Reset" (snap the rig back to neutral)
+        and an "Examples" dropdown that exposes the bundled demo
+        rigs without forcing the user to dig through File >
+        Examples."""
+        from PySide6.QtWidgets import QToolButton
+
         lang = language_wrapper.language_word_dict
         bar = QToolBar(lang.get("puppet_toolbar_title", "Puppet"), self)
         bar.setMovable(False)
+
+        # Examples — QToolButton with an attached menu so a single
+        # click pops the bundled-puppet list right next to the
+        # toolbar instead of buried under the File menu.
+        examples_btn = QToolButton(bar)
+        examples_btn.setText(lang.get("puppet_examples", "Examples"))
+        examples_btn.setMenu(self._examples_menu)
+        examples_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        examples_btn.setToolTip(
+            lang.get(
+                "puppet_examples_tooltip",
+                "Open one of the bundled example rigs",
+            ),
+        )
+        bar.addWidget(examples_btn)
+        bar.addSeparator()
+
         for action in (
             self._drag_toggle,
             self._blink_toggle,
@@ -394,6 +434,9 @@ class PuppetWorkspace(QMainWindow):
             self._record_action,
         ):
             bar.addAction(action)
+
+        bar.addSeparator()
+        bar.addAction(self._reset_action)
         return bar
 
     # ---- file ops -------------------------------------------------------
@@ -439,6 +482,64 @@ class PuppetWorkspace(QMainWindow):
 
     def _canvas_reset_view(self) -> None:
         self._canvas.reset_view()
+
+    # ---- reset-to-rest --------------------------------------------------
+
+    def _reset_to_rest(self) -> None:
+        """Snap the rig back to its authored neutral pose.
+
+        Motions don't auto-rewind on stop — when a clip finishes (or
+        the user pauses one mid-play) the rig stays frozen wherever
+        the last sample landed. Combined with the live-input toggles
+        (auto-blink, drag-track, lip-sync, webcam …) the user can
+        easily end up with the puppet stuck in a weird half-pose with
+        no obvious "go back to neutral" button. This method is that
+        button.
+
+        Order is deliberate: stop the *producers* first (motion
+        player, live drivers, recorder, idle cycler) so they can't
+        immediately overwrite the values we're about to reset; then
+        clear the *state* (expressions, pose groups, physics outputs);
+        finally restore the parameter dict to authored defaults.
+        """
+        # 1. Stop the motion player without playing out its fade.
+        player = self._motion_dock.player() if hasattr(self, "_motion_dock") else None
+        if player is not None and (player.is_playing() or player.is_fading_out()):
+            player._snap_stop()   # noqa: SLF001 — bypass fade for a hard reset
+        # 2. Untoggle every live-input action. setChecked(False) fires
+        #    the connected ``_toggle_*`` slot which is exactly the
+        #    teardown path we want.
+        for toggle in (
+            getattr(self, "_drag_toggle", None),
+            getattr(self, "_blink_toggle", None),
+            getattr(self, "_lipsync_toggle", None),
+            getattr(self, "_webcam_toggle", None),
+            getattr(self, "_idle_toggle", None),
+            getattr(self, "_idle_motion_toggle", None),
+            getattr(self, "_motion_record_toggle", None),
+        ):
+            if toggle is not None and toggle.isChecked():
+                toggle.setChecked(False)
+        # 3. Drop expressions + pose-group overrides + physics outputs.
+        for name in self._canvas.active_expressions():
+            self._canvas.remove_expression(name)
+        # The canvas's pose-group dict is exposed via active_pose();
+        # call set_pose_active with the empty default for each group.
+        doc = self._canvas.document()
+        if doc is not None:
+            for group in doc.pose_groups:
+                if group.drawables:
+                    # Restore the group's first drawable as the visible
+                    # member — matches resolve_pose_visibility's
+                    # "default to first member" semantics.
+                    self._canvas.set_pose_active(group.id, group.drawables[0])
+        # 4. Snap parameters back to their authored defaults.
+        self._canvas.reset_parameters()
+        # 5. Status feedback so the user sees the action took effect.
+        lang = language_wrapper.language_word_dict
+        self._status.setText(
+            lang.get("puppet_status_reset", "Rig reset to neutral pose."),
+        )
 
     # ---- save -----------------------------------------------------------
 
@@ -742,6 +843,40 @@ class PuppetWorkspace(QMainWindow):
                 "puppet_webcam_unavailable",
                 "Webcam tracking unavailable (install opencv-python + mediapipe)",
             )
+            return
+        # Pop a live preview window so the user can see what the
+        # camera is producing. The dialog polls the tracker via timer;
+        # we keep one instance around to avoid re-creating it every
+        # time the user re-toggles.
+        if enabled:
+            self._show_webcam_preview()
+        else:
+            self._hide_webcam_preview()
+
+    def _show_webcam_preview(self) -> None:
+        from Imervue.puppet.webcam_preview_dialog import WebcamPreviewDialog
+        if getattr(self, "_webcam_preview_dialog", None) is None:
+            dlg = WebcamPreviewDialog(self._webcam, self)
+            # Closing the dialog (X button or "Stop tracking") needs to
+            # also untick the toolbar toggle — otherwise the toggle
+            # stays "on" while the tracker is actually stopped.
+            dlg.finished.connect(self._on_webcam_preview_finished)
+            self._webcam_preview_dialog = dlg
+        self._webcam_preview_dialog.show()
+        self._webcam_preview_dialog.raise_()
+        self._webcam_preview_dialog.activateWindow()
+
+    def _hide_webcam_preview(self) -> None:
+        dlg = getattr(self, "_webcam_preview_dialog", None)
+        if dlg is not None:
+            dlg.hide()
+
+    def _on_webcam_preview_finished(self, _result: int) -> None:
+        # User closed the preview dialog directly. ``set_enabled`` is
+        # idempotent so the back-and-forth between this slot and the
+        # dialog's ``closeEvent`` settles after one round.
+        if self._webcam_toggle.isChecked():
+            self._reset_toggle(self._webcam_toggle)
 
     # ---- idle driver ---------------------------------------------------
 
@@ -939,10 +1074,22 @@ class PuppetWorkspace(QMainWindow):
                 "Virtual camera unavailable (install pyvirtualcam + OBS Virtual Camera).",
             )
             return
-        self._announce(
-            "puppet_virtual_camera_on" if enabled else "puppet_virtual_camera_off",
-            "Virtual camera on" if enabled else "Virtual camera off",
-        )
+        if enabled:
+            # Once a frame has flown, the camera object knows which
+            # device name pyvirtualcam handed back (OBS Virtual
+            # Camera / Unity Capture / v4l2loopback). Echo it so the
+            # user knows exactly what to pick in OBS's source list.
+            cam = getattr(self._virtual_camera, "_camera", None)
+            device = getattr(cam, "device", None) if cam is not None else None
+            self._announce(
+                "puppet_virtual_camera_on",
+                'Streaming as "{device}" — add it as a Video Capture Device in OBS.',
+                device=device or "OBS Virtual Camera",
+            )
+        else:
+            self._announce(
+                "puppet_virtual_camera_off", "Virtual camera off",
+            )
 
     # ---- NDI output ----------------------------------------------------
 
@@ -962,10 +1109,15 @@ class PuppetWorkspace(QMainWindow):
                 "NDI unavailable (install ndi-python + the NDI Runtime).",
             )
             return
-        self._announce(
-            "puppet_ndi_on" if enabled else "puppet_ndi_off",
-            "NDI broadcasting" if enabled else "NDI stopped",
-        )
+        if enabled:
+            self._announce(
+                "puppet_ndi_on",
+                'NDI source "{name}" broadcasting — add an "NDI Source" '
+                "in OBS (requires the obs-ndi plugin).",
+                name=self._ndi_output.source_name(),
+            )
+        else:
+            self._announce("puppet_ndi_off", "NDI stopped")
 
     # ---- VTube Studio API ---------------------------------------------
 
@@ -1252,6 +1404,37 @@ class PuppetWorkspace(QMainWindow):
             ),
         )
         return True
+
+    # ---- examples menu --------------------------------------------------
+
+    def _rebuild_examples_menu(self) -> None:
+        """Scan ``<app_dir>/examples/puppet/*.puppet`` and rebuild the
+        Examples submenu with one entry per bundled rig.
+
+        Re-scanned every time the menu opens so the user can drop new
+        ``.puppet`` files into the examples directory without
+        restarting Imervue. ``app_dir()`` is frozen-safe — it returns
+        the EXE's containing directory under PyInstaller / Nuitka and
+        the project root in dev."""
+        from Imervue.system.app_paths import examples_dir
+
+        self._examples_menu.clear()
+        lang = language_wrapper.language_word_dict
+        root = examples_dir() / "puppet"
+        bundled = sorted(root.glob("*.puppet")) if root.is_dir() else []
+        if not bundled:
+            empty = self._examples_menu.addAction(
+                lang.get("puppet_examples_empty", "(No bundled examples)"),
+            )
+            empty.setEnabled(False)
+            return
+        for path in bundled:
+            label = path.stem.replace("_", " ").title()
+            action = self._examples_menu.addAction(label)
+            action.setToolTip(str(path))
+            action.triggered.connect(
+                lambda _checked=False, p=str(path): self.open_puppet(p),
+            )
 
     # ---- recent menu ----------------------------------------------------
 

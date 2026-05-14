@@ -52,7 +52,11 @@ Toggle the toolbar features to drive the rig live:
 * **Drag-track head** — cursor look-at via `ParamAngleX/Y`.
 * **Mic lip-sync** — viseme drives mouth open + form.
 * **Webcam tracking** — face landmarks drive head + eyes + mouth.
-* **Virtual camera** — stream the puppet into OBS / Zoom.
+* **Virtual camera** / **NDI output** — stream the puppet into
+  OBS / Zoom. See [`puppet_guide.md`](../../puppet_guide.md) at the
+  repo root for the full end-to-end walkthrough covering both live
+  streaming (Virtual Camera + NDI + chroma-key recipe) and
+  animation production (motion record / timeline edit / MP4 export).
 
 ### Authoring your own from scratch
 

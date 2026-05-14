@@ -108,7 +108,7 @@ from Imervue.puppet.runtime import (
 )
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QMouseEvent, QWheelEvent
+    from PySide6.QtGui import QImage, QMouseEvent, QWheelEvent
 
 
 logger = logging.getLogger("Imervue.plugin.puppet.canvas")
@@ -119,9 +119,42 @@ _MAX_ZOOM = 32.0
 _CHECKER_TILE = 16
 
 
+def _premultiply_alpha(rgba: np.ndarray) -> np.ndarray:
+    """Return a copy of ``rgba`` (H × W × 4 uint8) with each colour
+    channel pre-multiplied by alpha.
+
+    Standard premultiplied-alpha conversion: ``RGB_pma = RGB * (A /
+    255)``. Pixels with ``A = 0`` end up with ``RGB = 0`` regardless
+    of their authored colour — which is exactly what kills the white
+    halo that GL_LINEAR sampling otherwise drags out of transparent
+    border pixels in Cubism atlases.
+
+    Vectorised numpy so even a 4096² atlas premultiplies in a
+    fraction of a second; pure helper so the test suite can verify
+    behaviour without a GL context."""
+    if rgba.dtype != np.uint8 or rgba.ndim != 3 or rgba.shape[-1] != 4:
+        raise ValueError("expected H×W×4 uint8 RGBA array")
+    alpha = rgba[..., 3:4].astype(np.uint16)
+    rgb = rgba[..., :3].astype(np.uint16)
+    # ``(rgb * alpha + 127) // 255`` rounds toward nearest, matching
+    # the standard PMA rounding; plain ``// 255`` truncates and drifts
+    # darker for mid-alpha pixels.
+    rgb_pma = ((rgb * alpha + 127) // 255).astype(np.uint8)
+    out = rgba.copy()
+    out[..., :3] = rgb_pma
+    return out
+
+
+# Textures are uploaded **premultiplied** (RGB *= alpha) by
+# ``_upload_texture`` so the blend functions below assume the source
+# colour already carries its own alpha. The win: GL_LINEAR sampling
+# across a mesh edge no longer leaks the texture's "background"
+# colour into anti-aliased transparent pixels, which produced the
+# visible white haloes on Cubism atlases (heel seam, dark_face
+# overlay fade-in, etc.).
 _BLEND_FUNCS = {
-    "normal": (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA),
-    "additive": (GL_SRC_ALPHA, GL_ONE),
+    "normal": (GL_ONE, GL_ONE_MINUS_SRC_ALPHA),
+    "additive": (GL_ONE, GL_ONE),
     "multiply": (GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA),
 }
 
@@ -261,6 +294,29 @@ class PuppetCanvas(QOpenGLWidget):
                 self._parameter_values[param_id] = float_value
                 changed = True
         if not changed:
+            return
+        self._recompute_deformed_vertices()
+        self.update()
+
+    def force_parameter_values(self, values: dict[str, float]) -> None:
+        """Batch-update parameters and recompute even when the values
+        already match the cached state.
+
+        Use case: a periodic driver (the auto-blink loop) needs to
+        own the eye parameter every tick — without ``force``, another
+        driver (motion player / webcam tracker) could write the same
+        numeric value between blink ticks and the equality check
+        below would skip the recompute, making the blink appear to
+        stall after the first cycle."""
+        if self._document is None or not values:
+            return
+        wrote_any = False
+        for param_id, value in values.items():
+            if param_id not in self._parameter_values:
+                continue
+            self._parameter_values[param_id] = float(value)
+            wrote_any = True
+        if not wrote_any:
             return
         self._recompute_deformed_vertices()
         self.update()
@@ -507,6 +563,91 @@ class PuppetCanvas(QOpenGLWidget):
         self._draw_selection_overlay()
         glPopMatrix()
 
+    def render_offscreen_puppet(   # pragma: no cover - GL needs display
+        self,
+        width: int,
+        height: int,
+        *,
+        background_rgba: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    ) -> QImage | None:
+        """Render JUST the puppet to an off-screen FBO and return it
+        as a QImage.
+
+        Skips the transparency checker, the editor selection overlay,
+        and the workspace chrome — perfect for the streaming outputs
+        which want "character only on a known background colour" so
+        OBS can composite or chroma-key it. The puppet is centred +
+        scaled to fit the FBO preserving aspect ratio (so the entire
+        document canvas always lands inside the streamed frame, no
+        cropping, regardless of how the user has the workspace
+        zoomed / panned).
+
+        ``background_rgba`` controls what fills the area outside the
+        puppet's drawables. The default ``(0, 0, 0, 0)`` is fully
+        transparent — NDI honours it, RGB-only virtual cameras lose
+        the alpha and end up with black. Pass a solid colour like
+        ``(1.0, 0.0, 1.0, 1.0)`` (magenta) to give virtual-camera
+        users something they can OBS-Color-Key out.
+        """
+        if self._document is None or width <= 0 or height <= 0:
+            return None
+        from PySide6.QtOpenGL import (
+            QOpenGLFramebufferObject,
+            QOpenGLFramebufferObjectFormat,
+        )
+
+        self.makeCurrent()
+        try:
+            fmt = QOpenGLFramebufferObjectFormat()
+            fbo = QOpenGLFramebufferObject(width, height, fmt)
+            if not fbo.bind():
+                return None
+            try:
+                glViewport(0, 0, width, height)
+                glMatrixMode(GL_PROJECTION)
+                glPushMatrix()
+                glLoadIdentity()
+                glOrtho(0, width, height, 0, -1, 1)
+                glMatrixMode(GL_MODELVIEW)
+                glPushMatrix()
+                glLoadIdentity()
+
+                # KeepAspectRatio fit of document into the FBO.
+                doc_w, doc_h = self._document.size
+                if doc_w <= 0 or doc_h <= 0:
+                    return None
+                scale = min(width / doc_w, height / doc_h)
+                pan_x = (width - doc_w * scale) / 2.0
+                pan_y = (height - doc_h * scale) / 2.0
+                glTranslatef(pan_x, pan_y, 0.0)
+                glScalef(scale, scale, 1.0)
+
+                # Clear to the requested background (transparent by
+                # default). The checker backdrop is intentionally NOT
+                # drawn — streamers chose the virtual-camera / NDI
+                # path because they want the character composited
+                # over their own scene.
+                r, g, b, a = background_rgba
+                glClearColor(float(r), float(g), float(b), float(a))
+                glClear(GL_COLOR_BUFFER_BIT)
+
+                self._draw_drawables()
+
+                image = fbo.toImage()
+
+                # Restore matrices. Viewport / clear colour get
+                # reset by the next paintGL on the visible widget,
+                # so leaving them is harmless.
+                glPopMatrix()
+                glMatrixMode(GL_PROJECTION)
+                glPopMatrix()
+                glMatrixMode(GL_MODELVIEW)
+                return image
+            finally:
+                fbo.release()
+        finally:
+            self.doneCurrent()
+
     # ---- rendering ------------------------------------------------------
 
     def _maybe_refit_view(self) -> None:  # pragma: no cover - GL needs display
@@ -602,7 +743,15 @@ class PuppetCanvas(QOpenGLWidget):
             tint_r, tint_g, tint_b = self._drawable_tint.get(
                 cmd.drawable_id, (1.0, 1.0, 1.0),
             )
-            glColor4f(tint_r, tint_g, tint_b, effective_opacity)
+            # Premultiply the vertex tint by the opacity so a partly-
+            # faded drawable doesn't over-brighten when the GL pipeline
+            # modulates the (already-premultiplied) texture RGB.
+            glColor4f(
+                tint_r * effective_opacity,
+                tint_g * effective_opacity,
+                tint_b * effective_opacity,
+                effective_opacity,
+            )
             glBindTexture(GL_TEXTURE_2D, tex_id)
             verts = self._deformed_vertices.get(cmd.drawable_id, cmd.vertices)
             mask_cmd = masks.get(cmd.drawable_id)
@@ -762,6 +911,13 @@ class PuppetCanvas(QOpenGLWidget):
             logger.warning("texture decode failed: %s", exc)
             return None
         arr = np.array(img, dtype=np.uint8)
+        # Premultiply RGB by alpha so GL_LINEAR sampling at mesh edges
+        # interpolates "half-transparent content" rather than "content
+        # blended with the texture's white background". Without this,
+        # Cubism atlas drawables produced a visible white halo at every
+        # anti-aliased edge — most obvious on the heel seam and the
+        # dark_face overlay during its alpha fade-in.
+        arr = _premultiply_alpha(arr)
         h, w = arr.shape[:2]
         tex = int(glGenTextures(1))
         glBindTexture(GL_TEXTURE_2D, tex)
