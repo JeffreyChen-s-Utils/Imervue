@@ -1475,6 +1475,121 @@ GPS ジオタグ
 
 ----
 
+Puppet ワークスペース（Puppet タブ）
+-------------------------------------
+
+4 番目のトップレベルタブ — **Puppet** — はゼロから構築した 2D リギング・パペットアニメーションシステムです。Live2D と同等の機能（メッシュ変形リギング、パラメータ、モーション、物理、表情、ポーズグループ、リップシンク、ウェブカメラ追跡）を、**プロプライエタリ SDK なし**、**``live2d-py`` なし**、完全にオープンな ``.puppet`` ファイルフォーマットで実現します。
+
+.. note::
+
+   エンドツーエンドのチュートリアル（新規インストールから OBS ライブ配信または MP4 出力まで）は
+   リポジトリルートの ``puppet_guide.md`` にあります（中国語版は ``puppet_guide.zh-TW.md`` /
+   ``puppet_guide.zh-CN.md``）。本章はリファレンス、ガイドはステップバイステップ解説です。
+
+エンドツーエンドのワークフロー
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. **PNG をインポート** — ツールバーの ``Import PNG…`` が ``puppet.auto_mesh.puppet_from_png`` を実行：アルファ境界の三角化、単一 drawable、即レンダリング可。
+2. **デフォーマー追加** — ``Add Rotation Deformer``（アンカー + 角度）または ``Add Warp Deformer``（行 × 列の Bezier 格子；境界外の頂点はそのまま）。
+3. **パラメータ追加** — ``Add Parameter`` で右側の **Parameters** ドックにスライダー追加（自動命名 ``Param1``、``Param2`` …）。
+4. **キー設定** — スライダーを片端まで動かし、デフォーマーの form を編集して **Set key**。中立値と反対端でも繰り返し。Runtime はスライダー移動時に隣接キー間で各フィールドを補間します。
+5. **保存** — ``Save As…`` で rig + テクスチャ + モーション + 表情 + 物理を 1 つの ``.puppet`` zip に書き出し。
+
+サンプル
+^^^^^^^^
+
+リポジトリ同梱：``examples/puppet/march_7th.puppet`` — ツリー内変換済みの 307-drawable Cubism Live2D キャラクター。テクスチャと per-parameter 頂点モーフは ``.puppet`` zip にベイク済みで、デフォルトの ``requirements.txt`` だけで開けます（Cubism SDK 再配布なし）。
+
+203 個の Cubism 標準パラメータを持つため（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …）、標準入力ドライバ（ウェブカメラ、まばたき、リップシンク、カーソル追従）が rig 固有設定なしで動きます。18 個のループモーションを同梱：作者変換済みの Cubism idle ループ + ``Idle`` グループ / ``Gesture`` グループのリファレンスジェスチャー。
+
+Puppet タブのツールバー → **Examples ▾** ドロップダウンから直接 March 7Th や自分の ``.puppet`` を開けます。下部の **Motions** ドックでモーションをクリックして再生。
+
+OBS ライブ配信
+^^^^^^^^^^^^^^
+
+2 つの出力パス。どちらもキャラクターのみを off-screen framebuffer にレンダリング（市松模様の背景もエディタ chrome も含まれない）して配信先に渡します。出力の長辺は 1080 px までキャップ（Cubism ネイティブの 3503×7777 が DirectShow 仮想カメラドライバに拒否されるのを防ぐ）。
+
+**A. 仮想カメラ** — OBS の「映像キャプチャデバイス」ソース一覧にウェブカメラとして表示。``pip install pyvirtualcam`` + プラットフォーム別ドライバ：OBS Studio 26+（Windows / macOS）に *OBS Virtual Camera* ドライバ同梱（OBS 初回起動で *Start Virtual Camera* クリックして登録）；Linux は ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。ツールバー **Output > Virtual camera** で配信開始。
+
+DirectShow / AVFoundation / v4l2loopback はすべて **RGB のみ・アルファチャンネルなし** のため、Imervue はキャラクター外の領域を **マゼンタ ``#FF00FF``** で塗ってクロマキーとします。OBS で除去：
+
+1. 映像キャプチャデバイスソースを右クリック → **フィルタ**
+2. **エフェクトフィルタ > + > Color Key**
+3. **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
+
+フィルタはソースに付随するため、仮想カメラを再開するたびに自動適用されます。
+
+**B. NDI 出力** — LAN 上 < 50 ms 遅延・ネイティブ RGBA、OBS / vMix が自身のシーンに直接合成でき、クロマキーパス不要。``pip install ndi-python`` + `NDI Tools <https://ndi.video/tools/>`_ ランタイム + `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ プラグイン。ツールバー **Output > NDI output** で配信開始（デフォルトソース名 *Imervue Puppet*）。
+
+``ndi-python`` はソース配布のみで、pip が C++ からビルドします。Windows ユーザーは Visual Studio Build Tools 2022（C++ ワークロード）、CMake を PATH に、NDI SDK（<https://ndi.video/for-developers/ndi-sdk/> から取得、NDI Tools とは別物）をデフォルト場所にインストール、環境変数 ``NDI_SDK_DIR`` を SDK に向ける必要があります。
+
+詳細な手順とトラブルシューティングは ``puppet_guide.md`` § 1.2 を参照。
+
+カスタムモーションの録画
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+キーフレームを手動で打つ代わりに、ライブ take を録ります：
+
+1. ツールバーの **Record motion** をオン — 名前ダイアログ表示。
+2. 録画中にスライダーを動かす、**Webcam tracking** を有効に、物理を動かす — パラメータ値を書く動作は何でも OK。
+3. **Record motion** をオフ — レコーダーが 30 Hz ストリームをベイクして ``Motion`` 化（実際に動いたパラメータごとに 1 つの linear-segment トラック、変動なしのトラックは破棄）。新しいモーションが下部 **Motions** ドックに即表示。
+
+カスタムモーションは手動オーサリングしたモーションと同じ ``motions/<name>.json`` JSON ペイロードで保存されます。
+
+ツールバーリファレンス
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - アクション
+     - 用途
+   * - Open Puppet… / Examples ▾
+     - ディスクから ``.puppet`` をロード、または ``examples/puppet/`` の同梱 rig をツールバーから直接選択
+   * - Import PNG… / Import PSD… / Import Cubism…
+     - PNG の自動メッシュ、PSD のレイヤー分割、Cubism ``.moc3`` の sample-and-reconstruct（SDK はユーザー提供）
+   * - Save As…
+     - 現在の rig を ``.puppet`` zip に書き出し
+   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
+     - ツールバーから rig をオーサリング
+   * - Drag-track head
+     - カーソルオフセット → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+   * - Auto-blink
+     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` で約 4.5 秒ごとの cosine close→open（force-write パスで canvas の no-change-skip をバイパスし、他のドライバに邪魔されない）
+   * - Mic lip-sync
+     - マイク RMS → ``ParamMouthOpenY``（``sounddevice`` 必要）
+   * - Webcam tracking
+     - MediaPipe Tasks API FaceLandmarker → 頭の yaw / pitch / roll + 目 + 口（``opencv-python`` + ``mediapipe`` 必要；検出ランドマーク表示のリアルタイムプレビュー dialog 起動）
+   * - Auto idle / Idle motions
+     - 標準パラメータの呼吸 + ドリフト、加えて Idle グループモーションのランダムサイクラー
+   * - Edit mesh
+     - canvas 上の頂点をドラッグしてメッシュ微調整
+   * - Record motion
+     - パラメータ変化を新しい ``Motion`` に録って文書に追加 — take ベイク、手動キーオーサリング不要
+   * - Capture frame… / Record… / Export all motions…
+     - 単一 PNG、GIF / WebM / MP4 録画トグル、各モーションを個別ファイルにバッチレンダリング（すべて配信と同じキャラクター単独 off-screen render パス使用）
+   * - Output > Virtual camera / NDI output
+     - ライブ配信サーフェス — 上記「OBS ライブ配信」参照
+   * - Reset to rest
+     - モーションプレイヤー即停止、すべてのライブドライバオフ、表情 / ポーズグループクリア、パラメータをデフォルトに復元
+   * - Fit to Window
+     - canvas で rig を再センタリング + 再スケール
+
+オプション依存
+^^^^^^^^^^^^^^
+
+* ``sounddevice`` — リップシンク用マイク
+* ``opencv-python`` + ``mediapipe`` — ウェブカメラ顔追跡
+* ``imageio-ffmpeg`` — MP4 / WebM 録画（既にスライドショー動画用に同梱）
+* ``pyvirtualcam`` — 仮想カメラ出力（「OBS ライブ配信」参照）
+* ``ndi-python`` — NDI 出力（「OBS ライブ配信」参照）
+* ユーザー提供 Cubism Native SDK DLL — ``.moc3 → .puppet`` 変換（Live2D Free Material License により再配布不可；``<cwd>/sdk/`` に置くか ``CUBISM_CORE_DLL`` 環境変数を設定）
+
+不足時は優雅にフォールバック — 該当ツールバートグルが自動オフになり、"install <package>" ヒントを表示。**File > Install dependencies…** ですべての Python オプションパッケージを一括インストール。
+
+----
+
 コマンドライン
 --------------
 

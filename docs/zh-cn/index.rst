@@ -1429,6 +1429,121 @@ GPS 地理标记
 
 ----
 
+Puppet 工作区（Puppet 标签）
+----------------------------
+
+第四个顶层标签 — **Puppet** — 是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势组、对嘴、摄像头追踪），但**不依赖任何专利 SDK**、**不使用** ``live2d-py``，采用完全开放的 ``.puppet`` 文件格式。
+
+.. note::
+
+   端到端教程 — 从全新安装到 OBS 直播或产出 MP4 — 在仓库根目录的
+   ``puppet_guide.zh-CN.md``（英文版 ``puppet_guide.md``、繁体中文版 ``puppet_guide.zh-TW.md``）。
+   本章是参考手册；那份是逐步走读。
+
+端到端流程
+^^^^^^^^^^
+
+1. **导入 PNG** — 工具栏 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、单一 drawable、可立即渲染。
+2. **加变形器** — ``Add Rotation Deformer``（锚点 + 角度）或 ``Add Warp Deformer``（rows × cols Bezier lattice；边界外顶点直通）。
+3. **加参数** — ``Add Parameter`` 在右侧 **Parameters** 停靠栏加滑块（自动命名 ``Param1``、``Param2`` …）。
+4. **设 keys** — 拖滑块到极端值、编辑 deformer form、按 **Set key**。对中立值跟另一端重复。Runtime 接着会在滑块移动时于相邻 keys 之间 lerp 各字段。
+5. **保存** — ``Save As…`` 把 rig + 纹理 + 动作 + 表情 + 物理写成单一 ``.puppet`` zip，可分享或之后用 ``Open Puppet…`` 重开。
+
+示例
+^^^^
+
+仓库内附完整 rig：``examples/puppet/march_7th.puppet`` — 307-drawable 的 Cubism Live2D 角色，仓库内转换好。纹理跟每参数顶点 morph 全烘进 ``.puppet`` zip，使用默认 ``requirements.txt`` 就能开，无需散布 Cubism SDK。
+
+该 rig 带 203 个 Cubism 标准参数（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有标准输入驱动（摄像头、眨眼、对嘴、光标追踪）不用调整就能驱动。内置 18 个循环动作 — 作者转换的 Cubism idle 循环，加上 ``Idle`` 组和 ``Gesture`` 组的参考手势。
+
+Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7Th 或自己的 ``.puppet`` 打开。下方 **Motions** 停靠栏点任一个动作即播。
+
+OBS 直播整合
+^^^^^^^^^^^^
+
+两条输出，都把角色独立渲染到 off-screen framebuffer（不含棋盘格背景与编辑器外壳）再送到推流端。输出长边上限 1080 px，避免 Cubism 原生画布（March 7th 是 3503×7777）被 DirectShow 虚拟摄像头驱动拒绝。
+
+**A. Virtual Camera** — 在 OBS"视频捕获设备"源列表里以 webcam 形式出现。``pip install pyvirtualcam`` 加上平台驱动：OBS Studio 26+（Windows/macOS）会附 *OBS Virtual Camera* 驱动，第一次打开 OBS 点 *Start Virtual Camera* 注册；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具栏 **Output > Virtual camera** 开始推流。
+
+DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**，所以 Imervue 在角色以外的区域填**洋红色 `#FF00FF`** 当色键。OBS 端去背：
+
+1. 视频捕获设备源右键 → **Filters**
+2. **Effect Filters > + > Color Key**
+3. 设置 **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
+
+滤镜跟着源走，下次启用虚拟摄像头自动套用。
+
+**B. NDI 输出** — LAN 上 < 50 ms 延迟、原生 RGBA，OBS / vMix 可以直接把角色叠到自己的场景上、不用色键。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 与 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 插件。工具栏 **Output > NDI output** 开始广播（默认源名 *Imervue Puppet*）。
+
+``ndi-python`` 只 ship source distribution、pip 拿到后从 C++ 编。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作负载）、CMake 加到 PATH、NDI SDK（从 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）装在默认位置、环境变量 ``NDI_SDK_DIR`` 指向 SDK。
+
+详细逐步与疑难排解见 ``puppet_guide.zh-CN.md`` § 1.2。
+
+录制自定义动作
+^^^^^^^^^^^^^^
+
+不想手动编 keyframe？用实时 take 录：
+
+1. 工具栏 **Record motion** 打勾，会弹出命名对话框。
+2. 录制时拖滑块、开 **Webcam tracking**、让物理跑 — 任何会写参数值的事情都可以。
+3. **Record motion** 取消勾 — 录制器把 30 Hz 串流烘焙成一个 ``Motion``：每个真的有变动的参数一条 linear-segment 轨（没变动的丢掉）。新动作立刻出现在底部 **Motions** 停靠栏。
+
+存进 ``.puppet`` 的方式跟手写 keys 的动作完全相同。
+
+工具栏参考
+^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 动作
+     - 用途
+   * - Open Puppet… / Examples ▾
+     - 从磁盘加载 ``.puppet``，或从工具栏直接挑 ``examples/puppet/`` 下内置的 rig
+   * - Import PNG… / Import PSD… / Import Cubism…
+     - PNG 自动 mesh、PSD 分层拆 drawable、Cubism ``.moc3`` sample-and-reconstruct（SDK 用户自备）
+   * - Save As…
+     - 把当前 rig 写成 ``.puppet`` zip
+   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
+     - 从工具栏 author rig
+   * - Drag-track head
+     - 光标偏移 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+   * - Auto-blink
+     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路径绕过 canvas 的 no-change-skip，避免被其他 driver 卡住）
+   * - Mic lip-sync
+     - 麦克风 RMS → ``ParamMouthOpenY``（需 ``sounddevice``）
+   * - Webcam tracking
+     - MediaPipe Tasks API FaceLandmarker → 头部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；打开实时预览 dialog 显示检测到的 landmark）
+   * - Auto idle / Idle motions
+     - 标准参数上的呼吸 + 漂移，加上 Idle 组动作的随机循环
+   * - Edit mesh
+     - 拖曳 canvas 上的顶点微调 mesh
+   * - Record motion
+     - 把参数变化录成新的 ``Motion`` 加进文档 — take 烘焙、不用手动 author keys
+   * - Capture frame… / Record… / Export all motions…
+     - 存单张 PNG、开关 GIF / WebM / MP4 录制、或批量把每个动作各别 render 成文件（全部用跟推流相同的角色独立 off-screen render）
+   * - Output > Virtual camera / NDI output
+     - 直播输出 — 见上面的"OBS 直播整合"
+   * - Reset to rest
+     - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、参数复位
+   * - Fit to Window
+     - Canvas 上重新居中 + 缩放 rig
+
+可选依赖
+^^^^^^^^
+
+* ``sounddevice`` — 麦克风对嘴
+* ``opencv-python`` + ``mediapipe`` — 摄像头脸部追踪
+* ``imageio-ffmpeg`` — MP4 / WebM 录制（已随幻灯片视频功能附带）
+* ``pyvirtualcam`` — 虚拟摄像头输出（见"OBS 直播整合"）
+* ``ndi-python`` — NDI 输出（见"OBS 直播整合"）
+* 用户自备 Cubism Native SDK DLL — ``.moc3 → .puppet`` 转换（Live2D Free Material License 禁止散布；放在 ``<cwd>/sdk/`` 或设 ``CUBISM_CORE_DLL`` 环境变量）
+
+任何缺失都会优雅停用 — 对应工具栏 toggle 会自动弹回去并提示安装。**File > Install dependencies…** 可一次装齐所有 Python 可选包。
+
+----
+
 命令行启动
 ----------
 
