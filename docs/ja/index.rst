@@ -1504,6 +1504,16 @@ Puppet ワークスペース（Puppet タブ）
 
 Puppet タブのツールバー → **Examples ▾** ドロップダウンから直接 March 7Th や自分の ``.puppet`` を開けます。下部の **Motions** ドックでモーションをクリックして再生。
 
+**同梱サンプルの実行手順：**
+
+1. **Imervue を起動**。ソースから：``python -m Imervue``。パッケージ版：``Imervue`` 実行ファイル / app bundle を直接起動。``examples/`` ディレクトリは wheel と Nuitka EXE の両方にバンドル済みなので、インストール先で rig ファイルが利用できます。
+2. ウィンドウ上部の **Puppet** タブをクリック。
+3. ツールバー → **File > Examples > March 7Th**（またはツールバーの **Examples ▾** ドロップダウン）。307-drawable の rig が中央にロードされ、パラメータドックが 203 個の Cubism 標準パラメータスライダーで満たされます。
+4. 下部の **Motions** ドックでモーションエントリ（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）をシングルクリック。即座に再生開始；もう一度クリックで停止、別のモーションを選ぶとクロスフェード。
+5. ツールバーのライブ入力トグルを切り替えて自分の入力で rig を動かす — **Drag-track head**（カーソル追従）、**Auto-blink**（自動まばたき）、**Auto idle** + **Idle motions**（呼吸 + ランダム idle モーション）、**Mic lip-sync**（マイク RMS から口の開閉）、**Webcam tracking**（MediaPipe FaceLandmarker による頭 / 目 / 口の追跡）。
+6. ツールバーの **Reset to rest** で全モーション停止、全ライブドライバ OFF、expressions / pose オーバーライドをクリア、全パラメータをデフォルトに戻します — 標準の「最初からやり直し」ボタン。
+7. 別の rig を後で開く場合：**File > Open Puppet…** でディスクから任意の ``.puppet`` zip を開く；**File > Examples ▾** は常に同梱リストにバインドされます。
+
 OBS ライブ配信
 ^^^^^^^^^^^^^^
 

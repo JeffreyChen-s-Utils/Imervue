@@ -1462,6 +1462,16 @@ Puppet 工作區（Puppet 分頁）
 
 Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7Th 或自己的 ``.puppet`` 開啟。下方 **Motions** 擺放欄點任一個動作即播。
 
+**執行內附範例 — 逐步走讀：**
+
+1. **啟動 Imervue**。原始碼跑：``python -m Imervue``；裝好的版本：直接執行 ``Imervue`` 執行檔 / app bundle。``examples/`` 資料夾已經打包進 wheel 跟 Nuitka EXE，rig 檔案會在安裝目錄底下。
+2. 點視窗頂端的 **Puppet** 分頁。
+3. 工具列 → **File > Examples > March 7Th**（或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
+4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即開始播放；再點一次停止，或選別的動作交叉淡入。
+5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**（頭跟著游標）、**Auto-blink**（自動眨眼）、**Auto idle** + **Idle motions**（呼吸 + 隨機 idle 動作）、**Mic lip-sync**（麥克風 RMS 帶動嘴型）、**Webcam tracking**（MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
+6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
+7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
+
 OBS 直播整合
 ^^^^^^^^^^^^
 
