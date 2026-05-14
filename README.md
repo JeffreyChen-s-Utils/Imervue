@@ -358,6 +358,13 @@ Press `E` from Deep Zoom to send the current image straight into a new Paint tab
 
 The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
 
+> **Full walkthrough**: [`puppet_guide.md`](puppet_guide.md) covers the
+> end-to-end flow for both live streaming (OBS / NDI / virtual camera)
+> and animation production (recording / timeline editing / MP4
+> export). Chinese versions at
+> [`puppet_guide.zh-TW.md`](puppet_guide.zh-TW.md) and
+> [`puppet_guide.zh-CN.md`](puppet_guide.zh-CN.md).
+
 ### File format
 
 `.puppet` is a zip container:

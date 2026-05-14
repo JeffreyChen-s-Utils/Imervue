@@ -355,6 +355,8 @@ python -m Imervue /path/to/folder
 
 ## Puppet — 2D 绑骨偶动画
 
+> **完整教程**：[`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md) 涵盖直播（OBS / NDI / 虚拟摄像头）与动画制作（录制 / 时间轴编辑 / MP4 导出）的端到端流程。英文版于 [`puppet_guide.md`](../puppet_guide.md)、繁体中文于 [`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md)。
+
 **Puppet** 标签是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势、对嘴、摄像头脸部追踪），但**不依赖任何专利 SDK**、**不使用 `live2d-py`**，采用完全开放的 `.puppet` 文件格式，规格完整记录于 `Imervue/puppet/FORMAT.md`。
 
 ### 文件格式
