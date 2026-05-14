@@ -34,6 +34,7 @@ import logging
 from pathlib import Path
 
 from Imervue.puppet.cubism_import import (
+    CubismBundle,
     apply_bundle,
     load_cdi3,
     load_exp3,
@@ -50,6 +51,7 @@ from Imervue.puppet.cubism_native_bridge import (
 )
 from Imervue.puppet.document import (
     Drawable,
+    Motion,
     Parameter,
     PuppetDocument,
 )
@@ -283,6 +285,30 @@ def _attach_parameters(
 # ---------------------------------------------------------------------------
 
 
+def _build_morph_entry(
+    rest: list[float],
+    deformed_min: list[float],
+    deformed_max: list[float],
+    morph_epsilon: float,
+    transform: _CanvasTransform,
+    parameter_id: str,
+) -> dict | None:
+    """Subtract rest from the two deformed vertex arrays and return a
+    serialisable morph entry — unless both deltas are below the
+    threshold (then the morph is noise, drop it)."""
+    if len(rest) != len(deformed_min) or len(rest) != len(deformed_max):
+        return None
+    morph_min = _vertex_deltas(rest, deformed_min, transform)
+    morph_max = _vertex_deltas(rest, deformed_max, transform)
+    if _max_abs(morph_min) < morph_epsilon and _max_abs(morph_max) < morph_epsilon:
+        return None
+    return {
+        "parameter": parameter_id,
+        "delta_at_min": morph_min,
+        "delta_at_max": morph_max,
+    }
+
+
 def _attach_morphs(
     document: PuppetDocument,
     model: CubismModel,
@@ -297,34 +323,23 @@ def _attach_morphs(
     pixel space, via the canvas transform) and attach the
     non-negligible ones as morphs on each drawable."""
     default_values = [p.default for p in parameters]
-    n_drawables = len(drawables_rest)
     rest_positions: list[list[float]] = [list(d.positions) for d in drawables_rest]
     for param_index, parameter in enumerate(parameters):
         if parameter.minimum == parameter.maximum:
             continue
         delta_min = _sample_at(model, default_values, param_index, parameter.minimum)
         delta_max = _sample_at(model, default_values, param_index, parameter.maximum)
-        for d_index in range(n_drawables):
-            rest = rest_positions[d_index]
-            d_min = delta_min[d_index]
-            d_max = delta_max[d_index]
-            if len(rest) != len(d_min) or len(rest) != len(d_max):
-                continue
-            morph_min = _vertex_deltas(rest, d_min, transform)
-            morph_max = _vertex_deltas(rest, d_max, transform)
-            if (
-                _max_abs(morph_min) < morph_epsilon
-                and _max_abs(morph_max) < morph_epsilon
-            ):
+        for d_index, rest in enumerate(rest_positions):
+            entry = _build_morph_entry(
+                rest, delta_min[d_index], delta_max[d_index],
+                morph_epsilon, transform, parameter.id,
+            )
+            if entry is None:
                 continue
             drawable = document.drawables[d_index]
             if drawable.vertex_morphs is None:
                 drawable.vertex_morphs = []
-            drawable.vertex_morphs.append({
-                "parameter": parameter.id,
-                "delta_at_min": morph_min,
-                "delta_at_max": morph_max,
-            })
+            drawable.vertex_morphs.append(entry)
     # Restore defaults so subsequent canvas info / drawable reads from
     # this same model still reflect the rest pose.
     model.set_parameter_values(default_values)
@@ -364,6 +379,35 @@ def _sample_visibility_at(
     return model.visibility_flags()
 
 
+def _emit_opacity_curve(
+    drawable: Drawable,
+    parameter: ParameterInfo,
+    vd: bool, vmin: bool, vmax: bool,
+) -> None:
+    """Append a three-stop ``opacity_keys`` entry to ``drawable`` and
+    force it visible + opaque so the curve has authority over the
+    renderer. Caller is responsible for deciding when this transition
+    is worth recording — this helper trusts that decision."""
+    stops = [
+        {"value": parameter.minimum, "alpha": 1.0 if vmin else 0.0},
+        {"value": parameter.default, "alpha": 1.0 if vd else 0.0},
+        {"value": parameter.maximum, "alpha": 1.0 if vmax else 0.0},
+    ]
+    if drawable.opacity_keys is None:
+        drawable.opacity_keys = []
+    drawable.opacity_keys.append({
+        "parameter": parameter.id,
+        "stops": stops,
+    })
+    # The curve must be the gate, not the authored base. A drawable
+    # hidden at rest gets opacity=0.0 from the converter;
+    # resolve_drawable_opacity multiplies that by the curve, so
+    # 0 * 1 = 0 and the curve does nothing. Force visible + opaque so
+    # the curve has the only say.
+    drawable.visible = True
+    drawable.opacity = 1.0
+
+
 def _attach_visibility_keys(
     document: PuppetDocument,
     model: CubismModel,
@@ -381,13 +425,6 @@ def _attach_visibility_keys(
     default, and max; when a drawable's visibility differs across
     those points, emit a three-stop ``opacity_keys`` curve so the
     runtime fades the mesh in/out as the parameter moves.
-
-    Drawables that get a visibility curve are forced to
-    ``visible=True`` and ``opacity=1.0`` so the curve has authority
-    over the renderer — :func:`resolve_drawable_opacity` multiplies
-    authored opacity by the curve, and the renderer hard-skips
-    drawables flagged ``visible=False``, so leaving either at its
-    rest value would nullify the curve.
     """
     default_values = [p.default for p in parameters]
     default_vis = [d.is_visible for d in drawables_rest]
@@ -401,29 +438,10 @@ def _attach_visibility_keys(
             model, default_values, param_index, parameter.maximum,
         )
         for d_index, drawable in enumerate(document.drawables):
-            vd = default_vis[d_index]
-            vmin = vis_min[d_index]
-            vmax = vis_max[d_index]
+            vd, vmin, vmax = default_vis[d_index], vis_min[d_index], vis_max[d_index]
             if vd == vmin == vmax:
                 continue
-            stops = [
-                {"value": parameter.minimum, "alpha": 1.0 if vmin else 0.0},
-                {"value": parameter.default, "alpha": 1.0 if vd else 0.0},
-                {"value": parameter.maximum, "alpha": 1.0 if vmax else 0.0},
-            ]
-            if drawable.opacity_keys is None:
-                drawable.opacity_keys = []
-            drawable.opacity_keys.append({
-                "parameter": parameter.id,
-                "stops": stops,
-            })
-            # The curve must be the gate, not the authored base. A
-            # drawable hidden at rest gets opacity=0.0 from the
-            # converter; resolve_drawable_opacity multiplies that by
-            # the curve, so 0 * 1 = 0 and the curve does nothing.
-            # Force visible + opaque so the curve has the only say.
-            drawable.visible = True
-            drawable.opacity = 1.0
+            _emit_opacity_curve(drawable, parameter, vd, vmin, vmax)
     # Restore the rest pose before any downstream caller reads the
     # model — _attach_morphs already does this for its own sweep, but
     # we may be the last sweep so be defensive.
@@ -462,7 +480,129 @@ def _max_abs(deltas: list[tuple[float, float]]) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _attach_cubism_bundle(  # noqa: C901  # bundle layout has many optional file types
+def _load_referenced_motion(
+    base_dir: Path, group_name: str, entry: dict,
+) -> tuple[Motion, Path] | None:
+    """Resolve and load one entry from the manifest's ``Motions``
+    map. Returns ``(motion, resolved_path)`` so the caller can both
+    collect the motion and track which files were already consumed.
+    Returns ``None`` for missing files or malformed entries."""
+    file_ref = entry.get("File")
+    if not isinstance(file_ref, str) or not file_ref:
+        return None
+    path = base_dir / file_ref
+    if not path.is_file():
+        logger.info("motion %s missing — skipping", path)
+        return None
+    stem = Path(file_ref).stem.removesuffix(".motion3")
+    motion = load_motion3(path, name=f"{group_name}/{stem}")
+    motion.group = str(group_name)
+    fade_in = entry.get("FadeInTime")
+    fade_out = entry.get("FadeOutTime")
+    if isinstance(fade_in, (int, float)):
+        motion.fade_in_duration = float(fade_in)
+    if isinstance(fade_out, (int, float)):
+        motion.fade_out_duration = float(fade_out)
+    return motion, path.resolve()
+
+
+def _collect_manifest_motions(
+    bundle: CubismBundle, file_refs: dict, base_dir: Path,
+) -> set[Path]:
+    """Walk ``FileReferences.Motions`` and append every entry that
+    resolves. Returns the set of resolved paths so the orphan-sweep
+    can skip duplicates."""
+    seen: set[Path] = set()
+    for group_name, entries in (file_refs.get("Motions") or {}).items():
+        for entry in entries or []:
+            if not isinstance(entry, dict):
+                continue
+            loaded = _load_referenced_motion(base_dir, group_name, entry)
+            if loaded is None:
+                continue
+            motion, resolved = loaded
+            bundle.motions.append(motion)
+            seen.add(resolved)
+    return seen
+
+
+def _collect_orphan_motions(
+    bundle: CubismBundle, base_dir: Path, already_seen: set[Path],
+) -> None:
+    """Real-world Cubism bundles often ship motions the manifest
+    forgot — sweep ``motions/`` and pick up anything not already
+    consumed. Default the group to ``Idle`` with a half-second
+    cross-fade."""
+    extra_root = base_dir / "motions"
+    if not extra_root.is_dir():
+        return
+    for path in sorted(extra_root.glob("*.motion3.json")):
+        if path.resolve() in already_seen:
+            continue
+        stem = path.stem.removesuffix(".motion3")
+        motion = load_motion3(path, name=stem)
+        motion.group = "Idle"
+        motion.fade_in_duration = 0.5
+        motion.fade_out_duration = 0.5
+        bundle.motions.append(motion)
+
+
+def _collect_expressions(
+    bundle: CubismBundle, file_refs: dict, base_dir: Path,
+) -> None:
+    """Broken paths in real-world bundles are common; also check
+    under ``base_dir / "exp"``."""
+    for entry in file_refs.get("Expressions") or []:
+        if not isinstance(entry, dict):
+            continue
+        file_ref = entry.get("File")
+        if not file_ref:
+            continue
+        name = entry.get("Name") or Path(file_ref).stem
+        for path in (base_dir / file_ref, base_dir / "exp" / file_ref):
+            if path.is_file():
+                try:
+                    bundle.expressions.append(load_exp3(path, name=str(name)))
+                except Exception as exc:   # noqa: BLE001 - load_exp3 backends vary
+                    logger.info("expression %s failed: %s", path, exc)
+                break
+        else:
+            logger.info("expression %s missing — skipping", file_ref)
+
+
+def _collect_single_sidecar(
+    file_refs: dict, base_dir: Path, key: str, loader, sink, label: str,
+) -> None:
+    """Apply the same pattern as physics / display info: look up a
+    single string filename, verify it exists, hand the path to the
+    loader, swallow any backend error as info-log."""
+    ref = file_refs.get(key)
+    if not isinstance(ref, str) or not ref:
+        return
+    path = base_dir / ref
+    if not path.is_file():
+        return
+    try:
+        sink(loader(path))
+    except Exception as exc:   # noqa: BLE001 - third-party loaders vary
+        logger.info("%s %s failed: %s", label, path, exc)
+
+
+def _collect_hit_areas(bundle: CubismBundle, manifest: dict) -> None:
+    from Imervue.puppet.document import HitArea
+    for entry in manifest.get("HitAreas") or []:
+        if not isinstance(entry, dict):
+            continue
+        drawable_id = entry.get("Id")
+        if not isinstance(drawable_id, str) or not drawable_id:
+            continue
+        name = entry.get("Name") or drawable_id
+        bundle.hit_areas.append(
+            HitArea(id=str(name), drawables=[str(drawable_id)]),
+        )
+
+
+def _attach_cubism_bundle(
     document: PuppetDocument, manifest: dict, base_dir: Path,
 ) -> None:
     """Pull motions / expressions / physics / cdi out of the Cubism
@@ -474,90 +614,17 @@ def _attach_cubism_bundle(  # noqa: C901  # bundle layout has many optional file
 
     file_refs = manifest.get("FileReferences") or {}
     bundle = CubismBundle()
-    referenced_motion_paths: set[Path] = set()
-    # Motions explicitly referenced by the model3 manifest first.
-    motions_raw = file_refs.get("Motions") or {}
-    for group_name, entries in motions_raw.items():
-        for entry in entries or []:
-            if not isinstance(entry, dict):
-                continue
-            file_ref = entry.get("File")
-            if not isinstance(file_ref, str) or not file_ref:
-                continue
-            path = base_dir / file_ref
-            if not path.is_file():
-                logger.info("motion %s missing — skipping", path)
-                continue
-            stem = Path(file_ref).stem.removesuffix(".motion3")
-            motion = load_motion3(path, name=f"{group_name}/{stem}")
-            motion.group = str(group_name)
-            if isinstance(entry.get("FadeInTime"), (int, float)):
-                motion.fade_in_duration = float(entry["FadeInTime"])
-            if isinstance(entry.get("FadeOutTime"), (int, float)):
-                motion.fade_out_duration = float(entry["FadeOutTime"])
-            bundle.motions.append(motion)
-            referenced_motion_paths.add(path.resolve())
-    # Sweep the conventional ``motions/`` sibling folder for any
-    # un-referenced .motion3.json files — real-world bundles often
-    # ship motions the model3 forgot to wire up. Skip duplicates we
-    # already picked up via FileReferences.
-    extra_root = base_dir / "motions"
-    if extra_root.is_dir():
-        for path in sorted(extra_root.glob("*.motion3.json")):
-            if path.resolve() in referenced_motion_paths:
-                continue
-            stem = path.stem.removesuffix(".motion3")
-            motion = load_motion3(path, name=stem)
-            motion.group = "Idle"
-            motion.fade_in_duration = 0.5
-            motion.fade_out_duration = 0.5
-            bundle.motions.append(motion)
-    # Expressions — broken paths in real-world bundles are common,
-    # so we recover by looking under base_dir / "exp" too.
-    for entry in file_refs.get("Expressions") or []:
-        if not isinstance(entry, dict):
-            continue
-        file_ref = entry.get("File")
-        name = entry.get("Name") or (Path(file_ref).stem if file_ref else "")
-        if not file_ref:
-            continue
-        candidates = [base_dir / file_ref, base_dir / "exp" / file_ref]
-        for path in candidates:
-            if path.is_file():
-                try:
-                    bundle.expressions.append(load_exp3(path, name=str(name)))
-                except Exception as exc:   # noqa: BLE001
-                    logger.info("expression %s failed: %s", path, exc)
-                break
-        else:
-            logger.info("expression %s missing — skipping", file_ref)
-    # Physics
-    physics_ref = file_refs.get("Physics")
-    if isinstance(physics_ref, str) and physics_ref:
-        physics_path = base_dir / physics_ref
-        if physics_path.is_file():
-            try:
-                bundle.physics_rigs = load_physics3(physics_path)
-            except Exception as exc:   # noqa: BLE001
-                logger.info("physics %s failed: %s", physics_path, exc)
-    # Display info
-    display_ref = file_refs.get("DisplayInfo")
-    if isinstance(display_ref, str) and display_ref:
-        display_path = base_dir / display_ref
-        if display_path.is_file():
-            try:
-                bundle.display_names = load_cdi3(display_path)
-            except Exception as exc:   # noqa: BLE001
-                logger.info("cdi %s failed: %s", display_path, exc)
-    # HitAreas — keep them even though the drawable ids referenced
-    # may differ from what's in this rig; the workspace handler
-    # silently no-ops on missing drawables.
-    for entry in manifest.get("HitAreas") or []:
-        if not isinstance(entry, dict):
-            continue
-        drawable_id = entry.get("Id")
-        name = entry.get("Name") or drawable_id
-        if isinstance(drawable_id, str) and drawable_id:
-            from Imervue.puppet.document import HitArea
-            bundle.hit_areas.append(HitArea(id=str(name), drawables=[str(drawable_id)]))
+
+    referenced_paths = _collect_manifest_motions(bundle, file_refs, base_dir)
+    _collect_orphan_motions(bundle, base_dir, referenced_paths)
+    _collect_expressions(bundle, file_refs, base_dir)
+    _collect_single_sidecar(
+        file_refs, base_dir, "Physics",
+        load_physics3, bundle.physics_rigs.extend, "physics",
+    )
+    _collect_single_sidecar(
+        file_refs, base_dir, "DisplayInfo",
+        load_cdi3, bundle.display_names.update, "cdi",
+    )
+    _collect_hit_areas(bundle, manifest)
     apply_bundle(document, bundle)

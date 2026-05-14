@@ -228,34 +228,47 @@ def load_model3(path: str | Path) -> CubismBundle:
     return bundle
 
 
+def _load_motion_entry(
+    base: Path, group_name: str, entry: object,
+) -> Motion | None:
+    """Resolve and load a single ``Motions[group][i]`` entry. Returns
+    ``None`` for malformed / missing-File entries."""
+    if not isinstance(entry, dict):
+        return None
+    file_ref = entry.get("File")
+    if not file_ref:
+        return None
+    motion_path = base / file_ref
+    # Real Cubism rigs ship multiple motions per group sharing the
+    # group name as a prefix in the file name (idle_01.motion3.json
+    # etc.); surfacing the file stem keeps that intent without
+    # collapsing all of them under "Idle_0" / "Idle_1".
+    real_name = Path(file_ref).stem.removesuffix(".motion3")
+    motion = load_motion3(motion_path, name=f"{group_name}/{real_name}")
+    motion.group = str(group_name)
+    # FadeInTime / FadeOutTime on the model3 reference override the
+    # motion3's own values when present — matches Cubism's rule.
+    fade_in = entry.get("FadeInTime")
+    fade_out = entry.get("FadeOutTime")
+    if isinstance(fade_in, (int, float)):
+        motion.fade_in_duration = float(fade_in)
+    if isinstance(fade_out, (int, float)):
+        motion.fade_out_duration = float(fade_out)
+    sound_ref = entry.get("Sound")
+    if isinstance(sound_ref, str) and sound_ref:
+        motion.sound_path = str(base / sound_ref)
+    return motion
+
+
 def _load_referenced_motions(base: Path, motions_raw: dict) -> list[Motion]:
     out: list[Motion] = []
     for group_name, entries in motions_raw.items():
         if not isinstance(entries, list):
             continue
-        for _index, entry in enumerate(entries):
-            file_ref = entry.get("File") if isinstance(entry, dict) else None
-            if not file_ref:
-                continue
-            motion_path = base / file_ref
-            # Real Cubism rigs ship multiple motions per group sharing
-            # the group name as a prefix in the file name (idle_01.motion3.json
-            # etc.). Surfacing the file stem keeps that intent without
-            # collapsing all of them under "Idle_0" / "Idle_1".
-            real_name = Path(file_ref).stem.removesuffix(".motion3")
-            motion = load_motion3(motion_path, name=f"{group_name}/{real_name}")
-            motion.group = str(group_name)
-            # FadeInTime / FadeOutTime on the model3 reference override
-            # the motion3's own values when present — matches Cubism's
-            # precedence rule.
-            if isinstance(entry.get("FadeInTime"), (int, float)):
-                motion.fade_in_duration = float(entry["FadeInTime"])
-            if isinstance(entry.get("FadeOutTime"), (int, float)):
-                motion.fade_out_duration = float(entry["FadeOutTime"])
-            sound_ref = entry.get("Sound")
-            if isinstance(sound_ref, str) and sound_ref:
-                motion.sound_path = str(base / sound_ref)
-            out.append(motion)
+        for entry in entries:
+            motion = _load_motion_entry(base, group_name, entry)
+            if motion is not None:
+                out.append(motion)
     return out
 
 
@@ -477,37 +490,29 @@ def load_cdi3(path: str | Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
+def _merge_by_attr(target: list, incoming: list, attr: str) -> None:
+    """Append every item from ``incoming`` whose ``attr`` value isn't
+    already present in ``target``. Same dedupe-on-attribute pattern
+    motions / expressions / hit areas / physics / poses all use."""
+    seen = {getattr(item, attr) for item in target}
+    for item in incoming:
+        key = getattr(item, attr)
+        if key not in seen:
+            target.append(item)
+            seen.add(key)
+
+
 def apply_bundle(document, bundle: CubismBundle) -> None:
     """Fold ``bundle`` into ``document`` in-place: append motions /
     expressions / hit areas, deduping by name / id. Parameter groups
     aren't merged into the document (the document doesn't model them
     explicitly) — callers wanting them should read
     :attr:`CubismBundle.parameter_groups` directly."""
-    existing_motions = {m.name for m in document.motions}
-    for motion in bundle.motions:
-        if motion.name not in existing_motions:
-            document.motions.append(motion)
-            existing_motions.add(motion.name)
-    existing_expressions = {e.name for e in document.expressions}
-    for expression in bundle.expressions:
-        if expression.name not in existing_expressions:
-            document.expressions.append(expression)
-            existing_expressions.add(expression.name)
-    existing_hits = {h.id for h in document.hit_areas}
-    for hit in bundle.hit_areas:
-        if hit.id not in existing_hits:
-            document.hit_areas.append(hit)
-            existing_hits.add(hit.id)
-    existing_rigs = {r.id for r in document.physics_rigs}
-    for rig in bundle.physics_rigs:
-        if rig.id not in existing_rigs:
-            document.physics_rigs.append(rig)
-            existing_rigs.add(rig.id)
-    existing_poses = {p.id for p in document.pose_groups}
-    for group in bundle.pose_groups:
-        if group.id not in existing_poses:
-            document.pose_groups.append(group)
-            existing_poses.add(group.id)
+    _merge_by_attr(document.motions, bundle.motions, "name")
+    _merge_by_attr(document.expressions, bundle.expressions, "name")
+    _merge_by_attr(document.hit_areas, bundle.hit_areas, "id")
+    _merge_by_attr(document.physics_rigs, bundle.physics_rigs, "id")
+    _merge_by_attr(document.pose_groups, bundle.pose_groups, "id")
     if bundle.display_names:
         document.display_names.update(bundle.display_names)
 

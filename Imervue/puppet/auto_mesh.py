@@ -28,6 +28,31 @@ transparent and dropped from the mesh — keeps offscreen empty space
 out of the triangulation."""
 
 
+def _validate_rgba(image_rgba: np.ndarray, cell_size: int) -> tuple[int, int]:
+    if image_rgba.ndim != 3 or image_rgba.shape[2] != 4:
+        raise ValueError(
+            f"image must be HxWx4 RGBA, got shape {image_rgba.shape}",
+        )
+    if cell_size <= 0:
+        raise ValueError(f"cell_size must be > 0, got {cell_size}")
+    h, w = image_rgba.shape[:2]
+    if h == 0 or w == 0:
+        raise ValueError("image is empty")
+    return h, w
+
+
+def _emit_cell_quad(
+    cx: int, cy: int,
+    vertex_for: callable,
+    indices: list[int],
+) -> None:
+    tl = vertex_for(cx, cy)
+    tr = vertex_for(cx + 1, cy)
+    br = vertex_for(cx + 1, cy + 1)
+    bl = vertex_for(cx, cy + 1)
+    indices.extend([tl, tr, br, tl, br, bl])
+
+
 def triangulate_alpha_grid(
     image_rgba: np.ndarray, cell_size: int = DEFAULT_CELL_SIZE,
 ) -> tuple[list[tuple[float, float]], list[int], list[tuple[float, float]]]:
@@ -47,17 +72,7 @@ def triangulate_alpha_grid(
     the alpha threshold (an entirely-transparent image is not a useful
     puppet).
     """
-    if image_rgba.ndim != 3 or image_rgba.shape[2] != 4:
-        raise ValueError(
-            f"image must be HxWx4 RGBA, got shape {image_rgba.shape}",
-        )
-    if cell_size <= 0:
-        raise ValueError(f"cell_size must be > 0, got {cell_size}")
-
-    h, w = image_rgba.shape[:2]
-    if h == 0 or w == 0:
-        raise ValueError("image is empty")
-
+    h, w = _validate_rgba(image_rgba, cell_size)
     alpha = image_rgba[..., 3]
     cells_y = max(1, (h + cell_size - 1) // cell_size)
     cells_x = max(1, (w + cell_size - 1) // cell_size)
@@ -87,15 +102,9 @@ def triangulate_alpha_grid(
             x1 = min(x0 + cell_size, w)
             y1 = min(y0 + cell_size, h)
             cell_alpha = alpha[y0:y1, x0:x1]
-            if not cell_alpha.size:
+            if not cell_alpha.size or int(cell_alpha.max()) < _ALPHA_THRESHOLD:
                 continue
-            if int(cell_alpha.max()) < _ALPHA_THRESHOLD:
-                continue
-            tl = _vertex(cx, cy)
-            tr = _vertex(cx + 1, cy)
-            br = _vertex(cx + 1, cy + 1)
-            bl = _vertex(cx, cy + 1)
-            indices.extend([tl, tr, br, tl, br, bl])
+            _emit_cell_quad(cx, cy, _vertex, indices)
 
     if not indices:
         raise ValueError("image has no opaque pixels — nothing to triangulate")
