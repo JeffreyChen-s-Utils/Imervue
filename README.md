@@ -408,9 +408,65 @@ The **Cubism Native SDK** can be plugged in (user-supplied DLL — Live2D's Free
 
 - **Capture frame…** saves a PNG of the current canvas via `glReadPixels`
 - **Record…** toggles a 30 FPS frame loop into GIF / WebM / MP4 via `imageio`
-- **NDI output** for streaming into OBS / Zoom (optional `ndi-python` dep)
-- **VTube Studio API server** — opt-in OBS-friendly remote control
-- **Virtual camera** stream
+- **Virtual camera** — exposes the puppet canvas as a system webcam
+- **NDI output** — broadcasts the puppet as an NDI source on the LAN
+- **VTube Studio API server** — opt-in WebSocket API for VTS-compatible clients
+
+### Live streaming to OBS
+
+Two supported paths. Pick A for "just works", B if you want the
+lowest latency and best quality on a fast LAN.
+
+#### A. Virtual camera (easiest)
+
+The puppet canvas appears as a webcam OBS picks up via its standard
+Video Capture Device source.
+
+1. `pip install pyvirtualcam`
+2. Install the platform driver:
+   - **Windows**: OBS Studio 26+ ships the *OBS Virtual Camera*
+     driver. After installing OBS, open it once and click **Start
+     Virtual Camera** in the bottom-right panel — that registers
+     the driver system-wide so `pyvirtualcam` can find it.
+   - **macOS**: OBS for Mac ships an OBS Virtual Camera system
+     extension. First run will prompt to enable it under
+     System Settings → Privacy & Security.
+   - **Linux**: `sudo modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"` (install `v4l2loopback-dkms` first).
+3. In the Puppet tab, open your rig, then toggle **Output > Virtual
+   camera**. The status bar shows the exact device name to pick.
+4. In OBS: **Sources > + > Video Capture Device**, pick the device
+   named in step 3 (typically *OBS Virtual Camera*).
+
+Imervue caps the streaming output's longest side at 1080 px so
+Cubism-native canvases (March 7th is 3503×7777) don't get rejected
+by the DirectShow virtual-camera driver. Aspect ratio is
+preserved; OBS can scale further if needed.
+
+#### B. NDI (lowest latency, pro-grade)
+
+NDI (Newtek's Network Device Interface) carries the puppet over
+the LAN at sub-50 ms latency with the alpha channel intact.
+
+1. Download and install **NDI Tools** from
+   <https://ndi.video/tools/> (includes the NDI runtime).
+2. `pip install ndi-python`
+3. Install the **obs-ndi** plugin into OBS:
+   <https://github.com/obs-ndi/obs-ndi/releases>
+4. In the Puppet tab, toggle **Output > NDI output**. The status
+   bar reports the NDI source name (default *Imervue Puppet*).
+5. In OBS: **Sources > + > NDI Source**, pick the source from
+   step 4.
+
+NDI broadcasts at the same 1080-capped resolution as path A, but
+delivers RGBA so receivers can composite the puppet over their
+own backgrounds without a green-screen pass.
+
+#### C. Window capture (fallback)
+
+OBS **Sources > + > Window Capture** can grab the Imervue window
+directly, no extra dependencies needed. Lower quality and you have
+to crop the chrome out yourself, but it works on locked-down
+machines where you can't install drivers.
 
 ### Demo
 

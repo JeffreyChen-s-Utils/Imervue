@@ -407,9 +407,43 @@ JSON 為主，人類可 diff，沒有專利二進位。
 
 - **擷取畫面…** 透過 `glReadPixels` 存 PNG
 - **錄製…** 切換 30 FPS 影格循環，透過 `imageio` 寫成 GIF / WebM / MP4
-- **NDI 輸出** 用於串流到 OBS / Zoom（選用 `ndi-python`）
-- **VTube Studio API 伺服器** — 可選 OBS 友善的遠端控制
-- **虛擬攝影機** 串流
+- **虛擬攝影機** — 把 puppet canvas 暴露成系統的 webcam
+- **NDI 輸出** — 在區網廣播 puppet 成 NDI 來源
+- **VTube Studio API 伺服器** — 可選的 WebSocket API，給 VTS 相容客戶端讀參數
+
+### OBS 直播整合
+
+兩條路：A 是「開箱即用」，B 是低延遲、高品質、需要區網。
+
+#### A. 虛擬攝影機（最簡單）
+
+把 puppet canvas 變成假的 webcam，OBS 用標準「視訊擷取裝置」來源即可吃到。
+
+1. `pip install pyvirtualcam`
+2. 各平台對應驅動：
+   - **Windows**：裝 OBS Studio 26+，會自帶 *OBS Virtual Camera* 驅動。第一次打開 OBS、右下角點 **Start Virtual Camera** 註冊驅動，之後 `pyvirtualcam` 才找得到它。
+   - **macOS**：OBS for Mac 自帶 system extension，首次執行會要求在「系統設定 → 隱私權與安全性」啟用。
+   - **Linux**：`sudo modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"`（要先 `apt install v4l2loopback-dkms` 之類）。
+3. Puppet 分頁打開 rig，工具列 / **Output > Virtual camera** 打勾。狀態列會印出實際裝置名稱。
+4. OBS：**Sources > + > Video Capture Device**，下拉選步驟 3 印出的裝置名（通常是 *OBS Virtual Camera*）。
+
+Imervue 會把輸出影格的長邊強制壓到 1080 px，所以 Cubism 原生畫布（March 7th 是 3503×7777）不會被 DirectShow 虛擬攝影機驅動拒絕。長寬比保留，OBS 端可以再縮。
+
+#### B. NDI（低延遲、專業）
+
+NDI（Newtek 的 Network Device Interface）以 < 50 ms 的延遲在 LAN 上傳遞 puppet 畫面、保留 alpha 通道。
+
+1. 從 <https://ndi.video/tools/> 下載安裝 **NDI Tools**（包含 NDI runtime）。
+2. `pip install ndi-python`
+3. OBS 端安裝 **obs-ndi** 外掛：<https://github.com/obs-ndi/obs-ndi/releases>
+4. Puppet 分頁工具列 / **Output > NDI output** 打勾。狀態列會印 NDI 來源名（預設 *Imervue Puppet*）。
+5. OBS：**Sources > + > NDI Source**，下拉選步驟 4 的來源名。
+
+NDI 也吃 1080 上限的縮放，但傳輸 RGBA，下游可以直接用 alpha 跟自己的背景合成，不用走 chroma key。
+
+#### C. 視窗擷取（保底）
+
+OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴。畫質較差、要自己 crop 掉外殼，但在不能裝驅動的鎖定機器上能跑。
 
 ### 範例
 

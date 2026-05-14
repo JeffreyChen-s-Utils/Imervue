@@ -52,7 +52,11 @@ Toggle the toolbar features to drive the rig live:
 * **Drag-track head** — cursor look-at via `ParamAngleX/Y`.
 * **Mic lip-sync** — viseme drives mouth open + form.
 * **Webcam tracking** — face landmarks drive head + eyes + mouth.
-* **Virtual camera** — stream the puppet into OBS / Zoom.
+* **Virtual camera** / **NDI output** — stream the puppet into
+  OBS / Zoom. See the *Live streaming to OBS* subsection of the
+  top-level [README](../../README.md#live-streaming-to-obs) for the
+  full A (`pyvirtualcam` + OBS Virtual Camera) and B (`ndi-python` +
+  obs-ndi) walkthroughs.
 
 ### Authoring your own from scratch
 

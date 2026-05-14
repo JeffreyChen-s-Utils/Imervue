@@ -29,6 +29,34 @@ logger = logging.getLogger("Imervue.plugin.puppet.virtual_camera")
 
 DEFAULT_FPS: int = 30
 
+# Cap the longest side of the virtual-camera frame. Live2D source
+# canvases are routinely 3000–8000 px tall (March 7th is 3503×7777),
+# which DirectShow virtual-camera drivers reject outright and which
+# wastes downstream bandwidth in any streaming pipeline. 1080 covers
+# every common streaming aspect (1080p landscape, 1920×1080 portrait,
+# 1080×1920 for vertical platforms) — anything taller gets scaled
+# down proportionally before the camera is opened.
+MAX_OUTPUT_DIMENSION: int = 1080
+
+
+def _scale_for_streaming(width: int, height: int) -> tuple[int, int]:
+    """Scale ``(width, height)`` so the longest side is at most
+    :data:`MAX_OUTPUT_DIMENSION`, preserving aspect ratio.
+
+    Pure helper so the resolution cap can be unit-tested without the
+    pyvirtualcam dep. Returns ``(width, height)`` unchanged when both
+    are already within the limit; rounds the smaller dimension to an
+    even integer (some virtual-camera drivers reject odd widths)."""
+    if width <= 0 or height <= 0:
+        return width, height
+    longest = max(width, height)
+    if longest <= MAX_OUTPUT_DIMENSION:
+        return width, height
+    scale = MAX_OUTPUT_DIMENSION / longest
+    new_w = max(2, int(round(width * scale)) & ~1)
+    new_h = max(2, int(round(height * scale)) & ~1)
+    return new_w, new_h
+
 
 class VirtualCameraOutput(QObject):
     """Stream the canvas to a virtual camera device.
@@ -94,7 +122,7 @@ class VirtualCameraOutput(QObject):
         except ImportError:
             logger.info("pyvirtualcam not installed; virtual camera unavailable")
             return False
-        width, height = document.size
+        width, height = _scale_for_streaming(*document.size)
         try:
             self._camera = pyvirtualcam.Camera(
                 width=int(width), height=int(height), fps=self._fps,

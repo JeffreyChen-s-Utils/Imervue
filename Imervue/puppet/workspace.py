@@ -1074,10 +1074,22 @@ class PuppetWorkspace(QMainWindow):
                 "Virtual camera unavailable (install pyvirtualcam + OBS Virtual Camera).",
             )
             return
-        self._announce(
-            "puppet_virtual_camera_on" if enabled else "puppet_virtual_camera_off",
-            "Virtual camera on" if enabled else "Virtual camera off",
-        )
+        if enabled:
+            # Once a frame has flown, the camera object knows which
+            # device name pyvirtualcam handed back (OBS Virtual
+            # Camera / Unity Capture / v4l2loopback). Echo it so the
+            # user knows exactly what to pick in OBS's source list.
+            cam = getattr(self._virtual_camera, "_camera", None)
+            device = getattr(cam, "device", None) if cam is not None else None
+            self._announce(
+                "puppet_virtual_camera_on",
+                'Streaming as "{device}" — add it as a Video Capture Device in OBS.',
+                device=device or "OBS Virtual Camera",
+            )
+        else:
+            self._announce(
+                "puppet_virtual_camera_off", "Virtual camera off",
+            )
 
     # ---- NDI output ----------------------------------------------------
 
@@ -1097,10 +1109,15 @@ class PuppetWorkspace(QMainWindow):
                 "NDI unavailable (install ndi-python + the NDI Runtime).",
             )
             return
-        self._announce(
-            "puppet_ndi_on" if enabled else "puppet_ndi_off",
-            "NDI broadcasting" if enabled else "NDI stopped",
-        )
+        if enabled:
+            self._announce(
+                "puppet_ndi_on",
+                'NDI source "{name}" broadcasting — add an "NDI Source" '
+                "in OBS (requires the obs-ndi plugin).",
+                name=self._ndi_output.source_name(),
+            )
+        else:
+            self._announce("puppet_ndi_off", "NDI stopped")
 
     # ---- VTube Studio API ---------------------------------------------
 

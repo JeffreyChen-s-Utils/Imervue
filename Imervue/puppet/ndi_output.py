@@ -32,6 +32,12 @@ logger = logging.getLogger("Imervue.plugin.puppet.ndi_output")
 DEFAULT_FPS: int = 30
 DEFAULT_SOURCE_NAME: str = "Imervue Puppet"
 
+# Same cap as the virtual-camera output for the same reason — see
+# ``virtual_camera.MAX_OUTPUT_DIMENSION``. NDI itself doesn't reject
+# huge frames, but a Cubism-native 3503×7777 source saturates a
+# 1 Gbps LAN and chokes any downstream OBS receiver.
+from Imervue.puppet.virtual_camera import _scale_for_streaming   # noqa: E402
+
 
 class NDIOutput(QObject):
     """Stream the canvas as an NDI source.
@@ -158,7 +164,8 @@ class NDIOutput(QObject):
             image = capture_canvas_image(self._canvas)
         except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
             return
-        frame = _qimage_to_rgba_array(image)
+        target_w, target_h = _scale_for_streaming(image.width(), image.height())
+        frame = _qimage_to_rgba_array(image, target_w, target_h)
         if frame is None:
             return
         try:
@@ -171,12 +178,24 @@ class NDIOutput(QObject):
             self._stop()
 
 
-def _qimage_to_rgba_array(image):
-    """QImage → HxWx4 uint8 numpy. NDI expects RGBA frames — the
-    alpha channel is preserved so receivers downstream can composite
-    the puppet over their own backgrounds."""
+def _qimage_to_rgba_array(image, target_width: int, target_height: int):
+    """QImage → HxWx4 uint8 numpy scaled to ``(target_height,
+    target_width)``. NDI expects RGBA frames — the alpha channel is
+    preserved so receivers downstream can composite the puppet over
+    their own backgrounds.
+
+    Scaling happens here (rather than in ``_on_tick``) so a future
+    fps / quality knob can swap the transformation mode without
+    touching the rest of the pipeline."""
     import numpy as np
+    from PySide6.QtCore import Qt
     from PySide6.QtGui import QImage as _QImage
+    if image.width() != target_width or image.height() != target_height:
+        image = image.scaled(
+            target_width, target_height,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
     if image.format() != _QImage.Format.Format_RGBA8888:
         image = image.convertToFormat(_QImage.Format.Format_RGBA8888)
     width = image.width()
