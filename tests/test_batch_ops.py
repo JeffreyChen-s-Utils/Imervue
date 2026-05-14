@@ -24,7 +24,7 @@ class TestBatchMoveCopy:
 
     def test_copy_file(self, image_folder, tmp_path):
         folder = Path(image_folder)
-        src = list(folder.glob("*.png"))[0]
+        src = next(iter(folder.glob("*.png")))
         dst_dir = tmp_path / "dest"
         dst_dir.mkdir()
         dst = dst_dir / src.name
@@ -34,7 +34,7 @@ class TestBatchMoveCopy:
 
     def test_move_file(self, image_folder, tmp_path):
         folder = Path(image_folder)
-        src = list(folder.glob("*.png"))[0]
+        src = next(iter(folder.glob("*.png")))
         dst_dir = tmp_path / "dest"
         dst_dir.mkdir()
         dst = dst_dir / src.name

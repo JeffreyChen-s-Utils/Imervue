@@ -245,7 +245,7 @@ class BookmarkDialog(QDialog):
                     ensure_ascii=False,
                 )
         except OSError as e:
-            logger.error(f"Bookmark export failed: {e}")
+            logger.exception(f"Bookmark export failed: {e}")
             QMessageBox.warning(
                 self,
                 lang.get("bookmark_export_title", _EXPORT_TITLE),
@@ -275,7 +275,7 @@ class BookmarkDialog(QDialog):
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except (OSError, json.JSONDecodeError) as e:
-            logger.error(f"Bookmark import failed: {e}")
+            logger.exception(f"Bookmark import failed: {e}")
             QMessageBox.warning(
                 self,
                 lang.get("bookmark_import_title", _IMPORT_TITLE),

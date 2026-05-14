@@ -75,7 +75,7 @@ def register_file_association() -> tuple[bool, str]:
     except PermissionError:
         return False, "need_admin"
     except Exception as e:
-        logger.error(f"Registration failed: {e}")
+        logger.exception(f"Registration failed: {e}")
         return False, str(e)
 
 
@@ -125,7 +125,7 @@ def unregister_file_association() -> tuple[bool, str]:
     except PermissionError:
         return False, "need_admin"
     except Exception as e:
-        logger.error(f"Unregistration failed: {e}")
+        logger.exception(f"Unregistration failed: {e}")
         return False, str(e)
 
 

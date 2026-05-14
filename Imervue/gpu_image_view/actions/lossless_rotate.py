@@ -65,7 +65,7 @@ def _rotate_via_exif(file_path: str, clockwise: bool) -> bool:
         )
         return True
     except Exception as exc:
-        logger.error(f"EXIF rotation failed for {file_path}: {exc}")
+        logger.exception(f"EXIF rotation failed for {file_path}: {exc}")
         return False
 
 
@@ -101,7 +101,7 @@ def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
         logger.info(f"PIL rotate {direction}: {file_path}")
         return True
     except Exception as exc:
-        logger.error(f"PIL rotation failed for {file_path}: {exc}")
+        logger.exception(f"PIL rotation failed for {file_path}: {exc}")
         return False
 
 

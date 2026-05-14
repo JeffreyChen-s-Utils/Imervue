@@ -93,7 +93,7 @@ class _ExportWorker(QThread):
             img.save(str(out_path), format=self._fmt, **self._save_kwargs())
             return True
         except Exception as exc:  # noqa: BLE001
-            logger.error(f"Batch export failed for {src}: {exc}")
+            logger.exception(f"Batch export failed for {src}: {exc}")
             return False
 
     def _resize_if_needed(self, img):

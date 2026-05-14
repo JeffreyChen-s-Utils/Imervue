@@ -68,7 +68,7 @@ def _flush_save() -> None:
     try:
         write_user_setting()
     except Exception as e:
-        _settings_logger.error(f"Debounced save failed: {e}")
+        _settings_logger.exception(f"Debounced save failed: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def write_json(json_save_path: str, data_to_output: dict | list) -> None:
         os.replace(tmp_path, path)
         tmp_path = None
     except Exception as e:
-        _settings_logger.error(f"Failed to write {json_save_path}: {e}")
+        _settings_logger.exception(f"Failed to write {json_save_path}: {e}")
     finally:
         # Clean up orphan tmp on failure
         if tmp_path is not None:

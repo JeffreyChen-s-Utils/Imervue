@@ -44,7 +44,7 @@ class LoadThumbnailWorker(QRunnable):
             if not self._abort:
                 self.signals.finished.emit(img_data, self.path, self.generation)
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Thumbnail load failed: {self.path} - {e}")
+            logger.exception(f"Thumbnail load failed: {self.path} - {e}")
 
     def _try_cache_lookup(self, r_hash: str):
         if self.size is None:

@@ -177,7 +177,7 @@ class MotionPlayer(QObject):
         that window before fully clearing — otherwise snap to t=0
         and apply the motion's frame-0 values (legacy behaviour)."""
         if (
-            not self._is_playing and self._elapsed == 0.0
+            not self._is_playing and self._elapsed <= 0.0
             and not self._fading_out
         ):
             return

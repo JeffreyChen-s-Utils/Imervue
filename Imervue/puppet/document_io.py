@@ -211,42 +211,61 @@ def _parse_bone_weights(
     return out
 
 
+def _validate_key_entry(
+    entry: Any,
+    *, drawable_id: str, key_label: str, idx: int,
+) -> tuple[str, list]:
+    """Shared validation for opacity_keys / multiply_color_keys entries.
+    Returns ``(parameter, stops)`` after checking entry shape, the
+    presence of a non-empty ``parameter`` string, and that ``stops``
+    is a list of >= 2."""
+    if not isinstance(entry, dict):
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} {key_label}[{idx}] must be a dict",
+        )
+    param = entry.get("parameter")
+    stops = entry.get("stops")
+    if not isinstance(param, str) or not param:
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} {key_label}[{idx}] missing 'parameter'",
+        )
+    if not isinstance(stops, list) or len(stops) < 2:
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} {key_label}[{idx}] needs >=2 stops",
+        )
+    return param, stops
+
+
 def _parse_opacity_keys(raw: Any, drawable_id: str) -> list[dict] | None:
     if raw is None:
         return None
     if not isinstance(raw, list):
         raise PuppetFormatError(
-            f"drawable {drawable_id!r} opacity_keys must be a list, got {type(raw).__name__}"
+            f"drawable {drawable_id!r} opacity_keys must be a list, got "
+            f"{type(raw).__name__}",
         )
     out: list[dict] = []
     for idx, entry in enumerate(raw):
-        if not isinstance(entry, dict):
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} opacity_keys[{idx}] must be a dict"
-            )
-        param = entry.get("parameter")
-        stops = entry.get("stops")
-        if not isinstance(param, str) or not param:
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} opacity_keys[{idx}] missing 'parameter'"
-            )
-        if not isinstance(stops, list) or len(stops) < 2:
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} opacity_keys[{idx}] needs >=2 stops"
-            )
-        parsed_stops = []
-        for s_idx, stop in enumerate(stops):
-            if not isinstance(stop, dict) or "value" not in stop or "alpha" not in stop:
-                raise PuppetFormatError(
-                    f"drawable {drawable_id!r} opacity_keys[{idx}].stops[{s_idx}] "
-                    f"must have 'value' and 'alpha'"
-                )
-            parsed_stops.append({
-                "value": float(stop["value"]),
-                "alpha": float(stop["alpha"]),
-            })
+        param, stops = _validate_key_entry(
+            entry, drawable_id=drawable_id, key_label="opacity_keys", idx=idx,
+        )
+        parsed_stops = [
+            _parse_alpha_stop(stop, drawable_id, idx, s_idx)
+            for s_idx, stop in enumerate(stops)
+        ]
         out.append({"parameter": param, "stops": parsed_stops})
     return out
+
+
+def _parse_alpha_stop(
+    stop: Any, drawable_id: str, idx: int, s_idx: int,
+) -> dict:
+    if not isinstance(stop, dict) or "value" not in stop or "alpha" not in stop:
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} opacity_keys[{idx}].stops[{s_idx}] "
+            f"must have 'value' and 'alpha'",
+        )
+    return {"value": float(stop["value"]), "alpha": float(stop["alpha"])}
 
 
 def _parse_color3(
@@ -259,6 +278,23 @@ def _parse_color3(
     return (float(raw[0]), float(raw[1]), float(raw[2]))
 
 
+def _parse_color_stop(
+    stop: Any, drawable_id: str, idx: int, s_idx: int,
+) -> dict:
+    if (
+        not isinstance(stop, dict)
+        or "value" not in stop or "color" not in stop
+    ):
+        raise PuppetFormatError(
+            f"drawable {drawable_id!r} multiply_color_keys[{idx}]"
+            f".stops[{s_idx}] must have 'value' and 'color'",
+        )
+    return {
+        "value": float(stop["value"]),
+        "color": _parse_color3(stop["color"], default=(1.0, 1.0, 1.0)),
+    }
+
+
 def _parse_color_keys(raw: Any, drawable_id: str) -> list[dict] | None:
     if raw is None:
         return None
@@ -268,34 +304,14 @@ def _parse_color_keys(raw: Any, drawable_id: str) -> list[dict] | None:
         )
     out: list[dict] = []
     for idx, entry in enumerate(raw):
-        if not isinstance(entry, dict):
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} multiply_color_keys[{idx}] must be a dict"
-            )
-        param = entry.get("parameter")
-        stops = entry.get("stops")
-        if not isinstance(param, str) or not param:
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} multiply_color_keys[{idx}] missing 'parameter'"
-            )
-        if not isinstance(stops, list) or len(stops) < 2:
-            raise PuppetFormatError(
-                f"drawable {drawable_id!r} multiply_color_keys[{idx}] needs >=2 stops"
-            )
-        parsed = []
-        for s_idx, stop in enumerate(stops):
-            if (
-                not isinstance(stop, dict)
-                or "value" not in stop or "color" not in stop
-            ):
-                raise PuppetFormatError(
-                    f"drawable {drawable_id!r} multiply_color_keys[{idx}]"
-                    f".stops[{s_idx}] must have 'value' and 'color'"
-                )
-            parsed.append({
-                "value": float(stop["value"]),
-                "color": _parse_color3(stop["color"], default=(1.0, 1.0, 1.0)),
-            })
+        param, stops = _validate_key_entry(
+            entry, drawable_id=drawable_id,
+            key_label="multiply_color_keys", idx=idx,
+        )
+        parsed = [
+            _parse_color_stop(stop, drawable_id, idx, s_idx)
+            for s_idx, stop in enumerate(stops)
+        ]
         out.append({"parameter": param, "stops": parsed})
     return out
 

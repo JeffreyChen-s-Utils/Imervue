@@ -231,7 +231,7 @@ def test_tick_is_a_noop_when_disabled(qapp):
     player = MotionPlayer(canvas)
     cycler = IdleMotionCycler(player, canvas)
     try:
-        cycler._on_tick()   # noqa: SLF001 — disabled, nothing should happen
+        cycler._on_tick()   # noqa: SLF001
         assert player.motion() is None
     finally:
         cycler.deleteLater()
@@ -245,7 +245,7 @@ def test_tick_no_document_is_safe(qapp):
     cycler = IdleMotionCycler(player, canvas)
     try:
         cycler.set_enabled(True)
-        cycler._on_tick()   # noqa: SLF001 — no document loaded, must not raise
+        cycler._on_tick()   # noqa: SLF001
         assert player.motion() is None
     finally:
         cycler.set_enabled(False)

@@ -154,7 +154,7 @@ class _DownloadPythonWorker(QThread):
             self.result_ready.emit(True, str(python_exe))
 
         except Exception as exc:
-            logger.error(f"Download Python failed: {exc}")
+            logger.exception(f"Download Python failed: {exc}")
             self.result_ready.emit(False, str(exc))
 
     def _download_embed_zip(self) -> bytes | None:
@@ -487,7 +487,7 @@ class _CheckDepsWorker(QThread):
             result = check_missing_packages(self._packages)
             logger.info("_CheckDepsWorker.run() check done, missing=%s", result)
         except Exception:
-            logger.error("_CheckDepsWorker.run() exception", exc_info=True)
+            logger.exception("_CheckDepsWorker.run() exception")
             result = list(self._packages)
         logger.info("_CheckDepsWorker.run() emitting result_ready")
         self.result_ready.emit(result)
@@ -819,7 +819,7 @@ class _EnsureDepsHelper(QObject):
             dlg.open()
             logger.info("_EnsureDepsHelper: install dialog opened")
         except Exception:
-            logger.error("_EnsureDepsHelper._handle_result failed", exc_info=True)
+            logger.exception("_EnsureDepsHelper._handle_result failed")
 
     def _cleanup(self):
         logger.info("_EnsureDepsHelper._cleanup: worker finished")

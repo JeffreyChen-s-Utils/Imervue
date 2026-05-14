@@ -290,7 +290,7 @@ class _UpscaleWorker(QThread):
                 self._save(out_img, dst)
                 success += 1
             except Exception as exc:
-                logger.error("Upscale failed for %s: %s", src, exc,
+                logger.exception("Upscale failed for %s: %s", src, exc,
                              exc_info=True)
                 failed += 1
         self.result_ready.emit(success, failed)
@@ -352,7 +352,7 @@ class _UpscaleWorker(QThread):
                 self._save(out_img, dst)
                 success += 1
             except Exception as exc:
-                logger.error("Upscale failed for %s: %s", src, exc,
+                logger.exception("Upscale failed for %s: %s", src, exc,
                              exc_info=True)
                 failed += 1
 
@@ -625,7 +625,7 @@ class AIUpscaleDialog(QDialog):
                 ensure_dependencies(
                     self._gui.main_window, REQUIRED_PACKAGES, _launch_worker)
             except Exception:
-                logger.error("ensure_dependencies raised", exc_info=True)
+                logger.exception("ensure_dependencies raised")
                 self._start_btn.setEnabled(True)
 
     def _on_progress(self, current, total, status):

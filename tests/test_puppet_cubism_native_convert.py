@@ -10,10 +10,15 @@ the only way it gets CI coverage.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 import pytest
 
-from Imervue.puppet.cubism_native_bridge import DrawableInfo, ParameterInfo
+from Imervue.puppet.cubism_native_bridge import (
+    CubismModel,
+    DrawableInfo,
+    ParameterInfo,
+)
 from Imervue.puppet.cubism_native_convert import _attach_visibility_keys
 from Imervue.puppet.document import Drawable, PuppetDocument
 
@@ -105,7 +110,7 @@ def test_no_visibility_change_emits_no_keys():
         defaults=[0.0],
         rest_visibility=[True, True],
     )
-    _attach_visibility_keys(doc, model, params, drawables_rest)
+    _attach_visibility_keys(doc, cast(CubismModel, model), params, drawables_rest)
     assert all(d.opacity_keys is None for d in doc.drawables)
 
 
@@ -143,7 +148,7 @@ def test_hidden_default_visible_at_max_emits_fade_in_curve():
         defaults=[0.0],
         rest_visibility=[False],   # hidden at rest matches DrawableInfo
     )
-    _attach_visibility_keys(doc, model, params, drawables_rest)
+    _attach_visibility_keys(doc, cast(CubismModel, model), params, drawables_rest)
     d = doc.drawables[0]
     assert d.visible is True
     assert d.opacity == pytest.approx(1.0)
@@ -153,10 +158,10 @@ def test_hidden_default_visible_at_max_emits_fade_in_curve():
     stops = key["stops"]
     assert len(stops) == 3
     # default-value stop carries alpha=0 (hidden at rest)
-    default_stop = next(s for s in stops if s["value"] == 0.0)
+    default_stop = next(s for s in stops if s["value"] == pytest.approx(0.0))
     assert default_stop["alpha"] == pytest.approx(0.0)
     # max-value stop carries alpha=1 (visible when active)
-    max_stop = next(s for s in stops if s["value"] == 1.0)
+    max_stop = next(s for s in stops if s["value"] == pytest.approx(1.0))
     assert max_stop["alpha"] == pytest.approx(1.0)
 
 
@@ -190,7 +195,7 @@ def test_visible_default_hidden_at_max_emits_fade_out_curve():
         defaults=[0.0],
         rest_visibility=[True],
     )
-    _attach_visibility_keys(doc, model, params, drawables_rest)
+    _attach_visibility_keys(doc, cast(CubismModel, model), params, drawables_rest)
     stops = doc.drawables[0].opacity_keys[0]["stops"]
     by_value = {s["value"]: s["alpha"] for s in stops}
     assert by_value[-1.0] == pytest.approx(1.0)
@@ -232,7 +237,7 @@ def test_multiple_params_accumulate_as_separate_curves():
         defaults=[0.0, 0.0],
         rest_visibility=[False],
     )
-    _attach_visibility_keys(doc, model, params, drawables_rest)
+    _attach_visibility_keys(doc, cast(CubismModel, model), params, drawables_rest)
     keys = doc.drawables[0].opacity_keys
     assert keys is not None and len(keys) == 2
     assert {k["parameter"] for k in keys} == {"A", "B"}
@@ -265,5 +270,5 @@ def test_zero_range_parameter_is_skipped():
         defaults=[0.5],
         rest_visibility=[True],
     )
-    _attach_visibility_keys(doc, model, params, drawables_rest)
+    _attach_visibility_keys(doc, cast(CubismModel, model), params, drawables_rest)
     assert doc.drawables[0].opacity_keys is None

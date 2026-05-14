@@ -98,6 +98,6 @@ def launch_editor(entry: EditorEntry, image_path: str) -> bool:
         # config, but we still never want a shell interpreter rewriting it.
         subprocess.Popen(argv, shell=False)  # noqa: S603 - user-configured path
     except OSError as exc:
-        logger.error("Failed to launch %s: %s", entry.name, exc)
+        logger.exception("Failed to launch %s: %s", entry.name, exc)
         return False
     return True

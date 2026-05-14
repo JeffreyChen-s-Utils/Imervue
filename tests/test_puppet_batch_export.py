@@ -58,7 +58,9 @@ def _doc_with(*motions: Motion) -> PuppetDocument:
     ("idle/01", "idle_01"),
     ("idle 01", "idle_01"),
     ("idle:01", "idle_01"),
-    ("私の/絵", "layer_or_motion_unique") if False else ("私の/絵", "motion"),
+    # Every CJK char gets stripped, so the helper falls back to its
+    # "empty-after-clean" sentinel — exercises the fallback branch.
+    ("私の/絵", "motion"),
 ])
 def test_safe_filename_strips_unfriendly_chars(name, expected):
     # The parametrize hack above keeps the unicode case in the table

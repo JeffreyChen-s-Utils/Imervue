@@ -123,7 +123,7 @@ class _HealWorker(QThread):
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
         except Exception as exc:
-            logger.error("Healing failed: %s", exc, exc_info=True)
+            logger.exception("Healing failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

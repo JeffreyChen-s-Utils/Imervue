@@ -46,7 +46,7 @@ class _CreateWorker(QThread):
                 self._create_video()
             self.result_ready.emit(True, self._output)
         except Exception as exc:
-            logger.error(f"Create {self._fmt} failed: {exc}")
+            logger.exception(f"Create {self._fmt} failed: {exc}")
             self.result_ready.emit(False, str(exc))
 
     def _load_and_resize(self, path: str) -> Image.Image:

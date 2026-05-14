@@ -51,7 +51,7 @@ class _PanoWorker(QThread):
             Image.fromarray(rgba).save(self._out)
             self.done.emit(True, self._out)
         except Exception as exc:
-            logger.error("Panorama stitch failed: %s", exc, exc_info=True)
+            logger.exception("Panorama stitch failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

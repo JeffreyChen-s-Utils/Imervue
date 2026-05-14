@@ -51,7 +51,7 @@ class _HdrWorker(QThread):
             Image.fromarray(rgba).save(self._out)
             self.done.emit(True, self._out)
         except Exception as exc:
-            logger.error("HDR merge failed: %s", exc, exc_info=True)
+            logger.exception("HDR merge failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

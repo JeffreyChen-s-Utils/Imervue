@@ -181,6 +181,35 @@ def _bracket_per_axis(
     return out
 
 
+def _reduce_axis(
+    corners: dict[tuple[int, ...], dict[str, dict[str, Any]]],
+    axis: int,
+    t: float,
+) -> dict[tuple[int, ...], dict[str, dict[str, Any]]]:
+    """One step of the cartesian-product reduction along ``axis``: pair
+    each 0-side corner with its 1-side neighbour, blend them, and key
+    the result by the remaining axis bits. 1-side entries whose paired
+    0-side already lives in ``corners`` are dropped here so the merge
+    runs exactly once per pair."""
+    next_corners: dict[tuple[int, ...], dict[str, dict[str, Any]]] = {}
+    for key, form_map in corners.items():
+        head, tail = key[:axis], key[axis + 1:]
+        sub_key = head + tail
+        if key[axis] == 0:
+            pair_form = corners.get(head + (1,) + tail)
+            blended = (
+                _blend_form_maps(form_map, pair_form, t)
+                if pair_form is not None else form_map
+            )
+        else:
+            # Already merged when we processed the 0-side key.
+            if head + (0,) + tail in corners:
+                continue
+            blended = form_map
+        next_corners[sub_key] = blended
+    return next_corners
+
+
 def _reduce_corners(
     blend: ParameterBlend,
     brackets: list[tuple[float, float, float]],
@@ -198,28 +227,8 @@ def _reduce_corners(
     # innermost varying dimension first — the order of axis reduction
     # doesn't change the result for linear interpolation but doing
     # high-to-low keeps the integer-key arithmetic obvious.
-    n_axes = len(brackets)
-    for axis in range(n_axes - 1, -1, -1):
-        t = brackets[axis][2]
-        next_corners: dict[tuple[int, ...], dict[str, dict[str, Any]]] = {}
-        for key, form_map in corners.items():
-            head, tail = key[:axis], key[axis + 1:]
-            sub_key = head + tail
-            if key[axis] == 0:
-                pair_key = head + (1,) + tail
-                pair_form = corners.get(pair_key)
-                blended = (
-                    _blend_form_maps(form_map, pair_form, t)
-                    if pair_form is not None else form_map
-                )
-            else:
-                pair_key = head + (0,) + tail
-                if pair_key in corners:
-                    # Already merged when we processed the 0-side key.
-                    continue
-                blended = form_map
-            next_corners[sub_key] = blended
-        corners = next_corners
+    for axis in range(len(brackets) - 1, -1, -1):
+        corners = _reduce_axis(corners, axis, brackets[axis][2])
     return next(iter(corners.values()))
 
 
@@ -277,6 +286,32 @@ def _blend_form_maps(
 # ---------------------------------------------------------------------------
 
 
+def _resolve_morph_side(
+    morph: dict, parameter: Parameter, value: float,
+) -> tuple[np.ndarray, float] | None:
+    """Return ``(deltas, t)`` for the side the parameter is currently
+    pulling toward — min or max — or ``None`` if the parameter sits
+    at its default (no morph contribution) or has a zero-span on
+    that side (avoid div-by-zero)."""
+    if value < parameter.default:
+        span = parameter.default - parameter.min
+        if span <= 0:
+            return None
+        t = max(0.0, min(1.0, (parameter.default - value) / span))
+        deltas = _morph_delta_array(morph, "delta_at_min", "_np_delta_at_min")
+    elif value > parameter.default:
+        span = parameter.max - parameter.default
+        if span <= 0:
+            return None
+        t = max(0.0, min(1.0, (value - parameter.default) / span))
+        deltas = _morph_delta_array(morph, "delta_at_max", "_np_delta_at_max")
+    else:
+        return None
+    if deltas is None or deltas.size == 0:
+        return None
+    return deltas, t
+
+
 def apply_vertex_morphs(
     rest_vertices: np.ndarray,
     morphs: list[dict] | None,
@@ -310,22 +345,10 @@ def apply_vertex_morphs(
         if parameter is None:
             continue
         value = float(parameter_values.get(param_id, parameter.default))
-        if value < parameter.default:
-            span = parameter.default - parameter.min
-            if span <= 0:
-                continue
-            t = max(0.0, min(1.0, (parameter.default - value) / span))
-            deltas = _morph_delta_array(morph, "delta_at_min", "_np_delta_at_min")
-        elif value > parameter.default:
-            span = parameter.max - parameter.default
-            if span <= 0:
-                continue
-            t = max(0.0, min(1.0, (value - parameter.default) / span))
-            deltas = _morph_delta_array(morph, "delta_at_max", "_np_delta_at_max")
-        else:
+        side = _resolve_morph_side(morph, parameter, value)
+        if side is None:
             continue
-        if deltas is None or deltas.size == 0:
-            continue
+        deltas, t = side
         n = min(deltas.shape[0], out.shape[0])
         # Vectorised add — replaces the per-vertex Python loop.
         out[:n] += deltas[:n] * t

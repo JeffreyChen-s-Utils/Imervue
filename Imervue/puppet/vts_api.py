@@ -48,6 +48,7 @@ DEFAULT_VTS_PORT: int = 8001
 LOCALHOST: str = "127.0.0.1"
 API_NAME: str = "VTubeStudioPublicAPI"
 API_VERSION: str = "1.0"
+_NOT_AUTHENTICATED_MSG: str = "not authenticated"
 
 
 class VTubeStudioHandler:
@@ -66,8 +67,14 @@ class VTubeStudioHandler:
     def is_authenticated(self) -> bool:
         return self._authenticated
 
-    def handle_message(self, message: dict) -> dict:
+    def handle_message(self, message: object) -> dict:
         """Dispatch one inbound request and return the response dict.
+
+        Accepts any object so we can validate inbound payloads at the
+        boundary — third-party trackers occasionally hand us strings
+        / lists / None when their JSON layer hiccups, and the explicit
+        ``isinstance`` guard below produces a clean InvalidRequest
+        envelope instead of a TypeError.
 
         Always emits an envelope — even on error paths — so the
         client never sees a torn message. The ``timestamp`` field
@@ -151,7 +158,7 @@ class VTubeStudioHandler:
 
     def _on_parameter_value(self, data: dict) -> tuple[str, dict]:
         if not self._require_auth():
-            return "APIError", {"errorID": 50, "message": "not authenticated"}
+            return "APIError", {"errorID": 50, "message": _NOT_AUTHENTICATED_MSG}
         name = str(data.get("name", ""))
         doc = self._canvas.document()
         param = doc.parameter(name) if doc is not None else None
@@ -168,7 +175,7 @@ class VTubeStudioHandler:
 
     def _on_parameter_creation(self, data: dict) -> tuple[str, dict]:
         if not self._require_auth():
-            return "APIError", {"errorID": 50, "message": "not authenticated"}
+            return "APIError", {"errorID": 50, "message": _NOT_AUTHENTICATED_MSG}
         from Imervue.puppet.operations import add_parameter
         doc = self._canvas.document()
         if doc is None:
@@ -194,7 +201,7 @@ class VTubeStudioHandler:
         """The big one — third-party trackers call this every frame to
         push the latest parameter values into our puppet."""
         if not self._require_auth():
-            return "APIError", {"errorID": 50, "message": "not authenticated"}
+            return "APIError", {"errorID": 50, "message": _NOT_AUTHENTICATED_MSG}
         values = data.get("parameterValues") or []
         applied = 0
         for entry in values:
@@ -325,7 +332,9 @@ class VTubeStudioServer(QObject):
             self._server.close()
             self._server.deleteLater()
             self._server = None
-        for socket in list(self._sessions):
+        # Snapshot keys: socket.close() triggers _on_disconnect, which
+        # pops the entry while we're still iterating.
+        for socket in list(self._sessions):   # NOSONAR S7504 - mutation guard
             with contextlib.suppress(RuntimeError):
                 socket.close()
         self._sessions.clear()

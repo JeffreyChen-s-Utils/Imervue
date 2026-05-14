@@ -49,7 +49,7 @@ class AnimationPlayer:
         try:
             img = Image.open(self.path)
         except Exception as e:
-            logger.error(f"Failed to open {self.path}: {e}")
+            logger.exception(f"Failed to open {self.path}: {e}")
             return False
 
         n_frames = getattr(img, "n_frames", 1)

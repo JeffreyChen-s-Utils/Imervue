@@ -89,7 +89,7 @@ class _ConvertWorker(QThread):
                 self._convert_one(src, target_ext)
                 success += 1
             except (OSError, ValueError) as exc:
-                logger.error("Batch convert failed for %s: %s", src, exc)
+                logger.exception("Batch convert failed for %s: %s", src, exc)
                 failed += 1
         self.result_ready.emit(success, failed, skipped)
 
