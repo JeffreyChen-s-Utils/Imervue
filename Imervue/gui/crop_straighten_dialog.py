@@ -60,7 +60,7 @@ class _Worker(QThread):
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError, RuntimeError) as exc:
-            logger.error("Crop/straighten failed: %s", exc, exc_info=True)
+            logger.exception("Crop/straighten failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

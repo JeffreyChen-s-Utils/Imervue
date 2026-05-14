@@ -29,7 +29,10 @@ def apply_rotation(vertices: np.ndarray, form: dict[str, Any]) -> np.ndarray:
     coming from interpolated parameter keys don't blow up.
     """
     angle = float(form.get("angle", 0.0))
-    if angle == 0.0:
+    # 0.0 is the sentinel default; treat near-zero as no-op so float
+    # quantisation noise from interpolated keys doesn't trigger an
+    # unnecessary trig pass.
+    if abs(angle) < 1e-9:
         return vertices
     anchor = _xy(form.get("anchor", (0.0, 0.0)))
     return _rotate(vertices, anchor, angle)

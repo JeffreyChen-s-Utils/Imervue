@@ -58,7 +58,7 @@ class _LensWorker(QThread):
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
         except Exception as exc:
-            logger.error("Lens correction failed: %s", exc, exc_info=True)
+            logger.exception("Lens correction failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

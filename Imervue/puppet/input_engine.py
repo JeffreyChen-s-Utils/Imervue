@@ -126,14 +126,14 @@ class InputEngine(QObject):
         # blink curve's downward sweep and the user only sees the
         # very first blink before everything looks frozen.
         self._canvas.force_parameter_values(
-            {eye_param: value for eye_param in DEFAULT_EYE_PARAMS},
+            dict.fromkeys(DEFAULT_EYE_PARAMS, value),
         )
 
     def _reset_blink_params(self) -> None:
         if self._canvas.document() is None:
             return
         self._canvas.set_parameter_values(
-            {eye_param: 1.0 for eye_param in DEFAULT_EYE_PARAMS},
+            dict.fromkeys(DEFAULT_EYE_PARAMS, 1.0),
         )
 
     def _reset_drag_params(self) -> None:

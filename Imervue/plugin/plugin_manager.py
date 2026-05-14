@@ -89,7 +89,7 @@ class PluginManager:
             logger.info("Successfully imported '%s', registering...", module_name)
             self._register_from_module(module, package_dir)
         except Exception as e:
-            logger.error("Failed to load plugin package '%s': %s", module_name, e, exc_info=True)
+            logger.exception("Failed to load plugin package '%s': %s", module_name, e)
 
     def _load_plugin_file(self, file_path: Path) -> None:
         """Load a plugin from a single .py file."""
@@ -102,7 +102,7 @@ class PluginManager:
                 spec.loader.exec_module(module)
                 self._register_from_module(module, file_path)
         except Exception as e:
-            logger.error(f"Failed to load plugin file '{file_path.name}': {e}")
+            logger.exception(f"Failed to load plugin file '{file_path.name}': {e}")
 
     def _register_from_module(self, module, source: Path) -> None:
         """Extract plugin_class from a module and instantiate it."""
@@ -151,7 +151,7 @@ class PluginManager:
                 f" by {instance.plugin_author}"
             )
         except Exception as e:
-            logger.error(f"Failed to instantiate plugin '{plugin_class.__name__}': {e}")
+            logger.exception(f"Failed to instantiate plugin '{plugin_class.__name__}': {e}")
 
     # ===========================
     # Hook Dispatch
@@ -162,21 +162,21 @@ class PluginManager:
             try:
                 plugin.on_build_menu_bar(plugin_menu)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_build_menu_bar error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_build_menu_bar error: {e}")
 
     def dispatch_build_context_menu(self, menu: QMenu, viewer: GPUImageView) -> None:
         for plugin in self._plugins:
             try:
                 plugin.on_build_context_menu(menu, viewer)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_build_context_menu error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_build_context_menu error: {e}")
 
     def dispatch_image_loaded(self, image_path: str, viewer: GPUImageView) -> None:
         for plugin in self._plugins:
             try:
                 plugin.on_image_loaded(image_path, viewer)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_image_loaded error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_image_loaded error: {e}")
 
     def dispatch_folder_opened(
         self, folder_path: str, image_paths: list[str], viewer: GPUImageView,
@@ -185,21 +185,21 @@ class PluginManager:
             try:
                 plugin.on_folder_opened(folder_path, image_paths, viewer)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_folder_opened error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_folder_opened error: {e}")
 
     def dispatch_image_switched(self, image_path: str, viewer: GPUImageView) -> None:
         for plugin in self._plugins:
             try:
                 plugin.on_image_switched(image_path, viewer)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_image_switched error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_image_switched error: {e}")
 
     def dispatch_image_deleted(self, deleted_paths: list[str], viewer: GPUImageView) -> None:
         for plugin in self._plugins:
             try:
                 plugin.on_image_deleted(deleted_paths, viewer)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_image_deleted error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_image_deleted error: {e}")
 
     def dispatch_key_press(self, key: int, modifiers: int, viewer: GPUImageView) -> bool:
         """Dispatch key press to plugins. Returns True if any plugin consumed the event."""
@@ -208,7 +208,7 @@ class PluginManager:
                 if plugin.on_key_press(key, modifiers, viewer):
                     return True
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_key_press error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_key_press error: {e}")
         return False
 
     def dispatch_app_closing(self, main_window: ImervueMainWindow) -> None:
@@ -216,7 +216,7 @@ class PluginManager:
             try:
                 plugin.on_app_closing(main_window)
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_app_closing error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_app_closing error: {e}")
 
     def unload_all(self) -> None:
         """Unload all plugins (called on app shutdown)."""
@@ -224,5 +224,5 @@ class PluginManager:
             try:
                 plugin.on_plugin_unloaded()
             except Exception as e:
-                logger.error(f"[{plugin.plugin_name}] on_plugin_unloaded error: {e}")
+                logger.exception(f"[{plugin.plugin_name}] on_plugin_unloaded error: {e}")
         self._plugins.clear()

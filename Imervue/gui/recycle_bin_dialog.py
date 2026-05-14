@@ -268,7 +268,7 @@ class RecycleBinDialog(QDialog):
             if path and Path(path).exists():
                 Path(path).unlink()
         except OSError as exc:
-            logger.error("Failed to purge %s: %s", path, exc)
+            logger.exception("Failed to purge %s: %s", path, exc)
 
 
 def open_recycle_bin_dialog(viewer: GPUImageView, parent=None) -> None:

@@ -45,7 +45,7 @@ class _DetectWorker(QThread):
             angle = detect_horizon_angle(arr)
             self.done.emit(True, float(angle))
         except (OSError, ValueError, RuntimeError) as exc:
-            logger.error("Auto-straighten detect failed: %s", exc, exc_info=True)
+            logger.exception("Auto-straighten detect failed: %s", exc)
             self.done.emit(False, 0.0)
 
 
@@ -65,7 +65,7 @@ class _ApplyWorker(QThread):
             Image.fromarray(out).save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError, RuntimeError) as exc:
-            logger.error("Auto-straighten apply failed: %s", exc, exc_info=True)
+            logger.exception("Auto-straighten apply failed: %s", exc)
             self.done.emit(False, str(exc))
 
 

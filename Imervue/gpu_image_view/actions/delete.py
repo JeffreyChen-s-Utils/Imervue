@@ -169,7 +169,7 @@ def commit_pending_deletions(main_gui: _UndoStackOwner):
                     Path(path).unlink()
                     logger.info(f"Permanent delete: {path}")
             except Exception as e:
-                logger.error(f"Failed to permanently delete {path}: {e}")
+                logger.exception(f"Failed to permanently delete {path}: {e}")
 
     # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()

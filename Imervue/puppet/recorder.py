@@ -59,7 +59,7 @@ def save_canvas_png(canvas: PuppetCanvas, path: str | Path) -> bool:
     """
     try:
         image = capture_canvas_image(canvas)
-    except (CaptureError, RuntimeError, Exception) as exc:   # noqa: BLE001
+    except Exception as exc:   # noqa: BLE001 - GL / PIL / capture backends vary
         logger.warning("capture failed: %s", exc)
         return False
     p = Path(path)
@@ -143,7 +143,7 @@ class RecordingSession(QObject):
             return
         try:
             image = capture_canvas_image(self._canvas)
-        except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
+        except Exception:   # noqa: BLE001 - GL / PIL / capture backends vary
             # GL not ready yet on this tick — skip the frame; the
             # writer keeps running so the next ready frame extends the
             # clip naturally.

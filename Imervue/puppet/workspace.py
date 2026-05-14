@@ -1291,7 +1291,7 @@ class PuppetWorkspace(QMainWindow):
         ``True`` on success."""
         try:
             doc = puppet_from_psd(path)
-        except (FileNotFoundError, ValueError, OSError) as exc:
+        except (ValueError, OSError) as exc:
             logger.warning("PSD import failed for %s: %s", path, exc)
             self._status_label.setText(
                 language_wrapper.language_word_dict.get(
@@ -1363,7 +1363,6 @@ class PuppetWorkspace(QMainWindow):
         try:
             new_doc = self._dispatch_cubism_import(doc, path_str)
         except (
-            FileNotFoundError,
             CubismFormatError,
             CubismBridgeError,
             OSError,
@@ -1438,7 +1437,7 @@ class PuppetWorkspace(QMainWindow):
         it into the canvas. Returns ``True`` on success."""
         try:
             doc = puppet_from_png(path, cell_size=cell_size)
-        except (FileNotFoundError, ValueError, OSError) as exc:
+        except (ValueError, OSError) as exc:
             logger.warning("PNG import failed for %s: %s", path, exc)
             self._status_label.setText(
                 language_wrapper.language_word_dict.get(

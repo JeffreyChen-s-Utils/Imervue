@@ -141,7 +141,7 @@ class LoadDeepZoomWorker(QRunnable):
             if not self._abort:
                 self.signals.finished.emit(dzi, self.path)
         except Exception as e:
-            logger.error(f"DeepZoom load failed: {self.path} - {e}")
+            logger.exception(f"DeepZoom load failed: {self.path} - {e}")
 
 
 # ================================================================

@@ -224,7 +224,7 @@ class ExportDialog(QDialog):
             logger.info(f"Exported image to {output_path} as {fmt}")
             self.accept()
         except Exception as exc:
-            logger.error(f"Export failed: {exc}")
+            logger.exception(f"Export failed: {exc}")
 
 
 def _open_image_for_export(path: str) -> Image.Image:
