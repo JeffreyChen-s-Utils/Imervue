@@ -442,6 +442,20 @@ Cubism-native canvases (March 7th is 3503×7777) don't get rejected
 by the DirectShow virtual-camera driver. Aspect ratio is
 preserved; OBS can scale further if needed.
 
+The puppet is rendered to an off-screen framebuffer (no checker
+backdrop, no editor chrome) before being handed to the camera, so
+the streamed frame is just the character on a solid magenta
+background. To drop the magenta in OBS:
+
+1. Right-click the Video Capture Device source → **Filters**
+2. **Effect Filters → + → Color Key**
+3. Key Color Type: **Custom Color**, hex `#FF00FF`
+4. Bump *Similarity* if any magenta edges leak through
+
+If the character has magenta in its colour palette (unusual but
+possible), see the NDI path below — NDI carries the alpha channel
+directly so no chroma keying is needed.
+
 #### B. NDI (lowest latency, pro-grade)
 
 NDI (Newtek's Network Device Interface) carries the puppet over
@@ -458,8 +472,10 @@ the LAN at sub-50 ms latency with the alpha channel intact.
    step 4.
 
 NDI broadcasts at the same 1080-capped resolution as path A, but
-delivers RGBA so receivers can composite the puppet over their
-own backgrounds without a green-screen pass.
+delivers RGBA — the off-screen render produces a transparent
+background outside the character, NDI ships the alpha channel
+intact, and OBS / vMix composite the puppet directly over your
+scene without any chroma-key pass.
 
 #### C. Window capture (fallback)
 

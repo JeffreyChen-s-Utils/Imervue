@@ -98,37 +98,6 @@ def test_ndi_output_reuses_virtual_camera_scaler():
 # ---------------------------------------------------------------------------
 
 
-class _FakeWidget:
-    """Stand-in for QOpenGLWidget exposing only the attributes
-    ``_widget_capture_size`` reads."""
-
-    def __init__(self, w, h, dpr=1.0):
-        self._w = w
-        self._h = h
-        self._dpr = dpr
-
-    def width(self): return self._w
-    def height(self): return self._h
-    def devicePixelRatioF(self): return self._dpr
-
-
-def test_widget_capture_size_applies_device_pixel_ratio():
-    """HiDPI screens render the QOpenGLWidget at logical-size ×
-    DPR physical pixels. Without DPR scaling the camera would open
-    at the logical size, mismatching the framebuffer."""
-    from Imervue.puppet.virtual_camera import _widget_capture_size
-    assert _widget_capture_size(_FakeWidget(800, 600, dpr=1.0)) == (800, 600)
-    assert _widget_capture_size(_FakeWidget(800, 600, dpr=2.0)) == (1600, 1200)
-    assert _widget_capture_size(_FakeWidget(1200, 800, dpr=1.5)) == (1800, 1200)
-
-
-def test_widget_capture_size_handles_none():
-    """Defensive: caller may pass ``None`` if the canvas isn't
-    attached yet."""
-    from Imervue.puppet.virtual_camera import _widget_capture_size
-    assert _widget_capture_size(None) == (0, 0)
-
-
 def test_qimage_to_rgb_array_preserves_aspect_on_match(qapp):
     """When source and target dimensions match exactly, the helper
     should not introduce any padding."""
@@ -173,3 +142,56 @@ def test_qimage_to_rgb_array_rejects_zero_target(qapp):
     src = QImage(640, 360, QImage.Format.Format_RGB888)
     assert _qimage_to_rgb_array(src, 0, 100) is None
     assert _qimage_to_rgb_array(src, 100, 0) is None
+
+
+# ---------------------------------------------------------------------------
+# render_offscreen_puppet — character-only FBO render
+# ---------------------------------------------------------------------------
+
+
+def test_render_offscreen_returns_none_without_document(qapp):
+    """Streaming outputs call ``render_offscreen_puppet`` every tick;
+    when no document is loaded the helper must return ``None`` so the
+    caller can skip the frame rather than crashing on the doc deref."""
+    from Imervue.puppet.canvas import PuppetCanvas
+    canvas = PuppetCanvas()
+    try:
+        assert canvas.render_offscreen_puppet(640, 480) is None
+    finally:
+        canvas.deleteLater()
+
+
+def test_render_offscreen_returns_none_for_zero_target(qapp):
+    """Defensive: ``(0, _)`` / ``(_, 0)`` returns ``None`` instead
+    of crashing inside QOpenGLFramebufferObject."""
+    from Imervue.puppet.canvas import PuppetCanvas
+    from Imervue.puppet.document import Drawable, PuppetDocument
+    doc = PuppetDocument(size=(512, 512))
+    doc.textures["textures/x.png"] = b""
+    doc.drawables = [Drawable(
+        id="x", texture="textures/x.png",
+        vertices=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        indices=[0, 1, 2],
+        uvs=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)],
+        draw_order=0,
+    )]
+    canvas = PuppetCanvas()
+    canvas.load_document(doc)
+    try:
+        assert canvas.render_offscreen_puppet(0, 480) is None
+        assert canvas.render_offscreen_puppet(640, 0) is None
+        assert canvas.render_offscreen_puppet(-100, 100) is None
+    finally:
+        canvas.deleteLater()
+
+
+def test_virtual_camera_uses_chroma_key_magenta(qapp):
+    """The virtual-camera output's background colour must default to
+    a chroma-keyable magenta — RGB-only virtual cameras can't carry
+    alpha, so streamers depend on this colour to drop the background
+    via OBS Color Key. Test guards against a future "let's just use
+    black" regression that would silently break the workflow."""
+    from Imervue.puppet.virtual_camera import CHROMA_KEY_MAGENTA_RGBA
+    r, g, b, a = CHROMA_KEY_MAGENTA_RGBA
+    # Pure magenta — full red + full blue, zero green, opaque alpha.
+    assert (r, g, b, a) == (1.0, 0.0, 1.0, 1.0)

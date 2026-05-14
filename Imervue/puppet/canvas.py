@@ -108,7 +108,7 @@ from Imervue.puppet.runtime import (
 )
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QMouseEvent, QWheelEvent
+    from PySide6.QtGui import QImage, QMouseEvent, QWheelEvent
 
 
 logger = logging.getLogger("Imervue.plugin.puppet.canvas")
@@ -562,6 +562,91 @@ class PuppetCanvas(QOpenGLWidget):
         self._draw_drawables()
         self._draw_selection_overlay()
         glPopMatrix()
+
+    def render_offscreen_puppet(   # pragma: no cover - GL needs display
+        self,
+        width: int,
+        height: int,
+        *,
+        background_rgba: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
+    ) -> QImage | None:
+        """Render JUST the puppet to an off-screen FBO and return it
+        as a QImage.
+
+        Skips the transparency checker, the editor selection overlay,
+        and the workspace chrome — perfect for the streaming outputs
+        which want "character only on a known background colour" so
+        OBS can composite or chroma-key it. The puppet is centred +
+        scaled to fit the FBO preserving aspect ratio (so the entire
+        document canvas always lands inside the streamed frame, no
+        cropping, regardless of how the user has the workspace
+        zoomed / panned).
+
+        ``background_rgba`` controls what fills the area outside the
+        puppet's drawables. The default ``(0, 0, 0, 0)`` is fully
+        transparent — NDI honours it, RGB-only virtual cameras lose
+        the alpha and end up with black. Pass a solid colour like
+        ``(1.0, 0.0, 1.0, 1.0)`` (magenta) to give virtual-camera
+        users something they can OBS-Color-Key out.
+        """
+        if self._document is None or width <= 0 or height <= 0:
+            return None
+        from PySide6.QtOpenGL import (
+            QOpenGLFramebufferObject,
+            QOpenGLFramebufferObjectFormat,
+        )
+
+        self.makeCurrent()
+        try:
+            fmt = QOpenGLFramebufferObjectFormat()
+            fbo = QOpenGLFramebufferObject(width, height, fmt)
+            if not fbo.bind():
+                return None
+            try:
+                glViewport(0, 0, width, height)
+                glMatrixMode(GL_PROJECTION)
+                glPushMatrix()
+                glLoadIdentity()
+                glOrtho(0, width, height, 0, -1, 1)
+                glMatrixMode(GL_MODELVIEW)
+                glPushMatrix()
+                glLoadIdentity()
+
+                # KeepAspectRatio fit of document into the FBO.
+                doc_w, doc_h = self._document.size
+                if doc_w <= 0 or doc_h <= 0:
+                    return None
+                scale = min(width / doc_w, height / doc_h)
+                pan_x = (width - doc_w * scale) / 2.0
+                pan_y = (height - doc_h * scale) / 2.0
+                glTranslatef(pan_x, pan_y, 0.0)
+                glScalef(scale, scale, 1.0)
+
+                # Clear to the requested background (transparent by
+                # default). The checker backdrop is intentionally NOT
+                # drawn — streamers chose the virtual-camera / NDI
+                # path because they want the character composited
+                # over their own scene.
+                r, g, b, a = background_rgba
+                glClearColor(float(r), float(g), float(b), float(a))
+                glClear(GL_COLOR_BUFFER_BIT)
+
+                self._draw_drawables()
+
+                image = fbo.toImage()
+
+                # Restore matrices. Viewport / clear colour get
+                # reset by the next paintGL on the visible widget,
+                # so leaving them is harmless.
+                glPopMatrix()
+                glMatrixMode(GL_PROJECTION)
+                glPopMatrix()
+                glMatrixMode(GL_MODELVIEW)
+                return image
+            finally:
+                fbo.release()
+        finally:
+            self.doneCurrent()
 
     # ---- rendering ------------------------------------------------------
 

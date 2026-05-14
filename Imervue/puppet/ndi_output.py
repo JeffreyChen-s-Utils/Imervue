@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from Imervue.puppet.recorder import CaptureError, capture_canvas_image
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -160,11 +159,24 @@ class NDIOutput(QObject):
     def _on_tick(self) -> None:  # pragma: no cover - needs NDI runtime
         if self._sender is None or self._ndi is None:
             return
-        try:
-            image = capture_canvas_image(self._canvas)
-        except (CaptureError, RuntimeError, Exception):   # noqa: BLE001
+        document = self._canvas.document()
+        if document is None:
             return
-        target_w, target_h = _scale_for_streaming(image.width(), image.height())
+        # Off-screen FBO render at document aspect — character only,
+        # transparent background. NDI carries RGBA so the alpha
+        # channel reaches receivers as-is and OBS / vMix can
+        # composite the puppet over their own scene without a
+        # chroma-key pass.
+        target_w, target_h = _scale_for_streaming(*document.size)
+        try:
+            image = self._canvas.render_offscreen_puppet(
+                target_w, target_h,
+                background_rgba=(0.0, 0.0, 0.0, 0.0),
+            )
+        except (RuntimeError, Exception):   # noqa: BLE001 - GL surfaces vary
+            return
+        if image is None:
+            return
         frame = _qimage_to_rgba_array(image, target_w, target_h)
         if frame is None:
             return
