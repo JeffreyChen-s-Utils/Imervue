@@ -741,7 +741,7 @@ pip install ndi-python
 |---|---|---|
 | PNG | **檔案 > Import PNG…** | 快速 prototype、單張無分層的角色圖 |
 | PSD | **檔案 > Import PSD…** | 多圖層的角色檔，每層自動拆 drawable |
-| Cubism `.moc3` | **檔案 > Import Cubism…** | 已有 Live2D Cubism rig 的話。需使用者自備 Cubism Native SDK，放在 `<cwd>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 |
+| Cubism `.moc3` / `.model3.json` | **檔案 > Import Cubism…** | 已有 Live2D Cubism rig 的話。檔案選擇器同時接受 `.moc3` 跟 `.model3.json` — 工作區還沒開 rig 時兩條路徑都跑完整 `.moc3 → .puppet` 轉換；已經開了 rig 時挑 `.model3.json` 會把 motions / expressions / physics 疊到既有文件。需使用者自備 Cubism Native SDK，放在 `<cwd>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 |
 
 Cubism 轉換器會 sample-and-reconstruct 每個參數的 vertex morph 跟可見度切換，所以比耶 / 捂臉 / 照相等手勢切換能完整保留。
 

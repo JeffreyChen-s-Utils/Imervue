@@ -1549,7 +1549,7 @@ DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음*
    * - Open Puppet… / Examples ▾
      - 디스크에서 ``.puppet`` 로드, 또는 ``examples/puppet/`` 의 동봉 rig 를 도구 모음에서 직접 선택
    * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 자동 메시, PSD 레이어 분할, Cubism ``.moc3`` sample-and-reconstruct (SDK 는 사용자 제공)
+     - PNG 자동 메시, PSD 레이어 분할, Cubism rig 의 sample-and-reconstruct. Cubism 파일 선택기는 ``.moc3`` 와 ``.model3.json`` 둘 다 받으며, 작업 공간에 rig 가 열려 있지 않을 때는 어느 경로든 완전한 ``.moc3 → .puppet`` 변환이 실행됩니다 (SDK 는 사용자 제공). rig 가 이미 열려 있는 상태에서 ``.model3.json`` 을 고르면 JSON 메타데이터 (motions / expressions / physics) 가 활성 문서에 병합됩니다
    * - Save As…
      - 현재 rig 을 ``.puppet`` zip 으로 출력
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter

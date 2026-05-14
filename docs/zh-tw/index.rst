@@ -1516,7 +1516,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
    * - Open Puppet… / Examples ▾
      - 從磁碟載入 ``.puppet``，或從工具列直接挑 ``examples/puppet/`` 下內附的 rig
    * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 自動 mesh、PSD 分層拆 drawable、Cubism ``.moc3`` sample-and-reconstruct（SDK 使用者自備）
+     - PNG 自動 mesh、PSD 分層拆 drawable、Cubism rig sample-and-reconstruct。Cubism 檔案選擇器同時接受 ``.moc3`` 跟 ``.model3.json``；工作區還沒開 rig 時兩條路徑都跑完整 ``.moc3 → .puppet`` 轉換（SDK 使用者自備）。已經開了 rig 時挑 ``.model3.json`` 改把 JSON 部分（motions / expressions / physics）疊到既有文件
    * - Save As…
      - 把目前 rig 寫成 ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter

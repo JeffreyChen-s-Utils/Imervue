@@ -869,7 +869,12 @@ Toolbar reference
        bundled under ``examples/puppet/`` directly from the toolbar
    * - Import PNG… / Import PSD… / Import Cubism…
      - Auto-mesh a PNG, layer-split a PSD, or sample-and-reconstruct
-       a Cubism ``.moc3`` (Cubism Native SDK user-supplied)
+       a Cubism rig. The Cubism picker accepts both ``.moc3`` and
+       ``.model3.json``; with no rig open either path runs the full
+       ``.moc3 → .puppet`` conversion (user-supplied Cubism Native
+       SDK). Picking ``.model3.json`` while a rig is loaded merges
+       its JSON-only metadata (motions / expressions / physics) onto
+       the active document instead.
    * - Recent
      - Quickly reopen a recently-opened puppet
    * - Save As…
