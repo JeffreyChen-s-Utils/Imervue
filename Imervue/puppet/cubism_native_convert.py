@@ -547,27 +547,38 @@ def _collect_orphan_motions(
         bundle.motions.append(motion)
 
 
+def _load_expression_entry(
+    bundle: CubismBundle, entry: object, base_dir: Path,
+) -> None:
+    """Resolve and load one entry from the manifest's ``Expressions``
+    list. Tries both ``base_dir / file_ref`` and the conventional
+    ``base_dir / "exp" / file_ref`` location; logs and skips when
+    neither exists. Caught exceptions cover the heterogeneous failure
+    surface of :func:`load_exp3` against real-world Cubism rigs."""
+    if not isinstance(entry, dict):
+        return
+    file_ref = entry.get("File")
+    if not file_ref:
+        return
+    name = entry.get("Name") or Path(file_ref).stem
+    for path in (base_dir / file_ref, base_dir / "exp" / file_ref):
+        if not path.is_file():
+            continue
+        try:
+            bundle.expressions.append(load_exp3(path, name=str(name)))
+        except Exception as exc:   # noqa: BLE001 - load_exp3 backends vary
+            logger.info("expression %s failed: %s", path, exc)
+        return
+    logger.info("expression %s missing — skipping", file_ref)
+
+
 def _collect_expressions(
     bundle: CubismBundle, file_refs: dict, base_dir: Path,
 ) -> None:
     """Broken paths in real-world bundles are common; also check
     under ``base_dir / "exp"``."""
     for entry in file_refs.get("Expressions") or []:
-        if not isinstance(entry, dict):
-            continue
-        file_ref = entry.get("File")
-        if not file_ref:
-            continue
-        name = entry.get("Name") or Path(file_ref).stem
-        for path in (base_dir / file_ref, base_dir / "exp" / file_ref):
-            if path.is_file():
-                try:
-                    bundle.expressions.append(load_exp3(path, name=str(name)))
-                except Exception as exc:   # noqa: BLE001 - load_exp3 backends vary
-                    logger.info("expression %s failed: %s", path, exc)
-                break
-        else:
-            logger.info("expression %s missing — skipping", file_ref)
+        _load_expression_entry(bundle, entry, base_dir)
 
 
 def _collect_single_sidecar(
