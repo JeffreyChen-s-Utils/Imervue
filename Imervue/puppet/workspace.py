@@ -521,7 +521,7 @@ class PuppetWorkspace(QMainWindow):
             if toggle is not None and toggle.isChecked():
                 toggle.setChecked(False)
         # 3. Drop expressions + pose-group overrides + physics outputs.
-        for name in list(self._canvas.active_expressions()):
+        for name in self._canvas.active_expressions():
             self._canvas.remove_expression(name)
         # The canvas's pose-group dict is exposed via active_pose();
         # call set_pose_active with the empty default for each group.

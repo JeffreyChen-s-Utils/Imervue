@@ -36,7 +36,7 @@ def test_tracker_preview_snapshot_keys_match_contract(qapp):
         assert state["frame_bgr"] is None
         assert state["landmarks_norm"] is None
         assert state["face_detected"] is False
-        assert state["fps"] == 0.0
+        assert state["fps"] == pytest.approx(0.0)
         assert state["camera_open"] is False
         assert state["error"] is None
     finally:

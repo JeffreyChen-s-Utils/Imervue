@@ -149,7 +149,7 @@ class WebcamTracker(QObject):
         import cv2
         import mediapipe as mp
         try:
-            landmarker = _build_face_landmarker(mp)
+            landmarker = _build_face_landmarker()
         except _WebcamSetupError as exc:
             with self._preview_lock:
                 self._camera_open = False
@@ -167,8 +167,9 @@ class WebcamTracker(QObject):
             self._camera_open = True
             self._error_message = None
         # EMA-smoothed FPS so the preview status doesn't jitter every
-        # frame; alpha 0.1 gives a ~10-frame window.
-        fps_ema = 0.0
+        # frame; alpha 0.1 gives a ~10-frame window. None marks "no
+        # sample yet" so the first measurement seeds the EMA directly.
+        fps_ema: float | None = None
         try:
             while not self._stop_evt.is_set():
                 start = time.monotonic()
@@ -184,7 +185,7 @@ class WebcamTracker(QObject):
                         self._latest_params = params
                 elapsed = time.monotonic() - start
                 inst_fps = 1.0 / elapsed if elapsed > 0 else 0.0
-                fps_ema = inst_fps if fps_ema == 0.0 else (0.9 * fps_ema + 0.1 * inst_fps)
+                fps_ema = inst_fps if fps_ema is None else (0.9 * fps_ema + 0.1 * inst_fps)
                 # Mirror the latest capture under the preview lock so
                 # the dialog (running on the GUI thread) can paint it.
                 with self._preview_lock:
@@ -292,7 +293,7 @@ def _face_landmarker_model_path():
     return target
 
 
-def _build_face_landmarker(mp):
+def _build_face_landmarker():
     """Wire up a mediapipe Tasks-API ``FaceLandmarker``.
 
     Returns the live detector; raises :class:`_WebcamSetupError` with

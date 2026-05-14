@@ -176,7 +176,7 @@ class VirtualCameraOutput(QObject):
                 self._camera.width, self._camera.height,
                 background_rgba=CHROMA_KEY_MAGENTA_RGBA,
             )
-        except (RuntimeError, Exception):   # noqa: BLE001 - GL surfaces vary
+        except Exception:   # noqa: BLE001 - GL surfaces vary
             return
         if image is None:
             return

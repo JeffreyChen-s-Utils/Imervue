@@ -314,7 +314,7 @@ def test_reset_to_rest_disables_live_toggles(qapp, tmp_path):
     ws = PuppetWorkspace()
     try:
         ws.open_puppet(out)
-        ws._drag_toggle.setChecked(True)   # noqa: SLF001 — direct, no mic needed
+        ws._drag_toggle.setChecked(True)   # noqa: SLF001
         ws._blink_toggle.setChecked(True)   # noqa: SLF001
         ws._idle_toggle.setChecked(True)   # noqa: SLF001
         ws._reset_to_rest()   # noqa: SLF001

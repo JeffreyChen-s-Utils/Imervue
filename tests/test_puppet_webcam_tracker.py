@@ -70,9 +70,9 @@ def test_https_urlopen_rejects_non_https_scheme():
     import pytest
     from Imervue.puppet.webcam_tracker import _https_urlopen, _WebcamSetupError
     for bad in (
-        "http://example.com/face_landmarker.task",
+        "http://example.com/face_landmarker.task",   # NOSONAR - negative test
         "file:///etc/passwd",
-        "ftp://example.com/asset.task",
+        "ftp://example.com/asset.task",   # NOSONAR - negative test
     ):
         with pytest.raises(_WebcamSetupError):
             _https_urlopen(bad)
@@ -133,6 +133,7 @@ def test_landmarks_to_array_handles_tasks_api_shape():
     the pipeline (face_landmark_mapper, params) doesn't need to
     change."""
     import numpy as np
+    import pytest
     from types import SimpleNamespace
     from Imervue.puppet.webcam_tracker import _landmarks_to_array
 
@@ -144,5 +145,5 @@ def test_landmarks_to_array_handles_tasks_api_shape():
     arr = _landmarks_to_array(fake_landmarks)
     assert arr.shape == (3, 3)
     assert arr.dtype == np.float64
-    assert arr[1, 0] == 0.5
-    assert arr[2, 2] == 0.05
+    assert arr[1, 0] == pytest.approx(0.5)
+    assert arr[2, 2] == pytest.approx(0.05)

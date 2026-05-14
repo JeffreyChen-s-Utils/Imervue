@@ -173,7 +173,7 @@ class NDIOutput(QObject):
                 target_w, target_h,
                 background_rgba=(0.0, 0.0, 0.0, 0.0),
             )
-        except (RuntimeError, Exception):   # noqa: BLE001 - GL surfaces vary
+        except Exception:   # noqa: BLE001 - GL surfaces vary
             return
         if image is None:
             return
