@@ -18,11 +18,14 @@ from typing import TYPE_CHECKING
 import numpy as np
 from OpenGL.GL import (
     GL_ALWAYS,
+    GL_ARRAY_BUFFER,
     GL_BLEND,
     GL_CLAMP_TO_EDGE,
     GL_REPEAT,
     GL_COLOR_BUFFER_BIT,
     GL_DST_COLOR,
+    GL_DYNAMIC_DRAW,
+    GL_ELEMENT_ARRAY_BUFFER,
     GL_EQUAL,
     GL_FALSE,
     GL_FLOAT,
@@ -35,6 +38,7 @@ from OpenGL.GL import (
     GL_REPLACE,
     GL_RGBA,
     GL_SRC_ALPHA,
+    GL_STATIC_DRAW,
     GL_STENCIL_BUFFER_BIT,
     GL_STENCIL_TEST,
     GL_TEXTURE_2D,
@@ -49,13 +53,17 @@ from OpenGL.GL import (
     GL_UNSIGNED_INT,
     GL_VERTEX_ARRAY,
     glBegin,
+    glBindBuffer,
     glBindTexture,
     glBlendFunc,
+    glBufferData,
+    glBufferSubData,
     glClear,
     glClearColor,
     glClearStencil,
     glColor4f,
     glColorMask,
+    glDeleteBuffers,
     glDeleteTextures,
     glDisable,
     glDisableClientState,
@@ -63,6 +71,7 @@ from OpenGL.GL import (
     glEnable,
     glEnableClientState,
     glEnd,
+    glGenBuffers,
     glGenTextures,
     glLoadIdentity,
     glMatrixMode,
@@ -231,6 +240,14 @@ class PuppetCanvas(QOpenGLWidget):
         # and the dominant playback bottleneck. Cache a 2×2 RGBA texture
         # once and tile it with GL_REPEAT instead.
         self._checker_texture: int | None = None
+        # Per-drawable VBO cache. Each entry holds
+        # ``{vert_vbo, uv_vbo, idx_ibo, idx_count, vert_bytes}`` so the
+        # immutable UV + index arrays live on the GPU once per document
+        # while the per-frame deformed vertices upload via
+        # ``glBufferSubData`` (or full ``glBufferData`` when mesh edit
+        # changed the vertex count). Invalidated on document swap; the
+        # next paint lazily recreates the buffers for each drawable.
+        self._drawable_buffers: dict[str, dict] = {}
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -247,6 +264,7 @@ class PuppetCanvas(QOpenGLWidget):
         self._document = document
         self._draw_list = build_draw_list(document) if document is not None else []
         self._invalidate_texture_cache()
+        self._invalidate_buffer_cache()
         self._user_view_locked = False
         self._parameter_values = (
             default_parameter_values(document) if document is not None else {}
@@ -725,48 +743,70 @@ class PuppetCanvas(QOpenGLWidget):
 
     def _draw_drawables(self) -> None:  # pragma: no cover - GL needs display
         masks = resolve_masks(self._draw_list)
-        for cmd in self._draw_list:
-            visible = self._visibility.get(cmd.drawable_id, cmd.visible)
-            if not visible:
-                continue
-            tex_id = self._texture_for(cmd.texture)
-            if tex_id is None:
-                continue
-            sfactor, dfactor = _BLEND_FUNCS.get(cmd.blend_mode, _BLEND_FUNCS["normal"])
-            glBlendFunc(sfactor, dfactor)
-            # ``_drawable_opacity`` folds ``cmd.opacity`` with parameter-
-            # driven ``opacity_keys`` curves; ``_part_opacity`` carries
-            # the cascading Part-tree multiplier on top.
-            effective_opacity = self._drawable_opacity.get(
-                cmd.drawable_id, cmd.opacity,
-            ) * self._part_opacity.get(cmd.drawable_id, 1.0)
-            tint_r, tint_g, tint_b = self._drawable_tint.get(
-                cmd.drawable_id, (1.0, 1.0, 1.0),
-            )
-            # Premultiply the vertex tint by the opacity so a partly-
-            # faded drawable doesn't over-brighten when the GL pipeline
-            # modulates the (already-premultiplied) texture RGB.
-            glColor4f(
-                tint_r * effective_opacity,
-                tint_g * effective_opacity,
-                tint_b * effective_opacity,
-                effective_opacity,
-            )
-            glBindTexture(GL_TEXTURE_2D, tex_id)
-            verts = self._deformed_vertices.get(cmd.drawable_id, cmd.vertices)
-            mask_cmd = masks.get(cmd.drawable_id)
-            if mask_cmd is None:
-                self._draw_indexed(verts, cmd.uvs, cmd.indices)
-                continue
-            self._draw_with_stencil(mask_cmd, verts, cmd.uvs, cmd.indices)
+        # Hoist client-state toggles out of the per-drawable loop. GL
+        # accepts redundant ``glEnableClientState`` cheaply but spamming
+        # them N*60 times per second on a 307-drawable rig is visible
+        # in profilers — once before / after the batch is enough.
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY)
+        last_blend: tuple[int, int] | None = None
+        last_tex: int | None = None
+        try:
+            for cmd in self._draw_list:
+                visible = self._visibility.get(cmd.drawable_id, cmd.visible)
+                if not visible:
+                    continue
+                tex_id = self._texture_for(cmd.texture)
+                if tex_id is None:
+                    continue
+                blend = _BLEND_FUNCS.get(cmd.blend_mode, _BLEND_FUNCS["normal"])
+                if blend != last_blend:
+                    glBlendFunc(*blend)
+                    last_blend = blend
+                # ``_drawable_opacity`` folds ``cmd.opacity`` with
+                # parameter-driven ``opacity_keys`` curves;
+                # ``_part_opacity`` carries the cascading Part-tree
+                # multiplier on top.
+                effective_opacity = self._drawable_opacity.get(
+                    cmd.drawable_id, cmd.opacity,
+                ) * self._part_opacity.get(cmd.drawable_id, 1.0)
+                tint_r, tint_g, tint_b = self._drawable_tint.get(
+                    cmd.drawable_id, (1.0, 1.0, 1.0),
+                )
+                # Premultiply the vertex tint by the opacity so a
+                # partly-faded drawable doesn't over-brighten when the
+                # GL pipeline modulates the (already-premultiplied)
+                # texture RGB.
+                glColor4f(
+                    tint_r * effective_opacity,
+                    tint_g * effective_opacity,
+                    tint_b * effective_opacity,
+                    effective_opacity,
+                )
+                if tex_id != last_tex:
+                    glBindTexture(GL_TEXTURE_2D, tex_id)
+                    last_tex = tex_id
+                verts = self._deformed_vertices.get(cmd.drawable_id, cmd.vertices)
+                mask_cmd = masks.get(cmd.drawable_id)
+                if mask_cmd is None:
+                    self._draw_cmd_mesh(cmd, verts)
+                    continue
+                self._draw_with_stencil(cmd, mask_cmd, verts)
+        finally:
+            # Unbind so neither immediate-mode follow-ups (selection
+            # overlay) nor a foreign GL caller inherit our bindings.
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+            glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+            glDisableClientState(GL_VERTEX_ARRAY)
 
     def _draw_with_stencil(  # pragma: no cover - GL needs display
-        self, mask_cmd, verts, uvs, indices,
+        self, cmd, mask_cmd, verts,
     ) -> None:
-        """Render ``verts/uvs/indices`` clipped to ``mask_cmd``'s shape
-        using the stencil buffer. The mask drawable's deformed vertices
-        are used (so a hair mask follows the head's deformation), and
-        the stencil buffer is wiped at the end so the next clipped pair
+        """Render ``cmd``'s mesh clipped to ``mask_cmd``'s shape using
+        the stencil buffer. The mask drawable's deformed vertices are
+        used (so a hair mask follows the head's deformation), and the
+        stencil buffer is wiped at the end so the next clipped pair
         starts clean."""
         mask_verts = self._deformed_vertices.get(
             mask_cmd.drawable_id, mask_cmd.vertices,
@@ -780,12 +820,12 @@ class PuppetCanvas(QOpenGLWidget):
         glStencilFunc(GL_ALWAYS, 1, 0xFF)
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE)
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
-        self._draw_indexed(mask_verts, mask_cmd.uvs, mask_cmd.indices)
+        self._draw_cmd_mesh(mask_cmd, mask_verts)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
         # Target draws only where stencil == 1.
         glStencilFunc(GL_EQUAL, 1, 0xFF)
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
-        self._draw_indexed(verts, uvs, indices)
+        self._draw_cmd_mesh(cmd, verts)
         glDisable(GL_STENCIL_TEST)
 
     def _draw_selection_overlay(self) -> None:   # pragma: no cover - GL needs display
@@ -861,28 +901,84 @@ class PuppetCanvas(QOpenGLWidget):
             glVertex2f(ax + radius * _math.cos(theta), ay + radius * _math.sin(theta))
         glEnd()
 
-    @staticmethod
-    def _draw_indexed(  # pragma: no cover - GL needs display
-        vertices: np.ndarray, uvs: np.ndarray, indices: np.ndarray,
+    def _draw_cmd_mesh(  # pragma: no cover - GL needs display
+        self, cmd: DrawCommand, vertices: np.ndarray,
     ) -> None:
-        """Submit one triangle list to the fixed-function pipeline using
-        client-side vertex arrays.
+        """Submit one triangle list via the per-drawable VBO trio.
 
         Per-vertex ``glBegin/glVertex2f`` runs in the millions for the
-        March 7th rig (307 drawables × ~200 verts × 60 fps) and was the
-        playback-lag bottleneck. ``glDrawElements`` with the same
-        numpy arrays drops paint cost ~10-50× by pushing the per-vertex
-        loop into the GL driver."""
+        March 7th rig (307 drawables × ~200 verts × 60 fps) and was
+        the original playback-lag bottleneck. Client-side
+        ``glDrawElements`` dropped paint cost ~10-50× by pushing the
+        loop into the GL driver; VBOs go one step further — UVs and
+        indices live on the GPU after the first frame, so each
+        subsequent frame only re-streams the deformed vertices.
+        Client-state toggles are hoisted to the caller (one set per
+        frame instead of one per drawable)."""
+        bufs = self._ensure_drawable_buffers(cmd)
+        if bufs is None:
+            return
+        # Stream the deformed vertices. ``glBufferSubData`` is reused
+        # when the vertex count is stable (the common case); a mesh
+        # edit that adds / removes vertices reallocates the buffer
+        # with the new size.
         verts32 = np.ascontiguousarray(vertices, dtype=np.float32)
-        uvs32 = np.ascontiguousarray(uvs, dtype=np.float32)
-        idx32 = np.ascontiguousarray(indices, dtype=np.uint32)
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY)
-        glVertexPointer(2, GL_FLOAT, 0, verts32)
-        glTexCoordPointer(2, GL_FLOAT, 0, uvs32)
-        glDrawElements(GL_TRIANGLES, int(idx32.size), GL_UNSIGNED_INT, idx32)
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY)
-        glDisableClientState(GL_VERTEX_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, bufs["vert_vbo"])
+        if verts32.nbytes != bufs["vert_bytes"]:
+            glBufferData(GL_ARRAY_BUFFER, verts32.nbytes, verts32, GL_DYNAMIC_DRAW)
+            bufs["vert_bytes"] = int(verts32.nbytes)
+        else:
+            glBufferSubData(GL_ARRAY_BUFFER, 0, verts32.nbytes, verts32)
+        glVertexPointer(2, GL_FLOAT, 0, None)
+        glBindBuffer(GL_ARRAY_BUFFER, bufs["uv_vbo"])
+        glTexCoordPointer(2, GL_FLOAT, 0, None)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufs["idx_ibo"])
+        glDrawElements(GL_TRIANGLES, bufs["idx_count"], GL_UNSIGNED_INT, None)
+
+    def _ensure_drawable_buffers(  # pragma: no cover - GL needs display
+        self, cmd: DrawCommand,
+    ) -> dict | None:
+        """Lazy-create the ``(vert_vbo, uv_vbo, idx_ibo)`` trio for one
+        drawable. UV + index buffers carry ``GL_STATIC_DRAW`` and
+        upload once; the vertex VBO is sized but left empty here
+        (``_draw_cmd_mesh`` fills it on its first call). Returns
+        ``None`` for empty meshes that the GL pipeline would reject
+        anyway."""
+        cached = self._drawable_buffers.get(cmd.drawable_id)
+        if cached is not None:
+            return cached
+        uvs32 = np.ascontiguousarray(cmd.uvs, dtype=np.float32)
+        idx32 = np.ascontiguousarray(cmd.indices, dtype=np.uint32)
+        if uvs32.size == 0 or idx32.size == 0:
+            return None
+        vert_vbo, uv_vbo, idx_ibo = (int(b) for b in glGenBuffers(3))
+        glBindBuffer(GL_ARRAY_BUFFER, uv_vbo)
+        glBufferData(GL_ARRAY_BUFFER, uvs32.nbytes, uvs32, GL_STATIC_DRAW)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_ibo)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, idx32.nbytes, idx32, GL_STATIC_DRAW)
+        entry = {
+            "vert_vbo": vert_vbo,
+            "uv_vbo": uv_vbo,
+            "idx_ibo": idx_ibo,
+            "idx_count": int(idx32.size),
+            "vert_bytes": 0,
+        }
+        self._drawable_buffers[cmd.drawable_id] = entry
+        return entry
+
+    def _invalidate_buffer_cache(self) -> None:   # pragma: no cover - GL needs display
+        """Release every per-drawable VBO trio. Called on document
+        swap (the next paint re-creates them against the new draw
+        list) and on widget teardown."""
+        if not self._drawable_buffers:
+            return
+        import contextlib
+        ids: list[int] = []
+        for entry in self._drawable_buffers.values():
+            ids.extend([entry["vert_vbo"], entry["uv_vbo"], entry["idx_ibo"]])
+        with contextlib.suppress(Exception):
+            glDeleteBuffers(len(ids), ids)
+        self._drawable_buffers.clear()
 
     # ---- texture cache --------------------------------------------------
 
