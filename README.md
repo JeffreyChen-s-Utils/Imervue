@@ -586,6 +586,36 @@ Pick any combination from the tab or the right-click menu. Each is off by defaul
 
 Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
+### Custom voice (pet script)
+
+The pet's speech bubble draws from a JSON file you can author yourself. Click **Load script…** in the **Pet script** group of the Desktop Pet tab and pick a `.petscript.json`. The schema:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — used when nothing more specific matches a click.
+- **`hit_responses`** — per-`HitArea` lines. Keys must match the hit-area IDs defined in the rig.
+- **`motion_lines`** — per-motion lines. Fire when the pet plays a motion with that name (hit-area motion or context-menu motion).
+- **`scheduled`** — timer-driven chimes. Each entry fires every `every_seconds` seconds.
+
+Lines cycle round-robin per bucket so the user doesn't hear the same line twice in a row. **Reset to default** drops the custom script and brings back the built-in greeting set.
+
+A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](examples/desktop_pet/march_7th.petscript.json).
+
 ---
 
 ## Keyboard & Mouse Shortcuts

@@ -39,12 +39,29 @@ def build_recent_menu(ui_we_want_to_set, menu: QMenu):
 
 
 def rebuild_recent_menu(ui_we_want_to_set):
-    lang = language_wrapper.language_word_dict
-    folder_menu = ui_we_want_to_set._recent_folder_menu
-    image_menu = ui_we_want_to_set._recent_image_menu
+    """Refresh the *Recent Folders* / *Recent Images* submenus.
 
-    folder_menu.clear()
-    image_menu.clear()
+    Safe to call during application teardown: ``on_file_clicked``
+    in the main window funnels every File-menu interaction here,
+    and during close Qt sometimes fires that signal after the
+    submenu's C++ side has already been freed. The first
+    ``QMenu.clear()`` then raises ``RuntimeError`` from
+    shiboken — we treat that as "the menus are gone, nothing to
+    refresh" and bail out silently rather than poisoning the
+    user-visible shutdown with a traceback.
+    """
+    lang = language_wrapper.language_word_dict
+    folder_menu = getattr(ui_we_want_to_set, "_recent_folder_menu", None)
+    image_menu = getattr(ui_we_want_to_set, "_recent_image_menu", None)
+    if folder_menu is None or image_menu is None:
+        return
+    try:
+        folder_menu.clear()
+        image_menu.clear()
+    except RuntimeError:
+        # shiboken: one of the submenus' C++ side is already gone
+        # (teardown race). Skip — there's no menu left to populate.
+        return
 
     # ===== Folders =====
     valid_folders = []
@@ -93,8 +110,13 @@ def rebuild_recent_menu(ui_we_want_to_set):
         empty.setEnabled(False)
     # QMenu hides ``setToolTip`` content by default; flip the attribute
     # so artists actually see the full path on hover.
-    folder_menu.setToolTipsVisible(True)
-    image_menu.setToolTipsVisible(True)
+    try:
+        folder_menu.setToolTipsVisible(True)
+        image_menu.setToolTipsVisible(True)
+    except RuntimeError:
+        # Same teardown race — the menus may have been freed while
+        # we were populating them. Nothing the user sees either way.
+        return
 
 
 def handle_clear_recent(ui_we_want_to_set):

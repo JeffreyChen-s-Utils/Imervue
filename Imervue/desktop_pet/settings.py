@@ -49,6 +49,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "show_on_launch": False,      # auto-show the pet when Imervue starts
     "speech_enabled": True,       # let the speech bubble pop on clicks
+    "script_path": "",            # path to a user-supplied .petscript.json; "" = built-in defaults
 }
 
 
@@ -173,4 +174,6 @@ def _clamped(settings: dict[str, Any]) -> dict[str, Any]:
     # Strings.
     if not isinstance(out.get("last_rig_path"), str):
         out["last_rig_path"] = ""
+    if not isinstance(out.get("script_path"), str):
+        out["script_path"] = ""
     return out

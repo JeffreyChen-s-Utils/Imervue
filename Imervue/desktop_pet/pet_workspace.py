@@ -82,16 +82,24 @@ class PetWorkspace(QWidget):
     # ---- persisted session restore -----------------------------
 
     def _restore_persisted_session(self) -> None:
-        """If the user's previous Imervue session had a rig
-        loaded, re-load it so the pet returns to that state.
-        ``show_on_launch`` separately controls whether the
-        overlay shows itself automatically."""
+        """If the user's previous Imervue session had a rig and /
+        or a pet script loaded, re-load them so the pet returns to
+        that state. ``show_on_launch`` separately controls whether
+        the overlay shows itself automatically."""
         settings = pet_settings.load()
         last_path = str(settings.get("last_rig_path", "") or "")
         if last_path and Path(last_path).is_file() and self.load_puppet(last_path):
             self._reapply_persisted_toggles(settings)
             if settings.get("show_on_launch"):
                 self._show_check.setChecked(True)
+        # PetWindow restores the script itself from settings on
+        # construction; refresh the workspace's label so the UI
+        # mirrors what's actually loaded.
+        script_path = str(settings.get("script_path", "") or "")
+        if hasattr(self, "_current_script_label"):
+            self._current_script_label.setText(
+                self._format_script_label(script_path),
+            )
 
     def _reapply_persisted_toggles(self, settings: dict) -> None:
         """Re-tick the workspace's checkboxes so the visible UI
@@ -127,6 +135,7 @@ class PetWorkspace(QWidget):
         layout.addWidget(self._build_rig_group())
         layout.addWidget(self._build_window_group())
         layout.addWidget(self._build_drivers_group())
+        layout.addWidget(self._build_script_group())
         layout.addStretch(1)
 
         self._status = QLabel("")
@@ -296,6 +305,37 @@ class PetWorkspace(QWidget):
         layout.addWidget(self._webcam_check)
         return group
 
+    def _build_script_group(self) -> QGroupBox:
+        """Custom pet voice — point at a ``.petscript.json`` to
+        replace the built-in greetings + per-hit-area / per-motion
+        lines + scheduled chimes. The actual JSON schema lives in
+        :mod:`Imervue.desktop_pet.pet_script`; this group is just
+        the load / reset surface."""
+        group = QGroupBox(_tr("desktop_pet_group_script", "Pet script"))
+        layout = QVBoxLayout(group)
+        settings = pet_settings.load()
+
+        row = QHBoxLayout()
+        self._load_script_button = QPushButton(
+            _tr("desktop_pet_load_script", "Load script…"),
+        )
+        self._load_script_button.clicked.connect(self._on_load_script)
+        row.addWidget(self._load_script_button)
+        self._reset_script_button = QPushButton(
+            _tr("desktop_pet_reset_script", "Reset to default"),
+        )
+        self._reset_script_button.clicked.connect(self._on_reset_script)
+        row.addWidget(self._reset_script_button)
+        row.addStretch(1)
+        layout.addLayout(row)
+
+        self._current_script_label = QLabel(
+            self._format_script_label(settings.get("script_path", "")),
+        )
+        self._current_script_label.setStyleSheet("color: #888;")
+        layout.addWidget(self._current_script_label)
+        return group
+
     # ---- pet-window lifecycle ----------------------------------
 
     def _ensure_pet_window(self) -> PetWindow:
@@ -362,6 +402,59 @@ class PetWorkspace(QWidget):
         )
         self._status.setText("")
         return True
+
+    # ---- pet script --------------------------------------------
+
+    def _format_script_label(self, path: str) -> str:
+        if not path:
+            return _tr(
+                "desktop_pet_script_default",
+                "(Using built-in default voice)",
+            )
+        return _tr(
+            "desktop_pet_script_loaded", "Loaded: {name}",
+        ).format(name=Path(path).name)
+
+    def _on_load_script(self) -> None:   # pragma: no cover - Qt UI
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            _tr("desktop_pet_load_script_title", "Load pet script"),
+            "",
+            "Pet script (*.json *.petscript.json)",
+        )
+        if path:
+            self.load_script(path)
+
+    def load_script(self, path: str | Path) -> bool:
+        """Load a ``.petscript.json`` into the pet overlay's
+        script engine. Returns ``True`` on success. The status
+        label surfaces failure detail."""
+        window = self._ensure_pet_window()
+        if not window.load_script_file(path):
+            self._status.setText(
+                _tr(
+                    "desktop_pet_script_failed", "Failed to load script: {path}",
+                ).format(path=path),
+            )
+            return False
+        self._current_script_label.setText(
+            self._format_script_label(str(path)),
+        )
+        self._status.setText("")
+        return True
+
+    def _on_reset_script(self) -> None:
+        """Drop the user script and revert to the built-in
+        greetings. The pet window does the actual reset; this
+        slot just refreshes the label + status."""
+        if self._pet_window is not None:
+            self._pet_window.reset_script_to_default()
+        # Whether or not we had a window, persist the empty path
+        # so the next launch doesn't reload a stale script.
+        from Imervue.desktop_pet import settings as _settings
+        _settings.update(script_path="")
+        self._current_script_label.setText(self._format_script_label(""))
+        self._status.setText("")
 
     # ---- visibility --------------------------------------------
 

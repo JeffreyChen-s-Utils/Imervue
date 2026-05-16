@@ -162,3 +162,59 @@ def test_build_recent_menu_includes_clear_action(qapp):
     build_recent_menu(main, parent)
     titles = [a.text() for a in main._recent_menu.actions() if a.text()]
     assert any("Clear" in t for t in titles)
+
+
+# ---------------------------------------------------------------------------
+# Teardown safety — the C++ side of the submenus may be deleted before
+# the next ``rebuild_recent_menu`` call lands.
+# ---------------------------------------------------------------------------
+
+
+class _DeletedMenuStub:
+    """Stands in for a QMenu whose underlying C++ object has been
+    freed. Every method that touches Qt raises ``RuntimeError`` the
+    same way shiboken does."""
+
+    def clear(self):
+        raise RuntimeError(
+            "libshiboken: Internal C++ object (PySide6.QtWidgets.QMenu) "
+            "already deleted.",
+        )
+
+    def addAction(self, *_args, **_kwargs):
+        raise RuntimeError("already deleted")
+
+    def setToolTipsVisible(self, *_args, **_kwargs):
+        raise RuntimeError("already deleted")
+
+
+class _ShutdownMainWindow:
+    """Stub main window whose recent submenus are dead wrappers."""
+
+    def __init__(self):
+        self._recent_folder_menu = _DeletedMenuStub()
+        self._recent_image_menu = _DeletedMenuStub()
+        self.model = _StubModel()
+
+
+def test_rebuild_silent_when_menus_already_deleted():
+    """During GUI close, ``on_file_clicked`` can fire after Qt has
+    freed the recent-submenu C++ objects. Without this guard,
+    ``folder_menu.clear()`` raised the libshiboken error all the
+    way through the close handler and dumped a traceback the user
+    saw in the terminal. The guard swallows that specific case
+    silently — there's no menu left to refresh."""
+    main = _ShutdownMainWindow()
+    user_setting_dict["user_recent_folders"] = ["/some/path"]
+    user_setting_dict["user_recent_images"] = ["/some/image.jpg"]
+    rebuild_recent_menu(main)   # must not raise
+
+
+def test_rebuild_silent_when_menu_attrs_missing():
+    """A partially-constructed window (e.g. an exception in the
+    File-menu build path) leaves the recent submenu attrs unset.
+    Any subsequent ``rebuild_recent_menu`` call must short-circuit
+    rather than ``AttributeError`` out."""
+    class _BareMainWindow:
+        pass
+    rebuild_recent_menu(_BareMainWindow())   # must not raise

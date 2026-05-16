@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "name": "March 7th — playful pet voice",
+  "greetings": [
+    "Hi!",
+    "Hello hello!",
+    "Need a break?",
+    "Looking sharp today.",
+    "How's the work going?",
+    "Don't forget to stretch~"
+  ],
+  "hit_responses": {
+    "HitAreaHead": [
+      "Hey, my head!",
+      "Stop poking!",
+      "That tickles!"
+    ],
+    "HitAreaBody": [
+      "Hehe~",
+      "Pat pat?",
+      "I'm not a plushie!"
+    ]
+  },
+  "motion_lines": {
+    "wave": ["Hi!", "Hello!"],
+    "curtsy": ["Cheers!"],
+    "cheer": ["Yay!"]
+  },
+  "scheduled": [
+    {
+      "every_seconds": 1800,
+      "messages": [
+        "Hydrate~",
+        "Look away for 20 seconds!",
+        "Stretch break!"
+      ]
+    }
+  ]
+}
