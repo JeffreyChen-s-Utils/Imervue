@@ -82,6 +82,39 @@ def test_default_example_constant_points_inside_examples_dir():
     assert DEFAULT_EXAMPLE_PUPPET.endswith(".puppet")
 
 
+def test_resolve_bundled_example_uses_app_paths(monkeypatch, tmp_path):
+    """A packaged build doesn't run from the repo root, so the
+    workspace must consult ``app_paths.examples_dir()`` rather
+    than a CWD-relative literal. Plant a fake rig under a
+    temp-dir-rooted ``examples_dir()`` and verify resolution
+    finds it without relying on the test's CWD."""
+    from Imervue.desktop_pet import pet_workspace
+    from Imervue.system import app_paths
+
+    fake_examples = tmp_path / "examples"
+    fake_puppet = fake_examples / "puppet" / "march_7th.puppet"
+    fake_puppet.parent.mkdir(parents=True)
+    fake_puppet.write_bytes(b"PK\x03\x04")  # just needs to be_a_file
+    monkeypatch.setattr(app_paths, "examples_dir", lambda: fake_examples)
+    resolved = pet_workspace._resolve_bundled_example()   # noqa: SLF001
+    assert resolved == fake_puppet
+
+
+def test_resolve_bundled_example_returns_none_when_missing(monkeypatch, tmp_path):
+    """No bundled rig anywhere → resolver hands back None so the
+    workspace can surface the dedicated "install or run from the
+    repo root" status message rather than crashing with a
+    FileNotFoundError."""
+    from Imervue.desktop_pet import pet_workspace
+    from Imervue.system import app_paths
+
+    empty = tmp_path / "no-examples"
+    empty.mkdir()
+    monkeypatch.setattr(app_paths, "examples_dir", lambda: empty)
+    monkeypatch.chdir(empty)
+    assert pet_workspace._resolve_bundled_example() is None   # noqa: SLF001
+
+
 @pytest.mark.parametrize("preset", ["small", "medium", "large"])
 def test_size_combo_offers_each_preset(qapp, preset):
     """Every preset string the combo box exposes has to be

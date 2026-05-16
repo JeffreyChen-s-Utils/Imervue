@@ -211,6 +211,18 @@ class PuppetCanvas(QOpenGLWidget):
         super().__init__(parent)
         self.setFormat(fmt)
         self._pet_mode = bool(pet_mode)
+        if pet_mode:
+            # The host PetWindow has WA_TranslucentBackground set,
+            # but Qt would still paint a system-coloured background
+            # behind the GL widget before it renders — leaving an
+            # opaque rectangle around the puppet on the desktop.
+            # Mirror the translucency attributes onto the canvas
+            # itself so no opaque background paint runs, then make
+            # the GL widget stack on top of any sibling so the
+            # window-composite step honours its per-pixel alpha.
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+            self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop, True)
         self._document: PuppetDocument | None = None
         self._draw_list: list[DrawCommand] = []
         self._texture_cache: dict[str, int] = {}

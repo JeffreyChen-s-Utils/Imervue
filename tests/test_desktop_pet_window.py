@@ -115,6 +115,23 @@ def test_canvas_is_in_pet_mode(qapp):
         window.deleteLater()
 
 
+def test_pet_mode_canvas_has_translucent_attributes(qapp):
+    """Without the WA_TranslucentBackground / WA_NoSystemBackground /
+    WA_AlwaysStackOnTop trio on the GL widget itself, Qt paints an
+    opaque system-coloured backdrop behind it before the GL render
+    runs — and the user sees a grey rectangle around the puppet on
+    their desktop. The attributes have to be set on the canvas, not
+    just on the host window."""
+    window = PetWindow()
+    try:
+        canvas = window.canvas()
+        assert canvas.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert canvas.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        assert canvas.testAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop)
+    finally:
+        window.deleteLater()
+
+
 def test_load_puppet_file_returns_false_on_missing(qapp, tmp_path):
     """A non-existent ``.puppet`` archive must produce a False
     return rather than raising — the workspace's status label is
