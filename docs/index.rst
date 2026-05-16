@@ -12,3 +12,8 @@ Welcome to the Imervue documentation. Please select your language:
    zh-cn/index
    ja/index
    ko/index
+   es/index
+   fr/index
+   de/index
+   pt-BR/index
+   ru/index
