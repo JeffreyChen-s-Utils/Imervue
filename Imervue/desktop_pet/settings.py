@@ -31,7 +31,7 @@ state at once."""
 # write them back as the user mutates state.
 DEFAULTS: dict[str, Any] = {
     "last_rig_path": "",          # absolute path; "" = no rig loaded
-    "position": [-1, -1],         # screen-coord (x, y); -1, -1 = "use default"
+    "position": [-1, -1],         # screen x and y; both negative means "use default"
     "size_preset": "medium",      # "small" | "medium" | "large"
     "opacity": 1.0,               # 0.1 - 1.0
     "click_through": False,

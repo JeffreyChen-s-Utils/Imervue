@@ -484,7 +484,7 @@ japanese_word_dict = {
     "desktop_pet_tab_title": 'デスクトップペット',
     "desktop_pet_section_title": 'デスクトップペット — パペットをデスクトップに重ねて表示',
     "desktop_pet_group_rig": 'Rig',
-    "desktop_pet_open_puppet": 'パペットを開く…',
+    "desktop_pet_open_puppet": 'パペットを開く…',   # NOSONAR S1192 - i18n label shared across tabs
     "desktop_pet_load_example": '同梱の March 7th を読み込む',
     "desktop_pet_no_rig": 'rig は未読み込み',
     "desktop_pet_loaded": '読み込み済み：{name}',

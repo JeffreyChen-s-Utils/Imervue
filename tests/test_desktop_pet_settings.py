@@ -16,6 +16,8 @@ made here can't leak into the real user settings.
 """
 from __future__ import annotations
 
+import pytest
+
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -29,7 +31,7 @@ def test_load_returns_defaults_when_unset():
     state = pet_settings.load()
     assert state["last_rig_path"] == ""
     assert state["size_preset"] == "medium"
-    assert state["opacity"] == 1.0
+    assert state["opacity"] == pytest.approx(1.0)
     assert state["click_through"] is False
     assert state["anchor_locked"] is False
     assert isinstance(state["drivers"], dict)
@@ -54,7 +56,7 @@ def test_save_then_load_round_trips():
     state = pet_settings.load()
     assert state["last_rig_path"] == "examples/puppet/march_7th.puppet"
     assert state["size_preset"] == "large"
-    assert state["opacity"] == 0.7
+    assert state["opacity"] == pytest.approx(0.7)
     assert state["click_through"] is True
     assert state["snap_threshold"] == 32
     assert state["drivers"]["auto_idle"] is True
@@ -71,19 +73,19 @@ def test_opacity_clamps_below_minimum():
     user might toggle it from the settings file and lose the
     ability to find their pet. Clamp to 0.1 as the floor."""
     pet_settings.save({"opacity": 0.0})
-    assert pet_settings.load()["opacity"] == 0.1
+    assert pet_settings.load()["opacity"] == pytest.approx(0.1)
 
 
 def test_opacity_clamps_above_maximum():
     pet_settings.save({"opacity": 5.0})
-    assert pet_settings.load()["opacity"] == 1.0
+    assert pet_settings.load()["opacity"] == pytest.approx(1.0)
 
 
 def test_opacity_garbage_falls_back_to_default():
     """A corrupted settings file could write a string into
     opacity; load() must coerce or fall back rather than crash."""
     pet_settings.save({"opacity": "not a number"})
-    assert pet_settings.load()["opacity"] == 1.0
+    assert pet_settings.load()["opacity"] == pytest.approx(1.0)
 
 
 def test_snap_threshold_clamps():
@@ -128,7 +130,7 @@ def test_update_helper_writes_through():
     every workspace setter uses; verify it actually persists."""
     pet_settings.save({"opacity": 1.0})
     pet_settings.update(opacity=0.5)
-    assert pet_settings.load()["opacity"] == 0.5
+    assert pet_settings.load()["opacity"] == pytest.approx(0.5)
 
 
 def test_save_ignores_non_dict():
@@ -137,4 +139,4 @@ def test_save_ignores_non_dict():
     ignore the call and keep what was there."""
     pet_settings.save({"opacity": 0.6})
     pet_settings.save(None)   # type: ignore[arg-type]
-    assert pet_settings.load()["opacity"] == 0.6
+    assert pet_settings.load()["opacity"] == pytest.approx(0.6)

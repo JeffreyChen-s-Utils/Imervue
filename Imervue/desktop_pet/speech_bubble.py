@@ -13,14 +13,10 @@ the pet window calling :meth:`anchor_to` whenever it moves.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QPropertyAnimation, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QLabel, QWidget
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.speech_bubble")
 
@@ -102,7 +98,13 @@ class SpeechBubble(QWidget):
             self._fade_anim = None
         self.setWindowOpacity(1.0)
         self.show()
-        self._hold_timer.start(max(0, int(hold_ms))) if hold_ms > 0 else self._hold_timer.stop()
+        # ``hold_ms == 0`` means "stay open until close_bubble is
+        # called explicitly" — used by callers that want the bubble
+        # to hold while a longer-running event is in flight.
+        if hold_ms > 0:
+            self._hold_timer.start(max(0, int(hold_ms)))
+        else:
+            self._hold_timer.stop()
 
     def anchor_to(self, rect: QRect) -> None:
         """Caller (pet window) calls this every time the pet

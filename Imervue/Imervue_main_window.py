@@ -669,25 +669,8 @@ class ImervueMainWindow(QMainWindow):
             lang.get("puppet_tab_title", "Puppet"),
         )
 
-        # --------------------------------------------------------
-        # Tab 4: Desktop Pet — frameless / transparent overlay
-        # that shares the Puppet runtime. The tab body is the
-        # control panel; the actual pet character renders in a
-        # separate top-level QWidget with WA_TranslucentBackground
-        # and a translucent GL surface. Created lazily by the
-        # workspace on first show, so the GL context is only paid
-        # for when the user enables the pet.
-        # --------------------------------------------------------
-        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
-        self.pet_workspace = PetWorkspace()
-        self._main_tabs.addTab(
-            self.pet_workspace,
-            lang.get("desktop_pet_tab_title", "Desktop Pet"),
-        )
-        if PetTrayIcon.is_available():
-            self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
-            self.pet_workspace.attach_tray(self._pet_tray)
-            self._pet_tray.show()
+        # Desktop Pet tab + (optional) system tray.
+        self._install_desktop_pet_tab(lang)
 
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
@@ -780,6 +763,26 @@ class ImervueMainWindow(QMainWindow):
             self.debug_timer.setInterval(10000)
             self.debug_timer.timeout.connect(self.debug_close)
             self.debug_timer.start()
+
+    def _install_desktop_pet_tab(self, lang) -> None:
+        """Wire the 5th tab (Desktop Pet) — frameless / transparent
+        overlay sharing the Puppet runtime. The tab body is the
+        control panel; the actual character lives in a separate
+        top-level window. The system tray icon piggybacks here so
+        the user can toggle visibility without finding the tab; it
+        is only constructed when the platform reports a tray is
+        available (CI / headless desktops skip it gracefully)."""
+        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
+        self.pet_workspace = PetWorkspace()
+        self._main_tabs.addTab(
+            self.pet_workspace,
+            lang.get("desktop_pet_tab_title", "Desktop Pet"),
+        )
+        if not PetTrayIcon.is_available():
+            return
+        self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
+        self.pet_workspace.attach_tray(self._pet_tray)
+        self._pet_tray.show()
 
     # ==========================
     # 主分頁切換（Imervue ↔ 修改）

@@ -465,14 +465,22 @@ class PetWindow(QWidget):
     def _show_context_menu(self, global_pos: QPoint) -> None:   # pragma: no cover - Qt UI
         tr = language_wrapper.language_word_dict.get
         menu = QMenu(self)
-
-        # Visibility
         hide_action = menu.addAction(tr("desktop_pet_menu_hide", "Hide pet"))
         hide_action.triggered.connect(self.hide)
         menu.addSeparator()
+        self._build_drivers_submenu(menu, tr)
+        self._build_motions_submenu(menu, tr)
+        self._build_expressions_submenu(menu, tr)
+        menu.addSeparator()
+        self._build_toggle_actions(menu, tr)
+        menu.addSeparator()
+        self._build_size_submenu(menu, tr)
+        menu.exec(global_pos)
 
-        # Drivers submenu — checkable toggles for each live
-        # input source.
+    def _build_drivers_submenu(self, menu: QMenu, tr) -> None:   # pragma: no cover - Qt UI
+        """Live-input toggles. Each driver's "is it running?" state
+        is sourced from its own object so the menu's check-state
+        always matches the world."""
         drivers_menu = menu.addMenu(tr("desktop_pet_group_drivers", "Live drivers"))
         idle_running = (
             self._idle_driver is not None and self._idle_driver.is_enabled()
@@ -481,7 +489,9 @@ class PetWindow(QWidget):
             drivers_menu, tr("desktop_pet_auto_idle", "Auto idle (breath + drift)"),
             idle_running, self.set_auto_idle_enabled,
         )
-        idle_motion_running = self._idle_cycler is not None and self._idle_cycler.is_enabled()
+        idle_motion_running = (
+            self._idle_cycler is not None and self._idle_cycler.is_enabled()
+        )
         self._add_driver_action(
             drivers_menu, tr("desktop_pet_idle_motion", "Idle motions"),
             idle_motion_running, self.set_idle_motion_enabled,
@@ -497,98 +507,79 @@ class PetWindow(QWidget):
         self._add_driver_action(
             drivers_menu, tr("desktop_pet_mic_lipsync", "Mic lip-sync"),
             self._input_engine.lipsync_enabled(),
-            lambda enabled: self.set_mic_lipsync_enabled(enabled),
+            self.set_mic_lipsync_enabled,
         )
         self._add_driver_action(
             drivers_menu, tr("desktop_pet_webcam", "Webcam tracking"),
             self._webcam_tracker is not None and self._webcam_tracker.is_enabled(),
-            lambda enabled: self.set_webcam_tracking_enabled(enabled),
+            self.set_webcam_tracking_enabled,
         )
 
-        # Motions submenu — populated from the loaded document.
+    def _build_motions_submenu(self, menu: QMenu, tr) -> None:   # pragma: no cover - Qt UI
+        """Lists every motion in the active rig. Each entry plays
+        that motion directly. Disabled when no rig is loaded."""
         motions_menu = menu.addMenu(tr("desktop_pet_menu_play_motion", "Play motion"))
         document = self.document()
-        if document is not None and document.motions:
-            for motion in document.motions:
-                action = motions_menu.addAction(motion.name or "(unnamed)")
-                action.triggered.connect(
-                    lambda _checked=False, m=motion: self._play_motion(m),
-                )
-        else:
+        if document is None or not document.motions:
             motions_menu.setEnabled(False)
+            return
+        for motion in document.motions:
+            action = motions_menu.addAction(motion.name or "(unnamed)")
+            action.triggered.connect(
+                lambda _checked=False, m=motion: self._play_motion(m),
+            )
 
-        # Expressions submenu
+    def _build_expressions_submenu(self, menu: QMenu, tr) -> None:   # pragma: no cover - Qt UI
         expressions_menu = menu.addMenu(
             tr("desktop_pet_menu_apply_expression", "Apply expression"),
         )
-        if document is not None and document.expressions:
-            for expression in document.expressions:
-                action = expressions_menu.addAction(expression.name or "(unnamed)")
-                action.triggered.connect(
-                    lambda _checked=False, e=expression: self._apply_expression(e.name),
-                )
-        else:
+        document = self.document()
+        if document is None or not document.expressions:
             expressions_menu.setEnabled(False)
+            return
+        for expression in document.expressions:
+            action = expressions_menu.addAction(expression.name or "(unnamed)")
+            action.triggered.connect(
+                lambda _checked=False, e=expression: self._apply_expression(e.name),
+            )
 
-        menu.addSeparator()
+    def _build_toggle_actions(self, menu: QMenu, tr) -> None:   # pragma: no cover - Qt UI
+        """The five top-level checkable toggles (anchor, click-
+        through, on-bottom, fullscreen-hide, speech bubble). Each
+        is wired so the user can flip it from the right-click menu
+        as a faster alternative to digging through the tab."""
+        for key, default, attr, setter in (
+            ("desktop_pet_anchor", "Lock position",
+             "_anchor_locked", self.set_anchor_locked),
+            ("desktop_pet_click_through", "Click-through (let mouse pass)",
+             "_click_through", self.set_click_through),
+            ("desktop_pet_on_bottom", "Always on bottom (desktop widget)",
+             "_always_on_bottom", self.set_always_on_bottom),
+            ("desktop_pet_hide_fullscreen", "Hide when other app is fullscreen",
+             "_hide_on_fullscreen", self.set_hide_on_fullscreen),
+            ("desktop_pet_speech", "Speech bubble on click",
+             "_speech_enabled", self.set_speech_enabled),
+        ):
+            action = menu.addAction(tr(key, default))
+            action.setCheckable(True)
+            action.setChecked(bool(getattr(self, attr)))
+            action.triggered.connect(setter)
 
-        # Toggles
-        anchor_action = menu.addAction(
-            tr("desktop_pet_anchor", "Lock position"),
-        )
-        anchor_action.setCheckable(True)
-        anchor_action.setChecked(self._anchor_locked)
-        anchor_action.triggered.connect(self.set_anchor_locked)
-
-        click_through_action = menu.addAction(
-            tr("desktop_pet_click_through", "Click-through (let mouse pass)"),
-        )
-        click_through_action.setCheckable(True)
-        click_through_action.setChecked(self._click_through)
-        click_through_action.triggered.connect(self.set_click_through)
-
-        on_bottom_action = menu.addAction(
-            tr("desktop_pet_on_bottom", "Always on bottom (desktop widget)"),
-        )
-        on_bottom_action.setCheckable(True)
-        on_bottom_action.setChecked(self._always_on_bottom)
-        on_bottom_action.triggered.connect(self.set_always_on_bottom)
-
-        fullscreen_action = menu.addAction(
-            tr(
-                "desktop_pet_hide_fullscreen",
-                "Hide when other app is fullscreen",
-            ),
-        )
-        fullscreen_action.setCheckable(True)
-        fullscreen_action.setChecked(self._hide_on_fullscreen)
-        fullscreen_action.triggered.connect(self.set_hide_on_fullscreen)
-
-        speech_action = menu.addAction(
-            tr("desktop_pet_speech", "Speech bubble on click"),
-        )
-        speech_action.setCheckable(True)
-        speech_action.setChecked(self._speech_enabled)
-        speech_action.triggered.connect(self.set_speech_enabled)
-
-        menu.addSeparator()
-
-        # Size submenu
+    def _build_size_submenu(self, menu: QMenu, tr) -> None:   # pragma: no cover - Qt UI
         size_menu = menu.addMenu(tr("desktop_pet_menu_size", "Size"))
         size_labels = {
             "small": tr("desktop_pet_size_small", "Small"),
             "medium": tr("desktop_pet_size_medium", "Medium"),
             "large": tr("desktop_pet_size_large", "Large"),
         }
+        current = self._current_size_preset()
         for preset in ("small", "medium", "large"):
             action = size_menu.addAction(size_labels[preset])
             action.setCheckable(True)
-            action.setChecked(preset == self._current_size_preset())
+            action.setChecked(preset == current)
             action.triggered.connect(
                 lambda _checked=False, p=preset: self.set_size_preset(p),
             )
-
-        menu.exec(global_pos)
 
     def _add_driver_action(
         self, parent_menu: QMenu, label: str, current: bool, setter,

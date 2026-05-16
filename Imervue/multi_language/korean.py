@@ -481,7 +481,7 @@ korean_word_dict = {
     "desktop_pet_tab_title": '데스크톱 펫',
     "desktop_pet_section_title": '데스크톱 펫 — 퍼펫을 데스크톱 위에 오버레이',
     "desktop_pet_group_rig": 'Rig',
-    "desktop_pet_open_puppet": '퍼펫 열기…',
+    "desktop_pet_open_puppet": '퍼펫 열기…',   # NOSONAR S1192 - i18n label shared across tabs
     "desktop_pet_load_example": '번들된 March 7th 불러오기',
     "desktop_pet_no_rig": 'rig 가 로드되지 않음',
     "desktop_pet_loaded": '로드됨: {name}',
@@ -494,7 +494,7 @@ korean_word_dict = {
     "desktop_pet_hide_fullscreen": '다른 앱이 전체 화면일 때 자동 숨김',
     "desktop_pet_speech": '클릭 시 말풍선',
     "desktop_pet_size_label": '크기:',
-    "desktop_pet_opacity_label": '불투명도:',
+    "desktop_pet_opacity_label": '불투명도:',   # NOSONAR S1192 - i18n label shared across tabs
     "desktop_pet_snap_label": '가장자리 스냅 임계값 (픽셀):',
     "desktop_pet_group_drivers": '실시간 드라이버',
     "desktop_pet_auto_idle": '자동 아이들 (호흡 + 드리프트)',

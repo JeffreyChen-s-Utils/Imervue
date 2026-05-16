@@ -543,8 +543,8 @@ english_word_dict = {
     "desktop_pet_on_bottom": 'Always on bottom (desktop widget — sits behind every window)',
     "desktop_pet_hide_fullscreen": 'Hide when another app goes fullscreen',
     "desktop_pet_speech": 'Speech bubble on click',
-    "desktop_pet_size_label": 'Size:',
-    "desktop_pet_opacity_label": 'Opacity:',
+    "desktop_pet_size_label": 'Size:',     # NOSONAR S1192 - i18n label shared across tabs
+    "desktop_pet_opacity_label": 'Opacity:',   # NOSONAR S1192 - i18n label shared across tabs
     "desktop_pet_snap_label": 'Edge-snap threshold (px):',
     "desktop_pet_group_drivers": 'Live drivers',
     "desktop_pet_auto_idle": 'Auto idle (breath + drift)',
