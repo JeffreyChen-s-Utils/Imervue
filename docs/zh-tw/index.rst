@@ -1561,9 +1561,9 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
 桌寵工作區（Desktop Pet 分頁）
 ------------------------------
 
-第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` rig 當成無邊框、透明背景、永遠置頂的桌面浮層執行。App 內這個分頁是控制面板；真正的角色住在另一個獨立的頂層視窗，共用 Puppet 的執行環境（相同的 :class:`PuppetCanvas`、相同的參數 / 動作 / 物理管線、相同的 live driver）。
+第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` 角色當成無邊框、透明背景的桌面浮層放到你的桌面上。分頁本身是控制面板；真正的角色浮在其他視窗的上方（或後方）。Puppet 分頁裡能對 rig 做的所有事 — 動作、表情、物理、idle driver、webcam / 麥克風輸入 — 在這裡通通能用。
 
-視窗行為
+能做什麼
 ^^^^^^^^
 
 .. list-table::
@@ -1573,96 +1573,57 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
    * - 功能
      - 說明
    * - 無邊框浮層
-     - 沒有視窗外框、不出現在工作列；透過 ``Qt.WindowStaysOnTopHint`` 永遠蓋在其他視窗上面。
+     - 沒有視窗外框、不出現在工作列 — 就只有角色待在你的桌面上。
    * - 透明背景
-     - ``WA_TranslucentBackground`` + alpha 感知的 GL surface format + ``glClearColor(0,0,0,0)`` — 角色沒畫到的像素直接透出桌面。
+     - 角色沒覆蓋到的地方直接透出後面的桌面。
    * - 拖曳移動
-     - 左鍵拖角色就能改位置。放開時若在可設定的吸附門檻（預設 24 px）內靠近螢幕邊緣，會**吸附**貼齊邊緣。快速拖曳超出螢幕時會被夾回畫面內，桌寵不會跑到看不見的地方。
-   * - 點擊穿透切換
-     - 可選的 ``Qt.WindowTransparentForInput`` 模式 — 所有點擊直接穿過去傳給桌面 / 後面的應用程式。
+     - 左鍵拖角色就能換位置。放開時若靠近螢幕邊緣，會**吸附**貼齊邊緣。
+   * - 點擊穿透模式
+     - 讓桌寵忽略你的滑鼠，你就能在它底下繼續工作。
    * - 鎖定位置
-     - 一鍵凍結桌寵位置，避免不小心拖到。
+     - 凍結桌寵位置，避免不小心拖到。
    * - 永遠置底
-     - 從 ``WindowStaysOnTopHint`` 切到 ``WindowStaysOnBottomHint``，讓桌寵變成桌面小工具縮在所有視窗後面（搭配 ``WindowDoesNotAcceptFocus``）。
+     - 把桌寵塞到所有視窗的後面 — 不是永遠置頂，而是桌面小工具的感覺。
    * - 全螢幕自動隱藏
-     - 1 Hz 輪詢透過 Win32 ``GetWindowRect`` API（Windows）監看前景視窗，當有其他 App 在桌寵所在螢幕上全螢幕時自動隱藏桌寵。
+     - 當同一個螢幕上有其他 App（遊戲 / 影片 / 簡報）全螢幕時自動隱藏，全螢幕結束後再回來。
    * - 隱藏時暫停
-     - 浮層隱藏時 33 ms 的繪製 tick 停掉，閒置的桌寵 CPU 用量為零。``showEvent`` 觸發時恢復。
+     - 桌寵看不見時不動畫 — 不在畫面上時 CPU 用量為零。
    * - 尺寸預設
-     - 小（200×300）/ 中（320×480）/ 大（480×720）；以中心為錨點縮放，調尺寸時桌寵不會跳到螢幕另一邊。
+     - 小 / 中 / 大。以中心為錨點縮放，調尺寸時桌寵不會跳到螢幕另一邊。
    * - 透明度滑桿
-     - 透過 ``setWindowOpacity`` 設定視窗級透明度 0.1 – 1.0 — ``WA_TranslucentBackground`` 合成加上每視窗 alpha 給出平滑淡入淡出，不只是把角色像素變暗。
-   * - 位置持久化
-     - 每次拖曳放開後的吸附位置 ``(x, y)`` 會寫進 ``user_setting_dict["desktop_pet"]["position"]``。下次啟動桌寵會回到同一個螢幕位置；多螢幕中斷時退回主螢幕右下角。
+     - 把桌寵從 10% 淡到 100%，讓它變成低調的桌面裝飾。
+   * - 記得你放在哪
+     - 把桌寵拖到你喜歡的角落，下次啟動它會回到原地。
 
-互動
-^^^^
+點擊互動
+^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-   :widths: 28 72
+* **左鍵點身體** — 如果 rig 有定義 hit area（例如點頭），就播對應的動作。沒命中時桌寵會用對話泡泡跟你打招呼。
+* **右鍵任意位置** — 開啟右鍵選單：隱藏桌寵、Live drivers、Play motion（rig 內所有動作的清單）、Apply expression、鎖定位置、點擊穿透、永遠置底、全螢幕自動隱藏、對話泡泡、Size。
+* **系統匣圖示** — 左鍵單擊切換顯示，右鍵開啟 顯示 / 隱藏、點擊穿透、開啟 puppet、隱藏桌寵。
 
-   * - 操作
-     - 行為
-   * - **左鍵點身體**
-     - 透過反向 pan / zoom 矩陣把點擊位置換算到 puppet canvas 座標，對文件中的 :class:`HitArea` 跑現成的 :func:`hit_test`，若有覆蓋到該 drawable 的 hit area 就播放對應動作。沒命中時對話泡泡輪流顯示一句招呼語。
-   * - **右鍵任意位置**
-     - 開啟右鍵選單：隱藏桌寵、**Live drivers** 子選單（6 個 checkable 切換）、**Play motion** 子選單（由 ``document.motions`` 動態產生）、**Apply expression** 子選單（由 ``document.expressions`` 動態產生）、鎖定位置、點擊穿透、永遠置底、全螢幕自動隱藏、對話泡泡切換、以及 **Size** 子選單。
-   * - **對話泡泡**
-     - 無邊框 / 透明 / 永遠置頂的圓角泡泡 + 尾巴。點擊後彈在桌寵上方，停留約 4 秒後在 400 ms 內淡出。錨定在桌寵的 geometry，拖動桌寵時泡泡跟著走。
-   * - **系統匣**
-     - 顯示 / 隱藏（checkable）、點擊穿透、開啟 puppet…、隱藏桌寵。左鍵單擊切換顯示，右鍵開啟選單。透過 ``sync_visibility`` / ``sync_click_through`` 與工作區的勾選狀態同步。
+Live driver
+^^^^^^^^^^^
 
-Live driver（lazy-init）
-^^^^^^^^^^^^^^^^^^^^^^^^
+從分頁或右鍵選單裡任意組合都行。每個預設都是關的 — 只開你想要的就好。
 
-每個 driver 都是第一次啟用才實體化，閒置的桌寵不耗 timer / thread：
+* **Auto idle** — 呼吸 + 微幅漂移，讓角色有生命感。
+* **Idle motions** — 隨機循環 rig 的 idle 群組動作。
+* **Auto-blink** — 自然週期性眨眼，每幾秒一次。
+* **Drag-track head** — 頭部轉向追隨你的游標。
+* **Mic lip-sync** — 嘴巴跟著你的聲音開合（需 ``sounddevice``）。
+* **Webcam tracking** — 你的頭 / 眼 / 嘴會驅動桌寵的頭 / 眼 / 嘴（需 ``opencv-python`` 和 ``mediapipe``）。
 
-* **Auto idle** — 透過 :class:`IdleDriver` 對標準參數（``ParamBreath`` …）做呼吸 + 漂移。
-* **Idle motions** — 透過 :class:`IdleMotionCycler` + 內附的 :class:`MotionPlayer` 隨機循環 ``Idle`` 群組動作。
-* **Auto-blink** — 透過 ``InputEngine.set_blink_enabled`` 對 ``ParamEyeLOpen`` / ``ParamEyeROpen`` 做 cosine close-open，每 ~4.5 秒一次。
-* **Drag-track head** — 透過 ``InputEngine.set_drag_enabled`` 把游標偏移轉成 ``ParamAngleX/Y`` + ``ParamEyeBallX/Y``。
-* **Mic lip-sync** — 透過 ``InputEngine.set_lipsync_enabled`` 把麥克風 RMS 轉成 ``ParamMouthOpenY``（需 ``sounddevice``）。
-* **Webcam tracking** — 透過 :class:`WebcamTracker` 把 MediaPipe FaceLandmarker 結果轉成頭部 + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``）。
+怎麼開始
+^^^^^^^^
 
-持久化
-^^^^^^
+1. 切換到 **Desktop Pet** 分頁。
+2. 點 **Load bundled March 7th** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
+3. 勾選 **Show pet on desktop**。
+4. 把角色拖到想要的位置；挑你想要的 driver；調整透明度 / 尺寸。
+5. 任何時候按右鍵叫出快速選單，或用系統匣圖示在不切回分頁的情況下藏起桌寵。
 
-:mod:`Imervue.desktop_pet.settings` 在 ``user_setting_dict["desktop_pet"]`` 上面包了一層：
-
-* 每個 key 都有預設值 + 載入時做範圍夾制，設定檔損壞時啟動也不會炸。
-* 一層深的 merge — 舊版設定檔缺新 key 也能組出完整的 state dict。
-* ``drivers`` 子 dict 的向前相容 — 未知的 driver key 原樣 round-trip，未來版本新增 driver 時，現有檔案仍可被乾淨讀取。
-
-每個使用者可調的設定（位置、尺寸、透明度、點擊穿透、鎖定、置底、全螢幕自動隱藏、對話泡泡、吸附門檻、每個 driver、最後載入的 rig、開機顯示）都透過這個 helper round-trip，下次啟動桌寵會回到同一個狀態。
-
-實作
-^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 38 62
-
-   * - 檔案
-     - 用途
-   * - ``Imervue/desktop_pet/pet_window.py``
-     - 頂層浮層 — 無邊框 / 永遠置頂 / ``WA_TranslucentBackground``。寄存 ``PuppetCanvas(pet_mode=True)``、負責拖曳移動、命中偵測、右鍵選單、對話泡泡整合、全螢幕偵測器接線、driver、持久化 write-through。
-   * - ``Imervue/desktop_pet/edge_snap.py``
-     - 純 Python 吸附數學（不依賴 Qt），可被單元測試的角落 / 邊緣對齊 + 超出夾制。
-   * - ``Imervue/desktop_pet/settings.py``
-     - 持久化 helper — load / save / update / clamp。
-   * - ``Imervue/desktop_pet/speech_bubble.py``
-     - 無邊框圓角泡泡浮層，提供 anchor-to-rect 定位 + 淡出動畫。
-   * - ``Imervue/desktop_pet/fullscreen_detector.py``
-     - 1 Hz 輪詢迴圈讀取前景視窗的 rect（Windows 上用 Win32 ctypes；其他平台 no-op fallback），透過 ``state_changed(bool)`` 對外發出狀態。
-   * - ``Imervue/desktop_pet/pet_workspace.py``
-     - 控制面板分頁。Lazy-create 浮層、把每個 toggle / slider / combo 暴露成 checkbox 或 spinbox、持久化最後載入的 rig + 開機顯示行為。
-   * - ``Imervue/desktop_pet/tray_icon.py``
-     - 系統匣 helper — 每個 session 只有一個實例，與工作區勾選狀態同步。
-
-``PuppetCanvas.__init__(pet_mode=True)`` 會略過編輯器的透明度棋盤格背景與選取浮層；render path 的其他部分（mesh VBO、motion player、物理、表情、姿勢群組）跟 Puppet 分頁完全一致。
-
-每個 UI 字串都透過 ``language_wrapper.language_word_dict.get(...)`` 取得，key 已在五個基礎語言包（English、繁體中文、简体中文、日本語、한국어）裡都定義好。
+你設定的所有東西 — 位置、driver、透明度、點擊穿透、尺寸 — 都會在下次啟動時記得。
 
 ----
 

@@ -543,69 +543,50 @@ Ein einsatzbereites Rig liegt unter [`examples/puppet/march_7th.puppet`](../exam
 
 ## Desktop Pet — rahmenloses Overlay
 
-Tab 5 — das **Desktop Pet** lässt jedes `.puppet`-Rig als rahmenloses, transparentes Always-on-Top-Overlay auf Ihrem Desktop laufen. Der In-App-Tab ist das Bedienpanel; die eigentliche Figur lebt in einem separaten Top-Level-Fenster, das sich die Puppet-Runtime teilt — dasselbe `PuppetCanvas`, dieselbe Parameter- / Motion- / Physik-Pipeline, dieselben Live-Input-Driver.
+Tab 5 — das **Desktop Pet** setzt jeden `.puppet`-Charakter als rahmenloses, transparentes Overlay auf Ihren Desktop. Der Tab selbst ist das Bedienpanel; die eigentliche Figur schwebt über (oder hinter) Ihren anderen Fenstern. Alles, was Sie mit einem Rig im Puppet-Tab tun können — Motions, Expressions, Physik, Idle-Driver, Webcam- / Mic-Input — funktioniert auch hier.
 
-### Fensterverhalten
+### Was Sie tun können
 
-| Feature | Hinweise |
+| Feature | Funktion |
 |---|---|
-| Rahmenloses Overlay | Kein Window-Chrome, kein Taskbar-Eintrag; sitzt über jedem anderen Fenster via `Qt.WindowStaysOnTopHint`. |
-| Transparenter Hintergrund | `WA_TranslucentBackground` + ein alpha-fähiges GL-Surface-Format + `glClearColor(0,0,0,0)` — jedes Pixel, das die Puppet nicht zeichnet, zeigt den Desktop durch. |
-| Drag-to-move | Linksziehen auf die Figur, um sie neu zu platzieren. Innerhalb des konfigurierbaren Snap-Schwellwerts (Default 24 px) einer Bildschirmkante loslassen, um bündig daran **einzurasten**. Schnelle Drags, die überschießen, werden zurück in den Bildschirm geklemmt, sodass das Pet nie außerhalb verschwindet. |
-| Click-Through-Toggle | Optionaler `Qt.WindowTransparentForInput`-Modus — jeder Klick geht durch zum Desktop / zur App hinter dem Pet. |
-| Anchor-Lock | Ein-Klick-Freeze auf der Pet-Position, sodass versehentliche Drags es nicht verschieben können. |
-| Always-on-Bottom | Wechsel von `WindowStaysOnTopHint` zu `WindowStaysOnBottomHint`, sodass das Pet hinter jedem Fenster als Desktop-Widget sitzt (gepaart mit `WindowDoesNotAcceptFocus`). |
-| Hide-on-Fullscreen | Ein 1-Hz-Poller beobachtet das aktive Fenster via Win32-`GetWindowRect`-API (Windows) und versteckt das Pet automatisch, während eine andere App auf dem Monitor des Pets Vollbild hält. |
-| Pause-when-Hidden | Der 33-ms-Paint-Tick stoppt, während das Overlay versteckt ist, sodass ein ruhendes Pet null CPU kostet. Setzt bei `showEvent` wieder ein. |
-| Größenvoreinstellungen | Klein (200×300) / mittel (320×480) / groß (480×720); zentrumsverankert, damit das Pet beim Größenwechsel nicht über den Bildschirm springt. |
-| Opacity-Slider | Fenster-Opazität 0.1 – 1.0 via `setWindowOpacity` — das WA_TranslucentBackground-Composite plus Per-Window-Alpha gibt sanften Fade statt nur Pixel-Dimmen. |
-| Positions-Persistenz | Das Post-Snap-`(x, y)` nach jedem Drag-Release wird in `user_setting_dict["desktop_pet"]["position"]` geschrieben. Beim nächsten Start kehrt das Pet zu dieser Bildschirmposition zurück; eine Multi-Monitor-Trennung fällt auf die rechte untere Ecke des Primärbildschirms zurück. |
+| Rahmenloses Overlay | Kein Window-Chrome, kein Taskbar-Eintrag — nur die Figur auf Ihrem Desktop. |
+| Transparenter Hintergrund | Alles, was die Figur nicht überdeckt, zeigt den Desktop durch. |
+| Drag to Move | Ziehen Sie die Figur per Linksklick an eine neue Stelle. Loslassen in der Nähe einer Bildschirmkante lässt sie bündig daran **einrasten**. |
+| Click-Through-Modus | Das Pet ignoriert Ihre Maus, sodass Sie darunter weiterarbeiten können. |
+| Position sperren | Friert das Pet ein, damit es durch versehentliches Ziehen nicht verrutscht. |
+| Always on Bottom | Setzt das Pet hinter jedes andere Fenster — Desktop-Widget-Feeling statt Always-on-Top. |
+| Hide on Fullscreen | Versteckt sich automatisch, während eine andere App (Spiel / Video / Präsentation) auf demselben Monitor im Vollbild läuft; kommt zurück, sobald der Vollbild endet. |
+| Pause beim Verstecken | Das Pet hört auf zu animieren, solange es unsichtbar ist — null CPU, wenn es nicht am Bildschirm ist. |
+| Größenvoreinstellungen | Klein / mittel / groß. Skaliert um den Mittelpunkt, sodass das Pet nicht über den Bildschirm springt. |
+| Opacity-Slider | Blendet das Pet zwischen 10 % und 100 %, sodass es eine dezente Desktop-Verzierung sein kann. |
+| Merkt sich seine Position | Ziehen Sie das Pet in Ihre Lieblingsecke; beim nächsten Start kehrt es dorthin zurück. |
 
-### Interaktion
+### Klick-Interaktionen
 
-| Feature | Hinweise |
-|---|---|
-| **Linksklick auf den Körper** | Bildet den Klick über die inverse Pan/Zoom-Matrix auf Puppet-Canvas-Koordinaten ab, führt den bestehenden `hit_test()` gegen die `HitArea`-Einträge des Dokuments aus und spielt die verknüpfte Motion ab, falls eine das getroffene Drawable abdeckt. Fällt auf eine Round-Robin-Begrüßung in der Sprechblase zurück, wenn nichts passt. |
-| **Rechtsklick an beliebiger Stelle** | Öffnet ein Kontextmenü mit: Pet verstecken, Untermenü **Live-Driver** (6 abhakbare Toggles), Untermenü **Motion abspielen** (befüllt aus `document.motions`), Untermenü **Expression anwenden** (befüllt aus `document.expressions`), Position sperren, Click-Through, Always-on-Bottom, Hide-on-Fullscreen, Sprechblasen-Toggle und ein Untermenü **Größe**. |
-| **Sprechblase** | Rahmenloses / transparentes / Always-on-Top-QWidget mit gerundetem Körper + Pfeil. Erscheint beim Klicken über dem Pet, hält ~4 s und blendet dann über 400 ms aus. Verankert sich an der Geometrie des Pets, sodass das Ziehen des Pets die Blase mitnimmt. Wird beim Verstecken / Rig-Wechsel automatisch entfernt. |
-| **System-Tray** | Anzeigen / Verstecken (abhakbar), Click-Through, Open puppet…, Pet verstecken. Linksklick toggelt Sichtbarkeit; Rechtsklick öffnet das Menü. Spiegelt den Check-State des Workspaces via `sync_visibility` / `sync_click_through`. |
+- **Linksklick auf den Körper** — definiert das Rig eine Hit Area (z. B. Kopf antippen), wird die passende Motion abgespielt. Andernfalls begrüßt Sie das Pet mit einer Sprechblase.
+- **Rechtsklick an beliebiger Stelle** — öffnet ein Kontextmenü mit: Pet verstecken, Live-Driver, Motion abspielen (Liste aller Motions des Rigs), Expression anwenden, Position sperren, Click-Through, Always on Bottom, Hide on Fullscreen, Sprechblase, Größe.
+- **System-Tray-Symbol** — Linksklick toggelt die Sichtbarkeit, Rechtsklick zeigt Anzeigen/Verstecken, Click-Through, Open Puppet, Pet verstecken.
 
-### Live-Driver (Lazy-Init)
+### Live-Driver
 
-Jeder Driver instanziiert beim ersten Aktivieren, sodass ein ruhendes Pet null Timer- / Thread-Kosten zahlt:
+Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. Jeder ist standardmäßig aus — schalten Sie nur ein, was Sie möchten.
 
-- **Auto-Idle** — Atmung + Drift auf Standard-Parametern (`ParamBreath`, etc.) via `IdleDriver`.
-- **Idle-Motions** — zufälliges Zykeln durch Motions der `Idle`-Group via `IdleMotionCycler` + dem mitgelieferten `MotionPlayer`.
-- **Auto-Blink** — Cosinus-Close-Open-Zyklus alle ~4.5 s auf `ParamEyeLOpen` / `ParamEyeROpen` via `InputEngine.set_blink_enabled`.
-- **Drag-Track-Head** — Cursor-Offset → `ParamAngleX/Y` + `ParamEyeBallX/Y` via `InputEngine.set_drag_enabled`.
-- **Mic-Lip-Sync** — Mikrofon-RMS → `ParamMouthOpenY` via `InputEngine.set_lipsync_enabled` (benötigt `sounddevice`).
-- **Webcam-Tracking** — MediaPipe FaceLandmarker → Kopf + Augen + Mund via `WebcamTracker` (benötigt `opencv-python` + `mediapipe`).
+- **Auto-Idle** — Atem + dezenter Drift, damit der Charakter lebendig wirkt.
+- **Idle-Motions** — zykelt zufällig durch die Motions der Idle-Group des Rigs.
+- **Auto-Blink** — natürliches zyklisches Augenschließen alle paar Sekunden.
+- **Drag-Track-Head** — der Kopf folgt Ihrem Cursor.
+- **Mic-Lip-Sync** — der Mund öffnet sich mit Ihrer Stimme (benötigt `sounddevice`).
+- **Webcam-Tracking** — Ihr Kopf / Ihre Augen / Ihr Mund steuern die der Puppet (benötigt `opencv-python` und `mediapipe`).
 
-### Persistenz
+### So starten Sie
 
-`Imervue/desktop_pet/settings.py` legt sich über `user_setting_dict["desktop_pet"]` mit:
+1. Wechseln Sie in den **Desktop Pet**-Tab.
+2. Klicken Sie auf **Load bundled March 7th**, um den mitgelieferten Charakter zu nutzen, oder auf **Open Puppet…**, um Ihre eigene `.puppet`-Datei zu wählen.
+3. Aktivieren Sie **Show pet on desktop**.
+4. Ziehen Sie die Figur dorthin, wo Sie sie haben möchten; wählen Sie die gewünschten Driver; passen Sie Opazität / Größe an.
+5. Rechtsklicken Sie jederzeit für das Schnellaktions-Menü, oder nutzen Sie das System-Tray-Symbol, um das Pet zu verstecken, ohne den Tab zu suchen.
 
-- Defaults für jeden Schlüssel + Range-Clamping beim Laden, sodass eine beschädigte Settings-Datei den Start nicht zum Absturz bringen kann.
-- Ein-Ebenen-tiefe Merge — ältere Settings-Dateien, denen neuere Schlüssel fehlen, ergeben weiterhin ein vollständiges State-Dict.
-- Forward-Kompat für das `drivers`-Sub-Dict — unbekannte Driver-Keys werden unverändert durchgereicht, sodass eine zukünftige Version, die einen neuen Driver hinzufügt, bestehende Dateien sauber lesen kann.
-
-Jede vom Benutzer einstellbare Oberfläche (Position, Größe, Opazität, Click-Through, Anchor, On-Bottom, Hide-on-Fullscreen, Sprechblase, Snap-Schwellwert, jeder Driver, zuletzt geladenes Rig, Show-on-Launch) wird durch diesen Helper geroundtripped, sodass das Pet beim nächsten Start in denselben Zustand zurückkehrt.
-
-### Implementierung
-
-| Datei | Rolle |
-|---|---|
-| `Imervue/desktop_pet/pet_window.py` | Top-Level-Overlay — rahmenlos / Always-on-Top / `WA_TranslucentBackground`. Hostet `PuppetCanvas(pet_mode=True)`, besitzt Drag-to-Move, Hit-Detect, Kontextmenü, Sprechblasen-Integration, Fullscreen-Detector-Wiring, Driver, Persistenz-Write-Through. |
-| `Imervue/desktop_pet/edge_snap.py` | Pure-Python-Snap-Mathematik (kein Qt) für unit-testbares Corner- / Edge-Docking + Overshoot-Clamp. |
-| `Imervue/desktop_pet/settings.py` | Persistenz-Helper — laden / speichern / aktualisieren / clampen. |
-| `Imervue/desktop_pet/speech_bubble.py` | Rahmenloses Rounded-Bubble-Overlay mit Anchor-to-Rect-Positionierung + Fade-Animation. |
-| `Imervue/desktop_pet/fullscreen_detector.py` | 1-Hz-Poll-Loop, der das Rect des Vordergrundfensters liest (Win32-ctypes auf Windows; No-op-Fallback anderswo) und `state_changed(bool)` emittiert. |
-| `Imervue/desktop_pet/pet_workspace.py` | Der Bedienpanel-Tab. Erzeugt das Overlay lazy, exponiert jeden Toggle / Slider / jede Combo als Checkbox oder Spinbox, persistiert das zuletzt geladene Rig + Show-on-Launch-Verhalten. |
-| `Imervue/desktop_pet/tray_icon.py` | System-Tray-Helper — Single-Instance pro Session, synchronisiert mit Workspace-Check-State. |
-
-`PuppetCanvas.__init__(pet_mode=True)` short-circuited den Transparenz-Karo-Hintergrund und das Selection-Overlay des Editors; der Rest des Render-Pfads (Mesh-VBOs, Motion-Player, Physik, Expressions, Pose-Groups) ist identisch zum Puppet-Tab.
-
-Jeder UI-String wird durch `language_wrapper.language_word_dict.get(...)` mit Keys geroutet, die in allen fünf Basis-Sprachpaketen definiert sind (English, 繁體中文, 简体中文, 日本語, 한국어).
+Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
 
 ---
 

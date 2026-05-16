@@ -541,69 +541,50 @@ A drop-in rig lives at [`examples/puppet/march_7th.puppet`](examples/puppet/marc
 
 ## Desktop Pet — frameless overlay
 
-Tab 5 — the **Desktop Pet** runs any `.puppet` rig as a frameless, transparent, always-on-top overlay on your desktop. The in-app tab is the control panel; the actual character lives in a separate top-level window that shares the Puppet runtime — same `PuppetCanvas`, same parameter / motion / physics pipeline, same live-input drivers.
+Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a frameless, transparent overlay. The tab itself is the control panel; the actual character floats on top of (or behind) your other windows. Everything you can do with a rig in the Puppet tab — motions, expressions, physics, idle drivers, webcam / mic input — works here too.
 
-### Window behaviour
+### What you can do
 
-| Feature | Notes |
+| Feature | What it does |
 |---|---|
-| Frameless overlay | No window chrome, no taskbar entry; sits on top of every other window via `Qt.WindowStaysOnTopHint`. |
-| Transparent background | `WA_TranslucentBackground` + an alpha-aware GL surface format + `glClearColor(0,0,0,0)` — every pixel the puppet doesn't draw shows the desktop through. |
-| Drag-to-move | Left-drag on the character to reposition. Release within the configurable snap threshold (default 24 px) of a screen edge to **snap** flush against it. Fast-drag overshoots clamp back inside so the pet never gets lost off-screen. |
-| Click-through toggle | Optional `Qt.WindowTransparentForInput` mode — every click passes through to the desktop / app behind the pet. |
-| Anchor lock | One-click freeze on the pet's position so accidental drags can't move it. |
-| Always-on-bottom | Flip from `WindowStaysOnTopHint` to `WindowStaysOnBottomHint` so the pet sits behind every window as a desktop widget (paired with `WindowDoesNotAcceptFocus`). |
-| Hide-on-fullscreen | A 1 Hz poller watches the active window via the Win32 `GetWindowRect` API (Windows) and hides the pet automatically while another app holds fullscreen on the pet's monitor. |
-| Pause-when-hidden | The 33 ms paint tick stops while the overlay is hidden so a dormant pet pays zero CPU. Resumes on `showEvent`. |
-| Size presets | Small (200×300) / medium (320×480) / large (480×720); centre-anchored so the pet doesn't jump across the screen when you resize. |
-| Opacity slider | Window-level opacity 0.1 – 1.0 via `setWindowOpacity` — the WA_TranslucentBackground composite plus per-window alpha gives smooth fade rather than just dimming puppet pixels. |
-| Position persistence | The post-snap `(x, y)` after every drag release is written to `user_setting_dict["desktop_pet"]["position"]`. On next launch the pet returns to that screen position; multi-monitor disconnection falls back to the bottom-right corner of the primary screen. |
+| Frameless overlay | No window chrome, no taskbar entry — just the character on your desktop. |
+| Transparent background | Anything the character doesn't cover shows the desktop through. |
+| Drag to move | Left-drag the character to a new spot. Release near a screen edge to **snap** flush against it. |
+| Click-through mode | Make the pet ignore your mouse so you can keep working under it. |
+| Lock position | Freeze the pet so accidental drags can't move it. |
+| Always on bottom | Sit the pet behind every other window — a desktop-widget feel instead of always-on-top. |
+| Hide on fullscreen | Auto-hide while another app (game / video / presentation) is fullscreen on the same monitor; come back when fullscreen ends. |
+| Pauses when hidden | The pet stops animating while invisible — zero CPU when off-screen. |
+| Size presets | Small / medium / large. Resizes around the centre so the pet doesn't jump across the screen. |
+| Opacity slider | Fade the pet from 10% to 100% so it can be a subtle desktop ornament. |
+| Remembers where you put it | Drag the pet to your favourite corner; it returns there on the next launch. |
 
-### Interaction
+### Click interactions
 
-| Feature | Notes |
-|---|---|
-| **Left-click on body** | Maps the click into puppet-canvas coordinates via the inverse pan / zoom matrix, runs the existing `hit_test()` against the document's `HitArea` entries, and plays the linked motion if any covers the hit drawable. Falls back to a round-robin greeting in the speech bubble when nothing matches. |
-| **Right-click anywhere** | Opens a context menu with: Hide pet, **Live drivers** submenu (6 checkable toggles), **Play motion** submenu (populated from `document.motions`), **Apply expression** submenu (populated from `document.expressions`), Lock position, Click-through, Always on bottom, Hide-on-fullscreen, Speech bubble toggle, and a **Size** submenu. |
-| **Speech bubble** | Frameless / transparent / always-on-top QWidget with rounded body + tail. Pops above the pet on click, holds for ~4 s, then fades over 400 ms. Anchors to the pet's geometry so dragging the pet brings the bubble along. Auto-dismissed on hide / rig swap. |
-| **System tray** | Show / Hide (checkable), Click-through, Open puppet…, Hide pet. Left-click toggles visibility; right-click opens the menu. Mirrors the workspace's check-state via `sync_visibility` / `sync_click_through`. |
+- **Left-click the body** — if the rig defines a hit area (e.g. tap the head), the matching motion plays. Otherwise the pet greets you with a speech bubble.
+- **Right-click anywhere** — opens a context menu with: Hide pet, Live drivers, Play motion (list of every motion in the rig), Apply expression, Lock position, Click-through, Always on bottom, Hide on fullscreen, Speech bubble, Size.
+- **System tray icon** — left-click to toggle visibility, right-click for Show/Hide, Click-through, Open puppet, Hide pet.
 
-### Live drivers (lazy-init)
+### Live drivers
 
-Each driver instantiates on first enable so a dormant pet pays zero timer / thread cost:
+Pick any combination from the tab or the right-click menu. Each is off by default — turn on only what you want.
 
-- **Auto idle** — breath + drift on standard params (`ParamBreath`, etc.) via `IdleDriver`.
-- **Idle motions** — random cycling through `Idle`-group motions via `IdleMotionCycler` + the bundled `MotionPlayer`.
-- **Auto-blink** — cosine close-open cycle every ~4.5 s on `ParamEyeLOpen` / `ParamEyeROpen` via `InputEngine.set_blink_enabled`.
-- **Drag-track head** — cursor offset → `ParamAngleX/Y` + `ParamEyeBallX/Y` via `InputEngine.set_drag_enabled`.
-- **Mic lip-sync** — microphone RMS → `ParamMouthOpenY` via `InputEngine.set_lipsync_enabled` (needs `sounddevice`).
-- **Webcam tracking** — MediaPipe FaceLandmarker → head + eyes + mouth via `WebcamTracker` (needs `opencv-python` + `mediapipe`).
+- **Auto idle** — breath + subtle drift so the character feels alive.
+- **Idle motions** — randomly cycle through the rig's idle-group motions.
+- **Auto-blink** — natural cyclic eye-close every few seconds.
+- **Drag-track head** — the head turns to follow your cursor.
+- **Mic lip-sync** — the mouth opens with your voice (needs `sounddevice`).
+- **Webcam tracking** — your head / eyes / mouth drive the puppet's (needs `opencv-python` and `mediapipe`).
 
-### Persistence
+### How to start
 
-`Imervue/desktop_pet/settings.py` layers over `user_setting_dict["desktop_pet"]` with:
+1. Switch to the **Desktop Pet** tab.
+2. Click **Load bundled March 7th** to use the included character, or **Open Puppet…** to pick your own `.puppet` file.
+3. Tick **Show pet on desktop**.
+4. Drag the character to where you want it; pick the drivers you want; adjust opacity / size.
+5. Right-click any time for the quick-action menu, or use the system tray icon to hide the pet without finding the tab.
 
-- Defaults for every key + range clamping on load so a corrupted settings file can't crash launch.
-- One-level-deep merge — older settings files missing newer keys still produce a complete state dict.
-- Forward-compat for the `drivers` sub-dict — unknown driver keys round-trip untouched so a future version that adds a new driver can read existing files cleanly.
-
-Every user-tweakable surface (position, size, opacity, click-through, anchor, on-bottom, hide-on-fullscreen, speech, snap threshold, each driver, last loaded rig, show-on-launch) round-trips through this helper so the pet returns to the same state next launch.
-
-### Implementation
-
-| File | Role |
-|---|---|
-| `Imervue/desktop_pet/pet_window.py` | Top-level overlay — frameless / always-on-top / `WA_TranslucentBackground`. Hosts `PuppetCanvas(pet_mode=True)`, owns drag-to-move, hit-detect, context menu, speech bubble integration, fullscreen detector wiring, drivers, persistence write-through. |
-| `Imervue/desktop_pet/edge_snap.py` | Pure-Python snap math (no Qt) for unit-testable corner / edge docking + overshoot clamp. |
-| `Imervue/desktop_pet/settings.py` | Persistence helper — load / save / update / clamp. |
-| `Imervue/desktop_pet/speech_bubble.py` | Frameless rounded-bubble overlay with anchor-to-rect positioning + fade animation. |
-| `Imervue/desktop_pet/fullscreen_detector.py` | 1 Hz poll loop reading the foreground window's rect (Win32 ctypes on Windows; no-op fallback elsewhere) and emitting `state_changed(bool)`. |
-| `Imervue/desktop_pet/pet_workspace.py` | The control-panel tab. Lazy-creates the overlay, exposes every toggle / slider / combo as a checkbox or spinbox, persists last loaded rig + show-on-launch behaviour. |
-| `Imervue/desktop_pet/tray_icon.py` | System-tray helper — single-instance per session, syncs with workspace check-state. |
-
-`PuppetCanvas.__init__(pet_mode=True)` short-circuits the editor's transparency-checker backdrop and selection overlay; the rest of the render path (mesh VBOs, motion player, physics, expressions, pose groups) is identical to the Puppet tab.
-
-Every UI string is routed through `language_wrapper.language_word_dict.get(...)` with keys defined in all five base language packs (English, 繁體中文, 简体中文, 日本語, 한국어).
+Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
 ---
 

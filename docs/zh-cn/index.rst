@@ -1557,10 +1557,10 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 桌宠工作区（Desktop Pet 标签）
 ------------------------------
 
-第五个标签 — **Desktop Pet** — 把任意 ``.puppet`` rig 当成无边框、透明、永远置顶的桌面浮层运行。应用内的标签是控制面板；真正的角色跑在一个独立的顶层窗口里，复用 Puppet 的运行时（同一份 :class:`PuppetCanvas`、同一套参数 / 动作 / 物理管线、同一组实时输入驱动）。
+第五个标签 — **Desktop Pet** — 把任意 ``.puppet`` 角色作为无边框、透明的浮层显示在桌面上。标签本身是控制面板；真正的角色会浮在（或藏在）其它窗口之上。在 Puppet 标签里可以做的一切 — 动作、表情、物理、闲置驱动、摄像头 / 麦克风输入 — 在这里同样可用。
 
-窗口行为
-^^^^^^^^
+可以做什么
+^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -1569,96 +1569,57 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
    * - 功能
      - 说明
    * - 无边框浮层
-     - 没有窗口装饰、不在任务栏出现；通过 ``Qt.WindowStaysOnTopHint`` 永远盖在其它窗口之上。
+     - 没有窗口边框，也不在任务栏出现 — 只有角色本身在桌面上。
    * - 透明背景
-     - ``WA_TranslucentBackground`` + 支持 alpha 的 GL surface format + ``glClearColor(0,0,0,0)`` — puppet 没画到的每一个像素都直接透出桌面。
+     - 角色没遮住的地方都会直接透出桌面。
    * - 拖曳移动
-     - 在角色身上左键拖动可重新摆位。在可配置的吸附阈值（默认 24 px）内松开会**吸附**到屏幕边缘。拖过头时会自动夹回屏内，保证桌宠不会跑到屏幕外找不回来。
-   * - 穿透点击切换
-     - 可选的 ``Qt.WindowTransparentForInput`` 模式 — 所有点击会直接穿透到桌宠背后的桌面 / 应用。
+     - 在角色身上左键拖动到新位置。在屏幕边缘附近松开会**吸附**贴边。
+   * - 穿透点击模式
+     - 让桌宠忽略鼠标，你可以继续在它下面工作。
    * - 位置锁定
-     - 一键冻结桌宠位置，避免误拖。
+     - 冻结桌宠位置，避免误拖。
    * - 永远置底
-     - 把 ``WindowStaysOnTopHint`` 翻成 ``WindowStaysOnBottomHint``，让桌宠像桌面挂件一样躲在所有窗口之后（搭配 ``WindowDoesNotAcceptFocus``）。
+     - 让桌宠待在所有窗口之后 — 像桌面挂件那样，而不是永远置顶。
    * - 全屏时隐藏
-     - 1 Hz 轮询器通过 Win32 ``GetWindowRect`` API（Windows）监测当前活动窗口；只要别的应用在桌宠所在显示器上独占全屏，桌宠会自动隐藏。
+     - 同一显示器上有其它应用（游戏 / 视频 / 演示）进入全屏时自动隐藏；全屏结束后恢复。
    * - 隐藏时暂停
-     - 浮层隐藏期间会停掉 33 ms 的绘制 tick，休眠的桌宠零 CPU 开销。``showEvent`` 触发后恢复。
+     - 桌宠看不见时停止动画 — 离屏零 CPU 占用。
    * - 尺寸预设
-     - 小（200×300）/ 中（320×480）/ 大（480×720）；按中心点锚定，缩放尺寸时桌宠不会在屏幕上跳来跳去。
+     - 小 / 中 / 大。围绕中心点缩放，桌宠不会在屏幕上跳来跳去。
    * - 透明度滑块
-     - 通过 ``setWindowOpacity`` 调整窗口级透明度 0.1 – 1.0 — ``WA_TranslucentBackground`` 合成加上每窗口 alpha，让淡入淡出平滑过渡，而不只是把 puppet 像素调暗。
-   * - 位置持久化
-     - 每次拖曳松手后吸附完成的 ``(x, y)`` 会写到 ``user_setting_dict["desktop_pet"]["position"]``。下次启动桌宠回到该屏幕位置；多显示器断开时回退到主屏右下角。
+     - 透明度可在 10% 到 100% 之间调节，可以当一个低调的桌面摆件。
+   * - 记住摆放位置
+     - 把桌宠拖到喜欢的角落；下次启动会回到那里。
 
-交互
-^^^^
+点击交互
+^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-   :widths: 28 72
+* **身体上左键** — 如果角色定义了点击区域（例如点头部），就会播放对应的动作。否则桌宠会用气泡向你打招呼。
+* **任意位置右键** — 弹出上下文菜单：隐藏桌宠、Live drivers、Play motion（角色的所有动作列表）、Apply expression、位置锁定、穿透点击、永远置底、全屏时隐藏、气泡、尺寸。
+* **系统托盘图标** — 左键切换显示 / 隐藏；右键弹出菜单：显示 / 隐藏、穿透点击、Open puppet、隐藏桌宠。
 
-   * - 操作
-     - 行为
-   * - **身体上左键**
-     - 通过 pan / zoom 的逆矩阵把点击映射到 puppet canvas 坐标，对文档的 :class:`HitArea` 入口跑现有的 :func:`hit_test`，命中的 drawable 若挂了动作就播放对应动作。没命中时按 round-robin 在气泡里说一句问候语兜底。
-   * - **任意位置右键**
-     - 弹出上下文菜单：隐藏桌宠、**Live drivers** 子菜单（6 个可勾选开关）、**Play motion** 子菜单（从 ``document.motions`` 填充）、**Apply expression** 子菜单（从 ``document.expressions`` 填充）、锁定位置、穿透点击、永远置底、全屏时隐藏、气泡开关、以及 **Size** 子菜单。
-   * - **气泡**
-     - 无边框 / 透明 / 永远置顶的圆角气泡，带尾巴。点击时弹在桌宠上方，约 4 秒后保持，再在 400 ms 内淡出。锚定到桌宠的几何位置，拖桌宠时气泡一起跟着走。
-   * - **系统托盘**
-     - 显示 / 隐藏（可勾选）、穿透点击、Open puppet…、隐藏桌宠。左键切换可见性；右键打开菜单。通过 ``sync_visibility`` / ``sync_click_through`` 与工作区的勾选状态保持同步。
+实时驱动
+^^^^^^^^
 
-实时驱动（懒初始化）
-^^^^^^^^^^^^^^^^^^^^
+可以在标签或右键菜单里任意组合。每一项默认关闭 — 只开你需要的。
 
-每个驱动只在首次启用时实例化，让休眠的桌宠不付任何定时器 / 线程开销：
+* **Auto idle** — 呼吸 + 轻微漂移，让角色显得有生气。
+* **Idle motions** — 在角色的 idle 组动作里随机循环。
+* **Auto-blink** — 每隔几秒自然眨一次眼。
+* **Drag-track head** — 头部转向追随鼠标。
+* **Mic lip-sync** — 嘴巴随你的说话张合（需 ``sounddevice``）。
+* **Webcam tracking** — 用你的头 / 眼 / 嘴驱动桌宠（需 ``opencv-python`` 与 ``mediapipe``）。
 
-* **Auto idle** — 在标准参数（``ParamBreath`` …）上叠加呼吸 + 漂移，通过 :class:`IdleDriver`。
-* **Idle motions** — 通过 :class:`IdleMotionCycler` 加上内置的 :class:`MotionPlayer` 随机循环 ``Idle`` 组动作。
-* **Auto-blink** — 通过 ``InputEngine.set_blink_enabled`` 在 ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上跑 cosine 闭→睁循环，每约 4.5 秒一次。
-* **Drag-track head** — 通过 ``InputEngine.set_drag_enabled`` 把光标偏移映射到 ``ParamAngleX/Y`` + ``ParamEyeBallX/Y``。
-* **Mic lip-sync** — 通过 ``InputEngine.set_lipsync_enabled`` 把麦克风 RMS 映射到 ``ParamMouthOpenY``（需 ``sounddevice``）。
-* **Webcam tracking** — 通过 :class:`WebcamTracker` 把 MediaPipe FaceLandmarker 输出映射到头部 + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``）。
+如何开始
+^^^^^^^^
 
-持久化
-^^^^^^
+1. 切到 **Desktop Pet** 标签。
+2. 点击 **Load bundled March 7th** 使用内置角色，或 **Open Puppet…** 打开自己的 ``.puppet`` 文件。
+3. 勾选 **Show pet on desktop**。
+4. 把角色拖到喜欢的位置；勾上想用的驱动；调好透明度 / 尺寸。
+5. 随时右键打开快捷菜单，或用系统托盘图标隐藏桌宠，无需回到标签里操作。
 
-:mod:`Imervue.desktop_pet.settings` 在 ``user_setting_dict["desktop_pet"]`` 之上提供：
-
-* 每个键都有默认值，载入时按范围 clamp — 设置文件损坏也不会让启动崩溃。
-* 一层深 merge — 旧版设置文件缺新键时仍能产出完整状态字典。
-* ``drivers`` 子字典做了向前兼容 — 未知驱动键原样 round-trip，未来版本新增驱动时旧文件仍可干净读出。
-
-每个可调表面（位置、尺寸、透明度、穿透点击、锚定、置底、全屏时隐藏、气泡、吸附阈值、每个驱动、最后载入的 rig、启动时显示）都经过这个 helper round-trip，让桌宠下次启动回到完全相同的状态。
-
-实现
-^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 38 62
-
-   * - 文件
-     - 职责
-   * - ``Imervue/desktop_pet/pet_window.py``
-     - 顶层浮层 — 无边框 / 永远置顶 / ``WA_TranslucentBackground``。承载 ``PuppetCanvas(pet_mode=True)``，负责拖曳移动、命中检测、上下文菜单、气泡集成、全屏检测器接线、驱动、持久化回写。
-   * - ``Imervue/desktop_pet/edge_snap.py``
-     - 纯 Python 吸附数学（不依赖 Qt），让角 / 边停靠加越界夹回逻辑可独立做单元测试。
-   * - ``Imervue/desktop_pet/settings.py``
-     - 持久化 helper — 载入 / 保存 / 更新 / clamp。
-   * - ``Imervue/desktop_pet/speech_bubble.py``
-     - 无边框圆角气泡浮层，支持锚定到矩形 + 淡入淡出动画。
-   * - ``Imervue/desktop_pet/fullscreen_detector.py``
-     - 1 Hz 轮询前景窗口矩形（Windows 用 Win32 ctypes；其它平台 no-op 兜底），发射 ``state_changed(bool)`` 信号。
-   * - ``Imervue/desktop_pet/pet_workspace.py``
-     - 控制面板标签。懒创建浮层，把每个 toggle / 滑块 / 下拉都以 checkbox 或 spinbox 暴露，持久化最后载入的 rig 与启动时显示行为。
-   * - ``Imervue/desktop_pet/tray_icon.py``
-     - 系统托盘 helper — 每个会话单例，与工作区勾选状态保持同步。
-
-``PuppetCanvas.__init__(pet_mode=True)`` 短路掉编辑器的透明棋盘格背景与选择浮层；其余渲染路径（mesh VBO、动作播放器、物理、表情、姿势组）与 Puppet 标签完全一致。
-
-每个 UI 字符串都通过 ``language_wrapper.language_word_dict.get(...)`` 路由，键值在五个基础语言包（English、繁體中文、简体中文、日本語、한국어）中全部定义。
+你设置的一切 — 位置、驱动、透明度、穿透点击、尺寸 — 都会在下次启动时保留。
 
 ----
 

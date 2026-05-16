@@ -541,69 +541,50 @@ Un rig listo para usar está en [`examples/puppet/march_7th.puppet`](../examples
 
 ## Desktop Pet — superposición sin marco
 
-La pestaña 5 — la **Desktop Pet** ejecuta cualquier rig `.puppet` como una superposición sin marco, transparente y siempre encima sobre tu escritorio. La pestaña dentro de la aplicación es el panel de control; el personaje en sí vive en una ventana de nivel superior independiente que comparte el runtime de Puppet — el mismo `PuppetCanvas`, la misma cadena de parámetros / motions / física, los mismos drivers de entrada en vivo.
+Pestaña 5 — la **Desktop Pet** coloca cualquier personaje `.puppet` sobre tu escritorio como una superposición sin marco y transparente. La pestaña en sí es el panel de control; el personaje real flota encima (o detrás) de tus otras ventanas. Todo lo que puedes hacer con un rig en la pestaña Puppet — motions, expresiones, física, drivers de idle, entrada por webcam / micrófono — funciona también aquí.
 
-### Comportamiento de la ventana
+### Qué puedes hacer
 
-| Característica | Notas |
+| Característica | Función |
 |---|---|
-| Superposición sin marco | Sin cromo de ventana, sin entrada en la barra de tareas; se sitúa encima de cualquier otra ventana vía `Qt.WindowStaysOnTopHint`. |
-| Fondo transparente | `WA_TranslucentBackground` + un formato de superficie GL consciente del alfa + `glClearColor(0,0,0,0)` — cada píxel que el puppet no dibuja deja ver el escritorio a través. |
-| Arrastrar para mover | Arrastra con el botón izquierdo sobre el personaje para reposicionarlo. Suelta dentro del umbral de ajuste configurable (24 px por defecto) de un borde de pantalla para **encajarlo** pegado a él. Los arrastres rápidos que se pasan vuelven a sujetarse dentro de la pantalla para que la mascota nunca se pierda fuera de cuadro. |
-| Alternar clic transparente | Modo opcional `Qt.WindowTransparentForInput` — cada clic pasa a través hacia el escritorio / aplicación que haya detrás de la mascota. |
-| Bloqueo de anclaje | Congelación con un clic de la posición de la mascota para que los arrastres accidentales no la muevan. |
-| Siempre debajo | Cambia de `WindowStaysOnTopHint` a `WindowStaysOnBottomHint` para que la mascota se sitúe detrás de todas las ventanas como un widget de escritorio (emparejado con `WindowDoesNotAcceptFocus`). |
-| Ocultar en pantalla completa | Un sondeo a 1 Hz vigila la ventana activa vía la API Win32 `GetWindowRect` (Windows) y oculta automáticamente la mascota mientras otra aplicación tiene la pantalla completa en el monitor de la mascota. |
-| Pausa al ocultar | El tick de pintado de 33 ms se detiene mientras la superposición está oculta, así que una mascota dormida no consume CPU. Se reanuda en `showEvent`. |
-| Tamaños predefinidos | Pequeño (200×300) / mediano (320×480) / grande (480×720); anclados al centro para que la mascota no salte a través de la pantalla al cambiar de tamaño. |
-| Control deslizante de opacidad | Opacidad a nivel de ventana 0.1 – 1.0 vía `setWindowOpacity` — la composición de WA_TranslucentBackground más el alfa por ventana da un fundido suave en vez de simplemente atenuar los píxeles del puppet. |
-| Persistencia de posición | El `(x, y)` posterior al ajuste tras cada liberación de arrastre se escribe en `user_setting_dict["desktop_pet"]["position"]`. En el próximo lanzamiento la mascota vuelve a esa posición en pantalla; la desconexión multi-monitor recurre a la esquina inferior derecha de la pantalla principal. |
+| Superposición sin marco | Sin cromo de ventana, sin entrada en la barra de tareas — solo el personaje en tu escritorio. |
+| Fondo transparente | Lo que el personaje no cubre deja ver el escritorio a través. |
+| Arrastrar para mover | Arrastra con el botón izquierdo el personaje a otro sitio. Suéltalo cerca de un borde de pantalla para **encajarlo** pegado a él. |
+| Modo clic transparente | Haz que la mascota ignore tu ratón para que puedas seguir trabajando bajo ella. |
+| Bloquear posición | Congela la mascota para que los arrastres accidentales no puedan moverla. |
+| Siempre debajo | Coloca la mascota detrás de todas las demás ventanas — sensación de widget de escritorio en lugar de siempre encima. |
+| Ocultar en pantalla completa | Se oculta automáticamente mientras otra aplicación (juego / vídeo / presentación) está en pantalla completa en el mismo monitor; vuelve cuando termina la pantalla completa. |
+| Pausa al ocultarse | La mascota deja de animarse mientras es invisible — cero CPU cuando está fuera de pantalla. |
+| Tamaños predefinidos | Pequeño / mediano / grande. Redimensiona alrededor del centro para que la mascota no salte a través de la pantalla. |
+| Control deslizante de opacidad | Atenúa la mascota del 10 % al 100 % para que pueda ser un adorno discreto del escritorio. |
+| Recuerda dónde la pusiste | Arrastra la mascota a tu esquina favorita; vuelve allí en el siguiente lanzamiento. |
 
-### Interacción
+### Interacciones de clic
 
-| Característica | Notas |
-|---|---|
-| **Clic izquierdo sobre el cuerpo** | Mapea el clic a coordenadas del lienzo del puppet vía la matriz inversa de paneo / zoom, ejecuta el `hit_test()` existente contra las entradas `HitArea` del documento, y reproduce el motion enlazado si alguno cubre el drawable impactado. Si no coincide nada, recurre a un saludo rotatorio en el bocadillo. |
-| **Clic derecho en cualquier sitio** | Abre un menú contextual con: Ocultar mascota, submenú **Drivers en vivo** (6 alternadores marcables), submenú **Reproducir motion** (rellenado desde `document.motions`), submenú **Aplicar expresión** (rellenado desde `document.expressions`), Bloquear posición, Clic transparente, Siempre debajo, Ocultar en pantalla completa, alternar bocadillo, y un submenú **Tamaño**. |
-| **Bocadillo** | QWidget sin marco / transparente / siempre encima con cuerpo redondeado + cola. Aparece sobre la mascota al hacer clic, se mantiene ~4 s y luego se desvanece durante 400 ms. Se ancla a la geometría de la mascota, así que arrastrarla lleva el bocadillo con ella. Se descarta automáticamente al ocultar / cambiar de rig. |
-| **Bandeja del sistema** | Mostrar / Ocultar (marcable), Clic transparente, Abrir puppet…, Ocultar mascota. El clic izquierdo alterna la visibilidad; el clic derecho abre el menú. Refleja el estado marcado del workspace vía `sync_visibility` / `sync_click_through`. |
+- **Clic izquierdo sobre el cuerpo** — si el rig define un hit area (p. ej. tocar la cabeza), se reproduce el motion correspondiente. Si no, la mascota te saluda con un bocadillo.
+- **Clic derecho en cualquier sitio** — abre un menú contextual con: Ocultar mascota, Drivers en vivo, Reproducir motion (lista de todos los motions del rig), Aplicar expresión, Bloquear posición, Clic transparente, Siempre debajo, Ocultar en pantalla completa, Bocadillo, Tamaño.
+- **Icono de la bandeja del sistema** — clic izquierdo para alternar visibilidad, clic derecho para Mostrar/Ocultar, Clic transparente, Abrir puppet, Ocultar mascota.
 
-### Drivers en vivo (lazy-init)
+### Drivers en vivo
 
-Cada driver se instancia en la primera activación, así que una mascota dormida no paga coste de timer / hilo:
+Elige cualquier combinación desde la pestaña o el menú del clic derecho. Cada uno está desactivado por defecto — activa solo lo que quieras.
 
-- **Auto idle** — respiración + deriva sobre parámetros estándar (`ParamBreath`, etc.) vía `IdleDriver`.
-- **Motions de idle** — ciclo aleatorio entre motions del grupo `Idle` vía `IdleMotionCycler` + el `MotionPlayer` incluido.
-- **Auto-parpadeo** — ciclo coseno cerrar-abrir cada ~4.5 s sobre `ParamEyeLOpen` / `ParamEyeROpen` vía `InputEngine.set_blink_enabled`.
-- **Seguir cabeza con arrastre** — desplazamiento del cursor → `ParamAngleX/Y` + `ParamEyeBallX/Y` vía `InputEngine.set_drag_enabled`.
-- **Sincronización labial por micrófono** — RMS de micrófono → `ParamMouthOpenY` vía `InputEngine.set_lipsync_enabled` (necesita `sounddevice`).
-- **Seguimiento por webcam** — MediaPipe FaceLandmarker → cabeza + ojos + boca vía `WebcamTracker` (necesita `opencv-python` + `mediapipe`).
+- **Auto idle** — respiración + leve deriva para que el personaje se sienta vivo.
+- **Motions de idle** — recorre aleatoriamente los motions del grupo idle del rig.
+- **Auto-parpadeo** — cierre cíclico natural de los ojos cada pocos segundos.
+- **Seguir cabeza con arrastre** — la cabeza gira para seguir tu cursor.
+- **Sincronización labial por micrófono** — la boca se abre con tu voz (necesita `sounddevice`).
+- **Seguimiento por webcam** — tu cabeza / ojos / boca controlan los del puppet (necesita `opencv-python` y `mediapipe`).
 
-### Persistencia
+### Cómo empezar
 
-`Imervue/desktop_pet/settings.py` se superpone sobre `user_setting_dict["desktop_pet"]` con:
+1. Cambia a la pestaña **Desktop Pet**.
+2. Haz clic en **Load bundled March 7th** para usar el personaje incluido, o en **Open Puppet…** para elegir tu propio archivo `.puppet`.
+3. Marca **Show pet on desktop**.
+4. Arrastra el personaje a donde quieras; elige los drivers que quieras; ajusta opacidad / tamaño.
+5. Haz clic derecho en cualquier momento para el menú de acción rápida, o usa el icono de la bandeja del sistema para ocultar la mascota sin tener que encontrar la pestaña.
 
-- Valores por defecto para cada clave + acotado de rango al cargar para que un archivo de configuración corrupto no pueda romper el lanzamiento.
-- Fusión de un solo nivel — archivos de configuración antiguos a los que les falten claves nuevas siguen produciendo un diccionario de estado completo.
-- Compatibilidad hacia adelante para el sub-dict `drivers` — las claves de driver desconocidas hacen ida y vuelta sin tocarse, así que una versión futura que añada un nuevo driver puede leer archivos existentes sin problemas.
-
-Cada superficie ajustable por el usuario (posición, tamaño, opacidad, clic transparente, anclaje, siempre debajo, ocultar en pantalla completa, bocadillo, umbral de ajuste, cada driver, último rig cargado, mostrar al iniciar) hace ida y vuelta a través de este helper, así que la mascota vuelve al mismo estado en el próximo lanzamiento.
-
-### Implementación
-
-| Archivo | Rol |
-|---|---|
-| `Imervue/desktop_pet/pet_window.py` | Superposición de nivel superior — sin marco / siempre encima / `WA_TranslucentBackground`. Aloja `PuppetCanvas(pet_mode=True)`, gestiona el arrastrar para mover, la detección de impacto, el menú contextual, la integración del bocadillo, el cableado del detector de pantalla completa, los drivers y la escritura inmediata de persistencia. |
-| `Imervue/desktop_pet/edge_snap.py` | Matemática de ajuste en Python puro (sin Qt) para el anclaje a esquina / borde testeable unitariamente + acotado de sobrepaso. |
-| `Imervue/desktop_pet/settings.py` | Helper de persistencia — cargar / guardar / actualizar / acotar. |
-| `Imervue/desktop_pet/speech_bubble.py` | Superposición de bocadillo redondeado sin marco con posicionado anclado a rectángulo + animación de fundido. |
-| `Imervue/desktop_pet/fullscreen_detector.py` | Bucle de sondeo a 1 Hz que lee el rect de la ventana en primer plano (ctypes Win32 en Windows; respaldo sin operación en otros sitios) y emite `state_changed(bool)`. |
-| `Imervue/desktop_pet/pet_workspace.py` | La pestaña del panel de control. Crea la superposición de forma diferida, expone cada alternador / control deslizante / combo como un checkbox o spinbox, persiste el último rig cargado + comportamiento de mostrar al iniciar. |
-| `Imervue/desktop_pet/tray_icon.py` | Helper de bandeja del sistema — instancia única por sesión, sincroniza con el estado marcado del workspace. |
-
-`PuppetCanvas.__init__(pet_mode=True)` cortocircuita el fondo de cuadros de transparencia del editor y la superposición de selección; el resto de la ruta de render (VBOs de malla, reproductor de motion, física, expresiones, grupos de pose) es idéntico al de la pestaña Puppet.
-
-Cada cadena de UI se enruta a través de `language_wrapper.language_word_dict.get(...)` con claves definidas en los cinco paquetes de idioma base (English, 繁體中文, 简体中文, 日本語, 한국어).
+Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño — se recuerda entre lanzamientos.
 
 ---
 
