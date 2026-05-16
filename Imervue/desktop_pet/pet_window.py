@@ -51,6 +51,12 @@ from Imervue.desktop_pet.edge_snap import (
     snap_to_screen_edges,
 )
 from Imervue.desktop_pet.fullscreen_detector import FullscreenDetector
+from Imervue.desktop_pet.pet_script import (
+    PetScript,
+    PetScriptEngine,
+    PetScriptError,
+    load_script,
+)
 from Imervue.desktop_pet.speech_bubble import SpeechBubble
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.puppet.canvas import PuppetCanvas
@@ -78,17 +84,10 @@ SIZE_PRESETS: dict[str, tuple[int, int]] = {
     "large": (480, 720),
 }
 
-DEFAULT_GREETINGS: tuple[str, ...] = (
-    "Hello!",
-    "Hi there!",
-    "What's up?",
-    "Hey!",
-    "Need anything?",
-)
-"""Short speech-bubble lines used when the user clicks the pet
-and the hit area has no associated motion. Kept neutral so the
-default voice works for any rig; localized strings come through
-:mod:`Imervue.multi_language` when callers want to swap them."""
+from Imervue.desktop_pet.pet_script import DEFAULT_GREETINGS  # noqa: F401, E402
+"""Re-export so callers / tests that imported the old constant
+keep working. The authoritative copy lives in
+:mod:`Imervue.desktop_pet.pet_script` alongside the engine."""
 
 
 class PetWindow(QWidget):
@@ -165,19 +164,28 @@ class PetWindow(QWidget):
         self._motion_player = MotionPlayer(self._canvas)
         self._idle_cycler: IdleMotionCycler | None = None
 
-        # ---- speech bubble + greetings -------------------------
+        # ---- speech bubble + scripted lines --------------------
+        # The pet's "voice" comes from a user-loadable
+        # ``.petscript.json`` (greetings, per-hit-area lines,
+        # per-motion lines, scheduled chimes). The engine defaults
+        # to the built-in greeting set, so an unconfigured pet
+        # still talks; ``set_script`` swaps in the user's file.
         self._speech_enabled: bool = bool(self._settings["speech_enabled"])
         self._speech: SpeechBubble | None = None
-        self._next_greeting_index: int = 0
+        self._script_engine = PetScriptEngine()
+        self._restore_persisted_script()
 
         # ---- tick timer ----------------------------------------
-        # 33 ms ≈ 30 FPS. Stopped while the overlay is hidden so
-        # the dormant pet doesn't tick. We also pause during a
-        # detected fullscreen so a background-running game gets
-        # its frames undisturbed.
+        # 33 ms ≈ 30 FPS for paint. A separate 1 Hz heartbeat
+        # below drives the script engine's scheduled chimes —
+        # finer resolution wouldn't change behaviour since the
+        # smallest sensible chime interval is multi-second.
         self._tick = QTimer(self)
         self._tick.setInterval(33)
         self._tick.timeout.connect(self._canvas.update)
+        self._script_tick = QTimer(self)
+        self._script_tick.setInterval(1000)
+        self._script_tick.timeout.connect(self._on_script_tick)
 
         # ---- fullscreen detector -------------------------------
         # Lazy-created on first ``hide_on_fullscreen`` enable so
@@ -295,7 +303,9 @@ class PetWindow(QWidget):
         super().showEvent(event)
         # Resume ticking — paintGL needs the timer ticks to
         # advance physics / motions while no input event is firing.
+        # The 1 Hz script tick wakes up for scheduled chimes.
         self._tick.start()
+        self._script_tick.start()
         if self._hide_on_fullscreen and self._fullscreen_detector is not None:
             self._fullscreen_detector.start()
         self.visibility_changed.emit(True)
@@ -304,6 +314,7 @@ class PetWindow(QWidget):
         super().hideEvent(event)
         # Stop the tick timer so the dormant pet doesn't repaint.
         self._tick.stop()
+        self._script_tick.stop()
         if self._fullscreen_detector is not None:
             self._fullscreen_detector.stop()
         if self._speech is not None:
@@ -408,8 +419,17 @@ class PetWindow(QWidget):
 
     def _handle_click(self, widget_pos: QPoint | None) -> None:   # pragma: no cover - GL needed
         """A click on the pet body → run hit-test → play the
-        linked motion / show a default greeting if nothing
-        matches."""
+        linked motion + speak the scripted line for that area, or
+        fall back to a greeting when no hit area covers the click.
+
+        Line selection order:
+
+        1. ``script.hit_responses[area.id]`` — per-area override.
+        2. ``script.motion_lines[area.motion]`` — per-motion line
+           when the script doesn't override the area itself.
+        3. ``script.greetings`` (or the built-in defaults) — the
+           generic voice for "nothing better matched".
+        """
         if widget_pos is None:
             return
         document = self.document()
@@ -424,12 +444,18 @@ class PetWindow(QWidget):
         )
         area_id = area.id if area is not None else ""
         self.hit_triggered.emit(area_id)
-        if area is not None and area.motion:
-            self._play_motion_by_name(area.motion)
-            if self._speech_enabled and area.id:
-                self._show_speech(area.id)
-        elif self._speech_enabled:
-            self._show_speech(self._next_default_greeting())
+        motion_name = area.motion if area is not None else None
+        if motion_name:
+            self._play_motion_by_name(motion_name)
+        if not self._speech_enabled:
+            return
+        line = (
+            self._script_engine.pick_for_hit_area(area_id or None)
+            or self._script_engine.pick_for_motion(motion_name)
+            or self._script_engine.pick_greeting()
+        )
+        if line:
+            self._show_speech(line)
 
     def _widget_to_image(self, widget_pos: QPoint) -> tuple[float, float] | None:
         """Inverse of the canvas's modelview transform: undo
@@ -695,12 +721,58 @@ class PetWindow(QWidget):
         self._speech.anchor_to(self.geometry())
         self._speech.show_message(text)
 
-    def _next_default_greeting(self) -> str:
-        # Round-robin through DEFAULT_GREETINGS so consecutive
-        # clicks don't repeat the same line.
-        idx = self._next_greeting_index % len(DEFAULT_GREETINGS)
-        self._next_greeting_index += 1
-        return DEFAULT_GREETINGS[idx]
+    # =====================================================================
+    # Pet script (user-customisable voice)
+    # =====================================================================
+
+    def load_script_file(self, path: str | Path) -> bool:
+        """Load a ``.petscript.json`` and bind it to the engine.
+        Returns ``True`` on success; failure writes the path to
+        the settings so the workspace can show a useful message
+        but doesn't crash the pet."""
+        try:
+            script = load_script(path)
+        except PetScriptError as exc:
+            logger.warning("pet script %s failed: %s", path, exc)
+            return False
+        self._script_engine.set_script(script)
+        pet_settings.update(script_path=str(path))
+        return True
+
+    def reset_script_to_default(self) -> None:
+        """Drop the user script and revert to the built-in
+        greeting set. Clears the persisted path so the next
+        launch doesn't reload the now-rejected script."""
+        self._script_engine.set_script(PetScript.default())
+        pet_settings.update(script_path="")
+
+    def script_engine(self) -> PetScriptEngine:
+        """Test / advanced caller hook — exposes the engine so
+        external code can read the active script without poking
+        the private attribute."""
+        return self._script_engine
+
+    def _restore_persisted_script(self) -> None:
+        """Apply the script the previous session ended with. A
+        missing / unreadable file falls back silently to the
+        default voice — the workspace's status label is the
+        user-facing reporting channel."""
+        path = str(self._settings.get("script_path", "") or "")
+        if not path:
+            return
+        try:
+            self._script_engine.set_script(load_script(path))
+        except PetScriptError as exc:
+            logger.info("ignoring stale pet script %s: %s", path, exc)
+
+    def _on_script_tick(self) -> None:   # pragma: no cover - Qt timer
+        """1 Hz heartbeat that fires any due
+        :class:`ScheduledEvent` from the active script."""
+        if not self._speech_enabled:
+            return
+        line = self._script_engine.due_scheduled_message()
+        if line:
+            self._show_speech(line)
 
     # =====================================================================
     # Fullscreen hide / restore

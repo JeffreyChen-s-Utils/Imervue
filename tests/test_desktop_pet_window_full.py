@@ -197,15 +197,17 @@ def test_set_hide_on_fullscreen_persists(qapp):
 
 def test_default_greetings_cycle_round_robin(qapp):
     """Successive clicks without a hit-area motion produce
-    successive greeting lines rather than the same one. Bug
-    bait: an off-by-one in the cycler would loop only between
-    the first two strings."""
+    successive greeting lines rather than the same one. The
+    cycling now lives in :class:`PetScriptEngine`, but the pet
+    window must still surface the round-robin behaviour through
+    its script engine attribute so a future refactor can't
+    silently revert to "same line every click"."""
     window = PetWindow()
     try:
+        engine = window.script_engine()
         seen = []
         for _ in range(len(DEFAULT_GREETINGS) + 1):
-            seen.append(window._next_default_greeting())   # noqa: SLF001
-        # First N greetings should be the full list in order.
+            seen.append(engine.pick_greeting())
         assert seen[: len(DEFAULT_GREETINGS)] == list(DEFAULT_GREETINGS)
         # N+1-th wraps back to the start.
         assert seen[len(DEFAULT_GREETINGS)] == DEFAULT_GREETINGS[0]

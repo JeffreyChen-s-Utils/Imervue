@@ -11,8 +11,25 @@ live drivers) is reused as-is from the Puppet tab.
 """
 
 from Imervue.desktop_pet.edge_snap import snap_to_screen_edges
+from Imervue.desktop_pet.pet_script import (
+    PetScript,
+    PetScriptEngine,
+    PetScriptError,
+    load_script,
+    save_script,
+)
 from Imervue.desktop_pet.pet_window import PetWindow
 from Imervue.desktop_pet.pet_workspace import PetWorkspace
 from Imervue.desktop_pet.tray_icon import PetTrayIcon
 
-__all__ = ["PetTrayIcon", "PetWindow", "PetWorkspace", "snap_to_screen_edges"]
+__all__ = [
+    "PetScript",
+    "PetScriptEngine",
+    "PetScriptError",
+    "PetTrayIcon",
+    "PetWindow",
+    "PetWorkspace",
+    "load_script",
+    "save_script",
+    "snap_to_screen_edges",
+]
