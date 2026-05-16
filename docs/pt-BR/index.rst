@@ -1002,6 +1002,197 @@ lote cada pacote Python opcional de uma vez.
 
 ----
 
+Espaço de Trabalho Desktop Pet (Aba Desktop Pet)
+------------------------------------------------
+
+Aba 5 — o **Desktop Pet** executa qualquer rig ``.puppet`` como uma sobreposição
+sem moldura, transparente e sempre no topo da sua área de trabalho. A aba dentro
+do aplicativo é o painel de controle; o personagem em si vive em uma janela
+de nível superior separada que compartilha o runtime do Puppet (mesmo
+:class:`PuppetCanvas`, mesmo pipeline de parâmetros / motions / física,
+mesmos drivers de entrada ao vivo).
+
+Comportamento da janela
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Recurso
+     - Notas
+   * - Sobreposição sem moldura
+     - Sem cromo de janela, sem entrada na barra de tarefas; fica acima de
+       todas as outras janelas via ``Qt.WindowStaysOnTopHint``.
+   * - Fundo transparente
+     - ``WA_TranslucentBackground`` + um formato de superfície GL ciente
+       de alfa + ``glClearColor(0,0,0,0)`` — cada pixel que o puppet não
+       desenha mostra a área de trabalho através dele.
+   * - Arrastar para mover
+     - Clique-arraste com o botão esquerdo no personagem para reposicionar.
+       Solte dentro do limiar de snap configurável (padrão 24 px) de uma
+       borda da tela para **encaixar** rente a ela. Arrastos rápidos que
+       ultrapassam são limitados de volta para dentro de modo que o pet
+       nunca se perca fora da tela.
+   * - Alternância de click-through
+     - Modo opcional ``Qt.WindowTransparentForInput`` — cada clique passa
+       através para a área de trabalho / aplicativo atrás do pet.
+   * - Trava de âncora
+     - Congelamento com um clique na posição do pet para que arrastos
+       acidentais não possam movê-lo.
+   * - Sempre no fundo
+     - Alterna de ``WindowStaysOnTopHint`` para ``WindowStaysOnBottomHint``
+       de modo que o pet fica atrás de todas as janelas como um widget de
+       área de trabalho (combinado com ``WindowDoesNotAcceptFocus``).
+   * - Ocultar em tela cheia
+     - Um poller de 1 Hz observa a janela ativa via a API Win32
+       ``GetWindowRect`` (Windows) e oculta o pet automaticamente
+       enquanto outro aplicativo mantém tela cheia no monitor do pet.
+   * - Pausar quando oculto
+     - O tick de pintura de 33 ms para enquanto a sobreposição está oculta
+       de modo que um pet inativo paga zero CPU. Retoma em ``showEvent``.
+   * - Tamanhos predefinidos
+     - Pequeno (200×300) / médio (320×480) / grande (480×720); ancorados
+       ao centro para que o pet não pule pela tela quando você redimensiona.
+   * - Slider de opacidade
+     - Opacidade no nível da janela de 0,1 a 1,0 via ``setWindowOpacity`` —
+       a composição ``WA_TranslucentBackground`` mais alfa por janela
+       fornece um esmaecimento suave em vez de apenas escurecer os pixels
+       do puppet.
+   * - Persistência de posição
+     - O ``(x, y)`` pós-snap após cada liberação de arrasto é escrito em
+       ``user_setting_dict["desktop_pet"]["position"]``. Na próxima
+       inicialização o pet retorna para aquela posição na tela; a
+       desconexão de múltiplos monitores recai para o canto inferior
+       direito da tela primária.
+
+Interação
+^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Ação
+     - Comportamento
+   * - **Clique esquerdo no corpo**
+     - Mapeia o clique para as coordenadas do puppet-canvas via a matriz
+       inversa de pan / zoom, executa o :func:`hit_test` existente contra
+       as entradas :class:`HitArea` do documento e reproduz a motion
+       vinculada se alguma cobrir o drawable atingido. Recai para uma
+       saudação em rodízio na balão de fala quando nada combina.
+   * - **Clique direito em qualquer lugar**
+     - Abre um menu de contexto com: Ocultar pet, submenu **Live drivers**
+       (6 alternâncias marcáveis), submenu **Play motion** (preenchido a
+       partir de ``document.motions``), submenu **Apply expression**
+       (preenchido a partir de ``document.expressions``), Travar posição,
+       Click-through, Sempre no fundo, Ocultar em tela cheia, alternância
+       de balão de fala e um submenu **Size**.
+   * - **Balão de fala**
+     - Widget sem moldura / transparente / sempre no topo com corpo
+       arredondado + cauda. Aparece acima do pet ao clicar, permanece por
+       ~4 s, depois esmaece por 400 ms. Ancora à geometria do pet de modo
+       que arrastar o pet leva o balão junto.
+   * - **Bandeja do sistema**
+     - Mostrar / Ocultar (marcável), Click-through, Open puppet…, Ocultar
+       pet. Clique esquerdo alterna a visibilidade; clique direito abre o
+       menu. Espelha o estado de marcação do espaço de trabalho via
+       ``sync_visibility`` / ``sync_click_through``.
+
+Drivers ao vivo (inicialização preguiçosa)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Cada driver é instanciado na primeira ativação de modo que um pet inativo
+paga zero custo de timer / thread:
+
+* **Auto idle** — respiração + deriva em parâmetros padrão
+  (``ParamBreath`` …) via :class:`IdleDriver`.
+* **Idle motions** — ciclagem aleatória através de motions do grupo
+  ``Idle`` via :class:`IdleMotionCycler` + o :class:`MotionPlayer`
+  incluído.
+* **Auto-blink** — ciclo cosseno de fechar-abrir a cada ~4,5 s em
+  ``ParamEyeLOpen`` / ``ParamEyeROpen`` via
+  ``InputEngine.set_blink_enabled``.
+* **Drag-track head** — deslocamento do cursor → ``ParamAngleX/Y`` +
+  ``ParamEyeBallX/Y`` via ``InputEngine.set_drag_enabled``.
+* **Mic lip-sync** — RMS do microfone → ``ParamMouthOpenY`` via
+  ``InputEngine.set_lipsync_enabled`` (precisa de ``sounddevice``).
+* **Webcam tracking** — MediaPipe FaceLandmarker → cabeça + olhos +
+  boca via :class:`WebcamTracker` (precisa de ``opencv-python`` +
+  ``mediapipe``).
+
+Persistência
+^^^^^^^^^^^^
+
+:mod:`Imervue.desktop_pet.settings` se sobrepõe a
+``user_setting_dict["desktop_pet"]`` com:
+
+* Padrões para cada chave + limitação de faixa no carregamento de modo
+  que um arquivo de configurações corrompido não pode travar a
+  inicialização.
+* Mesclagem de um nível de profundidade — arquivos de configurações
+  mais antigos sem chaves mais novas ainda produzem um dict de estado
+  completo.
+* Compatibilidade futura para o sub-dict ``drivers`` — chaves de driver
+  desconhecidas viajam de ida e volta intactas de modo que uma versão
+  futura que adiciona um novo driver pode ler arquivos existentes de
+  forma limpa.
+
+Cada superfície ajustável pelo usuário (posição, tamanho, opacidade,
+click-through, âncora, sempre no fundo, ocultar em tela cheia, fala,
+limiar de snap, cada driver, último rig carregado, mostrar na
+inicialização) faz viagem de ida e volta através deste helper de modo
+que o pet retorna ao mesmo estado na próxima inicialização.
+
+Implementação
+^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - Arquivo
+     - Função
+   * - ``Imervue/desktop_pet/pet_window.py``
+     - Sobreposição de nível superior — sem moldura / sempre no topo /
+       ``WA_TranslucentBackground``. Hospeda
+       ``PuppetCanvas(pet_mode=True)``, é dona do arrastar para mover,
+       detecção de acerto, menu de contexto, integração de balão de fala,
+       conexão do detector de tela cheia, drivers, write-through de
+       persistência.
+   * - ``Imervue/desktop_pet/edge_snap.py``
+     - Matemática de snap em Python puro (sem Qt) para docking de canto /
+       borda testável em unidade + limitação de ultrapassagem.
+   * - ``Imervue/desktop_pet/settings.py``
+     - Helper de persistência — load / save / update / clamp.
+   * - ``Imervue/desktop_pet/speech_bubble.py``
+     - Sobreposição de balão arredondado sem moldura com posicionamento
+       de âncora ao retângulo + animação de fade.
+   * - ``Imervue/desktop_pet/fullscreen_detector.py``
+     - Loop de polling de 1 Hz lendo o retângulo da janela em primeiro
+       plano (ctypes Win32 no Windows; fallback no-op em outros lugares)
+       e emitindo ``state_changed(bool)``.
+   * - ``Imervue/desktop_pet/pet_workspace.py``
+     - A aba do painel de controle. Cria a sobreposição preguiçosamente,
+       expõe cada alternância / slider / combo como uma checkbox ou
+       spinbox, persiste o último rig carregado + comportamento de
+       mostrar na inicialização.
+   * - ``Imervue/desktop_pet/tray_icon.py``
+     - Helper da bandeja do sistema — instância única por sessão,
+       sincroniza com o estado de marcação do espaço de trabalho.
+
+``PuppetCanvas.__init__(pet_mode=True)`` curto-circuita o fundo do
+verificador de transparência do editor e a sobreposição de seleção; o
+resto do caminho de renderização (VBOs de malha, motion player, física,
+expressões, grupos de pose) é idêntico à aba Puppet.
+
+Cada string de UI é roteada através de
+``language_wrapper.language_word_dict.get(...)`` com chaves definidas
+em todos os cinco pacotes de idioma base (English, 繁體中文, 简体中文,
+日本語, 한국어).
+
+----
+
 Rotação e Inversão
 ------------------
 

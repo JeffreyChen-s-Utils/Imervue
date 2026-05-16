@@ -40,6 +40,7 @@
 - [Modify — Revelado no destructivo](#modify--revelado-no-destructivo)
 - [Paint — Editor rasterizado con todas las funciones](#paint--editor-rasterizado-con-todas-las-funciones)
 - [Puppet — Animación 2D con esqueleto](#puppet--animación-2d-con-esqueleto)
+- [Desktop Pet — superposición sin marco](#desktop-pet--superposición-sin-marco)
 - [Atajos de teclado y ratón](#atajos-de-teclado-y-ratón)
 - [Estructura de menús](#estructura-de-menús)
 - [Sistema de plugins](#sistema-de-plugins)
@@ -53,7 +54,7 @@
 
 ## Resumen
 
-Imervue es una estación de trabajo de imágenes acelerada por GPU que ofrece **cuatro pestañas de nivel superior**:
+Imervue es una estación de trabajo de imágenes acelerada por GPU que ofrece **cinco pestañas de nivel superior**:
 
 | Pestaña | Función |
 |---|---|
@@ -61,6 +62,7 @@ Imervue es una estación de trabajo de imágenes acelerada por GPU que ofrece **
 | **Modify** | Cadena de revelado no destructiva — controles deslizantes, curvas, LUT, máscaras, retoque, multi-imagen |
 | **Paint** | Estudio de pintura rasterizada con todas las funciones, con pinceles, capas, animación, herramientas de manga, E/S de PSD |
 | **Puppet** | Animador 2D con esqueleto construido desde cero — mallas, deformadores, parámetros, animaciones, física |
+| **Desktop Pet** | Panel de control para ejecutar cualquier rig `.puppet` como una superposición de escritorio sin marco, transparente y siempre encima |
 
 Principios de diseño:
 
@@ -534,6 +536,74 @@ máquinas bloqueadas donde no puedes instalar drivers.
 ### Demo
 
 Un rig listo para usar está en [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — un personaje Cubism Live2D de 307 drawables convertido dentro del árbol. Ábrelo vía **Open Puppet…** para ver el rig aparecer centrado; haz clic en cualquiera de las 18 motions (grupo Idle + grupo Gesture) para reproducir. Los gestos cubren signo de paz, cubrirse la cara, foto, sonrojo, cara oscura, llorar, sudor, estrellas, estrella fugaz — todo gesto con nombre que define el rig.
+
+---
+
+## Desktop Pet — superposición sin marco
+
+La pestaña 5 — la **Desktop Pet** ejecuta cualquier rig `.puppet` como una superposición sin marco, transparente y siempre encima sobre tu escritorio. La pestaña dentro de la aplicación es el panel de control; el personaje en sí vive en una ventana de nivel superior independiente que comparte el runtime de Puppet — el mismo `PuppetCanvas`, la misma cadena de parámetros / motions / física, los mismos drivers de entrada en vivo.
+
+### Comportamiento de la ventana
+
+| Característica | Notas |
+|---|---|
+| Superposición sin marco | Sin cromo de ventana, sin entrada en la barra de tareas; se sitúa encima de cualquier otra ventana vía `Qt.WindowStaysOnTopHint`. |
+| Fondo transparente | `WA_TranslucentBackground` + un formato de superficie GL consciente del alfa + `glClearColor(0,0,0,0)` — cada píxel que el puppet no dibuja deja ver el escritorio a través. |
+| Arrastrar para mover | Arrastra con el botón izquierdo sobre el personaje para reposicionarlo. Suelta dentro del umbral de ajuste configurable (24 px por defecto) de un borde de pantalla para **encajarlo** pegado a él. Los arrastres rápidos que se pasan vuelven a sujetarse dentro de la pantalla para que la mascota nunca se pierda fuera de cuadro. |
+| Alternar clic transparente | Modo opcional `Qt.WindowTransparentForInput` — cada clic pasa a través hacia el escritorio / aplicación que haya detrás de la mascota. |
+| Bloqueo de anclaje | Congelación con un clic de la posición de la mascota para que los arrastres accidentales no la muevan. |
+| Siempre debajo | Cambia de `WindowStaysOnTopHint` a `WindowStaysOnBottomHint` para que la mascota se sitúe detrás de todas las ventanas como un widget de escritorio (emparejado con `WindowDoesNotAcceptFocus`). |
+| Ocultar en pantalla completa | Un sondeo a 1 Hz vigila la ventana activa vía la API Win32 `GetWindowRect` (Windows) y oculta automáticamente la mascota mientras otra aplicación tiene la pantalla completa en el monitor de la mascota. |
+| Pausa al ocultar | El tick de pintado de 33 ms se detiene mientras la superposición está oculta, así que una mascota dormida no consume CPU. Se reanuda en `showEvent`. |
+| Tamaños predefinidos | Pequeño (200×300) / mediano (320×480) / grande (480×720); anclados al centro para que la mascota no salte a través de la pantalla al cambiar de tamaño. |
+| Control deslizante de opacidad | Opacidad a nivel de ventana 0.1 – 1.0 vía `setWindowOpacity` — la composición de WA_TranslucentBackground más el alfa por ventana da un fundido suave en vez de simplemente atenuar los píxeles del puppet. |
+| Persistencia de posición | El `(x, y)` posterior al ajuste tras cada liberación de arrastre se escribe en `user_setting_dict["desktop_pet"]["position"]`. En el próximo lanzamiento la mascota vuelve a esa posición en pantalla; la desconexión multi-monitor recurre a la esquina inferior derecha de la pantalla principal. |
+
+### Interacción
+
+| Característica | Notas |
+|---|---|
+| **Clic izquierdo sobre el cuerpo** | Mapea el clic a coordenadas del lienzo del puppet vía la matriz inversa de paneo / zoom, ejecuta el `hit_test()` existente contra las entradas `HitArea` del documento, y reproduce el motion enlazado si alguno cubre el drawable impactado. Si no coincide nada, recurre a un saludo rotatorio en el bocadillo. |
+| **Clic derecho en cualquier sitio** | Abre un menú contextual con: Ocultar mascota, submenú **Drivers en vivo** (6 alternadores marcables), submenú **Reproducir motion** (rellenado desde `document.motions`), submenú **Aplicar expresión** (rellenado desde `document.expressions`), Bloquear posición, Clic transparente, Siempre debajo, Ocultar en pantalla completa, alternar bocadillo, y un submenú **Tamaño**. |
+| **Bocadillo** | QWidget sin marco / transparente / siempre encima con cuerpo redondeado + cola. Aparece sobre la mascota al hacer clic, se mantiene ~4 s y luego se desvanece durante 400 ms. Se ancla a la geometría de la mascota, así que arrastrarla lleva el bocadillo con ella. Se descarta automáticamente al ocultar / cambiar de rig. |
+| **Bandeja del sistema** | Mostrar / Ocultar (marcable), Clic transparente, Abrir puppet…, Ocultar mascota. El clic izquierdo alterna la visibilidad; el clic derecho abre el menú. Refleja el estado marcado del workspace vía `sync_visibility` / `sync_click_through`. |
+
+### Drivers en vivo (lazy-init)
+
+Cada driver se instancia en la primera activación, así que una mascota dormida no paga coste de timer / hilo:
+
+- **Auto idle** — respiración + deriva sobre parámetros estándar (`ParamBreath`, etc.) vía `IdleDriver`.
+- **Motions de idle** — ciclo aleatorio entre motions del grupo `Idle` vía `IdleMotionCycler` + el `MotionPlayer` incluido.
+- **Auto-parpadeo** — ciclo coseno cerrar-abrir cada ~4.5 s sobre `ParamEyeLOpen` / `ParamEyeROpen` vía `InputEngine.set_blink_enabled`.
+- **Seguir cabeza con arrastre** — desplazamiento del cursor → `ParamAngleX/Y` + `ParamEyeBallX/Y` vía `InputEngine.set_drag_enabled`.
+- **Sincronización labial por micrófono** — RMS de micrófono → `ParamMouthOpenY` vía `InputEngine.set_lipsync_enabled` (necesita `sounddevice`).
+- **Seguimiento por webcam** — MediaPipe FaceLandmarker → cabeza + ojos + boca vía `WebcamTracker` (necesita `opencv-python` + `mediapipe`).
+
+### Persistencia
+
+`Imervue/desktop_pet/settings.py` se superpone sobre `user_setting_dict["desktop_pet"]` con:
+
+- Valores por defecto para cada clave + acotado de rango al cargar para que un archivo de configuración corrupto no pueda romper el lanzamiento.
+- Fusión de un solo nivel — archivos de configuración antiguos a los que les falten claves nuevas siguen produciendo un diccionario de estado completo.
+- Compatibilidad hacia adelante para el sub-dict `drivers` — las claves de driver desconocidas hacen ida y vuelta sin tocarse, así que una versión futura que añada un nuevo driver puede leer archivos existentes sin problemas.
+
+Cada superficie ajustable por el usuario (posición, tamaño, opacidad, clic transparente, anclaje, siempre debajo, ocultar en pantalla completa, bocadillo, umbral de ajuste, cada driver, último rig cargado, mostrar al iniciar) hace ida y vuelta a través de este helper, así que la mascota vuelve al mismo estado en el próximo lanzamiento.
+
+### Implementación
+
+| Archivo | Rol |
+|---|---|
+| `Imervue/desktop_pet/pet_window.py` | Superposición de nivel superior — sin marco / siempre encima / `WA_TranslucentBackground`. Aloja `PuppetCanvas(pet_mode=True)`, gestiona el arrastrar para mover, la detección de impacto, el menú contextual, la integración del bocadillo, el cableado del detector de pantalla completa, los drivers y la escritura inmediata de persistencia. |
+| `Imervue/desktop_pet/edge_snap.py` | Matemática de ajuste en Python puro (sin Qt) para el anclaje a esquina / borde testeable unitariamente + acotado de sobrepaso. |
+| `Imervue/desktop_pet/settings.py` | Helper de persistencia — cargar / guardar / actualizar / acotar. |
+| `Imervue/desktop_pet/speech_bubble.py` | Superposición de bocadillo redondeado sin marco con posicionado anclado a rectángulo + animación de fundido. |
+| `Imervue/desktop_pet/fullscreen_detector.py` | Bucle de sondeo a 1 Hz que lee el rect de la ventana en primer plano (ctypes Win32 en Windows; respaldo sin operación en otros sitios) y emite `state_changed(bool)`. |
+| `Imervue/desktop_pet/pet_workspace.py` | La pestaña del panel de control. Crea la superposición de forma diferida, expone cada alternador / control deslizante / combo como un checkbox o spinbox, persiste el último rig cargado + comportamiento de mostrar al iniciar. |
+| `Imervue/desktop_pet/tray_icon.py` | Helper de bandeja del sistema — instancia única por sesión, sincroniza con el estado marcado del workspace. |
+
+`PuppetCanvas.__init__(pet_mode=True)` cortocircuita el fondo de cuadros de transparencia del editor y la superposición de selección; el resto de la ruta de render (VBOs de malla, reproductor de motion, física, expresiones, grupos de pose) es idéntico al de la pestaña Puppet.
+
+Cada cadena de UI se enruta a través de `language_wrapper.language_word_dict.get(...)` con claves definidas en los cinco paquetes de idioma base (English, 繁體中文, 简体中文, 日本語, 한국어).
 
 ---
 

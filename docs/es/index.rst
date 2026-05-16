@@ -1004,6 +1004,182 @@ de una sola vez.
 
 ----
 
+Espacio de trabajo Desktop Pet (Pestaña Desktop Pet)
+----------------------------------------------------
+
+La pestaña 5 — **Desktop Pet** — ejecuta cualquier rig ``.puppet`` como una superposición
+sin marco, transparente y siempre encima del escritorio. La pestaña dentro de la aplicación
+es el panel de control; el personaje real vive en una ventana de nivel superior
+independiente que comparte el runtime de Puppet (misma :class:`PuppetCanvas`, misma tubería
+de parámetros / movimientos / físicas, mismos drivers de entrada en vivo).
+
+Comportamiento de la ventana
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Característica
+     - Notas
+   * - Superposición sin marco
+     - Sin chrome de ventana, sin entrada en la barra de tareas; se sitúa encima de cualquier
+       otra ventana mediante ``Qt.WindowStaysOnTopHint``.
+   * - Fondo transparente
+     - ``WA_TranslucentBackground`` + un formato de superficie GL consciente del alfa
+       + ``glClearColor(0,0,0,0)`` — cada píxel que la marioneta no dibuja deja ver el
+       escritorio por detrás.
+   * - Arrastrar para mover
+     - Arrastre con clic izquierdo sobre el personaje para reubicarlo. Suelte dentro del
+       umbral de ajuste configurable (24 px por defecto) de un borde de la pantalla para
+       **acoplarlo** contra ese borde. Los arrastres rápidos que se pasan se ajustan de
+       vuelta hacia dentro, de modo que la mascota nunca se pierde fuera de pantalla.
+   * - Conmutador clic-pasante
+     - Modo opcional ``Qt.WindowTransparentForInput`` — cada clic pasa a través hacia el
+       escritorio / aplicación detrás de la mascota.
+   * - Anclar posición
+     - Congela la posición de la mascota con un clic para que los arrastres accidentales no
+       puedan moverla.
+   * - Siempre debajo
+     - Conmuta de ``WindowStaysOnTopHint`` a ``WindowStaysOnBottomHint`` para que la mascota
+       quede detrás de todas las ventanas como un widget de escritorio (emparejado con
+       ``WindowDoesNotAcceptFocus``).
+   * - Ocultar en pantalla completa
+     - Un sondeo a 1 Hz vigila la ventana activa mediante la API Win32 ``GetWindowRect``
+       (Windows) y oculta la mascota automáticamente mientras otra aplicación mantiene
+       pantalla completa en el monitor de la mascota.
+   * - Pausar al ocultar
+     - El tick de pintado de 33 ms se detiene mientras la superposición está oculta, de
+       modo que una mascota dormida consume cero CPU. Se reanuda en ``showEvent``.
+   * - Presets de tamaño
+     - Pequeño (200×300) / mediano (320×480) / grande (480×720); anclados al centro para
+       que la mascota no salte por la pantalla al redimensionarla.
+   * - Deslizador de opacidad
+     - Opacidad a nivel de ventana 0.1 – 1.0 mediante ``setWindowOpacity`` — el composite
+       de ``WA_TranslucentBackground`` más el alfa por ventana da un fundido suave en lugar
+       de simplemente atenuar los píxeles de la marioneta.
+   * - Persistencia de posición
+     - El par ``(x, y)`` posterior al ajuste tras cada suelta de arrastre se escribe en
+       ``user_setting_dict["desktop_pet"]["position"]``. En el próximo arranque la mascota
+       vuelve a esa posición de pantalla; la desconexión multimonitor recae en la esquina
+       inferior derecha de la pantalla primaria.
+
+Interacción
+^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Acción
+     - Comportamiento
+   * - **Clic izquierdo sobre el cuerpo**
+     - Mapea el clic a coordenadas del lienzo de marioneta mediante la matriz inversa de
+       paneo / zoom, ejecuta el :func:`hit_test` existente contra las entradas
+       :class:`HitArea` del documento, y reproduce el movimiento enlazado si alguno cubre
+       el drawable golpeado. Recae en un saludo round-robin en el bocadillo cuando nada
+       coincide.
+   * - **Clic derecho en cualquier lugar**
+     - Abre un menú contextual con: Ocultar mascota, submenú **Live drivers** (6
+       conmutadores marcables), submenú **Play motion** (poblado desde
+       ``document.motions``), submenú **Apply expression** (poblado desde
+       ``document.expressions``), Bloquear posición, Clic-pasante, Siempre debajo,
+       Ocultar en pantalla completa, conmutador del bocadillo y un submenú **Size**.
+   * - **Bocadillo de diálogo**
+     - Widget sin marco / transparente / siempre encima, con cuerpo redondeado + cola.
+       Aparece sobre la mascota al hacer clic, se mantiene durante ~4 s y luego se desvanece
+       en 400 ms. Se ancla a la geometría de la mascota, de modo que arrastrarla lleva
+       consigo el bocadillo.
+   * - **Bandeja del sistema**
+     - Mostrar / Ocultar (marcable), Clic-pasante, Open puppet…, Ocultar mascota. El clic
+       izquierdo conmuta la visibilidad; el clic derecho abre el menú. Refleja el estado de
+       marcado del espacio de trabajo mediante ``sync_visibility`` / ``sync_click_through``.
+
+Drivers en vivo (lazy-init)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Cada driver se instancia al activarse por primera vez, de modo que una mascota dormida
+consume cero coste de timer / hilo:
+
+* **Auto idle** — respiración + deriva sobre parámetros estándar
+  (``ParamBreath`` …) mediante :class:`IdleDriver`.
+* **Idle motions** — ciclo aleatorio a través de los movimientos del grupo ``Idle``
+  mediante :class:`IdleMotionCycler` + el :class:`MotionPlayer` incluido.
+* **Auto-blink** — ciclo coseno cerrar-abrir cada ~4.5 s sobre
+  ``ParamEyeLOpen`` / ``ParamEyeROpen`` mediante
+  ``InputEngine.set_blink_enabled``.
+* **Drag-track head** — offset del cursor → ``ParamAngleX/Y`` +
+  ``ParamEyeBallX/Y`` mediante ``InputEngine.set_drag_enabled``.
+* **Mic lip-sync** — RMS del micrófono → ``ParamMouthOpenY`` mediante
+  ``InputEngine.set_lipsync_enabled`` (requiere ``sounddevice``).
+* **Webcam tracking** — MediaPipe FaceLandmarker → cabeza + ojos +
+  boca mediante :class:`WebcamTracker` (requiere ``opencv-python`` +
+  ``mediapipe``).
+
+Persistencia
+^^^^^^^^^^^^
+
+:mod:`Imervue.desktop_pet.settings` se coloca como capa sobre
+``user_setting_dict["desktop_pet"]`` con:
+
+* Valores por defecto para cada clave + recorte de rango en la carga, de modo que un
+  archivo de configuración corrupto no pueda hacer fallar el arranque.
+* Fusión de un nivel de profundidad — los archivos de configuración antiguos a los que
+  les faltan claves nuevas siguen produciendo un dict de estado completo.
+* Compatibilidad hacia adelante para el sub-dict ``drivers`` — las claves de drivers
+  desconocidas hacen ida y vuelta sin tocarse, de modo que una versión futura que añada
+  un nuevo driver pueda leer los archivos existentes sin problema.
+
+Cada superficie ajustable por el usuario (posición, tamaño, opacidad, clic-pasante, anclaje,
+siempre debajo, ocultar en pantalla completa, bocadillo, umbral de ajuste, cada driver,
+último rig cargado, mostrar al arrancar) hace ida y vuelta a través de este helper, de
+modo que la mascota regresa al mismo estado en el próximo arranque.
+
+Implementación
+^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - Archivo
+     - Rol
+   * - ``Imervue/desktop_pet/pet_window.py``
+     - Superposición de nivel superior — sin marco / siempre encima /
+       ``WA_TranslucentBackground``. Aloja
+       ``PuppetCanvas(pet_mode=True)``, gestiona arrastrar para mover, detección de
+       impacto, menú contextual, integración del bocadillo, cableado del detector de
+       pantalla completa, drivers y escritura-pasante de persistencia.
+   * - ``Imervue/desktop_pet/edge_snap.py``
+     - Matemáticas de ajuste en Python puro (sin Qt) para acoplamiento a esquinas / bordes
+       y recorte de sobrepaso, comprobables con tests unitarios.
+   * - ``Imervue/desktop_pet/settings.py``
+     - Helper de persistencia — cargar / guardar / actualizar / recortar.
+   * - ``Imervue/desktop_pet/speech_bubble.py``
+     - Superposición de bocadillo redondeado sin marco con posicionamiento anclado a
+       rectángulo + animación de fundido.
+   * - ``Imervue/desktop_pet/fullscreen_detector.py``
+     - Bucle de sondeo a 1 Hz que lee el rect de la ventana en primer plano (ctypes Win32
+       en Windows; fallback no-op en el resto) y emite ``state_changed(bool)``.
+   * - ``Imervue/desktop_pet/pet_workspace.py``
+     - La pestaña del panel de control. Crea la superposición de forma perezosa, expone
+       cada conmutador / deslizador / combo como checkbox o spinbox, persiste el último
+       rig cargado + el comportamiento de mostrar al arrancar.
+   * - ``Imervue/desktop_pet/tray_icon.py``
+     - Helper de bandeja del sistema — instancia única por sesión, sincroniza con el
+       estado de marcado del espacio de trabajo.
+
+``PuppetCanvas.__init__(pet_mode=True)`` cortocircuita el fondo damero de transparencia y
+la superposición de selección del editor; el resto de la ruta de renderizado (VBOs de
+malla, reproductor de movimientos, físicas, expresiones, grupos de poses) es idéntico al
+de la pestaña Puppet.
+
+Cada cadena de UI se enruta a través de
+``language_wrapper.language_word_dict.get(...)`` con claves definidas en los cinco
+paquetes de idioma base (English, 繁體中文, 简体中文, 日本語, 한국어).
+
+----
+
 Rotación y volteo
 -----------------
 

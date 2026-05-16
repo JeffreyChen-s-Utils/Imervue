@@ -1591,6 +1591,114 @@ DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음*
 
 ----
 
+데스크톱 펫 작업 공간 (Desktop Pet 탭)
+--------------------------------------
+
+탭 5 — **Desktop Pet** 은 임의의 ``.puppet`` rig 를 프레임 없는, 투명한, 항상 위에 있는 오버레이로 데스크톱 위에 실행합니다. 앱 내 탭은 제어 패널이고, 실제 캐릭터는 Puppet 런타임 (동일한 :class:`PuppetCanvas`, 동일한 매개변수 / 모션 / 물리 파이프라인, 동일한 라이브 입력 드라이버) 을 공유하는 별도의 최상위 창에 존재합니다.
+
+창 동작
+^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 기능
+     - 설명
+   * - 프레임 없는 오버레이
+     - 창 chrome 없음, taskbar 항목 없음; ``Qt.WindowStaysOnTopHint`` 로 다른 모든 창 위에 위치.
+   * - 투명 배경
+     - ``WA_TranslucentBackground`` + 알파 인식 GL surface format + ``glClearColor(0,0,0,0)`` — 퍼펫이 그리지 않는 모든 픽셀에서 데스크톱이 그대로 보임.
+   * - 드래그로 이동
+     - 캐릭터를 좌클릭 드래그하여 위치 변경. 설정 가능한 snap 임계값 (기본 24 px) 안에서 화면 가장자리에 떨어뜨리면 그 가장자리에 **밀착**. 빠른 드래그로 화면 밖으로 튀어나가도 클램프되어 펫을 잃지 않음.
+   * - 클릭 통과 토글
+     - 선택적 ``Qt.WindowTransparentForInput`` 모드 — 모든 클릭이 펫 뒤의 데스크톱 / 앱으로 통과.
+   * - 앵커 잠금
+     - 펫 위치 원클릭 고정으로 실수로 드래그되어 움직이지 않게 함.
+   * - 항상 아래에 표시
+     - ``WindowStaysOnTopHint`` 에서 ``WindowStaysOnBottomHint`` 로 전환하여 펫이 모든 창 뒤의 데스크톱 위젯처럼 위치 (``WindowDoesNotAcceptFocus`` 와 함께).
+   * - 전체화면 시 숨기기
+     - 1 Hz 폴러가 Win32 ``GetWindowRect`` API (Windows) 로 활성 창을 감시하여, 다른 앱이 펫의 모니터에서 전체화면일 때 펫을 자동 숨김.
+   * - 숨겨졌을 때 일시정지
+     - 오버레이가 숨겨진 동안 33 ms 페인트 틱이 중단되어 휴면 상태의 펫이 CPU 를 전혀 쓰지 않음. ``showEvent`` 에서 재개.
+   * - 크기 프리셋
+     - 작게 (200×300) / 보통 (320×480) / 크게 (480×720); 중앙 앵커 기준이라 크기 변경 시 펫이 화면을 가로질러 튀지 않음.
+   * - 불투명도 슬라이더
+     - ``setWindowOpacity`` 로 창 단위 불투명도 0.1 – 1.0 — ``WA_TranslucentBackground`` 합성과 창별 알파의 결합으로 단순한 픽셀 어두워짐이 아닌 부드러운 페이드 제공.
+   * - 위치 영구 저장
+     - 매 드래그 종료 후 snap 이 끝난 ``(x, y)`` 가 ``user_setting_dict["desktop_pet"]["position"]`` 에 기록됨. 다음 실행 시 펫이 그 화면 위치로 돌아옴; 멀티 모니터 분리 시 기본 화면 우하단 모서리로 폴백.
+
+상호 작용
+^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 액션
+     - 동작
+   * - **본체 좌클릭**
+     - 역 pan / zoom 행렬로 클릭을 퍼펫 캔버스 좌표에 매핑하여, 문서의 :class:`HitArea` 항목에 대해 기존 :func:`hit_test` 를 실행하고, 히트한 drawable 을 덮는 모션이 있으면 연결된 모션을 재생. 일치 항목이 없으면 말풍선에서 라운드 로빈 인사로 폴백.
+   * - **임의 위치 우클릭**
+     - 컨텍스트 메뉴 표시: Hide pet, **Live drivers** 서브메뉴 (6 개 체크 가능 토글), **Play motion** 서브메뉴 (``document.motions`` 로 채워짐), **Apply expression** 서브메뉴 (``document.expressions`` 로 채워짐), Lock position, Click-through, Always on bottom, Hide-on-fullscreen, 말풍선 토글, **Size** 서브메뉴.
+   * - **말풍선**
+     - 프레임 없는 / 투명 / 항상 위 위젯, 둥근 본체 + 꼬리. 클릭 시 펫 위로 표시, 약 4 초 유지 후 400 ms 동안 페이드. 펫의 geometry 에 앵커되어 펫을 드래그하면 말풍선도 따라옴.
+   * - **시스템 트레이**
+     - Show / Hide (체크 가능), Click-through, Open puppet…, Hide pet. 좌클릭으로 표시 / 숨김 토글, 우클릭으로 메뉴 열기. ``sync_visibility`` / ``sync_click_through`` 로 작업 공간의 체크 상태와 동기화.
+
+라이브 드라이버 (지연 초기화)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+각 드라이버는 첫 활성화 시 인스턴스화되어 휴면 상태의 펫이 타이머 / 스레드 비용을 전혀 부담하지 않음:
+
+* **Auto idle** — :class:`IdleDriver` 를 통해 표준 매개변수 (``ParamBreath`` …) 에 호흡 + 드리프트.
+* **Idle motions** — :class:`IdleMotionCycler` + 동봉된 :class:`MotionPlayer` 로 ``Idle`` 그룹 모션 랜덤 사이클.
+* **Auto-blink** — ``InputEngine.set_blink_enabled`` 로 ``ParamEyeLOpen`` / ``ParamEyeROpen`` 에서 약 4.5 초마다 cosine close-open 사이클.
+* **Drag-track head** — ``InputEngine.set_drag_enabled`` 로 커서 오프셋 → ``ParamAngleX/Y`` + ``ParamEyeBallX/Y``.
+* **Mic lip-sync** — ``InputEngine.set_lipsync_enabled`` 로 마이크 RMS → ``ParamMouthOpenY`` (``sounddevice`` 필요).
+* **Webcam tracking** — :class:`WebcamTracker` 로 MediaPipe FaceLandmarker → 머리 + 눈 + 입 (``opencv-python`` + ``mediapipe`` 필요).
+
+영구 저장
+^^^^^^^^^
+
+:mod:`Imervue.desktop_pet.settings` 가 ``user_setting_dict["desktop_pet"]`` 위에 다음을 제공합니다:
+
+* 모든 키에 대한 기본값 + 로드 시 범위 클램핑으로 손상된 설정 파일이 실행을 중단시키지 않음.
+* 1 단계 깊이 병합 — 새 키가 빠진 구버전 설정 파일도 완전한 상태 dict 를 생성.
+* ``drivers`` 서브 dict 의 전방 호환 — 알 수 없는 드라이버 키는 그대로 라운드 트립되어, 새 드라이버를 추가한 향후 버전이 기존 파일을 깨끗하게 읽을 수 있음.
+
+사용자가 조정 가능한 모든 표면 (위치, 크기, 불투명도, 클릭 통과, 앵커, 항상 아래, 전체화면 시 숨기기, 말풍선, snap 임계값, 각 드라이버, 마지막 로드된 rig, 실행 시 표시) 이 이 헬퍼를 통해 라운드 트립되어, 펫이 다음 실행에서 동일한 상태로 돌아옵니다.
+
+구현
+^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 62
+
+   * - 파일
+     - 역할
+   * - ``Imervue/desktop_pet/pet_window.py``
+     - 최상위 오버레이 — 프레임 없는 / 항상 위 / ``WA_TranslucentBackground``. ``PuppetCanvas(pet_mode=True)`` 호스팅, 드래그 이동, 히트 감지, 컨텍스트 메뉴, 말풍선 통합, 전체화면 감지기 연결, 드라이버, 영구 저장 write-through 소유.
+   * - ``Imervue/desktop_pet/edge_snap.py``
+     - 단위 테스트 가능한 코너 / 가장자리 도킹 + 오버슛 클램프를 위한 순수 Python snap 수학 (Qt 없음).
+   * - ``Imervue/desktop_pet/settings.py``
+     - 영구 저장 헬퍼 — load / save / update / clamp.
+   * - ``Imervue/desktop_pet/speech_bubble.py``
+     - rect 앵커 위치 + 페이드 애니메이션을 갖는 프레임 없는 둥근 말풍선 오버레이.
+   * - ``Imervue/desktop_pet/fullscreen_detector.py``
+     - 전경 창의 rect 를 읽는 1 Hz 폴 루프 (Windows 에서는 Win32 ctypes; 그 외에는 no-op 폴백) 와 ``state_changed(bool)`` 발신.
+   * - ``Imervue/desktop_pet/pet_workspace.py``
+     - 제어 패널 탭. 오버레이를 지연 생성, 모든 토글 / 슬라이더 / 콤보를 체크박스 또는 스핀박스로 노출, 마지막 로드된 rig + 실행 시 표시 동작 영구 저장.
+   * - ``Imervue/desktop_pet/tray_icon.py``
+     - 시스템 트레이 헬퍼 — 세션당 단일 인스턴스, 작업 공간 체크 상태와 동기화.
+
+``PuppetCanvas.__init__(pet_mode=True)`` 은 에디터의 투명 체커보드 배경과 선택 오버레이를 단락시키며, 나머지 렌더 경로 (메시 VBO, 모션 플레이어, 물리, 표정, 포즈 그룹) 는 Puppet 탭과 동일합니다.
+
+모든 UI 문자열은 ``language_wrapper.language_word_dict.get(...)`` 을 통해 라우팅되며, 다섯 개의 기본 언어 팩 (English, 繁體中文, 简体中文, 日本語, 한국어) 모두에서 정의된 키를 사용합니다.
+
+----
+
 명령줄 실행
 -----------
 
