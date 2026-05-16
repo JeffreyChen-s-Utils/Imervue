@@ -25,6 +25,7 @@ from OpenGL.GL import (
     glBindBuffer,
     glBindTexture,
     glBufferData,
+    glBufferSubData,
     glColor4f,
     glDisableVertexAttribArray,
     glDrawArrays,
@@ -140,6 +141,22 @@ class GLRenderer:
         self._mvp = np.eye(4, dtype=np.float32)
         # 0=normal 1=grayscale 2=invert 3=sepia
         self.color_mode: int = 0
+        # Cached attribute / uniform locations — looked up once after
+        # the program links so each draw_* call avoids the
+        # ``glGetUniformLocation`` / ``glGetAttribLocation`` round-trip
+        # (these used to fire two or three times per quad).
+        self._tex_loc: dict[str, int] = {}
+        self._col_loc: dict[str, int] = {}
+        # Re-used CPU-side scratch buffers. Pre-allocated once;
+        # ``draw_*`` writes the four corner positions into them and
+        # uploads via ``glBufferSubData`` to a persistent GPU buffer
+        # instead of reallocating per call.
+        self._quad_scratch = np.zeros(16, dtype=np.float32)
+        self._rect_scratch = np.zeros(8, dtype=np.float32)
+        # Track the last bound shader program so back-to-back
+        # ``draw_textured_quad`` calls don't issue redundant
+        # ``glUseProgram`` switches.
+        self._active_program: int = 0
 
     def init(self):
         """在有效的 GL context 中呼叫"""
@@ -153,7 +170,33 @@ class GLRenderer:
             self._col_prog = gl_shaders.compileProgram(vs2, fs2)
 
             # 建立共用 VBO（quad = 4 vertices × (2 pos + 2 tex) = 16 floats）
+            # Reserve the maximum size we ever need (textured quad)
+            # once so per-frame draws just ``glBufferSubData`` into it.
             self._vbo = glGenBuffers(1)
+            glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
+            glBufferData(
+                GL_ARRAY_BUFFER, self._quad_scratch.nbytes, None, GL_DYNAMIC_DRAW,
+            )
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+            # Cache attribute / uniform locations now that both
+            # programs are linked. Locations are stable for the
+            # lifetime of the program, so this happens exactly once.
+            self._tex_loc = {
+                "u_mvp": glGetUniformLocation(self._tex_prog, "u_mvp"),
+                "u_color": glGetUniformLocation(self._tex_prog, "u_color"),
+                "u_color_mode": glGetUniformLocation(
+                    self._tex_prog, "u_color_mode",
+                ),
+                "u_texture": glGetUniformLocation(self._tex_prog, "u_texture"),
+                "a_position": glGetAttribLocation(self._tex_prog, "a_position"),
+                "a_texcoord": glGetAttribLocation(self._tex_prog, "a_texcoord"),
+            }
+            self._col_loc = {
+                "u_mvp": glGetUniformLocation(self._col_prog, "u_mvp"),
+                "u_color": glGetUniformLocation(self._col_prog, "u_color"),
+                "a_position": glGetAttribLocation(self._col_prog, "a_position"),
+            }
 
             self.use_shaders = True
 
@@ -190,41 +233,32 @@ class GLRenderer:
             return self._draw_textured_quad_legacy(x0, y0, x1, y1, tex_id, opacity)
 
         prog = self._tex_prog
-        glUseProgram(prog)
+        if prog != self._active_program:
+            glUseProgram(prog)
+            self._active_program = prog
 
-        # MVP
-        mvp_loc = glGetUniformLocation(prog, "u_mvp")
-        glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, self._mvp)
-
-        # Color
-        col_loc = glGetUniformLocation(prog, "u_color")
-        glUniform4f(col_loc, 1, 1, 1, opacity)
-
-        # Color mode (grayscale/invert/sepia)
-        mode_loc = glGetUniformLocation(prog, "u_color_mode")
-        if mode_loc != -1:
-            glUniform1i(mode_loc, int(self.color_mode))
-
-        # Texture
-        tex_loc = glGetUniformLocation(prog, "u_texture")
-        glUniform1i(tex_loc, 0)
+        loc = self._tex_loc
+        glUniformMatrix4fv(loc["u_mvp"], 1, GL_FALSE, self._mvp)
+        glUniform4f(loc["u_color"], 1, 1, 1, opacity)
+        if loc["u_color_mode"] != -1:
+            glUniform1i(loc["u_color_mode"], int(self.color_mode))
+        glUniform1i(loc["u_texture"], 0)
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, tex_id)
 
-        # VBO data: pos(x,y) + tex(s,t)
-        data = np.array([
-            x0, y1, 0, 1,   # bottom-left
-            x1, y1, 1, 1,   # bottom-right
-            x1, y0, 1, 0,   # top-right
-            x0, y0, 0, 0,   # top-left
-        ], dtype=np.float32)
+        # Reuse the scratch buffer in-place — only the four position
+        # components vary between calls; UVs are constant for a quad.
+        scratch = self._quad_scratch
+        scratch[0]  = x0; scratch[1]  = y1; scratch[2]  = 0.0; scratch[3]  = 1.0
+        scratch[4]  = x1; scratch[5]  = y1; scratch[6]  = 1.0; scratch[7]  = 1.0
+        scratch[8]  = x1; scratch[9]  = y0; scratch[10] = 1.0; scratch[11] = 0.0
+        scratch[12] = x0; scratch[13] = y0; scratch[14] = 0.0; scratch[15] = 0.0
 
         glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
-        glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_DYNAMIC_DRAW)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, scratch.nbytes, scratch)
 
-        pos_loc = glGetAttribLocation(prog, "a_position")
-        tex_loc_a = glGetAttribLocation(prog, "a_texcoord")
-
+        pos_loc = loc["a_position"]
+        tex_loc_a = loc["a_texcoord"]
         glEnableVertexAttribArray(pos_loc)
         glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 16, ctypes.c_void_p(0))
         glEnableVertexAttribArray(tex_loc_a)
@@ -235,7 +269,11 @@ class GLRenderer:
         glDisableVertexAttribArray(pos_loc)
         glDisableVertexAttribArray(tex_loc_a)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
+        # Unbind so immediate-mode follow-ups in the caller don't
+        # accidentally run through our shader. ``_active_program`` is
+        # cleared so the next shader draw rebinds correctly.
         glUseProgram(0)
+        self._active_program = 0
 
     def draw_colored_rect(self, x0, y0, x1, y1, r, g, b, a, filled=True):
         """用 shader 繪製純色矩形"""
@@ -243,20 +281,24 @@ class GLRenderer:
             return self._draw_colored_rect_legacy(x0, y0, x1, y1, r, g, b, a, filled)
 
         prog = self._col_prog
-        glUseProgram(prog)
+        if prog != self._active_program:
+            glUseProgram(prog)
+            self._active_program = prog
 
-        mvp_loc = glGetUniformLocation(prog, "u_mvp")
-        glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, self._mvp)
+        loc = self._col_loc
+        glUniformMatrix4fv(loc["u_mvp"], 1, GL_FALSE, self._mvp)
+        glUniform4f(loc["u_color"], r, g, b, a)
 
-        col_loc = glGetUniformLocation(prog, "u_color")
-        glUniform4f(col_loc, r, g, b, a)
-
-        data = np.array([x0, y0, x1, y0, x1, y1, x0, y1], dtype=np.float32)
+        scratch = self._rect_scratch
+        scratch[0] = x0; scratch[1] = y0
+        scratch[2] = x1; scratch[3] = y0
+        scratch[4] = x1; scratch[5] = y1
+        scratch[6] = x0; scratch[7] = y1
 
         glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
-        glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_DYNAMIC_DRAW)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, scratch.nbytes, scratch)
 
-        pos_loc = glGetAttribLocation(prog, "a_position")
+        pos_loc = loc["a_position"]
         glEnableVertexAttribArray(pos_loc)
         glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
@@ -268,6 +310,7 @@ class GLRenderer:
         glDisableVertexAttribArray(pos_loc)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glUseProgram(0)
+        self._active_program = 0
 
     # ===========================
     # Immediate mode fallback

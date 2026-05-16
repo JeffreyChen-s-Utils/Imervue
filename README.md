@@ -10,8 +10,16 @@
 </p>
 
 <p align="center">
+  <strong>English</strong> ·
   <a href="README/README_zh-TW.md">繁體中文</a> ·
-  <a href="README/README_zh-CN.md">简体中文</a>
+  <a href="README/README_zh-CN.md">简体中文</a> ·
+  <a href="README/README_ja.md">日本語</a> ·
+  <a href="README/README_ko.md">한국어</a> ·
+  <a href="README/README_es.md">Español</a> ·
+  <a href="README/README_fr.md">Français</a> ·
+  <a href="README/README_de.md">Deutsch</a> ·
+  <a href="README/README_pt-BR.md">Português (BR)</a> ·
+  <a href="README/README_ru.md">Русский</a>
 </p>
 
 <p align="center">
@@ -32,6 +40,7 @@
 - [Modify — Non-destructive develop](#modify--non-destructive-develop)
 - [Paint — full-featured raster editor](#paint--full-featured-raster-editor)
 - [Puppet — 2D rigged animation](#puppet--2d-rigged-animation)
+- [Desktop Pet — frameless overlay](#desktop-pet--frameless-overlay)
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
 - [Plugin System](#plugin-system)
@@ -45,7 +54,7 @@
 
 ## Overview
 
-Imervue is a GPU-accelerated image workstation that ships **four top-level tabs**:
+Imervue is a GPU-accelerated image workstation that ships **five top-level tabs**:
 
 | Tab | What it does |
 |---|---|
@@ -53,6 +62,7 @@ Imervue is a GPU-accelerated image workstation that ships **four top-level tabs*
 | **Modify** | Non-destructive develop pipeline — sliders, curves, LUTs, masks, retouch, multi-image |
 | **Paint** | full-featured raster paint studio with brushes, layers, animation, manga tools, PSD I/O |
 | **Puppet** | From-scratch 2D rigged-puppet animator — meshes, deformers, parameters, motions, physics |
+| **Desktop Pet** | Frameless / transparent / always-on-top overlay that runs the same puppet rigs on your desktop with live drivers (idle / blink / mic / webcam / drag-track) |
 
 Design principles:
 
@@ -526,6 +536,55 @@ machines where you can't install drivers.
 ### Demo
 
 A drop-in rig lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet) — a 307-drawable Cubism Live2D character converted in-tree. Open via **Open Puppet…** to see the rig come up centred; click any of the 18 motions (Idle group + Gesture group) to play. Gestures cover peace sign, face cover, photo, blush, dark face, cry, sweat, stars, shooting star — every named gesture the rig defines.
+
+---
+
+## Desktop Pet — frameless overlay
+
+Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a frameless, transparent overlay. The tab itself is the control panel; the actual character floats on top of (or behind) your other windows. Everything you can do with a rig in the Puppet tab — motions, expressions, physics, idle drivers, webcam / mic input — works here too.
+
+### What you can do
+
+| Feature | What it does |
+|---|---|
+| Frameless overlay | No window chrome, no taskbar entry — just the character on your desktop. |
+| Transparent background | Anything the character doesn't cover shows the desktop through. |
+| Drag to move | Left-drag the character to a new spot. Release near a screen edge to **snap** flush against it. |
+| Click-through mode | Make the pet ignore your mouse so you can keep working under it. |
+| Lock position | Freeze the pet so accidental drags can't move it. |
+| Always on bottom | Sit the pet behind every other window — a desktop-widget feel instead of always-on-top. |
+| Hide on fullscreen | Auto-hide while another app (game / video / presentation) is fullscreen on the same monitor; come back when fullscreen ends. |
+| Pauses when hidden | The pet stops animating while invisible — zero CPU when off-screen. |
+| Size presets | Small / medium / large. Resizes around the centre so the pet doesn't jump across the screen. |
+| Opacity slider | Fade the pet from 10% to 100% so it can be a subtle desktop ornament. |
+| Remembers where you put it | Drag the pet to your favourite corner; it returns there on the next launch. |
+
+### Click interactions
+
+- **Left-click the body** — if the rig defines a hit area (e.g. tap the head), the matching motion plays. Otherwise the pet greets you with a speech bubble.
+- **Right-click anywhere** — opens a context menu with: Hide pet, Live drivers, Play motion (list of every motion in the rig), Apply expression, Lock position, Click-through, Always on bottom, Hide on fullscreen, Speech bubble, Size.
+- **System tray icon** — left-click to toggle visibility, right-click for Show/Hide, Click-through, Open puppet, Hide pet.
+
+### Live drivers
+
+Pick any combination from the tab or the right-click menu. Each is off by default — turn on only what you want.
+
+- **Auto idle** — breath + subtle drift so the character feels alive.
+- **Idle motions** — randomly cycle through the rig's idle-group motions.
+- **Auto-blink** — natural cyclic eye-close every few seconds.
+- **Drag-track head** — the head turns to follow your cursor.
+- **Mic lip-sync** — the mouth opens with your voice (needs `sounddevice`).
+- **Webcam tracking** — your head / eyes / mouth drive the puppet's (needs `opencv-python` and `mediapipe`).
+
+### How to start
+
+1. Switch to the **Desktop Pet** tab.
+2. Click **Load bundled March 7th** to use the included character, or **Open Puppet…** to pick your own `.puppet` file.
+3. Tick **Show pet on desktop**.
+4. Drag the character to where you want it; pick the drivers you want; adjust opacity / size.
+5. Right-click any time for the quick-action menu, or use the system tray icon to hide the pet without finding the tab.
+
+Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
 ---
 

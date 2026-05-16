@@ -47,16 +47,27 @@ from OpenGL.GL import (
     GL_TEXTURE_WRAP_S,
     GL_TEXTURE_WRAP_T,
     GL_UNSIGNED_BYTE,
+    GL_ARRAY_BUFFER,
+    GL_FLOAT,
+    GL_STATIC_DRAW,
+    GL_VERTEX_ARRAY,
     glBegin,
+    glBindBuffer,
     glBindTexture,
     glBlendFunc,
+    glBufferData,
     glClear,
     glClearColor,
     glColor4f,
+    glDeleteBuffers,
     glDeleteTextures,
     glDisable,
+    glDisableClientState,
+    glDrawArrays,
     glEnable,
+    glEnableClientState,
     glEnd,
+    glGenBuffers,
     glGenTextures,
     glLineWidth,
     glLoadIdentity,
@@ -73,6 +84,7 @@ from OpenGL.GL import (
     glTexSubImage2D,
     glTranslatef,
     glVertex2f,
+    glVertexPointer,
     glViewport,
     GL_MODELVIEW,
     GL_PROJECTION,
@@ -274,6 +286,15 @@ class PaintCanvas(QOpenGLWidget):
         # next paint uses ``glTexSubImage2D`` for that region instead
         # of the full ``glTexImage2D`` upload.
         self._pending_damage: DamageRect = EMPTY_DAMAGE
+        # Pixel-grid VBO cache. Each entry is keyed by ``(w, h)`` and
+        # holds the GL buffer id plus its vertex count. The grid is
+        # rebuilt only when the canvas dimensions change — the
+        # previous implementation issued ~(w+h)*2 ``glVertex2f`` calls
+        # per frame, which became visible in profiles at deep-zoom on
+        # large documents.
+        self._grid_vbo: int | None = None
+        self._grid_vbo_size: tuple[int, int] | None = None
+        self._grid_vbo_vertices: int = 0
 
         self._zoom = 1.0
         self._pan_x = 0.0
@@ -1256,16 +1277,67 @@ class PaintCanvas(QOpenGLWidget):
         glDisable(GL_TEXTURE_2D)
         glLineWidth(1.0 / max(self._zoom, 1e-3))
         glColor4f(0.5, 0.5, 0.5, 0.5)
-        glBegin(GL_LINES)
-        for x in range(int(w) + 1):
-            glVertex2f(float(x), 0.0)
-            glVertex2f(float(x), float(h))
-        for y in range(int(h) + 1):
-            glVertex2f(0.0, float(y))
-            glVertex2f(float(w), float(y))
-        glEnd()
+        self._draw_grid_vbo(int(w), int(h))
         glLineWidth(1.0)
         glEnable(GL_TEXTURE_2D)
+
+    def _draw_grid_vbo(self, w: int, h: int) -> None:  # pragma: no cover - GL needs display
+        """Submit the cached pixel-grid lines via a single
+        ``glDrawArrays``. The grid VBO is regenerated on canvas-size
+        changes only — at 60 FPS a stable 4096² canvas pays the build
+        cost once instead of once per frame."""
+        if self._grid_vbo is None or self._grid_vbo_size != (w, h):
+            self._rebuild_grid_vbo(w, h)
+        if self._grid_vbo is None or self._grid_vbo_vertices == 0:
+            return
+        glBindBuffer(GL_ARRAY_BUFFER, self._grid_vbo)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glVertexPointer(2, GL_FLOAT, 0, None)
+        glDrawArrays(GL_LINES, 0, self._grid_vbo_vertices)
+        glDisableClientState(GL_VERTEX_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+    def _rebuild_grid_vbo(self, w: int, h: int) -> None:  # pragma: no cover - GL needs display
+        """Build the (re-usable) line-list buffer for a ``w × h``
+        pixel grid. Two endpoints per line, two floats per endpoint:
+        ``4*((w+1) + (h+1))`` floats total."""
+        if w <= 0 or h <= 0:
+            self._release_grid_vbo()
+            return
+        n_vert_lines = w + 1
+        n_horiz_lines = h + 1
+        vertex_count = (n_vert_lines + n_horiz_lines) * 2
+        data = np.empty((vertex_count, 2), dtype=np.float32)
+        xs = np.arange(n_vert_lines, dtype=np.float32)
+        ys = np.arange(n_horiz_lines, dtype=np.float32)
+        # Vertical lines: (x, 0) -> (x, h)
+        data[0:n_vert_lines * 2:2, 0] = xs
+        data[0:n_vert_lines * 2:2, 1] = 0.0
+        data[1:n_vert_lines * 2:2, 0] = xs
+        data[1:n_vert_lines * 2:2, 1] = float(h)
+        # Horizontal lines: (0, y) -> (w, y)
+        base = n_vert_lines * 2
+        data[base:base + n_horiz_lines * 2:2, 0] = 0.0
+        data[base:base + n_horiz_lines * 2:2, 1] = ys
+        data[base + 1:base + n_horiz_lines * 2:2, 0] = float(w)
+        data[base + 1:base + n_horiz_lines * 2:2, 1] = ys
+        if self._grid_vbo is None:
+            self._grid_vbo = int(glGenBuffers(1))
+        glBindBuffer(GL_ARRAY_BUFFER, self._grid_vbo)
+        glBufferData(GL_ARRAY_BUFFER, data.nbytes, data, GL_STATIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        self._grid_vbo_size = (w, h)
+        self._grid_vbo_vertices = int(vertex_count)
+
+    def _release_grid_vbo(self) -> None:  # pragma: no cover - GL needs display
+        if self._grid_vbo is None:
+            return
+        import contextlib
+        with contextlib.suppress(Exception):
+            glDeleteBuffers(1, [self._grid_vbo])
+        self._grid_vbo = None
+        self._grid_vbo_size = None
+        self._grid_vbo_vertices = 0
 
     # ---- mouse / tablet --------------------------------------------------
 
