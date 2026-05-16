@@ -15,6 +15,8 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QStyle, QSystemTrayIcon
 
+from Imervue.multi_language.language_wrapper import language_wrapper
+
 if TYPE_CHECKING:
     from Imervue.desktop_pet.pet_workspace import PetWorkspace
 
@@ -46,28 +48,36 @@ class PetTrayIcon(QObject):
     # ---- internals ---------------------------------------------
 
     def _build_tray(self) -> QSystemTrayIcon:
+        tr = language_wrapper.language_word_dict.get
         icon = self._fallback_icon()
         tray = QSystemTrayIcon(icon, self)
-        tray.setToolTip("Imervue Desktop Pet")
+        tray.setToolTip(tr("desktop_pet_tray_tooltip", "Imervue Desktop Pet"))
         menu = QMenu()
 
-        self._show_action = QAction("Show pet", menu, checkable=True)
+        self._show_action = QAction(
+            tr("desktop_pet_tray_show", "Show pet"), menu, checkable=True,
+        )
         self._show_action.toggled.connect(self._on_show_toggled)
         menu.addAction(self._show_action)
 
         self._click_through_action = QAction(
-            "Click-through", menu, checkable=True,
+            tr("desktop_pet_tray_click_through", "Click-through"),
+            menu, checkable=True,
         )
         self._click_through_action.toggled.connect(self._on_click_through_toggled)
         menu.addAction(self._click_through_action)
 
         menu.addSeparator()
-        open_action = QAction("Open puppet…", menu)
+        open_action = QAction(
+            tr("desktop_pet_tray_open", "Open puppet…"), menu,
+        )
         open_action.triggered.connect(self._on_open_puppet)
         menu.addAction(open_action)
 
         menu.addSeparator()
-        quit_pet_action = QAction("Hide pet", menu)
+        quit_pet_action = QAction(
+            tr("desktop_pet_tray_hide", "Hide pet"), menu,
+        )
         quit_pet_action.triggered.connect(self._on_hide_pet)
         menu.addAction(quit_pet_action)
 
