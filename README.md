@@ -40,6 +40,7 @@
 - [Modify — Non-destructive develop](#modify--non-destructive-develop)
 - [Paint — full-featured raster editor](#paint--full-featured-raster-editor)
 - [Puppet — 2D rigged animation](#puppet--2d-rigged-animation)
+- [Desktop Pet — frameless overlay](#desktop-pet--frameless-overlay)
 - [Keyboard & Mouse Shortcuts](#keyboard--mouse-shortcuts)
 - [Menu Structure](#menu-structure)
 - [Plugin System](#plugin-system)
@@ -53,7 +54,7 @@
 
 ## Overview
 
-Imervue is a GPU-accelerated image workstation that ships **four top-level tabs**:
+Imervue is a GPU-accelerated image workstation that ships **five top-level tabs**:
 
 | Tab | What it does |
 |---|---|
@@ -61,6 +62,7 @@ Imervue is a GPU-accelerated image workstation that ships **four top-level tabs*
 | **Modify** | Non-destructive develop pipeline — sliders, curves, LUTs, masks, retouch, multi-image |
 | **Paint** | full-featured raster paint studio with brushes, layers, animation, manga tools, PSD I/O |
 | **Puppet** | From-scratch 2D rigged-puppet animator — meshes, deformers, parameters, motions, physics |
+| **Desktop Pet** | Frameless / transparent / always-on-top overlay that runs the same puppet rigs on your desktop with live drivers (idle / blink / mic / webcam / drag-track) |
 
 Design principles:
 
@@ -534,6 +536,40 @@ machines where you can't install drivers.
 ### Demo
 
 A drop-in rig lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet) — a 307-drawable Cubism Live2D character converted in-tree. Open via **Open Puppet…** to see the rig come up centred; click any of the 18 motions (Idle group + Gesture group) to play. Gestures cover peace sign, face cover, photo, blush, dark face, cry, sweat, stars, shooting star — every named gesture the rig defines.
+
+---
+
+## Desktop Pet — frameless overlay
+
+Tab 5 — the **Desktop Pet** runs any `.puppet` rig as a frameless, transparent, always-on-top overlay on your desktop. The in-app tab is the control panel; the actual character lives in a separate top-level window that shares the Puppet runtime — same `PuppetCanvas`, same parameter / motion / physics pipeline, same live-input drivers.
+
+### What it does
+
+| Feature | Notes |
+|---|---|
+| Frameless overlay | No window chrome, no taskbar entry; sits on top of every other window via `Qt.WindowStaysOnTopHint`. |
+| Transparent background | `WA_TranslucentBackground` + an alpha-aware GL surface format + `glClearColor(0,0,0,0)` — every pixel the puppet doesn't draw shows the desktop through. |
+| Drag-to-move | Left-drag on the character to reposition. Release within ~24 px of a screen edge to **snap** flush against it. Fast-drag overshoots get clamped back inside the screen so the pet never goes lost off-screen. |
+| Click-through toggle | Optional `Qt.WindowTransparentForInput` mode — every click passes through to the desktop / app behind the pet. Useful when the pet is just decoration and you're working under it. |
+| System tray | Show / Hide, click-through toggle, Open puppet… — left-clicking the tray icon toggles visibility. Lets you dismiss the overlay without finding the tab. |
+| Size presets | Small / medium / large slots; centre-anchored so the pet doesn't jump across the screen when you resize. |
+| Live drivers | Auto idle (breath + drift), idle-motion cycler, auto-blink, drag-track head (looks at cursor), mic lip-sync, webcam tracking — same toggles the Puppet tab exposes. Each driver is lazy-created on first enable so a dormant pet pays zero cost. |
+
+### How to start
+
+1. **Tab > Desktop Pet > Load bundled March 7th** (or `Open Puppet…` for your own `.puppet`).
+2. Tick **Show pet on desktop** — the overlay window appears.
+3. Pick the drivers you want; everything you author / record in the Puppet tab plays back the same here.
+4. Drag the character to the corner you like and let go to snap onto it.
+
+### Implementation
+
+- `Imervue/desktop_pet/pet_window.py` — the top-level overlay (frameless / transparent / always-on-top), hosts a `PuppetCanvas` in `pet_mode=True` and forwards driver toggles.
+- `Imervue/desktop_pet/edge_snap.py` — pure-Python snap math (no Qt) for unit-testable corner / edge docking.
+- `Imervue/desktop_pet/pet_workspace.py` — the control-panel tab.
+- `Imervue/desktop_pet/tray_icon.py` — system-tray helper.
+
+`PuppetCanvas.__init__(pet_mode=True)` short-circuits the editor's transparency-checker backdrop and selection overlay; the rest of the render path (mesh VBOs, motion player, physics, expressions, pose groups) is identical to the Puppet tab.
 
 ---
 

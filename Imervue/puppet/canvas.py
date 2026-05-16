@@ -188,17 +188,29 @@ class PuppetCanvas(QOpenGLWidget):
     one. Only fires when mesh-edit mode is off — when it's on, the
     left-click is consumed by the vertex drag instead."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, pet_mode: bool = False):
         # Request a stencil buffer so clip_mask drawing can use it.
         # Done before super().__init__() so the underlying GL surface
         # picks up the format on creation; Qt silently downgrades on
         # drivers that can't provide stencil, which is fine because
         # the stencil pass short-circuits when no drawable has a mask.
+        #
+        # ``pet_mode`` switches the canvas into the desktop-pet
+        # rendering profile: the checker backdrop is suppressed and
+        # ``paintGL`` clears to fully-transparent so the host window
+        # (which has ``WA_TranslucentBackground`` set) shows the
+        # desktop through every pixel the puppet doesn't draw. An
+        # 8-bit alpha buffer is requested in the surface format so
+        # the framebuffer can actually carry that transparency — the
+        # default GL widget allocates RGB only.
         fmt = QSurfaceFormat()
         fmt.setStencilBufferSize(8)
+        if pet_mode:
+            fmt.setAlphaBufferSize(8)
         QSurfaceFormat.setDefaultFormat(fmt)
         super().__init__(parent)
         self.setFormat(fmt)
+        self._pet_mode = bool(pet_mode)
         self._document: PuppetDocument | None = None
         self._draw_list: list[DrawCommand] = []
         self._texture_cache: dict[str, int] = {}
@@ -555,7 +567,13 @@ class PuppetCanvas(QOpenGLWidget):
     # ---- GL lifecycle ---------------------------------------------------
 
     def initializeGL(self) -> None:  # pragma: no cover - GL needs display
-        glClearColor(0.13, 0.13, 0.15, 1.0)
+        if self._pet_mode:
+            # Fully transparent clear — paintGL skips the checker so
+            # every non-puppet pixel reaches the host window's
+            # translucent background and the desktop shows through.
+            glClearColor(0.0, 0.0, 0.0, 0.0)
+        else:
+            glClearColor(0.13, 0.13, 0.15, 1.0)
         glEnable(GL_TEXTURE_2D)
         glEnable(GL_BLEND)
 
@@ -576,9 +594,15 @@ class PuppetCanvas(QOpenGLWidget):
         glLoadIdentity()
         glTranslatef(self._pan_x, self._pan_y, 0.0)
         glScalef(self._zoom, self._zoom, 1.0)
-        self._draw_transparency_backdrop()
+        # Desktop-pet mode skips the editor's transparency checker
+        # backdrop — the host window is translucent and the desktop
+        # itself fills the role of "background" — and also drops the
+        # selection overlay since the pet has no editor UI.
+        if not self._pet_mode:
+            self._draw_transparency_backdrop()
         self._draw_drawables()
-        self._draw_selection_overlay()
+        if not self._pet_mode:
+            self._draw_selection_overlay()
         glPopMatrix()
 
     def render_offscreen_puppet(   # pragma: no cover - GL needs display

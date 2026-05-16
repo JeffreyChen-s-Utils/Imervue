@@ -669,6 +669,26 @@ class ImervueMainWindow(QMainWindow):
             lang.get("puppet_tab_title", "Puppet"),
         )
 
+        # --------------------------------------------------------
+        # Tab 4: Desktop Pet — frameless / transparent overlay
+        # that shares the Puppet runtime. The tab body is the
+        # control panel; the actual pet character renders in a
+        # separate top-level QWidget with WA_TranslucentBackground
+        # and a translucent GL surface. Created lazily by the
+        # workspace on first show, so the GL context is only paid
+        # for when the user enables the pet.
+        # --------------------------------------------------------
+        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
+        self.pet_workspace = PetWorkspace()
+        self._main_tabs.addTab(
+            self.pet_workspace,
+            lang.get("desktop_pet_tab_title", "Desktop Pet"),
+        )
+        if PetTrayIcon.is_available():
+            self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
+            self.pet_workspace.attach_tray(self._pet_tray)
+            self._pet_tray.show()
+
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
