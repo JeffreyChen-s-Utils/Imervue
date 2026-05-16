@@ -40,10 +40,33 @@ def _tr(key: str, default: str) -> str:
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
 
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
-"""Reasonable starter rig — the bundled March 7th Cubism
-conversion is the same default the Puppet tab's Examples menu
-offers. Lets the user launch a pet without first having to author
-or import their own ``.puppet`` archive."""
+"""Repo-root relative path used for the test that verifies the
+constant still points inside ``examples/puppet/``. The actual
+runtime resolution goes through :func:`examples_dir` so packaged
+builds (Nuitka EXE, pip install) find the bundled rig wherever
+Imervue was installed instead of relying on the user's CWD."""
+
+
+def _resolve_bundled_example() -> Path | None:
+    """Return the absolute path to the bundled March 7th rig, or
+    ``None`` when the file isn't present (some dev checkouts strip
+    examples for size). Tries the frozen-safe ``examples_dir()``
+    first, then falls back to a CWD-relative lookup so the workspace
+    keeps working when the user runs from the repo root without an
+    install."""
+    from Imervue.system.app_paths import examples_dir
+
+    for root in (examples_dir(), Path.cwd()):
+        candidate = root / "puppet" / "march_7th.puppet"
+        if candidate.is_file():
+            return candidate
+        # Some layouts use ``examples/puppet/...`` directly under
+        # the search root rather than splitting examples_dir already
+        # ending in "examples". Cover that too.
+        candidate = root / "examples" / "puppet" / "march_7th.puppet"
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 class PetWorkspace(QWidget):
@@ -309,17 +332,14 @@ class PetWorkspace(QWidget):
             self.load_puppet(path)
 
     def _on_open_example(self) -> None:   # pragma: no cover - depends on bundled file
-        # The bundled rig sits next to whatever CWD the user
-        # launched Imervue from. Tests bypass this via
-        # ``load_puppet`` directly.
-        candidate = Path(DEFAULT_EXAMPLE_PUPPET)
-        if not candidate.is_file():
+        candidate = _resolve_bundled_example()
+        if candidate is None:
             self._status.setText(
                 _tr(
                     "desktop_pet_example_missing",
                     "Bundled example not found at {path} — install or run "
                     "from the repository root.",
-                ).format(path=candidate),
+                ).format(path=DEFAULT_EXAMPLE_PUPPET),
             )
             return
         self.load_puppet(candidate)
