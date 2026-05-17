@@ -526,6 +526,43 @@ english_word_dict = {
     "puppet_cell_size_title": 'Mesh density',
     "puppet_cell_size_prompt": 'Cell size in pixels (smaller = denser mesh):',
     "puppet_import_failed": 'PNG import failed: {error}',
+    "puppet_import_cubism_title": 'Import Cubism file',
+    "puppet_cubism_notice_title": 'Importing Cubism files',
+    "puppet_cubism_notice_body": (
+        'Cubism imports work in two modes — please read before continuing:\n'
+        '\n'
+        '• .moc3 / .model3.json — Full rig conversion. Builds a fresh\n'
+        '  puppet from the Cubism rig. Requires Live2D\'s Cubism Native\n'
+        '  SDK (Live2DCubismCore.dll on Windows). Drop the extracted\n'
+        '  SDK under <project>/sdk/ or set the LIVE2D_CUBISM_CORE\n'
+        '  environment variable. The DLL is NOT redistributed with\n'
+        '  Imervue — Live2D\'s EULA forbids it.\n'
+        '\n'
+        '• .moc3 alone won\'t work — Cubism\'s full-rig importer needs\n'
+        '  the sibling .model3.json next to it for textures, groups,\n'
+        '  and hit areas.\n'
+        '\n'
+        '• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n'
+        '  .cdi3.json — Layered onto an already-open puppet. Open a\n'
+        '  puppet first, then import these. No SDK needed.'
+    ),
+    "puppet_cubism_notice_dont_show": "Don't show this again",
+    "puppet_cubism_failed_title": 'Cubism import failed',
+    "puppet_cubism_sdk_missing_title": 'Cubism SDK not found',
+    "puppet_cubism_sdk_missing_body": (
+        'Cubism Native SDK not found. To enable .moc3 / .model3.json\n'
+        'imports, do one of:\n'
+        '\n'
+        '  • Extract the Cubism SDK under <project>/sdk/ (e.g.\n'
+        '    <project>/sdk/CubismSdkForNative-5-r.5/).\n'
+        '  • Set the LIVE2D_CUBISM_CORE environment variable to the\n'
+        '    library file\'s absolute path.\n'
+        '\n'
+        'Get the SDK from https://www.live2d.com/en/sdk/download/native/.\n'
+        'Live2D\'s EULA forbids us from redistributing the DLL.\n'
+        '\n'
+        'Original error:\n{error}'
+    ),
     "puppet_status_imported": 'Imported {name} ({w}×{h}, {v} vertices, {t} triangles)',
     # Desktop Pet tab — frameless puppet overlay
     "desktop_pet_tab_title": 'Desktop Pet',

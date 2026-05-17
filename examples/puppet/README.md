@@ -7,6 +7,7 @@ plugin enable step needed.
 | File | Subject | Drawables | Parameters | Motions |
 |---|---|---|---|---|
 | `march_7th.puppet` | March 7th (Honkai: Star Rail) Live2D rig | 307 | 203 | 9 (Idle ×7, TapHead ×1, plus author-recorded loops) |
+| `vivian.puppet` | Vivian (薇薇安) — community-published free Live2D rig | 392 | 197 | 4 (synthesised idle loops) |
 
 ## `march_7th.puppet`
 
@@ -39,11 +40,36 @@ on the default `requirements.txt` without the Cubism Native SDK.
     equivalent, but every motion that touches the head or body
     survives.
 
+## `vivian.puppet`
+
+A second real Live2D rig converted with the same Cubism Native →
+`.puppet` pipeline, used to validate the importer against a multi-
+atlas rig (eleven 4096² source textures vs March 7th's two). The
+textures are downsampled to 2048² before packing so the example
+stays in the 20 MB range; the rig still covers the full 4584×7920
+author canvas and all 197 Cubism-standard parameters.
+
+**Highlights:**
+
+* **392 drawables** with original atlas UVs preserved.
+* **197 Cubism-standard parameters** — webcam tracking, auto-blink,
+  lip-sync, cursor look-at all drive the rig without per-rig
+  configuration.
+* **Eleven texture atlases** packed in-archive — exercises the
+  renderer's multi-texture bind path more heavily than the other
+  examples, which only ship two or three.
+* **Four synthesised idle motions** — `synth_head_sway`,
+  `synth_blink`, `synth_body_lean`, `synth_breath`. The source
+  rig ships a single `Scene1.motion3.json` that the converter
+  can't usefully promote to an idle loop, so the synthesiser
+  fills the Idle group with parameter-default-driven takes that
+  read as natural idle motion without per-rig tuning.
+
 ### Try it
 
 Launch Imervue, switch to the **Puppet** tab, click **Open Puppet…**,
-pick `examples/puppet/march_7th.puppet`. Click any motion in the
-bottom Motions dock to play it.
+pick `examples/puppet/march_7th.puppet` (or `vivian.puppet`). Click
+any motion in the bottom Motions dock to play it.
 
 Toggle the toolbar features to drive the rig live:
 

@@ -569,6 +569,43 @@ korean_word_dict = {
     "puppet_cell_size_title": '메시 밀도',
     "puppet_cell_size_prompt": '셀 크기 (픽셀, 작을수록 조밀):',
     "puppet_import_failed": 'PNG 가져오기 실패: {error}',
+    "puppet_import_cubism_title": 'Cubism 파일 가져오기',
+    "puppet_cubism_notice_title": 'Cubism 파일 가져오기',
+    "puppet_cubism_notice_body": (
+        'Cubism 가져오기는 두 가지 모드가 있습니다. 계속하기 전에 확인하세요:\n'
+        '\n'
+        '• .moc3 / .model3.json — 전체 변환. Cubism rig 에서 새 퍼펫을\n'
+        '  만듭니다. Live2D 의 Cubism Native SDK (Windows 에서는\n'
+        '  Live2DCubismCore.dll) 가 필요합니다. 추출한 SDK 를\n'
+        '  <project>/sdk/ 아래에 두거나 LIVE2D_CUBISM_CORE 환경 변수를\n'
+        '  DLL 경로로 설정하세요. Live2D 의 EULA 때문에 Imervue 에\n'
+        '  DLL 을 포함시킬 수 없습니다.\n'
+        '\n'
+        '• .moc3 단독으로는 동작하지 않습니다 — 전체 변환에는 텍스처/\n'
+        '  그룹/히트 영역이 담긴 같은 이름의 .model3.json 이 옆에\n'
+        '  있어야 합니다.\n'
+        '\n'
+        '• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n'
+        '  .cdi3.json — 열려 있는 퍼펫에 덧붙입니다. 먼저 퍼펫을 연 다음\n'
+        '  이 파일들을 가져오세요. SDK 가 필요 없습니다.'
+    ),
+    "puppet_cubism_notice_dont_show": '이 메시지를 다시 표시 안 함',
+    "puppet_cubism_failed_title": 'Cubism 가져오기 실패',
+    "puppet_cubism_sdk_missing_title": 'Cubism SDK 를 찾을 수 없음',
+    "puppet_cubism_sdk_missing_body": (
+        'Cubism Native SDK 를 찾을 수 없습니다. .moc3 / .model3.json\n'
+        '가져오기를 활성화하려면 다음 중 하나를 수행하세요:\n'
+        '\n'
+        '  • Cubism SDK 를 <project>/sdk/ 아래에 압축 해제 (예:\n'
+        '    <project>/sdk/CubismSdkForNative-5-r.5/).\n'
+        '  • LIVE2D_CUBISM_CORE 환경 변수를 라이브러리 파일의 절대\n'
+        '    경로로 설정.\n'
+        '\n'
+        'SDK 다운로드: https://www.live2d.com/en/sdk/download/native/.\n'
+        'Live2D 의 EULA 가 DLL 재배포를 금지합니다.\n'
+        '\n'
+        '원본 오류:\n{error}'
+    ),
     "puppet_status_imported": '{name} 가져옴 ({w}×{h}, 정점 {v}, 삼각형 {t})',
     "puppet_parameters_dock": '매개변수',
     "puppet_parameters_empty": '매개변수 없음 — 매개변수가 있는 퍼펫을 불러오면 슬라이더가 표시됩니다.',
