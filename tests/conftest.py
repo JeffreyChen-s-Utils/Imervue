@@ -149,6 +149,51 @@ def qapp():
     # exit clean it up is fine for the test runner.
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _suppress_automatic_gc():
+    """Stop Python's generational GC from firing inside test code.
+
+    Crashes seen in CI:
+
+        Garbage-collecting
+        File "Imervue/paint/tool_bar.py", line 125 in _add_tool_action
+        tests/test_paint_autosave_status.py::…
+
+    Python's GC fires when allocation counters cross
+    ``gc.get_threshold()`` — by default ``(700, 10, 10)``. Inside a
+    test that constructs a ``PaintWorkspace`` (dozens of toolbar
+    actions, dock widgets, sliders) the gen-0 threshold trips
+    mid-construction. If a *prior* test leaked an orphan QObject
+    wrapper (parented to ``None``, held by a closure / signal
+    capture, never ``deleteLater()``'d), GC walks into the wrapper
+    while its C++ partner is already gone → ``access violation``.
+    The traceback then blames the unrelated test currently running.
+
+    Drain-only (``sendPostedEvents`` of ``DeferredDelete``) handled
+    the leaks that *did* call ``deleteLater()``. This raises the
+    threshold so automatic GC effectively doesn't fire during the
+    session; refcounting still cleans up almost everything, and
+    pytest's per-test teardown runs the explicit Qt drain.
+
+    A targeted ``gc.collect()`` would be cheaper conceptually but
+    was rejected twice: full collect added ~350 ms / test (suite
+    went from 3 min → 42 min); ``gc.collect(0)`` disturbed the
+    Windows clipboard state on six tests.
+
+    The original thresholds are restored on session teardown so
+    Python's exit cleanup runs normally.
+    """
+    import gc
+    original = gc.get_threshold()
+    # 700_000 is comfortably above what any single test allocates,
+    # so automatic GC effectively never fires in test code. We
+    # leave gen-1 / gen-2 thresholds alone since they only matter
+    # if gen-0 fires.
+    gc.set_threshold(700_000, original[1], original[2])
+    yield
+    gc.set_threshold(*original)
+
+
 @pytest.fixture(autouse=True)
 def _drain_qt_deferred_delete():
     """Drain queued ``DeferredDelete`` events between tests.
