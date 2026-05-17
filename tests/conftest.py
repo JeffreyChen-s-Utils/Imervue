@@ -86,7 +86,18 @@ def _bootstrap_plugin_imports() -> None:
         sys.path.insert(0, plugin_root_str)
 
 
+def _bootstrap_tests_dir_on_path() -> None:
+    """Put ``tests/`` on sys.path so test modules can import shared
+    helpers like ``_qt_skip`` without needing relative-import gymnastics
+    (which would require ``tests/__init__.py`` and break pytest's
+    rootdir auto-discovery)."""
+    tests_dir = str(Path(__file__).resolve().parent)
+    if tests_dir not in sys.path:
+        sys.path.insert(0, tests_dir)
+
+
 _bootstrap_plugin_imports()
+_bootstrap_tests_dir_on_path()
 
 
 # ---------------------------------------------------------------------------
