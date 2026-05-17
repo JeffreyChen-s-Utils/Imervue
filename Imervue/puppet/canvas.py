@@ -207,7 +207,18 @@ class PuppetCanvas(QOpenGLWidget):
         fmt.setStencilBufferSize(8)
         if pet_mode:
             fmt.setAlphaBufferSize(8)
-        QSurfaceFormat.setDefaultFormat(fmt)
+        # ``QSurfaceFormat.setDefaultFormat`` is documented as
+        # "call before QApplication is created"; calling it again
+        # afterwards is undefined behaviour and segfaults inside
+        # ``QOpenGLWidget.__init__`` on Windows / PySide6 6.11 when
+        # the previous canvas's per-widget context has a different
+        # format. Only set the global default if no QGuiApplication
+        # exists yet (covers the from-source / EXE launch); during
+        # tests / nested-canvas creates we rely solely on the
+        # per-widget ``setFormat`` call below.
+        from PySide6.QtGui import QGuiApplication
+        if QGuiApplication.instance() is None:
+            QSurfaceFormat.setDefaultFormat(fmt)
         super().__init__(parent)
         self.setFormat(fmt)
         self._pet_mode = bool(pet_mode)
