@@ -6,7 +6,6 @@ the dock listens for ``parameters_changed`` so a fresh document load
 or a programmatic reset re-syncs sliders.
 """
 from __future__ import annotations
-
 import math
 
 import pytest
@@ -20,6 +19,8 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.parameter_dock import ParameterDock
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _rigged_doc() -> PuppetDocument:

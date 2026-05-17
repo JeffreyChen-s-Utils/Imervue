@@ -17,7 +17,6 @@ The Cubism Native SDK DLL isn't redistributable, so these tests stub
   ``.moc3`` file
 """
 from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
@@ -26,6 +25,8 @@ from Imervue.puppet.cubism_native_bridge import CubismBridgeError
 from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet import workspace as workspace_module
 from Imervue.puppet.workspace import PuppetWorkspace
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _make_demo_document() -> PuppetDocument:

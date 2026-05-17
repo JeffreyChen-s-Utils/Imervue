@@ -2,6 +2,8 @@
 Pytest configuration and shared fixtures for Imervue tests.
 """
 
+import atexit
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +12,57 @@ import pytest
 from PIL import Image
 
 _rng = np.random.default_rng(seed=0xC0FFEE)
+
+
+# ---------------------------------------------------------------------------
+# Force clean exit on Windows CI — bypass interpreter finalisation
+# ---------------------------------------------------------------------------
+# Even with ``-p no:unraisableexception`` (which kills the explicit
+# ``gc_collect_harder`` call pytest makes inside ``_ensure_unconfigure``),
+# CI was still segfaulting AFTER the pytest summary banner printed:
+#
+#     6343 passed, 295 skipped in 260s
+#     Windows fatal exception: access violation
+#     Current thread … (most recent call first):
+#       Garbage-collecting
+#       <no Python frame>
+#
+# ``<no Python frame>`` means the crash is during Python's own interpreter
+# shutdown — module deallocation triggers a final gc pass which finalises a
+# stale shiboken Qt wrapper. The QObject's C++ partner is already half-gone
+# (PySide6 / shiboken got unloaded earlier in the dealloc order), so the
+# ``__del__`` dereferences freed memory → access violation. The process exits
+# non-zero even though every test passed.
+#
+# We capture pytest's intended exit code via ``pytest_sessionfinish`` and
+# register an ``atexit`` handler that calls ``os._exit`` with it. ``atexit``
+# fires AFTER all session fixtures and pytest's own cleanup but BEFORE
+# module deallocation, so we skip the unsafe finalisation pass entirely.
+# Registering at module-load time puts us first in the LIFO queue → we
+# run last, after every other atexit handler has had its turn.
+
+_pytest_exit_status: int = 0
+
+
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+    """Capture pytest's intended exit code before finalisation runs."""
+    global _pytest_exit_status
+    _pytest_exit_status = int(exitstatus)
+
+
+def _force_clean_exit() -> None:
+    """Skip module finalisation to dodge the Qt teardown segfault.
+
+    Only fires under headless CI — local runs do interpreter cleanup
+    normally so any new ``__del__`` bug shows up immediately during
+    development instead of being masked.
+    """
+    if os.environ.get("CI") != "true":
+        return
+    os._exit(_pytest_exit_status)
+
+
+atexit.register(_force_clean_exit)
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +86,18 @@ def _bootstrap_plugin_imports() -> None:
         sys.path.insert(0, plugin_root_str)
 
 
+def _bootstrap_tests_dir_on_path() -> None:
+    """Put ``tests/`` on sys.path so test modules can import shared
+    helpers like ``_qt_skip`` without needing relative-import gymnastics
+    (which would require ``tests/__init__.py`` and break pytest's
+    rootdir auto-discovery)."""
+    tests_dir = str(Path(__file__).resolve().parent)
+    if tests_dir not in sys.path:
+        sys.path.insert(0, tests_dir)
+
+
 _bootstrap_plugin_imports()
+_bootstrap_tests_dir_on_path()
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +209,167 @@ def qapp():
     app = QApplication.instance() or QApplication([])
     yield app
     # Don't quit the app here — quitting it makes subsequent tests in the
-    # same session unable to recreate it on some platforms. Letting Python
-    # exit clean it up is fine for the test runner.
+    # same session unable to recreate it on some platforms. The dedicated
+    # ``_qt_session_teardown`` autouse fixture below handles end-of-session
+    # cleanup once all tests have finished.
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _qt_session_teardown():
+    """Shut Qt down explicitly at the very end of the session.
+
+    Why this exists: CI reported runs where every test passed
+    (``test_workspace_manager`` was the last to print ``PASSED``),
+    pytest's summary line never appeared, and the process exited
+    with code 1 and a truncated log. Classic Windows symptom —
+    ``QApplication`` is still alive when Python finalisation starts
+    tearing down modules, and a stale ``shiboken`` wrapper held
+    somewhere blows up during ``__del__``. The crash kills the
+    process before pytest can flush its summary banner.
+
+    Draining ``DeferredDelete``, spinning the event loop once, then
+    quitting the app explicitly while the interpreter is still in
+    a sane state — before Python starts unloading modules — keeps
+    teardown deterministic. We deliberately do NOT drop the
+    ``QApplication`` reference; on Windows that triggers the same
+    finalisation race we're trying to avoid. Quitting is enough.
+    """
+    yield
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return
+    app = QApplication.instance()
+    if app is None:
+        return
+    # Two drain passes: first clears most pending DeferredDeletes,
+    # second mops up the cascade (a parent being deleted enqueues
+    # deletes for its children). We deliberately do NOT call
+    # ``processEvents()`` — that would fire user-registered timers
+    # (e.g. ``QTimer.singleShot`` callbacks from Paint tests) that
+    # reference now-dead C++ objects and raise mid-teardown. The
+    # DeferredDelete drain alone is the smallest cleanup that
+    # frees the C++ side before Python finalises.
+    for _ in range(2):
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.quit()
+
+
+# =====================================================================
+# Headless-CI guard for QOpenGLWidget-constructing tests
+# =====================================================================
+
+HEADLESS_CI: bool = (
+    os.environ.get("CI") == "true"
+    or os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+)
+"""True when the test session is running on a headless CI runner
+(GitHub Actions Windows) where ``QOpenGLWidget`` construction
+segfaults once the offscreen-GL pool gets exhausted. Same class
+of bug already handled in ``test_paint_workspace`` and
+``test_puppet_auto_mesh``. Tests that construct a real
+``PuppetCanvas`` / ``PuppetWorkspace`` / ``PaintWorkspace`` use
+this flag to skip on CI; local runs still cover them."""
+
+skip_on_headless_ci = pytest.mark.skipif(
+    HEADLESS_CI,
+    reason=(
+        "QOpenGLWidget construction segfaults on the headless CI "
+        "runner once the offscreen-GL pool gets exhausted. The "
+        "underlying logic is exercised by pure-Python sibling "
+        "tests where possible."
+    ),
+)
+"""Pre-built ``pytest.mark.skipif`` that test modules can apply
+to individual tests or as a module-level ``pytestmark`` when the
+whole file constructs GL widgets."""
+
+
+# =====================================================================
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _suppress_automatic_gc():
+    """Stop Python's generational GC from firing inside test code.
+
+    Crashes seen in CI:
+
+        Garbage-collecting
+        File "Imervue/paint/tool_bar.py", line 125 in _add_tool_action
+        tests/test_paint_autosave_status.py::…
+
+    Python's GC fires when allocation counters cross
+    ``gc.get_threshold()`` — by default ``(700, 10, 10)``. Inside a
+    test that constructs a ``PaintWorkspace`` (dozens of toolbar
+    actions, dock widgets, sliders) the gen-0 threshold trips
+    mid-construction. If a *prior* test leaked an orphan QObject
+    wrapper (parented to ``None``, held by a closure / signal
+    capture, never ``deleteLater()``'d), GC walks into the wrapper
+    while its C++ partner is already gone → ``access violation``.
+    The traceback then blames the unrelated test currently running.
+
+    Drain-only (``sendPostedEvents`` of ``DeferredDelete``) handled
+    the leaks that *did* call ``deleteLater()``. This raises the
+    threshold so automatic GC effectively doesn't fire during the
+    session; refcounting still cleans up almost everything, and
+    pytest's per-test teardown runs the explicit Qt drain.
+
+    A targeted ``gc.collect()`` would be cheaper conceptually but
+    was rejected twice: full collect added ~350 ms / test (suite
+    went from 3 min → 42 min); ``gc.collect(0)`` disturbed the
+    Windows clipboard state on six tests.
+
+    The original thresholds are restored on session teardown so
+    Python's exit cleanup runs normally.
+    """
+    import gc
+    original = gc.get_threshold()
+    # 700_000 is comfortably above what any single test allocates,
+    # so automatic GC effectively never fires in test code. We
+    # leave gen-1 / gen-2 thresholds alone since they only matter
+    # if gen-0 fires.
+    gc.set_threshold(700_000, original[1], original[2])
+    yield
+    gc.set_threshold(*original)
+
+
+@pytest.fixture(autouse=True)
+def _drain_qt_deferred_delete():
+    """Drain queued ``DeferredDelete`` events between tests.
+
+    ``QObject.deleteLater()`` marks an object for deletion at the
+    next event-loop spin. Many Qt-using tests in this suite call
+    ``deleteLater()`` in fixture teardown without spinning the
+    loop afterwards — those C++ objects then linger past the
+    test, and when the next test's fixture setup triggers Python
+    GC the stale Python wrappers ask the now-half-dead C++ side
+    a question and segfault inside the GC pass. The traceback
+    shows up as "Garbage-collecting" / "Windows fatal exception:
+    access violation" with no obvious test responsible.
+
+    This autouse fixture drains all queued ``DeferredDelete``
+    events after every test, so the C++ side is fully freed
+    before the next test starts. Cheap (a no-op in tests that
+    didn't touch Qt) and prevents the cross-test contamination
+    centrally rather than requiring each Qt fixture to remember
+    to call ``sendPostedEvents`` itself.
+
+    A ``gc.collect()`` after the drain was tried and rejected:
+    full collection added ~350 ms per test (suite went from 3 min
+    to 42 min), and ``gc.collect(0)`` happened to disturb the
+    Windows clipboard state on a handful of tests. The drain
+    alone — without forcing Python GC — has handled every
+    reported crash so far.
+    """
+    yield
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+    except ImportError:
+        return
+    if QCoreApplication.instance() is None:
+        return
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 

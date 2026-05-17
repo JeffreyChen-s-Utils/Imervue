@@ -7,11 +7,12 @@ construction surface so later phases can extend without breaking
 the contract.
 """
 from __future__ import annotations
-
 import pytest
 from PySide6.QtWidgets import QTabWidget
 
 from Imervue.puppet import PuppetWorkspace
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 @pytest.mark.usefixtures("qapp")

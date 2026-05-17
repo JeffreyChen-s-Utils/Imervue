@@ -3,7 +3,6 @@ import preserving real motion names + group tag, and
 ``MotionPlayer.play_group`` picking from the matching set.
 """
 from __future__ import annotations
-
 import json
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -18,6 +17,8 @@ from Imervue.puppet.document import (
 )
 from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
 from Imervue.puppet.motion_player import MotionPlayer
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _motion(name: str, group: str | None) -> Motion:

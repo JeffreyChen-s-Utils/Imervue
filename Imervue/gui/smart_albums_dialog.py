@@ -180,7 +180,12 @@ class SmartAlbumsDialog(QDialog):
     def _save(self) -> None:
         name = self._name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "", "Name required")
+            lang = language_wrapper.language_word_dict
+            QMessageBox.warning(
+                self,
+                lang.get("warning_title", "Warning"),
+                lang.get("smart_albums_name_required", "Name required"),
+            )
             return
         smart_album.save(name, self._current_rules())
         self._refresh_list()

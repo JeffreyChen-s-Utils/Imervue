@@ -125,7 +125,12 @@ class HierarchicalTagsDialog(QDialog):
         try:
             image_index.create_tag_path(text)
         except ValueError:
-            QMessageBox.warning(self, "", "Invalid tag path")
+            lang = language_wrapper.language_word_dict
+            QMessageBox.warning(
+                self,
+                lang.get("warning_title", "Warning"),
+                lang.get("tags_invalid_path", "Invalid tag path"),
+            )
             return
         self._new_tag_edit.clear()
         self._refresh_tree()

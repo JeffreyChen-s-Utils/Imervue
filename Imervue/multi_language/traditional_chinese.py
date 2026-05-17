@@ -518,6 +518,15 @@ traditional_chinese_word_dict = {
     "desktop_pet_script_default": '（使用內建預設語音）',
     "desktop_pet_script_loaded": '已載入：{name}',
     "desktop_pet_script_failed": '腳本載入失敗：{path}',
+    "desktop_pet_unnamed": '（未命名）',
+    # 通用對話框標題與跨分頁訊息
+    "warning_title": '警告',
+    "dual_pane_dest_not_dir": '目的地不是資料夾',
+    "tags_invalid_path": '標籤路徑無效',
+    "smart_albums_name_required": '請輸入名稱',
+    # Paint 歡迎畫面提示
+    "paint_welcome_new_tooltip": '在新分頁中開啟空白畫布（Ctrl+T）',
+    "paint_welcome_open_tooltip": '從磁碟挑一張圖片或 .psd 載入到目前工作區',
     "puppet_placeholder_subtitle": '自製 2D 綁骨動畫 — 即將推出。',
     "puppet_toolbar_title": '偶動畫',
     "puppet_open": '開啟偶動畫…',

@@ -1,7 +1,6 @@
 """Pure-numpy tests for the verlet physics engine + canvas
 integration smoke."""
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -13,6 +12,8 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.physics import PhysicsEngine, REST_LENGTH
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _hair_rig() -> PhysicsRig:

@@ -3,13 +3,14 @@
 user clicks inside one.
 """
 from __future__ import annotations
-
 import numpy as np
 
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, HitArea, PuppetDocument
 from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
 from Imervue.puppet.hit_test import hit_area_bbox, hit_test
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _square_drawable(

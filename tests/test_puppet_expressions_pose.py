@@ -2,7 +2,6 @@
 plus canvas integration.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -18,6 +17,8 @@ from Imervue.puppet.runtime import (
     apply_expressions,
     resolve_pose_visibility,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

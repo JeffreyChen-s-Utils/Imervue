@@ -5,11 +5,12 @@ exercise the construction path, document binding, draw-list building,
 and the pure-Python view state without forcing a paint cycle.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_one_drawable() -> PuppetDocument:

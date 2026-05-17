@@ -10,7 +10,6 @@ CI). Instead we assert:
 * Playing a motion with a missing sound_path is silent / non-raising.
 """
 from __future__ import annotations
-
 import json
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -25,6 +24,8 @@ from Imervue.puppet.document import (
 )
 from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
 from Imervue.puppet.motion_player import MotionPlayer
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_motion(motion: Motion) -> PuppetDocument:

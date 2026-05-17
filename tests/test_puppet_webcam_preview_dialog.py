@@ -13,9 +13,10 @@ tests cover the pure-Python pieces:
    "waiting for first frame" state without crashing.
 """
 from __future__ import annotations
-
 import numpy as np
 import pytest
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def test_tracker_preview_snapshot_keys_match_contract(qapp):

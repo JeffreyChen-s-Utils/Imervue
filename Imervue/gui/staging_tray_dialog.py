@@ -152,7 +152,15 @@ class StagingTrayDialog(QDialog):
             else:
                 ok, failed = staging_tray.copy_all(dest)
         except NotADirectoryError:
-            QMessageBox.warning(self, "", "Destination is not a directory")
+            lang = language_wrapper.language_word_dict
+            QMessageBox.warning(
+                self,
+                lang.get("warning_title", "Warning"),
+                lang.get(
+                    "dual_pane_dest_not_dir",
+                    "Destination is not a directory",
+                ),
+            )
             return
         if hasattr(self._ui, "toast"):
             lang = language_wrapper.language_word_dict

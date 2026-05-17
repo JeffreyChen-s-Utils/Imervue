@@ -1,7 +1,6 @@
 """Pure-Python tests for the mesh-edit operations + canvas
 toggle / drag plumbing."""
 from __future__ import annotations
-
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet.mesh_edit import (
@@ -10,6 +9,8 @@ from Imervue.puppet.mesh_edit import (
     find_vertex_at,
     move_vertex,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _drawable_with_quad() -> Drawable:

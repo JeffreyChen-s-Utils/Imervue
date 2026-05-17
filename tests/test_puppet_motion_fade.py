@@ -7,7 +7,6 @@ parameter-write path is exercised end-to-end. Time is driven via
 the tests stay deterministic.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -20,6 +19,8 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.motion_player import MotionPlayer
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _two_motion_doc() -> PuppetDocument:

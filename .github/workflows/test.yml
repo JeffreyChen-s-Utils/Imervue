@@ -38,4 +38,26 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog pytest pytest-cov
     - name: Run tests
-      run: python -m pytest tests/ -v --tb=short -W ignore::DeprecationWarning
+      # ``PYTHONFAULTHANDLER=1`` + ``-X faulthandler`` makes the
+      # interpreter print a native traceback on SIGSEGV / fatal
+      # signals — keep these on so any future teardown crash is
+      # diagnosable rather than an opaque exit 1.
+      # ``PYTHONUNBUFFERED=1`` keeps stdout / stderr live so the
+      # crash trace actually reaches the GH Actions log before
+      # the process dies.
+      #
+      # ``-p no:unraisableexception`` disables pytest's plugin
+      # that calls ``gc_collect_harder()`` during
+      # ``_ensure_unconfigure`` (i.e. AFTER every session fixture
+      # has torn down). That explicit ``gc.collect`` walks the
+      # full object graph and hits stale shiboken wrappers from
+      # the thousands of QObjects this suite creates — segfault,
+      # process killed, summary banner never flushed. The plugin
+      # exists to surface exceptions raised inside ``__del__``;
+      # in a PySide6-heavy suite those are unavoidable false
+      # positives on shutdown, so disabling it on CI is the
+      # right call.
+      env:
+        PYTHONFAULTHANDLER: "1"
+        PYTHONUNBUFFERED: "1"
+      run: python -X faulthandler -u -m pytest tests/ -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception

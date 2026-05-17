@@ -59,6 +59,46 @@ def test_load_puppet_creates_overlay_on_first_call(qapp, tmp_path):
         ws.deleteLater()
 
 
+def test_failed_load_does_not_check_show_box(qapp, tmp_path):
+    """The show-on-desktop checkbox must NOT be auto-ticked when
+    the load fails — otherwise the user sees an empty pet window
+    pop up alongside the failure message, which is worse UX than
+    nothing happening at all."""
+    ws = PetWorkspace()
+    try:
+        ws.load_puppet(tmp_path / "nope.puppet")
+        assert ws._show_check.isChecked() is False   # noqa: SLF001
+    finally:
+        if ws.pet_window() is not None:
+            ws.pet_window().hide()
+            ws.pet_window().deleteLater()
+        ws.deleteLater()
+
+
+def test_successful_load_auto_shows_pet(qapp, tmp_path, monkeypatch):
+    """A successful ``load_puppet`` must auto-tick the show
+    checkbox so the user sees the pet appear without a second
+    click. Without this, clicking "Load bundled March 7th" felt
+    broken — the rig was loaded but the overlay stayed hidden."""
+    ws = PetWorkspace()
+    try:
+        # Stub ``PetWindow.load_puppet_file`` to succeed without
+        # actually parsing a .puppet file.
+        from Imervue.desktop_pet.pet_window import PetWindow
+        monkeypatch.setattr(
+            PetWindow, "load_puppet_file",
+            lambda self, path: True,
+        )
+        assert ws._show_check.isChecked() is False   # noqa: SLF001
+        ws.load_puppet(tmp_path / "any.puppet")
+        assert ws._show_check.isChecked() is True   # noqa: SLF001
+    finally:
+        if ws.pet_window() is not None:
+            ws.pet_window().hide()
+            ws.pet_window().deleteLater()
+        ws.deleteLater()
+
+
 def test_attach_tray_stores_reference(qapp):
     """The tray hookup is optional and goes through
     ``attach_tray``. The workspace just needs to keep the

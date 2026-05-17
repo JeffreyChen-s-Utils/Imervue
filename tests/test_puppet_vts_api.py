@@ -5,7 +5,6 @@ doesn't need QtWebSockets or a real WebSocket connection. The Qt
 server wrapper is covered indirectly by the same handler.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -15,6 +14,8 @@ from Imervue.puppet.vts_api import (
     API_VERSION,
     VTubeStudioHandler,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_params() -> PuppetDocument:

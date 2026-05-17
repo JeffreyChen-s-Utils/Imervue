@@ -3,12 +3,13 @@ verify parameter values flow into the canvas without spinning real
 audio capture.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, Parameter, PuppetDocument
 from Imervue.puppet.input_engine import InputEngine
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_face_params() -> PuppetDocument:

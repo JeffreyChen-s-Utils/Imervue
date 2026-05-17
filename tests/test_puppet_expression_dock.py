@@ -7,10 +7,11 @@ The dock instantiates a canvas internally (it listens to
 PuppetWorkspace so the wiring is exercised end-to-end.
 """
 from __future__ import annotations
-
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, Expression, ExpressionParam, PuppetDocument
 from Imervue.puppet.expression_dock import ExpressionDock
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_expressions(names: tuple[str, ...]) -> PuppetDocument:

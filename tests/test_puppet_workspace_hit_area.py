@@ -6,7 +6,6 @@ real ``PuppetWorkspace`` under ``qapp`` and drive the canvas signal
 directly so the test doesn't depend on Qt mouse events.
 """
 from __future__ import annotations
-
 from Imervue.puppet.document import (
     Drawable,
     Expression,
@@ -18,6 +17,8 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.workspace import PuppetWorkspace
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _doc_with_motion_and_expression() -> PuppetDocument:

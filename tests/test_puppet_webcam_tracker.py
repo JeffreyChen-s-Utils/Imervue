@@ -4,9 +4,10 @@ exercise the API contract: construction, toggle, graceful degrade
 when imports fail.
 """
 from __future__ import annotations
-
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.webcam_tracker import WebcamTracker
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def test_tracker_starts_disabled(qapp):

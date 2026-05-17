@@ -6,7 +6,6 @@ flaky. We exercise it via the public methods directly
 (``_on_tick``) so the watchdog logic is deterministic.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.canvas import PuppetCanvas
@@ -20,6 +19,8 @@ from Imervue.puppet.document import (
 )
 from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
 from Imervue.puppet.motion_player import MotionPlayer
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _motion(name: str, group: str | None) -> Motion:

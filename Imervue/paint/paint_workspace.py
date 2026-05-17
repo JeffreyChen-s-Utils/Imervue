@@ -2044,6 +2044,14 @@ class PaintWorkspace(QMainWindow):
             new_label=lang.get("paint_welcome_new", "New tab"),
             open_label=lang.get("paint_welcome_open", "Open file…"),
             recent_label=lang.get("paint_welcome_recent", "Recent"),
+            new_tooltip=lang.get(
+                "paint_welcome_new_tooltip",
+                "Open an empty canvas in a new tab (Ctrl+T)",
+            ),
+            open_tooltip=lang.get(
+                "paint_welcome_open_tooltip",
+                "Pick an image or .psd from disk to open in this workspace",
+            ),
         )
         self._welcome_hint.new_requested.connect(self._welcome_new_tab)
         self._welcome_hint.open_requested.connect(self._welcome_open_file)

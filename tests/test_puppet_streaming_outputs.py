@@ -8,13 +8,14 @@ keeps Cubism-native 3503×7777 canvases from getting rejected by
 the DirectShow virtual-camera driver.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.virtual_camera import (
     MAX_OUTPUT_DIMENSION,
     _scale_for_streaming,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 # ---------------------------------------------------------------------------

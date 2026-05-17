@@ -2,7 +2,6 @@
 open dialog wiring, status label.
 """
 from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
@@ -11,6 +10,8 @@ from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet.document_io import save_puppet
 from Imervue.puppet.workspace import PuppetWorkspace, _push_recent
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 _TINY_PNG = bytes.fromhex(

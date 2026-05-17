@@ -529,6 +529,15 @@ japanese_word_dict = {
     "desktop_pet_script_default": '（組み込みのデフォルト音声を使用中）',
     "desktop_pet_script_loaded": '読み込み済み：{name}',
     "desktop_pet_script_failed": 'スクリプトの読み込みに失敗：{path}',
+    "desktop_pet_unnamed": '（無題）',
+    # 共通ダイアログタイトルとタブ横断メッセージ
+    "warning_title": '警告',
+    "dual_pane_dest_not_dir": '宛先はフォルダーではありません',
+    "tags_invalid_path": 'タグパスが無効です',
+    "smart_albums_name_required": '名前を入力してください',
+    # Paint ウェルカム画面のツールチップ
+    "paint_welcome_new_tooltip": '新しいタブで空のキャンバスを開く（Ctrl+T）',
+    "paint_welcome_open_tooltip": 'ディスクから画像または .psd を選んで現在のワークスペースで開く',
     "puppet_placeholder_subtitle": '自作 2D リグアニメーション — 近日公開。',
     "puppet_toolbar_title": 'パペット',
     "puppet_open": 'パペットを開く…',

@@ -386,7 +386,14 @@ class PetWorkspace(QWidget):
 
     def load_puppet(self, path: str | Path) -> bool:
         """Load ``path`` into the pet overlay. Returns True on
-        success. The status label surfaces failure detail."""
+        success. The status label surfaces failure detail.
+
+        On success the **Show pet on desktop** checkbox is ticked
+        and the overlay is shown — without that, the user clicks
+        "Load…" and sees nothing happen, since the pet's default
+        state is hidden. Setting ``checked`` after the load
+        triggers the existing ``_on_show_toggled`` slot which
+        calls ``window.show()`` for us."""
         window = self._ensure_pet_window()
         if not window.load_puppet_file(path):
             self._status.setText(
@@ -401,6 +408,12 @@ class PetWorkspace(QWidget):
             ),
         )
         self._status.setText("")
+        # Auto-show on first successful load so the user sees
+        # immediate feedback from the click. setChecked emits
+        # ``toggled`` only when the state actually changes, so
+        # a re-load on an already-visible pet is a cheap no-op
+        # rather than a hide-then-show flicker.
+        self._show_check.setChecked(True)
         return True
 
     # ---- pet script --------------------------------------------

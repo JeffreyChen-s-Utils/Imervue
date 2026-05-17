@@ -6,7 +6,6 @@ machine: rejection paths, queue building, and the safe-filename
 sanitiser.
 """
 from __future__ import annotations
-
 import pytest
 
 from Imervue.puppet.batch_export import (
@@ -24,6 +23,8 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.motion_player import MotionPlayer
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _motion(name: str) -> Motion:

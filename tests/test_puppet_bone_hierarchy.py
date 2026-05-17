@@ -8,7 +8,6 @@ deformers in parent-first order even when the document lists them
 in the reverse order.
 """
 from __future__ import annotations
-
 import numpy as np
 
 from Imervue.puppet.bone_tree_dock import BoneTreeDock
@@ -22,6 +21,8 @@ from Imervue.puppet.runtime import (
     compose_drawable_vertices,
     topologically_sorted_deformers,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def _drawable(id_: str = "x") -> Drawable:

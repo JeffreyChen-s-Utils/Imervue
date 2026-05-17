@@ -62,15 +62,15 @@ class WelcomeHint(QFrame):
                 background: transparent;
             }
             QLabel#welcome_title {
-                font-size: 16px;
+                font-size: 12pt;
             }
             QLabel#welcome_subtitle {
                 color: #b0b0b0;
-                font-size: 12px;
+                font-size: 9pt;
             }
             QLabel#welcome_recent_label {
                 color: #b0b0b0;
-                font-size: 11px;
+                font-size: 8pt;
             }
             QPushButton {
                 background: rgba(255, 255, 255, 30);
@@ -78,7 +78,7 @@ class WelcomeHint(QFrame):
                 border: 1px solid rgba(255, 255, 255, 60);
                 border-radius: 6px;
                 padding: 6px 14px;
-                font-size: 12px;
+                font-size: 9pt;
             }
             QPushButton:hover {
                 background: rgba(255, 255, 255, 50);
