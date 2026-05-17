@@ -155,13 +155,13 @@ def _drain_qt_deferred_delete():
 
     ``QObject.deleteLater()`` marks an object for deletion at the
     next event-loop spin. Many Qt-using tests in this suite call
-    ``deleteLater()`` in fixture teardown without spinning the loop
-    afterwards — those C++ objects then linger past the test, and
-    when the next test's fixture setup triggers Python GC the
-    stale Python wrappers ask the now-half-dead C++ side a
-    question and segfault inside the GC pass. The traceback shows
-    up as "Garbage-collecting" / "Windows fatal exception: access
-    violation" with no obvious test responsible.
+    ``deleteLater()`` in fixture teardown without spinning the
+    loop afterwards — those C++ objects then linger past the
+    test, and when the next test's fixture setup triggers Python
+    GC the stale Python wrappers ask the now-half-dead C++ side
+    a question and segfault inside the GC pass. The traceback
+    shows up as "Garbage-collecting" / "Windows fatal exception:
+    access violation" with no obvious test responsible.
 
     This autouse fixture drains all queued ``DeferredDelete``
     events after every test, so the C++ side is fully freed
@@ -169,6 +169,13 @@ def _drain_qt_deferred_delete():
     didn't touch Qt) and prevents the cross-test contamination
     centrally rather than requiring each Qt fixture to remember
     to call ``sendPostedEvents`` itself.
+
+    A ``gc.collect()`` after the drain was tried and rejected:
+    full collection added ~350 ms per test (suite went from 3 min
+    to 42 min), and ``gc.collect(0)`` happened to disturb the
+    Windows clipboard state on a handful of tests. The drain
+    alone — without forcing Python GC — has handled every
+    reported crash so far.
     """
     yield
     try:
