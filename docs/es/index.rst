@@ -1007,100 +1007,517 @@ de una sola vez.
 Espacio de trabajo Desktop Pet (Pestaña Desktop Pet)
 ----------------------------------------------------
 
-La pestaña 5 — **Desktop Pet** — coloca cualquier personaje ``.puppet`` en
-su escritorio como una superposición sin marco y transparente. La pestaña
-en sí es el panel de control; el personaje real flota sobre (o detrás de)
-sus otras ventanas. Todo lo que puede hacer con un rig en la pestaña
-Puppet — movimientos, expresiones, físicas, drivers de reposo, entrada de
-cámara web / micrófono — también funciona aquí.
+La pestaña 5 — **Desktop Pet** — coloca cualquier personaje ``.puppet``
+en su escritorio como una superposición sin marco y transparente. La
+pestaña en sí es un panel de control; el personaje real es una ventana
+de nivel superior separada que comparte todo el runtime de Puppet
+(movimientos, expresiones, físicas, drivers de reposo, entrada de
+micrófono / cámara web). La mascota puede reaccionar a clics, ejecutar
+animaciones disparadas por temporizador, seguir el cursor, ocultarse
+mientras otra aplicación está en pantalla completa y decir frases
+personalizadas que usted defina en un archivo JSON.
 
-Qué puede hacer
-^^^^^^^^^^^^^^^
+Este capítulo es una referencia completa de la pestaña. Está organizado
+así:
 
-.. list-table::
+#. **Inicio rápido** — recorrido de cinco pasos desde "acabo de abrir
+   Imervue" hasta "hay una marioneta en mi escritorio".
+#. **Cargar un rig** — selector de archivos, ejemplo incluido,
+   restauración entre arranques.
+#. **La ventana de superposición** — todos los comportamientos a nivel
+   de ventana (arrastrar para mover, acople a borde, clic-pasante,
+   bloqueo de ancla, siempre detrás, ocultar en pantalla completa,
+   pausa al ocultar, opacidad, tamaño, restauración multimonitor).
+#. **Modelo de interacción** — zonas de impacto para clic izquierdo,
+   menú contextual completo del clic derecho, bandeja del sistema.
+#. **Drivers en vivo** — seis drivers de entrada opcionales y sus
+   dependencias opcionales.
+#. **Script de la mascota** — el archivo JSON que le permite reemplazar
+   la voz de la mascota con sus propias frases, programar recordatorios
+   y enlazar respuestas por zona de impacto / por movimiento.
+#. **Persistencia** — qué se recuerda entre arranques y el esquema
+   exacto de configuración.
+#. **Crear una nueva mascota** — puntero a la pestaña Puppet + el
+   formato del archivo ``.puppet``.
+#. **Solución de problemas** — sorpresas comunes y qué hacer con ellas.
+
+Inicio rápido
+^^^^^^^^^^^^^
+
+1. Cambie a la pestaña **Desktop Pet**.
+2. Haga clic en **Load bundled March 7th** para usar el personaje
+   incluido, o en **Open Puppet…** para elegir su propio archivo
+   ``.puppet``.
+3. La superposición aparece en el escritorio y la casilla **Show pet on
+   desktop** se marca automáticamente. (Si en algún momento desea
+   ocultar la mascota sin cerrar Imervue, desmarque la casilla o use
+   el icono de la bandeja del sistema.)
+4. Arrastre el personaje al lugar donde lo quiera. Suelte cerca de un
+   borde de la pantalla para acoplarlo a ras.
+5. Elija los **Live drivers** que desee — respiración en reposo,
+   parpadeo, seguimiento del cursor, lip-sync por micrófono,
+   seguimiento por cámara web — desde la pestaña del espacio de trabajo
+   o desde el menú contextual de la mascota.
+
+Todo lo que configure se conserva en el siguiente arranque, así que el
+paso 5 es una decisión única por rig / persona.
+
+Cargar un rig
+^^^^^^^^^^^^^
+
+La pestaña expone tres rutas de carga:
+
+* **Open Puppet…** — elija cualquier archivo ``.puppet`` del disco.
+* **Load bundled March 7th** — abre el rig incluido en
+  ``examples/puppet/march_7th.puppet``. El resolutor consulta primero
+  ``examples_dir()`` (seguro para entornos congelados con compilaciones
+  empaquetadas con Nuitka / instaladas con pip) y, como alternativa,
+  busca una ruta relativa a la raíz del repositorio para que el botón
+  funcione en ambos modos de ejecución.
+* **Último rig** — el rig cargado previamente se restaura automáticamente
+  al iniciar Imervue desde el campo de configuración ``last_rig_path``;
+  la pestaña Desktop Pet vuelve a instanciar la superposición de forma
+  invisible para que la mascota esté a un clic del mismo estado en el
+  que la dejó.
+
+Una carga exitosa marca automáticamente **Show pet on desktop** para
+que la mascota aparezca inmediatamente. La ruta de fallo deja la
+casilla intacta y escribe el error en la etiqueta de estado de la
+pestaña.
+
+La ventana de superposición
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+El personaje vive en una ventana de nivel superior separada de la
+ventana principal de Imervue. La ventana no tiene marco, no aparece
+en la barra de tareas y (por defecto) permanece por encima de todas
+las demás ventanas.
+
+.. list-table:: Comportamientos de la ventana
    :header-rows: 1
    :widths: 28 72
 
-   * - Característica
-     - Qué hace
+   * - Comportamiento
+     - Detalle
    * - Superposición sin marco
-     - Sin chrome de ventana, sin entrada en la barra de tareas — solo el
-       personaje sobre su escritorio.
+     - Sin chrome de ventana, sin botones de minimizar / cerrar, sin
+       entrada en la barra de tareas. El personaje es toda la
+       superficie visible.
    * - Fondo transparente
-     - Todo lo que el personaje no cubra deja ver el escritorio por detrás.
+     - Todo lo que el personaje no cubra es totalmente transparente.
+       El escritorio / aplicación detrás de la mascota se ve con
+       precisión píxel a píxel.
    * - Arrastrar para mover
-     - Arrastre con clic izquierdo el personaje a un nuevo lugar. Suelte
-       cerca de un borde de la pantalla para **acoplarlo** contra él.
+     - Pulse el botón izquierdo en cualquier punto del cuerpo,
+       arrastre y suelte. El gesto se reconoce como clic solo si el
+       cursor se movió menos de seis píxeles — moverse más convierte
+       el gesto en un movimiento y el manejador de clic no se dispara.
+   * - Acople a borde
+     - Suelte cerca de un borde de la pantalla (por defecto: a menos
+       de 24 px) y la mascota se "encaja" a ras contra ese borde. El
+       umbral es configurable de 0 (desactivado) a 200 (muy pegajoso).
+       El acople actúa de forma independiente en cada eje, así que
+       arrastrar a una esquina la encaja contra ambos bordes a la vez.
+   * - Limitación de desbordamiento
+     - Un arrastre que termina más allá del borde de la pantalla se
+       reajusta al interior. No se puede dejar la mascota fuera de
+       pantalla donde no podría volver a agarrarla.
    * - Modo clic-pasante
-     - Haga que la mascota ignore el ratón para que pueda seguir trabajando
-       debajo de ella.
+     - Cuando está activo, todos los eventos de ratón pasan a través
+       de la mascota a lo que haya detrás. El personaje sigue siendo
+       visible pero no se puede arrastrar, hacer clic derecho ni usar
+       para disparar movimientos. Actívelo cuando la mascota sea
+       puramente decorativa.
    * - Bloquear posición
-     - Congela la mascota para que arrastres accidentales no puedan moverla.
+     - Desactiva el arrastrar para mover sin afectar al clic-pasante.
+       Útil cuando ha colocado la mascota exactamente donde la quiere
+       y no desea que arrastres accidentales la muevan.
    * - Siempre debajo
-     - Sitúa la mascota detrás del resto de ventanas — sensación de widget
-       de escritorio en lugar de siempre encima.
+     - Cambia la mascota de siempre-encima a siempre-debajo. La
+       mascota queda detrás del resto de ventanas como un widget de
+       escritorio. También desactiva la marca de aceptar foco, así
+       que hacer clic en la mascota no la trae al frente.
    * - Ocultar en pantalla completa
-     - Se oculta automáticamente mientras otra aplicación (juego / vídeo /
-       presentación) está en pantalla completa en el mismo monitor; reaparece
-       cuando termina la pantalla completa.
-   * - Pausar al ocultar
-     - La mascota deja de animarse mientras está invisible — cero CPU fuera
-       de pantalla.
+     - Un sondeo en segundo plano a 1 Hz observa la ventana en primer
+       plano del monitor de la mascota. Cuando esa ventana cubre
+       ≥ 99 % de la pantalla con una tolerancia por borde ≤ 4 px
+       (detectando tanto pantalla completa real como juegos en
+       ventana sin bordes), la mascota se oculta automáticamente.
+       Cuando la pantalla completa termina, la mascota reaparece en
+       su posición anterior. El detector usa la API Win32
+       ``GetWindowRect`` en Windows; en macOS / Linux es no-op de
+       forma elegante (la mascota permanece visible).
+   * - Pausa al ocultar
+     - El tick de pintado a ~30 FPS y el tick de script a 1 Hz se
+       detienen en ``hideEvent``, así que una mascota oculta cuesta
+       cero CPU. Se reanudan en el siguiente ``showEvent``.
    * - Presets de tamaño
-     - Pequeño / mediano / grande. Redimensiona respecto al centro para que
-       la mascota no salte por la pantalla.
+     - Pequeño (200 × 300), mediano (320 × 480), grande (480 × 720).
+       La mascota se redimensiona alrededor de su centro actual, así
+       que un cambio de tamaño no la reubica. El acople se reejecuta
+       después del redimensionado.
    * - Deslizador de opacidad
-     - Atenúa la mascota del 10 % al 100 % para que pueda ser un adorno sutil
-       de escritorio.
-   * - Recuerda dónde la pone
-     - Arrastre la mascota a su esquina favorita; regresa allí en el próximo
-       arranque.
+     - 10 – 100 %. Actúa a nivel de ventana (mediante
+       ``setWindowOpacity``), así que toda la mascota se atenúa, no
+       solo la textura. El mínimo del 10 % existe para que siempre
+       pueda ver y agarrar la mascota — totalmente invisible le
+       permitiría perderla.
+   * - Memoria de posición
+     - Se persiste el ``(x, y)`` posterior al acople tras cada
+       liberación. En el siguiente arranque la mascota vuelve a esa
+       coordenada de pantalla. Si la posición guardada ya no cae
+       dentro de ninguna pantalla conectada (ha desconectado un
+       monitor desde el último arranque), la mascota recurre a la
+       esquina inferior derecha de la pantalla principal.
 
-Interacciones de clic
+Modelo de interacción
 ^^^^^^^^^^^^^^^^^^^^^
 
-* **Clic izquierdo sobre el cuerpo** — si el rig define una zona de impacto
-  (por ejemplo, tocar la cabeza), se reproduce el movimiento correspondiente.
-  Si no, la mascota le saluda con un bocadillo de diálogo.
-* **Clic derecho en cualquier lugar** — abre un menú contextual con:
-  Ocultar mascota, Live drivers, Play motion (lista de todos los movimientos
-  del rig), Apply expression, Bloquear posición, Clic-pasante, Siempre debajo,
-  Ocultar en pantalla completa, Bocadillo de diálogo, Tamaño.
-* **Icono de bandeja del sistema** — clic izquierdo para alternar la
-  visibilidad; clic derecho para Mostrar/Ocultar, Clic-pasante, Open puppet,
-  Ocultar mascota.
+La mascota responde a la entrada del ratón mediante tres canales
+independientes.
+
+**Clic izquierdo sobre el cuerpo**
+
+La posición del clic se mapea de vuelta a coordenadas del lienzo de
+la marioneta (deshaciendo el desplazamiento / zoom del lienzo) y se
+pasa por el pipeline existente de ``hit_test``. El resultado dirige
+el comportamiento de la siguiente forma:
+
+#. Si un ``HitArea`` cubre el drawable clicado Y esa zona tiene un
+   movimiento asociado, se reproduce el movimiento.
+#. Independientemente de si se reprodujo un movimiento, la mascota
+   puede mostrar un bocadillo de diálogo — véase la sección *Script
+   de la mascota* para la prioridad de selección de frases.
+#. Si ninguna zona de impacto cubre el clic, la mascota recurre a un
+   saludo (de la lista ``greetings`` del script o del fallback
+   incorporado).
+
+Un gesto de arrastrar para mover suprime el manejador de clic, así
+que mover la mascota no dispara un movimiento / habla.
+
+**Clic derecho en cualquier lugar del cuerpo**
+
+Abre un menú contextual con la siguiente estructura:
+
+* **Hide pet** — acción de nivel superior que cierra la superposición.
+* Submenú **Live drivers** — seis conmutadores marcables (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mic lip-sync, Webcam
+  tracking). El estado de marcado refleja el estado del driver en
+  vivo, así que el menú muestra lo que está corriendo actualmente.
+* Submenú **Play motion** — poblado a partir de la lista
+  ``document.motions`` del rig activo. Seleccionar una entrada
+  reproduce ese movimiento (y puede disparar la voz de la mascota
+  si el script enlaza una frase a él).
+* Submenú **Apply expression** — poblado a partir de
+  ``document.expressions`` del rig. Seleccionar conmuta la
+  superposición de parámetros de la expresión.
+* Cinco conmutadores marcables de nivel superior: **Lock position**,
+  **Click-through**, **Always on bottom**, **Hide on fullscreen**,
+  **Speech bubble** — acceso rápido a los mismos conmutadores de la
+  pestaña del espacio de trabajo.
+* Submenú **Size** — Pequeño / Mediano / Grande; el preset actual
+  aparece marcado.
+
+Los submenús de movimiento / expresión están desactivados cuando no
+hay ningún rig cargado.
+
+**Icono de la bandeja del sistema**
+
+Un icono de bandeja (instanciado solo en plataformas que reportan
+soporte de bandeja) ofrece una cuarta superficie para las acciones
+más comunes:
+
+* Clic izquierdo alterna la visibilidad de la mascota.
+* Clic derecho abre un menú con **Show pet** (marcable),
+  **Click-through**, **Open puppet…**, **Hide pet**.
+* Los elementos marcables Show / Click-through reflejan el estado
+  de marcado del espacio de trabajo mediante ``sync_visibility`` /
+  ``sync_click_through``, así que permanecen sincronizados sin
+  importar dónde el usuario active el conmutador correspondiente.
 
 Drivers en vivo
 ^^^^^^^^^^^^^^^
 
-Elija cualquier combinación desde la pestaña o desde el menú de clic derecho.
-Cada uno está desactivado por defecto — active solo lo que quiera.
+Cada driver en vivo se crea de forma perezosa en la primera
+activación, así que una mascota inactiva no paga ningún coste de
+temporizador / hilo por los drivers que nunca encienda. El estado de
+cada driver se persiste; activar uno, cerrar Imervue y reiniciar
+reabre la mascota con los mismos drivers en marcha.
 
-* **Auto idle** — respiración + deriva sutil para que el personaje parezca
-  vivo.
-* **Idle motions** — cicla aleatoriamente los movimientos del grupo de
-  reposo del rig.
-* **Auto-blink** — parpadeo cíclico natural cada pocos segundos.
-* **Drag-track head** — la cabeza gira para seguir el cursor.
-* **Mic lip-sync** — la boca se abre con su voz (necesita ``sounddevice``).
-* **Webcam tracking** — su cabeza / ojos / boca mueven los de la marioneta
-  (necesita ``opencv-python`` y ``mediapipe``).
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
 
-Cómo empezar
+   * - Driver
+     - Qué hace
+     - Dependencia opcional
+   * - **Auto idle**
+     - Respiración + deriva sutil sobre parámetros estándar
+       (``ParamBreath`` etc.) para que el personaje parezca vivo
+       cuando nada más se está animando.
+     - ninguna
+   * - **Idle motions**
+     - Elige aleatoriamente un movimiento del grupo ``Idle`` del rig
+       cada pocos segundos y lo reproduce. Se detiene si ya hay un
+       movimiento en curso.
+     - ninguna
+   * - **Auto-blink**
+     - Cierra y reabre los ojos en una curva coseno suave cada
+       ~4,5 s. El driver fuerza la escritura del parámetro para que
+       otros drivers que toquen los valores de apertura de ojos no
+       supriman el parpadeo.
+     - ninguna
+   * - **Drag-track head**
+     - La cabeza + los ojos giran hacia la posición global del cursor
+       incluso cuando el cursor está fuera de la mascota. Mueve
+       ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+       ``ParamEyeBallY``.
+     - ninguna
+   * - **Mic lip-sync**
+     - La amplitud RMS del micrófono mueve ``ParamMouthOpenY``. El
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker lee su cámara web a ~30 FPS y mueve
+       los parámetros de pose de cabeza + apertura de ojos + apertura
+       de boca. Abre una pequeña ventana de vista previa en vivo
+       para que pueda verificar que la cámara ve su cara.
+     - ``opencv-python`` + ``mediapipe``
+
+Los dos drivers con dependencia opcional se degradan con elegancia:
+si el paquete requerido no está instalado, al marcar la casilla esta
+vuelve a desmarcarse y la etiqueta de estado del espacio de trabajo
+muestra una pista "install sounddevice" / "install opencv-python +
+mediapipe".
+
+Script de la mascota — voz personalizada y eventos programados
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+El bocadillo de diálogo de la mascota se nutre de un archivo JSON
+que usted puede escribir y cargar desde el grupo **Pet script** de la
+pestaña. El script gobierna cuatro cosas:
+
+* **Saludos** — frases de clic por defecto cuando no coincide nada
+  más específico.
+* **Respuestas por zona de impacto** — depósitos de frases por
+  ``HitArea.id``.
+* **Frases de movimiento** — depósitos de frases por nombre de
+  movimiento, disparados cuando la mascota inicia ese movimiento (ya
+  sea desde una zona de impacto o desde el menú contextual).
+* **Recordatorios programados** — frases dirigidas por temporizador
+  que se disparan cada ``every_seconds`` de tiempo monotónico de
+  reloj.
+
+Esquema (versionado — los campos futuros son compatibles hacia
+adelante):
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+Reglas de carga:
+
+* Las listas se muestrean en orden cíclico por depósito para que el
+  usuario no vea la misma frase dos veces seguidas.
+* Las claves de nivel superior desconocidas se ignoran (compatibilidad
+  hacia adelante — un futuro archivo v2 sigue cargándose en un runtime
+  v1).
+* Las entradas de lista basura (tipo incorrecto, entradas programadas
+  malformadas, ``every_seconds`` cero / negativo) se omiten — una
+  fila mala no hace fallar toda la carga. Solo el JSON
+  completamente inanalizable lanza un error y muestra la ruta en la
+  etiqueta de estado.
+* La cascada de zona de impacto / movimiento / saludo es por capas:
+  un clic izquierdo consulta primero ``hit_responses[area.id]``,
+  luego ``motion_lines[area.motion]``, luego ``greetings`` y, como
+  base, el conjunto de saludo por defecto incorporado.
+* El seguimiento del tiempo usa ``time.monotonic``, así que suspender
+  el portátil o saltar el reloj del sistema no puede disparar en
+  ráfaga eventos en cola.
+
+**Reset to default** descarta el script del usuario y vuelve al
+conjunto de saludo incorporado; la ruta del script persistida se
+borra para que el siguiente arranque no la recargue.
+
+Un ejemplo funcional se encuentra en
+``examples/desktop_pet/march_7th.petscript.json`` — seis saludos, dos
+depósitos por zona de impacto (cabeza / cuerpo), tres frases de
+movimiento (wave / curtsy / cheer) y un recordatorio de estiramiento
+de 30 minutos.
+
+Persistencia
 ^^^^^^^^^^^^
 
-1. Cambie a la pestaña **Desktop Pet**.
-2. Haga clic en **Load bundled March 7th** para usar el personaje incluido,
-   o en **Open Puppet…** para elegir su propio archivo ``.puppet``.
-3. Marque **Show pet on desktop**.
-4. Arrastre el personaje a donde lo quiera; elija los drivers que desee;
-   ajuste opacidad / tamaño.
-5. Haga clic derecho en cualquier momento para el menú de acciones rápidas,
-   o use el icono de la bandeja del sistema para ocultar la mascota sin tener
-   que buscar la pestaña.
+Todo el estado de Desktop Pet va y vuelve a través de
+``user_setting_dict["desktop_pet"]`` (una ranura en el archivo
+estándar de configuración de usuario de Imervue). Cada campo tiene
+un valor por defecto + limitación de rango al cargar, así que un
+archivo de configuración corrupto no puede hacer fallar el arranque.
 
-Todo lo que configure — posición, drivers, opacidad, clic-pasante, tamaño —
-se recuerda entre arranques.
+.. list-table:: Campos persistidos
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - Campo
+     - Valor por defecto
+     - Notas
+   * - ``last_rig_path``
+     - ``""``
+     - Se restaura automáticamente al arrancar si el archivo todavía
+       existe.
+   * - ``script_path``
+     - ``""``
+     - Se restaura automáticamente al arrancar si el script aún se
+       analiza; un script ilegible vuelve a los valores por defecto
+       de forma silenciosa.
+   * - ``position``
+     - ``[-1, -1]``
+     - Coordenada de pantalla ``(x, y)`` de la última liberación del
+       arrastre. ``-1, -1`` significa "usar la esquina inferior
+       derecha de la pantalla principal". La desconexión multimonitor
+       entre sesiones recurre al mismo fallback.
+   * - ``size_preset``
+     - ``"medium"``
+     - Uno de ``small`` / ``medium`` / ``large``.
+   * - ``opacity``
+     - ``1.0``
+     - Limitado a ``[0.1, 1.0]``. Los valores fuera de rango vuelven
+       al valor por defecto.
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - Mutuamente excluyente con siempre-encima.
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - Establezca ``false`` para mantener la mascota visible durante
+       la pantalla completa.
+   * - ``snap_threshold``
+     - ``24``
+     - Limitado a ``[0, 200]`` px.
+   * - ``drivers``
+     - todos ``false``
+     - Subdiccionario indexado por id de driver (``auto_idle``,
+       ``idle_motion``, ``auto_blink``, ``drag_track``,
+       ``mic_lipsync``, ``webcam_tracking``). Las claves desconocidas
+       circulan intactas para compatibilidad hacia adelante.
+   * - ``show_on_launch``
+     - ``false``
+     - Muestra automáticamente la superposición cuando Imervue
+       arranca.
+   * - ``speech_enabled``
+     - ``true``
+     - Cuando es falso, el bocadillo de diálogo nunca aparece.
+
+El comportamiento de fusión del diccionario de configuración es de
+un nivel de profundidad: los archivos de configuración antiguos a
+los que les faltan claves más nuevas siguen produciendo un
+diccionario de estado completo al cargar (los valores por defecto
+rellenan los huecos); las claves más nuevas que ya guardó sobreviven
+a una vuelta atrás a un runtime más antiguo que no las conoce.
+
+Crear una nueva mascota
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Cualquier archivo ``.puppet`` funciona como personaje de Desktop
+Pet — la pestaña Desktop Pet es puramente un renderizador + capa de
+interacción; la autoría de rigs ocurre en la pestaña Puppet (véase
+*Espacio de trabajo Puppet (Pestaña Puppet)*).
+
+Para crear su propio rig de mascota:
+
+#. Cambie a la pestaña Puppet e importe un arte vía
+   **File > Import PNG…** o **File > Import PSD…**, o traiga un
+   modelo Cubism vía **File > Import Cubism…**.
+#. Cree deformadores de rotación / warp, parámetros, movimientos,
+   expresiones y (opcionalmente) zonas de impacto ligadas a partes
+   del cuerpo para que el manejador de clic izquierdo de Desktop Pet
+   pueda disparar movimientos.
+#. Guarde el rig vía **File > Save As…** en un zip ``.puppet``.
+#. Vuelva a la pestaña Desktop Pet y cargue el nuevo archivo vía
+   **Open Puppet…**.
+
+Si su rig define entradas ``HitArea``, puede escribir frases de
+bocadillo por zona de impacto en un ``.petscript.json`` cuyas
+claves ``hit_responses`` coincidan con los ids de las zonas.
+
+Solución de problemas
+^^^^^^^^^^^^^^^^^^^^^
+
+**La mascota aparece dentro de un rectángulo gris en lugar de ser
+totalmente transparente.** El atributo de fondo translúcido a nivel
+del SO requiere una superficie GL consciente de alfa más atributos
+coincidentes en el widget GL embebido. Asegúrese de que ninguna
+herramienta de gestión de ventanas de terceros esté sobrescribiendo
+el atributo ``WA_TranslucentBackground`` en la ventana de
+superposición (algunos gestores de ventanas personalizados en Linux
+hacen esto). En Windows / macOS debería "simplemente funcionar".
+
+**"Load bundled March 7th" indica que el archivo no se encuentra.**
+El resolutor consulta primero ``examples_dir()`` (la ubicación segura
+para entornos congelados utilizada por las compilaciones empaquetadas)
+y recurre a una ruta relativa al CWD. Si ninguna contiene el rig, la
+etiqueta de estado muestra la ruta esperada. Verifique el directorio
+``examples/`` que se incluye con su instalación — para checkouts del
+código fuente, lance Imervue desde la raíz del repositorio.
+
+**La mascota no habla al hacer clic.** Tres comprobaciones:
+
+#. Asegúrese de que el conmutador **Speech bubble on click** esté
+   activo (en la pestaña o en el menú contextual).
+#. Si cargó un script personalizado, verifique que el JSON se
+   analiza — la etiqueta de estado de la pestaña muestra el error
+   de carga.
+#. Si un clic en una zona de impacto no hizo nada, probablemente la
+   zona no tiene un movimiento coincidente Y el script no tiene una
+   entrada ``hit_responses`` para ese id de zona. Bien enlace un
+   movimiento a la zona en la pestaña Puppet, bien añada el id de
+   la zona a ``hit_responses`` del script.
+
+**La casilla de seguimiento por cámara web se desmarca sola.** El
+seguimiento por cámara web necesita ``opencv-python`` y ``mediapipe``
+instalados en el mismo entorno Python en el que se está ejecutando
+Imervue. Instálelos con ``pip install opencv-python mediapipe``.
+Después de la instalación, al marcar la casilla debería aparecer una
+pequeña ventana de vista previa mostrando los puntos faciales
+detectados.
+
+**La mascota no se oculta automáticamente durante aplicaciones en
+pantalla completa.** El detector de pantalla completa sondea la
+ventana en primer plano a 1 Hz. En Windows usa la API Win32
+``GetWindowRect``; en macOS / Linux no tiene un equivalente
+multiplataforma fiable y es no-op (la mascota permanece visible).
+Para Windows: asegúrese de que **Hide when other app is fullscreen**
+esté marcado y verifique que la ventana en pantalla completa
+realmente cubre ≥ 99 % del mismo monitor que la mascota.
+
+**La posición de la mascota se va fuera de la pantalla entre
+arranques.** Esto pasa cuando la pantalla en la que estaba la mascota
+ya no está conectada en el siguiente arranque (dock del portátil,
+segundo monitor desconectado). La mascota recurre automáticamente a
+la esquina inferior derecha de la pantalla principal en este caso —
+arrástrela a donde la quiera y el siguiente guardado sobrescribirá
+la posición obsoleta.
 
 ----
 

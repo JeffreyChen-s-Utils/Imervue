@@ -1005,104 +1005,501 @@ lote cada pacote Python opcional de uma vez.
 Espaço de Trabalho Desktop Pet (Aba Desktop Pet)
 ------------------------------------------------
 
-Aba 5 — o **Desktop Pet** coloca qualquer personagem ``.puppet`` na sua
-área de trabalho como uma sobreposição sem moldura e transparente. A
-aba em si é o painel de controle; o personagem propriamente dito flutua
-por cima (ou atrás) das suas outras janelas. Tudo que você pode fazer
-com um rig na aba Puppet — motions, expressões, física, drivers de
-idle, entrada de webcam / microfone — também funciona aqui.
+Aba 5 — o **Desktop Pet** coloca qualquer personagem ``.puppet`` na
+sua área de trabalho como uma sobreposição sem moldura e transparente.
+A aba em si é um painel de controle; o personagem propriamente dito é
+uma janela de nível superior separada que compartilha todo o runtime
+do Puppet (motions, expressões, física, drivers de idle, entrada de
+microfone / webcam). O pet pode reagir a cliques, executar animações
+controladas por temporizador, seguir seu cursor, se ocultar enquanto
+outro aplicativo estiver em tela cheia e falar linhas personalizadas
+que você cria em um arquivo JSON.
 
-O que você pode fazer
-^^^^^^^^^^^^^^^^^^^^^
+Este capítulo é uma referência completa para a aba. Está organizado
+como:
 
-.. list-table::
+#. **Início rápido** — caminho de cinco passos, de "acabei de abrir o
+   Imervue" até "tem um puppet na minha área de trabalho".
+#. **Carregando um rig** — seletor de arquivos, exemplo incluído,
+   restauração entre inicializações.
+#. **A janela de sobreposição** — todo comportamento em nível de
+   janela (arrastar para mover, encaixe em borda, click-through,
+   trava de âncora, sempre no fundo, ocultar em tela cheia, pausar
+   quando oculto, opacidade, tamanho, restauração multi-monitor).
+#. **Modelo de interação** — áreas de acerto no clique esquerdo, menu
+   de contexto completo no clique direito, bandeja do sistema.
+#. **Drivers ao vivo** — seis drivers de entrada opcionais e suas
+   dependências opcionais.
+#. **Pet script** — o arquivo JSON que permite substituir a voz do pet
+   por suas próprias linhas, agendar lembretes e vincular respostas
+   por-área-de-acerto / por-motion.
+#. **Persistência** — o que é lembrado entre inicializações e o
+   esquema exato de configurações.
+#. **Criando um novo pet** — ponteiro para a aba Puppet + o formato
+   de arquivo ``.puppet``.
+#. **Solução de problemas** — surpresas comuns e o que fazer a
+   respeito.
+
+Início rápido
+^^^^^^^^^^^^^
+
+1. Mude para a aba **Desktop Pet**.
+2. Clique em **Load bundled March 7th** para usar o personagem
+   incluído, ou em **Open Puppet…** para escolher seu próprio
+   arquivo ``.puppet``.
+3. A sobreposição aparece na sua área de trabalho e o checkbox
+   **Show pet on desktop** é marcado automaticamente. (Se você quiser
+   ocultar o pet sem fechar o Imervue, desmarque o checkbox ou use o
+   ícone da bandeja do sistema.)
+4. Arraste o personagem para onde você quiser. Solte perto de uma
+   borda da tela para encaixar rente a ela.
+5. Escolha os **Live drivers** que deseja — respiração de idle, blink,
+   seguir cursor, lip-sync de microfone, rastreamento de webcam — a
+   partir da aba do espaço de trabalho ou do menu de clique direito
+   do pet.
+
+Tudo que você configurar sobrevive à próxima inicialização, então o
+passo 5 é uma decisão única por rig / persona.
+
+Carregando um rig
+^^^^^^^^^^^^^^^^^
+
+A aba expõe três caminhos de carregamento:
+
+* **Open Puppet…** — escolha qualquer arquivo ``.puppet`` do disco.
+* **Load bundled March 7th** — abre o rig fornecido em
+  ``examples/puppet/march_7th.puppet``. O resolvedor procura em
+  ``examples_dir()`` primeiro (seguro para builds congelados em Nuitka
+  / instalados via pip) e cai para uma busca relativa à raiz do
+  repositório, para que o botão funcione em ambos os modos de
+  execução.
+* **Last rig** — o rig carregado anteriormente é restaurado
+  automaticamente na inicialização do Imervue a partir do campo
+  ``last_rig_path`` das configurações; a aba Desktop Pet
+  re-instancia a sobreposição invisivelmente para que o pet esteja a
+  um clique de distância do mesmo estado em que você o deixou.
+
+Um carregamento bem-sucedido marca automaticamente **Show pet on
+desktop** para que o pet apareça imediatamente. O caminho de falha
+deixa o checkbox em paz e escreve o erro no rótulo de status da aba.
+
+A janela de sobreposição
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+O personagem vive em uma janela de nível superior, separada da janela
+principal do Imervue. A janela é sem moldura, não tem entrada na
+barra de tarefas e (por padrão) fica acima de qualquer outra janela.
+
+.. list-table:: Comportamentos da janela
    :header-rows: 1
    :widths: 28 72
 
-   * - Recurso
-     - O que faz
+   * - Comportamento
+     - Detalhe
    * - Sobreposição sem moldura
-     - Sem cromo de janela, sem entrada na barra de tarefas — apenas o
-       personagem na sua área de trabalho.
+     - Sem cromo de janela, sem botões de minimizar / fechar, sem
+       entrada na barra de tarefas. O personagem é toda a superfície
+       visível.
    * - Fundo transparente
-     - Tudo que o personagem não cobrir mostra a área de trabalho
-       através dele.
+     - Tudo que o personagem não cobrir é totalmente transparente. A
+       área de trabalho / aplicativo atrás do pet aparece pixel a
+       pixel.
    * - Arrastar para mover
-     - Clique-arraste com o botão esquerdo no personagem para um novo
-       lugar. Solte perto de uma borda da tela para **encaixar** rente
-       a ela.
+     - Pressione o botão esquerdo em qualquer lugar do corpo, arraste,
+       solte. O arrasto é reconhecido como clique apenas se o cursor
+       se moveu menos de seis pixels — mover mais longe transforma o
+       gesto em movimento e o handler de clique não dispara.
+   * - Encaixe em borda
+     - Solte perto de uma borda da tela (padrão: dentro de 24 px) e o
+       pet "estala" rente a essa borda. O limiar é configurável de 0
+       (desligado) a 200 (muito grudento). O encaixe roda
+       independentemente em cada eixo, então arrastar para um canto
+       acopla nas duas bordas de uma vez.
+   * - Clamp de excesso
+     - Um arrasto que termina além de uma borda da tela é trazido de
+       volta para dentro. Você não pode deixar o pet fora da tela
+       onde não conseguiria pegá-lo de novo.
    * - Modo click-through
-     - Faz o pet ignorar o mouse para que você possa continuar
-       trabalhando por baixo dele.
+     - Quando habilitado, todo evento de mouse atravessa o pet até o
+       que estiver atrás. O personagem ainda é visível, mas não pode
+       ser arrastado, clicado com o botão direito ou usado para
+       disparar motions. Ative quando o pet for puramente decorativo.
    * - Travar posição
-     - Congela o pet para que arrastos acidentais não possam movê-lo.
+     - Desativa o arrastar-para-mover sem afetar o click-through.
+       Útil quando você colocou o pet exatamente onde queria e não
+       quer que arrastos acidentais o movam.
    * - Sempre no fundo
-     - Coloca o pet atrás de todas as outras janelas — sensação de
-       widget de área de trabalho em vez de sempre no topo.
+     - Inverte o pet de sempre-no-topo para sempre-no-fundo. O pet
+       fica atrás de todas as outras janelas como um widget de área
+       de trabalho. Também desativa a flag de aceitação de foco, então
+       clicar no pet não o eleva.
    * - Ocultar em tela cheia
-     - Oculta automaticamente enquanto outro aplicativo (jogo / vídeo /
-       apresentação) estiver em tela cheia no mesmo monitor; volta
-       quando a tela cheia termina.
+     - Um polling em segundo plano a 1 Hz observa a janela em primeiro
+       plano no monitor do pet. Quando essa janela cobre ≥ 99 % da
+       tela com uma tolerância por-borda ≤ 4 px (capturando tanto
+       tela cheia real quanto jogos em janela sem borda), o pet se
+       oculta automaticamente. Quando a tela cheia termina, o pet
+       reaparece na posição anterior. O detector usa a API Win32
+       ``GetWindowRect`` no Windows; no macOS / Linux ele faz no-op
+       graciosamente (o pet permanece visível).
    * - Pausa quando oculto
-     - O pet para de animar enquanto invisível — zero CPU quando fora
-       da tela.
+     - O tick de pintura de ~30 FPS e o tick de script de 1 Hz ambos
+       param em ``hideEvent``, então um pet oculto custa zero CPU.
+       Eles retomam no próximo ``showEvent``.
    * - Tamanhos predefinidos
-     - Pequeno / médio / grande. Redimensiona em torno do centro para
-       que o pet não pule pela tela.
+     - Pequeno (200 × 300), médio (320 × 480), grande (480 × 720). O
+       pet redimensiona em torno do seu centro atual, então uma
+       mudança de tamanho não o realoca. O encaixe roda novamente
+       após o redimensionamento.
    * - Slider de opacidade
-     - Esmaece o pet de 10% a 100% para que possa ser um ornamento sutil
-       da área de trabalho.
-   * - Lembra onde você o deixou
-     - Arraste o pet para o seu canto favorito; ele retorna lá na
-       próxima inicialização.
+     - 10 – 100 %. Atua no nível da janela (via ``setWindowOpacity``),
+       então o pet inteiro desbota, não apenas a textura. O piso
+       mínimo de 10 % existe para que você sempre possa ver e pegar
+       o pet — totalmente invisível faria você o perder.
+   * - Memória de posição
+     - O ``(x, y)`` pós-encaixe após cada soltura é persistido. Na
+       próxima inicialização o pet retorna a essa coordenada de tela.
+       Se a posição salva não cair mais dentro de nenhuma tela
+       conectada (você desconectou um monitor desde a última
+       inicialização), o pet cai de volta para o canto inferior
+       direito da tela primária.
 
-Interações de clique
-^^^^^^^^^^^^^^^^^^^^
+Modelo de interação
+^^^^^^^^^^^^^^^^^^^
 
-* **Clique esquerdo no corpo** — se o rig define uma área de acerto
-  (por exemplo, tocar a cabeça), a motion correspondente é reproduzida.
-  Caso contrário, o pet te cumprimenta com um balão de fala.
-* **Clique direito em qualquer lugar** — abre um menu de contexto com:
-  Ocultar pet, Live drivers, Play motion (lista de cada motion do rig),
-  Apply expression, Travar posição, Click-through, Sempre no fundo,
-  Ocultar em tela cheia, Balão de fala, Tamanho.
-* **Ícone da bandeja do sistema** — clique esquerdo para alternar a
-  visibilidade, clique direito para Mostrar/Ocultar, Click-through,
-  Open puppet, Ocultar pet.
+O pet responde à entrada do mouse via três canais independentes.
+
+**Clique esquerdo no corpo**
+
+A posição do clique é mapeada de volta para coordenadas do canvas do
+puppet (desfazendo o pan / zoom do canvas) e passa pelo pipeline
+existente de ``hit_test``. O resultado dirige o comportamento da
+seguinte forma:
+
+#. Se um ``HitArea`` cobre o drawable clicado E essa área tem uma
+   motion anexada, a motion é reproduzida.
+#. Independentemente de uma motion ter sido reproduzida, o pet pode
+   abrir um balão de fala — veja a seção *Pet script* para a
+   prioridade de escolha de linha.
+#. Se nenhuma área de acerto cobre o clique, o pet cai para uma
+   saudação (da lista ``greetings`` do script ou da saudação
+   embutida).
+
+Um gesto de arrastar-para-mover suprime o handler de clique, então
+mover o pet não dispara motion / fala.
+
+**Clique direito em qualquer lugar do corpo**
+
+Abre um menu de contexto com a seguinte estrutura:
+
+* **Hide pet** — ação de nível superior que fecha a sobreposição.
+* Submenu **Live drivers** — seis toggles marcáveis (Auto idle, Idle
+  motions, Auto-blink, Drag-track head, Mic lip-sync, Webcam
+  tracking). O estado de marcação espelha o estado dos drivers ao
+  vivo, então o menu mostra o que está rodando no momento.
+* Submenu **Play motion** — populado a partir da lista
+  ``document.motions`` do rig ativo. Selecionar uma entrada
+  reproduz essa motion (e pode disparar a voz do pet se o script
+  associar uma linha a ela).
+* Submenu **Apply expression** — populado a partir de
+  ``document.expressions`` do rig. Selecionar alterna a sobreposição
+  de parâmetros da expressão.
+* Cinco toggles marcáveis de nível superior: **Lock position**,
+  **Click-through**, **Always on bottom**, **Hide on fullscreen**,
+  **Speech bubble** — acesso rápido aos mesmos toggles na aba do
+  espaço de trabalho.
+* Submenu **Size** — Pequeno / Médio / Grande; o preset atual está
+  marcado.
+
+Os submenus de motion / expression ficam desabilitados quando nenhum
+rig está carregado.
+
+**Ícone da bandeja do sistema**
+
+Um ícone na bandeja (instanciado apenas em plataformas que reportam
+suporte a bandeja) fornece uma quarta superfície para as ações mais
+comuns:
+
+* Clique esquerdo alterna a visibilidade do pet.
+* Clique direito abre um menu com **Show pet** (marcável),
+  **Click-through**, **Open puppet…**, **Hide pet**.
+* Os itens marcáveis Show / Click-through espelham o estado de
+  marcação do espaço de trabalho via ``sync_visibility`` /
+  ``sync_click_through``, então eles permanecem sincronizados onde
+  quer que o usuário alterne o switch correspondente.
 
 Drivers ao vivo
 ^^^^^^^^^^^^^^^
 
-Escolha qualquer combinação na aba ou no menu de clique direito. Cada
-um está desligado por padrão — ative apenas o que você quiser.
+Cada driver ao vivo é criado preguiçosamente na primeira ativação,
+então um pet dormente paga zero custo de timer / thread para drivers
+que você nunca liga. O estado de cada driver é persistido; ligar,
+fechar o Imervue e relançar reabre o pet com os mesmos drivers
+rodando.
 
-* **Auto idle** — respiração + deriva sutil para que o personagem
-  pareça vivo.
-* **Idle motions** — alterna aleatoriamente entre as motions do grupo
-  idle do rig.
-* **Auto-blink** — fechamento cíclico natural dos olhos a cada poucos
-  segundos.
-* **Drag-track head** — a cabeça gira para seguir o cursor.
-* **Mic lip-sync** — a boca abre com a sua voz (precisa de
-  ``sounddevice``).
-* **Webcam tracking** — sua cabeça / olhos / boca controlam os do
-  puppet (precisa de ``opencv-python`` e ``mediapipe``).
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
 
-Como começar
+   * - Driver
+     - O que faz
+     - Dependência opcional
+   * - **Auto idle**
+     - Respiração + deriva sutil em parâmetros padrão
+       (``ParamBreath`` etc.) para que o personagem pareça vivo
+       quando nada mais estiver animando.
+     - nenhuma
+   * - **Idle motions**
+     - Escolhe aleatoriamente uma motion do grupo ``Idle`` do rig a
+       cada poucos segundos e a reproduz. Para se nenhuma motion
+       estiver em andamento no momento.
+     - nenhuma
+   * - **Auto-blink**
+     - Fecha e reabre os olhos em uma curva cosseno suave a cada
+       ~4,5 s. O driver força a escrita do parâmetro para que outros
+       drivers que mexem em valores de abertura de olhos não
+       suprimam o blink.
+     - nenhuma
+   * - **Drag-track head**
+     - A cabeça + olhos viram em direção à posição global do cursor
+       mesmo quando o cursor está fora do pet. Dirige
+       ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+       ``ParamEyeBallY``.
+     - nenhuma
+   * - **Mic lip-sync**
+     - A amplitude RMS do microfone dirige ``ParamMouthOpenY``. O
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - O MediaPipe FaceLandmarker lê sua webcam a ~30 FPS e dirige a
+       pose da cabeça + parâmetros de abertura de olhos + abertura de
+       boca. Abre uma pequena janela de pré-visualização ao vivo para
+       que você possa verificar se a câmera vê seu rosto.
+     - ``opencv-python`` + ``mediapipe``
+
+Os dois drivers com dep opcional degradam graciosamente: se o pacote
+necessário não estiver instalado, alternar o checkbox volta para o
+desligado e o rótulo de status do espaço de trabalho mostra uma dica
+"install sounddevice" / "install opencv-python + mediapipe".
+
+Pet script — voz personalizada e eventos agendados
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+O balão de fala do pet recorre a um arquivo JSON que você pode criar
+e carregar pelo grupo **Pet script** na aba. O script governa quatro
+coisas:
+
+* **Greetings** — linhas padrão de clique quando nada mais específico
+  combina.
+* **Hit-area responses** — buckets de linha por ``HitArea.id``.
+* **Motion lines** — buckets de linha por nome-de-motion, disparados
+  quando o pet inicia essa motion (seja de uma área de acerto ou do
+  menu de contexto).
+* **Scheduled chimes** — linhas controladas por temporizador que
+  disparam a cada ``every_seconds`` de tempo monotônico de relógio.
+
+Esquema (versionado — campos futuros são compatíveis para frente):
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+Regras de carregamento:
+
+* Listas são amostradas em round-robin por bucket para que o usuário
+  não veja a mesma linha duas vezes seguidas.
+* Chaves de nível superior desconhecidas são ignoradas (compatível
+  para frente — um futuro arquivo v2 ainda carrega em um runtime v1).
+* Entradas de lista inválidas (tipo errado, entradas agendadas
+  malformadas, ``every_seconds`` zero / negativo) são puladas — uma
+  linha ruim não faz o carregamento inteiro falhar. Apenas JSON
+  totalmente não parseável levanta um erro e expõe o caminho no
+  rótulo de status.
+* A cascata de hit-area / motion / greeting é em camadas: um clique
+  esquerdo consulta primeiro ``hit_responses[area.id]``, depois
+  ``motion_lines[area.motion]``, depois ``greetings``, depois o
+  conjunto de saudações padrão embutido como piso.
+* O rastreamento de tempo usa ``time.monotonic`` para que suspender o
+  notebook ou pular o relógio do sistema não possa disparar em
+  excesso eventos enfileirados.
+
+**Reset to default** descarta o script do usuário e reverte para o
+conjunto de saudações embutido; o caminho persistido do script é
+limpo para que a próxima inicialização não o recarregue.
+
+Um exemplo funcional vive em
+``examples/desktop_pet/march_7th.petscript.json`` — seis saudações,
+dois buckets de hit-area (cabeça / corpo), três linhas de motion
+(wave / curtsy / cheer) e um lembrete de alongamento a cada 30
+minutos.
+
+Persistência
 ^^^^^^^^^^^^
 
-1. Mude para a aba **Desktop Pet**.
-2. Clique em **Load bundled March 7th** para usar o personagem incluído,
-   ou em **Open Puppet…** para escolher seu próprio arquivo ``.puppet``.
-3. Marque **Show pet on desktop**.
-4. Arraste o personagem para onde você quiser; escolha os drivers que
-   deseja; ajuste a opacidade / tamanho.
-5. Clique com o botão direito a qualquer momento para o menu de ação
-   rápida, ou use o ícone da bandeja do sistema para ocultar o pet sem
-   precisar encontrar a aba.
+Todo estado do Desktop Pet faz round-trip através de
+``user_setting_dict["desktop_pet"]`` (um slot no arquivo padrão de
+configurações de usuário do Imervue). Cada campo tem um padrão +
+clamp de intervalo no carregamento, então um arquivo de configurações
+corrompido não pode travar o lançamento.
 
-Tudo que você configurar — posição, drivers, opacidade, click-through,
-tamanho — é lembrado entre inicializações.
+.. list-table:: Campos persistidos
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - Campo
+     - Padrão
+     - Notas
+   * - ``last_rig_path``
+     - ``""``
+     - Restaurado automaticamente na inicialização se o arquivo
+       ainda existir.
+   * - ``script_path``
+     - ``""``
+     - Restaurado automaticamente na inicialização se o script ainda
+       fizer parse; um script ilegível reverte para os padrões
+       silenciosamente.
+   * - ``position``
+     - ``[-1, -1]``
+     - Coordenada de tela ``(x, y)`` da última soltura de arrasto.
+       ``-1, -1`` significa "use o canto inferior direito da tela
+       primária". Desconectar monitores entre sessões cai de volta
+       da mesma forma.
+   * - ``size_preset``
+     - ``"medium"``
+     - Um de ``small`` / ``medium`` / ``large``.
+   * - ``opacity``
+     - ``1.0``
+     - Restringido a ``[0.1, 1.0]``. Valores fora do intervalo
+       resetam para o padrão.
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - Mutuamente exclusivo com sempre-no-topo.
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - Defina como ``false`` para manter o pet visível durante tela
+       cheia.
+   * - ``snap_threshold``
+     - ``24``
+     - Restringido a ``[0, 200]`` px.
+   * - ``drivers``
+     - todos ``false``
+     - Sub-dict com chaves por id de driver (``auto_idle``,
+       ``idle_motion``, ``auto_blink``, ``drag_track``,
+       ``mic_lipsync``, ``webcam_tracking``). Chaves desconhecidas
+       fazem round-trip intactas para compatibilidade para frente.
+   * - ``show_on_launch``
+     - ``false``
+     - Mostra a sobreposição automaticamente quando o Imervue inicia.
+   * - ``speech_enabled``
+     - ``true``
+     - Quando false o balão de fala nunca aparece.
+
+O comportamento de merge do dict de configurações é de um nível de
+profundidade: arquivos de configurações mais antigos sem chaves mais
+novas ainda produzem um dict de estado completo no carregamento (os
+padrões preenchem as lacunas); chaves mais novas que você salvou
+sobrevivem a um downgrade para um runtime mais antigo que não as
+conhece.
+
+Criando um novo pet
+^^^^^^^^^^^^^^^^^^^
+
+Qualquer arquivo ``.puppet`` funciona como um personagem de Desktop
+Pet — a aba Desktop Pet é puramente uma camada de renderização +
+interação; a criação de rigs acontece na aba Puppet (veja *Espaço de
+Trabalho Puppet (Aba Puppet)*).
+
+Para criar seu próprio rig de pet:
+
+#. Mude para a aba Puppet e importe uma arte via **File > Import
+   PNG…** ou **File > Import PSD…**, ou puxe um modelo Cubism via
+   **File > Import Cubism…**.
+#. Crie deformadores de rotação / warp, parâmetros, motions,
+   expressões e (opcionalmente) áreas de acerto vinculadas a partes
+   do corpo para que o handler de clique esquerdo do Desktop Pet
+   possa disparar motions.
+#. Salve o rig via **File > Save As…** em um zip ``.puppet``.
+#. Volte para a aba Desktop Pet e carregue o novo arquivo via
+   **Open Puppet…**.
+
+Se seu rig define entradas ``HitArea``, você pode criar linhas de
+balão de fala por área de acerto em um ``.petscript.json`` cujas
+chaves ``hit_responses`` combinam com os ids das áreas.
+
+Solução de problemas
+^^^^^^^^^^^^^^^^^^^^
+
+**O pet aparece dentro de um retângulo cinza em vez de ser totalmente
+transparente.** O atributo de fundo translúcido em nível de SO
+requer uma superfície GL ciente de alfa mais atributos correspondentes
+no widget GL incorporado. Certifique-se de que nenhuma ferramenta de
+gerenciamento de janelas de terceiros esteja sobrepondo o atributo
+``WA_TranslucentBackground`` na janela de sobreposição (alguns
+gerenciadores de janelas personalizados no Linux fazem isso). No
+Windows / macOS isso deve "simplesmente funcionar".
+
+**"Load bundled March 7th" reporta que o arquivo não foi encontrado.**
+O resolvedor consulta primeiro ``examples_dir()`` (a localização
+segura para congelamento usada por builds empacotados) e cai para um
+caminho relativo ao CWD. Se nenhum dos dois contiver o rig, o rótulo
+de status expõe o caminho esperado. Verifique se o diretório
+``examples/`` foi enviado com sua instalação — para checkouts do
+fonte, inicie o Imervue a partir da raiz do repositório.
+
+**O pet não fala quando clicado.** Três verificações:
+
+#. Certifique-se de que o toggle **Speech bubble on click** está
+   ligado (na aba ou no menu de clique direito).
+#. Se você carregou um script personalizado, verifique se o JSON faz
+   parse — o rótulo de status da aba mostra o erro de carregamento.
+#. Se um clique em hit-area não fez nada, a área provavelmente não tem
+   motion correspondente E o script não tem entrada ``hit_responses``
+   para esse id de área. Ou vincule uma motion à área na aba Puppet
+   ou adicione o id da área aos ``hit_responses`` do script.
+
+**O checkbox de webcam tracking volta para o desligado.** O
+rastreamento de webcam precisa de ``opencv-python`` e ``mediapipe``
+instalados no mesmo ambiente Python em que o Imervue está rodando.
+Instale com ``pip install opencv-python mediapipe``. Depois de
+instalar, alternar o checkbox deve abrir uma pequena janela de
+pré-visualização mostrando os marcos faciais detectados.
+
+**O pet não se oculta automaticamente durante apps em tela cheia.** O
+detector de tela cheia faz polling da janela em primeiro plano a
+1 Hz. No Windows ele usa a API Win32 ``GetWindowRect``; no macOS /
+Linux não há um equivalente multi-plataforma confiável e ele faz
+no-op (o pet permanece visível). Para Windows: certifique-se de que
+**Hide when other app is fullscreen** está marcado e verifique se a
+janela em tela cheia realmente cobre ≥ 99 % do mesmo monitor do pet.
+
+**A posição do pet flutua para fora da tela entre inicializações.**
+Isso acontece quando a tela em que o pet estava não está mais
+conectada na próxima inicialização (dock de notebook, segundo monitor
+desconectado). O pet cai automaticamente para o canto inferior
+direito da tela primária neste caso — arraste-o para onde você
+quiser e o próximo salvamento sobrescreverá a posição desatualizada.
 
 ----
 

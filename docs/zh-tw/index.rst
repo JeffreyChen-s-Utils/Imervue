@@ -1561,69 +1561,280 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
 桌寵工作區（Desktop Pet 分頁）
 ------------------------------
 
-第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` 角色當成無邊框、透明背景的桌面浮層放到你的桌面上。分頁本身是控制面板；真正的角色浮在其他視窗的上方（或後方）。Puppet 分頁裡能對 rig 做的所有事 — 動作、表情、物理、idle driver、webcam / 麥克風輸入 — 在這裡通通能用。
+第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` 角色當成無邊框、透明背景的桌面浮層放到你的桌面上。分頁本身是控制面板；真正的角色是另外一個獨立的最上層視窗，與整個 Puppet runtime 共用一切（動作、表情、物理、idle driver、麥克風 / 攝影機輸入）。桌寵可以對點擊有反應、跑計時器驅動的動畫、追隨你的游標、其他 App 全螢幕時自動藏起來，還能用你寫在 JSON 檔裡的台詞說話。
 
-能做什麼
-^^^^^^^^
+本章是這個分頁的完整參考手冊，章節安排如下：
 
-.. list-table::
-   :header-rows: 1
-   :widths: 28 72
+#. **快速上手** — 從「我剛打開 Imervue」到「桌面上出現桌寵了」的五步流程。
+#. **載入 rig** — 檔案選擇器、內附範例、跨啟動的還原。
+#. **浮層視窗** — 所有視窗層級的行為（拖曳移動、邊緣吸附、點擊穿透、位置鎖定、永遠置底、全螢幕自動隱藏、隱藏時暫停、透明度、尺寸、多螢幕還原）。
+#. **互動模型** — 左鍵 hit area、完整右鍵選單、系統匣。
+#. **Live driver** — 六個可開關的輸入 driver 與其選用依賴。
+#. **桌寵腳本** — 一個 JSON 檔，讓你能換掉桌寵的台詞、安排提醒，並對每個 hit area / 每個 motion 綁定反應。
+#. **持久化** — 哪些東西會跨啟動記住、以及完整的設定 schema。
+#. **製作新桌寵** — 指向 Puppet 分頁與 ``.puppet`` 檔案格式。
+#. **疑難排解** — 常見狀況與處理方式。
 
-   * - 功能
-     - 說明
-   * - 無邊框浮層
-     - 沒有視窗外框、不出現在工作列 — 就只有角色待在你的桌面上。
-   * - 透明背景
-     - 角色沒覆蓋到的地方直接透出後面的桌面。
-   * - 拖曳移動
-     - 左鍵拖角色就能換位置。放開時若靠近螢幕邊緣，會**吸附**貼齊邊緣。
-   * - 點擊穿透模式
-     - 讓桌寵忽略你的滑鼠，你就能在它底下繼續工作。
-   * - 鎖定位置
-     - 凍結桌寵位置，避免不小心拖到。
-   * - 永遠置底
-     - 把桌寵塞到所有視窗的後面 — 不是永遠置頂，而是桌面小工具的感覺。
-   * - 全螢幕自動隱藏
-     - 當同一個螢幕上有其他 App（遊戲 / 影片 / 簡報）全螢幕時自動隱藏，全螢幕結束後再回來。
-   * - 隱藏時暫停
-     - 桌寵看不見時不動畫 — 不在畫面上時 CPU 用量為零。
-   * - 尺寸預設
-     - 小 / 中 / 大。以中心為錨點縮放，調尺寸時桌寵不會跳到螢幕另一邊。
-   * - 透明度滑桿
-     - 把桌寵從 10% 淡到 100%，讓它變成低調的桌面裝飾。
-   * - 記得你放在哪
-     - 把桌寵拖到你喜歡的角落，下次啟動它會回到原地。
-
-點擊互動
-^^^^^^^^
-
-* **左鍵點身體** — 如果 rig 有定義 hit area（例如點頭），就播對應的動作。沒命中時桌寵會用對話泡泡跟你打招呼。
-* **右鍵任意位置** — 開啟右鍵選單：隱藏桌寵、Live drivers、Play motion（rig 內所有動作的清單）、Apply expression、鎖定位置、點擊穿透、永遠置底、全螢幕自動隱藏、對話泡泡、Size。
-* **系統匣圖示** — 左鍵單擊切換顯示，右鍵開啟 顯示 / 隱藏、點擊穿透、開啟 puppet、隱藏桌寵。
-
-Live driver
-^^^^^^^^^^^
-
-從分頁或右鍵選單裡任意組合都行。每個預設都是關的 — 只開你想要的就好。
-
-* **Auto idle** — 呼吸 + 微幅漂移，讓角色有生命感。
-* **Idle motions** — 隨機循環 rig 的 idle 群組動作。
-* **Auto-blink** — 自然週期性眨眼，每幾秒一次。
-* **Drag-track head** — 頭部轉向追隨你的游標。
-* **Mic lip-sync** — 嘴巴跟著你的聲音開合（需 ``sounddevice``）。
-* **Webcam tracking** — 你的頭 / 眼 / 嘴會驅動桌寵的頭 / 眼 / 嘴（需 ``opencv-python`` 和 ``mediapipe``）。
-
-怎麼開始
+快速上手
 ^^^^^^^^
 
 1. 切換到 **Desktop Pet** 分頁。
 2. 點 **Load bundled March 7th** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
-3. 勾選 **Show pet on desktop**。
-4. 把角色拖到想要的位置；挑你想要的 driver；調整透明度 / 尺寸。
-5. 任何時候按右鍵叫出快速選單，或用系統匣圖示在不切回分頁的情況下藏起桌寵。
+3. 浮層出現在桌面上，**Show pet on desktop** 勾選框會自動勾起來。（要在不關閉 Imervue 的情況下把桌寵藏起來，把勾選框取消、或用系統匣圖示。）
+4. 把角色拖到想要的位置，放開時靠近螢幕邊緣會吸附貼齊。
+5. 從分頁或桌寵的右鍵選單挑你要的 **Live driver** — idle 呼吸、眨眼、游標追隨、麥克風對嘴、攝影機追蹤。
 
-你設定的所有東西 — 位置、driver、透明度、點擊穿透、尺寸 — 都會在下次啟動時記得。
+你設定的一切都會跨啟動保留下來，所以步驟 5 是每個 rig / 角色一次的決定。
+
+載入 rig
+^^^^^^^^
+
+分頁提供三條載入途徑：
+
+* **Open Puppet…** — 從硬碟挑任何 ``.puppet`` 檔。
+* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``（對 Nuitka 打包 / pip 安裝版本是 frozen-safe），找不到再退回 repo 根目錄相對路徑，所以這顆按鈕在兩種執行模式下都能用。
+* **上次的 rig** — Imervue 啟動時會從 ``last_rig_path`` 設定欄位自動還原上次載入的 rig；Desktop Pet 分頁會靜默重建浮層，所以你和上次離開時的狀態之間只差一個點擊。
+
+載入成功會自動勾起 **Show pet on desktop**，桌寵立刻現身。失敗時勾選框不會動，錯誤訊息會寫在分頁的狀態列上。
+
+浮層視窗
+^^^^^^^^
+
+角色待在一個獨立於 Imervue 主視窗之外的最上層視窗。視窗是無邊框、不出現在工作列、預設永遠浮在所有其他視窗的上面。
+
+.. list-table:: 視窗行為
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 行為
+     - 細節
+   * - 無邊框浮層
+     - 沒有視窗外框、沒有最小化 / 關閉按鈕、不出現在工作列。整個可見表面就是角色本身。
+   * - 透明背景
+     - 角色沒覆蓋到的地方完全透明，後面的桌面 / App 像素級透出來。
+   * - 拖曳移動
+     - 在身體任意位置左鍵按下、拖、放開。游標移動少於 6 px 才會被當成點擊；移得更遠就視為拖曳，點擊處理器不會觸發。
+   * - 邊緣吸附
+     - 在螢幕邊緣附近放開（預設：24 px 以內），桌寵會「卡」上去貼齊邊緣。閾值可在 0（關閉）到 200（很黏）之間調整。X、Y 兩軸各自獨立判斷，所以拖到角落時會同時吸附兩條邊。
+   * - 越界夾回
+     - 拖到螢幕邊緣外才放開的，會被夾回螢幕內。你沒辦法把桌寵丟到螢幕外面、再也抓不回來。
+   * - 點擊穿透模式
+     - 開啟後，所有滑鼠事件穿過桌寵直達後面的東西。角色仍然看得見，但無法拖、無法右鍵、也無法用來觸發動作。桌寵純粹當裝飾時打開它。
+   * - 鎖定位置
+     - 停用拖曳移動，但不影響點擊穿透。把桌寵放好了、不想被誤拖時很有用。
+   * - 永遠置底
+     - 把桌寵從永遠置頂翻成永遠置底。桌寵會待在所有其他視窗的後面，像桌面小工具。同時取消接受 focus 的旗標，所以點桌寵不會把它升到前面。
+   * - 全螢幕自動隱藏
+     - 一個 1 Hz 的背景輪詢監看桌寵所在螢幕上的前景視窗。當該視窗覆蓋 ≥ 99 % 螢幕、且每邊容差 ≤ 4 px（真正的全螢幕和無邊框視窗遊戲都抓得到），桌寵自動藏起來。全螢幕結束後桌寵會回到原本的位置。Windows 上偵測器走 Win32 ``GetWindowRect`` API；macOS / Linux 上會優雅 no-op（桌寵保持可見）。
+   * - 隱藏時暫停
+     - ~30 FPS 的繪圖 tick 和 1 Hz 的腳本 tick 都會在 ``hideEvent`` 時停掉，所以藏起來的桌寵 CPU 用量為零。下次 ``showEvent`` 時重新啟動。
+   * - 尺寸預設
+     - 小（200 × 300）、中（320 × 480）、大（480 × 720）。桌寵以目前中心為錨點縮放，調尺寸時不會跳位。Snap 會在 resize 之後重跑一次。
+   * - 透明度滑桿
+     - 10 – 100 %。作用在視窗層級（透過 ``setWindowOpacity``），所以整個桌寵一起淡出，不是只淡材質。10 % 是下限，是為了讓你永遠看得到、抓得到桌寵 — 完全透明會讓你弄丟它。
+   * - 位置記憶
+     - 每次放開後吸附完成的 ``(x, y)`` 都會被保存。下次啟動時桌寵會回到那個螢幕座標。如果保存的位置已經不在任何連接的螢幕內（你從上次啟動到現在拔掉了一個螢幕），桌寵會退回主螢幕的右下角。
+
+互動模型
+^^^^^^^^
+
+桌寵透過三個獨立通道回應滑鼠輸入。
+
+**左鍵點身體**
+
+點擊位置會反映射回 puppet canvas 座標（抵銷 canvas 的平移 / 縮放），再丟進現有的 ``hit_test`` 流程。結果如下驅動行為：
+
+#. 如果有 ``HitArea`` 覆蓋了被點到的 drawable、且該 area 有綁定 motion，就播這個 motion。
+#. 不論 motion 有沒有播，桌寵都可能彈出對話泡泡 — 台詞挑選的優先順序見 *桌寵腳本* 段。
+#. 沒有任何 hit area 覆蓋點擊時，桌寵退回打招呼（從腳本的 ``greetings`` 清單，或內建 fallback）。
+
+拖曳移動的手勢會壓抑點擊處理器，所以移動桌寵不會觸發動作 / 對話。
+
+**右鍵點身體任意位置**
+
+開啟右鍵選單，結構如下：
+
+* **Hide pet** — 最上層動作，關閉浮層。
+* **Live drivers** 子選單 — 六個可勾選 toggle（Auto idle、Idle motions、Auto-blink、Drag-track head、Mic lip-sync、Webcam tracking）。勾選狀態鏡像 live driver 的真實狀態，所以選單顯示的就是目前在跑什麼。
+* **Play motion** 子選單 — 由當前 rig 的 ``document.motions`` 清單填入。選一項就播該動作（如果腳本對該動作綁了台詞，可能會同時觸發桌寵的聲音）。
+* **Apply expression** 子選單 — 由 rig 的 ``document.expressions`` 填入。選一項會切換該表情的參數 overlay。
+* 五個最上層的可勾選 toggle：**Lock position**、**Click-through**、**Always on bottom**、**Hide on fullscreen**、**Speech bubble** — 快速存取分頁裡同樣的 toggle。
+* **Size** 子選單 — Small / Medium / Large；目前的預設會被勾起來。
+
+沒載入 rig 時，motion / expression 子選單會 disabled。
+
+**系統匣圖示**
+
+系統匣圖示（僅在支援系統匣的平台上建立）提供第四個操作面，給最常用的動作：
+
+* 左鍵單擊切換桌寵顯示。
+* 右鍵開啟選單：**Show pet**（可勾選）、**Click-through**、**Open puppet…**、**Hide pet**。
+* 可勾選的 Show / Click-through 項目透過 ``sync_visibility`` / ``sync_click_through`` 鏡像分頁的勾選狀態，所以不論使用者從哪邊切，狀態都會同步。
+
+Live driver
+^^^^^^^^^^^
+
+每個 live driver 都是第一次開啟時才 lazy-create，所以沒在用的 driver，閒置的桌寵不會花任何 timer / thread 成本。每個 driver 的狀態會被保存；開啟、關閉 Imervue、再重啟，桌寵會帶著同樣的 driver 重新打開。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
+
+   * - Driver
+     - 做什麼
+     - 選用依賴
+   * - **Auto idle**
+     - 在標準參數（``ParamBreath`` 等）上加呼吸 + 微幅漂移，沒其他東西在動的時候讓角色看起來有生命。
+     - 無
+   * - **Idle motions**
+     - 每幾秒從 rig 的 ``Idle`` 群組隨機挑一個 motion 播。目前有 motion 在跑就停下不挑。
+     - 無
+   * - **Auto-blink**
+     - 每 ~4.5 秒沿著平滑的 cosine 曲線闔眼再睜眼。Driver 會強制寫入該參數，所以其他會碰到 eye-open 的 driver 不會壓掉眨眼。
+     - 無
+   * - **Drag-track head**
+     - 頭和眼睛會轉向全域游標位置，即使游標不在桌寵上也一樣。驅動 ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` / ``ParamEyeBallY``。
+     - 無
+   * - **Mic lip-sync**
+     - 麥克風 RMS 振幅驅動 ``ParamMouthOpenY``。
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker 以 ~30 FPS 讀你的攝影機，驅動頭部姿態 + eye-open + mouth-open 參數。會開一個小的即時預覽視窗讓你確認攝影機有看到你的臉。
+     - ``opencv-python`` + ``mediapipe``
+
+兩個帶選用依賴的 driver 會優雅降級：所需套件沒裝時，勾選框會自動彈回去，分頁的狀態列會顯示「install sounddevice」/「install opencv-python + mediapipe」提示。
+
+桌寵腳本 — 自訂台詞與排程事件
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+桌寵的對話泡泡內容來自一個 JSON 檔，你可以自己寫，並從分頁上的 **Pet script** 群組載入。腳本管四件事：
+
+* **Greetings** — 沒有更具體匹配時的預設點擊台詞。
+* **Hit-area responses** — 按 ``HitArea.id`` 分桶的台詞。
+* **Motion lines** — 按 motion 名稱分桶的台詞，桌寵開始播該 motion 時觸發（不論是 hit area 觸發還是右鍵選單觸發）。
+* **Scheduled chimes** — 計時器驅動的台詞，每 ``every_seconds`` 秒（monotonic 牆鐘時間）觸發一次。
+
+Schema（有版本 — 未來的欄位會向前相容）：
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+載入規則：
+
+* 每個桶內的清單以 round-robin 取樣，所以使用者不會連續兩次看到同一句。
+* 未知的最上層 key 會被忽略（向前相容 — 未來的 v2 檔在 v1 runtime 上仍能載入）。
+* 垃圾清單項（型別錯誤、scheduled 項格式錯誤、``every_seconds`` 為零或負數）會被跳過 — 一筆爛資料不會弄爛整個載入。只有完全無法 parse 的 JSON 才會 raise 錯誤、把路徑寫到狀態列上。
+* hit-area / motion / greeting 的層疊：左鍵點擊先查 ``hit_responses[area.id]``、再查 ``motion_lines[area.motion]``、再查 ``greetings``，最底層才是內建預設打招呼集。
+* 時間追蹤用 ``time.monotonic``，所以筆電休眠或系統時鐘跳變不會把排隊的事件一次連發出來。
+
+**Reset to default** 會丟掉使用者腳本、回到內建打招呼集；保存的腳本路徑也會清空，下次啟動不會再載入它。
+
+可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。
+
+持久化
+^^^^^^
+
+所有 Desktop Pet 狀態都透過 ``user_setting_dict["desktop_pet"]``（Imervue 標準使用者設定檔裡的一個 slot）來回。每個欄位在載入時都有預設值 + 範圍夾取，所以損壞的設定檔不會讓啟動 crash。
+
+.. list-table:: 持久化欄位
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - 欄位
+     - 預設值
+     - 備註
+   * - ``last_rig_path``
+     - ``""``
+     - 啟動時若檔案仍存在會自動還原。
+   * - ``script_path``
+     - ``""``
+     - 啟動時若腳本仍可 parse 會自動還原；無法讀的腳本會靜默退回預設。
+   * - ``position``
+     - ``[-1, -1]``
+     - 上次拖曳放開的螢幕座標 ``(x, y)``。``-1, -1`` 表示「使用主螢幕的右下角」。跨 session 拔掉多螢幕也會走同樣的 fallback。
+   * - ``size_preset``
+     - ``"medium"``
+     - ``small`` / ``medium`` / ``large`` 三選一。
+   * - ``opacity``
+     - ``1.0``
+     - 夾取到 ``[0.1, 1.0]``。超出範圍的值會被重置為預設。
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - 與永遠置頂互斥。
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - 設成 ``false`` 可讓桌寵在全螢幕期間保持顯示。
+   * - ``snap_threshold``
+     - ``24``
+     - 夾取到 ``[0, 200]`` px。
+   * - ``drivers``
+     - 全 ``false``
+     - 以 driver id 為 key 的子 dict（``auto_idle``、``idle_motion``、``auto_blink``、``drag_track``、``mic_lipsync``、``webcam_tracking``）。未知 key 會原樣往返保留以向前相容。
+   * - ``show_on_launch``
+     - ``false``
+     - Imervue 啟動時自動顯示浮層。
+   * - ``speech_enabled``
+     - ``true``
+     - 設成 false 時對話泡泡永遠不彈。
+
+設定 dict 的 merge 行為是淺一層的：缺少新 key 的舊設定檔，載入後仍會產生完整的狀態 dict（預設值補洞）；你存過的新 key，即使降級到不認得它們的舊 runtime 上也能保留下來。
+
+製作新桌寵
+^^^^^^^^^^
+
+任何 ``.puppet`` 檔都能當 Desktop Pet 的角色用 — Desktop Pet 分頁純粹是 renderer + 互動殼層；rig 的製作在 Puppet 分頁裡發生（見 *Puppet 工作區（Puppet 分頁）*）。
+
+製作自己的桌寵 rig：
+
+#. 切換到 Puppet 分頁，透過 **File > Import PNG…** 或 **File > Import PSD…** 匯入美術素材，或透過 **File > Import Cubism…** 拉入 Cubism 模型。
+#. 製作旋轉 / warp deformer、參數、動作、表情，以及（選用）綁定到身體部位的 hit area，讓 Desktop Pet 的左鍵處理器能觸發動作。
+#. 透過 **File > Save As…** 把 rig 存成 ``.puppet`` zip。
+#. 切回 Desktop Pet 分頁，用 **Open Puppet…** 載入新檔。
+
+如果你的 rig 定義了 ``HitArea`` 項目，可以在 ``.petscript.json`` 裡寫對應的 ``hit_responses`` key（key 要對得上 area id），就能為每個 hit area 寫自訂對話泡泡台詞。
+
+疑難排解
+^^^^^^^^
+
+**桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``（Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
+
+**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``（打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
+
+**桌寵被點了不講話。** 三個檢查點：
+
+#. 確認 **Speech bubble on click** toggle 是開的（在分頁或右鍵選單裡）。
+#. 如果你載了自訂腳本，確認 JSON 能 parse — 分頁的狀態列會顯示載入錯誤。
+#. 如果 hit-area 點擊沒反應，那個 area 大概是沒綁 motion 而且腳本裡也沒有對應 area id 的 ``hit_responses`` 項。要嘛在 Puppet 分頁把 motion 綁上去，要嘛把 area id 加到腳本的 ``hit_responses``。
+
+**Webcam tracking 勾選框自己彈回去。** Webcam tracking 需要在 Imervue 跑的同一個 Python 環境裡裝 ``opencv-python`` 和 ``mediapipe``。用 ``pip install opencv-python mediapipe`` 安裝。裝完後，切換勾選框應該會跳出一個小預覽視窗顯示偵測到的臉部 landmark。
+
+**桌寵沒在其他 App 全螢幕時自動藏起來。** 全螢幕偵測器以 1 Hz 輪詢前景視窗。Windows 上用 ``GetWindowRect`` Win32 API；macOS / Linux 上沒有可靠的跨平台對等物，會 no-op（桌寵保持顯示）。在 Windows 上：確認 **Hide when other app is fullscreen** 是勾的，並確認全螢幕視窗確實覆蓋了與桌寵同一個螢幕的 ≥ 99 %。
+
+**桌寵的位置在跨啟動之間漂到螢幕外。** 這發生在桌寵原本所在的螢幕在下次啟動時不再連接（筆電 dock、第二個螢幕被拔掉）。這種情況下桌寵會自動退回主螢幕的右下角 — 把它拖到你想要的地方，下次保存就會覆蓋掉那個過時的位置。
 
 ----
 

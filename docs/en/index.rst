@@ -1007,100 +1007,488 @@ Desktop Pet Workspace (Desktop Pet Tab)
 
 Tab 5 — the **Desktop Pet** puts any ``.puppet`` character on
 your desktop as a frameless, transparent overlay. The tab itself
-is the control panel; the actual character floats on top of (or
-behind) your other windows. Everything you can do with a rig in
-the Puppet tab — motions, expressions, physics, idle drivers,
-webcam / mic input — works here too.
+is a control panel; the actual character is a separate top-level
+window that shares the entire Puppet runtime (motions,
+expressions, physics, idle drivers, mic / webcam input). The
+pet can react to clicks, run timer-driven animations, follow
+your cursor, hide while another app is fullscreen, and speak
+custom lines you author in a JSON file.
 
-What you can do
-^^^^^^^^^^^^^^^
+This chapter is a complete reference for the tab. The
+chapter is organised as:
 
-.. list-table::
+#. **Quick start** — five-step path from "I just opened Imervue"
+   to "there's a puppet on my desktop".
+#. **Loading a rig** — file picker, bundled example, restoration
+   across launches.
+#. **The overlay window** — every window-level behaviour
+   (drag-to-move, edge snap, click-through, anchor lock,
+   always-on-bottom, hide-on-fullscreen, pause-when-hidden,
+   opacity, size, multi-monitor restoration).
+#. **Interaction model** — left-click hit areas, the full
+   right-click context menu, system tray.
+#. **Live drivers** — six opt-in input drivers and their
+   optional dependencies.
+#. **Pet script** — the JSON file that lets you replace the
+   pet's voice with your own lines, schedule reminders, and
+   bind per-hit-area / per-motion responses.
+#. **Persistence** — what gets remembered between launches and
+   the exact settings schema.
+#. **Authoring a new pet** — pointer at the Puppet tab + the
+   ``.puppet`` file format.
+#. **Troubleshooting** — common surprises and what to do about
+   them.
+
+Quick start
+^^^^^^^^^^^
+
+1. Switch to the **Desktop Pet** tab.
+2. Click **Load bundled March 7th** to use the included character,
+   or **Open Puppet…** to pick your own ``.puppet`` file.
+3. The overlay appears on your desktop and the **Show pet on
+   desktop** checkbox is ticked automatically. (If you ever want
+   to hide the pet without closing Imervue, untick the box or
+   use the system tray icon.)
+4. Drag the character to where you want it. Release near a screen
+   edge to snap flush.
+5. Pick the **Live drivers** you want — idle breathing, blink,
+   cursor-following, mic lip-sync, webcam tracking — from either
+   the workspace tab or the pet's right-click menu.
+
+Everything you set survives the next launch, so step 5 is a
+one-time decision per rig / persona.
+
+Loading a rig
+^^^^^^^^^^^^^
+
+The tab exposes three load paths:
+
+* **Open Puppet…** — pick any ``.puppet`` file from disk.
+* **Load bundled March 7th** — opens the rig shipped under
+  ``examples/puppet/march_7th.puppet``. The resolver searches
+  ``examples_dir()`` first (frozen-safe for packaged Nuitka /
+  pip-installed builds) and falls back to a repo-root-relative
+  lookup so the button works from both run-modes.
+* **Last rig** — the previously loaded rig auto-restores on
+  Imervue startup from the ``last_rig_path`` settings field; the
+  Desktop Pet tab re-instantiates the overlay invisibly so the
+  pet is one click away from the same state you left it in.
+
+A successful load auto-ticks **Show pet on desktop** so the pet
+appears immediately. The failure path leaves the checkbox alone
+and writes the error to the tab's status label.
+
+The overlay window
+^^^^^^^^^^^^^^^^^^
+
+The character lives in a top-level window separate from the
+Imervue main window. The window is frameless, has no taskbar
+entry, and (by default) stays on top of every other window.
+
+.. list-table:: Window behaviours
    :header-rows: 1
    :widths: 28 72
 
-   * - Feature
-     - What it does
+   * - Behaviour
+     - Detail
    * - Frameless overlay
-     - No window chrome, no taskbar entry — just the character on
-       your desktop.
+     - No window chrome, no minimise / close buttons, no taskbar
+       entry. The character is the entire visible surface.
    * - Transparent background
-     - Anything the character doesn't cover shows the desktop
-       through.
-   * - Drag to move
-     - Left-drag the character to a new spot. Release near a
-       screen edge to **snap** flush against it.
+     - Anything the character doesn't cover is fully transparent.
+       The desktop / app behind the pet shows through pixel-
+       perfectly.
+   * - Drag-to-move
+     - Left-press anywhere on the body, drag, release. The drag
+       is recognised as a click only if the cursor moved less
+       than six pixels — moving farther turns the gesture into a
+       move and the click handler doesn't fire.
+   * - Edge snap
+     - Release near a screen edge (default: within 24 px) and
+       the pet "clicks" flush against that edge. The threshold
+       is configurable from 0 (off) to 200 (very sticky). Snap
+       runs independently on each axis so dragging into a corner
+       docks against both edges at once.
+   * - Overshoot clamp
+     - A drag that ends past a screen edge clamps back inside.
+       You can't strand the pet off-screen where you couldn't
+       grab it again.
    * - Click-through mode
-     - Make the pet ignore your mouse so you can keep working
-       under it.
+     - When enabled, every mouse event passes through the pet to
+       whatever's behind it. The character is still visible but
+       it can't be dragged, right-clicked, or used to trigger
+       motions. Turn it on when the pet is purely decorative.
    * - Lock position
-     - Freeze the pet so accidental drags can't move it.
+     - Disables drag-to-move without affecting click-through.
+       Useful when you've placed the pet exactly where you want
+       it and don't want accidental drags to move it.
    * - Always on bottom
-     - Sit the pet behind every other window — a desktop-widget
-       feel instead of always-on-top.
+     - Flips the pet from always-on-top to always-on-bottom.
+       The pet sits behind every other window as a desktop
+       widget. Also unsets the focus-accept flag so clicking the
+       pet doesn't raise it.
    * - Hide on fullscreen
-     - Auto-hide while another app (game / video / presentation)
-       is fullscreen on the same monitor; come back when
-       fullscreen ends.
+     - A 1 Hz background poll watches the foreground window on
+       the pet's monitor. When that window covers ≥ 99 % of the
+       screen with a per-edge tolerance ≤ 4 px (catching both
+       real fullscreen and borderless-windowed games), the pet
+       auto-hides. When fullscreen ends, the pet reappears at
+       its previous position. The detector uses the Win32
+       ``GetWindowRect`` API on Windows; on macOS / Linux it
+       no-ops gracefully (the pet stays visible).
    * - Pauses when hidden
-     - The pet stops animating while invisible — zero CPU when
-       off-screen.
+     - The ~30 FPS paint tick and the 1 Hz script tick both
+       stop on ``hideEvent`` so a hidden pet costs zero CPU.
+       They restart on the next ``showEvent``.
    * - Size presets
-     - Small / medium / large. Resizes around the centre so the
-       pet doesn't jump across the screen.
+     - Small (200 × 300), medium (320 × 480), large (480 × 720).
+       The pet resizes around its current centre so a size
+       change doesn't relocate it. Snap re-runs after resize.
    * - Opacity slider
-     - Fade the pet from 10% to 100% so it can be a subtle
-       desktop ornament.
-   * - Remembers where you put it
-     - Drag the pet to your favourite corner; it returns there
-       on the next launch.
+     - 10 – 100 %. Acts at the window level (via
+       ``setWindowOpacity``) so the entire pet fades, not just
+       the texture. The minimum 10 % floor exists so you can
+       always still see and grab the pet — fully invisible
+       would let you lose it.
+   * - Position memory
+     - The post-snap ``(x, y)`` after every release is persisted.
+       On the next launch the pet returns to that screen
+       coordinate. If the saved position no longer falls inside
+       any connected screen (you unplugged a monitor since last
+       launch), the pet falls back to the bottom-right corner
+       of the primary screen.
 
-Click interactions
-^^^^^^^^^^^^^^^^^^
+Interaction model
+^^^^^^^^^^^^^^^^^
 
-* **Left-click the body** — if the rig defines a hit area
-  (e.g. tap the head), the matching motion plays. Otherwise the
-  pet greets you with a speech bubble.
-* **Right-click anywhere** — opens a context menu with: Hide
-  pet, Live drivers, Play motion (list of every motion in the
-  rig), Apply expression, Lock position, Click-through, Always
-  on bottom, Hide on fullscreen, Speech bubble, Size.
-* **System tray icon** — left-click to toggle visibility,
-  right-click for Show/Hide, Click-through, Open puppet, Hide
-  pet.
+The pet responds to mouse input via three independent channels.
+
+**Left-click on the body**
+
+The click position is mapped back into puppet-canvas
+coordinates (undoing the canvas pan / zoom) and run through the
+existing ``hit_test`` pipeline. The result drives behaviour as
+follows:
+
+#. If a ``HitArea`` covers the clicked drawable AND that area
+   has an attached motion, the motion plays.
+#. Whether or not a motion played, the pet may pop a speech
+   bubble — see the *Pet script* section for the line-pick
+   priority.
+#. If no hit area covers the click, the pet falls back to a
+   greeting (from the script's ``greetings`` list or the
+   built-in fallback).
+
+A drag-to-move gesture suppresses the click handler, so moving
+the pet doesn't trigger a motion / speech.
+
+**Right-click anywhere on the body**
+
+Opens a context menu with the following structure:
+
+* **Hide pet** — top-level action that closes the overlay.
+* **Live drivers** submenu — six checkable toggles (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
+  Webcam tracking). Check-state mirrors the live driver state,
+  so the menu shows what's currently running.
+* **Play motion** submenu — populated from the active rig's
+  ``document.motions`` list. Selecting an entry plays that
+  motion (and may trigger the pet's voice if the script binds a
+  line to it).
+* **Apply expression** submenu — populated from the rig's
+  ``document.expressions``. Selecting toggles the expression's
+  parameter overlay.
+* Five top-level checkable toggles: **Lock position**,
+  **Click-through**, **Always on bottom**, **Hide on fullscreen**,
+  **Speech bubble** — quick access to the same toggles in the
+  workspace tab.
+* **Size** submenu — Small / Medium / Large; current preset is
+  checked.
+
+The motion / expression submenus are disabled when no rig is
+loaded.
+
+**System tray icon**
+
+A tray icon (instantiated only on platforms reporting tray
+support) provides a fourth surface for the most common actions:
+
+* Left-click toggles pet visibility.
+* Right-click opens a menu with **Show pet** (checkable),
+  **Click-through**, **Open puppet…**, **Hide pet**.
+* The checkable Show / Click-through items mirror the
+  workspace's check state via ``sync_visibility`` /
+  ``sync_click_through``, so they stay in sync wherever the
+  user toggles the corresponding switch.
 
 Live drivers
 ^^^^^^^^^^^^
 
-Pick any combination from the tab or the right-click menu. Each
-is off by default — turn on only what you want.
+Each live driver is lazy-created on first enable, so a dormant
+pet pays zero timer / thread cost for drivers you never turn
+on. The state of each driver is persisted; toggling on, closing
+Imervue, and re-launching reopens the pet with the same
+drivers running.
 
-* **Auto idle** — breath + subtle drift so the character feels
-  alive.
-* **Idle motions** — randomly cycle through the rig's
-  idle-group motions.
-* **Auto-blink** — natural cyclic eye-close every few seconds.
-* **Drag-track head** — the head turns to follow your cursor.
-* **Mic lip-sync** — the mouth opens with your voice (needs
-  ``sounddevice``).
-* **Webcam tracking** — your head / eyes / mouth drive the
-  puppet's (needs ``opencv-python`` and ``mediapipe``).
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
 
-How to start
-^^^^^^^^^^^^
+   * - Driver
+     - What it does
+     - Optional dependency
+   * - **Auto idle**
+     - Breath + subtle drift on standard parameters
+       (``ParamBreath`` etc.) so the character looks alive when
+       nothing else is animating.
+     - none
+   * - **Idle motions**
+     - Randomly picks a motion from the rig's ``Idle`` group
+       every few seconds and plays it. Stops if no motion is
+       currently in flight.
+     - none
+   * - **Auto-blink**
+     - Closes and reopens the eyes on a smooth cosine curve
+       every ~4.5 s. The driver force-writes the parameter so
+       other drivers that touch eye-open values don't suppress
+       the blink.
+     - none
+   * - **Drag-track head**
+     - The head + eyes turn toward the global cursor position
+       even when the cursor is off the pet. Drives
+       ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+       ``ParamEyeBallY``.
+     - none
+   * - **Mic lip-sync**
+     - Microphone RMS amplitude drives ``ParamMouthOpenY``. The
+       mouth opens proportional to your voice volume so the
+       character looks like it's speaking when you are.
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker reads your webcam at ~30 FPS
+       and drives the head pose + eye-open + mouth-open params.
+       Opens a small live-preview window so you can verify the
+       camera sees your face.
+     - ``opencv-python`` + ``mediapipe``
 
-1. Switch to the **Desktop Pet** tab.
-2. Click **Load bundled March 7th** to use the included
-   character, or **Open Puppet…** to pick your own ``.puppet``
-   file.
-3. Tick **Show pet on desktop**.
-4. Drag the character to where you want it; pick the drivers
-   you want; adjust opacity / size.
-5. Right-click any time for the quick-action menu, or use the
-   system tray icon to hide the pet without finding the tab.
+The two optional-dep drivers degrade gracefully: if the
+required package isn't installed, toggling the checkbox bounces
+back off and the workspace's status label shows an "install
+sounddevice" / "install opencv-python + mediapipe" hint.
 
-Everything you set — position, drivers, opacity, click-through,
-size — is remembered between launches.
+Pet script — custom voice and scheduled events
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The pet's speech bubble draws from a JSON file you can author
+and load from the **Pet script** group on the tab. The script
+governs four things:
+
+* **Greetings** — default click lines when nothing more
+  specific matches.
+* **Hit-area responses** — per-``HitArea.id`` line buckets.
+* **Motion lines** — per-motion-name line buckets, fired when
+  the pet starts that motion (either from a hit area or from
+  the context menu).
+* **Scheduled chimes** — timer-driven lines that fire every
+  ``every_seconds`` of monotonic wall-clock time.
+
+Schema (versioned — future fields are forward-compatible):
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+Loading rules:
+
+* Lists are sampled round-robin per bucket so the user doesn't
+  see the same line twice in a row.
+* Unknown top-level keys are ignored (forward-compat — a future
+  v2 file still loads on a v1 runtime).
+* Garbage list entries (wrong type, malformed scheduled entries,
+  zero / negative ``every_seconds``) are skipped — one bad row
+  doesn't fail the whole load. Only outright-unparseable JSON
+  raises an error and surfaces the path in the status label.
+* The hit-area / motion / greeting cascade is layered: a left-
+  click consults ``hit_responses[area.id]`` first, then
+  ``motion_lines[area.motion]``, then ``greetings``, then the
+  built-in default greeting set as the floor.
+* Time tracking uses ``time.monotonic`` so suspending the laptop
+  or jumping the system clock can't binge-fire queued events.
+
+**Reset to default** drops the user script and reverts to the
+built-in greeting set; the persisted script path is cleared so
+the next launch doesn't reload it.
+
+A working sample lives at
+``examples/desktop_pet/march_7th.petscript.json`` — six
+greetings, two hit-area buckets (head / body), three motion
+lines (wave / curtsy / cheer), and a 30-minute stretch
+reminder.
+
+Persistence
+^^^^^^^^^^^
+
+All Desktop Pet state round-trips through
+``user_setting_dict["desktop_pet"]`` (a slot in the standard
+Imervue user-settings file). Each field has a default + range
+clamp on load so a corrupted settings file can't crash launch.
+
+.. list-table:: Persisted fields
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - Field
+     - Default
+     - Notes
+   * - ``last_rig_path``
+     - ``""``
+     - Auto-restored on launch if the file still exists.
+   * - ``script_path``
+     - ``""``
+     - Auto-restored on launch if the script still parses;
+       an unreadable script reverts to defaults silently.
+   * - ``position``
+     - ``[-1, -1]``
+     - Screen-coord ``(x, y)`` from the last drag release.
+       ``-1, -1`` means "use bottom-right of primary screen".
+       Multi-monitor unplug between sessions falls back the
+       same way.
+   * - ``size_preset``
+     - ``"medium"``
+     - One of ``small`` / ``medium`` / ``large``.
+   * - ``opacity``
+     - ``1.0``
+     - Clamped to ``[0.1, 1.0]``. Out-of-range values reset
+       to default.
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - Mutually exclusive with always-on-top.
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - Set ``false`` to keep the pet visible during fullscreen.
+   * - ``snap_threshold``
+     - ``24``
+     - Clamped to ``[0, 200]`` px.
+   * - ``drivers``
+     - all ``false``
+     - Sub-dict keyed by driver id (``auto_idle``,
+       ``idle_motion``, ``auto_blink``, ``drag_track``,
+       ``mic_lipsync``, ``webcam_tracking``). Unknown keys
+       round-trip untouched for forward-compat.
+   * - ``show_on_launch``
+     - ``false``
+     - Auto-show the overlay when Imervue starts.
+   * - ``speech_enabled``
+     - ``true``
+     - When false the speech bubble never pops.
+
+The settings dict's merge behaviour is one level deep: older
+settings files missing newer keys still produce a complete
+state dict on load (defaults fill the gaps); newer keys you've
+saved survive a downgrade to an older runtime that doesn't
+know about them.
+
+Authoring a new pet
+^^^^^^^^^^^^^^^^^^^
+
+Any ``.puppet`` file works as a Desktop Pet character — the
+Desktop Pet tab is purely a renderer + interaction shell; rig
+authoring happens in the Puppet tab (see
+*Puppet Workspace (Puppet Tab)*).
+
+To create your own pet rig:
+
+#. Switch to the Puppet tab and import an artwork via
+   **File > Import PNG…** or **File > Import PSD…**, or pull in
+   a Cubism model via **File > Import Cubism…**.
+#. Author rotation / warp deformers, parameters, motions,
+   expressions, and (optionally) hit areas tied to body parts
+   so the Desktop Pet's left-click handler can fire motions.
+#. Save the rig via **File > Save As…** to a ``.puppet`` zip.
+#. Switch back to the Desktop Pet tab and load the new file
+   via **Open Puppet…**.
+
+If your rig defines ``HitArea`` entries, you can author per-
+hit-area speech-bubble lines in a ``.petscript.json`` whose
+``hit_responses`` keys match the area ids.
+
+Troubleshooting
+^^^^^^^^^^^^^^^
+
+**The pet appears inside a grey rectangle instead of being
+fully transparent.** The OS-level translucent-background
+attribute requires an alpha-aware GL surface plus matching
+attributes on the embedded GL widget. Make sure no third-party
+window-management tool is overriding the
+``WA_TranslucentBackground`` attribute on the overlay window
+(some custom window managers on Linux do this). On Windows /
+macOS this should "just work".
+
+**"Load bundled March 7th" reports the file isn't found.** The
+resolver consults ``examples_dir()`` first (the frozen-safe
+location used by packaged builds) and falls back to a CWD-
+relative path. If neither contains the rig, the status label
+surfaces the expected path. Verify the ``examples/`` directory
+shipped with your install — for source checkouts, launch
+Imervue from the repository root.
+
+**The pet doesn't speak when clicked.** Three checks:
+
+#. Make sure the **Speech bubble on click** toggle is on (in the
+   tab or the right-click menu).
+#. If you loaded a custom script, verify the JSON parses — the
+   tab's status label shows the load error.
+#. If a hit-area click did nothing, the area probably has no
+   matching motion AND the script has no ``hit_responses`` entry
+   for that area id. Either bind a motion to the area in the
+   Puppet tab or add the area id to the script's
+   ``hit_responses``.
+
+**The webcam tracking checkbox bounces back off.** Webcam
+tracking needs ``opencv-python`` and ``mediapipe`` installed
+in the same Python environment Imervue is running in. Install
+with ``pip install opencv-python mediapipe``. After install,
+toggling the checkbox should bring up a small preview window
+showing the detected face landmarks.
+
+**The pet doesn't auto-hide during fullscreen apps.** The
+fullscreen detector polls the foreground window at 1 Hz. On
+Windows it uses the ``GetWindowRect`` Win32 API; on macOS /
+Linux it doesn't have a reliable cross-platform equivalent
+and no-ops (the pet stays visible). For Windows: make sure
+**Hide when other app is fullscreen** is checked, and verify
+the fullscreen window actually covers ≥ 99 % of the same
+monitor as the pet.
+
+**The pet's position drifts off-screen between launches.** This
+happens when the screen the pet was on is no longer connected
+on the next launch (laptop dock, second monitor unplugged).
+The pet auto-falls-back to the bottom-right corner of the
+primary screen in this case — drag it to where you want and
+the next save will overwrite the stale position.
 
 ----
 

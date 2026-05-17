@@ -1003,109 +1003,528 @@ Espace de travail Desktop Pet (onglet Desktop Pet)
 
 L'onglet 5 — le **Desktop Pet** — place n'importe quel personnage
 ``.puppet`` sur votre bureau sous forme de superposition sans cadre
-et transparente. L'onglet lui-même est le panneau de contrôle ; le
-personnage flotte au-dessus (ou en dessous) de vos autres fenêtres.
-Tout ce que vous pouvez faire avec un rig dans l'onglet Puppet —
-mouvements, expressions, physique, pilotes d'inactivité, entrée
-webcam / micro — fonctionne aussi ici.
+et transparente. L'onglet lui-même est un panneau de contrôle ; le
+personnage proprement dit est une fenêtre de premier niveau distincte
+qui partage l'intégralité du runtime Puppet (mouvements, expressions,
+physique, pilotes d'inactivité, entrée micro / webcam). Le pet peut
+réagir aux clics, lancer des animations pilotées par minuterie,
+suivre votre curseur, se masquer pendant qu'une autre application
+est en plein écran, et prononcer des répliques personnalisées que
+vous écrivez dans un fichier JSON.
 
-Ce que vous pouvez faire
-^^^^^^^^^^^^^^^^^^^^^^^^
+Ce chapitre est une référence complète de l'onglet. Il est organisé
+ainsi :
 
-.. list-table::
+#. **Démarrage rapide** — chemin en cinq étapes entre « je viens
+   d'ouvrir Imervue » et « il y a un pet sur mon bureau ».
+#. **Charger un rig** — sélecteur de fichier, exemple fourni,
+   restauration entre les lancements.
+#. **La fenêtre de superposition** — chaque comportement au niveau
+   fenêtre (glisser-déplacer, accrochage aux bords, clic-traversant,
+   verrouillage d'ancrage, toujours-en-dessous, masquage en plein
+   écran, mise en pause à l'arrêt, opacité, taille, restauration
+   multi-écran).
+#. **Modèle d'interaction** — zones cliquables au clic gauche, menu
+   contextuel complet du clic droit, barre d'état système.
+#. **Pilotes en direct** — six pilotes d'entrée optionnels et leurs
+   dépendances optionnelles.
+#. **Script du pet** — le fichier JSON qui vous permet de remplacer
+   la voix du pet par vos propres répliques, de planifier des
+   rappels et de lier les réponses par zone cliquable / par
+   mouvement.
+#. **Persistance** — ce qui est mémorisé entre les lancements et le
+   schéma exact des réglages.
+#. **Créer un nouveau pet** — pointeur vers l'onglet Puppet et le
+   format de fichier ``.puppet``.
+#. **Dépannage** — surprises courantes et que faire à leur sujet.
+
+Démarrage rapide
+^^^^^^^^^^^^^^^^
+
+1. Passez à l'onglet **Desktop Pet**.
+2. Cliquez sur **Load bundled March 7th** pour utiliser le
+   personnage inclus, ou sur **Open Puppet…** pour choisir votre
+   propre fichier ``.puppet``.
+3. La superposition apparaît sur votre bureau et la case **Show pet
+   on desktop** est cochée automatiquement. (Si vous voulez masquer
+   le pet sans fermer Imervue, décochez la case ou utilisez l'icône
+   de la barre d'état système.)
+4. Glissez le personnage à l'endroit voulu. Relâchez près d'un bord
+   d'écran pour l'accrocher à ras de celui-ci.
+5. Choisissez les **Pilotes en direct** voulus — respiration
+   d'inactivité, clignement, suivi du curseur, lip-sync micro,
+   suivi webcam — depuis l'onglet de l'espace de travail ou depuis
+   le menu contextuel du pet.
+
+Tout ce que vous réglez survit au prochain lancement, donc l'étape
+5 est une décision unique par rig / persona.
+
+Charger un rig
+^^^^^^^^^^^^^^
+
+L'onglet expose trois chemins de chargement :
+
+* **Open Puppet…** — choisissez n'importe quel fichier ``.puppet``
+  sur disque.
+* **Load bundled March 7th** — ouvre le rig livré sous
+  ``examples/puppet/march_7th.puppet``. Le résolveur consulte
+  d'abord ``examples_dir()`` (sûr en mode gelé pour les builds
+  Nuitka empaquetés / installés via pip) puis se rabat sur une
+  recherche relative à la racine du dépôt afin que le bouton
+  fonctionne dans les deux modes d'exécution.
+* **Dernier rig** — le rig chargé précédemment se restaure
+  automatiquement au démarrage d'Imervue depuis le champ de
+  réglages ``last_rig_path`` ; l'onglet Desktop Pet ré-instancie
+  la superposition de manière invisible afin que le pet ne soit
+  qu'à un clic du même état que celui où vous l'avez laissé.
+
+Un chargement réussi coche automatiquement **Show pet on desktop**
+pour que le pet apparaisse immédiatement. Le chemin d'échec laisse
+la case telle quelle et écrit l'erreur dans l'étiquette d'état de
+l'onglet.
+
+La fenêtre de superposition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Le personnage vit dans une fenêtre de premier niveau distincte de
+la fenêtre principale d'Imervue. La fenêtre est sans cadre, n'a
+pas d'entrée dans la barre des tâches et (par défaut) reste
+au-dessus de toutes les autres fenêtres.
+
+.. list-table:: Comportements de la fenêtre
    :header-rows: 1
    :widths: 28 72
 
-   * - Fonctionnalité
-     - Ce que ça fait
+   * - Comportement
+     - Détail
    * - Superposition sans cadre
-     - Pas de chrome de fenêtre, pas d'entrée dans la barre des
-       tâches — juste le personnage sur votre bureau.
+     - Aucun chrome de fenêtre, aucun bouton réduire / fermer,
+       aucune entrée dans la barre des tâches. Le personnage est
+       l'intégralité de la surface visible.
    * - Arrière-plan transparent
-     - Tout ce que le personnage ne couvre pas laisse voir le
-       bureau au travers.
-   * - Glisser pour déplacer
-     - Glissez le personnage avec le clic gauche vers un nouvel
-       emplacement. Relâchez près d'un bord d'écran pour
-       **accrocher** la fenêtre à ras de celui-ci.
+     - Tout ce que le personnage ne couvre pas est entièrement
+       transparent. Le bureau / l'application derrière le pet
+       transparaissent pixel par pixel.
+   * - Glisser-déplacer
+     - Clic gauche maintenu n'importe où sur le corps, glissement,
+       relâchement. Le glissement n'est reconnu comme un clic que
+       si le curseur s'est déplacé de moins de six pixels — au-delà,
+       le geste devient un déplacement et le gestionnaire de clic
+       ne se déclenche pas.
+   * - Accrochage aux bords
+     - Relâchez près d'un bord d'écran (par défaut : à moins de
+       24 px) et le pet « se cale » à ras de ce bord. Le seuil est
+       configurable de 0 (désactivé) à 200 (très collant).
+       L'accrochage s'effectue indépendamment sur chaque axe afin
+       qu'un glissement dans un coin l'amarre aux deux bords à la
+       fois.
+   * - Limitation de débordement
+     - Un glissement qui se termine au-delà d'un bord d'écran est
+       ramené à l'intérieur. Vous ne pouvez pas abandonner le pet
+       hors écran à un endroit où vous ne pourriez plus le saisir.
    * - Mode clic-traversant
-     - Le pet ignore votre souris afin que vous puissiez continuer
-       à travailler en dessous.
+     - Lorsqu'il est activé, chaque événement souris traverse le
+       pet pour atteindre ce qui se trouve derrière lui. Le
+       personnage reste visible mais il ne peut être ni glissé, ni
+       cliqué-droit, ni utilisé pour déclencher des mouvements.
+       Activez-le quand le pet est purement décoratif.
    * - Verrouiller la position
-     - Gèle le pet pour qu'un glissement accidentel ne puisse pas
-       le déplacer.
+     - Désactive le glisser-déplacer sans affecter le
+       clic-traversant. Utile quand vous avez placé le pet
+       exactement où vous le souhaitez et ne voulez pas qu'un
+       glissement accidentel le déplace.
    * - Toujours en dessous
-     - Place le pet derrière toutes les autres fenêtres — un
-       ressenti de widget de bureau plutôt que toujours au-dessus.
+     - Bascule le pet de toujours-au-dessus à toujours-en-dessous.
+     - Le pet se loge derrière toutes les autres fenêtres tel un
+       widget de bureau. L'indicateur d'acceptation du focus est
+       également désactivé afin que cliquer sur le pet ne le
+       remonte pas au premier plan.
    * - Masquage en plein écran
-     - Masque automatiquement le pet pendant qu'une autre
-       application (jeu / vidéo / présentation) est en plein écran
-       sur le même moniteur ; revient à la fin du plein écran.
+     - Une scrutation d'arrière-plan à 1 Hz observe la fenêtre de
+       premier plan sur le moniteur du pet. Lorsque cette fenêtre
+       couvre ≥ 99 % de l'écran avec une tolérance par bord ≤ 4 px
+       (attrapant à la fois le vrai plein écran et les jeux en
+       fenêtré sans bordure), le pet se masque automatiquement.
+       À la fin du plein écran, le pet réapparaît à sa position
+       précédente. Le détecteur utilise l'API Win32
+       ``GetWindowRect`` sous Windows ; sur macOS / Linux il
+       devient un no-op silencieux (le pet reste visible).
    * - Mise en pause à l'arrêt
-     - Le pet cesse de s'animer pendant qu'il est invisible — zéro
-       CPU hors écran.
+     - Le tick de rendu à ~30 FPS et le tick de script à 1 Hz
+       s'arrêtent tous deux sur ``hideEvent`` afin qu'un pet
+       masqué coûte zéro CPU. Ils redémarrent au prochain
+       ``showEvent``.
    * - Préréglages de taille
-     - Petit / moyen / grand. Redimensionne autour du centre pour
-       que le pet ne saute pas à travers l'écran.
+     - Petit (200 × 300), moyen (320 × 480), grand (480 × 720).
+       Le pet se redimensionne autour de son centre actuel afin
+       qu'un changement de taille ne le relocalise pas.
+       L'accrochage est rejoué après le redimensionnement.
    * - Curseur d'opacité
-     - Fait varier le pet de 10 % à 100 % pour qu'il puisse être un
-       ornement de bureau discret.
-   * - Mémorise où vous le placez
-     - Glissez le pet dans votre coin favori ; il y revient au
-       lancement suivant.
+     - 10 – 100 %. Agit au niveau fenêtre (via
+       ``setWindowOpacity``) afin que tout le pet s'estompe, pas
+       seulement la texture. Le plancher minimal de 10 % existe
+       pour que vous puissiez toujours voir et saisir le pet —
+       complètement invisible vous le ferait perdre.
+   * - Mémoire de position
+     - Le ``(x, y)`` post-accrochage après chaque relâchement est
+       persisté. Au prochain lancement, le pet revient à cette
+       coordonnée écran. Si la position enregistrée ne tombe plus
+       sur aucun écran connecté (vous avez débranché un moniteur
+       depuis le dernier lancement), le pet se rabat sur le coin
+       inférieur droit de l'écran principal.
 
-Interactions au clic
+Modèle d'interaction
 ^^^^^^^^^^^^^^^^^^^^
 
-* **Clic gauche sur le corps** — si le rig définit une zone
-  cliquable (par exemple toucher la tête), le mouvement
-  correspondant se joue. Sinon le pet vous salue avec une bulle de
-  dialogue.
-* **Clic droit n'importe où** — ouvre un menu contextuel avec :
-  Masquer le pet, Pilotes en direct, Jouer un mouvement (liste de
-  tous les mouvements du rig), Appliquer une expression,
-  Verrouiller la position, Clic-traversant, Toujours en dessous,
-  Masquage en plein écran, Bulle de dialogue, Taille.
-* **Icône de barre d'état système** — clic gauche pour basculer la
-  visibilité, clic droit pour Afficher / Masquer, Clic-traversant,
-  Ouvrir puppet, Masquer le pet.
+Le pet répond à la souris via trois canaux indépendants.
+
+**Clic gauche sur le corps**
+
+La position du clic est reconvertie en coordonnées de canevas
+puppet (en annulant le pan / zoom du canevas) et passe par le
+pipeline ``hit_test`` existant. Le résultat dicte le comportement
+comme suit :
+
+#. Si une ``HitArea`` couvre le drawable cliqué ET que cette zone
+   a un mouvement attaché, le mouvement se joue.
+#. Qu'un mouvement ait été joué ou non, le pet peut afficher une
+   bulle de dialogue — voir la section *Script du pet* pour la
+   priorité de sélection des répliques.
+#. Si aucune zone cliquable ne couvre le clic, le pet se rabat sur
+   une salutation (depuis la liste ``greetings`` du script ou la
+   liste de repli intégrée).
+
+Un geste de glisser-déplacer supprime le gestionnaire de clic, donc
+déplacer le pet ne déclenche ni mouvement ni parole.
+
+**Clic droit n'importe où sur le corps**
+
+Ouvre un menu contextuel avec la structure suivante :
+
+* **Hide pet** — action de haut niveau qui ferme la superposition.
+* Sous-menu **Live drivers** — six bascules à cocher (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
+  Webcam tracking). L'état coché reflète l'état des pilotes en
+  direct, donc le menu indique ce qui tourne actuellement.
+* Sous-menu **Play motion** — peuplé depuis la liste
+  ``document.motions`` du rig actif. Sélectionner une entrée joue
+  ce mouvement (et peut déclencher la voix du pet si le script lie
+  une réplique à celui-ci).
+* Sous-menu **Apply expression** — peuplé depuis
+  ``document.expressions`` du rig. Sélectionner bascule la
+  superposition de paramètres de l'expression.
+* Cinq bascules à cocher de haut niveau : **Lock position**,
+  **Click-through**, **Always on bottom**, **Hide on fullscreen**,
+  **Speech bubble** — accès rapide aux mêmes bascules de l'onglet
+  espace de travail.
+* Sous-menu **Size** — Small / Medium / Large ; le préréglage
+  courant est coché.
+
+Les sous-menus mouvement / expression sont désactivés lorsqu'aucun
+rig n'est chargé.
+
+**Icône de barre d'état système**
+
+Une icône de barre d'état (instanciée uniquement sur les
+plateformes signalant la prise en charge de la barre d'état)
+fournit une quatrième surface pour les actions les plus courantes :
+
+* Clic gauche bascule la visibilité du pet.
+* Clic droit ouvre un menu avec **Show pet** (à cocher),
+  **Click-through**, **Open puppet…**, **Hide pet**.
+* Les éléments à cocher Show / Click-through reflètent l'état de
+  l'espace de travail via ``sync_visibility`` /
+  ``sync_click_through``, donc ils restent synchronisés quel que
+  soit l'endroit où l'utilisateur bascule l'interrupteur
+  correspondant.
 
 Pilotes en direct
 ^^^^^^^^^^^^^^^^^
 
-Choisissez n'importe quelle combinaison depuis l'onglet ou le menu
-contextuel. Chacun est désactivé par défaut — n'activez que ce que
-vous voulez.
+Chaque pilote en direct est créé paresseusement à la première
+activation, donc un pet dormant ne paie aucun coût de minuterie /
+thread pour les pilotes que vous n'allumez jamais. L'état de chaque
+pilote est persisté ; activer, fermer Imervue puis relancer rouvre
+le pet avec les mêmes pilotes en marche.
 
-* **Inactivité auto** — respiration + dérive subtile pour que le
-  personnage semble vivant.
-* **Mouvements d'inactivité** — cycle aléatoire à travers les
-  mouvements du groupe inactivité du rig.
-* **Clignement auto** — fermeture cyclique naturelle des yeux
-  toutes les quelques secondes.
-* **Suivi de tête par glissement** — la tête tourne pour suivre
-  votre curseur.
-* **Lip-sync micro** — la bouche s'ouvre avec votre voix
-  (nécessite ``sounddevice``).
-* **Suivi webcam** — votre tête / yeux / bouche pilotent ceux du
-  puppet (nécessite ``opencv-python`` et ``mediapipe``).
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
 
-Comment démarrer
-^^^^^^^^^^^^^^^^
+   * - Pilote
+     - Ce qu'il fait
+     - Dépendance optionnelle
+   * - **Auto idle**
+     - Respiration + dérive subtile sur les paramètres standard
+       (``ParamBreath`` etc.) afin que le personnage paraisse
+       vivant quand rien d'autre ne l'anime.
+     - aucune
+   * - **Idle motions**
+     - Choisit aléatoirement un mouvement du groupe ``Idle`` du
+       rig toutes les quelques secondes et le joue. S'arrête si
+       un mouvement est déjà en cours.
+     - aucune
+   * - **Auto-blink**
+     - Ferme et rouvre les yeux selon une courbe cosinus douce
+       toutes les ~4,5 s. Le pilote force l'écriture du paramètre
+       afin que les autres pilotes qui touchent aux valeurs
+       d'ouverture des yeux ne suppriment pas le clignement.
+     - aucune
+   * - **Drag-track head**
+     - La tête + les yeux tournent vers la position globale du
+       curseur même quand le curseur n'est pas sur le pet. Pilote
+       ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+       ``ParamEyeBallY``.
+     - aucune
+   * - **Mic lip-sync**
+     - L'amplitude RMS du micro pilote ``ParamMouthOpenY``. Le
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker lit votre webcam à ~30 FPS et
+       pilote la pose de la tête + l'ouverture des yeux + les
+       paramètres d'ouverture de la bouche. Ouvre une petite
+       fenêtre d'aperçu en direct pour que vous puissiez vérifier
+       que la caméra voit votre visage.
+     - ``opencv-python`` + ``mediapipe``
 
-1. Passez à l'onglet **Desktop Pet**.
-2. Cliquez sur **Charger March 7th fourni** pour utiliser le
-   personnage inclus, ou sur **Ouvrir Puppet…** pour choisir votre
-   propre fichier ``.puppet``.
-3. Cochez **Afficher le pet sur le bureau**.
-4. Glissez le personnage où vous le voulez ; choisissez les
-   pilotes souhaités ; ajustez l'opacité / la taille.
-5. Faites un clic droit à tout moment pour le menu d'actions
-   rapides, ou utilisez l'icône de barre d'état système pour
-   masquer le pet sans retrouver l'onglet.
+Les deux pilotes à dépendance optionnelle se dégradent gracieusement :
+si le paquet requis n'est pas installé, basculer la case la fait
+rebondir à l'état désactivé et l'étiquette d'état de l'espace de
+travail affiche un indice « install sounddevice » / « install
+opencv-python + mediapipe ».
 
-Tout ce que vous réglez — position, pilotes, opacité,
-clic-traversant, taille — est mémorisé entre les lancements.
+Script du pet — voix personnalisée et événements planifiés
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+La bulle de dialogue du pet puise dans un fichier JSON que vous
+pouvez écrire et charger depuis le groupe **Pet script** de
+l'onglet. Le script régit quatre choses :
+
+* **Greetings** — répliques par défaut au clic quand rien de plus
+  spécifique ne correspond.
+* **Hit-area responses** — paniers de répliques par ``HitArea.id``.
+* **Motion lines** — paniers de répliques par nom de mouvement,
+  déclenchés quand le pet démarre ce mouvement (depuis une zone
+  cliquable ou depuis le menu contextuel).
+* **Scheduled chimes** — répliques pilotées par minuterie qui se
+  déclenchent toutes les ``every_seconds`` de temps horloge
+  monotone.
+
+Schéma (versionné — les futurs champs sont compatibles ascendants) :
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+Règles de chargement :
+
+* Les listes sont échantillonnées en tourniquet par panier afin
+  que l'utilisateur ne voie pas deux fois la même réplique d'affilée.
+* Les clés de niveau supérieur inconnues sont ignorées (compatibilité
+  ascendante — un futur fichier v2 se charge encore sur un runtime
+  v1).
+* Les entrées de liste invalides (mauvais type, entrées planifiées
+  malformées, ``every_seconds`` nul / négatif) sont ignorées — une
+  ligne défectueuse ne fait pas échouer tout le chargement. Seul
+  un JSON franchement non analysable lève une erreur et fait
+  remonter le chemin dans l'étiquette d'état.
+* La cascade zone cliquable / mouvement / salutation est en
+  couches : un clic gauche consulte ``hit_responses[area.id]``
+  d'abord, puis ``motion_lines[area.motion]``, puis ``greetings``,
+  puis le jeu de salutations par défaut intégré comme plancher.
+* Le suivi du temps utilise ``time.monotonic`` afin que mettre le
+  portable en veille ou faire bondir l'horloge système ne puisse
+  pas déclencher en rafale des événements en file.
+
+**Reset to default** abandonne le script utilisateur et revient au
+jeu de salutations intégré ; le chemin de script persisté est
+effacé afin que le prochain lancement ne le recharge pas.
+
+Un exemple fonctionnel se trouve à
+``examples/desktop_pet/march_7th.petscript.json`` — six
+salutations, deux paniers de zones cliquables (tête / corps),
+trois lignes de mouvement (wave / curtsy / cheer) et un rappel
+d'étirement de 30 minutes.
+
+Persistance
+^^^^^^^^^^^
+
+Tout l'état Desktop Pet fait des allers-retours via
+``user_setting_dict["desktop_pet"]`` (un emplacement du fichier
+de réglages utilisateur standard d'Imervue). Chaque champ a une
+valeur par défaut + un bridage de plage au chargement afin qu'un
+fichier de réglages corrompu ne puisse pas faire planter le
+démarrage.
+
+.. list-table:: Champs persistés
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - Champ
+     - Défaut
+     - Notes
+   * - ``last_rig_path``
+     - ``""``
+     - Restauré automatiquement au lancement si le fichier existe
+       encore.
+   * - ``script_path``
+     - ``""``
+     - Restauré automatiquement au lancement si le script s'analyse
+       encore ; un script illisible revient silencieusement aux
+       valeurs par défaut.
+   * - ``position``
+     - ``[-1, -1]``
+     - ``(x, y)`` en coordonnées écran du dernier relâchement de
+       glissement. ``-1, -1`` signifie « utiliser le coin
+       inférieur droit de l'écran principal ». Un débranchement
+       multi-écran entre sessions retombe de la même façon.
+   * - ``size_preset``
+     - ``"medium"``
+     - L'une de ``small`` / ``medium`` / ``large``.
+   * - ``opacity``
+     - ``1.0``
+     - Bridé à ``[0.1, 1.0]``. Les valeurs hors plage reviennent
+       au défaut.
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - Mutuellement exclusif avec toujours-au-dessus.
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - Mettez ``false`` pour garder le pet visible pendant le
+       plein écran.
+   * - ``snap_threshold``
+     - ``24``
+     - Bridé à ``[0, 200]`` px.
+   * - ``drivers``
+     - tous ``false``
+     - Sous-dict indexé par id de pilote (``auto_idle``,
+       ``idle_motion``, ``auto_blink``, ``drag_track``,
+       ``mic_lipsync``, ``webcam_tracking``). Les clés inconnues
+       font un aller-retour intactes pour la compatibilité
+       ascendante.
+   * - ``show_on_launch``
+     - ``false``
+     - Affiche automatiquement la superposition au démarrage
+       d'Imervue.
+   * - ``speech_enabled``
+     - ``true``
+     - Quand c'est faux, la bulle de dialogue ne s'affiche jamais.
+
+La fusion du dict de réglages se fait sur un niveau de
+profondeur : des fichiers de réglages plus anciens auxquels
+manquent des clés plus récentes produisent malgré tout un dict
+d'état complet au chargement (les valeurs par défaut comblent les
+lacunes) ; les clés plus récentes que vous avez sauvegardées
+survivent à un retour vers un runtime plus ancien qui ne les
+connaît pas.
+
+Créer un nouveau pet
+^^^^^^^^^^^^^^^^^^^^
+
+N'importe quel fichier ``.puppet`` fonctionne comme un personnage
+Desktop Pet — l'onglet Desktop Pet est purement un moteur de rendu
++ coquille d'interaction ; la création de rig se fait dans l'onglet
+Puppet (voir *Espace de travail Puppet (onglet Puppet)*).
+
+Pour créer votre propre rig de pet :
+
+#. Passez à l'onglet Puppet et importez une œuvre via
+   **File > Import PNG…** ou **File > Import PSD…**, ou tirez un
+   modèle Cubism via **File > Import Cubism…**.
+#. Créez des déformateurs de rotation / warp, des paramètres, des
+   mouvements, des expressions et (optionnellement) des zones
+   cliquables liées à des parties du corps afin que le gestionnaire
+   de clic gauche du Desktop Pet puisse déclencher des mouvements.
+#. Enregistrez le rig via **File > Save As…** dans un zip
+   ``.puppet``.
+#. Revenez à l'onglet Desktop Pet et chargez le nouveau fichier
+   via **Open Puppet…**.
+
+Si votre rig définit des entrées ``HitArea``, vous pouvez écrire
+des répliques de bulle par zone cliquable dans un
+``.petscript.json`` dont les clés ``hit_responses`` correspondent
+aux ids de zone.
+
+Dépannage
+^^^^^^^^^
+
+**Le pet apparaît dans un rectangle gris au lieu d'être entièrement
+transparent.** L'attribut d'arrière-plan translucide au niveau OS
+requiert une surface GL consciente du canal alpha plus les
+attributs correspondants sur le widget GL embarqué. Assurez-vous
+qu'aucun outil tiers de gestion de fenêtres ne contourne l'attribut
+``WA_TranslucentBackground`` sur la fenêtre de superposition
+(certains gestionnaires de fenêtres personnalisés sous Linux le
+font). Sous Windows / macOS cela devrait « juste fonctionner ».
+
+**« Load bundled March 7th » signale que le fichier est introuvable.**
+Le résolveur consulte d'abord ``examples_dir()`` (l'emplacement sûr
+en mode gelé utilisé par les builds empaquetés) puis se rabat sur
+un chemin relatif au CWD. Si aucun ne contient le rig, l'étiquette
+d'état fait remonter le chemin attendu. Vérifiez que le répertoire
+``examples/`` a bien été livré avec votre installation — pour les
+checkouts source, lancez Imervue depuis la racine du dépôt.
+
+**Le pet ne parle pas quand on clique.** Trois vérifications :
+
+#. Assurez-vous que la bascule **Speech bubble on click** est
+   activée (dans l'onglet ou le menu contextuel).
+#. Si vous avez chargé un script personnalisé, vérifiez que le JSON
+   s'analyse — l'étiquette d'état de l'onglet affiche l'erreur de
+   chargement.
+#. Si un clic sur une zone cliquable n'a rien fait, c'est
+   probablement que la zone n'a pas de mouvement associé ET que le
+   script n'a pas d'entrée ``hit_responses`` pour cet id de zone.
+   Liez un mouvement à la zone dans l'onglet Puppet ou ajoutez
+   l'id de zone à ``hit_responses`` du script.
+
+**La case du suivi webcam rebondit à l'état désactivé.** Le suivi
+webcam a besoin de ``opencv-python`` et ``mediapipe`` installés
+dans le même environnement Python que celui dans lequel tourne
+Imervue. Installez avec ``pip install opencv-python mediapipe``.
+Après installation, basculer la case devrait faire apparaître une
+petite fenêtre d'aperçu montrant les points caractéristiques
+détectés du visage.
+
+**Le pet ne se masque pas automatiquement pendant les applications
+plein écran.** Le détecteur de plein écran scrute la fenêtre de
+premier plan à 1 Hz. Sous Windows il utilise l'API Win32
+``GetWindowRect`` ; sur macOS / Linux il n'a pas d'équivalent
+multi-plateforme fiable et devient un no-op silencieux (le pet
+reste visible). Pour Windows : assurez-vous que **Hide when other
+app is fullscreen** est coché et vérifiez que la fenêtre plein
+écran couvre bien ≥ 99 % du même moniteur que celui du pet.
+
+**La position du pet dérive hors écran entre les lancements.** Cela
+arrive quand l'écran sur lequel se trouvait le pet n'est plus
+connecté au prochain lancement (station d'accueil portable,
+second moniteur débranché). Le pet se rabat alors automatiquement
+sur le coin inférieur droit de l'écran principal — glissez-le où
+vous le voulez et la prochaine sauvegarde écrasera la position
+obsolète.
 
 ----
 
