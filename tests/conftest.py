@@ -149,6 +149,37 @@ def qapp():
     # exit clean it up is fine for the test runner.
 
 
+@pytest.fixture(autouse=True)
+def _drain_qt_deferred_delete():
+    """Drain queued ``DeferredDelete`` events between tests.
+
+    ``QObject.deleteLater()`` marks an object for deletion at the
+    next event-loop spin. Many Qt-using tests in this suite call
+    ``deleteLater()`` in fixture teardown without spinning the loop
+    afterwards — those C++ objects then linger past the test, and
+    when the next test's fixture setup triggers Python GC the
+    stale Python wrappers ask the now-half-dead C++ side a
+    question and segfault inside the GC pass. The traceback shows
+    up as "Garbage-collecting" / "Windows fatal exception: access
+    violation" with no obvious test responsible.
+
+    This autouse fixture drains all queued ``DeferredDelete``
+    events after every test, so the C++ side is fully freed
+    before the next test starts. Cheap (a no-op in tests that
+    didn't touch Qt) and prevents the cross-test contamination
+    centrally rather than requiring each Qt fixture to remember
+    to call ``sendPostedEvents`` itself.
+    """
+    yield
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+    except ImportError:
+        return
+    if QCoreApplication.instance() is None:
+        return
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
 
 
 # ===========================
