@@ -16,12 +16,14 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QInputDialog,
     QLabel,
     QMainWindow,
     QMenu,
     QMenuBar,
+    QMessageBox,
     QStatusBar,
     QToolBar,
 )
@@ -82,6 +84,47 @@ logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
 _RECENT_KEY = "puppet_recent_files"
 _RECENT_LIMIT = 10
+
+# Persisted suppression flag for the Cubism format / SDK advisory. Set
+# to True via the "Don't show this again" checkbox on the notice.
+_CUBISM_NOTICE_KEY = "puppet_cubism_notice_suppressed"
+
+# Fallback text used when a language pack hasn't translated the key
+# yet. Lives at module scope (rather than inline) so the i18n lookup
+# stays cheap and the wording is easy to grep / review.
+_CUBISM_NOTICE_BODY_FALLBACK = (
+    "Cubism imports work in two modes — please read before continuing:\n"
+    "\n"
+    "• .moc3 / .model3.json — Full rig conversion. Builds a fresh\n"
+    "  puppet from the Cubism rig. Requires Live2D's Cubism Native\n"
+    "  SDK (Live2DCubismCore.dll on Windows). Drop the extracted\n"
+    "  SDK under <project>/sdk/ or set the LIVE2D_CUBISM_CORE\n"
+    "  environment variable. The DLL is NOT redistributed with\n"
+    "  Imervue — Live2D's EULA forbids it.\n"
+    "\n"
+    "• .moc3 alone won't work — Cubism's full-rig importer needs\n"
+    "  the sibling .model3.json next to it for textures, groups,\n"
+    "  and hit areas.\n"
+    "\n"
+    "• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n"
+    "  .cdi3.json — Layered onto an already-open puppet. Open a\n"
+    "  puppet first, then import these. No SDK needed."
+)
+
+_CUBISM_SDK_HINT_FALLBACK = (
+    "Cubism Native SDK not found. To enable .moc3 / .model3.json\n"
+    "imports, do one of:\n"
+    "\n"
+    "  • Extract the Cubism SDK under <project>/sdk/ (e.g.\n"
+    "    <project>/sdk/CubismSdkForNative-5-r.5/).\n"
+    "  • Set the LIVE2D_CUBISM_CORE environment variable to the\n"
+    "    library file's absolute path.\n"
+    "\n"
+    "Get the SDK from https://www.live2d.com/en/sdk/download/native/.\n"
+    "Live2D's EULA forbids us from redistributing the DLL.\n"
+    "\n"
+    "Original error:\n{error}"
+)
 
 
 class PuppetWorkspace(QMainWindow):
@@ -1316,6 +1359,11 @@ class PuppetWorkspace(QMainWindow):
     # ---- import Cubism ------------------------------------------------
 
     def _import_cubism_via_dialog(self) -> None:
+        # The advisory comes BEFORE the file picker so a user who's
+        # missing the SDK can back out without hunting for the model
+        # file first. Suppressed runs go straight to the picker.
+        if not self._show_cubism_import_notice():
+            return
         lang = language_wrapper.language_word_dict
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1327,6 +1375,71 @@ class PuppetWorkspace(QMainWindow):
         if not path:
             return
         self.import_cubism(path)
+
+    def _show_cubism_import_notice(self) -> bool:
+        """Display the format / SDK advisory before launching the file
+        picker. The checkbox persists the suppression so repeat users
+        don't have to dismiss it every time.
+
+        Returns ``True`` when the user proceeds, ``False`` when they
+        cancel or close the dialog.
+        """
+        if user_setting_dict.get(_CUBISM_NOTICE_KEY):
+            return True
+        lang = language_wrapper.language_word_dict
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(
+            lang.get("puppet_cubism_notice_title", "Importing Cubism files"),
+        )
+        box.setText(
+            lang.get("puppet_cubism_notice_body", _CUBISM_NOTICE_BODY_FALLBACK),
+        )
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+        )
+        box.setDefaultButton(QMessageBox.StandardButton.Ok)
+        suppress = QCheckBox(
+            lang.get(
+                "puppet_cubism_notice_dont_show", "Don't show this again",
+            ),
+        )
+        box.setCheckBox(suppress)
+        result = box.exec()
+        if suppress.isChecked():
+            user_setting_dict[_CUBISM_NOTICE_KEY] = True
+        return result == QMessageBox.StandardButton.Ok
+
+    def _show_cubism_error_dialog(self, exc: Exception) -> None:
+        """Surface a Cubism import error as a dialog so users actually
+        see it. Status bar updates alone get missed on big screens or
+        with the bar covered by docks. The bridge error already carries
+        useful install instructions; we just re-wrap it with the
+        SDK-hint fallback so the wording stays consistent under any
+        language pack.
+        """
+        lang = language_wrapper.language_word_dict
+        is_sdk_missing = isinstance(exc, CubismBridgeError)
+        title_key = (
+            "puppet_cubism_sdk_missing_title" if is_sdk_missing
+            else "puppet_cubism_failed_title"
+        )
+        title_default = (
+            "Cubism SDK not found" if is_sdk_missing
+            else "Cubism import failed"
+        )
+        if is_sdk_missing:
+            body = lang.get(
+                "puppet_cubism_sdk_missing_body",
+                _CUBISM_SDK_HINT_FALLBACK,
+            ).format(error=str(exc))
+        else:
+            body = str(exc)
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(lang.get(title_key, title_default))
+        box.setText(body)
+        box.exec()
 
     def import_cubism(self, path: str | Path) -> bool:
         """Route by filename suffix.
@@ -1373,6 +1486,7 @@ class PuppetWorkspace(QMainWindow):
                     "puppet_cubism_failed", "Cubism import failed: {error}",
                 ).format(error=str(exc)),
             )
+            self._show_cubism_error_dialog(exc)
             return False
         target_doc = new_doc if new_doc is not None else doc
         self._canvas.load_document(target_doc)

@@ -25,6 +25,23 @@ from Imervue.puppet.cubism_native_bridge import CubismBridgeError
 from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet import workspace as workspace_module
 from Imervue.puppet.workspace import PuppetWorkspace
+from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+
+@pytest.fixture(autouse=True)
+def _silence_cubism_dialogs(monkeypatch):
+    """Suppress the format-notice and error-dialog modals so the
+    workspace tests don't deadlock waiting for a click. New tests
+    that specifically exercise the dialogs override these in their
+    own scope.
+    """
+    user_setting_dict["puppet_cubism_notice_suppressed"] = True
+    monkeypatch.setattr(
+        PuppetWorkspace, "_show_cubism_error_dialog",
+        lambda self, exc: None,
+    )
+    yield
+    user_setting_dict.pop("puppet_cubism_notice_suppressed", None)
 
 from _qt_skip import pytestmark  # noqa: E402,F401
 
@@ -221,3 +238,96 @@ def test_guess_model3_raises_when_manifest_missing(tmp_path):
     moc3.write_bytes(b"x")
     with pytest.raises(CubismFormatError):
         PuppetWorkspace._guess_model3_for_moc3(str(moc3))   # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Format / SDK advisory dialog
+# ---------------------------------------------------------------------------
+
+
+def test_notice_suppressed_when_setting_set(qapp):
+    """The user setting ``puppet_cubism_notice_suppressed`` short-circuits
+    the advisory — repeat users don't have to dismiss the dialog every
+    time they reach for Import Cubism."""
+    user_setting_dict["puppet_cubism_notice_suppressed"] = True
+    ws = PuppetWorkspace()
+    try:
+        assert ws._show_cubism_import_notice() is True   # noqa: SLF001
+    finally:
+        ws.deleteLater()
+
+
+def test_notice_blocks_dialog_when_user_cancels(qapp, monkeypatch):
+    """Cancelling the advisory must abort the entire import flow —
+    nothing should reach ``QFileDialog`` if the user clicked Cancel
+    on the warning."""
+    user_setting_dict.pop("puppet_cubism_notice_suppressed", None)
+    monkeypatch.setattr(
+        PuppetWorkspace, "_show_cubism_import_notice",
+        lambda self: False,
+    )
+    file_dialog_calls: list[tuple] = []
+
+    def _fake_dialog(*args, **kwargs):
+        file_dialog_calls.append((args, kwargs))
+        return ("", "")
+
+    monkeypatch.setattr(
+        workspace_module.QFileDialog, "getOpenFileName", _fake_dialog,
+    )
+    ws = PuppetWorkspace()
+    try:
+        ws._import_cubism_via_dialog()   # noqa: SLF001
+    finally:
+        ws.deleteLater()
+    assert file_dialog_calls == []
+
+
+def test_notice_proceeds_to_dialog_when_user_accepts(qapp, monkeypatch):
+    """When the advisory is accepted (or already suppressed), the
+    file picker fires normally."""
+    monkeypatch.setattr(
+        PuppetWorkspace, "_show_cubism_import_notice",
+        lambda self: True,
+    )
+    fired: list[bool] = []
+
+    def _fake_dialog(*_args, **_kwargs):
+        fired.append(True)
+        return ("", "")
+
+    monkeypatch.setattr(
+        workspace_module.QFileDialog, "getOpenFileName", _fake_dialog,
+    )
+    ws = PuppetWorkspace()
+    try:
+        ws._import_cubism_via_dialog()   # noqa: SLF001
+    finally:
+        ws.deleteLater()
+    assert fired == [True]
+
+
+def test_bridge_error_surfaces_via_dialog(qapp, tmp_path, monkeypatch):
+    """When the bridge raises (SDK missing), the workspace must call
+    ``_show_cubism_error_dialog`` so users see a modal instead of
+    silently logging to a tucked-away status bar."""
+    seen: list[Exception] = []
+    monkeypatch.setattr(
+        PuppetWorkspace, "_show_cubism_error_dialog",
+        lambda self, exc: seen.append(exc),
+    )
+    model3 = tmp_path / "Boom.model3.json"
+    model3.write_text("{}", encoding="utf-8")
+
+    def _fake_convert(*_args, **_kwargs):
+        raise CubismBridgeError("Live2DCubismCore.dll not found")
+
+    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    ws = PuppetWorkspace()
+    try:
+        ok = ws.import_cubism(model3)
+        assert ok is False
+        assert len(seen) == 1
+        assert isinstance(seen[0], CubismBridgeError)
+    finally:
+        ws.deleteLater()

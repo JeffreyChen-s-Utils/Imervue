@@ -561,6 +561,40 @@ chinese_word_dict = {
     "puppet_cell_size_title": '网格密度',
     "puppet_cell_size_prompt": '网格边长（像素，越小越密）：',
     "puppet_import_failed": 'PNG 导入失败：{error}',
+    "puppet_import_cubism_title": '导入 Cubism 文件',
+    "puppet_cubism_notice_title": '导入 Cubism 文件',
+    "puppet_cubism_notice_body": (
+        'Cubism 导入有两种模式，请先阅读再继续：\n'
+        '\n'
+        '• .moc3 / .model3.json — 完整转换。会从 Cubism rig 创建全新的\n'
+        '  puppet。需要 Live2D 的 Cubism Native SDK（Windows 上是\n'
+        '  Live2DCubismCore.dll）。请将解压后的 SDK 放在 <project>/sdk/\n'
+        '  下，或设置 LIVE2D_CUBISM_CORE 环境变量指向 DLL。\n'
+        '  我们不能随 Imervue 一起分发该 DLL—Live2D 的 EULA 禁止。\n'
+        '\n'
+        '• 单独 .moc3 不能用—完整转换还需要旁边的同名 .model3.json，\n'
+        '  否则找不到贴图、分组与 hit area。\n'
+        '\n'
+        '• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n'
+        '  .cdi3.json — 叠加到已打开的 puppet。请先打开一个 puppet，\n'
+        '  再导入这些文件。不需要 SDK。'
+    ),
+    "puppet_cubism_notice_dont_show": '不再显示此消息',
+    "puppet_cubism_failed_title": 'Cubism 导入失败',
+    "puppet_cubism_sdk_missing_title": '找不到 Cubism SDK',
+    "puppet_cubism_sdk_missing_body": (
+        '找不到 Cubism Native SDK。要启用 .moc3 / .model3.json 导入，\n'
+        '请择一执行：\n'
+        '\n'
+        '  • 将 Cubism SDK 解压到 <project>/sdk/ 下（例如\n'
+        '    <project>/sdk/CubismSdkForNative-5-r.5/）。\n'
+        '  • 设置 LIVE2D_CUBISM_CORE 环境变量指向库文件的绝对路径。\n'
+        '\n'
+        'SDK 下载：https://www.live2d.com/en/sdk/download/native/。\n'
+        'Live2D 的 EULA 禁止我们随项目分发该 DLL。\n'
+        '\n'
+        '原始错误信息：\n{error}'
+    ),
     "puppet_status_imported": '已导入 {name}（{w}×{h}，{v} 顶点，{t} 三角形）',
     "puppet_parameters_dock": '参数',
     "puppet_parameters_empty": '尚无参数 — 加载带参数的偶才会看到滑块。',

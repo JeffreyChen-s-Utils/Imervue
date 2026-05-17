@@ -572,6 +572,42 @@ japanese_word_dict = {
     "puppet_cell_size_title": 'メッシュ密度',
     "puppet_cell_size_prompt": 'セルサイズ（小さいほど高密度）：',
     "puppet_import_failed": 'PNG 取り込み失敗：{error}',
+    "puppet_import_cubism_title": 'Cubism ファイルを取り込み',
+    "puppet_cubism_notice_title": 'Cubism ファイルの取り込み',
+    "puppet_cubism_notice_body": (
+        'Cubism の取り込みには 2 つのモードがあります。続行前にお読みください：\n'
+        '\n'
+        '• .moc3 / .model3.json — フル変換。Cubism rig から新しい puppet を\n'
+        '  作成します。Live2D の Cubism Native SDK（Windows では\n'
+        '  Live2DCubismCore.dll）が必要です。展開した SDK を\n'
+        '  <project>/sdk/ の下に置くか、LIVE2D_CUBISM_CORE 環境変数を\n'
+        '  DLL のパスに設定してください。Live2D の EULA により Imervue\n'
+        '  に DLL を同梱することはできません。\n'
+        '\n'
+        '• .moc3 単体では動きません — フル変換にはテクスチャ／グループ／\n'
+        '  ヒットエリアを含む同名の .model3.json が隣に必要です。\n'
+        '\n'
+        '• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n'
+        '  .cdi3.json — 開いている puppet に重ねます。先に puppet を開いて\n'
+        '  からこれらを取り込んでください。SDK は不要です。'
+    ),
+    "puppet_cubism_notice_dont_show": 'このメッセージを表示しない',
+    "puppet_cubism_failed_title": 'Cubism 取り込み失敗',
+    "puppet_cubism_sdk_missing_title": 'Cubism SDK が見つかりません',
+    "puppet_cubism_sdk_missing_body": (
+        'Cubism Native SDK が見つかりません。.moc3 / .model3.json の取り込みを\n'
+        '有効にするには、次のいずれかを行ってください：\n'
+        '\n'
+        '  • Cubism SDK を <project>/sdk/ の下に展開する（例：\n'
+        '    <project>/sdk/CubismSdkForNative-5-r.5/）。\n'
+        '  • LIVE2D_CUBISM_CORE 環境変数をライブラリファイルの絶対パスに\n'
+        '    設定する。\n'
+        '\n'
+        'SDK ダウンロード：https://www.live2d.com/en/sdk/download/native/。\n'
+        'Live2D の EULA により DLL の再配布は禁止されています。\n'
+        '\n'
+        '元のエラー：\n{error}'
+    ),
     "puppet_status_imported": '{name} を取り込みました（{w}×{h}、頂点 {v}、三角形 {t}）',
     "puppet_parameters_dock": 'パラメータ',
     "puppet_parameters_empty": 'パラメータなし — パラメータを持つパペットを読み込むとスライダーが表示されます。',
