@@ -7,7 +7,7 @@ plugin enable step needed.
 | File | Subject | Drawables | Parameters | Motions |
 |---|---|---|---|---|
 | `march_7th.puppet` | March 7th (Honkai: Star Rail) Live2D rig | 307 | 203 | 9 (Idle ×7, TapHead ×1, plus author-recorded loops) |
-| `ailian.puppet` | Ailian (艾莲) — community-published free Live2D rig | 480 | 207 | 6 (`/idle`, `/idle2` + 4 synthesised) plus 6 expressions |
+| `vivian.puppet` | Vivian (薇薇安) — community-published free Live2D rig | 392 | 197 | 4 (synthesised idle loops) |
 
 ## `march_7th.puppet`
 
@@ -40,39 +40,35 @@ on the default `requirements.txt` without the Cubism Native SDK.
     equivalent, but every motion that touches the head or body
     survives.
 
-## `ailian.puppet`
+## `vivian.puppet`
 
 A second real Live2D rig converted with the same Cubism Native →
-`.puppet` pipeline, used to validate the importer against a denser
-mesh and a wider parameter set than March 7th. The source 4096²
+`.puppet` pipeline, used to validate the importer against a multi-
+atlas rig (eleven 4096² source textures vs March 7th's two). The
 textures are downsampled to 2048² before packing so the example
-ships at a similar footprint to `march_7th.puppet`; the rig still
-covers the full 5000×8000 author canvas, all 207 Cubism-standard
-parameters, and ships with six expressions (`black`, `red`,
-`shock`, `shou`, `shuiyin`, `tang`) the rig author included.
+stays in the 20 MB range; the rig still covers the full 4584×7920
+author canvas and all 197 Cubism-standard parameters.
 
 **Highlights:**
 
-* **480 drawables** with original atlas UVs preserved — denser than
-  March 7th, useful for stress-testing the renderer's draw-order
-  + masking paths.
-* **207 Cubism-standard parameters** drive face / body / hair /
-  cloth from the same standard inputs (webcam, blink, lip-sync,
-  cursor look-at) as the other examples.
-* **Six motions** — two are the author's own (`/idle`, `/idle2`,
-  converted from the bundled `idle.motion3.json` / `idle2.motion3.json`).
-  Four are synthesised by the converter to fill out the Idle group
-  when the source `.motion3.json` set is sparse: `synth_head_sway`,
-  `synth_blink`, `synth_body_lean`, `synth_breath`. The synthesised
-  takes use parameter-default extrema so they read as natural idle
-  motion without per-rig tuning.
-* **Six expressions** baked directly from the `.exp3.json` files
-  the author distributed (eye-shadow swap, blush, shock, etc.).
+* **392 drawables** with original atlas UVs preserved.
+* **197 Cubism-standard parameters** — webcam tracking, auto-blink,
+  lip-sync, cursor look-at all drive the rig without per-rig
+  configuration.
+* **Eleven texture atlases** packed in-archive — exercises the
+  renderer's multi-texture bind path more heavily than the other
+  examples, which only ship two or three.
+* **Four synthesised idle motions** — `synth_head_sway`,
+  `synth_blink`, `synth_body_lean`, `synth_breath`. The source
+  rig ships a single `Scene1.motion3.json` that the converter
+  can't usefully promote to an idle loop, so the synthesiser
+  fills the Idle group with parameter-default-driven takes that
+  read as natural idle motion without per-rig tuning.
 
 ### Try it
 
 Launch Imervue, switch to the **Puppet** tab, click **Open Puppet…**,
-pick `examples/puppet/march_7th.puppet` (or `ailian.puppet`). Click
+pick `examples/puppet/march_7th.puppet` (or `vivian.puppet`). Click
 any motion in the bottom Motions dock to play it.
 
 Toggle the toolbar features to drive the rig live:
