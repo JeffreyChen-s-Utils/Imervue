@@ -146,8 +146,51 @@ def qapp():
     app = QApplication.instance() or QApplication([])
     yield app
     # Don't quit the app here — quitting it makes subsequent tests in the
-    # same session unable to recreate it on some platforms. Letting Python
-    # exit clean it up is fine for the test runner.
+    # same session unable to recreate it on some platforms. The dedicated
+    # ``_qt_session_teardown`` autouse fixture below handles end-of-session
+    # cleanup once all tests have finished.
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _qt_session_teardown():
+    """Shut Qt down explicitly at the very end of the session.
+
+    Why this exists: CI reported runs where every test passed
+    (``test_workspace_manager`` was the last to print ``PASSED``),
+    pytest's summary line never appeared, and the process exited
+    with code 1 and a truncated log. Classic Windows symptom —
+    ``QApplication`` is still alive when Python finalisation starts
+    tearing down modules, and a stale ``shiboken`` wrapper held
+    somewhere blows up during ``__del__``. The crash kills the
+    process before pytest can flush its summary banner.
+
+    Draining ``DeferredDelete``, spinning the event loop once, then
+    quitting the app explicitly while the interpreter is still in
+    a sane state — before Python starts unloading modules — keeps
+    teardown deterministic. We deliberately do NOT drop the
+    ``QApplication`` reference; on Windows that triggers the same
+    finalisation race we're trying to avoid. Quitting is enough.
+    """
+    yield
+    try:
+        from PySide6.QtCore import QCoreApplication, QEvent
+        from PySide6.QtWidgets import QApplication
+    except ImportError:
+        return
+    app = QApplication.instance()
+    if app is None:
+        return
+    # Two drain passes: first clears most pending DeferredDeletes,
+    # second mops up the cascade (a parent being deleted enqueues
+    # deletes for its children). We deliberately do NOT call
+    # ``processEvents()`` — that would fire user-registered timers
+    # (e.g. ``QTimer.singleShot`` callbacks from Paint tests) that
+    # reference now-dead C++ objects and raise mid-teardown. The
+    # DeferredDelete drain alone is the smallest cleanup that
+    # frees the C++ side before Python finalises.
+    for _ in range(2):
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.quit()
 
 
 # =====================================================================
