@@ -58,8 +58,20 @@ def panel(main_window, monkeypatch, tmp_path):
     # Shrink the debounce interval so tests don't need to wait
     p._debounce.setInterval(0)
     yield p, isolated
+    # The panel wires Qt signals into the MagicMock ``stub_gui``;
+    # if we leave those connected when the next test constructs
+    # a fresh MagicMock, Python's GC can fire DURING ``Mock.__init__``
+    # and try to call into the now-dead stub via the still-live
+    # signal connection — an "access violation" in the C++ side.
+    # Tear the connections down explicitly, then drain queued
+    # ``DeferredDelete`` events so the QObject C++ sides are gone
+    # before the next test runs.
+    from PySide6.QtCore import QCoreApplication, QEvent
+    splitter.setParent(None)
     splitter.deleteLater()
+    p.setParent(None)
     p.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture
