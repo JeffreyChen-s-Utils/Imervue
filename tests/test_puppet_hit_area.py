@@ -3,13 +3,28 @@
 user clicks inside one.
 """
 from __future__ import annotations
-
 import numpy as np
 
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document import Drawable, HitArea, PuppetDocument
 from Imervue.puppet.document_io import from_zip_bytes, to_zip_bytes
 from Imervue.puppet.hit_test import hit_area_bbox, hit_test
+
+
+# QOpenGLWidget construction segfaults on the headless GitHub
+# Actions Windows runner once the offscreen-GL pool is exhausted
+# (see tests/conftest.py::skip_on_headless_ci). All tests in this
+# file touch a real PuppetCanvas / PuppetWorkspace, so the whole
+# module skips on CI; local runs cover them.
+import os as _os_for_skip  # noqa: E402
+import pytest as _pytest_for_skip  # noqa: E402
+
+pytestmark = _pytest_for_skip.mark.skipif(
+    _os_for_skip.environ.get("CI") == "true"
+    or _os_for_skip.environ.get("QT_QPA_PLATFORM") == "offscreen",
+    reason="QOpenGLWidget construction segfaults on headless CI runner",
+)
+
 
 
 def _square_drawable(

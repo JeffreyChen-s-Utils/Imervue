@@ -6,7 +6,6 @@ real ``PuppetWorkspace`` under ``qapp`` and drive the canvas signal
 directly so the test doesn't depend on Qt mouse events.
 """
 from __future__ import annotations
-
 from Imervue.puppet.document import (
     Drawable,
     Expression,
@@ -18,6 +17,22 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.workspace import PuppetWorkspace
+
+
+# QOpenGLWidget construction segfaults on the headless GitHub
+# Actions Windows runner once the offscreen-GL pool is exhausted
+# (see tests/conftest.py::skip_on_headless_ci). All tests in this
+# file touch a real PuppetCanvas / PuppetWorkspace, so the whole
+# module skips on CI; local runs cover them.
+import os as _os_for_skip  # noqa: E402
+import pytest as _pytest_for_skip  # noqa: E402
+
+pytestmark = _pytest_for_skip.mark.skipif(
+    _os_for_skip.environ.get("CI") == "true"
+    or _os_for_skip.environ.get("QT_QPA_PLATFORM") == "offscreen",
+    reason="QOpenGLWidget construction segfaults on headless CI runner",
+)
+
 
 
 def _doc_with_motion_and_expression() -> PuppetDocument:

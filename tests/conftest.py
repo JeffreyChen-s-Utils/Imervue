@@ -2,6 +2,7 @@
 Pytest configuration and shared fixtures for Imervue tests.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -147,6 +148,39 @@ def qapp():
     # Don't quit the app here — quitting it makes subsequent tests in the
     # same session unable to recreate it on some platforms. Letting Python
     # exit clean it up is fine for the test runner.
+
+
+# =====================================================================
+# Headless-CI guard for QOpenGLWidget-constructing tests
+# =====================================================================
+
+HEADLESS_CI: bool = (
+    os.environ.get("CI") == "true"
+    or os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+)
+"""True when the test session is running on a headless CI runner
+(GitHub Actions Windows) where ``QOpenGLWidget`` construction
+segfaults once the offscreen-GL pool gets exhausted. Same class
+of bug already handled in ``test_paint_workspace`` and
+``test_puppet_auto_mesh``. Tests that construct a real
+``PuppetCanvas`` / ``PuppetWorkspace`` / ``PaintWorkspace`` use
+this flag to skip on CI; local runs still cover them."""
+
+skip_on_headless_ci = pytest.mark.skipif(
+    HEADLESS_CI,
+    reason=(
+        "QOpenGLWidget construction segfaults on the headless CI "
+        "runner once the offscreen-GL pool gets exhausted. The "
+        "underlying logic is exercised by pure-Python sibling "
+        "tests where possible."
+    ),
+)
+"""Pre-built ``pytest.mark.skipif`` that test modules can apply
+to individual tests or as a module-level ``pytestmark`` when the
+whole file constructs GL widgets."""
+
+
+# =====================================================================
 
 
 @pytest.fixture(autouse=True, scope="session")

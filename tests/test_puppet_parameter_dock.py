@@ -6,7 +6,6 @@ the dock listens for ``parameters_changed`` so a fresh document load
 or a programmatic reset re-syncs sliders.
 """
 from __future__ import annotations
-
 import math
 
 import pytest
@@ -20,6 +19,22 @@ from Imervue.puppet.document import (
     PuppetDocument,
 )
 from Imervue.puppet.parameter_dock import ParameterDock
+
+
+# QOpenGLWidget construction segfaults on the headless GitHub
+# Actions Windows runner once the offscreen-GL pool is exhausted
+# (see tests/conftest.py::skip_on_headless_ci). All tests in this
+# file touch a real PuppetCanvas / PuppetWorkspace, so the whole
+# module skips on CI; local runs cover them.
+import os as _os_for_skip  # noqa: E402
+import pytest as _pytest_for_skip  # noqa: E402
+
+pytestmark = _pytest_for_skip.mark.skipif(
+    _os_for_skip.environ.get("CI") == "true"
+    or _os_for_skip.environ.get("QT_QPA_PLATFORM") == "offscreen",
+    reason="QOpenGLWidget construction segfaults on headless CI runner",
+)
+
 
 
 def _rigged_doc() -> PuppetDocument:

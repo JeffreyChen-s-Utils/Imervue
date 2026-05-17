@@ -2,7 +2,6 @@
 open dialog wiring, status label.
 """
 from __future__ import annotations
-
 from pathlib import Path
 
 import pytest
@@ -11,6 +10,22 @@ from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet.document_io import save_puppet
 from Imervue.puppet.workspace import PuppetWorkspace, _push_recent
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+
+# QOpenGLWidget construction segfaults on the headless GitHub
+# Actions Windows runner once the offscreen-GL pool is exhausted
+# (see tests/conftest.py::skip_on_headless_ci). All tests in this
+# file touch a real PuppetCanvas / PuppetWorkspace, so the whole
+# module skips on CI; local runs cover them.
+import os as _os_for_skip  # noqa: E402
+import pytest as _pytest_for_skip  # noqa: E402
+
+pytestmark = _pytest_for_skip.mark.skipif(
+    _os_for_skip.environ.get("CI") == "true"
+    or _os_for_skip.environ.get("QT_QPA_PLATFORM") == "offscreen",
+    reason="QOpenGLWidget construction segfaults on headless CI runner",
+)
+
 
 
 _TINY_PNG = bytes.fromhex(
