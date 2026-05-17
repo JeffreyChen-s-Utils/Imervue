@@ -2,6 +2,7 @@
 Pytest configuration and shared fixtures for Imervue tests.
 """
 
+import atexit
 import os
 import sys
 from pathlib import Path
@@ -11,6 +12,57 @@ import pytest
 from PIL import Image
 
 _rng = np.random.default_rng(seed=0xC0FFEE)
+
+
+# ---------------------------------------------------------------------------
+# Force clean exit on Windows CI — bypass interpreter finalisation
+# ---------------------------------------------------------------------------
+# Even with ``-p no:unraisableexception`` (which kills the explicit
+# ``gc_collect_harder`` call pytest makes inside ``_ensure_unconfigure``),
+# CI was still segfaulting AFTER the pytest summary banner printed:
+#
+#     6343 passed, 295 skipped in 260s
+#     Windows fatal exception: access violation
+#     Current thread … (most recent call first):
+#       Garbage-collecting
+#       <no Python frame>
+#
+# ``<no Python frame>`` means the crash is during Python's own interpreter
+# shutdown — module deallocation triggers a final gc pass which finalises a
+# stale shiboken Qt wrapper. The QObject's C++ partner is already half-gone
+# (PySide6 / shiboken got unloaded earlier in the dealloc order), so the
+# ``__del__`` dereferences freed memory → access violation. The process exits
+# non-zero even though every test passed.
+#
+# We capture pytest's intended exit code via ``pytest_sessionfinish`` and
+# register an ``atexit`` handler that calls ``os._exit`` with it. ``atexit``
+# fires AFTER all session fixtures and pytest's own cleanup but BEFORE
+# module deallocation, so we skip the unsafe finalisation pass entirely.
+# Registering at module-load time puts us first in the LIFO queue → we
+# run last, after every other atexit handler has had its turn.
+
+_pytest_exit_status: int = 0
+
+
+def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
+    """Capture pytest's intended exit code before finalisation runs."""
+    global _pytest_exit_status
+    _pytest_exit_status = int(exitstatus)
+
+
+def _force_clean_exit() -> None:
+    """Skip module finalisation to dodge the Qt teardown segfault.
+
+    Only fires under headless CI — local runs do interpreter cleanup
+    normally so any new ``__del__`` bug shows up immediately during
+    development instead of being masked.
+    """
+    if os.environ.get("CI") != "true":
+        return
+    os._exit(_pytest_exit_status)
+
+
+atexit.register(_force_clean_exit)
 
 
 # ---------------------------------------------------------------------------
