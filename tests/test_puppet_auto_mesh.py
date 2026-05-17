@@ -6,6 +6,7 @@ end-to-end PNG → PuppetDocument round-trip via Pillow.
 from __future__ import annotations
 
 import io
+import os
 
 import numpy as np
 import pytest
@@ -14,6 +15,24 @@ from Imervue.puppet.auto_mesh import (
     DEFAULT_CELL_SIZE,
     puppet_from_png,
     triangulate_alpha_grid,
+)
+
+
+# QOpenGLWidget construction crashes on the headless GitHub CI
+# Windows runner once the offscreen-GL pool gets touched — the
+# same vulnerability handled in tests/test_paint_workspace.py.
+# The three workspace-level tests that construct a PuppetWorkspace
+# (which in turn creates a real QOpenGLWidget) get this skip;
+# the pure-numpy auto-mesh tests above don't need it.
+_skip_on_headless_ci = pytest.mark.skipif(
+    os.environ.get("CI") == "true"
+    or os.environ.get("QT_QPA_PLATFORM") == "offscreen",
+    reason=(
+        "QOpenGLWidget construction segfaults on the headless CI "
+        "runner — same class of issue handled in "
+        "test_paint_workspace. The pure auto_mesh + import_png "
+        "logic is exercised by the numpy-only tests above."
+    ),
 )
 
 
@@ -185,6 +204,7 @@ def test_puppet_from_png_carries_custom_drawable_id():
 # ---------------------------------------------------------------------------
 
 
+@_skip_on_headless_ci
 def test_workspace_import_png_loads_into_canvas(qapp, tmp_path):
     from Imervue.puppet.workspace import PuppetWorkspace
 
@@ -202,6 +222,7 @@ def test_workspace_import_png_loads_into_canvas(qapp, tmp_path):
         ws.deleteLater()
 
 
+@_skip_on_headless_ci
 def test_workspace_import_png_handles_corrupt_input(qapp, tmp_path):
     from Imervue.puppet.workspace import PuppetWorkspace
 
@@ -214,6 +235,7 @@ def test_workspace_import_png_handles_corrupt_input(qapp, tmp_path):
         ws.deleteLater()
 
 
+@_skip_on_headless_ci
 def test_workspace_import_png_handles_fully_transparent_image(qapp, tmp_path):
     from Imervue.puppet.workspace import PuppetWorkspace
 
