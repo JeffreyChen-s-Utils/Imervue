@@ -576,6 +576,15 @@ english_word_dict = {
     "desktop_pet_script_default": '(Using built-in default voice)',
     "desktop_pet_script_loaded": 'Loaded: {name}',
     "desktop_pet_script_failed": 'Failed to load script: {path}',
+    "desktop_pet_unnamed": '(unnamed)',
+    # Generic dialog titles + cross-tab messages surfaced by the audit
+    "warning_title": 'Warning',
+    "dual_pane_dest_not_dir": 'Destination is not a directory',
+    "tags_invalid_path": 'Invalid tag path',
+    "smart_albums_name_required": 'Name required',
+    # Paint welcome-overlay tooltips
+    "paint_welcome_new_tooltip": 'Open an empty canvas in a new tab (Ctrl+T)',
+    "paint_welcome_open_tooltip": 'Pick an image or .psd from disk to open in this workspace',
     "puppet_parameters_dock": 'Parameters',
     "puppet_parameters_empty": 'No parameters yet — load a puppet with parameters to see sliders here.',
     "puppet_parameters_reset": 'Reset all',

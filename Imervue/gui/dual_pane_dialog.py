@@ -135,7 +135,15 @@ class DualPaneDialog(QDialog):
             return
         dest_dir = Path(dst.path())
         if not dest_dir.is_dir():
-            QMessageBox.warning(self, "", "Destination is not a directory")
+            lang = language_wrapper.language_word_dict
+            QMessageBox.warning(
+                self,
+                lang.get("warning_title", "Warning"),
+                lang.get(
+                    "dual_pane_dest_not_dir",
+                    "Destination is not a directory",
+                ),
+            )
             return
         ok = failed = 0
         for p in paths:

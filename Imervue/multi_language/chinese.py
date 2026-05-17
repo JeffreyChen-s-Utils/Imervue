@@ -518,6 +518,15 @@ chinese_word_dict = {
     "desktop_pet_script_default": '（使用内置默认语音）',
     "desktop_pet_script_loaded": '已加载：{name}',
     "desktop_pet_script_failed": '脚本加载失败：{path}',
+    "desktop_pet_unnamed": '（未命名）',
+    # 通用对话框标题与跨标签消息
+    "warning_title": '警告',
+    "dual_pane_dest_not_dir": '目标不是文件夹',
+    "tags_invalid_path": '标签路径无效',
+    "smart_albums_name_required": '请输入名称',
+    # Paint 欢迎界面提示
+    "paint_welcome_new_tooltip": '在新标签中打开空白画布（Ctrl+T）',
+    "paint_welcome_open_tooltip": '从磁盘挑一张图片或 .psd 加载到当前工作区',
     "puppet_placeholder_subtitle": '自制 2D 绑骨动画 — 即将推出。',
     "puppet_toolbar_title": '偶动画',
     "puppet_open": '打开偶动画…',

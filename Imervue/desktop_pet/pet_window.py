@@ -549,8 +549,9 @@ class PetWindow(QWidget):
         if document is None or not document.motions:
             motions_menu.setEnabled(False)
             return
+        unnamed = tr("desktop_pet_unnamed", "(unnamed)")
         for motion in document.motions:
-            action = motions_menu.addAction(motion.name or "(unnamed)")
+            action = motions_menu.addAction(motion.name or unnamed)
             action.triggered.connect(
                 lambda _checked=False, m=motion: self._play_motion(m),
             )
@@ -563,8 +564,9 @@ class PetWindow(QWidget):
         if document is None or not document.expressions:
             expressions_menu.setEnabled(False)
             return
+        unnamed = tr("desktop_pet_unnamed", "(unnamed)")
         for expression in document.expressions:
-            action = expressions_menu.addAction(expression.name or "(unnamed)")
+            action = expressions_menu.addAction(expression.name or unnamed)
             action.triggered.connect(
                 lambda _checked=False, e=expression: self._apply_expression(e.name),
             )

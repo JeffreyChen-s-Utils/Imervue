@@ -526,6 +526,15 @@ korean_word_dict = {
     "desktop_pet_script_default": '(내장 기본 음성 사용 중)',
     "desktop_pet_script_loaded": '로드됨: {name}',
     "desktop_pet_script_failed": '스크립트 로드 실패: {path}',
+    "desktop_pet_unnamed": '(이름 없음)',
+    # 공통 대화상자 제목 및 탭 간 메시지
+    "warning_title": '경고',
+    "dual_pane_dest_not_dir": '대상이 폴더가 아닙니다',
+    "tags_invalid_path": '태그 경로가 잘못되었습니다',
+    "smart_albums_name_required": '이름을 입력하세요',
+    # Paint 시작 화면 툴팁
+    "paint_welcome_new_tooltip": '새 탭에서 빈 캔버스 열기 (Ctrl+T)',
+    "paint_welcome_open_tooltip": '디스크에서 이미지 또는 .psd 를 골라 이 작업 공간에서 열기',
     "puppet_placeholder_subtitle": '직접 만든 2D 리깅 애니메이션 — 곧 출시.',
     "puppet_toolbar_title": '퍼펫',
     "puppet_open": '퍼펫 열기…',
