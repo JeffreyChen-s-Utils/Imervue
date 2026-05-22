@@ -12,12 +12,15 @@ import logging
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
+    QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QKeySequenceEdit,
     QLabel,
     QPushButton,
     QSlider,
@@ -27,6 +30,14 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.desktop_pet import settings as pet_settings
+from Imervue.desktop_pet.hotkey_manager import (
+    ACTION_SPEAK_NOW,
+    ACTION_TOGGLE_CLICK_THROUGH,
+    ACTION_TOGGLE_LOCK,
+    ACTION_TOGGLE_VISIBLE,
+    DEFAULT_HOTKEY_BINDINGS,
+    is_valid_spec,
+)
 from Imervue.desktop_pet.pet_window import PetWindow
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -112,6 +123,7 @@ class PetWorkspace(QWidget):
             ("idle_motion", self._idle_motion_check),
             ("auto_blink", self._blink_check),
             ("drag_track", self._drag_check),
+            ("mouse_gaze", self._gaze_check),
             ("mic_lipsync", self._mic_check),
             ("webcam_tracking", self._webcam_check),
         ):
@@ -136,6 +148,7 @@ class PetWorkspace(QWidget):
         layout.addWidget(self._build_window_group())
         layout.addWidget(self._build_drivers_group())
         layout.addWidget(self._build_script_group())
+        layout.addWidget(self._build_hotkey_group())
         layout.addStretch(1)
 
         self._status = QLabel("")
@@ -289,6 +302,12 @@ class PetWorkspace(QWidget):
         self._drag_check.toggled.connect(self._on_drag_toggled)
         layout.addWidget(self._drag_check)
 
+        self._gaze_check = QCheckBox(
+            _tr("desktop_pet_mouse_gaze", "Mouse gaze (eyes follow cursor)"),
+        )
+        self._gaze_check.toggled.connect(self._on_gaze_toggled)
+        layout.addWidget(self._gaze_check)
+
         self._mic_check = QCheckBox(
             _tr("desktop_pet_mic_lipsync", "Mic lip-sync (needs sounddevice)"),
         )
@@ -321,6 +340,11 @@ class PetWorkspace(QWidget):
         )
         self._load_script_button.clicked.connect(self._on_load_script)
         row.addWidget(self._load_script_button)
+        self._edit_script_button = QPushButton(
+            _tr("desktop_pet_edit_script", "Edit script…"),
+        )
+        self._edit_script_button.clicked.connect(self._on_edit_script)
+        row.addWidget(self._edit_script_button)
         self._reset_script_button = QPushButton(
             _tr("desktop_pet_reset_script", "Reset to default"),
         )
@@ -334,6 +358,51 @@ class PetWorkspace(QWidget):
         )
         self._current_script_label.setStyleSheet("color: #888;")
         layout.addWidget(self._current_script_label)
+        return group
+
+    def _build_hotkey_group(self) -> QGroupBox:
+        """System-wide keyboard shortcuts. ``pynput`` provides the
+        OS-level hook; missing dep degrades the group to a hint
+        rather than an error."""
+        group = QGroupBox(_tr("desktop_pet_group_hotkeys", "Global hotkeys"))
+        layout = QVBoxLayout(group)
+        settings = pet_settings.load()
+        persisted = settings.get("hotkeys", {}) or {}
+        merged = dict(DEFAULT_HOTKEY_BINDINGS)
+        for action, spec in persisted.items():
+            if isinstance(spec, str) and spec:
+                merged[action] = spec
+
+        self._hotkey_check = QCheckBox(
+            _tr(
+                "desktop_pet_hotkeys_enabled",
+                "Enable global hotkeys (needs pynput)",
+            ),
+        )
+        self._hotkey_check.setChecked(bool(settings.get("hotkeys_enabled", False)))
+        self._hotkey_check.toggled.connect(self._on_hotkeys_toggled)
+        layout.addWidget(self._hotkey_check)
+
+        form = QFormLayout()
+        self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
+        rows: tuple[tuple[str, str, str], ...] = (
+            (ACTION_TOGGLE_VISIBLE,
+             "desktop_pet_hotkey_toggle_visible", "Show / hide pet"),
+            (ACTION_TOGGLE_LOCK,
+             "desktop_pet_hotkey_toggle_lock", "Lock / unlock position"),
+            (ACTION_TOGGLE_CLICK_THROUGH,
+             "desktop_pet_hotkey_click_through", "Toggle click-through"),
+            (ACTION_SPEAK_NOW,
+             "desktop_pet_hotkey_speak_now", "Speak now"),
+        )
+        for action, label_key, default_label in rows:
+            edit = QKeySequenceEdit(QKeySequence(merged[action]))
+            edit.editingFinished.connect(
+                lambda _a=action, _e=edit: self._on_hotkey_edited(_a, _e),
+            )
+            form.addRow(_tr(label_key, default_label), edit)
+            self._hotkey_edits[action] = edit
+        layout.addLayout(form)
         return group
 
     # ---- pet-window lifecycle ----------------------------------
@@ -456,6 +525,41 @@ class PetWorkspace(QWidget):
         self._status.setText("")
         return True
 
+    def _on_edit_script(self) -> None:   # pragma: no cover - Qt UI
+        """Open the visual script editor. Loads the currently-bound
+        script (from the engine; falls back to default) so the
+        user edits exactly what the pet is using right now. On
+        accept, prompts for a save path + persists the script_path
+        setting so the next launch reloads."""
+        from Imervue.desktop_pet.pet_script import save_script
+        from Imervue.desktop_pet.pet_script_editor import (
+            PetScriptEditorDialog,
+        )
+
+        window = self._ensure_pet_window()
+        current = window._script_engine.script()   # noqa: SLF001
+        dialog = PetScriptEditorDialog(current, parent=self)
+        if dialog.exec() != PetScriptEditorDialog.DialogCode.Accepted:
+            return
+        edited = dialog.script()
+        # Pick a save path — default to the currently-loaded one
+        # so "Edit + save" round-trips to the same file.
+        settings = pet_settings.load()
+        start_dir = settings.get("script_path", "") or ""
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("desktop_pet_save_script_title", "Save pet script"),
+            start_dir,
+            "Pet script (*.json *.petscript.json)",
+        )
+        if not path:
+            return
+        save_script(edited, path)
+        pet_settings.update(script_path=path)
+        window._script_engine.set_script(edited)   # noqa: SLF001
+        self._current_script_label.setText(self._format_script_label(path))
+        self._status.setText("")
+
     def _on_reset_script(self) -> None:
         """Drop the user script and revert to the built-in
         greetings. The pet window does the actual reset; this
@@ -528,6 +632,36 @@ class PetWorkspace(QWidget):
 
     def _on_drag_toggled(self, checked: bool) -> None:
         self._ensure_pet_window().set_drag_track_enabled(bool(checked))
+
+    def _on_gaze_toggled(self, checked: bool) -> None:
+        self._ensure_pet_window().set_mouse_gaze_enabled(bool(checked))
+
+    def _on_hotkeys_toggled(self, checked: bool) -> None:
+        ok = self._ensure_pet_window().set_hotkeys_enabled(bool(checked))
+        if checked and not ok:
+            self._status.setText(
+                _tr(
+                    "desktop_pet_hotkeys_missing",
+                    "Global hotkeys need pynput — pip install pynput",
+                ),
+            )
+            self._hotkey_check.blockSignals(True)
+            self._hotkey_check.setChecked(False)
+            self._hotkey_check.blockSignals(False)
+
+    def _on_hotkey_edited(self, action: str, edit: QKeySequenceEdit) -> None:
+        """Persist the new binding (if parseable) and refresh the
+        running listener so the change takes effect immediately."""
+        spec = edit.keySequence().toString()
+        if not spec or not is_valid_spec(spec):
+            return
+        persisted = pet_settings.load().get("hotkeys", {}) or {}
+        if not isinstance(persisted, dict):
+            persisted = {}
+        persisted[action] = spec
+        pet_settings.update(hotkeys=persisted)
+        if self._pet_window is not None and self._pet_window.hotkeys_enabled():
+            self._pet_window.set_hotkeys_enabled(True)
 
     def _on_mic_toggled(self, checked: bool) -> None:
         ok = self._ensure_pet_window().set_mic_lipsync_enabled(bool(checked))

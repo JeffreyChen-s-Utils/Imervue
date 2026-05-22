@@ -39,6 +39,60 @@ class Rect:
         return self.y + self.h
 
 
+@dataclass(frozen=True)
+class ScreenInfo:
+    """A monitor's identity + its available (work area) rectangle.
+
+    ``name`` is whatever the platform calls the screen — Qt exposes
+    it as :meth:`QScreen.name`. Useful as a stable identifier
+    across sessions: same physical monitor keeps the same name even
+    when the user rearranges screens or unplugs a sibling display.
+    """
+
+    name: str
+    available: Rect
+
+
+def resolve_screen(
+    preferred_name: str, screens: list[ScreenInfo],
+) -> ScreenInfo | None:
+    """Pick the right :class:`ScreenInfo` for a saved
+    ``preferred_name``.
+
+    Priority:
+
+    1. Exact name match — same physical monitor across sessions.
+    2. First screen in the list — usually the primary; the caller
+       passes screens in the platform's preferred order.
+    3. ``None`` only when ``screens`` is empty (no displays).
+    """
+    if not screens:
+        return None
+    if preferred_name:
+        for screen in screens:
+            if screen.name == preferred_name:
+                return screen
+    return screens[0]
+
+
+def clamp_window_to_screen(
+    window: Rect, screen: ScreenInfo,
+) -> tuple[int, int]:
+    """Shift ``window`` so it sits entirely inside
+    ``screen.available``, returning the new ``(x, y)``.
+
+    Window size is preserved. When the window is *bigger* than the
+    screen on an axis, that axis pins to the screen's top-left so
+    the window's top-left stays visible — best the helper can do
+    until the user resizes the pet."""
+    avail = screen.available
+    max_x = avail.right - window.w
+    max_y = avail.bottom - window.h
+    new_x = _clamp(window.x, avail.x, max_x)
+    new_y = _clamp(window.y, avail.y, max_y)
+    return new_x, new_y
+
+
 def snap_to_screen_edges(
     window: Rect,
     screen: Rect,
@@ -99,3 +153,13 @@ def _clamp(value: int, low: int, high: int) -> int:
     if value > high:
         return high
     return value
+
+
+__all__ = [
+    "DEFAULT_SNAP_THRESHOLD",
+    "Rect",
+    "ScreenInfo",
+    "clamp_window_to_screen",
+    "resolve_screen",
+    "snap_to_screen_edges",
+]

@@ -14,6 +14,12 @@ JSON schema (versioned so we can grow without breaking older files):
         "version": 1,
         "name": "March 7th",
         "greetings": ["Hello!", "Hi there!"],
+        "time_of_day_greetings": {
+            "morning": ["Good morning!"],
+            "afternoon": ["Afternoon!"],
+            "evening": ["Good evening!"],
+            "night": ["Still up?"]
+        },
         "hit_responses": {
             "head": ["Don't poke me!", "Hey!"],
             "body": ["Ticklish!"]
@@ -28,6 +34,10 @@ JSON schema (versioned so we can grow without breaking older files):
 
 * ``greetings`` — used when the user clicks the pet and no hit
   area matches.
+* ``time_of_day_greetings`` — same trigger as ``greetings``, but
+  takes priority and picks based on local clock band
+  (``morning`` 05–11, ``afternoon`` 12–17, ``evening`` 18–21,
+  ``night`` 22–04). Missing bands fall back to ``greetings``.
 * ``hit_responses`` — keyed by ``HitArea.id``; one of the lines
   pops when that area is clicked. Overrides the default greeting.
 * ``motion_lines`` — keyed by ``Motion.name``; one of the lines
@@ -52,6 +62,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +85,35 @@ five lines the desktop pet shipped with before scripting. Kept here
 (rather than in ``pet_window``) so callers can construct an empty
 script that still surfaces the default voice."""
 
+TIME_OF_DAY_BANDS: tuple[str, ...] = ("morning", "afternoon", "evening", "night")
+"""Canonical ordering of the four bands. Anything outside this set
+in a loaded script is dropped during coercion so the engine never
+has to defend against typo'd band keys at sample time."""
+
+
+def time_of_day_band(hour: int) -> str:
+    """Map a 24-hour clock value to its band name.
+
+    Bands match common-sense thresholds:
+
+    * ``morning``   — 05 ≤ h < 12
+    * ``afternoon`` — 12 ≤ h < 18
+    * ``evening``   — 18 ≤ h < 22
+    * ``night``     — 22 ≤ h < 24  *or*  0 ≤ h < 5
+
+    Pure helper so tests inject any hour without monkey-patching the
+    clock. ``hour`` is wrapped to ``[0, 24)`` so timezone-offset
+    arithmetic that produces 25 or -3 still lands somewhere sane.
+    """
+    h = int(hour) % 24
+    if 5 <= h < 12:
+        return "morning"
+    if 12 <= h < 18:
+        return "afternoon"
+    if 18 <= h < 22:
+        return "evening"
+    return "night"
+
 
 @dataclass
 class ScheduledEvent:
@@ -95,6 +135,7 @@ class PetScript:
     version: int = CURRENT_SCHEMA_VERSION
     name: str = ""
     greetings: list[str] = field(default_factory=list)
+    time_of_day_greetings: dict[str, list[str]] = field(default_factory=dict)
     hit_responses: dict[str, list[str]] = field(default_factory=dict)
     motion_lines: dict[str, list[str]] = field(default_factory=dict)
     scheduled: list[ScheduledEvent] = field(default_factory=list)
@@ -116,6 +157,9 @@ class PetScript:
             "version": self.version,
             "name": self.name,
             "greetings": list(self.greetings),
+            "time_of_day_greetings": {
+                k: list(v) for k, v in self.time_of_day_greetings.items()
+            },
             "hit_responses": {k: list(v) for k, v in self.hit_responses.items()},
             "motion_lines": {k: list(v) for k, v in self.motion_lines.items()},
             "scheduled": [
@@ -181,10 +225,24 @@ def _coerce_script(raw: dict[str, Any]) -> PetScript:
         version=_coerce_int(raw.get("version"), CURRENT_SCHEMA_VERSION),
         name=str(raw.get("name", "")),
         greetings=_coerce_str_list(raw.get("greetings")),
+        time_of_day_greetings=_coerce_time_of_day(raw.get("time_of_day_greetings")),
         hit_responses=_coerce_str_list_dict(raw.get("hit_responses")),
         motion_lines=_coerce_str_list_dict(raw.get("motion_lines")),
         scheduled=_coerce_scheduled(raw.get("scheduled")),
     )
+
+
+def _coerce_time_of_day(value: Any) -> dict[str, list[str]]:
+    """Same shape as :func:`_coerce_str_list_dict` but drops any key
+    that isn't in :data:`TIME_OF_DAY_BANDS`. Typo'd bands (``"mornig"``)
+    silently disappear instead of becoming a never-firing bucket."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): _coerce_str_list(val)
+        for key, val in value.items()
+        if isinstance(val, list) and str(key) in TIME_OF_DAY_BANDS
+    }
 
 
 def _coerce_int(value: Any, default: int) -> int:
@@ -292,6 +350,24 @@ class PetScriptEngine:
         if not lines:
             return None
         return self._next_line(f"motion:{motion_name}", lines)
+
+    def pick_time_of_day_greeting(self, *, hour: int | None = None) -> str | None:
+        """Pick a greeting for the current local-clock band, or
+        ``None`` when the band has no lines authored.
+
+        ``hour`` lets tests inject a deterministic clock; production
+        callers pass nothing and we read ``datetime.now().hour``.
+        Returning ``None`` (not falling back to the plain greetings)
+        is deliberate — the pet window chains this in front of
+        :meth:`pick_greeting` so the caller controls the fallback.
+        """
+        if hour is None:
+            hour = datetime.now().hour
+        band = time_of_day_band(hour)
+        lines = self._script.time_of_day_greetings.get(band)
+        if not lines:
+            return None
+        return self._next_line(f"tod:{band}", lines)
 
     def pick_greeting(self) -> str | None:
         """Default click line. Falls back through three layers so

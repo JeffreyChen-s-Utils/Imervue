@@ -264,6 +264,14 @@ class PuppetCanvas(QOpenGLWidget):
         # and the dominant playback bottleneck. Cache a 2×2 RGBA texture
         # once and tile it with GL_REPEAT instead.
         self._checker_texture: int | None = None
+        # Pet-mode drop shadow: a small radial-gradient RGBA
+        # texture stretched to a flattened ellipse below the rig.
+        # State is canvas-local (per-instance) so multi-pet setups
+        # can have one pet with shadow on, another off.
+        self._pet_shadow_texture: int | None = None
+        self._pet_shadow_enabled: bool = False
+        self._pet_shadow_opacity: float = 1.0
+        self._pet_shadow_scale: float = 1.0
         # Per-drawable VBO cache. Each entry holds
         # ``{vert_vbo, uv_vbo, idx_ibo, idx_count, vert_bytes}`` so the
         # immutable UV + index arrays live on the GPU once per document
@@ -612,6 +620,8 @@ class PuppetCanvas(QOpenGLWidget):
         # selection overlay since the pet has no editor UI.
         if not self._pet_mode:
             self._draw_transparency_backdrop()
+        if self._pet_mode and self._pet_shadow_enabled:
+            self._draw_pet_shadow()
         self._draw_drawables()
         if not self._pet_mode:
             self._draw_selection_overlay()
@@ -747,6 +757,86 @@ class PuppetCanvas(QOpenGLWidget):
         glTexCoord2f(0.0, v_repeat)
         glVertex2f(0.0, h)
         glEnd()
+
+    # ---- pet-mode drop shadow ------------------------------------------
+
+    def set_pet_shadow(
+        self,
+        *,
+        enabled: bool,
+        opacity: float = 1.0,
+        scale: float = 1.0,
+    ) -> None:
+        """Configure the drop shadow drawn under the puppet in pet
+        mode. ``opacity`` multiplies the texture's built-in falloff
+        (so ``1.0`` is the default-look shadow, ``0.5`` half-fade);
+        ``scale`` scales the shadow ellipse width."""
+        self._pet_shadow_enabled = bool(enabled)
+        self._pet_shadow_opacity = max(0.0, min(1.0, float(opacity)))
+        self._pet_shadow_scale = max(0.0, float(scale))
+        self.update()
+
+    def pet_shadow_enabled(self) -> bool:
+        return self._pet_shadow_enabled
+
+    def _draw_pet_shadow(self) -> None:  # pragma: no cover - GL needs display
+        """Render the drop shadow as one textured quad below the
+        rig. Skipped when no document is bound or the shadow
+        texture failed to upload."""
+        if self._document is None:
+            return
+        from Imervue.desktop_pet.pet_shadow import shadow_quad_geometry
+        tex = self._ensure_pet_shadow_texture()
+        if tex is None:
+            return
+        x, y, w, h = shadow_quad_geometry(
+            self._document.size, scale=self._pet_shadow_scale,
+        )
+        if w <= 0.0 or h <= 0.0:
+            return
+        glBindTexture(GL_TEXTURE_2D, tex)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glColor4f(1.0, 1.0, 1.0, self._pet_shadow_opacity)
+        glBegin(GL_QUADS)
+        glTexCoord2f(0.0, 0.0)
+        glVertex2f(x, y)
+        glTexCoord2f(1.0, 0.0)
+        glVertex2f(x + w, y)
+        glTexCoord2f(1.0, 1.0)
+        glVertex2f(x + w, y + h)
+        glTexCoord2f(0.0, 1.0)
+        glVertex2f(x, y + h)
+        glEnd()
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+
+    def _ensure_pet_shadow_texture(self) -> int | None:  # pragma: no cover - GL needs display
+        """Lazy-build the radial-alpha shadow texture. Cached on
+        the canvas; document-independent so it survives swaps."""
+        if self._pet_shadow_texture is not None:
+            return self._pet_shadow_texture
+        from Imervue.desktop_pet.pet_shadow import (
+            DEFAULT_TEXTURE_SIZE,
+            make_shadow_pixels,
+        )
+        from OpenGL.GL import (
+            GL_CLAMP_TO_EDGE,
+            GL_LINEAR,
+        )
+        pixels_list = make_shadow_pixels(size=DEFAULT_TEXTURE_SIZE)
+        pixels = np.array(pixels_list, dtype=np.uint8)
+        tex = int(glGenTextures(1))
+        glBindTexture(GL_TEXTURE_2D, tex)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA,
+            pixels.shape[1], pixels.shape[0], 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, pixels.tobytes(),
+        )
+        self._pet_shadow_texture = tex
+        return tex
 
     def _ensure_checker_texture(self) -> int:  # pragma: no cover - GL needs display
         """Lazy-build a 2×2 RGBA texture carrying the checker pattern.

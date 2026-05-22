@@ -18,6 +18,9 @@ import pytest
 from Imervue.desktop_pet.edge_snap import (
     DEFAULT_SNAP_THRESHOLD,
     Rect,
+    ScreenInfo,
+    clamp_window_to_screen,
+    resolve_screen,
     snap_to_screen_edges,
 )
 
@@ -141,6 +144,84 @@ def test_offset_screen_origin():
     x, y = snap_to_screen_edges(win, secondary, threshold=24)
     assert x == 1920
     assert y == 540
+
+
+# ---------------------------------------------------------------
+# Multi-monitor helpers
+# ---------------------------------------------------------------
+
+
+def _primary() -> ScreenInfo:
+    return ScreenInfo(name="DISPLAY1", available=Rect(0, 0, 1920, 1080))
+
+
+def _secondary() -> ScreenInfo:
+    # Tucked to the right of the primary, smaller resolution.
+    return ScreenInfo(name="DISPLAY2", available=Rect(1920, 0, 1280, 720))
+
+
+def test_resolve_screen_matches_name():
+    """Same physical monitor across sessions → exact-name match
+    wins regardless of list order."""
+    screens = [_primary(), _secondary()]
+    result = resolve_screen("DISPLAY2", screens)
+    assert result is _secondary() or result == _secondary()
+    assert result.name == "DISPLAY2"
+
+
+def test_resolve_screen_falls_back_to_first():
+    """Saved name doesn't match any current screen → return the
+    primary (first in list) rather than None — pet still has
+    somewhere to live."""
+    screens = [_primary(), _secondary()]
+    result = resolve_screen("DISPLAY_GONE", screens)
+    assert result is screens[0]
+
+
+def test_resolve_screen_empty_name_returns_first():
+    """Fresh-install case: no saved screen_name yet → primary."""
+    screens = [_primary(), _secondary()]
+    assert resolve_screen("", screens) is screens[0]
+
+
+def test_resolve_screen_no_screens_returns_none():
+    """No connected displays (headless) — caller must handle
+    None rather than crash on indexing."""
+    assert resolve_screen("DISPLAY1", []) is None
+
+
+def test_clamp_window_inside_screen_is_unchanged():
+    win = Rect(x=200, y=300, w=320, h=480)
+    x, y = clamp_window_to_screen(win, _primary())
+    assert (x, y) == (200, 300)
+
+
+def test_clamp_window_pushes_off_screen_back():
+    """A saved position from a wider monitor lands past the new
+    monitor's right edge → must be pulled back inside."""
+    win = Rect(x=2200, y=300, w=320, h=480)
+    x, y = clamp_window_to_screen(win, _primary())
+    assert x == 1920 - 320
+    assert y == 300
+
+
+def test_clamp_window_respects_screen_origin():
+    """Secondary screen offset → clamp uses its origin, not (0,0).
+    The secondary is shorter (720 px), so a 480-px-tall window at
+    y=300 also gets pulled up to fit: 720 - 480 = 240."""
+    win = Rect(x=1000, y=300, w=320, h=480)   # would be on primary
+    x, y = clamp_window_to_screen(win, _secondary())
+    assert x == 1920   # left edge of secondary
+    assert y == 240    # bottom-aligned inside the shorter screen
+
+
+def test_clamp_window_oversized_pins_to_top_left():
+    """When the window doesn't fit, the helper pins to top-left so
+    the user can still drag it — same rule as snap_to_screen_edges."""
+    win = Rect(x=500, y=500, w=4000, h=4000)
+    x, y = clamp_window_to_screen(win, _primary())
+    assert x == 0
+    assert y == 0
 
 
 @pytest.mark.parametrize("threshold", [1, 8, 24, 100])
