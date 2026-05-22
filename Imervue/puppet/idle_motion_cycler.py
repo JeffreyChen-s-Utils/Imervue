@@ -20,13 +20,13 @@ Yields gracefully:
 from __future__ import annotations
 
 import logging
-import secrets
 import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from Imervue.puppet.document import Motion
+from Imervue.puppet.motion_picker import pick_random_motion_in_group
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -136,23 +136,13 @@ class IdleMotionCycler(QObject):
         return motion.group != self._group
 
     def _pick_next(self) -> Motion | None:
-        document = self._canvas.document()
-        if document is None:
-            return None
-        candidates = [m for m in document.motions if m.group == self._group]
-        if not candidates:
-            return None
-        # Avoid back-to-back replay when alternatives exist — keeps
-        # the loop feeling varied even with two or three Idle motions.
-        if len(candidates) > 1 and self._last_motion_name is not None:
-            filtered = [m for m in candidates if m.name != self._last_motion_name]
-            if filtered:
-                candidates = filtered
-        picked = (
-            candidates[0]
-            if len(candidates) == 1
-            else secrets.choice(candidates)
+        picked = pick_random_motion_in_group(
+            self._canvas.document(),
+            self._group,
+            exclude_name=self._last_motion_name,
         )
+        if picked is None:
+            return None
         self._player.set_motion(picked)
         self._player.play()
         self._last_pick_t = time.monotonic()

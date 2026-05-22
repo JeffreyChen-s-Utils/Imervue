@@ -19,12 +19,14 @@ import pytest
 from Imervue.desktop_pet.pet_script import (
     CURRENT_SCHEMA_VERSION,
     DEFAULT_GREETINGS,
+    TIME_OF_DAY_BANDS,
     PetScript,
     PetScriptEngine,
     PetScriptError,
     ScheduledEvent,
     load_script,
     save_script,
+    time_of_day_band,
 )
 
 
@@ -236,3 +238,152 @@ def test_scheduled_event_with_empty_messages_does_not_fire(monkeypatch):
     ))
     base[0] = 65.0
     assert engine.due_scheduled_message() == "B"
+
+
+# ---------------------------------------------------------------
+# Time-of-day greetings
+# ---------------------------------------------------------------
+
+
+def test_time_of_day_band_thresholds():
+    """Boundary check on every band edge — off-by-one here would
+    mean the user wakes up to a "good night" greeting at 5 AM."""
+    assert time_of_day_band(5) == "morning"     # start of morning
+    assert time_of_day_band(11) == "morning"
+    assert time_of_day_band(12) == "afternoon"  # start of afternoon
+    assert time_of_day_band(17) == "afternoon"
+    assert time_of_day_band(18) == "evening"
+    assert time_of_day_band(21) == "evening"
+    assert time_of_day_band(22) == "night"
+    assert time_of_day_band(4) == "night"
+    assert time_of_day_band(0) == "night"
+
+
+def test_time_of_day_band_wraps_out_of_range():
+    """Robust to garbage input — timezone math sometimes overshoots
+    into negative or >=24 hour values; the band should still resolve
+    rather than raise."""
+    assert time_of_day_band(25) == "night"        # 25 % 24 == 1 → night
+    assert time_of_day_band(-1) == "night"        # -1 % 24 == 23 → night
+    assert time_of_day_band(36) == "afternoon"    # 36 % 24 == 12 → afternoon
+
+
+def test_time_of_day_bands_constant_lists_four_bands():
+    """Schema lists exactly four bands — adding a fifth without
+    updating the band function would silently drop user lines."""
+    assert TIME_OF_DAY_BANDS == ("morning", "afternoon", "evening", "night")
+
+
+def test_pick_time_of_day_greeting_picks_band():
+    """Happy path — the engine picks from the requested band when
+    that band has lines."""
+    engine = PetScriptEngine(PetScript(
+        time_of_day_greetings={
+            "morning": ["Morning A", "Morning B"],
+            "night": ["Night A"],
+        },
+    ))
+    assert engine.pick_time_of_day_greeting(hour=7) == "Morning A"
+    assert engine.pick_time_of_day_greeting(hour=7) == "Morning B"
+    assert engine.pick_time_of_day_greeting(hour=23) == "Night A"
+
+
+def test_pick_time_of_day_greeting_returns_none_when_empty():
+    """No lines authored for the current band → ``None`` so the
+    caller can fall through to ``pick_greeting``. Returning a plain
+    greeting here would defeat the whole "time-of-day takes priority"
+    chain in pet_window."""
+    engine = PetScriptEngine(PetScript(
+        time_of_day_greetings={"morning": ["Hi!"]},
+        greetings=["fallback"],
+    ))
+    # Afternoon band — no lines, must return None even though greetings exist.
+    assert engine.pick_time_of_day_greeting(hour=14) is None
+
+
+def test_pick_time_of_day_greeting_with_no_section_returns_none():
+    """Script without any time-of-day greetings authored → every
+    band returns None. Same forward-compat rule as the other engine
+    helpers."""
+    engine = PetScriptEngine(PetScript(greetings=["Hi!"]))
+    for hour in range(0, 24, 3):
+        assert engine.pick_time_of_day_greeting(hour=hour) is None
+
+
+def test_pick_time_of_day_greeting_default_hour_reads_clock():
+    """No ``hour`` kwarg → engine consults ``datetime.now()``. We
+    can't monkeypatch datetime cleanly, but we can verify the call
+    succeeds and returns the right type."""
+    engine = PetScriptEngine(PetScript(
+        time_of_day_greetings={
+            "morning": ["m"], "afternoon": ["a"],
+            "evening": ["e"], "night": ["n"],
+        },
+    ))
+    line = engine.pick_time_of_day_greeting()
+    # Every band has a line, so any non-None hour resolves; assert
+    # we got *something* rather than the actual band (which depends
+    # on the wall clock at test time).
+    assert line in {"m", "a", "e", "n"}
+
+
+def test_loader_drops_unknown_time_of_day_bands(tmp_path):
+    """Typo'd band keys like ``mornig`` must not survive load —
+    otherwise they'd sit as a never-firing bucket until the user
+    notices the typo (which could be never)."""
+    p = tmp_path / "tod.json"
+    p.write_text(
+        '{"time_of_day_greetings": {'
+        ' "morning": ["good morning"],'
+        ' "mornig": ["typo"],'
+        ' "afternoon": ["good afternoon"]'
+        '}}',
+        encoding="utf-8",
+    )
+    script = load_script(p)
+    assert set(script.time_of_day_greetings.keys()) == {"morning", "afternoon"}
+
+
+def test_time_of_day_round_trips_through_save_load(tmp_path):
+    """Save → load preserves the section. Catches a writer that
+    drops the new schema field."""
+    script = PetScript(
+        time_of_day_greetings={
+            "evening": ["Evening!"], "night": ["Late!"],
+        },
+    )
+    p = tmp_path / "tod_rt.json"
+    save_script(script, p)
+    reloaded = load_script(p)
+    assert reloaded.time_of_day_greetings == {
+        "evening": ["Evening!"], "night": ["Late!"],
+    }
+
+
+def test_time_of_day_round_robin_uses_separate_cursors():
+    """Each band has its own cursor — picking morning shouldn't
+    fast-forward the night cursor."""
+    engine = PetScriptEngine(PetScript(
+        time_of_day_greetings={
+            "morning": ["A", "B"],
+            "night": ["X", "Y"],
+        },
+    ))
+    assert engine.pick_time_of_day_greeting(hour=7) == "A"
+    assert engine.pick_time_of_day_greeting(hour=23) == "X"
+    assert engine.pick_time_of_day_greeting(hour=7) == "B"
+    assert engine.pick_time_of_day_greeting(hour=23) == "Y"
+
+
+def test_set_script_resets_time_of_day_cursors():
+    """``set_script`` already resets every cursor — same rule must
+    apply to the new TOD buckets, otherwise the new script's first
+    pick could land on index N instead of 0."""
+    engine = PetScriptEngine(PetScript(
+        time_of_day_greetings={"morning": ["A", "B"]},
+    ))
+    assert engine.pick_time_of_day_greeting(hour=7) == "A"
+    engine.set_script(PetScript(
+        time_of_day_greetings={"morning": ["X", "Y"]},
+    ))
+    assert engine.pick_time_of_day_greeting(hour=7) == "X"
