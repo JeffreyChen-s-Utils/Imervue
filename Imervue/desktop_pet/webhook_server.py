@@ -111,8 +111,11 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     # Silence the noisy default access log; we route through our
     # own logger so users can tune verbosity uniformly. Parameter
     # names mirror ``BaseHTTPRequestHandler.log_message`` exactly
-    # (``format``, ``*args``) so pylint W0221 doesn't complain
-    # about a signature drift on override.
+    # (``format``, ``*args``) so pylint W0221 (arguments-differ)
+    # doesn't complain about a signature drift on override; the
+    # stdlib parent itself shadows the ``format`` builtin, which is
+    # why we also disable W0622 here.
+    # pylint: disable=W0622
     def log_message(self, format, *args) -> None:   # noqa: A002, A003 - stdlib override signature
         del format, args
 
