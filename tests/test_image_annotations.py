@@ -199,8 +199,8 @@ def test_load_clamps_extreme_stroke_px(tmp_path):
         ],
     }), encoding="utf-8")
     layer = load(img)
-    assert layer.annotations[0].stroke_px == 50.0
-    assert layer.annotations[1].stroke_px == 0.5
+    assert layer.annotations[0].stroke_px == 50.0   # NOSONAR  # exact representable value asserted intentionally
+    assert layer.annotations[1].stroke_px == 0.5   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_load_uses_defaults_for_missing_optional_fields(tmp_path):

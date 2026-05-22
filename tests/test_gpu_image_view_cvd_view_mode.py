@@ -74,9 +74,9 @@ def test_set_view_mode_unknown_string_disables():
 
 def test_set_view_mode_clamps_severity():
     set_view_mode("protanopia", severity=2.0)
-    assert view_severity() == 1.0
+    assert view_severity() == 1.0   # NOSONAR  # exact representable value asserted intentionally
     set_view_mode("protanopia", severity=-1.0)
-    assert view_severity() == 0.0
+    assert view_severity() == 0.0   # NOSONAR  # exact representable value asserted intentionally
     set_view_mode("protanopia", severity=0.4)
     assert view_severity() == pytest.approx(0.4)
 
@@ -84,8 +84,8 @@ def test_set_view_mode_clamps_severity():
 def test_set_view_mode_non_numeric_severity_falls_back():
     """A misconfigured severity (string, None) → use 1.0 rather
     than crash the loader pipeline."""
-    set_view_mode("protanopia", severity="banana")   # type: ignore[arg-type]
-    assert view_severity() == 1.0
+    set_view_mode("protanopia", severity="banana")   # type: ignore[arg-type]  # NOSONAR  # negative-case fixture: helper must tolerate wrong type
+    assert view_severity() == 1.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_is_active_false_when_severity_is_zero():

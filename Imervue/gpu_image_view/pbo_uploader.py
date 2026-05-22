@@ -25,10 +25,6 @@ context.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.gpu_image_view.pbo_uploader")
 
