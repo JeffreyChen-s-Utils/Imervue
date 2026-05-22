@@ -5,6 +5,12 @@ the window-flag plumbing is testable: the right flag combination
 must be set before show, click-through toggle has to round-trip
 without losing the other flags, and the auxiliary state (drag
 offset, snap threshold) needs sane defaults.
+
+Every test in this module constructs a real :class:`PetWindow`,
+which instantiates a :class:`PuppetCanvas`. ``QOpenGLWidget`` is
+flaky on the headless GitHub Actions Windows runner once the
+offscreen-GL pool is exhausted — local runs still cover this
+file. Same skip marker pattern the ``test_puppet_*`` files use.
 """
 from __future__ import annotations
 
@@ -17,6 +23,8 @@ from Imervue.desktop_pet.pet_window import (
     PET_IDLE_CYCLE_DURATION_S,
     PetWindow,
 )
+
+from _qt_skip import pytestmark  # noqa: E402,F401
 from Imervue.puppet.document import (
     Motion,
     MotionSegment,

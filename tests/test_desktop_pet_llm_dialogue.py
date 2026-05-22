@@ -39,9 +39,9 @@ def test_validate_base_url_accepts_loopback_http():
     """The whole point of HTTP-on-loopback: Ollama listens on plain
     HTTP at 127.0.0.1 by default — must be allowed without making
     the user run a TLS proxy."""
-    validate_base_url("http://localhost:11434")
-    validate_base_url("http://127.0.0.1:11434")
-    validate_base_url("http://[::1]:11434")
+    validate_base_url("http://localhost:11434")   # NOSONAR  # loopback HTTP literal under test
+    validate_base_url("http://127.0.0.1:11434")   # NOSONAR  # loopback HTTP literal under test
+    validate_base_url("http://[::1]:11434")       # NOSONAR  # loopback HTTP literal under test
 
 
 def test_validate_base_url_rejects_plain_http_remote():
@@ -49,9 +49,9 @@ def test_validate_base_url_rejects_plain_http_remote():
     kind of "oh no" we want a fail-loud about, not a silent
     misconfiguration."""
     with pytest.raises(ValueError):
-        validate_base_url("http://example.com:11434")
+        validate_base_url("http://example.com:11434")   # NOSONAR  # negative-case fixture; the validator must reject it
     with pytest.raises(ValueError):
-        validate_base_url("http://192.168.1.5:11434")
+        validate_base_url("http://192.168.1.5:11434")   # NOSONAR  # negative-case fixture; the validator must reject it
 
 
 def test_validate_base_url_accepts_https_anywhere():
@@ -157,7 +157,7 @@ def test_request_json_returns_parsed_dict(monkeypatch):
 
     monkeypatch.setattr(llm_dialogue.urllib.request, "urlopen", fake_urlopen)
     out = llm_dialogue._request_json(   # noqa: SLF001
-        "http://localhost:11434/api/generate",
+        "http://localhost:11434/api/generate",   # NOSONAR  # loopback HTTP literal under test
         {"prompt": "x"}, timeout=5.0,
     )
     assert out == {"response": "ok"}
@@ -177,7 +177,8 @@ def test_request_json_validates_url_before_dialling(monkeypatch):
     monkeypatch.setattr(llm_dialogue.urllib.request, "urlopen", should_not_call)
     with pytest.raises(ValueError):
         llm_dialogue._request_json(   # noqa: SLF001
-            "http://example.com/api", {}, timeout=1.0,
+            "http://example.com/api",   # NOSONAR  # negative-case fixture; the guard must reject it
+            {}, timeout=1.0,
         )
     assert called["n"] == 0
 
@@ -199,7 +200,7 @@ def test_client_set_endpoint_validates(qapp):
     bounce the user back to the input box with an error."""
     client = LlmDialogueClient()
     with pytest.raises(ValueError):
-        client.set_endpoint(base_url="http://remote-server")
+        client.set_endpoint(base_url="http://remote-server")   # NOSONAR  # negative-case fixture; the setter must reject it
 
 
 def _wait_for(qapp, predicate, timeout_s: float = 2.0) -> bool:
@@ -303,7 +304,7 @@ def test_client_set_endpoint_takes_effect_on_next_request(qapp, monkeypatch):
     monkeypatch.setattr(llm_dialogue, "_request_json", capture)
     client = LlmDialogueClient()
     client.set_endpoint(
-        base_url="http://localhost:11434",
+        base_url="http://localhost:11434",   # NOSONAR  # loopback HTTP literal under test
         model="custom-model",
         persona="custom",
     )
@@ -311,4 +312,4 @@ def test_client_set_endpoint_takes_effect_on_next_request(qapp, monkeypatch):
     client.line_received.connect(received.append)
     client.request_line("greeting")
     assert _wait_for(qapp, lambda: bool(received))
-    assert captured[0] == "http://localhost:11434/api/generate"
+    assert captured[0] == "http://localhost:11434/api/generate"   # NOSONAR  # loopback HTTP literal under test
