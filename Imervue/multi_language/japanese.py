@@ -1606,6 +1606,12 @@ japanese_word_dict = {
     "lens_run": "適用",
 
     # --- Map View ---
+    "cvd_view_title": "色覚多様性プレビュー",
+    "cvd_view_off": "オフ",
+    "cvd_view_protanopia": "1型色覚（赤覚異常）",
+    "cvd_view_deuteranopia": "2型色覚（緑覚異常）",
+    "cvd_view_tritanopia": "3型色覚（青覚異常）",
+    "cvd_view_achromatopsia": "全色盲（グレースケール）",
     "map_title": "マップビュー",
     "map_count": "スキャン済み {total} 枚のうち {n} 枚が GPS 付き。",
     "map_fallback": "QtWebEngine 未インストール — 座標リスト表示。",
