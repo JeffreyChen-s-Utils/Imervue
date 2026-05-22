@@ -42,10 +42,10 @@ def test_gaze_target_zero_offset_is_neutral():
     else would mean the driver pushes a constant drift even when
     the user is hovering directly over the pet."""
     values = gaze_target_values((0.0, 0.0))
-    assert values[PARAM_ANGLE_X] == 0.0
-    assert values[PARAM_ANGLE_Y] == 0.0
-    assert values[PARAM_EYE_BALL_X] == 0.0
-    assert values[PARAM_EYE_BALL_Y] == 0.0
+    assert values[PARAM_ANGLE_X] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+    assert values[PARAM_ANGLE_Y] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+    assert values[PARAM_EYE_BALL_X] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+    assert values[PARAM_EYE_BALL_Y] == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_gaze_target_y_axis_is_flipped():
@@ -68,10 +68,10 @@ def test_gaze_target_clamps_to_unit_range():
     far_right_down = gaze_target_values((10_000.0, 10_000.0))
     far_left_up = gaze_target_values((-10_000.0, -10_000.0))
     for pid in (PARAM_ANGLE_X, PARAM_EYE_BALL_X):
-        assert far_right_down[pid] == 1.0
+        assert far_right_down[pid] == 1.0   # NOSONAR  # exact representable value asserted intentionally
         assert far_left_up[pid] == -1.0
     assert far_right_down[PARAM_ANGLE_Y] == -1.0   # cursor down → look down
-    assert far_left_up[PARAM_ANGLE_Y] == 1.0
+    assert far_left_up[PARAM_ANGLE_Y] == 1.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_gaze_target_eye_saturates_before_head():
@@ -80,7 +80,7 @@ def test_gaze_target_eye_saturates_before_head():
     and the rig looks like a turret instead of an animate puppet."""
     offset = (DEFAULT_EYE_TRACK_RADIUS_PX, 0.0)
     values = gaze_target_values(offset)
-    assert values[PARAM_EYE_BALL_X] == 1.0
+    assert values[PARAM_EYE_BALL_X] == 1.0   # NOSONAR  # exact representable value asserted intentionally
     assert 0.0 < values[PARAM_ANGLE_X] < 1.0
 
 
@@ -92,7 +92,7 @@ def test_gaze_target_zero_radius_returns_neutral():
         (100.0, 100.0), head_radius_px=0.0, eye_radius_px=0.0,
     )
     for pid in (PARAM_ANGLE_X, PARAM_ANGLE_Y, PARAM_EYE_BALL_X, PARAM_EYE_BALL_Y):
-        assert values[pid] == 0.0
+        assert values[pid] == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_gaze_target_negative_radius_treated_as_zero():
@@ -102,7 +102,7 @@ def test_gaze_target_negative_radius_treated_as_zero():
         (100.0, 100.0), head_radius_px=-50.0, eye_radius_px=-1.0,
     )
     for value in values.values():
-        assert value == 0.0
+        assert value == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_gaze_target_returns_only_four_standard_params():
@@ -123,15 +123,15 @@ def test_gaze_target_returns_only_four_standard_params():
 def test_smoothed_value_snaps_when_tau_is_zero():
     """Caller-opt-out of smoothing → adopt target immediately. This
     is what a "no smoothing" UI toggle would call into."""
-    assert smoothed_value(0.0, 1.0, dt_s=0.033, tau_s=0.0) == 1.0
-    assert smoothed_value(-0.5, 0.5, dt_s=0.033, tau_s=-1.0) == 0.5
+    assert smoothed_value(0.0, 1.0, dt_s=0.033, tau_s=0.0) == 1.0   # NOSONAR  # exact representable value asserted intentionally
+    assert smoothed_value(-0.5, 0.5, dt_s=0.033, tau_s=-1.0) == 0.5   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_smoothed_value_snaps_when_dt_is_zero():
     """First tick after enable has ``dt == 0`` because we haven't
     accumulated time yet. Snap to target instead of freezing on
     stale state."""
-    assert smoothed_value(0.0, 0.7, dt_s=0.0, tau_s=0.18) == 0.7
+    assert smoothed_value(0.0, 0.7, dt_s=0.0, tau_s=0.18) == 0.7   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_smoothed_value_approaches_target_monotonically():
@@ -229,7 +229,7 @@ def test_setters_clamp_to_positive_minimum(qapp):
         driver.set_eye_radius(0.0)
         assert driver.eye_radius() >= 1.0
         driver.set_smoothing(-1.0)
-        assert driver.smoothing() == 0.0
+        assert driver.smoothing() == 0.0   # NOSONAR  # exact representable value asserted intentionally
         driver.set_smoothing(0.4)
         assert driver.smoothing() == pytest.approx(0.4)
     finally:

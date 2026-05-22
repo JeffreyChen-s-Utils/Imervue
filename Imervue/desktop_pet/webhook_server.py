@@ -35,12 +35,8 @@ import logging
 import threading
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.webhook_server")
 
@@ -113,9 +109,12 @@ class _WebhookHandler(BaseHTTPRequestHandler):
     ``server.receiver`` attribute we set in :meth:`start`."""
 
     # Silence the noisy default access log; we route through our
-    # own logger so users can tune verbosity uniformly.
-    def log_message(self, _format, *_args) -> None:   # noqa: A003 - stdlib override
-        return
+    # own logger so users can tune verbosity uniformly. Parameter
+    # names mirror ``BaseHTTPRequestHandler.log_message`` exactly
+    # (``format``, ``*args``) so pylint W0221 doesn't complain
+    # about a signature drift on override.
+    def log_message(self, format, *args) -> None:   # noqa: A002, A003 - stdlib override signature
+        del format, args
 
     def _send_json(self, status: int, body: dict) -> None:
         payload = json.dumps(body).encode("utf-8")
@@ -161,7 +160,10 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         try:
             body = self.rfile.read(length)
             parsed = json.loads(body.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        except ValueError:
+            # JSONDecodeError + UnicodeDecodeError both derive from
+            # ValueError, so the bare catch covers "malformed JSON"
+            # and "non-utf8 body" without redundant subclass listing.
             self._send_json(400, {"error": "invalid json"})
             return
         command = parse_payload(parsed)

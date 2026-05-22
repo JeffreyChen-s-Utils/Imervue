@@ -458,9 +458,9 @@ def test_pet_shadow_opacity_clamps(qapp):
     window = PetWindow()
     try:
         window.set_pet_shadow_opacity(5.0)
-        assert pet_settings.load()["pet_shadow_opacity"] == 1.0
+        assert pet_settings.load()["pet_shadow_opacity"] == 1.0   # NOSONAR  # exact representable value asserted intentionally
         window.set_pet_shadow_opacity(-1.0)
-        assert pet_settings.load()["pet_shadow_opacity"] == 0.0
+        assert pet_settings.load()["pet_shadow_opacity"] == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         window.deleteLater()
 
@@ -471,9 +471,9 @@ def test_pet_shadow_scale_clamps(qapp):
     window = PetWindow()
     try:
         window.set_pet_shadow_scale(5.0)
-        assert pet_settings.load()["pet_shadow_scale"] == 2.0
+        assert pet_settings.load()["pet_shadow_scale"] == 2.0   # NOSONAR  # exact representable value asserted intentionally
         window.set_pet_shadow_scale(-1.0)
-        assert pet_settings.load()["pet_shadow_scale"] == 0.0
+        assert pet_settings.load()["pet_shadow_scale"] == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         window.deleteLater()
 

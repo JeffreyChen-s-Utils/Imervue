@@ -123,8 +123,8 @@ def test_extract_line_missing_field_returns_none():
 def test_extract_line_non_dict_returns_none():
     """Defensive against ``_request_json`` returning a list or
     string by accident."""
-    assert extract_line([]) is None    # type: ignore[arg-type]
-    assert extract_line("string") is None   # type: ignore[arg-type]
+    assert extract_line([]) is None    # type: ignore[arg-type]  # NOSONAR  # negative-case fixture: helper must tolerate wrong type
+    assert extract_line("string") is None   # type: ignore[arg-type]  # NOSONAR  # negative-case fixture: helper must tolerate wrong type
 
 
 # ---------------------------------------------------------------
@@ -163,7 +163,7 @@ def test_request_json_returns_parsed_dict(monkeypatch):
     assert out == {"response": "ok"}
     assert captured["url"].endswith("/api/generate")
     assert json.loads(captured["body"])["prompt"] == "x"
-    assert captured["timeout"] == 5.0
+    assert captured["timeout"] == 5.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_request_json_validates_url_before_dialling(monkeypatch):

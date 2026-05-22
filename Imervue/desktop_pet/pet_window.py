@@ -152,6 +152,18 @@ PUPPET_FILE_SUFFIX: str = ".puppet"
 rig". Anything else triggers the generic Drop reaction instead."""
 
 
+def _llm_situation_tag(area_id: str | None, motion_name: str | None) -> str:
+    """Pick the situation label to pass to the LLM. Hit-area
+    context wins over motion context which wins over the generic
+    greeting fallback — same priority chain the script engine
+    uses when looking up scripted lines."""
+    if area_id:
+        return f"hit:{area_id}"
+    if motion_name:
+        return f"motion:{motion_name}"
+    return "greeting"
+
+
 def _screen_info(screen) -> ScreenInfo:   # pragma: no cover - Qt geometry
     """Snapshot a Qt :class:`QScreen` into a pure :class:`ScreenInfo`.
 
@@ -655,23 +667,44 @@ class PetWindow(QWidget):
         3. ``script.greetings`` (or the built-in defaults) — the
            generic voice for "nothing better matched".
         """
-        if widget_pos is None:
+        area = self._hit_test_at(widget_pos)
+        if area is None and self.document() is None:
+            # ``_hit_test_at`` returns None for both "no document"
+            # and "no hit area matched"; only bail when no rig is
+            # loaded at all.
             return
-        document = self.document()
-        if document is None:
-            return
-        image_xy = self._widget_to_image(widget_pos)
-        if image_xy is None:
-            return
-        area = hit_test(
-            document, image_xy[0], image_xy[1],
-            deformed_vertices=self._canvas._deformed_vertices,   # noqa: SLF001
-        )
         area_id = area.id if area is not None else ""
         self.hit_triggered.emit(area_id)
         motion_name = area.motion if area is not None else None
         if motion_name:
             self._play_motion_by_name(motion_name)
+        self._play_sfx(SFX_CLICK)
+        self._speak_click_response(area_id, motion_name)
+
+    def _hit_test_at(self, widget_pos: QPoint | None):
+        """Run the document's hit-area test at a widget-space
+        position. ``None`` when there's no rig, no transform, or
+        no area covers the point."""
+        if widget_pos is None:
+            return None
+        document = self.document()
+        if document is None:
+            return None
+        image_xy = self._widget_to_image(widget_pos)
+        if image_xy is None:
+            return None
+        return hit_test(
+            document, image_xy[0], image_xy[1],
+            deformed_vertices=self._canvas._deformed_vertices,   # noqa: SLF001
+        )
+
+    def _speak_click_response(
+        self, area_id: str, motion_name: str | None,
+    ) -> None:
+        """Show the scripted speech line for a click (if speech is
+        on) and fire the LLM in parallel if enabled. The scripted
+        line shows immediately for snappy feedback; the LLM reply
+        replaces it via ``_on_llm_line`` if/when it lands."""
         if not self._speech_enabled:
             return
         line = (
@@ -682,21 +715,13 @@ class PetWindow(QWidget):
         )
         if line:
             self._show_speech(line)
-        self._play_sfx(SFX_CLICK)
-        # Kick the LLM in parallel — the scripted line shows
-        # immediately so the user gets snappy feedback; the LLM
-        # reply replaces it via ``_on_llm_line`` if/when it lands.
-        if self.llm_dialogue_enabled():
-            situation = (
-                f"hit:{area_id}" if area_id
-                else f"motion:{motion_name}" if motion_name
-                else "greeting"
-            )
-            try:
-                client = self._ensure_llm_client()
-            except ValueError:
-                return
-            client.request_line(situation)
+        if not self.llm_dialogue_enabled():
+            return
+        try:
+            client = self._ensure_llm_client()
+        except ValueError:
+            return
+        client.request_line(_llm_situation_tag(area_id, motion_name))
 
     def _widget_to_image(self, widget_pos: QPoint) -> tuple[float, float] | None:
         """Inverse of the canvas's modelview transform: undo

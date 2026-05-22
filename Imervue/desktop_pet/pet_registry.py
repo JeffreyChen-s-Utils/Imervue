@@ -19,15 +19,11 @@ and keeps the workspace + tray talking to the right ``PetWindow``.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet.pet_window import PetWindow
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_registry")
 
@@ -93,8 +89,10 @@ class PetRegistry(QObject):
 
     def despawn_all(self) -> None:
         """Tear down every live pet — used by the workspace's
-        teardown so test runs don't leak Qt windows between cases."""
-        for pet_id in list(self._pets.keys()):
+        teardown so test runs don't leak Qt windows between cases.
+        The list() snapshot is deliberate — despawn() mutates
+        self._pets in the loop body."""
+        for pet_id in list(self._pets.keys()):   # NOSONAR
             self.despawn(pet_id)
 
     # ---- inspection ------------------------------------------------

@@ -21,12 +21,8 @@ without instantiating the WebSocket client.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.obs_event_hook")
 

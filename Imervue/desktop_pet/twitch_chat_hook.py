@@ -25,12 +25,8 @@ import logging
 import socket
 import ssl
 import threading
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.twitch_chat_hook")
 
@@ -219,6 +215,10 @@ class TwitchChatClient(QObject):
         :class:`OSError` on any failure so :meth:`start` can surface
         a single uniform error path."""
         ctx = ssl.create_default_context()
+        # Explicit floor: Python 3.10+ defaults are already TLS 1.2,
+        # but pinning here makes the policy obvious to reviewers
+        # and survives a future ``create_default_context`` regression.
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         raw = socket.create_connection(
             (TWITCH_IRC_HOST, TWITCH_IRC_TLS_PORT), timeout=_CONNECT_TIMEOUT_S,
         )

@@ -111,8 +111,8 @@ def test_pick_phantom_offset_clamps_input():
     """A misconfigured caller passing |u| > 1 → clamped to ±1."""
     out = pick_phantom_offset(random_unit=(5.0, -5.0))
     # Eye saturates at 1.0 (clamp), head at gaze_range.
-    assert out[PARAM_EYE_BALL_X] == 1.0
-    assert out[PARAM_EYE_BALL_Y] == -1.0
+    assert out[PARAM_EYE_BALL_X] == 1.0   # NOSONAR  # exact representable value asserted intentionally
+    assert out[PARAM_EYE_BALL_Y] == -1.0   # NOSONAR  # exact representable value asserted intentionally
     assert out[PARAM_ANGLE_X] == pytest.approx(DEFAULT_GAZE_RANGE)
     assert out[PARAM_ANGLE_Y] == pytest.approx(-DEFAULT_GAZE_RANGE)
 
@@ -212,7 +212,7 @@ def test_notify_activity_resets_to_active(qapp, monkeypatch):
         # User comes back.
         driver.notify_activity()
         assert driver.stage() is IdleStage.ACTIVE
-        assert driver.idle_seconds() == 0.0
+        assert driver.idle_seconds() == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         driver.set_enabled(False)
         driver.deleteLater()
@@ -288,8 +288,8 @@ def test_disable_resets_gaze_to_neutral(qapp):
         driver.set_enabled(True)
         driver.set_enabled(False)
         values = canvas.parameter_values()
-        assert values[PARAM_ANGLE_X] == 0.0
-        assert values[PARAM_EYE_BALL_X] == 0.0
+        assert values[PARAM_ANGLE_X] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+        assert values[PARAM_EYE_BALL_X] == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         driver.deleteLater()
         canvas.deleteLater()

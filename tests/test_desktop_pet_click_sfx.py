@@ -90,10 +90,10 @@ class _StubEffect:
         self.play_calls = 0
         self.stop_calls = 0
 
-    def setSource(self, url) -> None:   # noqa: N802 - mirrors Qt API
+    def setSource(self, url) -> None:   # noqa: N802  # NOSONAR  # mirrors QSoundEffect.setSource so duck-typing works
         self.source = url
 
-    def setVolume(self, value) -> None:   # noqa: N802
+    def setVolume(self, value) -> None:   # noqa: N802  # NOSONAR  # mirrors QSoundEffect.setVolume so duck-typing works
         self.volume = value
 
     def play(self) -> None:
@@ -182,11 +182,11 @@ def test_set_volume_clamps_and_propagates(qapp, tmp_path, stub_qsoundeffect):
         player.set_paths({EVENT_CLICK: str(wav)})
         player.play(EVENT_CLICK)   # forces effect creation
         player.set_volume(2.5)
-        assert player.volume() == 1.0
-        assert player._effects[EVENT_CLICK].volume == 1.0   # noqa: SLF001
+        assert player.volume() == 1.0   # NOSONAR  # exact representable value asserted intentionally
+        assert player._effects[EVENT_CLICK].volume == 1.0   # noqa: SLF001   # NOSONAR  # exact representable value asserted intentionally
         player.set_volume(-0.5)
-        assert player.volume() == 0.0
-        assert player._effects[EVENT_CLICK].volume == 0.0   # noqa: SLF001
+        assert player.volume() == 0.0   # NOSONAR  # exact representable value asserted intentionally
+        assert player._effects[EVENT_CLICK].volume == 0.0   # noqa: SLF001   # NOSONAR  # exact representable value asserted intentionally
     finally:
         player.deleteLater()
 

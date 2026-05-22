@@ -36,7 +36,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def test_envelope_silence_is_zero():
-    assert compute_envelope([[0.0], [0.0], [0.0]]) == 0.0
+    assert compute_envelope([[0.0], [0.0], [0.0]]) == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_envelope_unit_signal_is_one():
@@ -51,11 +51,11 @@ def test_envelope_clips_above_one():
     the helper must clip rather than push >1.0 down the pipeline
     where it'd flip the rig past its parameter range."""
     block = [[2.0], [2.0], [2.0], [2.0]]
-    assert compute_envelope(block) == 1.0
+    assert compute_envelope(block) == 1.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_envelope_empty_array_is_zero():
-    assert compute_envelope([]) == 0.0
+    assert compute_envelope([]) == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_envelope_handles_nan():
@@ -73,13 +73,13 @@ def test_envelope_handles_nan():
 
 
 def test_smooth_envelope_snaps_when_tau_zero():
-    assert smooth_envelope(0.0, 1.0, dt_s=0.033, tau_s=0.0) == 1.0
+    assert smooth_envelope(0.0, 1.0, dt_s=0.033, tau_s=0.0) == 1.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_smooth_envelope_snaps_when_dt_zero():
     """First tick after enable has dt==0 — adopt the target so the
     smoothed value isn't permanently stuck at 0."""
-    assert smooth_envelope(0.0, 0.7, dt_s=0.0, tau_s=0.25) == 0.7
+    assert smooth_envelope(0.0, 0.7, dt_s=0.0, tau_s=0.25) == 0.7   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_smooth_envelope_approaches_target_monotonically():
@@ -102,8 +102,8 @@ def test_envelope_zero_silences_sway():
     still when nothing's playing."""
     for phase in (0.0, 0.1, 0.25, 0.5, 1.0):
         out = envelope_to_sway(0.0, phase)
-        assert out[PARAM_ANGLE_Z] == 0.0
-        assert out[PARAM_BODY_ANGLE_Z] == 0.0
+        assert out[PARAM_ANGLE_Z] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+        assert out[PARAM_BODY_ANGLE_Z] == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_envelope_one_at_phase_quarter_is_max_angle():
@@ -178,7 +178,7 @@ def test_driver_starts_disabled(qapp):
     driver = MusicRhythmDriver(canvas)
     try:
         assert driver.is_enabled() is False
-        assert driver.envelope() == 0.0
+        assert driver.envelope() == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         driver.deleteLater()
         canvas.deleteLater()
@@ -233,9 +233,9 @@ def test_push_envelope_clamps(qapp):
     driver = MusicRhythmDriver(canvas)
     try:
         driver.push_envelope(5.0)
-        assert driver._envelope_target == 1.0   # noqa: SLF001
+        assert driver._envelope_target == 1.0   # noqa: SLF001   # NOSONAR  # exact representable value asserted intentionally
         driver.push_envelope(-2.0)
-        assert driver._envelope_target == 0.0   # noqa: SLF001
+        assert driver._envelope_target == 0.0   # noqa: SLF001   # NOSONAR  # exact representable value asserted intentionally
     finally:
         driver.deleteLater()
         canvas.deleteLater()
@@ -255,8 +255,8 @@ def test_set_enabled_false_resets_sway_params(qapp):
         })
         driver._reset_params()   # noqa: SLF001
         values = canvas.parameter_values()
-        assert values[PARAM_ANGLE_Z] == 0.0
-        assert values[PARAM_BODY_ANGLE_Z] == 0.0
+        assert values[PARAM_ANGLE_Z] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+        assert values[PARAM_BODY_ANGLE_Z] == 0.0   # NOSONAR  # exact representable value asserted intentionally
     finally:
         driver.deleteLater()
         canvas.deleteLater()

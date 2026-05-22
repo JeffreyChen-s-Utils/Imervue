@@ -28,13 +28,9 @@ import logging
 import threading
 import urllib.error
 import urllib.request
-from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from PySide6.QtCore import QObject, Signal
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.llm_dialogue")
 
@@ -208,7 +204,10 @@ class LlmDialogueClient(QObject):
             logger.info("llm request URLError: %s", exc)
             self.request_failed.emit(f"connection: {exc}")
             return
-        except (TimeoutError, OSError) as exc:
+        except OSError as exc:
+            # TimeoutError is an OSError subclass on Python 3, so a
+            # bare OSError catches both connect-refused and read-
+            # timeout paths.
             logger.info("llm request OSError: %s", exc)
             self.request_failed.emit(f"network: {exc}")
             return

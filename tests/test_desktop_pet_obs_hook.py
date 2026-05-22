@@ -171,7 +171,7 @@ def test_event_callback_emits_signal(qapp, stub_obs):
     inst = stub_obs.instances[-1]
 
     class _Event:
-        def getType(self):
+        def getType(self):   # noqa: N802  # NOSONAR  # mirrors obswebsocket event API for duck-typing
             return "RecordingStarted"
     inst.event_callback(_Event())
     assert received == [OBS_GROUP_RECORD]
@@ -188,7 +188,7 @@ def test_event_callback_ignores_unmatched(qapp, stub_obs):
     inst = stub_obs.instances[-1]
 
     class _Event:
-        def getType(self):
+        def getType(self):   # noqa: N802  # NOSONAR  # mirrors obswebsocket event API for duck-typing
             return "Heartbeat"
     inst.event_callback(_Event())
     assert received == []
@@ -244,10 +244,14 @@ def test_start_returns_false_when_connect_raises(qapp, monkeypatch):
     report failure."""
     class _RaisingClient:
         def __init__(self, *_, **__):
-            pass
+            # Stub constructor — no setup needed; the real obsws
+            # init does network handshake we want to skip.
+            return
 
         def register(self, *_, **__):
-            pass
+            # Stub event-handler registration — we never fire
+            # events in this test, only verify connect() fails.
+            return
 
         def connect(self):
             raise ConnectionRefusedError("OBS not running")

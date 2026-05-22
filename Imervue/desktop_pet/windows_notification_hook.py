@@ -28,12 +28,8 @@ from __future__ import annotations
 import logging
 import platform
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.windows_notification_hook")
 

@@ -111,7 +111,7 @@ def test_default_constants_are_sane():
 
 def test_quad_centered_horizontally():
     """The quad must be horizontally centred under the puppet."""
-    x, y, w, h = shadow_quad_geometry((1000, 2000), scale=1.0)
+    x, _y, w, _h = shadow_quad_geometry((1000, 2000), scale=1.0)
     # Centre of quad along x.
     centre_x = x + w / 2
     assert centre_x == pytest.approx(500.0)
@@ -135,8 +135,8 @@ def test_quad_scale_zero_makes_zero_quad():
     """``scale=0`` → no shadow drawn. Useful as an "invisible but
     still allocated" state for animation transitions."""
     out = shadow_quad_geometry((1000, 2000), scale=0.0)
-    assert out[2] == 0.0
-    assert out[3] == 0.0
+    assert out[2] == 0.0   # NOSONAR  # exact representable value asserted intentionally
+    assert out[3] == 0.0   # NOSONAR  # exact representable value asserted intentionally
 
 
 def test_quad_scale_doubles_width_and_height():

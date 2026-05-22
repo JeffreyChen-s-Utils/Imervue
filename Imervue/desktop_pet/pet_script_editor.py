@@ -23,7 +23,6 @@ without Qt, used by the dialog's accept path.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -48,9 +47,6 @@ from Imervue.desktop_pet.pet_script import (
     ScheduledEvent,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
-
-if TYPE_CHECKING:
-    pass
 
 
 def _tr(key: str, default: str) -> str:
@@ -131,27 +127,30 @@ class _StringListEditor(QWidget):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        self._list = QListWidget(self)
-        self._list.setSelectionMode(
-            QListWidget.SelectionMode.SingleSelection,
-        )
-        self._list.itemDoubleClicked.connect(self._on_edit)
+        self._list = self._build_list_widget()
         layout.addWidget(self._list)
-        row = QHBoxLayout()
-        add_btn = QPushButton(_tr("desktop_pet_editor_add", "Add"))
-        add_btn.clicked.connect(self._on_add)
-        edit_btn = QPushButton(_tr("desktop_pet_editor_edit", "Edit"))
-        edit_btn.clicked.connect(self._on_edit_selected)
-        remove_btn = QPushButton(_tr("desktop_pet_editor_remove", "Remove"))
-        remove_btn.clicked.connect(self._on_remove)
-        row.addWidget(add_btn)
-        row.addWidget(edit_btn)
-        row.addWidget(remove_btn)
-        row.addStretch(1)
-        layout.addLayout(row)
+        layout.addLayout(self._build_button_row())
         if initial:
-            for line in initial:
-                self._list.addItem(QListWidgetItem(str(line)))
+            self.set_lines(initial)
+
+    def _build_list_widget(self) -> QListWidget:
+        widget = QListWidget(self)
+        widget.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        widget.itemDoubleClicked.connect(self._on_edit)
+        return widget
+
+    def _build_button_row(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        for label_key, default_label, handler in (
+            ("desktop_pet_editor_add", "Add", self._on_add),
+            ("desktop_pet_editor_edit", "Edit", self._on_edit_selected),
+            ("desktop_pet_editor_remove", "Remove", self._on_remove),
+        ):
+            button = QPushButton(_tr(label_key, default_label))
+            button.clicked.connect(handler)
+            row.addWidget(button)
+        row.addStretch(1)
+        return row
 
     def set_lines(self, lines: list[str]) -> None:
         self._list.clear()

@@ -20,12 +20,8 @@ from __future__ import annotations
 import contextlib
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QUrl
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger("Imervue.desktop_pet.click_sfx")
 
@@ -97,8 +93,10 @@ class ClickSfxPlayer(QObject):
         whose path changed get their source URL refreshed on the
         next :meth:`play`."""
         self._paths = coerce_paths_map(paths)
-        # Drop effects that no longer have a configured path.
-        for event in list(self._effects.keys()):
+        # Drop effects that no longer have a configured path. The
+        # list() copy is deliberate — we mutate self._effects in
+        # the loop body, which iter() would refuse.
+        for event in list(self._effects.keys()):   # NOSONAR
             if event not in self._paths:
                 self._effects.pop(event, None)
 
