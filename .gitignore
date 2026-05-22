@@ -182,7 +182,10 @@ cython_debug/
 .idea/discord.xml
 .idea/vcs.xml
 /output/
-/.claude/
+# Ignore Claude Code per-user state (settings.local.json, etc.) but
+# track shipped project agents so the whole team gets them.
+/.claude/*
+!/.claude/agents/
 exe/user_setting.json
 /.idea
 plugins/object_splitter/models/u2net.onnx

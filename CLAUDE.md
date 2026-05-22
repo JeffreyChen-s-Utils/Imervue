@@ -104,6 +104,36 @@ exposes a previously untested path).
 - Run `py -m pytest tests/` before committing. If a test was already skipping because of a
   missing optional dependency, leave it skipping — but every NEW test must run, not skip.
 
+#### Qt / OpenGL tests on headless CI
+
+The GitHub Actions Windows runner crashes with `Windows fatal exception: access
+violation` once enough `QOpenGLWidget` instances are constructed in one pytest
+session — the offscreen-GL surface pool is finite and overflowing it corrupts
+process memory. The crash trace points at `super().__init__(parent)` inside
+`PuppetCanvas.__init__` (or any other `QOpenGLWidget` subclass).
+
+Every test file that constructs `PetWindow`, `PuppetCanvas`, `PuppetWorkspace`,
+or any other `QOpenGLWidget` subclass MUST import the shared skip marker at the
+top of the module:
+
+```python
+from _qt_skip import pytestmark  # noqa: E402,F401
+```
+
+`tests/_qt_skip.py` exports a `pytestmark` that skips when `CI=true` or
+`QT_QPA_PLATFORM=offscreen`. Local runs still cover the file; CI sees every
+test as `s` (skipped).
+
+Before committing any test that touches Qt/GL, invoke the project subagent
+defined at `.claude/agents/qt-headless-ci-guard.md` (via the Agent tool with
+`subagent_type: qt-headless-ci-guard`). The agent enumerates the
+GL-widget constructions in the file and confirms the marker is wired so this
+crash doesn't reappear on CI. The same guard's reference body documents the
+root cause and mitigation pattern in detail.
+
+Verification command after applying the marker:
+`CI=true py -m pytest <file> -q` — every test in the file must report `s`.
+
 ### Linter & Static Analysis Compliance (SonarQube / Codacy / pylint / flake8 / ruff)
 
 All new and modified code MUST pass the following rules without warnings. These mirror the
