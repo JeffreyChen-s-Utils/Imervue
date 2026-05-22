@@ -1625,6 +1625,13 @@ english_word_dict = {
     "lens_output": _ENGLISH_OUTPUT_LABEL,
     "lens_run": "Apply",
 
+    # --- Color blindness preview ---
+    "cvd_view_title": "Color blindness preview",
+    "cvd_view_off": "Off",
+    "cvd_view_protanopia": "Protanopia (red-blind)",
+    "cvd_view_deuteranopia": "Deuteranopia (green-blind)",
+    "cvd_view_tritanopia": "Tritanopia (blue-blind)",
+    "cvd_view_achromatopsia": "Achromatopsia (greyscale)",
     # --- Map View ---
     "map_title": "Map View",
     "map_count": "Plotting {n} geotagged image(s) of {total} scanned.",

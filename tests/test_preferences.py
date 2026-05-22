@@ -8,6 +8,7 @@ from Imervue.gpu_image_view.vram_budget import (
     VRAM_MIN_MB,
     clamp_detected_bytes,
     compute_user_override_bytes,
+    mipmap_texture_bytes,
 )
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -71,6 +72,70 @@ def test_clamp_detected_ceiling():
 def test_clamp_detected_passthrough():
     mid = 2 * 1024 * 1024 * 1024
     assert clamp_detected_bytes(mid) == mid
+
+
+# ---------------------------------------------------------------------------
+# mipmap_texture_bytes
+# ---------------------------------------------------------------------------
+
+
+def test_mipmap_bytes_is_four_thirds_of_base():
+    """The full mipmap chain converges to 4/3 the base texture
+    size. For a clean power-of-two, the math is exact."""
+    # 64 × 64 × 4 = 16384 base → 16384 * 4 // 3 = 21845 (ceil)
+    base = 64 * 64 * 4
+    out = mipmap_texture_bytes(64, 64)
+    assert out > base   # overhead > 0
+    # Should be close to 4/3 × base, within the integer-ceil tolerance.
+    assert abs(out - base * 4 / 3) <= 1
+
+
+def test_mipmap_bytes_grows_quadratically_with_side():
+    """Doubling each side quadruples the total — same shape as
+    a flat texture, mipmap just scales the constant. Small +/-
+    tolerance because the ceiling-up at each call adds at most
+    a couple of bytes."""
+    small = mipmap_texture_bytes(256, 256)
+    big = mipmap_texture_bytes(512, 512)
+    assert abs(big - small * 4) <= 4
+
+
+def test_mipmap_bytes_zero_for_empty_image():
+    """Defensive: zero-dimension input → 0 cost. The texture
+    upload path skips these but the budget helper still needs to
+    answer cleanly."""
+    assert mipmap_texture_bytes(0, 100) == 0
+    assert mipmap_texture_bytes(100, 0) == 0
+    assert mipmap_texture_bytes(0, 0) == 0
+
+
+def test_mipmap_bytes_negative_returns_zero():
+    """A stale image reference might briefly produce negative
+    dims during teardown — must not feed negative numbers into
+    the VRAM accounting."""
+    assert mipmap_texture_bytes(-1, 100) == 0
+    assert mipmap_texture_bytes(100, -1) == 0
+
+
+def test_mipmap_bytes_custom_bytes_per_pixel():
+    """RGB (3 bpp) should land at 3/4 of RGBA's total — tunable
+    for codecs that don't store alpha."""
+    rgba = mipmap_texture_bytes(64, 64, bytes_per_pixel=4)
+    rgb = mipmap_texture_bytes(64, 64, bytes_per_pixel=3)
+    assert abs(rgb - rgba * 3 / 4) <= 1
+
+
+def test_mipmap_bytes_zero_bpp_is_safe():
+    """0 bytes-per-pixel is meaningless but mustn't crash."""
+    assert mipmap_texture_bytes(64, 64, bytes_per_pixel=0) == 0
+
+
+def test_mipmap_bytes_rounds_up_not_down():
+    """Integer ceiling: any non-zero remainder of base × 4 / 3
+    must add one byte. Catches a regression where the float
+    rounding causes under-accounting."""
+    # base = 7 (odd) → base * 4 = 28 → 28/3 ≈ 9.33 → must ceil to 10.
+    assert mipmap_texture_bytes(7, 1, bytes_per_pixel=1) == 10
 
 
 # ---------------------------------------------------------------------------

@@ -1604,6 +1604,12 @@ korean_word_dict = {
     "lens_run": "적용",
 
     # --- Map View ---
+    "cvd_view_title": "색맹 시뮬레이션 미리보기",
+    "cvd_view_off": "끄기",
+    "cvd_view_protanopia": "적색맹 (L 원뿔 결손)",
+    "cvd_view_deuteranopia": "녹색맹 (M 원뿔 결손)",
+    "cvd_view_tritanopia": "청색맹 (S 원뿔 결손)",
+    "cvd_view_achromatopsia": "전색맹 (그레이스케일)",
     "map_title": "지도 보기",
     "map_count": "{total}장 중 {n}장에 GPS 태그.",
     "map_fallback": "QtWebEngine 미설치 — 좌표 목록으로 대체.",

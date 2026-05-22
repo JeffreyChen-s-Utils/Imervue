@@ -1592,6 +1592,12 @@ traditional_chinese_word_dict = {
     "lens_run": "套用",
 
     # --- Map View ---
+    "cvd_view_title": "色盲模擬預覽",
+    "cvd_view_off": "關閉",
+    "cvd_view_protanopia": "紅色盲（缺 L 視錐）",
+    "cvd_view_deuteranopia": "綠色盲（缺 M 視錐）",
+    "cvd_view_tritanopia": "藍色盲（缺 S 視錐）",
+    "cvd_view_achromatopsia": "全色盲（灰階）",
     "map_title": "地圖檢視",
     "map_count": "掃描 {total} 張，其中 {n} 張含 GPS 資訊。",
     "map_fallback": "未安裝 QtWebEngine — 以座標清單顯示。",

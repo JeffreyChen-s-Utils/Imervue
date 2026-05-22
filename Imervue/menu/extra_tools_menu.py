@@ -80,6 +80,32 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_calendar_view(ui))
     _add_action(sub, lang, "map_title", "Map View",
                 lambda: _open_map_view(ui))
+    _build_cvd_submenu(sub, ui, lang)
+
+
+def _build_cvd_submenu(parent_menu, ui: ImervueMainWindow, lang: dict) -> None:
+    """Colour-vision-deficiency simulation overlay — preview the
+    current image as a viewer with protanopia / deuteranopia /
+    tritanopia / achromatopsia would see it. Non-destructive; the
+    source file and recipe stay untouched."""
+    cvd_menu = parent_menu.addMenu(lang.get("cvd_view_title", "Color blindness preview"))
+    _add_action(cvd_menu, lang, "cvd_view_off", "Off",
+                lambda: _set_cvd_mode(ui, None))
+    for kind, fallback in (
+        ("protanopia", "Protanopia (red-blind)"),
+        ("deuteranopia", "Deuteranopia (green-blind)"),
+        ("tritanopia", "Tritanopia (blue-blind)"),
+        ("achromatopsia", "Achromatopsia (greyscale)"),
+    ):
+        _add_action(cvd_menu, lang, f"cvd_view_{kind}", fallback,
+                    lambda _kind=kind: _set_cvd_mode(ui, _kind))
+
+
+def _set_cvd_mode(ui: ImervueMainWindow, mode: str | None) -> None:
+    viewer = getattr(ui, "viewer", None)
+    if viewer is None or not hasattr(viewer, "set_cvd_view_mode"):
+        return
+    viewer.set_cvd_view_mode(mode)
 
 
 def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:

@@ -708,6 +708,16 @@ class ImervueMainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_info_size)
         self._status_bar.addPermanentWidget(self._status_info_zoom)
         self._status_bar.addPermanentWidget(self._status_info_cursor)
+        # VRAM tile-cache pressure indicator — green / yellow / red
+        # dot + percentage. Polls the viewer; click clears the cache.
+        from Imervue.gpu_image_view.memory_pressure import (
+            MemoryPressureIndicator,
+        )
+        self._memory_pressure = MemoryPressureIndicator(
+            source=self._collect_memory_pressure,
+            clear_cache=self._on_memory_pressure_clear,
+        )
+        self._status_bar.addPermanentWidget(self._memory_pressure)
         self._status_bar.addPermanentWidget(self._progress_bar)
 
         # ===== Toast 通知 =====
@@ -787,6 +797,38 @@ class ImervueMainWindow(QMainWindow):
     # ==========================
     # 主分頁切換（Imervue ↔ 修改）
     # ==========================
+    def _collect_memory_pressure(self) -> dict:
+        """Source callable for the status-bar memory-pressure widget.
+        Returns the current ``(used, limit)`` byte counts plus a few
+        cache-population numbers for the tooltip. Returns zeros when
+        the viewer isn't ready yet so the widget shows ``--``."""
+        viewer = getattr(self, "viewer", None)
+        if viewer is None:
+            return {"used_bytes": 0, "limit_bytes": 0}
+        return {
+            "used_bytes": int(getattr(viewer, "_vram_usage", 0)),
+            "limit_bytes": int(getattr(viewer, "_vram_limit", 0)),
+            "tile_count": len(getattr(viewer, "tile_textures", {})),
+            "prefetch_count": len(getattr(viewer, "_prefetch_cache", {})),
+        }
+
+    def _on_memory_pressure_clear(self) -> None:
+        """Click handler for the indicator. Drops the prefetch cache
+        and the tile-texture cache so the user can recover the
+        budget without restarting the app."""
+        viewer = getattr(self, "viewer", None)
+        if viewer is None:
+            return
+        cancel = getattr(viewer, "_cancel_all_prefetch", None)
+        if callable(cancel):
+            cancel()
+        clear_tiles = getattr(viewer, "_delete_all_tile_textures", None)
+        if callable(clear_tiles):
+            clear_tiles()
+        tile_cache = getattr(viewer, "tile_cache", None)
+        if isinstance(tile_cache, dict):
+            tile_cache.clear()
+
     def _on_main_tab_changed(self, idx: int) -> None:
         """Switch between Imervue (viewer), Modify and Paint tabs."""
         if idx == 1:

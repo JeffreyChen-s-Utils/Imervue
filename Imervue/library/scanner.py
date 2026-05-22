@@ -15,6 +15,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QThread, Signal
 
 from Imervue.library import image_index
+from Imervue.library.bloom_filter import BloomFilter, fingerprint
 from Imervue.library.phash import compute_phash
 
 logger = logging.getLogger("Imervue.library.scanner")
@@ -34,11 +35,53 @@ def _iter_images(root: str) -> Iterable[Path]:
                 yield p
 
 
-def _index_one(path: Path, *, with_phash: bool) -> None:
+def _build_skip_bloom() -> BloomFilter:
+    """Hydrate a bloom filter from the existing catalog so the
+    scanner can short-circuit unchanged files without hitting SQL
+    or recomputing pHash."""
+    count = max(1024, image_index.count_images())
+    bloom = BloomFilter(expected_items=count)
+    for path, mtime, size in image_index.iter_image_fingerprints():
+        bloom.add(fingerprint(path, mtime, size))
+    return bloom
+
+
+def _can_skip_via_bloom(
+    path: Path, stat_result, bloom: BloomFilter | None,
+) -> bool:
+    """``True`` when the bloom filter says this file is *probably*
+    already indexed AND an exact-row check confirms mtime + size
+    match. The two-stage check keeps bloom-filter false positives
+    from making us miss a real update."""
+    if bloom is None:
+        return False
+    fp = fingerprint(str(path), stat_result.st_mtime, stat_result.st_size)
+    if fp not in bloom:
+        return False
+    # Bloom says "maybe" — confirm with an exact lookup.
+    row = image_index.get_image(str(path))
+    if row is None:
+        return False
+    return (
+        row["mtime"] is not None
+        and row["size"] is not None
+        and float(row["mtime"]) == float(stat_result.st_mtime)
+        and int(row["size"]) == int(stat_result.st_size)
+    )
+
+
+def _index_one(
+    path: Path, *, with_phash: bool, bloom: BloomFilter | None = None,
+) -> bool:
+    """Index a single file. Returns ``True`` when the file was
+    upserted, ``False`` when the bloom filter let us skip it
+    (caller uses the return value for progress accounting)."""
     try:
         stat = path.stat()
     except OSError:
-        return
+        return False
+    if _can_skip_via_bloom(path, stat, bloom):
+        return False
     width = height = None
     if with_phash:
         try:
@@ -56,6 +99,7 @@ def _index_one(path: Path, *, with_phash: bool) -> None:
         height=height,
         phash=phash,
     )
+    return True
 
 
 class LibraryScanner(QObject):
@@ -82,10 +126,14 @@ class LibraryScanner(QObject):
                     continue
                 paths.extend(_iter_images(root))
             total = len(paths)
+            # Hydrate the skip-bloom once before walking — on a
+            # re-scan of an unchanged library this lets ~all files
+            # short-circuit without a SQL upsert or pHash decode.
+            bloom = _build_skip_bloom()
             for i, p in enumerate(paths, start=1):
                 if self._cancel:
                     break
-                _index_one(p, with_phash=self._with_phash)
+                _index_one(p, with_phash=self._with_phash, bloom=bloom)
                 if i % 10 == 0 or i == total:
                     self.progress.emit(i, total, str(p))
             self.done.emit(total)

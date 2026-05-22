@@ -1593,6 +1593,12 @@ chinese_word_dict = {
     "lens_run": "应用",
 
     # --- Map View ---
+    "cvd_view_title": "色盲模拟预览",
+    "cvd_view_off": "关闭",
+    "cvd_view_protanopia": "红色盲（缺 L 视锥）",
+    "cvd_view_deuteranopia": "绿色盲（缺 M 视锥）",
+    "cvd_view_tritanopia": "蓝色盲（缺 S 视锥）",
+    "cvd_view_achromatopsia": "全色盲（灰阶）",
     "map_title": "地图视图",
     "map_count": "扫描 {total} 张，其中 {n} 张带 GPS。",
     "map_fallback": "未安装 QtWebEngine — 以坐标列表显示。",
