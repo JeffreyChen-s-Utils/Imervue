@@ -10,6 +10,7 @@ WAL journal mode is enabled so readers don't block the background scanner.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import sqlite3
@@ -21,7 +22,11 @@ from pathlib import Path
 
 logger = logging.getLogger("Imervue.library")
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+# v1 → v2: added composite + partial indexes for facet queries.
+# The schema is purely additive (CREATE INDEX IF NOT EXISTS), so
+# v1 catalogs upgrade in place on first connect — no migration
+# script needed.
 
 
 def _default_db_path() -> Path:
@@ -57,6 +62,20 @@ CREATE TABLE IF NOT EXISTS images (
 CREATE INDEX IF NOT EXISTS idx_images_parent ON images(parent);
 CREATE INDEX IF NOT EXISTS idx_images_ext ON images(ext);
 CREATE INDEX IF NOT EXISTS idx_images_taken_at ON images(taken_at);
+-- Composite indexes for the facet queries in ``search_paths``: the
+-- common shape is "filter by parent / ext + sort by taken_at desc".
+-- Without the composites SQLite filters via the single-column index
+-- then sorts a full result set into a temp table. With the composite,
+-- the index iterator itself is already in taken_at order.
+CREATE INDEX IF NOT EXISTS idx_images_parent_taken_at
+    ON images(parent, taken_at);
+CREATE INDEX IF NOT EXISTS idx_images_ext_taken_at
+    ON images(ext, taken_at);
+-- ``WHERE phash IS NOT NULL`` is the entry point for similarity /
+-- dedupe scans. A partial index keeps the structure tiny (only rows
+-- with a computed phash) and turns the scan into a direct lookup.
+CREATE INDEX IF NOT EXISTS idx_images_phash_notnull
+    ON images(phash) WHERE phash IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS notes (
     path TEXT PRIMARY KEY,
@@ -145,6 +164,13 @@ def close() -> None:
     global _conn
     with _lock:
         if _conn is not None:
+            # Hand SQLite a chance to update query-plan statistics
+            # before we drop the connection. ``PRAGMA optimize`` is
+            # the recommended on-close hook (since SQLite 3.18) —
+            # cheap when nothing's changed, applies an ANALYZE when
+            # tables have grown enough that the plan would shift.
+            with contextlib.suppress(sqlite3.Error):
+                _conn.execute("PRAGMA optimize")
             _conn.close()
             _conn = None
 
@@ -215,6 +241,21 @@ def delete_image(path: str) -> None:
 
 def all_image_paths() -> list[str]:
     return [r["path"] for r in conn().execute("SELECT path FROM images").fetchall()]
+
+
+def iter_image_fingerprints():
+    """Yield ``(path, mtime, size)`` tuples for every indexed
+    image — used by the scanner to hydrate a
+    :class:`Imervue.library.bloom_filter.BloomFilter` before walking
+    the filesystem. Streamed rather than materialised because a
+    100k-image catalog would otherwise build a dict that big in
+    memory just to throw it away after the bloom is populated."""
+    cursor = conn().execute(
+        "SELECT path, mtime, size FROM images "
+        "WHERE mtime IS NOT NULL AND size IS NOT NULL",
+    )
+    for row in cursor:
+        yield row["path"], float(row["mtime"]), int(row["size"])
 
 
 def count_images() -> int:

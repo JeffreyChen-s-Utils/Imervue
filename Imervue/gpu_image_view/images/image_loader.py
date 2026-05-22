@@ -32,7 +32,12 @@ _RAW_EXTS = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
 
 
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
-    with rawpy.imread(path) as raw:
+    # ``open_raw_efficient`` uses libraw's native file API instead of
+    # rawpy's convenience ``imread`` which would otherwise pre-load
+    # the whole file into a Python ``bytes`` object. For 50 MB+ CR3
+    # / NEF files that's a meaningful peak-memory saving.
+    from Imervue.image.raw_loader import open_raw_efficient
+    with open_raw_efficient(path) as raw:
         if thumbnail:
             return _load_raw_thumbnail(raw)
         return raw.postprocess(
@@ -104,6 +109,13 @@ def load_image_file(path, thumbnail=False, recipe=None):
             # 一張圖片的 recipe 壞掉不該害整個載入流程炸掉; log 一下繼續用
             # 原始像素. 使用者下一次打開 Develop panel 會看到 reset 過的值.
             logger.warning(f"Recipe apply failed for {path}: {exc}")
+
+    # View-time CVD simulation — applied AFTER the recipe so the
+    # user sees how their *edited* image looks under the simulation.
+    # No-op when the mode is off (the common case); the helper short-
+    # circuits cheaply via ``is_active``.
+    from Imervue.gpu_image_view.cvd_view_mode import apply_if_active
+    img_data = apply_if_active(img_data)
 
     return img_data
 

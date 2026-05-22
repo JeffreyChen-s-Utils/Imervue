@@ -19,6 +19,11 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
+from Imervue.gpu_image_view.images.prefetch import (
+    NavigationDirectionTracker,
+    compute_prefetch_targets,
+    range_for_direction,
+)
 from Imervue.gpu_image_view.images.image_model import ImageModel
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 from Imervue.menu.right_click_menu import right_click_context_menu
@@ -45,6 +50,7 @@ from OpenGL.GL import (
     GL_SRC_ALPHA,
     GL_TEXTURE_2D,
     GL_TEXTURE_MAG_FILTER,
+    GL_LINEAR_MIPMAP_LINEAR,
     GL_TEXTURE_MIN_FILTER,
     GL_TEXTURE_WRAP_S,
     GL_TEXTURE_WRAP_T,
@@ -61,6 +67,7 @@ from OpenGL.GL import (
     glDisable,
     glEnable,
     glEnd,
+    glGenerateMipmap,
     glGenTextures,
     glGetError,
     glGetIntegerv,
@@ -188,8 +195,32 @@ class GPUImageView(QOpenGLWidget):
         self.press_pos = None
 
         # ===== Thread =====
-        self.thread_pool = QThreadPool.globalInstance()
-        self.thread_pool.setMaxThreadCount(min((os.cpu_count() or 4) * 2, 16))
+        # Per-workload pools instead of a single oversubscribed
+        # global pool — see ``worker_pools.worker_pool_sizes`` for
+        # the policy. Each pool runs at most its documented ceiling
+        # so a folder-open burst of N thumbnail decodes can't queue
+        # behind the user's current deep-zoom or the ±N prefetch.
+        from Imervue.gpu_image_view.worker_pools import worker_pool_sizes
+        sizes = worker_pool_sizes(os.cpu_count() or 4)
+        self.thumbnail_pool = QThreadPool(self)
+        self.thumbnail_pool.setMaxThreadCount(sizes["thumbnail"])
+        self.deepzoom_pool = QThreadPool(self)
+        self.deepzoom_pool.setMaxThreadCount(sizes["deepzoom"])
+        self.prefetch_pool = QThreadPool(self)
+        self.prefetch_pool.setMaxThreadCount(sizes["prefetch"])
+        # Legacy alias — many call sites and the Ctrl+F3 HUD still
+        # reference ``self.thread_pool``. Pointing it at the
+        # deep-zoom pool gives them the most-relevant counts; the
+        # split pools land on their own start sites below.
+        self.thread_pool = self.deepzoom_pool
+
+        # Coalesce per-thumbnail progress + status updates into
+        # one GUI-thread refresh per ~16 ms. See ``signal_coalescer``.
+        from Imervue.gpu_image_view.signal_coalescer import SignalCoalescer
+        self._progress_coalescer = SignalCoalescer(parent=self)
+        self._progress_coalescer.flush_requested.connect(
+            self._flush_thumbnail_progress,
+        )
         self.grid_mutex = QMutex()  # 保護 tile_cache 併發讀寫
         self._prefetch_mutex = QMutex()  # 保護 prefetch cache/workers
         self._load_generation = 0  # 世代計數器，用來取消過期的 tile worker
@@ -202,6 +233,10 @@ class GPUImageView(QOpenGLWidget):
         # ===== Prefetch（DeepZoom 預載入）=====
         self._prefetch_cache: OrderedDict[str, object] = OrderedDict()  # path → DeepZoomImage
         self._prefetch_workers: dict[str, LoadDeepZoomWorker] = {}  # path → worker
+        # Track navigation direction so the prefetch window can lean
+        # ahead when the user is paging forward and behind when they
+        # reverse — see :mod:`prefetch`.
+        self._nav_direction_tracker = NavigationDirectionTracker()
 
         # ===== GL Renderer =====
         self.renderer = GLRenderer()
@@ -281,6 +316,20 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.actions.recipe_commands import EditRecipeCommand
         cmd = EditRecipeCommand(self, path, old_recipe, new_recipe)
         self.undo_manager.push(cmd)
+
+    def set_cvd_view_mode(self, mode: str | None) -> None:
+        """Toggle the colour-vision-deficiency view mode and reload
+        the current image so the change is immediately visible.
+
+        The entire prefetch cache is dropped — every cached frame
+        was rendered against the *previous* CVD mode and would
+        flash the wrong colours when the user pages through it."""
+        from Imervue.gpu_image_view.cvd_view_mode import set_view_mode
+        set_view_mode(mode)
+        # Burn the prefetch cache + cancel inflight workers; the
+        # next paint reloads against the new mode.
+        self._cancel_all_prefetch()
+        self.reload_current_image_with_recipe()
 
     def reload_current_image_with_recipe(self, path: str | None = None):
         """Drop any cached baked pixels for ``path`` and reload it fresh.
@@ -503,10 +552,21 @@ class GPUImageView(QOpenGLWidget):
 
     def _ensure_tile_texture(self, path: str, img_data) -> bool:
         """Allocate a GPU texture for *path* if needed. Returns False when
-        over the VRAM budget so the caller can skip drawing."""
+        over the VRAM budget so the caller can skip drawing.
+
+        Generates the full mipmap chain at upload time so the
+        trilinear minification filter has every level it needs.
+        At small zooms the GPU samples a small mip level instead
+        of the 1024²-ish base, cutting sampling cost by ~33 % and
+        eliminating the moire / sparkle that bare GL_LINEAR shows
+        on downscaled tiles.
+        """
         if path in self.tile_textures:
             return True
-        tex_bytes = img_data.shape[1] * img_data.shape[0] * 4
+        from Imervue.gpu_image_view.vram_budget import mipmap_texture_bytes
+        tex_bytes = mipmap_texture_bytes(
+            img_data.shape[1], img_data.shape[0],
+        )
         if self._vram_usage + tex_bytes > self._vram_limit:
             return False
         tex = glGenTextures(1)
@@ -514,7 +574,10 @@ class GPUImageView(QOpenGLWidget):
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
                      img_data.shape[1], img_data.shape[0], 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, img_data)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glGenerateMipmap(GL_TEXTURE_2D)
+        glTexParameteri(
+            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR,
+        )
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
@@ -1594,6 +1657,9 @@ class GPUImageView(QOpenGLWidget):
             w.abort()
         self._prefetch_workers.clear()
         self._prefetch_cache.clear()
+        # Folder change → forget the previous folder's navigation
+        # history so the new folder starts with a symmetric window.
+        self._nav_direction_tracker.reset()
 
     # ---------------------------
     # Tile Grid 載入
@@ -1615,11 +1681,17 @@ class GPUImageView(QOpenGLWidget):
         self._tile_load_total = len(image_paths)
         self._tile_load_count = 0
 
-        for path in image_paths:
+        from Imervue.gpu_image_view.worker_pools import priority_for_distance
+        for index, path in enumerate(image_paths):
             worker = LoadThumbnailWorker(path, self.thumbnail_size, gen)
             worker.signals.finished.connect(self._on_thumbnail_loaded)
             self.active_tile_workers.append(worker)
-            self.thread_pool.start(worker)
+            # Tiles near the current selection get higher priority
+            # so a fresh folder-open shows the user's viewport first
+            # even if the pool can't drain the full list before
+            # they start scrolling.
+            distance = abs(index - self.current_index)
+            self.thumbnail_pool.start(worker, priority_for_distance(distance))
 
         if hasattr(self.main_window, 'show_progress'):
             self.main_window.show_progress(0, self._tile_load_total)
@@ -1639,12 +1711,27 @@ class GPUImageView(QOpenGLWidget):
         with QMutexLocker(self.grid_mutex):
             self.tile_cache[path] = img_data
 
-        # 更新進度
         self._tile_load_count = len(self.tile_cache)
-        if hasattr(self.main_window, 'show_progress'):
-            self.main_window.show_progress(self._tile_load_count, self._tile_load_total)
+        # Coalesce the progress update — a folder of N thumbnails
+        # finishing in quick succession otherwise re-lays out the
+        # status bar N times. The coalescer caps that at one
+        # update per ~16 ms; the final flush below makes sure the
+        # bar lands at 100 % even if the last tile arrived inside
+        # the window.
+        self._progress_coalescer.schedule()
+        if self._tile_load_count >= self._tile_load_total:
+            self._progress_coalescer.force_flush()
 
         self.update()
+
+    def _flush_thumbnail_progress(self) -> None:
+        """Coalesced status-bar update. Reads the latest counter
+        and forwards to the main window; called at most once per
+        coalescer window."""
+        if hasattr(self.main_window, 'show_progress'):
+            self.main_window.show_progress(
+                self._tile_load_count, self._tile_load_total,
+            )
 
     # 保持向後相容（undo_delete 使用）
     def add_thumbnail(self, img_data, path, generation=None):
@@ -1952,7 +2039,7 @@ class GPUImageView(QOpenGLWidget):
         worker = LoadDeepZoomWorker(path, recipe=recipe)
         worker.signals.finished.connect(self._on_deep_zoom_loaded)
         self.active_deep_zoom_worker = worker
-        self.thread_pool.start(worker)
+        self.deepzoom_pool.start(worker)
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -2023,15 +2110,22 @@ class GPUImageView(QOpenGLWidget):
             self._spawn_prefetch_workers(needed)
 
     def _compute_prefetch_targets(self, images: list[str]) -> set[str]:
-        """Return the set of paths within ±_PREFETCH_RANGE of current_index."""
-        needed: set[str] = set()
-        for offset in range(-_PREFETCH_RANGE, _PREFETCH_RANGE + 1):
-            if offset == 0:
-                continue
-            idx = self.current_index + offset
-            if 0 <= idx < len(images):
-                needed.add(images[idx])
-        return needed
+        """Return the set of paths to prefetch around ``current_index``.
+
+        The window is asymmetric when the user has been navigating in
+        one direction — biased ahead on forward paging, behind on
+        backward — so the cache budget lands on images the user is
+        actually about to view. Falls back to symmetric ±_PREFETCH_RANGE
+        when navigation looks scattered (jump-around browsing)."""
+        self._nav_direction_tracker.record(self.current_index)
+        range_ahead, range_behind = range_for_direction(
+            self._nav_direction_tracker.direction(),
+        )
+        indices = compute_prefetch_targets(
+            self.current_index, len(images),
+            range_ahead=range_ahead, range_behind=range_behind,
+        )
+        return {images[i] for i in indices}
 
     def _cancel_outdated_prefetch_workers(self, needed: set[str]) -> None:
         # list() required: we mutate _prefetch_workers in-loop.
@@ -2045,6 +2139,16 @@ class GPUImageView(QOpenGLWidget):
             if path not in needed:
                 del self._prefetch_cache[path]
 
+    def _prefetch_distance_for(self, path: str) -> int:
+        """Return |index(path) - current_index| for the priority
+        helper. Defaults to a large distance when the path isn't in
+        the model — happens during transient races; the queue will
+        drop the worker on the next ``_cancel_outdated`` pass."""
+        try:
+            return abs(self.model.images.index(path) - self.current_index)
+        except (ValueError, AttributeError):
+            return 99
+
     def _spawn_prefetch_workers(self, needed: set[str]) -> None:
         from Imervue.image.recipe_store import recipe_store
         for path in needed:
@@ -2053,7 +2157,13 @@ class GPUImageView(QOpenGLWidget):
             worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
             worker.signals.finished.connect(self._on_prefetch_loaded)
             self._prefetch_workers[path] = worker
-            self.thread_pool.start(worker)
+            # Distance-aware priority: the next neighbour the user
+            # might press lands before the far-out ones, so when the
+            # pool drains it pulls the most-likely-needed image
+            # first regardless of submit order.
+            from Imervue.gpu_image_view.worker_pools import priority_for_distance
+            distance = self._prefetch_distance_for(path)
+            self.prefetch_pool.start(worker, priority_for_distance(distance))
 
     def _on_prefetch_loaded(self, dzi, path):
         """預載 worker 完成回調"""

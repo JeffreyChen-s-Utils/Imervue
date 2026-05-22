@@ -163,3 +163,79 @@ class TestLibraryRoots:
         assert image_index.list_library_roots() == [str(tmp_path)]
         assert image_index.remove_library_root(str(tmp_path))
         assert image_index.list_library_roots() == []
+
+
+class TestIndexes:
+    """Verify the composite + partial indexes are created and that
+    the query planner picks them up. The actual perf win is hard to
+    assert on a 5-row test DB, but EXPLAIN QUERY PLAN tells us
+    SQLite knows about them."""
+
+    def _index_names(self) -> set[str]:
+        return {
+            r["name"]
+            for r in image_index.conn().execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='index' AND tbl_name='images'",
+            )
+        }
+
+    def test_composite_indexes_exist(self):
+        """The new indexes ship in the schema and survive the
+        ``CREATE INDEX IF NOT EXISTS`` idempotency check."""
+        names = self._index_names()
+        assert "idx_images_parent_taken_at" in names
+        assert "idx_images_ext_taken_at" in names
+        assert "idx_images_phash_notnull" in names
+
+    def test_facet_query_uses_composite_index(self):
+        """``search_paths(parents=...)`` plus the ORDER BY
+        taken_at should hit the (parent, taken_at) composite —
+        EXPLAIN reveals which index SQLite chose."""
+        c = image_index.conn()
+        plan = c.execute(
+            "EXPLAIN QUERY PLAN "
+            "SELECT path FROM images WHERE parent = ? "
+            "ORDER BY taken_at DESC",
+            ("/foo",),
+        ).fetchall()
+        joined = " ".join(str(row["detail"]) for row in plan)
+        assert "idx_images_parent_taken_at" in joined
+
+    def test_phash_scan_uses_partial_index(self):
+        """The dedupe / similarity scan filters on
+        ``WHERE phash IS NOT NULL`` — the partial index makes
+        this a direct lookup instead of a table scan."""
+        c = image_index.conn()
+        plan = c.execute(
+            "EXPLAIN QUERY PLAN "
+            "SELECT path, phash FROM images WHERE phash IS NOT NULL",
+        ).fetchall()
+        joined = " ".join(str(row["detail"]) for row in plan)
+        assert "idx_images_phash_notnull" in joined
+
+    def test_schema_version_bumped(self):
+        """Schema bumps must round-trip through the meta table —
+        catches a forgotten ``_set_schema_version`` call."""
+        row = image_index.conn().execute(
+            "SELECT value FROM meta WHERE key = 'schema_version'",
+        ).fetchone()
+        assert row is not None
+        assert int(row["value"]) >= 2
+
+
+class TestCloseRunsOptimize:
+    """``PRAGMA optimize`` on close keeps the query planner's
+    statistics current. The test can't observe the optimize step
+    directly (it's silent unless a table grew), but it confirms
+    close() doesn't raise when the pragma runs against a populated
+    schema and that close + reopen continues to work."""
+
+    def test_close_after_upserts_succeeds(self, tmp_path):
+        p = str(tmp_path / "a.png")
+        image_index.upsert_image(p, width=10, height=10)
+        image_index.close()   # must not raise
+        # Reopen — exercising the conn-rebuild path after the
+        # PRAGMA-optimize close hook.
+        image_index.set_db_path(tmp_path / "library.db")
+        assert image_index.get_image(p) is not None

@@ -41,3 +41,27 @@ def clamp_detected_bytes(detected_bytes: int) -> int:
     min_bytes = VRAM_MIN_MB * 1024 * 1024
     max_bytes = VRAM_MAX_MB * 1024 * 1024
     return max(min_bytes, min(max_bytes, int(detected_bytes)))
+
+
+def mipmap_texture_bytes(
+    width: int, height: int, *, bytes_per_pixel: int = 4,
+) -> int:
+    """Total VRAM cost of a texture *plus* its full mipmap chain.
+
+    A full chain doubles down in resolution per level, so total
+    storage is the geometric sum ``base × (1 + 1/4 + 1/16 + ...)``
+    which converges to ``base × 4/3``. We round up to a whole byte
+    so the VRAM budget never under-accounts; cumulative under-
+    accounting would let the cache silently overflow.
+
+    Returns 0 for non-positive dimensions so a caller that hands
+    in a zero-width image gets a 0-cost answer rather than a
+    division surprise.
+    """
+    if width <= 0 or height <= 0 or bytes_per_pixel <= 0:
+        return 0
+    base = int(width) * int(height) * int(bytes_per_pixel)
+    # ``(base * 4 + 2) // 3`` is the integer-arithmetic equivalent of
+    # ``ceil(base * 4 / 3)``: adds (denominator - 1) before flooring
+    # so any non-zero remainder rounds up.
+    return (base * 4 + 2) // 3
