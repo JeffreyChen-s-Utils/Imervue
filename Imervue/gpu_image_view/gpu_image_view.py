@@ -19,6 +19,7 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
+from Imervue.gpu_image_view.tile_layout import plan_tile_size_change, tile_grid_layout
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -128,6 +129,13 @@ class GPUImageView(QOpenGLWidget):
         self.grid_offset_x = 0
         self.grid_offset_y = 0
         self.tile_scale = 1.0
+        # Effective per-tile draw scale = tile_scale / devicePixelRatio,
+        # recomputed each ``paint_tile_grid`` so thumbnails keep a consistent
+        # physical size across monitors with different display scaling.
+        self._tile_draw_scale = 1.0
+        # Set when the thumbnail size changes while in deep zoom, so the grid
+        # is rebuilt at the new size when the user exits back to the wall.
+        self._tile_size_dirty = False
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
 
@@ -595,8 +603,8 @@ class GPUImageView(QOpenGLWidget):
             self._draw_tile_placeholder(x0, y0, scaled_tile, vw, vh)
             return
         img_data = self.tile_cache[path]
-        x1 = x0 + img_data.shape[1] * self.tile_scale
-        y1 = y0 + img_data.shape[0] * self.tile_scale
+        x1 = x0 + img_data.shape[1] * self._tile_draw_scale
+        y1 = y0 + img_data.shape[0] * self._tile_draw_scale
         if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
             return
         self.tile_rects.append((x0, y0, x1, y1, path))
@@ -693,9 +701,11 @@ class GPUImageView(QOpenGLWidget):
 
         images = self.model.images
         base_tile = self._tile_base_size()
-        scaled_tile = base_tile * self.tile_scale
-        cell = scaled_tile + self.tile_padding
-        cols = max(1, int(self.width() // cell))
+        self._tile_draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
+        scaled_tile = base_tile * self._tile_draw_scale
         self.tile_rects = []
         # Placeholders for tiles whose thumbnail hasn't arrived yet — rendered
         # as dark squares so the grid layout is visible immediately. Stored
@@ -1564,9 +1574,10 @@ class GPUImageView(QOpenGLWidget):
         """Return the subset of cached tiles whose rect intersects the viewport."""
         images = self.model.images
         base_tile = self._evict_base_tile_size()
-        scaled_tile = base_tile * self.tile_scale
-        cell = scaled_tile + self.tile_padding
-        cols = max(1, int(self.width() // cell))
+        draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
         vw, vh = self.width(), self.height()
 
         visible: set[str] = set()
@@ -1577,8 +1588,8 @@ class GPUImageView(QOpenGLWidget):
             x0 = col * cell + self.grid_offset_x
             y0 = row * cell + self.grid_offset_y
             img = self.tile_cache[p]
-            x1 = x0 + img.shape[1] * self.tile_scale
-            y1 = y0 + img.shape[0] * self.tile_scale
+            x1 = x0 + img.shape[1] * draw_scale
+            y1 = y0 + img.shape[0] * draw_scale
             if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
                 visible.add(p)
         return visible
@@ -1664,6 +1675,25 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Tile Grid 載入
     # ---------------------------
+    def set_thumbnail_size(self, size) -> None:
+        """Apply a new thumbnail size picked from the menu.
+
+        While in deep zoom the grid is *not* rebuilt — that would drop the
+        user back to the wall and wipe the status-bar info. The size is stored
+        and the grid is regenerated lazily on the next exit to the wall.
+        """
+        self.thumbnail_size = None if size == "None" else size
+        in_deep_zoom = self.deep_zoom is not None and not self.tile_grid_mode
+        action = plan_tile_size_change(
+            in_deep_zoom=in_deep_zoom, has_images=bool(self.model.images),
+        )
+        if action == "rebuild":
+            self.clear_tile_grid()
+            self.load_tile_grid_async(image_paths=self.model.images)
+        elif action == "defer":
+            self._tile_size_dirty = True
+            self.update()
+
     def load_tile_grid_async(self, image_paths):
         self._cancel_tile_workers()
         self._cancel_deep_zoom_worker()
@@ -2442,13 +2472,22 @@ class GPUImageView(QOpenGLWidget):
     def _exit_deep_zoom_to_grid(self) -> None:
         self._cancel_deep_zoom_worker()
         self._cancel_all_prefetch()
-        self._clear_deep_zoom()
-        self.tile_grid_mode = True
-        if self._saved_tile_state:
-            self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
-            self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
-            self.tile_scale = self._saved_tile_state["tile_scale"]
+        # Thumbnail size changed while zoomed in → the cached tiles are the
+        # old size, so rebuild the grid at the new size instead of restoring
+        # the stale layout (which would mismatch the new cell metrics).
+        if self._tile_size_dirty and self.model.images:
+            self._tile_size_dirty = False
             self._saved_tile_state = None
+            self.clear_tile_grid()
+            self.load_tile_grid_async(image_paths=self.model.images)
+        else:
+            self._clear_deep_zoom()
+            self.tile_grid_mode = True
+            if self._saved_tile_state:
+                self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
+                self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
+                self.tile_scale = self._saved_tile_state["tile_scale"]
+                self._saved_tile_state = None
         # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
         if hasattr(self.main_window, "after_deep_zoom_escape"):
             self.main_window.after_deep_zoom_escape()
@@ -2477,8 +2516,9 @@ class GPUImageView(QOpenGLWidget):
 
     def _scroll_grid_by_arrow(self, key, shift) -> None:
         """Translate arrow keys into tile-grid pan deltas."""
-        step = self.thumbnail_size or 1024
-        move_step = int(step / 2) if shift else step
+        dpr = self.devicePixelRatio() or 1.0
+        step = (self.thumbnail_size or 1024) / dpr
+        move_step = int(step / 2) if shift else int(step)
         deltas = {
             Qt.Key.Key_Up: (0, move_step),
             Qt.Key.Key_Down: (0, -move_step),

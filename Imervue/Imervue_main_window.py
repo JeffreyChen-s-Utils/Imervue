@@ -1173,19 +1173,10 @@ class ImervueMainWindow(QMainWindow):
         self.toast.info(lang.get(key, default))
 
     def change_tile_size(self, size):
-        if size != "None":
-            self.viewer.thumbnail_size = size
-        else:
-            self.viewer.thumbnail_size = None
-
-        # 如果目前有載入圖片，重新刷新
-        if self.viewer.model.images:
-            if len(self.viewer.model.images) > 1:
-                self.viewer.clear_tile_grid()
-                self.viewer.load_tile_grid_async(image_paths=self.viewer.model.images)
-            else:
-                self.viewer.tile_grid_mode = False
-                self.viewer.load_deep_zoom_image(self.viewer.model.images[0])
+        # Delegate to the viewer, which keeps the user in deep zoom (instead of
+        # dropping back to the wall and wiping the status bar) when a size is
+        # picked mid-zoom. See ``GPUImageView.set_thumbnail_size``.
+        self.viewer.set_thumbnail_size(size)
 
     def change_tile_padding(self, padding: int) -> None:
         """Set thumbnail-grid padding and persist — 0 compact, 8 standard, 16 relaxed."""
