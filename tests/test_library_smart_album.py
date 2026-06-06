@@ -55,6 +55,25 @@ class TestPersistence:
             smart_album.save("", {})
 
 
+class TestWriteBatch:
+    def test_commits_on_success(self, tmp_path):
+        a = str(tmp_path / "a.png")
+        b = str(tmp_path / "b.png")
+        with image_index.write_batch():
+            image_index.upsert_image(a, size=10)
+            image_index.upsert_image(b, size=20)
+        assert image_index.get_image(a) is not None
+        assert image_index.get_image(b) is not None
+
+    def test_rolls_back_on_exception(self, tmp_path):
+        c = str(tmp_path / "c.png")
+        with pytest.raises(RuntimeError), image_index.write_batch():
+            image_index.upsert_image(c, size=10)
+            raise RuntimeError("boom")
+        # The whole batch is discarded, not just the row after the failure.
+        assert image_index.get_image(c) is None
+
+
 class TestApplyToPaths:
     def test_filter_by_ext(self, tmp_path):
         a = _touch(tmp_path / "one.png")

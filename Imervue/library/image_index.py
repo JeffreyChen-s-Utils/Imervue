@@ -175,6 +175,31 @@ def close() -> None:
             _conn = None
 
 
+@contextlib.contextmanager
+def write_batch():
+    """Group many writes into a single transaction.
+
+    The shared connection runs in autocommit mode, so without this each
+    ``upsert_image`` is its own transaction — a bulk scan of N files becomes N
+    commits. Wrapping a batch in one ``BEGIN`` … ``COMMIT`` collapses that into
+    a single commit. The transaction is rolled back if the body raises, so a
+    partially-applied chunk never lands.
+    """
+    c = conn()
+    with _lock:
+        c.execute("BEGIN")
+    committed = False
+    try:
+        yield
+        with _lock:
+            c.execute("COMMIT")
+        committed = True
+    finally:
+        if not committed:
+            with _lock:
+                c.execute("ROLLBACK")
+
+
 def _set_schema_version(c: sqlite3.Connection, version: int) -> None:
     c.execute(
         "INSERT INTO meta(key, value) VALUES('schema_version', ?)"

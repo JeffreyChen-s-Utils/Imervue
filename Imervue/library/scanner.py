@@ -20,6 +20,10 @@ from Imervue.library.phash import compute_phash
 
 logger = logging.getLogger("Imervue.library.scanner")
 
+# Files indexed per DB transaction during a bulk scan. Large enough to amortise
+# commit overhead, small enough to keep progress durable and transactions short.
+_SCAN_COMMIT_CHUNK = 256
+
 _IMAGE_EXTS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng", ".svg",
@@ -130,16 +134,26 @@ class LibraryScanner(QObject):
             # re-scan of an unchanged library this lets ~all files
             # short-circuit without a SQL upsert or pHash decode.
             bloom = _build_skip_bloom()
-            for i, p in enumerate(paths, start=1):
-                if self._cancel:
-                    break
-                _index_one(p, with_phash=self._with_phash, bloom=bloom)
-                if i % 10 == 0 or i == total:
-                    self.progress.emit(i, total, str(p))
+            self._scan_paths(paths, total, bloom)
             self.done.emit(total)
         except Exception as exc:  # noqa: BLE001
             logger.exception("library scan failed")
             self.error.emit(str(exc))
+
+    def _scan_paths(self, paths: list[Path], total: int, bloom) -> None:
+        """Index *paths*, committing one transaction per chunk so a large
+        first scan isn't N separate commits while progress stays durable."""
+        for start in range(0, total, _SCAN_COMMIT_CHUNK):
+            if self._cancel:
+                return
+            with image_index.write_batch():
+                for offset, p in enumerate(paths[start:start + _SCAN_COMMIT_CHUNK]):
+                    if self._cancel:
+                        break
+                    _index_one(p, with_phash=self._with_phash, bloom=bloom)
+                    i = start + offset + 1
+                    if i % 10 == 0 or i == total:
+                        self.progress.emit(i, total, str(p))
 
 
 class LibraryScanThread(QThread):

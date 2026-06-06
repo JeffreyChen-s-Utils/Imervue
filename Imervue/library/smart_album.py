@@ -115,7 +115,8 @@ def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
     tags_all = rules.get("tags_all") or []
     if tags_all:
         for t in tags_all:
-            paths = [p for p in paths if p in set(image_index.images_with_tag(t))]
+            tagged = set(image_index.images_with_tag(t))
+            paths = [p for p in paths if p in tagged]
 
     date_from = rules.get("date_from")
     date_to = rules.get("date_to")
