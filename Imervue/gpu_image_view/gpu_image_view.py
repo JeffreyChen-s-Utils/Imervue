@@ -19,6 +19,12 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
+from Imervue.gpu_image_view.minimap import (
+    MINIMAP_MARGIN,
+    minimap_geometry,
+    point_in_rect,
+    recenter_offsets,
+)
 from Imervue.gpu_image_view.tile_layout import (
     DEFAULT_THUMBNAIL_SIZE,
     plan_tile_size_change,
@@ -152,6 +158,9 @@ class GPUImageView(QOpenGLWidget):
         self.tile_manager = None
         self.deep_zoom = None
         self._saved_tile_state = None
+        # True while the user is click-dragging inside the deep-zoom minimap
+        # to pan the viewport.
+        self._minimap_dragging = False
         # When True, the user has zoomed / panned manually so the
         # canvas should not auto-fit on resize. Cleared on every
         # fresh image load via :meth:`_fit_to_window`.
@@ -169,6 +178,10 @@ class GPUImageView(QOpenGLWidget):
         self.model.images = []  # 所有圖片路徑
         self.current_index = 0
         self.on_filename_changed = None
+        # Fired with the edited full-resolution base-level array once a deep-zoom
+        # image is on screen. The multi-monitor mirror uses it to show the same
+        # edited result the main viewer shows (not the raw file on disk).
+        self.on_deep_zoom_displayed = None
         self.deep_zoom_tile_size = 512
         self._slideshow_opacity = 1.0
 
@@ -818,29 +831,27 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # 小地圖（Deep Zoom）
     # ---------------------------
-    _MINIMAP_MAX_W = 180
-    _MINIMAP_MARGIN = 12
     _MINIMAP_OPACITY = 0.85
 
-    def _paint_minimap(self):
+    def _current_minimap_rect(self) -> tuple[int, int, int, int] | None:
+        """Minimap rectangle (x, y, w, h) in widget coords, or None when no
+        deep-zoom image is loaded. Shared by the painter and the click handler
+        so the clickable area always matches what is drawn."""
         if not self.deep_zoom:
+            return None
+        base = self.deep_zoom.levels[0]
+        return minimap_geometry(
+            self.width(), self.height(), base.shape[1], base.shape[0],
+        )
+
+    def _paint_minimap(self):
+        rect = self._current_minimap_rect()
+        if rect is None:
             return
 
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-
-        # 小地圖尺寸（等比縮放）
-        aspect = img_w / max(img_h, 1)
-        mm_w = self._MINIMAP_MAX_W
-        mm_h = int(mm_w / max(aspect, 0.1))
-        if mm_h > 140:
-            mm_h = 140
-            mm_w = int(mm_h * aspect)
-        margin = self._MINIMAP_MARGIN
-
-        # 小地圖左上角在畫面座標
-        mm_x = self.width() - mm_w - margin
-        mm_y = self.height() - mm_h - margin
+        mm_x, mm_y, mm_w, mm_h = rect
 
         # 確保 ortho 回到畫面座標
         if not self.renderer.use_shaders:
@@ -1111,15 +1122,13 @@ class GPUImageView(QOpenGLWidget):
         painter.setFont(font)
         fm = painter.fontMetrics()
         tw = fm.horizontalAdvance(pct)
-        x = self.width() - tw - self._MINIMAP_MARGIN - 2
-        y = self.height() - self._MINIMAP_MARGIN - 8
-        # 小地圖高度估算
-        if self.deep_zoom:
-            base = self.deep_zoom.levels[0]
-            aspect = base.shape[1] / max(base.shape[0], 1)
-            mm_h = int(self._MINIMAP_MAX_W / max(aspect, 0.1))
-            mm_h = min(mm_h, 140)
-            y = self.height() - self._MINIMAP_MARGIN - mm_h - fm.height() - 4
+        x = self.width() - tw - MINIMAP_MARGIN - 2
+        # 置於小地圖上方（無小地圖時貼齊右下）
+        rect = self._current_minimap_rect()
+        if rect is not None:
+            y = self.height() - MINIMAP_MARGIN - rect[3] - fm.height() - 4
+        else:
+            y = self.height() - MINIMAP_MARGIN - 8
 
         painter.setPen(QColor(0, 0, 0, 160))
         painter.drawText(x + 1, y + 1, pct)
@@ -2067,6 +2076,7 @@ class GPUImageView(QOpenGLWidget):
             self._init_animation(path)
             self._prefetch_neighbors()
             self._update_status_info()
+            self._notify_deep_zoom_displayed()
             self.update()
             return
 
@@ -2119,7 +2129,14 @@ class GPUImageView(QOpenGLWidget):
             )
 
         self._update_status_info()
+        self._notify_deep_zoom_displayed()
         self.update()
+
+    def _notify_deep_zoom_displayed(self) -> None:
+        """Push the edited base-level array to the deep-zoom-displayed hook."""
+        callback = self.on_deep_zoom_displayed
+        if callback is not None and self.deep_zoom is not None:
+            callback(self.deep_zoom.levels[0])
 
     def _init_animation(self, path: str):
         """偵測並初始化動畫播放"""
@@ -2315,9 +2332,35 @@ class GPUImageView(QOpenGLWidget):
                 self._drag_start_pos = event.position()
                 self._drag_end_pos = event.position()
                 self._drag_selecting = False  # 先不啟動，等拖動才算框選
+            elif self.deep_zoom and self._begin_minimap_nav(event.position()):
+                return
             return
 
         super().mousePressEvent(event)
+
+    def _begin_minimap_nav(self, pos) -> bool:
+        """Start click-to-navigate if *pos* is inside the minimap. Returns
+        True when the click was consumed by the minimap."""
+        rect = self._current_minimap_rect()
+        if rect is None or not point_in_rect(pos.x(), pos.y(), rect):
+            return False
+        self._minimap_dragging = True
+        self._minimap_nav_to(pos)
+        return True
+
+    def _minimap_nav_to(self, pos) -> None:
+        """Recenter the deep-zoom viewport on the image point under *pos*."""
+        rect = self._current_minimap_rect()
+        if rect is None:
+            return
+        base = self.deep_zoom.levels[0]
+        self.dz_offset_x, self.dz_offset_y = recenter_offsets(
+            pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
+            self.width(), self.height(), self.zoom,
+        )
+        self._user_locked_view = True
+        self._update_status_info()
+        self.update()
 
     def mouseMoveEvent(self, event):
         self._update_hover_state(event)
@@ -2331,6 +2374,10 @@ class GPUImageView(QOpenGLWidget):
 
         if self._middle_dragging:
             self._handle_middle_drag(delta)
+            return
+
+        if self._minimap_dragging:
+            self._minimap_nav_to(event.position())
             return
 
         self._handle_left_drag_select(event)
@@ -2392,6 +2439,9 @@ class GPUImageView(QOpenGLWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
+            return
+        if event.button() == Qt.MouseButton.LeftButton and self._minimap_dragging:
+            self._minimap_dragging = False
             return
         if (
             self.tile_grid_mode

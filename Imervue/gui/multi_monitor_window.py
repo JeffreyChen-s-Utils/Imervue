@@ -12,8 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QGuiApplication, QPixmap, QKeyEvent
+from PySide6.QtGui import QGuiApplication, QImage, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -21,6 +22,25 @@ import contextlib
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
+
+
+def array_to_qimage(arr: np.ndarray) -> QImage:
+    """Copy an RGB or RGBA uint8 ndarray into a fresh QImage.
+
+    ``.copy()`` detaches the QImage from the numpy buffer so it stays valid
+    after the source array is freed (the viewer recycles its deep-zoom arrays
+    on navigation). Raises ``ValueError`` for unsupported channel counts.
+    """
+    if arr.ndim != 3 or arr.shape[2] not in (3, 4):
+        raise ValueError(f"expected HxWx3 or HxWx4 array, got shape {arr.shape}")
+    contiguous = np.ascontiguousarray(arr)
+    height, width = contiguous.shape[:2]
+    fmt = (
+        QImage.Format.Format_RGBA8888 if contiguous.shape[2] == 4
+        else QImage.Format.Format_RGB888
+    )
+    qimg = QImage(contiguous.data, width, height, contiguous.strides[0], fmt)
+    return qimg.copy()
 
 
 class _PreviewPanel(QLabel):
@@ -49,6 +69,15 @@ class _PreviewPanel(QLabel):
             self._pixmap = None
             return
         self._pixmap = pm
+        self._rescale()
+
+    def set_array(self, arr: np.ndarray | None) -> None:
+        """Display an in-memory RGB(A) array — the viewer's edited result."""
+        if arr is None:
+            self.set_image(None)
+            return
+        self.setStyleSheet("background-color: #000;")
+        self._pixmap = QPixmap.fromImage(array_to_qimage(arr))
         self._rescale()
 
     def _rescale(self) -> None:
@@ -91,6 +120,9 @@ class MultiMonitorWindow(QWidget):
     # -------- Public API --------
     def set_image(self, path: str | None) -> None:
         self._panel.set_image(path)
+
+    def set_array(self, arr) -> None:
+        self._panel.set_array(arr)
 
     def place_on_secondary(self) -> bool:
         """Move the window to a non-primary screen and show maximized.
@@ -144,16 +176,14 @@ class MultiMonitorController:
         win = MultiMonitorWindow(mw)
         win.closed.connect(self._on_closed)
         win.place_on_secondary()
-        # Seed with the currently-shown image
-        images = mw.viewer.model.images
-        idx = mw.viewer.current_index
-        if images and 0 <= idx < len(images):
-            win.set_image(images[idx])
         self._window = win
+        # Seed with the currently-shown edited image, if any.
+        self._mirror_current()
 
-        # Hook into filename-change so image mirroring stays in sync
-        self._prev_on_filename = mw.viewer.on_filename_changed
-        mw.viewer.on_filename_changed = self._wrap_filename_change
+        # Hook into deep-zoom display so the mirror shows the same edited
+        # result the main viewer shows (not the raw file on disk).
+        self._prev_on_displayed = mw.viewer.on_deep_zoom_displayed
+        mw.viewer.on_deep_zoom_displayed = self._on_deep_zoom_array
         if hasattr(mw, "toast"):
             lang = language_wrapper.language_word_dict
             mw.toast.info(
@@ -161,21 +191,27 @@ class MultiMonitorController:
                          "Secondary display opened — Ctrl+Shift+M to close")
             )
 
-    def _on_closed(self) -> None:
-        # Restore the original filename hook
-        mw = self._main_window
-        with contextlib.suppress(AttributeError):
-            mw.viewer.on_filename_changed = self._prev_on_filename
-        self._window = None
-
-    def _wrap_filename_change(self, name: str) -> None:
-        # Forward to the main window's original handler first, then mirror
-        with contextlib.suppress(Exception):
-            if self._prev_on_filename is not None:
-                self._prev_on_filename(name)
+    def _mirror_current(self) -> None:
+        """Show whatever the viewer currently has loaded (or 'No image')."""
         if self._window is None:
             return
-        images = self._main_window.viewer.model.images
-        idx = self._main_window.viewer.current_index
-        if images and 0 <= idx < len(images):
-            self._window.set_image(images[idx])
+        deep_zoom = getattr(self._main_window.viewer, "deep_zoom", None)
+        if deep_zoom is not None:
+            self._window.set_array(deep_zoom.levels[0])
+        else:
+            self._window.set_image(None)
+
+    def _on_closed(self) -> None:
+        # Restore the original deep-zoom-display hook
+        mw = self._main_window
+        with contextlib.suppress(AttributeError):
+            mw.viewer.on_deep_zoom_displayed = self._prev_on_displayed
+        self._window = None
+
+    def _on_deep_zoom_array(self, arr) -> None:
+        # Forward to any previously-registered hook first, then mirror.
+        with contextlib.suppress(Exception):
+            if self._prev_on_displayed is not None:
+                self._prev_on_displayed(arr)
+        if self._window is not None:
+            self._window.set_array(arr)
