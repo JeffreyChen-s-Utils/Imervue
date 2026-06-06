@@ -2295,9 +2295,9 @@ class GPUImageView(QOpenGLWidget):
     _ZOOM_MAX = 50.0
 
     def _handle_deep_zoom_wheel(self, event, delta) -> None:
-        """Apply a wheel zoom step to the deep-zoom view and re-anchor
-        the offset around the cursor. At the zoom limit, surface a
-        throttled toast instead of zooming."""
+        """Apply a wheel zoom step to the deep-zoom view. Scrolling over the
+        minimap zooms into the pointed location; elsewhere the zoom re-anchors
+        around the cursor. At the zoom limit, surface a throttled toast."""
         factor = 1.1 if delta > 0 else 0.9
         old_zoom = self.zoom
         new_zoom = stepped_zoom(old_zoom, factor, self._ZOOM_MIN, self._ZOOM_MAX)
@@ -2305,7 +2305,19 @@ class GPUImageView(QOpenGLWidget):
             self._notify_zoom_limit_once(new_zoom)
             return
         self.zoom = new_zoom
-        self._anchor_zoom_about(event.position(), old_zoom, new_zoom)
+        pos = event.position()
+        rect = self._current_minimap_rect()
+        if rect is not None and point_in_rect(pos.x(), pos.y(), rect):
+            base = self.deep_zoom.levels[0]
+            self.dz_offset_x, self.dz_offset_y = recenter_offsets(
+                pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
+                self.width(), self.height(), new_zoom,
+            )
+            self._user_locked_view = True
+            self._update_status_info()
+            self.update()
+        else:
+            self._anchor_zoom_about(pos, old_zoom, new_zoom)
 
     _KEYBOARD_ZOOM_FACTOR = 1.25
 
