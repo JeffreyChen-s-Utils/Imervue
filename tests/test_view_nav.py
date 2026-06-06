@@ -3,7 +3,29 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.gpu_image_view.view_nav import toggle_zoom_target, zoom_about_point
+from Imervue.gpu_image_view.view_nav import (
+    stepped_zoom,
+    toggle_zoom_target,
+    zoom_about_point,
+)
+
+
+class TestSteppedZoom:
+    def test_zooms_in_by_factor(self):
+        assert stepped_zoom(1.0, 1.25, 0.05, 50.0) == pytest.approx(1.25)
+
+    def test_zooms_out_by_factor(self):
+        assert stepped_zoom(1.0, 0.8, 0.05, 50.0) == pytest.approx(0.8)
+
+    def test_clamps_to_upper_limit(self):
+        assert stepped_zoom(40.0, 2.0, 0.05, 50.0) == pytest.approx(50.0)
+
+    def test_clamps_to_lower_limit(self):
+        assert stepped_zoom(0.06, 0.5, 0.05, 50.0) == pytest.approx(0.05)
+
+    def test_at_limit_is_idempotent(self):
+        # Already at the cap → stays, so the caller can detect "no change".
+        assert stepped_zoom(50.0, 1.25, 0.05, 50.0) == pytest.approx(50.0)
 
 
 class TestToggleZoomTarget:

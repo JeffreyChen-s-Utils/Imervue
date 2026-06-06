@@ -15,7 +15,21 @@ from Imervue.gui.multi_monitor_window import (
     _PreviewPanel,
     array_to_qimage,
     choose_mirror_screen_index,
+    next_screen_index,
 )
+
+
+class TestNextScreenIndex:
+    def test_forward_wraps(self):
+        assert next_screen_index(0, 3, forward=True) == 1
+        assert next_screen_index(2, 3, forward=True) == 0
+
+    def test_backward_wraps(self):
+        assert next_screen_index(0, 3, forward=False) == 2
+        assert next_screen_index(1, 3, forward=False) == 0
+
+    def test_empty_screen_list_is_safe(self):
+        assert next_screen_index(0, 0, forward=True) == 0
 
 
 class TestChooseMirrorScreenIndex:

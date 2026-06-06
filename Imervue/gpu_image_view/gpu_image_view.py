@@ -31,7 +31,11 @@ from Imervue.gpu_image_view.tile_layout import (
     resolve_thumbnail_size,
     tile_grid_layout,
 )
-from Imervue.gpu_image_view.view_nav import toggle_zoom_target, zoom_about_point
+from Imervue.gpu_image_view.view_nav import (
+    stepped_zoom,
+    toggle_zoom_target,
+    zoom_about_point,
+)
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -2296,12 +2300,36 @@ class GPUImageView(QOpenGLWidget):
         throttled toast instead of zooming."""
         factor = 1.1 if delta > 0 else 0.9
         old_zoom = self.zoom
-        new_zoom = max(self._ZOOM_MIN, min(self._ZOOM_MAX, old_zoom * factor))
+        new_zoom = stepped_zoom(old_zoom, factor, self._ZOOM_MIN, self._ZOOM_MAX)
         if new_zoom == old_zoom:
             self._notify_zoom_limit_once(new_zoom)
             return
         self.zoom = new_zoom
         self._anchor_zoom_about(event.position(), old_zoom, new_zoom)
+
+    _KEYBOARD_ZOOM_FACTOR = 1.25
+
+    def _zoom_step(self, zoom_in: bool) -> None:
+        """Keyboard zoom in/out, anchored on the viewport centre."""
+        if not self.deep_zoom:
+            return
+        from PySide6.QtCore import QPointF
+        factor = (self._KEYBOARD_ZOOM_FACTOR if zoom_in
+                  else 1 / self._KEYBOARD_ZOOM_FACTOR)
+        old_zoom = self.zoom
+        new_zoom = stepped_zoom(old_zoom, factor, self._ZOOM_MIN, self._ZOOM_MAX)
+        if new_zoom == old_zoom:
+            self._notify_zoom_limit_once(new_zoom)
+            return
+        self.zoom = new_zoom
+        center = QPointF(self.width() / 2, self.height() / 2)
+        self._anchor_zoom_about(center, old_zoom, new_zoom)
+
+    def _fit_window_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_window()
+            self.update()
+            self._toast("fit_window", "Fit to Window")
 
     def _anchor_zoom_about(self, pos, old_zoom: float, new_zoom: float) -> None:
         """Re-anchor the deep-zoom offset so the image point under *pos* stays
@@ -2883,6 +2911,9 @@ class GPUImageView(QOpenGLWidget):
             "histogram": self._toggle_histogram,
             "fit_width": self._fit_width_with_toast,
             "fit_height": self._fit_height_with_toast,
+            "fit_window": self._fit_window_with_toast,
+            "zoom_in": lambda: self._zoom_step(True),
+            "zoom_out": lambda: self._zoom_step(False),
             "bookmark": self._bookmark_if_deep_zoom,
             "rotate_cw": lambda: self._push_rotate(True),
             "rotate_ccw": lambda: self._push_rotate(False),

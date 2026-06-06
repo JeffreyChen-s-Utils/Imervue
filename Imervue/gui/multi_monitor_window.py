@@ -45,6 +45,17 @@ def choose_mirror_screen_index(
     return primary_index
 
 
+def next_screen_index(current_index: int, count: int, *, forward: bool = True) -> int:
+    """Index of the next screen when cycling, wrapping around.
+
+    Returns 0 for an empty screen list so callers can't index out of range.
+    """
+    if count <= 0:
+        return 0
+    step = 1 if forward else -1
+    return (current_index + step) % count
+
+
 def array_to_qimage(arr: np.ndarray) -> QImage:
     """Copy an RGB or RGBA uint8 ndarray into a fresh QImage.
 
@@ -170,10 +181,29 @@ class MultiMonitorWindow(QWidget):
         user_setting_dict["multi_monitor_screen"] = target.name()
         return idx != primary_index
 
+    def _move_to_adjacent_screen(self, forward: bool) -> None:
+        """Cycle the mirror to the next / previous screen and remember it."""
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        screens = QGuiApplication.screens()
+        if len(screens) <= 1:
+            return
+        current = self.screen()
+        cur_index = next(
+            (i for i, s in enumerate(screens) if s is current), 0,
+        )
+        target = screens[next_screen_index(cur_index, len(screens), forward=forward)]
+        self.setGeometry(target.availableGeometry())
+        self.showMaximized()
+        user_setting_dict["multi_monitor_screen"] = target.name()
+
     # -------- Events --------
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        if event.key() == Qt.Key.Key_Escape:
+        key = event.key()
+        if key == Qt.Key.Key_Escape:
             self.close()
+            return
+        if key in (Qt.Key.Key_Right, Qt.Key.Key_Left):
+            self._move_to_adjacent_screen(forward=key == Qt.Key.Key_Right)
             return
         super().keyPressEvent(event)
 

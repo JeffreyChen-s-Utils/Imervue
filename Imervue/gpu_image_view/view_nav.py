@@ -26,6 +26,15 @@ def toggle_zoom_target(
     return actual
 
 
+def stepped_zoom(current: float, factor: float, lo: float, hi: float) -> float:
+    """Multiply *current* zoom by *factor*, clamped to ``[lo, hi]``.
+
+    Shared by the wheel, keyboard and pinch zoom paths so they all honour the
+    same limits.
+    """
+    return max(lo, min(hi, current * factor))
+
+
 def zoom_about_point(
     offset: float,
     cursor: float,
