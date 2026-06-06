@@ -19,7 +19,12 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
-from Imervue.gpu_image_view.tile_layout import plan_tile_size_change, tile_grid_layout
+from Imervue.gpu_image_view.tile_layout import (
+    DEFAULT_THUMBNAIL_SIZE,
+    plan_tile_size_change,
+    resolve_thumbnail_size,
+    tile_grid_layout,
+)
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -165,7 +170,6 @@ class GPUImageView(QOpenGLWidget):
         self.current_index = 0
         self.on_filename_changed = None
         self.deep_zoom_tile_size = 512
-        self.thumbnail_size = 512
         self._slideshow_opacity = 1.0
 
         # ===== 篩選前完整圖片列表 =====
@@ -175,6 +179,11 @@ class GPUImageView(QOpenGLWidget):
         # 0 (compact) / 8 (standard) / 16 (relaxed) — 縮圖間額外 padding 像素
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         self.tile_padding = int(user_setting_dict.get("tile_padding", 8))
+        # Persisted thumbnail size — survives restarts (validated against the
+        # known sizes so a corrupt value can't break the grid).
+        self.thumbnail_size = resolve_thumbnail_size(
+            user_setting_dict.get("thumbnail_size", DEFAULT_THUMBNAIL_SIZE),
+        )
 
         # ===== Hover 預覽 =====
         # Lazy-init 避免在沒有 QApplication 時匯入失敗
@@ -1683,6 +1692,8 @@ class GPUImageView(QOpenGLWidget):
         and the grid is regenerated lazily on the next exit to the wall.
         """
         self.thumbnail_size = None if size == "None" else size
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        user_setting_dict["thumbnail_size"] = self.thumbnail_size
         in_deep_zoom = self.deep_zoom is not None and not self.tile_grid_mode
         action = plan_tile_size_change(
             in_deep_zoom=in_deep_zoom, has_images=bool(self.model.images),

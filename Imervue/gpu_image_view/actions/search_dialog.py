@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
+from Imervue.gpu_image_view.tile_layout import tile_grid_layout
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
@@ -244,9 +245,10 @@ class ImageSearchDialog(QDialog):
         gui = self._main_gui
 
         base_tile = gui.thumbnail_size or 256
-        scaled_tile = base_tile * gui.tile_scale
-        cell = scaled_tile + gui.tile_padding
-        cols = max(1, int(gui.width() // cell))
+        _, cell, cols = tile_grid_layout(
+            gui.width(), base_tile, gui.tile_scale,
+            gui.tile_padding, gui.devicePixelRatio(),
+        )
 
         row = index // cols
         target_y = -(row * cell) + gui.height() / 3

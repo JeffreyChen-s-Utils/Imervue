@@ -4,7 +4,11 @@ from __future__ import annotations
 import pytest
 
 from Imervue.gpu_image_view.tile_layout import (
+    DEFAULT_THUMBNAIL_SIZE,
+    VALID_THUMBNAIL_SIZES,
+    is_active_thumbnail_choice,
     plan_tile_size_change,
+    resolve_thumbnail_size,
     tile_grid_layout,
 )
 
@@ -58,3 +62,43 @@ class TestPlanTileSizeChange:
 
     def test_grid_rebuilds_now(self):
         assert plan_tile_size_change(in_deep_zoom=False, has_images=True) == "rebuild"
+
+
+class TestResolveThumbnailSize:
+    def test_none_means_full_resolution(self):
+        assert resolve_thumbnail_size(None) is None
+
+    @pytest.mark.parametrize("size", VALID_THUMBNAIL_SIZES)
+    def test_valid_sizes_pass_through(self, size):
+        assert resolve_thumbnail_size(size) == size
+
+    def test_string_digits_are_coerced(self):
+        # JSON round-trips ints, but a hand-edited settings file may store
+        # a string — coerce it rather than reject a recoverable value.
+        assert resolve_thumbnail_size("256") == 256
+
+    @pytest.mark.parametrize("bad", [0, 999, -1, "abc", [512], 3.5])
+    def test_invalid_falls_back_to_default(self, bad):
+        assert resolve_thumbnail_size(bad) == DEFAULT_THUMBNAIL_SIZE
+
+    def test_custom_default_is_honoured(self):
+        assert resolve_thumbnail_size(999, default=128) == 128
+
+
+class TestIsActiveThumbnailChoice:
+    def test_none_sentinel_matches_full_resolution(self):
+        assert is_active_thumbnail_choice("None", None) is True
+
+    def test_none_sentinel_does_not_match_a_size(self):
+        assert is_active_thumbnail_choice("None", 512) is False
+
+    def test_int_option_matches_equal_current(self):
+        assert is_active_thumbnail_choice(512, 512) is True
+
+    def test_int_option_does_not_match_full_resolution(self):
+        # The old ``size == None`` check returned False here too, but the bug
+        # was the *other* direction (the "None" entry never matched).
+        assert is_active_thumbnail_choice(512, None) is False
+
+    def test_int_option_does_not_match_other_size(self):
+        assert is_active_thumbnail_choice(256, 512) is False

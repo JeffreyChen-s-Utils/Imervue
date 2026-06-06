@@ -15,6 +15,39 @@ or any Qt widget.
 """
 from __future__ import annotations
 
+# Thumbnail sizes offered by the menu. ``None`` (full resolution) is handled
+# separately because it is not an integer.
+VALID_THUMBNAIL_SIZES = (128, 256, 512, 1024)
+DEFAULT_THUMBNAIL_SIZE = 512
+
+
+def resolve_thumbnail_size(stored, *, default: int = DEFAULT_THUMBNAIL_SIZE):
+    """Validate a persisted thumbnail size read from user settings.
+
+    ``None`` means the user picked the full-resolution option and is passed
+    through. Anything that isn't a recognised size (corrupt / tampered value)
+    falls back to *default* so a bad setting can't break the grid.
+    """
+    if stored is None:
+        return None
+    try:
+        value = int(stored)
+    except (TypeError, ValueError):
+        return default
+    return value if value in VALID_THUMBNAIL_SIZES else default
+
+
+def is_active_thumbnail_choice(option, current) -> bool:
+    """True if a menu *option* matches the viewer's *current* thumbnail size.
+
+    The menu's full-resolution entry is the string ``"None"`` while the viewer
+    stores ``None``; this bridges the two so the active radio item shows a
+    checkmark even when full resolution is selected.
+    """
+    if option == "None":
+        return current is None
+    return option == current
+
 
 def tile_grid_layout(
     view_width: float,
