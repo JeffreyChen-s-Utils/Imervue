@@ -24,6 +24,27 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 
+def choose_mirror_screen_index(
+    screen_names: list[str],
+    primary_index: int,
+    preferred_name: str | None,
+) -> int:
+    """Pick which screen the mirror should open on.
+
+    Prefers a non-primary screen matching *preferred_name* (the one the user
+    last used), then the first non-primary screen, and finally falls back to
+    the primary screen when it's the only one available.
+    """
+    if preferred_name:
+        for i, name in enumerate(screen_names):
+            if name == preferred_name and i != primary_index:
+                return i
+    for i in range(len(screen_names)):
+        if i != primary_index:
+            return i
+    return primary_index
+
+
 def array_to_qimage(arr: np.ndarray) -> QImage:
     """Copy an RGB or RGBA uint8 ndarray into a fresh QImage.
 
@@ -127,21 +148,27 @@ class MultiMonitorWindow(QWidget):
     def place_on_secondary(self) -> bool:
         """Move the window to a non-primary screen and show maximized.
 
-        Returns True if a secondary screen was found; False otherwise (in
-        which case the caller may decide to show it on the primary screen
-        anyway).
+        Prefers the screen the mirror was last shown on (persisted by name),
+        then any other non-primary screen. Returns True if a secondary screen
+        was used; False when only the primary screen is available.
         """
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
         screens = QGuiApplication.screens()
         primary = QGuiApplication.primaryScreen()
-        for screen in screens:
-            if screen is not primary:
-                geo = screen.availableGeometry()
-                self.setGeometry(geo)
-                self.showMaximized()
-                return True
-        # Fall back to primary screen
+        primary_index = next(
+            (i for i, s in enumerate(screens) if s is primary), 0,
+        )
+        idx = choose_mirror_screen_index(
+            [s.name() for s in screens],
+            primary_index,
+            user_setting_dict.get("multi_monitor_screen"),
+        )
+        target = screens[idx]
+        self.setGeometry(target.availableGeometry())
         self.showMaximized()
-        return False
+        # Remember the monitor so reopening lands on the same one.
+        user_setting_dict["multi_monitor_screen"] = target.name()
+        return idx != primary_index
 
     # -------- Events --------
     def keyPressEvent(self, event: QKeyEvent) -> None:

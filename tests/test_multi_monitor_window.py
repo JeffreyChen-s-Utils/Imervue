@@ -14,7 +14,32 @@ from Imervue.gui.multi_monitor_window import (
     MultiMonitorController,
     _PreviewPanel,
     array_to_qimage,
+    choose_mirror_screen_index,
 )
+
+
+class TestChooseMirrorScreenIndex:
+    def test_prefers_remembered_non_primary_screen(self):
+        names = ["DELL", "HP", "LG"]
+        # Primary is index 0; remembered "LG" should win over first-other "HP".
+        assert choose_mirror_screen_index(names, 0, "LG") == 2
+
+    def test_falls_back_to_first_non_primary(self):
+        names = ["A", "B", "C"]
+        assert choose_mirror_screen_index(names, 1, None) == 0
+
+    def test_ignores_preferred_when_it_is_the_primary(self):
+        names = ["A", "B"]
+        # Preferred names the primary screen → skip it, use the other one.
+        assert choose_mirror_screen_index(names, 0, "A") == 1
+
+    def test_ignores_preferred_when_absent(self):
+        names = ["A", "B"]
+        assert choose_mirror_screen_index(names, 0, "GONE") == 1
+
+    def test_single_screen_returns_primary(self):
+        assert choose_mirror_screen_index(["only"], 0, None) == 0
+        assert choose_mirror_screen_index(["only"], 0, "only") == 0
 
 
 class TestArrayToQImage:

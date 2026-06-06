@@ -31,6 +31,7 @@ from Imervue.gpu_image_view.tile_layout import (
     resolve_thumbnail_size,
     tile_grid_layout,
 )
+from Imervue.gpu_image_view.view_nav import toggle_zoom_target, zoom_about_point
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -1443,20 +1444,32 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Fit to Window
     # ---------------------------
+    def _fit_zoom(self) -> float:
+        """Zoom level that fits the whole image in the canvas (capped at 1.0).
+
+        Prefers the most recent ``resizeGL`` size — it's authoritative for the
+        GL coordinate system and avoids the brief frames where ``self.width()``
+        lags the actual layout.
+        """
+        base = self.deep_zoom.levels[0]
+        img_w, img_h = base.shape[1], base.shape[0]
+        if self._last_resize_size != (0, 0):
+            w, h = self._last_resize_size
+        else:
+            w, h = self.width() or 1, self.height() or 1
+        return min(w / img_w, h / img_h, 1.0)
+
     def _fit_to_window(self):
         """自動縮放使圖片完整顯示在視窗內"""
         if not self.deep_zoom:
             return
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-        # Prefer the most recent ``resizeGL`` size — it's authoritative
-        # for the GL coordinate system and avoids the brief frames
-        # where ``self.width()`` lags the actual layout.
         if self._last_resize_size != (0, 0):
             w, h = self._last_resize_size
         else:
             w, h = self.width() or 1, self.height() or 1
-        self.zoom = min(w / img_w, h / img_h, 1.0)
+        self.zoom = self._fit_zoom()
         displayed_w = img_w * self.zoom
         displayed_h = img_h * self.zoom
         self.dz_offset_x = (w - displayed_w) / 2
@@ -2288,11 +2301,17 @@ class GPUImageView(QOpenGLWidget):
             self._notify_zoom_limit_once(new_zoom)
             return
         self.zoom = new_zoom
-        mx = event.position().x()
-        my = event.position().y()
-        ratio = self.zoom / old_zoom
-        self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
-        self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
+        self._anchor_zoom_about(event.position(), old_zoom, new_zoom)
+
+    def _anchor_zoom_about(self, pos, old_zoom: float, new_zoom: float) -> None:
+        """Re-anchor the deep-zoom offset so the image point under *pos* stays
+        put across a zoom change, then refresh status + repaint."""
+        self.dz_offset_x = zoom_about_point(
+            self.dz_offset_x, pos.x(), old_zoom, new_zoom,
+        )
+        self.dz_offset_y = zoom_about_point(
+            self.dz_offset_y, pos.y(), old_zoom, new_zoom,
+        )
         self._user_locked_view = True
         self._update_status_info()
         self.update()
@@ -2361,6 +2380,35 @@ class GPUImageView(QOpenGLWidget):
         self._user_locked_view = True
         self._update_status_info()
         self.update()
+
+    def mouseDoubleClickEvent(self, event):
+        # Deep zoom: double-click toggles fit ↔ 100% centred on the cursor,
+        # except inside the minimap (which owns clicks for navigation).
+        if (event.button() == Qt.MouseButton.LeftButton
+                and self.deep_zoom and not self.tile_grid_mode):
+            pos = event.position()
+            rect = self._current_minimap_rect()
+            if rect is None or not point_in_rect(pos.x(), pos.y(), rect):
+                self._toggle_zoom_at(pos)
+                return
+        super().mouseDoubleClickEvent(event)
+
+    def _toggle_zoom_at(self, pos) -> None:
+        """Toggle between fit-to-window and 100%.
+
+        Zooming to 100% anchors on the cursor; returning to fit re-centres the
+        image (anchoring on the cursor would leave it off-centre once it's
+        small enough to fit).
+        """
+        fit = self._fit_zoom()
+        target = toggle_zoom_target(self.zoom, fit)
+        if target == fit:
+            self._fit_to_window()
+            self.update()
+            return
+        old_zoom = self.zoom
+        self.zoom = target
+        self._anchor_zoom_about(pos, old_zoom, target)
 
     def mouseMoveEvent(self, event):
         self._update_hover_state(event)
