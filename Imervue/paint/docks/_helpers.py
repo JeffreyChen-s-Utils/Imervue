@@ -1,7 +1,6 @@
 """Shared widgets, constants and icon helpers for the dock panels."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -11,9 +10,6 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 
-
-if TYPE_CHECKING:
-    pass
 
 _SWATCH_PX = 22
 

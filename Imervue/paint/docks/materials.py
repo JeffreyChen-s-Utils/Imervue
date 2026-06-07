@@ -1,7 +1,6 @@
 """Material library dock."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
@@ -18,9 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-
-if TYPE_CHECKING:
-    pass
 
 from Imervue.paint.docks._helpers import (
     _HINT_LABEL_STYLE,

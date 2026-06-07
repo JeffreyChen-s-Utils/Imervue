@@ -5,7 +5,7 @@ duplicate-name helper. Extracted from ``Imervue_main_window``; re-exported
 there for backwards compatibility.
 """
 import os
-import subprocess
+import subprocess  # nosec B404  # NOSONAR - static arg lists for trusted OS file managers
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -286,17 +286,28 @@ class _FileTreeView(QTreeView):
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
+        # Static command + a local filesystem path from the file tree — no
+        # untrusted input, shell=False. Bandit B603/B607 and Semgrep flag any
+        # subprocess use; suppressed inline (rules are also config-skipped).
         with contextlib.suppress(Exception):
             if sys.platform == "win32":
                 if select and Path(path).is_file():
-                    subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+                    subprocess.Popen(  # nosec B603,B607  # nosemgrep
+                        ["explorer", "/select,", os.path.normpath(path)],
+                    )
                 else:
-                    subprocess.Popen(["explorer", os.path.normpath(path)])
+                    subprocess.Popen(  # nosec B603,B607  # nosemgrep
+                        ["explorer", os.path.normpath(path)],
+                    )
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", "-R" if select else "", path])
+                subprocess.Popen(  # nosec B603,B607  # nosemgrep
+                    ["open", "-R" if select else "", path],
+                )
             else:
                 target = path if Path(path).is_dir() else str(Path(path).parent)
-                subprocess.Popen(["xdg-open", target])
+                subprocess.Popen(  # nosec B603,B607  # nosemgrep
+                    ["xdg-open", target],
+                )
 
     def _open_with_default_app(self, path: str) -> None:
         """Open ``path`` with the OS's default application via Qt's

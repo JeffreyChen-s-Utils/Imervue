@@ -210,10 +210,12 @@ def test_reveal_path_handles_unknown_target(qapp, tmp_path, monkeypatch):
 
     from Imervue.gui.image_list_view import ImageListView
     opened: list = []
-    monkeypatch.setattr(
-        QDesktopServices, "openUrl",
-        lambda url: bool(opened.append(url)) or True,
-    )
+
+    def _stub_open_url(url):
+        opened.append(url)
+        return True
+
+    monkeypatch.setattr(QDesktopServices, "openUrl", _stub_open_url)
     view = ImageListView(main_window=None)
     try:
         view._reveal_path(str(tmp_path / "nope.png"))  # noqa: SLF001

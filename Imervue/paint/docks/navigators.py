@@ -1,7 +1,6 @@
 """Navigator, history and page-navigator docks."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
@@ -18,9 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-
-if TYPE_CHECKING:
-    pass
 
 from Imervue.paint.docks._helpers import (
     _HINT_LABEL_STYLE,

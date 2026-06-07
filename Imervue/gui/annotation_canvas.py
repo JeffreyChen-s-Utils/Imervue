@@ -697,7 +697,7 @@ class AnnotationCanvas(QWidget):
     @staticmethod
     def _draw_watercolor_qt(painter: QPainter, ann: Annotation, width: int) -> None:
         import random as _random
-        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)  # nosec B311  # NOSONAR S2245
         jitter = width * 0.15
         for _ in range(3):
             path = QPainterPath()
@@ -713,7 +713,7 @@ class AnnotationCanvas(QWidget):
     def _draw_crayon_qt(painter: QPainter, ann: Annotation,
                         color: QColor, width: int) -> None:
         import random as _random
-        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)  # nosec B311  # NOSONAR S2245
         for offset in range(3):
             w = max(1, width - offset)
             pen2 = QPen(color)
@@ -743,7 +743,7 @@ class AnnotationCanvas(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(color))
 
-        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)  # nosec B311  # NOSONAR S2245
         pts = ann.points
         samples: list[tuple[float, float]] = [
             (float(pts[0][0]), float(pts[0][1]))
@@ -812,7 +812,7 @@ class AnnotationCanvas(QWidget):
         final_alpha = int(a * opacity / 100)
         color = QColor(r, g, b, final_alpha)
         width = max(1, int(ann.stroke_width * 1.2))
-        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)
+        rng = _random.Random(hash(ann.id) & 0xFFFFFFFF)  # nosec B311  # NOSONAR S2245
         # Main stroke
         pen = QPen(color)
         pen.setWidthF(width)

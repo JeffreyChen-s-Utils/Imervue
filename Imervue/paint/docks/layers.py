@@ -1,7 +1,6 @@
 """Layer dock."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
@@ -21,9 +20,6 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
-
-if TYPE_CHECKING:
-    pass
 
 from Imervue.paint.docks._helpers import (
     _array_to_icon,

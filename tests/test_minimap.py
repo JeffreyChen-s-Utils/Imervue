@@ -30,7 +30,7 @@ class TestMinimapGeometry:
 
     def test_zero_height_does_not_divide_by_zero(self):
         # Degenerate image height is clamped, not crashed.
-        x, y, w, h = minimap_geometry(1000, 800, 100, 0)
+        _, _, w, h = minimap_geometry(1000, 800, 100, 0)
         assert w > 0 and h > 0
 
 
