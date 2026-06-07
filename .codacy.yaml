@@ -11,3 +11,9 @@ engines:
       # Translator dictionaries contain localised strings like "Enter password:"
       # and "API key" that trip B105 hardcoded_password_string.
       - 'Imervue/multi_language/**'
+      # The file-tree view's only bandit hits are the "reveal in file manager"
+      # subprocess calls (static commands + a local path; B603/B607) and an
+      # already-narrow except — accepted project-wide in .bandit. Codacy's
+      # bandit honours neither the .bandit skips nor inline `# nosec`, so the
+      # file is excluded here to match that documented acceptance.
+      - 'Imervue/gui/file_tree_view.py'

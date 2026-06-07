@@ -2153,6 +2153,7 @@ class GPUImageView(QOpenGLWidget):
         """Push the edited base-level array to the deep-zoom-displayed hook."""
         callback = self.on_deep_zoom_displayed
         if callable(callback) and self.deep_zoom is not None:
+            # pylint: disable=not-callable  # guarded by callable() above
             callback(self.deep_zoom.levels[0])
 
     def _init_animation(self, path: str):
