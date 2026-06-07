@@ -202,12 +202,23 @@ def test_context_menu_no_op_on_empty_selection(qapp):
         view.deleteLater()
 
 
-def test_reveal_path_handles_unknown_target(qapp, tmp_path):
-    """Asking the OS to reveal a path that doesn't exist must not
-    crash — QDesktopServices already handles missing files."""
+def test_reveal_path_handles_unknown_target(qapp, tmp_path, monkeypatch):
+    """Reveal delegates to QDesktopServices. The opener is stubbed so the
+    test never launches a real file-manager window (which would otherwise
+    pop open — and stay open — on every test run)."""
+    from PySide6.QtGui import QDesktopServices
+
     from Imervue.gui.image_list_view import ImageListView
+    opened: list = []
+
+    def _stub_open_url(url):
+        opened.append(url)
+        return True
+
+    monkeypatch.setattr(QDesktopServices, "openUrl", _stub_open_url)
     view = ImageListView(main_window=None)
     try:
         view._reveal_path(str(tmp_path / "nope.png"))  # noqa: SLF001
     finally:
         view.deleteLater()
+    assert opened, "reveal should delegate to QDesktopServices.openUrl"

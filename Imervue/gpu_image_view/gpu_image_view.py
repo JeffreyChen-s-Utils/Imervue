@@ -19,6 +19,23 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
+from Imervue.gpu_image_view.minimap import (
+    MINIMAP_MARGIN,
+    minimap_geometry,
+    point_in_rect,
+    recenter_offsets,
+)
+from Imervue.gpu_image_view.tile_layout import (
+    DEFAULT_THUMBNAIL_SIZE,
+    plan_tile_size_change,
+    resolve_thumbnail_size,
+    tile_grid_layout,
+)
+from Imervue.gpu_image_view.view_nav import (
+    stepped_zoom,
+    toggle_zoom_target,
+    zoom_about_point,
+)
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -128,6 +145,13 @@ class GPUImageView(QOpenGLWidget):
         self.grid_offset_x = 0
         self.grid_offset_y = 0
         self.tile_scale = 1.0
+        # Effective per-tile draw scale = tile_scale / devicePixelRatio,
+        # recomputed each ``paint_tile_grid`` so thumbnails keep a consistent
+        # physical size across monitors with different display scaling.
+        self._tile_draw_scale = 1.0
+        # Set when the thumbnail size changes while in deep zoom, so the grid
+        # is rebuilt at the new size when the user exits back to the wall.
+        self._tile_size_dirty = False
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
 
@@ -139,6 +163,9 @@ class GPUImageView(QOpenGLWidget):
         self.tile_manager = None
         self.deep_zoom = None
         self._saved_tile_state = None
+        # True while the user is click-dragging inside the deep-zoom minimap
+        # to pan the viewport.
+        self._minimap_dragging = False
         # When True, the user has zoomed / panned manually so the
         # canvas should not auto-fit on resize. Cleared on every
         # fresh image load via :meth:`_fit_to_window`.
@@ -156,8 +183,11 @@ class GPUImageView(QOpenGLWidget):
         self.model.images = []  # 所有圖片路徑
         self.current_index = 0
         self.on_filename_changed = None
+        # Fired with the edited full-resolution base-level array once a deep-zoom
+        # image is on screen. The multi-monitor mirror uses it to show the same
+        # edited result the main viewer shows (not the raw file on disk).
+        self.on_deep_zoom_displayed = None
         self.deep_zoom_tile_size = 512
-        self.thumbnail_size = 512
         self._slideshow_opacity = 1.0
 
         # ===== 篩選前完整圖片列表 =====
@@ -167,6 +197,11 @@ class GPUImageView(QOpenGLWidget):
         # 0 (compact) / 8 (standard) / 16 (relaxed) — 縮圖間額外 padding 像素
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         self.tile_padding = int(user_setting_dict.get("tile_padding", 8))
+        # Persisted thumbnail size — survives restarts (validated against the
+        # known sizes so a corrupt value can't break the grid).
+        self.thumbnail_size = resolve_thumbnail_size(
+            user_setting_dict.get("thumbnail_size", DEFAULT_THUMBNAIL_SIZE),
+        )
 
         # ===== Hover 預覽 =====
         # Lazy-init 避免在沒有 QApplication 時匯入失敗
@@ -595,8 +630,8 @@ class GPUImageView(QOpenGLWidget):
             self._draw_tile_placeholder(x0, y0, scaled_tile, vw, vh)
             return
         img_data = self.tile_cache[path]
-        x1 = x0 + img_data.shape[1] * self.tile_scale
-        y1 = y0 + img_data.shape[0] * self.tile_scale
+        x1 = x0 + img_data.shape[1] * self._tile_draw_scale
+        y1 = y0 + img_data.shape[0] * self._tile_draw_scale
         if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
             return
         self.tile_rects.append((x0, y0, x1, y1, path))
@@ -693,9 +728,11 @@ class GPUImageView(QOpenGLWidget):
 
         images = self.model.images
         base_tile = self._tile_base_size()
-        scaled_tile = base_tile * self.tile_scale
-        cell = scaled_tile + self.tile_padding
-        cols = max(1, int(self.width() // cell))
+        self._tile_draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
+        scaled_tile = base_tile * self._tile_draw_scale
         self.tile_rects = []
         # Placeholders for tiles whose thumbnail hasn't arrived yet — rendered
         # as dark squares so the grid layout is visible immediately. Stored
@@ -799,29 +836,27 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # 小地圖（Deep Zoom）
     # ---------------------------
-    _MINIMAP_MAX_W = 180
-    _MINIMAP_MARGIN = 12
     _MINIMAP_OPACITY = 0.85
 
-    def _paint_minimap(self):
+    def _current_minimap_rect(self) -> tuple[int, int, int, int] | None:
+        """Minimap rectangle (x, y, w, h) in widget coords, or None when no
+        deep-zoom image is loaded. Shared by the painter and the click handler
+        so the clickable area always matches what is drawn."""
         if not self.deep_zoom:
+            return None
+        base = self.deep_zoom.levels[0]
+        return minimap_geometry(
+            self.width(), self.height(), base.shape[1], base.shape[0],
+        )
+
+    def _paint_minimap(self):
+        rect = self._current_minimap_rect()
+        if rect is None:
             return
 
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-
-        # 小地圖尺寸（等比縮放）
-        aspect = img_w / max(img_h, 1)
-        mm_w = self._MINIMAP_MAX_W
-        mm_h = int(mm_w / max(aspect, 0.1))
-        if mm_h > 140:
-            mm_h = 140
-            mm_w = int(mm_h * aspect)
-        margin = self._MINIMAP_MARGIN
-
-        # 小地圖左上角在畫面座標
-        mm_x = self.width() - mm_w - margin
-        mm_y = self.height() - mm_h - margin
+        mm_x, mm_y, mm_w, mm_h = rect
 
         # 確保 ortho 回到畫面座標
         if not self.renderer.use_shaders:
@@ -1092,15 +1127,13 @@ class GPUImageView(QOpenGLWidget):
         painter.setFont(font)
         fm = painter.fontMetrics()
         tw = fm.horizontalAdvance(pct)
-        x = self.width() - tw - self._MINIMAP_MARGIN - 2
-        y = self.height() - self._MINIMAP_MARGIN - 8
-        # 小地圖高度估算
-        if self.deep_zoom:
-            base = self.deep_zoom.levels[0]
-            aspect = base.shape[1] / max(base.shape[0], 1)
-            mm_h = int(self._MINIMAP_MAX_W / max(aspect, 0.1))
-            mm_h = min(mm_h, 140)
-            y = self.height() - self._MINIMAP_MARGIN - mm_h - fm.height() - 4
+        x = self.width() - tw - MINIMAP_MARGIN - 2
+        # 置於小地圖上方（無小地圖時貼齊右下）
+        rect = self._current_minimap_rect()
+        if rect is not None:
+            y = self.height() - MINIMAP_MARGIN - rect[3] - fm.height() - 4
+        else:
+            y = self.height() - MINIMAP_MARGIN - 8
 
         painter.setPen(QColor(0, 0, 0, 160))
         painter.drawText(x + 1, y + 1, pct)
@@ -1415,20 +1448,32 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Fit to Window
     # ---------------------------
+    def _fit_zoom(self) -> float:
+        """Zoom level that fits the whole image in the canvas (capped at 1.0).
+
+        Prefers the most recent ``resizeGL`` size — it's authoritative for the
+        GL coordinate system and avoids the brief frames where ``self.width()``
+        lags the actual layout.
+        """
+        base = self.deep_zoom.levels[0]
+        img_w, img_h = base.shape[1], base.shape[0]
+        if self._last_resize_size != (0, 0):
+            w, h = self._last_resize_size
+        else:
+            w, h = self.width() or 1, self.height() or 1
+        return min(w / img_w, h / img_h, 1.0)
+
     def _fit_to_window(self):
         """自動縮放使圖片完整顯示在視窗內"""
         if not self.deep_zoom:
             return
         base = self.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-        # Prefer the most recent ``resizeGL`` size — it's authoritative
-        # for the GL coordinate system and avoids the brief frames
-        # where ``self.width()`` lags the actual layout.
         if self._last_resize_size != (0, 0):
             w, h = self._last_resize_size
         else:
             w, h = self.width() or 1, self.height() or 1
-        self.zoom = min(w / img_w, h / img_h, 1.0)
+        self.zoom = self._fit_zoom()
         displayed_w = img_w * self.zoom
         displayed_h = img_h * self.zoom
         self.dz_offset_x = (w - displayed_w) / 2
@@ -1564,9 +1609,10 @@ class GPUImageView(QOpenGLWidget):
         """Return the subset of cached tiles whose rect intersects the viewport."""
         images = self.model.images
         base_tile = self._evict_base_tile_size()
-        scaled_tile = base_tile * self.tile_scale
-        cell = scaled_tile + self.tile_padding
-        cols = max(1, int(self.width() // cell))
+        draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
         vw, vh = self.width(), self.height()
 
         visible: set[str] = set()
@@ -1577,8 +1623,8 @@ class GPUImageView(QOpenGLWidget):
             x0 = col * cell + self.grid_offset_x
             y0 = row * cell + self.grid_offset_y
             img = self.tile_cache[p]
-            x1 = x0 + img.shape[1] * self.tile_scale
-            y1 = y0 + img.shape[0] * self.tile_scale
+            x1 = x0 + img.shape[1] * draw_scale
+            y1 = y0 + img.shape[0] * draw_scale
             if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
                 visible.add(p)
         return visible
@@ -1664,6 +1710,27 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Tile Grid 載入
     # ---------------------------
+    def set_thumbnail_size(self, size) -> None:
+        """Apply a new thumbnail size picked from the menu.
+
+        While in deep zoom the grid is *not* rebuilt — that would drop the
+        user back to the wall and wipe the status-bar info. The size is stored
+        and the grid is regenerated lazily on the next exit to the wall.
+        """
+        self.thumbnail_size = None if size == "None" else size
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        user_setting_dict["thumbnail_size"] = self.thumbnail_size
+        in_deep_zoom = self.deep_zoom is not None and not self.tile_grid_mode
+        action = plan_tile_size_change(
+            in_deep_zoom=in_deep_zoom, has_images=bool(self.model.images),
+        )
+        if action == "rebuild":
+            self.clear_tile_grid()
+            self.load_tile_grid_async(image_paths=self.model.images)
+        elif action == "defer":
+            self._tile_size_dirty = True
+            self.update()
+
     def load_tile_grid_async(self, image_paths):
         self._cancel_tile_workers()
         self._cancel_deep_zoom_worker()
@@ -2026,6 +2093,7 @@ class GPUImageView(QOpenGLWidget):
             self._init_animation(path)
             self._prefetch_neighbors()
             self._update_status_info()
+            self._notify_deep_zoom_displayed()
             self.update()
             return
 
@@ -2078,7 +2146,15 @@ class GPUImageView(QOpenGLWidget):
             )
 
         self._update_status_info()
+        self._notify_deep_zoom_displayed()
         self.update()
+
+    def _notify_deep_zoom_displayed(self) -> None:
+        """Push the edited base-level array to the deep-zoom-displayed hook."""
+        callback = self.on_deep_zoom_displayed
+        if callable(callback) and self.deep_zoom is not None:
+            # pylint: disable=not-callable  # guarded by callable() above
+            callback(self.deep_zoom.levels[0])
 
     def _init_animation(self, path: str):
         """偵測並初始化動畫播放"""
@@ -2220,21 +2296,63 @@ class GPUImageView(QOpenGLWidget):
     _ZOOM_MAX = 50.0
 
     def _handle_deep_zoom_wheel(self, event, delta) -> None:
-        """Apply a wheel zoom step to the deep-zoom view and re-anchor
-        the offset around the cursor. At the zoom limit, surface a
-        throttled toast instead of zooming."""
+        """Apply a wheel zoom step to the deep-zoom view. Scrolling over the
+        minimap zooms into the pointed location; elsewhere the zoom re-anchors
+        around the cursor. At the zoom limit, surface a throttled toast."""
         factor = 1.1 if delta > 0 else 0.9
         old_zoom = self.zoom
-        new_zoom = max(self._ZOOM_MIN, min(self._ZOOM_MAX, old_zoom * factor))
+        new_zoom = stepped_zoom(old_zoom, factor, self._ZOOM_MIN, self._ZOOM_MAX)
         if new_zoom == old_zoom:
             self._notify_zoom_limit_once(new_zoom)
             return
         self.zoom = new_zoom
-        mx = event.position().x()
-        my = event.position().y()
-        ratio = self.zoom / old_zoom
-        self.dz_offset_x = mx - (mx - self.dz_offset_x) * ratio
-        self.dz_offset_y = my - (my - self.dz_offset_y) * ratio
+        pos = event.position()
+        rect = self._current_minimap_rect()
+        if rect is not None and point_in_rect(pos.x(), pos.y(), rect):
+            base = self.deep_zoom.levels[0]
+            self.dz_offset_x, self.dz_offset_y = recenter_offsets(
+                pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
+                self.width(), self.height(), new_zoom,
+            )
+            self._user_locked_view = True
+            self._update_status_info()
+            self.update()
+        else:
+            self._anchor_zoom_about(pos, old_zoom, new_zoom)
+
+    _KEYBOARD_ZOOM_FACTOR = 1.25
+
+    def _zoom_step(self, zoom_in: bool) -> None:
+        """Keyboard zoom in/out, anchored on the viewport centre."""
+        if not self.deep_zoom:
+            return
+        from PySide6.QtCore import QPointF
+        factor = (self._KEYBOARD_ZOOM_FACTOR if zoom_in
+                  else 1 / self._KEYBOARD_ZOOM_FACTOR)
+        old_zoom = self.zoom
+        new_zoom = stepped_zoom(old_zoom, factor, self._ZOOM_MIN, self._ZOOM_MAX)
+        if new_zoom == old_zoom:
+            self._notify_zoom_limit_once(new_zoom)
+            return
+        self.zoom = new_zoom
+        center = QPointF(self.width() / 2, self.height() / 2)
+        self._anchor_zoom_about(center, old_zoom, new_zoom)
+
+    def _fit_window_with_toast(self) -> None:
+        if self.deep_zoom:
+            self._fit_to_window()
+            self.update()
+            self._toast("fit_window", "Fit to Window")
+
+    def _anchor_zoom_about(self, pos, old_zoom: float, new_zoom: float) -> None:
+        """Re-anchor the deep-zoom offset so the image point under *pos* stays
+        put across a zoom change, then refresh status + repaint."""
+        self.dz_offset_x = zoom_about_point(
+            self.dz_offset_x, pos.x(), old_zoom, new_zoom,
+        )
+        self.dz_offset_y = zoom_about_point(
+            self.dz_offset_y, pos.y(), old_zoom, new_zoom,
+        )
         self._user_locked_view = True
         self._update_status_info()
         self.update()
@@ -2274,9 +2392,64 @@ class GPUImageView(QOpenGLWidget):
                 self._drag_start_pos = event.position()
                 self._drag_end_pos = event.position()
                 self._drag_selecting = False  # 先不啟動，等拖動才算框選
+            elif self.deep_zoom and self._begin_minimap_nav(event.position()):
+                return
             return
 
         super().mousePressEvent(event)
+
+    def _begin_minimap_nav(self, pos) -> bool:
+        """Start click-to-navigate if *pos* is inside the minimap. Returns
+        True when the click was consumed by the minimap."""
+        rect = self._current_minimap_rect()
+        if rect is None or not point_in_rect(pos.x(), pos.y(), rect):
+            return False
+        self._minimap_dragging = True
+        self._minimap_nav_to(pos)
+        return True
+
+    def _minimap_nav_to(self, pos) -> None:
+        """Recenter the deep-zoom viewport on the image point under *pos*."""
+        rect = self._current_minimap_rect()
+        if rect is None:
+            return
+        base = self.deep_zoom.levels[0]
+        self.dz_offset_x, self.dz_offset_y = recenter_offsets(
+            pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
+            self.width(), self.height(), self.zoom,
+        )
+        self._user_locked_view = True
+        self._update_status_info()
+        self.update()
+
+    def mouseDoubleClickEvent(self, event):
+        # Deep zoom: double-click toggles fit ↔ 100% centred on the cursor,
+        # except inside the minimap (which owns clicks for navigation).
+        if (event.button() == Qt.MouseButton.LeftButton
+                and self.deep_zoom and not self.tile_grid_mode):
+            pos = event.position()
+            rect = self._current_minimap_rect()
+            if rect is None or not point_in_rect(pos.x(), pos.y(), rect):
+                self._toggle_zoom_at(pos)
+                return
+        super().mouseDoubleClickEvent(event)
+
+    def _toggle_zoom_at(self, pos) -> None:
+        """Toggle between fit-to-window and 100%.
+
+        Zooming to 100% anchors on the cursor; returning to fit re-centres the
+        image (anchoring on the cursor would leave it off-centre once it's
+        small enough to fit).
+        """
+        fit = self._fit_zoom()
+        target = toggle_zoom_target(self.zoom, fit)
+        if target == fit:
+            self._fit_to_window()
+            self.update()
+            return
+        old_zoom = self.zoom
+        self.zoom = target
+        self._anchor_zoom_about(pos, old_zoom, target)
 
     def mouseMoveEvent(self, event):
         self._update_hover_state(event)
@@ -2290,6 +2463,10 @@ class GPUImageView(QOpenGLWidget):
 
         if self._middle_dragging:
             self._handle_middle_drag(delta)
+            return
+
+        if self._minimap_dragging:
+            self._minimap_nav_to(event.position())
             return
 
         self._handle_left_drag_select(event)
@@ -2351,6 +2528,9 @@ class GPUImageView(QOpenGLWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
+            return
+        if event.button() == Qt.MouseButton.LeftButton and self._minimap_dragging:
+            self._minimap_dragging = False
             return
         if (
             self.tile_grid_mode
@@ -2442,13 +2622,22 @@ class GPUImageView(QOpenGLWidget):
     def _exit_deep_zoom_to_grid(self) -> None:
         self._cancel_deep_zoom_worker()
         self._cancel_all_prefetch()
-        self._clear_deep_zoom()
-        self.tile_grid_mode = True
-        if self._saved_tile_state:
-            self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
-            self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
-            self.tile_scale = self._saved_tile_state["tile_scale"]
+        # Thumbnail size changed while zoomed in → the cached tiles are the
+        # old size, so rebuild the grid at the new size instead of restoring
+        # the stale layout (which would mismatch the new cell metrics).
+        if self._tile_size_dirty and self.model.images:
+            self._tile_size_dirty = False
             self._saved_tile_state = None
+            self.clear_tile_grid()
+            self.load_tile_grid_async(image_paths=self.model.images)
+        else:
+            self._clear_deep_zoom()
+            self.tile_grid_mode = True
+            if self._saved_tile_state:
+                self.grid_offset_x = self._saved_tile_state["grid_offset_x"]
+                self.grid_offset_y = self._saved_tile_state["grid_offset_y"]
+                self.tile_scale = self._saved_tile_state["tile_scale"]
+                self._saved_tile_state = None
         # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
         if hasattr(self.main_window, "after_deep_zoom_escape"):
             self.main_window.after_deep_zoom_escape()
@@ -2477,8 +2666,9 @@ class GPUImageView(QOpenGLWidget):
 
     def _scroll_grid_by_arrow(self, key, shift) -> None:
         """Translate arrow keys into tile-grid pan deltas."""
-        step = self.thumbnail_size or 1024
-        move_step = int(step / 2) if shift else step
+        dpr = self.devicePixelRatio() or 1.0
+        step = (self.thumbnail_size or 1024) / dpr
+        move_step = int(step / 2) if shift else int(step)
         deltas = {
             Qt.Key.Key_Up: (0, move_step),
             Qt.Key.Key_Down: (0, -move_step),
@@ -2734,6 +2924,9 @@ class GPUImageView(QOpenGLWidget):
             "histogram": self._toggle_histogram,
             "fit_width": self._fit_width_with_toast,
             "fit_height": self._fit_height_with_toast,
+            "fit_window": self._fit_window_with_toast,
+            "zoom_in": lambda: self._zoom_step(True),
+            "zoom_out": lambda: self._zoom_step(False),
             "bookmark": self._bookmark_if_deep_zoom,
             "rotate_cw": lambda: self._push_rotate(True),
             "rotate_ccw": lambda: self._push_rotate(False),

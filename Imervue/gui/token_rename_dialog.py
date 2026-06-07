@@ -18,8 +18,9 @@ if TYPE_CHECKING:
 
 _DEFAULT_TEMPLATE = "{name}_{counter:04}{ext}"
 _TOKENS_HELP = (
-    "{name} {ext} {counter} {counter:04} {date} {date:yyyymmdd} "
-    "{width} {height} {wxh} {size_kb} {camera} {year} {month} {day}"
+    "{name} {ext} {parent} {counter} {counter:04} {date} {date:yyyymmdd} "
+    "{width} {height} {wxh} {size_kb} {camera} {year} {month} {day}  •  "
+    "case: {name:upper} {name:lower} {name:title}"
 )
 
 

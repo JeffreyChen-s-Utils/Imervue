@@ -5,10 +5,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
+from PIL import Image
 
 from Imervue.library import image_index, smart_album
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+_rng = np.random.default_rng(seed=0x5A1B)
+
+
+def _make_image(path: Path, w: int, h: int) -> str:
+    arr = _rng.integers(0, 256, (h, w, 3), dtype=np.uint8)
+    Image.fromarray(arr).save(str(path))
+    return str(path)
 
 
 @pytest.fixture(autouse=True)
@@ -43,6 +53,25 @@ class TestPersistence:
     def test_save_rejects_empty_name(self):
         with pytest.raises(ValueError):
             smart_album.save("", {})
+
+
+class TestWriteBatch:
+    def test_commits_on_success(self, tmp_path):
+        a = str(tmp_path / "a.png")
+        b = str(tmp_path / "b.png")
+        with image_index.write_batch():
+            image_index.upsert_image(a, size=10)
+            image_index.upsert_image(b, size=20)
+        assert image_index.get_image(a) is not None
+        assert image_index.get_image(b) is not None
+
+    def test_rolls_back_on_exception(self, tmp_path):
+        c = str(tmp_path / "c.png")
+        with pytest.raises(RuntimeError), image_index.write_batch():
+            image_index.upsert_image(c, size=10)
+            raise RuntimeError("boom")
+        # The whole batch is discarded, not just the row after the failure.
+        assert image_index.get_image(c) is None
 
 
 class TestApplyToPaths:
@@ -82,6 +111,45 @@ class TestApplyToPaths:
             [a, b], {"tags_all": ["animal/cat", "indoor"]}
         )
         assert result == [a]
+
+    def test_min_size_filter(self, tmp_path):
+        small = tmp_path / "small.bin"
+        small.write_bytes(b"\x00" * 100)
+        big = tmp_path / "big.bin"
+        big.write_bytes(b"\x00" * 5000)
+        result = smart_album.apply_to_paths(
+            [str(small), str(big)], {"min_size": 1000}
+        )
+        assert result == [str(big)]
+
+    def test_max_size_filter(self, tmp_path):
+        small = tmp_path / "small.bin"
+        small.write_bytes(b"\x00" * 100)
+        big = tmp_path / "big.bin"
+        big.write_bytes(b"\x00" * 5000)
+        result = smart_album.apply_to_paths(
+            [str(small), str(big)], {"max_size": 1000}
+        )
+        assert result == [str(small)]
+
+    def test_min_width_and_height_filter(self, tmp_path):
+        wide = _make_image(tmp_path / "wide.png", 200, 50)
+        tall = _make_image(tmp_path / "tall.png", 50, 200)
+        big = _make_image(tmp_path / "big.png", 200, 200)
+        result = smart_album.apply_to_paths(
+            [wide, tall, big], {"min_width": 100, "min_height": 100}
+        )
+        assert result == [big]
+
+    def test_dimension_filter_skips_unreadable(self, tmp_path):
+        not_image = tmp_path / "broken.png"
+        not_image.write_bytes(b"not really a png")
+        result = smart_album.apply_to_paths([str(not_image)], {"min_width": 1})
+        assert result == []
+
+    def test_no_size_rules_is_passthrough(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        assert smart_album.apply_to_paths([a], {}) == [a]
 
     def test_combined_rules(self, tmp_path):
         a = _touch(tmp_path / "cat.png")

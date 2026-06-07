@@ -125,7 +125,8 @@ class CullingDialog(QDialog):
                     "culling_deleted_toast", "Deleted {n} reject(s)"
                 ).format(n=deleted)
             )
-        remaining = [p for p in base if p not in set(rejects)]
+        reject_set = set(rejects)
+        remaining = [p for p in base if p not in reject_set]
         viewer._unfiltered_images = None
         viewer.clear_tile_grid()
         viewer.load_tile_grid_async(remaining)

@@ -72,6 +72,8 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
         result = [p for p in result if q in Path(p).name.lower()]
     result = _apply_user_setting_filters(result, rules)
     result = _apply_index_filters(result, rules)
+    result = _apply_size_filters(result, rules)
+    result = _apply_dimension_filters(result, rules)
     return result
 
 
@@ -113,13 +115,61 @@ def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
     tags_all = rules.get("tags_all") or []
     if tags_all:
         for t in tags_all:
-            paths = [p for p in paths if p in set(image_index.images_with_tag(t))]
+            tagged = set(image_index.images_with_tag(t))
+            paths = [p for p in paths if p in tagged]
 
     date_from = rules.get("date_from")
     date_to = rules.get("date_to")
     if date_from or date_to:
         paths = _apply_date_filter(paths, date_from, date_to)
     return paths
+
+
+def _apply_size_filters(paths: list[str], rules: dict) -> list[str]:
+    """Filter by file size in bytes (``min_size`` / ``max_size``) via stat."""
+    min_size = rules.get("min_size")
+    max_size = rules.get("max_size")
+    if not min_size and not max_size:
+        return paths
+    out: list[str] = []
+    for p in paths:
+        try:
+            size = Path(p).stat().st_size
+        except OSError:
+            continue
+        if min_size and size < int(min_size):
+            continue
+        if max_size and size > int(max_size):
+            continue
+        out.append(p)
+    return out
+
+
+def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
+    """Filter by pixel dimensions (``min_width`` / ``min_height``).
+
+    Reads only the image header (no full decode) and runs after the cheaper
+    filters, so it touches the smallest possible set. Unreadable images can't
+    satisfy a dimension rule, so they're dropped.
+    """
+    min_w = rules.get("min_width")
+    min_h = rules.get("min_height")
+    if not min_w and not min_h:
+        return paths
+    from PIL import Image
+    out: list[str] = []
+    for p in paths:
+        try:
+            with Image.open(p) as im:
+                width, height = im.size
+        except OSError:
+            continue
+        if min_w and width < int(min_w):
+            continue
+        if min_h and height < int(min_h):
+            continue
+        out.append(p)
+    return out
 
 
 def _apply_date_filter(

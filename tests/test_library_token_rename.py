@@ -10,7 +10,11 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from Imervue.library.token_rename import apply_plan, preview
+from Imervue.library.token_rename import (
+    _apply_string_format,
+    apply_plan,
+    preview,
+)
 
 
 _rng = np.random.default_rng(seed=0xC0FFEE)
@@ -42,6 +46,36 @@ class TestPreview:
     def test_unknown_token_preserved(self, three_images):
         plans = preview(three_images[:1], "{bogus}{ext}")
         assert Path(plans[0].dst).name == "{bogus}.png"
+
+    def test_parent_token(self, three_images):
+        parent_name = Path(three_images[0]).parent.name
+        plans = preview(three_images[:1], "{parent}_{name}{ext}")
+        assert Path(plans[0].dst).name == f"{parent_name}_img0.png"
+
+    def test_case_transform_on_name(self, three_images):
+        plans = preview(three_images[:1], "{name:upper}{ext}")
+        assert Path(plans[0].dst).name == "IMG0.png"
+
+    def test_unknown_transform_leaves_value_unchanged(self, three_images):
+        plans = preview(three_images[:1], "{name:bogus}{ext}")
+        assert Path(plans[0].dst).name == "img0.png"
+
+
+class TestApplyStringFormat:
+    def test_upper(self):
+        assert _apply_string_format("Photo", "upper") == "PHOTO"
+
+    def test_lower(self):
+        assert _apply_string_format("Photo", "lower") == "photo"
+
+    def test_title(self):
+        assert _apply_string_format("my photo", "title") == "My Photo"
+
+    def test_none_format_is_identity(self):
+        assert _apply_string_format("Photo", None) == "Photo"
+
+    def test_unknown_format_is_identity(self):
+        assert _apply_string_format("Photo", "rot13") == "Photo"
 
     def test_conflict_flagged_when_destinations_collide(self, three_images):
         plans = preview(three_images, "same{ext}")

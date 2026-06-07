@@ -7,6 +7,7 @@ from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QFileDialog
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
+from Imervue.gpu_image_view.tile_layout import is_active_thumbnail_choice
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.menu.recent_menu import rebuild_recent_menu, build_recent_menu
 from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
@@ -162,7 +163,7 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
             action = view_menu.addAction(size)
         action.setCheckable(True)
 
-        if size == ui_we_want_to_set.viewer.thumbnail_size:
+        if is_active_thumbnail_choice(size, ui_we_want_to_set.viewer.thumbnail_size):
             action.setChecked(True)
 
         tile_group.addAction(action)

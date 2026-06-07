@@ -5,6 +5,7 @@ Template syntax::
 
     {name}            original stem
     {ext}             extension including dot
+    {parent}          immediate parent folder name
     {counter}         1-based sequence
     {counter:04}      zero-padded counter (any width)
     {date}            yyyy-mm-dd of file mtime
@@ -15,6 +16,9 @@ Template syntax::
     {size_kb}         file size in KiB (integer)
     {camera}          EXIF make+model, best-effort
     {year} {month} {day} {hour} {minute}  — mtime components
+
+Text tokens accept a case transform via ``{token:upper}``, ``{token:lower}``
+or ``{token:title}`` (e.g. ``{name:upper}``, ``{parent:lower}``).
 
 Unknown tokens are preserved verbatim so the user can see the mistake.
 """
@@ -96,7 +100,21 @@ def _resolve_token(key: str, fmt: str | None, metadata: dict[str, str]) -> str:
     value = metadata.get(key)
     if value is None:
         return f"{{{key}{':' + fmt if fmt else ''}}}"
-    return str(value)
+    return _apply_string_format(str(value), fmt)
+
+
+_STRING_TRANSFORMS = {
+    "upper": str.upper,
+    "lower": str.lower,
+    "title": str.title,
+}
+
+
+def _apply_string_format(value: str, fmt: str | None) -> str:
+    """Apply an optional case transform to a text token; unknown formats and
+    ``None`` leave the value unchanged."""
+    transform = _STRING_TRANSFORMS.get(fmt) if fmt else None
+    return transform(value) if transform else value
 
 
 _DATE_MAP = {
@@ -139,6 +157,7 @@ def _gather_metadata(path: str, counter: int) -> dict[str, str]:
     return {
         "name": p.stem,
         "ext": p.suffix,
+        "parent": p.parent.name,
         "counter": str(counter),
         "mtime": str(mtime),
         "width": str(width),
