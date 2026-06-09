@@ -1,35 +1,20 @@
 """Desktop-pet overlay window — full edition.
 
-A top-level frameless / transparent-background window that hosts
-a :class:`PuppetCanvas` in pet mode. The pet inherits the entire
-Puppet runtime — same parameters, motions, expressions, physics,
-live-input drivers — and adds the polish that makes it feel like
-a commercial desktop widget:
+A top-level frameless / transparent-background window that hosts a
+:class:`PuppetCanvas` in pet mode. The pet inherits the entire Puppet
+runtime (parameters, motions, expressions, physics, live-input drivers)
+and adds desktop-widget polish: drag-to-move with edge-snap, click-
+through, a right-click context menu, left-click hit detection, anchor
+lock, window opacity, always-on-bottom, hide-on-fullscreen, a speech
+bubble, and pause-when-hidden.
 
-* Drag-to-move with edge-snap on release (snaps onto whichever
-  edge of the active screen the user releases near; off-screen
-  drags clamp back inside).
-* Click-through toggle so the pet can become decorative without
-  blocking interaction with whatever's behind it.
-* Right-click context menu with submenus for motions and
-  expressions discovered from the loaded rig, plus quick-access
-  toggles for visibility / drivers / size / opacity / anchor /
-  on-top vs on-bottom.
-* Left-click hit detection that maps the click into puppet-canvas
-  coordinates and plays the linked motion / expression if any
-  :class:`HitArea` covers the hit drawable.
-* Anchor lock so accidental drags can't reposition the pet.
-* Opacity slider (window-level, 0.1 - 1.0).
-* Always-on-bottom mode for desktop-widget feel (pet sits behind
-  every other window instead of on top).
-* Hide-on-fullscreen — politely vanishes while another app holds
-  fullscreen on the pet's monitor.
-* Speech bubble that pops above the pet on hit / motion triggers.
-* Pause-when-hidden: the canvas tick timer stops while the
-  overlay is hidden so a dormant pet costs zero CPU.
-* Persistence: every user-tweakable knob round-trips through
-  :mod:`Imervue.desktop_pet.settings` so the pet returns to the
-  same state on the next Imervue launch.
+:class:`PetWindow` is a thin coordinator — the heavy subsystems live in
+sibling controllers: pointer interaction (:mod:`pet_interaction`),
+canvas-input drivers (:mod:`pet_canvas_drivers`), drop shadow
+(:mod:`pet_shadow_controller`), integration hooks (:mod:`pet_features`),
+and the lazy LLM / SFX / rhythm / minigame controllers
+(:mod:`pet_drivers`). Every user-tweakable knob round-trips through
+:mod:`Imervue.desktop_pet.settings` so the pet restores on next launch.
 """
 from __future__ import annotations
 
@@ -41,7 +26,6 @@ from PySide6.QtCore import Qt, QPoint, QTimer, Signal
 from PySide6.QtGui import (
     QDragEnterEvent,
     QDropEvent,
-    QMouseEvent,
 )
 from PySide6.QtWidgets import (
     QVBoxLayout,
@@ -51,12 +35,7 @@ from PySide6.QtWidgets import (
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet import pet_placement
 from Imervue.desktop_pet.fullscreen_detector import FullscreenDetector
-from Imervue.desktop_pet.click_sfx import (
-    EVENT_CLICK as SFX_CLICK,
-    EVENT_DRAG as SFX_DRAG,
-    EVENT_DROP as SFX_DROP,
-    EVENT_NOTIFY as SFX_NOTIFY,
-)
+from Imervue.desktop_pet.click_sfx import EVENT_NOTIFY as SFX_NOTIFY
 from Imervue.desktop_pet.pet_context_menu import build_context_menu
 from Imervue.desktop_pet.hotkey_manager import (
     ACTION_SPEAK_NOW,
@@ -70,6 +49,9 @@ from Imervue.desktop_pet.pet_drivers import (
     LlmDialogueController,
     MusicRhythmController,
 )
+from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
+from Imervue.desktop_pet.pet_interaction import PetInteraction, llm_situation_tag
+from Imervue.desktop_pet.pet_shadow_controller import PetShadowController
 from Imervue.desktop_pet.pet_features import build_integration_controllers
 from Imervue.desktop_pet.pet_script import (
     PetScript,
@@ -80,17 +62,16 @@ from Imervue.desktop_pet.pet_script import (
 from Imervue.desktop_pet.speech_bubble import SpeechBubble
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document_io import load_puppet
-from Imervue.puppet.hit_test import hit_test
-from Imervue.puppet.idle_driver import IdleDriver
-from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
-from Imervue.puppet.input_engine import InputEngine
 from Imervue.puppet.motion_picker import pick_random_motion_in_group
-from Imervue.puppet.motion_player import MotionPlayer
-from Imervue.puppet.mouse_gaze_driver import MouseGazeDriver
-from Imervue.puppet.virtual_camera import VirtualCameraOutput
 
 if TYPE_CHECKING:
     from Imervue.puppet.document import PuppetDocument
+    from Imervue.puppet.idle_driver import IdleDriver
+    from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
+    from Imervue.puppet.input_engine import InputEngine
+    from Imervue.puppet.motion_player import MotionPlayer
+    from Imervue.puppet.mouse_gaze_driver import MouseGazeDriver
+    from Imervue.puppet.virtual_camera import VirtualCameraOutput
     from Imervue.puppet.webcam_tracker import WebcamTracker
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_window")
@@ -137,18 +118,6 @@ something"."""
 PUPPET_FILE_SUFFIX: str = ".puppet"
 """Extension treated as "drop this and the pet loads it as its new
 rig". Anything else triggers the generic Drop reaction instead."""
-
-
-def _llm_situation_tag(area_id: str | None, motion_name: str | None) -> str:
-    """Pick the situation label to pass to the LLM. Hit-area
-    context wins over motion context which wins over the generic
-    greeting fallback — same priority chain the script engine
-    uses when looking up scripted lines."""
-    if area_id:
-        return f"hit:{area_id}"
-    if motion_name:
-        return f"motion:{motion_name}"
-    return "greeting"
 
 
 def classify_drop_paths(paths: list[Path]) -> tuple[str, Path | None]:
@@ -252,11 +221,10 @@ class PetWindow(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._canvas)
-        self._canvas.set_pet_shadow(
-            enabled=bool(self._settings.get("pet_shadow_enabled", True)),
-            opacity=float(self._settings.get("pet_shadow_opacity", 0.7)),
-            scale=float(self._settings.get("pet_shadow_scale", 1.0)),
+        self._shadow = PetShadowController(
+            self._canvas, self.setting, self._persist,
         )
+        self._shadow.apply_initial()
 
     def _init_interaction_state(self) -> None:
         """Seed the drag / click-through / anchor state and install
@@ -268,21 +236,20 @@ class PetWindow(QWidget):
         self._click_through: bool = bool(self._settings["click_through"])
         self._anchor_locked: bool = bool(self._settings["anchor_locked"])
         self._always_on_bottom: bool = bool(self._settings["always_on_bottom"])
-        self._dragging: bool = False
-        self._drag_offset: QPoint = QPoint(0, 0)
         self._snap_threshold: int = int(self._settings["snap_threshold"])
-        self._press_pos: QPoint | None = None
-        self._install_event_filter()
+        # Drag / click / hit-detection lives in its own controller; the
+        # window re-exposes its drag-state flags via properties below.
+        self._interaction = PetInteraction(self)
+        self._canvas.installEventFilter(self)
 
     def _init_drivers_and_voice(self) -> None:
         """Construct the always-present canvas-input drivers, the
         speech / script engine, and the paint + script tick timers."""
-        self._input_engine = InputEngine(self._canvas, parent=self)
-        self._idle_driver: IdleDriver | None = None
-        self._webcam_tracker: WebcamTracker | None = None
-        self._motion_player = MotionPlayer(self._canvas)
-        self._idle_cycler: IdleMotionCycler | None = None
-        self._mouse_gaze: MouseGazeDriver | None = None
+        # Canvas-input drivers (auto-blink / idle / gaze / webcam /
+        # virtual-camera / motion player) live in one controller; the
+        # window re-exposes them via @property accessors below so the
+        # construction + enable logic stays out of this class.
+        self._canvas_drivers = PetCanvasDrivers(self, self._canvas)
 
         # The pet's "voice" comes from a user-loadable
         # ``.petscript.json``; the engine defaults to the built-in
@@ -316,11 +283,6 @@ class PetWindow(QWidget):
         # the window delegates its public toggles in.
         self._features = build_integration_controllers(self)
 
-        # Virtual camera stays a direct window attribute (vs a
-        # controller) because its lazy-construction contract is
-        # asserted directly by the pet-window tests.
-        self._virtual_camera: VirtualCameraOutput | None = None
-
         # LLM dialogue, click SFX, music-rhythm and idle-minigame each
         # get a controller owning lazy construction + settings
         # round-trip + persistence (see pet_drivers).
@@ -332,6 +294,42 @@ class PetWindow(QWidget):
             self._click_sfx_ctl.ensure_player()
         self._music_rhythm = MusicRhythmController(self)
         self._idle_minigame = IdleMinigameController(self)
+
+    # =====================================================================
+    # Canvas-driver accessors
+    # =====================================================================
+    # The input drivers live in ``self._canvas_drivers`` (see
+    # pet_canvas_drivers). These read-only properties preserve the
+    # historical attribute names so the menu builder and the pet-window
+    # tests can reach each driver without knowing about the controller.
+
+    @property
+    def _input_engine(self) -> InputEngine:
+        return self._canvas_drivers.input_engine
+
+    @property
+    def _motion_player(self) -> MotionPlayer:
+        return self._canvas_drivers.motion_player
+
+    @property
+    def _idle_driver(self) -> IdleDriver | None:
+        return self._canvas_drivers.idle_driver
+
+    @property
+    def _idle_cycler(self) -> IdleMotionCycler | None:
+        return self._canvas_drivers.idle_cycler
+
+    @property
+    def _mouse_gaze(self) -> MouseGazeDriver | None:
+        return self._canvas_drivers.mouse_gaze
+
+    @property
+    def _webcam_tracker(self) -> WebcamTracker | None:
+        return self._canvas_drivers.webcam_tracker
+
+    @property
+    def _virtual_camera(self) -> VirtualCameraOutput | None:
+        return self._canvas_drivers.virtual_camera
 
     # =====================================================================
     # Window flags + visibility
@@ -518,128 +516,35 @@ class PetWindow(QWidget):
     # =====================================================================
     # Drag-to-move + hit detection
     # =====================================================================
+    # The pointer-interaction behaviour lives in ``self._interaction``
+    # (see pet_interaction). The drag-state flags are re-exposed as
+    # read-only properties so the existing tests can poke them.
 
-    def _install_event_filter(self) -> None:
-        self._canvas.installEventFilter(self)
+    @property
+    def _dragging(self) -> bool:
+        return self._interaction.dragging
+
+    @property
+    def _drag_offset(self) -> QPoint:
+        return self._interaction.drag_offset
+
+    @property
+    def _press_pos(self) -> QPoint | None:
+        return self._interaction.press_pos
 
     def eventFilter(self, obj, event):   # pragma: no cover - Qt UI
-        if obj is self._canvas:
-            etype = event.type()
-            if etype == event.Type.MouseButtonPress:
-                self._on_press(event)
-            elif etype == event.Type.MouseMove:
-                self._on_move(event)
-            elif etype == event.Type.MouseButtonRelease:
-                self._on_release(event)
-            elif etype == event.Type.ContextMenu:
-                self._show_context_menu(event.globalPos())
-                return True
+        if obj is self._canvas and self._interaction.handle_canvas_event(event):
+            return True
         return super().eventFilter(obj, event)
 
-    def _on_press(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
-        if self._click_through:
-            return
-        if event.button() == Qt.MouseButton.RightButton:
-            # Right-click → context menu. Eat the event so the
-            # canvas doesn't try to start a pan.
-            self._show_context_menu(event.globalPosition().toPoint())
-            return
-        if event.button() != Qt.MouseButton.LeftButton:
-            return
-        self._press_pos = event.position().toPoint()
-        self._notify_user_activity()
-        if not self._anchor_locked:
-            self._dragging = True
-            self._drag_offset = event.globalPosition().toPoint() - self.pos()
-            self._canvas.setCursor(Qt.CursorShape.ClosedHandCursor)
-            self.play_random_motion_in_group(DRAG_MOTION_GROUP)
-            self._play_sfx(SFX_DRAG)
-
-    def _on_move(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
-        self._notify_user_activity()
-        if not self._dragging:
-            return
-        new_pos = event.globalPosition().toPoint() - self._drag_offset
-        self.move(new_pos)
+    def reanchor_speech(self) -> None:   # pragma: no cover - Qt UI
+        """Re-anchor the speech bubble to the current geometry — the
+        interaction controller calls this mid-drag so the bubble tracks
+        the pet."""
         if self._speech is not None:
             self._speech.anchor_to(self.geometry())
 
-    def _on_release(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
-        if event.button() != Qt.MouseButton.LeftButton:
-            return
-        was_dragging = self._dragging
-        self._dragging = False
-        self._canvas.unsetCursor()
-        # A short release without movement is a "click" — try
-        # hit-area routing. A real drag triggers edge-snap + position
-        # persistence instead.
-        press = self._press_pos
-        self._press_pos = None
-        if was_dragging:
-            self._apply_edge_snap()
-            pos = self.pos()
-            self._persist(
-                position=[pos.x(), pos.y()],
-                screen_name=self._current_screen_name(),
-            )
-            self.moved.emit(pos.x(), pos.y())
-            click_inside_press_radius = (
-                press is not None
-                and (event.position().toPoint() - press).manhattanLength() < 6
-            )
-            if click_inside_press_radius:
-                self._handle_click(press)
-            else:
-                self.play_random_motion_in_group(LAND_MOTION_GROUP)
-                self._play_sfx(SFX_DROP)
-        else:
-            self._handle_click(press)
-
-    def _handle_click(self, widget_pos: QPoint | None) -> None:   # pragma: no cover - GL needed
-        """A click on the pet body → run hit-test → play the
-        linked motion + speak the scripted line for that area, or
-        fall back to a greeting when no hit area covers the click.
-
-        Line selection order:
-
-        1. ``script.hit_responses[area.id]`` — per-area override.
-        2. ``script.motion_lines[area.motion]`` — per-motion line
-           when the script doesn't override the area itself.
-        3. ``script.greetings`` (or the built-in defaults) — the
-           generic voice for "nothing better matched".
-        """
-        area = self._hit_test_at(widget_pos)
-        if area is None and self.document() is None:
-            # ``_hit_test_at`` returns None for both "no document"
-            # and "no hit area matched"; only bail when no rig is
-            # loaded at all.
-            return
-        area_id = area.id if area is not None else ""
-        self.hit_triggered.emit(area_id)
-        motion_name = area.motion if area is not None else None
-        if motion_name:
-            self._play_motion_by_name(motion_name)
-        self._play_sfx(SFX_CLICK)
-        self._speak_click_response(area_id, motion_name)
-
-    def _hit_test_at(self, widget_pos: QPoint | None):
-        """Run the document's hit-area test at a widget-space
-        position. ``None`` when there's no rig, no transform, or
-        no area covers the point."""
-        if widget_pos is None:
-            return None
-        document = self.document()
-        if document is None:
-            return None
-        image_xy = self._widget_to_image(widget_pos)
-        if image_xy is None:
-            return None
-        return hit_test(
-            document, image_xy[0], image_xy[1],
-            deformed_vertices=self._canvas._deformed_vertices,   # noqa: SLF001
-        )
-
-    def _speak_click_response(
+    def speak_click_response(
         self, area_id: str, motion_name: str | None,
     ) -> None:
         """Show the scripted speech line for a click (if speech is
@@ -659,23 +564,9 @@ class PetWindow(QWidget):
         if not self.llm_dialogue_enabled():
             return
         try:
-            self._llm.request_line(_llm_situation_tag(area_id, motion_name))
+            self._llm.request_line(llm_situation_tag(area_id, motion_name))
         except ValueError:
             return
-
-    def _widget_to_image(self, widget_pos: QPoint) -> tuple[float, float] | None:
-        """Inverse of the canvas's modelview transform: undo
-        pan + zoom so a widget-space mouse position becomes the
-        puppet-canvas (document) coordinate hit-test expects."""
-        canvas = self._canvas
-        zoom = float(getattr(canvas, "_zoom", 1.0))
-        if zoom <= 0:
-            return None
-        pan_x = float(getattr(canvas, "_pan_x", 0.0))
-        pan_y = float(getattr(canvas, "_pan_y", 0.0))
-        image_x = (widget_pos.x() - pan_x) / zoom
-        image_y = (widget_pos.y() - pan_y) / zoom
-        return image_x, image_y
 
     def _apply_edge_snap(self) -> None:   # pragma: no cover - Qt geometry
         pet_placement.apply_edge_snap(self)
@@ -694,34 +585,22 @@ class PetWindow(QWidget):
         default_label, currently_running, setter)``. Each running
         flag is sourced from the driver's own object so the menu
         check-state always matches the world."""
-        idle_running = (
-            self._idle_driver is not None and self._idle_driver.is_enabled()
-        )
-        idle_motion_running = (
-            self._idle_cycler is not None and self._idle_cycler.is_enabled()
-        )
-        gaze_running = (
-            self._mouse_gaze is not None and self._mouse_gaze.is_enabled()
-        )
-        webcam_running = (
-            self._webcam_tracker is not None
-            and self._webcam_tracker.is_enabled()
-        )
+        drivers = self._canvas_drivers
         return [
             ("desktop_pet_auto_idle", "Auto idle (breath + drift)",
-             idle_running, self.set_auto_idle_enabled),
+             drivers.idle_running(), self.set_auto_idle_enabled),
             ("desktop_pet_idle_motion", "Idle motions",
-             idle_motion_running, self.set_idle_motion_enabled),
+             drivers.idle_motion_running(), self.set_idle_motion_enabled),
             ("desktop_pet_auto_blink", "Auto-blink",
              self._input_engine.blink_enabled(), self.set_auto_blink_enabled),
             ("desktop_pet_drag_track", "Drag-track head",
              self._input_engine.drag_enabled(), self.set_drag_track_enabled),
             ("desktop_pet_mouse_gaze", "Mouse gaze (eyes follow cursor)",
-             gaze_running, self.set_mouse_gaze_enabled),
+             drivers.gaze_running(), self.set_mouse_gaze_enabled),
             ("desktop_pet_mic_lipsync", "Mic lip-sync",
              self._input_engine.lipsync_enabled(), self.set_mic_lipsync_enabled),
             ("desktop_pet_webcam", "Webcam tracking",
-             webcam_running, self.set_webcam_tracking_enabled),
+             drivers.webcam_running(), self.set_webcam_tracking_enabled),
         ]
 
     def toggle_menu_entries(
@@ -755,24 +634,13 @@ class PetWindow(QWidget):
         self._persist_driver("auto_blink", bool(enabled))
 
     def set_auto_idle_enabled(self, enabled: bool) -> None:
-        if enabled:
-            if self._idle_driver is None:
-                self._idle_driver = IdleDriver(self._canvas, parent=self)
-            self._idle_driver.set_enabled(True)
-        elif self._idle_driver is not None:
-            self._idle_driver.set_enabled(False)
+        self._canvas_drivers.set_auto_idle_enabled(bool(enabled))
         self._persist_driver("auto_idle", bool(enabled))
 
     def set_idle_motion_enabled(self, enabled: bool) -> None:
-        if enabled:
-            if self._idle_cycler is None:
-                self._idle_cycler = IdleMotionCycler(
-                    self._motion_player, self._canvas, parent=self,
-                )
-                self._idle_cycler.set_cycle_duration(PET_IDLE_CYCLE_DURATION_S)
-            self._idle_cycler.set_enabled(True)
-        elif self._idle_cycler is not None:
-            self._idle_cycler.set_enabled(False)
+        self._canvas_drivers.set_idle_motion_enabled(
+            bool(enabled), PET_IDLE_CYCLE_DURATION_S,
+        )
         self._persist_driver("idle_motion", bool(enabled))
 
     def set_mic_lipsync_enabled(self, enabled: bool) -> bool:
@@ -781,15 +649,7 @@ class PetWindow(QWidget):
         return ok
 
     def set_webcam_tracking_enabled(self, enabled: bool) -> bool:
-        if enabled:
-            if self._webcam_tracker is None:
-                from Imervue.puppet.webcam_tracker import WebcamTracker
-                self._webcam_tracker = WebcamTracker(self._canvas, parent=self)
-            ok = bool(self._webcam_tracker.set_enabled(True))
-        else:
-            if self._webcam_tracker is not None:
-                self._webcam_tracker.set_enabled(False)
-            ok = True
+        ok = self._canvas_drivers.set_webcam_tracking_enabled(bool(enabled))
         self._persist_driver("webcam_tracking", bool(enabled and ok))
         return ok
 
@@ -798,10 +658,9 @@ class PetWindow(QWidget):
         self._persist_driver("drag_track", bool(enabled))
 
     def set_hotkeys_enabled(self, enabled: bool, bindings: dict | None = None) -> bool:
-        """Toggle the global-hotkey listener. Returns ``True`` when
-        the requested state was reached; ``False`` means ``pynput``
-        is missing or the OS refused the keyboard hook. ``bindings``
-        overrides the persisted map; ``None`` reads from settings."""
+        """Toggle the global-hotkey listener (see HotkeyController).
+        ``bindings`` overrides the persisted map; ``None`` reads
+        settings. ``False`` when the dep / OS hook is unavailable."""
         return self._features["hotkeys"].set_enabled(enabled, bindings)
 
     def hotkeys_enabled(self) -> bool:
@@ -834,64 +693,47 @@ class PetWindow(QWidget):
                 self._show_speech(line)
 
     def set_obs_hook_enabled(self, enabled: bool) -> bool:
-        """Connect or disconnect the OBS event listener. Returns
-        ``True`` when the requested state was reached; ``False``
-        means ``obs-websocket-py`` is missing or the connection
-        failed (wrong port / password / OBS not running)."""
+        """Connect / disconnect the OBS event listener (see
+        ObsHookController). ``False`` when the dep / connection failed."""
         return self._features["obs"].set_enabled(enabled)
 
     def obs_hook_enabled(self) -> bool:
         return self._features["obs"].is_enabled()
 
     def set_twitch_hook_enabled(self, enabled: bool) -> bool:
-        """Connect or disconnect the Twitch chat listener. Returns
-        ``True`` when the requested state was reached; ``False``
-        when no channel / oauth is configured or the IRC handshake
-        failed."""
+        """Connect / disconnect the Twitch chat listener (see
+        TwitchHookController). ``False`` when config / handshake failed."""
         return self._features["twitch"].set_enabled(enabled)
 
     def twitch_hook_enabled(self) -> bool:
         return self._features["twitch"].is_enabled()
 
     def set_virtual_camera_enabled(self, enabled: bool) -> bool:
-        """Toggle the system virtual camera output. Returns ``True``
-        when the requested state was reached; ``False`` means
-        ``pyvirtualcam`` is missing or no virtual camera driver is
-        installed on the host (the macOS / Linux flows usually need
-        a one-time driver setup)."""
+        """Toggle the system virtual camera output. ``False`` when
+        ``pyvirtualcam`` / a driver is missing (see PetCanvasDrivers)."""
         if enabled:
-            if self._virtual_camera is None:
-                self._virtual_camera = VirtualCameraOutput(self._canvas, parent=self)
-            ok = self._virtual_camera.set_enabled(True)
+            ok = self._canvas_drivers.set_virtual_camera_enabled(True)
             self._persist(virtual_camera_enabled=bool(ok))
             return ok
-        if self._virtual_camera is not None:
-            self._virtual_camera.set_enabled(False)
+        self._canvas_drivers.set_virtual_camera_enabled(False)
         self._persist(virtual_camera_enabled=False)
         return True
 
     def virtual_camera_enabled(self) -> bool:
-        return (
-            self._virtual_camera is not None and self._virtual_camera.is_enabled()
-        )
+        return self._canvas_drivers.virtual_camera_enabled()
 
     def set_llm_dialogue_enabled(self, enabled: bool) -> bool:
-        """Toggle LLM-backed speech generation. Returns ``True`` on
-        successful configuration; ``False`` when the saved base URL
-        is invalid (HTTP non-loopback, unknown scheme). Connection
-        failures only surface later, per request — we don't ping
-        on enable since Ollama spin-up can lag."""
+        """Toggle LLM-backed speech generation (see
+        LlmDialogueController). ``False`` when the saved base URL is
+        invalid; connection failures only surface later, per request."""
         return self._llm.set_enabled(enabled)
 
     def llm_dialogue_enabled(self) -> bool:
         return self._llm.is_enabled()
 
     def _on_llm_line(self, line: str) -> None:   # pragma: no cover - Qt UI
-        """Async callback when the LLM returns a fresh line. We
-        only surface it if the user still wants LLM speech and
-        the speech bubble subsystem is enabled — a stale
-        in-flight response after the user disables the feature
-        gets discarded."""
+        """Surface a fresh LLM line only if the user still wants LLM
+        speech — a stale in-flight reply after disable is discarded."""
         if not self._speech_enabled or not self.llm_dialogue_enabled():
             return
         if not line:
@@ -899,17 +741,14 @@ class PetWindow(QWidget):
         self._show_speech(line)
 
     def _on_llm_failed(self, reason: str) -> None:   # pragma: no cover - Qt UI
-        """Log + fall through. The scripted line already showed
-        synchronously when the user clicked, so there's nothing
-        more to surface — the pet just stays with the scripted
-        line."""
+        """Log + fall through — the scripted line already showed
+        synchronously on click, so the pet just keeps it."""
         logger.info("llm dialogue failed (%s); keeping scripted line", reason)
 
     def set_music_rhythm_enabled(self, enabled: bool) -> bool:
-        """Toggle the system-audio rhythm driver. Returns ``True``
-        when the requested state was reached; ``False`` when
-        ``sounddevice`` is missing or WASAPI loopback isn't
-        available (non-Windows OS, no output device)."""
+        """Toggle the system-audio rhythm driver (see
+        MusicRhythmController). ``False`` when the dep / loopback is
+        unavailable."""
         return self._music_rhythm.set_enabled(enabled)
 
     def music_rhythm_enabled(self) -> bool:
@@ -929,9 +768,8 @@ class PetWindow(QWidget):
         self._idle_minigame.notify_activity()
 
     def set_windows_notifications_enabled(self, enabled: bool) -> bool:
-        """Toggle the Windows toast notification listener. Returns
-        ``True`` only after the OS access prompt was granted and
-        the handler is registered; ``False`` covers missing winrt,
+        """Toggle the Windows toast notification listener (see
+        WindowsNotificationController). ``False`` covers missing winrt,
         non-Windows, denied permission, or registration failure."""
         return self._features["windows_notifications"].set_enabled(enabled)
 
@@ -949,11 +787,9 @@ class PetWindow(QWidget):
         self._play_sfx(SFX_NOTIFY)
 
     def set_webhook_enabled(self, enabled: bool) -> bool:
-        """Toggle the localhost HTTP webhook receiver. Returns
-        ``True`` when the requested state was reached; ``False``
-        means the bind failed (port in use, OS refusal). The
-        persisted flag is updated to match the actual state so a
-        bind failure doesn't leave settings claiming it's on."""
+        """Toggle the localhost HTTP webhook receiver (see
+        WebhookController). ``False`` when the bind failed (port in
+        use, OS refusal)."""
         return self._features["webhook"].set_enabled(enabled)
 
     def webhook_enabled(self) -> bool:
@@ -962,33 +798,16 @@ class PetWindow(QWidget):
     def set_pet_shadow_enabled(self, enabled: bool) -> None:
         """Toggle the drop shadow + persist. Live update — the next
         canvas paint reflects the new state."""
-        self._persist(pet_shadow_enabled=bool(enabled))
-        self._canvas.set_pet_shadow(
-            enabled=bool(enabled),
-            opacity=float(self._settings.get("pet_shadow_opacity", 0.7)),
-            scale=float(self._settings.get("pet_shadow_scale", 1.0)),
-        )
+        self._shadow.set_enabled(enabled)
 
     def pet_shadow_enabled(self) -> bool:
-        return self._canvas.pet_shadow_enabled()
+        return self._shadow.is_enabled()
 
     def set_pet_shadow_opacity(self, value: float) -> None:
-        clamped = max(0.0, min(1.0, float(value)))
-        self._persist(pet_shadow_opacity=clamped)
-        self._canvas.set_pet_shadow(
-            enabled=self._canvas.pet_shadow_enabled(),
-            opacity=clamped,
-            scale=float(self._settings.get("pet_shadow_scale", 1.0)),
-        )
+        self._shadow.set_opacity(value)
 
     def set_pet_shadow_scale(self, value: float) -> None:
-        clamped = max(0.0, min(2.0, float(value)))
-        self._persist(pet_shadow_scale=clamped)
-        self._canvas.set_pet_shadow(
-            enabled=self._canvas.pet_shadow_enabled(),
-            opacity=float(self._settings.get("pet_shadow_opacity", 0.7)),
-            scale=clamped,
-        )
+        self._shadow.set_scale(value)
 
     def set_click_sfx_enabled(self, enabled: bool) -> None:
         """Toggle the click SFX subsystem. Paths and volume are
@@ -1005,14 +824,7 @@ class PetWindow(QWidget):
         self._click_sfx_ctl.play(event)
 
     def set_mouse_gaze_enabled(self, enabled: bool) -> None:
-        if enabled:
-            if self._mouse_gaze is None:
-                self._mouse_gaze = MouseGazeDriver(
-                    self._canvas, self, parent=self,
-                )
-            self._mouse_gaze.set_enabled(True)
-        elif self._mouse_gaze is not None:
-            self._mouse_gaze.set_enabled(False)
+        self._canvas_drivers.set_mouse_gaze_enabled(bool(enabled))
         self._persist_driver("mouse_gaze", bool(enabled))
 
     def _persist_driver(self, key: str, value: bool) -> None:
@@ -1036,32 +848,25 @@ class PetWindow(QWidget):
     # identical to the old inline implementations.
 
     def persist(self, **fields: Any) -> None:
-        """FeatureHost hook — forward to the window's persist seam."""
         self._persist(**fields)
 
     def setting(self, key: str, default: Any) -> Any:
-        """FeatureHost hook — read a persisted setting with a default."""
         return self._settings.get(key, default)
 
     def persist_driver(self, key: str, value: bool) -> None:
-        """FeatureHost hook — persist a slot in the ``drivers`` dict."""
         self._persist_driver(key, value)
 
     def play_group(self, group: str) -> bool:
-        """FeatureHost hook — play a random motion from ``group``."""
         return self.play_random_motion_in_group(group)
 
     def speak(self, line: str) -> None:
-        """FeatureHost hook — surface ``line`` in the speech bubble."""
         self._show_speech(line)
 
     def on_hotkey_action(self, action: str) -> None:
-        """FeatureHost hook — route a hotkey hit to its window action."""
         self._on_hotkey_action(action)
 
     @property
     def speech_on(self) -> bool:
-        """FeatureHost hook — whether the speech bubble is enabled."""
         return self._speech_enabled
 
     def pet_id(self) -> str:
