@@ -89,6 +89,10 @@ ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})   # anus, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"   # medium — best accuracy
+# Pin an explicit commit so a future repo compromise cannot silently swap the
+# weights we download (bandit B615). This is the latest commit on `main` as of
+# 2024-12-25; the repo ships no tags, so a full SHA is the stable anchor.
+_ERAX_REVISION = "90878ab981060833413ae1a24df72f5e1fff66bc"
 
 # ---------------------------------------------------------------------------
 # Packages per mode
@@ -203,7 +207,8 @@ def _get_anime_model():
             from huggingface_hub import hf_hub_download
             from ultralytics import YOLO
             model_path = hf_hub_download(
-                repo_id=_ERAX_REPO, filename=_ERAX_MODEL)
+                repo_id=_ERAX_REPO, filename=_ERAX_MODEL,
+                revision=_ERAX_REVISION)
             _cached_anime_model = YOLO(model_path)
         return _cached_anime_model
 
