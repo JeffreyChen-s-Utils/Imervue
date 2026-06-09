@@ -53,9 +53,7 @@ import os
 from collections import OrderedDict
 from OpenGL.GL import (
     GL_BLEND,
-    GL_CLAMP_TO_EDGE,
     GL_COLOR_BUFFER_BIT,
-    GL_LINEAR,
     GL_LINES,
     GL_LINE_LOOP,
     GL_MODELVIEW,
@@ -63,19 +61,11 @@ from OpenGL.GL import (
     GL_ONE_MINUS_SRC_ALPHA,
     GL_PROJECTION,
     GL_QUADS,
-    GL_RGBA,
     GL_SRC_ALPHA,
     GL_TEXTURE_2D,
-    GL_TEXTURE_MAG_FILTER,
-    GL_LINEAR_MIPMAP_LINEAR,
-    GL_TEXTURE_MIN_FILTER,
-    GL_TEXTURE_WRAP_S,
-    GL_TEXTURE_WRAP_T,
     GL_TRIANGLE_FAN,
     GL_UNPACK_ALIGNMENT,
-    GL_UNSIGNED_BYTE,
     glBegin,
-    glBindTexture,
     glBlendFunc,
     glClear,
     glClearColor,
@@ -84,8 +74,6 @@ from OpenGL.GL import (
     glDisable,
     glEnable,
     glEnd,
-    glGenerateMipmap,
-    glGenTextures,
     glGetError,
     glGetIntegerv,
     glLineWidth,
@@ -94,8 +82,6 @@ from OpenGL.GL import (
     glOrtho,
     glPixelStorei,
     glScalef,
-    glTexImage2D,
-    glTexParameteri,
     glTranslatef,
     glVertex2f,
     glViewport,
@@ -106,6 +92,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
+from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
 from Imervue.image.tile_manager import TileManager
 import contextlib
 
@@ -154,6 +141,9 @@ class GPUImageView(QOpenGLWidget):
         self._tile_size_dirty = False
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
+        # Async PBO streaming uploader; allocated in initializeGL once a
+        # GL context exists. Stays None (synchronous fallback) until then.
+        self._tile_uploader = None
 
         # ===== DeepZoom =====
         self.zoom = 1.0
@@ -399,6 +389,16 @@ class GPUImageView(QOpenGLWidget):
         glClearColor(0.1, 0.1, 0.1, 1)
         self.renderer.init()
         self._detect_vram_limit()
+        self._init_tile_uploader()
+
+    def _init_tile_uploader(self) -> None:
+        """Allocate the PBO streaming uploader now that a GL context
+        exists. Failure leaves ``_tile_uploader`` usable but not
+        initialised, so :func:`upload_rgba_texture` transparently
+        falls back to the synchronous path."""
+        from Imervue.gpu_image_view.pbo_uploader import PBOTextureUploader
+        self._tile_uploader = PBOTextureUploader()
+        self._tile_uploader.initialise()
 
     def _detect_vram_limit(self) -> None:
         """Query the GL driver for real VRAM and size the tile cache to it.
@@ -604,18 +604,11 @@ class GPUImageView(QOpenGLWidget):
         )
         if self._vram_usage + tex_bytes > self._vram_limit:
             return False
-        tex = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, tex)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                     img_data.shape[1], img_data.shape[0], 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, img_data)
-        glGenerateMipmap(GL_TEXTURE_2D)
-        glTexParameteri(
-            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR,
+        tex = upload_rgba_texture(
+            prepare_rgba(img_data),
+            generate_mipmaps=True,
+            uploader=self._tile_uploader,
         )
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         self.tile_textures[path] = tex
         self._tile_tex_sizes[path] = tex_bytes
         self._vram_usage += tex_bytes
@@ -876,18 +869,9 @@ class GPUImageView(QOpenGLWidget):
             # 重建 minimap texture
             if self._minimap_tex is not None:
                 glDeleteTextures([self._minimap_tex])
-            self._minimap_tex = glGenTextures(1)
-            glBindTexture(GL_TEXTURE_2D, self._minimap_tex)
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-            td = thumb
-            if td.shape[2] == 3:
-                alpha = np.full((*td.shape[:2], 1), 255, dtype=np.uint8)
-                td = np.concatenate([td, alpha], axis=2)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                         td.shape[1], td.shape[0], 0,
-                         GL_RGBA, GL_UNSIGNED_BYTE, td.astype(np.uint8))
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            self._minimap_tex = upload_rgba_texture(
+                prepare_rgba(thumb), clamp_to_edge=False,
+            )
             self._minimap_dzi = self.deep_zoom
 
         self.renderer.draw_textured_quad(mm_x, mm_y, mm_x + mm_w, mm_y + mm_h,

@@ -168,6 +168,67 @@ class PBOTextureUploader:
         self._next_index = next_ring_index(idx, PBO_RING_SIZE)
         return idx
 
+    def stream_upload(
+        self, tex: int, rgba, width: int, height: int,
+    ) -> bool:   # pragma: no cover - needs GL context
+        """Stream *rgba* into the already-bound texture *tex* via the
+        next PBO in the ring.
+
+        Returns ``True`` when the PBO upload completed, ``False`` to
+        let the caller fall back to the synchronous path. The bound
+        texture must already be ``glBindTexture``-ed by the caller;
+        this method only touches the unpack-buffer binding and
+        restores it to 0 before returning.
+        """
+        if not self._initialised or not self._pbos:
+            return False
+        try:
+            from OpenGL.GL import (
+                GL_PIXEL_UNPACK_BUFFER,
+                GL_RGBA,
+                GL_TEXTURE_2D,
+                GL_UNSIGNED_BYTE,
+                glBindBuffer,
+                glBufferSubData,
+                glTexImage2D,
+                glTexSubImage2D,
+            )
+        except ImportError:
+            return False
+        try:
+            data = rgba.tobytes()
+            pbo = self._pbos[self.advance()]
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo)
+            glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, len(data), data)
+            # Allocate texture storage, then fill from the bound PBO
+            # (the final ``None`` pointer is interpreted as a byte
+            # offset into the bound unpack buffer).
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, None,
+            )
+            glTexSubImage2D(
+                GL_TEXTURE_2D, 0, 0, 0, width, height,
+                GL_RGBA, GL_UNSIGNED_BYTE, None,
+            )
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+        except Exception as exc:   # noqa: BLE001 - GL error surface varies
+            logger.info("PBO stream_upload failed (%s); fallback to direct", exc)
+            self._unbind_unpack_buffer()
+            return False
+        return True
+
+    @staticmethod
+    def _unbind_unpack_buffer() -> None:   # pragma: no cover - needs GL context
+        """Best-effort restore of the unpack-buffer binding to 0 after a
+        failed streaming upload, so the synchronous fallback runs with a
+        clean binding."""
+        try:
+            from OpenGL.GL import GL_PIXEL_UNPACK_BUFFER, glBindBuffer
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
+        except Exception as exc:   # noqa: BLE001 - GL error surface varies
+            logger.info("PBO unbind swallowed: %s", exc)
+
     def shutdown(self) -> None:   # pragma: no cover - needs GL context
         """Release the PBO handles. Safe on an uninitialised
         uploader."""
