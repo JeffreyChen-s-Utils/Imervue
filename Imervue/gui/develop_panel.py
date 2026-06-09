@@ -115,6 +115,10 @@ class DevelopPanel(QWidget):
         self._current = Recipe()
         self._committed = Recipe()
         self._suppress_signals = False
+        # Guards re-entrancy: the commit handler reloads the image, which can
+        # synchronously rebind the panel; without this flag a stray slider tick
+        # during that reload could fire a second, nested commit.
+        self._committing = False
 
         self._undo_stack = QUndoStack(self)
 
@@ -976,9 +980,10 @@ class DevelopPanel(QWidget):
         self._current = Recipe()
         self._sync_sliders()
         self._refresh_canvas_base()
+        self._commit_recipe()
 
     # ------------------------------------------------------------------
-    # Preview logic — debounced canvas refresh, no commit to recipe_store
+    # Preview + commit logic — debounced canvas refresh, then write-back
     # ------------------------------------------------------------------
 
     def _schedule_preview(self) -> None:
@@ -987,4 +992,34 @@ class DevelopPanel(QWidget):
         self._debounce.start()
 
     def _preview_debounced(self) -> None:
+        """Refresh the inline preview, then finalise the edit.
+
+        Firing the debounce timer is the signal that the user has paused —
+        the working recipe is now considered committed. We update the canvas
+        preview first (cheap, local) and then push the recipe to the store and
+        notify the viewer via ``recipe_committed`` so the edit survives a tab
+        or image switch.
+        """
         self._refresh_canvas_base()
+        self._commit_recipe()
+
+    def _commit_recipe(self) -> None:
+        """Persist the working recipe and emit ``recipe_committed``.
+
+        No-op when nothing changed since the last commit, when no image is
+        bound, or while a commit is already in flight. The emitted payload is
+        ``(path, old_recipe, new_recipe)`` with defensive copies so a later
+        in-place mutation of ``self._current`` can't corrupt the undo state.
+        """
+        if self._committing or self._path is None:
+            return
+        if self._current == self._committed:
+            return
+        old_recipe = Recipe.from_dict(self._committed.to_dict())
+        new_recipe = Recipe.from_dict(self._current.to_dict())
+        self._committed = Recipe.from_dict(self._current.to_dict())
+        self._committing = True
+        try:
+            self.recipe_committed.emit(self._path, old_recipe, new_recipe)
+        finally:
+            self._committing = False
