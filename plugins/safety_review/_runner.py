@@ -107,9 +107,15 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
     if expand_pct > 0:
         ex = int(bw * expand_pct / 100)
         ey = int(bh * expand_pct / 100)
-        x1 -= ex; y1 -= ey; x2 += ex; y2 += ey
+        x1 -= ex
+        y1 -= ey
+        x2 += ex
+        y2 += ey
     if padding > 0:
-        x1 -= padding; y1 -= padding; x2 += padding; y2 += padding
+        x1 -= padding
+        y1 -= padding
+        x2 += padding
+        y2 += padding
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
@@ -202,10 +208,9 @@ def _process_one(detector, src, dst, block_size, padding,
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    for x1, y1, x2, y2 in boxes:
-        x1, y1, x2, y2 = _expand_box(x1, y1, x2, y2, padding, expand_pct,
-                                       iw, ih)
-        _censor_region(img, x1, y1, x2, y2, block_size, style=style)
+    for box in boxes:
+        ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
+        _censor_region(img, ex1, ey1, ex2, ey2, block_size, style=style)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
