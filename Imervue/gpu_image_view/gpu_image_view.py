@@ -4,23 +4,16 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
-from Imervue.gpu_image_view.actions.delete import undo_delete
 from Imervue.gpu_image_view.actions.keyboard_actions import (
-    toggle_fullscreen, trash_current_image, trash_selected_tiles,
-    copy_image_to_clipboard, rate_current_image,
-    toggle_favorite,
+    toggle_fullscreen,
 )
-from Imervue.gpu_image_view.actions.search_dialog import open_search_dialog
-from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog, stop_slideshow
-from Imervue.gpu_image_view.actions.goto_dialog import open_goto_dialog
-from Imervue.gui.annotation_dialog import open_annotation_for_path
+from Imervue.gpu_image_view.actions.slideshow import stop_slideshow
 from Imervue.gpu_image_view.actions.select import (
     switch_to_next_image, switch_to_previous_image, select_tiles_in_rect,
     switch_to_next_folder, switch_to_previous_folder,
 )
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
 from Imervue.gpu_image_view.minimap import (
-    MINIMAP_MARGIN,
     minimap_geometry,
     point_in_rect,
     recenter_offsets,
@@ -87,7 +80,7 @@ from OpenGL.GL import (
     glViewport,
 )
 from PySide6.QtCore import QThreadPool, QMutex, QMutexLocker, Qt
-from PySide6.QtGui import QUndoStack, QPainter, QColor, QPen, QFont, QPainterPath, QImage
+from PySide6.QtGui import QUndoStack, QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
 
@@ -99,9 +92,6 @@ import contextlib
 # DeepZoom 預載範圍（±N 張）
 _PREFETCH_RANGE = 3
 _PREFETCH_MAX = _PREFETCH_RANGE * 2 + 1
-
-_FONT_SEGOE_UI = "Segoe UI"
-_FONT_CONSOLAS = "Consolas"
 
 
 def _format_file_size(path: str) -> str:
@@ -265,6 +255,14 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== GL Renderer =====
         self.renderer = GLRenderer()
+
+        # ===== QPainter overlay (OSD / HUD / histogram / badges) =====
+        from Imervue.gpu_image_view.overlay_painter import OverlayPainter
+        self._overlay = OverlayPainter(self)
+
+        # ===== Keyboard-action dispatch =====
+        from Imervue.gpu_image_view.key_action_dispatcher import KeyActionDispatcher
+        self._key_dispatch = KeyActionDispatcher(self)
 
         # ===== VRAM 管理 =====
         # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
@@ -898,485 +896,22 @@ class GPUImageView(QOpenGLWidget):
         glDisable(GL_BLEND)
 
     # ---------------------------
-    # QPainter 覆蓋層
+    # QPainter overlay (delegated to OverlayPainter)
     # ---------------------------
-    def _collect_overlay_layers(self) -> list:
-        """Return active overlay layers in draw order. Each entry is a
-        callable painter -> None or a list of such callables."""
-        zoom_active = bool((not self.tile_grid_mode) and self.deep_zoom)
-        anim_active = bool(self._animation and self._animation.is_animated)
-        pixel_active = zoom_active and self._pixel_view and self.zoom >= 4.0
-
-        # Table-driven dispatch flattens what was a deeply-nested if-chain.
-        # Each tuple = (predicate_value, painter or [painters]).
-        layer_table: list[tuple[bool, object]] = [
-            (
-                self.tile_grid_mode and bool(self.tile_rects),
-                [self._draw_tile_labels, self._draw_tile_badges,
-                 self._draw_tile_placeholders],
-            ),
-            (zoom_active, self._draw_zoom_indicator),
-            (zoom_active and self._show_histogram, self._draw_histogram),
-            (anim_active, self._draw_anim_indicator),
-            (zoom_active and self._show_osd, self._draw_osd),
-            (self._show_debug_hud, self._draw_debug_hud),
-            (pixel_active, self._draw_pixel_view),
-        ]
-        candidates: list = []
-        for active, painter in layer_table:
-            if not active:
-                continue
-            if isinstance(painter, list):
-                candidates += painter
-            else:
-                candidates.append(painter)
-        return candidates
-
-    def _paint_overlay(self, painter: QPainter):
-        layers = self._collect_overlay_layers()
-        if not layers:
-            return
-
-        # 在獨立 QImage 上以裝置解析度繪製，避免 QOpenGLWidget FBO 模糊
-        dpr = self.devicePixelRatio()
-        w, h = self.width(), self.height()
-        img = QImage(int(w * dpr), int(h * dpr),
-                     QImage.Format.Format_ARGB32_Premultiplied)
-        img.setDevicePixelRatio(dpr)
-        img.fill(Qt.GlobalColor.transparent)
-
-        p = QPainter(img)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        for layer in layers:
-            layer(p)
-        p.end()
-        painter.drawImage(0, 0, img)
-
-    def _draw_tile_labels(self, painter: QPainter):
-        """在每個縮圖下方繪製檔名"""
-        font = QFont(_FONT_SEGOE_UI)
-        font.setPixelSize(13)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-
-        for x0, _y0, x1, y1, path in self.tile_rects:
-            name = Path(path).stem
-            tw = x1 - x0
-            elided = fm.elidedText(name, Qt.TextElideMode.ElideRight, int(tw))
-            tx = int(x0 + (tw - fm.horizontalAdvance(elided)) / 2)
-            ty = int(y1 + fm.ascent() + 2)
-            if ty < self.height() + fm.height():
-                # 陰影
-                painter.setPen(QColor(0, 0, 0, 180))
-                painter.drawText(tx + 1, ty + 1, elided)
-                # 文字
-                painter.setPen(QColor(220, 220, 220))
-                painter.drawText(tx, ty, elided)
-
-    def _draw_tile_badges(self, painter: QPainter):
-        """在每個縮圖角落繪製評分/收藏/書籤/色彩標籤徽章."""
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        from Imervue.user_settings.color_labels import _store as _color_store
-
-        ratings = user_setting_dict.get("image_ratings", {}) or {}
-        favs = self._badge_favorites_set()
-        color_store = _color_store()
-
-        font = QFont(_FONT_SEGOE_UI)
-        font.setPixelSize(11)
-        font.setWeight(QFont.Weight.Bold)
-        painter.setFont(font)
-
-        for x0, y0, x1, y1, path in self.tile_rects:
-            color_name = color_store.get(path)
-            self._paint_color_strip(painter, x0, y0, y1, color_name)
-            self._paint_favorite_badge(painter, x0, y0, path in favs, color_name)
-            self._paint_bookmark_badge(painter, x0, y0, x1, path)
-            self._paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
-
-    @staticmethod
-    def _badge_favorites_set() -> set:
-        """Read favorites from settings, tolerating list/set serialisation."""
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        favs = user_setting_dict.get("image_favorites", set())
-        if isinstance(favs, set):
-            return favs
-        try:
-            return set(favs)
-        except TypeError:
-            return set()
-
-    @staticmethod
-    def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:
-        """Left-edge 6 px colour-label strip - skipped when no label is set."""
-        from Imervue.user_settings.color_labels import COLOR_RGB
-        if not color_name or color_name not in COLOR_RGB:
-            return
-        r, g, b = COLOR_RGB[color_name]
-        painter.fillRect(int(x0), int(y0), 6, int(y1 - y0), QColor(r, g, b, 230))
-
-    @staticmethod
-    def _paint_favorite_badge(painter, x0, y0, is_fav: bool, color_name) -> None:
-        if not is_fav:
-            return
-        offset = 10 if color_name else 4
-        painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18,
-                         QColor(0, 0, 0, 140))
-        painter.setPen(QColor(255, 90, 120))
-        painter.drawText(int(x0 + offset + 2), int(y0 + 18), "\u2665")
-
-    @staticmethod
-    def _paint_bookmark_badge(painter, x0, y0, x1, path: str) -> None:
-        from Imervue.user_settings.bookmark import is_bookmarked
-        if not is_bookmarked(path):
-            return
-        painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
-        painter.setPen(QColor(255, 210, 80))
-        painter.drawText(int(x1 - 20), int(y0 + 18), "\u2605")
-
-    @staticmethod
-    def _paint_rating_badge(painter, x0, y1, rating: int) -> None:
-        if not rating or rating <= 0:
-            return
-        badge_text = "\u2605" * int(rating)
-        fm = painter.fontMetrics()
-        tw = fm.horizontalAdvance(badge_text)
-        painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18,
-                         QColor(0, 0, 0, 140))
-        painter.setPen(QColor(255, 210, 80))
-        painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
-
-    def _draw_tile_placeholders(self, painter: QPainter):
-        """Draw a subtle spinner-like dot pattern on unloaded tile slots.
-
-        The dots rotate via the animation frame counter so the user sees
-        activity while thumbnails stream in, reinforcing that something is
-        happening beyond the bottom progress bar.
-        """
-        rects = getattr(self, "placeholder_rects", None)
-        if not rects:
-            return
-
-        import time
-        phase = (time.monotonic() % 1.0) * 2 * 3.14159
-        painter.setPen(QColor(140, 140, 140, 200))
-        font = QFont(_FONT_SEGOE_UI)
-        font.setPixelSize(11)
-        painter.setFont(font)
-
-        for x0, y0, x1, y1 in rects:
-            cx = (x0 + x1) / 2
-            cy = (y0 + y1) / 2
-            # Four dots spinning around centre; size proportional to tile
-            radius = min(x1 - x0, y1 - y0) * 0.12
-            for i in range(4):
-                angle = phase + i * (3.14159 / 2)
-                dot_x = cx + radius * 1.6 * np.cos(angle)
-                dot_y = cy + radius * 1.6 * np.sin(angle)
-                alpha = 80 + int(120 * (i / 3))
-                painter.setBrush(QColor(200, 200, 200, alpha))
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawEllipse(
-                    int(dot_x - radius / 3), int(dot_y - radius / 3),
-                    int(radius * 2 / 3), int(radius * 2 / 3),
-                )
-
-        # Trigger another paint on next frame while placeholders exist — cheap
-        # because only the overlay layer is repainted.
-        if not getattr(self, "_placeholder_timer", None):
-            from PySide6.QtCore import QTimer
-            t = QTimer(self)
-            t.setInterval(80)
-            t.timeout.connect(self._tick_placeholder)
-            self._placeholder_timer = t
-        if not self._placeholder_timer.isActive():
-            self._placeholder_timer.start()
+    def _paint_overlay(self, painter):
+        """Composite the active QPainter overlay layers onto the canvas."""
+        self._overlay.paint(painter)
 
     def _tick_placeholder(self) -> None:
-        if self.tile_grid_mode and getattr(self, "placeholder_rects", None):
-            self.update()
-        else:
-            # No placeholders left — stop the spinner timer
-            timer = getattr(self, "_placeholder_timer", None)
-            if timer and timer.isActive():
-                timer.stop()
+        """Repaint while tile placeholders are still streaming in."""
+        self._overlay.tick_placeholder()
 
-    def _draw_zoom_indicator(self, painter: QPainter):
-        """在右下角小地圖上方顯示縮放百分比"""
-        pct = f"{self.zoom * 100:.0f}%"
-        font = QFont(_FONT_CONSOLAS)
-        font.setPixelSize(15)
-        font.setWeight(QFont.Weight.Bold)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-        tw = fm.horizontalAdvance(pct)
-        x = self.width() - tw - MINIMAP_MARGIN - 2
-        # 置於小地圖上方（無小地圖時貼齊右下）
-        rect = self._current_minimap_rect()
-        if rect is not None:
-            y = self.height() - MINIMAP_MARGIN - rect[3] - fm.height() - 4
-        else:
-            y = self.height() - MINIMAP_MARGIN - 8
-
-        painter.setPen(QColor(0, 0, 0, 160))
-        painter.drawText(x + 1, y + 1, pct)
-        painter.setPen(QColor(230, 230, 230))
-        painter.drawText(x, y, pct)
-
-    def _draw_histogram(self, painter: QPainter):
-        """繪製 RGB 直方圖覆蓋層"""
-        if not self.deep_zoom:
-            return
-
-        # 取得/快取直方圖資料
-        images = self.model.images
-        if not images or self.current_index >= len(images):
-            return
-        cur_path = images[self.current_index]
-        if cur_path and (not self._histogram_cache or self._histogram_cache[0] != cur_path):
-            img = self.deep_zoom.levels[-1]  # 用最低解析度計算
-            self._histogram_cache = (
-                cur_path,
-                np.histogram(img[:, :, 0], bins=256, range=(0, 256))[0],
-                np.histogram(img[:, :, 1], bins=256, range=(0, 256))[0],
-                np.histogram(img[:, :, 2], bins=256, range=(0, 256))[0],
-            )
-
-        if not self._histogram_cache:
-            return
-
-        _, hr, hg, hb = self._histogram_cache
-        h_max = max(hr.max(), hg.max(), hb.max(), 1)
-
-        # 繪製區域：左上角
-        hx, hy, hw, hh = 12, 12, 256, 120
-
-        # 半透明背景
-        painter.fillRect(hx - 2, hy - 2, hw + 4, hh + 4, QColor(0, 0, 0, 140))
-
-        for hist, color in [(hr, QColor(220, 60, 60, 120)),
-                            (hg, QColor(60, 200, 60, 120)),
-                            (hb, QColor(60, 100, 220, 120))]:
-            path = QPainterPath()
-            path.moveTo(hx, hy + hh)
-            for i in range(256):
-                bh = hist[i] / h_max * hh
-                path.lineTo(hx + i, hy + hh - bh)
-            path.lineTo(hx + 255, hy + hh)
-            path.closeSubpath()
-            painter.fillPath(path, color)
-
-    def _draw_anim_indicator(self, painter: QPainter):
-        """繪製動畫幀指示器（底部中央）"""
-        anim = self._animation
-        if not anim or not anim.is_animated:
-            return
-
-        lang = self.main_window.language_wrapper.language_word_dict
-
-        frame_text = lang.get("anim_frame_indicator", "Frame {current}/{total}").format(
-            current=anim.current_frame + 1, total=anim.total_frames
-        )
-        status = (
-            lang.get("anim_play", "Play") if not anim.playing
-            else lang.get("anim_pause", "Pause")
-        )
-        speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
-        text = f"{status}  |  {frame_text}  |  {speed_text}"
-
-        font = QFont(_FONT_CONSOLAS)
-        font.setPixelSize(13)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-        tw = fm.horizontalAdvance(text)
-        th = fm.height()
-
-        x = (self.width() - tw) // 2
-        y = self.height() - 20
-
-        # 背景
-        painter.fillRect(x - 8, y - th - 2, tw + 16, th + 8, QColor(0, 0, 0, 160))
-        # 文字
-        painter.setPen(QColor(230, 230, 230))
-        painter.drawText(x, y, text)
-
-    # ---------------------------
-    # OSD + Debug HUD
-    # ---------------------------
     def _current_path(self) -> str | None:
         imgs = self.model.images
         if imgs and 0 <= self.current_index < len(imgs):
             return imgs[self.current_index]
         return None
 
-    def _draw_osd(self, painter: QPainter):
-        """F3 OSD — 右上角顯示檔名 / 尺寸 / 格式 / 檔案大小."""
-        path = self._current_path()
-        if not path or not self.deep_zoom:
-            return
-
-        base = self.deep_zoom.levels[0]
-        h, w = base.shape[:2]
-
-        try:
-            size_bytes = os.path.getsize(path)
-            if size_bytes >= 1024 * 1024:
-                size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
-            else:
-                size_str = f"{size_bytes / 1024:.1f} KB"
-        except OSError:
-            size_str = "—"
-
-        lines = [
-            Path(path).name,
-            f"{w} × {h}",
-            f"{Path(path).suffix.lstrip('.').upper() or '—'}   {size_str}",
-        ]
-
-        font = QFont(_FONT_SEGOE_UI)
-        font.setPixelSize(13)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-
-        pad_x, pad_y = 10, 6
-        line_h = fm.height()
-        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
-        box_h = line_h * len(lines) + pad_y * 2
-
-        # 右上角，避開 histogram(左上) 與 minimap(右下)
-        x = self.width() - box_w - 12
-        y = 12
-
-        painter.fillRect(x, y, box_w, box_h, QColor(0, 0, 0, 170))
-        painter.setPen(QColor(230, 230, 230))
-        for i, line in enumerate(lines):
-            painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
-
-    def _draw_debug_hud(self, painter: QPainter):
-        """Ctrl+F3 Debug HUD — 顯示 VRAM / cache / 執行緒池."""
-        vram_mb = self._vram_usage / (1024 * 1024)
-        limit_mb = self._vram_limit / (1024 * 1024)
-        pct = (self._vram_usage / self._vram_limit * 100) if self._vram_limit else 0
-        tile_count = len(self.tile_textures)
-        cache_count = len(self.tile_cache)
-        prefetch_count = len(self._prefetch_cache)
-        active_threads = self.thread_pool.activeThreadCount()
-        max_threads = self.thread_pool.maxThreadCount()
-
-        lines = [
-            f"VRAM  {vram_mb:6.1f} / {limit_mb:6.1f} MB  ({pct:4.1f}%)",
-            f"Tile tex   {tile_count:4d}   cache {cache_count:4d}",
-            f"Prefetch   {prefetch_count:4d}   workers {len(self._prefetch_workers)}",
-            f"Threads    {active_threads:4d} / {max_threads}",
-            f"Gen {self._load_generation}   Zoom {self.zoom * 100:.1f}%",
-        ]
-
-        font = QFont(_FONT_CONSOLAS)
-        font.setPixelSize(12)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-
-        pad_x, pad_y = 8, 5
-        line_h = fm.height()
-        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
-        box_h = line_h * len(lines) + pad_y * 2
-
-        # 左下角 — 不擋直方圖 / minimap / OSD
-        x = 12
-        y = self.height() - box_h - 12
-
-        painter.fillRect(x, y, box_w, box_h, QColor(0, 0, 0, 180))
-        painter.setPen(QColor(120, 220, 120))
-        for i, line in enumerate(lines):
-            painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
-
-    def _draw_pixel_view(self, painter: QPainter):
-        """Shift+P — 在 zoom ≥ 4x 時繪製像素網格 + hover pixel RGB."""
-        if not self.deep_zoom or self.zoom < 4.0:
-            return
-        base = self.deep_zoom.levels[0]
-        h, w = base.shape[:2]
-        x0, y0, x1, y1 = self._visible_pixel_bounds(w, h)
-        if (x1 - x0) * (y1 - y0) <= 40000:
-            self._draw_pixel_grid(painter, x0, y0, x1, y1)
-        if self._hover_image_xy is not None:
-            cx, cy = self._hover_image_xy
-            if 0 <= cx < w and 0 <= cy < h:
-                self._draw_hover_pixel_hud(painter, base, cx, cy)
-
-    def _visible_pixel_bounds(self, w: int, h: int) -> tuple[int, int, int, int]:
-        left = -self.dz_offset_x / self.zoom
-        top = -self.dz_offset_y / self.zoom
-        right = left + self.width() / self.zoom
-        bottom = top + self.height() / self.zoom
-        return (
-            max(0, int(left)), max(0, int(top)),
-            min(w, int(right) + 1), min(h, int(bottom) + 1),
-        )
-
-    def _draw_pixel_grid(self, painter: QPainter,
-                         x0: int, y0: int, x1: int, y1: int) -> None:
-        pen = QPen(QColor(128, 128, 128, 120))
-        pen.setWidth(0)
-        painter.setPen(pen)
-        y_top = int(y0 * self.zoom + self.dz_offset_y)
-        y_bot = int(y1 * self.zoom + self.dz_offset_y)
-        for gx in range(x0, x1 + 1):
-            sx = int(gx * self.zoom + self.dz_offset_x)
-            painter.drawLine(sx, y_top, sx, y_bot)
-        x_left = int(x0 * self.zoom + self.dz_offset_x)
-        x_right = int(x1 * self.zoom + self.dz_offset_x)
-        for gy in range(y0, y1 + 1):
-            sy = int(gy * self.zoom + self.dz_offset_y)
-            painter.drawLine(x_left, sy, x_right, sy)
-
-    def _draw_hover_pixel_hud(self, painter: QPainter, base, cx: int, cy: int) -> None:
-        pixel = base[cy, cx]
-        r, g, b = int(pixel[0]), int(pixel[1]), int(pixel[2])
-        a = int(pixel[3]) if base.shape[2] >= 4 else 255
-        lines = [
-            f"({cx}, {cy})",
-            f"RGB {r:3d} {g:3d} {b:3d}",
-            f"A   {a:3d}    #{r:02X}{g:02X}{b:02X}",
-        ]
-        font = QFont(_FONT_CONSOLAS)
-        font.setPixelSize(12)
-        painter.setFont(font)
-        fm = painter.fontMetrics()
-        pad_x, pad_y = 6, 4
-        line_h = fm.height()
-        box_w = max(fm.horizontalAdvance(line) for line in lines) + pad_x * 2
-        box_h = line_h * len(lines) + pad_y * 2
-        sx = cx * self.zoom + self.dz_offset_x
-        sy = cy * self.zoom + self.dz_offset_y
-        size = self.zoom
-        self._draw_hover_pixel_outline(painter, sx, sy, size)
-        hx, hy = self._place_hud_box(int(sx), int(sy), int(size), box_w, box_h)
-        painter.fillRect(hx, hy, box_w, box_h, QColor(0, 0, 0, 190))
-        painter.setPen(QColor(240, 240, 240))
-        for i, line in enumerate(lines):
-            painter.drawText(hx + pad_x, hy + pad_y + fm.ascent() + i * line_h, line)
-        painter.fillRect(hx + box_w - 20, hy + pad_y, 14, 14, QColor(r, g, b))
-
-    @staticmethod
-    def _draw_hover_pixel_outline(painter: QPainter, sx: float, sy: float,
-                                  size: float) -> None:
-        pen = QPen(QColor(255, 220, 0, 230))
-        pen.setWidth(2)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRect(int(sx), int(sy), int(size), int(size))
-
-    def _place_hud_box(self, sx: int, sy: int, size: int,
-                       box_w: int, box_h: int) -> tuple[int, int]:
-        hx = sx + size + 12
-        hy = sy
-        if hx + box_w > self.width():
-            hx = sx - box_w - 12
-        if hy + box_h > self.height():
-            hy = self.height() - box_h - 4
-        return hx, max(hy, 0)
 
     # ---------------------------
     # Status bar sync
@@ -2710,231 +2245,14 @@ class GPUImageView(QOpenGLWidget):
         action = shortcut_manager.get_action(key, mods_int)
         if action is None:
             return
-        self._dispatch_action(action, modifiers)
-
-    def _dispatch_action(self, action: str, modifiers) -> None:
-        if self._dispatch_simple_action(action):
-            return
-        if self._dispatch_toggle_action(action, modifiers):
-            return
-        if self._dispatch_culling_action(action):
-            return
-        if self._dispatch_image_action(action):
-            return
-        if self._animation and self._animation.is_animated:
-            self._dispatch_anim_action(action)
-
-    _COLOR_MODE_NAMES = ["Normal", "Grayscale", "Invert", "Sepia"]
-    _COLOR_MODE_KEYS = [
-        "color_mode_normal", "color_mode_grayscale",
-        "color_mode_invert", "color_mode_sepia",
-    ]
-    _RATING_ACTIONS = {"rate_1", "rate_2", "rate_3", "rate_4", "rate_5"}
+        self._key_dispatch.dispatch(action, modifiers)
 
     def _toast(self, key: str, fallback: str) -> None:
+        """Show a localized toast via the main window, if available."""
         if hasattr(self.main_window, 'toast'):
             lang = self.main_window.language_wrapper.language_word_dict
             self.main_window.toast.info(lang.get(key, fallback))
 
-    def _do_undo(self) -> None:
-        if self.undo_manager.canUndo():
-            self.undo_manager.undo()
-        else:
-            undo_delete(main_gui=self)
-
-    def _open_command_palette(self) -> None:
-        from Imervue.gui.command_palette import open_command_palette
-        open_command_palette(self.main_window)
-
-    def _replay_macro(self) -> None:
-        from Imervue.macros.macro_manager import replay_last_macro
-        replay_last_macro(self.main_window)
-
-    def _open_tag_album(self) -> None:
-        from Imervue.gui.tag_album_dialog import open_tag_album_dialog
-        open_tag_album_dialog(self)
-
-    def _history_back_toast(self) -> None:
-        if not self.history_back():
-            self._toast("history_at_start", "At start of history")
-
-    def _history_forward_toast(self) -> None:
-        if not self.history_forward():
-            self._toast("history_at_end", "At end of history")
-
-    def _dispatch_simple_action(self, action: str) -> bool:
-        """Actions that map 1:1 to a function call with no condition."""
-        if action in self._RATING_ACTIONS:
-            rate_current_image(self, int(action[-1]))
-            return True
-        handler = {
-            "undo": self._do_undo,
-            "redo": self.undo_manager.redo,
-            "redo_alt": self.undo_manager.redo,
-            "copy": lambda: copy_image_to_clipboard(self),
-            "paste": self._paste_image_from_clipboard,
-            "search": lambda: open_search_dialog(self),
-            "search_alt": lambda: open_search_dialog(self),
-            "goto": lambda: open_goto_dialog(self),
-            "fullscreen": lambda: toggle_fullscreen(self),
-            "random_image": self.jump_to_random_image,
-            "command_palette": self._open_command_palette,
-            "macro_replay": self._replay_macro,
-            "slideshow": lambda: open_slideshow_dialog(self),
-            "tags": self._open_tag_album,
-            "favorite": lambda: toggle_favorite(self),
-            "history_back": self._history_back_toast,
-            "history_forward": self._history_forward_toast,
-        }.get(action)
-        if handler is None:
-            return False
-        handler()
-        return True
-
-    def _dispatch_toggle_action(self, action: str, modifiers) -> bool:
-        """View-mode toggles: theater, pixel_view, split, dual, multi-monitor, color."""
-        # Lookup table flattens what was a long if/elif chain. Each handler
-        # is a bound method; some accept ``modifiers`` for context-aware modes.
-        toggle_handlers = {
-            "theater": self._toggle_theater_mode,
-            "pixel_view": self._toggle_pixel_view,
-            "split_view": self._toggle_split_view,
-            "dual_page": lambda: self._toggle_dual_page(modifiers),
-            "multi_monitor": self._toggle_multi_monitor,
-            "color_mode_cycle": self._cycle_color_mode,
-        }
-        handler = toggle_handlers.get(action)
-        if handler is None:
-            return False
-        handler()
-        return True
-
-    def _toggle_theater_mode(self) -> None:
-        if hasattr(self.main_window, "toggle_theater_mode"):
-            self.main_window.toggle_theater_mode()
-
-    def _toggle_pixel_view(self) -> None:
-        if not self.deep_zoom:
-            return
-        self._pixel_view = not self._pixel_view
-        if self._pixel_view:
-            self._toast("pixel_view_hint",
-                        "Pixel view — zoom in to ≥400% to see grid")
-        self.update()
-
-    def _toggle_split_view(self) -> None:
-        if hasattr(self.main_window, "activate_dual_view"):
-            self.main_window.activate_dual_view("split")
-
-    def _toggle_dual_page(self, modifiers) -> None:
-        if not hasattr(self.main_window, "activate_dual_view"):
-            return
-        mode = ("manga_rtl"
-                if modifiers & Qt.KeyboardModifier.ControlModifier
-                else "manga")
-        self.main_window.activate_dual_view(mode)
-
-    def _toggle_multi_monitor(self) -> None:
-        if hasattr(self.main_window, "toggle_multi_monitor_window"):
-            self.main_window.toggle_multi_monitor_window()
-
-    def _cycle_color_mode(self) -> None:
-        self.renderer.color_mode = (self.renderer.color_mode + 1) % 4
-        idx = self.renderer.color_mode
-        self._toast(self._COLOR_MODE_KEYS[idx], self._COLOR_MODE_NAMES[idx])
-        self.update()
-
-    def _dispatch_culling_action(self, action: str) -> bool:
-        mapping = {"cull_pick": "pick", "cull_reject": "reject",
-                   "cull_unflag": "unflagged"}
-        state = mapping.get(action)
-        if state is None:
-            return False
-        self._apply_cull_state(state)
-        return True
-
-    def _push_rotate(self, clockwise: bool) -> None:
-        if not self.deep_zoom:
-            return
-        from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-        self.undo_manager.push(RotateCommand(self, clockwise=clockwise))
-
-    def _reset_view(self) -> None:
-        if self.deep_zoom:
-            self.zoom = 1.0
-            self.dz_offset_x = 0
-            self.dz_offset_y = 0
-        elif self.tile_grid_mode:
-            self.grid_offset_x = 0
-            self.grid_offset_y = 0
-        self.update()
-
-    def _edit_current_image(self) -> None:
-        if not self.deep_zoom:
-            return
-        images = self.model.images
-        if images and 0 <= self.current_index < len(images):
-            open_annotation_for_path(self, images[self.current_index])
-
-    def _toggle_histogram(self) -> None:
-        if self.deep_zoom:
-            self._show_histogram = not self._show_histogram
-            self.update()
-
-    def _fit_width_with_toast(self) -> None:
-        if self.deep_zoom:
-            self._fit_to_width()
-            self._toast("fit_width", "Fit Width")
-
-    def _fit_height_with_toast(self) -> None:
-        if self.deep_zoom:
-            self._fit_to_height()
-            self._toast("fit_height", "Fit Height")
-
-    def _bookmark_if_deep_zoom(self) -> None:
-        if self.deep_zoom:
-            self._toggle_bookmark()
-
-    def _delete_current(self) -> None:
-        if self.tile_grid_mode and self.tile_selection_mode:
-            trash_selected_tiles(self)
-        elif self.deep_zoom:
-            trash_current_image(self)
-
-    def _dispatch_image_action(self, action: str) -> bool:
-        """Current-image operations: edit, histogram, fit, bookmark, rotate, reset, delete."""
-        handler = {
-            "edit": self._edit_current_image,
-            "histogram": self._toggle_histogram,
-            "fit_width": self._fit_width_with_toast,
-            "fit_height": self._fit_height_with_toast,
-            "fit_window": self._fit_window_with_toast,
-            "zoom_in": lambda: self._zoom_step(True),
-            "zoom_out": lambda: self._zoom_step(False),
-            "bookmark": self._bookmark_if_deep_zoom,
-            "rotate_cw": lambda: self._push_rotate(True),
-            "rotate_ccw": lambda: self._push_rotate(False),
-            "reset_view": self._reset_view,
-            "delete": self._delete_current,
-        }.get(action)
-        if handler is None:
-            return False
-        handler()
-        return True
-
-    def _dispatch_anim_action(self, action: str) -> None:
-        if action == "anim_toggle":
-            self._animation.toggle()
-        elif action == "anim_prev":
-            self._animation.prev_frame()
-        elif action == "anim_next":
-            self._animation.next_frame()
-        elif action in ("anim_slower", "anim_faster"):
-            factor = 1 / 1.5 if action == "anim_slower" else 1.5
-            self._animation.set_speed(self._animation.speed * factor)
-            if hasattr(self.main_window, 'toast'):
-                self.main_window.toast.info(
-                    f"Speed: {self._animation.speed:.2f}x")
 
     # ===========================
     # Touchpad / Touch gestures
