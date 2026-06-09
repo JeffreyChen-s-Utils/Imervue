@@ -419,6 +419,117 @@ class TestRecipeCommitted:
 # Destructive save paths — crop + annotation atomic write
 # ======================================================================
 
+class TestDecodedSourceCache:
+    """The decoded source image is cached by path so repeated previews for
+    the same image skip the disk read + decode."""
+
+    @staticmethod
+    def _spy_image_open(monkeypatch):
+        """Wrap ``Image.open`` in the develop_panel module with a call counter.
+
+        Returns a list whose length equals the number of decode calls.
+        """
+        import Imervue.gui.develop_panel as mod
+
+        calls: list[str] = []
+        real_open = mod.Image.open
+
+        def _counting_open(path, *args, **kwargs):
+            calls.append(str(path))
+            return real_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(mod.Image, "open", _counting_open)
+        return calls
+
+    def test_repeated_preview_decodes_once(self, panel, real_image, monkeypatch):
+        p, _ = panel
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        decodes_after_bind = len(calls)
+        # bind decodes once to build the canvas.
+        assert decodes_after_bind == 1
+
+        # Several preview refreshes on the same path must reuse the cache.
+        p._current = Recipe(brightness=0.2)
+        p._refresh_canvas_base()
+        p._current = Recipe(brightness=0.4)
+        p._refresh_canvas_base()
+        p._current = Recipe(brightness=0.6)
+        p._refresh_canvas_base()
+
+        assert len(calls) == decodes_after_bind  # no extra decodes
+
+    def test_switching_path_redecodes(self, panel, real_image, tmp_path, monkeypatch):
+        from PIL import Image as PILImage
+
+        from Imervue.image.recipe import clear_identity_cache
+
+        # A second distinct image.
+        other = tmp_path / "other.png"
+        PILImage.new("RGBA", (40, 30), (10, 20, 30, 255)).save(str(other), "PNG")
+        clear_identity_cache()
+
+        p, _ = panel
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        assert len(calls) == 1
+        assert calls[-1] == str(real_image)
+
+        # Binding to a different path invalidates the cache and re-decodes.
+        p.bind_to_path(str(other))
+        assert len(calls) == 2
+        assert calls[-1] == str(other)
+
+    def test_bind_to_none_invalidates_cache(self, panel, real_image, monkeypatch):
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        assert p._decoded_source is not None
+
+        p.bind_to_path(None)
+        assert p._decoded_source is None
+        assert p._decoded_source_path is None
+
+        # Re-binding must decode again (cache was cleared).
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        assert len(calls) == 1
+
+    def test_cached_output_matches_uncached(self, panel, real_image):
+        """A cached re-render produces byte-identical output to a fresh load."""
+        import numpy as np
+        from PIL import Image as PILImage
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        recipe = Recipe(brightness=0.5, contrast=0.2)
+        p._current = recipe
+
+        # Render via the (now-cached) panel path.
+        cached = np.array(p._load_image_with_recipe(str(real_image)))
+
+        # Render the same recipe independently, bypassing the cache entirely.
+        raw = PILImage.open(str(real_image)).convert("RGBA")
+        expected = np.array(PILImage.fromarray(recipe.apply(np.array(raw)), "RGBA"))
+
+        assert np.array_equal(cached, expected)
+
+    def test_failed_decode_clears_cache(self, panel, real_image, monkeypatch):
+        import Imervue.gui.develop_panel as mod
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        assert p._decoded_source is not None
+
+        def _boom(_path, *_a, **_k):
+            raise OSError("cannot read")
+
+        monkeypatch.setattr(mod.Image, "open", _boom)
+        result = p._load_image_with_recipe(str(real_image) + "x")
+        assert result is None
+        assert p._decoded_source is None
+        assert p._decoded_source_path is None
+
+
 class TestCropSave:
     """``_apply_crop`` writes the cropped image atomically and resets state."""
 
