@@ -9,6 +9,8 @@ from Imervue.paint import tool_state as ts
 from Imervue.paint.paint_workspace import PaintWorkspace
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 # Tests that need a real on-screen widget (``ws.show()``) SIGSEGV on
 # the headless CI runner once enough QOpenGLWidget surfaces have been

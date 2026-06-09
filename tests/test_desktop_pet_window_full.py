@@ -23,6 +23,8 @@ from Imervue.desktop_pet.pet_window import (
     PetWindow,
 )
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 def _has_flag(flags: Qt.WindowType, target: Qt.WindowType) -> bool:
     return bool(int(flags) & int(target))

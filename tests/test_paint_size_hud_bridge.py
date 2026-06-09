@@ -15,6 +15,8 @@ from Imervue.paint.size_hud_bridge import (
 from Imervue.paint.tool_state import BRUSH_SIZE_MAX, BRUSH_SIZE_MIN
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 @pytest.fixture(autouse=True)
 def _clean_state():
