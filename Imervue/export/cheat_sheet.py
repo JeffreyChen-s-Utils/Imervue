@@ -40,6 +40,16 @@ _KEY_PT = 11
 _PADDING_PX = 10
 _ROW_HEIGHT_PX = 36
 
+# Hard-wired browsing keys that are not part of the configurable shortcut
+# registry, listed so they still appear on the printed cheat sheet.
+# Each entry is (lang_key, english_fallback, key_combo_text).
+_BUILTIN_BROWSING_KEYS: tuple[tuple[str, str, str], ...] = (
+    ("cheat_grid_focus", "Move thumbnail focus", "Arrow Keys"),
+    ("cheat_grid_open", "Open focused thumbnail", "Enter"),
+    ("cheat_loupe", "Loupe magnifier (deep zoom)", "L"),
+    ("cheat_reading", "Reading mode — fit width (deep zoom)", "W"),
+)
+
 
 @dataclass(frozen=True)
 class CheatSheetOptions:
@@ -66,7 +76,23 @@ def collect_shortcut_rows() -> list[tuple[str, str]]:
             ACTION_FALLBACKS.get(action_id, action_id),
         )
         rows.append((label, _action_key_text(action_id)))
+    rows.extend(builtin_browsing_rows())
     return rows
+
+
+def builtin_browsing_rows() -> list[tuple[str, str]]:
+    """Return ``[(label, key_combo), ...]`` for the hard-wired browsing keys.
+
+    These keys (thumbnail-wall focus navigation, the loupe, reading mode) are
+    handled directly by the viewer rather than the configurable shortcut
+    registry, so they are listed here to keep the cheat sheet complete. Labels
+    respect the active language, falling back to English.
+    """
+    lang = language_wrapper.language_word_dict
+    return [
+        (lang.get(key, fallback), combo)
+        for key, fallback, combo in _BUILTIN_BROWSING_KEYS
+    ]
 
 
 def _action_key_text(action_id: str) -> str:

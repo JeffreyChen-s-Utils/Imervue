@@ -10,6 +10,7 @@ for the signal callbacks and the public ``load_tile_grid_async`` /
 from __future__ import annotations
 
 import contextlib
+import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QMutexLocker
@@ -69,6 +70,8 @@ def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
         return
     with QMutexLocker(view.grid_mutex):
         view.tile_cache[path] = img_data
+    view._tile_load_times[path] = time.monotonic()
+    view._overlay.ensure_fade_pump()
 
     view._tile_load_count = len(view.tile_cache)
     # Coalesce the progress update — a folder of N thumbnails finishing in
@@ -95,4 +98,6 @@ def add_thumbnail(view: GPUImageView, img_data, path, generation=None) -> None:
     if path not in view.model.images:
         return
     view.tile_cache[path] = img_data
+    view._tile_load_times[path] = time.monotonic()
+    view._overlay.ensure_fade_pump()
     view.update()

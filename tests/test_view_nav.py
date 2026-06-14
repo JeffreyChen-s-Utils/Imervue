@@ -5,6 +5,7 @@ import pytest
 
 from Imervue.gpu_image_view.view_nav import (
     clamp_pan_offset,
+    reading_scroll,
     stepped_zoom,
     toggle_zoom_target,
     zoom_about_point,
@@ -126,3 +127,28 @@ class TestZoomToRegion:
             (300, 300, 500, 500), 2.0, (100.0, 100.0), self.CANVAS, self.LIMITS,
         )
         assert new_zoom == pytest.approx(10.0)  # 1000 / 100
+
+
+class TestReadingScroll:
+    # Tall page (content 2000) in a 600 px viewport → min offset -1400.
+    def test_scrolls_within_page(self):
+        assert reading_scroll(-500, 2000, 600, -120) == (-620, 0)
+
+    def test_clamps_to_top_without_advancing(self):
+        # Near the top, scrolling up stops at 0 first (no advance yet).
+        assert reading_scroll(-50, 2000, 600, 120) == (0.0, 0)
+
+    def test_advance_previous_at_top_edge(self):
+        # Already at the top → next scroll-up advances to the previous image.
+        assert reading_scroll(0, 2000, 600, 120) == (0, -1)
+
+    def test_clamps_to_bottom_without_advancing(self):
+        assert reading_scroll(-1350, 2000, 600, -120) == (-1400, 0)
+
+    def test_advance_next_at_bottom_edge(self):
+        assert reading_scroll(-1400, 2000, 600, -120) == (-1400, 1)
+
+    def test_short_page_advances_on_any_scroll(self):
+        # Image shorter than the viewport: scroll down → next, up → previous.
+        assert reading_scroll(0, 300, 600, -120) == (0, 1)
+        assert reading_scroll(0, 300, 600, 120) == (0, -1)

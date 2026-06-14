@@ -65,6 +65,31 @@ def clamp_pan_offset(offset: float, image_extent: float,
     return max(canvas_extent - image_extent, min(0.0, offset))
 
 
+def reading_scroll(offset_y: float, content_h: float, view_h: float,
+                   delta: float) -> tuple[float, int]:
+    """Vertical reading-mode scroll with edge auto-advance.
+
+    Returns ``(new_offset_y, advance)`` where *advance* is ``+1`` to move to the
+    next image, ``-1`` to the previous, and ``0`` to stay. The image top sits at
+    *offset_y* (a larger offset reveals higher content). An image shorter than
+    the viewport advances on any scroll; a taller one scrolls to its edges first
+    and the next scroll past an edge advances — the standard webtoon-reader flow.
+    """
+    if content_h <= view_h:
+        if delta < 0:
+            return offset_y, 1
+        if delta > 0:
+            return offset_y, -1
+        return offset_y, 0
+    min_off = view_h - content_h  # negative; bottom-aligned offset
+    new_off = offset_y + delta
+    if new_off > 0:
+        return (offset_y, -1) if offset_y >= 0 else (0.0, 0)
+    if new_off < min_off:
+        return (offset_y, 1) if offset_y <= min_off else (min_off, 0)
+    return new_off, 0
+
+
 def zoom_to_region(
     rect: tuple[float, float, float, float],
     zoom: float,

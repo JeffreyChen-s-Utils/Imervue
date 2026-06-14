@@ -37,12 +37,15 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 _FONT_SEGOE_UI = "Segoe UI"
 _FONT_CONSOLAS = "Consolas"
+# Repaint cadence for the tile-wall placeholder spinner + fade-in pump.
+_PLACEHOLDER_TICK_MS = 80
 
 _BYTES_PER_MB = 1024 * 1024
 _BYTES_PER_KB = 1024
@@ -378,20 +381,37 @@ class OverlayPainter:
                     int(radius * 2 / 3), int(radius * 2 / 3),
                 )
 
+        self.ensure_fade_pump()
+
+    def tick_placeholder(self) -> None:
+        view = self.view
+        if view.tile_grid_mode and (getattr(view, "placeholder_rects", None)
+                                    or self._tiles_fading()):
+            view.update()
+        elif self._placeholder_timer and self._placeholder_timer.isActive():
+            self._placeholder_timer.stop()
+
+    def _tiles_fading(self) -> bool:
+        """True while any tile is still within its fade-in window."""
+        times = getattr(self.view, "_tile_load_times", None)
+        if not times:
+            return False
+        now = time.monotonic()
+        return any((now - start) * 1000 < THUMB_FADE_MS for start in times.values())
+
+    def ensure_fade_pump(self) -> None:
+        """Start the repaint timer so freshly loaded tiles animate their fade.
+
+        Called when a thumbnail arrives even if no placeholders remain, so the
+        last tiles of a folder still fade in smoothly rather than popping.
+        """
         if self._placeholder_timer is None:
-            timer = QTimer(view)
-            timer.setInterval(80)
+            timer = QTimer(self.view)
+            timer.setInterval(_PLACEHOLDER_TICK_MS)
             timer.timeout.connect(self.tick_placeholder)
             self._placeholder_timer = timer
         if not self._placeholder_timer.isActive():
             self._placeholder_timer.start()
-
-    def tick_placeholder(self) -> None:
-        view = self.view
-        if view.tile_grid_mode and getattr(view, "placeholder_rects", None):
-            view.update()
-        elif self._placeholder_timer and self._placeholder_timer.isActive():
-            self._placeholder_timer.stop()
 
     # ------------------------------------------------------------------
     # Indicators

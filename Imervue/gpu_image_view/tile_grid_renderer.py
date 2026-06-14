@@ -37,9 +37,12 @@ from OpenGL.GL import (
     glVertex2f,
 )
 
+import time
+
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
 from Imervue.gpu_image_view.tile_focus import focus_tile_rect
 from Imervue.gpu_image_view.tile_layout import tile_grid_layout
+from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS, fade_opacity
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -102,7 +105,19 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         view.tile_rects.append((x0, y0, x1, y1, path))
         if not view._ensure_tile_texture(path, img_data):
             return
-        view.renderer.draw_textured_quad(x0, y0, x1, y1, view.tile_textures[path])
+        view.renderer.draw_textured_quad(
+            x0, y0, x1, y1, view.tile_textures[path], self._tile_alpha(path))
+
+    def _tile_alpha(self, path: str) -> float:
+        """Fade-in opacity for a tile based on how long ago it arrived.
+
+        Tiles without a recorded arrival time (already present) draw fully
+        opaque; freshly loaded tiles ramp up over ``THUMB_FADE_MS``.
+        """
+        start = self._view._tile_load_times.get(path)
+        if start is None:
+            return 1.0
+        return fade_opacity((time.monotonic() - start) * 1000, THUMB_FADE_MS)
 
     # -- overlays -----------------------------------------------------
 

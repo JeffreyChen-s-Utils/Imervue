@@ -82,6 +82,8 @@ class GPUImageView(QOpenGLWidget):
         self.focused_tile_index = NO_FOCUS
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
+        # path -> monotonic arrival time, for the thumbnail fade-in animation.
+        self._tile_load_times: dict[str, float] = {}
         # Async PBO streaming uploader; allocated in initializeGL once a
         # GL context exists. Stays None (synchronous fallback) until then.
         self._tile_uploader = None
@@ -291,6 +293,8 @@ class GPUImageView(QOpenGLWidget):
         self._pixel_view = False
         # L — 放大鏡 loupe：跟著游標顯示局部放大，挑片/對焦確認用
         self._loupe_enabled = False
+        # W — 閱讀模式：fit 寬度 + 垂直捲動，捲到底自動接下一張（webtoon/長圖）
+        self._reading_mode = False
 
         # ===== 動畫播放 =====
         self._animation: object | None = None  # AnimationPlayer instance
@@ -584,8 +588,10 @@ class GPUImageView(QOpenGLWidget):
         fit_to_height(self)
 
     def _begin_image_fade_in(self) -> None:
-        """Fade a newly displayed deep-zoom image in (unless a slideshow, which
-        drives the same opacity channel, is running)."""
+        """Post-display hook: in reading mode re-fit the new image to width/top,
+        then fade it in (unless a slideshow already drives the opacity)."""
+        if self._reading_mode:
+            self._apply_reading_fit()
         from Imervue.gpu_image_view.view_animator import should_transition
         slideshow = getattr(self, "_slideshow", None)
         running = bool(slideshow and slideshow.running)
@@ -969,6 +975,7 @@ class GPUImageView(QOpenGLWidget):
         self.grid_offset_y = 0
         self.focused_tile_index = NO_FOCUS
         self._filmstrip_thumb_cache.clear()
+        self._tile_load_times.clear()
 
         self.update()
 
@@ -983,8 +990,37 @@ class GPUImageView(QOpenGLWidget):
             self.grid_offset_y += scroll_amount
             self.update()
             return
+        if self.deep_zoom and self._reading_mode:
+            self._reading_wheel(delta)
+            return
         if self.deep_zoom:
             self._input.handle_deep_zoom_wheel(event, delta)
+
+    def _reading_wheel(self, delta: float) -> None:
+        """Reading-mode wheel: scroll the page, auto-advancing at the edges."""
+        from Imervue.gpu_image_view.view_nav import reading_scroll
+        base = self.deep_zoom.levels[0]
+        content_h = base.shape[0] * self.zoom
+        new_off, advance = reading_scroll(
+            self.dz_offset_y, content_h, self.height(), delta)
+        self.dz_offset_y = new_off
+        if advance > 0:
+            from Imervue.gpu_image_view.actions.select import switch_to_next_image
+            switch_to_next_image(main_gui=self)
+        elif advance < 0:
+            from Imervue.gpu_image_view.actions.select import switch_to_previous_image
+            switch_to_previous_image(main_gui=self)
+        else:
+            self.update()
+
+    def _apply_reading_fit(self) -> None:
+        """Fit the current image to width and align it to the top for reading."""
+        if not self.deep_zoom:
+            return
+        self._fit_to_width()
+        self.dz_offset_y = 0.0
+        self._clamp_deep_zoom_pan()
+        self.update()
 
     def _zoom_step(self, zoom_in: bool) -> None:
         """Keyboard zoom in/out — called by the key-action dispatcher.

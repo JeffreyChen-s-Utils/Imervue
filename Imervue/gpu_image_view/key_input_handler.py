@@ -98,6 +98,8 @@ class KeyInputHandler:
             return True
         if key == Qt.Key.Key_L and no_ctrl_alt and self._toggle_loupe():
             return True
+        if key == Qt.Key.Key_W and no_ctrl_alt and self._toggle_reading_mode():
+            return True
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
         return key in _ARROW_KEYS and self._handle_arrow_keys(key, modifiers, shift)
 
@@ -237,6 +239,21 @@ class KeyInputHandler:
             view._toast("loupe_on", "Loupe on — magnifier follows cursor")
         else:
             view._toast("loupe_off", "Loupe off")
+        view.update()
+        return True
+
+    def _toggle_reading_mode(self) -> bool:
+        """Toggle fit-width reading mode; only acts in deep zoom."""
+        view = self._view
+        if not view.deep_zoom:
+            return False
+        view._reading_mode = not view._reading_mode
+        if view._reading_mode:
+            view._apply_reading_fit()
+            view._toast("reading_on", "Reading mode — scroll to read, auto-advance")
+        else:
+            view._fit_to_window()
+            view._toast("reading_off", "Reading mode off")
         view.update()
         return True
 

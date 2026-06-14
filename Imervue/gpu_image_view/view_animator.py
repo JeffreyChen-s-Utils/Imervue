@@ -17,6 +17,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 # Fade-in duration for a freshly displayed deep-zoom image.
 IMAGE_FADE_MS = 160
+# Fade-in duration for a thumbnail arriving on the tile wall.
+THUMB_FADE_MS = 180
 # Eased-zoom settle time and momentum-pan decay / stop threshold.
 ZOOM_EASE_MS = 120
 PAN_DECAY = 0.85
