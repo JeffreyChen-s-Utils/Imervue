@@ -204,7 +204,9 @@ def _format_exposure(value) -> str | None:
     seconds = _exif_to_float(value)
     if seconds is None or seconds <= 0:
         return None
-    return f"{seconds:g}s" if seconds >= 1 else f"1/{round(1 / seconds)}s"
+    if seconds >= 1:
+        return f"{seconds:g}s"
+    return f"1/{round(1 / seconds)}s"
 
 
 def _format_iso(value) -> str | None:
@@ -268,12 +270,12 @@ class OverlayPainter:
             and not view.tile_grid_mode
         )
 
+        loupe_active = (zoom_active and view._loupe_enabled
+                        and view._hover_image_xy is not None)
+        band_active = bool(view._zoom_band_active and view._zoom_band_start
+                           and view._zoom_band_end)
         layer_table: list[tuple[bool, object]] = [
-            (
-                view.tile_grid_mode and bool(view.tile_rects),
-                [self.draw_tile_labels, self.draw_tile_badges,
-                 self.draw_tile_placeholders],
-            ),
+            (view.tile_grid_mode and bool(view.tile_rects), self.draw_tile_overlays),
             # Low-res preview sits in the background, below the filmstrip and
             # chrome; the "Loading…" pill is added last so it stays on top.
             (loading_active, self.draw_loading_preview),
@@ -284,21 +286,17 @@ class OverlayPainter:
             (zoom_active and view._show_osd, self.draw_osd),
             (view._show_debug_hud, self.draw_debug_hud),
             (pixel_active, self.draw_pixel_view),
-            (zoom_active and view._loupe_enabled
-             and view._hover_image_xy is not None, self.draw_loupe),
-            (bool(view._zoom_band_active and view._zoom_band_start
-                  and view._zoom_band_end), self.draw_zoom_band),
+            (loupe_active, self.draw_loupe),
+            (band_active, self.draw_zoom_band),
             (loading_active, self.draw_loading_pill),
         ]
-        candidates: list = []
-        for active, painter in layer_table:
-            if not active:
-                continue
-            if isinstance(painter, list):
-                candidates += painter
-            else:
-                candidates.append(painter)
-        return candidates
+        return [painter for active, painter in layer_table if active]
+
+    def draw_tile_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Draw the tile-wall QPainter overlays (labels, badges, placeholders)."""
+        self.draw_tile_labels(painter)
+        self.draw_tile_badges(painter)
+        self.draw_tile_placeholders(painter)
 
     def paint(self, painter: QPainter) -> None:  # pragma: no cover - GL compositing
         layers = self.collect_layers()
@@ -361,7 +359,7 @@ class OverlayPainter:
             color_name = color_store.get(path)
             _paint_color_strip(painter, x0, y0, y1, color_name)
             _paint_favorite_badge(painter, x0, y0, path in favs, color_name)
-            _paint_bookmark_badge(painter, x0, y0, x1, path)
+            _paint_bookmark_badge(painter, y0, x1, path)
             _paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
 
     def draw_tile_placeholders(self, painter: QPainter):  # pragma: no cover - GL paint
@@ -812,7 +810,7 @@ def _paint_favorite_badge(painter, x0, y0, is_fav: bool,  # pragma: no cover - G
     painter.drawText(int(x0 + offset + 2), int(y0 + 18), "♥")
 
 
-def _paint_bookmark_badge(painter, x0, y0, x1, path: str) -> None:  # pragma: no cover - GL paint
+def _paint_bookmark_badge(painter, y0, x1, path: str) -> None:  # pragma: no cover - GL paint
     from Imervue.user_settings.bookmark import is_bookmarked
     if not is_bookmarked(path):
         return

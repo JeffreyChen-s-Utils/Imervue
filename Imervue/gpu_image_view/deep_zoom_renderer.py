@@ -166,7 +166,6 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
 
         base = view.deep_zoom.levels[0]
         img_w, img_h = base.shape[1], base.shape[0]
-        mm_x, mm_y, mm_w, mm_h = rect
 
         # 確保 ortho 回到畫面座標
         if not view.renderer.use_shaders:

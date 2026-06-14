@@ -169,10 +169,10 @@ class PBOTextureUploader:
         return idx
 
     def stream_upload(
-        self, tex: int, rgba, width: int, height: int,
+        self, _tex: int, rgba, width: int, height: int,
     ) -> bool:   # pragma: no cover - needs GL context
-        """Stream *rgba* into the already-bound texture *tex* via the
-        next PBO in the ring.
+        """Stream *rgba* into the caller's already-bound texture via the next
+        PBO in the ring.
 
         Returns ``True`` when the PBO upload completed, ``False`` to
         let the caller fall back to the synchronous path. The bound

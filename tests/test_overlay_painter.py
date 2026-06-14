@@ -301,9 +301,7 @@ def test_collect_layers_zoom_band_active_while_framing():
 def test_collect_layers_tile_grid_layers_active():
     overlay = OverlayPainter(_overlay_view(
         tile_grid_mode=True, tile_rects=[(0, 0, 1, 1, "a.png")]))
-    layers = overlay.collect_layers()
-    assert overlay.draw_tile_labels in layers
-    assert overlay.draw_tile_placeholders in layers
+    assert overlay.draw_tile_overlays in overlay.collect_layers()
 
 
 # ---------------------------------------------------------------
