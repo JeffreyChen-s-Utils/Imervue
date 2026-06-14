@@ -204,7 +204,7 @@ def _format_exposure(value) -> str | None:
     seconds = _exif_to_float(value)
     if seconds is None or seconds <= 0:
         return None
-    if seconds >= 1:
+    if seconds >= 1:  # NOSONAR S2583 - FP: _exif_to_float can return (0, 1), e.g. 1/200s
         return f"{seconds:g}s"
     return f"1/{round(1 / seconds)}s"
 
