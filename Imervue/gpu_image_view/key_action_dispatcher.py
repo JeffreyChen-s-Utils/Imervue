@@ -246,11 +246,15 @@ class KeyActionDispatcher:
         view.undo_manager.push(RotateCommand(view, clockwise=clockwise))
 
     def _reset_view(self) -> None:
+        """Home key — back to the "whole image visible" baseline.
+
+        Deep zoom fits-to-window (NOT 100 % top-left: the reset state the
+        user expects is the same centred fit shown when an image opens);
+        the tile grid scrolls back to its origin.
+        """
         view = self.view
         if view.deep_zoom:
-            view.zoom = 1.0
-            view.dz_offset_x = 0
-            view.dz_offset_y = 0
+            view._fit_to_window()
         elif view.tile_grid_mode:
             view.grid_offset_x = 0
             view.grid_offset_y = 0

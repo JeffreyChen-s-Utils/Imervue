@@ -26,6 +26,7 @@ from OpenGL.GL import (
     glTranslatef,
 )
 
+from Imervue.gpu_image_view.fit_view import canvas_size
 from Imervue.gpu_image_view.minimap import minimap_geometry
 from Imervue.gpu_image_view.tile_grid_renderer import upload_minimap_texture
 
@@ -33,6 +34,26 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 MINIMAP_OPACITY = 0.85
+
+
+def visible_tile_range(
+    canvas_w: float, canvas_h: float,
+    scale_x: float, scale_y: float,
+    off_x: float, off_y: float, tile_size: int,
+) -> tuple[int, int, int, int]:
+    """Tile-index span ``(tx0, tx1, ty0, ty1)`` overlapping the viewport.
+
+    ``canvas_w`` / ``canvas_h`` MUST be the same size the fit math centred
+    against (see :func:`fit_view.canvas_size`); reading ``view.width()`` here
+    while the fit used the resizeGL size makes the visible window disagree with
+    where the image was placed. Pure so the index math is unit-testable.
+    """
+    left = -off_x / scale_x
+    top = -off_y / scale_y
+    right = left + canvas_w / scale_x
+    bottom = top + canvas_h / scale_y
+    return (int(left // tile_size), int(right // tile_size),
+            int(top // tile_size), int(bottom // tile_size))
 
 
 class DeepZoomRenderer:  # pragma: no cover - GL drawing path
@@ -51,27 +72,29 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
             glEnable(GL_BLEND)
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+        canvas = canvas_size(view)
         level, _ = view.deep_zoom.get_level(view.zoom)
         level_image = view.deep_zoom.levels[level]
         base_image = view.deep_zoom.levels[0]
         scale_x = view.zoom * (base_image.shape[1] / level_image.shape[1])
         scale_y = view.zoom * (base_image.shape[0] / level_image.shape[0])
 
-        self._apply_transform(scale_x, scale_y)
-        self._draw_visible_tiles(level, level_image, scale_x, scale_y)
+        self._apply_transform(scale_x, scale_y, canvas)
+        self._draw_visible_tiles(level, level_image, scale_x, scale_y, canvas)
 
         # 恢復 ortho MVP for other rendering
         if view.renderer.use_shaders:
-            view.renderer.set_ortho(view.width(), view.height())
+            view.renderer.set_ortho(*canvas)
 
-    def _apply_transform(self, scale_x: float, scale_y: float) -> None:
+    def _apply_transform(self, scale_x: float, scale_y: float,
+                         canvas: tuple[int, int]) -> None:
         """Push the scale+translate matrix mapping deep-zoom tile coords
         into widget pixels — shader path or fixed-function."""
         view = self._view
         if view.renderer.use_shaders:
             import numpy as _np
             from Imervue.gpu_image_view.gl_renderer import _ortho
-            base_ortho = _ortho(0, view.width(), view.height(), 0, -1, 1)
+            base_ortho = _ortho(0, canvas[0], canvas[1], 0, -1, 1)
             trans = _np.eye(4, dtype=_np.float32)
             trans[3, 0] = view.dz_offset_x / scale_x
             trans[3, 1] = view.dz_offset_y / scale_y
@@ -85,22 +108,18 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         glTranslatef(view.dz_offset_x / scale_x, view.dz_offset_y / scale_y, 0)
 
     def _draw_visible_tiles(self, level: int, level_image,
-                            scale_x: float, scale_y: float) -> None:
+                            scale_x: float, scale_y: float,
+                            canvas: tuple[int, int]) -> None:
         """Walk the deep-zoom level and draw every tile that overlaps the
         current viewport, fetching textures lazily."""
         view = self._view
         tile_size = view.deep_zoom_tile_size
         h, w = level_image.shape[:2]
 
-        left = -view.dz_offset_x / scale_x
-        top = -view.dz_offset_y / scale_y
-        right = left + view.width() / scale_x
-        bottom = top + view.height() / scale_y
-
-        tx0 = int(left // tile_size)
-        tx1 = int(right // tile_size)
-        ty0 = int(top // tile_size)
-        ty1 = int(bottom // tile_size)
+        tx0, tx1, ty0, ty1 = visible_tile_range(
+            canvas[0], canvas[1], scale_x, scale_y,
+            view.dz_offset_x, view.dz_offset_y, tile_size,
+        )
 
         for tx in range(tx0, tx1 + 1):
             for ty in range(ty0, ty1 + 1):
@@ -134,8 +153,9 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         if not view.deep_zoom:
             return None
         base = view.deep_zoom.levels[0]
+        canvas_w, canvas_h = canvas_size(view)
         return minimap_geometry(
-            view.width(), view.height(), base.shape[1], base.shape[0],
+            canvas_w, canvas_h, base.shape[1], base.shape[0],
         )
 
     def paint_minimap(self) -> None:
@@ -183,11 +203,12 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
                            img_w: int, img_h: int) -> None:
         view = self._view
         mm_x, mm_y, mm_w, mm_h = rect
+        canvas_w, canvas_h = canvas_size(view)
         # 畫面可視區域在原圖座標
         vp_left = -view.dz_offset_x / view.zoom
         vp_top = -view.dz_offset_y / view.zoom
-        vp_right = vp_left + view.width() / view.zoom
-        vp_bottom = vp_top + view.height() / view.zoom
+        vp_right = vp_left + canvas_w / view.zoom
+        vp_bottom = vp_top + canvas_h / view.zoom
 
         sx = mm_w / img_w
         sy = mm_h / img_h

@@ -16,8 +16,15 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 _MAX_FIT_ZOOM = 1.0
 
 
-def _canvas_size(view: GPUImageView) -> tuple[int, int]:
-    """Return the logical canvas size, preferring the last resizeGL size."""
+def canvas_size(view: GPUImageView) -> tuple[int, int]:
+    """Return the logical canvas size, preferring the last resizeGL size.
+
+    Single source of truth for "how big is the drawing surface". The
+    deep-zoom renderer reads the SAME helper so the centring offsets computed
+    here are mapped to screen against the identical size — otherwise the image
+    lands off-centre during the brief frames where ``view.width()`` lags the
+    real layout (the "Home key shifts x/y" bug).
+    """
     if view._last_resize_size != (0, 0):
         return view._last_resize_size
     return view.width() or 1, view.height() or 1
@@ -31,7 +38,7 @@ def _base_dimensions(view: GPUImageView) -> tuple[int, int]:
 def fit_zoom(view: GPUImageView) -> float:
     """Zoom level that fits the whole image in the canvas (capped at 1.0)."""
     img_w, img_h = _base_dimensions(view)
-    w, h = _canvas_size(view)
+    w, h = canvas_size(view)
     return min(w / img_w, h / img_h, _MAX_FIT_ZOOM)
 
 
@@ -40,7 +47,7 @@ def fit_to_window(view: GPUImageView) -> None:
     if not view.deep_zoom:
         return
     img_w, img_h = _base_dimensions(view)
-    w, h = _canvas_size(view)
+    w, h = canvas_size(view)
     view.zoom = fit_zoom(view)
     view.dz_offset_x = (w - img_w * view.zoom) / 2
     view.dz_offset_y = (h - img_h * view.zoom) / 2
@@ -55,7 +62,7 @@ def fit_to_width(view: GPUImageView) -> None:
     if not view.deep_zoom:
         return
     img_w, img_h = _base_dimensions(view)
-    w, h = view.width() or 1, view.height() or 1
+    w, h = canvas_size(view)
     view.zoom = w / img_w
     view.dz_offset_x = 0
     view.dz_offset_y = (h - img_h * view.zoom) / 2
@@ -67,7 +74,7 @@ def fit_to_height(view: GPUImageView) -> None:
     if not view.deep_zoom:
         return
     img_w, img_h = _base_dimensions(view)
-    w, h = view.width() or 1, view.height() or 1
+    w, h = canvas_size(view)
     view.zoom = h / img_h
     view.dz_offset_x = (w - img_w * view.zoom) / 2
     view.dz_offset_y = 0

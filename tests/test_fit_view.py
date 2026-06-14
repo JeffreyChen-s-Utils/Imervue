@@ -94,3 +94,45 @@ def test_fit_to_width_no_deep_zoom_is_noop():
     view = _FakeView(0, 0, (100, 100), deep=False)
     fit_view.fit_to_width(view)
     assert view.updated is False
+
+
+def test_canvas_size_prefers_last_resize():
+    view = _FakeView(100, 100, (10, 10), last_resize=(800, 600))
+    assert fit_view.canvas_size(view) == (800, 600)
+
+
+def test_canvas_size_falls_back_to_widget_size():
+    view = _FakeView(100, 100, (640, 480))
+    assert fit_view.canvas_size(view) == (640, 480)
+
+
+def test_canvas_size_clamps_zero_widget_size():
+    # No resizeGL yet AND a degenerate 0x0 widget → never returns 0
+    # (the fit math divides by it).
+    view = _FakeView(100, 100, (0, 0))
+    assert fit_view.canvas_size(view) == (1, 1)
+
+
+def test_fit_to_window_centres_on_resize_size_not_lagging_width():
+    # Regression: the "Home key shifts x/y" bug. width()/height() lag the
+    # real layout, so centring must use the authoritative resizeGL size or
+    # the offsets disagree with where the renderer maps the image.
+    view = _FakeView(500, 500, (10, 10), last_resize=(1000, 1000))
+    fit_view.fit_to_window(view)
+    assert view.zoom == 1.0
+    assert view.dz_offset_x == 250  # (1000 - 500) / 2, NOT (10 - 500) / 2
+    assert view.dz_offset_y == 250
+
+
+def test_fit_to_width_prefers_resize_size():
+    view = _FakeView(1000, 500, (10, 10), last_resize=(500, 500))
+    fit_view.fit_to_width(view)
+    assert view.zoom == pytest.approx(0.5)
+    assert view.dz_offset_y == pytest.approx(125)  # centred against 500, not 10
+
+
+def test_fit_to_height_prefers_resize_size():
+    view = _FakeView(500, 1000, (10, 10), last_resize=(500, 500))
+    fit_view.fit_to_height(view)
+    assert view.zoom == pytest.approx(0.5)
+    assert view.dz_offset_x == pytest.approx(125)  # centred against 500, not 10
