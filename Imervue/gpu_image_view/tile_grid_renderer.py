@@ -38,6 +38,7 @@ from OpenGL.GL import (
 )
 
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
+from Imervue.gpu_image_view.tile_focus import focus_tile_rect
 from Imervue.gpu_image_view.tile_layout import tile_grid_layout
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -49,6 +50,10 @@ _DEFAULT_TILE_BASE = 256
 _MARKER_CIRCLE_RADIUS = 9
 _MARKER_CIRCLE_SEGMENTS = 32
 _TWO_PI = 2.0 * 3.1415926
+# Keyboard-focus ring — warm amber so it reads distinctly from the blue
+# selection marker even when the focused tile is also selected.
+_FOCUS_COLOR = (1.0, 0.78, 0.16, 1.0)
+_FOCUS_BORDER_WIDTH = 3
 
 
 class TileGridRenderer:  # pragma: no cover - GL drawing path
@@ -153,6 +158,31 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         glColor4f(1, 1, 1, 1)
         glLineWidth(1)
 
+    def _draw_focus_marker(self, cols: int, cell: float,
+                           scaled_tile: float, vw: int, vh: int) -> None:
+        view = self._view
+        idx = view.focused_tile_index
+        if not 0 <= idx < len(view.model.images):
+            return
+        rect = focus_tile_rect(idx, cols, cell, scaled_tile,
+                               view.grid_offset_x, view.grid_offset_y)
+        x0, y0, x1, y1 = rect
+        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+            return
+        glDisable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glLineWidth(_FOCUS_BORDER_WIDTH)
+        glColor4f(*_FOCUS_COLOR)
+        glBegin(GL_LINE_LOOP)
+        for (vx, vy) in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+            glVertex2f(vx, vy)
+        glEnd()
+        glDisable(GL_BLEND)
+        glEnable(GL_TEXTURE_2D)
+        glColor4f(1, 1, 1, 1)
+        glLineWidth(1)
+
     def _draw_drag_rect(self) -> None:
         view = self._view
         if not (view._drag_selecting and view._drag_start_pos and view._drag_end_pos):
@@ -212,6 +242,7 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
 
         self._draw_grid_borders()
         self._draw_selection_overlay()
+        self._draw_focus_marker(cols, cell, scaled_tile, vw, vh)
         self._draw_drag_rect()
 
 

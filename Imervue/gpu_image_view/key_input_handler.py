@@ -23,6 +23,16 @@ from Imervue.gpu_image_view.actions.select import (
     switch_to_previous_image,
 )
 from Imervue.gpu_image_view.actions.slideshow import stop_slideshow
+from Imervue.gpu_image_view.tile_focus import (
+    DOWN,
+    LEFT,
+    NO_FOCUS,
+    RIGHT,
+    UP,
+    next_focus_index,
+    scroll_offset_to_reveal,
+)
+from Imervue.gpu_image_view.tile_layout import tile_grid_layout
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -36,7 +46,13 @@ COLOR_LABEL_KEYS = {
     Qt.Key.Key_F5: "purple",
 }
 _ARROW_KEYS = (Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right)
-_DEFAULT_GRID_STEP = 1024
+_ARROW_DIRECTIONS = {
+    Qt.Key.Key_Left: LEFT,
+    Qt.Key.Key_Right: RIGHT,
+    Qt.Key.Key_Up: UP,
+    Qt.Key.Key_Down: DOWN,
+}
+_ENTER_KEYS = (Qt.Key.Key_Return, Qt.Key.Key_Enter)
 
 
 class KeyInputHandler:
@@ -77,6 +93,8 @@ class KeyInputHandler:
             self._view._apply_color_label(COLOR_LABEL_KEYS[key])
             return True
         if key == Qt.Key.Key_Escape and self._handle_escape():
+            return True
+        if key in _ENTER_KEYS and self._activate_focused_tile():
             return True
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
         return key in _ARROW_KEYS and self._handle_arrow_keys(key, modifiers, shift)
@@ -122,6 +140,8 @@ class KeyInputHandler:
             view.load_tile_grid_async(image_paths=view.model.images)
         else:
             self._restore_grid_state()
+        # 回到縮圖牆時，把游標標在剛才檢視的那張，讓使用者保留瀏覽位置
+        self._focus_current_if_valid()
         # 若使用者偏好清單瀏覽，Esc 後切回 list 而非 tile grid
         if hasattr(view.main_window, "after_deep_zoom_escape"):
             view.main_window.after_deep_zoom_escape()
@@ -144,7 +164,7 @@ class KeyInputHandler:
         if ctrl and shift and self._handle_folder_jump(key):
             return True
         if view.tile_grid_mode:
-            self._scroll_grid_by_arrow(key, shift)
+            self._move_grid_focus(key)
             return True
         if view.deep_zoom:
             return self._switch_image_by_arrow(key)
@@ -161,22 +181,57 @@ class KeyInputHandler:
             return True
         return False
 
-    def _scroll_grid_by_arrow(self, key, shift) -> None:
-        """Translate arrow keys into tile-grid pan deltas."""
+    def _grid_layout(self) -> tuple[float, float, float, int]:
+        """Current thumbnail-wall layout as ``(base_tile, draw_scale, cell, cols)``."""
         view = self._view
-        dpr = view.devicePixelRatio() or 1.0
-        step = (view.thumbnail_size or _DEFAULT_GRID_STEP) / dpr
-        move_step = int(step / 2) if shift else int(step)
-        deltas = {
-            Qt.Key.Key_Up: (0, move_step),
-            Qt.Key.Key_Down: (0, -move_step),
-            Qt.Key.Key_Left: (move_step, 0),
-            Qt.Key.Key_Right: (-move_step, 0),
-        }
-        dx, dy = deltas.get(key, (0, 0))
-        view.grid_offset_x += dx
-        view.grid_offset_y += dy
+        base_tile = view._tile_renderer.base_size()
+        draw_scale, cell, cols = tile_grid_layout(
+            view.width(), base_tile, view.tile_scale,
+            view.tile_padding, view.devicePixelRatio(),
+        )
+        return base_tile, draw_scale, cell, cols
+
+    def _move_grid_focus(self, key) -> None:
+        """Arrow keys move the keyboard focus cursor across the thumbnail wall,
+        scrolling the wall so the focused tile stays fully visible."""
+        view = self._view
+        count = len(view.model.images)
+        if count == 0:
+            return
+        base_tile, draw_scale, cell, cols = self._grid_layout()
+        view.focused_tile_index = next_focus_index(
+            view.focused_tile_index, _ARROW_DIRECTIONS[key], cols, count,
+        )
+        view.grid_offset_y = scroll_offset_to_reveal(
+            view.focused_tile_index, cols, cell, base_tile * draw_scale,
+            view.grid_offset_y, view.height(),
+        )
         view.update()
+
+    def _activate_focused_tile(self) -> bool:
+        """Enter on the thumbnail wall opens the focused tile (or toggles its
+        selection while in selection mode). Returns True when a tile was acted on."""
+        view = self._view
+        if not view.tile_grid_mode:
+            return False
+        images = view.model.images
+        idx = view.focused_tile_index
+        if not 0 <= idx < len(images):
+            return False
+        path = images[idx]
+        if view.tile_selection_mode:
+            view._input.toggle_tile_selection(path)
+        else:
+            view._input.enter_deep_zoom(path)
+        return True
+
+    def _focus_current_if_valid(self) -> None:
+        """Highlight the tile we were just viewing after leaving deep zoom."""
+        view = self._view
+        count = len(view.model.images)
+        view.focused_tile_index = (
+            view.current_index if 0 <= view.current_index < count else NO_FOCUS
+        )
 
     def _switch_image_by_arrow(self, key) -> bool:
         """Left / Right → previous / next image in deep zoom. True on hit."""

@@ -18,8 +18,24 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPainterPath, QPen
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QImage,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+)
 
+from Imervue.gpu_image_view.filmstrip import (
+    BAND_VPAD,
+    ITEM_HEIGHT,
+    ITEM_WIDTH,
+    compute_filmstrip_items,
+    filmstrip_band,
+    fit_rect_centered,
+)
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -32,6 +48,30 @@ _BYTES_PER_MB = 1024 * 1024
 _BYTES_PER_KB = 1024
 _PIXEL_VIEW_ZOOM = 4.0
 _PIXEL_GRID_MAX_CELLS = 40000
+# Filmstrip band background + current-item highlight (amber, matching the
+# tile-wall keyboard focus ring).
+_FILMSTRIP_BAND_RGBA = (0, 0, 0, 150)
+_FILMSTRIP_PLACEHOLDER_RGBA = (40, 40, 40, 200)
+_FILMSTRIP_HIGHLIGHT_RGBA = (255, 199, 41, 255)
+_FILMSTRIP_BORDER_WIDTH = 3
+_LOADING_PILL_RGBA = (0, 0, 0, 170)
+# Rubber-band zoom selection rectangle (deep zoom).
+_ZOOM_BAND_FILL_RGBA = (70, 140, 255, 40)
+_ZOOM_BAND_BORDER_RGBA = (70, 140, 255, 220)
+_ZOOM_BAND_BORDER_WIDTH = 2
+
+
+def _rgba_to_pixmap(arr: np.ndarray) -> QPixmap:
+    """Convert an H×W×4 uint8 RGBA array into a detached :class:`QPixmap`.
+
+    ``.copy()`` detaches the ``QImage`` from the numpy buffer before the array
+    can be freed (the established project idiom for numpy → Qt image handoff).
+    """
+    contiguous = np.ascontiguousarray(arr)
+    height, width = contiguous.shape[:2]
+    qimg = QImage(contiguous.data, width, height, width * 4,
+                  QImage.Format.Format_RGBA8888).copy()
+    return QPixmap.fromImage(qimg)
 
 
 def human_file_size(path: str) -> str:
@@ -127,6 +167,14 @@ class OverlayPainter:
         zoom_active = bool((not view.tile_grid_mode) and view.deep_zoom)
         anim_active = bool(view._animation and view._animation.is_animated)
         pixel_active = zoom_active and view._pixel_view and view.zoom >= _PIXEL_VIEW_ZOOM
+        filmstrip_active = bool(
+            (not view.tile_grid_mode) and view._filmstrip_enabled
+            and len(view.model.images) > 1
+        )
+        loading_active = bool(
+            view._deep_zoom_loading and view.deep_zoom is None
+            and not view.tile_grid_mode
+        )
 
         layer_table: list[tuple[bool, object]] = [
             (
@@ -134,12 +182,19 @@ class OverlayPainter:
                 [self.draw_tile_labels, self.draw_tile_badges,
                  self.draw_tile_placeholders],
             ),
+            # Low-res preview sits in the background, below the filmstrip and
+            # chrome; the "Loading…" pill is added last so it stays on top.
+            (loading_active, self.draw_loading_preview),
+            (filmstrip_active, self.draw_filmstrip),
             (zoom_active, self.draw_zoom_indicator),
             (zoom_active and view._show_histogram, self.draw_histogram),
             (anim_active, self.draw_anim_indicator),
             (zoom_active and view._show_osd, self.draw_osd),
             (view._show_debug_hud, self.draw_debug_hud),
             (pixel_active, self.draw_pixel_view),
+            (bool(view._zoom_band_active and view._zoom_band_start
+                  and view._zoom_band_end), self.draw_zoom_band),
+            (loading_active, self.draw_loading_pill),
         ]
         candidates: list = []
         for active, painter in layer_table:
@@ -484,6 +539,101 @@ class OverlayPainter:
         for i, line in enumerate(lines):
             painter.drawText(hx + pad_x, hy + pad_y + fm.ascent() + i * line_h, line)
         painter.fillRect(hx + box_w - 20, hy + pad_y, 14, 14, QColor(r, g, b))
+
+    # ------------------------------------------------------------------
+    # Filmstrip + loading feedback
+    # ------------------------------------------------------------------
+    def draw_filmstrip(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Bottom-of-screen strip of neighbour thumbnails (deep-zoom only)."""
+        view = self.view
+        images = view.model.images
+        strip_width = view._filmstrip_strip_width()
+        items = compute_filmstrip_items(
+            enabled=view._filmstrip_enabled, in_grid_mode=view.tile_grid_mode,
+            current_index=view.current_index, count=len(images),
+            strip_width=strip_width,
+        )
+        if not items:
+            return
+        y_top, band_h = filmstrip_band(view.height(), ITEM_HEIGHT, BAND_VPAD)
+        painter.fillRect(0, int(y_top), int(strip_width), int(band_h),
+                         QColor(*_FILMSTRIP_BAND_RGBA))
+        for index, x_left in items:
+            self._draw_filmstrip_item(painter, images[index], x_left,
+                                      y_top + BAND_VPAD, index == view.current_index)
+
+    def _draw_filmstrip_item(self, painter: QPainter, path: str,  # pragma: no cover
+                             x_left: float, item_y: float, is_current: bool) -> None:
+        pixmap = self._filmstrip_pixmap(path)
+        if pixmap is not None:
+            fx, fy, fw, fh = fit_rect_centered(
+                pixmap.width(), pixmap.height(), x_left, item_y,
+                ITEM_WIDTH, ITEM_HEIGHT,
+            )
+            painter.drawPixmap(int(fx), int(fy), int(fw), int(fh), pixmap)
+        else:
+            painter.fillRect(int(x_left), int(item_y), ITEM_WIDTH, ITEM_HEIGHT,
+                             QColor(*_FILMSTRIP_PLACEHOLDER_RGBA))
+        if is_current:
+            pen = QPen(QColor(*_FILMSTRIP_HIGHLIGHT_RGBA))
+            pen.setWidth(_FILMSTRIP_BORDER_WIDTH)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(int(x_left), int(item_y), ITEM_WIDTH, ITEM_HEIGHT)
+
+    def _filmstrip_pixmap(self, path: str):  # pragma: no cover - GL paint
+        """Cached QPixmap for *path*, built lazily from the tile thumbnail cache."""
+        cache = self.view._filmstrip_thumb_cache
+        if path in cache:
+            return cache[path]
+        arr = self.view.tile_cache.get(path)
+        if arr is None:
+            return None
+        pixmap = _rgba_to_pixmap(arr)
+        cache[path] = pixmap
+        return pixmap
+
+    def draw_zoom_band(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Draw the rubber-band rectangle while the user frames a zoom region."""
+        view = self.view
+        start, end = view._zoom_band_start, view._zoom_band_end
+        left, top = min(start.x(), end.x()), min(start.y(), end.y())
+        width, height = abs(end.x() - start.x()), abs(end.y() - start.y())
+        painter.fillRect(int(left), int(top), int(width), int(height),
+                         QColor(*_ZOOM_BAND_FILL_RGBA))
+        pen = QPen(QColor(*_ZOOM_BAND_BORDER_RGBA))
+        pen.setWidth(_ZOOM_BAND_BORDER_WIDTH)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(int(left), int(top), int(width), int(height))
+
+    def draw_loading_preview(self, painter: QPainter) -> None:  # pragma: no cover
+        """Background low-res preview shown while the full image streams in."""
+        view = self.view
+        pixmap = self._filmstrip_pixmap(view._deep_zoom_loading)
+        if pixmap is None:
+            return
+        fx, fy, fw, fh = fit_rect_centered(
+            pixmap.width(), pixmap.height(), 0, 0, view.width(), view.height(),
+        )
+        painter.drawPixmap(int(fx), int(fy), int(fw), int(fh), pixmap)
+
+    def draw_loading_pill(self, painter: QPainter) -> None:  # pragma: no cover
+        view = self.view
+        lang = view.main_window.language_wrapper.language_word_dict
+        text = lang.get("status_loading_image", "Loading image...")
+        font = QFont(_FONT_SEGOE_UI)
+        font.setPixelSize(14)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+        pad_x, pad_y = 16, 8
+        box_w = fm.horizontalAdvance(text) + pad_x * 2
+        box_h = fm.height() + pad_y * 2
+        x = (view.width() - box_w) // 2
+        y = (view.height() - box_h) // 2
+        painter.fillRect(x, y, box_w, box_h, QColor(*_LOADING_PILL_RGBA))
+        painter.setPen(QColor(235, 235, 235))
+        painter.drawText(x + pad_x, y + pad_y + fm.ascent(), text)
 
 
 def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:  # pragma: no cover - GL paint

@@ -6,9 +6,11 @@ Python (no Qt, no GL) so they run on headless CI without a context.
 """
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 from Imervue.gpu_image_view.overlay_painter import (
+    _rgba_to_pixmap,
     debug_hud_lines,
     favorites_set,
     human_file_size,
@@ -165,3 +167,26 @@ def test_visible_pixel_bounds_with_pan_offset():
     assert (x0, y0) == (10, 5)
     assert x1 == pytest.approx(31, abs=1)
     assert y1 == pytest.approx(26, abs=1)
+
+
+# ---------------------------------------------------------------
+# _rgba_to_pixmap (filmstrip / loading-preview thumbnail handoff)
+# ---------------------------------------------------------------
+def test_rgba_to_pixmap_preserves_dimensions(qapp):
+    arr = np.zeros((12, 20, 4), dtype=np.uint8)
+    arr[..., 0] = 255  # opaque red
+    arr[..., 3] = 255
+    pixmap = _rgba_to_pixmap(arr)
+    assert not pixmap.isNull()
+    assert pixmap.width() == 20
+    assert pixmap.height() == 12
+
+
+def test_rgba_to_pixmap_accepts_non_contiguous(qapp):
+    # A sliced (non-contiguous) view must still convert without raising.
+    base = np.zeros((10, 10, 4), dtype=np.uint8)
+    base[..., 3] = 255
+    view = base[::2, ::2]
+    pixmap = _rgba_to_pixmap(view)
+    assert pixmap.width() == 5
+    assert pixmap.height() == 5

@@ -29,6 +29,7 @@ from Imervue.gpu_image_view.view_nav import (
     stepped_zoom,
     toggle_zoom_target,
     zoom_about_point,
+    zoom_to_region,
 )
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -62,12 +63,15 @@ class InputController:
         if new_zoom == old_zoom:
             self.notify_zoom_limit_once(new_zoom)
             return
-        view.zoom = new_zoom
         pos = event.position()
         rect = view._current_minimap_rect()
         if rect is not None and point_in_rect(pos.x(), pos.y(), rect):
+            view.zoom = new_zoom
             self._recenter_on_minimap(pos, rect, new_zoom)
+        elif view._smooth_nav_enabled:
+            view._zoom_ease.animate_to(new_zoom, pos.x(), pos.y())
         else:
+            view.zoom = new_zoom
             self.anchor_zoom_about(pos, old_zoom, new_zoom)
 
     def zoom_step(self, zoom_in: bool) -> None:
@@ -82,9 +86,12 @@ class InputController:
         if new_zoom == old_zoom:
             self.notify_zoom_limit_once(new_zoom)
             return
-        view.zoom = new_zoom
         center = QPointF(view.width() / 2, view.height() / 2)
-        self.anchor_zoom_about(center, old_zoom, new_zoom)
+        if view._smooth_nav_enabled:
+            view._zoom_ease.animate_to(new_zoom, center.x(), center.y())
+        else:
+            view.zoom = new_zoom
+            self.anchor_zoom_about(center, old_zoom, new_zoom)
 
     def anchor_zoom_about(self, pos, old_zoom: float, new_zoom: float) -> None:
         """Re-anchor the deep-zoom offset so the image point under *pos* stays
@@ -92,6 +99,7 @@ class InputController:
         view = self._view
         view.dz_offset_x = zoom_about_point(view.dz_offset_x, pos.x(), old_zoom, new_zoom)
         view.dz_offset_y = zoom_about_point(view.dz_offset_y, pos.y(), old_zoom, new_zoom)
+        view._clamp_deep_zoom_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -157,6 +165,7 @@ class InputController:
             pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
             view.width(), view.height(), zoom,
         )
+        view._clamp_deep_zoom_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -183,8 +192,16 @@ class InputController:
         elif view.deep_zoom:
             view.dz_offset_x += delta.x()
             view.dz_offset_y += delta.y()
+            view._clamp_deep_zoom_pan()
             view._user_locked_view = True
+            view._last_pan_velocity = (delta.x(), delta.y())
         view.update()
+
+    def start_pan_momentum(self) -> None:
+        """Fling the deep-zoom image after a middle-drag release."""
+        view = self._view
+        if view._smooth_nav_enabled and view.deep_zoom:
+            view._pan_momentum.start(*view._last_pan_velocity)
 
     def handle_left_drag_select(self, event) -> None:
         from PySide6.QtCore import Qt
@@ -268,6 +285,60 @@ class InputController:
             view.selected_tiles.add(path)
         view.update()
 
+    # -- rubber-band zoom (deep zoom) ---------------------------------
+
+    def begin_zoom_band(self, pos) -> None:
+        """Start a left-drag rubber-band that zooms into the framed region."""
+        view = self._view
+        view._zoom_band_active = True
+        view._zoom_band_start = pos
+        view._zoom_band_end = pos
+
+    def update_zoom_band(self, event) -> None:
+        from PySide6.QtCore import Qt
+        view = self._view
+        if not (view._zoom_band_active
+                and event.buttons() & Qt.MouseButton.LeftButton):
+            return
+        view._zoom_band_end = event.position()
+        view.update()
+
+    def finish_zoom_band(self, pos) -> bool:
+        """Apply the rubber-band zoom on release; a too-small box is ignored."""
+        view = self._view
+        if not view._zoom_band_active:
+            return False
+        view._zoom_band_active = False
+        start = view._zoom_band_start
+        view._zoom_band_start = None
+        view._zoom_band_end = None
+        if start is not None and view.deep_zoom and self._band_big_enough(start, pos):
+            self._apply_zoom_band(start, pos)
+        else:
+            view.update()
+        return True
+
+    @staticmethod
+    def _band_big_enough(start, end) -> bool:
+        threshold = QApplication.startDragDistance()
+        return (abs(end.x() - start.x()) > threshold
+                and abs(end.y() - start.y()) > threshold)
+
+    def _apply_zoom_band(self, start, end) -> None:
+        view = self._view
+        new_zoom, off_x, off_y = zoom_to_region(
+            (start.x(), start.y(), end.x(), end.y()),
+            view.zoom, (view.dz_offset_x, view.dz_offset_y),
+            (view.width(), view.height()), (ZOOM_MIN, ZOOM_MAX),
+        )
+        view.zoom = new_zoom
+        view.dz_offset_x = off_x
+        view.dz_offset_y = off_y
+        view._clamp_deep_zoom_pan()
+        view._user_locked_view = True
+        view._update_status_info()
+        view.update()
+
     # -- gestures -----------------------------------------------------
 
     def handle_gesture_event(self, event) -> None:
@@ -301,6 +372,7 @@ class InputController:
         view.zoom = new_zoom
         view.dz_offset_x = cx - (cx - view.dz_offset_x) * ratio
         view.dz_offset_y = cy - (cy - view.dz_offset_y) * ratio
+        view._clamp_deep_zoom_pan()
         view._update_status_info()
         view.update()
 
