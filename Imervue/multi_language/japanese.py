@@ -19,6 +19,19 @@ _NO_EXPORT_IMAGES = '書き出せる画像がありません。'
 _EXPORT_FAILED = '書き出しに失敗：{err}'
 
 japanese_word_dict = {
+    # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
+    "loupe_on": "ルーペ オン — カーソルに追従して拡大",
+    "loupe_off": "ルーペ オフ",
+    "reading_on": "読書モード — スクロールで読む、自動で次へ",
+    "reading_off": "読書モード オフ",
+    "shortcut_action_loupe": "ルーペ",
+    "shortcut_action_reading_mode": "読書モード",
+    "preferences_filmstrip": "ディープズームのフィルムストリップを表示",
+    "preferences_transition": "画像切り替え時にフェードイン",
+    "preferences_smooth_nav": "スムーズなズームと慣性パン",
+    "preferences_browsing_hint": "ディープズームの閲覧補助 — すぐに反映されます。",
+    "cheat_grid_focus": "サムネイルのフォーカスを移動",
+    "cheat_grid_open": "選択中のサムネイルを開く",
     "tab_new": "新しいタブ",
     "main_window_current_filename_format": "現在のファイル名: {name}",
     # File menu

@@ -8,6 +8,19 @@ _NO_EXPORT_IMAGES = '没有可导出的图片。'
 _EXPORT_FAILED = '导出失败：{err}'
 
 chinese_word_dict = {
+    # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
+    "loupe_on": "放大镜开启 — 跟随游标放大",
+    "loupe_off": "放大镜关闭",
+    "reading_on": "阅读模式 — 滚动阅读，自动翻页",
+    "reading_off": "阅读模式关闭",
+    "shortcut_action_loupe": "放大镜",
+    "shortcut_action_reading_mode": "阅读模式",
+    "preferences_filmstrip": "显示深缩放底部缩图列",
+    "preferences_transition": "切换图片时淡入",
+    "preferences_smooth_nav": "平滑缩放与惯性平移",
+    "preferences_browsing_hint": "深缩放浏览辅助 — 立即生效。",
+    "cheat_grid_focus": "移动缩图焦点",
+    "cheat_grid_open": "打开选中的缩图",
     "tab_new": "新标签页",
     "main_window_current_filename_format": "当前文件名：{name}",
     # File menu
