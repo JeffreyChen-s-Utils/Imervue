@@ -11,6 +11,7 @@ import pytest
 
 from Imervue.gpu_image_view.overlay_painter import (
     _rgba_to_pixmap,
+    clamp_loupe_magnification,
     debug_hud_lines,
     favorites_set,
     format_exif_osd_lines,
@@ -209,6 +210,20 @@ class TestLoupeSourceRect:
 
     def test_image_smaller_than_sample(self):
         assert loupe_source_rect(5, 5, 40, 40, 20, 20) == (0, 0, 20, 20)
+
+
+class TestClampLoupeMagnification:
+    def test_scroll_up_magnifies_more(self):
+        assert clamp_loupe_magnification(4, 120) == 5
+
+    def test_scroll_down_magnifies_less(self):
+        assert clamp_loupe_magnification(4, -120) == 3
+
+    def test_clamps_at_max(self):
+        assert clamp_loupe_magnification(16, 120) == 16
+
+    def test_clamps_at_min(self):
+        assert clamp_loupe_magnification(2, -120) == 2
 
 
 # ---------------------------------------------------------------

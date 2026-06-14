@@ -30,6 +30,9 @@ class BrowseFeatures:
 
     def __init__(self, view: GPUImageView) -> None:
         self._view = view
+        # Set transiently when paging backwards so the previous reading page
+        # opens at its bottom (where the reader left off) rather than its top.
+        self._anchor_bottom = False
 
     def reload_settings(self) -> None:
         """Re-read the browse feature flags from user settings.
@@ -85,17 +88,25 @@ class BrowseFeatures:
             switch_to_next_image(main_gui=view)
         elif advance < 0:
             from Imervue.gpu_image_view.actions.select import switch_to_previous_image
+            self._anchor_bottom = True  # open the previous page at its bottom
             switch_to_previous_image(main_gui=view)
         else:
             view.update()
 
     def apply_reading_fit(self) -> None:
-        """Fit the current image to width and align it to the top for reading."""
+        """Fit the current image to width, aligned to the top (or, when paging
+        backwards, the bottom) for reading."""
         view = self._view
         if not view.deep_zoom:
             return
         view._fit_to_width()
-        view.dz_offset_y = 0.0
+        if self._anchor_bottom:
+            from Imervue.gpu_image_view.view_nav import reading_bottom_offset
+            content_h = view.deep_zoom.levels[0].shape[0] * view.zoom
+            view.dz_offset_y = reading_bottom_offset(content_h, view.height())
+        else:
+            view.dz_offset_y = 0.0
+        self._anchor_bottom = False
         self.clamp_pan()
         view.update()
 

@@ -5,6 +5,7 @@ import pytest
 
 from Imervue.gpu_image_view.view_nav import (
     clamp_pan_offset,
+    reading_bottom_offset,
     reading_scroll,
     stepped_zoom,
     toggle_zoom_target,
@@ -152,3 +153,13 @@ class TestReadingScroll:
         # Image shorter than the viewport: scroll down → next, up → previous.
         assert reading_scroll(0, 300, 600, -120) == (0, 1)
         assert reading_scroll(0, 300, 600, 120) == (0, -1)
+
+
+class TestReadingBottomOffset:
+    def test_tall_page_is_bottom_aligned(self):
+        # content 2000 in a 600 viewport → offset -1400 (bottom flush).
+        assert reading_bottom_offset(2000, 600) == -1400
+
+    def test_short_page_stays_at_top(self):
+        # A page that already fits never goes negative.
+        assert reading_bottom_offset(300, 600) == 0

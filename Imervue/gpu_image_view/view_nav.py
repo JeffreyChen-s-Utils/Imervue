@@ -90,6 +90,15 @@ def reading_scroll(offset_y: float, content_h: float, view_h: float,
     return new_off, 0
 
 
+def reading_bottom_offset(content_h: float, view_h: float) -> float:
+    """Top offset that bottom-aligns a reading page (0 when it fits the view).
+
+    Used when paging *backwards* in reading mode so the previous page opens at
+    its end, where the reader left off, instead of jumping to its top.
+    """
+    return min(0.0, view_h - content_h)
+
+
 def zoom_to_region(
     rect: tuple[float, float, float, float],
     zoom: float,

@@ -54,6 +54,8 @@ _PIXEL_GRID_MAX_CELLS = 40000
 # Loupe magnifier (toggle with L in deep zoom).
 LOUPE_BOX_PX = 170
 LOUPE_MAGNIFICATION = 4
+_LOUPE_MAG_MIN = 2
+_LOUPE_MAG_MAX = 16
 _LOUPE_CURSOR_GAP = 24
 _LOUPE_BORDER_RGBA = (255, 255, 255, 210)
 _LOUPE_CROSSHAIR_RGBA = (255, 80, 80, 200)
@@ -156,6 +158,16 @@ def visible_pixel_bounds(zoom: float, off_x: float, off_y: float,
         max(0, int(left)), max(0, int(top)),
         min(img_w, int(right) + 1), min(img_h, int(bottom) + 1),
     )
+
+
+def clamp_loupe_magnification(magnification: int, wheel_delta: float) -> int:
+    """Step the loupe magnification by one on a wheel notch, clamped to range.
+
+    A positive *wheel_delta* (scroll up) magnifies more; the result is held in
+    ``[2, 16]`` so the loupe stays usable.
+    """
+    step = 1 if wheel_delta > 0 else -1
+    return max(_LOUPE_MAG_MIN, min(_LOUPE_MAG_MAX, magnification + step))
 
 
 def loupe_source_rect(img_x: int, img_y: int, sample_w: int, sample_h: int,
@@ -711,7 +723,7 @@ class OverlayPainter:
         cx, cy = view._hover_image_xy
         if not (0 <= cx < img_w and 0 <= cy < img_h):
             return
-        sample = max(1, round(LOUPE_BOX_PX / LOUPE_MAGNIFICATION))
+        sample = max(1, round(LOUPE_BOX_PX / view._loupe_magnification))
         left, top, right, bottom = loupe_source_rect(cx, cy, sample, sample,
                                                       img_w, img_h)
         crop = base[top:bottom, left:right]
