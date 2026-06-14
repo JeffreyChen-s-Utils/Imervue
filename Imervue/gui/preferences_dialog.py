@@ -11,6 +11,7 @@ to take effect because it is consumed during ``GPUImageView.initializeGL``.
 """
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -65,6 +66,7 @@ class PreferencesDialog(QDialog):
         layout.addLayout(self._build_vram_form())
         layout.addLayout(self._build_ui_scale_form())
         layout.addLayout(self._build_theme_form())
+        layout.addLayout(self._build_browsing_form())
         layout.addStretch(1)
         layout.addWidget(self._build_button_box())
 
@@ -163,6 +165,42 @@ class PreferencesDialog(QDialog):
         form.addRow(hint)
         return form
 
+    def _build_browsing_form(self) -> QFormLayout:
+        lang = language_wrapper.language_word_dict
+        form = QFormLayout()
+
+        self._filmstrip_check = QCheckBox(
+            lang.get("preferences_filmstrip", "Show the deep-zoom filmstrip")
+        )
+        self._filmstrip_check.setChecked(
+            bool(user_setting_dict.get("filmstrip_enabled", True)))
+
+        self._transition_check = QCheckBox(
+            lang.get("preferences_transition", "Fade images in when switching")
+        )
+        self._transition_check.setChecked(
+            bool(user_setting_dict.get("image_transition_enabled", True)))
+
+        self._smooth_nav_check = QCheckBox(
+            lang.get("preferences_smooth_nav",
+                     "Smooth (eased) zoom and momentum pan")
+        )
+        self._smooth_nav_check.setChecked(
+            bool(user_setting_dict.get("smooth_navigation_enabled", False)))
+
+        hint = QLabel(
+            lang.get("preferences_browsing_hint",
+                     "Deep-zoom browsing aids — applied immediately.")
+        )
+        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setWordWrap(True)
+
+        form.addRow("", self._filmstrip_check)
+        form.addRow("", self._transition_check)
+        form.addRow("", self._smooth_nav_check)
+        form.addRow(hint)
+        return form
+
     def _build_button_box(self) -> QDialogButtonBox:
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -197,14 +235,32 @@ class PreferencesDialog(QDialog):
         idx = self._theme_combo.findData(DEFAULT_THEME_NAME)
         if idx >= 0:
             self._theme_combo.setCurrentIndex(idx)
+        self._filmstrip_check.setChecked(True)
+        self._transition_check.setChecked(True)
+        self._smooth_nav_check.setChecked(False)
 
     def _accept(self) -> None:
         user_setting_dict["vram_limit_auto"] = bool(self._auto_vram.isChecked())
         user_setting_dict["vram_limit_mb"] = int(self._vram_spin.value())
         user_setting_dict["ui_scale_percent"] = int(self._ui_scale_spin.value())
         user_setting_dict["theme"] = str(self._theme_combo.currentData())
+        user_setting_dict["filmstrip_enabled"] = bool(self._filmstrip_check.isChecked())
+        user_setting_dict["image_transition_enabled"] = bool(
+            self._transition_check.isChecked())
+        user_setting_dict["smooth_navigation_enabled"] = bool(
+            self._smooth_nav_check.isChecked())
         schedule_save()
+        self._apply_browse_settings_live()
         self.accept()
+
+    def _apply_browse_settings_live(self) -> None:
+        """Push the browsing flags to the live viewer so they apply without a
+        restart (the VRAM / scale / theme options still need one)."""
+        viewer = getattr(self.parent(), "viewer", None)
+        browse = getattr(viewer, "_browse", None)
+        if browse is not None:
+            with contextlib.suppress(Exception):
+                browse.reload_settings()
 
 
 def open_preferences_dialog(parent: ImervueMainWindow) -> None:

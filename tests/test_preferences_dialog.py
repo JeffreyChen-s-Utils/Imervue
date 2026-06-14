@@ -23,7 +23,9 @@ from Imervue.user_settings.user_setting_dict import user_setting_dict
 def _reset_user_settings():
     """Strip every key the dialog touches before and after each test
     so the tests are independent."""
-    keys = ("vram_limit_auto", "vram_limit_mb", "ui_scale_percent", "theme")
+    keys = ("vram_limit_auto", "vram_limit_mb", "ui_scale_percent", "theme",
+            "filmstrip_enabled", "image_transition_enabled",
+            "smooth_navigation_enabled")
     for k in keys:
         user_setting_dict.pop(k, None)
     yield
@@ -79,6 +81,34 @@ def test_accept_persists_every_field(qapp):
         assert user_setting_dict["vram_limit_mb"] == 2048
         assert user_setting_dict["ui_scale_percent"] == 125
         assert user_setting_dict["theme"] == dlg._theme_combo.itemData(0)   # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+
+
+def test_accept_persists_browsing_flags(qapp):
+    dlg = PreferencesDialog()
+    try:
+        dlg._filmstrip_check.setChecked(False)      # noqa: SLF001
+        dlg._transition_check.setChecked(False)     # noqa: SLF001
+        dlg._smooth_nav_check.setChecked(True)      # noqa: SLF001
+        dlg._accept()                               # noqa: SLF001
+        assert user_setting_dict["filmstrip_enabled"] is False
+        assert user_setting_dict["image_transition_enabled"] is False
+        assert user_setting_dict["smooth_navigation_enabled"] is True
+    finally:
+        dlg.deleteLater()
+
+
+def test_restore_defaults_resets_browsing_flags(qapp):
+    dlg = PreferencesDialog()
+    try:
+        dlg._filmstrip_check.setChecked(False)      # noqa: SLF001
+        dlg._transition_check.setChecked(False)     # noqa: SLF001
+        dlg._smooth_nav_check.setChecked(True)      # noqa: SLF001
+        dlg.restore_defaults()
+        assert dlg._filmstrip_check.isChecked() is True     # noqa: SLF001
+        assert dlg._transition_check.isChecked() is True    # noqa: SLF001
+        assert dlg._smooth_nav_check.isChecked() is False   # noqa: SLF001
     finally:
         dlg.deleteLater()
 

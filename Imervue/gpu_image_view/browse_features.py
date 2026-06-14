@@ -31,6 +31,23 @@ class BrowseFeatures:
     def __init__(self, view: GPUImageView) -> None:
         self._view = view
 
+    def reload_settings(self) -> None:
+        """Re-read the browse feature flags from user settings.
+
+        Called by the Preferences dialog so toggling the filmstrip / fade /
+        smooth-navigation options takes effect on the live viewer without a
+        restart (the view caches the flags at construction time).
+        """
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        view = self._view
+        view._filmstrip_enabled = bool(
+            user_setting_dict.get("filmstrip_enabled", True))
+        view._transition_enabled = bool(
+            user_setting_dict.get("image_transition_enabled", True))
+        view._smooth_nav_enabled = bool(
+            user_setting_dict.get("smooth_navigation_enabled", False))
+        view.update()
+
     # -- pan clamping -------------------------------------------------
 
     def clamp_pan(self) -> None:
