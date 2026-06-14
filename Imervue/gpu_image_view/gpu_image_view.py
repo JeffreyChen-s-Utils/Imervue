@@ -285,8 +285,12 @@ class GPUImageView(QOpenGLWidget):
         self._show_debug_hud = False
         # 目前滑鼠在圖片上的像素座標（update_status 用，paint_pixel_view 用）
         self._hover_image_xy: tuple[int, int] | None = None
+        # OSD 的 EXIF 行快取：(path, lines)，避免每幀重讀檔案
+        self._exif_osd_cache: tuple | None = None
         # Shift+P — 像素檢視模式：zoom >= 4x 時顯示像素網格 + RGB 值
         self._pixel_view = False
+        # L — 放大鏡 loupe：跟著游標顯示局部放大，挑片/對焦確認用
+        self._loupe_enabled = False
 
         # ===== 動畫播放 =====
         self._animation: object | None = None  # AnimationPlayer instance

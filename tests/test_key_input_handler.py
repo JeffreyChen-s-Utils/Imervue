@@ -32,11 +32,14 @@ def _view(**kw):
         "grid_offset_y": 0,
         "thumbnail_size": 256,
         "current_index": 0,
+        "_loupe_enabled": False,
+        "toasts": [],
     }
     base.update(kw)
     view = SimpleNamespace(**base)
     view.update = lambda: setattr(view, "updates", view.updates + 1)
     view._apply_color_label = view.applied_labels.append
+    view._toast = lambda key, fallback: view.toasts.append(fallback)
     # Thumbnail-wall stand-ins for the keyboard-focus path. Width 800 / cell 256
     # → 3 columns; height 600 → roughly two rows visible.
     view.model = SimpleNamespace(images=images)
@@ -177,6 +180,25 @@ def test_focus_current_if_valid_clears_when_index_out_of_range():
     handler = KeyInputHandler(view)
     handler._focus_current_if_valid()
     assert view.focused_tile_index == -1
+
+
+def test_loupe_toggle_in_deep_zoom():
+    view = _view(deep_zoom=object())
+    handler = KeyInputHandler(view)
+    consumed = handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
+    assert consumed is True
+    assert view._loupe_enabled is True
+    # Toggling again turns it back off.
+    handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
+    assert view._loupe_enabled is False
+
+
+def test_loupe_key_ignored_outside_deep_zoom():
+    view = _view(deep_zoom=None)
+    handler = KeyInputHandler(view)
+    consumed = handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
+    assert consumed is False
+    assert view._loupe_enabled is False
 
 
 def test_non_builtin_key_returns_false():

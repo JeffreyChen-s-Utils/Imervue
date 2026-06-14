@@ -181,6 +181,8 @@ class InputController:
             img_y = int((my - view.dz_offset_y) / max(view.zoom, _EPSILON))
             view._hover_image_xy = (img_x, img_y)
             view._update_status_info()
+            if view._loupe_enabled:
+                view.update()  # repaint so the magnifier tracks the cursor
         if view.tile_grid_mode:
             view._update_hover_preview(event)
 

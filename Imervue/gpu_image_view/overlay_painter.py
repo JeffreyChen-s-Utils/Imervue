@@ -48,6 +48,12 @@ _BYTES_PER_MB = 1024 * 1024
 _BYTES_PER_KB = 1024
 _PIXEL_VIEW_ZOOM = 4.0
 _PIXEL_GRID_MAX_CELLS = 40000
+# Loupe magnifier (toggle with L in deep zoom).
+LOUPE_BOX_PX = 170
+LOUPE_MAGNIFICATION = 4
+_LOUPE_CURSOR_GAP = 24
+_LOUPE_BORDER_RGBA = (255, 255, 255, 210)
+_LOUPE_CROSSHAIR_RGBA = (255, 80, 80, 200)
 # Filmstrip band background + current-item highlight (amber, matching the
 # tile-wall keyboard focus ring).
 _FILMSTRIP_BAND_RGBA = (0, 0, 0, 150)
@@ -149,6 +155,77 @@ def visible_pixel_bounds(zoom: float, off_x: float, off_y: float,
     )
 
 
+def loupe_source_rect(img_x: int, img_y: int, sample_w: int, sample_h: int,
+                      img_w: int, img_h: int) -> tuple[int, int, int, int]:
+    """Image-space crop rectangle the loupe samples, centred on the cursor.
+
+    The crop keeps its requested ``sample_w`` x ``sample_h`` size (shrinking
+    only when the image itself is smaller) and is clamped so it never runs off
+    the image edge, so the magnifier always shows a full square near the border.
+    """
+    width = min(sample_w, img_w)
+    height = min(sample_h, img_h)
+    left = int(round(img_x - width / 2))
+    top = int(round(img_y - height / 2))
+    left = max(0, min(left, img_w - width))
+    top = max(0, min(top, img_h - height))
+    return left, top, left + width, top + height
+
+
+def _exif_to_float(value) -> float | None:
+    """Coerce an EXIF value (IFDRational / (num, den) / number) to a float."""
+    if value is None:
+        return None
+    try:
+        if isinstance(value, (tuple, list)) and len(value) == 2:
+            num, den = value
+            return num / den if den else None
+        return float(value)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def _format_exposure(value) -> str | None:
+    seconds = _exif_to_float(value)
+    if seconds is None or seconds <= 0:
+        return None
+    return f"{seconds:g}s" if seconds >= 1 else f"1/{round(1 / seconds)}s"
+
+
+def _format_iso(value) -> str | None:
+    if isinstance(value, (tuple, list)) and value:
+        value = value[0]
+    try:
+        return f"ISO {int(value)}"
+    except (TypeError, ValueError):
+        return None
+
+
+def format_exif_osd_lines(exif: dict) -> list[str]:
+    """Build compact OSD lines (exposure / f-number / ISO / focal + lens).
+
+    Returns an empty list when no shooting data is present, so non-photo images
+    leave the OSD unchanged. Each field is skipped individually when missing or
+    malformed, so partial EXIF still yields a useful line.
+    """
+    if not exif:
+        return []
+    fnumber = _exif_to_float(exif.get("FNumber"))
+    focal = _exif_to_float(exif.get("FocalLength"))
+    fields = [
+        _format_exposure(exif.get("ExposureTime")),
+        f"f/{fnumber:g}" if fnumber and fnumber > 0 else None,
+        _format_iso(exif.get("ISOSpeedRatings")),
+        f"{round(focal)}mm" if focal and focal > 0 else None,
+    ]
+    primary = [field for field in fields if field]
+    lines = ["   ".join(primary)] if primary else []
+    lens = exif.get("LensModel")
+    if lens and str(lens).strip():
+        lines.append(str(lens).strip())
+    return lines
+
+
 class OverlayPainter:
     """Draws every ``QPainter`` overlay layer for a ``GPUImageView``."""
 
@@ -192,6 +269,8 @@ class OverlayPainter:
             (zoom_active and view._show_osd, self.draw_osd),
             (view._show_debug_hud, self.draw_debug_hud),
             (pixel_active, self.draw_pixel_view),
+            (zoom_active and view._loupe_enabled
+             and view._hover_image_xy is not None, self.draw_loupe),
             (bool(view._zoom_band_active and view._zoom_band_start
                   and view._zoom_band_end), self.draw_zoom_band),
             (loading_active, self.draw_loading_pill),
@@ -420,7 +499,7 @@ class OverlayPainter:
             return
         base = view.deep_zoom.levels[0]
         h, w = base.shape[:2]
-        lines = osd_lines(path, w, h)
+        lines = osd_lines(path, w, h) + self._exif_osd_lines(path)
 
         font = QFont(_FONT_SEGOE_UI)
         font.setPixelSize(13)
@@ -437,6 +516,17 @@ class OverlayPainter:
         painter.setPen(QColor(230, 230, 230))
         for i, line in enumerate(lines):
             painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
+
+    def _exif_osd_lines(self, path: str) -> list:  # pragma: no cover - file IO
+        """Cached EXIF OSD lines for *path* (read once per image, not per frame)."""
+        view = self.view
+        cache = view._exif_osd_cache
+        if cache and cache[0] == path:
+            return cache[1]
+        from Imervue.image.info import get_exif_data
+        lines = format_exif_osd_lines(get_exif_data(Path(path)))
+        view._exif_osd_cache = (path, lines)
+        return lines
 
     def draw_debug_hud(self, painter: QPainter):  # pragma: no cover - GL paint
         """Ctrl+F3 Debug HUD — VRAM / cache / thread-pool stats."""
@@ -592,6 +682,41 @@ class OverlayPainter:
         pixmap = _rgba_to_pixmap(arr)
         cache[path] = pixmap
         return pixmap
+
+    def draw_loupe(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Cursor-following magnifier showing image pixels at higher zoom."""
+        view = self.view
+        base = view.deep_zoom.levels[0]
+        img_h, img_w = base.shape[:2]
+        cx, cy = view._hover_image_xy
+        if not (0 <= cx < img_w and 0 <= cy < img_h):
+            return
+        sample = max(1, round(LOUPE_BOX_PX / LOUPE_MAGNIFICATION))
+        left, top, right, bottom = loupe_source_rect(cx, cy, sample, sample,
+                                                      img_w, img_h)
+        crop = base[top:bottom, left:right]
+        if crop.size == 0:
+            return
+        screen_x = int(cx * view.zoom + view.dz_offset_x)
+        screen_y = int(cy * view.zoom + view.dz_offset_y)
+        box_x, box_y = place_hud_box(screen_x, screen_y, _LOUPE_CURSOR_GAP,
+                                     LOUPE_BOX_PX, LOUPE_BOX_PX,
+                                     view.width(), view.height())
+        painter.drawPixmap(box_x, box_y, LOUPE_BOX_PX, LOUPE_BOX_PX,
+                           _rgba_to_pixmap(crop))
+        self._draw_loupe_frame(painter, box_x, box_y)
+
+    def _draw_loupe_frame(self, painter: QPainter,  # pragma: no cover - GL paint
+                          box_x: int, box_y: int) -> None:
+        pen = QPen(QColor(*_LOUPE_BORDER_RGBA))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(box_x, box_y, LOUPE_BOX_PX, LOUPE_BOX_PX)
+        mid = LOUPE_BOX_PX // 2
+        painter.setPen(QColor(*_LOUPE_CROSSHAIR_RGBA))
+        painter.drawLine(box_x + mid, box_y, box_x + mid, box_y + LOUPE_BOX_PX)
+        painter.drawLine(box_x, box_y + mid, box_x + LOUPE_BOX_PX, box_y + mid)
 
     def draw_zoom_band(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw the rubber-band rectangle while the user frames a zoom region."""

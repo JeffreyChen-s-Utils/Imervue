@@ -13,7 +13,9 @@ from Imervue.gpu_image_view.overlay_painter import (
     _rgba_to_pixmap,
     debug_hud_lines,
     favorites_set,
+    format_exif_osd_lines,
     human_file_size,
+    loupe_source_rect,
     osd_lines,
     place_hud_box,
     visible_pixel_bounds,
@@ -190,3 +192,55 @@ def test_rgba_to_pixmap_accepts_non_contiguous(qapp):
     pixmap = _rgba_to_pixmap(view)
     assert pixmap.width() == 5
     assert pixmap.height() == 5
+
+
+# ---------------------------------------------------------------
+# loupe_source_rect
+# ---------------------------------------------------------------
+class TestLoupeSourceRect:
+    def test_centred_crop_well_inside(self):
+        assert loupe_source_rect(100, 100, 40, 40, 1000, 1000) == (80, 80, 120, 120)
+
+    def test_clamps_at_left_edge(self):
+        assert loupe_source_rect(5, 100, 40, 40, 1000, 1000) == (0, 80, 40, 120)
+
+    def test_clamps_at_right_edge(self):
+        assert loupe_source_rect(995, 100, 40, 40, 1000, 1000) == (960, 80, 1000, 120)
+
+    def test_image_smaller_than_sample(self):
+        assert loupe_source_rect(5, 5, 40, 40, 20, 20) == (0, 0, 20, 20)
+
+
+# ---------------------------------------------------------------
+# format_exif_osd_lines
+# ---------------------------------------------------------------
+class TestFormatExifOsdLines:
+    def test_full_set(self):
+        exif = {"ExposureTime": 0.005, "FNumber": 2.8,
+                "ISOSpeedRatings": 400, "FocalLength": 50, "LensModel": "FE 50mm"}
+        lines = format_exif_osd_lines(exif)
+        assert lines[0] == "1/200s   f/2.8   ISO 400   50mm"
+        assert lines[1] == "FE 50mm"
+
+    def test_rational_tuples_are_handled(self):
+        exif = {"ExposureTime": (1, 200), "FNumber": (28, 10)}
+        assert format_exif_osd_lines(exif)[0] == "1/200s   f/2.8"
+
+    def test_long_exposure_in_seconds(self):
+        assert format_exif_osd_lines({"ExposureTime": 2.0})[0] == "2s"
+
+    def test_iso_tuple_uses_first(self):
+        assert format_exif_osd_lines({"ISOSpeedRatings": (800,)})[0] == "ISO 800"
+
+    def test_partial_data_skips_missing_fields(self):
+        assert format_exif_osd_lines({"ISOSpeedRatings": 100}) == ["ISO 100"]
+
+    def test_malformed_values_are_dropped(self):
+        exif = {"FNumber": "bad", "ExposureTime": None, "FocalLength": 0}
+        assert format_exif_osd_lines(exif) == []
+
+    def test_lens_only_is_stripped(self):
+        assert format_exif_osd_lines({"LensModel": "  Canon EF  "}) == ["Canon EF"]
+
+    def test_empty_returns_no_lines(self):
+        assert format_exif_osd_lines({}) == []
