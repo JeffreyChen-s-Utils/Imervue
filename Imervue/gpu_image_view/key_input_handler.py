@@ -249,7 +249,7 @@ class KeyInputHandler:
             return False
         view._reading_mode = not view._reading_mode
         if view._reading_mode:
-            view._apply_reading_fit()
+            view._browse.apply_reading_fit()
             view._toast("reading_on", "Reading mode — scroll to read, auto-advance")
         else:
             view._fit_to_window()

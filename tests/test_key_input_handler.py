@@ -43,7 +43,9 @@ def _view(**kw):
     view.update = lambda: setattr(view, "updates", view.updates + 1)
     view._apply_color_label = view.applied_labels.append
     view._toast = lambda key, fallback: view.toasts.append(fallback)
-    view._apply_reading_fit = lambda: setattr(view, "reading_fits", view.reading_fits + 1)
+    view._browse = SimpleNamespace(
+        apply_reading_fit=lambda: setattr(view, "reading_fits", view.reading_fits + 1),
+    )
     view._fit_to_window = lambda: setattr(view, "window_fits", view.window_fits + 1)
     # Thumbnail-wall stand-ins for the keyboard-focus path. Width 800 / cell 256
     # → 3 columns; height 600 → roughly two rows visible.

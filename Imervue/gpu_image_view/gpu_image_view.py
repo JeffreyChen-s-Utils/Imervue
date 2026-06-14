@@ -5,15 +5,6 @@ from typing import TYPE_CHECKING
 
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
 from Imervue.gpu_image_view.minimap import point_in_rect
-from Imervue.gpu_image_view.filmstrip import (
-    BAND_VPAD,
-    ITEM_HEIGHT,
-    ITEM_WIDTH,
-    MINIMAP_GAP,
-    compute_filmstrip_items,
-    filmstrip_band,
-    filmstrip_item_at,
-)
 from Imervue.gpu_image_view.tile_focus import NO_FOCUS
 from Imervue.gpu_image_view.tile_layout import (
     DEFAULT_THUMBNAIL_SIZE,
@@ -268,6 +259,10 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.key_input_handler import KeyInputHandler
         self._key_input = KeyInputHandler(self)
 
+        # ===== Browse features (filmstrip / reading mode / pan clamp / fade) =====
+        from Imervue.gpu_image_view.browse_features import BrowseFeatures
+        self._browse = BrowseFeatures(self)
+
         # ===== VRAM 管理 =====
         # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
         # 抓到的話會覆寫成實體 VRAM 的 ~40%，在顯卡強的機器上可大幅放寬 tile cache。
@@ -521,43 +516,9 @@ class GPUImageView(QOpenGLWidget):
         return None
 
     # ---------------------------
-    # Filmstrip (deep-zoom 底部縮圖膠卷)
+    # Filmstrip / reading-mode / pan-clamp behaviour lives in BrowseFeatures
+    # (self._browse); the Qt event handlers below delegate to it.
     # ---------------------------
-    def _filmstrip_strip_width(self) -> float:
-        """Usable strip width — full width, minus the minimap so they don't overlap."""
-        rect = self._current_minimap_rect()
-        if rect is None:
-            return self.width()
-        return max(float(ITEM_HEIGHT), rect[0] - MINIMAP_GAP)
-
-    def _filmstrip_items(self) -> list[tuple[int, float]]:
-        """Visible ``(index, x_left)`` filmstrip items for the current state."""
-        return compute_filmstrip_items(
-            enabled=self._filmstrip_enabled,
-            in_grid_mode=self.tile_grid_mode,
-            current_index=self.current_index,
-            count=len(self.model.images),
-            strip_width=self._filmstrip_strip_width(),
-        )
-
-    def _filmstrip_item_at(self, pos) -> int | None:
-        """Image index under a click *pos*, or None when outside the filmstrip."""
-        items = self._filmstrip_items()
-        if not items:
-            return None
-        y_top, _ = filmstrip_band(self.height(), ITEM_HEIGHT, BAND_VPAD)
-        return filmstrip_item_at(pos.x(), pos.y(), items, ITEM_WIDTH,
-                                 y_top, self.height())
-
-    def _jump_to_filmstrip_index(self, index: int) -> None:
-        """Open the image the user clicked in the filmstrip."""
-        images = self.model.images
-        if not 0 <= index < len(images) or index == self.current_index:
-            return
-        self.current_index = index
-        self.load_deep_zoom_image(images[index])
-
-
     def _update_status_info(self):
         """Sync the main-window status bar — called by viewer collaborators
         and external GUI panels. External contract, keep stable."""
@@ -586,35 +547,6 @@ class GPUImageView(QOpenGLWidget):
         """Fit image height — external contract (key dispatcher)."""
         from Imervue.gpu_image_view.fit_view import fit_to_height
         fit_to_height(self)
-
-    def _begin_image_fade_in(self) -> None:
-        """Post-display hook: in reading mode re-fit the new image to width/top,
-        then fade it in (unless a slideshow already drives the opacity)."""
-        if self._reading_mode:
-            self._apply_reading_fit()
-        from Imervue.gpu_image_view.view_animator import should_transition
-        slideshow = getattr(self, "_slideshow", None)
-        running = bool(slideshow and slideshow.running)
-        if should_transition(self._transition_enabled, running):
-            self._image_fade.start()
-
-    def _clamp_deep_zoom_pan(self) -> None:
-        """Keep the zoomed image on screen — called after every pan / zoom.
-
-        No-op while the image fits (it stays centred); once it overflows the
-        canvas the offsets are held so neither edge can be dragged inside the
-        viewport, so the image can never be lost off-screen.
-        """
-        if not self.deep_zoom:
-            return
-        from Imervue.gpu_image_view.fit_view import canvas_size
-        from Imervue.gpu_image_view.view_nav import clamp_pan_offset
-        base = self.deep_zoom.levels[0]
-        canvas_w, canvas_h = canvas_size(self)
-        self.dz_offset_x = clamp_pan_offset(
-            self.dz_offset_x, base.shape[1] * self.zoom, canvas_w)
-        self.dz_offset_y = clamp_pan_offset(
-            self.dz_offset_y, base.shape[0] * self.zoom, canvas_h)
 
     def _toggle_bookmark(self):
         """切換當前圖片的書籤狀態"""
@@ -843,7 +775,7 @@ class GPUImageView(QOpenGLWidget):
             self._prefetch_neighbors()
             self._update_status_info()
             self._notify_deep_zoom_displayed()
-            self._begin_image_fade_in()
+            self._browse.begin_image_fade_in()
             self.update()
             return
 
@@ -898,7 +830,7 @@ class GPUImageView(QOpenGLWidget):
 
         self._update_status_info()
         self._notify_deep_zoom_displayed()
-        self._begin_image_fade_in()
+        self._browse.begin_image_fade_in()
         self.update()
 
     def _notify_deep_zoom_displayed(self) -> None:
@@ -954,7 +886,7 @@ class GPUImageView(QOpenGLWidget):
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
             self._prefetch_neighbors()
-            self._begin_image_fade_in()
+            self._browse.begin_image_fade_in()
             self.update()
             return
 
@@ -991,36 +923,10 @@ class GPUImageView(QOpenGLWidget):
             self.update()
             return
         if self.deep_zoom and self._reading_mode:
-            self._reading_wheel(delta)
+            self._browse.reading_wheel(delta)
             return
         if self.deep_zoom:
             self._input.handle_deep_zoom_wheel(event, delta)
-
-    def _reading_wheel(self, delta: float) -> None:
-        """Reading-mode wheel: scroll the page, auto-advancing at the edges."""
-        from Imervue.gpu_image_view.view_nav import reading_scroll
-        base = self.deep_zoom.levels[0]
-        content_h = base.shape[0] * self.zoom
-        new_off, advance = reading_scroll(
-            self.dz_offset_y, content_h, self.height(), delta)
-        self.dz_offset_y = new_off
-        if advance > 0:
-            from Imervue.gpu_image_view.actions.select import switch_to_next_image
-            switch_to_next_image(main_gui=self)
-        elif advance < 0:
-            from Imervue.gpu_image_view.actions.select import switch_to_previous_image
-            switch_to_previous_image(main_gui=self)
-        else:
-            self.update()
-
-    def _apply_reading_fit(self) -> None:
-        """Fit the current image to width and align it to the top for reading."""
-        if not self.deep_zoom:
-            return
-        self._fit_to_width()
-        self.dz_offset_y = 0.0
-        self._clamp_deep_zoom_pan()
-        self.update()
 
     def _zoom_step(self, zoom_in: bool) -> None:
         """Keyboard zoom in/out — called by the key-action dispatcher.
@@ -1064,21 +970,12 @@ class GPUImageView(QOpenGLWidget):
                 self._drag_end_pos = event.position()
                 self._drag_selecting = False  # 先不啟動，等拖動才算框選
             elif self.deep_zoom:
-                if self._handle_deep_zoom_press(event.position()):
+                if self._browse.handle_deep_zoom_press(event.position()):
                     return
                 self._input.begin_zoom_band(event.position())
             return
 
         super().mousePressEvent(event)
-
-    def _handle_deep_zoom_press(self, pos) -> bool:
-        """Left-press in deep zoom: a filmstrip thumbnail jumps to that image;
-        otherwise let the minimap claim the click. Returns True when consumed."""
-        idx = self._filmstrip_item_at(pos)
-        if idx is not None:
-            self._jump_to_filmstrip_index(idx)
-            return True
-        return self._input.begin_minimap_nav(pos)
 
     def mouseDoubleClickEvent(self, event):
         # Deep zoom: double-click toggles fit ↔ 100% centred on the cursor,

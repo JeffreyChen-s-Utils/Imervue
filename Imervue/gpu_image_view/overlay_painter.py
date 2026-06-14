@@ -657,7 +657,7 @@ class OverlayPainter:
         """Bottom-of-screen strip of neighbour thumbnails (deep-zoom only)."""
         view = self.view
         images = view.model.images
-        strip_width = view._filmstrip_strip_width()
+        strip_width = view._browse.filmstrip_strip_width()
         items = compute_filmstrip_items(
             enabled=view._filmstrip_enabled, in_grid_mode=view.tile_grid_mode,
             current_index=view.current_index, count=len(images),

@@ -99,7 +99,7 @@ class InputController:
         view = self._view
         view.dz_offset_x = zoom_about_point(view.dz_offset_x, pos.x(), old_zoom, new_zoom)
         view.dz_offset_y = zoom_about_point(view.dz_offset_y, pos.y(), old_zoom, new_zoom)
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -165,7 +165,7 @@ class InputController:
             pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
             view.width(), view.height(), zoom,
         )
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -194,7 +194,7 @@ class InputController:
         elif view.deep_zoom:
             view.dz_offset_x += delta.x()
             view.dz_offset_y += delta.y()
-            view._clamp_deep_zoom_pan()
+            view._browse.clamp_pan()
             view._user_locked_view = True
             view._last_pan_velocity = (delta.x(), delta.y())
         view.update()
@@ -336,7 +336,7 @@ class InputController:
         view.zoom = new_zoom
         view.dz_offset_x = off_x
         view.dz_offset_y = off_y
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -374,7 +374,7 @@ class InputController:
         view.zoom = new_zoom
         view.dz_offset_x = cx - (cx - view.dz_offset_x) * ratio
         view.dz_offset_y = cy - (cy - view.dz_offset_y) * ratio
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view._update_status_info()
         view.update()
 

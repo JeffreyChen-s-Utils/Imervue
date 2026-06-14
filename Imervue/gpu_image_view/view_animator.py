@@ -158,7 +158,7 @@ class ZoomEaseController:
             self._anchor[0], self._image_point[0], zoom)
         view.dz_offset_y = offset_for_fixed_point(
             self._anchor[1], self._image_point[1], zoom)
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view._user_locked_view = True
         view._update_status_info()
         view.update()
@@ -200,7 +200,7 @@ class PanMomentumController:
             return
         view.dz_offset_x += vx
         view.dz_offset_y += vy
-        view._clamp_deep_zoom_pan()
+        view._browse.clamp_pan()
         view.update()
         self._velocity = (decayed_velocity(vx, PAN_DECAY),
                           decayed_velocity(vy, PAN_DECAY))
