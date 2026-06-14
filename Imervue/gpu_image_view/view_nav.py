@@ -49,3 +49,51 @@ def zoom_about_point(
     """
     ratio = new_zoom / old_zoom if old_zoom else 1.0
     return cursor - (cursor - offset) * ratio
+
+
+def clamp_pan_offset(offset: float, image_extent: float,
+                     canvas_extent: float) -> float:
+    """Clamp a pan offset so the image can't be dragged off the canvas.
+
+    Single axis: ``image_extent`` is the on-screen image size (``img_dim *
+    zoom``) and ``canvas_extent`` the viewport size. When the image is smaller
+    than the canvas it is re-centred; when larger, the offset is held in
+    ``[canvas_extent - image_extent, 0]`` so neither edge pulls inside the view.
+    """
+    if image_extent <= canvas_extent:
+        return (canvas_extent - image_extent) / 2
+    return max(canvas_extent - image_extent, min(0.0, offset))
+
+
+def zoom_to_region(
+    rect: tuple[float, float, float, float],
+    zoom: float,
+    offset: tuple[float, float],
+    canvas: tuple[float, float],
+    limits: tuple[float, float],
+) -> tuple[float, float, float]:
+    """Zoom so the screen-space *rect* fills the canvas, returning
+    ``(new_zoom, new_off_x, new_off_y)``.
+
+    *rect* is ``(x0, y0, x1, y1)`` in widget pixels (any corner order). The
+    region is mapped back to image space, scaled to fit the canvas within
+    ``limits`` = ``(zoom_min, zoom_max)``, then centred. A degenerate (zero-area)
+    rect is floored to one image pixel so the zoom stays finite.
+    """
+    off_x, off_y = offset
+    canvas_w, canvas_h = canvas
+    zoom_min, zoom_max = limits
+    x0, x1 = sorted((rect[0], rect[2]))
+    y0, y1 = sorted((rect[1], rect[3]))
+    img_left = (x0 - off_x) / zoom
+    img_right = (x1 - off_x) / zoom
+    img_top = (y0 - off_y) / zoom
+    img_bottom = (y1 - off_y) / zoom
+    region_w = max(img_right - img_left, 1.0)
+    region_h = max(img_bottom - img_top, 1.0)
+    new_zoom = max(zoom_min, min(canvas_w / region_w, canvas_h / region_h, zoom_max))
+    center_x = (img_left + img_right) / 2
+    center_y = (img_top + img_bottom) / 2
+    return (new_zoom,
+            canvas_w / 2 - center_x * new_zoom,
+            canvas_h / 2 - center_y * new_zoom)
