@@ -11,6 +11,8 @@ from Imervue.paint.pose_drop import (
     load_pose_image,
 )
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 def _solid_pose(h: int = 40, w: int = 20) -> np.ndarray:
     """A non-empty pose silhouette — solid red with full alpha."""

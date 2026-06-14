@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from Imervue.export.cheat_sheet import (
     CheatSheetOptions,
     _format_key_combo,
+    builtin_browsing_rows,
     collect_shortcut_rows,
     generate_cheat_sheet,
 )
@@ -23,6 +24,30 @@ def test_collect_rows_returns_at_least_one_row(qapp):
     for label, combo in rows:
         assert isinstance(label, str)
         assert isinstance(combo, str)
+
+
+def test_builtin_browsing_rows_present(qapp):
+    rows = builtin_browsing_rows()
+    combos = {combo for _label, combo in rows}
+    # Only the grid focus/open keys remain hard-wired; loupe/reading moved to
+    # the configurable shortcut registry.
+    assert {"Arrow Keys", "Enter"} <= combos
+    for label, combo in rows:
+        assert isinstance(label, str) and label
+        assert isinstance(combo, str) and combo
+
+
+def test_builtin_browsing_rows_appended_to_cheat_sheet(qapp):
+    all_combos = [combo for _label, combo in collect_shortcut_rows()]
+    # Enter (open focused thumbnail) only comes from the built-in list, so its
+    # presence proves the section is appended.
+    assert "Enter" in all_combos
+
+
+def test_loupe_and_reading_listed_as_registered_shortcuts(qapp):
+    labels = [label for label, _combo in collect_shortcut_rows()]
+    assert "Loupe Magnifier" in labels
+    assert "Reading Mode" in labels
 
 
 def test_collect_rows_label_uses_active_language(qapp):

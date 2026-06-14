@@ -174,6 +174,23 @@ def _free_port() -> int:
         sock.close()
 
 
+def _start_on_free_port(receiver, token: str, attempts: int = 5) -> int:
+    """Bind *receiver* to a fresh free port, retrying to dodge the inherent
+    race between probing a free port and binding it.
+
+    ``_free_port`` closes its probe socket before returning the number, so under
+    full-suite load another binder can grab that port in the gap, making
+    ``start()`` fail — the source of the rare CI flakiness. Retrying with a new
+    port each time makes a repeated collision astronomically unlikely.
+    """
+    for _ in range(attempts):
+        port = _free_port()
+        receiver.set_endpoint(port=port, token=token)
+        if receiver.start():
+            return port
+    raise RuntimeError("could not bind the webhook receiver to a free port")
+
+
 def _wait_for(qapp, predicate, timeout_s: float = 3.0) -> bool:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
@@ -188,9 +205,7 @@ def _wait_for(qapp, predicate, timeout_s: float = 3.0) -> bool:
 @pytest.fixture
 def running_receiver(qapp):
     receiver = WebhookReceiver()
-    port = _free_port()
-    receiver.set_endpoint(port=port, token="")
-    assert receiver.start() is True
+    port = _start_on_free_port(receiver, token="")
     yield receiver, port
     receiver.stop()
     receiver.deleteLater()
@@ -276,9 +291,7 @@ def test_e2e_health_endpoint(qapp, running_receiver):
 
 def test_e2e_auth_required_when_token_set(qapp):
     receiver = WebhookReceiver()
-    port = _free_port()
-    receiver.set_endpoint(port=port, token="s3cret")   # noqa: S106  # test fixture, not a real credential
-    assert receiver.start() is True
+    port = _start_on_free_port(receiver, token="s3cret")   # noqa: S106  # test fixture, not a real credential
     try:
         # No header → 401.
         status, _ = _post_json(port, "/trigger", {"group": "Wave"})

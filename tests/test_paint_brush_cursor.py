@@ -9,6 +9,8 @@ from Imervue.paint.brush_cursor import (
     render_cursor_ring,
 )
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 # ---------------------------------------------------------------------------
 # Validation

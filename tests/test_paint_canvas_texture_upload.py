@@ -20,6 +20,8 @@ from Imervue.paint import canvas as canvas_module
 from Imervue.paint.canvas import PaintCanvas
 from Imervue.paint.damage import DamageRect
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 @pytest.fixture
 def canvas(qapp):

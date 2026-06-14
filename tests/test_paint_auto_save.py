@@ -23,6 +23,8 @@ from Imervue.paint.auto_save import (
 )
 from Imervue.paint.document import PaintDocument
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 def _populated_document(h: int = 8, w: int = 8) -> PaintDocument:
     arr = np.full((h, w, 4), 200, dtype=np.uint8)

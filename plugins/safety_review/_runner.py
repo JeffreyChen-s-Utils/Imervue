@@ -32,6 +32,10 @@ ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})  # anus, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"
+# Pin an explicit commit so a future repo compromise cannot silently swap the
+# weights we download (bandit B615). This is the latest commit on `main` as of
+# 2024-12-25; the repo ships no tags, so a full SHA is the stable anchor.
+_ERAX_REVISION = "90878ab981060833413ae1a24df72f5e1fff66bc"
 
 MIN_CONFIDENCE = 0.25
 
@@ -103,9 +107,15 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
     if expand_pct > 0:
         ex = int(bw * expand_pct / 100)
         ey = int(bh * expand_pct / 100)
-        x1 -= ex; y1 -= ey; x2 += ex; y2 += ey
+        x1 -= ex
+        y1 -= ey
+        x2 += ex
+        y2 += ey
     if padding > 0:
-        x1 -= padding; y1 -= padding; x2 += padding; y2 += padding
+        x1 -= padding
+        y1 -= padding
+        x2 += padding
+        y2 += padding
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
@@ -198,10 +208,9 @@ def _process_one(detector, src, dst, block_size, padding,
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    for x1, y1, x2, y2 in boxes:
-        x1, y1, x2, y2 = _expand_box(x1, y1, x2, y2, padding, expand_pct,
-                                       iw, ih)
-        _censor_region(img, x1, y1, x2, y2, block_size, style=style)
+    for box in boxes:
+        ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
+        _censor_region(img, ex1, ey1, ex2, ey2, block_size, style=style)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
@@ -220,7 +229,8 @@ def _process_one(detector, src, dst, block_size, padding,
 def _load_anime_model():
     from huggingface_hub import hf_hub_download
     from ultralytics import YOLO
-    model_path = hf_hub_download(repo_id=_ERAX_REPO, filename=_ERAX_MODEL)
+    model_path = hf_hub_download(
+        repo_id=_ERAX_REPO, filename=_ERAX_MODEL, revision=_ERAX_REVISION)
     return YOLO(model_path)
 
 

@@ -115,6 +115,10 @@ class DevelopPanel(QWidget):
         self._current = Recipe()
         self._committed = Recipe()
         self._suppress_signals = False
+        # Guards re-entrancy: the commit handler reloads the image, which can
+        # synchronously rebind the panel; without this flag a stray slider tick
+        # during that reload could fire a second, nested commit.
+        self._committing = False
 
         self._undo_stack = QUndoStack(self)
 
@@ -132,6 +136,14 @@ class DevelopPanel(QWidget):
 
         # Drawing state (mirrored by the right-panel controls)
         self._draw_color: tuple[int, int, int, int] = (255, 0, 0, 255)
+
+        # Decoded-source cache: maps the currently bound path to its raw RGBA
+        # PIL image (post-decode, pre-recipe). Dragging a develop slider is a
+        # high-frequency operation; without this every debounce tick would
+        # re-open and re-decode the full-resolution file from disk. We keep at
+        # most one entry (the current path) so memory stays bounded.
+        self._decoded_source_path: str | None = None
+        self._decoded_source: Image.Image | None = None
 
     # ------------------------------------------------------------------
     # Panel builders — called by ImervueMainWindow
@@ -513,6 +525,7 @@ class DevelopPanel(QWidget):
         if path is None:
             self._current = Recipe()
             self._committed = Recipe()
+            self._invalidate_decoded_source()
             self._set_enabled(False)
             self._sync_sliders()
             self._destroy_canvas()
@@ -539,11 +552,17 @@ class DevelopPanel(QWidget):
     # Inline AnnotationCanvas management
     # ------------------------------------------------------------------
 
-    def _load_image_with_recipe(self, path: str) -> Image.Image | None:
-        """Load *path* from disk and apply the current recipe.
+    def _decode_source(self, path: str) -> Image.Image | None:
+        """Return the raw RGBA source image for *path*, decoding once.
 
-        Returns an RGBA PIL image or None on failure.
+        The decoded image (post-decode, pre-recipe) is cached keyed by *path*
+        so repeated recipe previews for the same image reuse it instead of
+        re-reading and re-decoding the file on every debounce tick. Only the
+        current path is retained; binding to a different path discards it.
         """
+        if self._decoded_source_path == path and self._decoded_source is not None:
+            return self._decoded_source
+
         try:
             img = Image.open(path)
             if img.mode not in ("RGB", "RGBA", "L"):
@@ -552,10 +571,30 @@ class DevelopPanel(QWidget):
                 img.load()
         except Exception:
             logger.exception("Failed to load image: %s", path)
+            self._invalidate_decoded_source()
             return None
 
         if img.mode != "RGBA":
             img = img.convert("RGBA")
+
+        self._decoded_source_path = path
+        self._decoded_source = img
+        return img
+
+    def _invalidate_decoded_source(self) -> None:
+        """Drop the cached decoded source so the next load re-decodes."""
+        self._decoded_source_path = None
+        self._decoded_source = None
+
+    def _load_image_with_recipe(self, path: str) -> Image.Image | None:
+        """Load *path* (cached decode) and apply the current recipe.
+
+        Returns an RGBA PIL image or None on failure. The decode step is
+        cached by path; only the recipe re-application runs on every call.
+        """
+        img = self._decode_source(path)
+        if img is None:
+            return None
 
         if not self._current.is_identity():
             arr = self._current.apply(np.array(img))
@@ -713,6 +752,9 @@ class DevelopPanel(QWidget):
         recipe_store.set_for_path(path, Recipe())
         self._sync_sliders()
 
+        # The on-disk pixels changed — the cached decode for this path is stale.
+        self._invalidate_decoded_source()
+
         # Reload
         self._canvas.clear_crop()
         self._create_canvas(path)
@@ -856,6 +898,9 @@ class DevelopPanel(QWidget):
         recipe_store.set_for_path(path, Recipe())
         self._sync_sliders()
 
+        # The on-disk pixels changed — the cached decode for this path is stale.
+        self._invalidate_decoded_source()
+
         # Reload the image in both the canvas and the main viewer
         self._create_canvas(path)
         try:
@@ -976,9 +1021,10 @@ class DevelopPanel(QWidget):
         self._current = Recipe()
         self._sync_sliders()
         self._refresh_canvas_base()
+        self._commit_recipe()
 
     # ------------------------------------------------------------------
-    # Preview logic — debounced canvas refresh, no commit to recipe_store
+    # Preview + commit logic — debounced canvas refresh, then write-back
     # ------------------------------------------------------------------
 
     def _schedule_preview(self) -> None:
@@ -987,4 +1033,34 @@ class DevelopPanel(QWidget):
         self._debounce.start()
 
     def _preview_debounced(self) -> None:
+        """Refresh the inline preview, then finalise the edit.
+
+        Firing the debounce timer is the signal that the user has paused —
+        the working recipe is now considered committed. We update the canvas
+        preview first (cheap, local) and then push the recipe to the store and
+        notify the viewer via ``recipe_committed`` so the edit survives a tab
+        or image switch.
+        """
         self._refresh_canvas_base()
+        self._commit_recipe()
+
+    def _commit_recipe(self) -> None:
+        """Persist the working recipe and emit ``recipe_committed``.
+
+        No-op when nothing changed since the last commit, when no image is
+        bound, or while a commit is already in flight. The emitted payload is
+        ``(path, old_recipe, new_recipe)`` with defensive copies so a later
+        in-place mutation of ``self._current`` can't corrupt the undo state.
+        """
+        if self._committing or self._path is None:
+            return
+        if self._current == self._committed:
+            return
+        old_recipe = Recipe.from_dict(self._committed.to_dict())
+        new_recipe = Recipe.from_dict(self._current.to_dict())
+        self._committed = Recipe.from_dict(self._current.to_dict())
+        self._committing = True
+        try:
+            self.recipe_committed.emit(self._path, old_recipe, new_recipe)
+        finally:
+            self._committing = False

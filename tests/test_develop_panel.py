@@ -308,3 +308,368 @@ class TestCanvasRecipeSync:
         p._refresh_canvas_base()
         # Image is now 80x100 (was 100x80) → annotations cleared
         assert len(p._canvas.get_annotations()) == 0
+
+
+# ======================================================================
+# recipe_committed wiring — debounced commit writes back + notifies
+# ======================================================================
+
+def _connect_store_writer(panel_obj, store):
+    """Wire ``recipe_committed`` to a handler that mirrors production.
+
+    The real consumer (``EditRecipeCommand`` via ``_on_recipe_committed``)
+    writes the *new* recipe to the store. We replicate just that effect so the
+    test can assert the round-trip without standing up a full viewer.
+    """
+    emitted: list[tuple] = []
+
+    def _handler(path, old_recipe, new_recipe):
+        emitted.append((path, old_recipe, new_recipe))
+        store.set_for_path(path, new_recipe)
+
+    panel_obj.recipe_committed.connect(_handler)
+    return emitted
+
+
+class TestRecipeCommitted:
+    """The debounce timer firing finalises the edit: write-back + signal."""
+
+    def test_debounced_commit_emits_and_writes_store(self, panel, sample_file):
+        p, store = panel
+        p.bind_to_path(str(sample_file))
+        emitted = _connect_store_writer(p, store)
+
+        p._brightness.setValue(50)
+        # Slider only schedules a preview — nothing committed yet.
+        assert emitted == []
+
+        # Fire the debounce as the timer would.
+        p._preview_debounced()
+
+        assert len(emitted) == 1
+        path, old_recipe, new_recipe = emitted[0]
+        assert path == str(sample_file)
+        assert old_recipe.brightness == pytest.approx(0.0)
+        assert new_recipe.brightness == pytest.approx(0.5)
+        # The store now holds the committed recipe.
+        assert store.get_for_path(str(sample_file)).brightness == pytest.approx(0.5)
+
+    def test_commit_payload_is_defensive_copy(self, panel, sample_file):
+        p, store = panel
+        p.bind_to_path(str(sample_file))
+        emitted = _connect_store_writer(p, store)
+
+        p._brightness.setValue(50)
+        p._preview_debounced()
+        _, _, new_recipe = emitted[0]
+
+        # Mutating the panel's working recipe must not corrupt the payload.
+        p._current.brightness = 0.9
+        assert new_recipe.brightness == pytest.approx(0.5)
+
+    def test_commit_is_noop_when_unchanged(self, panel, sample_file):
+        p, store = panel
+        p.bind_to_path(str(sample_file))
+        emitted = _connect_store_writer(p, store)
+
+        # No slider moved → committed == current → no emission.
+        p._preview_debounced()
+        assert emitted == []
+
+    def test_second_commit_uses_prior_as_old(self, panel, sample_file):
+        p, store = panel
+        p.bind_to_path(str(sample_file))
+        emitted = _connect_store_writer(p, store)
+
+        p._brightness.setValue(50)
+        p._preview_debounced()
+        p._brightness.setValue(20)
+        p._preview_debounced()
+
+        assert len(emitted) == 2
+        _, old_recipe, new_recipe = emitted[1]
+        assert old_recipe.brightness == pytest.approx(0.5)
+        assert new_recipe.brightness == pytest.approx(0.2)
+
+    def test_commit_noop_without_path(self, panel):
+        p, store = panel
+        p.bind_to_path(None)
+        emitted = _connect_store_writer(p, store)
+        p._current = Recipe(brightness=0.5)
+        p._preview_debounced()
+        assert emitted == []
+
+    def test_reset_commits_back_to_identity(self, panel, sample_file):
+        p, store = panel
+        store.set_for_path(str(sample_file), Recipe(brightness=0.5))
+        p.bind_to_path(str(sample_file))
+        emitted = _connect_store_writer(p, store)
+
+        p._reset()
+
+        assert len(emitted) == 1
+        _, old_recipe, new_recipe = emitted[0]
+        assert old_recipe.brightness == pytest.approx(0.5)
+        assert new_recipe.is_identity()
+        # Identity recipe drops the entry from the store.
+        assert store.get_for_path(str(sample_file)) is None
+
+
+# ======================================================================
+# Destructive save paths — crop + annotation atomic write
+# ======================================================================
+
+class TestDecodedSourceCache:
+    """The decoded source image is cached by path so repeated previews for
+    the same image skip the disk read + decode."""
+
+    @staticmethod
+    def _spy_image_open(monkeypatch):
+        """Wrap ``Image.open`` in the develop_panel module with a call counter.
+
+        Returns a list whose length equals the number of decode calls.
+        """
+        import Imervue.gui.develop_panel as mod
+
+        calls: list[str] = []
+        real_open = mod.Image.open
+
+        def _counting_open(path, *args, **kwargs):
+            calls.append(str(path))
+            return real_open(path, *args, **kwargs)
+
+        monkeypatch.setattr(mod.Image, "open", _counting_open)
+        return calls
+
+    def test_repeated_preview_decodes_once(self, panel, real_image, monkeypatch):
+        p, _ = panel
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        decodes_after_bind = len(calls)
+        # bind decodes once to build the canvas.
+        assert decodes_after_bind == 1
+
+        # Several preview refreshes on the same path must reuse the cache.
+        p._current = Recipe(brightness=0.2)
+        p._refresh_canvas_base()
+        p._current = Recipe(brightness=0.4)
+        p._refresh_canvas_base()
+        p._current = Recipe(brightness=0.6)
+        p._refresh_canvas_base()
+
+        assert len(calls) == decodes_after_bind  # no extra decodes
+
+    def test_switching_path_redecodes(self, panel, real_image, tmp_path, monkeypatch):
+        from PIL import Image as PILImage
+
+        from Imervue.image.recipe import clear_identity_cache
+
+        # A second distinct image.
+        other = tmp_path / "other.png"
+        PILImage.new("RGBA", (40, 30), (10, 20, 30, 255)).save(str(other), "PNG")
+        clear_identity_cache()
+
+        p, _ = panel
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        assert len(calls) == 1
+        assert calls[-1] == str(real_image)
+
+        # Binding to a different path invalidates the cache and re-decodes.
+        p.bind_to_path(str(other))
+        assert len(calls) == 2
+        assert calls[-1] == str(other)
+
+    def test_bind_to_none_invalidates_cache(self, panel, real_image, monkeypatch):
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        assert p._decoded_source is not None
+
+        p.bind_to_path(None)
+        assert p._decoded_source is None
+        assert p._decoded_source_path is None
+
+        # Re-binding must decode again (cache was cleared).
+        calls = self._spy_image_open(monkeypatch)
+        p.bind_to_path(str(real_image))
+        assert len(calls) == 1
+
+    def test_cached_output_matches_uncached(self, panel, real_image):
+        """A cached re-render produces byte-identical output to a fresh load."""
+        import numpy as np
+        from PIL import Image as PILImage
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        recipe = Recipe(brightness=0.5, contrast=0.2)
+        p._current = recipe
+
+        # Render via the (now-cached) panel path.
+        cached = np.array(p._load_image_with_recipe(str(real_image)))
+
+        # Render the same recipe independently, bypassing the cache entirely.
+        raw = PILImage.open(str(real_image)).convert("RGBA")
+        expected = np.array(PILImage.fromarray(recipe.apply(np.array(raw)), "RGBA"))
+
+        assert np.array_equal(cached, expected)
+
+    def test_failed_decode_clears_cache(self, panel, real_image, monkeypatch):
+        import Imervue.gui.develop_panel as mod
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        assert p._decoded_source is not None
+
+        def _boom(_path, *_a, **_k):
+            raise OSError("cannot read")
+
+        monkeypatch.setattr(mod.Image, "open", _boom)
+        result = p._load_image_with_recipe(str(real_image) + "x")
+        assert result is None
+        assert p._decoded_source is None
+        assert p._decoded_source_path is None
+
+
+class TestCropSave:
+    """``_apply_crop`` writes the cropped image atomically and resets state."""
+
+    def test_apply_crop_writes_file_and_cleans_tmp(self, panel, real_image):
+        from PIL import Image
+
+        p, store = panel
+        p.bind_to_path(str(real_image))
+        # Select a 40x30 crop region.
+        p._canvas._crop_rect = (10, 5, 40, 30)
+
+        p._apply_crop()
+
+        saved = Image.open(str(real_image))
+        assert saved.size == (40, 30)
+        # The atomic .tmp sibling must be gone.
+        assert not (real_image.parent / (real_image.name + ".tmp")).exists()
+        # Recipe is reset because the edit is now baked into the pixels.
+        assert p._current.is_identity()
+
+    def test_apply_crop_jpeg_converts_rgba_to_rgb(self, panel, tmp_path):
+        from PIL import Image
+
+        from Imervue.image.recipe import clear_identity_cache
+
+        # A .jpg source is loaded into the canvas as RGBA, so the crop save
+        # must take the RGBA->RGB branch before re-encoding as JPEG.
+        rgb = Image.new("RGB", (60, 50), (120, 30, 200))
+        jpg_path = tmp_path / "shot.jpg"
+        rgb.save(str(jpg_path), format="JPEG")
+        clear_identity_cache()
+
+        p, _ = panel
+        p.bind_to_path(str(jpg_path))
+        assert p._canvas.get_base_pil().mode == "RGBA"
+        p._canvas._crop_rect = (0, 0, 30, 20)
+
+        p._apply_crop()
+
+        saved = Image.open(str(jpg_path))
+        assert saved.mode == "RGB"
+        assert saved.size == (30, 20)
+
+    def test_apply_crop_rolls_back_on_write_failure(self, panel, real_image, monkeypatch):
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        # A non-identity recipe so we can prove it is NOT reset on failure.
+        p._current = Recipe(brightness=0.4)
+        p._canvas._crop_rect = (0, 0, 40, 30)
+
+        import Imervue.gui.develop_panel as mod
+
+        def _boom(_src, _dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(mod.os, "replace", _boom)
+
+        p._apply_crop()
+
+        # No leftover .tmp, and the recipe survived (no reset on failure).
+        assert not (real_image.parent / (real_image.name + ".tmp")).exists()
+        assert p._current.brightness == pytest.approx(0.4)
+
+    def test_apply_crop_ignores_tiny_region(self, panel, real_image):
+        from PIL import Image
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        original_size = Image.open(str(real_image)).size
+        p._canvas._crop_rect = (0, 0, 1, 1)  # below the 2px minimum
+
+        p._apply_crop()
+
+        # File untouched.
+        assert Image.open(str(real_image)).size == original_size
+
+
+class TestAnnotationSave:
+    """``_save_annotation`` bakes overlays and writes back atomically."""
+
+    def test_save_annotation_writes_and_cleans_tmp(self, panel, real_image):
+        from PIL import Image
+
+        from Imervue.gui.annotation_models import Annotation
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        p._canvas.set_annotations(
+            [Annotation(kind="rect", points=[(5, 5), (40, 30)])]
+        )
+
+        p._save_annotation()
+
+        # File still opens and the .tmp sibling is cleaned up.
+        assert Image.open(str(real_image)).size == (100, 80)
+        assert not (real_image.parent / (real_image.name + ".tmp")).exists()
+        assert p._current.is_identity()
+
+    def test_save_annotation_jpeg_converts_rgba_to_rgb(self, panel, tmp_path):
+        from PIL import Image
+
+        from Imervue.gui.annotation_models import Annotation
+        from Imervue.image.recipe import clear_identity_cache
+
+        rgb = Image.new("RGB", (60, 50), (10, 220, 40))
+        jpg_path = tmp_path / "ann.jpg"
+        rgb.save(str(jpg_path), format="JPEG")
+        clear_identity_cache()
+
+        p, _ = panel
+        p.bind_to_path(str(jpg_path))
+        # bake() returns RGBA, so the save path must convert before JPEG encode.
+        p._canvas.set_annotations(
+            [Annotation(kind="rect", points=[(5, 5), (30, 25)])]
+        )
+
+        p._save_annotation()
+
+        saved = Image.open(str(jpg_path))
+        assert saved.mode == "RGB"
+
+    def test_save_annotation_rolls_back_on_write_failure(self, panel, real_image, monkeypatch):
+        from Imervue.gui.annotation_models import Annotation
+
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        p._current = Recipe(brightness=0.3)
+        p._canvas.set_annotations(
+            [Annotation(kind="rect", points=[(5, 5), (40, 30)])]
+        )
+
+        import Imervue.gui.develop_panel as mod
+
+        def _boom(_src, _dst):
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(mod.os, "replace", _boom)
+
+        p._save_annotation()
+
+        assert not (real_image.parent / (real_image.name + ".tmp")).exists()
+        # Recipe untouched because the save never completed.
+        assert p._current.brightness == pytest.approx(0.3)
