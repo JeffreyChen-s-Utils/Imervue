@@ -32,21 +32,11 @@ def _view(**kw):
         "grid_offset_y": 0,
         "thumbnail_size": 256,
         "current_index": 0,
-        "_loupe_enabled": False,
-        "_reading_mode": False,
-        "reading_fits": 0,
-        "window_fits": 0,
-        "toasts": [],
     }
     base.update(kw)
     view = SimpleNamespace(**base)
     view.update = lambda: setattr(view, "updates", view.updates + 1)
     view._apply_color_label = view.applied_labels.append
-    view._toast = lambda key, fallback: view.toasts.append(fallback)
-    view._browse = SimpleNamespace(
-        apply_reading_fit=lambda: setattr(view, "reading_fits", view.reading_fits + 1),
-    )
-    view._fit_to_window = lambda: setattr(view, "window_fits", view.window_fits + 1)
     # Thumbnail-wall stand-ins for the keyboard-focus path. Width 800 / cell 256
     # → 3 columns; height 600 → roughly two rows visible.
     view.model = SimpleNamespace(images=images)
@@ -189,44 +179,13 @@ def test_focus_current_if_valid_clears_when_index_out_of_range():
     assert view.focused_tile_index == -1
 
 
-def test_loupe_toggle_in_deep_zoom():
+def test_loupe_and_reading_keys_are_not_builtin_anymore():
+    # L (loupe) and V (reading mode) are now configurable shortcut actions
+    # dispatched via shortcut_manager, so _handle_builtin must NOT consume them.
     view = _view(deep_zoom=object())
     handler = KeyInputHandler(view)
-    consumed = handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
-    assert consumed is True
-    assert view._loupe_enabled is True
-    # Toggling again turns it back off.
-    handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
-    assert view._loupe_enabled is False
-
-
-def test_loupe_key_ignored_outside_deep_zoom():
-    view = _view(deep_zoom=None)
-    handler = KeyInputHandler(view)
-    consumed = handler._handle_builtin(Qt.Key.Key_L, Qt.KeyboardModifier.NoModifier)
-    assert consumed is False
-    assert view._loupe_enabled is False
-
-
-def test_reading_mode_toggle_in_deep_zoom():
-    view = _view(deep_zoom=object())
-    handler = KeyInputHandler(view)
-    consumed = handler._handle_builtin(Qt.Key.Key_W, Qt.KeyboardModifier.NoModifier)
-    assert consumed is True
-    assert view._reading_mode is True
-    assert view.reading_fits == 1  # entering fits to width/top
-    # Toggling off fits back to window.
-    handler._handle_builtin(Qt.Key.Key_W, Qt.KeyboardModifier.NoModifier)
-    assert view._reading_mode is False
-    assert view.window_fits == 1
-
-
-def test_reading_mode_key_ignored_outside_deep_zoom():
-    view = _view(deep_zoom=None)
-    handler = KeyInputHandler(view)
-    consumed = handler._handle_builtin(Qt.Key.Key_W, Qt.KeyboardModifier.NoModifier)
-    assert consumed is False
-    assert view._reading_mode is False
+    for key in (Qt.Key.Key_L, Qt.Key.Key_V, Qt.Key.Key_W):
+        assert handler._handle_builtin(key, Qt.KeyboardModifier.NoModifier) is False
 
 
 def test_non_builtin_key_returns_false():

@@ -41,13 +41,12 @@ _PADDING_PX = 10
 _ROW_HEIGHT_PX = 36
 
 # Hard-wired browsing keys that are not part of the configurable shortcut
-# registry, listed so they still appear on the printed cheat sheet.
-# Each entry is (lang_key, english_fallback, key_combo_text).
+# registry (the loupe and reading mode now live there), listed so they still
+# appear on the printed cheat sheet. Each entry is
+# (lang_key, english_fallback, key_combo_text).
 _BUILTIN_BROWSING_KEYS: tuple[tuple[str, str, str], ...] = (
     ("cheat_grid_focus", "Move thumbnail focus", "Arrow Keys"),
     ("cheat_grid_open", "Open focused thumbnail", "Enter"),
-    ("cheat_loupe", "Loupe magnifier (deep zoom)", "L"),
-    ("cheat_reading", "Reading mode — fit width (deep zoom)", "W"),
 )
 
 

@@ -96,10 +96,6 @@ class KeyInputHandler:
             return True
         if key in _ENTER_KEYS and self._activate_focused_tile():
             return True
-        if key == Qt.Key.Key_L and no_ctrl_alt and self._toggle_loupe():
-            return True
-        if key == Qt.Key.Key_W and no_ctrl_alt and self._toggle_reading_mode():
-            return True
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
         return key in _ARROW_KEYS and self._handle_arrow_keys(key, modifiers, shift)
 
@@ -227,34 +223,6 @@ class KeyInputHandler:
             view._input.toggle_tile_selection(path)
         else:
             view._input.enter_deep_zoom(path)
-        return True
-
-    def _toggle_loupe(self) -> bool:
-        """Toggle the cursor-following magnifier; only acts in deep zoom."""
-        view = self._view
-        if not view.deep_zoom:
-            return False
-        view._loupe_enabled = not view._loupe_enabled
-        if view._loupe_enabled:
-            view._toast("loupe_on", "Loupe on — magnifier follows cursor")
-        else:
-            view._toast("loupe_off", "Loupe off")
-        view.update()
-        return True
-
-    def _toggle_reading_mode(self) -> bool:
-        """Toggle fit-width reading mode; only acts in deep zoom."""
-        view = self._view
-        if not view.deep_zoom:
-            return False
-        view._reading_mode = not view._reading_mode
-        if view._reading_mode:
-            view._browse.apply_reading_fit()
-            view._toast("reading_on", "Reading mode — scroll to read, auto-advance")
-        else:
-            view._fit_to_window()
-            view._toast("reading_off", "Reading mode off")
-        view.update()
         return True
 
     def _focus_current_if_valid(self) -> None:

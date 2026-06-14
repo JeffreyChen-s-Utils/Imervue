@@ -6,6 +6,8 @@ functions and run without Qt or a GL context.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from Imervue.gpu_image_view.key_action_dispatcher import (
     KeyActionDispatcher,
     anim_speed_factor,
@@ -112,3 +114,56 @@ def test_reset_view_with_nothing_loaded_is_safe():
     KeyActionDispatcher(view)._reset_view()   # noqa: SLF001
     assert view.fit_calls == 0
     assert view.updated is True
+
+
+# ---------------------------------------------------------------
+# loupe / reading-mode toggles (now configurable shortcut actions)
+# ---------------------------------------------------------------
+class _ToggleView:
+    """Attribute surface the loupe / reading-mode toggles touch."""
+
+    def __init__(self, *, deep: bool = True):
+        self.deep_zoom = object() if deep else None
+        self._loupe_enabled = False
+        self._reading_mode = False
+        self.reading_fits = 0
+        self.window_fits = 0
+        self.toasts: list[str] = []
+        self._browse = SimpleNamespace(
+            apply_reading_fit=lambda: setattr(self, "reading_fits", self.reading_fits + 1),
+        )
+
+    def _toast(self, _key, fallback):
+        self.toasts.append(fallback)
+
+    def _fit_to_window(self):
+        self.window_fits += 1
+
+    def update(self):
+        pass
+
+
+def test_loupe_toggles_via_dispatcher():
+    view = _ToggleView(deep=True)
+    dispatcher = KeyActionDispatcher(view)
+    assert dispatcher._dispatch_toggle("loupe", None) is True   # noqa: SLF001
+    assert view._loupe_enabled is True
+    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    assert view._loupe_enabled is False
+
+
+def test_loupe_ignored_without_deep_zoom():
+    view = _ToggleView(deep=False)
+    KeyActionDispatcher(view)._dispatch_toggle("loupe", None)   # noqa: SLF001
+    assert view._loupe_enabled is False
+
+
+def test_reading_mode_toggles_and_fits_via_dispatcher():
+    view = _ToggleView(deep=True)
+    dispatcher = KeyActionDispatcher(view)
+    assert dispatcher._dispatch_toggle("reading_mode", None) is True  # noqa: SLF001
+    assert view._reading_mode is True
+    assert view.reading_fits == 1   # entering fits to width
+    dispatcher._dispatch_toggle("reading_mode", None)                # noqa: SLF001
+    assert view._reading_mode is False
+    assert view.window_fits == 1    # leaving fits back to window

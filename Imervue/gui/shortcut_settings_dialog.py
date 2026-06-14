@@ -95,6 +95,8 @@ DEFAULT_SHORTCUTS: dict[str, tuple[int, int]] = {
     "cull_unflag":      (_k(Qt.Key.Key_U), _NONE),
     "command_palette":  (_k(Qt.Key.Key_P), _CTRL_SHIFT),
     "macro_replay":     (_k(Qt.Key.Key_M), _ALT),
+    "loupe":            (_k(Qt.Key.Key_L), _NONE),
+    "reading_mode":     (_k(Qt.Key.Key_V), _NONE),
 }
 
 # Translation key for each action (displayed in the dialog)
@@ -147,6 +149,8 @@ ACTION_DISPLAY_KEYS: dict[str, str] = {
     "cull_unflag":      "shortcut_action_cull_unflag",
     "command_palette":  "shortcut_action_command_palette",
     "macro_replay":     "shortcut_action_macro_replay",
+    "loupe":            "shortcut_action_loupe",
+    "reading_mode":     "shortcut_action_reading_mode",
 }
 
 # English fallback names
@@ -183,6 +187,8 @@ ACTION_FALLBACKS: dict[str, str] = {
     "cull_unflag": "Cull: Unflag",
     "command_palette": "Command Palette",
     "macro_replay": "Replay Last Macro",
+    "loupe": "Loupe Magnifier",
+    "reading_mode": "Reading Mode",
 }
 
 

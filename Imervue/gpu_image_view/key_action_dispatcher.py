@@ -155,6 +155,8 @@ class KeyActionDispatcher:
             "dual_page": lambda: self._toggle_dual_page(modifiers),
             "multi_monitor": self._toggle_multi_monitor,
             "color_mode_cycle": self._cycle_color_mode,
+            "loupe": self._toggle_loupe,
+            "reading_mode": self._toggle_reading_mode,
         }
         handler = toggle_handlers.get(action)
         if handler is None:
@@ -201,6 +203,32 @@ class KeyActionDispatcher:
         view.renderer.color_mode = next_color_mode(view.renderer.color_mode)
         key, fallback = color_mode_labels(view.renderer.color_mode)
         view._toast(key, fallback)
+        view.update()
+
+    def _toggle_loupe(self) -> None:
+        """Cursor-following magnifier; deep zoom only."""
+        view = self.view
+        if not view.deep_zoom:
+            return
+        view._loupe_enabled = not view._loupe_enabled
+        if view._loupe_enabled:
+            view._toast("loupe_on", "Loupe on — magnifier follows cursor")
+        else:
+            view._toast("loupe_off", "Loupe off")
+        view.update()
+
+    def _toggle_reading_mode(self) -> None:
+        """Fit-width vertical reading mode; deep zoom only."""
+        view = self.view
+        if not view.deep_zoom:
+            return
+        view._reading_mode = not view._reading_mode
+        if view._reading_mode:
+            view._browse.apply_reading_fit()
+            view._toast("reading_on", "Reading mode — scroll to read, auto-advance")
+        else:
+            view._fit_to_window()
+            view._toast("reading_off", "Reading mode off")
         view.update()
 
     # ------------------------------------------------------------------
