@@ -222,7 +222,7 @@ class _SubprocessSingleWorker(QThread):
 
     def run(self):
         try:
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # nosec B603,B607  # nosemgrep
                 self._command(), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, **_subprocess_kwargs(),
             )
@@ -318,7 +318,7 @@ class _SubprocessBatchWorker(QThread):
                 tmp_path = tmp.name
                 json.dump(self._paths, tmp)
 
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # nosec B603,B607  # nosemgrep
                 self._command(tmp_path), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, **_subprocess_kwargs(),
             )
