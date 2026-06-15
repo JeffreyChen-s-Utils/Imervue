@@ -183,7 +183,7 @@ class TestLegacyCleanup:
         cache_dir.mkdir(parents=True, exist_ok=True)
         legacy = cache_dir / "abc123.npy"
         legacy.write_bytes(b"legacy payload")
-        _c = tdc.ThumbnailDiskCache()
+        tdc.ThumbnailDiskCache()  # constructing scans the dir and removes legacy .npy files
         assert not legacy.exists()
 
 

@@ -16,6 +16,19 @@ _EXPORT_FAILED = '내보내기 실패: {err}'
 _KOREAN_OPEN_FOLDER = '폴더 열기'
 
 korean_word_dict = {
+    # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
+    "loupe_on": "루페 켜짐 — 커서를 따라 확대",
+    "loupe_off": "루페 꺼짐",
+    "reading_on": "읽기 모드 — 스크롤로 읽기, 자동 넘김",
+    "reading_off": "읽기 모드 꺼짐",
+    "shortcut_action_loupe": "루페",
+    "shortcut_action_reading_mode": "읽기 모드",
+    "preferences_filmstrip": "딥 줌 필름스트립 표시",
+    "preferences_transition": "이미지 전환 시 페이드 인",
+    "preferences_smooth_nav": "부드러운 줌과 관성 패닝",
+    "preferences_browsing_hint": "딥 줌 탐색 보조 — 즉시 적용됩니다.",
+    "cheat_grid_focus": "썸네일 포커스 이동",
+    "cheat_grid_open": "선택한 썸네일 열기",
     "tab_new": "새 탭",
     "main_window_current_filename_format": "현재 파일 이름: {name}",
     # File menu
@@ -155,6 +168,9 @@ korean_word_dict = {
     "tree_open_folder": _KOREAN_OPEN_FOLDER,
     "tree_delete": "삭제",
     "tree_deleted": "휴지통으로 이동됨: {name}",
+    "tree_delete_selected": "{count}개 항목 삭제",
+    "tree_deleted_batch": "{count}개 항목을 휴지통으로 이동함",
+    "tree_copy_paths": "경로 복사",
     # 정렬 메뉴
     "sort_menu_title": "정렬",
     "sort_by_name": "이름순",

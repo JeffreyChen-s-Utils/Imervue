@@ -190,6 +190,18 @@ def test_shutdown_on_uninitialised_is_safe():
     up.shutdown()   # no GL calls expected, must not raise
 
 
+def test_stream_upload_returns_false_when_uninitialised():
+    """The async path must short-circuit (no GL touched) on an
+    uninitialised uploader so callers fall back to the synchronous
+    ``glTexImage2D``. This branch runs before any GL import, so it is
+    exercisable headless."""
+    import numpy as np
+
+    up = PBOTextureUploader()
+    rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    assert up.stream_upload(1, rgba, 4, 4) is False
+
+
 @pytest.mark.parametrize("side", [256, 512, 1024])
 def test_decide_path_is_pbo_for_typical_tile_sizes(side):
     """Common tile sizes used by the viewer (256/512/1024) all

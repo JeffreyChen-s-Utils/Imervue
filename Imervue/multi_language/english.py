@@ -31,6 +31,19 @@ _EXPORT_FAILED = 'Export failed: {err}'
 _ENGLISH_INTENSITY_LABEL = 'Intensity:'
 
 english_word_dict = {
+    # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
+    "loupe_on": "Loupe on — magnifier follows cursor",
+    "loupe_off": "Loupe off",
+    "reading_on": "Reading mode — scroll to read, auto-advance",
+    "reading_off": "Reading mode off",
+    "shortcut_action_loupe": "Loupe Magnifier",
+    "shortcut_action_reading_mode": "Reading Mode",
+    "preferences_filmstrip": "Show the deep-zoom filmstrip",
+    "preferences_transition": "Fade images in when switching",
+    "preferences_smooth_nav": "Smooth (eased) zoom and momentum pan",
+    "preferences_browsing_hint": "Deep-zoom browsing aids — applied immediately.",
+    "cheat_grid_focus": "Move thumbnail focus",
+    "cheat_grid_open": "Open focused thumbnail",
     "tab_new": "New Tab",
     "main_window_current_filename_format": "Current Filename: {name}",
     # File menu
@@ -170,6 +183,9 @@ english_word_dict = {
     "tree_open_folder": "Open Containing Folder",
     "tree_delete": _ENGLISH_DELETE,
     "tree_deleted": "Moved to trash: {name}",
+    "tree_delete_selected": "Delete {count} Items",
+    "tree_deleted_batch": "Moved {count} items to trash",
+    "tree_copy_paths": "Copy Paths",
     # Sort menu
     "sort_menu_title": "Sort",
     "sort_by_name": "By Name",

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import pytest
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 @pytest.fixture
 def canvas(qapp):

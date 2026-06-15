@@ -17,6 +17,8 @@ from Imervue.puppet.auto_mesh import (
     triangulate_alpha_grid,
 )
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 # QOpenGLWidget construction crashes on the headless GitHub CI
 # Windows runner once the offscreen-GL pool gets touched — the

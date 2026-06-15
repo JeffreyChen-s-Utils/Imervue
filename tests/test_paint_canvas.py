@@ -19,6 +19,8 @@ from Imervue.paint.canvas import (
     cursor_for_tool,
 )
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 # ---------------------------------------------------------------------------
 # cursor_for_tool

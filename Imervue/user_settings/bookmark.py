@@ -45,7 +45,6 @@ def add_bookmark(path: str) -> bool:
         return False
     bookmarks = user_setting_dict.setdefault("bookmarks", [])
     # setdefault may have created a new list; re-sync the id cache.
-    global _cached_list_id
     if id(bookmarks) != _cached_list_id:
         bookmark_set = _ensure_set_synced()
     bookmarks.append(path)

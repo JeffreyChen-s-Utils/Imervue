@@ -32,6 +32,9 @@ from Imervue.user_settings.user_setting_dict import (
 )
 import contextlib
 
+# 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
+_SCREEN_ADAPT_DEBOUNCE_MS = 300
+
 
 def _safe_submenus_of(parent) -> list:
     """Return live submenus reachable from ``parent`` (a QMenuBar or
@@ -390,6 +393,15 @@ class ImervueMainWindow(QMainWindow):
         from Imervue.system.file_tree_watcher import FileTreeWatchdog
         self._tree_watchdog = FileTreeWatchdog(self)
         self._tree_watchdog.bind_model(self.model)
+
+        # ===== 拖到別的螢幕 → 視窗與 deep-zoom 圖片自動適配 =====
+        # moveEvent 在拖曳期間連續觸發；用單發計時器去抖動，等視窗
+        # 「停下來」再檢查是否落在不同螢幕上（見 _adapt_to_current_screen）。
+        self._screen_adapt_timer = QTimer(self)
+        self._screen_adapt_timer.setSingleShot(True)
+        self._screen_adapt_timer.setInterval(_SCREEN_ADAPT_DEBOUNCE_MS)
+        self._screen_adapt_timer.timeout.connect(self._adapt_to_current_screen)
+        self._last_screen_avail: tuple[int, int, int, int] | None = None
 
         # ===== 還原視窗位置與大小（多螢幕適配） =====
         self._restore_window_geometry()
@@ -1194,6 +1206,77 @@ class ImervueMainWindow(QMainWindow):
         self._tab_bar.setCurrentIndex(
             (self._tab_bar.currentIndex() - 1) % count
         )
+
+    # ==========================
+    # 拖到別的螢幕 → 自動適配
+    # ==========================
+    def moveEvent(self, event):  # noqa: N802 — Qt naming
+        super().moveEvent(event)
+        # __init__ 還沒跑完前 Qt 就可能送出第一個 moveEvent。
+        timer = getattr(self, "_screen_adapt_timer", None)
+        if timer is not None:
+            timer.start()
+
+    def _adapt_to_current_screen(self) -> None:
+        """Debounced ``moveEvent`` handler.
+
+        When the window settles on a screen with a different available
+        geometry (dragged to another monitor, or the monitor changed
+        resolution), rescale the frame to keep its relative footprint and
+        re-fit the deep-zoom image so the whole picture stays visible.
+        """
+        screen = self.screen()
+        if screen is None:
+            return
+        avail = screen.availableGeometry()
+        new_avail = (avail.x(), avail.y(), avail.width(), avail.height())
+        old_avail, self._last_screen_avail = self._last_screen_avail, new_avail
+        if old_avail is None or old_avail == new_avail:
+            return
+        # 最大化 / 全螢幕視窗由 OS 自己重排到新螢幕，只需重新 fit 圖片。
+        if not (self.isMaximized() or self.isFullScreen()):
+            self._rescale_window_between_screens(old_avail, new_avail)
+        self._refit_deep_zoom_image()
+
+    def _rescale_window_between_screens(self, old_avail, new_avail) -> None:
+        """Keep the window's relative size / position on the new screen."""
+        from Imervue.gui.screen_fit import rescale_rect_between_screens
+        frame = self.frameGeometry()
+        client = self.geometry()
+        frame_rect = (frame.x(), frame.y(), frame.width(), frame.height())
+        target = rescale_rect_between_screens(frame_rect, old_avail, new_avail)
+        if target == frame_rect:
+            return
+        # setGeometry 吃的是 CLIENT rect — 把 frame 目標往內縮掉視窗
+        # 裝飾邊距，標題列才不會被擠出螢幕外。
+        left = client.x() - frame.x()
+        top = client.y() - frame.y()
+        extra_w = frame.width() - client.width()
+        extra_h = frame.height() - client.height()
+        x, y, w, h = target
+        self.setGeometry(
+            x + left, y + top,
+            max(1, w - extra_w), max(1, h - extra_h),
+        )
+
+    def _refit_deep_zoom_image(self) -> None:
+        """Fit the whole deep-zoom image into the (possibly resized) canvas.
+
+        Deferred one event-loop turn so the fit math sees the canvas size
+        AFTER the ``setGeometry`` layout pass, not the mid-resize one.
+        Intentionally overrides a user zoom/pan — landing on a new screen
+        means "show me the whole image at this screen's size".
+        """
+        viewer = self.viewer
+        if viewer.deep_zoom is None or viewer.tile_grid_mode:
+            return
+
+        def _do_fit() -> None:
+            if viewer.deep_zoom is not None and not viewer.tile_grid_mode:
+                viewer._fit_to_window()
+                viewer.update()
+
+        QTimer.singleShot(0, _do_fit)
 
     # ==========================
     # 多螢幕視窗位置記憶

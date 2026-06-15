@@ -1,14 +1,8 @@
 from collections import OrderedDict
 
-import numpy as np
-from OpenGL.GL import (
-    glDeleteTextures, glGenTextures, glTexImage2D, glBindTexture,
-    glTexParameteri, glPixelStorei,
-    GL_TEXTURE_2D, GL_RGBA, GL_UNSIGNED_BYTE,
-    GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER,
-    GL_UNPACK_ALIGNMENT, GL_LINEAR,
-    GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE,
-)
+from OpenGL.GL import glDeleteTextures
+
+from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
 
 
 _MAX_TILE_CACHE = 256
@@ -55,34 +49,8 @@ class TileManager:
         if x0 >= w or y0 >= h:
             return None
 
-        tile = image[y0:y1, x0:x1]
-
-        tile = tile.astype(np.uint8)
-        if tile.ndim == 2:
-            tile = np.stack([tile, tile, tile], axis=2)
-        if tile.shape[2] == 3:
-            alpha = np.full((tile.shape[0], tile.shape[1], 1), 255, dtype=np.uint8)
-            tile = np.concatenate([tile, alpha], axis=2)
-
-        tex = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, tex)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            tile.shape[1],
-            tile.shape[0],
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            tile
-        )
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        tile = prepare_rgba(image[y0:y1, x0:x1])
+        tex = upload_rgba_texture(tile)
 
         self.cache[key] = tex
         return tex

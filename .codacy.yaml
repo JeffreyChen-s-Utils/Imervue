@@ -17,3 +17,14 @@ engines:
       # bandit honours neither the .bandit skips nor inline `# nosec`, so the
       # file is excluded here to match that documented acceptance.
       - 'Imervue/gui/file_tree_view.py'
+      # safety_review launches NudeNet / ERAX in an isolated Python subprocess
+      # (no shell=True, controlled args) for frozen-build native-DLL safety —
+      # the B404/B603 subprocess hits are the accepted isolation pattern,
+      # already skipped in .bandit / pyproject [tool.bandit].
+      - 'plugins/safety_review/**'
+  semgrep:
+    enabled: true
+    exclude_paths:
+      # Same accepted subprocess-isolation pattern as above — semgrep's
+      # dangerous-subprocess-use audit flags the controlled Popen calls.
+      - 'plugins/safety_review/**'

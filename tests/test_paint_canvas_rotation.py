@@ -6,6 +6,8 @@ import pytest
 
 from Imervue.paint.canvas import PaintCanvas, _wrap_rotation
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 # ---------------------------------------------------------------------------
 # _wrap_rotation

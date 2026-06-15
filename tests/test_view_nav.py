@@ -4,9 +4,13 @@ from __future__ import annotations
 import pytest
 
 from Imervue.gpu_image_view.view_nav import (
+    clamp_pan_offset,
+    reading_bottom_offset,
+    reading_scroll,
     stepped_zoom,
     toggle_zoom_target,
     zoom_about_point,
+    zoom_to_region,
 )
 
 
@@ -61,3 +65,101 @@ class TestZoomAboutPoint:
     def test_zero_old_zoom_is_guarded(self):
         # Degenerate old zoom must not divide by zero; offset is unchanged.
         assert zoom_about_point(50.0, 200.0, 0.0, 2.0) == pytest.approx(50.0)
+
+
+class TestClampPanOffset:
+    def test_smaller_than_canvas_recentres(self):
+        # Image narrower than the viewport → snaps to centred, ignoring offset.
+        assert clamp_pan_offset(999.0, 100.0, 300.0) == pytest.approx(100.0)
+
+    def test_within_bounds_is_unchanged(self):
+        # Image wider than canvas; offset inside [canvas-image, 0] stays put.
+        assert clamp_pan_offset(-100.0, 500.0, 300.0) == pytest.approx(-100.0)
+
+    def test_positive_overshoot_clamps_to_zero(self):
+        # A positive offset would show empty space on the left → clamp to 0.
+        assert clamp_pan_offset(50.0, 500.0, 300.0) == pytest.approx(0.0)
+
+    def test_negative_overshoot_clamps_to_min(self):
+        # Past the right edge → clamp so the right edge meets the viewport.
+        assert clamp_pan_offset(-999.0, 500.0, 300.0) == pytest.approx(-200.0)
+
+    @pytest.mark.parametrize("offset,expected", [(0.0, 0.0), (-200.0, -200.0)])
+    def test_exact_bounds_are_kept(self, offset, expected):
+        assert clamp_pan_offset(offset, 500.0, 300.0) == pytest.approx(expected)
+
+
+class TestZoomToRegion:
+    CANVAS = (1000.0, 1000.0)
+    LIMITS = (0.05, 50.0)
+
+    def test_region_fills_canvas_and_centres(self):
+        new_zoom, off_x, off_y = zoom_to_region(
+            (200, 200, 400, 400), 1.0, (0.0, 0.0), self.CANVAS, self.LIMITS,
+        )
+        assert new_zoom == pytest.approx(5.0)  # 1000 / 200
+        # The framed region's centre (300, 300) lands at the canvas centre.
+        assert 300 * new_zoom + off_x == pytest.approx(500)
+        assert 300 * new_zoom + off_y == pytest.approx(500)
+
+    def test_corner_order_is_normalised(self):
+        forward = zoom_to_region((200, 200, 400, 400), 1.0, (0.0, 0.0),
+                                 self.CANVAS, self.LIMITS)
+        reversed_ = zoom_to_region((400, 400, 200, 200), 1.0, (0.0, 0.0),
+                                   self.CANVAS, self.LIMITS)
+        assert forward == reversed_
+
+    def test_tiny_region_clamped_to_zoom_max(self):
+        new_zoom, _, _ = zoom_to_region(
+            (500, 500, 510, 510), 1.0, (0.0, 0.0), self.CANVAS, self.LIMITS,
+        )
+        assert new_zoom == pytest.approx(50.0)  # 1000/10 capped at zoom_max
+
+    def test_zero_area_region_does_not_divide_by_zero(self):
+        new_zoom, off_x, off_y = zoom_to_region(
+            (300, 300, 300, 300), 1.0, (0.0, 0.0), self.CANVAS, self.LIMITS,
+        )
+        assert new_zoom == pytest.approx(50.0)
+        assert off_x == pytest.approx(1000 / 2 - 300 * 50.0)
+
+    def test_accounts_for_current_zoom_and_offset(self):
+        # zoom 2, panned (100, 100): screen rect 300..500 → image span 100 px.
+        new_zoom, _, _ = zoom_to_region(
+            (300, 300, 500, 500), 2.0, (100.0, 100.0), self.CANVAS, self.LIMITS,
+        )
+        assert new_zoom == pytest.approx(10.0)  # 1000 / 100
+
+
+class TestReadingScroll:
+    # Tall page (content 2000) in a 600 px viewport → min offset -1400.
+    def test_scrolls_within_page(self):
+        assert reading_scroll(-500, 2000, 600, -120) == (-620, 0)
+
+    def test_clamps_to_top_without_advancing(self):
+        # Near the top, scrolling up stops at 0 first (no advance yet).
+        assert reading_scroll(-50, 2000, 600, 120) == (0.0, 0)
+
+    def test_advance_previous_at_top_edge(self):
+        # Already at the top → next scroll-up advances to the previous image.
+        assert reading_scroll(0, 2000, 600, 120) == (0, -1)
+
+    def test_clamps_to_bottom_without_advancing(self):
+        assert reading_scroll(-1350, 2000, 600, -120) == (-1400, 0)
+
+    def test_advance_next_at_bottom_edge(self):
+        assert reading_scroll(-1400, 2000, 600, -120) == (-1400, 1)
+
+    def test_short_page_advances_on_any_scroll(self):
+        # Image shorter than the viewport: scroll down → next, up → previous.
+        assert reading_scroll(0, 300, 600, -120) == (0, 1)
+        assert reading_scroll(0, 300, 600, 120) == (0, -1)
+
+
+class TestReadingBottomOffset:
+    def test_tall_page_is_bottom_aligned(self):
+        # content 2000 in a 600 viewport → offset -1400 (bottom flush).
+        assert reading_bottom_offset(2000, 600) == -1400
+
+    def test_short_page_stays_at_top(self):
+        # A page that already fits never goes negative.
+        assert reading_bottom_offset(300, 600) == 0

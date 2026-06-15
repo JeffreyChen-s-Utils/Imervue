@@ -7,6 +7,7 @@ there for backwards compatibility.
 import os
 import subprocess  # nosec B404  # NOSONAR - static arg lists for trusted OS file managers
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -39,6 +40,22 @@ def _next_duplicate_name(source: Path) -> Path:
         n += 1
 
 
+def _dedupe_paths(paths: Iterable[str]) -> list[str]:
+    """Order-preserving de-duplication of paths, dropping empty strings.
+
+    The selection model yields one index per selected row but a path can
+    repeat (e.g. the same file reachable through an expanded + collapsed
+    branch); the batch ops need each path exactly once.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for path in paths:
+        if path and path not in seen:
+            seen.add(path)
+            out.append(path)
+    return out
+
+
 class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
@@ -47,6 +64,17 @@ class _FileTreeView(QTreeView):
         self._main_window = main_window
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
+        # Ctrl/Shift multi-select so batch delete / copy-paths can act on
+        # several files at once. A plain single click still selects and
+        # opens one file via the main window's ``clicked`` handler.
+        self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+
+    def _selected_paths(self) -> list[str]:
+        """Unique filesystem paths for every selected row (column 0)."""
+        model: QFileSystemModel = self.model()
+        return _dedupe_paths(
+            model.filePath(index) for index in self.selectionModel().selectedRows()
+        )
 
     # ---------- Keyboard shortcuts ----------
 
@@ -90,14 +118,7 @@ class _FileTreeView(QTreeView):
             self.setRootIndex(model.index(path))
 
     def _delete_selected(self):
-        indexes = self.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        model: QFileSystemModel = self.model()
-        path = model.filePath(indexes[0])
-        if not path or not Path(path).exists():
-            return
-        self._delete_path(path)
+        self._delete_paths(self._selected_paths())
 
     # ---------- Right-click menu ----------
 
@@ -109,9 +130,45 @@ class _FileTreeView(QTreeView):
         path = model.filePath(index)
         if not path:
             return
+        # When the user right-clicks a row that is part of a multi-selection,
+        # offer the batch menu; otherwise fall back to the full single-item
+        # menu (rename / duplicate / new folder etc. only make sense for one).
+        selected = self._selected_paths()
+        if len(selected) > 1 and path in selected:
+            self._show_multi_context_menu(selected, pos)
+        else:
+            self._show_single_context_menu(path, pos)
 
+    def _show_multi_context_menu(self, paths: list[str], pos) -> None:
+        """Context menu for a multi-row selection: reveal, copy paths, delete."""
         lang = language_wrapper.language_word_dict
         menu = QMenu(self)
+
+        action_explorer = menu.addAction(
+            lang.get("tree_open_in_explorer", "Open in Explorer")
+        )
+        action_explorer.triggered.connect(lambda: self._open_in_explorer(paths[0]))
+
+        action_copy = menu.addAction(lang.get("tree_copy_paths", "Copy Paths"))
+        action_copy.triggered.connect(
+            lambda: QApplication.clipboard().setText("\n".join(paths))
+        )
+
+        menu.addSeparator()
+
+        action_del = menu.addAction(
+            lang.get("tree_delete_selected", "Delete {count} Items").format(
+                count=len(paths),
+            )
+        )
+        action_del.triggered.connect(lambda: self._delete_paths(paths))
+
+        menu.exec(self.viewport().mapToGlobal(pos))
+
+    def _show_single_context_menu(self, path: str, pos):
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+        index = self.model().index(path)
 
         # Show in Explorer
         action_explorer = menu.addAction(
@@ -328,17 +385,36 @@ class _FileTreeView(QTreeView):
                 ).format(name=Path(path).name),
             )
 
-    def _delete_path(self, path: str):
+    def _delete_paths(self, paths: list[str]) -> None:
+        """Send every existing path in *paths* to the trash.
+
+        For a single path this defers to ``_delete_path`` so the existing
+        per-file toast is preserved; for a batch the individual toasts are
+        suppressed and replaced with one summary so the user isn't spammed.
+        """
+        existing = [p for p in paths if Path(p).exists()]
+        if not existing:
+            return
+        if len(existing) == 1:
+            self._delete_path(existing[0])
+            return
+        for path in existing:
+            self._delete_path(path, notify=False)
+        self._notify_deleted_batch(len(existing))
+
+    def _delete_path(self, path: str, notify: bool = True):
         if not Path(path).exists():
             return
         viewer = self._main_window.viewer
         images = viewer.model.images
         if Path(path).is_file() and path in images:
-            self._delete_from_viewer_list(path, viewer, images)
+            self._delete_from_viewer_list(path, viewer, images, notify=notify)
         else:
-            self._delete_external(path)
+            self._delete_external(path, notify=notify)
 
-    def _delete_from_viewer_list(self, path: str, viewer, images: list[str]) -> None:
+    def _delete_from_viewer_list(
+        self, path: str, viewer, images: list[str], notify: bool = True,
+    ) -> None:
         idx = images.index(path)
         images.pop(idx)
         viewer.undo_stack.append({
@@ -368,7 +444,8 @@ class _FileTreeView(QTreeView):
                     viewer.doneCurrent()
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
-        self._notify_deleted(path)
+        if notify:
+            self._notify_deleted(path)
 
     @staticmethod
     def _refresh_viewer_after_delete(viewer, images: list[str], idx: int) -> None:
@@ -387,9 +464,9 @@ class _FileTreeView(QTreeView):
             viewer.tile_grid_mode = True
             viewer.update()
 
-    def _delete_external(self, path: str) -> None:
+    def _delete_external(self, path: str, notify: bool = True) -> None:
         from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-        if _send_to_trash(path):
+        if _send_to_trash(path) and notify:
             self._notify_deleted(path)
 
     def _notify_deleted(self, path: str) -> None:
@@ -399,6 +476,17 @@ class _FileTreeView(QTreeView):
         self._main_window.toast.info(
             lang.get("tree_deleted", "Moved to trash: {name}").format(
                 name=Path(path).name
+            )
+        )
+
+    def _notify_deleted_batch(self, count: int) -> None:
+        """One summary toast after a multi-file delete."""
+        if not hasattr(self._main_window, "toast"):
+            return
+        lang = language_wrapper.language_word_dict
+        self._main_window.toast.info(
+            lang.get("tree_deleted_batch", "Moved {count} items to trash").format(
+                count=count,
             )
         )
 

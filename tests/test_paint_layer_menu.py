@@ -10,6 +10,8 @@ from Imervue.paint.paint_menu_bar import menu_for
 from Imervue.paint.paint_workspace import PaintWorkspace
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 @pytest.fixture(autouse=True)
 def _clean_state():

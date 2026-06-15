@@ -13,6 +13,8 @@ import pytest
 
 from Imervue.desktop_pet.pet_workspace import PetWorkspace
 
+from _qt_skip import pytestmark  # noqa: E402,F401
+
 
 def test_workspace_instantiates_without_creating_window(qapp):
     """Tab construction must NOT spin up the GL overlay — the
