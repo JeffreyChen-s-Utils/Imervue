@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 
@@ -40,6 +41,8 @@ from pathlib import Path
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
 from Imervue.image.tile_manager import TileManager
 import contextlib
+
+logger = logging.getLogger("Imervue.gpu_image_view")
 
 
 class GPUImageView(QOpenGLWidget):
@@ -472,13 +475,17 @@ class GPUImageView(QOpenGLWidget):
             painter.endNativePainting()
             return
 
-        # ===== Tile Grid Mode =====
-        if self.tile_grid_mode:
-            self._tile_renderer.paint()
-        # ===== DeepZoom Mode =====
-        elif self.deep_zoom:
-            self._deep_zoom_renderer.paint()
-            self._deep_zoom_renderer.paint_minimap()
+        # Render the GL scene defensively: a renderer exception must never skip
+        # endNativePainting + the QPainter overlay below, or the filmstrip / OSD
+        # (drawn there) silently vanish for the whole frame.
+        try:
+            if self.tile_grid_mode:
+                self._tile_renderer.paint()
+            elif self.deep_zoom:
+                self._deep_zoom_renderer.paint()
+                self._deep_zoom_renderer.paint_minimap()
+        except Exception:   # noqa: BLE001 - keep the overlay alive; log the cause
+            logger.exception("Deep-zoom/tile GL render failed this frame")
 
         painter.endNativePainting()
 
@@ -535,6 +542,16 @@ class GPUImageView(QOpenGLWidget):
         """Zoom level that fits the whole image in the canvas (capped at 1.0)."""
         from Imervue.gpu_image_view.fit_view import fit_zoom
         return fit_zoom(self)
+
+    def _should_refit_on_load(self, path: str) -> bool:
+        """Whether to content-fit on display: always for a fresh image, and for
+        a remembered one whose whole image still fits the canvas — so the
+        overlay band letterboxes it instead of cropping its bottom. A genuine
+        zoom-in is left where the user left it."""
+        if path not in self._view_memory:
+            return True
+        from Imervue.gpu_image_view.fit_view import fits_within_canvas
+        return fits_within_canvas(self)
 
     def _fit_to_window(self):
         """Centre + fit the image. Called by the input controller and loaders."""
@@ -772,7 +789,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            if path not in self._view_memory:
+            if self._should_refit_on_load(path):
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
@@ -816,7 +833,7 @@ class GPUImageView(QOpenGLWidget):
 
         # 首次進入此圖片 → 自動 fit-to-window
         cur_path = self.model.images[self.current_index]
-        if cur_path and cur_path not in self._view_memory:
+        if cur_path and self._should_refit_on_load(cur_path):
             self._fit_to_window()
 
         # 動畫偵測
@@ -842,6 +859,31 @@ class GPUImageView(QOpenGLWidget):
         if callable(callback) and self.deep_zoom is not None:
             # pylint: disable=not-callable  # guarded by callable() above
             callback(self.deep_zoom.levels[0])
+        self._log_overlay_diagnostics()
+
+    def _log_overlay_diagnostics(self) -> None:
+        """Record (at DEBUG) the inputs that decide filmstrip / minimap /
+        letterbox visibility, so an 'overlays missing / image cropped' report
+        can be pinned from the log without a live debugger."""
+        if not logger.isEnabledFor(logging.DEBUG):
+            return
+        try:
+            from Imervue.gpu_image_view.fit_view import (
+                canvas_size,
+                content_size,
+                fit_zoom,
+                reserved_overlay_height,
+            )
+            logger.debug(
+                "overlay-state: images=%d filmstrip_enabled=%s grid=%s "
+                "canvas=%s content=%s reserved=%d zoom=%.4f fit=%.4f off_y=%.1f",
+                len(self.model.images), getattr(self, "_filmstrip_enabled", None),
+                self.tile_grid_mode, canvas_size(self), content_size(self),
+                reserved_overlay_height(self), self.zoom, fit_zoom(self),
+                self.dz_offset_y,
+            )
+        except Exception:  # noqa: BLE001 - diagnostics must never break display
+            logger.exception("overlay-state diagnostics failed")
 
     def _init_animation(self, path: str):
         """偵測並初始化動畫播放"""

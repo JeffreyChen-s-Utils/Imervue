@@ -63,10 +63,10 @@ class BrowseFeatures:
         view = self._view
         if not view.deep_zoom:
             return
-        from Imervue.gpu_image_view.fit_view import canvas_size
+        from Imervue.gpu_image_view.fit_view import content_size
         from Imervue.gpu_image_view.view_nav import clamp_pan_offset
         base = view.deep_zoom.levels[0]
-        canvas_w, canvas_h = canvas_size(view)
+        canvas_w, canvas_h = content_size(view)
         view.dz_offset_x = clamp_pan_offset(
             view.dz_offset_x, base.shape[1] * view.zoom, canvas_w)
         view.dz_offset_y = clamp_pan_offset(
