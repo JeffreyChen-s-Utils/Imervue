@@ -27,7 +27,6 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
 if TYPE_CHECKING:
-    from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.object_splitter")

@@ -237,18 +237,6 @@ def _composite_one_layer(
     return out, clip_base_alpha
 
 
-def _resolve_group_opacity(layer, groups: dict) -> float | None:
-    """Return the multiplier the layer's group contributes, or ``None``
-    if the group is hidden / zero-opacity (skip the layer entirely)."""
-    layer_group = getattr(layer, "group", None)
-    if layer_group is None or layer_group not in groups:
-        return 1.0
-    grp = groups[layer_group]
-    if not grp.visible or grp.opacity <= 0:
-        return None
-    return float(grp.opacity)
-
-
 def _apply_adjustment_layer(
     out: np.ndarray, adjustment, effective_opacity: float,
 ) -> np.ndarray:

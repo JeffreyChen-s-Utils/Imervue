@@ -29,8 +29,6 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
 if TYPE_CHECKING:
-    from PySide6.QtWidgets import QMenuBar
-    from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_bg_remover")
@@ -265,7 +263,6 @@ class _RemoveBackgroundWorker(QThread):
             session = new_session(self._model)
 
             self.progress.emit("Processing image...")
-            from PIL import Image
             input_img = self._load_image(self._input)
 
             output_img = remove(
