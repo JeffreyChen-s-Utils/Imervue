@@ -53,6 +53,8 @@ def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_smart_albums(ui))
     _add_action(sub, lang, "similar_search_title", "Find Similar Images",
                 lambda: _open_similar_search(ui))
+    _add_action(sub, lang, "semantic_search_title", "Semantic Search (text)",
+                lambda: _open_semantic_search(ui))
     _add_action(sub, lang, "duplicate_title", "Find Duplicate Images",
                 lambda: _open_duplicate_detection(ui))
     _add_action(sub, lang, "auto_tag_title", "Auto-Tag Images",
@@ -339,6 +341,11 @@ def _open_map_view(ui: ImervueMainWindow):
 def _open_before_after(ui: ImervueMainWindow):
     from Imervue.gui.before_after_dialog import open_before_after_dialog
     open_before_after_dialog(ui.viewer)
+
+
+def _open_semantic_search(ui: ImervueMainWindow):
+    from Imervue.gui.semantic_search_dialog import open_semantic_search_dialog
+    open_semantic_search_dialog(ui.viewer)
 
 
 def _open_develop_presets(ui: ImervueMainWindow):
