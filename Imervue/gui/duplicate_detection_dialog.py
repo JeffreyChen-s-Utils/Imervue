@@ -376,6 +376,12 @@ class DuplicateDetectionDialog(QDialog):
         self._delete_btn.setEnabled(False)
         btn_row.addWidget(self._delete_btn)
 
+        self._select_redundant_btn = QPushButton(
+            lang.get("duplicate_select_redundant", "Select Redundant (keep best)"))
+        self._select_redundant_btn.clicked.connect(self._select_redundant)
+        self._select_redundant_btn.setEnabled(False)
+        btn_row.addWidget(self._select_redundant_btn)
+
         btn_row.addStretch()
 
         close_btn = QPushButton(lang.get("export_cancel", "Close"))
@@ -402,6 +408,7 @@ class DuplicateDetectionDialog(QDialog):
         self._tree.clear()
         self._groups.clear()
         self._delete_btn.setEnabled(False)
+        self._select_redundant_btn.setEnabled(False)
         self._scan_btn.setEnabled(False)
         self._progress.setValue(0)
         self._progress.show()
@@ -452,6 +459,7 @@ class DuplicateDetectionDialog(QDialog):
                 child.setData(0, Qt.ItemDataRole.UserRole, path)
             group_item.setExpanded(True)
         self._delete_btn.setEnabled(True)
+        self._select_redundant_btn.setEnabled(True)
 
     def _on_error(self, msg: str):
         self._status_label.setText(f"Error: {msg}")
@@ -496,6 +504,43 @@ class DuplicateDetectionDialog(QDialog):
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
                 _COUNT_PLACEHOLDER, str(deleted)
             ))
+
+    def _select_redundant(self):
+        """Keep the best image per group (most pixels, then largest file) and
+        select the rest, so the user can review before Delete Selected."""
+        from Imervue.library.dedupe_resolver import Candidate, plan_discards
+        groups = [
+            [Candidate(path, *self._probe_dims(path), size) for path, size in group]
+            for group in self._groups
+        ]
+        discards = set(plan_discards(groups))
+        self._tree.clearSelection()
+        count = self._select_paths(discards)
+        self._status_label.setText(
+            self._lang.get(
+                "duplicate_selected_redundant",
+                "{count} redundant file(s) selected — review, then Delete Selected",
+            ).replace(_COUNT_PLACEHOLDER, str(count)))
+
+    def _select_paths(self, paths: set[str]) -> int:
+        count = 0
+        for gi in range(self._tree.topLevelItemCount()):
+            group_item = self._tree.topLevelItem(gi)
+            for ci in range(group_item.childCount()):
+                child = group_item.child(ci)
+                if child.data(0, Qt.ItemDataRole.UserRole) in paths:
+                    child.setSelected(True)
+                    count += 1
+        return count
+
+    @staticmethod
+    def _probe_dims(path: str) -> tuple[int, int]:
+        """Pixel dimensions via PIL's header-only ``size``; (0, 0) if unreadable."""
+        try:
+            with Image.open(path) as im:
+                return im.size
+        except (OSError, ValueError):
+            return (0, 0)
 
     @staticmethod
     def _format_size(size: int) -> str:
