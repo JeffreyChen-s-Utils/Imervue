@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
@@ -29,6 +30,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.crop_geometry import (
+    ASPECT_PRESETS,
+    centered_aspect_crop,
+    parse_aspect,
+)
 from Imervue.image.geometry import CropRect, apply_crop, straighten
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -85,11 +91,17 @@ class CropStraightenDialog(QDialog):
         self._crop_w = self._make_spin(0.05, 1.0, 1.0)
         self._crop_h = self._make_spin(0.05, 1.0, 1.0)
 
+        self._image_aspect = self._probe_image_aspect()
+        self._aspect = QComboBox()
+        self._aspect.addItems(ASPECT_PRESETS)
+        self._aspect.currentTextChanged.connect(self._apply_aspect_preset)
+
         form = QFormLayout()
         angle_row = QHBoxLayout()
         angle_row.addWidget(self._angle, 1)
         angle_row.addWidget(self._angle_label)
         form.addRow(lang.get("crop_angle", "Straighten angle:"), angle_row)
+        form.addRow(lang.get("crop_aspect", "Aspect ratio:"), self._aspect)
         form.addRow(lang.get("crop_x", "Crop X (0..1):"), self._crop_x)
         form.addRow(lang.get("crop_y", "Crop Y (0..1):"), self._crop_y)
         form.addRow(lang.get("crop_w", "Crop width (0..1):"), self._crop_w)
@@ -129,6 +141,29 @@ class CropStraightenDialog(QDialog):
         s.setDecimals(3)
         s.setValue(value)
         return s
+
+    def _probe_image_aspect(self) -> float:
+        """Image width/height for aspect framing; 1.0 if the size can't be read.
+
+        Uses PIL's lazy ``size`` (header only, no pixel decode)."""
+        try:
+            with Image.open(self._path) as im:
+                w, h = im.size
+        except (OSError, ValueError):
+            return 1.0
+        return w / h if h else 1.0
+
+    def _apply_aspect_preset(self, label: str) -> None:
+        """Fill the crop fields with the largest centred crop of the chosen
+        aspect ratio; 'free' leaves the current crop untouched."""
+        ratio = parse_aspect(label)
+        if ratio is None:
+            return
+        fx, fy, fw, fh = centered_aspect_crop(self._image_aspect, ratio)
+        self._crop_x.setValue(fx)
+        self._crop_y.setValue(fy)
+        self._crop_w.setValue(fw)
+        self._crop_h.setValue(fh)
 
     def _update_angle_label(self, v: int) -> None:
         self._angle_label.setText(f"{v / 10.0:.1f}°")
