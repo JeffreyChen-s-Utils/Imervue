@@ -16,7 +16,7 @@ from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
-from Imervue.gui.folder_thumbnail_model import FolderThumbnailModel
+from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
 from Imervue.gui.toast import ToastManager
 from Imervue.integration_guide import _init_plugin_system_example
 from Imervue.menu.extra_tools_menu import build_extra_tools_menu
@@ -121,6 +121,8 @@ class ImervueMainWindow(QMainWindow):
 
         self.tree = _FileTreeView(self)
         self.tree.setModel(self.model)
+        self.tree.set_thumbnail_size(
+            user_setting_dict.get("tree_thumbnail_size", DEFAULT_ICON_SIZE))
         self.tree.setRootIndex(self.model.index(start_path))
         # 只顯示「名稱」欄，隱藏大小/類型/日期（省掉大量 stat() 呼叫）
         for col in (1, 2, 3):

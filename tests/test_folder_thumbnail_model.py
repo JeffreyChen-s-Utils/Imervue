@@ -5,12 +5,16 @@ QFileSystemModel (a QObject, not a QOpenGLWidget) → no headless-CI skip.
 """
 from __future__ import annotations
 
+import pytest
 from PIL import Image
 from PySide6.QtGui import QImage
 
 from Imervue.gui.folder_thumbnail_model import (
+    MAX_ICON_SIZE,
+    MIN_ICON_SIZE,
     FolderThumbnailModel,
     _PreviewWorker,
+    clamp_icon_size,
     folder_preview_path,
 )
 
@@ -86,3 +90,52 @@ class TestFolderThumbnailModel:
         assert model._cache["/has"] is not None
         assert model._cache["/none"] is None
         assert "/has" not in model._pending
+
+
+class TestDynamicIconSize:
+    @pytest.mark.parametrize("raw,expected", [
+        (5, MIN_ICON_SIZE), (16, 16), (50, 50), (128, MAX_ICON_SIZE), (999, MAX_ICON_SIZE),
+    ])
+    def test_clamp_icon_size(self, raw, expected):
+        assert clamp_icon_size(raw) == expected
+
+    def test_set_icon_size_changes_and_clears_cache(self, qapp):
+        model = FolderThumbnailModel(icon_size=32)
+        model._cache["/x"] = None
+        model._pending.add("/y")
+        model.set_icon_size(64)
+        assert model.icon_size() == 64
+        assert model._cache == {}
+        assert model._pending == set()
+
+    def test_set_icon_size_clamps(self, qapp):
+        model = FolderThumbnailModel()
+        model.set_icon_size(9999)
+        assert model.icon_size() == MAX_ICON_SIZE
+
+    def test_request_preview_uses_current_icon_size(self, qapp, monkeypatch):
+        model = FolderThumbnailModel(icon_size=64)
+        captured = []
+        monkeypatch.setattr(model._pool, "start", lambda worker: captured.append(worker))
+        model._request_preview("/f")
+        assert captured[0]._size == 64
+
+    def test_tree_set_thumbnail_size_syncs_view_and_model(self, qapp):
+        from types import SimpleNamespace
+
+        from Imervue.gui.file_tree_view import _FileTreeView
+        tree = _FileTreeView(SimpleNamespace())
+        model = FolderThumbnailModel()
+        tree.setModel(model)
+        tree.set_thumbnail_size(64)
+        assert tree.iconSize().width() == 64
+        assert model.icon_size() == 64
+
+    def test_tree_set_thumbnail_size_clamps(self, qapp):
+        from types import SimpleNamespace
+
+        from Imervue.gui.file_tree_view import _FileTreeView
+        tree = _FileTreeView(SimpleNamespace())
+        tree.setModel(FolderThumbnailModel())
+        tree.set_thumbnail_size(9999)
+        assert tree.iconSize().width() == MAX_ICON_SIZE

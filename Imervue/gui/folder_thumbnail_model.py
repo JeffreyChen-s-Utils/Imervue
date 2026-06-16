@@ -26,7 +26,14 @@ logger = logging.getLogger("Imervue.gui.folder_thumbnail_model")
 PREVIEW_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
 })
-_ICON_SIZE = 48
+DEFAULT_ICON_SIZE = 32
+MIN_ICON_SIZE = 16
+MAX_ICON_SIZE = 128
+
+
+def clamp_icon_size(px: int) -> int:
+    """Clamp a requested thumbnail edge to the supported ``[16, 128]`` range."""
+    return max(MIN_ICON_SIZE, min(MAX_ICON_SIZE, int(px)))
 
 
 def folder_preview_path(folder: str, exts: Iterable[str] = PREVIEW_EXTS) -> str | None:
@@ -77,11 +84,24 @@ class _PreviewWorker(QRunnable):
 class FolderThumbnailModel(QFileSystemModel):
     """File-system model whose folder icons are the folder's first image."""
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, icon_size: int = DEFAULT_ICON_SIZE) -> None:
         super().__init__(parent)
         self._cache: dict[str, QIcon | None] = {}  # None = scanned, no preview
         self._pending: set[str] = set()
         self._pool = QThreadPool(self)
+        self._icon_size = clamp_icon_size(icon_size)
+
+    def icon_size(self) -> int:
+        return self._icon_size
+
+    def set_icon_size(self, px: int) -> None:
+        """Set the preview edge size; drops the cache so previews re-decode
+        crisply at the new size on the next paint."""
+        px = clamp_icon_size(px)
+        if px != self._icon_size:
+            self._icon_size = px
+            self._cache.clear()
+            self._pending.clear()
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if (role == Qt.ItemDataRole.DecorationRole and index.column() == 0
@@ -99,7 +119,7 @@ class FolderThumbnailModel(QFileSystemModel):
         if folder in self._cache or folder in self._pending:
             return
         self._pending.add(folder)
-        worker = _PreviewWorker(folder, PREVIEW_EXTS, _ICON_SIZE)
+        worker = _PreviewWorker(folder, PREVIEW_EXTS, self._icon_size)
         worker.signals.done.connect(self._on_preview_ready)
         self._pool.start(worker)
 
