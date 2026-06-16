@@ -93,7 +93,7 @@ def compute_visible_tile_paths(view: GPUImageView) -> set[str]:
 def _evict_invisible(view: GPUImageView, visible: set[str]) -> None:  # pragma: no cover - GL delete
     """Delete GPU textures for paths not in ``visible`` until under VRAM cap."""
     # list() required because we mutate the dict inside the loop.
-    for path in list(view.tile_textures):  # noqa: S7504
+    for path in list(view.tile_textures):  # NOSONAR S7504 — iterating a list() copy
         if view._vram_usage <= view._vram_limit:
             return
         if path not in visible:
