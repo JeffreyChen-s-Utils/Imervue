@@ -103,9 +103,12 @@ class MasksDialog(QDialog):
         self._saturation = self._spin(-1.0, 1.0, 0.05)
         self._temperature = self._spin(-1.0, 1.0, 0.05)
         self._tint = self._spin(-1.0, 1.0, 0.05)
+        self._highlights = self._spin(-1.0, 1.0, 0.05)
+        self._shadows = self._spin(-1.0, 1.0, 0.05)
         self._feather = self._spin(0.0, 1.0, 0.05, value=0.5)
         for s in (self._exposure, self._brightness, self._contrast,
                   self._saturation, self._temperature, self._tint,
+                  self._highlights, self._shadows,
                   self._feather):
             s.valueChanged.connect(self._on_adjust_change)
 
@@ -117,6 +120,8 @@ class MasksDialog(QDialog):
         form.addRow(lang.get("masks_saturation", "Saturation:"), self._saturation)
         form.addRow(lang.get("masks_temperature", "Temperature:"), self._temperature)
         form.addRow(lang.get("masks_tint", "Tint:"), self._tint)
+        form.addRow(lang.get("masks_highlights", "Highlights:"), self._highlights)
+        form.addRow(lang.get("masks_shadows", "Shadows:"), self._shadows)
         form.addRow(lang.get("masks_feather", "Feather:"), self._feather)
 
     @staticmethod
@@ -177,6 +182,8 @@ class MasksDialog(QDialog):
             (self._saturation, m.adjustments.saturation),
             (self._temperature, m.adjustments.temperature),
             (self._tint, m.adjustments.tint),
+            (self._highlights, m.adjustments.highlights),
+            (self._shadows, m.adjustments.shadows),
             (self._feather, m.feather),
         ):
             spin.blockSignals(True)
@@ -194,6 +201,8 @@ class MasksDialog(QDialog):
             saturation=self._saturation.value(),
             temperature=self._temperature.value(),
             tint=self._tint.value(),
+            highlights=self._highlights.value(),
+            shadows=self._shadows.value(),
         )
         m.feather = self._feather.value()
 
