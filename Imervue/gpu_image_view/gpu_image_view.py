@@ -279,7 +279,7 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== 直方圖 =====
         self._show_histogram = False
-        self._histogram_cache: tuple | None = None  # (path, hist_r, hist_g, hist_b)
+        self._histogram_cache: tuple | None = None  # (path, Histogram, ClipStats)
 
         # ===== OSD (On-Screen Display) =====
         # F3 — 切換右上角顯示檔名 / 尺寸 / 格式 / 檔案大小
@@ -960,6 +960,26 @@ class GPUImageView(QOpenGLWidget):
 
         self.update()
 
+    def _clamp_grid_scroll(self) -> None:
+        """Hold the thumbnail-wall scroll within its content so the wheel /
+        middle-drag can't flick the grid into empty space above the first row
+        or below the last. Recomputes the live layout (cols / cell depend on
+        the widget width, thumbnail size and DPR) so the bound always matches
+        what the renderer draws this frame."""
+        from Imervue.gpu_image_view.tile_layout import (
+            clamp_grid_offset,
+            tile_grid_layout,
+        )
+        base_tile = self._tile_renderer.base_size()
+        draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
+        self.grid_offset_y = clamp_grid_offset(
+            self.grid_offset_y, len(self.model.images), cols, cell,
+            base_tile * draw_scale, self.height(),
+        )
+
     # ===========================
     # Event
     # ===========================
@@ -969,6 +989,7 @@ class GPUImageView(QOpenGLWidget):
             # 滾輪 → 上下捲動縮圖列表
             scroll_amount = delta / 2  # angleDelta 通常 ±120，/2 → ±60 px
             self.grid_offset_y += scroll_amount
+            self._clamp_grid_scroll()
             self.update()
             return
         if (self.deep_zoom and self._loupe_enabled
