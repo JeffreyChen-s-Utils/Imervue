@@ -138,6 +138,8 @@ def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
     sub = menu.addMenu(lang.get("develop_submenu", "Develop (Non-Destructive)"))
+    _add_action(sub, lang, "before_after_title", "Before / After Compare",
+                lambda: _open_before_after(ui))
     _add_action(sub, lang, "tone_curve_title", "Tone Curve",
                 lambda: _open_tone_curve(ui))
     _add_action(sub, lang, "lut_title", "Apply .cube LUT",
@@ -330,6 +332,11 @@ def _open_calendar_view(ui: ImervueMainWindow):
 def _open_map_view(ui: ImervueMainWindow):
     from Imervue.gui.map_view_dialog import open_map_view
     open_map_view(ui)
+
+
+def _open_before_after(ui: ImervueMainWindow):
+    from Imervue.gui.before_after_dialog import open_before_after_dialog
+    open_before_after_dialog(ui.viewer)
 
 
 def _open_tone_curve(ui: ImervueMainWindow):
