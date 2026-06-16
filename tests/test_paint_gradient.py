@@ -20,6 +20,38 @@ def _clean_state():
     ts.reset_tool_state()
 
 
+def _hline_canvas(width=11):
+    return np.zeros((1, width, 4), dtype=np.uint8)
+
+
+def test_repeat_tiles_the_gradient():
+    repeated = _hline_canvas()
+    render_gradient(repeated, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255),
+                    kind="linear", repeat=2)
+    single = _hline_canvas()
+    render_gradient(single, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255),
+                    kind="linear", repeat=1)
+    # Midpoint: a 2x repeat wraps back to the FG (red); a single span is mid.
+    assert int(repeated[0, 5, 0]) > 240
+    assert int(single[0, 5, 0]) < 160
+
+
+def test_repeat_one_matches_default():
+    default = _hline_canvas()
+    explicit = _hline_canvas()
+    render_gradient(default, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255))
+    render_gradient(explicit, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255), repeat=1)
+    assert np.array_equal(default, explicit)
+
+
+def test_repeat_below_one_is_clamped_to_one():
+    zero = _hline_canvas()
+    one = _hline_canvas()
+    render_gradient(zero, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255), repeat=0)
+    render_gradient(one, (0, 0), (10, 0), (255, 0, 0), (0, 0, 255), repeat=1)
+    assert np.array_equal(zero, one)
+
+
 @pytest.fixture
 def state():
     return ts.load_tool_state()

@@ -648,6 +648,7 @@ class GradientTool:
                 bg=self._state.background,
                 kind=self._state.gradient_kind,
                 reverse=self._state.gradient_reverse,
+                repeat=self._state.gradient_repeat,
                 selection=self._selection_provider(),
             )
             return painted

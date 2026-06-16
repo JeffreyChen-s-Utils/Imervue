@@ -311,6 +311,18 @@ def test_state_round_trips_via_to_from_dict():
     assert rebuilt.brush.blend_mode == "multiply"
 
 
+def test_gradient_repeat_round_trips_and_clamps():
+    state = ts.load_tool_state()
+    assert state.set_gradient(repeat=3) is True
+    assert ts.ToolState.from_dict(state.to_dict()).gradient_repeat == 3
+    # set_gradient clamps below 1; from_dict tolerates a corrupt value.
+    state.set_gradient(repeat=0)
+    assert state.gradient_repeat == 1
+    bad = state.to_dict()
+    bad["gradient_repeat"] = "xyz"
+    assert ts.ToolState.from_dict(bad).gradient_repeat == 1
+
+
 def test_from_dict_handles_missing_dict():
     rebuilt = ts.ToolState.from_dict(None)
     assert rebuilt.tool == ts.DEFAULT_TOOL

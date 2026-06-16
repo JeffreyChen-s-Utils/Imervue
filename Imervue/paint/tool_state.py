@@ -215,6 +215,7 @@ class ToolState:
     selection_mode: str = "replace"
     gradient_kind: str = "linear"
     gradient_reverse: bool = False
+    gradient_repeat: int = 1
     symmetry_mode: str = "off"
     ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
@@ -354,8 +355,9 @@ class ToolState:
     # ---- brush -----------------------------------------------------------
 
     def set_gradient(self, *, kind: str | None = None,
-                     reverse: bool | None = None) -> bool:
-        """Update gradient kind / reverse. Returns True if anything changed."""
+                     reverse: bool | None = None,
+                     repeat: int | None = None) -> bool:
+        """Update gradient kind / reverse / repeat. True if anything changed."""
         from Imervue.paint.gradient import GRADIENT_KINDS
         changed = False
         if kind is not None:
@@ -369,6 +371,11 @@ class ToolState:
         if reverse is not None and bool(reverse) != self.gradient_reverse:
             self.gradient_reverse = bool(reverse)
             changed = True
+        if repeat is not None:
+            repeat = max(1, int(repeat))
+            if repeat != self.gradient_repeat:
+                self.gradient_repeat = repeat
+                changed = True
         if changed:
             self._persist()
             self._emit(EVENT_GRADIENT)
@@ -606,6 +613,7 @@ class ToolState:
             "selection_mode": self.selection_mode,
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
+            "gradient_repeat": self.gradient_repeat,
             "symmetry_mode": self.symmetry_mode,
             "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
@@ -644,6 +652,10 @@ class ToolState:
         if gradient_kind not in GRADIENT_KINDS:
             gradient_kind = "linear"
         gradient_reverse = bool(raw.get("gradient_reverse", False))
+        try:
+            gradient_repeat = max(1, int(raw.get("gradient_repeat", 1)))
+        except (TypeError, ValueError):
+            gradient_repeat = 1
         from Imervue.paint.symmetry import DEFAULT_SYMMETRY_MODE, SYMMETRY_MODES
         symmetry_mode = raw.get("symmetry_mode", DEFAULT_SYMMETRY_MODE)
         if symmetry_mode not in SYMMETRY_MODES:
@@ -655,6 +667,7 @@ class ToolState:
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
+            gradient_repeat=gradient_repeat,
             symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
