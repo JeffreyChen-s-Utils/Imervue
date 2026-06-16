@@ -347,3 +347,56 @@ def test_open_recycle_bin_dialog_smoke(qapp, tmp_path, monkeypatch):
     # Skip the modal exec() — we only want to verify wiring + initialisation
     monkeypatch.setattr(mod.RecycleBinDialog, "exec", lambda self: 0)
     mod.open_recycle_bin_dialog(viewer)
+
+
+# ---------------------------------------------------------------------------
+# Regression: the Delete key / right-click delete must feed the recycle bin.
+# They used to call send2trash directly, bypassing undo_stack, so the recycle
+# bin and Ctrl+Z had nothing to recover.
+# ---------------------------------------------------------------------------
+
+
+class _DeleteView:
+    def __init__(self, images):
+        self.undo_stack: list[dict] = []
+        self.model = type("M", (), {"images": list(images)})()
+        self.current_index = 0
+        self.tile_textures: dict = {}
+        self.tile_cache: dict = {}
+        self.tile_grid_mode = False
+        self.tile_selection_mode = True
+        self.tile_rects: list = []
+        self.selected_tiles: set = set()
+        self.deep_zoom = object()
+        self.main_window = object()  # no plugin_manager attribute
+        self.loaded: list = []
+
+    def load_deep_zoom_image(self, path):
+        self.loaded.append(path)
+
+    def update(self):
+        pass
+
+
+def test_delete_current_image_records_pending_entry_for_recovery(tmp_path):
+    from Imervue.gpu_image_view.actions.delete import delete_current_image
+
+    a, b = str(tmp_path / "a.png"), str(tmp_path / "b.png")
+    view = _DeleteView([a, b])
+    delete_current_image(view)
+
+    entries = list_pending_entries(view.undo_stack)
+    assert [e["path"] for e in entries] == [a]
+    assert view.model.images == [b]
+
+
+def test_delete_selected_tiles_records_pending_entries(tmp_path):
+    from Imervue.gpu_image_view.actions.delete import delete_selected_tiles
+
+    a, b, c = (str(tmp_path / f"{name}.png") for name in "abc")
+    view = _DeleteView([a, b, c])
+    view.selected_tiles = {a, c}
+    delete_selected_tiles(view)
+
+    assert {e["path"] for e in list_pending_entries(view.undo_stack)} == {a, c}
+    assert view.model.images == [b]

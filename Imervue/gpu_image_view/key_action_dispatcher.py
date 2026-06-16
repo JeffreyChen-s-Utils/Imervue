@@ -12,15 +12,17 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 
-from Imervue.gpu_image_view.actions.delete import undo_delete
+from Imervue.gpu_image_view.actions.delete import (
+    delete_current_image,
+    delete_selected_tiles,
+    undo_delete,
+)
 from Imervue.gpu_image_view.actions.goto_dialog import open_goto_dialog
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     copy_image_to_clipboard,
     rate_current_image,
     toggle_favorite,
     toggle_fullscreen,
-    trash_current_image,
-    trash_selected_tiles,
 )
 from Imervue.gpu_image_view.actions.search_dialog import open_search_dialog
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
@@ -322,9 +324,9 @@ class KeyActionDispatcher:
     def _delete_current(self) -> None:
         view = self.view
         if view.tile_grid_mode and view.tile_selection_mode:
-            trash_selected_tiles(view)
+            delete_selected_tiles(view)
         elif view.deep_zoom:
-            trash_current_image(view)
+            delete_current_image(view)
 
     # ------------------------------------------------------------------
     # Animation
