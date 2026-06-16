@@ -1,4 +1,4 @@
-"""Liquify / warp brushes — push / pinch / bloat / twirl.
+"""Liquify / warp brushes — push / pinch / bloat / twirl / push-left.
 
 Pure-numpy implementations of the four raster paint apps / Photoshop liquify
 brushes. Each call mutates a single brush stroke worth of pixels:
@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import numpy as np
 
-WARP_KINDS = ("push", "pinch", "bloat", "twirl")
+WARP_KINDS = ("push", "pinch", "bloat", "twirl", "push_left")
 MAX_RADIUS = 1024
 
 
@@ -112,6 +112,26 @@ def twirl_warp(
     return _bilinear_sample_rgba(image, src_x, src_y)
 
 
+def push_left_warp(
+    image: np.ndarray,
+    cx: float,
+    cy: float,
+    radius: float,
+    dx: float,
+    dy: float,
+    *,
+    strength: float = 1.0,
+) -> np.ndarray:
+    """Displace pixels perpendicular (90° left) to the drag direction.
+
+    Photoshop's "Push Left": dragging smears content to the side of the
+    stroke rather than along it, so an edge can be nudged sideways without
+    dragging the whole region. Equivalent to :func:`push_warp` with the drag
+    vector rotated 90° (``(dx, dy)`` → ``(-dy, dx)``).
+    """
+    return push_warp(image, cx, cy, radius, -float(dy), float(dx), strength=strength)
+
+
 def apply_warp(
     image: np.ndarray,
     cx: float,
@@ -136,6 +156,8 @@ def apply_warp(
         return twirl_warp(
             image, cx, cy, radius, angle_deg=angle_deg, strength=strength,
         )
+    if kind == "push_left":
+        return push_left_warp(image, cx, cy, radius, dx, dy, strength=strength)
     raise ValueError(
         f"unknown warp kind {kind!r}; expected one of {WARP_KINDS}",
     )

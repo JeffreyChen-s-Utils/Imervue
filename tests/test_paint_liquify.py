@@ -48,7 +48,27 @@ def _disc_image(h=40, w=40, cx=20, cy=20, r=8):
 
 
 def test_warp_kinds_constant():
-    assert set(WARP_KINDS) == {"push", "pinch", "bloat", "twirl"}
+    assert set(WARP_KINDS) == {"push", "pinch", "bloat", "twirl", "push_left"}
+
+
+def test_push_left_is_push_rotated_90_degrees():
+    # Push-left displaces perpendicular to the drag: push with (dx, dy) rotated
+    # 90° to (-dy, dx).
+    from Imervue.paint.liquify import push_left_warp, push_warp
+    img = _vertical_stripe_image()
+    left = push_left_warp(img, 20, 20, 8, 3.0, 1.0, strength=0.7)
+    rotated = push_warp(img, 20, 20, 8, -1.0, 3.0, strength=0.7)
+    assert np.array_equal(left, rotated)
+
+
+def test_push_left_moves_footprint_and_respects_radius():
+    from Imervue.paint.liquify import push_left_warp
+    img = _vertical_stripe_image()
+    # Drag down → perpendicular displacement is horizontal, which a vertical
+    # stripe registers; the far corner sits outside the radius-8 brush.
+    out = push_left_warp(img, 20, 20, 8, 0.0, 4.0, strength=1.0)
+    assert not np.array_equal(out, img)
+    assert np.array_equal(out[0, 0], img[0, 0])
 
 
 def test_unknown_kind_raises():

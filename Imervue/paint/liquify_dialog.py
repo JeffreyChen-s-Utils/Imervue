@@ -76,7 +76,7 @@ class LiquifyDialog(QDialog):
         self._kind_combo = QComboBox()
         for kind in WARP_KINDS:
             self._kind_combo.addItem(
-                lang.get(f"paint_liquify_kind_{kind}", kind.title()),
+                lang.get(f"paint_liquify_kind_{kind}", kind.replace("_", " ").title()),
                 userData=kind,
             )
         self._kind_combo.currentIndexChanged.connect(self._on_kind_changed)
