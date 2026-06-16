@@ -254,6 +254,13 @@ def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_folder
     images = _scan_images_for_user(str(path_obj))
     if not images:
+        # An image-less folder (e.g. a parent reached "back" via the breadcrumb)
+        # still resets the wall to a clean empty grid, instead of leaving the
+        # previous folder's thumbnails / a half-cleared blank that then breaks
+        # the next open.
+        main_gui._unfiltered_images = []
+        main_gui._stack_members = {}
+        main_gui.load_tile_grid_async([])
         return
     main_gui.current_index = 0
     main_gui._unfiltered_images = list(images)

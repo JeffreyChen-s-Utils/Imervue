@@ -869,8 +869,16 @@ class ImervueMainWindow(QMainWindow):
     # 點擊檔案
     # ==========================
     def on_file_clicked(self, index):
-        path = self.model.filePath(index)
+        self.navigate_to_path(self.model.filePath(index))
 
+    def navigate_to_path(self, path: str) -> None:
+        """Open a folder (tile grid) or a file (deep zoom) and sync the chrome.
+
+        The single entry point the file tree AND the breadcrumb both call, so
+        navigation is identical from either: same root, viewer reset, path bar,
+        folder watch and recent menu. (The breadcrumb used to duplicate this and
+        drifted — it stopped updating the path bar.)
+        """
         if Path(path).is_dir():
             # 點擊資料夾 → 導航進入並載入圖片
             self.model.setRootPath(path)
