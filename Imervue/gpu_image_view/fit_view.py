@@ -100,6 +100,17 @@ def fits_within_canvas(view: GPUImageView) -> bool:
     return view.zoom <= full_fit * _FIT_EPSILON
 
 
+def should_refit_on_load(was_remembered: bool, view: GPUImageView) -> bool:
+    """Whether to content-fit an image on display.
+
+    A fresh entry (``was_remembered`` False) always fits — so opening an image
+    from the tile wall never inherits the previous view's leftover zoom. A
+    genuinely remembered view is re-fit only when its whole image still fits the
+    canvas; a real zoom-in is preserved.
+    """
+    return (not was_remembered) or fits_within_canvas(view)
+
+
 def fit_to_window(view: GPUImageView) -> None:
     """自動縮放使圖片完整顯示在視窗內(覆蓋層上方的內容區)。"""
     if not view.deep_zoom:

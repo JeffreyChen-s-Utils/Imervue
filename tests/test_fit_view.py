@@ -159,6 +159,26 @@ def test_fits_within_canvas_false_when_zoomed_in():
     assert fit_view.fits_within_canvas(view) is False
 
 
+def test_should_refit_on_load_always_fits_a_fresh_entry():
+    # Not remembered → fit regardless of the leftover zoom (e.g. inherited from
+    # a previous zoomed-in image), so opening from the tile wall always fits.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 5.0  # leftover zoom-in from the previous image
+    assert fit_view.should_refit_on_load(False, view) is True
+
+
+def test_should_refit_on_load_refits_remembered_whole_image():
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.3  # remembered at the whole-image fit
+    assert fit_view.should_refit_on_load(True, view) is True
+
+
+def test_should_refit_on_load_keeps_remembered_zoom_in():
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6  # genuine remembered zoom-in
+    assert fit_view.should_refit_on_load(True, view) is False
+
+
 # ---------------------------------------------------------------------------
 # fit_to_window
 # ---------------------------------------------------------------------------

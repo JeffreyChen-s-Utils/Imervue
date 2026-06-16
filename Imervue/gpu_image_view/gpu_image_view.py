@@ -101,6 +101,9 @@ class GPUImageView(QOpenGLWidget):
         # canvas should not auto-fit on resize. Cleared on every
         # fresh image load via :meth:`_fit_to_window`.
         self._user_locked_view = False
+        # Snapshot (taken before the per-load save) of whether the image being
+        # loaded had a genuinely remembered view, so a fresh entry always fits.
+        self._loading_was_remembered = False
         # Most-recent ``resizeGL`` size — same role as the paint
         # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
         # so the initial centre uses the GL-reported logical size
@@ -543,15 +546,11 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.fit_view import fit_zoom
         return fit_zoom(self)
 
-    def _should_refit_on_load(self, path: str) -> bool:
-        """Whether to content-fit on display: always for a fresh image, and for
-        a remembered one whose whole image still fits the canvas — so the
-        overlay band letterboxes it instead of cropping its bottom. A genuine
-        zoom-in is left where the user left it."""
-        if path not in self._view_memory:
-            return True
-        from Imervue.gpu_image_view.fit_view import fits_within_canvas
-        return fits_within_canvas(self)
+    def _should_refit_on_load(self) -> bool:
+        """Content-fit on display unless the user has a genuine zoom-in saved
+        for this image (see :func:`fit_view.should_refit_on_load`)."""
+        from Imervue.gpu_image_view.fit_view import should_refit_on_load
+        return should_refit_on_load(self._loading_was_remembered, self)
 
     def _fit_to_window(self):
         """Centre + fit the image. Called by the input controller and loaders."""
@@ -769,6 +768,11 @@ class GPUImageView(QOpenGLWidget):
         restore_view_state(self, path)
 
     def load_deep_zoom_image(self, path):
+        # Capture whether this image was *genuinely* remembered BEFORE the save
+        # below — `_save_view_state` writes the (already-updated) current index,
+        # which would otherwise pre-seed this path with the previous view's
+        # leftover zoom and fool the fit-on-load decision into skipping the fit.
+        self._loading_was_remembered = path in self._view_memory
         # 儲存前一張的狀態
         self._save_view_state()
 
@@ -789,7 +793,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            if self._should_refit_on_load(path):
+            if self._should_refit_on_load():
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
@@ -833,7 +837,7 @@ class GPUImageView(QOpenGLWidget):
 
         # 首次進入此圖片 → 自動 fit-to-window
         cur_path = self.model.images[self.current_index]
-        if cur_path and self._should_refit_on_load(cur_path):
+        if cur_path and self._should_refit_on_load():
             self._fit_to_window()
 
         # 動畫偵測
