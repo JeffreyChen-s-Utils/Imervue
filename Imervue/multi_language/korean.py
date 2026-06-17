@@ -16,6 +16,7 @@ _EXPORT_FAILED = '내보내기 실패: {err}'
 _KOREAN_OPEN_FOLDER = '폴더 열기'
 
 korean_word_dict = {
+    "heif_install_hint": "HEIC/AVIF 이미지를 보려면 pillow-heif를 설치하세요.",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

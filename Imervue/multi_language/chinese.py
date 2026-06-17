@@ -8,6 +8,7 @@ _NO_EXPORT_IMAGES = '没有可导出的图片。'
 _EXPORT_FAILED = '导出失败：{err}'
 
 chinese_word_dict = {
+    "heif_install_hint": "安装 pillow-heif 以查看 HEIC/AVIF 图像。",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

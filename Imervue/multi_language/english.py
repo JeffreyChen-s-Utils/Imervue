@@ -31,6 +31,7 @@ _EXPORT_FAILED = 'Export failed: {err}'
 _ENGLISH_INTENSITY_LABEL = 'Intensity:'
 
 english_word_dict = {
+    "heif_install_hint": "Install pillow-heif to view HEIC/AVIF images.",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

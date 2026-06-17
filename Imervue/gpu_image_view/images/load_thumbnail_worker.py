@@ -62,13 +62,29 @@ class LoadThumbnailWorker(QRunnable):
         return img_data
 
     def _load_by_extension(self):
+        from Imervue.image.heif_support import ensure_heif_opener, is_heif_path
+        from Imervue.image.video_frames import is_video_path
         ext = Path(self.path).suffix.lower()
         raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
         if ext in raw_exts:
             return self._load_raw()
         if ext == ".svg":
             return self._load_svg()
+        if is_video_path(self.path):
+            return self._load_video()
+        if is_heif_path(self.path):
+            ensure_heif_opener()
         return self._load_standard()
+
+    def _load_video(self) -> np.ndarray:
+        """Decode a video poster frame, downscaled for thumbnails."""
+        from Imervue.image.video_frames import poster_frame
+        img_data = poster_frame(self.path)
+        if self.size is not None:
+            img_pil = Image.fromarray(img_data)
+            img_pil.thumbnail((self.size, self.size), Image.Resampling.LANCZOS)
+            img_data = np.array(img_pil)
+        return img_data
 
     @staticmethod
     def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:

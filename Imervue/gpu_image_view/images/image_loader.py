@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject
 
+from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
 from Imervue.image.pyramid import DeepZoomImage
+from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -97,7 +99,11 @@ def load_image_file(path, thumbnail=False, recipe=None):
         img_data = _load_raw(path, thumbnail)
     elif ext == ".svg":
         img_data = _load_svg(path, thumbnail=thumbnail)
+    elif ext in VIDEO_EXTENSIONS:
+        img_data = poster_frame(path)
     else:
+        if ext in HEIF_EXTENSIONS:
+            ensure_heif_opener()
         img_data = _load_raster(path)
 
     img_data = _ensure_rgba(img_data)
@@ -164,7 +170,7 @@ _SUPPORTED_EXTS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng", ".svg",
     ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-}
+} | VIDEO_EXTENSIONS | HEIF_EXTENSIONS
 
 
 def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
@@ -255,6 +261,23 @@ def open_path(main_gui: GPUImageView, path: str):
         _open_file(main_gui, path_obj)
 
 
+def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
+    """Toast once per window when a folder has HEIC/AVIF but no decoder."""
+    from Imervue.image.heif_support import needs_heif_hint
+    if not needs_heif_hint(images, ensure_heif_opener()):
+        return
+    main_window = getattr(main_gui, "main_window", None)
+    toast = getattr(main_window, "toast", None)
+    if toast is None or getattr(main_window, "_heif_hint_shown", False):
+        return
+    main_window._heif_hint_shown = True
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    toast.info(language_wrapper.language_word_dict.get(
+        "heif_install_hint",
+        "Install pillow-heif to view HEIC/AVIF images.",
+    ))
+
+
 def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     from Imervue.user_settings.recent_image import add_recent_folder
@@ -270,6 +293,7 @@ def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
         return
     main_gui.current_index = 0
     main_gui._unfiltered_images = list(images)
+    _maybe_hint_heif(main_gui, images)
     images, stacks = _maybe_collapse_stacks(images)
     main_gui._stack_members = stacks
     main_gui.load_tile_grid_async(images)

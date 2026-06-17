@@ -5,6 +5,7 @@ PyOpenGL
 numpy
 rawpy
 imageio
+pillow-heif
 PyOpenGL_accelerate
 auto-py-to-exe
 twine
