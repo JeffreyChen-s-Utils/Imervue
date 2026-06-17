@@ -25,7 +25,7 @@ class TestDevelopPresetStore:
     def test_save_and_get_round_trip(self):
         store = DevelopPresetStore({})
         assert store.save("Warm", Recipe(exposure=1.5)) is True
-        assert store.get("Warm").exposure == 1.5
+        assert store.get("Warm").exposure == pytest.approx(1.5)
 
     def test_names_are_sorted(self):
         store = DevelopPresetStore({})
@@ -97,7 +97,7 @@ class TestApplyRecipeToPaths:
         apply_recipe_to_paths(Recipe(exposure=1.0), ["a", "b"], store)
         first, second = store.calls[0][1], store.calls[1][1]
         assert first is not second
-        assert first.exposure == 1.0 and second.exposure == 1.0
+        assert first.exposure == pytest.approx(1.0) and second.exposure == pytest.approx(1.0)
 
     def test_empty_paths_applies_nothing(self):
         store = _FakeStore()

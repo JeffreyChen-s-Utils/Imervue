@@ -69,7 +69,7 @@ class TestClampGridOffset:
     def test_scroll_up_past_first_row_clamps_to_zero(self):
         # A positive offset would drop the first row below the top edge,
         # revealing empty space above the grid.
-        assert self._clamp(50.0, 200) == 0.0
+        assert self._clamp(50.0, 200) == pytest.approx(0.0)
 
     def test_scroll_down_past_last_row_clamps_to_bottom(self):
         # min offset = view_height - content_height = 200 - 290 = -90; the last
@@ -82,11 +82,11 @@ class TestClampGridOffset:
     def test_grid_shorter_than_viewport_pins_to_top(self):
         # Content 290 fits inside a 400px viewport → no scrolling; any attempt
         # to move it is pinned to offset 0 (top-aligned).
-        assert self._clamp(-50.0, 400) == 0.0
-        assert self._clamp(30.0, 400) == 0.0
+        assert self._clamp(-50.0, 400) == pytest.approx(0.0)
+        assert self._clamp(30.0, 400) == pytest.approx(0.0)
 
     def test_empty_grid_clamps_to_zero(self):
-        assert clamp_grid_offset(-999.0, 0, 4, 100.0, 90.0, 200) == 0.0
+        assert clamp_grid_offset(-999.0, 0, 4, 100.0, 90.0, 200) == pytest.approx(0.0)
 
     def test_non_positive_cols_treated_as_single_column(self):
         # cols=0 must not divide-by-zero; one column → 3 tiles span 3 rows.
@@ -95,7 +95,7 @@ class TestClampGridOffset:
 
     def test_single_row_fitting_exactly_has_no_scroll(self):
         # 4 tiles in 4 cols → one row of height 90 in a 90px viewport.
-        assert clamp_grid_offset(-10.0, 4, 4, 100.0, 90.0, 90) == 0.0
+        assert clamp_grid_offset(-10.0, 4, 4, 100.0, 90.0, 90) == pytest.approx(0.0)
 
 
 class TestPlanTileSizeChange:

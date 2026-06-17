@@ -22,8 +22,8 @@ class TestMaskAdjustments:
     def test_from_dict_defaults_new_fields_to_zero(self):
         # Legacy masks saved before highlights/shadows existed load as 0.
         back = masks.MaskAdjustments.from_dict({"exposure": 0.2})
-        assert back.highlights == 0.0
-        assert back.shadows == 0.0
+        assert back.highlights == pytest.approx(0.0)
+        assert back.shadows == pytest.approx(0.0)
 
     def test_round_trip(self):
         adj = masks.MaskAdjustments(

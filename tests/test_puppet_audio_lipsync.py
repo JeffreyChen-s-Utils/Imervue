@@ -44,7 +44,7 @@ class TestRmsEnvelope:
         assert env == pytest.approx([0.5, 0.5])
 
     def test_silence_is_zero(self):
-        assert np.all(rms_envelope(np.zeros(100), 1000, 10) == 0.0)
+        assert np.allclose(rms_envelope(np.zeros(100), 1000, 10), 0.0)
 
 
 class TestNormalizeEnvelope:
@@ -53,11 +53,11 @@ class TestNormalizeEnvelope:
 
     def test_gate_zeroes_near_silence(self):
         out = normalize_envelope(np.array([0.01, 1.0]), gate=0.04)
-        assert out[0] == 0.0
-        assert out[1] == 1.0
+        assert out[0] == pytest.approx(0.0)
+        assert out[1] == pytest.approx(1.0)
 
     def test_all_silence_returns_zeros(self):
-        assert np.all(normalize_envelope(np.zeros(5)) == 0.0)
+        assert np.allclose(normalize_envelope(np.zeros(5)), 0.0)
 
     def test_empty(self):
         assert normalize_envelope(np.zeros(0)).size == 0
@@ -68,7 +68,7 @@ class TestMouthOpenCurve:
         samples = np.concatenate([np.full(10, 0.8), np.zeros(10)])
         curve = mouth_open_curve(samples, sample_rate=10, fps=10, gate=0.04)
         assert curve[0] == pytest.approx(1.0)
-        assert curve[-1] == 0.0
+        assert curve[-1] == pytest.approx(0.0)
 
 
 class TestWavIo:
@@ -110,4 +110,4 @@ class TestWavIo:
         curve = mouth_open_curve_from_wav(path, fps=10)  # window 100 → 20 frames
         assert len(curve) == 20
         assert curve[0] == pytest.approx(1.0, abs=1e-6)
-        assert curve[-1] == 0.0
+        assert curve[-1] == pytest.approx(0.0)

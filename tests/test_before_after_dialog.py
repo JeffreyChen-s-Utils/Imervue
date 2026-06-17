@@ -42,10 +42,10 @@ class TestSplitGeometry:
         assert divider_x(1.0, 200) == 200
 
     def test_fraction_from_x_clamps_and_guards_zero_width(self):
-        assert fraction_from_x(50, 200) == 0.25
-        assert fraction_from_x(-10, 200) == 0.0
-        assert fraction_from_x(999, 200) == 1.0
-        assert fraction_from_x(5, 0) == 0.0  # empty strip → no divide-by-zero
+        assert fraction_from_x(50, 200) == pytest.approx(0.25)
+        assert fraction_from_x(-10, 200) == pytest.approx(0.0)
+        assert fraction_from_x(999, 200) == pytest.approx(1.0)
+        assert fraction_from_x(5, 0) == pytest.approx(0.0)  # empty strip → no divide-by-zero
 
     def test_near_divider_grab_zone(self):
         assert near_divider(100, 0.5, 200) is True
@@ -82,7 +82,7 @@ class TestBeforeAfterView:
         return view
 
     def test_default_divider_is_centre(self, qapp):
-        assert self._view().fraction() == 0.5
+        assert self._view().fraction() == pytest.approx(0.5)
 
     def test_set_divider_from_widget_x_updates_fraction(self, qapp):
         view = self._view()
@@ -94,9 +94,9 @@ class TestBeforeAfterView:
         view = self._view()
         rx, _, rw, _ = view._display_rect()
         view.set_divider_from_widget_x(rx - 100)
-        assert view.fraction() == 0.0
+        assert view.fraction() == pytest.approx(0.0)
         view.set_divider_from_widget_x(rx + rw + 100)
-        assert view.fraction() == 1.0
+        assert view.fraction() == pytest.approx(1.0)
 
 
 class TestBeforeAfterDialog:

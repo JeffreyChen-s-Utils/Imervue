@@ -66,25 +66,25 @@ class TestComputeClipping:
 
     def test_all_white_is_fully_over(self):
         stats = compute_clipping(_solid(255))
-        assert stats.over_fraction == 1.0
-        assert stats.under_fraction == 0.0
+        assert stats.over_fraction == pytest.approx(1.0)
+        assert stats.under_fraction == pytest.approx(0.0)
 
     def test_all_black_is_fully_under(self):
         stats = compute_clipping(_solid(0))
-        assert stats.under_fraction == 1.0
-        assert stats.over_fraction == 0.0
+        assert stats.under_fraction == pytest.approx(1.0)
+        assert stats.over_fraction == pytest.approx(0.0)
 
     def test_over_fires_on_any_single_blown_channel(self):
         # One blown channel (red) is enough to flag a highlight.
         img = _solid(100)
         img[..., 0] = 255
-        assert compute_clipping(img).over_fraction == 1.0
+        assert compute_clipping(img).over_fraction == pytest.approx(1.0)
 
     def test_under_needs_all_channels_dark(self):
         # A single dark channel is NOT a crushed shadow — colour detail remains.
         img = _solid(0)
         img[..., 1] = 40
-        assert compute_clipping(img).under_fraction == 0.0
+        assert compute_clipping(img).under_fraction == pytest.approx(0.0)
 
     def test_half_clipped_reports_half_fraction(self):
         img = _solid(128, h=2, w=2)
@@ -93,18 +93,18 @@ class TestComputeClipping:
 
     def test_threshold_boundaries(self):
         # Pixels at exactly 254 are >= the default high (clipped); 253 is not.
-        assert compute_clipping(_solid(254)).over_fraction == 1.0
-        assert compute_clipping(_solid(253)).over_fraction == 0.0
+        assert compute_clipping(_solid(254)).over_fraction == pytest.approx(1.0)
+        assert compute_clipping(_solid(253)).over_fraction == pytest.approx(0.0)
         # And 1 is <= the default low (crushed); 2 is not.
-        assert compute_clipping(_solid(1)).under_fraction == 1.0
-        assert compute_clipping(_solid(2)).under_fraction == 0.0
+        assert compute_clipping(_solid(1)).under_fraction == pytest.approx(1.0)
+        assert compute_clipping(_solid(2)).under_fraction == pytest.approx(0.0)
 
     def test_custom_thresholds_are_honoured_and_clamped(self):
         img = _solid(200)
-        assert compute_clipping(img, high=200).over_fraction == 1.0
-        assert compute_clipping(img, high=201).over_fraction == 0.0
+        assert compute_clipping(img, high=200).over_fraction == pytest.approx(1.0)
+        assert compute_clipping(img, high=201).over_fraction == pytest.approx(0.0)
         # Out-of-range thresholds clamp rather than crash.
-        assert compute_clipping(_solid(255), high=999).over_fraction == 1.0
+        assert compute_clipping(_solid(255), high=999).over_fraction == pytest.approx(1.0)
 
     def test_empty_image_reports_no_clipping(self):
         empty = np.zeros((0, 0, 3), dtype=np.uint8)

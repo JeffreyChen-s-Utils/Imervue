@@ -42,7 +42,7 @@ class TestCenteredAspectCrop:
         assert y == pytest.approx(0.0)
 
     def test_wide_crop_in_square_image_is_width_limited(self):
-        x, y, w, h = centered_aspect_crop(1.0, 16 / 9)
+        _, y, w, h = centered_aspect_crop(1.0, 16 / 9)
         assert w == pytest.approx(1.0)
         assert h == pytest.approx(9 / 16)
         assert y == pytest.approx((1 - 9 / 16) / 2)

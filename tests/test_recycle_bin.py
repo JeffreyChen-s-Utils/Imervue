@@ -375,7 +375,7 @@ class _DeleteView:
         self.loaded.append(path)
 
     def update(self):
-        pass
+        """No-op repaint; the fake view never draws to a real surface."""
 
 
 def test_delete_current_image_records_pending_entry_for_recovery(tmp_path):
@@ -383,7 +383,7 @@ def test_delete_current_image_records_pending_entry_for_recovery(tmp_path):
 
     a, b = str(tmp_path / "a.png"), str(tmp_path / "b.png")
     view = _DeleteView([a, b])
-    delete_current_image(view)
+    delete_current_image(view)  # NOSONAR: duck-typed fake stands in for GPUImageView
 
     entries = list_pending_entries(view.undo_stack)
     assert [e["path"] for e in entries] == [a]

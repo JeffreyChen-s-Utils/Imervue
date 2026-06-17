@@ -118,6 +118,7 @@ class TestDynamicIconSize:
         captured = []
         monkeypatch.setattr(model._pool, "start", lambda worker: captured.append(worker))
         model._request_preview("/f")
+        assert len(captured) == 1
         assert captured[0]._size == 64
 
     def test_tree_set_thumbnail_size_syncs_view_and_model(self, qapp):

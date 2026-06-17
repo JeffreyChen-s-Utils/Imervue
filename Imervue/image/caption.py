@@ -52,11 +52,14 @@ def build_caption_payload(model: str, image_bytes: bytes, prompt: str) -> dict:
     }
 
 
-def parse_caption_response(data: dict) -> str | None:
+def parse_caption_response(data: object) -> str | None:
     """Pull the caption out of Ollama's ``{"response": ...}`` envelope.
 
-    Strips surrounding quotes/whitespace (vision models love to wrap the answer
-    in quotes); an empty or missing response yields ``None``.
+    Accepts ``object`` rather than ``dict`` because the function defensively
+    validates its input: a non-dict envelope (or a non-string ``response``)
+    yields ``None`` instead of raising. Strips surrounding quotes/whitespace
+    (vision models love to wrap the answer in quotes); an empty or missing
+    response yields ``None``.
     """
     raw = data.get("response") if isinstance(data, dict) else None
     if not isinstance(raw, str):

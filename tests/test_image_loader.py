@@ -86,6 +86,6 @@ class TestOpenFolder:
             load_tile_grid_async=lambda paths: loaded.append(list(paths)),
             main_window=object(),  # no plugin_manager
         )
-        _open_folder(view, Path(str(empty)))
+        _open_folder(view, Path(str(empty)))  # NOSONAR: duck-typed fake stands in for GPUImageView
         assert loaded == [[]]
         assert view._unfiltered_images == []
