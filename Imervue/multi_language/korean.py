@@ -17,6 +17,8 @@ _KOREAN_OPEN_FOLDER = '폴더 열기'
 
 korean_word_dict = {
     "heif_install_hint": "HEIC/AVIF 이미지를 보려면 pillow-heif를 설치하세요.",
+    "exif_location": "위치",
+    "exif_coordinates": "좌표",
     "exif_video_label": "동영상",
     "exif_duration": "길이",
     "exif_fps": "프레임 속도",

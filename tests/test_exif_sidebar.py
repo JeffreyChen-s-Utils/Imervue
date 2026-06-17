@@ -30,3 +30,17 @@ def test_format_video_meta_resolution_only():
     lines = ExifSidebar._format_video_meta(meta, _LANG)
     assert len(lines) == 1
     assert "640 x 480" in lines[0]
+
+
+_GEO_LANG = {"exif_coordinates": "GPS", "exif_location": "Location"}
+
+
+def test_format_location_with_gps():
+    lines = ExifSidebar._format_location((40.71, -74.01), _GEO_LANG)
+    joined = " ".join(lines)
+    assert "40.71000" in joined
+    assert "New York, United States" in joined
+
+
+def test_format_location_none_returns_empty():
+    assert ExifSidebar._format_location(None, _GEO_LANG) == []

@@ -9,6 +9,8 @@ _EXPORT_FAILED = '匯出失敗：{err}'
 
 traditional_chinese_word_dict = {
     "heif_install_hint": "安裝 pillow-heif 以檢視 HEIC/AVIF 影像。",
+    "exif_location": "地點",
+    "exif_coordinates": "座標",
     "exif_video_label": "影片",
     "exif_duration": "時長",
     "exif_fps": "幀率",

@@ -164,6 +164,7 @@ class ExifSidebar(QWidget):
             *self._file_stat_lines(p, lang),
             "<hr>",
             *detail_lines,
+            *self._location_lines(p, lang),
         ]
         self._info_label.setText("<br>".join(lines))
 
@@ -217,6 +218,25 @@ class ExifSidebar(QWidget):
         h = exif.get("ExifImageHeight") or exif.get("ImageLength")
         if w and h:
             lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
+        return lines
+
+    @staticmethod
+    def _location_lines(p: Path, lang) -> list[str]:
+        from Imervue.image.gps import extract_gps
+        return ExifSidebar._format_location(extract_gps(str(p)), lang)
+
+    @staticmethod
+    def _format_location(coords: tuple[float, float] | None, lang) -> list[str]:
+        if coords is None:
+            return []
+        from Imervue.image.reverse_geocode import reverse_geocode
+        lat, lon = coords
+        lines = [
+            f"<b>{lang.get('exif_coordinates', 'GPS')}:</b> {lat:.5f}, {lon:.5f}",
+        ]
+        place = reverse_geocode(lat, lon)
+        if place:
+            lines.append(f"<b>{lang.get('exif_location', 'Location')}:</b> {place}")
         return lines
 
     @staticmethod
