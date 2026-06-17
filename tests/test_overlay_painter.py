@@ -29,6 +29,32 @@ from Imervue.gpu_image_view.overlay_painter import (
 # ---------------------------------------------------------------
 # human_file_size
 # ---------------------------------------------------------------
+def _video_view(images, current_index):
+    return SimpleNamespace(
+        model=SimpleNamespace(images=images), current_index=current_index,
+    )
+
+
+def test_current_is_video_true():
+    op = OverlayPainter(_video_view(["a.png", "clip.mp4"], 1))
+    assert op._current_is_video() is True
+
+
+def test_current_is_video_false_for_image():
+    op = OverlayPainter(_video_view(["a.png"], 0))
+    assert op._current_is_video() is False
+
+
+def test_current_is_video_empty():
+    op = OverlayPainter(_video_view([], 0))
+    assert op._current_is_video() is False
+
+
+def test_current_is_video_out_of_range():
+    op = OverlayPainter(_video_view(["clip.mp4"], 9))
+    assert op._current_is_video() is False
+
+
 def test_human_file_size_missing_path_returns_dash():
     assert human_file_size("does/not/exist____.png") == "—"
 

@@ -42,9 +42,7 @@ import time
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
 from Imervue.gpu_image_view.tile_focus import focus_tile_rect
 from Imervue.gpu_image_view.tile_layout import tile_grid_layout
-from Imervue.gpu_image_view.video_badge import VideoBadge, video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS, fade_opacity
-from Imervue.image.video_frames import is_video_path
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -59,10 +57,6 @@ _TWO_PI = 2.0 * 3.1415926
 # selection marker even when the focused tile is also selected.
 _FOCUS_COLOR = (1.0, 0.78, 0.16, 1.0)
 _FOCUS_BORDER_WIDTH = 3
-# Video badge — translucent dark disc + opaque white play triangle, centred.
-_BADGE_CIRCLE_SEGMENTS = 28
-_BADGE_DISC_COLOR = (0.0, 0.0, 0.0, 0.45)
-_BADGE_TRIANGLE_COLOR = (1.0, 1.0, 1.0, 0.95)
 
 
 class TileGridRenderer:  # pragma: no cover - GL drawing path
@@ -233,35 +227,6 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         glEnable(GL_TEXTURE_2D)
         glColor4f(1, 1, 1, 1)
 
-    def _draw_video_badges(self) -> None:
-        view = self._view
-        if not view.tile_rects:
-            return
-        glDisable(GL_TEXTURE_2D)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        for x0, y0, x1, y1, path in view.tile_rects:
-            if is_video_path(path):
-                self._draw_one_badge(video_badge_geometry(x0, y0, x1, y1))
-        glDisable(GL_BLEND)
-        glEnable(GL_TEXTURE_2D)
-        glColor4f(1, 1, 1, 1)
-
-    def _draw_one_badge(self, badge: VideoBadge) -> None:
-        glColor4f(*_BADGE_DISC_COLOR)
-        glBegin(GL_TRIANGLE_FAN)
-        glVertex2f(badge.cx, badge.cy)
-        for i in range(_BADGE_CIRCLE_SEGMENTS + 1):
-            angle = i * _TWO_PI / _BADGE_CIRCLE_SEGMENTS
-            glVertex2f(badge.cx + badge.radius * np.cos(angle),
-                       badge.cy + badge.radius * np.sin(angle))
-        glEnd()
-        glColor4f(*_BADGE_TRIANGLE_COLOR)
-        glBegin(GL_TRIANGLE_FAN)
-        for (vx, vy) in badge.triangle:
-            glVertex2f(vx, vy)
-        glEnd()
-
     # -- entry point --------------------------------------------------
 
     def paint(self) -> None:
@@ -291,7 +256,6 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
             self._draw_single(i, path, cols, cell, scaled_tile, vw, vh)
 
         self._draw_grid_borders()
-        self._draw_video_badges()
         self._draw_selection_overlay()
         self._draw_focus_marker(cols, cell, scaled_tile, vw, vh)
         self._draw_drag_rect()

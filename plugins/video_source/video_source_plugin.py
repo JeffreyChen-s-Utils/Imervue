@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.video_frames import is_video_path
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 from video_source.video_frames import (
@@ -80,11 +81,23 @@ class VideoSourcePlugin(ImervuePlugin):
         )
         action.triggered.connect(self._open_dialog)
 
-    def _open_dialog(self) -> None:  # pragma: no cover - Qt UI
-        viewer = getattr(self, "viewer", None)
-        path = _pick_video(viewer)
+    def on_build_context_menu(self, menu, viewer) -> None:  # pragma: no cover - Qt UI
+        path = _context_video_path(viewer)
         if not path:
             return
+        lang = language_wrapper.language_word_dict
+        action = menu.addAction(
+            lang.get("video_source_extract_menu", "Extract frames from video…"),
+        )
+        action.triggered.connect(lambda: self._launch_dialog(path))
+
+    def _open_dialog(self) -> None:  # pragma: no cover - Qt UI
+        path = _pick_video(getattr(self, "viewer", None))
+        if path:
+            self._launch_dialog(path)
+
+    def _launch_dialog(self, path: str) -> None:  # pragma: no cover - Qt UI
+        viewer = getattr(self, "viewer", None)
         try:
             reader = FrameReader(path).open()
             info = reader.info()
@@ -299,6 +312,26 @@ def _ndarray_to_qimage(arr: np.ndarray) -> QImage:
     return image.copy()
 
 
+def _context_video_path(viewer) -> str | None:
+    """Resolve which video the context menu targets, from viewer state.
+
+    Deep-zoom mode targets the current image; tile-grid mode targets a single
+    selected tile. Returns None when the target is not a video.
+    """
+    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
+    if not images:
+        return None
+    if getattr(viewer, "deep_zoom", None):
+        idx = getattr(viewer, "current_index", -1)
+        if 0 <= idx < len(images) and is_video_path(images[idx]):
+            return images[idx]
+        return None
+    selected = list(getattr(viewer, "selected_tiles", []) or [])
+    if len(selected) == 1 and is_video_path(selected[0]):
+        return selected[0]
+    return None
+
+
 def _pick_video(parent: QWidget | None) -> str:  # pragma: no cover - Qt UI
     lang = language_wrapper.language_word_dict
     patterns = " ".join(f"*{ext}" for ext in sorted(VIDEO_EXTENSIONS))
@@ -328,6 +361,7 @@ def _notify_text(parent: object, text: str, error: bool) -> None:
 _TRANSLATIONS: dict[str, dict[str, str]] = {
     "English": {
         "video_source_title": "Import Video Frames…",
+        "video_source_extract_menu": "Extract frames from video…",
         "video_source_pick": "Choose video file",
         "video_source_filter": "Videos",
         "video_source_frame": "Frame {index} / {total}  ({time:.2f}s)",
@@ -343,6 +377,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "Traditional_Chinese": {
         "video_source_title": "匯入影片畫格…",
+        "video_source_extract_menu": "從影片擷取畫格…",
         "video_source_pick": "選擇影片檔",
         "video_source_filter": "影片",
         "video_source_frame": "畫格 {index} / {total}  （{time:.2f} 秒）",
@@ -358,6 +393,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "Chinese": {
         "video_source_title": "导入视频帧…",
+        "video_source_extract_menu": "从视频提取帧…",
         "video_source_pick": "选择视频文件",
         "video_source_filter": "视频",
         "video_source_frame": "帧 {index} / {total}  （{time:.2f} 秒）",
@@ -373,6 +409,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "Japanese": {
         "video_source_title": "動画フレームを取り込む…",
+        "video_source_extract_menu": "動画からフレームを抽出…",
         "video_source_pick": "動画ファイルを選択",
         "video_source_filter": "動画",
         "video_source_frame": "フレーム {index} / {total}  （{time:.2f} 秒）",
@@ -388,6 +425,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "Korean": {
         "video_source_title": "동영상 프레임 가져오기…",
+        "video_source_extract_menu": "동영상에서 프레임 추출…",
         "video_source_pick": "동영상 파일 선택",
         "video_source_filter": "동영상",
         "video_source_frame": "프레임 {index} / {total}  ({time:.2f}초)",

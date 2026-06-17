@@ -12,6 +12,7 @@ from Imervue.image.video_frames import (
     frame_index_for_time,
     is_video_path,
     poster_frame,
+    probe_video_meta,
     time_for_frame_index,
     to_rgb_uint8,
 )
@@ -151,6 +152,17 @@ def test_poster_frame(tmp_path):
     arr = poster_frame(str(video))
     assert arr.shape == (16, 16, 3)
     assert arr.dtype == np.uint8
+
+
+def test_probe_video_meta(tmp_path):
+    video = tmp_path / "clip.mp4"
+    _write_sample_video(video)
+    meta = probe_video_meta(str(video))
+    assert meta["width"] == 16
+    assert meta["height"] == 16
+    assert meta["fps"] > 0
+    assert meta["duration_s"] > 0
+    assert meta["codec"]
 
 
 def test_open_missing_file_raises_backend_error():

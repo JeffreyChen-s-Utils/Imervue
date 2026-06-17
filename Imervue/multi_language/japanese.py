@@ -20,6 +20,10 @@ _EXPORT_FAILED = '書き出しに失敗：{err}'
 
 japanese_word_dict = {
     "heif_install_hint": "HEIC/AVIF 画像を表示するには pillow-heif をインストールしてください。",
+    "exif_video_label": "動画",
+    "exif_duration": "再生時間",
+    "exif_fps": "フレームレート",
+    "exif_codec": "コーデック",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.info import get_exif_data, get_file_times
+from Imervue.image.video_frames import is_video_path, probe_video_meta
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -154,11 +155,15 @@ class ExifSidebar(QWidget):
         self._rating_widget.bind_path(path)
         lang = language_wrapper.language_word_dict
         p = Path(path)
+        detail_lines = (
+            self._video_lines(p, lang) if is_video_path(path)
+            else self._exif_lines(p, lang)
+        )
         lines: list[str] = [
             f"<b>{lang.get('exif_filename', 'File')}:</b> {p.name}",
             *self._file_stat_lines(p, lang),
             "<hr>",
-            *self._exif_lines(p, lang),
+            *detail_lines,
         ]
         self._info_label.setText("<br>".join(lines))
 
@@ -212,6 +217,35 @@ class ExifSidebar(QWidget):
         h = exif.get("ExifImageHeight") or exif.get("ImageLength")
         if w and h:
             lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
+        return lines
+
+    @staticmethod
+    def _video_lines(p: Path, lang) -> list[str]:
+        from Imervue.image.video_frames import VideoBackendError
+        header = f"<i>{lang.get('exif_video_label', 'Video')}</i>"
+        try:
+            meta = probe_video_meta(str(p))
+        except (VideoBackendError, OSError, ValueError):
+            return [header]
+        return [header, *ExifSidebar._format_video_meta(meta, lang)]
+
+    @staticmethod
+    def _format_video_meta(meta: dict, lang) -> list[str]:
+        lines: list[str] = []
+        width, height = meta.get("width", 0), meta.get("height", 0)
+        if width and height:
+            lines.append(
+                f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {width} x {height}",
+            )
+        duration = meta.get("duration_s", 0.0)
+        if duration > 0:
+            lines.append(f"<b>{lang.get('exif_duration', 'Duration')}:</b> {duration:.2f}s")
+        fps = meta.get("fps", 0.0)
+        if fps > 0:
+            lines.append(f"<b>{lang.get('exif_fps', 'Frame rate')}:</b> {fps:.2f} fps")
+        codec = meta.get("codec")
+        if codec:
+            lines.append(f"<b>{lang.get('exif_codec', 'Codec')}:</b> {codec}")
         return lines
 
     def _load_note_for(self, path: str | None) -> None:

@@ -132,17 +132,42 @@ class FrameReader:
 
         Note: this can be slow on some containers because the frame count may
         require a full demux pass. Thumbnail code paths must avoid it and read
-        a fixed frame index instead (see :func:`poster_frame`).
+        a fixed frame index instead (see :func:`poster_frame`); the info sidebar
+        uses :meth:`probe_meta` to skip the count entirely.
         """
         if self._reader is None:
             raise VideoBackendError("Reader is not open.")
         meta = self._reader.get_meta_data()
+        fps, duration, width, height = self._basic_meta(meta)
+        frame_count = self._resolve_frame_count(meta, fps, duration)
+        return VideoInfo(self._path, frame_count, fps, duration, width, height)
+
+    def probe_meta(self) -> dict:
+        """Fast metadata (no full-stream frame count) for the info sidebar.
+
+        ``frame_count`` is estimated from ``fps * duration`` to avoid the
+        expensive demux pass an exact count would need.
+        """
+        if self._reader is None:
+            raise VideoBackendError("Reader is not open.")
+        meta = self._reader.get_meta_data()
+        fps, duration, width, height = self._basic_meta(meta)
+        estimated = int(round(fps * duration)) if fps > 0.0 and duration > 0.0 else 0
+        return {
+            "width": width,
+            "height": height,
+            "fps": fps,
+            "duration_s": duration,
+            "frame_count": estimated,
+            "codec": str(meta.get("codec", "") or ""),
+        }
+
+    @staticmethod
+    def _basic_meta(meta: dict) -> tuple[float, float, int, int]:
         fps = float(meta.get("fps", 0.0) or 0.0)
         duration = float(meta.get("duration", 0.0) or 0.0)
         size = meta.get("size", (0, 0))
-        width, height = int(size[0]), int(size[1])
-        frame_count = self._resolve_frame_count(meta, fps, duration)
-        return VideoInfo(self._path, frame_count, fps, duration, width, height)
+        return fps, duration, int(size[0]), int(size[1])
 
     def frame(self, index: int) -> np.ndarray:
         """Decode a single frame to ``HxWx3`` uint8 RGB."""
@@ -194,3 +219,12 @@ def poster_frame(path: str) -> np.ndarray:
     """
     with FrameReader(path) as reader:
         return reader.frame(0)
+
+
+def probe_video_meta(path: str) -> dict:
+    """Open ``path`` and return fast metadata for the info sidebar.
+
+    See :meth:`FrameReader.probe_meta` for the returned keys.
+    """
+    with FrameReader(path) as reader:
+        return reader.probe_meta()

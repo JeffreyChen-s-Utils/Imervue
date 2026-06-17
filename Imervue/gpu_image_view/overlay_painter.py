@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QPointF
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
     QPixmap,
+    QPolygonF,
 )
 
 from Imervue.gpu_image_view.filmstrip import (
@@ -37,8 +38,10 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
 from Imervue.image.histogram import compute_clipping, compute_histogram
+from Imervue.image.video_frames import is_video_path
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -67,6 +70,9 @@ _FILMSTRIP_PLACEHOLDER_RGBA = (40, 40, 40, 200)
 _FILMSTRIP_HIGHLIGHT_RGBA = (255, 199, 41, 255)
 _FILMSTRIP_BORDER_WIDTH = 3
 _LOADING_PILL_RGBA = (0, 0, 0, 170)
+# Video ▶ badge — translucent disc + opaque white play triangle.
+_VIDEO_BADGE_DISC_RGBA = (0, 0, 0, 150)
+_VIDEO_BADGE_TRI_RGBA = (255, 255, 255, 235)
 # Rubber-band zoom selection rectangle (deep zoom).
 _ZOOM_BAND_FILL_RGBA = (70, 140, 255, 40)
 _ZOOM_BAND_BORDER_RGBA = (70, 140, 255, 220)
@@ -289,9 +295,22 @@ class OverlayPainter:
             (pixel_active, self.draw_pixel_view),
             (loupe_active, self.draw_loupe),
             (band_active, self.draw_zoom_band),
+            (zoom_active and self._current_is_video(), self.draw_video_badge),
             (loading_active, self.draw_loading_pill),
         ]
         return [painter for active, painter in layer_table if active]
+
+    def _current_is_video(self) -> bool:
+        """True when the deep-zoom image is a video (so it shows a play badge)."""
+        view = self.view
+        images = getattr(getattr(view, "model", None), "images", None) or []
+        idx = getattr(view, "current_index", -1)
+        return bool(0 <= idx < len(images) and is_video_path(images[idx]))
+
+    def draw_video_badge(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Centre a play badge over a deep-zoom video poster."""
+        view = self.view
+        _paint_play_badge(painter, video_badge_geometry(0, 0, view.width(), view.height()))
 
     def draw_tile_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw the tile-wall QPainter overlays (labels, badges, placeholders)."""
@@ -362,6 +381,8 @@ class OverlayPainter:
             _paint_favorite_badge(painter, x0, y0, path in favs, color_name)
             _paint_bookmark_badge(painter, y0, x1, path)
             _paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
+            if is_video_path(path):
+                _paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
 
     def draw_tile_placeholders(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw a rotating dot spinner on tile slots without a thumbnail yet."""
@@ -808,6 +829,15 @@ class OverlayPainter:
         painter.fillRect(x, y, box_w, box_h, QColor(*_LOADING_PILL_RGBA))
         painter.setPen(QColor(235, 235, 235))
         painter.drawText(x + pad_x, y + pad_y + fm.ascent(), text)
+
+
+def _paint_play_badge(painter, badge) -> None:  # pragma: no cover - GL paint
+    """Draw a translucent disc + white play triangle for a video badge."""
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QColor(*_VIDEO_BADGE_DISC_RGBA))
+    painter.drawEllipse(QPointF(badge.cx, badge.cy), badge.radius, badge.radius)
+    painter.setBrush(QColor(*_VIDEO_BADGE_TRI_RGBA))
+    painter.drawPolygon(QPolygonF([QPointF(vx, vy) for vx, vy in badge.triangle]))
 
 
 def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:  # pragma: no cover - GL paint

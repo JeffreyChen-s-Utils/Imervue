@@ -1,6 +1,8 @@
 """Tests for the Video Source plugin (frame planning, extraction, dialog)."""
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -141,3 +143,81 @@ def test_dialog_smoke(qapp):
         assert not dialog._preview.pixmap().isNull()
     finally:
         dialog.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# _context_video_path — which video the context menu targets
+# ---------------------------------------------------------------------------
+
+
+def _grid_view(images, selected):
+    return SimpleNamespace(
+        model=SimpleNamespace(images=images),
+        deep_zoom=None,
+        current_index=0,
+        selected_tiles=selected,
+    )
+
+
+def test_context_path_deep_zoom_video():
+    from video_source.video_source_plugin import _context_video_path
+    view = SimpleNamespace(
+        model=SimpleNamespace(images=["a.png", "clip.mp4"]),
+        deep_zoom=object(), current_index=1, selected_tiles=[],
+    )
+    assert _context_video_path(view) == "clip.mp4"
+
+
+def test_context_path_deep_zoom_image_returns_none():
+    from video_source.video_source_plugin import _context_video_path
+    view = SimpleNamespace(
+        model=SimpleNamespace(images=["a.png"]),
+        deep_zoom=object(), current_index=0, selected_tiles=[],
+    )
+    assert _context_video_path(view) is None
+
+
+def test_context_path_single_selected_video():
+    from video_source.video_source_plugin import _context_video_path
+    assert _context_video_path(_grid_view(["a.png", "c.mov"], ["c.mov"])) == "c.mov"
+
+
+def test_context_path_multiple_selected_returns_none():
+    from video_source.video_source_plugin import _context_video_path
+    assert _context_video_path(_grid_view(["a.mp4", "b.mp4"], ["a.mp4", "b.mp4"])) is None
+
+
+def test_context_path_empty_model_returns_none():
+    from video_source.video_source_plugin import _context_video_path
+    assert _context_video_path(_grid_view([], [])) is None
+
+
+def test_context_menu_adds_action_for_video(qapp):
+    from PySide6.QtWidgets import QMenu
+    from video_source.video_source_plugin import VideoSourcePlugin
+
+    plugin = VideoSourcePlugin(SimpleNamespace(viewer=object()))
+    view = SimpleNamespace(
+        model=SimpleNamespace(images=["clip.mp4"]),
+        deep_zoom=object(), current_index=0, selected_tiles=[],
+    )
+    menu = QMenu()
+    try:
+        plugin.on_build_context_menu(menu, view)
+        assert len(menu.actions()) == 1
+    finally:
+        menu.deleteLater()
+
+
+def test_context_menu_skips_non_video(qapp):
+    from PySide6.QtWidgets import QMenu
+    from video_source.video_source_plugin import VideoSourcePlugin
+
+    plugin = VideoSourcePlugin(SimpleNamespace(viewer=object()))
+    view = _grid_view(["a.png"], [])
+    menu = QMenu()
+    try:
+        plugin.on_build_context_menu(menu, view)
+        assert len(menu.actions()) == 0
+    finally:
+        menu.deleteLater()
