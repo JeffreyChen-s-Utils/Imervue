@@ -86,6 +86,8 @@ class TestOpenFolder:
             load_tile_grid_async=lambda paths: loaded.append(list(paths)),
             main_window=object(),  # no plugin_manager
         )
-        _open_folder(view, Path(str(empty)))  # NOSONAR: duck-typed fake stands in for GPUImageView
+        # The duck-typed fake deliberately stands in for a real GPUImageView;
+        # S5655's argument-type check is a false positive for test doubles.
+        _open_folder(view, Path(str(empty)))  # NOSONAR
         assert loaded == [[]]
         assert view._unfiltered_images == []

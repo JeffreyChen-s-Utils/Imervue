@@ -383,7 +383,9 @@ def test_delete_current_image_records_pending_entry_for_recovery(tmp_path):
 
     a, b = str(tmp_path / "a.png"), str(tmp_path / "b.png")
     view = _DeleteView([a, b])
-    delete_current_image(view)  # NOSONAR: duck-typed fake stands in for GPUImageView
+    # The duck-typed fake deliberately stands in for a real GPUImageView;
+    # S5655's argument-type check is a false positive for test doubles.
+    delete_current_image(view)  # NOSONAR
 
     entries = list_pending_entries(view.undo_stack)
     assert [e["path"] for e in entries] == [a]
