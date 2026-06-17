@@ -159,6 +159,20 @@ class RecordingSession(QObject):
             self.failed.emit(str(exc))
 
 
+def save_spritesheet_from_qimages(images, path, max_cols: int = 8) -> tuple[int, int]:
+    """Pack recorded canvas frames (QImages) into one spritesheet PNG.
+
+    Bridges the recorder's QImage→array conversion to the pure spritesheet
+    composer; returns ``(cols, rows)``. Degenerate frames are skipped, and an
+    empty / all-degenerate sequence raises ``ValueError``.
+    """
+    from Imervue.puppet.spritesheet import save_spritesheet
+    frames = [arr for img in images if (arr := _qimage_to_rgb_array(img)) is not None]
+    if not frames:
+        raise ValueError("no convertible frames to write")
+    return save_spritesheet(frames, path, max_cols=max_cols)
+
+
 def _qimage_to_rgb_array(image: QImage):
     """Convert ``image`` to an HxWx3 uint8 ndarray. Returns ``None``
     if the conversion isn't possible (degenerate image)."""

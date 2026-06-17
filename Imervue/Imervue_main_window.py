@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import QByteArray, Qt, QTimer, QFileSystemWatcher
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QFileSystemModel, QSplitter, QSizePolicy,
+    QApplication, QMainWindow, QSplitter, QSizePolicy,
     QStatusBar, QProgressBar, QMenu, QTabBar, QTabWidget,
     QStackedWidget,
 )
@@ -16,6 +16,7 @@ from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
+from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
 from Imervue.gui.toast import ToastManager
 from Imervue.integration_guide import _init_plugin_system_example
 from Imervue.menu.extra_tools_menu import build_extra_tools_menu
@@ -105,7 +106,7 @@ class ImervueMainWindow(QMainWindow):
         imervue_layout.addWidget(splitter)
 
         # ===== 左側檔案樹 =====
-        self.model = QFileSystemModel()
+        self.model = FolderThumbnailModel()
         # 只篩選圖片格式 + 資料夾，隱藏不符合的檔案
         self.model.setNameFilters([
             "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.webp",
@@ -120,6 +121,8 @@ class ImervueMainWindow(QMainWindow):
 
         self.tree = _FileTreeView(self)
         self.tree.setModel(self.model)
+        self.tree.set_thumbnail_size(
+            user_setting_dict.get("tree_thumbnail_size", DEFAULT_ICON_SIZE))
         self.tree.setRootIndex(self.model.index(start_path))
         # 只顯示「名稱」欄，隱藏大小/類型/日期（省掉大量 stat() 呼叫）
         for col in (1, 2, 3):
@@ -869,8 +872,16 @@ class ImervueMainWindow(QMainWindow):
     # 點擊檔案
     # ==========================
     def on_file_clicked(self, index):
-        path = self.model.filePath(index)
+        self.navigate_to_path(self.model.filePath(index))
 
+    def navigate_to_path(self, path: str) -> None:
+        """Open a folder (tile grid) or a file (deep zoom) and sync the chrome.
+
+        The single entry point the file tree AND the breadcrumb both call, so
+        navigation is identical from either: same root, viewer reset, path bar,
+        folder watch and recent menu. (The breadcrumb used to duplicate this and
+        drifted — it stopped updating the path bar.)
+        """
         if Path(path).is_dir():
             # 點擊資料夾 → 導航進入並載入圖片
             self.model.setRootPath(path)

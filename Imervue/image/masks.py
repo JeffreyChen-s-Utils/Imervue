@@ -41,12 +41,15 @@ class MaskAdjustments:
     saturation: float = 0.0    # -1..+1
     temperature: float = 0.0   # -1..+1
     tint: float = 0.0          # -1..+1
+    highlights: float = 0.0    # -1..+1 (<0 recovers blown highlights)
+    shadows: float = 0.0       # -1..+1 (>0 lifts blocked shadows)
 
     def is_zero(self) -> bool:
         return all(
             abs(getattr(self, f)) < 1e-6
             for f in ("exposure", "brightness", "contrast",
-                      "saturation", "temperature", "tint")
+                      "saturation", "temperature", "tint",
+                      "highlights", "shadows")
         )
 
     def to_dict(self) -> dict[str, float]:
@@ -57,6 +60,8 @@ class MaskAdjustments:
             "saturation": float(self.saturation),
             "temperature": float(self.temperature),
             "tint": float(self.tint),
+            "highlights": float(self.highlights),
+            "shadows": float(self.shadows),
         }
 
     @classmethod
@@ -68,6 +73,8 @@ class MaskAdjustments:
             saturation=float(data.get("saturation", 0.0)),
             temperature=float(data.get("temperature", 0.0)),
             tint=float(data.get("tint", 0.0)),
+            highlights=float(data.get("highlights", 0.0)),
+            shadows=float(data.get("shadows", 0.0)),
         )
 
 
@@ -267,6 +274,9 @@ def _apply_local_adjustments(
         np.clip(rgb, 0.0, 255.0, out=rgb)
         out = out.copy()
         out[..., :3] = rgb.astype(np.uint8)
+    if abs(adj.highlights) > 1e-6 or abs(adj.shadows) > 1e-6:
+        from Imervue.image.recipe_adjustments import apply_highlights_shadows
+        out = apply_highlights_shadows(out, adj.highlights, adj.shadows)
     if abs(adj.brightness) > 1e-6 or abs(adj.contrast) > 1e-6:
         img = pil_image.fromarray(out, mode="RGBA")
         if abs(adj.brightness) > 1e-6:

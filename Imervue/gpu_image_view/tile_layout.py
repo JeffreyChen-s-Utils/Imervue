@@ -71,6 +71,33 @@ def tile_grid_layout(
     return draw_scale, cell, cols
 
 
+def clamp_grid_offset(
+    offset_y: float,
+    count: int,
+    cols: int,
+    cell: float,
+    tile_extent: float,
+    view_height: float,
+) -> float:
+    """Clamp the thumbnail-wall vertical scroll offset to its content range.
+
+    Tiles sit at ``y = row * cell + offset_y`` (a larger offset pushes the wall
+    *down*). Without a bound the wheel / middle-drag scrolls the whole grid off
+    into empty space — above the first row or below the last — leaving a blank
+    screen with no cue that it over-scrolled. The offset is held in
+    ``[view_height - content_height, 0]`` so the first row can't drop below the
+    top edge and the last row can't lift above the bottom; a grid shorter than
+    the viewport is pinned to the top (offset ``0``). An empty grid clamps to 0.
+    """
+    if count <= 0:
+        return 0.0
+    safe_cols = cols if cols > 0 else 1
+    last_row = (count - 1) // safe_cols
+    content_height = last_row * cell + tile_extent
+    min_offset = min(0.0, view_height - content_height)
+    return max(min_offset, min(0.0, offset_y))
+
+
 def plan_tile_size_change(*, in_deep_zoom: bool, has_images: bool) -> str:
     """Decide how to react to a thumbnail-size change.
 

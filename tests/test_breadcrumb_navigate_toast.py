@@ -36,34 +36,33 @@ def test_navigate_to_missing_folder_emits_warning(bar, tmp_path):
     assert "ghost" in msgs[0][1]
 
 
-def test_navigate_runtime_failure_emits_error(qapp, tmp_path, monkeypatch):
-    """Even though the directory exists, an exception bubbling up from
-    ``open_path`` must be surfaced as an error toast rather than buried
-    in the log."""
+def test_navigate_existing_folder_delegates_to_main_window(qapp, tmp_path):
+    """An existing folder is handed to the main window's single navigator
+    (which updates the path bar) — the breadcrumb no longer reimplements it."""
     folder = tmp_path / "real"
     folder.mkdir()
-
     main = _StubMainWindow()
-    # Stand-in for the rest of the main window surface that
-    # ``_navigate`` reaches into.
-    main.model = type("M", (), {
-        "setRootPath": lambda self, *_: None,
-        "index": lambda self, *_: None,
-    })()
-    main.tree = type("T", (), {"setRootIndex": lambda self, *_: None})()
+    calls = []
+    main.navigate_to_path = calls.append
+    bar = BreadcrumbBar(main)
+    try:
+        bar._navigate(str(folder))   # noqa: SLF001
+    finally:
+        bar.deleteLater()
+    assert calls == [str(folder)]
 
-    class _Viewer:
-        def clear_tile_grid(self):
-            """No-op — the test only asserts on toast, not GL state."""
 
-    main.viewer = _Viewer()
+def test_navigate_runtime_failure_emits_error(qapp, tmp_path):
+    """An exception bubbling up from navigation must surface an error toast
+    rather than being buried in the log."""
+    folder = tmp_path / "real"
+    folder.mkdir()
+    main = _StubMainWindow()
 
-    def fake_open_path(*, main_gui, path):
+    def boom(_path):
         raise RuntimeError("decode failed")
 
-    monkeypatch.setattr(
-        "Imervue.gpu_image_view.images.image_loader.open_path", fake_open_path,
-    )
+    main.navigate_to_path = boom
     bar = BreadcrumbBar(main)
     try:
         bar._navigate(str(folder))   # noqa: SLF001

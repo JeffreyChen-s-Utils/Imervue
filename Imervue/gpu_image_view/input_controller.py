@@ -191,6 +191,7 @@ class InputController:
         if view.tile_grid_mode:
             view.grid_offset_x += delta.x()
             view.grid_offset_y += delta.y()
+            view._clamp_grid_scroll()
         elif view.deep_zoom:
             view.dz_offset_x += delta.x()
             view.dz_offset_y += delta.y()
@@ -328,10 +329,15 @@ class InputController:
 
     def _apply_zoom_band(self, start, end) -> None:
         view = self._view
+        # Fit the boxed region into the content area (canvas minus the reserved
+        # overlay band), not the full canvas — otherwise a height-limited
+        # selection over-zooms and its bottom rows land behind the minimap /
+        # filmstrip instead of filling the visible area above them.
+        from Imervue.gpu_image_view.fit_view import content_size
         new_zoom, off_x, off_y = zoom_to_region(
             (start.x(), start.y(), end.x(), end.y()),
             view.zoom, (view.dz_offset_x, view.dz_offset_y),
-            (view.width(), view.height()), (ZOOM_MIN, ZOOM_MAX),
+            content_size(view), (ZOOM_MIN, ZOOM_MAX),
         )
         view.zoom = new_zoom
         view.dz_offset_x = off_x

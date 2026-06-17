@@ -66,3 +66,28 @@ class TestScanImages:
     def test_scan_nonexistent_dir(self):
         results = _scan_images("/nonexistent/path/xyz")
         assert results == []
+
+
+class TestOpenFolder:
+    def test_empty_folder_resets_to_clean_grid(self, tmp_path):
+        # Navigating "back" to an image-less folder must rebuild the wall empty
+        # rather than leave the previous folder's stale thumbnails behind.
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        from Imervue.gpu_image_view.images.image_loader import _open_folder
+
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        loaded = []
+        view = SimpleNamespace(
+            _unfiltered_images=["stale.png"],
+            _stack_members={"k": 1},
+            load_tile_grid_async=lambda paths: loaded.append(list(paths)),
+            main_window=object(),  # no plugin_manager
+        )
+        # The duck-typed fake deliberately stands in for a real GPUImageView;
+        # S5655's argument-type check is a false positive for test doubles.
+        _open_folder(view, Path(str(empty)))  # NOSONAR
+        assert loaded == [[]]
+        assert view._unfiltered_images == []

@@ -11,6 +11,7 @@ Every method drives the live GL context, so they carry
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from OpenGL.GL import (
@@ -26,14 +27,31 @@ from OpenGL.GL import (
     glTranslatef,
 )
 
-from Imervue.gpu_image_view.fit_view import canvas_size
+from Imervue.gpu_image_view.fit_view import canvas_size, reserved_overlay_height
 from Imervue.gpu_image_view.minimap import minimap_geometry
 from Imervue.gpu_image_view.tile_grid_renderer import upload_minimap_texture
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
+logger = logging.getLogger("Imervue.gpu_image_view.deep_zoom_renderer")
+
 MINIMAP_OPACITY = 0.85
+# Letterbox band fill — matches the GL clear colour so the reserved strip below
+# the image reads as background, not a visible bar.
+_LETTERBOX_RGBA = (0.1, 0.1, 0.1, 1.0)
+
+
+def letterbox_band_rect(canvas_w: float, canvas_h: float,
+                        reserved: float) -> tuple[float, float, float, float]:
+    """Screen-space rect ``(x0, y0, x1, y1)`` of the reserved bottom band.
+
+    Painted opaque over the deep-zoom image so a zoomed-in view's bottom edge is
+    hidden and the minimap / filmstrip sit on a clean letterbox. ``y0`` is
+    floored at 0 so an over-tall band can't start above the canvas.
+    """
+    top = max(0.0, canvas_h - reserved)
+    return 0.0, top, canvas_w, canvas_h
 
 
 def visible_tile_range(
@@ -173,9 +191,33 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
 
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        self._draw_letterbox_band()
         self._draw_minimap_background(rect)
         self._draw_minimap_thumbnail(rect)
         self._draw_viewport_box(rect, img_w, img_h)
+
+    def _draw_letterbox_band(self) -> None:
+        """Fill the reserved bottom band over the image so a zoomed-in view's
+        bottom edge is hidden and the minimap / filmstrip sit on background.
+
+        Drawn here (after the tiles, before the minimap, in screen-space ortho)
+        rather than via a GL scissor on the tiles: scissoring leaks into Qt's
+        QOpenGLWidget paint engine and was clipping the QPainter filmstrip out.
+
+        Guarded so a band-fill failure can never abort ``paint_minimap`` (which
+        would drop the minimap *and*, by skipping ``endNativePainting``, the
+        QPainter filmstrip overlay too).
+        """
+        view = self._view
+        try:
+            reserved = reserved_overlay_height(view)
+            if reserved <= 0:
+                return
+            canvas_w, canvas_h = canvas_size(view)
+            x0, y0, x1, y1 = letterbox_band_rect(canvas_w, canvas_h, reserved)
+            view.renderer.draw_colored_rect(x0, y0, x1, y1, *_LETTERBOX_RGBA)
+        except Exception:  # noqa: BLE001 - never let the band break the overlays
+            logger.exception("Letterbox band draw failed; skipping it this frame")
 
     def _draw_minimap_background(self, rect: tuple[int, int, int, int]) -> None:
         mm_x, mm_y, mm_w, mm_h = rect

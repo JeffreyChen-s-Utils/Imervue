@@ -22,8 +22,10 @@ from Imervue.gui.gif_video_dialog import open_gif_video_dialog
 from Imervue.gui.tag_album_dialog import (
     build_tag_submenu, build_album_submenu, build_batch_tag_album_submenu,
 )
+from Imervue.gpu_image_view.actions.delete import (
+    delete_current_image, delete_selected_tiles,
+)
 from Imervue.gpu_image_view.actions.keyboard_actions import (
-    trash_current_image, trash_selected_tiles,
     copy_image_to_clipboard,
 )
 from Imervue.gpu_image_view.actions.select import switch_to_previous_image, switch_to_next_image
@@ -217,11 +219,11 @@ def _delete_action(main_gui: GPUImageView, menu: QMenu):
 
     if main_gui.tile_grid_mode and main_gui.tile_selection_mode:
         action = menu.addAction(lang.get("right_click_menu_delete_selected"))
-        action.triggered.connect(lambda: trash_selected_tiles(main_gui))
+        action.triggered.connect(lambda: delete_selected_tiles(main_gui))
 
     if main_gui.deep_zoom:
         action = menu.addAction(lang.get("right_click_menu_delete_current"))
-        action.triggered.connect(lambda: trash_current_image(main_gui))
+        action.triggered.connect(lambda: delete_current_image(main_gui))
 
 
 # ===========================

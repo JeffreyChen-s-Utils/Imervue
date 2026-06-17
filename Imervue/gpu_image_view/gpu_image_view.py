@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 
@@ -40,6 +41,8 @@ from pathlib import Path
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
 from Imervue.image.tile_manager import TileManager
 import contextlib
+
+logger = logging.getLogger("Imervue.gpu_image_view")
 
 
 class GPUImageView(QOpenGLWidget):
@@ -98,6 +101,9 @@ class GPUImageView(QOpenGLWidget):
         # canvas should not auto-fit on resize. Cleared on every
         # fresh image load via :meth:`_fit_to_window`.
         self._user_locked_view = False
+        # Snapshot (taken before the per-load save) of whether the image being
+        # loaded had a genuinely remembered view, so a fresh entry always fits.
+        self._loading_was_remembered = False
         # Most-recent ``resizeGL`` size — same role as the paint
         # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
         # so the initial centre uses the GL-reported logical size
@@ -273,7 +279,7 @@ class GPUImageView(QOpenGLWidget):
 
         # ===== 直方圖 =====
         self._show_histogram = False
-        self._histogram_cache: tuple | None = None  # (path, hist_r, hist_g, hist_b)
+        self._histogram_cache: tuple | None = None  # (path, Histogram, ClipStats)
 
         # ===== OSD (On-Screen Display) =====
         # F3 — 切換右上角顯示檔名 / 尺寸 / 格式 / 檔案大小
@@ -472,13 +478,17 @@ class GPUImageView(QOpenGLWidget):
             painter.endNativePainting()
             return
 
-        # ===== Tile Grid Mode =====
-        if self.tile_grid_mode:
-            self._tile_renderer.paint()
-        # ===== DeepZoom Mode =====
-        elif self.deep_zoom:
-            self._deep_zoom_renderer.paint()
-            self._deep_zoom_renderer.paint_minimap()
+        # Render the GL scene defensively: a renderer exception must never skip
+        # endNativePainting + the QPainter overlay below, or the filmstrip / OSD
+        # (drawn there) silently vanish for the whole frame.
+        try:
+            if self.tile_grid_mode:
+                self._tile_renderer.paint()
+            elif self.deep_zoom:
+                self._deep_zoom_renderer.paint()
+                self._deep_zoom_renderer.paint_minimap()
+        except Exception:   # noqa: BLE001 - keep the overlay alive; log the cause
+            logger.exception("Deep-zoom/tile GL render failed this frame")
 
         painter.endNativePainting()
 
@@ -535,6 +545,12 @@ class GPUImageView(QOpenGLWidget):
         """Zoom level that fits the whole image in the canvas (capped at 1.0)."""
         from Imervue.gpu_image_view.fit_view import fit_zoom
         return fit_zoom(self)
+
+    def _should_refit_on_load(self) -> bool:
+        """Content-fit on display unless the user has a genuine zoom-in saved
+        for this image (see :func:`fit_view.should_refit_on_load`)."""
+        from Imervue.gpu_image_view.fit_view import should_refit_on_load
+        return should_refit_on_load(self._loading_was_remembered, self)
 
     def _fit_to_window(self):
         """Centre + fit the image. Called by the input controller and loaders."""
@@ -752,6 +768,11 @@ class GPUImageView(QOpenGLWidget):
         restore_view_state(self, path)
 
     def load_deep_zoom_image(self, path):
+        # Capture whether this image was *genuinely* remembered BEFORE the save
+        # below — `_save_view_state` writes the (already-updated) current index,
+        # which would otherwise pre-seed this path with the previous view's
+        # leftover zoom and fool the fit-on-load decision into skipping the fit.
+        self._loading_was_remembered = path in self._view_memory
         # 儲存前一張的狀態
         self._save_view_state()
 
@@ -772,7 +793,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            if path not in self._view_memory:
+            if self._should_refit_on_load():
                 self._fit_to_window()
             self._init_animation(path)
             self._prefetch_neighbors()
@@ -816,7 +837,7 @@ class GPUImageView(QOpenGLWidget):
 
         # 首次進入此圖片 → 自動 fit-to-window
         cur_path = self.model.images[self.current_index]
-        if cur_path and cur_path not in self._view_memory:
+        if cur_path and self._should_refit_on_load():
             self._fit_to_window()
 
         # 動畫偵測
@@ -842,6 +863,31 @@ class GPUImageView(QOpenGLWidget):
         if callable(callback) and self.deep_zoom is not None:
             # pylint: disable=not-callable  # guarded by callable() above
             callback(self.deep_zoom.levels[0])
+        self._log_overlay_diagnostics()
+
+    def _log_overlay_diagnostics(self) -> None:
+        """Record (at DEBUG) the inputs that decide filmstrip / minimap /
+        letterbox visibility, so an 'overlays missing / image cropped' report
+        can be pinned from the log without a live debugger."""
+        if not logger.isEnabledFor(logging.DEBUG):
+            return
+        try:
+            from Imervue.gpu_image_view.fit_view import (
+                canvas_size,
+                content_size,
+                fit_zoom,
+                reserved_overlay_height,
+            )
+            logger.debug(
+                "overlay-state: images=%d filmstrip_enabled=%s grid=%s "
+                "canvas=%s content=%s reserved=%d zoom=%.4f fit=%.4f off_y=%.1f",
+                len(self.model.images), getattr(self, "_filmstrip_enabled", None),
+                self.tile_grid_mode, canvas_size(self), content_size(self),
+                reserved_overlay_height(self), self.zoom, fit_zoom(self),
+                self.dz_offset_y,
+            )
+        except Exception:  # noqa: BLE001 - diagnostics must never break display
+            logger.exception("overlay-state diagnostics failed")
 
     def _init_animation(self, path: str):
         """偵測並初始化動畫播放"""
@@ -914,6 +960,26 @@ class GPUImageView(QOpenGLWidget):
 
         self.update()
 
+    def _clamp_grid_scroll(self) -> None:
+        """Hold the thumbnail-wall scroll within its content so the wheel /
+        middle-drag can't flick the grid into empty space above the first row
+        or below the last. Recomputes the live layout (cols / cell depend on
+        the widget width, thumbnail size and DPR) so the bound always matches
+        what the renderer draws this frame."""
+        from Imervue.gpu_image_view.tile_layout import (
+            clamp_grid_offset,
+            tile_grid_layout,
+        )
+        base_tile = self._tile_renderer.base_size()
+        draw_scale, cell, cols = tile_grid_layout(
+            self.width(), base_tile, self.tile_scale,
+            self.tile_padding, self.devicePixelRatio(),
+        )
+        self.grid_offset_y = clamp_grid_offset(
+            self.grid_offset_y, len(self.model.images), cols, cell,
+            base_tile * draw_scale, self.height(),
+        )
+
     # ===========================
     # Event
     # ===========================
@@ -923,6 +989,7 @@ class GPUImageView(QOpenGLWidget):
             # 滾輪 → 上下捲動縮圖列表
             scroll_amount = delta / 2  # angleDelta 通常 ±120，/2 → ±60 px
             self.grid_offset_y += scroll_amount
+            self._clamp_grid_scroll()
             self.update()
             return
         if (self.deep_zoom and self._loupe_enabled

@@ -15,10 +15,21 @@ class TestMaskAdjustments:
         adj = masks.MaskAdjustments(exposure=0.5)
         assert not adj.is_zero()
 
+    def test_highlights_or_shadows_make_non_zero(self):
+        assert not masks.MaskAdjustments(highlights=-0.3).is_zero()
+        assert not masks.MaskAdjustments(shadows=0.3).is_zero()
+
+    def test_from_dict_defaults_new_fields_to_zero(self):
+        # Legacy masks saved before highlights/shadows existed load as 0.
+        back = masks.MaskAdjustments.from_dict({"exposure": 0.2})
+        assert back.highlights == pytest.approx(0.0)
+        assert back.shadows == pytest.approx(0.0)
+
     def test_round_trip(self):
         adj = masks.MaskAdjustments(
             exposure=0.5, brightness=-0.2, contrast=0.1,
             saturation=0.3, temperature=-0.1, tint=0.05,
+            highlights=-0.4, shadows=0.6,
         )
         back = masks.MaskAdjustments.from_dict(adj.to_dict())
         assert back == adj
@@ -107,6 +118,19 @@ class TestApplyMasks:
         out = masks.apply_masks(arr, [m])
         assert int(out[20, 20, 0]) > 130
         assert int(out[0, 0, 0]) == 100
+
+    def test_shadows_lift_dark_pixels_inside_region(self):
+        arr = np.full((40, 40, 4), 30, dtype=np.uint8)  # blocked shadows
+        arr[..., 3] = 255
+        m = masks.Mask(
+            mask_type="brush",
+            params={"points": [{"x": 20.0, "y": 20.0, "r": 5.0}]},
+            adjustments=masks.MaskAdjustments(shadows=0.8),
+            feather=0.2,
+        )
+        out = masks.apply_masks(arr, [m])
+        assert int(out[20, 20, 0]) > 30   # shadow lifted inside the mask
+        assert int(out[0, 0, 0]) == 30    # untouched outside
 
     def test_zero_adjustments_skipped(self):
         arr = np.full((20, 20, 4), 100, dtype=np.uint8)

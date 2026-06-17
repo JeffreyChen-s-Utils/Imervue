@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from Imervue.paint.blend_modes import BLEND_MODES, blend_rgb
+
 # ---------------------------------------------------------------------------
 # Kernel construction
 # ---------------------------------------------------------------------------
@@ -71,15 +73,6 @@ def round_brush_kernel(size: int, hardness: float) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Dab compositing
 # ---------------------------------------------------------------------------
-
-BLEND_MODES = (
-    "normal", "multiply", "screen", "overlay",
-    "darken", "lighten",
-    "color_dodge", "color_burn",
-    "soft_light", "hard_light",
-    "linear_burn", "linear_dodge",
-)
-
 
 @dataclass(frozen=True)
 class DabResult:
@@ -324,7 +317,7 @@ def _composite_in_place(
     transparent = dst[..., 3] == 0
     if transparent.any():
         bg[transparent] = fg
-    blended = _blend_rgb(bg, fg, blend_mode)
+    blended = blend_rgb(bg, fg, blend_mode)
 
     a = alpha[..., None]
     out_rgb = bg * (1.0 - a) + blended * a
@@ -332,45 +325,6 @@ def _composite_in_place(
     dst_a = dst[..., 3].astype(np.float32) / 255.0
     new_a = dst_a + (1.0 - dst_a) * alpha
     dst[..., 3] = np.clip(new_a * 255.0, 0.0, 255.0).astype(np.uint8)
-
-
-def _blend_rgb(bg: np.ndarray, fg: np.ndarray, mode: str) -> np.ndarray:
-    """Per-pixel blend of two ``[0, 1]`` RGB arrays."""
-    if mode == "normal":
-        return fg
-    if mode == "multiply":
-        return bg * fg
-    if mode == "screen":
-        return 1.0 - (1.0 - bg) * (1.0 - fg)
-    if mode == "overlay":
-        return np.where(bg <= 0.5, 2.0 * bg * fg, 1.0 - 2.0 * (1.0 - bg) * (1.0 - fg))
-    if mode == "darken":
-        return np.minimum(bg, fg)
-    if mode == "lighten":
-        return np.maximum(bg, fg)
-    if mode == "color_dodge":
-        return np.where(fg >= 1.0, 1.0, np.minimum(1.0, bg / np.maximum(1.0 - fg, 1e-6)))
-    if mode == "color_burn":
-        return np.where(fg <= 0.0, 0.0, 1.0 - np.minimum(1.0, (1.0 - bg) / np.maximum(fg, 1e-6)))
-    if mode == "soft_light":
-        return np.where(
-            fg <= 0.5,
-            bg - (1.0 - 2.0 * fg) * bg * (1.0 - bg),
-            bg + (2.0 * fg - 1.0) * (_d_curve(bg) - bg),
-        )
-    if mode == "hard_light":
-        return np.where(fg <= 0.5, 2.0 * bg * fg, 1.0 - 2.0 * (1.0 - bg) * (1.0 - fg))
-    if mode == "linear_burn":
-        return np.maximum(bg + fg - 1.0, 0.0)
-    if mode == "linear_dodge":
-        return np.minimum(bg + fg, 1.0)
-    raise ValueError(f"unknown blend_mode {mode!r}")
-
-
-def _d_curve(x: np.ndarray) -> np.ndarray:
-    """Photoshop's D(x) used by soft-light: square-root for x>0.25 else
-    a polynomial that joins smoothly."""
-    return np.where(x <= 0.25, ((16.0 * x - 12.0) * x + 4.0) * x, np.sqrt(x))
 
 
 # ---------------------------------------------------------------------------

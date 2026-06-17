@@ -16,13 +16,11 @@ from collections.abc import Iterable
 
 import numpy as np
 
-LAYER_BLEND_MODES = (
-    "normal", "multiply", "screen", "overlay",
-    "darken", "lighten",
-    "color_dodge", "color_burn",
-    "soft_light", "hard_light",
-    "linear_burn", "linear_dodge",
-)
+from Imervue.paint.blend_modes import BLEND_MODES, blend_rgb
+
+# Re-exported under the layer-compositing name; the canonical tuple lives in
+# blend_modes so the brush engine and the compositor can't drift apart.
+LAYER_BLEND_MODES = BLEND_MODES
 
 
 def composite_layer_pair(
@@ -65,7 +63,7 @@ def composite_layer_pair(
     if mask is not None:
         fg_a = fg_a * (mask.astype(np.float32) / 255.0)
 
-    blended_rgb = _blend_rgb(bg_rgb, fg_rgb, blend_mode)
+    blended_rgb = blend_rgb(bg_rgb, fg_rgb, blend_mode)
     out_rgb = bg_rgb * (1.0 - fg_a)[..., None] + blended_rgb * fg_a[..., None]
     out_a = fg_a + bg_a * (1.0 - fg_a)
 
@@ -408,45 +406,6 @@ def _resolve_region_mask(
 # ---------------------------------------------------------------------------
 # Internals — same blend curves as the brush engine, vectorised here.
 # ---------------------------------------------------------------------------
-
-
-def _blend_rgb(bg: np.ndarray, fg: np.ndarray, mode: str) -> np.ndarray:
-    if mode == "normal":
-        return fg
-    if mode == "multiply":
-        return bg * fg
-    if mode == "screen":
-        return 1.0 - (1.0 - bg) * (1.0 - fg)
-    if mode == "overlay":
-        return np.where(bg <= 0.5, 2.0 * bg * fg, 1.0 - 2.0 * (1.0 - bg) * (1.0 - fg))
-    if mode == "darken":
-        return np.minimum(bg, fg)
-    if mode == "lighten":
-        return np.maximum(bg, fg)
-    if mode == "color_dodge":
-        return np.where(fg >= 1.0, 1.0, np.minimum(1.0, bg / np.maximum(1.0 - fg, 1e-6)))
-    if mode == "color_burn":
-        return np.where(
-            fg <= 0.0, 0.0,
-            1.0 - np.minimum(1.0, (1.0 - bg) / np.maximum(fg, 1e-6)),
-        )
-    if mode == "soft_light":
-        return np.where(
-            fg <= 0.5,
-            bg - (1.0 - 2.0 * fg) * bg * (1.0 - bg),
-            bg + (2.0 * fg - 1.0) * (_d_curve(bg) - bg),
-        )
-    if mode == "hard_light":
-        return np.where(fg <= 0.5, 2.0 * bg * fg, 1.0 - 2.0 * (1.0 - bg) * (1.0 - fg))
-    if mode == "linear_burn":
-        return np.maximum(bg + fg - 1.0, 0.0)
-    if mode == "linear_dodge":
-        return np.minimum(bg + fg, 1.0)
-    raise ValueError(f"unknown blend_mode {mode!r}")
-
-
-def _d_curve(x: np.ndarray) -> np.ndarray:
-    return np.where(x <= 0.25, ((16.0 * x - 12.0) * x + 4.0) * x, np.sqrt(x))
 
 
 def _check_pair(below: np.ndarray, above: np.ndarray) -> None:

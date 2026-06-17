@@ -38,6 +38,7 @@ from Imervue.gpu_image_view.filmstrip import (
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
+from Imervue.image.histogram import compute_clipping, compute_histogram
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -449,7 +450,7 @@ class OverlayPainter:
         painter.drawText(x, y, pct)
 
     def draw_histogram(self, painter: QPainter):  # pragma: no cover - GL paint
-        """Draw the RGB histogram overlay (top-left)."""
+        """Draw the RGB+luma histogram and the exposure-clipping readout."""
         view = self.view
         if not view.deep_zoom:
             return
@@ -461,31 +462,49 @@ class OverlayPainter:
         if cur_path and (not cache or cache[0] != cur_path):
             img = view.deep_zoom.levels[-1]
             view._histogram_cache = (
-                cur_path,
-                np.histogram(img[:, :, 0], bins=256, range=(0, 256))[0],
-                np.histogram(img[:, :, 1], bins=256, range=(0, 256))[0],
-                np.histogram(img[:, :, 2], bins=256, range=(0, 256))[0],
+                cur_path, compute_histogram(img), compute_clipping(img),
             )
-
         if not view._histogram_cache:
             return
+        _, hist, clip = view._histogram_cache
+        self._draw_histogram_panel(painter, hist, clip)
 
-        _, hr, hg, hb = view._histogram_cache
-        h_max = max(hr.max(), hg.max(), hb.max(), 1)
+    def _draw_histogram_panel(self, painter, hist, clip):  # pragma: no cover - GL paint
         hx, hy, hw, hh = 12, 12, 256, 120
         painter.fillRect(hx - 2, hy - 2, hw + 4, hh + 4, QColor(0, 0, 0, 140))
-
-        for hist, color in [(hr, QColor(220, 60, 60, 120)),
-                            (hg, QColor(60, 200, 60, 120)),
-                            (hb, QColor(60, 100, 220, 120))]:
+        h_max = max(hist.r.max(), hist.g.max(), hist.b.max(), hist.luma.max(), 1)
+        # Luma sits behind as a faint grey backdrop; RGB curves draw over it.
+        channels = (
+            (hist.luma, QColor(200, 200, 200, 80)),
+            (hist.r, QColor(220, 60, 60, 120)),
+            (hist.g, QColor(60, 200, 60, 120)),
+            (hist.b, QColor(60, 100, 220, 120)),
+        )
+        for counts, color in channels:
             path = QPainterPath()
             path.moveTo(hx, hy + hh)
             for i in range(256):
-                bh = hist[i] / h_max * hh
-                path.lineTo(hx + i, hy + hh - bh)
+                path.lineTo(hx + i, hy + hh - counts[i] / h_max * hh)
             path.lineTo(hx + 255, hy + hh)
             path.closeSubpath()
             painter.fillPath(path, color)
+        self._draw_clipping_readout(painter, clip, hx, hy, hw, hh)
+
+    def _draw_clipping_readout(self, painter, clip, hx, hy, hw, hh):  # pragma: no cover - GL paint
+        # Flag the clipped end of the range so the eye is drawn straight to it.
+        if clip.over_fraction > 0:
+            painter.fillRect(hx + hw - 3, hy, 3, hh, QColor(255, 70, 70, 200))
+        if clip.under_fraction > 0:
+            painter.fillRect(hx, hy, 3, hh, QColor(80, 130, 255, 200))
+        font = QFont(_FONT_CONSOLAS)
+        font.setPixelSize(11)
+        painter.setFont(font)
+        painter.setPen(QColor(235, 235, 235, 220))
+        painter.drawText(
+            hx, hy + hh + 14,
+            f"▲ {clip.over_fraction * 100:.1f}%"
+            f"   ▼ {clip.under_fraction * 100:.1f}%",
+        )
 
     def draw_anim_indicator(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw the animation frame indicator (bottom centre)."""

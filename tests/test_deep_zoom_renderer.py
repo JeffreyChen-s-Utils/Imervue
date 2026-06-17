@@ -11,7 +11,21 @@ import numpy as np
 import pytest
 
 from Imervue.gpu_image_view import fit_view
-from Imervue.gpu_image_view.deep_zoom_renderer import visible_tile_range
+from Imervue.gpu_image_view.deep_zoom_renderer import (
+    letterbox_band_rect,
+    visible_tile_range,
+)
+
+
+def test_letterbox_band_rect_covers_reserved_bottom_strip():
+    # Screen-space (top-origin): the 152 px band spans the full width across the
+    # bottom, starting at y = canvas_h - reserved.
+    assert letterbox_band_rect(1000, 800, 152) == (0.0, 648.0, 1000, 800)
+
+
+def test_letterbox_band_rect_floors_top_when_band_exceeds_canvas():
+    # A viewport shorter than the band fills the whole height (top floored at 0).
+    assert letterbox_band_rect(1000, 100, 152) == (0.0, 0.0, 1000, 100)
 
 
 def test_visible_tile_range_origin():
@@ -35,20 +49,24 @@ def test_visible_tile_range_scaled():
 def test_renderer_and_fit_agree_on_centre():
     # Regression for the off-centre Home-key bug: fit_to_window centres the
     # image using fit_view.canvas_size; the renderer maps it to screen with the
-    # SAME helper. So the margins must come out symmetric even when width()
-    # lags behind the authoritative resizeGL size.
+    # SAME helper, so width() lagging the authoritative resizeGL size can't push
+    # the image off-screen. Horizontally the margins stay symmetric; vertically
+    # the image is letterboxed above the reserved overlay band, so the extra
+    # space all sits at the bottom (bottom margin = top margin + the reserve).
     img_w = img_h = 500
     view = _FakeView(img_w, img_h, widget=(10, 10), last_resize=(1000, 1000))
     fit_view.fit_to_window(view)
 
     canvas_w, canvas_h = fit_view.canvas_size(view)
+    reserve = fit_view.reserved_overlay_height(view)
     left_margin = view.dz_offset_x
     right_margin = canvas_w - (view.dz_offset_x + img_w * view.zoom)
     top_margin = view.dz_offset_y
     bottom_margin = canvas_h - (view.dz_offset_y + img_h * view.zoom)
 
     assert left_margin == pytest.approx(right_margin)
-    assert top_margin == pytest.approx(bottom_margin)
+    assert bottom_margin - top_margin == pytest.approx(reserve)
+    assert top_margin > 0
     assert left_margin > 0  # the lagging width() would have pushed it off-screen
 
 

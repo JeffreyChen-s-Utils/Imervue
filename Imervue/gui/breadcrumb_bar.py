@@ -107,8 +107,6 @@ class BreadcrumbBar(QScrollArea):
                 widget.deleteLater()
 
     def _navigate(self, folder: str) -> None:
-        from Imervue.gpu_image_view.images.image_loader import open_path
-
         mw = self._main_window
         if not Path(folder).is_dir():
             # The folder vanished between the breadcrumb being built
@@ -117,20 +115,10 @@ class BreadcrumbBar(QScrollArea):
             self._toast_navigation_failure(folder, missing=True)
             return
         try:
-            mw.model.setRootPath(folder)
-            mw.tree.setRootIndex(mw.model.index(folder))
-            mw.viewer.clear_tile_grid()
-            open_path(main_gui=mw.viewer, path=folder)
-            from Imervue.multi_language.language_wrapper import language_wrapper
-            mw.filename_label.setText(
-                language_wrapper.language_word_dict.get(
-                    "main_window_current_folder_format"
-                ).format(path=folder)
-            )
-            mw.watch_folder(folder)
-            from Imervue.user_settings.user_setting_dict import user_setting_dict
-            user_setting_dict["user_last_folder"] = folder
-        except Exception:   # noqa: BLE001 — open_path raises across many types
+            # Delegate to the one shared navigator so the breadcrumb behaves
+            # exactly like the file tree — including updating the path bar.
+            mw.navigate_to_path(folder)
+        except Exception:   # noqa: BLE001 — navigation raises across many types
             import logging
             logging.getLogger("Imervue").exception(
                 "breadcrumb navigate to %s failed", folder

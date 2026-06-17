@@ -84,6 +84,7 @@ def render_gradient(
     *,
     kind: str = DEFAULT_GRADIENT_KIND,
     reverse: bool = False,
+    repeat: int = 1,
     selection: np.ndarray | None = None,
 ) -> bool:
     """Fill ``canvas`` with a gradient between ``p0`` (fg) and ``p1`` (bg).
@@ -112,6 +113,10 @@ def render_gradient(
     t = np.clip(t, 0.0, 1.0)
     if reverse:
         t = 1.0 - t
+    repeat = max(1, int(repeat))
+    if repeat > 1:
+        # Tile the gradient ``repeat`` times along its span (sawtooth wrap).
+        t = np.mod(t * repeat, 1.0)
 
     fg_color, bg_color, fg_alpha, bg_alpha = _resolve_endpoint_colors(fg, bg)
     fg_arr = np.array(fg_color, dtype=np.float32)

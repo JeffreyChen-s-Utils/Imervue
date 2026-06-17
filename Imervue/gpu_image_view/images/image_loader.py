@@ -212,7 +212,10 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
     import os
     result = []
     try:
-        with os.scandir(directory) as it:
+        # Desktop viewer: *directory* is the user's own local folder pick
+        # (file-open dialog / breadcrumb), not untrusted remote input — no
+        # privilege boundary is crossed, so the taint warning is a false positive.
+        with os.scandir(directory) as it:  # NOSONAR
             for entry in it:
                 if entry.is_file(follow_symlinks=False):
                     ext = os.path.splitext(entry.name)[1].lower()
@@ -243,9 +246,12 @@ def _scan_images_for_user(directory: str) -> list[str]:
 
 def open_path(main_gui: GPUImageView, path: str):
     path_obj = Path(path)
-    if path_obj.is_dir():
+    # *path* is the user's own local selection in this desktop viewer, not
+    # untrusted remote input; the taint warnings on these probes are false
+    # positives for that threat model.
+    if path_obj.is_dir():  # NOSONAR
         _open_folder(main_gui, path_obj)
-    elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:
+    elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:  # NOSONAR
         _open_file(main_gui, path_obj)
 
 
@@ -254,6 +260,13 @@ def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_folder
     images = _scan_images_for_user(str(path_obj))
     if not images:
+        # An image-less folder (e.g. a parent reached "back" via the breadcrumb)
+        # still resets the wall to a clean empty grid, instead of leaving the
+        # previous folder's thumbnails / a half-cleared blank that then breaks
+        # the next open.
+        main_gui._unfiltered_images = []
+        main_gui._stack_members = {}
+        main_gui.load_tile_grid_async([])
         return
     main_gui.current_index = 0
     main_gui._unfiltered_images = list(images)

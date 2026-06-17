@@ -83,13 +83,13 @@ class PrefetchScheduler:
 
     def _cancel_outdated_workers(self, needed: set[str]) -> None:
         # list() required: we mutate self.workers in-loop.
-        for path in list(self.workers):  # noqa: S7504
+        for path in list(self.workers):  # NOSONAR S7504 — iterating a list() copy
             if path not in needed:
                 self.workers.pop(path).abort()
 
     def _evict_outdated_cache(self, needed: set[str]) -> None:
         # list() required: we del from self.cache in-loop.
-        for path in list(self.cache):  # noqa: S7504
+        for path in list(self.cache):  # NOSONAR S7504 — iterating a list() copy
             if path not in needed:
                 del self.cache[path]
 

@@ -11,10 +11,12 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QApplication, QTreeView, QFileSystemModel, QMenu,
 )
+
+from Imervue.gui.folder_thumbnail_model import clamp_icon_size
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -59,6 +61,8 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
 class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
+    _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
+
     def __init__(self, main_window: "ImervueMainWindow"):
         super().__init__()
         self._main_window = main_window
@@ -68,6 +72,31 @@ class _FileTreeView(QTreeView):
         # several files at once. A plain single click still selects and
         # opens one file via the main window's ``clicked`` handler.
         self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+
+    def set_thumbnail_size(self, px: int) -> None:
+        """Resize the folder preview icons (view + model) and remember it."""
+        size = clamp_icon_size(px)
+        self.setIconSize(QSize(size, size))
+        model = self.model()
+        if hasattr(model, "set_icon_size"):
+            model.set_icon_size(size)
+        from Imervue.user_settings.user_setting_dict import (
+            schedule_save,
+            user_setting_dict,
+        )
+        user_setting_dict["tree_thumbnail_size"] = size
+        schedule_save()
+        self.viewport().update()
+
+    def wheelEvent(self, event):
+        # Ctrl+wheel dynamically grows / shrinks the folder thumbnails; a plain
+        # wheel scrolls the tree as usual.
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            step = self._ZOOM_STEP if event.angleDelta().y() > 0 else -self._ZOOM_STEP
+            self.set_thumbnail_size(self.iconSize().width() + step)
+            event.accept()
+            return
+        super().wheelEvent(event)
 
     def _selected_paths(self) -> list[str]:
         """Unique filesystem paths for every selected row (column 0)."""
