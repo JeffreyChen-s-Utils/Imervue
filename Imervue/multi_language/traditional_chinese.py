@@ -22,6 +22,12 @@ traditional_chinese_word_dict = {
     "batch_geo_keywords": "依地點標記",
     "batch_geo_keywords_done": "已依地點標記 {n} 張照片",
     "batch_geo_keywords_none": "找不到含 GPS 的影像",
+    "keyword_editor_title": "編輯關鍵字",
+    "keyword_editor_title_label": "標題：",
+    "keyword_editor_creator": "作者：",
+    "keyword_editor_keywords": "關鍵字（逗號分隔）：",
+    "keyword_editor_description": "說明：",
+    "keyword_editor_saved": "已將中介資料儲存到 {path}",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",

@@ -30,6 +30,12 @@ korean_word_dict = {
     "batch_geo_keywords": "위치로 태그",
     "batch_geo_keywords_done": "{n}장의 사진을 위치로 태그했습니다",
     "batch_geo_keywords_none": "GPS 정보가 있는 이미지가 없습니다",
+    "keyword_editor_title": "키워드 편집",
+    "keyword_editor_title_label": "제목:",
+    "keyword_editor_creator": "작성자:",
+    "keyword_editor_keywords": "키워드(쉼표로 구분):",
+    "keyword_editor_description": "설명:",
+    "keyword_editor_saved": "{path}에 메타데이터를 저장했습니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

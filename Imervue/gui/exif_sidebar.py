@@ -80,6 +80,12 @@ class ExifSidebar(QWidget):
         self._edit_btn.setStyleSheet("QPushButton { margin: 4px; }")
         self._edit_btn.clicked.connect(self._open_editor)
 
+        self._keywords_btn = QPushButton(
+            language_wrapper.language_word_dict.get("keyword_editor_title", "Edit Keywords")
+        )
+        self._keywords_btn.setStyleSheet("QPushButton { margin: 4px; }")
+        self._keywords_btn.clicked.connect(self._open_keyword_editor)
+
         # 星等評分 — 5 顆可點擊的星，點同一顆會清除
         self._rating_widget = _RatingStars(self._on_rating_clicked)
 
@@ -114,6 +120,7 @@ class ExifSidebar(QWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addWidget(self._info_label)
         content_layout.addWidget(self._edit_btn)
+        content_layout.addWidget(self._keywords_btn)
         content_layout.addWidget(self._rating_widget)
         content_layout.addWidget(self._notes_label)
         content_layout.addWidget(self._notes_edit)
@@ -144,6 +151,10 @@ class ExifSidebar(QWidget):
     def _open_editor(self):
         from Imervue.gui.exif_editor import open_exif_editor
         open_exif_editor(self._main_window.viewer)
+
+    def _open_keyword_editor(self):
+        from Imervue.gui.keyword_editor_dialog import open_keyword_editor
+        open_keyword_editor(self._main_window.viewer)
 
     def update_info(self, path: str | None = None):
         """更新 EXIF 面板內容"""

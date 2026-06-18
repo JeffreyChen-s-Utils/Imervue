@@ -45,6 +45,12 @@ english_word_dict = {
     "batch_geo_keywords": "Tag by Location",
     "batch_geo_keywords_done": "Tagged {n} photo(s) by location",
     "batch_geo_keywords_none": "No geotagged images found",
+    "keyword_editor_title": "Edit Keywords",
+    "keyword_editor_title_label": "Title:",
+    "keyword_editor_creator": "Creator:",
+    "keyword_editor_keywords": "Keywords (comma-separated):",
+    "keyword_editor_description": "Description:",
+    "keyword_editor_saved": "Saved metadata to {path}",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

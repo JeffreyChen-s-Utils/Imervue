@@ -60,6 +60,7 @@ class XmpData:
     description: str = ""
     keywords: list[str] = field(default_factory=list)
     color_label: str = ""
+    creator: str = ""
 
     def is_empty(self) -> bool:
         """Return True if every tracked field carries no information."""
@@ -69,6 +70,7 @@ class XmpData:
             and not self.description
             and not self.keywords
             and not self.color_label
+            and not self.creator
         )
 
 
@@ -174,6 +176,7 @@ def load(image_path: str | Path) -> XmpData:
     title = _parse_alt_default(desc.find(f"{{{_NS['dc']}}}title"))
     description = _parse_alt_default(desc.find(f"{{{_NS['dc']}}}description"))
     keywords = _parse_bag(desc.find(f"{{{_NS['dc']}}}subject"))
+    creators = _parse_bag(desc.find(f"{{{_NS['dc']}}}creator"))
     label = desc.get(f"{{{_NS['xmp']}}}Label") or ""
     if not label:
         child = desc.find(f"{{{_NS['xmp']}}}Label")
@@ -185,6 +188,7 @@ def load(image_path: str | Path) -> XmpData:
         description=description,
         keywords=keywords,
         color_label=label.strip(),
+        creator=creators[0] if creators else "",
     )
 
 
@@ -216,6 +220,18 @@ def _make_bag(parent, tag: str, items: list[str]) -> None:
         li.text = item
 
 
+def _make_seq(parent, tag: str, items: list[str]) -> None:
+    """Append ``dc:tag`` with an ordered ``rdf:Seq`` of ``li`` entries."""
+    entries = [item for item in items if item]
+    if not entries:
+        return
+    field_el = ET.SubElement(parent, f"{{{_NS['dc']}}}{tag}")
+    seq = ET.SubElement(field_el, f"{{{_NS['rdf']}}}Seq")
+    for item in entries:
+        li = ET.SubElement(seq, f"{{{_NS['rdf']}}}li")
+        li.text = item
+
+
 def _build_tree(data: XmpData) -> ET.ElementTree:
     """Build an ``xmpmeta`` ElementTree from a ``XmpData`` value."""
     for prefix, uri in _NS.items():
@@ -239,6 +255,7 @@ def _build_tree(data: XmpData) -> ET.ElementTree:
     _make_alt(desc, "title", data.title)
     _make_alt(desc, "description", data.description)
     _make_bag(desc, "subject", data.keywords)
+    _make_seq(desc, "creator", [data.creator])
 
     return ET.ElementTree(xmpmeta)
 

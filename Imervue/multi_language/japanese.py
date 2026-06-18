@@ -33,6 +33,12 @@ japanese_word_dict = {
     "batch_geo_keywords": "場所でタグ付け",
     "batch_geo_keywords_done": "{n} 枚の写真を場所でタグ付けしました",
     "batch_geo_keywords_none": "GPS 付き画像が見つかりません",
+    "keyword_editor_title": "キーワード編集",
+    "keyword_editor_title_label": "タイトル:",
+    "keyword_editor_creator": "作成者:",
+    "keyword_editor_keywords": "キーワード（カンマ区切り）:",
+    "keyword_editor_description": "説明:",
+    "keyword_editor_saved": "{path} にメタデータを保存しました",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",
