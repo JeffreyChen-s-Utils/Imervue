@@ -31,6 +31,9 @@ traditional_chinese_word_dict = {
     "batch_index_keywords": "索引關鍵字",
     "batch_index_keywords_done": "已從 {n} 張照片索引關鍵字",
     "batch_index_keywords_none": "找不到可索引的關鍵字",
+    "batch_auto_cull": "自動挑出模糊",
+    "batch_auto_cull_done": "已將 {n} 張模糊照片標為剔除",
+    "batch_auto_cull_none": "找不到模糊照片",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",

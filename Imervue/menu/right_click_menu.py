@@ -219,6 +219,10 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
         lang.get("batch_index_keywords", "Index Keywords"))
     index_action.triggered.connect(lambda: _index_keywords(main_gui))
 
+    cull_action = batch_menu.addAction(
+        lang.get("batch_auto_cull", "Auto-cull Blurry"))
+    cull_action.triggered.connect(lambda: _auto_cull_blurry(main_gui))
+
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
 
 
@@ -250,6 +254,22 @@ def _index_keywords(main_gui: GPUImageView) -> None:
     else:
         main_gui.main_window.toast.info(
             lang.get("batch_index_keywords_none", "No keywords found to index"))
+
+
+def _auto_cull_blurry(main_gui: GPUImageView) -> None:
+    from Imervue.library.auto_cull import auto_cull_blurry
+    count = auto_cull_blurry(list(main_gui.selected_tiles))
+    main_gui.update()
+    if not hasattr(main_gui.main_window, "toast"):
+        return
+    lang = language_wrapper.language_word_dict
+    if count:
+        main_gui.main_window.toast.success(
+            lang.get("batch_auto_cull_done",
+                     "Flagged {n} blurry photo(s) as reject").format(n=count))
+    else:
+        main_gui.main_window.toast.info(
+            lang.get("batch_auto_cull_none", "No blurry photos found"))
 
 
 def _delete_action(main_gui: GPUImageView, menu: QMenu):

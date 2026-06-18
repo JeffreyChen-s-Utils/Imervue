@@ -54,6 +54,9 @@ english_word_dict = {
     "batch_index_keywords": "Index Keywords",
     "batch_index_keywords_done": "Indexed keywords from {n} photo(s)",
     "batch_index_keywords_none": "No keywords found to index",
+    "batch_auto_cull": "Auto-cull Blurry",
+    "batch_auto_cull_done": "Flagged {n} blurry photo(s) as reject",
+    "batch_auto_cull_none": "No blurry photos found",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

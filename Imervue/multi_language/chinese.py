@@ -31,6 +31,9 @@ chinese_word_dict = {
     "batch_index_keywords": "索引关键字",
     "batch_index_keywords_done": "已从 {n} 张照片索引关键字",
     "batch_index_keywords_none": "未找到可索引的关键字",
+    "batch_auto_cull": "自动挑出模糊",
+    "batch_auto_cull_done": "已将 {n} 张模糊照片标为剔除",
+    "batch_auto_cull_none": "未找到模糊照片",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

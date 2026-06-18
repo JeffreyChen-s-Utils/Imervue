@@ -39,6 +39,9 @@ korean_word_dict = {
     "batch_index_keywords": "키워드 색인",
     "batch_index_keywords_done": "{n}장의 사진에서 키워드를 색인했습니다",
     "batch_index_keywords_none": "색인할 키워드가 없습니다",
+    "batch_auto_cull": "흐릿한 사진 자동 선별",
+    "batch_auto_cull_done": "{n}장의 흐릿한 사진을 거부로 표시했습니다",
+    "batch_auto_cull_none": "흐릿한 사진이 없습니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",
