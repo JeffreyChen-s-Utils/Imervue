@@ -1716,6 +1716,12 @@ english_word_dict = {
     "hsl_band_purple": "Purple",
     "hsl_band_magenta": "Magenta",
 
+    # --- Tiny Planet (360°) ---
+    "tiny_planet_title": "Tiny Planet (360°)",
+    "tiny_planet_size": "Output size (px):",
+    "tiny_planet_not_360": "This image is not a 2:1 panorama; result may look odd.",
+    "tiny_planet_failed": "Tiny planet failed",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

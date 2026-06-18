@@ -1696,6 +1696,12 @@ japanese_word_dict = {
     "hsl_band_purple": "パープル",
     "hsl_band_magenta": "マゼンタ",
 
+    # --- Tiny Planet (360°) ---
+    "tiny_planet_title": "リトルプラネット（360°）",
+    "tiny_planet_size": "出力サイズ（px）：",
+    "tiny_planet_not_360": "この画像は 2:1 パノラマではないため、結果が不自然になる場合があります。",
+    "tiny_planet_failed": "リトルプラネットに失敗しました",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

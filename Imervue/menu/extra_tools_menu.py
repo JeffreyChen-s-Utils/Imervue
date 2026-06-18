@@ -84,6 +84,8 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_map_view(ui))
     _add_action(sub, lang, "inspector_title", "Scopes & Inspector",
                 lambda: _open_image_inspector(ui))
+    _add_action(sub, lang, "tiny_planet_title", "Tiny Planet (360°)",
+                lambda: _open_tiny_planet(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -349,6 +351,11 @@ def _open_map_view(ui: ImervueMainWindow):
 def _open_image_inspector(ui: ImervueMainWindow):
     from Imervue.gui.image_inspector_dialog import open_image_inspector
     open_image_inspector(ui.viewer)
+
+
+def _open_tiny_planet(ui: ImervueMainWindow):
+    from Imervue.gui.tiny_planet_dialog import open_tiny_planet
+    open_tiny_planet(ui.viewer)
 
 
 def _open_before_after(ui: ImervueMainWindow):

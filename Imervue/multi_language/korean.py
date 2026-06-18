@@ -1694,6 +1694,12 @@ korean_word_dict = {
     "hsl_band_purple": "보라",
     "hsl_band_magenta": "자홍",
 
+    # --- Tiny Planet (360°) ---
+    "tiny_planet_title": "타이니 플래닛 (360°)",
+    "tiny_planet_size": "출력 크기(px):",
+    "tiny_planet_not_360": "이 이미지는 2:1 파노라마가 아니므로 결과가 어색할 수 있습니다.",
+    "tiny_planet_failed": "타이니 플래닛 실패",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

@@ -1682,6 +1682,12 @@ traditional_chinese_word_dict = {
     "hsl_band_purple": "紫",
     "hsl_band_magenta": "洋紅",
 
+    # --- Tiny Planet (360°) ---
+    "tiny_planet_title": "小行星全景（360°）",
+    "tiny_planet_size": "輸出尺寸（像素）：",
+    "tiny_planet_not_360": "此影像非 2:1 全景，結果可能異常。",
+    "tiny_planet_failed": "小行星投影失敗",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",
