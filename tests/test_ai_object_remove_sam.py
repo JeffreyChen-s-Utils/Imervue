@@ -24,7 +24,7 @@ from ai_object_remove.sam import (
 
 def test_longest_side_scale():
     assert longest_side_scale(1000, 2000) == pytest.approx(0.512)
-    assert longest_side_scale(0, 0) == 1.0
+    assert longest_side_scale(0, 0) == 1.0  # NOSONAR - exact guard result
 
 
 def test_resized_hw_caps_longest_side():
@@ -47,8 +47,8 @@ def test_preprocess_point_coords_scales_and_pads():
 def test_preprocess_point_labels_appends_padding():
     labels = preprocess_point_labels([1])
     assert labels.shape == (1, 2)
-    assert labels[0, 0] == 1.0
-    assert labels[0, 1] == -1.0
+    assert labels[0, 0] == 1.0  # NOSONAR - exact array value
+    assert labels[0, 1] == -1.0  # NOSONAR - exact padding label
 
 
 # ---------------------------------------------------------------------------

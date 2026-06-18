@@ -19,24 +19,24 @@ from Imervue.gpu_image_view.video_badge import (
 
 def test_radius_uses_shorter_side():
     # Wide tile: 200x50 -> shorter side 50 -> 50 * 0.16 = 8 -> clamped up to min 9.
-    assert video_badge_radius(200, 50) == 9.0
+    assert video_badge_radius(200, 50) == 9.0  # NOSONAR - exact clamp result
 
 
 def test_radius_scales_with_size():
     # 100 px shorter side -> 16 px, inside the clamp band.
-    assert video_badge_radius(100, 120) == 16.0
+    assert video_badge_radius(100, 120) == 16.0  # NOSONAR - exact fraction result
 
 
 def test_radius_clamped_to_min():
-    assert video_badge_radius(10, 10) == 9.0
+    assert video_badge_radius(10, 10) == 9.0  # NOSONAR - exact clamp result
 
 
 def test_radius_clamped_to_max():
-    assert video_badge_radius(5000, 4000) == 30.0
+    assert video_badge_radius(5000, 4000) == 30.0  # NOSONAR - exact clamp result
 
 
 def test_radius_ignores_sign():
-    assert video_badge_radius(-100, -120) == 16.0
+    assert video_badge_radius(-100, -120) == 16.0  # NOSONAR - exact fraction result
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +46,8 @@ def test_radius_ignores_sign():
 
 def test_centre_is_midpoint():
     badge = video_badge_geometry(0, 0, 100, 200)
-    assert badge.cx == 50.0
-    assert badge.cy == 100.0
+    assert badge.cx == 50.0  # NOSONAR - exact midpoint
+    assert badge.cy == 100.0  # NOSONAR - exact midpoint
 
 
 def test_returns_dataclass_with_three_triangle_points():
@@ -69,7 +69,7 @@ def test_triangle_back_edge_is_symmetric():
     _tip, top, bottom = badge.triangle
     assert top[0] == bottom[0]
     # top and bottom straddle the centre line symmetrically.
-    assert (top[1] + bottom[1]) / 2.0 == pytest.approx(badge.cy)
+    assert (top[1] + bottom[1]) / 2.0 == pytest.approx(badge.cy)  # NOSONAR - approx compare
     assert top[1] < badge.cy < bottom[1]
 
 

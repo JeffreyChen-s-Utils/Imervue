@@ -57,7 +57,7 @@ def test_parse_imgur_link():
 
 def test_https_guard_rejects_http():
     with pytest.raises(UploadError):
-        uploaders._https_urlopen(Request("http://insecure.example.com/x"))
+        uploaders._https_urlopen(Request("http://insecure.example.com/x"))  # NOSONAR - deliberate http test input
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ def test_upload_webdav_rejects_http(tmp_path):
     f = tmp_path / "a.png"
     f.write_bytes(b"x")
     with pytest.raises(UploadError):
-        upload_webdav("http://d/dav", str(f))
+        upload_webdav("http://d/dav", str(f))  # NOSONAR - deliberate http test input
 
 
 def test_upload_imgur_success(tmp_path, monkeypatch):
@@ -144,7 +144,7 @@ def test_upload_s3_rejects_http(tmp_path):
     f = tmp_path / "a.png"
     f.write_bytes(b"x")
     with pytest.raises(UploadError):
-        uploaders.upload_s3_presigned("http://b.s3/k?sig=1", str(f))
+        uploaders.upload_s3_presigned("http://b.s3/k?sig=1", str(f))  # NOSONAR - deliberate http test input
 
 
 def test_upload_batch_collects_results():

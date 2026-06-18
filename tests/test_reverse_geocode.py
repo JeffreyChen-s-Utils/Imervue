@@ -63,7 +63,7 @@ def test_reverse_geocode_remote_point_returns_nearest():
 def test_reverse_geocode_cache_buckets_nearby_points():
     _cached_place.cache_clear()
     reverse_geocode(48.851, 2.349)
-    before = _cached_place.cache_info()
+    before = _cached_place.cache_info()  # pylint: disable=no-value-for-parameter
     reverse_geocode(48.853, 2.351)  # rounds to the same (48.85, 2.35)
-    after = _cached_place.cache_info()
+    after = _cached_place.cache_info()  # pylint: disable=no-value-for-parameter
     assert after.hits == before.hits + 1

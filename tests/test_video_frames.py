@@ -58,7 +58,7 @@ def test_frame_index_for_time_guards_zero_fps():
 
 def test_time_for_frame_index():
     assert time_for_frame_index(50, 25.0) == pytest.approx(2.0)
-    assert time_for_frame_index(10, 0.0) == 0.0
+    assert time_for_frame_index(10, 0.0) == 0.0  # NOSONAR - exact guard result
 
 
 # ---------------------------------------------------------------------------

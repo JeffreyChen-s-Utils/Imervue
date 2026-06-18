@@ -21,20 +21,21 @@ _EARTH_RADIUS_KM = 6371.0
 # Round coordinates before the cached lookup so nearby points share a result
 # (≈1 km at 2 decimals) and the cache actually hits during a browse session.
 _CACHE_PRECISION = 2
+_US = "United States"
 
 # (city, country, latitude, longitude) — a compact, globally spread set of
 # major cities. Coordinates are to ~2 decimals, which is plenty for a
 # nearest-city match.
 _CITIES: tuple[tuple[str, str, float, float], ...] = (
-    ("New York", "United States", 40.71, -74.01),
-    ("Los Angeles", "United States", 34.05, -118.24),
-    ("Chicago", "United States", 41.88, -87.63),
-    ("San Francisco", "United States", 37.77, -122.42),
-    ("Seattle", "United States", 47.61, -122.33),
-    ("Las Vegas", "United States", 36.17, -115.14),
-    ("Miami", "United States", 25.76, -80.19),
-    ("Washington", "United States", 38.91, -77.04),
-    ("Boston", "United States", 42.36, -71.06),
+    ("New York", _US,40.71, -74.01),
+    ("Los Angeles", _US,34.05, -118.24),
+    ("Chicago", _US,41.88, -87.63),
+    ("San Francisco", _US,37.77, -122.42),
+    ("Seattle", _US,47.61, -122.33),
+    ("Las Vegas", _US,36.17, -115.14),
+    ("Miami", _US,25.76, -80.19),
+    ("Washington", _US,38.91, -77.04),
+    ("Boston", _US,42.36, -71.06),
     ("Toronto", "Canada", 43.65, -79.38),
     ("Vancouver", "Canada", 49.28, -123.12),
     ("Montreal", "Canada", 45.50, -73.57),

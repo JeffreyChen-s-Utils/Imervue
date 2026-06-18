@@ -30,6 +30,7 @@ VIDEO_EXTENSIONS: frozenset[str] = frozenset({
 _RGB_CHANNELS = 3
 _RGBA_CHANNELS = 4
 _UINT8_MAX = 255
+_READER_NOT_OPEN = "Reader is not open."
 
 
 class VideoBackendError(RuntimeError):
@@ -136,7 +137,7 @@ class FrameReader:
         uses :meth:`probe_meta` to skip the count entirely.
         """
         if self._reader is None:
-            raise VideoBackendError("Reader is not open.")
+            raise VideoBackendError(_READER_NOT_OPEN)
         meta = self._reader.get_meta_data()
         fps, duration, width, height = self._basic_meta(meta)
         frame_count = self._resolve_frame_count(meta, fps, duration)
@@ -149,7 +150,7 @@ class FrameReader:
         expensive demux pass an exact count would need.
         """
         if self._reader is None:
-            raise VideoBackendError("Reader is not open.")
+            raise VideoBackendError(_READER_NOT_OPEN)
         meta = self._reader.get_meta_data()
         fps, duration, width, height = self._basic_meta(meta)
         estimated = int(round(fps * duration)) if fps > 0.0 and duration > 0.0 else 0
@@ -172,7 +173,7 @@ class FrameReader:
     def frame(self, index: int) -> np.ndarray:
         """Decode a single frame to ``HxWx3`` uint8 RGB."""
         if self._reader is None:
-            raise VideoBackendError("Reader is not open.")
+            raise VideoBackendError(_READER_NOT_OPEN)
         try:
             raw = self._reader.get_data(int(index))
         except (IndexError, RuntimeError, ValueError) as exc:

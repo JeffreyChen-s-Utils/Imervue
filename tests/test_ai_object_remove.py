@@ -177,7 +177,7 @@ def test_mask_to_nchw():
     mask[1, 1] = True
     out = mask_to_nchw(mask)
     assert out.shape == (1, 1, 4, 5)
-    assert out[0, 0, 1, 1] == 1.0
+    assert out[0, 0, 1, 1] == 1.0  # NOSONAR - exact array value
     assert out.dtype == np.float32
 
 

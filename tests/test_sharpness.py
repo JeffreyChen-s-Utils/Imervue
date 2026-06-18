@@ -26,18 +26,18 @@ def test_to_luma_reduces_rgb():
 
 
 def test_laplacian_variance_uniform_is_zero():
-    assert laplacian_variance(np.full((8, 8), 128.0)) == 0.0
+    assert laplacian_variance(np.full((8, 8), 128.0)) == 0.0  # NOSONAR - exact by construction
 
 
 def test_laplacian_variance_empty_is_zero():
-    assert laplacian_variance(np.zeros((0, 0))) == 0.0
+    assert laplacian_variance(np.zeros((0, 0))) == 0.0  # NOSONAR - exact by construction
 
 
 def test_sharp_scores_higher_than_blurry():
     sharp = sharpness_score(_checkerboard())
     blurry = sharpness_score(np.full((16, 16), 128.0))
     assert sharp > blurry
-    assert blurry == 0.0
+    assert blurry == 0.0  # NOSONAR - exact by construction
 
 
 def test_select_blurry_filters_below_threshold():
