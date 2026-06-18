@@ -27,6 +27,9 @@ korean_word_dict = {
     "smart_albums_auto": "위치로 자동 생성",
     "smart_albums_auto_done": "{n}개의 위치 앨범을 생성했습니다",
     "smart_albums_auto_none": "GPS 정보가 있는 이미지가 없습니다",
+    "batch_geo_keywords": "위치로 태그",
+    "batch_geo_keywords_done": "{n}장의 사진을 위치로 태그했습니다",
+    "batch_geo_keywords_none": "GPS 정보가 있는 이미지가 없습니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

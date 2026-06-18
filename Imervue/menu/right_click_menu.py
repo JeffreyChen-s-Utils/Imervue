@@ -211,7 +211,26 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
     gif_action = batch_menu.addAction(lang.get("gif_video_title", "Create GIF / Video"))
     gif_action.triggered.connect(lambda: open_gif_video_dialog(main_gui))
 
+    geo_action = batch_menu.addAction(
+        lang.get("batch_geo_keywords", "Tag by Location"))
+    geo_action.triggered.connect(lambda: _tag_by_location(main_gui))
+
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
+
+
+def _tag_by_location(main_gui: GPUImageView) -> None:
+    from Imervue.image.geo_keywords import tag_paths_by_location
+    count = tag_paths_by_location(list(main_gui.selected_tiles))
+    if not hasattr(main_gui.main_window, "toast"):
+        return
+    lang = language_wrapper.language_word_dict
+    if count:
+        main_gui.main_window.toast.success(
+            lang.get("batch_geo_keywords_done",
+                     "Tagged {n} photo(s) by location").format(n=count))
+    else:
+        main_gui.main_window.toast.info(
+            lang.get("batch_geo_keywords_none", "No geotagged images found"))
 
 
 def _delete_action(main_gui: GPUImageView, menu: QMenu):

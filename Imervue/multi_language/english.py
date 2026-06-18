@@ -42,6 +42,9 @@ english_word_dict = {
     "smart_albums_auto": "Auto by location",
     "smart_albums_auto_done": "Created {n} location album(s)",
     "smart_albums_auto_none": "No geotagged images found",
+    "batch_geo_keywords": "Tag by Location",
+    "batch_geo_keywords_done": "Tagged {n} photo(s) by location",
+    "batch_geo_keywords_none": "No geotagged images found",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

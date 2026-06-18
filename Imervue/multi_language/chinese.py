@@ -19,6 +19,9 @@ chinese_word_dict = {
     "smart_albums_auto": "按地点自动创建",
     "smart_albums_auto_done": "已创建 {n} 个地点相册",
     "smart_albums_auto_none": "未找到含 GPS 的图像",
+    "batch_geo_keywords": "按地点标记",
+    "batch_geo_keywords_done": "已按地点标记 {n} 张照片",
+    "batch_geo_keywords_none": "未找到含 GPS 的图像",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

@@ -139,3 +139,12 @@ def reverse_geocode(lat: float, lon: float) -> str | None:
     photos from the same place reuses one computation.
     """
     return _cached_place(round(lat, _CACHE_PRECISION), round(lon, _CACHE_PRECISION))
+
+
+def place_keywords(lat: float, lon: float) -> list[str]:
+    """Return ``[city, country]`` keywords for the nearest city, or ``[]``."""
+    nearest = nearest_city(lat, lon)
+    if nearest is None:
+        return []
+    city, country, _distance = nearest
+    return [city, country]
