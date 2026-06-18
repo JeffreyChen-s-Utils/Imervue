@@ -32,6 +32,7 @@ from Imervue.image.stack_blend import (
     STACK_MEAN,
     STACK_MEDIAN,
     STACK_MIN,
+    STACK_SIGMA,
     stack_images,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -46,6 +47,7 @@ _MODE_LABELS = (
     (STACK_MEDIAN, "stack_median", "Median (remove crowds)"),
     (STACK_MAX, "stack_max", "Max / lighten (star trails)"),
     (STACK_MIN, "stack_min", "Min / darken"),
+    (STACK_SIGMA, "stack_sigma", "Sigma-clipped mean (reject trails)"),
 )
 
 

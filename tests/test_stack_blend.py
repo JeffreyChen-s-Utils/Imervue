@@ -9,6 +9,7 @@ from Imervue.image.stack_blend import (
     STACK_MEAN,
     STACK_MEDIAN,
     STACK_MIN,
+    STACK_SIGMA,
     blend_stack,
     stack_images,
 )
@@ -46,6 +47,24 @@ def test_median_rejects_transient():
 def test_median_even_count_averages_middle():
     out = blend_stack([_frame(100), _frame(200)], STACK_MEDIAN)
     assert np.all(out == 150)
+
+
+def test_sigma_clip_rejects_outlier_frame():
+    # Nine clean frames at 100 plus one bright outlier (a "trail").
+    frames = [_frame(100) for _ in range(9)]
+    outlier = _frame(100)
+    outlier[0, 0] = 255
+    frames.append(outlier)
+    out = blend_stack(frames, STACK_SIGMA)
+    # The lone bright sample is rejected, so the pixel stays near 100,
+    # well below the ~115 a plain mean would give.
+    assert out[0, 0, 0] < 110
+
+
+def test_sigma_clip_matches_mean_without_outliers():
+    frames = [_frame(100), _frame(102), _frame(98), _frame(100)]
+    out = blend_stack(frames, STACK_SIGMA)
+    assert abs(int(out[0, 0, 0]) - 100) <= 1
 
 
 def test_unknown_mode_raises():

@@ -15,6 +15,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QTabWidget, QVBoxLayout, QWidget
 
+from Imervue.image.ela import error_level_analysis
 from Imervue.image.false_color import false_color
 from Imervue.image.focus_peaking import focus_peaking
 from Imervue.image.scopes import compute_parade, compute_waveform
@@ -59,6 +60,8 @@ class ImageInspectorDialog(QDialog):
         self._add_tab(lang.get("inspector_parade", "RGB Parade"), compute_parade(rgba))
         self._add_tab(lang.get("inspector_false_color", "False Color"), false_color(rgba))
         self._add_tab(lang.get("inspector_focus_peak", "Focus Peaking"), focus_peaking(rgba))
+        self._add_tab(lang.get("inspector_ela", "Error Level (ELA)"),
+                      error_level_analysis(rgba))
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._tabs)

@@ -1730,6 +1730,22 @@ english_word_dict = {
     "watch_folder_watching": "Watching {path} — {n} processed",
     "watch_folder_unavailable": "Could not watch this folder.",
 
+    # --- Inspector ELA / sigma stack / CLAHE / flatten / binarize ---
+    "inspector_ela": "Error Level (ELA)",
+    "stack_sigma": "Sigma-clipped mean (reject trails)",
+    "clahe_title": "CLAHE (Local Equalize)",
+    "clahe_clip": "Clip limit:",
+    "clahe_tiles": "Tiles:",
+    "clahe_failed": "CLAHE failed",
+    "flatten_title": "Flatten Background",
+    "flatten_degree": "Gradient degree:",
+    "flatten_divide": "Divide (vignetting)",
+    "flatten_failed": "Flatten failed",
+    "binarize_title": "Document Binarize",
+    "binarize_window": "Window size:",
+    "binarize_k": "Threshold k:",
+    "binarize_failed": "Binarize failed",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

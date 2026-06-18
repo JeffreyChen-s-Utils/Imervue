@@ -1710,6 +1710,22 @@ japanese_word_dict = {
     "watch_folder_watching": "監視中 {path} — {n} 件処理",
     "watch_folder_unavailable": "このフォルダーを監視できませんでした。",
 
+    # --- Inspector ELA / sigma stack / CLAHE / flatten / binarize ---
+    "inspector_ela": "誤差レベル (ELA)",
+    "stack_sigma": "シグマクリップ平均（軌跡除去）",
+    "clahe_title": "CLAHE（局所均等化）",
+    "clahe_clip": "クリップ制限：",
+    "clahe_tiles": "タイル数：",
+    "clahe_failed": "CLAHE に失敗しました",
+    "flatten_title": "背景の平坦化",
+    "flatten_degree": "グラデーション次数：",
+    "flatten_divide": "除算（周辺減光）",
+    "flatten_failed": "平坦化に失敗しました",
+    "binarize_title": "ドキュメント二値化",
+    "binarize_window": "ウィンドウサイズ：",
+    "binarize_k": "しきい値 k：",
+    "binarize_failed": "二値化に失敗しました",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

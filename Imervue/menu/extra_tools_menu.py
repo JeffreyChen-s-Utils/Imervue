@@ -43,6 +43,8 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_token_rename(ui))
     _add_action(sub, lang, "deflicker_title", "Deflicker (Time-lapse)",
                 lambda: _open_deflicker(ui))
+    _add_action(sub, lang, "binarize_title", "Document Binarize",
+                lambda: _open_binarize(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -172,6 +174,10 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_local_contrast(ui))
     _add_action(sub, lang, "hsl_title", "HSL / Color Mixer",
                 lambda: _open_hsl_mixer(ui))
+    _add_action(sub, lang, "clahe_title", "CLAHE (Local Equalize)",
+                lambda: _open_clahe(ui))
+    _add_action(sub, lang, "flatten_title", "Flatten Background",
+                lambda: _open_flatten_field(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -423,6 +429,21 @@ def _open_local_contrast(ui: ImervueMainWindow) -> None:
 def _open_hsl_mixer(ui: ImervueMainWindow) -> None:
     from Imervue.gui.hsl_mixer_dialog import open_hsl_mixer
     open_hsl_mixer(ui.viewer)
+
+
+def _open_clahe(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.clahe_dialog import open_clahe
+    open_clahe(ui.viewer)
+
+
+def _open_flatten_field(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.flatten_field_dialog import open_flatten_field
+    open_flatten_field(ui.viewer)
+
+
+def _open_binarize(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.binarize_dialog import open_binarize
+    open_binarize(ui.viewer)
 
 
 def _open_film_grain(ui: ImervueMainWindow) -> None:

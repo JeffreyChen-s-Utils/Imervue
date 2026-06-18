@@ -58,6 +58,6 @@ def test_dialog_smoke(qapp, tmp_path):
     PILImage.fromarray(_edge_rgba(40, 40)).save(str(path))
     dialog = ImageInspectorDialog(object(), str(path))
     try:
-        assert dialog._tabs.count() == 4
+        assert dialog._tabs.count() == 5  # waveform, parade, false-color, peaking, ELA
     finally:
         dialog.deleteLater()

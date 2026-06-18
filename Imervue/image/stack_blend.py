@@ -34,11 +34,13 @@ STACK_MEAN = "mean"
 STACK_MEDIAN = "median"
 STACK_MAX = "max"
 STACK_MIN = "min"
-STACK_MODES = (STACK_MEAN, STACK_MEDIAN, STACK_MAX, STACK_MIN)
+STACK_SIGMA = "sigma"
+STACK_MODES = (STACK_MEAN, STACK_MEDIAN, STACK_MAX, STACK_MIN, STACK_SIGMA)
 
 _MIN_FRAMES = 2
 _RGB_CHANNELS = 3
 _OPAQUE = 255
+_KAPPA = 2.5
 
 
 def blend_stack(frames: Sequence[np.ndarray], mode: str) -> np.ndarray:
@@ -64,6 +66,8 @@ def _reduce(frames: Sequence[np.ndarray], mode: str) -> np.ndarray:
     if mode == STACK_MEDIAN:
         # Median is the one mode that needs every frame resident at once.
         return np.median(np.stack(frames, axis=0), axis=0).round().astype(np.uint8)
+    if mode == STACK_SIGMA:
+        return _sigma_clip(frames)
     if mode == STACK_MEAN:
         acc = np.zeros(frames[0].shape, dtype=np.float64)
         for frame in frames:
@@ -75,6 +79,25 @@ def _reduce(frames: Sequence[np.ndarray], mode: str) -> np.ndarray:
     for frame in frames[1:]:
         out = reducer(out, frame)
     return out
+
+
+def _sigma_clip(frames: Sequence[np.ndarray]) -> np.ndarray:
+    """Average the stack after rejecting per-pixel outliers beyond kappa-sigma.
+
+    Drops satellite/airplane trails, cosmic rays and brief passers-by that a
+    plain mean would smear in, falling back to the median where every sample
+    was rejected.
+    """
+    stacked = np.stack(frames, axis=0).astype(np.float32)
+    median = np.median(stacked, axis=0)
+    spread = stacked.std(axis=0)
+    low = median - _KAPPA * spread
+    high = median + _KAPPA * spread
+    keep = (stacked >= low) & (stacked <= high)
+    kept_sum = np.where(keep, stacked, 0.0).sum(axis=0)
+    kept_count = keep.sum(axis=0)
+    averaged = np.where(kept_count > 0, kept_sum / np.maximum(kept_count, 1), median)
+    return np.clip(np.rint(averaged), 0, 255).astype(np.uint8)
 
 
 def _load_rgb(path: str | Path) -> np.ndarray:

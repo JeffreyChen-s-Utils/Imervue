@@ -1708,6 +1708,22 @@ korean_word_dict = {
     "watch_folder_watching": "감시 중 {path} — {n}개 처리됨",
     "watch_folder_unavailable": "이 폴더를 감시할 수 없습니다.",
 
+    # --- Inspector ELA / sigma stack / CLAHE / flatten / binarize ---
+    "inspector_ela": "오류 수준 (ELA)",
+    "stack_sigma": "시그마 클리핑 평균(궤적 제거)",
+    "clahe_title": "CLAHE(국소 평활화)",
+    "clahe_clip": "클립 한계:",
+    "clahe_tiles": "타일 수:",
+    "clahe_failed": "CLAHE 실패",
+    "flatten_title": "배경 평탄화",
+    "flatten_degree": "그라디언트 차수:",
+    "flatten_divide": "나누기(비네팅)",
+    "flatten_failed": "평탄화 실패",
+    "binarize_title": "문서 이진화",
+    "binarize_window": "윈도우 크기:",
+    "binarize_k": "임계값 k:",
+    "binarize_failed": "이진화 실패",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

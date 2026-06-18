@@ -1697,6 +1697,22 @@ chinese_word_dict = {
     "watch_folder_watching": "监视中 {path} — 已处理 {n} 个",
     "watch_folder_unavailable": "无法监视此文件夹。",
 
+    # --- Inspector ELA / sigma stack / CLAHE / flatten / binarize ---
+    "inspector_ela": "误差层级 (ELA)",
+    "stack_sigma": "Sigma 截尾平均（去轨迹）",
+    "clahe_title": "CLAHE（局部均衡）",
+    "clahe_clip": "限幅：",
+    "clahe_tiles": "分块数：",
+    "clahe_failed": "CLAHE 失败",
+    "flatten_title": "背景平整",
+    "flatten_degree": "渐变次数：",
+    "flatten_divide": "除法（暗角）",
+    "flatten_failed": "背景平整失败",
+    "binarize_title": "文档二值化",
+    "binarize_window": "窗口大小：",
+    "binarize_k": "阈值 k：",
+    "binarize_failed": "二值化失败",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",
