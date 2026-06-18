@@ -61,6 +61,9 @@ japanese_word_dict = {
     "query_search_prompt": "例: kw:beach rating:>=4 type:video place:Paris",
     "query_search_none": "クエリに一致する画像がありません",
     "query_search_done": "{n} 件一致",
+    "date_import_menu": "日付フォルダに取り込み…",
+    "date_import_done": "{n} 個のファイルを日付別に取り込みました",
+    "date_import_none": "取り込むファイルがありません",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

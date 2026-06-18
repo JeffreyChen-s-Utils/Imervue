@@ -50,6 +50,9 @@ traditional_chinese_word_dict = {
     "query_search_prompt": "例如 kw:beach rating:>=4 type:video place:Paris",
     "query_search_none": "沒有符合查詢的影像",
     "query_search_done": "{n} 張符合",
+    "date_import_menu": "依日期匯入資料夾…",
+    "date_import_done": "已依日期匯入 {n} 個檔案",
+    "date_import_none": "沒有可匯入的檔案",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",

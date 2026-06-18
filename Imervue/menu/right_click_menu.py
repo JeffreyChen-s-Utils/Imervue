@@ -290,7 +290,33 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
         lang.get("multipage_combine", "Combine to PDF / TIFF…"))
     combine_action.triggered.connect(lambda: _combine_multipage(main_gui))
 
+    date_import_action = batch_menu.addAction(
+        lang.get("date_import_menu", "Import to Dated Folders…"))
+    date_import_action.triggered.connect(lambda: _import_by_date(main_gui))
+
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
+
+
+def _import_by_date(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from Imervue.library.date_import import import_by_date
+    paths = list(main_gui.selected_tiles)
+    if not paths:
+        return
+    lang = language_wrapper.language_word_dict
+    out_dir = QFileDialog.getExistingDirectory(
+        main_gui, lang.get("date_import_menu", "Import to Dated Folders…"))
+    if not out_dir:
+        return
+    count = import_by_date(paths, out_dir)
+    toast = getattr(main_gui.main_window, "toast", None)
+    if toast is None:
+        return
+    if count:
+        toast.success(lang.get("date_import_done",
+                               "Imported {n} file(s) by date").format(n=count))
+    else:
+        toast.info(lang.get("date_import_none", "No files to import"))
 
 
 def _combine_multipage(main_gui: GPUImageView) -> None:

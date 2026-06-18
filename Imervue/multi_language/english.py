@@ -73,6 +73,9 @@ english_word_dict = {
     "query_search_prompt": "e.g. kw:beach rating:>=4 type:video place:Paris",
     "query_search_none": "No images match the query",
     "query_search_done": "{n} match",
+    "date_import_menu": "Import to Dated Folders…",
+    "date_import_done": "Imported {n} file(s) by date",
+    "date_import_none": "No files to import",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",
