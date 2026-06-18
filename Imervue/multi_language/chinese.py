@@ -53,6 +53,9 @@ chinese_word_dict = {
     "date_import_menu": "按日期导入文件夹…",
     "date_import_done": "已按日期导入 {n} 个文件",
     "date_import_none": "没有可导入的文件",
+    "events_title": "事件",
+    "events_menu": "分组成事件…",
+    "events_empty": "未找到含日期的照片",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

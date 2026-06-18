@@ -78,6 +78,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     build_right_click_menu.addSeparator()
 
     _query_search_action(main_gui, build_right_click_menu)
+    _events_action(main_gui, build_right_click_menu)
     image_info_action(main_gui=main_gui, local_pos=local_pos, menu=build_right_click_menu)
     build_recent_menu(main_gui.main_window, build_right_click_menu)
 
@@ -182,6 +183,17 @@ def _query_search_action(main_gui: GPUImageView, menu: QMenu):
 def _open_query_search(main_gui: GPUImageView):
     from Imervue.gui.query_search import open_query_search
     open_query_search(main_gui)
+
+
+def _events_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("events_menu", "Group into Events…"))
+    action.triggered.connect(lambda: _open_events(main_gui))
+
+
+def _open_events(main_gui: GPUImageView):
+    from Imervue.gui.events_dialog import open_events
+    open_events(main_gui)
 
 
 def _split_pages_action(main_gui: GPUImageView, menu: QMenu):

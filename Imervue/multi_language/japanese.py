@@ -64,6 +64,9 @@ japanese_word_dict = {
     "date_import_menu": "日付フォルダに取り込み…",
     "date_import_done": "{n} 個のファイルを日付別に取り込みました",
     "date_import_none": "取り込むファイルがありません",
+    "events_title": "イベント",
+    "events_menu": "イベントにグループ化…",
+    "events_empty": "日付のある写真が見つかりません",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

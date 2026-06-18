@@ -61,6 +61,9 @@ korean_word_dict = {
     "date_import_menu": "날짜 폴더로 가져오기…",
     "date_import_done": "{n}개 파일을 날짜별로 가져왔습니다",
     "date_import_none": "가져올 파일이 없습니다",
+    "events_title": "이벤트",
+    "events_menu": "이벤트로 그룹화…",
+    "events_empty": "날짜가 있는 사진이 없습니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

@@ -76,6 +76,9 @@ english_word_dict = {
     "date_import_menu": "Import to Dated Folders…",
     "date_import_done": "Imported {n} file(s) by date",
     "date_import_none": "No files to import",
+    "events_title": "Events",
+    "events_menu": "Group into Events…",
+    "events_empty": "No dated photos found",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",
