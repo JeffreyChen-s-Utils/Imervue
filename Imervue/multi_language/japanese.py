@@ -67,6 +67,10 @@ japanese_word_dict = {
     "events_title": "イベント",
     "events_menu": "イベントにグループ化…",
     "events_empty": "日付のある写真が見つかりません",
+    "maintenance_menu": "ライブラリ メンテナンス…",
+    "maintenance_summary": "不明 {missing} 件、新規 {new} 件",
+    "maintenance_prune_q": "{n} 件の不明ファイルをインデックスから削除しますか？",
+    "maintenance_pruned": "{n} 件の不明項目を削除しました",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

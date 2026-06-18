@@ -56,6 +56,10 @@ chinese_word_dict = {
     "events_title": "事件",
     "events_menu": "分组成事件…",
     "events_empty": "未找到含日期的照片",
+    "maintenance_menu": "图库维护…",
+    "maintenance_summary": "{missing} 个丢失、{new} 个新增",
+    "maintenance_prune_q": "要从索引移除 {n} 个丢失文件吗？",
+    "maintenance_pruned": "已清除 {n} 个丢失项",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

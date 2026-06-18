@@ -79,6 +79,10 @@ english_word_dict = {
     "events_title": "Events",
     "events_menu": "Group into Events…",
     "events_empty": "No dated photos found",
+    "maintenance_menu": "Library Maintenance…",
+    "maintenance_summary": "{missing} missing, {new} new",
+    "maintenance_prune_q": "Remove {n} missing file(s) from the index?",
+    "maintenance_pruned": "Pruned {n} missing",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

@@ -64,6 +64,10 @@ korean_word_dict = {
     "events_title": "이벤트",
     "events_menu": "이벤트로 그룹화…",
     "events_empty": "날짜가 있는 사진이 없습니다",
+    "maintenance_menu": "라이브러리 유지 관리…",
+    "maintenance_summary": "누락 {missing}개, 신규 {new}개",
+    "maintenance_prune_q": "누락된 파일 {n}개를 색인에서 제거할까요?",
+    "maintenance_pruned": "누락 {n}개를 정리했습니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

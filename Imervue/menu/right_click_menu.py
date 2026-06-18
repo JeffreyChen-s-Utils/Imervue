@@ -79,6 +79,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     _query_search_action(main_gui, build_right_click_menu)
     _events_action(main_gui, build_right_click_menu)
+    _maintenance_action(main_gui, build_right_click_menu)
     image_info_action(main_gui=main_gui, local_pos=local_pos, menu=build_right_click_menu)
     build_recent_menu(main_gui.main_window, build_right_click_menu)
 
@@ -194,6 +195,42 @@ def _events_action(main_gui: GPUImageView, menu: QMenu):
 def _open_events(main_gui: GPUImageView):
     from Imervue.gui.events_dialog import open_events
     open_events(main_gui)
+
+
+def _maintenance_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("maintenance_menu", "Library Maintenance…"))
+    action.triggered.connect(lambda: _library_maintenance(main_gui))
+
+
+def _library_maintenance(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QMessageBox
+    from Imervue.library import image_index
+    from Imervue.library.maintenance import run_maintenance
+    folders = image_index.list_library_roots()
+    if not folders:
+        images = main_gui.model.images
+        folders = [os.path.dirname(images[0])] if images else []
+    if not folders:
+        return
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    result = run_maintenance(folders)
+    if result["missing"]:
+        reply = QMessageBox.question(
+            main_gui, lang.get("maintenance_menu", "Library Maintenance…"),
+            lang.get("maintenance_prune_q",
+                     "Remove {n} missing file(s) from the index?").format(
+                         n=result["missing"]))
+        if reply == QMessageBox.StandardButton.Yes:
+            run_maintenance(folders, prune=True)
+            if toast is not None:
+                toast.success(lang.get("maintenance_pruned",
+                                       "Pruned {n} missing").format(n=result["missing"]))
+            return
+    if toast is not None:
+        toast.info(lang.get("maintenance_summary", "{missing} missing, {new} new").format(
+            missing=result["missing"], new=result["new"]))
 
 
 def _split_pages_action(main_gui: GPUImageView, menu: QMenu):
