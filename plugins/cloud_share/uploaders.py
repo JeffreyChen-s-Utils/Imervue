@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from base64 import b64encode
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -92,3 +93,46 @@ def upload_imgur(file_path: str, client_id: str) -> str:
     if not link:
         raise UploadError("Imgur upload returned no link.")
     return link
+
+
+def s3_object_url(presigned_url: str) -> str:
+    """The S3 object URL without the signing query string (the public-ish link)."""
+    return presigned_url.split("?", 1)[0]
+
+
+def build_s3_request(presigned_url: str, file_path: str) -> Request:
+    return Request(  # noqa: S310 - scheme enforced by _https_urlopen at send time
+        presigned_url, data=Path(file_path).read_bytes(), method="PUT",
+    )
+
+
+def upload_s3_presigned(presigned_url: str, file_path: str) -> str:
+    """PUT *file_path* to a pre-signed S3 URL; return the object URL.
+
+    A pre-signed URL carries its own credentials, so no AWS keys are stored —
+    the user generates the URL elsewhere (console / CLI) and pastes it.
+    """
+    req = build_s3_request(presigned_url, file_path)
+    with _https_urlopen(req) as resp:
+        status = getattr(resp, "status", None)
+        if status is not None and status not in _WEBDAV_OK:
+            raise UploadError(f"S3 upload failed: HTTP {status}")
+    return s3_object_url(presigned_url)
+
+
+def upload_batch(
+    uploader: Callable[[str], str], paths: list[str],
+) -> list[tuple[str, str | None]]:
+    """Upload each path via *uploader*; return ``(path, link_or_None)`` per item.
+
+    A failed item is recorded as ``None`` rather than aborting the batch, so one
+    bad file does not lose the rest. Pure given an injected uploader.
+    """
+    results: list[tuple[str, str | None]] = []
+    for path in paths:
+        try:
+            link: str | None = uploader(path)
+        except (UploadError, OSError, ValueError):
+            link = None
+        results.append((path, link))
+    return results

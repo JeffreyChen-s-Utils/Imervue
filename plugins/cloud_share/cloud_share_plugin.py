@@ -24,7 +24,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from cloud_share.uploaders import UploadError, upload_imgur, upload_webdav
+from cloud_share.uploaders import (
+    UploadError,
+    upload_batch,
+    upload_imgur,
+    upload_s3_presigned,
+    upload_webdav,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 
@@ -35,6 +41,7 @@ logger = logging.getLogger("Imervue.plugin.cloud_share")
 
 _TARGET_WEBDAV = "webdav"
 _TARGET_IMGUR = "imgur"
+_TARGET_S3 = "s3"
 _SETTINGS_KEY = "cloud_share"
 
 
@@ -54,19 +61,24 @@ class CloudSharePlugin(ImervuePlugin):
 
     def _open_dialog(self) -> None:  # pragma: no cover - Qt UI
         viewer = getattr(self, "viewer", None)
-        images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-        idx = getattr(viewer, "current_index", -1)
-        if 0 <= idx < len(images):
-            CloudShareDialog(viewer, str(images[idx])).exec()
+        selected = list(getattr(viewer, "selected_tiles", []) or [])
+        if not selected:
+            images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
+            idx = getattr(viewer, "current_index", -1)
+            selected = [str(images[idx])] if 0 <= idx < len(images) else []
+        if selected:
+            CloudShareDialog(viewer, selected).exec()
 
 
 class CloudShareDialog(QDialog):
     """Pick a target + credentials and upload the current image."""
 
-    def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
+    def __init__(self, viewer: GPUImageView, paths: list[str],
+                 parent: QWidget | None = None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
-        self._path = path
+        self._paths = list(paths)
+        self._path = self._paths[0] if self._paths else ""
         self._worker: _UploadWorker | None = None
         saved = _load_settings()
         lang = language_wrapper.language_word_dict
@@ -76,11 +88,13 @@ class CloudShareDialog(QDialog):
         self._target = QComboBox()
         self._target.addItem("WebDAV", userData=_TARGET_WEBDAV)
         self._target.addItem("Imgur", userData=_TARGET_IMGUR)
+        self._target.addItem("S3 (pre-signed URL)", userData=_TARGET_S3)
         self._url = QLineEdit(saved.get("webdav_url", ""))
         self._username = QLineEdit(saved.get("webdav_user", ""))
         self._password = QLineEdit()
         self._password.setEchoMode(QLineEdit.EchoMode.Password)
         self._client_id = QLineEdit(saved.get("imgur_client_id", ""))
+        self._s3_url = QLineEdit()
 
         self._target.currentIndexChanged.connect(self._update_visibility)
         self._build_layout(lang)
@@ -106,7 +120,13 @@ class CloudShareDialog(QDialog):
         form.addRow(self._pass_label, self._password)
         self._cid_label = QLabel(lang.get("cloud_share_client_id", "Imgur Client-ID:"))
         form.addRow(self._cid_label, self._client_id)
+        self._s3_label = QLabel(lang.get("cloud_share_s3_url", "Pre-signed PUT URL:"))
+        form.addRow(self._s3_label, self._s3_url)
         layout.addLayout(form)
+        if len(self._paths) > 1:
+            layout.addWidget(QLabel(
+                lang.get("cloud_share_batch_note", "{n} images selected — all will be uploaded.")
+                .format(n=len(self._paths))))
         layout.addLayout(self._build_buttons(lang))
 
     def _build_buttons(self, lang: dict) -> QHBoxLayout:
@@ -124,23 +144,32 @@ class CloudShareDialog(QDialog):
         return self._target.currentData() == _TARGET_WEBDAV
 
     def _update_visibility(self) -> None:
-        webdav = self._is_webdav()
+        target = self._target.currentData()
+        webdav = target == _TARGET_WEBDAV
         for widget in (self._url_label, self._url, self._user_label, self._username,
                        self._pass_label, self._password):
             widget.setVisible(webdav)
         for widget in (self._cid_label, self._client_id):
-            widget.setVisible(not webdav)
+            widget.setVisible(target == _TARGET_IMGUR)
+        for widget in (self._s3_label, self._s3_url):
+            widget.setVisible(target == _TARGET_S3)
 
     def _upload(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
         self._persist_settings()
-        if self._is_webdav():
-            args = (_TARGET_WEBDAV, self._path, self._url.text().strip(),
-                    self._username.text().strip(), self._password.text())
-        else:
-            args = (_TARGET_IMGUR, self._path, self._client_id.text().strip(), "", "")
-        self._worker = _UploadWorker(*args)
+        target = self._target.currentData()
+        creds = {
+            "url": self._url.text().strip(),
+            "user": self._username.text().strip(),
+            "password": self._password.text(),
+            "client_id": self._client_id.text().strip(),
+            "s3_url": self._s3_url.text().strip(),
+        }
+        # A pre-signed S3 URL targets a single object; others upload all selected.
+        paths = [self._path] if target == _TARGET_S3 else self._paths
+        self._batch = len(paths) > 1
+        self._worker = _UploadWorker(target, paths, creds)
         self._worker.done.connect(self._on_done)
         self._worker.start()
 
@@ -158,9 +187,13 @@ class CloudShareDialog(QDialog):
             self._toast(f"{lang.get('cloud_share_failed', 'Upload failed')}: {message}",
                         error=True)
             return
-        QApplication.clipboard().setText(message)
-        self._toast(lang.get("cloud_share_done", "Uploaded — link copied: {url}").format(
-            url=message), error=False)
+        if getattr(self, "_batch", False):
+            self._toast(lang.get("cloud_share_batch_done", "Uploaded {summary}").format(
+                summary=message), error=False)
+        else:
+            QApplication.clipboard().setText(message)
+            self._toast(lang.get("cloud_share_done", "Uploaded — link copied: {url}").format(
+                url=message), error=False)
         self.accept()
 
     def _toast(self, text: str, error: bool) -> None:  # pragma: no cover - Qt UI
@@ -171,26 +204,38 @@ class CloudShareDialog(QDialog):
 
 
 class _UploadWorker(QThread):
-    """Upload off the UI thread; emit the public URL or an error message."""
+    """Upload off the UI thread; emit the link (single) or a summary (batch)."""
 
     done = Signal(bool, str)
 
-    def __init__(self, target: str, path: str, arg1: str, arg2: str, arg3: str):
+    def __init__(self, target: str, paths: list[str], creds: dict):
         super().__init__()
         self._target = target
-        self._path = path
-        self._arg1, self._arg2, self._arg3 = arg1, arg2, arg3
+        self._paths = paths
+        self._creds = creds
+
+    def _uploader(self):
+        target, creds = self._target, self._creds
+        if target == _TARGET_WEBDAV:
+            return lambda p: upload_webdav(
+                creds["url"], p, creds["user"], creds["password"])
+        if target == _TARGET_IMGUR:
+            return lambda p: upload_imgur(p, creds["client_id"])
+        return lambda p: upload_s3_presigned(creds["s3_url"], p)
 
     def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            if self._target == _TARGET_WEBDAV:
-                link = upload_webdav(self._arg1, self._path, self._arg2, self._arg3)
-            else:
-                link = upload_imgur(self._path, self._arg1)
-        except (UploadError, OSError, ValueError) as exc:
-            self.done.emit(False, str(exc))
+        uploader = self._uploader()
+        if len(self._paths) == 1:
+            try:
+                link = uploader(self._paths[0])
+            except (UploadError, OSError, ValueError) as exc:
+                self.done.emit(False, str(exc))
+                return
+            self.done.emit(True, link)
             return
-        self.done.emit(True, link)
+        results = upload_batch(uploader, self._paths)
+        succeeded = sum(1 for _path, link in results if link)
+        self.done.emit(True, f"{succeeded}/{len(results)}")
 
 
 def _load_settings() -> dict:
@@ -216,6 +261,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cloud_share_warning": "Uploading publishes this image to an external service.",
         "cloud_share_done": "Uploaded — link copied: {url}",
         "cloud_share_failed": "Upload failed",
+        "cloud_share_s3_url": "Pre-signed PUT URL:",
+        "cloud_share_batch_note": "{n} images selected — all will be uploaded.",
+        "cloud_share_batch_done": "Uploaded {summary}",
     },
     "Traditional_Chinese": {
         "cloud_share_title": "分享 / 上傳…",
@@ -228,6 +276,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cloud_share_warning": "上傳會將這張影像發佈到外部服務。",
         "cloud_share_done": "已上傳 — 連結已複製：{url}",
         "cloud_share_failed": "上傳失敗",
+        "cloud_share_s3_url": "預簽 PUT 網址：",
+        "cloud_share_batch_note": "已選 {n} 張 — 將全部上傳。",
+        "cloud_share_batch_done": "已上傳 {summary}",
     },
     "Chinese": {
         "cloud_share_title": "分享 / 上传…",
@@ -240,6 +291,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cloud_share_warning": "上传会将这张图像发布到外部服务。",
         "cloud_share_done": "已上传 — 链接已复制：{url}",
         "cloud_share_failed": "上传失败",
+        "cloud_share_s3_url": "预签 PUT 网址：",
+        "cloud_share_batch_note": "已选 {n} 张 — 将全部上传。",
+        "cloud_share_batch_done": "已上传 {summary}",
     },
     "Japanese": {
         "cloud_share_title": "共有 / アップロード…",
@@ -252,6 +306,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cloud_share_warning": "アップロードするとこの画像が外部サービスに公開されます。",
         "cloud_share_done": "アップロード完了 — リンクをコピーしました: {url}",
         "cloud_share_failed": "アップロード失敗",
+        "cloud_share_s3_url": "署名付き PUT URL:",
+        "cloud_share_batch_note": "{n} 枚選択 — すべてアップロードします。",
+        "cloud_share_batch_done": "アップロード {summary}",
     },
     "Korean": {
         "cloud_share_title": "공유 / 업로드…",
@@ -264,5 +321,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "cloud_share_warning": "업로드하면 이 이미지가 외부 서비스에 게시됩니다.",
         "cloud_share_done": "업로드됨 — 링크 복사됨: {url}",
         "cloud_share_failed": "업로드 실패",
+        "cloud_share_s3_url": "사전 서명 PUT URL:",
+        "cloud_share_batch_note": "{n}장 선택됨 — 모두 업로드됩니다.",
+        "cloud_share_batch_done": "업로드 {summary}",
     },
 }
