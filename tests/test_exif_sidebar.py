@@ -44,3 +44,9 @@ def test_format_location_with_gps():
 
 def test_format_location_none_returns_empty():
     assert ExifSidebar._format_location(None, _GEO_LANG) == []
+
+
+def test_format_location_is_clickable_map_link():
+    joined = " ".join(ExifSidebar._format_location((48.85, 2.35), _GEO_LANG))
+    assert 'href="imervue:open-map"' in joined
+    assert "Paris, France" in joined

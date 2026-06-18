@@ -21,6 +21,9 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
+# Custom link scheme for the clickable Location line (opens the map view).
+_MAP_LINK = "imervue:open-map"
+
 
 class ExifSidebar(QWidget):
     """可摺疊的 EXIF 資訊面板"""
@@ -63,7 +66,12 @@ class ExifSidebar(QWidget):
         self._info_label.setStyleSheet(
             "QLabel { color: #ccc; padding: 8px; font-size: 12px; background: #1e1e1e; }"
         )
-        self._info_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._info_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse,
+        )
+        self._info_label.setOpenExternalLinks(False)
+        self._info_label.linkActivated.connect(self._on_link_activated)
 
         # 編輯按鈕
         self._edit_btn = QPushButton(
@@ -236,8 +244,15 @@ class ExifSidebar(QWidget):
         ]
         place = reverse_geocode(lat, lon)
         if place:
-            lines.append(f"<b>{lang.get('exif_location', 'Location')}:</b> {place}")
+            label = lang.get("exif_location", "Location")
+            lines.append(f'<b>{label}:</b> <a href="{_MAP_LINK}">{place}</a>')
         return lines
+
+    def _on_link_activated(self, href: str) -> None:  # pragma: no cover - Qt UI
+        if href != _MAP_LINK:
+            return
+        from Imervue.gui.map_view_dialog import open_map_view
+        open_map_view(self._main_window)
 
     @staticmethod
     def _video_lines(p: Path, lang) -> list[str]:
