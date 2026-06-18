@@ -1642,6 +1642,15 @@ traditional_chinese_word_dict = {
     "fstack_run": "合成",
     "fstack_hint": "選擇不同對焦距離的多張影像（微距 / 商品攝影）。",
 
+    # --- Image Stack (statistical) ---
+    "stack_blend_title": "影像疊合",
+    "stack_blend_hint": "選擇定點連拍的多張影像，畫面必須已對齊。",
+    "stack_mode_label": "模式：",
+    "stack_mean": "平均（長曝）",
+    "stack_median": "中位數（去人潮）",
+    "stack_max": "最亮值（星軌）",
+    "stack_min": "最暗值",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",

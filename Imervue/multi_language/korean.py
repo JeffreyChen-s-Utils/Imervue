@@ -1654,6 +1654,15 @@ korean_word_dict = {
     "fstack_run": "스택",
     "fstack_hint": "초점 거리가 다른 브라케트 선택(매크로 / 제품).",
 
+    # --- Image Stack (statistical) ---
+    "stack_blend_title": "이미지 스택",
+    "stack_blend_hint": "고정 위치 연사 이미지를 선택하세요. 프레임이 이미 정렬되어 있어야 합니다.",
+    "stack_mode_label": "모드:",
+    "stack_mean": "평균(장노출)",
+    "stack_median": "중앙값(군중 제거)",
+    "stack_max": "최댓값/밝게(별 궤적)",
+    "stack_min": "최솟값/어둡게",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

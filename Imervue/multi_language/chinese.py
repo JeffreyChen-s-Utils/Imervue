@@ -1643,6 +1643,15 @@ chinese_word_dict = {
     "fstack_run": "合成",
     "fstack_hint": "选择不同对焦距离的多张图像（微距 / 产品）。",
 
+    # --- Image Stack (statistical) ---
+    "stack_blend_title": "图像叠合",
+    "stack_blend_hint": "选择定点连拍的多张图像，画面必须已对齐。",
+    "stack_mode_label": "模式：",
+    "stack_mean": "平均（长曝）",
+    "stack_median": "中位数（去人潮）",
+    "stack_max": "最亮值（星轨）",
+    "stack_min": "最暗值",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

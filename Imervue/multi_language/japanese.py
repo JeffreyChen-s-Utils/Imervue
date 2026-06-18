@@ -1656,6 +1656,15 @@ japanese_word_dict = {
     "fstack_run": "合成",
     "fstack_hint": "ピント距離違いのブラケットを選択（マクロ / 商品撮影）。",
 
+    # --- Image Stack (statistical) ---
+    "stack_blend_title": "画像スタック",
+    "stack_blend_hint": "固定位置の連写を選択。フレームは位置合わせ済みである必要があります。",
+    "stack_mode_label": "モード：",
+    "stack_mean": "平均（長秒露光）",
+    "stack_median": "中央値（人物除去）",
+    "stack_max": "比較明（星の軌跡）",
+    "stack_min": "比較暗",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

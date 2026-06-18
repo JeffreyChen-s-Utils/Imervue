@@ -1676,6 +1676,15 @@ english_word_dict = {
     "fstack_run": "Stack",
     "fstack_hint": "Pick a bracket of shots with different focus distances \u2014 macro / product shooters.",
 
+    # --- Image Stack (statistical) ---
+    "stack_blend_title": "Image Stack",
+    "stack_blend_hint": "Pick a burst shot from a fixed position. Frames must already be aligned.",
+    "stack_mode_label": "Mode:",
+    "stack_mean": "Mean (long exposure)",
+    "stack_median": "Median (remove crowds)",
+    "stack_max": "Max / lighten (star trails)",
+    "stack_min": "Min / darken",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

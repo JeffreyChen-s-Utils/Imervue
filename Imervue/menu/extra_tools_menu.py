@@ -209,6 +209,8 @@ def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_panorama(ui))
     _add_action(sub, lang, "fstack_title", "Focus Stacking",
                 lambda: _open_focus_stack(ui))
+    _add_action(sub, lang, "stack_blend_title", "Image Stack (Mean/Median/Max/Min)",
+                lambda: _open_stack_blend(ui))
 
 
 # --- Dialog openers ---------------------------------------------------------
@@ -478,6 +480,11 @@ def _open_panorama(ui: ImervueMainWindow):
 def _open_focus_stack(ui: ImervueMainWindow):
     from Imervue.gui.focus_stack_dialog import open_focus_stack
     open_focus_stack(ui.viewer)
+
+
+def _open_stack_blend(ui: ImervueMainWindow):
+    from Imervue.gui.stack_blend_dialog import open_stack_blend
+    open_stack_blend(ui.viewer)
 
 
 def _open_masks(ui: ImervueMainWindow):
