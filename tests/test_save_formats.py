@@ -84,6 +84,14 @@ def test_save_image_jpeg_with_quality(tmp_path):
     assert out.exists()
 
 
+def test_save_image_extra_dpi_applied(tmp_path):
+    out = tmp_path / "x.jpg"
+    save_image(Image.new("RGB", (8, 8)), str(out), "JPEG", quality=90,
+               extra={"dpi": (96, 96)})
+    with Image.open(out) as reopened:
+        assert reopened.info.get("dpi") == (96, 96)
+
+
 def test_save_image_heic_without_backend_raises(monkeypatch, tmp_path):
     monkeypatch.setattr(save_formats, "ensure_heif_opener", lambda: False)
     with pytest.raises(ValueError):

@@ -19,6 +19,12 @@ from PIL import Image
 
 from Imervue.image import export_presets
 from Imervue.image.recipe_store import recipe_store
+from Imervue.image.save_formats import (
+    FORMAT_EXTENSIONS,
+    QUALITY_FORMATS,
+    available_formats,
+    save_image,
+)
 from Imervue.image.watermark import WatermarkOptions, apply_watermark
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -26,13 +32,6 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.batch_export")
-
-FORMAT_OPTIONS = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
-FORMAT_EXTENSIONS = {
-    "PNG": ".png", "JPEG": ".jpg", "WebP": ".webp",
-    "BMP": ".bmp", "TIFF": ".tiff",
-}
-QUALITY_FORMATS = {"JPEG", "WebP"}
 
 
 def _watermark_corners(lang):
@@ -86,11 +85,11 @@ class _ExportWorker(QThread):
                 img = export_presets.square_crop(img)
             img = self._resize_if_needed(img)
             img = apply_watermark(img, self._watermark)
-            img = _coerce_mode_for_format(img, self._fmt)
             out_path = _build_output_path(
                 Path(src), self._output_dir, FORMAT_EXTENSIONS.get(self._fmt, ".png"),
             )
-            img.save(str(out_path), format=self._fmt, **self._save_kwargs())
+            extra = {"dpi": (self._dpi, self._dpi)} if self._dpi > 0 else None
+            save_image(img, str(out_path), self._fmt, self._quality, extra)
             return True
         except Exception as exc:  # noqa: BLE001
             logger.exception(f"Batch export failed for {src}: {exc}")
@@ -106,14 +105,6 @@ class _ExportWorker(QThread):
             img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
         return img
 
-    def _save_kwargs(self) -> dict:
-        kwargs: dict = {}
-        if self._fmt in QUALITY_FORMATS:
-            kwargs["quality"] = self._quality
-        if self._dpi > 0:
-            kwargs["dpi"] = (self._dpi, self._dpi)
-        return kwargs
-
 
 def _apply_recipe(src: str, img: Image.Image) -> Image.Image:
     """Bake the stored non-destructive recipe onto ``img`` if one exists."""
@@ -123,15 +114,6 @@ def _apply_recipe(src: str, img: Image.Image) -> Image.Image:
     if img.mode != "RGBA":
         img = img.convert("RGBA")
     return Image.fromarray(recipe.apply(np.array(img)))
-
-
-def _coerce_mode_for_format(img: Image.Image, fmt: str) -> Image.Image:
-    """Strip the alpha channel when the target format can't carry it."""
-    if fmt == "JPEG" and img.mode in ("RGBA", "P"):
-        return img.convert("RGB")
-    if fmt == "BMP" and img.mode == "RGBA":
-        return img.convert("RGB")
-    return img
 
 
 def _build_output_path(src: Path, output_dir: str, ext: str) -> Path:
@@ -186,7 +168,7 @@ class BatchExportDialog(QDialog):
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
         self._fmt_combo = QComboBox()
-        self._fmt_combo.addItems(FORMAT_OPTIONS)
+        self._fmt_combo.addItems(available_formats())
         self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
         fmt_row.addWidget(self._fmt_combo, 1)
         layout.addLayout(fmt_row)

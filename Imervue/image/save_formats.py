@@ -68,12 +68,14 @@ def save_image(
     fp: str | BinaryIO,
     format_name: str,
     quality: int | None = None,
+    extra: dict | None = None,
 ) -> None:
     """Save ``img`` as ``format_name`` to a path or file object.
 
-    Registers the HEIF/AVIF backend on demand and raises ``ValueError`` when a
-    HEIC/AVIF save is requested without ``pillow-heif`` installed, so callers
-    can report it at the boundary.
+    ``extra`` carries format-agnostic save options (e.g. ``dpi``) merged after
+    the quality handling. Registers the HEIF/AVIF backend on demand and raises
+    ``ValueError`` when a HEIC/AVIF save is requested without ``pillow-heif``
+    installed, so callers can report it at the boundary.
     """
     if format_name in _HEIF_FORMATS and not ensure_heif_opener():
         raise ValueError(
@@ -83,4 +85,6 @@ def save_image(
     kwargs: dict = {}
     if quality is not None and format_name in QUALITY_FORMATS:
         kwargs["quality"] = int(quality)
+    if extra:
+        kwargs.update(extra)
     prepared.save(fp, format=pil_format(format_name), **kwargs)
