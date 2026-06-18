@@ -45,6 +45,11 @@ traditional_chinese_word_dict = {
     "multipage_split": "拆分頁面…",
     "multipage_split_done": "已拆分為 {n} 頁",
     "multipage_split_none": "不是多頁檔案",
+    "query_search_menu": "查詢搜尋…",
+    "query_search_title": "查詢搜尋",
+    "query_search_prompt": "例如 kw:beach rating:>=4 type:video place:Paris",
+    "query_search_none": "沒有符合查詢的影像",
+    "query_search_done": "{n} 張符合",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",

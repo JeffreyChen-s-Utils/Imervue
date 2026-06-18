@@ -45,6 +45,11 @@ chinese_word_dict = {
     "multipage_split": "拆分页面…",
     "multipage_split_done": "已拆分为 {n} 页",
     "multipage_split_none": "不是多页文件",
+    "query_search_menu": "查询搜索…",
+    "query_search_title": "查询搜索",
+    "query_search_prompt": "例如 kw:beach rating:>=4 type:video place:Paris",
+    "query_search_none": "没有符合查询的图像",
+    "query_search_done": "{n} 张符合",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

@@ -53,6 +53,11 @@ korean_word_dict = {
     "multipage_split": "페이지 분할…",
     "multipage_split_done": "{n}페이지로 분할했습니다",
     "multipage_split_none": "여러 페이지 파일이 아닙니다",
+    "query_search_menu": "쿼리 검색…",
+    "query_search_title": "쿼리 검색",
+    "query_search_prompt": "예: kw:beach rating:>=4 type:video place:Paris",
+    "query_search_none": "쿼리와 일치하는 이미지가 없습니다",
+    "query_search_done": "{n}개 일치",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

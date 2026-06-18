@@ -56,6 +56,11 @@ japanese_word_dict = {
     "multipage_split": "ページ分割…",
     "multipage_split_done": "{n} ページに分割しました",
     "multipage_split_none": "複数ページのファイルではありません",
+    "query_search_menu": "クエリ検索…",
+    "query_search_title": "クエリ検索",
+    "query_search_prompt": "例: kw:beach rating:>=4 type:video place:Paris",
+    "query_search_none": "クエリに一致する画像がありません",
+    "query_search_done": "{n} 件一致",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

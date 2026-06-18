@@ -68,6 +68,11 @@ english_word_dict = {
     "multipage_split": "Split Pages…",
     "multipage_split_done": "Split into {n} pages",
     "multipage_split_none": "Not a multi-page file",
+    "query_search_menu": "Search by Query…",
+    "query_search_title": "Search by Query",
+    "query_search_prompt": "e.g. kw:beach rating:>=4 type:video place:Paris",
+    "query_search_none": "No images match the query",
+    "query_search_done": "{n} match",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",
