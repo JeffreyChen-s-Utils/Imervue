@@ -57,6 +57,12 @@ english_word_dict = {
     "batch_auto_cull": "Auto-cull Blurry",
     "batch_auto_cull_done": "Flagged {n} blurry photo(s) as reject",
     "batch_auto_cull_none": "No blurry photos found",
+    "ocr_title": "Extract Text (OCR)",
+    "ocr_extract": "Extract Text (OCR)",
+    "ocr_copy": "Copy",
+    "ocr_running": "Running OCR…",
+    "ocr_empty": "No text found.",
+    "ocr_unavailable": "Install Tesseract OCR to extract text.",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

@@ -49,6 +49,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     _show_in_explorer_action(main_gui, build_right_click_menu)
     _copy_path_action(main_gui, build_right_click_menu)
     _copy_image_action(main_gui, build_right_click_menu)
+    _ocr_action(main_gui, build_right_click_menu)
 
     build_right_click_menu.addSeparator()
 
@@ -155,6 +156,19 @@ def _copy_image_action(main_gui: GPUImageView, menu: QMenu):
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_copy_image", "Copy Image"))
     action.triggered.connect(lambda: copy_image_to_clipboard(main_gui))
+
+
+def _ocr_action(main_gui: GPUImageView, menu: QMenu):
+    if not main_gui.deep_zoom:
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("ocr_extract", "Extract Text (OCR)"))
+    action.triggered.connect(lambda: _open_ocr(main_gui))
+
+
+def _open_ocr(main_gui: GPUImageView):
+    from Imervue.gui.ocr_dialog import open_ocr
+    open_ocr(main_gui)
 
 
 # ===========================

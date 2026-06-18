@@ -45,6 +45,12 @@ japanese_word_dict = {
     "batch_auto_cull": "ブレを自動除外",
     "batch_auto_cull_done": "{n} 枚のブレ写真を除外候補にしました",
     "batch_auto_cull_none": "ブレ写真は見つかりません",
+    "ocr_title": "テキスト抽出（OCR）",
+    "ocr_extract": "テキスト抽出（OCR）",
+    "ocr_copy": "コピー",
+    "ocr_running": "OCR 実行中…",
+    "ocr_empty": "テキストが見つかりません。",
+    "ocr_unavailable": "テキストを抽出するには Tesseract OCR をインストールしてください。",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

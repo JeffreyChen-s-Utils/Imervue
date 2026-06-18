@@ -42,6 +42,12 @@ korean_word_dict = {
     "batch_auto_cull": "흐릿한 사진 자동 선별",
     "batch_auto_cull_done": "{n}장의 흐릿한 사진을 거부로 표시했습니다",
     "batch_auto_cull_none": "흐릿한 사진이 없습니다",
+    "ocr_title": "텍스트 추출(OCR)",
+    "ocr_extract": "텍스트 추출(OCR)",
+    "ocr_copy": "복사",
+    "ocr_running": "OCR 실행 중…",
+    "ocr_empty": "텍스트를 찾을 수 없습니다.",
+    "ocr_unavailable": "텍스트를 추출하려면 Tesseract OCR을 설치하세요.",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

@@ -34,6 +34,12 @@ traditional_chinese_word_dict = {
     "batch_auto_cull": "自動挑出模糊",
     "batch_auto_cull_done": "已將 {n} 張模糊照片標為剔除",
     "batch_auto_cull_none": "找不到模糊照片",
+    "ocr_title": "擷取文字（OCR）",
+    "ocr_extract": "擷取文字（OCR）",
+    "ocr_copy": "複製",
+    "ocr_running": "OCR 執行中…",
+    "ocr_empty": "找不到文字。",
+    "ocr_unavailable": "請安裝 Tesseract OCR 以擷取文字。",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",
