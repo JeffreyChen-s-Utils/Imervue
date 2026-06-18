@@ -1694,6 +1694,13 @@ english_word_dict = {
     "local_contrast_done": "Saved {path}",
     "local_contrast_failed": "Adjustment failed",
 
+    # --- Image Inspector (scopes) ---
+    "inspector_title": "Scopes & Inspector",
+    "inspector_waveform": "Waveform",
+    "inspector_parade": "RGB Parade",
+    "inspector_false_color": "False Color",
+    "inspector_focus_peak": "Focus Peaking",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

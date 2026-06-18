@@ -1672,6 +1672,13 @@ korean_word_dict = {
     "local_contrast_done": "{path} 저장됨",
     "local_contrast_failed": "조정 실패",
 
+    # --- Image Inspector (scopes) ---
+    "inspector_title": "스코프 및 검사",
+    "inspector_waveform": "파형",
+    "inspector_parade": "RGB 퍼레이드",
+    "inspector_false_color": "폴스 컬러",
+    "inspector_focus_peak": "포커스 피킹",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

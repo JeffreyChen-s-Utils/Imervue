@@ -1674,6 +1674,13 @@ japanese_word_dict = {
     "local_contrast_done": "保存しました: {path}",
     "local_contrast_failed": "調整に失敗しました",
 
+    # --- Image Inspector (scopes) ---
+    "inspector_title": "スコープと検査",
+    "inspector_waveform": "波形",
+    "inspector_parade": "RGB パレード",
+    "inspector_false_color": "フォルスカラー",
+    "inspector_focus_peak": "フォーカスピーキング",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

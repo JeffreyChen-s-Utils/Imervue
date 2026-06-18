@@ -1660,6 +1660,13 @@ traditional_chinese_word_dict = {
     "local_contrast_done": "已儲存 {path}",
     "local_contrast_failed": "調整失敗",
 
+    # --- Image Inspector (scopes) ---
+    "inspector_title": "示波器與檢測",
+    "inspector_waveform": "波形圖",
+    "inspector_parade": "RGB 分量圖",
+    "inspector_false_color": "偽色曝光圖",
+    "inspector_focus_peak": "對焦輪廓",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",

@@ -1661,6 +1661,13 @@ chinese_word_dict = {
     "local_contrast_done": "已保存 {path}",
     "local_contrast_failed": "调整失败",
 
+    # --- Image Inspector (scopes) ---
+    "inspector_title": "示波器与检测",
+    "inspector_waveform": "波形图",
+    "inspector_parade": "RGB 分量图",
+    "inspector_false_color": "伪色曝光图",
+    "inspector_focus_peak": "对焦轮廓",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

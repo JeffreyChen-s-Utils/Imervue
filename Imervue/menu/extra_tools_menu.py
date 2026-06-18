@@ -82,6 +82,8 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_calendar_view(ui))
     _add_action(sub, lang, "map_title", "Map View",
                 lambda: _open_map_view(ui))
+    _add_action(sub, lang, "inspector_title", "Scopes & Inspector",
+                lambda: _open_image_inspector(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -340,6 +342,11 @@ def _open_calendar_view(ui: ImervueMainWindow):
 def _open_map_view(ui: ImervueMainWindow):
     from Imervue.gui.map_view_dialog import open_map_view
     open_map_view(ui)
+
+
+def _open_image_inspector(ui: ImervueMainWindow):
+    from Imervue.gui.image_inspector_dialog import open_image_inspector
+    open_image_inspector(ui.viewer)
 
 
 def _open_before_after(ui: ImervueMainWindow):
