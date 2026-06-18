@@ -50,6 +50,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     _copy_path_action(main_gui, build_right_click_menu)
     _copy_image_action(main_gui, build_right_click_menu)
     _ocr_action(main_gui, build_right_click_menu)
+    _split_pages_action(main_gui, build_right_click_menu)
 
     build_right_click_menu.addSeparator()
 
@@ -171,6 +172,42 @@ def _open_ocr(main_gui: GPUImageView):
     open_ocr(main_gui)
 
 
+def _split_pages_action(main_gui: GPUImageView, menu: QMenu):
+    if not main_gui.deep_zoom:
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("multipage_split", "Split Pages…"))
+    action.triggered.connect(lambda: _split_multipage(main_gui))
+
+
+def _split_multipage(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from PIL import Image
+    from Imervue.image.multipage import split_multipage
+    path = _current_image_path(main_gui)
+    if not path:
+        return
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    try:
+        with Image.open(path) as img:
+            frames = getattr(img, "n_frames", 1)
+    except (OSError, ValueError):
+        frames = 1
+    if frames <= 1:
+        if toast is not None:
+            toast.info(lang.get("multipage_split_none", "Not a multi-page file"))
+        return
+    out_dir = QFileDialog.getExistingDirectory(
+        main_gui, lang.get("multipage_split", "Split Pages…"))
+    if not out_dir:
+        return
+    saved = split_multipage(path, out_dir)
+    if toast is not None:
+        toast.success(lang.get(
+            "multipage_split_done", "Split into {n} pages").format(n=len(saved)))
+
+
 # ===========================
 # 修改 — 與主選單 Modify 共用 ModifyActionsWidget
 # ===========================
@@ -237,7 +274,37 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
         lang.get("batch_auto_cull", "Auto-cull Blurry"))
     cull_action.triggered.connect(lambda: _auto_cull_blurry(main_gui))
 
+    combine_action = batch_menu.addAction(
+        lang.get("multipage_combine", "Combine to PDF / TIFF…"))
+    combine_action.triggered.connect(lambda: _combine_multipage(main_gui))
+
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
+
+
+def _combine_multipage(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from Imervue.image.multipage import combine_to_multipage
+    paths = list(main_gui.selected_tiles)
+    if not paths:
+        return
+    lang = language_wrapper.language_word_dict
+    dest, _ = QFileDialog.getSaveFileName(
+        main_gui, lang.get("multipage_combine", "Combine to PDF / TIFF…"),
+        "", "PDF (*.pdf);;TIFF (*.tiff)",
+    )
+    if not dest:
+        return
+    toast = getattr(main_gui.main_window, "toast", None)
+    try:
+        result = combine_to_multipage(paths, dest)
+    except (OSError, ValueError) as exc:
+        if toast is not None:
+            toast.error(str(exc))
+        return
+    if toast is not None:
+        toast.success(lang.get(
+            "multipage_combine_done", "Combined {n} pages → {name}").format(
+            n=result["pages"], name=Path(dest).name))
 
 
 def _tag_by_location(main_gui: GPUImageView) -> None:

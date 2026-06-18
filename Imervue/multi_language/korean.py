@@ -48,6 +48,11 @@ korean_word_dict = {
     "ocr_running": "OCR 실행 중…",
     "ocr_empty": "텍스트를 찾을 수 없습니다.",
     "ocr_unavailable": "텍스트를 추출하려면 Tesseract OCR을 설치하세요.",
+    "multipage_combine": "PDF／TIFF로 결합…",
+    "multipage_combine_done": "{n}페이지를 {name}로 결합했습니다",
+    "multipage_split": "페이지 분할…",
+    "multipage_split_done": "{n}페이지로 분할했습니다",
+    "multipage_split_none": "여러 페이지 파일이 아닙니다",
     # ===== 탐색 기능 (루페 / 읽기 모드 / 필름스트립 / 커서) =====
     "loupe_on": "루페 켜짐 — 커서를 따라 확대",
     "loupe_off": "루페 꺼짐",

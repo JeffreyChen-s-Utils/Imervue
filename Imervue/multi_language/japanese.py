@@ -51,6 +51,11 @@ japanese_word_dict = {
     "ocr_running": "OCR 実行中…",
     "ocr_empty": "テキストが見つかりません。",
     "ocr_unavailable": "テキストを抽出するには Tesseract OCR をインストールしてください。",
+    "multipage_combine": "PDF／TIFF に結合…",
+    "multipage_combine_done": "{n} ページを {name} に結合しました",
+    "multipage_split": "ページ分割…",
+    "multipage_split_done": "{n} ページに分割しました",
+    "multipage_split_none": "複数ページのファイルではありません",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

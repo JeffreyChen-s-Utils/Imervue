@@ -63,6 +63,11 @@ english_word_dict = {
     "ocr_running": "Running OCR…",
     "ocr_empty": "No text found.",
     "ocr_unavailable": "Install Tesseract OCR to extract text.",
+    "multipage_combine": "Combine to PDF / TIFF…",
+    "multipage_combine_done": "Combined {n} pages → {name}",
+    "multipage_split": "Split Pages…",
+    "multipage_split_done": "Split into {n} pages",
+    "multipage_split_none": "Not a multi-page file",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

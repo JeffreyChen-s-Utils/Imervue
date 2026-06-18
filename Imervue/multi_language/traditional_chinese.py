@@ -40,6 +40,11 @@ traditional_chinese_word_dict = {
     "ocr_running": "OCR 執行中…",
     "ocr_empty": "找不到文字。",
     "ocr_unavailable": "請安裝 Tesseract OCR 以擷取文字。",
+    "multipage_combine": "合併成 PDF／TIFF…",
+    "multipage_combine_done": "已合併 {n} 頁 → {name}",
+    "multipage_split": "拆分頁面…",
+    "multipage_split_done": "已拆分為 {n} 頁",
+    "multipage_split_none": "不是多頁檔案",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",

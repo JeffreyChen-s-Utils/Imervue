@@ -40,6 +40,11 @@ chinese_word_dict = {
     "ocr_running": "OCR 运行中…",
     "ocr_empty": "未找到文字。",
     "ocr_unavailable": "请安装 Tesseract OCR 以提取文字。",
+    "multipage_combine": "合并成 PDF／TIFF…",
+    "multipage_combine_done": "已合并 {n} 页 → {name}",
+    "multipage_split": "拆分页面…",
+    "multipage_split_done": "已拆分为 {n} 页",
+    "multipage_split_none": "不是多页文件",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",
