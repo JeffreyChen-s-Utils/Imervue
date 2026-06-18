@@ -1702,6 +1702,14 @@ japanese_word_dict = {
     "tiny_planet_not_360": "この画像は 2:1 パノラマではないため、結果が不自然になる場合があります。",
     "tiny_planet_failed": "リトルプラネットに失敗しました",
 
+    # --- Watched Folder ---
+    "watch_folder_title": "監視フォルダー",
+    "watch_folder_preset": "適用するプリセット：",
+    "watch_folder_start": "監視を開始",
+    "watch_folder_stop": "監視を停止",
+    "watch_folder_watching": "監視中 {path} — {n} 件処理",
+    "watch_folder_unavailable": "このフォルダーを監視できませんでした。",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

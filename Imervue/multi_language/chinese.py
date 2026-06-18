@@ -1689,6 +1689,14 @@ chinese_word_dict = {
     "tiny_planet_not_360": "此图像非 2:1 全景，结果可能异常。",
     "tiny_planet_failed": "小行星投影失败",
 
+    # --- Watched Folder ---
+    "watch_folder_title": "监视文件夹",
+    "watch_folder_preset": "应用预设：",
+    "watch_folder_start": "开始监视",
+    "watch_folder_stop": "停止监视",
+    "watch_folder_watching": "监视中 {path} — 已处理 {n} 个",
+    "watch_folder_unavailable": "无法监视此文件夹。",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

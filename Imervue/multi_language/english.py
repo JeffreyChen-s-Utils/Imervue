@@ -1722,6 +1722,14 @@ english_word_dict = {
     "tiny_planet_not_360": "This image is not a 2:1 panorama; result may look odd.",
     "tiny_planet_failed": "Tiny planet failed",
 
+    # --- Watched Folder ---
+    "watch_folder_title": "Watched Folder",
+    "watch_folder_preset": "Apply preset:",
+    "watch_folder_start": "Start Watching",
+    "watch_folder_stop": "Stop Watching",
+    "watch_folder_watching": "Watching {path} — {n} processed",
+    "watch_folder_unavailable": "Could not watch this folder.",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

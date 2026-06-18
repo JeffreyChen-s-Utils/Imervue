@@ -128,6 +128,8 @@ def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_dual_pane(ui))
     _add_action(sub, lang, "macro_title", "Macros",
                 lambda: _open_macro_manager(ui))
+    _add_action(sub, lang, "watch_folder_title", "Watched Folder",
+                lambda: _open_watch_folder(ui))
 
 
 def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -321,6 +323,11 @@ def _open_timeline(ui: ImervueMainWindow, granularity: str):
 def _open_macro_manager(ui: ImervueMainWindow):
     from Imervue.gui.macro_manager_dialog import open_macro_manager_dialog
     open_macro_manager_dialog(ui)
+
+
+def _open_watch_folder(ui: ImervueMainWindow):
+    from Imervue.gui.watch_folder_dialog import open_watch_folder
+    open_watch_folder(ui.viewer)
 
 
 def _open_contact_sheet(ui: ImervueMainWindow):

@@ -1700,6 +1700,14 @@ korean_word_dict = {
     "tiny_planet_not_360": "이 이미지는 2:1 파노라마가 아니므로 결과가 어색할 수 있습니다.",
     "tiny_planet_failed": "타이니 플래닛 실패",
 
+    # --- Watched Folder ---
+    "watch_folder_title": "감시 폴더",
+    "watch_folder_preset": "적용할 프리셋:",
+    "watch_folder_start": "감시 시작",
+    "watch_folder_stop": "감시 중지",
+    "watch_folder_watching": "감시 중 {path} — {n}개 처리됨",
+    "watch_folder_unavailable": "이 폴더를 감시할 수 없습니다.",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",
