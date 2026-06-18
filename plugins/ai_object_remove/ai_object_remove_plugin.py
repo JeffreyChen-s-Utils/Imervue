@@ -34,10 +34,12 @@ from ai_object_remove.object_removal import (
     GROW_MAX,
     TOLERANCE_MAX,
     build_mask,
+    grow_mask,
     image_coord_from_click,
     onnx_inpaint,
     remove_object,
 )
+from ai_object_remove.sam import discover_sam_models, sam_mask
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -106,8 +108,21 @@ class ObjectRemoveDialog(QDialog):
         self._seed: tuple[int, int] | None = None
         self._mask: np.ndarray | None = None
         self._worker: _RemoveWorker | None = None
+        self._sam_worker: _SamMaskWorker | None = None
+        self._sam_encoder, self._sam_decoder = discover_sam_models(_MODELS_DIR)
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("object_remove_title", "Remove Object"))
+
+        self._selection = QComboBox()
+        self._selection.addItem(
+            lang.get("object_remove_selection_flood", "Flood-fill (fast)"),
+            userData="flood",
+        )
+        if self._sam_encoder and self._sam_decoder:
+            self._selection.addItem(
+                lang.get("object_remove_selection_sam", "SAM (precise)"),
+                userData="sam",
+            )
 
         self._preview = _ClickLabel()
         self._preview.setFixedSize(_PREVIEW_W, _PREVIEW_H)
@@ -142,6 +157,8 @@ class ObjectRemoveDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(self._preview)
         layout.addWidget(self._build_hint(lang))
+        layout.addWidget(QLabel(lang.get("object_remove_selection", "Selection:")))
+        layout.addWidget(self._selection)
         layout.addWidget(QLabel(lang.get("object_remove_tolerance", "Tolerance:")))
         layout.addWidget(self._tolerance)
         layout.addWidget(QLabel(lang.get("object_remove_grow", "Grow edge:")))
@@ -192,11 +209,32 @@ class ObjectRemoveDialog(QDialog):
         if coord is None:
             return
         self._seed = coord
-        self._recompute_mask()
+        if self._selection.currentData() == "sam" and self._sam_encoder and self._sam_decoder:
+            self._run_sam(coord)
+        else:
+            self._recompute_mask()
 
     def _on_param_changed(self, _value: int) -> None:  # pragma: no cover - Qt UI
-        if self._seed is not None:
+        if self._seed is not None and self._selection.currentData() != "sam":
             self._debounce.start(_PREVIEW_DEBOUNCE_MS)
+
+    def _run_sam(self, coord: tuple[int, int]) -> None:  # pragma: no cover - Qt UI
+        if self._sam_worker is not None:
+            return
+        self._sam_worker = _SamMaskWorker(
+            self._arr, coord, self._sam_encoder, self._sam_decoder,
+        )
+        self._sam_worker.done.connect(self._on_sam_done)
+        self._sam_worker.start()
+
+    def _on_sam_done(self, ok: bool, mask_or_error: object) -> None:  # pragma: no cover - Qt UI
+        self._sam_worker = None
+        if not ok:
+            self._notify("object_remove_failed", "Object removal failed", str(mask_or_error))
+            return
+        mask = mask_or_error
+        self._mask = grow_mask(mask, self._grow.value()) if self._grow.value() else mask
+        self._render_preview()
 
     def _recompute_mask(self) -> None:
         if self._seed is None:
@@ -283,6 +321,28 @@ class _RemoveWorker(QThread):
         self.done.emit(True, self._out_path)
 
 
+class _SamMaskWorker(QThread):
+    """Compute a SAM point-prompt mask off the UI thread (encoder is heavy)."""
+
+    done = Signal(bool, object)
+
+    def __init__(self, arr: np.ndarray, coord: tuple[int, int],
+                 encoder: str, decoder: str):
+        super().__init__()
+        self._arr = arr
+        self._coord = coord
+        self._encoder = encoder
+        self._decoder = decoder
+
+    def run(self) -> None:  # pragma: no cover - background thread
+        try:
+            mask = sam_mask(self._arr, [self._coord], [1], self._encoder, self._decoder)
+        except (ImportError, OSError, ValueError, RuntimeError) as exc:
+            self.done.emit(False, str(exc))
+            return
+        self.done.emit(True, mask)
+
+
 def _load_rgba(path: str) -> np.ndarray:
     img = Image.open(path)
     if img.mode != "RGBA":
@@ -299,6 +359,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_apply": "Apply",
         "object_remove_method": "Method:",
         "object_remove_method_diffusion": "Diffusion (fast)",
+        "object_remove_selection": "Selection:",
+        "object_remove_selection_flood": "Flood-fill (fast)",
+        "object_remove_selection_sam": "SAM (precise)",
         "object_remove_models_hint": "Drop LaMa/ONNX inpaint models into plugins/ai_object_remove/models/.",
         "object_remove_done": "Saved {path}",
         "object_remove_failed": "Object removal failed",
@@ -312,6 +375,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_apply": "套用",
         "object_remove_method": "方法：",
         "object_remove_method_diffusion": "擴散（快速）",
+        "object_remove_selection": "選取方式：",
+        "object_remove_selection_flood": "洪水填充（快速）",
+        "object_remove_selection_sam": "SAM（精準）",
         "object_remove_models_hint": "將 LaMa/ONNX 修補模型放入 plugins/ai_object_remove/models/。",
         "object_remove_done": "已儲存 {path}",
         "object_remove_failed": "物件移除失敗",
@@ -325,6 +391,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_apply": "应用",
         "object_remove_method": "方法：",
         "object_remove_method_diffusion": "扩散（快速）",
+        "object_remove_selection": "选取方式：",
+        "object_remove_selection_flood": "洪水填充（快速）",
+        "object_remove_selection_sam": "SAM（精准）",
         "object_remove_models_hint": "将 LaMa/ONNX 修补模型放入 plugins/ai_object_remove/models/。",
         "object_remove_done": "已保存 {path}",
         "object_remove_failed": "对象移除失败",
@@ -338,6 +407,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_apply": "適用",
         "object_remove_method": "方式:",
         "object_remove_method_diffusion": "拡散（高速）",
+        "object_remove_selection": "選択方法:",
+        "object_remove_selection_flood": "塗りつぶし（高速）",
+        "object_remove_selection_sam": "SAM（高精度）",
         "object_remove_models_hint": "LaMa/ONNX インペイントモデルを plugins/ai_object_remove/models/ に配置してください。",
         "object_remove_done": "保存しました: {path}",
         "object_remove_failed": "オブジェクト除去に失敗しました",
@@ -351,6 +423,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_apply": "적용",
         "object_remove_method": "방법:",
         "object_remove_method_diffusion": "확산(빠름)",
+        "object_remove_selection": "선택 방법:",
+        "object_remove_selection_flood": "플러드 필(빠름)",
+        "object_remove_selection_sam": "SAM(정밀)",
         "object_remove_models_hint": "LaMa/ONNX 인페인트 모델을 plugins/ai_object_remove/models/에 넣으세요.",
         "object_remove_done": "{path}에 저장됨",
         "object_remove_failed": "개체 제거 실패",
