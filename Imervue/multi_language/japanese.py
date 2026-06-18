@@ -26,6 +26,10 @@ japanese_word_dict = {
     "exif_duration": "再生時間",
     "exif_fps": "フレームレート",
     "exif_codec": "コーデック",
+    "smart_albums_place": "場所（都市, 国）",
+    "smart_albums_auto": "場所で自動作成",
+    "smart_albums_auto_done": "{n} 個の場所アルバムを作成しました",
+    "smart_albums_auto_none": "GPS 付き画像が見つかりません",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

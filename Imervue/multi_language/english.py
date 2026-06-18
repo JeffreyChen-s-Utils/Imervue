@@ -38,6 +38,10 @@ english_word_dict = {
     "exif_duration": "Duration",
     "exif_fps": "Frame rate",
     "exif_codec": "Codec",
+    "smart_albums_place": "place (City, Country)",
+    "smart_albums_auto": "Auto by location",
+    "smart_albums_auto_done": "Created {n} location album(s)",
+    "smart_albums_auto_none": "No geotagged images found",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

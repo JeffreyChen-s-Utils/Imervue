@@ -15,6 +15,10 @@ traditional_chinese_word_dict = {
     "exif_duration": "時長",
     "exif_fps": "幀率",
     "exif_codec": "編碼",
+    "smart_albums_place": "地點（城市, 國家）",
+    "smart_albums_auto": "依地點自動建立",
+    "smart_albums_auto_done": "已建立 {n} 個地點相簿",
+    "smart_albums_auto_none": "找不到含 GPS 的影像",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",
