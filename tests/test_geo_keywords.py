@@ -1,6 +1,10 @@
 """Tests for batch location → XMP keyword tagging."""
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("defusedxml")
+
 from Imervue.image import gps, xmp_sidecar
 from Imervue.image.geo_keywords import merge_keywords, tag_paths_by_location
 from Imervue.image.reverse_geocode import place_keywords
