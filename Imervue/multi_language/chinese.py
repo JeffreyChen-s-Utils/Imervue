@@ -1652,6 +1652,15 @@ chinese_word_dict = {
     "stack_max": "最亮值（星轨）",
     "stack_min": "最暗值",
 
+    # --- Clarity / Dehaze ---
+    "local_contrast_title": "清晰度 / 去雾",
+    "local_contrast_dehaze": "去雾：",
+    "local_contrast_clarity": "清晰度：",
+    "local_contrast_texture": "纹理：",
+    "local_contrast_apply": "应用并保存",
+    "local_contrast_done": "已保存 {path}",
+    "local_contrast_failed": "调整失败",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

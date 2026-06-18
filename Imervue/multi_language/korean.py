@@ -1663,6 +1663,15 @@ korean_word_dict = {
     "stack_max": "최댓값/밝게(별 궤적)",
     "stack_min": "최솟값/어둡게",
 
+    # --- Clarity / Dehaze ---
+    "local_contrast_title": "선명도 / 안개 제거",
+    "local_contrast_dehaze": "안개 제거:",
+    "local_contrast_clarity": "선명도:",
+    "local_contrast_texture": "텍스처:",
+    "local_contrast_apply": "적용 및 저장",
+    "local_contrast_done": "{path} 저장됨",
+    "local_contrast_failed": "조정 실패",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

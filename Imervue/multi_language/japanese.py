@@ -1665,6 +1665,15 @@ japanese_word_dict = {
     "stack_max": "比較明（星の軌跡）",
     "stack_min": "比較暗",
 
+    # --- Clarity / Dehaze ---
+    "local_contrast_title": "明瞭度 / かすみ除去",
+    "local_contrast_dehaze": "かすみ除去：",
+    "local_contrast_clarity": "明瞭度：",
+    "local_contrast_texture": "テクスチャ：",
+    "local_contrast_apply": "適用して保存",
+    "local_contrast_done": "保存しました: {path}",
+    "local_contrast_failed": "調整に失敗しました",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

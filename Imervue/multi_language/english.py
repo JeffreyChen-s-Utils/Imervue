@@ -1685,6 +1685,15 @@ english_word_dict = {
     "stack_max": "Max / lighten (star trails)",
     "stack_min": "Min / darken",
 
+    # --- Clarity / Dehaze ---
+    "local_contrast_title": "Clarity / Dehaze",
+    "local_contrast_dehaze": "Dehaze:",
+    "local_contrast_clarity": "Clarity:",
+    "local_contrast_texture": "Texture:",
+    "local_contrast_apply": "Apply & Save",
+    "local_contrast_done": "Saved {path}",
+    "local_contrast_failed": "Adjustment failed",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

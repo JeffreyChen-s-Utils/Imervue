@@ -162,6 +162,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_gradient_map(ui))
     _add_action(sub, lang, "auto_balance_title", "Auto Color Balance",
                 lambda: _open_auto_balance(ui))
+    _add_action(sub, lang, "local_contrast_title", "Clarity / Dehaze",
+                lambda: _open_local_contrast(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -388,6 +390,11 @@ def _open_gradient_map(ui: ImervueMainWindow) -> None:
 def _open_auto_balance(ui: ImervueMainWindow) -> None:
     from Imervue.gui.auto_color_balance_dialog import open_auto_color_balance_dialog
     open_auto_color_balance_dialog(ui.viewer)
+
+
+def _open_local_contrast(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.local_contrast_dialog import open_local_contrast
+    open_local_contrast(ui.viewer)
 
 
 def _open_film_grain(ui: ImervueMainWindow) -> None:
