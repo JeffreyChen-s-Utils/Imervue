@@ -27,14 +27,18 @@ from Imervue.mcp_server.server import (
     MCPServer,
     run,
 )
+from Imervue.mcp_server import tools
 from Imervue.mcp_server.tools import (
     convert_format,
+    extract_video_frame,
     list_images,
     puppet_from_png,
     puppet_inspect,
     read_image_metadata,
     read_xmp_tags,
     register_default_tools,
+    reverse_geocode,
+    sharpness_score,
 )
 
 
@@ -356,3 +360,62 @@ def test_puppet_inspect_returns_inventory(sample_rgba_image, tmp_path):
     assert {"id", "min", "max", "default", "key_count"} == set(
         inventory["parameters"][0],
     )
+
+
+# ---------------------------------------------------------------------------
+# New tools: reverse_geocode / sharpness_score / extract_video_frame / HEIC
+# ---------------------------------------------------------------------------
+
+
+def test_reverse_geocode_tool():
+    result = reverse_geocode(48.85, 2.35)
+    assert result["place"] == "Paris, France"
+    assert result["keywords"] == ["Paris", "France"]
+
+
+def _sharp_png(tmp_path):
+    from PIL import Image
+    arr = ((np.indices((32, 32)).sum(axis=0) % 2) * 255).astype(np.uint8)
+    path = tmp_path / "sharp.png"
+    Image.fromarray(arr, mode="L").save(path, format="PNG")
+    return path
+
+
+def test_sharpness_score_flags_blurry(tmp_path):
+    from PIL import Image
+    sharp = _sharp_png(tmp_path)
+    blurry = tmp_path / "blurry.png"
+    Image.fromarray(np.full((32, 32), 128, dtype=np.uint8), mode="L").save(
+        blurry, format="PNG")
+    sharp_result = sharpness_score(str(sharp))
+    blurry_result = sharpness_score(str(blurry))
+    assert sharp_result["score"] > blurry_result["score"]
+    assert blurry_result["blurry"] is True
+
+
+def test_new_tools_are_registered():
+    names = {d["name"] for d in tools._TOOL_DEFINITIONS}
+    assert {"reverse_geocode", "extract_video_frame", "sharpness_score"} <= names
+
+
+def test_convert_format_to_heic(sample_image, tmp_path):
+    pytest.importorskip("pillow_heif")
+    dst = tmp_path / "out.heic"
+    result = convert_format(str(sample_image), str(dst))
+    assert dst.exists()
+    assert result["size_bytes"] > 0
+
+
+def test_extract_video_frame_tool(tmp_path):
+    iio = pytest.importorskip("imageio").v2
+    pytest.importorskip("imageio_ffmpeg")
+    video = tmp_path / "clip.mp4"
+    frames = [np.full((16, 16, 3), 40 + i * 30, dtype=np.uint8) for i in range(5)]
+    try:
+        iio.mimwrite(str(video), frames, format="ffmpeg", fps=5)
+    except (OSError, RuntimeError, ValueError) as exc:
+        pytest.skip(f"ffmpeg writer unavailable: {exc}")
+    dst = tmp_path / "frame.png"
+    result = extract_video_frame(str(video), str(dst), frame_index=0)
+    assert dst.exists()
+    assert result["size_bytes"] > 0
