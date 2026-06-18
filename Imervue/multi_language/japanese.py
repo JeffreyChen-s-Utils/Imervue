@@ -39,6 +39,9 @@ japanese_word_dict = {
     "keyword_editor_keywords": "キーワード（カンマ区切り）:",
     "keyword_editor_description": "説明:",
     "keyword_editor_saved": "{path} にメタデータを保存しました",
+    "batch_index_keywords": "キーワードを索引",
+    "batch_index_keywords_done": "{n} 枚の写真からキーワードを索引しました",
+    "batch_index_keywords_none": "索引できるキーワードが見つかりません",
     # ===== 閲覧機能（ルーペ / 読書モード / フィルムストリップ / カーソル）=====
     "loupe_on": "ルーペ オン — カーソルに追従して拡大",
     "loupe_off": "ルーペ オフ",

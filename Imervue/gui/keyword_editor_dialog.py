@@ -104,8 +104,17 @@ class KeywordEditorDialog(QDialog):
         except OSError as exc:
             logger.warning("Keyword save failed for %s: %s", self._path, exc)
             return
+        self._index_keywords()
         self._notify_saved()
         self.accept()
+
+    def _index_keywords(self) -> None:
+        """Mirror the saved keywords into the searchable tag index (best-effort)."""
+        try:
+            from Imervue.library.keyword_index import import_keywords_to_index
+            import_keywords_to_index([self._path])
+        except Exception as exc:  # noqa: BLE001 - indexing optional; XMP is the source of truth
+            logger.warning("Keyword indexing failed for %s: %s", self._path, exc)
 
     def _notify_saved(self) -> None:  # pragma: no cover - Qt UI
         from pathlib import Path

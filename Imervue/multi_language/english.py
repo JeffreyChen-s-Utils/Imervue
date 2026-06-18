@@ -51,6 +51,9 @@ english_word_dict = {
     "keyword_editor_keywords": "Keywords (comma-separated):",
     "keyword_editor_description": "Description:",
     "keyword_editor_saved": "Saved metadata to {path}",
+    "batch_index_keywords": "Index Keywords",
+    "batch_index_keywords_done": "Indexed keywords from {n} photo(s)",
+    "batch_index_keywords_none": "No keywords found to index",
     # ===== Browsing features (loupe / reading / filmstrip / grid cursor) =====
     "loupe_on": "Loupe on — magnifier follows cursor",
     "loupe_off": "Loupe off",

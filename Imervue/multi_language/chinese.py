@@ -28,6 +28,9 @@ chinese_word_dict = {
     "keyword_editor_keywords": "关键字（逗号分隔）：",
     "keyword_editor_description": "说明：",
     "keyword_editor_saved": "已将元数据保存到 {path}",
+    "batch_index_keywords": "索引关键字",
+    "batch_index_keywords_done": "已从 {n} 张照片索引关键字",
+    "batch_index_keywords_none": "未找到可索引的关键字",
     # ===== 浏览功能（放大镜 / 阅读模式 / 缩图列 / 缩图游标）=====
     "loupe_on": "放大镜开启 — 跟随游标放大",
     "loupe_off": "放大镜关闭",

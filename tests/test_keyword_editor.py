@@ -7,6 +7,17 @@ import pytest
 pytest.importorskip("defusedxml")
 
 from Imervue.gui.keyword_editor_dialog import keywords_to_text, parse_keywords
+from Imervue.library import image_index
+
+
+@pytest.fixture(autouse=True)
+def _isolated_db(tmp_path):
+    # _save mirrors keywords into the tag index; keep that off the real DB.
+    image_index.set_db_path(tmp_path / "library.db")
+    try:
+        yield
+    finally:
+        image_index.close()
 
 
 # ---------------------------------------------------------------------------
@@ -51,3 +62,5 @@ def test_dialog_smoke_saves_xmp(qapp, tmp_path):
     assert loaded.title == "Sunset"
     assert loaded.creator == "Jane Doe"
     assert loaded.keywords == ["beach", "sunset"]
+    # Saving also mirrors keywords into the searchable tag index.
+    assert set(image_index.tags_of_image(str(path))) == {"beach", "sunset"}

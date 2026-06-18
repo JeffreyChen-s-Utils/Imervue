@@ -28,6 +28,9 @@ traditional_chinese_word_dict = {
     "keyword_editor_keywords": "關鍵字（逗號分隔）：",
     "keyword_editor_description": "說明：",
     "keyword_editor_saved": "已將中介資料儲存到 {path}",
+    "batch_index_keywords": "索引關鍵字",
+    "batch_index_keywords_done": "已從 {n} 張照片索引關鍵字",
+    "batch_index_keywords_none": "找不到可索引的關鍵字",
     # ===== 瀏覽功能（放大鏡 / 閱讀模式 / 縮圖列 / 縮圖游標）=====
     "loupe_on": "放大鏡開啟 — 跟著游標放大",
     "loupe_off": "放大鏡關閉",
