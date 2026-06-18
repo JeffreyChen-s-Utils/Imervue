@@ -39,6 +39,11 @@ def test_free_words_become_name_contains():
     assert parse_query("name:sunset over lake")["name_contains"] == "sunset over lake"
 
 
+def test_missing_field_accumulates():
+    assert parse_query("missing:location missing:keywords")["missing"] == [
+        "location", "keywords"]
+
+
 def test_empty_query_is_empty_rules():
     assert parse_query("   ") == {}
 

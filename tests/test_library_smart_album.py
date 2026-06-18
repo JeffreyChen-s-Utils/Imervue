@@ -181,6 +181,17 @@ class TestLocationAlbums:
         )
         assert result == ["/a.jpg"]
 
+    def test_missing_rule_filters_incomplete(self, monkeypatch):
+        from Imervue.library import metadata_audit
+        has_kw = {"/a": True, "/b": False}
+        monkeypatch.setattr(
+            metadata_audit, "image_metadata_presence",
+            lambda p: {"location": True, "title": True, "creator": True,
+                       "keywords": has_kw[p]},
+        )
+        assert smart_album.apply_to_paths(
+            ["/a", "/b"], {"missing": ["keywords"]}) == ["/b"]
+
     def test_generate_location_albums_persists(self, monkeypatch):
         from Imervue.image import gps
         coords = {"/a.jpg": (48.85, 2.35), "/b.jpg": (35.68, 139.69)}

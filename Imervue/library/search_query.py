@@ -57,6 +57,8 @@ def _apply_token(field: str, value: str, acc: dict, rules: dict) -> None:
         acc["free"].append(value)
     elif field == "place":
         rules["place"] = value
+    elif field == "missing":
+        rules.setdefault("missing", []).append(value.lower())
     elif field == "cull":
         rules["cull"] = value.lower()
     elif field == "rating":
