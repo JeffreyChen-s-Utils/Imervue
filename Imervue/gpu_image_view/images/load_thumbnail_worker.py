@@ -63,6 +63,7 @@ class LoadThumbnailWorker(QRunnable):
 
     def _load_by_extension(self):
         from Imervue.image.heif_support import ensure_heif_opener, is_heif_path
+        from Imervue.image.jxl_support import ensure_jxl_opener, is_jxl_path
         from Imervue.image.video_frames import is_video_path
         ext = Path(self.path).suffix.lower()
         raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
@@ -74,6 +75,8 @@ class LoadThumbnailWorker(QRunnable):
             return self._load_video()
         if is_heif_path(self.path):
             ensure_heif_opener()
+        elif is_jxl_path(self.path):
+            ensure_jxl_opener()
         return self._load_standard()
 
     def _load_video(self) -> np.ndarray:

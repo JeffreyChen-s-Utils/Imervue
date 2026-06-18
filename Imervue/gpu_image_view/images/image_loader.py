@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRunnable, Signal, QObject
 
 from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
+from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 
@@ -84,6 +85,14 @@ def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
     return img_data
 
 
+def _ensure_optional_opener(ext: str) -> None:
+    """Register an optional Pillow codec (HEIF/AVIF or JPEG-XL) on demand."""
+    if ext in HEIF_EXTENSIONS:
+        ensure_heif_opener()
+    elif ext in JXL_EXTENSIONS:
+        ensure_jxl_opener()
+
+
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
@@ -102,8 +111,7 @@ def load_image_file(path, thumbnail=False, recipe=None):
     elif ext in VIDEO_EXTENSIONS:
         img_data = poster_frame(path)
     else:
-        if ext in HEIF_EXTENSIONS:
-            ensure_heif_opener()
+        _ensure_optional_opener(ext)
         img_data = _load_raster(path)
 
     img_data = _ensure_rgba(img_data)
@@ -170,7 +178,7 @@ _SUPPORTED_EXTS = {
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng", ".svg",
     ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-} | VIDEO_EXTENSIONS | HEIF_EXTENSIONS
+} | VIDEO_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
 
 
 def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:

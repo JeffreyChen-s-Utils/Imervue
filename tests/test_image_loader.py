@@ -138,3 +138,18 @@ class TestHeifInGrid:
         img.save(str(tmp_path / "photo.heic"))
         results = _scan_images(str(tmp_path))
         assert any(p.endswith("photo.heic") for p in results)
+
+
+class TestJxlInGrid:
+    def test_jxl_ext_supported(self):
+        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
+        assert ".jxl" in _SUPPORTED_EXTS
+
+    def test_load_jxl_returns_rgba(self, tmp_path):
+        pytest.importorskip("pillow_jxl")
+        import pillow_jxl  # noqa: F401  (registers the codec)
+        out = tmp_path / "shot.jxl"
+        Image.fromarray(np.full((16, 16, 3), 60, dtype=np.uint8)).save(str(out), "JXL")
+        result = load_image_file(str(out))
+        assert result.ndim == 3
+        assert result.shape[2] == 4

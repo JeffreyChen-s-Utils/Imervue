@@ -17,6 +17,7 @@ from typing import BinaryIO
 from PIL import Image
 
 from Imervue.image.heif_support import ensure_heif_opener
+from Imervue.image.jxl_support import ensure_jxl_opener
 
 # Display name → file extension.
 FORMAT_EXTENSIONS: dict[str, str] = {
@@ -27,9 +28,10 @@ FORMAT_EXTENSIONS: dict[str, str] = {
     "TIFF": ".tiff",
     "HEIC": ".heic",
     "AVIF": ".avif",
+    "JXL": ".jxl",
 }
 # Formats whose ``save`` honours a 0-100 quality parameter.
-QUALITY_FORMATS: frozenset[str] = frozenset({"JPEG", "WebP", "HEIC", "AVIF"})
+QUALITY_FORMATS: frozenset[str] = frozenset({"JPEG", "WebP", "HEIC", "AVIF", "JXL"})
 
 _BASE_FORMATS: tuple[str, ...] = ("PNG", "JPEG", "WebP", "BMP", "TIFF")
 # Ordered so the menu shows HEIC before AVIF deterministically.
@@ -46,6 +48,8 @@ def available_formats() -> list[str]:
     formats = list(_BASE_FORMATS)
     if ensure_heif_opener():
         formats.extend(_HEIF_FORMATS_ORDER)
+    if ensure_jxl_opener():
+        formats.append("JXL")
     return formats
 
 
@@ -81,6 +85,8 @@ def save_image(
         raise ValueError(
             f"{format_name} output requires the pillow-heif package.",
         )
+    if format_name == "JXL" and not ensure_jxl_opener():
+        raise ValueError("JXL output requires the pillow-jxl-plugin package.")
     prepared = prepare_for_format(img, format_name)
     kwargs: dict = {}
     if quality is not None and format_name in QUALITY_FORMATS:

@@ -24,6 +24,31 @@ def test_extensions_include_heif():
     assert FORMAT_EXTENSIONS["AVIF"] == ".avif"
 
 
+def test_extensions_include_jxl():
+    assert FORMAT_EXTENSIONS["JXL"] == ".jxl"
+
+
+def test_available_formats_excludes_jxl_without_backend(monkeypatch):
+    monkeypatch.setattr(save_formats, "ensure_jxl_opener", lambda: False)
+    assert "JXL" not in available_formats()
+
+
+def test_save_image_jxl_without_backend_raises(monkeypatch, tmp_path):
+    monkeypatch.setattr(save_formats, "ensure_jxl_opener", lambda: False)
+    with pytest.raises(ValueError):
+        save_image(Image.new("RGB", (8, 8)), str(tmp_path / "x.jxl"), "JXL")
+
+
+def test_save_image_jxl_roundtrip(tmp_path):
+    pytest.importorskip("pillow_jxl")
+    out = tmp_path / "x.jxl"
+    save_image(Image.new("RGB", (16, 16), (40, 80, 120)), str(out), "JXL", quality=80)
+    assert out.exists()
+    with Image.open(out) as reopened:
+        reopened.load()
+        assert reopened.size == (16, 16)
+
+
 def test_pil_format_maps_heic_to_heif():
     assert pil_format("HEIC") == "HEIF"
     assert pil_format("AVIF") == "AVIF"
