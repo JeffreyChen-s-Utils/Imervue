@@ -15,10 +15,14 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.info import get_exif_data, get_file_times
+from Imervue.image.video_frames import is_video_path, probe_video_meta
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
+
+# Custom link scheme for the clickable Location line (opens the map view).
+_MAP_LINK = "imervue:open-map"
 
 
 class ExifSidebar(QWidget):
@@ -62,7 +66,12 @@ class ExifSidebar(QWidget):
         self._info_label.setStyleSheet(
             "QLabel { color: #ccc; padding: 8px; font-size: 12px; background: #1e1e1e; }"
         )
-        self._info_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._info_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse,
+        )
+        self._info_label.setOpenExternalLinks(False)
+        self._info_label.linkActivated.connect(self._on_link_activated)
 
         # 編輯按鈕
         self._edit_btn = QPushButton(
@@ -70,6 +79,12 @@ class ExifSidebar(QWidget):
         )
         self._edit_btn.setStyleSheet("QPushButton { margin: 4px; }")
         self._edit_btn.clicked.connect(self._open_editor)
+
+        self._keywords_btn = QPushButton(
+            language_wrapper.language_word_dict.get("keyword_editor_title", "Edit Keywords")
+        )
+        self._keywords_btn.setStyleSheet("QPushButton { margin: 4px; }")
+        self._keywords_btn.clicked.connect(self._open_keyword_editor)
 
         # 星等評分 — 5 顆可點擊的星，點同一顆會清除
         self._rating_widget = _RatingStars(self._on_rating_clicked)
@@ -105,6 +120,7 @@ class ExifSidebar(QWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addWidget(self._info_label)
         content_layout.addWidget(self._edit_btn)
+        content_layout.addWidget(self._keywords_btn)
         content_layout.addWidget(self._rating_widget)
         content_layout.addWidget(self._notes_label)
         content_layout.addWidget(self._notes_edit)
@@ -136,6 +152,10 @@ class ExifSidebar(QWidget):
         from Imervue.gui.exif_editor import open_exif_editor
         open_exif_editor(self._main_window.viewer)
 
+    def _open_keyword_editor(self):
+        from Imervue.gui.keyword_editor_dialog import open_keyword_editor
+        open_keyword_editor(self._main_window.viewer)
+
     def update_info(self, path: str | None = None):
         """更新 EXIF 面板內容"""
         if self._collapsed:
@@ -154,11 +174,16 @@ class ExifSidebar(QWidget):
         self._rating_widget.bind_path(path)
         lang = language_wrapper.language_word_dict
         p = Path(path)
+        detail_lines = (
+            self._video_lines(p, lang) if is_video_path(path)
+            else self._exif_lines(p, lang)
+        )
         lines: list[str] = [
             f"<b>{lang.get('exif_filename', 'File')}:</b> {p.name}",
             *self._file_stat_lines(p, lang),
             "<hr>",
-            *self._exif_lines(p, lang),
+            *detail_lines,
+            *self._location_lines(p, lang),
         ]
         self._info_label.setText("<br>".join(lines))
 
@@ -212,6 +237,61 @@ class ExifSidebar(QWidget):
         h = exif.get("ExifImageHeight") or exif.get("ImageLength")
         if w and h:
             lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
+        return lines
+
+    @staticmethod
+    def _location_lines(p: Path, lang) -> list[str]:
+        from Imervue.image.gps import extract_gps
+        return ExifSidebar._format_location(extract_gps(str(p)), lang)
+
+    @staticmethod
+    def _format_location(coords: tuple[float, float] | None, lang) -> list[str]:
+        if coords is None:
+            return []
+        from Imervue.image.reverse_geocode import reverse_geocode
+        lat, lon = coords
+        lines = [
+            f"<b>{lang.get('exif_coordinates', 'GPS')}:</b> {lat:.5f}, {lon:.5f}",
+        ]
+        place = reverse_geocode(lat, lon)
+        if place:
+            label = lang.get("exif_location", "Location")
+            lines.append(f'<b>{label}:</b> <a href="{_MAP_LINK}">{place}</a>')
+        return lines
+
+    def _on_link_activated(self, href: str) -> None:  # pragma: no cover - Qt UI
+        if href != _MAP_LINK:
+            return
+        from Imervue.gui.map_view_dialog import open_map_view
+        open_map_view(self._main_window)
+
+    @staticmethod
+    def _video_lines(p: Path, lang) -> list[str]:
+        from Imervue.image.video_frames import VideoBackendError
+        header = f"<i>{lang.get('exif_video_label', 'Video')}</i>"
+        try:
+            meta = probe_video_meta(str(p))
+        except (VideoBackendError, OSError, ValueError):
+            return [header]
+        return [header, *ExifSidebar._format_video_meta(meta, lang)]
+
+    @staticmethod
+    def _format_video_meta(meta: dict, lang) -> list[str]:
+        lines: list[str] = []
+        width, height = meta.get("width", 0), meta.get("height", 0)
+        if width and height:
+            lines.append(
+                f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {width} x {height}",
+            )
+        duration = meta.get("duration_s", 0.0)
+        if duration > 0:
+            lines.append(f"<b>{lang.get('exif_duration', 'Duration')}:</b> {duration:.2f}s")
+        fps = meta.get("fps", 0.0)
+        if fps > 0:
+            lines.append(f"<b>{lang.get('exif_fps', 'Frame rate')}:</b> {fps:.2f} fps")
+        codec = meta.get("codec")
+        if codec:
+            lines.append(f"<b>{lang.get('exif_codec', 'Codec')}:</b> {codec}")
         return lines
 
     def _load_note_for(self, path: str | None) -> None:

@@ -159,3 +159,33 @@ class TestApplyToPaths:
         image_index.set_cull_state(c, "pick")
         rules = {"exts": ["png"], "cull": "pick", "name_contains": "cat"}
         assert smart_album.apply_to_paths([a, b, c], rules) == [a]
+
+
+class TestLocationAlbums:
+    def test_auto_location_albums_groups_by_city(self):
+        coords = [
+            ("/a.jpg", 48.85, 2.35),    # Paris
+            ("/b.jpg", 48.86, 2.34),    # Paris
+            ("/c.jpg", 35.68, 139.69),  # Tokyo
+        ]
+        albums = dict(smart_album.auto_location_albums(coords))
+        assert albums["Paris, France"] == {"place": "Paris, France"}
+        assert "Tokyo, Japan" in albums
+
+    def test_place_rule_filters_by_city(self, monkeypatch):
+        from Imervue.image import gps
+        coords = {"/a.jpg": (48.85, 2.35), "/b.jpg": (35.68, 139.69)}
+        monkeypatch.setattr(gps, "extract_gps", lambda p: coords.get(str(p)))
+        result = smart_album.apply_to_paths(
+            ["/a.jpg", "/b.jpg"], {"place": "Paris, France"},
+        )
+        assert result == ["/a.jpg"]
+
+    def test_generate_location_albums_persists(self, monkeypatch):
+        from Imervue.image import gps
+        coords = {"/a.jpg": (48.85, 2.35), "/b.jpg": (35.68, 139.69)}
+        monkeypatch.setattr(gps, "extract_gps", lambda p: coords.get(str(p)))
+        count = smart_album.generate_location_albums(["/a.jpg", "/b.jpg"])
+        assert count == 2
+        names = {row["name"] for row in smart_album.list_all()}
+        assert {"Paris, France", "Tokyo, Japan"} <= names

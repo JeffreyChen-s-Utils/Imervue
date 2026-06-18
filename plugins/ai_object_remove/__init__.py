@@ -1,0 +1,3 @@
+from ai_object_remove.ai_object_remove_plugin import AIObjectRemovePlugin
+
+plugin_class = AIObjectRemovePlugin

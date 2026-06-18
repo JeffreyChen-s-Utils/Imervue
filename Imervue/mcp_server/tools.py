@@ -31,6 +31,9 @@ _IMAGE_EXTENSIONS: frozenset[str] = frozenset({
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
 })
+# Optional-backend output formats, routed through save_formats (HEIF / JXL).
+_EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
+_SHARPNESS_MAX_SIDE = 512
 
 
 # ---------------------------------------------------------------------------
@@ -169,10 +172,12 @@ def convert_format(
     if not dst.parent.exists():
         raise ValueError(f"destination parent {dst.parent} does not exist")
     fmt = dst.suffix.lower().lstrip(".")
+    if fmt in _EXTRA_FORMAT_NAMES:
+        return _convert_via_save_formats(src, dst, fmt, quality)
     if fmt not in _CONVERTIBLE_FORMATS:
         raise ValueError(
             f"unsupported destination format {fmt!r}; "
-            f"expected one of {sorted(_CONVERTIBLE_FORMATS)}",
+            f"expected one of {sorted(_CONVERTIBLE_FORMATS | set(_EXTRA_FORMAT_NAMES))}",
         )
     from PIL import Image
     with Image.open(src) as opened:
@@ -261,6 +266,95 @@ def puppet_inspect(path: str) -> dict[str, Any]:
     }
 
 
+def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
+    """Convert through save_formats for the optional HEIC/AVIF/JXL backends."""
+    from PIL import Image
+    from Imervue.image.save_formats import save_image
+    with Image.open(src) as opened:
+        save_image(opened, str(dst), _EXTRA_FORMAT_NAMES[fmt], max(1, min(100, int(quality))))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# reverse_geocode
+# ---------------------------------------------------------------------------
+
+
+def reverse_geocode(latitude: float, longitude: float) -> dict[str, Any]:
+    """Resolve GPS coordinates to the nearest major city, offline.
+
+    Returns the ``"City, Country"`` place name and ``[city, country]`` keywords.
+    """
+    from Imervue.image.reverse_geocode import place_keywords
+    from Imervue.image.reverse_geocode import reverse_geocode as _resolve
+    lat, lon = float(latitude), float(longitude)
+    return {
+        "latitude": lat,
+        "longitude": lon,
+        "place": _resolve(lat, lon),
+        "keywords": place_keywords(lat, lon),
+    }
+
+
+# ---------------------------------------------------------------------------
+# extract_video_frame
+# ---------------------------------------------------------------------------
+
+
+def extract_video_frame(
+    source: str, destination: str, *, frame_index: int = 0,
+) -> dict[str, Any]:
+    """Decode one frame of a video and save it as an image.
+
+    ``destination``'s suffix picks the still format. Needs the imageio ffmpeg
+    backend; its absence surfaces as an error rather than a crash.
+    """
+    src = _validated_file(source)
+    dst = Path(destination)
+    if not dst.parent.exists():
+        raise ValueError(f"destination parent {dst.parent} does not exist")
+    from PIL import Image
+    from Imervue.image.video_frames import FrameReader
+    with FrameReader(str(src)) as reader:
+        arr = reader.frame(int(frame_index))
+    with Image.fromarray(arr, mode="RGB") as img:
+        img.save(dst)
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "frame_index": int(frame_index),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# sharpness_score
+# ---------------------------------------------------------------------------
+
+
+def sharpness_score(path: str) -> dict[str, Any]:
+    """Score an image's sharpness (Laplacian variance); flag likely-blurry."""
+    import numpy as np
+    from PIL import Image
+    from Imervue.image.sharpness import DEFAULT_BLUR_THRESHOLD
+    from Imervue.image.sharpness import sharpness_score as _score
+    img_path = _validated_file(path)
+    with Image.open(img_path) as opened:
+        gray = opened.convert("L")
+        gray.thumbnail((_SHARPNESS_MAX_SIDE, _SHARPNESS_MAX_SIDE))
+        arr = np.asarray(gray, dtype=np.float64)
+    score = _score(arr)
+    return {
+        "path": str(img_path),
+        "score": score,
+        "blurry": score < DEFAULT_BLUR_THRESHOLD,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
@@ -311,7 +405,8 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "convert_format",
         "description": (
             "Convert one image to another format. Destination format is taken from "
-            "the destination suffix (png / jpg / jpeg / webp / tiff / bmp)."
+            "the destination suffix (png / jpg / jpeg / webp / tiff / bmp, plus "
+            "heic / avif / jxl when their optional backends are installed)."
         ),
         "input_schema": {
             "type": "object",
@@ -355,6 +450,52 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": puppet_inspect,
+    },
+    {
+        "name": "reverse_geocode",
+        "description": (
+            "Resolve GPS latitude/longitude to the nearest major city (offline). "
+            "Returns a 'City, Country' place name and [city, country] keywords."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "latitude": {"type": "number"},
+                "longitude": {"type": "number"},
+            },
+            "required": ["latitude", "longitude"],
+        },
+        "handler": reverse_geocode,
+    },
+    {
+        "name": "extract_video_frame",
+        "description": (
+            "Decode one frame of a video file and save it as an image. The "
+            "destination suffix picks the still format. frame_index defaults to 0."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "frame_index": {"type": "integer", "minimum": 0, "default": 0},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": extract_video_frame,
+    },
+    {
+        "name": "sharpness_score",
+        "description": (
+            "Score an image's sharpness via Laplacian variance and flag whether "
+            "it is likely blurry. Higher score means sharper."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": sharpness_score,
     },
 ]
 

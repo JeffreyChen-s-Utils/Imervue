@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 import json
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
@@ -22,12 +23,15 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.gps import collect_gps
+from Imervue.image.reverse_geocode import reverse_geocode
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 logger = logging.getLogger("Imervue.map_view_dialog")
+
+_UNKNOWN_PLACE = "Unknown"
 
 _LEAFLET_HTML = """<!DOCTYPE html>
 <html><head>
@@ -60,6 +64,43 @@ if (points.length) {
 """
 
 
+@dataclass(frozen=True)
+class PlaceGroup:
+    """Photos sharing a nearest-city place name, plotted as one marker."""
+
+    place: str
+    lat: float
+    lon: float
+    count: int
+    paths: tuple[str, ...]
+
+
+def group_points_by_place(
+    points: list[tuple[str, float, float]],
+) -> list[PlaceGroup]:
+    """Cluster ``(path, lat, lon)`` points by their nearest-city place name.
+
+    Each group's marker sits at the mean coordinate of its members. Groups are
+    ordered by descending count (then place name) for a stable, useful order.
+    """
+    buckets: dict[str, list[tuple[str, float, float]]] = {}
+    for path, lat, lon in points:
+        place = reverse_geocode(lat, lon) or _UNKNOWN_PLACE
+        buckets.setdefault(place, []).append((path, lat, lon))
+    groups = [
+        PlaceGroup(
+            place=place,
+            lat=sum(item[1] for item in items) / len(items),
+            lon=sum(item[2] for item in items) / len(items),
+            count=len(items),
+            paths=tuple(item[0] for item in items),
+        )
+        for place, items in buckets.items()
+    ]
+    groups.sort(key=lambda group: (-group.count, group.place))
+    return groups
+
+
 def _collect_library_paths(ui: ImervueMainWindow) -> list[str]:
     viewer = getattr(ui, "viewer", None)
     model = getattr(viewer, "model", None)
@@ -67,10 +108,11 @@ def _collect_library_paths(ui: ImervueMainWindow) -> list[str]:
     return list(images) if images else []
 
 
-def _render_html(points: list[tuple[str, float, float]]) -> str:
+def _render_html(groups: list[PlaceGroup]) -> str:
     items = [
-        {"lat": lat, "lon": lon, "label": html.escape(path)}
-        for path, lat, lon in points
+        {"lat": g.lat, "lon": g.lon,
+         "label": html.escape(f"{g.place} ({g.count})")}
+        for g in groups
     ]
     return _LEAFLET_HTML.replace("__POINTS__", json.dumps(items))
 
@@ -85,6 +127,7 @@ class MapViewDialog(QDialog):
 
         paths = _collect_library_paths(ui)
         self._points = collect_gps(paths)
+        self._groups = group_points_by_place(self._points)
 
         layout = QVBoxLayout(self)
         summary = lang.get(
@@ -102,8 +145,11 @@ class MapViewDialog(QDialog):
                 "QtWebEngine is not installed — showing coordinates as a list.",
             )))
             lst = QListWidget()
-            for path, lat, lon in self._points:
-                lst.addItem(f"{lat:.5f}, {lon:.5f}  —  {path}")
+            for group in self._groups:
+                lst.addItem(
+                    f"{group.place} ({group.count})  —  "
+                    f"{group.lat:.5f}, {group.lon:.5f}",
+                )
             layout.addWidget(lst, 1)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -117,7 +163,7 @@ class MapViewDialog(QDialog):
         except ImportError:
             return None
         view = QWebEngineView(self)
-        view.setHtml(_render_html(self._points))
+        view.setHtml(_render_html(self._groups))
         return view
 
 

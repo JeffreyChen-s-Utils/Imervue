@@ -74,7 +74,55 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     result = _apply_index_filters(result, rules)
     result = _apply_size_filters(result, rules)
     result = _apply_dimension_filters(result, rules)
+    place = rules.get("place")
+    if place:
+        result = _apply_place_filter(result, place)
     return result
+
+
+def _apply_place_filter(paths: list[str], place: str) -> list[str]:
+    """Keep paths whose GPS reverse-geocodes to the nearest-city *place*.
+
+    Runs last (after the cheap filters narrow the set) because it extracts EXIF
+    GPS per file. Untagged images can't match a place, so they drop out.
+    """
+    from Imervue.image.gps import extract_gps
+    from Imervue.image.reverse_geocode import reverse_geocode
+    out: list[str] = []
+    for path in paths:
+        coords = extract_gps(path)
+        if coords is not None and reverse_geocode(coords[0], coords[1]) == place:
+            out.append(path)
+    return out
+
+
+def auto_location_albums(
+    path_coords: list[tuple[str, float, float]],
+) -> list[tuple[str, dict]]:
+    """Group ``(path, lat, lon)`` into one ``(album_name, rules)`` per city.
+
+    Pure: the album name is the nearest-city place and its rule is a matching
+    ``place`` filter. Returned sorted by name for stable output.
+    """
+    from Imervue.image.reverse_geocode import reverse_geocode
+    buckets: dict[str, list[str]] = {}
+    for path, lat, lon in path_coords:
+        place = reverse_geocode(lat, lon)
+        if place:
+            buckets.setdefault(place, []).append(path)
+    return [(place, {"place": place}) for place in sorted(buckets)]
+
+
+def generate_location_albums(paths: Iterable[str]) -> int:
+    """Create a smart album per nearest-city for the geotagged *paths*.
+
+    Returns the number of albums created (one per distinct city found).
+    """
+    from Imervue.image.gps import collect_gps
+    albums = auto_location_albums(collect_gps(list(paths)))
+    for name, rules in albums:
+        save(name, rules)
+    return len(albums)
 
 
 def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:

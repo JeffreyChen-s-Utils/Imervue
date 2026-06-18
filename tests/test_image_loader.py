@@ -91,3 +91,65 @@ class TestOpenFolder:
         _open_folder(view, Path(str(empty)))  # NOSONAR
         assert loaded == [[]]
         assert view._unfiltered_images == []
+
+
+def _write_sample_video(path, frame_count=5):
+    iio = pytest.importorskip("imageio").v2
+    pytest.importorskip("imageio_ffmpeg")
+    frames = [
+        np.full((16, 16, 3), 40 + idx * 30, dtype=np.uint8)
+        for idx in range(frame_count)
+    ]
+    try:
+        iio.mimwrite(str(path), frames, format="ffmpeg", fps=5)
+    except (OSError, RuntimeError, ValueError) as exc:  # ffmpeg binary issues
+        pytest.skip(f"ffmpeg writer unavailable: {exc}")
+
+
+class TestVideoInGrid:
+    def test_video_ext_supported(self):
+        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
+        assert ".mp4" in _SUPPORTED_EXTS
+
+    def test_scan_finds_video(self, tmp_path):
+        _write_sample_video(tmp_path / "clip.mp4")
+        results = _scan_images(str(tmp_path))
+        assert any(p.endswith("clip.mp4") for p in results)
+
+    def test_load_video_returns_rgba_poster(self, tmp_path):
+        video = tmp_path / "clip.mp4"
+        _write_sample_video(video)
+        result = load_image_file(str(video))
+        assert result.ndim == 3
+        assert result.shape[2] == 4
+        assert result.dtype == np.uint8
+
+
+class TestHeifInGrid:
+    def test_heif_exts_supported(self):
+        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
+        assert ".heic" in _SUPPORTED_EXTS
+        assert ".avif" in _SUPPORTED_EXTS
+
+    def test_scan_finds_heic(self, tmp_path):
+        pillow_heif = pytest.importorskip("pillow_heif")
+        pillow_heif.register_heif_opener()
+        img = Image.fromarray(np.full((16, 16, 3), 70, dtype=np.uint8))
+        img.save(str(tmp_path / "photo.heic"))
+        results = _scan_images(str(tmp_path))
+        assert any(p.endswith("photo.heic") for p in results)
+
+
+class TestJxlInGrid:
+    def test_jxl_ext_supported(self):
+        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
+        assert ".jxl" in _SUPPORTED_EXTS
+
+    def test_load_jxl_returns_rgba(self, tmp_path):
+        pytest.importorskip("pillow_jxl")
+        import pillow_jxl  # noqa: F401  (registers the codec)
+        out = tmp_path / "shot.jxl"
+        Image.fromarray(np.full((16, 16, 3), 60, dtype=np.uint8)).save(str(out), "JXL")
+        result = load_image_file(str(out))
+        assert result.ndim == 3
+        assert result.shape[2] == 4

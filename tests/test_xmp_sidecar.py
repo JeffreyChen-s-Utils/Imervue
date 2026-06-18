@@ -52,6 +52,10 @@ class TestRoundTrip:
         assert loaded.keywords == ["landscape", "sunset"]
         assert loaded.color_label == "red"
 
+    def test_creator_round_trips(self, xmp, image_path):
+        xmp.save(image_path, xmp.XmpData(creator="Ansel Adams"))
+        assert xmp.load(image_path).creator == "Ansel Adams"
+
     def test_missing_sidecar_returns_empty(self, xmp, image_path):
         loaded = xmp.load(image_path)
         assert loaded.is_empty()

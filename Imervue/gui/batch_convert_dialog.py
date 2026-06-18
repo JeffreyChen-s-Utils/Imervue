@@ -25,6 +25,12 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.image.save_formats import (
+    FORMAT_EXTENSIONS,
+    QUALITY_FORMATS,
+    available_formats,
+    save_image,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -35,12 +41,6 @@ logger = logging.getLogger("Imervue.batch_convert")
 
 _JPEG_EXT = ".jpeg"
 
-FORMAT_OPTIONS = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
-FORMAT_EXTENSIONS = {
-    "PNG": ".png", "JPEG": ".jpg", "WebP": ".webp",
-    "BMP": ".bmp", "TIFF": ".tiff",
-}
-QUALITY_FORMATS = {"JPEG", "WebP"}
 _IMAGE_EXTS = frozenset({
     ".png", ".jpg", _JPEG_EXT, ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng",
@@ -102,23 +102,11 @@ class _ConvertWorker(QThread):
         return src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
 
     def _convert_one(self, src: str, target_ext: str) -> None:
-        img = self._prepare_image(src)
-        out_path = self._resolve_output_path(src, target_ext)
-        kwargs = {"quality": self._quality} if self._fmt in QUALITY_FORMATS else {}
-        img.save(str(out_path), format=self._fmt, **kwargs)
-        self._maybe_delete_original(src, str(out_path))
-
-    def _prepare_image(self, src: str) -> Image.Image:
         img = Image.open(src)
-        needs_rgb = (
-            (self._fmt == "JPEG" and img.mode in ("RGBA", "P", "LA"))
-            or (self._fmt == "BMP" and img.mode == "RGBA")
-        )
-        if needs_rgb:
-            return img.convert("RGB")
-        if img.mode not in ("RGB", "RGBA", "L"):
-            return img.convert("RGBA")
-        return img
+        out_path = self._resolve_output_path(src, target_ext)
+        quality = self._quality if self._fmt in QUALITY_FORMATS else None
+        save_image(img, str(out_path), self._fmt, quality)
+        self._maybe_delete_original(src, str(out_path))
 
     def _resolve_output_path(self, src: str, target_ext: str) -> Path:
         out_path = Path(self._output_dir) / (Path(src).stem + target_ext)
@@ -183,7 +171,7 @@ class BatchConvertDialog(QDialog):
         fmt_row.addWidget(QLabel(
             self._lang.get("batch_convert_format", "Convert to:")))
         self._fmt_combo = QComboBox()
-        self._fmt_combo.addItems(FORMAT_OPTIONS)
+        self._fmt_combo.addItems(available_formats())
         self._fmt_combo.setCurrentText("WebP")
         self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
         self._fmt_combo.setToolTip(self._lang.get(

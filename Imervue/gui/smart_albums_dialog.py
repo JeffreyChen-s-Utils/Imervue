@@ -50,7 +50,9 @@ class SmartAlbumsDialog(QDialog):
         apply_btn.clicked.connect(self._apply)
         del_btn = QPushButton(lang.get("smart_albums_delete", "Delete"))
         del_btn.clicked.connect(self._delete)
-        for b in (save_btn, apply_btn, del_btn):
+        auto_btn = QPushButton(lang.get("smart_albums_auto", "Auto by location"))
+        auto_btn.clicked.connect(self._auto_by_location)
+        for b in (save_btn, apply_btn, del_btn, auto_btn):
             row.addWidget(b)
         layout.addLayout(row)
 
@@ -104,6 +106,12 @@ class SmartAlbumsDialog(QDialog):
         )
         layout.addWidget(self._tags_edit)
 
+        self._place_edit = QLineEdit()
+        self._place_edit.setPlaceholderText(
+            lang.get("smart_albums_place", "place (City, Country)")
+        )
+        layout.addWidget(self._place_edit)
+
         close_btn = QPushButton(lang.get("common_close", "Close"))
         close_btn.clicked.connect(self.accept)
         layout.addWidget(close_btn)
@@ -141,6 +149,8 @@ class SmartAlbumsDialog(QDialog):
         tags = [s.strip() for s in self._tags_edit.text().split(",") if s.strip()]
         if tags:
             rules["tags_all"] = tags
+        if self._place_edit.text().strip():
+            rules["place"] = self._place_edit.text().strip()
         return rules
 
     def _load_rules(self, rules: dict) -> None:
@@ -167,6 +177,7 @@ class SmartAlbumsDialog(QDialog):
         self._cull_combo.setCurrentIndex(cull_idx)
         self._fav_check.setChecked(bool(rules.get("favorites_only", False)))
         self._tags_edit.setText(",".join(rules.get("tags_all") or []))
+        self._place_edit.setText(rules.get("place", ""))
 
     # ---------- Actions ----------
 
@@ -194,6 +205,24 @@ class SmartAlbumsDialog(QDialog):
                 language_wrapper.language_word_dict.get(
                     "smart_albums_saved_toast", "Saved: {name}"
                 ).format(name=name)
+            )
+
+    def _auto_by_location(self) -> None:
+        viewer = self._ui.viewer
+        base = getattr(viewer, "_unfiltered_images", None) or list(viewer.model.images)
+        count = smart_album.generate_location_albums(base)
+        self._refresh_list()
+        if not hasattr(self._ui, "toast"):
+            return
+        lang = language_wrapper.language_word_dict
+        if count:
+            self._ui.toast.success(
+                lang.get("smart_albums_auto_done",
+                         "Created {n} location album(s)").format(n=count),
+            )
+        else:
+            self._ui.toast.info(
+                lang.get("smart_albums_auto_none", "No geotagged images found"),
             )
 
     def _delete(self) -> None:

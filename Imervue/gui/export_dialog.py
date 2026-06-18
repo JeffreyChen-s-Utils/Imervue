@@ -12,6 +12,12 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.image.save_formats import (
+    FORMAT_EXTENSIONS,
+    QUALITY_FORMATS,
+    available_formats,
+    save_image,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -20,37 +26,23 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.export_dialog")
 
-# Supported export formats and their PIL save parameters
-FORMAT_OPTIONS: list[str] = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
-FORMAT_EXTENSIONS: dict[str, str] = {
-    "PNG": ".png",
-    "JPEG": ".jpg",
-    "WebP": ".webp",
-    "BMP": ".bmp",
-    "TIFF": ".tiff",
-}
-# Formats that support a quality parameter
-QUALITY_FORMATS: set[str] = {"JPEG", "WebP"}
-
 
 class _SizeEstimateWorker(QThread):
     """Compute the in-memory output size for the chosen format off the UI thread."""
     result_ready = Signal(int, str)  # (size_bytes, error_message)
 
-    def __init__(self, source_path: str, fmt: str, save_kwargs: dict):
+    def __init__(self, source_path: str, fmt: str, quality: int | None):
         super().__init__()
         self._source_path = source_path
         self._fmt = fmt
-        self._save_kwargs = save_kwargs
+        self._quality = quality
 
     def run(self):
         try:
             import io
             img = _open_image_for_export(self._source_path)
             buf = io.BytesIO()
-            if self._fmt == "JPEG" and img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            img.save(buf, format=self._fmt, **self._save_kwargs)
+            save_image(img, buf, self._fmt, self._quality)
             self.result_ready.emit(buf.tell(), "")
         except Exception as exc:
             self.result_ready.emit(0, str(exc))
@@ -87,7 +79,7 @@ class ExportDialog(QDialog):
         fmt_layout = QHBoxLayout()
         fmt_label = QLabel(self._lang.get("export_format", "Format:"))
         self.format_combo = QComboBox()
-        self.format_combo.addItems(FORMAT_OPTIONS)
+        self.format_combo.addItems(available_formats())
         fmt_layout.addWidget(fmt_label)
         fmt_layout.addWidget(self.format_combo, 1)
         layout.addLayout(fmt_layout)
@@ -166,8 +158,7 @@ class ExportDialog(QDialog):
         self.size_label.setText(self._lang.get("export_size_calculating", "Calculating..."))
 
         fmt = self._selected_format()
-        save_kwargs = self._build_save_kwargs(fmt)
-        worker = _SizeEstimateWorker(self.source_path, fmt, save_kwargs)
+        worker = _SizeEstimateWorker(self.source_path, fmt, self._quality_for(fmt))
         worker.result_ready.connect(self._on_size_ready)
         worker.finished.connect(lambda w=worker: w.deleteLater())
         self._size_worker = worker
@@ -185,11 +176,8 @@ class ExportDialog(QDialog):
             size_str = f"{size_bytes / (1024 * 1024):.2f} MB"
         self.size_label.setText(f"~{size_str}")
 
-    def _build_save_kwargs(self, fmt: str) -> dict:
-        kwargs: dict = {}
-        if fmt in QUALITY_FORMATS:
-            kwargs["quality"] = self.quality_slider.value()
-        return kwargs
+    def _quality_for(self, fmt: str) -> int | None:
+        return self.quality_slider.value() if fmt in QUALITY_FORMATS else None
 
     def _browse_output(self) -> None:
         fmt = self._selected_format()
@@ -210,17 +198,9 @@ class ExportDialog(QDialog):
             return
 
         fmt = self._selected_format()
-        save_kwargs = self._build_save_kwargs(fmt)
-
         try:
             img = _open_image_for_export(self.source_path)
-            # Convert mode if the target format doesn't support the current mode
-            if fmt == "JPEG" and img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            if fmt == "BMP" and img.mode == "RGBA":
-                img = img.convert("RGB")
-
-            img.save(output_path, format=fmt, **save_kwargs)
+            save_image(img, output_path, fmt, self._quality_for(fmt))
             logger.info(f"Exported image to {output_path} as {fmt}")
             self.accept()
         except Exception as exc:
