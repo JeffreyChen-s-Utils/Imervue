@@ -6,10 +6,15 @@ import pytest
 
 from ai_object_remove.object_removal import (
     build_mask,
+    classify_onnx_inputs,
+    composite_inpaint,
     flood_fill_mask,
     grow_mask,
     image_coord_from_click,
+    mask_to_nchw,
+    onnx_inpaint,
     remove_object,
+    to_nchw,
 )
 
 
@@ -136,6 +141,64 @@ def test_click_zero_size_returns_none():
 # ---------------------------------------------------------------------------
 # Qt smoke test
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# ONNX inpaint helpers (pure pre/post + runtime guard)
+# ---------------------------------------------------------------------------
+
+
+def test_classify_image_and_mask_inputs():
+    specs = [("image", [1, 3, 256, 256]), ("mask", [1, 1, 256, 256])]
+    assert classify_onnx_inputs(specs) == ("image", "mask")
+
+
+def test_classify_image_only():
+    assert classify_onnx_inputs([("input", [1, 3, 512, 512])]) == ("input", None)
+
+
+def test_classify_order_independent():
+    specs = [("m", [1, 1, 64, 64]), ("img", [1, 3, 64, 64])]
+    assert classify_onnx_inputs(specs) == ("img", "m")
+
+
+def test_classify_unknown_shape_falls_back_to_first():
+    assert classify_onnx_inputs([("x", ["N", "C", "H", "W"])]) == ("x", None)
+
+
+def test_to_nchw_shape_and_dtype():
+    out = to_nchw(np.zeros((4, 5, 3), dtype=np.float32))
+    assert out.shape == (1, 3, 4, 5)
+    assert out.dtype == np.float32
+
+
+def test_mask_to_nchw():
+    mask = np.zeros((4, 5), dtype=bool)
+    mask[1, 1] = True
+    out = mask_to_nchw(mask)
+    assert out.shape == (1, 1, 4, 5)
+    assert out[0, 0, 1, 1] == 1.0
+    assert out.dtype == np.float32
+
+
+def test_composite_inpaint_replaces_only_masked():
+    original = _rgba(4, 4, fill=(10, 20, 30))
+    model_rgb = np.full((4, 4, 3), 200, dtype=np.uint8)
+    mask = np.zeros((4, 4), dtype=bool)
+    mask[1, 1] = True
+    out = composite_inpaint(original, model_rgb, mask)
+    assert tuple(out[1, 1, :3]) == (200, 200, 200)
+    assert tuple(out[0, 0, :3]) == (10, 20, 30)
+    assert out[0, 0, 3] == 255
+
+
+def test_onnx_inpaint_missing_runtime_raises(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "onnxruntime", None)
+    mask = np.zeros((8, 8), dtype=bool)
+    mask[2, 2] = True
+    with pytest.raises(ImportError):
+        onnx_inpaint(_rgba(8, 8), mask, "missing_model.onnx")
 
 
 def test_dialog_smoke(qapp, tmp_path):

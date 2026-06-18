@@ -84,6 +84,98 @@ def remove_object(arr: np.ndarray, mask: np.ndarray,
     return inpaint_diffusion(arr, mask, iterations=iterations)
 
 
+# ---------------------------------------------------------------------------
+# Optional generative (ONNX) inpainting — pure pre/post helpers + runner
+# ---------------------------------------------------------------------------
+
+_NCHW_RANK = 4
+_CHANNEL_AXIS = 1
+
+
+def _channel_dim(shape) -> int | None:
+    """Return the channel count of an NCHW input shape, or None if unknown."""
+    if len(shape) != _NCHW_RANK:
+        return None
+    channels = shape[_CHANNEL_AXIS]
+    return channels if isinstance(channels, int) else None
+
+
+def classify_onnx_inputs(specs: list[tuple[str, list]]) -> tuple[str | None, str | None]:
+    """Pick the image and (optional) mask input names from ONNX input specs.
+
+    *specs* is ``[(name, shape), …]``. The 3-channel input is the image and the
+    1-channel input is the mask; when no 3-channel input is found the first
+    input is assumed to be the image (image-only inpaint models).
+    """
+    image_name = mask_name = None
+    for name, shape in specs:
+        channels = _channel_dim(shape)
+        if channels == _RGB_CHANNELS and image_name is None:
+            image_name = name
+        elif channels == 1 and mask_name is None:
+            mask_name = name
+    if image_name is None and specs:
+        image_name = specs[0][0]
+    return image_name, mask_name
+
+
+def to_nchw(rgb: np.ndarray) -> np.ndarray:
+    """``HxWx3`` float → ``1x3xHxW`` float32 (NCHW) for an ONNX image input."""
+    return np.transpose(rgb, (2, 0, 1))[None, ...].astype(np.float32)
+
+
+def mask_to_nchw(mask: np.ndarray) -> np.ndarray:
+    """``HxW`` bool → ``1x1xHxW`` float32 mask for an ONNX mask input."""
+    return np.asarray(mask, dtype=bool).astype(np.float32)[None, None, ...]
+
+
+def composite_inpaint(original: np.ndarray, model_rgb: np.ndarray,
+                      mask: np.ndarray) -> np.ndarray:
+    """Replace only the masked pixels of *original* with the model's output."""
+    out = original.copy()
+    out[mask, :_RGB_CHANNELS] = model_rgb[mask]
+    return out
+
+
+def onnx_inpaint(arr: np.ndarray, mask: np.ndarray, model_path: str) -> np.ndarray:
+    """Run a generative ONNX inpaint model over the masked region.
+
+    The model is expected to keep the input resolution and accept a 3-channel
+    image (and optionally a 1-channel mask) in NCHW float [0, 1]. ``onnxruntime``
+    is optional — its absence surfaces as ``ImportError`` so the dialog can fall
+    back to diffusion.
+    """
+    if arr.ndim != _RGB_CHANNELS or arr.shape[2] < _RGB_CHANNELS:
+        raise ValueError(f"expected HxWxC (C>=3) image, got {arr.shape}")
+    try:
+        import onnxruntime as ort
+    except ImportError as exc:
+        raise ImportError(
+            "onnxruntime is required for the generative inpaint path.",
+        ) from exc
+    session = ort.InferenceSession(
+        str(model_path), providers=ort.get_available_providers(),
+    )
+    mask_bool = np.asarray(mask, dtype=bool)
+    rgb = arr[..., :_RGB_CHANNELS].astype(np.float32) / 255.0
+    image_name, mask_name = classify_onnx_inputs(
+        [(i.name, i.shape) for i in session.get_inputs()],
+    )
+    if mask_name is None:
+        rgb = rgb.copy()
+        rgb[mask_bool] = 0.0
+    feed = {image_name: to_nchw(rgb)}
+    if mask_name is not None:
+        feed[mask_name] = mask_to_nchw(mask_bool)
+    output = session.run(None, feed)[0]
+    model_rgb = np.clip(
+        np.transpose(output[0], (1, 2, 0)) * 255.0, 0, 255,
+    ).astype(np.uint8)
+    if model_rgb.shape[:2] != arr.shape[:2]:
+        raise ValueError("ONNX inpaint model changed the image resolution")
+    return composite_inpaint(arr, model_rgb, mask_bool)
+
+
 def image_coord_from_click(wx: float, wy: float, label_w: int, label_h: int,
                            img_w: int, img_h: int) -> tuple[int, int] | None:
     """Map a click on a fit-scaled, centred preview to image pixel coords.

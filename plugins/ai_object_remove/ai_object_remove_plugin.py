@@ -20,6 +20,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QImage, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -34,9 +35,11 @@ from ai_object_remove.object_removal import (
     TOLERANCE_MAX,
     build_mask,
     image_coord_from_click,
+    onnx_inpaint,
     remove_object,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
 
 if TYPE_CHECKING:
@@ -44,6 +47,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.plugin.ai_object_remove")
 
+_MODELS_DIR = Path(__file__).resolve().parent / "models"
 _PREVIEW_W = 480
 _PREVIEW_H = 360
 _PREVIEW_DEBOUNCE_MS = 150
@@ -117,6 +121,14 @@ class ObjectRemoveDialog(QDialog):
         self._grow.setRange(0, GROW_MAX)
         self._grow.setValue(_DEFAULT_GROW)
 
+        self._method = QComboBox()
+        self._method.addItem(
+            lang.get("object_remove_method_diffusion", "Diffusion (fast)"),
+            userData=None,
+        )
+        for model_path in sorted(discover_models(_MODELS_DIR)):
+            self._method.addItem(model_path.name, userData=str(model_path))
+
         self._debounce = QTimer(self)
         self._debounce.setSingleShot(True)
         self._debounce.timeout.connect(self._recompute_mask)
@@ -134,7 +146,20 @@ class ObjectRemoveDialog(QDialog):
         layout.addWidget(self._tolerance)
         layout.addWidget(QLabel(lang.get("object_remove_grow", "Grow edge:")))
         layout.addWidget(self._grow)
+        layout.addWidget(QLabel(lang.get("object_remove_method", "Method:")))
+        layout.addWidget(self._method)
+        layout.addWidget(self._build_models_hint(lang))
         layout.addLayout(self._build_buttons(lang))
+
+    @staticmethod
+    def _build_models_hint(lang: dict) -> QLabel:
+        hint = QLabel(lang.get(
+            "object_remove_models_hint",
+            "Drop LaMa/ONNX inpaint models into plugins/ai_object_remove/models/.",
+        ))
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #888; font-size: 11px;")
+        return hint
 
     @staticmethod
     def _build_hint(lang: dict) -> QLabel:
@@ -205,7 +230,9 @@ class ObjectRemoveDialog(QDialog):
             self._notify("object_remove_no_selection", "Click the object first")
             return
         out_path = Path(self._path).with_name(f"{Path(self._path).stem}_edited.png")
-        self._worker = _RemoveWorker(self._arr, self._mask, str(out_path))
+        self._worker = _RemoveWorker(
+            self._arr, self._mask, str(out_path), self._method.currentData(),
+        )
         self._worker.done.connect(self._on_done)
         self._worker.start()
 
@@ -235,17 +262,22 @@ class _RemoveWorker(QThread):
 
     done = Signal(bool, str)
 
-    def __init__(self, arr: np.ndarray, mask: np.ndarray, out_path: str):
+    def __init__(self, arr: np.ndarray, mask: np.ndarray, out_path: str,
+                 model_path: str | None = None):
         super().__init__()
         self._arr = arr
         self._mask = mask
         self._out_path = out_path
+        self._model_path = model_path
 
     def run(self) -> None:  # pragma: no cover - background thread
         try:
-            result = remove_object(self._arr, self._mask)
+            if self._model_path:
+                result = onnx_inpaint(self._arr, self._mask, self._model_path)
+            else:
+                result = remove_object(self._arr, self._mask)
             Image.fromarray(result, mode="RGBA").save(self._out_path)
-        except (OSError, ValueError) as exc:
+        except (ImportError, OSError, ValueError) as exc:
             self.done.emit(False, str(exc))
             return
         self.done.emit(True, self._out_path)
@@ -265,6 +297,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_tolerance": "Tolerance:",
         "object_remove_grow": "Grow edge:",
         "object_remove_apply": "Apply",
+        "object_remove_method": "Method:",
+        "object_remove_method_diffusion": "Diffusion (fast)",
+        "object_remove_models_hint": "Drop LaMa/ONNX inpaint models into plugins/ai_object_remove/models/.",
         "object_remove_done": "Saved {path}",
         "object_remove_failed": "Object removal failed",
         "object_remove_no_selection": "Click the object first",
@@ -275,6 +310,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_tolerance": "容差：",
         "object_remove_grow": "邊緣擴張：",
         "object_remove_apply": "套用",
+        "object_remove_method": "方法：",
+        "object_remove_method_diffusion": "擴散（快速）",
+        "object_remove_models_hint": "將 LaMa/ONNX 修補模型放入 plugins/ai_object_remove/models/。",
         "object_remove_done": "已儲存 {path}",
         "object_remove_failed": "物件移除失敗",
         "object_remove_no_selection": "請先點選物件",
@@ -285,6 +323,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_tolerance": "容差：",
         "object_remove_grow": "边缘扩张：",
         "object_remove_apply": "应用",
+        "object_remove_method": "方法：",
+        "object_remove_method_diffusion": "扩散（快速）",
+        "object_remove_models_hint": "将 LaMa/ONNX 修补模型放入 plugins/ai_object_remove/models/。",
         "object_remove_done": "已保存 {path}",
         "object_remove_failed": "对象移除失败",
         "object_remove_no_selection": "请先点击对象",
@@ -295,6 +336,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_tolerance": "許容値:",
         "object_remove_grow": "エッジ拡張:",
         "object_remove_apply": "適用",
+        "object_remove_method": "方式:",
+        "object_remove_method_diffusion": "拡散（高速）",
+        "object_remove_models_hint": "LaMa/ONNX インペイントモデルを plugins/ai_object_remove/models/ に配置してください。",
         "object_remove_done": "保存しました: {path}",
         "object_remove_failed": "オブジェクト除去に失敗しました",
         "object_remove_no_selection": "先にオブジェクトをクリックしてください",
@@ -305,6 +349,9 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "object_remove_tolerance": "허용값:",
         "object_remove_grow": "가장자리 확장:",
         "object_remove_apply": "적용",
+        "object_remove_method": "방법:",
+        "object_remove_method_diffusion": "확산(빠름)",
+        "object_remove_models_hint": "LaMa/ONNX 인페인트 모델을 plugins/ai_object_remove/models/에 넣으세요.",
         "object_remove_done": "{path}에 저장됨",
         "object_remove_failed": "개체 제거 실패",
         "object_remove_no_selection": "먼저 개체를 클릭하세요",
