@@ -1668,6 +1668,21 @@ chinese_word_dict = {
     "inspector_false_color": "伪色曝光图",
     "inspector_focus_peak": "对焦轮廓",
 
+    # --- HSL / Color Mixer ---
+    "hsl_title": "HSL / 色彩混合",
+    "hsl_hue": "色相：",
+    "hsl_saturation": "饱和度：",
+    "hsl_luminance": "明度：",
+    "hsl_failed": "色彩混合失败",
+    "hsl_band_red": "红",
+    "hsl_band_orange": "橙",
+    "hsl_band_yellow": "黄",
+    "hsl_band_green": "绿",
+    "hsl_band_aqua": "青",
+    "hsl_band_blue": "蓝",
+    "hsl_band_purple": "紫",
+    "hsl_band_magenta": "洋红",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

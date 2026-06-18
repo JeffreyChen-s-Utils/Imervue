@@ -166,6 +166,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_auto_balance(ui))
     _add_action(sub, lang, "local_contrast_title", "Clarity / Dehaze",
                 lambda: _open_local_contrast(ui))
+    _add_action(sub, lang, "hsl_title", "HSL / Color Mixer",
+                lambda: _open_hsl_mixer(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -402,6 +404,11 @@ def _open_auto_balance(ui: ImervueMainWindow) -> None:
 def _open_local_contrast(ui: ImervueMainWindow) -> None:
     from Imervue.gui.local_contrast_dialog import open_local_contrast
     open_local_contrast(ui.viewer)
+
+
+def _open_hsl_mixer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.hsl_mixer_dialog import open_hsl_mixer
+    open_hsl_mixer(ui.viewer)
 
 
 def _open_film_grain(ui: ImervueMainWindow) -> None:

@@ -1701,6 +1701,21 @@ english_word_dict = {
     "inspector_false_color": "False Color",
     "inspector_focus_peak": "Focus Peaking",
 
+    # --- HSL / Color Mixer ---
+    "hsl_title": "HSL / Color Mixer",
+    "hsl_hue": "Hue:",
+    "hsl_saturation": "Saturation:",
+    "hsl_luminance": "Luminance:",
+    "hsl_failed": "Color mix failed",
+    "hsl_band_red": "Red",
+    "hsl_band_orange": "Orange",
+    "hsl_band_yellow": "Yellow",
+    "hsl_band_green": "Green",
+    "hsl_band_aqua": "Aqua",
+    "hsl_band_blue": "Blue",
+    "hsl_band_purple": "Purple",
+    "hsl_band_magenta": "Magenta",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

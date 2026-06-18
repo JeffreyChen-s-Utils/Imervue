@@ -1679,6 +1679,21 @@ korean_word_dict = {
     "inspector_false_color": "폴스 컬러",
     "inspector_focus_peak": "포커스 피킹",
 
+    # --- HSL / Color Mixer ---
+    "hsl_title": "HSL / 색상 믹서",
+    "hsl_hue": "색조:",
+    "hsl_saturation": "채도:",
+    "hsl_luminance": "광도:",
+    "hsl_failed": "색상 조정 실패",
+    "hsl_band_red": "빨강",
+    "hsl_band_orange": "주황",
+    "hsl_band_yellow": "노랑",
+    "hsl_band_green": "초록",
+    "hsl_band_aqua": "청록",
+    "hsl_band_blue": "파랑",
+    "hsl_band_purple": "보라",
+    "hsl_band_magenta": "자홍",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

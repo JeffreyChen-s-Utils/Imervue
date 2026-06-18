@@ -1681,6 +1681,21 @@ japanese_word_dict = {
     "inspector_false_color": "フォルスカラー",
     "inspector_focus_peak": "フォーカスピーキング",
 
+    # --- HSL / Color Mixer ---
+    "hsl_title": "HSL / カラーミキサー",
+    "hsl_hue": "色相：",
+    "hsl_saturation": "彩度：",
+    "hsl_luminance": "輝度：",
+    "hsl_failed": "カラー調整に失敗しました",
+    "hsl_band_red": "レッド",
+    "hsl_band_orange": "オレンジ",
+    "hsl_band_yellow": "イエロー",
+    "hsl_band_green": "グリーン",
+    "hsl_band_aqua": "アクア",
+    "hsl_band_blue": "ブルー",
+    "hsl_band_purple": "パープル",
+    "hsl_band_magenta": "マゼンタ",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
