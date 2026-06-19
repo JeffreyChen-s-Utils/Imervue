@@ -1726,6 +1726,24 @@ chinese_word_dict = {
     "batch_auto_orient_done": "已校正 {n} 张方向",
     "batch_auto_orient_none": "没有可校正的图像",
 
+    # --- Collage / ID sheet / frame / dither ---
+    "collage_title": "拼贴",
+    "collage_count": "图像数：{n}",
+    "collage_columns": "列数：",
+    "collage_failed": "拼贴失败",
+    "idsheet_title": "证件照排版",
+    "idsheet_size": "照片尺寸：",
+    "idsheet_paper": "纸张：",
+    "idsheet_failed": "证件照排版失败",
+    "frame_title": "边框与说明文字",
+    "frame_border": "边框（像素）：",
+    "frame_bottom": "拍立得下缘（像素）：",
+    "frame_caption": "说明文字：",
+    "frame_failed": "边框失败",
+    "dither_title": "有序抖动",
+    "dither_levels": "每通道色阶数：",
+    "dither_failed": "抖动失败",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

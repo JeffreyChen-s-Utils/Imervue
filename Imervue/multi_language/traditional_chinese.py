@@ -1725,6 +1725,24 @@ traditional_chinese_word_dict = {
     "batch_auto_orient_done": "已校正 {n} 張方向",
     "batch_auto_orient_none": "沒有可校正的影像",
 
+    # --- Collage / ID sheet / frame / dither ---
+    "collage_title": "拼貼",
+    "collage_count": "影像數：{n}",
+    "collage_columns": "欄數：",
+    "collage_failed": "拼貼失敗",
+    "idsheet_title": "證件照排版",
+    "idsheet_size": "相片尺寸：",
+    "idsheet_paper": "紙張：",
+    "idsheet_failed": "證件照排版失敗",
+    "frame_title": "外框與說明文字",
+    "frame_border": "邊框（像素）：",
+    "frame_bottom": "拍立得下緣（像素）：",
+    "frame_caption": "說明文字：",
+    "frame_failed": "外框失敗",
+    "dither_title": "有序抖動",
+    "dither_levels": "每通道色階數：",
+    "dither_failed": "抖動失敗",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",

@@ -1737,6 +1737,24 @@ korean_word_dict = {
     "batch_auto_orient_done": "{n}장의 방향을 보정했습니다",
     "batch_auto_orient_none": "보정할 이미지가 없습니다",
 
+    # --- Collage / ID sheet / frame / dither ---
+    "collage_title": "콜라주",
+    "collage_count": "이미지 수: {n}",
+    "collage_columns": "열 수:",
+    "collage_failed": "콜라주 실패",
+    "idsheet_title": "증명사진 시트",
+    "idsheet_size": "사진 크기:",
+    "idsheet_paper": "용지:",
+    "idsheet_failed": "증명사진 시트 실패",
+    "frame_title": "프레임 및 캡션",
+    "frame_border": "테두리(px):",
+    "frame_bottom": "폴라로이드 하단(px):",
+    "frame_caption": "캡션:",
+    "frame_failed": "프레임 실패",
+    "dither_title": "정렬 디더링",
+    "dither_levels": "채널당 레벨:",
+    "dither_failed": "디더링 실패",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

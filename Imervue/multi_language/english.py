@@ -1759,6 +1759,24 @@ english_word_dict = {
     "batch_auto_orient_done": "Oriented {n} photo(s)",
     "batch_auto_orient_none": "No images to orient",
 
+    # --- Collage / ID sheet / frame / dither ---
+    "collage_title": "Collage",
+    "collage_count": "Images: {n}",
+    "collage_columns": "Columns:",
+    "collage_failed": "Collage failed",
+    "idsheet_title": "ID Photo Sheet",
+    "idsheet_size": "Photo size:",
+    "idsheet_paper": "Paper:",
+    "idsheet_failed": "ID sheet failed",
+    "frame_title": "Frame & Caption",
+    "frame_border": "Border (px):",
+    "frame_bottom": "Polaroid bottom (px):",
+    "frame_caption": "Caption:",
+    "frame_failed": "Frame failed",
+    "dither_title": "Ordered Dither",
+    "dither_levels": "Levels per channel:",
+    "dither_failed": "Dither failed",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

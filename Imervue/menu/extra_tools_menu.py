@@ -144,6 +144,10 @@ def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_slideshow_mp4(ui))
     _add_action(sub, lang, "print_title", "Print Layout",
                 lambda: _open_print_layout(ui))
+    _add_action(sub, lang, "collage_title", "Collage",
+                lambda: _open_collage(ui))
+    _add_action(sub, lang, "idsheet_title", "ID Photo Sheet",
+                lambda: _open_id_photo_sheet(ui))
 
 
 def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -178,6 +182,10 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_clahe(ui))
     _add_action(sub, lang, "flatten_title", "Flatten Background",
                 lambda: _open_flatten_field(ui))
+    _add_action(sub, lang, "frame_title", "Frame & Caption",
+                lambda: _open_photo_frame(ui))
+    _add_action(sub, lang, "dither_title", "Ordered Dither",
+                lambda: _open_dither(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -598,3 +606,23 @@ def _open_gps_geotag(ui: ImervueMainWindow):
 def _open_print_layout(ui: ImervueMainWindow):
     from Imervue.gui.print_layout_dialog import open_print_layout
     open_print_layout(ui)
+
+
+def _open_collage(ui: ImervueMainWindow):
+    from Imervue.gui.collage_dialog import open_collage
+    open_collage(ui.viewer)
+
+
+def _open_id_photo_sheet(ui: ImervueMainWindow):
+    from Imervue.gui.id_photo_sheet_dialog import open_id_photo_sheet
+    open_id_photo_sheet(ui.viewer)
+
+
+def _open_photo_frame(ui: ImervueMainWindow):
+    from Imervue.gui.photo_frame_dialog import open_photo_frame
+    open_photo_frame(ui.viewer)
+
+
+def _open_dither(ui: ImervueMainWindow):
+    from Imervue.gui.dither_dialog import open_dither
+    open_dither(ui.viewer)

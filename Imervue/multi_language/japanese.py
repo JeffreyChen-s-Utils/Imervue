@@ -1739,6 +1739,24 @@ japanese_word_dict = {
     "batch_auto_orient_done": "{n} 枚の向きを補正しました",
     "batch_auto_orient_none": "補正する画像がありません",
 
+    # --- Collage / ID sheet / frame / dither ---
+    "collage_title": "コラージュ",
+    "collage_count": "画像数：{n}",
+    "collage_columns": "列数：",
+    "collage_failed": "コラージュに失敗しました",
+    "idsheet_title": "証明写真シート",
+    "idsheet_size": "写真サイズ：",
+    "idsheet_paper": "用紙：",
+    "idsheet_failed": "証明写真シートに失敗しました",
+    "frame_title": "フレームとキャプション",
+    "frame_border": "枠（px）：",
+    "frame_bottom": "ポラロイド下部（px）：",
+    "frame_caption": "キャプション：",
+    "frame_failed": "フレームに失敗しました",
+    "dither_title": "オーダードディザ",
+    "dither_levels": "チャンネルあたりの階調数：",
+    "dither_failed": "ディザに失敗しました",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
