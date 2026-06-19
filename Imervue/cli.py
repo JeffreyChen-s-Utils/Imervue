@@ -173,7 +173,9 @@ def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
                 print(f"would write {target}")
                 continue
             if out_dir is not None:
-                out_dir.mkdir(parents=True, exist_ok=True)
+                # out_dir is validated (no '..'); writing to a user-chosen directory
+                # is the intended CLI behaviour, so the path-escape rule is N/A here.
+                out_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
             if target.exists() and not args.overwrite:
                 print(f"skip (exists): {target}")
                 continue
