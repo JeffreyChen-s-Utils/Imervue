@@ -394,6 +394,80 @@ def quality_metrics(path: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# read_histogram
+# ---------------------------------------------------------------------------
+
+
+def read_histogram(path: str) -> dict[str, Any]:
+    """Return the 256-bin per-channel histogram and exposure-clipping fractions."""
+    img_path = _validated_file(path)
+    from Imervue.image.histogram import compute_clipping, compute_histogram
+    arr = _load_rgba_array(img_path)
+    hist = compute_histogram(arr)
+    clip = compute_clipping(arr)
+    return {
+        "path": str(img_path),
+        "histogram": {
+            "r": hist.r.tolist(), "g": hist.g.tolist(),
+            "b": hist.b.tolist(), "luma": hist.luma.tolist(),
+        },
+        "clipping": {
+            "over_fraction": round(clip.over_fraction, 4),
+            "under_fraction": round(clip.under_fraction, 4),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# ocr_text
+# ---------------------------------------------------------------------------
+
+
+def ocr_text(path: str, min_confidence: float = 0.0) -> dict[str, Any]:
+    """Extract text from an image via Tesseract. Degrades gracefully: when the
+    optional backend is missing it returns ``available=False`` rather than
+    raising, so an agent can fall back."""
+    img_path = _validated_file(path)
+    from Imervue.image.ocr import extract_text, ocr_available
+    if not ocr_available():
+        return {"path": str(img_path), "available": False, "text": ""}
+    return {
+        "path": str(img_path),
+        "available": True,
+        "text": extract_text(str(img_path), float(min_confidence)),
+    }
+
+
+# ---------------------------------------------------------------------------
+# image_thumbnail
+# ---------------------------------------------------------------------------
+
+_THUMB_MAX = 512
+
+
+def image_thumbnail(path: str, max_size: int = 256) -> dict[str, Any]:
+    """Return a downscaled PNG preview as a base64 data URI (bounded size)."""
+    import base64
+    import io
+    from PIL import Image
+    img_path = _validated_file(path)
+    box = max(16, min(_THUMB_MAX, int(max_size)))
+    with Image.open(img_path) as opened:
+        thumb = opened.convert("RGBA")
+        thumb.thumbnail((box, box), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        thumb.save(buffer, format="PNG")
+        width, height = thumb.size
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return {
+        "path": str(img_path),
+        "width": width,
+        "height": height,
+        "data_uri": f"data:image/png;base64,{encoded}",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -560,6 +634,51 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": quality_metrics,
+    },
+    {
+        "name": "read_histogram",
+        "description": (
+            "Return the 256-bin per-channel (r/g/b/luma) histogram and the "
+            "over/under exposure-clipping fractions for one image."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": read_histogram,
+    },
+    {
+        "name": "ocr_text",
+        "description": (
+            "Extract text from an image via Tesseract OCR. Returns available=false "
+            "(not an error) when the optional backend is missing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "min_confidence": {"type": "number", "default": 0.0},
+            },
+            "required": ["path"],
+        },
+        "handler": ocr_text,
+    },
+    {
+        "name": "image_thumbnail",
+        "description": (
+            "Return a downscaled PNG preview of an image as a base64 data URI. "
+            "max_size bounds the long edge (default 256, capped at 512)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "max_size": {"type": "integer", "minimum": 16, "maximum": 512, "default": 256},
+            },
+            "required": ["path"],
+        },
+        "handler": image_thumbnail,
     },
 ]
 

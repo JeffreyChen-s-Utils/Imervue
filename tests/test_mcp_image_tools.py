@@ -5,7 +5,13 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from Imervue.mcp_server.tools import image_statistics, quality_metrics
+from Imervue.mcp_server.tools import (
+    image_statistics,
+    image_thumbnail,
+    ocr_text,
+    quality_metrics,
+    read_histogram,
+)
 
 
 def _save(path, value=128, h=24, w=24):
@@ -43,7 +49,36 @@ def test_missing_file_raises():
         quality_metrics("/no/such/file.png")
 
 
+def test_read_histogram_shape(tmp_path):
+    result = read_histogram(_save(tmp_path / "h.png", value=100))
+    hist = result["histogram"]
+    assert set(hist) == {"r", "g", "b", "luma"}
+    assert len(hist["r"]) == 256
+    # A flat value-100 image puts every pixel in one bin.
+    assert hist["r"][100] == 24 * 24
+    assert "over_fraction" in result["clipping"]
+
+
+def test_image_thumbnail_data_uri(tmp_path):
+    result = image_thumbnail(_save(tmp_path / "t.png", h=400, w=600), max_size=64)
+    assert result["data_uri"].startswith("data:image/png;base64,")
+    assert max(result["width"], result["height"]) <= 64
+
+
+def test_image_thumbnail_caps_max_size(tmp_path):
+    result = image_thumbnail(_save(tmp_path / "t.png", h=2000, w=2000), max_size=99999)
+    assert max(result["width"], result["height"]) <= 512
+
+
+def test_ocr_text_degrades_gracefully(tmp_path):
+    # Whether or not Tesseract is installed, the tool must return a dict.
+    result = ocr_text(_save(tmp_path / "doc.png"))
+    assert "available" in result and "text" in result
+    assert isinstance(result["text"], str)
+
+
 def test_registered_in_default_tools():
     from Imervue.mcp_server.tools import _TOOL_DEFINITIONS
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
-    assert {"image_statistics", "quality_metrics"} <= names
+    assert {"image_statistics", "quality_metrics", "read_histogram",
+            "ocr_text", "image_thumbnail"} <= names
