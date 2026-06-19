@@ -1755,6 +1755,18 @@ korean_word_dict = {
     "dither_levels": "채널당 레벨:",
     "dither_failed": "디더링 실패",
 
+    # --- Otsu / colormap / statistics ---
+    "otsu_title": "오츠 임계값",
+    "otsu_invert": "반전",
+    "otsu_hint": "전역 자동 임계값으로 흑백 변환.",
+    "otsu_failed": "오츠 임계값 실패",
+    "colormap_title": "컬러맵",
+    "colormap_label": "컬러맵:",
+    "colormap_failed": "컬러맵 실패",
+    "stats_title": "이미지 통계",
+    "stats_export_csv": "히스토그램 CSV 내보내기…",
+    "stats_exported": "{path} 저장됨",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

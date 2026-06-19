@@ -45,6 +45,8 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_deflicker(ui))
     _add_action(sub, lang, "binarize_title", "Document Binarize",
                 lambda: _open_binarize(ui))
+    _add_action(sub, lang, "otsu_title", "Otsu Threshold",
+                lambda: _open_otsu(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -88,6 +90,8 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_image_inspector(ui))
     _add_action(sub, lang, "tiny_planet_title", "Tiny Planet (360°)",
                 lambda: _open_tiny_planet(ui))
+    _add_action(sub, lang, "stats_title", "Image Statistics",
+                lambda: _open_image_statistics(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -186,6 +190,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_photo_frame(ui))
     _add_action(sub, lang, "dither_title", "Ordered Dither",
                 lambda: _open_dither(ui))
+    _add_action(sub, lang, "colormap_title", "Color Map",
+                lambda: _open_colormap(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -454,6 +460,21 @@ def _open_flatten_field(ui: ImervueMainWindow) -> None:
 def _open_binarize(ui: ImervueMainWindow) -> None:
     from Imervue.gui.binarize_dialog import open_binarize
     open_binarize(ui.viewer)
+
+
+def _open_otsu(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.otsu_dialog import open_otsu
+    open_otsu(ui.viewer)
+
+
+def _open_colormap(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.colormap_dialog import open_colormap
+    open_colormap(ui.viewer)
+
+
+def _open_image_statistics(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.image_statistics_dialog import open_image_statistics
+    open_image_statistics(ui.viewer)
 
 
 def _open_film_grain(ui: ImervueMainWindow) -> None:

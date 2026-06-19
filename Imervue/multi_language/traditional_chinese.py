@@ -1743,6 +1743,18 @@ traditional_chinese_word_dict = {
     "dither_levels": "每通道色階數：",
     "dither_failed": "抖動失敗",
 
+    # --- Otsu / colormap / statistics ---
+    "otsu_title": "Otsu 閾值",
+    "otsu_invert": "反相",
+    "otsu_hint": "全域自動閾值轉黑白。",
+    "otsu_failed": "Otsu 閾值失敗",
+    "colormap_title": "色彩映射",
+    "colormap_label": "色彩映射：",
+    "colormap_failed": "色彩映射失敗",
+    "stats_title": "影像統計",
+    "stats_export_csv": "匯出直方圖 CSV…",
+    "stats_exported": "已儲存 {path}",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",
