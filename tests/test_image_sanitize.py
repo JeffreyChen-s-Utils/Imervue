@@ -735,7 +735,7 @@ class TestSanitizeWorker:
         assert len(entries) == 2
         assert all(os.path.isfile(os.path.join(out_dir, e)) for e in entries)
 
-    def test_lsb_steganography_is_disrupted(self, tmp_path):
+    def test_lsb_steganography_is_disrupted(self, tmp_path, monkeypatch):
         """A stealth-pnginfo style payload must not survive sanitize.
 
         Plants a NovelAI-flavoured ``stealth_pngcomp`` magic header plus
@@ -744,6 +744,15 @@ class TestSanitizeWorker:
         visual image must still be ±1 per channel.
         """
         import gzip
+
+        # The production LSB scramble is deliberately unseeded (a predictable
+        # seed would make it reversible). Pin a seed for THIS test only so the
+        # disruption assertion is deterministic and can't flake under shuffled
+        # test ordering; production behaviour is unchanged.
+        monkeypatch.setattr(
+            "Imervue.gui.image_sanitize_dialog._make_unseeded_rng",
+            lambda: np.random.default_rng(0x5A4117),
+        )
         src = str(tmp_path / "stego.png")
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
