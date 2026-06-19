@@ -1785,6 +1785,22 @@ korean_word_dict = {
     "anaglyph_right": "오른쪽 눈 이미지:",
     "anaglyph_failed": "애너글리프 실패",
 
+    # --- Animation edit / optimize / quality report ---
+    "animedit_title": "애니메이션 편집",
+    "animedit_operation": "작업:",
+    "animedit_speed_label": "속도('속도' 작업의 배율):",
+    "animedit_reverse": "역재생",
+    "animedit_boomerang": "부메랑",
+    "animedit_speed": "속도",
+    "animedit_optimize": "최적화",
+    "animedit_failed": "애니메이션 편집 실패",
+    "optimize_title": "목표 크기로 최적화",
+    "optimize_format": "형식:",
+    "optimize_budget": "목표 크기:",
+    "optimize_failed": "최적화 실패",
+    "quality_title": "품질 보고서",
+    "quality_value": "값",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",
