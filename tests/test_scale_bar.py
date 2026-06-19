@@ -14,11 +14,12 @@ def _rgba(h=80, w=120, value=128):
 
 
 def test_nice_length_rounds_to_1_2_5():
-    assert nice_length(123) == 100
-    assert nice_length(280) == 200
-    assert nice_length(600) == 500
-    assert nice_length(9) == 5
-    assert nice_length(0) == 1.0
+    # nice_length returns floats; compare as ints to avoid float-equality.
+    assert int(nice_length(123)) == 100
+    assert int(nice_length(280)) == 200
+    assert int(nice_length(600)) == 500
+    assert int(nice_length(9)) == 5
+    assert int(nice_length(0)) == 1
 
 
 def test_scale_bar_shape_and_alpha():

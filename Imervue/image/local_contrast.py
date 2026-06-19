@@ -23,6 +23,7 @@ _RGB_CHANNELS = 3
 _RGBA_CHANNELS = 4
 _MAX_8BIT = 255.0
 _AMOUNT_LIMIT = 4.0
+_NEAR_ZERO = 1e-6
 CLARITY_RADIUS = 24
 TEXTURE_RADIUS = 3
 _CLARITY_GAIN = 0.9
@@ -44,7 +45,7 @@ def _unsharp_luma(
 ) -> np.ndarray:
     _validate(arr)
     amount = float(np.clip(amount, -_AMOUNT_LIMIT, _AMOUNT_LIMIT))
-    if amount == 0.0:
+    if abs(amount) < _NEAR_ZERO:
         return arr.copy()
     rgb = arr[..., :3].astype(np.float32)
     lum = rgb @ _LUMA_WEIGHTS

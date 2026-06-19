@@ -17,6 +17,11 @@ _RGBA_CHANNELS = 4
 DEFAULT_COLOR = (255, 0, 0)
 DEFAULT_THRESHOLD = 0.25
 _DIM_FACTOR = 0.55
+# Edges must clear this absolute gradient magnitude as well as the relative
+# threshold, so a flat / near-flat frame (where the peak is ~0 and a purely
+# relative threshold would amplify float noise into spurious peaks) marks
+# nothing.
+_ABS_FLOOR = 1.0
 _SOBEL_X = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
 
 
@@ -48,8 +53,8 @@ def focus_peaking(
     rgb = img[:, :, :3].astype(np.float32)
     luma = rgb @ _LUMA_WEIGHTS
     magnitude = _sobel_magnitude(luma)
-    peak = magnitude.max()
-    mask = magnitude >= threshold * peak if peak > 0 else np.zeros(luma.shape, dtype=bool)
+    peak = float(magnitude.max())
+    mask = (magnitude >= threshold * peak) & (magnitude > _ABS_FLOOR)
 
     out = np.empty((*luma.shape, _RGBA_CHANNELS), dtype=np.uint8)
     out[..., :3] = np.clip(rgb * _DIM_FACTOR, 0, 255).astype(np.uint8)

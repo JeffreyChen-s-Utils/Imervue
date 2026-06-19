@@ -9,19 +9,16 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    load_rgba,
+    notify_saved,
+)
 from Imervue.image.dither import ordered_dither
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -42,8 +39,8 @@ class _DitherWorker(QThread):
 
     def run(self) -> None:
         try:
-            arr = _load_rgba(self._path)
-            Image.fromarray(ordered_dither(arr, self._levels), mode="RGBA").save(self._out)
+            Image.fromarray(ordered_dither(load_rgba(self._path), self._levels),
+                            mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
             logger.exception("Dither failed: %s", exc)
@@ -69,18 +66,7 @@ class DitherDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(lang.get("dither_levels", "Levels per channel:")))
         layout.addWidget(self._levels)
-        layout.addLayout(self._build_buttons(lang))
-
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
@@ -92,27 +78,12 @@ class DitherDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('dither_failed', 'Dither failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "dither_failed", "Dither failed")
         if ok:
             self.accept()
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
-
-
 def open_dither(viewer: GPUImageView) -> None:
-    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-    idx = getattr(viewer, "current_index", -1)
-    if 0 <= idx < len(images):
-        DitherDialog(viewer, str(images[idx])).exec()
+    path = current_image_path(viewer)
+    if path:
+        DitherDialog(viewer, path).exec()

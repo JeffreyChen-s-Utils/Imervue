@@ -1,7 +1,7 @@
 """Scale-bar dialog — calibrate pixels-per-unit and burn in a scale bar.
 
 Pure drawing in :mod:`Imervue.image.scale_bar`; this is the Qt shell
-(pixels-per-unit + unit-label inputs, background worker) saving a copy.
+(pixels-per-unit + unit-label inputs, background worker).
 """
 from __future__ import annotations
 
@@ -9,20 +9,23 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    load_rgba,
+    notify_saved,
+)
 from Imervue.image.scale_bar import add_scale_bar
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -46,9 +49,8 @@ class _ScaleBarWorker(QThread):
 
     def run(self) -> None:
         try:
-            arr = _load_rgba(self._path)
-            Image.fromarray(add_scale_bar(arr, self._ppu, self._unit), mode="RGBA").save(
-                self._out)
+            arr = add_scale_bar(load_rgba(self._path), self._ppu, self._unit)
+            Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
             logger.exception("Scale bar failed: %s", exc)
@@ -78,18 +80,7 @@ class ScaleBarDialog(QDialog):
         layout.addWidget(self._ppu)
         layout.addWidget(QLabel(lang.get("scalebar_unit", "Unit label:")))
         layout.addWidget(self._unit)
-        layout.addLayout(self._build_buttons(lang))
-
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
@@ -102,27 +93,12 @@ class ScaleBarDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('scalebar_failed', 'Scale bar failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "scalebar_failed", "Scale bar failed")
         if ok:
             self.accept()
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
-
-
 def open_scale_bar(viewer: GPUImageView) -> None:
-    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-    idx = getattr(viewer, "current_index", -1)
-    if 0 <= idx < len(images):
-        ScaleBarDialog(viewer, str(images[idx])).exec()
+    path = current_image_path(viewer)
+    if path:
+        ScaleBarDialog(viewer, path).exec()

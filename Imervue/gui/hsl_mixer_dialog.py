@@ -2,8 +2,7 @@
 
 One band is edited at a time (Capture One Colour-Editor style): pick a band,
 nudge its three sliders, repeat. The pure math lives in
-:mod:`Imervue.image.hsl_mixer`; this is the Qt shell plus a background worker
-that applies all bands and saves a copy.
+:mod:`Imervue.image.hsl_mixer`; this is the Qt shell plus a background worker.
 """
 from __future__ import annotations
 
@@ -11,20 +10,16 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    load_rgba,
+    notify_saved,
+)
 from Imervue.image.hsl_mixer import BANDS, apply_hsl
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -47,8 +42,8 @@ class _HslWorker(QThread):
 
     def run(self) -> None:
         try:
-            arr = _load_rgba(self._path)
-            Image.fromarray(apply_hsl(arr, self._adjustments), mode="RGBA").save(self._out)
+            arr = apply_hsl(load_rgba(self._path), self._adjustments)
+            Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
             logger.exception("HSL mix failed: %s", exc)
@@ -73,11 +68,7 @@ class HslMixerDialog(QDialog):
             self._band_combo.addItem(lang.get(f"hsl_band_{band}", band.title()), band)
         self._band_combo.currentIndexChanged.connect(self._on_band_changed)
 
-        self._sliders = [
-            self._make_slider(),  # hue
-            self._make_slider(),  # saturation
-            self._make_slider(),  # luminance
-        ]
+        self._sliders = [self._make_slider(), self._make_slider(), self._make_slider()]
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._band_combo)
@@ -89,7 +80,7 @@ class HslMixerDialog(QDialog):
         ):
             layout.addWidget(QLabel(lang.get(key, fallback)))
             layout.addWidget(slider)
-        layout.addLayout(self._build_buttons(lang))
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     def _make_slider(self) -> QSlider:
         slider = QSlider(Qt.Orientation.Horizontal)
@@ -113,17 +104,6 @@ class HslMixerDialog(QDialog):
             slider.value() / _SLIDER_RANGE for slider in self._sliders
         ]
 
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
-
     def _adjustments(self) -> dict[str, tuple[float, float, float]]:
         return {band: tuple(values) for band, values in self._values.items()}
 
@@ -137,27 +117,12 @@ class HslMixerDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('hsl_failed', 'Color mix failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "hsl_failed", "Color mix failed")
         if ok:
             self.accept()
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
-
-
 def open_hsl_mixer(viewer: GPUImageView) -> None:
-    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-    idx = getattr(viewer, "current_index", -1)
-    if 0 <= idx < len(images):
-        HslMixerDialog(viewer, str(images[idx])).exec()
+    path = current_image_path(viewer)
+    if path:
+        HslMixerDialog(viewer, path).exec()

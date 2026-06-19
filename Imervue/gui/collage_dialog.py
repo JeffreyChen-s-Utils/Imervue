@@ -9,19 +9,11 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
-from PySide6.QtWidgets import (
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSpinBox,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QDialog, QLabel, QSpinBox, QVBoxLayout, QWidget
 
+from Imervue.gui._apply_save import apply_save_buttons, load_rgba, notify_saved
 from Imervue.image.collage import build_collage
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -29,13 +21,6 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.collage_dialog")
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _CollageWorker(QThread):
@@ -49,7 +34,7 @@ class _CollageWorker(QThread):
 
     def run(self) -> None:
         try:
-            images = [_load_rgba(p) for p in self._paths]
+            images = [load_rgba(p) for p in self._paths]
             Image.fromarray(build_collage(images, self._columns), mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
@@ -77,18 +62,7 @@ class CollageDialog(QDialog):
         layout.addWidget(QLabel(lang.get("collage_count", "Images: {n}").format(n=len(paths))))
         layout.addWidget(QLabel(lang.get("collage_columns", "Columns:")))
         layout.addWidget(self._columns)
-        layout.addLayout(self._build_buttons(lang))
-
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None or not self._paths:
@@ -100,14 +74,7 @@ class CollageDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('collage_failed', 'Collage failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "collage_failed", "Collage failed")
         if ok:
             self.accept()
 

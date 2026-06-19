@@ -9,20 +9,16 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QSlider, QVBoxLayout, QWidget
 
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    load_rgba,
+    notify_saved,
+)
 from Imervue.image.photo_frame import FrameOptions, add_frame
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -43,8 +39,8 @@ class _FrameWorker(QThread):
 
     def run(self) -> None:
         try:
-            arr = _load_rgba(self._path)
-            Image.fromarray(add_frame(arr, self._options), mode="RGBA").save(self._out)
+            arr = add_frame(load_rgba(self._path), self._options)
+            Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
             logger.exception("Frame failed: %s", exc)
@@ -74,7 +70,7 @@ class PhotoFrameDialog(QDialog):
         layout.addWidget(self._bottom)
         layout.addWidget(QLabel(lang.get("frame_caption", "Caption:")))
         layout.addWidget(self._caption)
-        layout.addLayout(self._build_buttons(lang))
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     @staticmethod
     def _make_slider(low: int, high: int, value: int) -> QSlider:
@@ -82,17 +78,6 @@ class PhotoFrameDialog(QDialog):
         slider.setRange(low, high)
         slider.setValue(value)
         return slider
-
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
@@ -109,27 +94,12 @@ class PhotoFrameDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('frame_failed', 'Frame failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "frame_failed", "Frame failed")
         if ok:
             self.accept()
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
-
-
 def open_photo_frame(viewer: GPUImageView) -> None:
-    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-    idx = getattr(viewer, "current_index", -1)
-    if 0 <= idx < len(images):
-        PhotoFrameDialog(viewer, str(images[idx])).exec()
+    path = current_image_path(viewer)
+    if path:
+        PhotoFrameDialog(viewer, path).exec()

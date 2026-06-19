@@ -31,7 +31,7 @@ def dehaze(arr: np.ndarray, strength: float) -> np.ndarray:
     """Remove haze from ``arr`` (HxWx3/4 uint8). ``strength`` in [0, 1]."""
     _validate(arr)
     strength = float(np.clip(strength, 0.0, 1.0))
-    if strength == 0.0:
+    if strength <= 0.0:
         return arr.copy()
     rgb = arr[..., :3].astype(np.float32) / _MAX_8BIT
     airlight = _atmospheric_light(rgb)

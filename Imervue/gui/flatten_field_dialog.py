@@ -9,20 +9,16 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QCheckBox,
-    QDialog,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    load_rgba,
+    notify_saved,
+)
 from Imervue.image.flatten_field import flatten_background
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -44,8 +40,7 @@ class _FlattenWorker(QThread):
 
     def run(self) -> None:
         try:
-            arr = _load_rgba(self._path)
-            result = flatten_background(arr, self._degree, divide=self._divide)
+            result = flatten_background(load_rgba(self._path), self._degree, divide=self._divide)
             Image.fromarray(result, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
         except (OSError, ValueError) as exc:
@@ -74,18 +69,7 @@ class FlattenFieldDialog(QDialog):
         layout.addWidget(QLabel(lang.get("flatten_degree", "Gradient degree:")))
         layout.addWidget(self._degree)
         layout.addWidget(self._divide)
-        layout.addLayout(self._build_buttons(lang))
-
-    def _build_buttons(self, lang: dict) -> QHBoxLayout:
-        row = QHBoxLayout()
-        row.addStretch(1)
-        cancel = QPushButton(lang.get("export_cancel", "Cancel"))
-        cancel.clicked.connect(self.reject)
-        apply_btn = QPushButton(lang.get("local_contrast_apply", "Apply & Save"))
-        apply_btn.clicked.connect(self._commit)
-        row.addWidget(cancel)
-        row.addWidget(apply_btn)
-        return row
+        layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
@@ -98,27 +82,12 @@ class FlattenFieldDialog(QDialog):
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
         self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('flatten_failed', 'Flatten failed')}: {message}")
+        notify_saved(self._viewer, ok, message, "flatten_failed", "Flatten failed")
         if ok:
             self.accept()
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
-
-
 def open_flatten_field(viewer: GPUImageView) -> None:
-    images = list(getattr(getattr(viewer, "model", None), "images", []) or [])
-    idx = getattr(viewer, "current_index", -1)
-    if 0 <= idx < len(images):
-        FlattenFieldDialog(viewer, str(images[idx])).exec()
+    path = current_image_path(viewer)
+    if path:
+        FlattenFieldDialog(viewer, path).exec()
