@@ -1712,6 +1712,19 @@ traditional_chinese_word_dict = {
     "binarize_k": "門檻 k：",
     "binarize_failed": "二值化失敗",
 
+    # --- Clone detection / scale bar / quality cull / auto-orient ---
+    "inspector_copy_move": "仿製偵測",
+    "scalebar_title": "比例尺",
+    "scalebar_ppu": "每單位像素數：",
+    "scalebar_unit": "單位標籤：",
+    "scalebar_failed": "比例尺失敗",
+    "batch_quality_cull": "自動剔除低品質",
+    "batch_quality_cull_done": "已將 {n} 張低品質標記為淘汰",
+    "batch_quality_cull_none": "沒有可剔除的影像",
+    "batch_auto_orient": "依 EXIF 自動旋轉",
+    "batch_auto_orient_done": "已校正 {n} 張方向",
+    "batch_auto_orient_none": "沒有可校正的影像",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",

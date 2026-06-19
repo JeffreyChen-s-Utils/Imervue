@@ -1746,6 +1746,19 @@ english_word_dict = {
     "binarize_k": "Threshold k:",
     "binarize_failed": "Binarize failed",
 
+    # --- Clone detection / scale bar / quality cull / auto-orient ---
+    "inspector_copy_move": "Clone Detection",
+    "scalebar_title": "Scale Bar",
+    "scalebar_ppu": "Pixels per unit:",
+    "scalebar_unit": "Unit label:",
+    "scalebar_failed": "Scale bar failed",
+    "batch_quality_cull": "Auto-cull Low Quality",
+    "batch_quality_cull_done": "Flagged {n} low-quality photo(s) as reject",
+    "batch_quality_cull_none": "No images to cull",
+    "batch_auto_orient": "Auto-Rotate by EXIF",
+    "batch_auto_orient_done": "Oriented {n} photo(s)",
+    "batch_auto_orient_none": "No images to orient",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

@@ -215,6 +215,8 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_auto_straighten(ui))
     _add_action(sub, lang, "lens_title", "Lens Correction",
                 lambda: _open_lens_correction(ui))
+    _add_action(sub, lang, "scalebar_title", "Scale Bar",
+                lambda: _open_scale_bar(ui))
 
 
 def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -516,6 +518,11 @@ def _open_face_detection(ui: ImervueMainWindow):
 def _open_lens_correction(ui: ImervueMainWindow):
     from Imervue.gui.lens_correction_dialog import open_lens_correction
     open_lens_correction(ui.viewer)
+
+
+def _open_scale_bar(ui: ImervueMainWindow):
+    from Imervue.gui.scale_bar_dialog import open_scale_bar
+    open_scale_bar(ui.viewer)
 
 
 def _open_healing_brush(ui: ImervueMainWindow):

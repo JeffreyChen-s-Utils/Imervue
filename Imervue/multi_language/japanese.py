@@ -1726,6 +1726,19 @@ japanese_word_dict = {
     "binarize_k": "しきい値 k：",
     "binarize_failed": "二値化に失敗しました",
 
+    # --- Clone detection / scale bar / quality cull / auto-orient ---
+    "inspector_copy_move": "複製検出",
+    "scalebar_title": "スケールバー",
+    "scalebar_ppu": "単位あたりのピクセル数：",
+    "scalebar_unit": "単位ラベル：",
+    "scalebar_failed": "スケールバーに失敗しました",
+    "batch_quality_cull": "低品質を自動選別",
+    "batch_quality_cull_done": "{n} 枚を低品質として除外しました",
+    "batch_quality_cull_none": "選別する画像がありません",
+    "batch_auto_orient": "EXIF で自動回転",
+    "batch_auto_orient_done": "{n} 枚の向きを補正しました",
+    "batch_auto_orient_none": "補正する画像がありません",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

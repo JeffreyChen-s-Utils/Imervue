@@ -335,6 +335,14 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
         lang.get("batch_auto_cull", "Auto-cull Blurry"))
     cull_action.triggered.connect(lambda: _auto_cull_blurry(main_gui))
 
+    quality_action = batch_menu.addAction(
+        lang.get("batch_quality_cull", "Auto-cull Low Quality"))
+    quality_action.triggered.connect(lambda: _auto_cull_low_quality(main_gui))
+
+    orient_action = batch_menu.addAction(
+        lang.get("batch_auto_orient", "Auto-Rotate by EXIF"))
+    orient_action.triggered.connect(lambda: _auto_orient(main_gui))
+
     combine_action = batch_menu.addAction(
         lang.get("multipage_combine", "Combine to PDF / TIFF…"))
     combine_action.triggered.connect(lambda: _combine_multipage(main_gui))
@@ -438,6 +446,45 @@ def _auto_cull_blurry(main_gui: GPUImageView) -> None:
     else:
         main_gui.main_window.toast.info(
             lang.get("batch_auto_cull_none", "No blurry photos found"))
+
+
+def _auto_cull_low_quality(main_gui: GPUImageView) -> None:
+    from Imervue.library.quality_cull import auto_cull_low_quality
+    count = auto_cull_low_quality(list(main_gui.selected_tiles))
+    main_gui.update()
+    if not hasattr(main_gui.main_window, "toast"):
+        return
+    lang = language_wrapper.language_word_dict
+    if count:
+        main_gui.main_window.toast.success(
+            lang.get("batch_quality_cull_done",
+                     "Flagged {n} low-quality photo(s) as reject").format(n=count))
+    else:
+        main_gui.main_window.toast.info(
+            lang.get("batch_quality_cull_none", "No images to cull"))
+
+
+def _auto_orient(main_gui: GPUImageView) -> None:
+    from PIL import Image
+    from Imervue.image.orientation import oriented_array
+    paths = list(main_gui.selected_tiles)
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    count = 0
+    for path in paths:
+        try:
+            out_path = Path(path).with_name(f"{Path(path).stem}_oriented.png")
+            Image.fromarray(oriented_array(path), mode="RGBA").save(str(out_path))
+            count += 1
+        except (OSError, ValueError):
+            continue
+    if toast is None:
+        return
+    if count:
+        toast.success(lang.get("batch_auto_orient_done",
+                               "Oriented {n} photo(s)").format(n=count))
+    else:
+        toast.info(lang.get("batch_auto_orient_none", "No images to orient"))
 
 
 def _delete_action(main_gui: GPUImageView, menu: QMenu):

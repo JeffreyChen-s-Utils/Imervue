@@ -1724,6 +1724,19 @@ korean_word_dict = {
     "binarize_k": "임계값 k:",
     "binarize_failed": "이진화 실패",
 
+    # --- Clone detection / scale bar / quality cull / auto-orient ---
+    "inspector_copy_move": "복제 감지",
+    "scalebar_title": "스케일 바",
+    "scalebar_ppu": "단위당 픽셀:",
+    "scalebar_unit": "단위 라벨:",
+    "scalebar_failed": "스케일 바 실패",
+    "batch_quality_cull": "저품질 자동 선별",
+    "batch_quality_cull_done": "{n}장을 저품질로 제외 표시했습니다",
+    "batch_quality_cull_none": "선별할 이미지가 없습니다",
+    "batch_auto_orient": "EXIF로 자동 회전",
+    "batch_auto_orient_done": "{n}장의 방향을 보정했습니다",
+    "batch_auto_orient_none": "보정할 이미지가 없습니다",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

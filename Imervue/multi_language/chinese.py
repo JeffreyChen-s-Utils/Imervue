@@ -1713,6 +1713,19 @@ chinese_word_dict = {
     "binarize_k": "阈值 k：",
     "binarize_failed": "二值化失败",
 
+    # --- Clone detection / scale bar / quality cull / auto-orient ---
+    "inspector_copy_move": "仿制检测",
+    "scalebar_title": "比例尺",
+    "scalebar_ppu": "每单位像素数：",
+    "scalebar_unit": "单位标签：",
+    "scalebar_failed": "比例尺失败",
+    "batch_quality_cull": "自动剔除低质量",
+    "batch_quality_cull_done": "已将 {n} 张低质量标记为淘汰",
+    "batch_quality_cull_none": "没有可剔除的图像",
+    "batch_auto_orient": "按 EXIF 自动旋转",
+    "batch_auto_orient_done": "已校正 {n} 张方向",
+    "batch_auto_orient_none": "没有可校正的图像",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",
