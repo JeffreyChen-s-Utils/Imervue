@@ -356,6 +356,44 @@ def sharpness_score(path: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# image_statistics
+# ---------------------------------------------------------------------------
+
+
+def _load_rgba_array(image_path: Path):
+    import numpy as np
+    from PIL import Image
+    with Image.open(image_path) as opened:
+        return np.array(opened.convert("RGBA"))
+
+
+def image_statistics(path: str) -> dict[str, Any]:
+    """Return per-channel (r/g/b/luma) mean, min, max, std and median."""
+    img_path = _validated_file(path)
+    from Imervue.image.statistics import image_statistics as _stats
+    stats = _stats(_load_rgba_array(img_path))
+    rounded = {
+        channel: {metric: round(value, 3) for metric, value in metrics.items()}
+        for channel, metrics in stats.items()
+    }
+    return {"path": str(img_path), "statistics": rounded}
+
+
+# ---------------------------------------------------------------------------
+# quality_metrics
+# ---------------------------------------------------------------------------
+
+
+def quality_metrics(path: str) -> dict[str, Any]:
+    """Return no-reference quality metrics: colourfulness, entropy, RMS
+    contrast, edge density and a noise-sigma estimate."""
+    img_path = _validated_file(path)
+    from Imervue.image.quality_metrics import quality_metrics as _metrics
+    metrics = {k: round(v, 3) for k, v in _metrics(_load_rgba_array(img_path)).items()}
+    return {"path": str(img_path), "metrics": metrics}
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -496,6 +534,32 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": sharpness_score,
+    },
+    {
+        "name": "image_statistics",
+        "description": (
+            "Return per-channel (r/g/b/luma) mean, min, max, std and median for "
+            "one image — a quantitative read-out for inspection."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": image_statistics,
+    },
+    {
+        "name": "quality_metrics",
+        "description": (
+            "Return no-reference quality metrics for one image: colourfulness, "
+            "tonal entropy, RMS contrast, edge density and a noise-sigma estimate."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": quality_metrics,
     },
 ]
 

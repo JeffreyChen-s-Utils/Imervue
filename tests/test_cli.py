@@ -102,6 +102,31 @@ def test_optimize_hits_budget(tmp_path):
     assert (out_dir / "big.jpg").exists()
 
 
+def test_dehaze_writes_output(tmp_path):
+    _noisy(tmp_path / "h.png")
+    out_dir = tmp_path / "out"
+    assert main(["dehaze", str(tmp_path / "h.png"), "--strength", "1.0",
+                 "--out", str(out_dir)]) == 0
+    assert (out_dir / "h.png").exists()
+
+
+def test_clahe_writes_output(tmp_path):
+    _noisy(tmp_path / "c.png")
+    out_dir = tmp_path / "out"
+    assert main(["clahe", str(tmp_path / "c.png"), "--out", str(out_dir)]) == 0
+    assert (out_dir / "c.png").exists()
+
+
+def test_dither_two_levels_is_black_white(tmp_path):
+    _save(tmp_path / "g.png", size=(64, 64), value=128)
+    out_dir = tmp_path / "out"
+    assert main(["dither", str(tmp_path / "g.png"), "--levels", "2",
+                 "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "g.png") as result:
+        values = set(np.unique(np.array(result.convert("RGB"))).tolist())
+    assert values <= {0, 255}
+
+
 def test_dry_run_writes_nothing(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"
