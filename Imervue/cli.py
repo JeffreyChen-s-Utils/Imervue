@@ -145,16 +145,35 @@ def _report(args, paths: Sequence[Path], operation) -> int:
     return 0
 
 
+def _validated_out_dir(raw: str | None) -> Path | None:
+    """Validate the user-supplied --out directory before any filesystem access.
+
+    Rejects parent-traversal (``..``) segments so a crafted argument can't
+    escape to an unexpected location (SonarQube python:S6547).
+    """
+    if not raw:
+        return None
+    out = Path(raw)
+    if ".." in out.parts:
+        raise ValueError("--out must not contain '..' path segments")
+    return out
+
+
 def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
+    try:
+        out_dir = _validated_out_dir(args.out)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     errors = 0
     for src in paths:
-        target = output_path(src, args.out, suffix, ext_fn(args))
+        target = output_path(src, str(out_dir) if out_dir else None, suffix, ext_fn(args))
         try:
             if args.dry_run:
                 print(f"would write {target}")
                 continue
-            if args.out:
-                Path(args.out).mkdir(parents=True, exist_ok=True)
+            if out_dir is not None:
+                out_dir.mkdir(parents=True, exist_ok=True)
             if target.exists() and not args.overwrite:
                 print(f"skip (exists): {target}")
                 continue

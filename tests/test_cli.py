@@ -110,6 +110,13 @@ def test_dry_run_writes_nothing(tmp_path, capsys):
     assert not out_dir.exists()
 
 
+def test_rejects_parent_traversal_out_dir(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    code = main(["resize", str(tmp_path / "a.png"), "--out", "../escape"])
+    assert code == 2
+    assert "must not contain '..'" in capsys.readouterr().err
+
+
 def test_skip_existing_without_overwrite(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"
