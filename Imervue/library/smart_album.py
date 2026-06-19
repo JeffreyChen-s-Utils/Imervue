@@ -77,6 +77,11 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     place = rules.get("place")
     if place:
         result = _apply_place_filter(result, place)
+    missing = rules.get("missing")
+    if missing:
+        from Imervue.library.metadata_audit import paths_missing
+        incomplete = set(paths_missing(result, missing))
+        result = [p for p in result if p in incomplete]
     return result
 
 

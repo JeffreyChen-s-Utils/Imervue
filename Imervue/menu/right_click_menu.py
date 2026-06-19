@@ -49,6 +49,8 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     _show_in_explorer_action(main_gui, build_right_click_menu)
     _copy_path_action(main_gui, build_right_click_menu)
     _copy_image_action(main_gui, build_right_click_menu)
+    _ocr_action(main_gui, build_right_click_menu)
+    _split_pages_action(main_gui, build_right_click_menu)
 
     build_right_click_menu.addSeparator()
 
@@ -75,6 +77,9 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     build_right_click_menu.addSeparator()
 
+    _query_search_action(main_gui, build_right_click_menu)
+    _events_action(main_gui, build_right_click_menu)
+    _maintenance_action(main_gui, build_right_click_menu)
     image_info_action(main_gui=main_gui, local_pos=local_pos, menu=build_right_click_menu)
     build_recent_menu(main_gui.main_window, build_right_click_menu)
 
@@ -157,6 +162,113 @@ def _copy_image_action(main_gui: GPUImageView, menu: QMenu):
     action.triggered.connect(lambda: copy_image_to_clipboard(main_gui))
 
 
+def _ocr_action(main_gui: GPUImageView, menu: QMenu):
+    if not main_gui.deep_zoom:
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("ocr_extract", "Extract Text (OCR)"))
+    action.triggered.connect(lambda: _open_ocr(main_gui))
+
+
+def _open_ocr(main_gui: GPUImageView):
+    from Imervue.gui.ocr_dialog import open_ocr
+    open_ocr(main_gui)
+
+
+def _query_search_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("query_search_menu", "Search by Query…"))
+    action.triggered.connect(lambda: _open_query_search(main_gui))
+
+
+def _open_query_search(main_gui: GPUImageView):
+    from Imervue.gui.query_search import open_query_search
+    open_query_search(main_gui)
+
+
+def _events_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("events_menu", "Group into Events…"))
+    action.triggered.connect(lambda: _open_events(main_gui))
+
+
+def _open_events(main_gui: GPUImageView):
+    from Imervue.gui.events_dialog import open_events
+    open_events(main_gui)
+
+
+def _maintenance_action(main_gui: GPUImageView, menu: QMenu):
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("maintenance_menu", "Library Maintenance…"))
+    action.triggered.connect(lambda: _library_maintenance(main_gui))
+
+
+def _library_maintenance(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QMessageBox
+    from Imervue.library import image_index
+    from Imervue.library.maintenance import run_maintenance
+    folders = image_index.list_library_roots()
+    if not folders:
+        images = main_gui.model.images
+        folders = [os.path.dirname(images[0])] if images else []
+    if not folders:
+        return
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    result = run_maintenance(folders)
+    if result["missing"]:
+        reply = QMessageBox.question(
+            main_gui, lang.get("maintenance_menu", "Library Maintenance…"),
+            lang.get("maintenance_prune_q",
+                     "Remove {n} missing file(s) from the index?").format(
+                         n=result["missing"]))
+        if reply == QMessageBox.StandardButton.Yes:
+            run_maintenance(folders, prune=True)
+            if toast is not None:
+                toast.success(lang.get("maintenance_pruned",
+                                       "Pruned {n} missing").format(n=result["missing"]))
+            return
+    if toast is not None:
+        toast.info(lang.get("maintenance_summary", "{missing} missing, {new} new").format(
+            missing=result["missing"], new=result["new"]))
+
+
+def _split_pages_action(main_gui: GPUImageView, menu: QMenu):
+    if not main_gui.deep_zoom:
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("multipage_split", "Split Pages…"))
+    action.triggered.connect(lambda: _split_multipage(main_gui))
+
+
+def _split_multipage(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from PIL import Image
+    from Imervue.image.multipage import split_multipage
+    path = _current_image_path(main_gui)
+    if not path:
+        return
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    try:
+        with Image.open(path) as img:
+            frames = getattr(img, "n_frames", 1)
+    except (OSError, ValueError):
+        frames = 1
+    if frames <= 1:
+        if toast is not None:
+            toast.info(lang.get("multipage_split_none", "Not a multi-page file"))
+        return
+    out_dir = QFileDialog.getExistingDirectory(
+        main_gui, lang.get("multipage_split", "Split Pages…"))
+    if not out_dir:
+        return
+    saved = split_multipage(path, out_dir)
+    if toast is not None:
+        toast.success(lang.get(
+            "multipage_split_done", "Split into {n} pages").format(n=len(saved)))
+
+
 # ===========================
 # 修改 — 與主選單 Modify 共用 ModifyActionsWidget
 # ===========================
@@ -223,7 +335,71 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
         lang.get("batch_auto_cull", "Auto-cull Blurry"))
     cull_action.triggered.connect(lambda: _auto_cull_blurry(main_gui))
 
+    quality_action = batch_menu.addAction(
+        lang.get("batch_quality_cull", "Auto-cull Low Quality"))
+    quality_action.triggered.connect(lambda: _auto_cull_low_quality(main_gui))
+
+    orient_action = batch_menu.addAction(
+        lang.get("batch_auto_orient", "Auto-Rotate by EXIF"))
+    orient_action.triggered.connect(lambda: _auto_orient(main_gui))
+
+    combine_action = batch_menu.addAction(
+        lang.get("multipage_combine", "Combine to PDF / TIFF…"))
+    combine_action.triggered.connect(lambda: _combine_multipage(main_gui))
+
+    date_import_action = batch_menu.addAction(
+        lang.get("date_import_menu", "Import to Dated Folders…"))
+    date_import_action.triggered.connect(lambda: _import_by_date(main_gui))
+
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
+
+
+def _import_by_date(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from Imervue.library.date_import import import_by_date
+    paths = list(main_gui.selected_tiles)
+    if not paths:
+        return
+    lang = language_wrapper.language_word_dict
+    out_dir = QFileDialog.getExistingDirectory(
+        main_gui, lang.get("date_import_menu", "Import to Dated Folders…"))
+    if not out_dir:
+        return
+    count = import_by_date(paths, out_dir)
+    toast = getattr(main_gui.main_window, "toast", None)
+    if toast is None:
+        return
+    if count:
+        toast.success(lang.get("date_import_done",
+                               "Imported {n} file(s) by date").format(n=count))
+    else:
+        toast.info(lang.get("date_import_none", "No files to import"))
+
+
+def _combine_multipage(main_gui: GPUImageView) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    from Imervue.image.multipage import combine_to_multipage
+    paths = list(main_gui.selected_tiles)
+    if not paths:
+        return
+    lang = language_wrapper.language_word_dict
+    dest, _ = QFileDialog.getSaveFileName(
+        main_gui, lang.get("multipage_combine", "Combine to PDF / TIFF…"),
+        "", "PDF (*.pdf);;TIFF (*.tiff)",
+    )
+    if not dest:
+        return
+    toast = getattr(main_gui.main_window, "toast", None)
+    try:
+        result = combine_to_multipage(paths, dest)
+    except (OSError, ValueError) as exc:
+        if toast is not None:
+            toast.error(str(exc))
+        return
+    if toast is not None:
+        toast.success(lang.get(
+            "multipage_combine_done", "Combined {n} pages → {name}").format(
+            n=result["pages"], name=Path(dest).name))
 
 
 def _tag_by_location(main_gui: GPUImageView) -> None:
@@ -270,6 +446,45 @@ def _auto_cull_blurry(main_gui: GPUImageView) -> None:
     else:
         main_gui.main_window.toast.info(
             lang.get("batch_auto_cull_none", "No blurry photos found"))
+
+
+def _auto_cull_low_quality(main_gui: GPUImageView) -> None:
+    from Imervue.library.quality_cull import auto_cull_low_quality
+    count = auto_cull_low_quality(list(main_gui.selected_tiles))
+    main_gui.update()
+    if not hasattr(main_gui.main_window, "toast"):
+        return
+    lang = language_wrapper.language_word_dict
+    if count:
+        main_gui.main_window.toast.success(
+            lang.get("batch_quality_cull_done",
+                     "Flagged {n} low-quality photo(s) as reject").format(n=count))
+    else:
+        main_gui.main_window.toast.info(
+            lang.get("batch_quality_cull_none", "No images to cull"))
+
+
+def _auto_orient(main_gui: GPUImageView) -> None:
+    from PIL import Image
+    from Imervue.image.orientation import oriented_array
+    paths = list(main_gui.selected_tiles)
+    lang = language_wrapper.language_word_dict
+    toast = getattr(main_gui.main_window, "toast", None)
+    count = 0
+    for path in paths:
+        try:
+            out_path = Path(path).with_name(f"{Path(path).stem}_oriented.png")
+            Image.fromarray(oriented_array(path), mode="RGBA").save(str(out_path))
+            count += 1
+        except (OSError, ValueError):
+            continue
+    if toast is None:
+        return
+    if count:
+        toast.success(lang.get("batch_auto_orient_done",
+                               "Oriented {n} photo(s)").format(n=count))
+    else:
+        toast.info(lang.get("batch_auto_orient_none", "No images to orient"))
 
 
 def _delete_action(main_gui: GPUImageView, menu: QMenu):

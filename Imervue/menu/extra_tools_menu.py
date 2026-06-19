@@ -43,6 +43,8 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_token_rename(ui))
     _add_action(sub, lang, "deflicker_title", "Deflicker (Time-lapse)",
                 lambda: _open_deflicker(ui))
+    _add_action(sub, lang, "binarize_title", "Document Binarize",
+                lambda: _open_binarize(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -82,6 +84,10 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_calendar_view(ui))
     _add_action(sub, lang, "map_title", "Map View",
                 lambda: _open_map_view(ui))
+    _add_action(sub, lang, "inspector_title", "Scopes & Inspector",
+                lambda: _open_image_inspector(ui))
+    _add_action(sub, lang, "tiny_planet_title", "Tiny Planet (360°)",
+                lambda: _open_tiny_planet(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -124,6 +130,8 @@ def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_dual_pane(ui))
     _add_action(sub, lang, "macro_title", "Macros",
                 lambda: _open_macro_manager(ui))
+    _add_action(sub, lang, "watch_folder_title", "Watched Folder",
+                lambda: _open_watch_folder(ui))
 
 
 def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -136,6 +144,10 @@ def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_slideshow_mp4(ui))
     _add_action(sub, lang, "print_title", "Print Layout",
                 lambda: _open_print_layout(ui))
+    _add_action(sub, lang, "collage_title", "Collage",
+                lambda: _open_collage(ui))
+    _add_action(sub, lang, "idsheet_title", "ID Photo Sheet",
+                lambda: _open_id_photo_sheet(ui))
 
 
 def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -162,6 +174,18 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_gradient_map(ui))
     _add_action(sub, lang, "auto_balance_title", "Auto Color Balance",
                 lambda: _open_auto_balance(ui))
+    _add_action(sub, lang, "local_contrast_title", "Clarity / Dehaze",
+                lambda: _open_local_contrast(ui))
+    _add_action(sub, lang, "hsl_title", "HSL / Color Mixer",
+                lambda: _open_hsl_mixer(ui))
+    _add_action(sub, lang, "clahe_title", "CLAHE (Local Equalize)",
+                lambda: _open_clahe(ui))
+    _add_action(sub, lang, "flatten_title", "Flatten Background",
+                lambda: _open_flatten_field(ui))
+    _add_action(sub, lang, "frame_title", "Frame & Caption",
+                lambda: _open_photo_frame(ui))
+    _add_action(sub, lang, "dither_title", "Ordered Dither",
+                lambda: _open_dither(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -199,6 +223,8 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_auto_straighten(ui))
     _add_action(sub, lang, "lens_title", "Lens Correction",
                 lambda: _open_lens_correction(ui))
+    _add_action(sub, lang, "scalebar_title", "Scale Bar",
+                lambda: _open_scale_bar(ui))
 
 
 def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -209,6 +235,8 @@ def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_panorama(ui))
     _add_action(sub, lang, "fstack_title", "Focus Stacking",
                 lambda: _open_focus_stack(ui))
+    _add_action(sub, lang, "stack_blend_title", "Image Stack (Mean/Median/Max/Min)",
+                lambda: _open_stack_blend(ui))
 
 
 # --- Dialog openers ---------------------------------------------------------
@@ -313,6 +341,11 @@ def _open_macro_manager(ui: ImervueMainWindow):
     open_macro_manager_dialog(ui)
 
 
+def _open_watch_folder(ui: ImervueMainWindow):
+    from Imervue.gui.watch_folder_dialog import open_watch_folder
+    open_watch_folder(ui.viewer)
+
+
 def _open_contact_sheet(ui: ImervueMainWindow):
     from Imervue.gui.contact_sheet_dialog import open_contact_sheet_dialog
     open_contact_sheet_dialog(ui)
@@ -336,6 +369,16 @@ def _open_calendar_view(ui: ImervueMainWindow):
 def _open_map_view(ui: ImervueMainWindow):
     from Imervue.gui.map_view_dialog import open_map_view
     open_map_view(ui)
+
+
+def _open_image_inspector(ui: ImervueMainWindow):
+    from Imervue.gui.image_inspector_dialog import open_image_inspector
+    open_image_inspector(ui.viewer)
+
+
+def _open_tiny_planet(ui: ImervueMainWindow):
+    from Imervue.gui.tiny_planet_dialog import open_tiny_planet
+    open_tiny_planet(ui.viewer)
 
 
 def _open_before_after(ui: ImervueMainWindow):
@@ -386,6 +429,31 @@ def _open_gradient_map(ui: ImervueMainWindow) -> None:
 def _open_auto_balance(ui: ImervueMainWindow) -> None:
     from Imervue.gui.auto_color_balance_dialog import open_auto_color_balance_dialog
     open_auto_color_balance_dialog(ui.viewer)
+
+
+def _open_local_contrast(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.local_contrast_dialog import open_local_contrast
+    open_local_contrast(ui.viewer)
+
+
+def _open_hsl_mixer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.hsl_mixer_dialog import open_hsl_mixer
+    open_hsl_mixer(ui.viewer)
+
+
+def _open_clahe(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.clahe_dialog import open_clahe
+    open_clahe(ui.viewer)
+
+
+def _open_flatten_field(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.flatten_field_dialog import open_flatten_field
+    open_flatten_field(ui.viewer)
+
+
+def _open_binarize(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.binarize_dialog import open_binarize
+    open_binarize(ui.viewer)
 
 
 def _open_film_grain(ui: ImervueMainWindow) -> None:
@@ -460,6 +528,11 @@ def _open_lens_correction(ui: ImervueMainWindow):
     open_lens_correction(ui.viewer)
 
 
+def _open_scale_bar(ui: ImervueMainWindow):
+    from Imervue.gui.scale_bar_dialog import open_scale_bar
+    open_scale_bar(ui.viewer)
+
+
 def _open_healing_brush(ui: ImervueMainWindow):
     from Imervue.gui.healing_brush_dialog import open_healing_brush
     open_healing_brush(ui.viewer)
@@ -478,6 +551,11 @@ def _open_panorama(ui: ImervueMainWindow):
 def _open_focus_stack(ui: ImervueMainWindow):
     from Imervue.gui.focus_stack_dialog import open_focus_stack
     open_focus_stack(ui.viewer)
+
+
+def _open_stack_blend(ui: ImervueMainWindow):
+    from Imervue.gui.stack_blend_dialog import open_stack_blend
+    open_stack_blend(ui.viewer)
 
 
 def _open_masks(ui: ImervueMainWindow):
@@ -528,3 +606,23 @@ def _open_gps_geotag(ui: ImervueMainWindow):
 def _open_print_layout(ui: ImervueMainWindow):
     from Imervue.gui.print_layout_dialog import open_print_layout
     open_print_layout(ui)
+
+
+def _open_collage(ui: ImervueMainWindow):
+    from Imervue.gui.collage_dialog import open_collage
+    open_collage(ui.viewer)
+
+
+def _open_id_photo_sheet(ui: ImervueMainWindow):
+    from Imervue.gui.id_photo_sheet_dialog import open_id_photo_sheet
+    open_id_photo_sheet(ui.viewer)
+
+
+def _open_photo_frame(ui: ImervueMainWindow):
+    from Imervue.gui.photo_frame_dialog import open_photo_frame
+    open_photo_frame(ui.viewer)
+
+
+def _open_dither(ui: ImervueMainWindow):
+    from Imervue.gui.dither_dialog import open_dither
+    open_dither(ui.viewer)
