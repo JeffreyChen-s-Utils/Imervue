@@ -1777,6 +1777,18 @@ english_word_dict = {
     "dither_levels": "Levels per channel:",
     "dither_failed": "Dither failed",
 
+    # --- Otsu / colormap / statistics ---
+    "otsu_title": "Otsu Threshold",
+    "otsu_invert": "Invert",
+    "otsu_hint": "Global auto-threshold to black & white.",
+    "otsu_failed": "Otsu threshold failed",
+    "colormap_title": "Color Map",
+    "colormap_label": "Color map:",
+    "colormap_failed": "Colormap failed",
+    "stats_title": "Image Statistics",
+    "stats_export_csv": "Export Histogram CSV…",
+    "stats_exported": "Saved {path}",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

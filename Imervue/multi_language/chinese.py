@@ -1744,6 +1744,18 @@ chinese_word_dict = {
     "dither_levels": "每通道色阶数：",
     "dither_failed": "抖动失败",
 
+    # --- Otsu / colormap / statistics ---
+    "otsu_title": "Otsu 阈值",
+    "otsu_invert": "反相",
+    "otsu_hint": "全局自动阈值转黑白。",
+    "otsu_failed": "Otsu 阈值失败",
+    "colormap_title": "色彩映射",
+    "colormap_label": "色彩映射：",
+    "colormap_failed": "色彩映射失败",
+    "stats_title": "图像统计",
+    "stats_export_csv": "导出直方图 CSV…",
+    "stats_exported": "已保存 {path}",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

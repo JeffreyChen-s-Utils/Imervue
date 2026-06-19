@@ -1757,6 +1757,18 @@ japanese_word_dict = {
     "dither_levels": "チャンネルあたりの階調数：",
     "dither_failed": "ディザに失敗しました",
 
+    # --- Otsu / colormap / statistics ---
+    "otsu_title": "大津の閾値",
+    "otsu_invert": "反転",
+    "otsu_hint": "全体の自動しきい値で白黒化します。",
+    "otsu_failed": "大津の閾値に失敗しました",
+    "colormap_title": "カラーマップ",
+    "colormap_label": "カラーマップ：",
+    "colormap_failed": "カラーマップに失敗しました",
+    "stats_title": "画像統計",
+    "stats_export_csv": "ヒストグラム CSV を書き出し…",
+    "stats_exported": "保存しました: {path}",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
