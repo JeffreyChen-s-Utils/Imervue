@@ -1756,6 +1756,24 @@ chinese_word_dict = {
     "stats_export_csv": "导出直方图 CSV…",
     "stats_exported": "已保存 {path}",
 
+    # --- Distort / pixel sort / anaglyph ---
+    "distort_title": "扭曲",
+    "distort_mode": "模式：",
+    "distort_strength": "强度：",
+    "distort_swirl": "漩涡",
+    "distort_pinch": "挤压 / 凸起",
+    "distort_ripple": "波纹",
+    "distort_failed": "扭曲失败",
+    "pixelsort_title": "像素排序",
+    "pixelsort_lower": "下限阈值：",
+    "pixelsort_upper": "上限阈值：",
+    "pixelsort_vertical": "垂直",
+    "pixelsort_failed": "像素排序失败",
+    "anaglyph_title": "立体 3D（红青）",
+    "anaglyph_method": "方式：",
+    "anaglyph_right": "右眼图像：",
+    "anaglyph_failed": "立体 3D 失败",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

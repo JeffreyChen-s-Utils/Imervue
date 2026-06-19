@@ -1769,6 +1769,24 @@ japanese_word_dict = {
     "stats_export_csv": "ヒストグラム CSV を書き出し…",
     "stats_exported": "保存しました: {path}",
 
+    # --- Distort / pixel sort / anaglyph ---
+    "distort_title": "ゆがみ",
+    "distort_mode": "モード：",
+    "distort_strength": "強さ：",
+    "distort_swirl": "渦巻き",
+    "distort_pinch": "つまむ / 膨らます",
+    "distort_ripple": "波紋",
+    "distort_failed": "ゆがみに失敗しました",
+    "pixelsort_title": "ピクセルソート",
+    "pixelsort_lower": "下限しきい値：",
+    "pixelsort_upper": "上限しきい値：",
+    "pixelsort_vertical": "垂直",
+    "pixelsort_failed": "ピクセルソートに失敗しました",
+    "anaglyph_title": "アナグリフ 3D",
+    "anaglyph_method": "方式：",
+    "anaglyph_right": "右目画像：",
+    "anaglyph_failed": "アナグリフに失敗しました",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

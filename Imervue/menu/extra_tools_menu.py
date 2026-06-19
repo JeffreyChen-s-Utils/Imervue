@@ -192,6 +192,10 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_dither(ui))
     _add_action(sub, lang, "colormap_title", "Color Map",
                 lambda: _open_colormap(ui))
+    _add_action(sub, lang, "distort_title", "Distort (Swirl/Pinch/Ripple)",
+                lambda: _open_distort(ui))
+    _add_action(sub, lang, "pixelsort_title", "Pixel Sort",
+                lambda: _open_pixel_sort(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
                 lambda: _open_film_grain(ui))
     _add_action(sub, lang, "lens_flare_title", "Lens Flare",
@@ -243,6 +247,8 @@ def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_focus_stack(ui))
     _add_action(sub, lang, "stack_blend_title", "Image Stack (Mean/Median/Max/Min)",
                 lambda: _open_stack_blend(ui))
+    _add_action(sub, lang, "anaglyph_title", "Anaglyph 3D",
+                lambda: _open_anaglyph(ui))
 
 
 # --- Dialog openers ---------------------------------------------------------
@@ -470,6 +476,21 @@ def _open_otsu(ui: ImervueMainWindow) -> None:
 def _open_colormap(ui: ImervueMainWindow) -> None:
     from Imervue.gui.colormap_dialog import open_colormap
     open_colormap(ui.viewer)
+
+
+def _open_distort(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.distort_dialog import open_distort
+    open_distort(ui.viewer)
+
+
+def _open_pixel_sort(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.pixel_sort_dialog import open_pixel_sort
+    open_pixel_sort(ui.viewer)
+
+
+def _open_anaglyph(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.anaglyph_dialog import open_anaglyph
+    open_anaglyph(ui.viewer)
 
 
 def _open_image_statistics(ui: ImervueMainWindow) -> None:
