@@ -96,6 +96,21 @@ def op_optimize(src: Path, target: Path, args) -> None:
     target.write_bytes(data)
 
 
+def op_dehaze(src: Path, target: Path, args) -> None:
+    from Imervue.image.dehaze import dehaze
+    Image.fromarray(dehaze(_load_rgba(src), args.strength), mode="RGBA").save(target)
+
+
+def op_clahe(src: Path, target: Path, args) -> None:
+    from Imervue.image.clahe import apply_clahe
+    Image.fromarray(apply_clahe(_load_rgba(src), args.clip, args.tiles), mode="RGBA").save(target)
+
+
+def op_dither(src: Path, target: Path, args) -> None:
+    from Imervue.image.dither import ordered_dither
+    Image.fromarray(ordered_dither(_load_rgba(src), args.levels), mode="RGBA").save(target)
+
+
 def op_info(src: Path, _args) -> dict:
     with Image.open(src) as img:
         width, height = img.size
@@ -121,6 +136,9 @@ _WRITE_SPEC = {
     "thumbnail": (op_thumbnail, "_thumb", lambda _a: ".png"),
     "watermark": (op_watermark, "_wm", lambda _a: ".png"),
     "optimize": (op_optimize, "_opt", lambda a: _FORMAT_EXT.get(a.format.upper(), ".jpg")),
+    "dehaze": (op_dehaze, "_dehaze", lambda _a: ".png"),
+    "clahe": (op_clahe, "_clahe", lambda _a: ".png"),
+    "dither": (op_dither, "_dither", lambda _a: ".png"),
 }
 
 
@@ -230,6 +248,19 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(optimize)
     optimize.add_argument("--max-kb", type=float, required=True, dest="max_kb")
     optimize.add_argument("--format", default="JPEG", help="JPEG / WEBP")
+
+    dehaze = subs.add_parser("dehaze", help="dark-channel-prior haze removal")
+    _add_common(dehaze)
+    dehaze.add_argument("--strength", type=float, default=1.0, help="0..1")
+
+    clahe = subs.add_parser("clahe", help="contrast-limited adaptive equalization")
+    _add_common(clahe)
+    clahe.add_argument("--clip", type=float, default=2.0, help="clip limit")
+    clahe.add_argument("--tiles", type=int, default=8, help="tile grid size")
+
+    dither = subs.add_parser("dither", help="ordered (Bayer) dithering")
+    _add_common(dither)
+    dither.add_argument("--levels", type=int, default=2, help="levels per channel (2-8)")
     return parser
 
 
