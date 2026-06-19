@@ -47,6 +47,10 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_binarize(ui))
     _add_action(sub, lang, "otsu_title", "Otsu Threshold",
                 lambda: _open_otsu(ui))
+    _add_action(sub, lang, "animedit_title", "Edit Animation (GIF)",
+                lambda: _open_animation_edit(ui))
+    _add_action(sub, lang, "optimize_title", "Optimize to Target Size",
+                lambda: _open_optimize(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -92,6 +96,8 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_tiny_planet(ui))
     _add_action(sub, lang, "stats_title", "Image Statistics",
                 lambda: _open_image_statistics(ui))
+    _add_action(sub, lang, "quality_title", "Quality Report",
+                lambda: _open_quality_report(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -471,6 +477,21 @@ def _open_binarize(ui: ImervueMainWindow) -> None:
 def _open_otsu(ui: ImervueMainWindow) -> None:
     from Imervue.gui.otsu_dialog import open_otsu
     open_otsu(ui.viewer)
+
+
+def _open_animation_edit(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.animation_edit_dialog import open_animation_edit
+    open_animation_edit(ui.viewer)
+
+
+def _open_optimize(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.optimize_dialog import open_optimize
+    open_optimize(ui.viewer)
+
+
+def _open_quality_report(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.quality_report_dialog import open_quality_report
+    open_quality_report(ui.viewer)
 
 
 def _open_colormap(ui: ImervueMainWindow) -> None:

@@ -1787,6 +1787,22 @@ japanese_word_dict = {
     "anaglyph_right": "右目画像：",
     "anaglyph_failed": "アナグリフに失敗しました",
 
+    # --- Animation edit / optimize / quality report ---
+    "animedit_title": "アニメ編集",
+    "animedit_operation": "操作：",
+    "animedit_speed_label": "速度（「速度」操作の倍率）：",
+    "animedit_reverse": "逆再生",
+    "animedit_boomerang": "ブーメラン",
+    "animedit_speed": "速度",
+    "animedit_optimize": "最適化",
+    "animedit_failed": "アニメ編集に失敗しました",
+    "optimize_title": "目標サイズに最適化",
+    "optimize_format": "形式：",
+    "optimize_budget": "目標サイズ：",
+    "optimize_failed": "最適化に失敗しました",
+    "quality_title": "品質レポート",
+    "quality_value": "値",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",

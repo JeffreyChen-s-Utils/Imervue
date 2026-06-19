@@ -1774,6 +1774,22 @@ chinese_word_dict = {
     "anaglyph_right": "右眼图像：",
     "anaglyph_failed": "立体 3D 失败",
 
+    # --- Animation edit / optimize / quality report ---
+    "animedit_title": "编辑动画",
+    "animedit_operation": "操作：",
+    "animedit_speed_label": "速度（用于“速度”操作的倍率）：",
+    "animedit_reverse": "倒放",
+    "animedit_boomerang": "来回",
+    "animedit_speed": "速度",
+    "animedit_optimize": "优化",
+    "animedit_failed": "动画编辑失败",
+    "optimize_title": "优化到目标大小",
+    "optimize_format": "格式：",
+    "optimize_budget": "目标大小：",
+    "optimize_failed": "优化失败",
+    "quality_title": "质量报告",
+    "quality_value": "数值",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",

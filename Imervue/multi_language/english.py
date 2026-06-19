@@ -1807,6 +1807,22 @@ english_word_dict = {
     "anaglyph_right": "Right-eye image:",
     "anaglyph_failed": "Anaglyph failed",
 
+    # --- Animation edit / optimize / quality report ---
+    "animedit_title": "Edit Animation",
+    "animedit_operation": "Operation:",
+    "animedit_speed_label": "Speed (× for Speed op):",
+    "animedit_reverse": "Reverse",
+    "animedit_boomerang": "Boomerang",
+    "animedit_speed": "Speed",
+    "animedit_optimize": "Optimize",
+    "animedit_failed": "Animation edit failed",
+    "optimize_title": "Optimize to Target Size",
+    "optimize_format": "Format:",
+    "optimize_budget": "Target size:",
+    "optimize_failed": "Optimize failed",
+    "quality_title": "Quality Report",
+    "quality_value": "Value",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

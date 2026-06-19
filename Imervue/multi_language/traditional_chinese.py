@@ -1773,6 +1773,22 @@ traditional_chinese_word_dict = {
     "anaglyph_right": "右眼影像：",
     "anaglyph_failed": "立體 3D 失敗",
 
+    # --- Animation edit / optimize / quality report ---
+    "animedit_title": "編輯動畫",
+    "animedit_operation": "操作：",
+    "animedit_speed_label": "速度（用於「速度」操作的倍率）：",
+    "animedit_reverse": "倒放",
+    "animedit_boomerang": "來回",
+    "animedit_speed": "速度",
+    "animedit_optimize": "最佳化",
+    "animedit_failed": "動畫編輯失敗",
+    "optimize_title": "最佳化至目標大小",
+    "optimize_format": "格式：",
+    "optimize_budget": "目標大小：",
+    "optimize_failed": "最佳化失敗",
+    "quality_title": "品質報告",
+    "quality_value": "數值",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",
