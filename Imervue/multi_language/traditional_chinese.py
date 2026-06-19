@@ -1789,6 +1789,28 @@ traditional_chinese_word_dict = {
     "quality_title": "品質報告",
     "quality_value": "數值",
 
+    # --- Meme / steganography / test chart ---
+    "meme_title": "迷因字幕",
+    "meme_top": "上方文字：",
+    "meme_bottom": "下方文字：",
+    "meme_failed": "迷因產生失敗",
+    "stego_title": "隱寫術",
+    "stego_capacity": "訊息（最多 {n} 位元組）：",
+    "stego_reveal": "解出",
+    "stego_hide": "藏入並儲存",
+    "stego_none": "找不到隱藏訊息",
+    "stego_failed": "藏入訊息失敗",
+    "testchart_title": "測試圖卡",
+    "testchart_pattern": "圖樣：",
+    "testchart_width": "寬度：",
+    "testchart_height": "高度：",
+    "testchart_generate": "產生並儲存",
+    "testchart_smpte": "SMPTE 彩條",
+    "testchart_grayscale": "灰階階梯",
+    "testchart_gradient": "漸層",
+    "testchart_checker": "棋盤格",
+    "testchart_solid": "純色",
+
     # --- Healing Brush ---
     "heal_title": "修復筆刷",
     "heal_hint": "左鍵新增修復點；右鍵刪除。半徑滑桿設定新點大小。",

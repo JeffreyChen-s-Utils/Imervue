@@ -1801,6 +1801,28 @@ korean_word_dict = {
     "quality_title": "품질 보고서",
     "quality_value": "값",
 
+    # --- Meme / steganography / test chart ---
+    "meme_title": "밈 자막",
+    "meme_top": "상단 텍스트:",
+    "meme_bottom": "하단 텍스트:",
+    "meme_failed": "밈 생성 실패",
+    "stego_title": "스테가노그래피",
+    "stego_capacity": "메시지(최대 {n}바이트):",
+    "stego_reveal": "추출",
+    "stego_hide": "숨기고 저장",
+    "stego_none": "숨겨진 메시지 없음",
+    "stego_failed": "메시지 숨기기 실패",
+    "testchart_title": "테스트 차트",
+    "testchart_pattern": "패턴:",
+    "testchart_width": "너비:",
+    "testchart_height": "높이:",
+    "testchart_generate": "생성 및 저장",
+    "testchart_smpte": "SMPTE 컬러바",
+    "testchart_grayscale": "그레이스케일",
+    "testchart_gradient": "그라데이션",
+    "testchart_checker": "체커보드",
+    "testchart_solid": "단색",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",

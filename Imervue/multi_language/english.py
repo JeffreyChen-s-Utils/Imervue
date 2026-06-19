@@ -1823,6 +1823,28 @@ english_word_dict = {
     "quality_title": "Quality Report",
     "quality_value": "Value",
 
+    # --- Meme / steganography / test chart ---
+    "meme_title": "Meme Caption",
+    "meme_top": "Top text:",
+    "meme_bottom": "Bottom text:",
+    "meme_failed": "Meme failed",
+    "stego_title": "Steganography",
+    "stego_capacity": "Message (max {n} bytes):",
+    "stego_reveal": "Reveal",
+    "stego_hide": "Hide & Save",
+    "stego_none": "No hidden message found",
+    "stego_failed": "Hide message failed",
+    "testchart_title": "Test Chart",
+    "testchart_pattern": "Pattern:",
+    "testchart_width": "Width:",
+    "testchart_height": "Height:",
+    "testchart_generate": "Generate & Save",
+    "testchart_smpte": "SMPTE Color Bars",
+    "testchart_grayscale": "Grayscale Wedge",
+    "testchart_gradient": "Gradient Ramp",
+    "testchart_checker": "Checkerboard",
+    "testchart_solid": "Solid Color",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

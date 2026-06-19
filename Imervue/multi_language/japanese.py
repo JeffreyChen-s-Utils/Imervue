@@ -1803,6 +1803,28 @@ japanese_word_dict = {
     "quality_title": "品質レポート",
     "quality_value": "値",
 
+    # --- Meme / steganography / test chart ---
+    "meme_title": "ミーム字幕",
+    "meme_top": "上のテキスト：",
+    "meme_bottom": "下のテキスト：",
+    "meme_failed": "ミーム生成に失敗しました",
+    "stego_title": "ステガノグラフィ",
+    "stego_capacity": "メッセージ（最大 {n} バイト）：",
+    "stego_reveal": "抽出",
+    "stego_hide": "埋め込んで保存",
+    "stego_none": "隠しメッセージが見つかりません",
+    "stego_failed": "埋め込みに失敗しました",
+    "testchart_title": "テストチャート",
+    "testchart_pattern": "パターン：",
+    "testchart_width": "幅：",
+    "testchart_height": "高さ：",
+    "testchart_generate": "生成して保存",
+    "testchart_smpte": "SMPTE カラーバー",
+    "testchart_grayscale": "グレースケール",
+    "testchart_gradient": "グラデーション",
+    "testchart_checker": "チェッカー",
+    "testchart_solid": "単色",
+
     # --- Healing Brush ---
     "heal_title": "ヒーリングブラシ",
     "heal_hint": "左クリックで追加、右クリックで削除。半径スライダーで新規サイズ。",
