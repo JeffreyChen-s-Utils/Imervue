@@ -51,6 +51,10 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_animation_edit(ui))
     _add_action(sub, lang, "optimize_title", "Optimize to Target Size",
                 lambda: _open_optimize(ui))
+    _add_action(sub, lang, "meme_title", "Meme Caption",
+                lambda: _open_meme(ui))
+    _add_action(sub, lang, "stego_title", "Steganography",
+                lambda: _open_steganography(ui))
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -98,6 +102,8 @@ def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_image_statistics(ui))
     _add_action(sub, lang, "quality_title", "Quality Report",
                 lambda: _open_quality_report(ui))
+    _add_action(sub, lang, "testchart_title", "Test Chart",
+                lambda: _open_test_charts(ui))
     _build_cvd_submenu(sub, ui, lang)
 
 
@@ -487,6 +493,21 @@ def _open_animation_edit(ui: ImervueMainWindow) -> None:
 def _open_optimize(ui: ImervueMainWindow) -> None:
     from Imervue.gui.optimize_dialog import open_optimize
     open_optimize(ui.viewer)
+
+
+def _open_meme(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.meme_dialog import open_meme
+    open_meme(ui.viewer)
+
+
+def _open_steganography(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.steganography_dialog import open_steganography
+    open_steganography(ui.viewer)
+
+
+def _open_test_charts(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.test_charts_dialog import open_test_charts
+    open_test_charts(ui.viewer)
 
 
 def _open_quality_report(ui: ImervueMainWindow) -> None:

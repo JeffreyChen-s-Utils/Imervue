@@ -1790,6 +1790,28 @@ chinese_word_dict = {
     "quality_title": "质量报告",
     "quality_value": "数值",
 
+    # --- Meme / steganography / test chart ---
+    "meme_title": "梗图字幕",
+    "meme_top": "上方文字：",
+    "meme_bottom": "下方文字：",
+    "meme_failed": "梗图生成失败",
+    "stego_title": "隐写术",
+    "stego_capacity": "消息（最多 {n} 字节）：",
+    "stego_reveal": "解出",
+    "stego_hide": "藏入并保存",
+    "stego_none": "未找到隐藏消息",
+    "stego_failed": "藏入消息失败",
+    "testchart_title": "测试图卡",
+    "testchart_pattern": "图样：",
+    "testchart_width": "宽度：",
+    "testchart_height": "高度：",
+    "testchart_generate": "生成并保存",
+    "testchart_smpte": "SMPTE 彩条",
+    "testchart_grayscale": "灰阶阶梯",
+    "testchart_gradient": "渐变",
+    "testchart_checker": "棋盘格",
+    "testchart_solid": "纯色",
+
     # --- Healing Brush ---
     "heal_title": "修复画笔",
     "heal_hint": "左键添加修复点；右键删除。半径滑块设定新点大小。",
