@@ -111,6 +111,22 @@ def op_dither(src: Path, target: Path, args) -> None:
     Image.fromarray(ordered_dither(_load_rgba(src), args.levels), mode="RGBA").save(target)
 
 
+def op_distort(src: Path, target: Path, args) -> None:
+    from Imervue.image.distort import distort
+    Image.fromarray(distort(_load_rgba(src), args.mode, args.strength), mode="RGBA").save(target)
+
+
+def op_autoorient(src: Path, target: Path, _args) -> None:
+    from Imervue.image.orientation import oriented_array
+    Image.fromarray(oriented_array(str(src)), mode="RGBA").save(target)
+
+
+def op_strip(src: Path, target: Path, _args) -> None:
+    # Re-save without forwarding exif/icc/xmp — Pillow omits metadata by default.
+    with Image.open(src) as img:
+        img.save(target)
+
+
 def op_info(src: Path, _args) -> dict:
     with Image.open(src) as img:
         width, height = img.size
@@ -139,6 +155,9 @@ _WRITE_SPEC = {
     "dehaze": (op_dehaze, "_dehaze", lambda _a: ".png"),
     "clahe": (op_clahe, "_clahe", lambda _a: ".png"),
     "dither": (op_dither, "_dither", lambda _a: ".png"),
+    "distort": (op_distort, "_distort", lambda _a: ".png"),
+    "auto-orient": (op_autoorient, "_oriented", lambda _a: ".png"),
+    "strip": (op_strip, "_clean", lambda _a: None),
 }
 
 
@@ -261,6 +280,17 @@ def build_parser() -> argparse.ArgumentParser:
     dither = subs.add_parser("dither", help="ordered (Bayer) dithering")
     _add_common(dither)
     dither.add_argument("--levels", type=int, default=2, help="levels per channel (2-8)")
+
+    distort = subs.add_parser("distort", help="swirl / pinch / ripple")
+    _add_common(distort)
+    distort.add_argument("--mode", default="swirl", help="swirl / pinch / ripple")
+    distort.add_argument("--strength", type=float, default=0.5, help="-1..1")
+
+    orient = subs.add_parser("auto-orient", help="bake EXIF orientation into pixels")
+    _add_common(orient)
+
+    strip = subs.add_parser("strip", help="re-save without metadata (EXIF/XMP/ICC)")
+    _add_common(strip)
     return parser
 
 

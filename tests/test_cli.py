@@ -127,6 +127,28 @@ def test_dither_two_levels_is_black_white(tmp_path):
     assert values <= {0, 255}
 
 
+def test_distort_writes_output(tmp_path):
+    _save(tmp_path / "d.png", size=(64, 64))
+    out_dir = tmp_path / "out"
+    assert main(["distort", str(tmp_path / "d.png"), "--mode", "swirl",
+                 "--strength", "0.8", "--out", str(out_dir)]) == 0
+    assert (out_dir / "d.png").exists()
+
+
+def test_strip_keeps_extension(tmp_path):
+    _save(tmp_path / "p.jpg")
+    out_dir = tmp_path / "out"
+    assert main(["strip", str(tmp_path / "p.jpg"), "--out", str(out_dir)]) == 0
+    assert (out_dir / "p.jpg").exists()
+
+
+def test_auto_orient_writes_output(tmp_path):
+    _save(tmp_path / "o.png")
+    out_dir = tmp_path / "out"
+    assert main(["auto-orient", str(tmp_path / "o.png"), "--out", str(out_dir)]) == 0
+    assert (out_dir / "o.png").exists()
+
+
 def test_dry_run_writes_nothing(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"
