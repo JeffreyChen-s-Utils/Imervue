@@ -1789,6 +1789,24 @@ english_word_dict = {
     "stats_export_csv": "Export Histogram CSV…",
     "stats_exported": "Saved {path}",
 
+    # --- Distort / pixel sort / anaglyph ---
+    "distort_title": "Distort",
+    "distort_mode": "Mode:",
+    "distort_strength": "Strength:",
+    "distort_swirl": "Swirl",
+    "distort_pinch": "Pinch / Bulge",
+    "distort_ripple": "Ripple",
+    "distort_failed": "Distort failed",
+    "pixelsort_title": "Pixel Sort",
+    "pixelsort_lower": "Lower threshold:",
+    "pixelsort_upper": "Upper threshold:",
+    "pixelsort_vertical": "Vertical",
+    "pixelsort_failed": "Pixel sort failed",
+    "anaglyph_title": "Anaglyph 3D",
+    "anaglyph_method": "Method:",
+    "anaglyph_right": "Right-eye image:",
+    "anaglyph_failed": "Anaglyph failed",
+
     # --- Healing Brush ---
     "heal_title": "Healing Brush",
     "heal_hint": "Left-click to add a spot; right-click to remove. Radius slider sets new spot size.",

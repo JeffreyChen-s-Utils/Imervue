@@ -1767,6 +1767,24 @@ korean_word_dict = {
     "stats_export_csv": "히스토그램 CSV 내보내기…",
     "stats_exported": "{path} 저장됨",
 
+    # --- Distort / pixel sort / anaglyph ---
+    "distort_title": "왜곡",
+    "distort_mode": "모드:",
+    "distort_strength": "강도:",
+    "distort_swirl": "소용돌이",
+    "distort_pinch": "오목 / 볼록",
+    "distort_ripple": "물결",
+    "distort_failed": "왜곡 실패",
+    "pixelsort_title": "픽셀 정렬",
+    "pixelsort_lower": "하한 임계값:",
+    "pixelsort_upper": "상한 임계값:",
+    "pixelsort_vertical": "수직",
+    "pixelsort_failed": "픽셀 정렬 실패",
+    "anaglyph_title": "애너글리프 3D",
+    "anaglyph_method": "방식:",
+    "anaglyph_right": "오른쪽 눈 이미지:",
+    "anaglyph_failed": "애너글리프 실패",
+
     # --- Healing Brush ---
     "heal_title": "복원 브러시",
     "heal_hint": "좌클릭으로 스팟 추가, 우클릭으로 제거. 반경 슬라이더로 크기 조절.",
