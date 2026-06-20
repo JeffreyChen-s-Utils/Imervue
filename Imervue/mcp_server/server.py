@@ -59,6 +59,7 @@ class MCPServer:
     resource_root: str | None = None
     notifier: Any = None  # Notifier | None — set when push notifications are wired
     subscriptions: Any = field(default=None)  # SubscriptionRegistry | None
+    log_level: str = "info"
 
     def __post_init__(self) -> None:
         if self.subscriptions is None:
@@ -112,6 +113,7 @@ class MCPServer:
                 "prompts": {"listChanged": False},
                 "resources": {"subscribe": True, "listChanged": True},
                 "completions": {},
+                "logging": {},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         })
@@ -164,6 +166,24 @@ class MCPServer:
         """Push ``notifications/resources/list_changed`` to the client."""
         if self.notifier is not None:
             self.notifier.notify("notifications/resources/list_changed")
+
+    def _on_logging_set_level(self, msg_id: Any, params: dict) -> dict:
+        from Imervue.mcp_server.logging import is_valid_level
+        level = params.get("level") if isinstance(params, dict) else None
+        if not is_valid_level(level):
+            raise _MCPError(-32602, f"invalid log level: {level!r}")
+        self.log_level = level
+        return _success(msg_id, {})
+
+    def emit_log(self, level: str, data: Any, logger_name: str | None = None) -> None:
+        """Push a ``notifications/message`` if *level* clears the current floor.
+
+        ``data`` must not contain secrets or PII (per the MCP spec) — that is
+        the caller's responsibility.
+        """
+        from Imervue.mcp_server.logging import build_message, should_emit
+        if self.notifier is not None and should_emit(level, self.log_level):
+            self.notifier.notify("notifications/message", build_message(level, data, logger_name))
 
     def _on_prompts_list(self, msg_id: Any, _params: dict) -> dict:
         from Imervue.mcp_server.prompts import list_prompts
@@ -231,6 +251,7 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
     "completion/complete": MCPServer._on_completion_complete,
     "resources/subscribe": MCPServer._on_resources_subscribe,
     "resources/unsubscribe": MCPServer._on_resources_unsubscribe,
+    "logging/setLevel": MCPServer._on_logging_set_level,
 }
 
 
