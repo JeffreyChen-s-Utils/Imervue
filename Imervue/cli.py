@@ -163,6 +163,8 @@ _WRITE_SPEC = {
 
 def run(args) -> int:
     """Execute the parsed *args*; return a process exit code."""
+    if args.command in _MULTI_COMMANDS:
+        return _MULTI_COMMANDS[args.command](args)
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
         print("no input images found", file=sys.stderr)
@@ -222,6 +224,88 @@ def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
             print(f"error: {src}: {exc}", file=sys.stderr)
             errors += 1
     return 1 if errors else 0
+
+
+def _checked_path(raw: str) -> Path:
+    """Return *raw* as a Path, rejecting parent-traversal segments (S6547)."""
+    path = Path(raw)
+    if ".." in path.parts:
+        raise ValueError("path must not contain '..' segments")
+    return path
+
+
+def _ensure_parent(out: Path) -> None:
+    parent = out.parent
+    if str(parent) and not parent.exists():
+        # NOSONAR - parent derived from a validated (no '..') CLI path; writing
+        # to a user-chosen location is the intended CLI behaviour.
+        parent.mkdir(parents=True, exist_ok=True)  # NOSONAR
+
+
+def cmd_collage(args) -> int:
+    """Composite many inputs into one grid montage."""
+    paths = iter_image_paths(args.inputs, recursive=args.recursive)
+    if not paths:
+        print("no input images found", file=sys.stderr)
+        return 1
+    try:
+        out = _checked_path(args.out)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    from Imervue.image.collage import build_collage
+    images = [_load_rgba(p) for p in paths]
+    _ensure_parent(out)
+    Image.fromarray(build_collage(images, args.columns), mode="RGBA").save(out)
+    print(f"{len(paths)} images -> {out}")
+    return 0
+
+
+def cmd_anaglyph(args) -> int:
+    """Combine a left/right stereo pair into one red-cyan anaglyph."""
+    left, right = Path(args.left), Path(args.right)
+    if not left.is_file() or not right.is_file():
+        print("both left and right must be existing image files", file=sys.stderr)
+        return 1
+    try:
+        out = _checked_path(args.out) if args.out else left.with_name(
+            f"{left.stem}_anaglyph.png")
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    from Imervue.image.anaglyph import anaglyph
+    result = anaglyph(_load_rgba(left), _load_rgba(right), args.method)
+    _ensure_parent(out)
+    Image.fromarray(result, mode="RGBA").save(out)
+    print(f"{left} + {right} -> {out}")
+    return 0
+
+
+def op_preset(src: Path, target: Path, args) -> None:
+    Image.fromarray(args.recipe.apply(_load_rgba(src)), mode="RGBA").save(target)
+
+
+def cmd_preset(args) -> int:
+    """Apply a saved develop preset (by name) to each input image."""
+    from Imervue.image.develop_presets import PRESETS_KEY, DevelopPresetStore
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    if PRESETS_KEY not in user_setting_dict:
+        from Imervue.user_settings.user_setting_dict import read_user_setting
+        read_user_setting()
+    store = DevelopPresetStore(user_setting_dict)
+    recipe = store.get(args.name)
+    if recipe is None:
+        print(f"unknown preset {args.name!r}; available: {store.names()}", file=sys.stderr)
+        return 1
+    paths = iter_image_paths(args.inputs, recursive=args.recursive)
+    if not paths:
+        print("no input images found", file=sys.stderr)
+        return 1
+    args.recipe = recipe
+    return _write(args, paths, op_preset, "_preset", lambda _a: ".png")
+
+
+_MULTI_COMMANDS = {"collage": cmd_collage, "anaglyph": cmd_anaglyph, "preset": cmd_preset}
 
 
 def _add_common(sub: argparse.ArgumentParser) -> None:
@@ -291,6 +375,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     strip = subs.add_parser("strip", help="re-save without metadata (EXIF/XMP/ICC)")
     _add_common(strip)
+
+    collage = subs.add_parser("collage", help="composite many images into one grid")
+    collage.add_argument("inputs", nargs="+", help="image files or folders")
+    collage.add_argument("--recursive", action="store_true")
+    collage.add_argument("--columns", type=int, default=3, help="grid columns")
+    collage.add_argument("--out", default="collage.png", help="output image file")
+
+    anaglyph = subs.add_parser("anaglyph", help="red-cyan 3D from a stereo pair")
+    anaglyph.add_argument("left", help="left-eye image")
+    anaglyph.add_argument("right", help="right-eye image")
+    anaglyph.add_argument("--method", default="dubois", help="dubois / color / gray / true")
+    anaglyph.add_argument("--out", default=None, help="output image file")
+
+    preset = subs.add_parser("preset", help="apply a saved develop preset by name")
+    preset.add_argument("name", help="develop preset name")
+    _add_common(preset)
     return parser
 
 

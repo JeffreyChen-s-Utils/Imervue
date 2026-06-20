@@ -32,6 +32,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.perceptual_hash import dhash as _dhash
+from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -44,38 +46,6 @@ _IMAGE_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng",
 })
-
-
-# ---------------------------------------------------------------------------
-# Perceptual hash — difference hash (dHash)
-# ---------------------------------------------------------------------------
-
-def _dhash(img: Image.Image, hash_size: int = 8) -> int:
-    """Compute a difference hash (dHash) for an image.
-
-    Resizes to (hash_size+1, hash_size), converts to grayscale, then
-    compares adjacent pixel brightness to build a binary fingerprint.
-    Very fast and surprisingly effective for near-duplicate detection.
-    """
-    resized = img.convert("L").resize(
-        (hash_size + 1, hash_size), Image.Resampling.LANCZOS
-    )
-    # Pillow 14+ renamed getdata() → get_flattened_data(); support both.
-    _get = getattr(resized, "get_flattened_data", None) or resized.getdata
-    pixels = list(_get())
-    w = hash_size + 1
-    bits = 0
-    for row in range(hash_size):
-        for col in range(hash_size):
-            idx = row * w + col
-            if pixels[idx] < pixels[idx + 1]:
-                bits |= 1 << (row * hash_size + col)
-    return bits
-
-
-def _hamming_distance(a: int, b: int) -> int:
-    """Count differing bits between two integers."""
-    return bin(a ^ b).count("1")
 
 
 _METHOD_EXACT = "exact"
