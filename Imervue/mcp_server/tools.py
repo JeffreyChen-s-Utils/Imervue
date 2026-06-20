@@ -734,13 +734,18 @@ def register_default_tools(server: MCPServer) -> None:
     Called once from :func:`Imervue.mcp_server.server.run` and from
     tests that want the default tool set. Tests that want to register
     a custom subset should drop straight into ``server.register``
-    instead of using this helper."""
+    instead of using this helper. Output schemas and annotations are
+    pulled from :data:`Imervue.mcp_server.tool_schemas.TOOL_METADATA`."""
+    from Imervue.mcp_server.tool_schemas import TOOL_METADATA
     for entry in _TOOL_DEFINITIONS:
+        meta = TOOL_METADATA.get(entry["name"], {})
         server.register(
             name=entry["name"],
             description=entry["description"],
             input_schema=entry["input_schema"],
             handler=entry["handler"],
+            output_schema=meta.get("output_schema"),
+            annotations=meta.get("annotations"),
         )
 
 

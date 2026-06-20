@@ -44,6 +44,8 @@ class Tool:
     description: str
     input_schema: dict[str, Any]
     handler: Callable[..., Any]
+    output_schema: dict[str, Any] | None = None
+    annotations: dict[str, Any] | None = None
 
 
 @dataclass
@@ -72,12 +74,15 @@ class MCPServer:
         description: str,
         input_schema: dict[str, Any],
         handler: Callable[..., Any],
+        output_schema: dict[str, Any] | None = None,
+        annotations: dict[str, Any] | None = None,
     ) -> None:
         if name in self.tools:
             raise ValueError(f"tool {name!r} already registered")
         self.tools[name] = Tool(
             name=name, description=description,
             input_schema=input_schema, handler=handler,
+            output_schema=output_schema, annotations=annotations,
         )
 
     def handle_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
@@ -204,14 +209,7 @@ class MCPServer:
 
     def _on_tools_list(self, msg_id: Any, _params: dict) -> dict:
         return _success(msg_id, {
-            "tools": [
-                {
-                    "name": t.name,
-                    "description": t.description,
-                    "inputSchema": t.input_schema,
-                }
-                for t in self.tools.values()
-            ],
+            "tools": [_tool_descriptor(t) for t in self.tools.values()],
         })
 
     def _on_tools_call(self, msg_id: Any, params: dict) -> dict:
@@ -280,16 +278,38 @@ def _error_response(msg_id: Any, code: int, message: str) -> dict[str, Any]:
     }
 
 
+def _tool_descriptor(tool: Tool) -> dict[str, Any]:
+    """Render one tool for ``tools/list``, including the MCP 2025-11-25
+    ``outputSchema`` and ``annotations`` fields when the tool declares them."""
+    descriptor: dict[str, Any] = {
+        "name": tool.name,
+        "description": tool.description,
+        "inputSchema": tool.input_schema,
+    }
+    if tool.output_schema is not None:
+        descriptor["outputSchema"] = tool.output_schema
+    if tool.annotations is not None:
+        descriptor["annotations"] = tool.annotations
+    return descriptor
+
+
 def _tool_success(value: Any) -> dict[str, Any]:
     """Wrap a tool's return value in the MCP ``content`` envelope.
 
     Strings come through as ``text``; everything else is JSON-encoded
-    so the client can parse the structured payload back."""
+    so the client can parse the structured payload back. Dict results are
+    additionally surfaced as ``structuredContent`` so clients can consume
+    the typed payload directly (validated against the tool's outputSchema)
+    without re-parsing the text block."""
     if isinstance(value, str):
-        text = value
-    else:
-        text = json.dumps(value, ensure_ascii=False, indent=2, default=str)
-    return {"content": [{"type": "text", "text": text}], "isError": False}
+        return {"content": [{"type": "text", "text": value}], "isError": False}
+    text = json.dumps(value, ensure_ascii=False, indent=2, default=str)
+    result: dict[str, Any] = {
+        "content": [{"type": "text", "text": text}], "isError": False,
+    }
+    if isinstance(value, dict):
+        result["structuredContent"] = value
+    return result
 
 
 def _tool_error(message: str) -> dict[str, Any]:
