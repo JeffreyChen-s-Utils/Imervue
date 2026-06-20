@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -56,6 +57,13 @@ class MCPServer:
 
     tools: dict[str, Tool] = field(default_factory=dict)
     resource_root: str | None = None
+    notifier: Any = None  # Notifier | None — set when push notifications are wired
+    subscriptions: Any = field(default=None)  # SubscriptionRegistry | None
+
+    def __post_init__(self) -> None:
+        if self.subscriptions is None:
+            from Imervue.mcp_server.notifications import SubscriptionRegistry
+            self.subscriptions = SubscriptionRegistry()
 
     def register(
         self,
@@ -102,7 +110,7 @@ class MCPServer:
             "capabilities": {
                 "tools": {"listChanged": False},
                 "prompts": {"listChanged": False},
-                "resources": {"subscribe": False, "listChanged": False},
+                "resources": {"subscribe": True, "listChanged": True},
                 "completions": {},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
@@ -136,6 +144,26 @@ class MCPServer:
             return _success(msg_id, read_resource(params.get("uri")))
         except ResourceError as exc:
             raise _MCPError(exc.code, exc.message) from exc
+
+    def _on_resources_subscribe(self, msg_id: Any, params: dict) -> dict:
+        self.subscriptions.subscribe(_required_uri(params))
+        return _success(msg_id, {})
+
+    def _on_resources_unsubscribe(self, msg_id: Any, params: dict) -> dict:
+        self.subscriptions.unsubscribe(_required_uri(params))
+        return _success(msg_id, {})
+
+    # ---- server-pushed notifications ---------------------------------
+
+    def notify_resource_updated(self, uri: str) -> None:
+        """Push ``notifications/resources/updated`` if *uri* is subscribed."""
+        if self.notifier is not None and self.subscriptions.is_subscribed(uri):
+            self.notifier.notify("notifications/resources/updated", {"uri": uri})
+
+    def notify_list_changed(self) -> None:
+        """Push ``notifications/resources/list_changed`` to the client."""
+        if self.notifier is not None:
+            self.notifier.notify("notifications/resources/list_changed")
 
     def _on_prompts_list(self, msg_id: Any, _params: dict) -> dict:
         from Imervue.mcp_server.prompts import list_prompts
@@ -201,7 +229,18 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
     "resources/read": MCPServer._on_resources_read,
     "ping": MCPServer._on_ping,
     "completion/complete": MCPServer._on_completion_complete,
+    "resources/subscribe": MCPServer._on_resources_subscribe,
+    "resources/unsubscribe": MCPServer._on_resources_unsubscribe,
 }
+
+
+def _required_uri(params: dict) -> str:
+    if not isinstance(params, dict):
+        raise _MCPError(-32602, "params must be an object")
+    uri = params.get("uri")
+    if not isinstance(uri, str) or not uri:
+        raise _MCPError(-32602, "params.uri must be a non-empty string")
+    return uri
 
 
 # ---------------------------------------------------------------------------
@@ -260,25 +299,62 @@ def run(
 
     ``stdin`` / ``stdout`` default to the system handles but can be
     swapped for in-memory ``io.StringIO`` objects in tests."""
-    import os
+    from Imervue.mcp_server.notifications import Notifier
     server = MCPServer(resource_root=os.environ.get("IMERVUE_MCP_ROOT"))
     from Imervue.mcp_server.tools import register_default_tools
     register_default_tools(server)
     input_stream = stdin or sys.stdin
     output_stream = stdout or sys.stdout
-    for raw_line in input_stream:
-        line = raw_line.strip()
-        if not line:
-            continue
-        try:
-            message = json.loads(line)
-        except json.JSONDecodeError as exc:
-            response = _error_response(None, -32700, f"parse error: {exc}")
-        else:
-            response = server.handle_message(message)
-        if response is None:
-            continue
-        output_stream.write(json.dumps(response, ensure_ascii=False) + "\n")
-        output_stream.flush()
+    server.notifier = Notifier(output_stream)
+    watcher = _start_resource_watcher(server)
+    try:
+        for raw_line in input_stream:
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                message = json.loads(line)
+            except json.JSONDecodeError as exc:
+                response = _error_response(None, -32700, f"parse error: {exc}")
+            else:
+                response = server.handle_message(message)
+            if response is None:
+                continue
+            # Responses share the same locked writer as push notifications.
+            server.notifier.send(response)
+    finally:
+        if watcher is not None:
+            watcher.stop()
+
+
+def _start_resource_watcher(server: MCPServer):
+    """Watch the resource root and push resource notifications. None if unavailable."""
+    root = server.resource_root
+    if not root or not os.path.isdir(root):
+        return None
+    try:
+        from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
+    except ImportError:
+        return None
+    from Imervue.mcp_server.resources import image_uri
+
+    class _Handler(FileSystemEventHandler):
+        def on_any_event(self, event):  # noqa: D401 - watchdog hook
+            try:
+                if not getattr(event, "is_directory", False):
+                    server.notify_resource_updated(image_uri(event.src_path))
+                server.notify_list_changed()
+            except Exception:  # noqa: BLE001 - never let a watcher error kill the loop
+                logger.debug("resource watcher notify failed", exc_info=True)
+
+    try:
+        observer = Observer()
+        observer.schedule(_Handler(), root, recursive=False)
+        observer.daemon = True
+        observer.start()
+    except (OSError, RuntimeError):
+        return None
+    return observer
 
 
