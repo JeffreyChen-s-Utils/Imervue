@@ -258,6 +258,42 @@ def test_list_ops_json(capsys):
     assert {"resize", "pipeline", "list-ops"} <= commands
 
 
+def test_jobs_parallel_processes_all(tmp_path, capsys):
+    for i in range(5):
+        _save(tmp_path / f"f{i}.png", size=(40, 40))
+    out_dir = tmp_path / "out"
+    assert main(["resize", str(tmp_path), "--max", "16", "-j", "4", "--out", str(out_dir)]) == 0
+    assert sorted(p.name for p in out_dir.glob("*.png")) == [f"f{i}.png" for i in range(5)]
+    assert "5 processed, 0 skipped, 0 errors" in capsys.readouterr().err
+
+
+def test_jobs_auto_zero(tmp_path):
+    for i in range(3):
+        _save(tmp_path / f"f{i}.png")
+    out_dir = tmp_path / "out"
+    assert main(["thumbnail", str(tmp_path), "-j", "0", "--out", str(out_dir)]) == 0
+    assert len(list(out_dir.glob("*.png"))) == 3
+
+
+def test_summary_counts_skips(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    out_dir = tmp_path / "out"
+    main(["resize", str(tmp_path / "a.png"), "--out", str(out_dir)])
+    capsys.readouterr()
+    main(["resize", str(tmp_path / "a.png"), "--out", str(out_dir)])  # exists → skip
+    assert "0 processed, 1 skipped, 0 errors" in capsys.readouterr().err
+
+
+def test_parallel_output_is_input_ordered(tmp_path, capsys):
+    for i in range(4):
+        _save(tmp_path / f"{i}.png")
+    out_dir = tmp_path / "out"
+    main(["resize", str(tmp_path), "-j", "4", "--out", str(out_dir)])
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if "->" in ln]
+    names = [ln.split("->")[0].strip().rsplit("\\", 1)[-1].rsplit("/", 1)[-1] for ln in lines]
+    assert names == sorted(names)   # deterministic, input order
+
+
 def test_dry_run_writes_nothing(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"

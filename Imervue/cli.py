@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -293,32 +294,58 @@ def _validated_out_dir(raw: str | None) -> Path | None:
     return out
 
 
+def _process_one(src: Path, out_dir, operation, suffix: str, ext_fn, args) -> tuple[str, str]:
+    """Process one file; return ``(status, message)`` — pure of shared state."""
+    target = output_path(src, str(out_dir) if out_dir else None, suffix, ext_fn(args))
+    if args.dry_run:
+        return ("dry", f"would write {target}")
+    try:
+        if out_dir is not None:
+            # out_dir is validated (no '..'); writing to a user-chosen directory
+            # is the intended CLI behaviour, so the path-escape rule is N/A here.
+            out_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
+        if target.exists() and not args.overwrite:
+            return ("skip", f"skip (exists): {target}")
+        operation(src, target, args)
+    except (OSError, ValueError) as exc:
+        return ("error", f"error: {src}: {exc}")
+    return ("ok", f"{src} -> {target}")
+
+
+def _resolve_workers(jobs: int, count: int) -> int:
+    """Worker count: 1 = inline; 0 = auto; clamp to the number of files."""
+    if jobs == 1 or count <= 1:
+        return 1
+    workers = (os.cpu_count() or 1) if jobs <= 0 else jobs
+    return max(1, min(workers, count))
+
+
 def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
     try:
         out_dir = _validated_out_dir(args.out)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    errors = 0
-    for src in paths:
-        target = output_path(src, str(out_dir) if out_dir else None, suffix, ext_fn(args))
-        try:
-            if args.dry_run:
-                print(f"would write {target}")
-                continue
-            if out_dir is not None:
-                # out_dir is validated (no '..'); writing to a user-chosen directory
-                # is the intended CLI behaviour, so the path-escape rule is N/A here.
-                out_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
-            if target.exists() and not args.overwrite:
-                print(f"skip (exists): {target}")
-                continue
-            operation(src, target, args)
-            print(f"{src} -> {target}")
-        except (OSError, ValueError) as exc:
-            print(f"error: {src}: {exc}", file=sys.stderr)
-            errors += 1
-    return 1 if errors else 0
+
+    def work(src: Path) -> tuple[str, str]:
+        return _process_one(src, out_dir, operation, suffix, ext_fn, args)
+
+    workers = _resolve_workers(getattr(args, "jobs", 1), len(paths))
+    if workers == 1:
+        results = [work(src) for src in paths]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            # map preserves input order, so output is deterministic.
+            results = list(pool.map(work, paths))
+
+    tally = {"ok": 0, "skip": 0, "error": 0, "dry": 0}
+    for status, message in results:
+        tally[status] += 1
+        print(message, file=sys.stderr if status == "error" else sys.stdout)
+    print(f"{tally['ok'] + tally['dry']} processed, {tally['skip']} skipped, "
+          f"{tally['error']} errors", file=sys.stderr)
+    return 1 if tally["error"] else 0
 
 
 def _checked_path(raw: str) -> Path:
@@ -448,6 +475,8 @@ def _add_common(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--recursive", action="store_true", help="recurse into folders")
     sub.add_argument("--dry-run", action="store_true", help="list actions, write nothing")
     sub.add_argument("--overwrite", action="store_true", help="overwrite existing outputs")
+    sub.add_argument("-j", "--jobs", type=int, default=1,
+                     help="parallel workers (1=inline, 0=auto/all cores)")
 
 
 def build_parser() -> argparse.ArgumentParser:
