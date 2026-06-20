@@ -19,7 +19,7 @@ from Imervue.mcp_server.tools import _TOOL_DEFINITIONS, register_default_tools
 _WRITE_TOOLS = {
     "convert_format", "puppet_from_png", "extract_video_frame",
     "apply_watermark", "apply_frame", "build_collage", "crop_image",
-    "resize_image",
+    "resize_image", "rotate_image",
 }
 
 
@@ -267,6 +267,22 @@ def test_resize_image_structured_content_conforms(server, sample_png, tmp_path):
     assert result["isError"] is False
     _assert_conforms(
         result["structuredContent"], TOOL_METADATA["resize_image"]["output_schema"],
+    )
+    assert dst.exists()
+
+
+def test_rotate_image_structured_content_conforms(server, sample_png, tmp_path):
+    dst = tmp_path / "rotated.png"
+    response = server.handle_message(_request(
+        "tools/call",
+        {"name": "rotate_image",
+         "arguments": {"source": str(sample_png), "destination": str(dst),
+                       "operation": "rotate_90"}},
+    ))
+    result = response["result"]
+    assert result["isError"] is False
+    _assert_conforms(
+        result["structuredContent"], TOOL_METADATA["rotate_image"]["output_schema"],
     )
     assert dst.exists()
 

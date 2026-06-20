@@ -337,4 +337,19 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["source", "destination", "width", "height", "size_bytes"],
         ),
     },
+    "rotate_image": {
+        "annotations": _writes_file("Rotate image"),
+        "output_schema": _obj(
+            {
+                "source": _STR,
+                "destination": _STR,
+                "operation": _STR,
+                "width": _INT,
+                "height": _INT,
+                "size_bytes": _INT,
+            },
+            ["source", "destination", "operation",
+             "width", "height", "size_bytes"],
+        ),
+    },
 }

@@ -18,6 +18,7 @@ from Imervue.mcp_server.tools import (
     quality_metrics,
     read_histogram,
     resize_image,
+    rotate_image,
 )
 
 
@@ -113,7 +114,80 @@ def test_registered_in_default_tools():
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
             "apply_watermark", "apply_frame", "build_collage",
-            "crop_image", "resize_image"} <= names
+            "crop_image", "resize_image", "rotate_image"} <= names
+
+
+# ---------------------------------------------------------------------------
+# rotate_image
+# ---------------------------------------------------------------------------
+
+
+def _marked_rgb(tmp_path, name):
+    """20x10 (w x h) RGB image with a single white marker at top-left (0,0)."""
+    arr = np.zeros((10, 20, 3), dtype=np.uint8)
+    arr[0, 0] = (255, 255, 255)
+    path = tmp_path / name
+    Image.fromarray(arr, "RGB").save(str(path))
+    return str(path)
+
+
+@pytest.mark.parametrize("operation,expected_size", [
+    ("rotate_90", (10, 20)),    # 90deg swaps WxH: 20x10 -> 10x20
+    ("rotate_180", (20, 10)),
+    ("rotate_270", (10, 20)),
+    ("flip_horizontal", (20, 10)),
+    ("flip_vertical", (20, 10)),
+])
+def test_rotate_image_dimensions(tmp_path, operation, expected_size):
+    src = _marked_rgb(tmp_path, "src.png")
+    dst = tmp_path / "out.png"
+    result = rotate_image(src, str(dst), operation)
+    assert Image.open(dst).size == expected_size
+    assert (result["width"], result["height"]) == expected_size
+    assert result["operation"] == operation
+
+
+def test_rotate_90_is_clockwise(tmp_path):
+    # Marker at (0,0) of a 20x10 image. A 90deg clockwise rotation sends the
+    # top-left corner to the top-right of the 10x20 result.
+    src = _marked_rgb(tmp_path, "src.png")
+    dst = tmp_path / "out.png"
+    rotate_image(src, str(dst), "rotate_90")
+    out = np.asarray(Image.open(dst).convert("RGB"))
+    assert out.shape[:2] == (20, 10)  # HxW
+    assert tuple(out[0, -1]) == (255, 255, 255)  # top-right
+
+
+def test_flip_horizontal_moves_marker_to_top_right(tmp_path):
+    src = _marked_rgb(tmp_path, "src.png")
+    dst = tmp_path / "out.png"
+    rotate_image(src, str(dst), "flip_horizontal")
+    out = np.asarray(Image.open(dst).convert("RGB"))
+    assert tuple(out[0, -1]) == (255, 255, 255)
+
+
+def test_rotate_image_invalid_operation_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="operation"):
+        rotate_image(src, str(tmp_path / "out.png"), "spin")
+
+
+def test_rotate_image_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "src.png", h=20, w=20)
+    dst = tmp_path / "out.jpg"
+    rotate_image(src, str(dst), "rotate_180")
+    assert Image.open(dst).mode == "RGB"
+
+
+def test_rotate_image_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        rotate_image("/no/such.png", str(tmp_path / "out.png"), "rotate_90")
+
+
+def test_rotate_image_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        rotate_image(src, str(tmp_path / "nope" / "out.png"), "rotate_90")
 
 
 # ---------------------------------------------------------------------------

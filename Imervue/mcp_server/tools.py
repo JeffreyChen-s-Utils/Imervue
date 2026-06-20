@@ -777,6 +777,52 @@ def resize_image(
 
 
 # ---------------------------------------------------------------------------
+# rotate_image
+# ---------------------------------------------------------------------------
+
+# Operation name -> PIL transpose attribute. Rotations are clockwise; PIL's
+# ROTATE_n constants are counter-clockwise, hence the 90/270 swap.
+_ROTATE_OPERATIONS: dict[str, str] = {
+    "rotate_90": "ROTATE_270",
+    "rotate_180": "ROTATE_180",
+    "rotate_270": "ROTATE_90",
+    "flip_horizontal": "FLIP_LEFT_RIGHT",
+    "flip_vertical": "FLIP_TOP_BOTTOM",
+}
+
+
+def rotate_image(source: str, destination: str, operation: str) -> dict[str, Any]:
+    """Rotate (clockwise) or flip an image by a fixed operation and save it.
+
+    ``operation`` is one of ``rotate_90`` / ``rotate_180`` / ``rotate_270`` /
+    ``flip_horizontal`` / ``flip_vertical``. These are lossless orientation
+    changes. The destination format follows its suffix. Returns the
+    destination path, the operation, the resulting dimensions and size.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    transpose_name = _ROTATE_OPERATIONS.get(operation)
+    if transpose_name is None:
+        raise ValueError(
+            f"operation must be one of {sorted(_ROTATE_OPERATIONS)}, "
+            f"got {operation!r}",
+        )
+    from PIL import Image
+    with Image.open(src) as opened:
+        result = opened.transpose(getattr(Image.Transpose, transpose_name))
+        width, height = result.size
+        _save_image_to(dst, result)
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "operation": operation,
+        "width": int(width),
+        "height": int(height),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1139,6 +1185,29 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": resize_image,
+    },
+    {
+        "name": "rotate_image",
+        "description": (
+            "Rotate (clockwise) or flip an image by a fixed, lossless operation "
+            "and save it. operation is one of rotate_90 / rotate_180 / "
+            "rotate_270 / flip_horizontal / flip_vertical. The destination "
+            "format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "operation": {
+                    "type": "string",
+                    "enum": ["rotate_90", "rotate_180", "rotate_270",
+                             "flip_horizontal", "flip_vertical"],
+                },
+            },
+            "required": ["source", "destination", "operation"],
+        },
+        "handler": rotate_image,
     },
 ]
 
