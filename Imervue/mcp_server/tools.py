@@ -468,6 +468,33 @@ def image_thumbnail(path: str, max_size: int = 256) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# find_similar
+# ---------------------------------------------------------------------------
+
+
+def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) -> dict[str, Any]:
+    """Group near-duplicate images in *folder* by perceptual (dHash) similarity.
+
+    ``threshold`` is the maximum Hamming distance (0 = identical hash, higher =
+    more tolerant). Returns the groups (each a list of paths) of size > 1.
+    """
+    base = _validated_dir(folder)
+    iterator = base.rglob("*") if recursive else base.iterdir()
+    paths = [
+        str(p) for p in iterator
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+    ]
+    from Imervue.image.perceptual_hash import find_similar as _find
+    groups = _find(sorted(paths), int(threshold))
+    return {
+        "folder": str(base),
+        "threshold": int(threshold),
+        "group_count": len(groups),
+        "groups": groups,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -679,6 +706,24 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": image_thumbnail,
+    },
+    {
+        "name": "find_similar",
+        "description": (
+            "Group near-duplicate images in a folder by perceptual (dHash) "
+            "similarity. threshold is the max Hamming distance (default 5); set "
+            "recursive=true to walk subfolders. Returns groups of size > 1."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder": {"type": "string"},
+                "threshold": {"type": "integer", "minimum": 0, "maximum": 32, "default": 5},
+                "recursive": {"type": "boolean", "default": False},
+            },
+            "required": ["folder"],
+        },
+        "handler": find_similar,
     },
 ]
 

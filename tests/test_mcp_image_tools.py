@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
+    find_similar,
     image_statistics,
     image_thumbnail,
     ocr_text,
@@ -77,8 +78,23 @@ def test_ocr_text_degrades_gracefully(tmp_path):
     assert isinstance(result["text"], str)
 
 
+def test_find_similar_groups_duplicates(tmp_path):
+    ramp = np.tile(np.linspace(0, 255, 32, dtype=np.uint8), (32, 1))
+    Image.fromarray(ramp, "L").convert("RGB").save(str(tmp_path / "a.png"))
+    Image.fromarray(ramp, "L").convert("RGB").save(str(tmp_path / "b.png"))
+    Image.fromarray(ramp.T, "L").convert("RGB").save(str(tmp_path / "c.png"))
+    result = find_similar(str(tmp_path), threshold=0)
+    assert result["group_count"] == 1
+    assert len(result["groups"][0]) == 2
+
+
+def test_find_similar_missing_folder_raises():
+    with pytest.raises(ValueError):
+        find_similar("/no/such/folder")
+
+
 def test_registered_in_default_tools():
     from Imervue.mcp_server.tools import _TOOL_DEFINITIONS
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
     assert {"image_statistics", "quality_metrics", "read_histogram",
-            "ocr_text", "image_thumbnail"} <= names
+            "ocr_text", "image_thumbnail", "find_similar"} <= names

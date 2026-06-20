@@ -149,6 +149,48 @@ def test_auto_orient_writes_output(tmp_path):
     assert (out_dir / "o.png").exists()
 
 
+def test_collage_combines_inputs(tmp_path):
+    _save(tmp_path / "a.png", size=(40, 40))
+    _save(tmp_path / "b.png", size=(40, 40))
+    out = tmp_path / "out" / "grid.png"
+    assert main(["collage", str(tmp_path / "a.png"), str(tmp_path / "b.png"),
+                 "--columns", "2", "--out", str(out)]) == 0
+    assert out.exists()
+
+
+def test_collage_rejects_traversal_out(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    assert main(["collage", str(tmp_path / "a.png"), "--out", "../grid.png"]) == 2
+    assert "must not contain '..'" in capsys.readouterr().err
+
+
+def test_anaglyph_combines_stereo_pair(tmp_path):
+    _save(tmp_path / "left.png", size=(40, 40), value=200)
+    _save(tmp_path / "right.png", size=(40, 40), value=60)
+    out = tmp_path / "out" / "ana.png"
+    assert main(["anaglyph", str(tmp_path / "left.png"), str(tmp_path / "right.png"),
+                 "--method", "dubois", "--out", str(out)]) == 0
+    assert out.exists()
+
+
+def test_preset_applies_saved_preset(tmp_path):
+    from Imervue.image.develop_presets import DevelopPresetStore
+    from Imervue.image.recipe import Recipe
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    DevelopPresetStore(user_setting_dict).save("MyPreset", Recipe())
+    _save(tmp_path / "p.png")
+    out_dir = tmp_path / "out"
+    assert main(["preset", "MyPreset", str(tmp_path / "p.png"), "--out", str(out_dir)]) == 0
+    # With --out the file keeps its stem + the op extension (no suffix).
+    assert (out_dir / "p.png").exists()
+
+
+def test_preset_unknown_returns_error(tmp_path, capsys):
+    _save(tmp_path / "p.png")
+    assert main(["preset", "NoSuchPreset", str(tmp_path / "p.png")]) == 1
+    assert "unknown preset" in capsys.readouterr().err
+
+
 def test_dry_run_writes_nothing(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"
