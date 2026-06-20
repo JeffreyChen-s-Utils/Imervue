@@ -36,6 +36,7 @@ _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "J
 _SHARPNESS_MAX_SIDE = 512
 _RGB_MAX = 255
 _DEFAULT_WATERMARK_COLOR = (_RGB_MAX, _RGB_MAX, _RGB_MAX)
+_DEFAULT_FRAME_TEXT_COLOR = (40, 40, 40)
 _WATERMARK_CORNERS = frozenset({
     "top-left", "top-right", "bottom-left", "bottom-right", "center",
 })
@@ -506,14 +507,23 @@ def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) ->
 # ---------------------------------------------------------------------------
 
 
-def _validated_rgb_triplet(color: Any) -> tuple[int, int, int]:
+def _validated_rgb_triplet(
+    color: Any, default: tuple[int, int, int],
+) -> tuple[int, int, int]:
     """Coerce a JSON ``[r, g, b]`` array into a clamped uint8 RGB tuple."""
     if color is None:
-        return _DEFAULT_WATERMARK_COLOR
+        return default
     if (not isinstance(color, (list, tuple)) or len(color) != 3
             or not all(isinstance(c, int) for c in color)):
         raise ValueError("color must be a list of three integers 0-255")
     return tuple(max(0, min(_RGB_MAX, int(c))) for c in color)
+
+
+def _save_image_to(dst: Path, img: Any) -> None:
+    """Save a PIL image to ``dst``, flattening alpha for formats lacking it."""
+    fmt = dst.suffix.lower().lstrip(".")
+    to_save = img.convert("RGB") if fmt in _NO_ALPHA_FORMATS else img
+    to_save.save(dst)
 
 
 def apply_watermark(
@@ -540,10 +550,8 @@ def apply_watermark(
         raise ValueError(
             f"corner must be one of {sorted(_WATERMARK_CORNERS)}, got {corner!r}",
         )
-    dst = Path(destination)
-    if not dst.parent.exists():
-        raise ValueError(f"destination parent {dst.parent} does not exist")
-    rgb = _validated_rgb_triplet(color)
+    dst = _validated_destination(destination)
+    rgb = _validated_rgb_triplet(color, _DEFAULT_WATERMARK_COLOR)
     from PIL import Image
     from Imervue.image.watermark import WatermarkOptions
     from Imervue.image.watermark import apply_watermark as _apply
@@ -551,17 +559,68 @@ def apply_watermark(
         text=text, corner=corner, opacity=float(opacity),
         font_fraction=float(font_fraction), color=rgb, shadow=bool(shadow),
     )
-    fmt = dst.suffix.lower().lstrip(".")
     with Image.open(src) as opened:
-        marked = _apply(opened, opts)
-        to_save = marked.convert("RGB") if fmt in _NO_ALPHA_FORMATS else marked
-        to_save.save(dst)
+        _save_image_to(dst, _apply(opened, opts))
     return {
         "source": str(src),
         "destination": str(dst),
         "size_bytes": int(dst.stat().st_size),
         "corner": corner,
     }
+
+
+# ---------------------------------------------------------------------------
+# apply_frame
+# ---------------------------------------------------------------------------
+
+
+def apply_frame(
+    source: str,
+    destination: str,
+    *,
+    border: int = 40,
+    color: list[int] | None = None,
+    bottom_extra: int = 0,
+    caption: str = "",
+    text_color: list[int] | None = None,
+) -> dict[str, Any]:
+    """Wrap an image in a matte border (+ optional caption) and save it.
+
+    ``border`` is the matte width in pixels, ``bottom_extra`` adds a thicker
+    Polaroid-style bottom band, and ``caption`` is burned into that band.
+    The destination format follows its suffix. Returns the destination path,
+    its size in bytes and the framed dimensions.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    frame_rgb = _validated_rgb_triplet(color, _DEFAULT_WATERMARK_COLOR)
+    text_rgb = _validated_rgb_triplet(text_color, _DEFAULT_FRAME_TEXT_COLOR)
+    from PIL import Image
+    from Imervue.image.photo_frame import FrameOptions, add_frame
+    opts = FrameOptions(
+        border=max(0, int(border)), color=frame_rgb,
+        bottom_extra=max(0, int(bottom_extra)),
+        caption=str(caption), text_color=text_rgb,
+    )
+    framed = add_frame(_load_rgba_array(src), opts)
+    with Image.fromarray(framed, "RGBA") as out:
+        _save_image_to(dst, out)
+    height, width = framed.shape[:2]
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "size_bytes": int(dst.stat().st_size),
+        "width": int(width),
+        "height": int(height),
+    }
+
+
+def _validated_destination(destination: str) -> Path:
+    """Return the destination Path, requiring its parent directory to exist."""
+    dst = Path(destination)
+    if not dst.parent.exists():
+        raise ValueError(f"destination parent {dst.parent} does not exist")
+    return dst
 
 
 # ---------------------------------------------------------------------------
@@ -828,6 +887,35 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination", "text"],
         },
         "handler": apply_watermark,
+    },
+    {
+        "name": "apply_frame",
+        "description": (
+            "Wrap an image in a coloured matte border and save it to a "
+            "destination path. border is the matte width in pixels; bottom_extra "
+            "adds a thicker Polaroid-style bottom band; caption is burned into "
+            "that band. color and text_color are [r, g, b] triplets."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "border": {"type": "integer", "minimum": 0, "default": 40},
+                "color": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [255, 255, 255],
+                },
+                "bottom_extra": {"type": "integer", "minimum": 0, "default": 0},
+                "caption": {"type": "string", "default": ""},
+                "text_color": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [40, 40, 40],
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": apply_frame,
     },
 ]
 

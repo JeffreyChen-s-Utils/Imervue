@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
+    apply_frame,
     apply_watermark,
     find_similar,
     image_statistics,
@@ -107,7 +108,7 @@ def test_registered_in_default_tools():
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
-            "apply_watermark"} <= names
+            "apply_watermark", "apply_frame"} <= names
 
 
 # ---------------------------------------------------------------------------
@@ -172,3 +173,68 @@ def test_apply_watermark_missing_destination_parent_raises(tmp_path):
     src = _save(tmp_path / "src.png")
     with pytest.raises(ValueError, match="destination parent"):
         apply_watermark(src, str(tmp_path / "nope" / "out.png"), "x")
+
+
+# ---------------------------------------------------------------------------
+# apply_frame
+# ---------------------------------------------------------------------------
+
+
+def test_apply_frame_grows_canvas_by_border(tmp_path):
+    src = _save(tmp_path / "src.png", h=24, w=24)
+    dst = tmp_path / "framed.png"
+    result = apply_frame(src, str(dst), border=10)
+    assert dst.exists()
+    # 24 + 2*10 border on each axis.
+    assert result["width"] == 44
+    assert result["height"] == 44
+    assert result["size_bytes"] > 0
+
+
+def test_apply_frame_bottom_extra_adds_height_only(tmp_path):
+    src = _save(tmp_path / "src.png", h=30, w=30)
+    result = apply_frame(src, str(tmp_path / "out.png"), border=5, bottom_extra=20)
+    assert result["width"] == 40            # 30 + 2*5
+    assert result["height"] == 60           # 30 + 2*5 + 20
+
+
+def test_apply_frame_with_caption(tmp_path):
+    src = _save(tmp_path / "src.png", h=40, w=80)
+    dst = tmp_path / "cap.png"
+    result = apply_frame(
+        src, str(dst), border=8, bottom_extra=30,
+        caption="Hello", text_color=[10, 10, 10],
+    )
+    assert dst.exists()
+    assert result["height"] == 40 + 16 + 30
+
+
+def test_apply_frame_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "src.png")
+    dst = tmp_path / "out.jpg"
+    apply_frame(src, str(dst), border=6)
+    assert Image.open(dst).mode == "RGB"
+
+
+def test_apply_frame_clamps_out_of_range_color(tmp_path):
+    src = _save(tmp_path / "src.png")
+    dst = tmp_path / "out.png"
+    apply_frame(src, str(dst), color=[999, -10, 50])
+    assert dst.exists()
+
+
+def test_apply_frame_invalid_color_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="color"):
+        apply_frame(src, str(tmp_path / "out.png"), text_color=[0, 0])
+
+
+def test_apply_frame_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        apply_frame("/no/such.png", str(tmp_path / "out.png"))
+
+
+def test_apply_frame_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        apply_frame(src, str(tmp_path / "nope" / "out.png"))

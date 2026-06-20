@@ -283,4 +283,17 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["source", "destination", "size_bytes", "corner"],
         ),
     },
+    "apply_frame": {
+        "annotations": _writes_file("Apply photo frame"),
+        "output_schema": _obj(
+            {
+                "source": _STR,
+                "destination": _STR,
+                "size_bytes": _INT,
+                "width": _INT,
+                "height": _INT,
+            },
+            ["source", "destination", "size_bytes", "width", "height"],
+        ),
+    },
 }
