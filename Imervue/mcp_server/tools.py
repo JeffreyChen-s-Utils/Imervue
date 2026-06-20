@@ -640,6 +640,7 @@ def build_collage(
     gap: int = 12,
     margin: int = 20,
     background: list[int] | None = None,
+    progress: Any = None,
 ) -> dict[str, Any]:
     """Composite several images into a grid montage and save it.
 
@@ -647,6 +648,9 @@ def build_collage(
     ``cell_height`` cell; ``gap`` separates cells and ``margin`` frames the
     grid. The destination format follows its suffix. Returns the destination
     path, image count, column count, output dimensions and size in bytes.
+
+    ``progress`` is an optional reporter injected by the server when the
+    caller passes a progressToken; each loaded source advances it.
     """
     if not isinstance(sources, (list, tuple)) or not sources:
         raise ValueError("sources must be a non-empty list of image paths")
@@ -654,7 +658,12 @@ def build_collage(
         raise ValueError(f"collage supports at most {_COLLAGE_MAX_IMAGES} images")
     dst = _validated_destination(destination)
     rgb = _validated_rgb_triplet(background, _DEFAULT_WATERMARK_COLOR)
-    arrays = [_load_rgba_array(_validated_file(src)) for src in sources]
+    total = len(sources)
+    arrays = []
+    for index, src in enumerate(sources, start=1):
+        arrays.append(_load_rgba_array(_validated_file(src)))
+        if progress is not None:
+            progress.report(index, total=total, message=f"loaded {index}/{total}")
     cols = max(1, int(columns))
     from PIL import Image
     from Imervue.image.collage import build_collage as _build

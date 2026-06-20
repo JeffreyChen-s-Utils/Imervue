@@ -21,6 +21,7 @@ they need to.
 """
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import os
@@ -46,6 +47,7 @@ class Tool:
     handler: Callable[..., Any]
     output_schema: dict[str, Any] | None = None
     annotations: dict[str, Any] | None = None
+    accepts_progress: bool = False
 
 
 @dataclass
@@ -83,6 +85,7 @@ class MCPServer:
             name=name, description=description,
             input_schema=input_schema, handler=handler,
             output_schema=output_schema, annotations=annotations,
+            accepts_progress="progress" in inspect.signature(handler).parameters,
         )
 
     def handle_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
@@ -224,8 +227,9 @@ class MCPServer:
         args = params.get("arguments") or {}
         if not isinstance(args, dict):
             raise _MCPError(-32602, "params.arguments must be an object")
+        call_args = self._with_progress(tool, args, params)
         try:
-            raw_result = tool.handler(**args)
+            raw_result = tool.handler(**call_args)
         except TypeError as exc:
             # Bad argument shape — surface to client as a tool error
             # rather than a protocol error, so the client can retry.
@@ -234,6 +238,20 @@ class MCPServer:
             logger.exception("tool %s crashed", name)
             return _success(msg_id, _tool_error(str(exc)))
         return _success(msg_id, _tool_success(raw_result))
+
+    def _with_progress(
+        self, tool: Tool, args: dict, params: dict,
+    ) -> dict[str, Any]:
+        """Inject a ProgressReporter for tools that declare a ``progress`` param.
+
+        The reporter is bound to the request's ``_meta.progressToken`` (if any)
+        and the server's notifier, so it no-ops when the client didn't ask for
+        progress or no stream is wired."""
+        if not tool.accepts_progress:
+            return args
+        from Imervue.mcp_server.progress import ProgressReporter, progress_token
+        reporter = ProgressReporter(self.notifier, progress_token(params))
+        return {**args, "progress": reporter}
 
 
 _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
