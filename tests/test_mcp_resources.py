@@ -123,5 +123,5 @@ def test_resources_read_method(tmp_path):
 def test_resources_read_bad_uri_is_error():
     resp = _server().handle_message({
         "jsonrpc": "2.0", "id": 5, "method": "resources/read",
-        "params": {"uri": "http://x"}})
+        "params": {"uri": "file:///x"}})
     assert resp["error"]["code"] == -32602
