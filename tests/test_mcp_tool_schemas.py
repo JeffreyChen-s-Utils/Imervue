@@ -16,7 +16,9 @@ from Imervue.mcp_server.server import MCPServer, _tool_success
 from Imervue.mcp_server.tool_schemas import TOOL_METADATA
 from Imervue.mcp_server.tools import _TOOL_DEFINITIONS, register_default_tools
 
-_WRITE_TOOLS = {"convert_format", "puppet_from_png", "extract_video_frame"}
+_WRITE_TOOLS = {
+    "convert_format", "puppet_from_png", "extract_video_frame", "apply_watermark",
+}
 
 
 @pytest.fixture
@@ -185,6 +187,22 @@ def test_image_tool_structured_content_conforms(server, sample_png, name):
     _assert_conforms(
         result["structuredContent"], TOOL_METADATA[name]["output_schema"],
     )
+
+
+def test_apply_watermark_structured_content_conforms(server, sample_png, tmp_path):
+    dst = tmp_path / "marked.png"
+    response = server.handle_message(_request(
+        "tools/call",
+        {"name": "apply_watermark",
+         "arguments": {"source": str(sample_png),
+                       "destination": str(dst), "text": "mark"}},
+    ))
+    result = response["result"]
+    assert result["isError"] is False
+    _assert_conforms(
+        result["structuredContent"], TOOL_METADATA["apply_watermark"]["output_schema"],
+    )
+    assert dst.exists()
 
 
 def test_list_images_structured_content_conforms(server, sample_png):

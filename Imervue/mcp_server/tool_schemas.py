@@ -271,4 +271,16 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["folder", "threshold", "group_count", "groups"],
         ),
     },
+    "apply_watermark": {
+        "annotations": _writes_file("Apply watermark"),
+        "output_schema": _obj(
+            {
+                "source": _STR,
+                "destination": _STR,
+                "size_bytes": _INT,
+                "corner": _STR,
+            },
+            ["source", "destination", "size_bytes", "corner"],
+        ),
+    },
 }

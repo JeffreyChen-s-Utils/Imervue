@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
+    apply_watermark,
     find_similar,
     image_statistics,
     image_thumbnail,
@@ -17,6 +18,14 @@ from Imervue.mcp_server.tools import (
 
 def _save(path, value=128, h=24, w=24):
     Image.fromarray(np.full((h, w, 3), value, dtype=np.uint8), "RGB").save(str(path))
+    return str(path)
+
+
+def _save_rgba(path, h=40, w=60):
+    arr = np.zeros((h, w, 4), dtype=np.uint8)
+    arr[..., :3] = 30
+    arr[..., 3] = 255
+    Image.fromarray(arr, "RGBA").save(str(path))
     return str(path)
 
 
@@ -97,4 +106,69 @@ def test_registered_in_default_tools():
     from Imervue.mcp_server.tools import _TOOL_DEFINITIONS
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
     assert {"image_statistics", "quality_metrics", "read_histogram",
-            "ocr_text", "image_thumbnail", "find_similar"} <= names
+            "ocr_text", "image_thumbnail", "find_similar",
+            "apply_watermark"} <= names
+
+
+# ---------------------------------------------------------------------------
+# apply_watermark
+# ---------------------------------------------------------------------------
+
+
+def test_apply_watermark_writes_visible_mark(tmp_path):
+    src = _save(tmp_path / "src.png", value=30, h=80, w=120)
+    dst = tmp_path / "out.png"
+    result = apply_watermark(src, str(dst), "© Imervue", corner="bottom-right")
+    assert result["corner"] == "bottom-right"
+    assert result["size_bytes"] > 0
+    assert dst.exists()
+    # The flat source had no bright pixels; the white text introduces some.
+    out = np.asarray(Image.open(dst).convert("RGBA"))
+    assert out.shape[:2] == (80, 120)
+    assert out[..., :3].max() > 30
+
+
+def test_apply_watermark_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "src.png")
+    dst = tmp_path / "out.jpg"
+    result = apply_watermark(src, str(dst), "mark")
+    assert dst.exists()
+    assert Image.open(dst).mode == "RGB"
+    assert result["destination"].endswith("out.jpg")
+
+
+def test_apply_watermark_clamps_out_of_range_color(tmp_path):
+    src = _save(tmp_path / "src.png")
+    dst = tmp_path / "out.png"
+    # Out-of-range channels must be clamped, not crash.
+    apply_watermark(src, str(dst), "x", color=[300, -5, 128])
+    assert dst.exists()
+
+
+def test_apply_watermark_empty_text_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="text"):
+        apply_watermark(src, str(tmp_path / "out.png"), "   ")
+
+
+def test_apply_watermark_invalid_corner_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="corner"):
+        apply_watermark(src, str(tmp_path / "out.png"), "x", corner="middle")
+
+
+def test_apply_watermark_invalid_color_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="color"):
+        apply_watermark(src, str(tmp_path / "out.png"), "x", color=[255, 255])
+
+
+def test_apply_watermark_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        apply_watermark("/no/such.png", str(tmp_path / "out.png"), "x")
+
+
+def test_apply_watermark_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        apply_watermark(src, str(tmp_path / "nope" / "out.png"), "x")
