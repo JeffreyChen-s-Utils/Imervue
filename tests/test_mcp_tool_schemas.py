@@ -18,7 +18,7 @@ from Imervue.mcp_server.tools import _TOOL_DEFINITIONS, register_default_tools
 
 _WRITE_TOOLS = {
     "convert_format", "puppet_from_png", "extract_video_frame",
-    "apply_watermark", "apply_frame", "build_collage",
+    "apply_watermark", "apply_frame", "build_collage", "crop_image",
 }
 
 
@@ -234,6 +234,22 @@ def test_build_collage_structured_content_conforms(server, sample_png, tmp_path)
     assert result["isError"] is False
     _assert_conforms(
         result["structuredContent"], TOOL_METADATA["build_collage"]["output_schema"],
+    )
+    assert dst.exists()
+
+
+def test_crop_image_structured_content_conforms(server, sample_png, tmp_path):
+    dst = tmp_path / "crop.png"
+    response = server.handle_message(_request(
+        "tools/call",
+        {"name": "crop_image",
+         "arguments": {"source": str(sample_png), "destination": str(dst),
+                       "x": 2, "y": 2, "width": 8, "height": 8}},
+    ))
+    result = response["result"]
+    assert result["isError"] is False
+    _assert_conforms(
+        result["structuredContent"], TOOL_METADATA["crop_image"]["output_schema"],
     )
     assert dst.exists()
 

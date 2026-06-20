@@ -677,6 +677,53 @@ def build_collage(
 
 
 # ---------------------------------------------------------------------------
+# crop_image
+# ---------------------------------------------------------------------------
+
+
+def crop_image(
+    source: str,
+    destination: str,
+    *,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+) -> dict[str, Any]:
+    """Crop a rectangular region out of an image and save it.
+
+    ``x`` / ``y`` are the top-left corner and ``width`` / ``height`` the box
+    size, all in source pixels. The box must lie fully inside the image. The
+    destination format follows its suffix. Returns the destination path, the
+    cropped dimensions and the size in bytes.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    left, top = int(x), int(y)
+    box_w, box_h = int(width), int(height)
+    if box_w <= 0 or box_h <= 0:
+        raise ValueError("width and height must be positive")
+    if left < 0 or top < 0:
+        raise ValueError("x and y must be non-negative")
+    from PIL import Image
+    with Image.open(src) as opened:
+        img_w, img_h = opened.size
+        if left + box_w > img_w or top + box_h > img_h:
+            raise ValueError(
+                f"crop box ({left},{top},{box_w}x{box_h}) exceeds "
+                f"image {img_w}x{img_h}",
+            )
+        _save_image_to(dst, opened.crop((left, top, left + box_w, top + box_h)))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": box_w,
+        "height": box_h,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -998,6 +1045,28 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["sources", "destination"],
         },
         "handler": build_collage,
+    },
+    {
+        "name": "crop_image",
+        "description": (
+            "Crop a rectangular region out of an image and save it. x / y are "
+            "the top-left corner and width / height the box size, all in source "
+            "pixels; the box must lie fully inside the image. The destination "
+            "format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "x": {"type": "integer", "minimum": 0},
+                "y": {"type": "integer", "minimum": 0},
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1},
+            },
+            "required": ["source", "destination", "x", "y", "width", "height"],
+        },
+        "handler": crop_image,
     },
 ]
 

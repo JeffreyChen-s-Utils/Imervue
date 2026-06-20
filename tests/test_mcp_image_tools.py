@@ -9,6 +9,7 @@ from Imervue.mcp_server.tools import (
     apply_frame,
     apply_watermark,
     build_collage,
+    crop_image,
     find_similar,
     image_statistics,
     image_thumbnail,
@@ -109,7 +110,69 @@ def test_registered_in_default_tools():
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
-            "apply_watermark", "apply_frame", "build_collage"} <= names
+            "apply_watermark", "apply_frame", "build_collage",
+            "crop_image"} <= names
+
+
+# ---------------------------------------------------------------------------
+# crop_image
+# ---------------------------------------------------------------------------
+
+
+def test_crop_image_extracts_region(tmp_path):
+    src = _save(tmp_path / "src.png", h=40, w=60)
+    dst = tmp_path / "crop.png"
+    result = crop_image(src, str(dst), x=10, y=5, width=20, height=15)
+    assert dst.exists()
+    assert result["width"] == 20
+    assert result["height"] == 15
+    out = Image.open(dst)
+    assert out.size == (20, 15)
+
+
+def test_crop_image_full_extent_allowed(tmp_path):
+    src = _save(tmp_path / "src.png", h=30, w=30)
+    dst = tmp_path / "crop.png"
+    result = crop_image(src, str(dst), x=0, y=0, width=30, height=30)
+    assert result["width"] == 30 and result["height"] == 30
+
+
+def test_crop_image_box_exceeds_bounds_raises(tmp_path):
+    src = _save(tmp_path / "src.png", h=20, w=20)
+    with pytest.raises(ValueError, match="exceeds"):
+        crop_image(src, str(tmp_path / "out.png"), x=10, y=10, width=20, height=5)
+
+
+def test_crop_image_negative_origin_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="non-negative"):
+        crop_image(src, str(tmp_path / "out.png"), x=-1, y=0, width=5, height=5)
+
+
+def test_crop_image_non_positive_size_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="positive"):
+        crop_image(src, str(tmp_path / "out.png"), x=0, y=0, width=0, height=5)
+
+
+def test_crop_image_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "src.png", h=40, w=40)
+    dst = tmp_path / "out.jpg"
+    crop_image(src, str(dst), x=2, y=2, width=10, height=10)
+    assert Image.open(dst).mode == "RGB"
+
+
+def test_crop_image_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        crop_image("/no/such.png", str(tmp_path / "out.png"),
+                   x=0, y=0, width=5, height=5)
+
+
+def test_crop_image_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        crop_image(src, str(tmp_path / "nope" / "out.png"),
+                   x=0, y=0, width=5, height=5)
 
 
 # ---------------------------------------------------------------------------
