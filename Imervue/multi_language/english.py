@@ -1008,6 +1008,8 @@ english_word_dict = {
     "paint_tool_gradient": 'Gradient',
     "paint_tool_blur": 'Blur',
     "paint_tool_smudge": 'Smudge',
+    "paint_tool_dodge": 'Dodge',
+    "paint_tool_burn": 'Burn',
     "paint_tool_hand": 'Hand',
     "paint_tool_zoom": 'Zoom',
     "paint_fill_tolerance": 'Tolerance:',

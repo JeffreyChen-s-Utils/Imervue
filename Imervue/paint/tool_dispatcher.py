@@ -241,6 +241,7 @@ class ToolDispatcher:
     # so a hover / hand / eyedropper interaction never burns a slot.
     _MUTATING_TOOLS = frozenset({
         "brush", "eraser", "fill", "smudge", "blur", "gradient",
+        "dodge", "burn",
         "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
         "speech_bubble", "clone_stamp",
         "select_rect", "select_lasso", "select_wand", "select_quick",
@@ -351,6 +352,12 @@ class ToolDispatcher:
             "gradient": GradientTool(self._state, self._selection_provider),
             "smudge": SmudgeTool(self._state, self._selection_provider),
             "blur": _BlurTool(self._state, self._selection_provider),
+            "dodge": _DodgeBurnTool(
+                self._state, "dodge", self._selection_provider,
+            ),
+            "burn": _DodgeBurnTool(
+                self._state, "burn", self._selection_provider,
+            ),
             "bezier_pen": _BezierPenTool(self._state, self._overlay_setter),
             "clone_stamp": _CloneStampTool(self._state, self._overlay_setter),
             "transform": _TransformHandleTool(self._state),
@@ -787,6 +794,90 @@ class _BlurTool:
         self._last = (evt.x, evt.y)
         self._damage = _damage_from_rect(union)
         return union[2] > 0 and union[3] > 0
+
+
+class _DodgeBurnTool:
+    """Lighten (dodge) or darken (burn) each dab — brush pointer protocol.
+
+    One class backs both toolbar entries; ``mode`` fixes the sign so the
+    dodge instance always lightens and the burn instance always darkens.
+    Strength comes from the shared brush-opacity slider and the targeted
+    tonal band defaults to midtones.
+    """
+
+    def __init__(
+        self,
+        state: ToolState,
+        mode: str,
+        selection_provider=None,
+        *,
+        range_mode: str = "midtones",
+    ):
+        self._state = state
+        self._sign = 1.0 if mode == "dodge" else -1.0
+        self._range_mode = range_mode
+        self._selection_provider = selection_provider or (lambda: None)
+        self._kernel = None
+        self._spacing = 1.0
+        self._last: tuple[float, float] | None = None
+        self._selection_snapshot = None
+        self._active = False
+        self._damage = _EMPTY_DAMAGE
+
+    @property
+    def last_damage(self):
+        return self._damage
+
+    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        if evt.phase == "press":
+            return self._begin(evt, canvas)
+        if evt.phase == "move" and self._active:
+            return self._extend(evt, canvas)
+        if evt.phase in ("release", "leave") and self._active:
+            self._extend(evt, canvas)
+            self._active = False
+            self._last = None
+            return True
+        return False
+
+    def cancel(self) -> None:
+        self._active = False
+        self._last = None
+        self._damage = _EMPTY_DAMAGE
+
+    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        brush = self._state.brush
+        self._kernel = round_brush_kernel(brush.size, brush.hardness)
+        self._spacing = spacing_from_brush(brush.size, brush.hardness)
+        self._selection_snapshot = self._selection_provider()
+        self._last = (evt.x, evt.y)
+        self._active = True
+        rect = self._dab(canvas, evt.x, evt.y)
+        self._damage = _damage_from_rect(rect)
+        return rect[2] > 0 and rect[3] > 0
+
+    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        from Imervue.paint.brush_engine import stroke_dab_positions
+        if self._last is None or self._kernel is None:
+            return False
+        union = (0, 0, 0, 0)
+        for px, py in stroke_dab_positions(
+            self._last, (evt.x, evt.y), self._spacing,
+        ):
+            union = _union_rects(union, self._dab(canvas, px, py))
+        self._last = (evt.x, evt.y)
+        self._damage = _damage_from_rect(union)
+        return union[2] > 0 and union[3] > 0
+
+    def _dab(self, canvas: np.ndarray, px: float, py: float):
+        from Imervue.paint.dodge_burn import dodge_burn_dab
+        brush = self._state.brush
+        amount = self._sign * max(0.05, brush.opacity)
+        return dodge_burn_dab(
+            canvas, px, py, self._kernel,
+            amount=amount, range_mode=self._range_mode,
+            selection=self._selection_snapshot,
+        )
 
 
 def _union_rects(a, b):

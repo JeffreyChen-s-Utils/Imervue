@@ -982,6 +982,8 @@ traditional_chinese_word_dict = {
     "paint_tool_gradient": '漸層',
     "paint_tool_blur": '模糊',
     "paint_tool_smudge": '塗抹',
+    "paint_tool_dodge": '加亮',
+    "paint_tool_burn": '加深',
     "paint_tool_hand": '手型',
     "paint_tool_zoom": '縮放',
     "paint_fill_tolerance": '容差：',

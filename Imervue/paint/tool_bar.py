@@ -61,6 +61,8 @@ TOOL_ORDER = (
     ("gradient",      "G"),
     ("blur",          ""),
     ("smudge",        ""),
+    ("dodge",         ""),
+    ("burn",          ""),
     ("bezier_pen",    "P"),
     ("clone_stamp",   "S"),
     ("speech_bubble", "Ctrl+B"),
@@ -187,6 +189,7 @@ class PaintOptionsBar(QToolBar):
         empty_idx = self._stack.addWidget(self._build_empty_strip(lang))
         for tool in (
             "eyedropper", "move", "hand", "zoom", "blur", "smudge",
+            "dodge", "burn",
             "bezier_pen", "clone_stamp", "transform", "speech_bubble",
             "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
             "crop",

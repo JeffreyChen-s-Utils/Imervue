@@ -21,7 +21,8 @@ class StatusLineMixin:
     # Tools whose options live on BrushSettings and therefore want
     # the brush-size segment surfaced in the status bar.
     _BRUSHED_TOOLS = frozenset(
-        {"brush", "eraser", "blur", "smudge", "clone_stamp"},
+        {"brush", "eraser", "blur", "smudge", "clone_stamp",
+         "dodge", "burn"},
     )
 
     def _refresh_status_line(self) -> None:

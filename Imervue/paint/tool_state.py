@@ -44,6 +44,8 @@ TOOLS = (
     "gradient",
     "blur",
     "smudge",
+    "dodge",
+    "burn",
     "hand",
     "zoom",
     "bezier_pen",
