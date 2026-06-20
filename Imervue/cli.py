@@ -29,6 +29,7 @@ _IMAGE_EXTS = frozenset({
 })
 _FORMAT_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 _BYTES_PER_KB = 1024.0
+_CLI_VERSION = "1.0"
 
 
 def iter_image_paths(inputs: Iterable[str], *, recursive: bool) -> list[Path]:
@@ -399,6 +400,22 @@ def cmd_preset(args) -> int:
     return _write(args, paths, op_preset, "_preset", lambda _a: ".png")
 
 
+def cmd_list_ops(args) -> int:
+    """List the available subcommands and their one-line help."""
+    ops: list[dict] = []
+    for action in build_parser()._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            ops = [{"command": a.dest, "help": a.help or ""}
+                   for a in action._choices_actions]
+            break
+    if getattr(args, "json", False):
+        print(json.dumps(ops, indent=2))
+    else:
+        for op in ops:
+            print(f"{op['command']:14} {op['help']}")
+    return 0
+
+
 def cmd_pipeline(args) -> int:
     """Apply an ordered JSON pipeline of operations to each input image."""
     try:
@@ -421,7 +438,7 @@ def cmd_pipeline(args) -> int:
 
 _MULTI_COMMANDS = {
     "collage": cmd_collage, "anaglyph": cmd_anaglyph,
-    "preset": cmd_preset, "pipeline": cmd_pipeline,
+    "preset": cmd_preset, "pipeline": cmd_pipeline, "list-ops": cmd_list_ops,
 }
 
 
@@ -435,6 +452,7 @@ def _add_common(sub: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="Imervue.cli", description="Imervue headless image CLI")
+    parser.add_argument("--version", action="version", version=f"Imervue CLI {_CLI_VERSION}")
     subs = parser.add_subparsers(dest="command", required=True)
 
     info = subs.add_parser("info", help="print image dimensions / format")
@@ -512,6 +530,9 @@ def build_parser() -> argparse.ArgumentParser:
     pipeline = subs.add_parser("pipeline", help="apply an ordered JSON pipeline of ops")
     pipeline.add_argument("file", help="pipeline JSON file ([{op, ...}] or {pipeline: [...]})")
     _add_common(pipeline)
+
+    list_ops = subs.add_parser("list-ops", help="list available subcommands")
+    list_ops.add_argument("--json", action="store_true", help="emit JSON")
     return parser
 
 

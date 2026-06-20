@@ -103,9 +103,19 @@ class MCPServer:
                 "tools": {"listChanged": False},
                 "prompts": {"listChanged": False},
                 "resources": {"subscribe": False, "listChanged": False},
+                "completions": {},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         })
+
+    def _on_ping(self, msg_id: Any, _params: dict) -> dict:
+        return _success(msg_id, {})
+
+    def _on_completion_complete(self, msg_id: Any, params: dict) -> dict:
+        if not isinstance(params, dict):
+            raise _MCPError(-32602, "params must be an object")
+        from Imervue.mcp_server.completion import complete
+        return _success(msg_id, complete(params.get("ref"), params.get("argument") or {}))
 
     def _on_resources_list(self, msg_id: Any, params: dict) -> dict:
         from Imervue.mcp_server.resources import ResourceError, list_resources
@@ -189,6 +199,8 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
     "resources/list": MCPServer._on_resources_list,
     "resources/templates/list": MCPServer._on_resources_templates_list,
     "resources/read": MCPServer._on_resources_read,
+    "ping": MCPServer._on_ping,
+    "completion/complete": MCPServer._on_completion_complete,
 }
 
 
