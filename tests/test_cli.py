@@ -6,7 +6,13 @@ import json
 import numpy as np
 from PIL import Image
 
-from Imervue.cli import iter_image_paths, main, output_path
+from Imervue.cli import (
+    iter_image_paths,
+    load_pipeline,
+    main,
+    output_path,
+    validate_pipeline,
+)
 
 
 def _save(path, size=(200, 100), value=128, mode="RGB"):
@@ -189,6 +195,46 @@ def test_preset_unknown_returns_error(tmp_path, capsys):
     _save(tmp_path / "p.png")
     assert main(["preset", "NoSuchPreset", str(tmp_path / "p.png")]) == 1
     assert "unknown preset" in capsys.readouterr().err
+
+
+def test_load_pipeline_accepts_list_and_object(tmp_path):
+    bare = tmp_path / "a.json"
+    bare.write_text(json.dumps([{"op": "invert"}]))
+    wrapped = tmp_path / "b.json"
+    wrapped.write_text(json.dumps({"pipeline": [{"op": "invert"}]}))
+    assert load_pipeline(str(bare)) == [{"op": "invert"}]
+    assert load_pipeline(str(wrapped)) == [{"op": "invert"}]
+
+
+def test_validate_pipeline_reports_errors():
+    assert validate_pipeline([{"op": "dehaze"}, {"op": "invert"}]) == []
+    errors = validate_pipeline([{"op": "bogus"}, {"missing": "op"}])
+    assert len(errors) == 2
+    assert "unknown op" in errors[0]
+
+
+def test_pipeline_applies_steps(tmp_path):
+    _save(tmp_path / "p.png", size=(64, 64))
+    spec = tmp_path / "pipe.json"
+    spec.write_text(json.dumps({"pipeline": [{"op": "grayscale"}, {"op": "invert"}]}))
+    out_dir = tmp_path / "out"
+    assert main(["pipeline", str(spec), str(tmp_path / "p.png"), "--out", str(out_dir)]) == 0
+    assert (out_dir / "p.png").exists()
+
+
+def test_pipeline_unknown_op_is_validation_error(tmp_path, capsys):
+    _save(tmp_path / "p.png")
+    spec = tmp_path / "pipe.json"
+    spec.write_text(json.dumps([{"op": "nope"}]))
+    assert main(["pipeline", str(spec), str(tmp_path / "p.png")]) == 2
+    assert "unknown op" in capsys.readouterr().err
+
+
+def test_pipeline_bad_json_is_error(tmp_path):
+    spec = tmp_path / "pipe.json"
+    spec.write_text("{not valid json")
+    _save(tmp_path / "p.png")
+    assert main(["pipeline", str(spec), str(tmp_path / "p.png")]) == 2
 
 
 def test_dry_run_writes_nothing(tmp_path, capsys):
