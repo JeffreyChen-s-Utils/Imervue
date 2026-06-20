@@ -55,6 +55,7 @@ class MCPServer:
     expected"."""
 
     tools: dict[str, Tool] = field(default_factory=dict)
+    resource_root: str | None = None
 
     def register(
         self,
@@ -101,9 +102,30 @@ class MCPServer:
             "capabilities": {
                 "tools": {"listChanged": False},
                 "prompts": {"listChanged": False},
+                "resources": {"subscribe": False, "listChanged": False},
             },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         })
+
+    def _on_resources_list(self, msg_id: Any, params: dict) -> dict:
+        from Imervue.mcp_server.resources import ResourceError, list_resources
+        try:
+            return _success(msg_id, list_resources(self.resource_root, params.get("cursor")))
+        except ResourceError as exc:
+            raise _MCPError(exc.code, exc.message) from exc
+
+    def _on_resources_templates_list(self, msg_id: Any, _params: dict) -> dict:
+        from Imervue.mcp_server.resources import list_resource_templates
+        return _success(msg_id, list_resource_templates())
+
+    def _on_resources_read(self, msg_id: Any, params: dict) -> dict:
+        if not isinstance(params, dict):
+            raise _MCPError(-32602, "params must be an object")
+        from Imervue.mcp_server.resources import ResourceError, read_resource
+        try:
+            return _success(msg_id, read_resource(params.get("uri")))
+        except ResourceError as exc:
+            raise _MCPError(exc.code, exc.message) from exc
 
     def _on_prompts_list(self, msg_id: Any, _params: dict) -> dict:
         from Imervue.mcp_server.prompts import list_prompts
@@ -164,6 +186,9 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
     "tools/call": MCPServer._on_tools_call,
     "prompts/list": MCPServer._on_prompts_list,
     "prompts/get": MCPServer._on_prompts_get,
+    "resources/list": MCPServer._on_resources_list,
+    "resources/templates/list": MCPServer._on_resources_templates_list,
+    "resources/read": MCPServer._on_resources_read,
 }
 
 
@@ -223,7 +248,8 @@ def run(
 
     ``stdin`` / ``stdout`` default to the system handles but can be
     swapped for in-memory ``io.StringIO`` objects in tests."""
-    server = MCPServer()
+    import os
+    server = MCPServer(resource_root=os.environ.get("IMERVUE_MCP_ROOT"))
     from Imervue.mcp_server.tools import register_default_tools
     register_default_tools(server)
     input_stream = stdin or sys.stdin
