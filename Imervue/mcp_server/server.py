@@ -98,9 +98,29 @@ class MCPServer:
     def _on_initialize(self, msg_id: Any, _params: dict) -> dict:
         return _success(msg_id, {
             "protocolVersion": PROTOCOL_VERSION,
-            "capabilities": {"tools": {"listChanged": False}},
+            "capabilities": {
+                "tools": {"listChanged": False},
+                "prompts": {"listChanged": False},
+            },
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         })
+
+    def _on_prompts_list(self, msg_id: Any, _params: dict) -> dict:
+        from Imervue.mcp_server.prompts import list_prompts
+        return _success(msg_id, {"prompts": list_prompts()})
+
+    def _on_prompts_get(self, msg_id: Any, params: dict) -> dict:
+        if not isinstance(params, dict):
+            raise _MCPError(-32602, "params must be an object")
+        name = params.get("name")
+        if not isinstance(name, str):
+            raise _MCPError(-32602, "params.name must be a string")
+        arguments = params.get("arguments") or {}
+        from Imervue.mcp_server.prompts import get_prompt
+        try:
+            return _success(msg_id, get_prompt(name, arguments))
+        except ValueError as exc:
+            raise _MCPError(-32602, str(exc)) from exc
 
     def _on_tools_list(self, msg_id: Any, _params: dict) -> dict:
         return _success(msg_id, {
@@ -142,6 +162,8 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
     "initialize": MCPServer._on_initialize,
     "tools/list": MCPServer._on_tools_list,
     "tools/call": MCPServer._on_tools_call,
+    "prompts/list": MCPServer._on_prompts_list,
+    "prompts/get": MCPServer._on_prompts_get,
 }
 
 

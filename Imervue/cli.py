@@ -127,6 +127,100 @@ def op_strip(src: Path, target: Path, _args) -> None:
         img.save(target)
 
 
+# --- pipeline (chain several operations from a JSON file) -------------------
+
+_MAX_PIPELINE_STEPS = 50
+_LUMA = np.array([0.299, 0.587, 0.114], dtype=np.float32)
+
+
+def _step_dehaze(arr, p):
+    from Imervue.image.dehaze import dehaze
+    return dehaze(arr, float(p.get("strength", 1.0)))
+
+
+def _step_clahe(arr, p):
+    from Imervue.image.clahe import apply_clahe
+    return apply_clahe(arr, float(p.get("clip", 2.0)), int(p.get("tiles", 8)))
+
+
+def _step_dither(arr, p):
+    from Imervue.image.dither import ordered_dither
+    return ordered_dither(arr, int(p.get("levels", 2)))
+
+
+def _step_distort(arr, p):
+    from Imervue.image.distort import distort
+    return distort(arr, str(p.get("mode", "swirl")), float(p.get("strength", 0.5)))
+
+
+def _step_clarity(arr, p):
+    from Imervue.image.local_contrast import apply_clarity
+    return apply_clarity(arr, float(p.get("amount", 0.5)))
+
+
+def _step_texture(arr, p):
+    from Imervue.image.local_contrast import apply_texture
+    return apply_texture(arr, float(p.get("amount", 0.5)))
+
+
+def _step_grayscale(arr, _p):
+    luma = np.clip(np.rint(arr[..., :3].astype(np.float32) @ _LUMA), 0, 255).astype(np.uint8)
+    out = arr.copy()
+    out[..., :3] = luma[..., None]
+    return out
+
+
+def _step_invert(arr, _p):
+    out = arr.copy()
+    out[..., :3] = 255 - out[..., :3]
+    return out
+
+
+def _step_watermark(arr, p):
+    from Imervue.image.watermark import WatermarkOptions, apply_watermark
+    marked = apply_watermark(Image.fromarray(arr, "RGBA"), WatermarkOptions(
+        text=str(p.get("text", "")), corner=str(p.get("corner", "bottom-right")),
+        opacity=float(p.get("opacity", 0.6))))
+    return np.array(marked)
+
+
+_PIPELINE_OPS = {
+    "dehaze": _step_dehaze, "clahe": _step_clahe, "dither": _step_dither,
+    "distort": _step_distort, "clarity": _step_clarity, "texture": _step_texture,
+    "grayscale": _step_grayscale, "invert": _step_invert, "watermark": _step_watermark,
+}
+
+
+def load_pipeline(file: str) -> list[dict]:
+    """Read a pipeline JSON file (a list of steps, or ``{"pipeline": [...]}``)."""
+    raw = json.loads(Path(file).read_text(encoding="utf-8"))
+    steps = raw["pipeline"] if isinstance(raw, dict) and "pipeline" in raw else raw
+    if not isinstance(steps, list):
+        raise ValueError('pipeline must be a list, or {"pipeline": [...]}')
+    return steps
+
+
+def validate_pipeline(steps: list) -> list[str]:
+    """Return a list of human-readable validation errors (empty when valid)."""
+    errors: list[str] = []
+    if len(steps) > _MAX_PIPELINE_STEPS:
+        errors.append(f"too many steps ({len(steps)} > {_MAX_PIPELINE_STEPS})")
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict) or "op" not in step:
+            errors.append(f"step {i}: each step must be an object with an 'op'")
+        elif step["op"] not in _PIPELINE_OPS:
+            errors.append(f"step {i}: unknown op {step['op']!r}; "
+                          f"known: {sorted(_PIPELINE_OPS)}")
+    return errors
+
+
+def op_pipeline(src: Path, target: Path, args) -> None:
+    arr = _load_rgba(src)
+    for step in args.pipeline_steps:
+        arr = _PIPELINE_OPS[step["op"]](arr, step)
+    Image.fromarray(arr, mode="RGBA").save(target)
+
+
 def op_info(src: Path, _args) -> dict:
     with Image.open(src) as img:
         width, height = img.size
@@ -305,7 +399,30 @@ def cmd_preset(args) -> int:
     return _write(args, paths, op_preset, "_preset", lambda _a: ".png")
 
 
-_MULTI_COMMANDS = {"collage": cmd_collage, "anaglyph": cmd_anaglyph, "preset": cmd_preset}
+def cmd_pipeline(args) -> int:
+    """Apply an ordered JSON pipeline of operations to each input image."""
+    try:
+        steps = load_pipeline(args.file)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    errors = validate_pipeline(steps)
+    if errors:
+        for err in errors:
+            print(f"pipeline error: {err}", file=sys.stderr)
+        return 2
+    paths = iter_image_paths(args.inputs, recursive=args.recursive)
+    if not paths:
+        print("no input images found", file=sys.stderr)
+        return 1
+    args.pipeline_steps = steps
+    return _write(args, paths, op_pipeline, "_pipeline", lambda _a: ".png")
+
+
+_MULTI_COMMANDS = {
+    "collage": cmd_collage, "anaglyph": cmd_anaglyph,
+    "preset": cmd_preset, "pipeline": cmd_pipeline,
+}
 
 
 def _add_common(sub: argparse.ArgumentParser) -> None:
@@ -391,6 +508,10 @@ def build_parser() -> argparse.ArgumentParser:
     preset = subs.add_parser("preset", help="apply a saved develop preset by name")
     preset.add_argument("name", help="develop preset name")
     _add_common(preset)
+
+    pipeline = subs.add_parser("pipeline", help="apply an ordered JSON pipeline of ops")
+    pipeline.add_argument("file", help="pipeline JSON file ([{op, ...}] or {pipeline: [...]})")
+    _add_common(pipeline)
     return parser
 
 
