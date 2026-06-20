@@ -984,6 +984,7 @@ chinese_word_dict = {
     "paint_tool_smudge": '涂抹',
     "paint_tool_dodge": '减淡',
     "paint_tool_burn": '加深',
+    "paint_tool_sponge": '海绵',
     "paint_tool_hand": '抓手',
     "paint_tool_zoom": '缩放',
     "paint_fill_tolerance": '容差：',

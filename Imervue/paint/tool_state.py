@@ -46,6 +46,7 @@ TOOLS = (
     "smudge",
     "dodge",
     "burn",
+    "sponge",
     "hand",
     "zoom",
     "bezier_pen",

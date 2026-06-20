@@ -997,6 +997,7 @@ japanese_word_dict = {
     "paint_tool_smudge": '指先',
     "paint_tool_dodge": '覆い焼き',
     "paint_tool_burn": '焼き込み',
+    "paint_tool_sponge": 'スポンジ',
     "paint_tool_hand": 'ハンド',
     "paint_tool_zoom": 'ズーム',
     "paint_fill_tolerance": '許容値:',

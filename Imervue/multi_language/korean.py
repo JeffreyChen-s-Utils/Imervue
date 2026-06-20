@@ -995,6 +995,7 @@ korean_word_dict = {
     "paint_tool_smudge": '스머지',
     "paint_tool_dodge": '닷지',
     "paint_tool_burn": '번',
+    "paint_tool_sponge": '스폰지',
     "paint_tool_hand": '손바닥',
     "paint_tool_zoom": '확대/축소',
     "paint_fill_tolerance": '허용치:',

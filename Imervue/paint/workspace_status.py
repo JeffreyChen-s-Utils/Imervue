@@ -22,7 +22,7 @@ class StatusLineMixin:
     # the brush-size segment surfaced in the status bar.
     _BRUSHED_TOOLS = frozenset(
         {"brush", "eraser", "blur", "smudge", "clone_stamp",
-         "dodge", "burn"},
+         "dodge", "burn", "sponge"},
     )
 
     def _refresh_status_line(self) -> None:

@@ -433,7 +433,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     # tracks size × zoom).
     _BRUSH_RING_TOOLS = frozenset({
         "brush", "eraser", "smudge", "blur", "clone_stamp",
-        "dodge", "burn",
+        "dodge", "burn", "sponge",
     })
 
     def _on_state_event(self, channel: str) -> None:

@@ -165,6 +165,7 @@ _TOOL_CURSORS = {
     "smudge": Qt.CursorShape.CrossCursor,
     "dodge": Qt.CursorShape.CrossCursor,
     "burn": Qt.CursorShape.CrossCursor,
+    "sponge": Qt.CursorShape.CrossCursor,
     "hand": Qt.CursorShape.OpenHandCursor,
     "zoom": Qt.CursorShape.PointingHandCursor,
     "bezier_pen": Qt.CursorShape.CrossCursor,

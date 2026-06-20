@@ -13,6 +13,7 @@ from Imervue.paint.tool_dispatcher import (
     EyedropperTool,
     ToolDispatcher,
     _DodgeBurnTool,
+    _SpongeTool,
 )
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -762,5 +763,58 @@ def test_dodge_tool_cancel_clears_active_stroke(state):
     tool.handle(_press(10, 10), canvas)
     tool.cancel()
     # With the stroke cancelled, a follow-up move is ignored.
+    assert tool.handle(_move(20, 20), canvas) is False
+
+
+# ---------------------------------------------------------------------------
+# Sponge tool
+# ---------------------------------------------------------------------------
+
+
+def _color_canvas(rgb=(200, 100, 50), size=64):
+    """Opaque RGBA canvas of a uniform colour so the sponge has chroma."""
+    arr = np.full((size, size, 4), 255, dtype=np.uint8)
+    arr[..., :3] = rgb
+    return arr
+
+
+def _chroma(arr):
+    rgb = arr[..., :3].astype(np.int32)
+    return float((rgb.max(axis=2) - rgb.min(axis=2)).mean())
+
+
+def test_sponge_tool_routed_via_dispatcher_desaturates(state):
+    """Selecting 'sponge' and stroking drains chroma under the kernel."""
+    canvas = _color_canvas()
+    state.set_tool("sponge")
+    state.set_brush(size=16, hardness=0.8, opacity=1.0)
+    before = _chroma(canvas)
+    disp = ToolDispatcher(state, image_provider=lambda: canvas)
+    assert disp(_press(20, 20)) is True
+    disp(_release(20, 20))
+    assert _chroma(canvas) < before
+
+
+def test_sponge_saturate_mode_boosts_chroma(state):
+    canvas = _color_canvas(rgb=(150, 120, 110))
+    state.set_brush(size=16, hardness=0.8, opacity=1.0)
+    tool = _SpongeTool(state, mode="saturate")
+    before = _chroma(canvas)
+    assert tool.handle(_press(20, 20), canvas) is True
+    tool.handle(_release(20, 20), canvas)
+    assert _chroma(canvas) > before
+
+
+def test_sponge_tool_move_without_press_returns_false(state):
+    canvas = _color_canvas()
+    tool = _SpongeTool(state)
+    assert tool.handle(_move(10, 10), canvas) is False
+
+
+def test_sponge_tool_cancel_clears_active_stroke(state):
+    canvas = _color_canvas()
+    tool = _SpongeTool(state)
+    tool.handle(_press(10, 10), canvas)
+    tool.cancel()
     assert tool.handle(_move(20, 20), canvas) is False
 
