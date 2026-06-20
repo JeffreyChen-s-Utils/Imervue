@@ -624,6 +624,59 @@ def _validated_destination(destination: str) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# build_collage
+# ---------------------------------------------------------------------------
+
+_COLLAGE_MAX_IMAGES = 200
+
+
+def build_collage(
+    sources: list[str],
+    destination: str,
+    *,
+    columns: int = 3,
+    cell_width: int = 400,
+    cell_height: int = 400,
+    gap: int = 12,
+    margin: int = 20,
+    background: list[int] | None = None,
+) -> dict[str, Any]:
+    """Composite several images into a grid montage and save it.
+
+    Each source is letterboxed and centred in an equal ``cell_width`` x
+    ``cell_height`` cell; ``gap`` separates cells and ``margin`` frames the
+    grid. The destination format follows its suffix. Returns the destination
+    path, image count, column count, output dimensions and size in bytes.
+    """
+    if not isinstance(sources, (list, tuple)) or not sources:
+        raise ValueError("sources must be a non-empty list of image paths")
+    if len(sources) > _COLLAGE_MAX_IMAGES:
+        raise ValueError(f"collage supports at most {_COLLAGE_MAX_IMAGES} images")
+    dst = _validated_destination(destination)
+    rgb = _validated_rgb_triplet(background, _DEFAULT_WATERMARK_COLOR)
+    arrays = [_load_rgba_array(_validated_file(src)) for src in sources]
+    cols = max(1, int(columns))
+    from PIL import Image
+    from Imervue.image.collage import build_collage as _build
+    collage = _build(
+        arrays, cols,
+        cell=(max(1, int(cell_width)), max(1, int(cell_height))),
+        gap=max(0, int(gap)), margin=max(0, int(margin)), background=rgb,
+    )
+    with Image.fromarray(collage, "RGBA") as out:
+        _save_image_to(dst, out)
+    height, width = collage.shape[:2]
+    return {
+        "destination": str(dst),
+        "image_count": len(arrays),
+        "columns": cols,
+        "width": int(width),
+        "height": int(height),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -916,6 +969,35 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": apply_frame,
+    },
+    {
+        "name": "build_collage",
+        "description": (
+            "Composite several images into a grid montage and save it. Each "
+            "source is letterboxed into an equal cell_width x cell_height cell; "
+            "columns sets the grid width, gap separates cells and margin frames "
+            "the grid. background is an [r, g, b] triplet."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sources": {
+                    "type": "array", "items": {"type": "string"}, "minItems": 1,
+                },
+                "destination": {"type": "string"},
+                "columns": {"type": "integer", "minimum": 1, "default": 3},
+                "cell_width": {"type": "integer", "minimum": 1, "default": 400},
+                "cell_height": {"type": "integer", "minimum": 1, "default": 400},
+                "gap": {"type": "integer", "minimum": 0, "default": 12},
+                "margin": {"type": "integer", "minimum": 0, "default": 20},
+                "background": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [255, 255, 255],
+                },
+            },
+            "required": ["sources", "destination"],
+        },
+        "handler": build_collage,
     },
 ]
 

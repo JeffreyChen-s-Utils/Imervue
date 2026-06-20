@@ -296,4 +296,19 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["source", "destination", "size_bytes", "width", "height"],
         ),
     },
+    "build_collage": {
+        "annotations": _writes_file("Build collage"),
+        "output_schema": _obj(
+            {
+                "destination": _STR,
+                "image_count": _INT,
+                "columns": _INT,
+                "width": _INT,
+                "height": _INT,
+                "size_bytes": _INT,
+            },
+            ["destination", "image_count", "columns",
+             "width", "height", "size_bytes"],
+        ),
+    },
 }

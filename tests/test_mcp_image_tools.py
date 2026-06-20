@@ -8,6 +8,7 @@ from PIL import Image
 from Imervue.mcp_server.tools import (
     apply_frame,
     apply_watermark,
+    build_collage,
     find_similar,
     image_statistics,
     image_thumbnail,
@@ -108,7 +109,76 @@ def test_registered_in_default_tools():
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
-            "apply_watermark", "apply_frame"} <= names
+            "apply_watermark", "apply_frame", "build_collage"} <= names
+
+
+# ---------------------------------------------------------------------------
+# build_collage
+# ---------------------------------------------------------------------------
+
+
+def test_build_collage_grid_dimensions(tmp_path):
+    sources = [_save(tmp_path / f"i{n}.png", value=50 + n * 30) for n in range(3)]
+    dst = tmp_path / "collage.png"
+    result = build_collage(
+        sources, str(dst), columns=2, cell_width=100, cell_height=80,
+        gap=10, margin=5,
+    )
+    assert dst.exists()
+    assert result["image_count"] == 3
+    assert result["columns"] == 2
+    # 3 images, 2 columns -> 2 rows. width = 2*5 + 2*100 + 1*10 = 220.
+    assert result["width"] == 220
+    # height = 2*5 + 2*80 + 1*10 = 180.
+    assert result["height"] == 180
+
+
+def test_build_collage_reserves_full_column_width(tmp_path):
+    src = _save(tmp_path / "solo.png")
+    dst = tmp_path / "one.png"
+    result = build_collage([src], str(dst), columns=4, cell_width=60, cell_height=60,
+                           gap=0, margin=0)
+    # One image but 4 columns requested -> full 4-wide canvas, single row.
+    assert result["columns"] == 4
+    assert result["width"] == 240   # 4 * 60
+    assert result["height"] == 60   # 1 row * 60
+
+
+def test_build_collage_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "a.png")
+    dst = tmp_path / "out.jpg"
+    build_collage([src], str(dst), cell_width=50, cell_height=50)
+    assert Image.open(dst).mode == "RGB"
+
+
+def test_build_collage_empty_sources_raises(tmp_path):
+    with pytest.raises(ValueError, match="non-empty"):
+        build_collage([], str(tmp_path / "out.png"))
+
+
+def test_build_collage_too_many_images_raises(tmp_path):
+    src = _save(tmp_path / "a.png")
+    with pytest.raises(ValueError, match="at most"):
+        build_collage([src] * 201, str(tmp_path / "out.png"))
+
+
+def test_build_collage_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        build_collage(["/no/such.png"], str(tmp_path / "out.png"))
+
+
+def test_build_collage_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "a.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        build_collage([src], str(tmp_path / "nope" / "out.png"))
+
+
+def test_build_collage_clamps_out_of_range_background(tmp_path):
+    src = _save(tmp_path / "a.png")
+    dst = tmp_path / "out.png"
+    build_collage([src], str(dst), background=[999, -1, 100], cell_width=40,
+                  cell_height=40)
+    assert dst.exists()
 
 
 # ---------------------------------------------------------------------------
