@@ -17,6 +17,9 @@ _ENUM_ARGUMENTS: dict[tuple[str, str], list[str]] = {
     ("suggest_edits", "style"): [
         "general", "portrait", "landscape", "product", "street", "food", "macro",
     ],
+    ("analyze_composition", "focus"): [
+        "all", "framing", "balance", "subject", "leading_lines",
+    ],
 }
 
 
