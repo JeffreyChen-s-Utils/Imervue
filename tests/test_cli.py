@@ -237,6 +237,27 @@ def test_pipeline_bad_json_is_error(tmp_path):
     assert main(["pipeline", str(spec), str(tmp_path / "p.png")]) == 2
 
 
+def test_version_flag(capsys):
+    import pytest
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+    assert exc.value.code == 0
+    assert "Imervue CLI" in capsys.readouterr().out
+
+
+def test_list_ops_lists_subcommands(capsys):
+    assert main(["list-ops"]) == 0
+    out = capsys.readouterr().out
+    assert "resize" in out and "pipeline" in out and "anaglyph" in out
+
+
+def test_list_ops_json(capsys):
+    assert main(["list-ops", "--json"]) == 0
+    ops = json.loads(capsys.readouterr().out)
+    commands = {o["command"] for o in ops}
+    assert {"resize", "pipeline", "list-ops"} <= commands
+
+
 def test_dry_run_writes_nothing(tmp_path, capsys):
     _save(tmp_path / "a.png")
     out_dir = tmp_path / "out"
