@@ -724,6 +724,59 @@ def crop_image(
 
 
 # ---------------------------------------------------------------------------
+# resize_image
+# ---------------------------------------------------------------------------
+
+
+def _resize_dims(
+    src_w: int, src_h: int, width: int | None, height: int | None,
+) -> tuple[int, int]:
+    """Resolve a resize target, preserving aspect when one edge is omitted."""
+    if width is not None and height is not None:
+        return (width, height)
+    if width is not None:
+        return (width, max(1, round(src_h * (width / src_w))))
+    return (max(1, round(src_w * (height / src_h))), height)
+
+
+def resize_image(
+    source: str,
+    destination: str,
+    *,
+    width: int | None = None,
+    height: int | None = None,
+) -> dict[str, Any]:
+    """Resize an image and save it.
+
+    Pass both ``width`` and ``height`` for an exact resize, or just one to
+    scale the other proportionally. The destination format follows its
+    suffix. Returns the destination path, the new dimensions and size in bytes.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    target_w = None if width is None else int(width)
+    target_h = None if height is None else int(height)
+    if target_w is None and target_h is None:
+        raise ValueError("at least one of width or height is required")
+    if (target_w is not None and target_w <= 0) or (
+        target_h is not None and target_h <= 0
+    ):
+        raise ValueError("width and height must be positive")
+    from PIL import Image
+    with Image.open(src) as opened:
+        src_w, src_h = opened.size
+        target = _resize_dims(src_w, src_h, target_w, target_h)
+        _save_image_to(dst, opened.resize(target, Image.Resampling.LANCZOS))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": target[0],
+        "height": target[1],
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1067,6 +1120,25 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination", "x", "y", "width", "height"],
         },
         "handler": crop_image,
+    },
+    {
+        "name": "resize_image",
+        "description": (
+            "Resize an image and save it. Pass both width and height for an "
+            "exact resize, or just one to scale the other proportionally. The "
+            "destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": resize_image,
     },
 ]
 

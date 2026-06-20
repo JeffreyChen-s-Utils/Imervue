@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
+    _resize_dims,
     apply_frame,
     apply_watermark,
     build_collage,
@@ -16,6 +17,7 @@ from Imervue.mcp_server.tools import (
     ocr_text,
     quality_metrics,
     read_histogram,
+    resize_image,
 )
 
 
@@ -111,7 +113,69 @@ def test_registered_in_default_tools():
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
             "apply_watermark", "apply_frame", "build_collage",
-            "crop_image"} <= names
+            "crop_image", "resize_image"} <= names
+
+
+# ---------------------------------------------------------------------------
+# resize_image
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("src_w,src_h,w,h,expected", [
+    (100, 50, 200, 80, (200, 80)),      # exact, both given
+    (100, 50, 50, None, (50, 25)),      # width only -> half scale
+    (100, 50, None, 100, (200, 100)),   # height only -> double scale
+    (3, 10, 1, None, (1, 3)),           # rounding stays >= 1
+    (10, 3, None, 1, (3, 1)),
+])
+def test_resize_dims_preserves_aspect(src_w, src_h, w, h, expected):
+    assert _resize_dims(src_w, src_h, w, h) == expected
+
+
+def test_resize_image_exact(tmp_path):
+    src = _save(tmp_path / "src.png", h=40, w=60)
+    dst = tmp_path / "out.png"
+    result = resize_image(src, str(dst), width=30, height=20)
+    assert Image.open(dst).size == (30, 20)
+    assert result["width"] == 30 and result["height"] == 20
+
+
+def test_resize_image_width_only_keeps_aspect(tmp_path):
+    src = _save(tmp_path / "src.png", h=40, w=80)
+    dst = tmp_path / "out.png"
+    result = resize_image(src, str(dst), width=40)
+    assert result["width"] == 40
+    assert result["height"] == 20  # 40 * (40/80)
+
+
+def test_resize_image_requires_a_dimension(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="at least one"):
+        resize_image(src, str(tmp_path / "out.png"))
+
+
+def test_resize_image_non_positive_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="positive"):
+        resize_image(src, str(tmp_path / "out.png"), width=0)
+
+
+def test_resize_image_flattens_alpha_for_jpeg(tmp_path):
+    src = _save_rgba(tmp_path / "src.png", h=40, w=40)
+    dst = tmp_path / "out.jpg"
+    resize_image(src, str(dst), width=20)
+    assert Image.open(dst).mode == "RGB"
+
+
+def test_resize_image_missing_source_raises(tmp_path):
+    with pytest.raises(ValueError):
+        resize_image("/no/such.png", str(tmp_path / "out.png"), width=10)
+
+
+def test_resize_image_missing_destination_parent_raises(tmp_path):
+    src = _save(tmp_path / "src.png")
+    with pytest.raises(ValueError, match="destination parent"):
+        resize_image(src, str(tmp_path / "nope" / "out.png"), width=10)
 
 
 # ---------------------------------------------------------------------------

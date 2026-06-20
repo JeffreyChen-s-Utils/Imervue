@@ -324,4 +324,17 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["source", "destination", "width", "height", "size_bytes"],
         ),
     },
+    "resize_image": {
+        "annotations": _writes_file("Resize image"),
+        "output_schema": _obj(
+            {
+                "source": _STR,
+                "destination": _STR,
+                "width": _INT,
+                "height": _INT,
+                "size_bytes": _INT,
+            },
+            ["source", "destination", "width", "height", "size_bytes"],
+        ),
+    },
 }
