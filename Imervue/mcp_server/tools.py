@@ -480,11 +480,19 @@ def image_thumbnail(path: str, max_size: int = 256) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) -> dict[str, Any]:
+def find_similar(
+    folder: str,
+    *,
+    threshold: int = 5,
+    recursive: bool = False,
+    progress: Any = None,
+) -> dict[str, Any]:
     """Group near-duplicate images in *folder* by perceptual (dHash) similarity.
 
     ``threshold`` is the maximum Hamming distance (0 = identical hash, higher =
     more tolerant). Returns the groups (each a list of paths) of size > 1.
+    ``progress`` is an optional reporter injected by the server; each hashed
+    image advances it.
     """
     base = _validated_dir(folder)
     iterator = base.rglob("*") if recursive else base.iterdir()
@@ -493,7 +501,11 @@ def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) ->
         if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
     ]
     from Imervue.image.perceptual_hash import find_similar as _find
-    groups = _find(sorted(paths), int(threshold))
+    on_progress = None
+    if progress is not None:
+        def on_progress(done: int, total: int) -> None:
+            progress.report(done, total=total, message=f"hashed {done}/{total}")
+    groups = _find(sorted(paths), int(threshold), on_progress=on_progress)
     return {
         "folder": str(base),
         "threshold": int(threshold),

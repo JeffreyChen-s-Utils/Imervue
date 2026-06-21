@@ -59,3 +59,36 @@ def test_find_similar_groups_duplicates(tmp_path):
         threshold=0)
     assert len(groups) == 1
     assert {p.rsplit("\\", 1)[-1].rsplit("/", 1)[-1] for p in groups[0]} == {"a.png", "b.png"}
+
+
+def test_hash_paths_reports_progress_including_skipped(tmp_path):
+    good = tmp_path / "g.png"
+    _gradient_img().save(str(good))
+    calls: list[tuple[int, int]] = []
+    hashed = hash_paths(
+        [str(good), str(tmp_path / "missing.png")],
+        on_progress=lambda done, total: calls.append((done, total)),
+    )
+    assert len(hashed) == 1               # unreadable still skipped from results
+    # ...but progress advances for both and reaches the total.
+    assert calls == [(1, 2), (2, 2)]
+
+
+def test_find_similar_reports_progress(tmp_path):
+    _gradient_img().save(str(tmp_path / "a.png"))
+    _gradient_img().save(str(tmp_path / "b.png"))
+    calls: list[tuple[int, int]] = []
+    find_similar(
+        [str(tmp_path / "a.png"), str(tmp_path / "b.png")],
+        threshold=0,
+        on_progress=lambda done, total: calls.append((done, total)),
+    )
+    assert [done for done, _ in calls] == [1, 2]
+    assert all(total == 2 for _, total in calls)
+
+
+def test_hash_paths_without_callback_accepts_lazy_iterable(tmp_path):
+    good = tmp_path / "g.png"
+    _gradient_img().save(str(good))
+    # Default path must not require a materialised sequence.
+    assert len(hash_paths(iter([str(good)]))) == 1

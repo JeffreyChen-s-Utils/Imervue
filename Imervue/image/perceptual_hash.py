@@ -8,7 +8,7 @@ testable without a display server; the dialog now imports from here.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from PIL import Image
 
@@ -38,15 +38,27 @@ def hamming_distance(a: int, b: int) -> int:
     return bin(a ^ b).count("1")
 
 
-def hash_paths(paths: Iterable[str]) -> list[tuple[str, int]]:
-    """Return ``(path, dhash)`` for each readable image; unreadable ones skipped."""
+def hash_paths(
+    paths: Iterable[str],
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[tuple[str, int]]:
+    """Return ``(path, dhash)`` for each readable image; unreadable ones skipped.
+
+    When ``on_progress`` is given the iterable is materialised so a total is
+    known, and the callback is invoked ``(processed, total)`` after each path —
+    including skipped ones — so progress always reaches the total.
+    """
+    items = list(paths) if on_progress is not None else paths
+    total = len(items) if on_progress is not None else 0
     hashed: list[tuple[str, int]] = []
-    for path in paths:
+    for processed, path in enumerate(items, start=1):
         try:
             with Image.open(path) as img:
                 hashed.append((str(path), dhash(img)))
         except (OSError, ValueError):
-            continue
+            pass
+        if on_progress is not None:
+            on_progress(processed, total)
     return hashed
 
 
@@ -84,6 +96,13 @@ def group_similar(
     return groups
 
 
-def find_similar(paths: Iterable[str], threshold: int = DEFAULT_THRESHOLD) -> list[list[str]]:
-    """Hash *paths* and return groups of near-duplicate images."""
-    return group_similar(hash_paths(paths), threshold)
+def find_similar(
+    paths: Iterable[str],
+    threshold: int = DEFAULT_THRESHOLD,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[list[str]]:
+    """Hash *paths* and return groups of near-duplicate images.
+
+    ``on_progress`` is forwarded to :func:`hash_paths` for per-file progress.
+    """
+    return group_similar(hash_paths(paths, on_progress), threshold)

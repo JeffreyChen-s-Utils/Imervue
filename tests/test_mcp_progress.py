@@ -124,6 +124,7 @@ def test_progress_token_missing_or_malformed_meta():
 def test_accepts_progress_flag_set_per_handler():
     server, _ = _server_with_notifier()
     assert server.tools["build_collage"].accepts_progress is True
+    assert server.tools["find_similar"].accepts_progress is True
     assert server.tools["crop_image"].accepts_progress is False
 
 
@@ -144,6 +145,23 @@ def test_build_collage_emits_progress_with_token(tmp_path):
     updates = _progress_params(notifier)
     assert len(updates) == 3
     assert all(u["progressToken"] == "tok-1" for u in updates)
+    assert [u["progress"] for u in updates] == [1.0, 2.0, 3.0]
+    assert updates[-1]["total"] == 3.0
+
+
+def test_find_similar_emits_progress_with_token(tmp_path):
+    server, notifier = _server_with_notifier()
+    for n in range(3):
+        _save_png(tmp_path / f"d{n}.png")
+    response = _call(
+        server, "find_similar",
+        {"folder": str(tmp_path), "threshold": 0},
+        progress_id="fs-1",
+    )
+    assert response["result"]["isError"] is False
+    updates = _progress_params(notifier)
+    assert len(updates) == 3
+    assert all(u["progressToken"] == "fs-1" for u in updates)
     assert [u["progress"] for u in updates] == [1.0, 2.0, 3.0]
     assert updates[-1]["total"] == 3.0
 
