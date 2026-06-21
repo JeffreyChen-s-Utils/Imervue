@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 
 from Imervue.image.perceptual_hash import (
+    ahash,
     dhash,
     find_similar,
     group_similar,
@@ -92,3 +93,47 @@ def test_hash_paths_without_callback_accepts_lazy_iterable(tmp_path):
     _gradient_img().save(str(good))
     # Default path must not require a materialised sequence.
     assert len(hash_paths(iter([str(good)]))) == 1
+
+
+# ---------------------------------------------------------------------------
+# Average hash (ahash) + selectable hasher
+# ---------------------------------------------------------------------------
+
+
+def _flat_img(level=128):
+    return Image.new("L", (32, 32), level).convert("RGB")
+
+
+def test_ahash_is_deterministic_and_distinguishing():
+    a = ahash(_gradient_img())
+    assert ahash(_gradient_img()) == a
+    assert ahash(_gradient_img(transpose=True)) != a
+
+
+def test_ahash_flat_image_sets_all_bits():
+    # Every pixel equals the mean, so all 64 bits are set (value >= average).
+    assert ahash(_flat_img()) == (1 << 64) - 1
+
+
+def test_ahash_differs_from_dhash_on_same_image():
+    img = _gradient_img()
+    assert ahash(img) != dhash(img)
+
+
+def test_hash_paths_uses_selected_hasher(tmp_path):
+    good = tmp_path / "g.png"
+    _gradient_img().save(str(good))
+    result = hash_paths([str(good)], hasher=ahash)
+    assert result[0][1] == ahash(_gradient_img())
+
+
+def test_find_similar_with_ahash_groups_identical(tmp_path):
+    _gradient_img().save(str(tmp_path / "a.png"))
+    _gradient_img().save(str(tmp_path / "b.png"))
+    _gradient_img(transpose=True).save(str(tmp_path / "c.png"))
+    groups = find_similar(
+        [str(tmp_path / "a.png"), str(tmp_path / "b.png"), str(tmp_path / "c.png")],
+        threshold=0, hasher=ahash)
+    assert len(groups) == 1
+    assert {p.rsplit("\\", 1)[-1].rsplit("/", 1)[-1] for p in groups[0]} == {
+        "a.png", "b.png"}
