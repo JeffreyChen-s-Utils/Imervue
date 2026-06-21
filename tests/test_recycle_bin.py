@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from Imervue.gui.recycle_bin_dialog import (
     list_pending_entries,
+    pending_external_paths,
     remove_path_from_action,
 )
 
@@ -402,3 +403,110 @@ def test_delete_selected_tiles_records_pending_entries(tmp_path):
 
     assert {e["path"] for e in list_pending_entries(view.undo_stack)} == {a, c}
     assert view.model.images == [b]
+
+
+# ---------------------------------------------------------------------------
+# Folder / external soft-delete — restorable through the Recycle Bin
+# ---------------------------------------------------------------------------
+
+
+def test_list_pending_entries_marks_image_vs_external_kind():
+    stack = [
+        {"mode": "delete", "deleted_paths": ["/img"], "indices": [0], "restored": False},
+        {"mode": "delete_external", "deleted_paths": ["/folder"], "restored": False},
+    ]
+    by_path = {e["path"]: e for e in list_pending_entries(stack)}
+    assert by_path["/img"]["kind"] == "image"
+    assert by_path["/folder"]["kind"] == "external"
+
+
+def test_pending_external_paths_collects_unrestored_folders():
+    stack = [
+        {"mode": "delete_external", "deleted_paths": ["/a", "/b"], "restored": False},
+        {"mode": "delete_external", "deleted_paths": ["/c"], "restored": True},
+        {"mode": "delete", "deleted_paths": ["/img"], "indices": [0], "restored": False},
+    ]
+    assert pending_external_paths(stack) == {"/a", "/b"}
+
+
+def test_commit_sends_external_folder_to_trash_but_unlinks_images(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.actions import delete as delete_mod
+    from Imervue.gpu_image_view.actions import keyboard_actions
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    (folder / "inside.txt").write_text("hi")
+    image = tmp_path / "img.png"
+    image.write_bytes(b"x")
+
+    trashed: list[str] = []
+    monkeypatch.setattr(
+        keyboard_actions, "_send_to_trash",
+        lambda p: (trashed.append(p), True)[1],
+    )
+
+    view = _MinimalViewer()
+    view.undo_stack.append(
+        {"mode": "delete_external", "deleted_paths": [str(folder)], "restored": False})
+    view.undo_stack.append(
+        {"mode": "delete", "deleted_paths": [str(image)], "indices": [0],
+         "restored": False})
+
+    delete_mod.commit_pending_deletions(view)
+
+    assert str(folder) in trashed   # folder went to the OS trash...
+    assert folder.exists()          # ...not unlinked (we faked the trash move)
+    assert not image.exists()       # the image was unlinked as before
+
+
+def test_commit_skips_restored_external_folder(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.actions import delete as delete_mod
+    from Imervue.gpu_image_view.actions import keyboard_actions
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    trashed: list[str] = []
+    monkeypatch.setattr(
+        keyboard_actions, "_send_to_trash",
+        lambda p: (trashed.append(p), True)[1],
+    )
+    view = _MinimalViewer()
+    view.undo_stack.append(
+        {"mode": "delete_external", "deleted_paths": [str(folder)], "restored": True})
+
+    delete_mod.commit_pending_deletions(view)
+    assert trashed == []            # a restored folder is never trashed
+    assert folder.exists()
+
+
+def test_undo_delete_external_pops_without_touching_images():
+    from Imervue.gpu_image_view.actions.delete import undo_delete
+
+    view = _MinimalViewer()
+    view.model.images = ["/x"]
+    view.update = lambda: None
+    view.undo_stack.append(
+        {"mode": "delete_external", "deleted_paths": ["/folder"], "restored": False})
+
+    undo_delete(view)
+    assert view.undo_stack == []        # the external action was popped (undone)
+    assert view.model.images == ["/x"]  # a folder is not re-inserted as an image
+
+
+def test_dialog_restore_external_does_not_touch_images(qapp, tmp_path):
+    from Imervue.gui.recycle_bin_dialog import RecycleBinDialog
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    viewer = _MinimalViewer()
+    viewer.model.images = ["/x", "/y"]
+    viewer.main_window = type("MW", (), {"tree": None})()  # no tree -> refresh no-op
+    viewer.undo_stack.append(
+        {"mode": "delete_external", "deleted_paths": [str(folder)], "restored": False})
+
+    dlg = RecycleBinDialog(viewer)
+    dlg._tree.selectAll()
+    dlg._restore_selected()
+
+    assert viewer.undo_stack[0]["restored"] is True
+    assert viewer.model.images == ["/x", "/y"]  # image list untouched

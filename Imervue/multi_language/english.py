@@ -240,6 +240,7 @@ english_word_dict = {
     "tree_open_folder": "Open Containing Folder",
     "tree_delete": _ENGLISH_DELETE,
     "tree_deleted": "Moved to trash: {name}",
+    "tree_recycled": "Moved to Recycle Bin: {name}",
     "tree_delete_selected": "Delete {count} Items",
     "tree_deleted_batch": "Moved {count} items to trash",
     "tree_copy_paths": "Copy Paths",

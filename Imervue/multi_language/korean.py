@@ -225,6 +225,7 @@ korean_word_dict = {
     "tree_open_folder": _KOREAN_OPEN_FOLDER,
     "tree_delete": "삭제",
     "tree_deleted": "휴지통으로 이동됨: {name}",
+    "tree_recycled": "휴지통으로 이동됨: {name}",
     "tree_delete_selected": "{count}개 항목 삭제",
     "tree_deleted_batch": "{count}개 항목을 휴지통으로 이동함",
     "tree_copy_paths": "경로 복사",

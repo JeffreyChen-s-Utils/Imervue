@@ -217,6 +217,7 @@ traditional_chinese_word_dict = {
     "tree_open_folder": "開啟所在資料夾",
     "tree_delete": "刪除",
     "tree_deleted": "已移至垃圾桶：{name}",
+    "tree_recycled": "已移至資源回收桶：{name}",
     "tree_delete_selected": "刪除 {count} 個項目",
     "tree_deleted_batch": "已將 {count} 個項目移至垃圾桶",
     "tree_copy_paths": "複製路徑",

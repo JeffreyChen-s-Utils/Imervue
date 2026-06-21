@@ -54,17 +54,28 @@ logger = logging.getLogger("Imervue.recycle_bin")
 # ---------------------------------------------------------------------------
 
 
+# Soft-delete action modes the Recycle Bin surfaces. ``delete`` is an image
+# removed from the viewer list (kept on disk, restored back into the list);
+# ``delete_external`` is a folder / non-list file deleted from the file tree
+# (kept on disk, hidden from the tree, sent to the OS trash only at shutdown).
+_PENDING_MODES = ("delete", "delete_external")
+
+
 def list_pending_entries(undo_stack: list[dict]) -> list[dict]:
     """Flatten an undo-stack into one entry per pending deletion.
 
     Each entry exposes the indices we need to mutate the original action
     in-place: ``action_idx`` is the index into ``undo_stack``, ``path_idx``
-    is the position inside that action's ``deleted_paths`` list.
+    is the position inside that action's ``deleted_paths`` list. ``kind`` is
+    ``"image"`` for viewer-list deletions or ``"external"`` for folder / file
+    tree deletions, so restore can pick the right recovery.
     """
     entries: list[dict] = []
     for action_idx, action in enumerate(undo_stack):
-        if action.get("mode") != "delete" or action.get("restored"):
+        mode = action.get("mode")
+        if mode not in _PENDING_MODES or action.get("restored"):
             continue
+        kind = "external" if mode == "delete_external" else "image"
         paths = action.get("deleted_paths", [])
         indices = action.get("indices", [])
         for path_idx, path in enumerate(paths):
@@ -72,9 +83,23 @@ def list_pending_entries(undo_stack: list[dict]) -> list[dict]:
                 "action_idx": action_idx,
                 "path_idx": path_idx,
                 "path": path,
+                "kind": kind,
                 "original_index": indices[path_idx] if path_idx < len(indices) else 0,
             })
     return entries
+
+
+def pending_external_paths(undo_stack: list[dict]) -> set[str]:
+    """Return the folder / file-tree paths still pending soft-deletion.
+
+    These are kept on disk but hidden from the file tree until the user
+    restores them or the app commits the deletions at shutdown.
+    """
+    out: set[str] = set()
+    for action in undo_stack:
+        if action.get("mode") == "delete_external" and not action.get("restored"):
+            out.update(action.get("deleted_paths", []))
+    return out
 
 
 def remove_path_from_action(action: dict, path_idx: int) -> tuple[str, int] | None:
@@ -204,10 +229,20 @@ class RecycleBinDialog(QDialog):
         if result is None:
             return
         path, original_index = result
+        if entry.get("kind") == "external":
+            self._restore_external()
+            return
         images = viewer.model.images
         insert_at = max(0, min(original_index, len(images)))
         images.insert(insert_at, path)
         self._reload_thumbnail(path)
+
+    def _restore_external(self) -> None:
+        """Un-hide restored folders / files by re-syncing the file tree."""
+        tree = getattr(getattr(self._viewer, "main_window", None), "tree", None)
+        refresh = getattr(tree, "refresh_pending_hidden", None)
+        if callable(refresh):
+            refresh()
 
     def _reload_thumbnail(self, path: str) -> None:
         try:
@@ -266,9 +301,17 @@ class RecycleBinDialog(QDialog):
         path, _ = result
         try:
             if path and Path(path).exists():
-                Path(path).unlink()
+                if entry.get("kind") == "external":
+                    from Imervue.gpu_image_view.actions.keyboard_actions import (
+                        _send_to_trash,
+                    )
+                    _send_to_trash(path)
+                else:
+                    Path(path).unlink()
         except OSError as exc:
             logger.exception("Failed to purge %s: %s", path, exc)
+        if entry.get("kind") == "external":
+            self._restore_external()  # re-sync the tree's hidden rows
 
 
 def open_recycle_bin_dialog(viewer: GPUImageView, parent=None) -> None:

@@ -228,6 +228,7 @@ japanese_word_dict = {
     "tree_open_folder": "フォルダーを開く",
     "tree_delete": "削除",
     "tree_deleted": "ゴミ箱に移動しました：{name}",
+    "tree_recycled": "ごみ箱に移動しました：{name}",
     "tree_delete_selected": "{count} 件を削除",
     "tree_deleted_batch": "{count} 件をゴミ箱に移動しました",
     "tree_copy_paths": "パスをコピー",
