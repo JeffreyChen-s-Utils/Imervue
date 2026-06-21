@@ -10,6 +10,7 @@ from Imervue.mcp_server.tools import (
     apply_frame,
     apply_watermark,
     build_collage,
+    collection_stats,
     crop_image,
     find_similar,
     image_statistics,
@@ -114,7 +115,33 @@ def test_registered_in_default_tools():
     assert {"image_statistics", "quality_metrics", "read_histogram",
             "ocr_text", "image_thumbnail", "find_similar",
             "apply_watermark", "apply_frame", "build_collage",
-            "crop_image", "resize_image", "rotate_image"} <= names
+            "crop_image", "resize_image", "rotate_image",
+            "collection_stats"} <= names
+
+
+# ---------------------------------------------------------------------------
+# collection_stats
+# ---------------------------------------------------------------------------
+
+
+def test_collection_stats_summarises_folder(tmp_path):
+    from Imervue.library import image_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    a = _save(tmp_path / "a.png")
+    _save(tmp_path / "b.png")
+    image_index.set_db_path(tmp_path / "lib.db")
+    try:
+        image_index.set_cull_state(a, "pick")
+        user_setting_dict["image_ratings"] = {a: 4}
+        stats = collection_stats(str(tmp_path))
+        assert stats["total"] == 2
+        assert stats["rated"] == 1
+        assert stats["average_rating"] == 4.0
+        assert stats["cull"]["pick"] == 1
+        assert stats["cull"]["unflagged"] == 1
+    finally:
+        user_setting_dict["image_ratings"] = {}
+        image_index.close()
 
 
 # ---------------------------------------------------------------------------

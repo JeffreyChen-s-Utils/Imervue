@@ -41,6 +41,8 @@ def _arr(items: dict[str, Any]) -> dict[str, Any]:
 
 _STR_ARRAY = _arr(_STR)
 _INT_ARRAY = _arr(_INT)
+# An object whose values are integers (e.g. a label / cull tally).
+_INT_MAP: dict[str, Any] = {"type": "object", "additionalProperties": _INT}
 _STAT = _obj(
     {"mean": _NUM, "min": _NUM, "max": _NUM, "std": _NUM, "median": _NUM},
     ["mean", "min", "max", "std", "median"],
@@ -269,6 +271,24 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
                 "groups": _arr(_STR_ARRAY),
             },
             ["folder", "threshold", "group_count", "groups"],
+        ),
+    },
+    "collection_stats": {
+        "annotations": _read_only("Collection stats"),
+        "output_schema": _obj(
+            {
+                "folder": _STR,
+                "total": _INT,
+                "rated": _INT,
+                "unrated": _INT,
+                "average_rating": _NUM,
+                "rating_distribution": _INT_MAP,
+                "favorites": _INT,
+                "color_labels": _INT_MAP,
+                "cull": _INT_MAP,
+            },
+            ["folder", "total", "rated", "unrated", "average_rating",
+             "rating_distribution", "favorites", "color_labels", "cull"],
         ),
     },
     "apply_watermark": {

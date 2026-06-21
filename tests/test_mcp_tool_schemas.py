@@ -287,6 +287,25 @@ def test_rotate_image_structured_content_conforms(server, sample_png, tmp_path):
     assert dst.exists()
 
 
+def test_collection_stats_structured_content_conforms(server, sample_png, tmp_path):
+    from Imervue.library import image_index
+    image_index.set_db_path(tmp_path / "lib.db")
+    try:
+        response = server.handle_message(_request(
+            "tools/call",
+            {"name": "collection_stats",
+             "arguments": {"folder": str(sample_png.parent)}},
+        ))
+        result = response["result"]
+        assert result["isError"] is False
+        _assert_conforms(
+            result["structuredContent"],
+            TOOL_METADATA["collection_stats"]["output_schema"],
+        )
+    finally:
+        image_index.close()
+
+
 def test_list_images_structured_content_conforms(server, sample_png):
     response = server.handle_message(_request(
         "tools/call",

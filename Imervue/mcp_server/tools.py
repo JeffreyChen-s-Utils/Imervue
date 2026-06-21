@@ -515,6 +515,29 @@ def find_similar(
 
 
 # ---------------------------------------------------------------------------
+# collection_stats
+# ---------------------------------------------------------------------------
+
+
+def collection_stats(folder: str, *, recursive: bool = False) -> dict[str, Any]:
+    """Summarise a folder's ratings, favourites, colour labels and cull states.
+
+    Returns total / rated / unrated counts, a 0-5 star distribution and
+    average, favourite count, a colour-label tally and a pick/reject/unflagged
+    cull tally. Reads ratings and labels from the user's settings and cull
+    states from the library index.
+    """
+    base = _validated_dir(folder)
+    iterator = base.rglob("*") if recursive else base.iterdir()
+    paths = sorted(
+        str(p) for p in iterator
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+    )
+    from Imervue.library.collection_stats import summarize
+    return {"folder": str(base), **summarize(paths)}
+
+
+# ---------------------------------------------------------------------------
 # apply_watermark
 # ---------------------------------------------------------------------------
 
@@ -1073,6 +1096,24 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["folder"],
         },
         "handler": find_similar,
+    },
+    {
+        "name": "collection_stats",
+        "description": (
+            "Summarise a folder's images: total / rated / unrated counts, a 0-5 "
+            "star distribution and average, favourite count, a colour-label "
+            "tally and a pick/reject/unflagged cull tally. Set recursive=true to "
+            "walk subfolders."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder": {"type": "string"},
+                "recursive": {"type": "boolean", "default": False},
+            },
+            "required": ["folder"],
+        },
+        "handler": collection_stats,
     },
     {
         "name": "apply_watermark",
