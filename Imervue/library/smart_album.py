@@ -4,8 +4,9 @@ Smart Albums — persist a filter query and reapply it later.
 A rules dict supports these keys (all optional):
     - exts:              list[str]       file extensions without dot
     - min_width / min_height / min_size / max_size:  int
+    - min_aspect / max_aspect: float     width / height ratio bounds
     - color_labels:      list[str]       colour names (see color_labels.COLORS)
-    - min_rating:        int             1-5 (inclusive)
+    - min_rating / max_rating: int       1-5 (inclusive)
     - favorites_only:    bool
     - cull:              str             'pick' | 'reject' | 'unflagged'
     - tags_any / tags_all: list[str]     hierarchical tag paths
@@ -147,6 +148,11 @@ def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:
         ratings = user_setting_dict.get("image_ratings", {})
         paths = [p for p in paths if int(ratings.get(p, 0)) >= int(min_rating)]
 
+    max_rating = rules.get("max_rating")
+    if max_rating is not None:
+        ratings = user_setting_dict.get("image_ratings", {})
+        paths = [p for p in paths if int(ratings.get(p, 0)) <= int(max_rating)]
+
     if rules.get("favorites_only"):
         favs = user_setting_dict.get("image_favorites", [])
         fav_set = set(favs) if isinstance(favs, (list, set, tuple)) else set()
@@ -206,8 +212,22 @@ def _apply_size_filters(paths: list[str], rules: dict) -> list[str]:
     return out
 
 
+def _aspect_ok(
+    width: int, height: int, min_aspect, max_aspect,
+) -> bool:
+    """True when ``width / height`` falls within the aspect bounds (if any)."""
+    if min_aspect is None and max_aspect is None:
+        return True
+    if height == 0:
+        return False
+    aspect = width / height
+    if min_aspect is not None and aspect < float(min_aspect):
+        return False
+    return not (max_aspect is not None and aspect > float(max_aspect))
+
+
 def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
-    """Filter by pixel dimensions (``min_width`` / ``min_height``).
+    """Filter by pixel dimensions (``min_width`` / ``min_height``) and aspect.
 
     Reads only the image header (no full decode) and runs after the cheaper
     filters, so it touches the smallest possible set. Unreadable images can't
@@ -215,7 +235,9 @@ def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
     """
     min_w = rules.get("min_width")
     min_h = rules.get("min_height")
-    if not min_w and not min_h:
+    min_aspect = rules.get("min_aspect")
+    max_aspect = rules.get("max_aspect")
+    if not any((min_w, min_h, min_aspect, max_aspect)):
         return paths
     from PIL import Image
     out: list[str] = []
@@ -228,6 +250,8 @@ def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
         if min_w and width < int(min_w):
             continue
         if min_h and height < int(min_h):
+            continue
+        if not _aspect_ok(width, height, min_aspect, max_aspect):
             continue
         out.append(p)
     return out

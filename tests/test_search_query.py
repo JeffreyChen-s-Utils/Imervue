@@ -1,6 +1,8 @@
 """Tests for the search-query DSL → smart_album rules parser."""
 from __future__ import annotations
 
+import time
+
 from Imervue.library.search_query import parse_query
 
 
@@ -65,6 +67,34 @@ def test_bare_dash_word_is_free_text_not_exclusion():
     rules = parse_query("-sunset")
     assert "tags_exclude" not in rules
     assert rules["name_contains"] == "-sunset"
+
+
+def test_aspect_operators_set_bounds():
+    assert parse_query("aspect:>1.5")["min_aspect"] == 1.5
+    assert parse_query("aspect:<0.8")["max_aspect"] == 0.8
+
+
+def test_rating_ceiling_with_less_than():
+    rules = parse_query("rating:<=3")
+    assert rules["max_rating"] == 3
+    assert "min_rating" not in rules
+
+
+def test_rating_floor_unchanged():
+    assert parse_query("rating:>=4")["min_rating"] == 4
+    assert parse_query("rating:2")["min_rating"] == 2
+
+
+def test_age_younger_sets_date_from():
+    rules = parse_query("age:<30d")
+    assert "date_to" not in rules
+    assert abs(rules["date_from"] - (time.time() - 30 * 86400)) < 5
+
+
+def test_age_older_sets_date_to():
+    rules = parse_query("age:>7d")
+    assert "date_from" not in rules
+    assert abs(rules["date_to"] - (time.time() - 7 * 86400)) < 5
 
 
 def test_empty_query_is_empty_rules():

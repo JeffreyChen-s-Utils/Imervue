@@ -13,11 +13,14 @@ rules. The dialog just feeds the result to ``smart_album.apply_to_paths``.
 from __future__ import annotations
 
 import re
+import time
 
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
 _DIGITS = re.compile(r"(\d+)")
+_FLOAT = re.compile(r"(\d+(?:\.\d+)?)")
 _TRUE = {"1", "true", "yes", "y", "on"}
+_SECONDS_PER_DAY = 86400.0
 _LIST_KEYS = {
     "kw": "tags", "keyword": "tags", "tag": "tags", "tags": "tags",
     "color": "colors", "colour": "colors",
@@ -63,24 +66,84 @@ def parse_query(query: str) -> dict:
     return rules
 
 
+def _apply_ext(value: str, acc: dict, _rules: dict) -> None:
+    acc["exts"].append(value.lstrip("."))
+
+
+def _apply_type(value: str, acc: dict, _rules: dict) -> None:
+    if value.lower() == "video":
+        acc["exts"].extend(sorted(e.lstrip(".") for e in VIDEO_EXTENSIONS))
+
+
+def _apply_name(value: str, acc: dict, _rules: dict) -> None:
+    acc["free"].append(value)
+
+
+def _apply_place(value: str, _acc: dict, rules: dict) -> None:
+    rules["place"] = value
+
+
+def _apply_missing(value: str, _acc: dict, rules: dict) -> None:
+    rules.setdefault("missing", []).append(value.lower())
+
+
+def _apply_cull(value: str, _acc: dict, rules: dict) -> None:
+    rules["cull"] = value.lower()
+
+
+def _apply_fav(value: str, _acc: dict, rules: dict) -> None:
+    rules["favorites_only"] = value.lower() in _TRUE
+
+
+def _apply_rating(value: str, _acc: dict, rules: dict) -> None:
+    """``rating:>=4`` / ``rating:3`` set a floor; ``rating:<=3`` sets a ceiling."""
+    match = _DIGITS.search(value)
+    if match is None:
+        return
+    rules["max_rating" if "<" in value else "min_rating"] = int(match.group(1))
+
+
+def _apply_aspect(value: str, _acc: dict, rules: dict) -> None:
+    """``aspect:>1.5`` keeps wide images; ``aspect:<1`` keeps tall ones."""
+    match = _FLOAT.search(value)
+    if match is None:
+        return
+    rules["max_aspect" if "<" in value else "min_aspect"] = float(match.group(1))
+
+
+def _apply_age(value: str, _acc: dict, rules: dict) -> None:
+    """``age:<30d`` keeps files modified in the last N days; ``age:>30d`` older.
+
+    Resolved to an absolute mtime cutoff at parse time, reusing the
+    ``date_from`` / ``date_to`` evaluation.
+    """
+    match = _FLOAT.search(value)
+    if match is None:
+        return
+    cutoff = time.time() - float(match.group(1)) * _SECONDS_PER_DAY
+    rules["date_from" if "<" in value else "date_to"] = cutoff
+
+
+_FIELD_HANDLERS = {
+    "ext": _apply_ext,
+    "type": _apply_type,
+    "name": _apply_name,
+    "place": _apply_place,
+    "missing": _apply_missing,
+    "cull": _apply_cull,
+    "rating": _apply_rating,
+    "fav": _apply_fav,
+    "favorite": _apply_fav,
+    "favourite": _apply_fav,
+    "aspect": _apply_aspect,
+    "age": _apply_age,
+}
+
+
 def _apply_token(field: str, value: str, acc: dict, rules: dict) -> None:
     if field in _LIST_KEYS:
         acc[_LIST_KEYS[field]].append(value)
-    elif field == "ext":
-        acc["exts"].append(value.lstrip("."))
-    elif field == "type" and value.lower() == "video":
-        acc["exts"].extend(sorted(e.lstrip(".") for e in VIDEO_EXTENSIONS))
-    elif field == "name":
-        acc["free"].append(value)
-    elif field == "place":
-        rules["place"] = value
-    elif field == "missing":
-        rules.setdefault("missing", []).append(value.lower())
-    elif field == "cull":
-        rules["cull"] = value.lower()
-    elif field == "rating":
-        match = _DIGITS.search(value)
-        if match:
-            rules["min_rating"] = int(match.group(1))
-    elif field in ("fav", "favorite", "favourite"):
-        rules["favorites_only"] = value.lower() in _TRUE
+        return
+    handler = _FIELD_HANDLERS.get(field)
+    if handler is not None:
+        handler(value, acc, rules)

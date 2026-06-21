@@ -150,6 +150,28 @@ class TestApplyToPaths:
         )
         assert result == [str(small)]
 
+    def test_min_aspect_keeps_wide_images(self, tmp_path):
+        wide = _make_image(tmp_path / "wide.png", 200, 100)   # aspect 2.0
+        tall = _make_image(tmp_path / "tall.png", 100, 200)   # aspect 0.5
+        result = smart_album.apply_to_paths([wide, tall], {"min_aspect": 1.5})
+        assert result == [wide]
+
+    def test_max_aspect_keeps_tall_images(self, tmp_path):
+        wide = _make_image(tmp_path / "wide.png", 200, 100)
+        tall = _make_image(tmp_path / "tall.png", 100, 200)
+        result = smart_album.apply_to_paths([wide, tall], {"max_aspect": 1.0})
+        assert result == [tall]
+
+    def test_max_rating_keeps_low_rated(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        user_setting_dict["image_ratings"] = {a: 2, b: 5}
+        try:
+            result = smart_album.apply_to_paths([a, b], {"max_rating": 3})
+        finally:
+            user_setting_dict["image_ratings"] = {}
+        assert result == [a]
+
     def test_min_width_and_height_filter(self, tmp_path):
         wide = _make_image(tmp_path / "wide.png", 200, 50)
         tall = _make_image(tmp_path / "tall.png", 50, 200)
