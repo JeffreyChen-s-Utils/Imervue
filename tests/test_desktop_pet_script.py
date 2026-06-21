@@ -387,3 +387,60 @@ def test_set_script_resets_time_of_day_cursors():
         time_of_day_greetings={"morning": ["X", "Y"]},
     ))
     assert engine.pick_time_of_day_greeting(hour=7) == "X"
+
+
+# ---------------------------------------------------------------
+# Scheduled-event wall-clock rules
+# ---------------------------------------------------------------
+
+
+def test_scheduled_rule_gates_firing_by_hour():
+    from datetime import datetime
+
+    from Imervue.desktop_pet.pet_script import (
+        PetScript,
+        PetScriptEngine,
+        ScheduledEvent,
+    )
+    from Imervue.desktop_pet.schedule_rules import ScheduleRule
+
+    engine = PetScriptEngine(PetScript(scheduled=[ScheduledEvent(
+        every_seconds=1.0, messages=["break?"],
+        rule=ScheduleRule(start_hour=9, end_hour=17),
+    )]))
+    engine._sched_anchors[0] -= 100  # force the event overdue  # noqa: SLF001
+
+    # Outside the 9-17 window it stays silent (and stays overdue)...
+    assert engine.due_scheduled_message(now_dt=datetime(2024, 1, 1, 3, 0)) is None
+    # ...and fires as soon as the window opens.
+    assert engine.due_scheduled_message(now_dt=datetime(2024, 1, 1, 10, 0)) == "break?"
+
+
+def test_scheduled_rule_round_trips_through_script_dict():
+    from Imervue.desktop_pet.pet_script import (
+        PetScript,
+        ScheduledEvent,
+        _coerce_script,
+    )
+    from Imervue.desktop_pet.schedule_rules import ScheduleRule
+
+    script = PetScript(scheduled=[ScheduledEvent(
+        every_seconds=600, messages=["hi"],
+        rule=ScheduleRule(start_hour=22, end_hour=7, weekdays=[0, 1, 2, 3, 4]),
+    )])
+    data = script.to_dict()
+    assert data["scheduled"][0]["rule"] == {
+        "start_hour": 22, "end_hour": 7, "weekdays": [0, 1, 2, 3, 4]}
+
+    restored = _coerce_script(data).scheduled[0]
+    assert restored.rule.start_hour == 22
+    assert restored.rule.end_hour == 7
+    assert restored.rule.weekdays == [0, 1, 2, 3, 4]
+
+
+def test_scheduled_without_rule_omits_it_from_dict():
+    from Imervue.desktop_pet.pet_script import PetScript, ScheduledEvent
+
+    data = PetScript(scheduled=[ScheduledEvent(
+        every_seconds=60, messages=["x"])]).to_dict()
+    assert "rule" not in data["scheduled"][0]

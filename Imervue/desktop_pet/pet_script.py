@@ -66,6 +66,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from Imervue.desktop_pet.schedule_rules import (
+    ScheduleRule,
+    rule_allows,
+    rule_from_dict,
+    rule_to_dict,
+)
+
 logger = logging.getLogger("Imervue.desktop_pet.pet_script")
 
 CURRENT_SCHEMA_VERSION: int = 1
@@ -126,6 +133,9 @@ class ScheduledEvent:
 
     every_seconds: float
     messages: list[str] = field(default_factory=list)
+    # Optional wall-clock gate — only fire within an hour window / on certain
+    # weekdays. ``None`` means "fire whenever ``every_seconds`` is up".
+    rule: ScheduleRule | None = None
 
 
 @dataclass
@@ -162,13 +172,7 @@ class PetScript:
             },
             "hit_responses": {k: list(v) for k, v in self.hit_responses.items()},
             "motion_lines": {k: list(v) for k, v in self.motion_lines.items()},
-            "scheduled": [
-                {
-                    "every_seconds": ev.every_seconds,
-                    "messages": list(ev.messages),
-                }
-                for ev in self.scheduled
-            ],
+            "scheduled": [_scheduled_to_dict(ev) for ev in self.scheduled],
         }
 
 
@@ -268,6 +272,17 @@ def _coerce_str_list_dict(value: Any) -> dict[str, list[str]]:
     }
 
 
+def _scheduled_to_dict(ev: ScheduledEvent) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "every_seconds": ev.every_seconds,
+        "messages": list(ev.messages),
+    }
+    rule = rule_to_dict(ev.rule)
+    if rule is not None:
+        out["rule"] = rule
+    return out
+
+
 def _coerce_scheduled(value: Any) -> list[ScheduledEvent]:
     if not isinstance(value, list):
         return []
@@ -284,6 +299,7 @@ def _coerce_scheduled(value: Any) -> list[ScheduledEvent]:
         out.append(ScheduledEvent(
             every_seconds=every,
             messages=_coerce_str_list(entry.get("messages")),
+            rule=rule_from_dict(entry.get("rule")),
         ))
     return out
 
@@ -383,18 +399,24 @@ class PetScriptEngine:
             return self._next_line("default_greetings", list(DEFAULT_GREETINGS))
         return None
 
-    def due_scheduled_message(self) -> str | None:
+    def due_scheduled_message(self, *, now_dt: datetime | None = None) -> str | None:
         """Called from the pet window's tick. Returns one message
-        string if any ``ScheduledEvent`` is overdue, or ``None``.
-        On fire, the entry's anchor resets so the next fire is
-        ``every_seconds`` away from now (drift-free relative to
-        the moment we fired — not relative to the original
-        anchor)."""
+        string if any ``ScheduledEvent`` is overdue (and its wall-clock
+        ``rule`` allows it right now), or ``None``. On fire, the entry's
+        anchor resets so the next fire is ``every_seconds`` away from now.
+
+        An event blocked by its rule (e.g. quiet overnight) stays overdue
+        without resetting its anchor, so it fires as soon as the rule
+        allows. ``now_dt`` lets tests inject a deterministic wall clock.
+        """
+        when = now_dt or datetime.now()
         now = time.monotonic()
         for index, event in enumerate(self._script.scheduled):
             anchor = self._sched_anchors[index]
             if now - anchor < event.every_seconds:
                 continue
+            if not rule_allows(event.rule, when):
+                continue  # overdue but gated — retry once the rule allows
             self._sched_anchors[index] = now
             if not event.messages:
                 continue
