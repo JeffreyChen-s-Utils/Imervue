@@ -22,13 +22,28 @@ _LIST_KEYS = {
     "kw": "tags", "keyword": "tags", "tag": "tags", "tags": "tags",
     "color": "colors", "colour": "colors",
 }
+# Keys that name a tag, so ``-tag:foo`` / ``-kw:foo`` can exclude one.
+_TAG_KEYS = {key for key, mapped in _LIST_KEYS.items() if mapped == "tags"}
+
+
+def _is_tag_negation(token: str) -> bool:
+    """True for a ``-tag:foo`` style token that excludes a tag."""
+    if not token.startswith("-") or ":" not in token:
+        return False
+    field, _, value = token[1:].partition(":")
+    return field.lower().strip() in _TAG_KEYS and bool(value.strip())
 
 
 def parse_query(query: str) -> dict:
     """Parse *query* into a ``smart_album`` rules dict."""
-    acc: dict[str, list[str]] = {"tags": [], "colors": [], "exts": [], "free": []}
+    acc: dict[str, list[str]] = {
+        "tags": [], "tags_exclude": [], "colors": [], "exts": [], "free": [],
+    }
     rules: dict = {}
     for token in query.split():
+        if _is_tag_negation(token):
+            acc["tags_exclude"].append(token[1:].partition(":")[2].strip())
+            continue
         field, sep, value = token.partition(":")
         value = value.strip()
         if not sep or not value:
@@ -37,6 +52,8 @@ def parse_query(query: str) -> dict:
         _apply_token(field.lower().strip(), value, acc, rules)
     if acc["tags"]:
         rules["tags_all"] = acc["tags"]
+    if acc["tags_exclude"]:
+        rules["tags_exclude"] = acc["tags_exclude"]
     if acc["colors"]:
         rules["color_labels"] = acc["colors"]
     if acc["exts"]:

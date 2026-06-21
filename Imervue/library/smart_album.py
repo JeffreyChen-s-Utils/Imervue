@@ -9,6 +9,7 @@ A rules dict supports these keys (all optional):
     - favorites_only:    bool
     - cull:              str             'pick' | 'reject' | 'unflagged'
     - tags_any / tags_all: list[str]     hierarchical tag paths
+    - tags_exclude:      list[str]       hierarchical tag paths to exclude
     - name_contains:     str
     - date_from / date_to: float         Unix timestamp, mtime
 """
@@ -170,6 +171,13 @@ def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
         for t in tags_all:
             tagged = set(image_index.images_with_tag(t))
             paths = [p for p in paths if p in tagged]
+
+    tags_exclude = rules.get("tags_exclude") or []
+    if tags_exclude:
+        excluded: set[str] = set()
+        for t in tags_exclude:
+            excluded.update(image_index.images_with_tag(t))
+        paths = [p for p in paths if p not in excluded]
 
     date_from = rules.get("date_from")
     date_to = rules.get("date_to")

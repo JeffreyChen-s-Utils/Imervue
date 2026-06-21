@@ -44,6 +44,29 @@ def test_missing_field_accumulates():
         "location", "keywords"]
 
 
+def test_tag_negation_collects_into_tags_exclude():
+    assert parse_query("-tag:reject")["tags_exclude"] == ["reject"]
+    assert parse_query("-kw:private -keyword:wip")["tags_exclude"] == [
+        "private", "wip"]
+
+
+def test_include_and_exclude_tags_coexist():
+    rules = parse_query("tag:trip -tag:reject")
+    assert rules["tags_all"] == ["trip"]
+    assert rules["tags_exclude"] == ["reject"]
+
+
+def test_negation_only_applies_to_tag_fields():
+    # A leading dash on a non-tag field is not a tag exclusion.
+    assert "tags_exclude" not in parse_query("-rating:4")
+
+
+def test_bare_dash_word_is_free_text_not_exclusion():
+    rules = parse_query("-sunset")
+    assert "tags_exclude" not in rules
+    assert rules["name_contains"] == "-sunset"
+
+
 def test_empty_query_is_empty_rules():
     assert parse_query("   ") == {}
 

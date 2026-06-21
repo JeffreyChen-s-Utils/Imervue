@@ -112,6 +112,24 @@ class TestApplyToPaths:
         )
         assert result == [a]
 
+    def test_tags_exclude_drops_tagged_paths(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        image_index.add_image_tag(b, "reject")
+        result = smart_album.apply_to_paths([a, b], {"tags_exclude": ["reject"]})
+        assert result == [a]
+
+    def test_tags_exclude_narrows_an_inclusion(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        image_index.add_image_tag(a, "trip")
+        image_index.add_image_tag(b, "trip")
+        image_index.add_image_tag(b, "reject")
+        result = smart_album.apply_to_paths(
+            [a, b], {"tags_all": ["trip"], "tags_exclude": ["reject"]}
+        )
+        assert result == [a]
+
     def test_min_size_filter(self, tmp_path):
         small = tmp_path / "small.bin"
         small.write_bytes(b"\x00" * 100)
