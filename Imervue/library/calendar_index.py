@@ -23,6 +23,7 @@ from PIL import Image
 logger = logging.getLogger("Imervue.calendar_index")
 
 UNKNOWN_DATE = _dt.date.min  # sentinel — falsey compare with == UNKNOWN_DATE
+UNKNOWN_DATETIME = _dt.datetime.min  # sentinel for capture_datetime
 
 
 _EXIF_DT_ORIGINAL = 0x9003
@@ -46,31 +47,54 @@ def _parse_exif_datetime(value: str) -> _dt.date | None:
         return None
 
 
-def capture_date(path: str | Path) -> _dt.date:
-    """Return the capture date (EXIF original → EXIF digitised → mtime)."""
+def _parse_exif_datetime_full(value: str) -> _dt.datetime | None:
+    """Parse ``YYYY:MM:DD HH:MM:SS``; fall back to the date at midnight."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return _dt.datetime.strptime(value.strip(), "%Y:%m:%d %H:%M:%S")
+    except ValueError:
+        date = _parse_exif_datetime(value)
+        return _dt.datetime(date.year, date.month, date.day) if date else None
+
+
+def _exif_datetime(exif) -> _dt.datetime | None:
+    """Return the first parseable EXIF capture datetime, or None."""
+    sub_ifd = {}
+    try:
+        sub_ifd = exif.get_ifd(_EXIF_IFD)
+    except (AttributeError, KeyError, ValueError, OSError):
+        sub_ifd = {}
+    for source in (sub_ifd, exif):
+        for tag in (_EXIF_DT_ORIGINAL, _EXIF_DT_DIGITIZED, _EXIF_DT_TOP):
+            dt = _parse_exif_datetime_full(source.get(tag, ""))
+            if dt is not None:
+                return dt
+    return None
+
+
+def capture_datetime(path: str | Path) -> _dt.datetime:
+    """Return the capture datetime (EXIF original → digitised → top → mtime)."""
     p = Path(path)
     try:
         with Image.open(p) as im:
             exif = im.getexif()
     except (OSError, ValueError):
         exif = None
-
     if exif:
-        sub_ifd = {}
-        try:
-            sub_ifd = exif.get_ifd(_EXIF_IFD)
-        except (AttributeError, KeyError, ValueError, OSError):
-            sub_ifd = {}
-        for source in (sub_ifd, exif):
-            for tag in (_EXIF_DT_ORIGINAL, _EXIF_DT_DIGITIZED, _EXIF_DT_TOP):
-                dt = _parse_exif_datetime(source.get(tag, ""))
-                if dt is not None:
-                    return dt
+        dt = _exif_datetime(exif)
+        if dt is not None:
+            return dt
     try:
-        ts = p.stat().st_mtime
+        return _dt.datetime.fromtimestamp(p.stat().st_mtime)
     except OSError:
-        return UNKNOWN_DATE
-    return _dt.date.fromtimestamp(ts)
+        return UNKNOWN_DATETIME
+
+
+def capture_date(path: str | Path) -> _dt.date:
+    """Return the capture date (EXIF original → EXIF digitised → mtime)."""
+    dt = capture_datetime(path)
+    return UNKNOWN_DATE if dt == UNKNOWN_DATETIME else dt.date()
 
 
 def group_by_date(paths: list[str | Path]) -> dict[_dt.date, list[str]]:
@@ -101,3 +125,34 @@ def group_by_month(
 def date_histogram(paths: list[str | Path]) -> dict[_dt.date, int]:
     """Return ``{date: count}`` — useful for badging calendar cells."""
     return {d: len(items) for d, items in group_by_date(paths).items()}
+
+
+def group_by_hour(paths: list[str | Path]) -> dict[_dt.datetime, list[str]]:
+    """Return ``{hour_bucket: [path, ...]}`` keyed by the datetime truncated to
+    the hour — drilling into a day by capture hour. Entries are sorted by path.
+    """
+    out: dict[_dt.datetime, list[str]] = {}
+    for p in paths:
+        dt = capture_datetime(p)
+        bucket = (
+            UNKNOWN_DATETIME if dt == UNKNOWN_DATETIME
+            else dt.replace(minute=0, second=0, microsecond=0)
+        )
+        out.setdefault(bucket, []).append(str(p))
+    for value in out.values():
+        value.sort()
+    return out
+
+
+def hour_histogram(paths: list[str | Path]) -> dict[int, int]:
+    """Return ``{hour_of_day(0-23): count}`` — a time-of-day distribution.
+
+    Images with no derivable capture datetime are skipped.
+    """
+    counts: dict[int, int] = {}
+    for p in paths:
+        dt = capture_datetime(p)
+        if dt == UNKNOWN_DATETIME:
+            continue
+        counts[dt.hour] = counts.get(dt.hour, 0) + 1
+    return counts
