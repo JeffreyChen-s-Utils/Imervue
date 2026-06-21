@@ -1894,3 +1894,141 @@ rig が ``HitArea`` エントリを定義していれば、``hit_responses`` キ
    imervue /path/to/folder        # 指定したフォルダを開く
    imervue --debug                # デバッグモードを有効化
    imervue --software_opengl      # ソフトウェアレンダリングを使用（GPU 非対応時）
+
+----
+
+MCP Server
+----------
+
+Imervue には組み込みの `Model Context Protocol <https://modelcontextprotocol.io>`_
+サーバが同梱されており、AI アシスタント（Claude Code、Claude Desktop、Cursor、
+Cline、…）が GUI を起動せずにプロジェクトの純粋ロジックヘルパーを呼び出せます。
+次のコマンドで起動します::
+
+   python -m Imervue.mcp_server
+
+サーバは Qt 非依存で、各ツールが呼び出し時に必要とするものだけをロードします。
+
+利用可能なツール
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Tool
+     - 用途
+   * - ``list_images``
+     - フォルダ内の画像ファイル（パス、サイズ、mtime）を一覧表示します。
+       ``recursive=true`` を渡すとサブフォルダも走査します。
+   * - ``read_image_metadata``
+     - 1 枚の画像の寸法、フォーマット、EXIF タグ、XMP サイドカーフィールドを返します。
+       欠落しているデータは例外を送出せず、適切な空の値として報告されます。
+   * - ``read_xmp_tags``
+     - XMP サイドカーのみを読み取る高速パス — レーティング、カラーラベル、
+       キーワード、タイトル、説明。
+   * - ``convert_format``
+     - 1 枚の画像を別のフォーマットに変換します。出力フォーマットは出力先の拡張子
+       （``png`` / ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``）から推測されます。
+       オプションの ``quality``（1–100）は JPEG/WebP に適用されます。
+   * - ``puppet_from_png``
+     - Puppet プラグインのオートメッシュを使って PNG から ``.puppet`` rig を構築します。
+       Cubism 標準のパラメータカタログをシードするため、rig はただちに駆動可能になります。
+   * - ``puppet_inspect``
+     - ``.puppet`` アーカイブを開き、構造化されたインベントリを返します:
+       drawables、deformers、parameters、motions、expressions、hit areas、
+       parts、parameter blends、physics rigs。
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - チャンネルごとの平均/最小/最大/標準偏差/中央値、参照なしの品質メトリクス
+       （colourfulness、entropy、contrast、edge density、noise）、および
+       オーバー/アンダークリッピング比率を含む 256 ビンのヒストグラム。
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - ラプラシアン分散によるブレスコア、Tesseract OCR テキスト（未インストール時は
+       グレースフルに処理）、および上限付きの base64 PNG プレビュー。
+   * - ``find_similar``
+     - 知覚ハッシュ（ハミング距離のしきい値）でほぼ重複した画像をグループ化します。
+       progress token が渡された場合はファイルごとの進捗を報告します。
+   * - ``apply_watermark`` / ``apply_frame``
+     - テキストの透かしを焼き込むか、画像をマット / ポラロイドフレームで囲み、
+       オプションでキャプションを付けます。
+   * - ``build_collage``
+     - 複数の画像をグリッドモンタージュに合成します（列数、セルサイズ、間隔、余白、
+       背景を設定可能）。進捗を報告します。
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - ピクセルボックスのクロップ、アスペクト比を維持したリサイズ、および
+       ロスレスな 90/180/270 回転または水平/垂直反転。
+   * - ``collection_stats``
+     - フォルダのレーティング、お気に入り、カラーラベル、選別状態を要約します
+       （カウント、0–5 星の分布、平均）。
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - GPS 座標をオフラインで最寄りの都市に解決し、動画の 1 フレームを静止画に
+       デコードします。
+
+すべてのツールは JSON の ``outputSchema`` と読み取り専用 / 破壊的の ``annotations`` を
+公開し、結果をテキストエンベロープと並んで ``structuredContent`` として返します
+（MCP 2025-11-25 準拠）。これによりクライアントは再パースなしで型付きペイロードを
+消費できます。長時間実行されるツールは、呼び出し側が progress token を渡した場合に
+``notifications/progress`` をストリーミングします。
+
+Prompts
+^^^^^^^
+
+サーバは ``prompts/list`` / ``prompts/get`` を通じて 4 つの prompt を公開します:
+``caption_image``、``suggest_edits``、``analyze_composition``（saliency 駆動の構図批評）、
+``flag_issues``（シャープネス + 品質 + クリッピングのトリアージ）。Prompt の引数は
+``completion/complete`` を通じて補完可能です。
+
+Claude Code (Project-Level)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+リポジトリにはプロジェクトレベルの ``.mcp.json`` がリポジトリルートに同梱されています:
+
+.. code-block:: json
+
+   {
+     "mcpServers": {
+       "imervue": {
+         "type": "stdio",
+         "command": "python",
+         "args": ["-m", "Imervue.mcp_server"]
+       }
+     }
+   }
+
+リポジトリの任意のサブディレクトリを Claude Code で開くと、このサーバが自動検出されます。
+Claude Code は初回にプロジェクトサーバを有効化する前に確認を求めます — 使用するには
+そのプロンプトを承認してください。
+
+Claude Desktop
+^^^^^^^^^^^^^^
+
+同じエントリを Claude Desktop の設定に追加します:
+
+* macOS: ``~/Library/Application Support/Claude/claude_desktop_config.json``
+* Windows: ``%APPDATA%\Claude\claude_desktop_config.json``
+
+絶対パスの作業ディレクトリを使うか、Imervue がインストールされた virtualenv を
+アクティブ化してください。``python`` の呼び出しは ``import Imervue`` できる
+インタプリタに解決される必要があります。
+
+Protocol Surface
+^^^^^^^^^^^^^^^^
+
+サーバは MCP バージョン ``2025-03-26`` の stdio JSON-RPC 2.0 トランスポートを
+実装しています:
+
+* ``initialize`` — ハンドシェイク。``capabilities.tools`` を公開します。
+* ``tools/list`` — 登録されたツールを JSON-Schema 入力定義とともに列挙します。
+* ``tools/call`` — ``{"name", "arguments"}`` でツールを呼び出します。
+  結果は ``content`` 配列の中に返ります。
+* ``notifications/*`` — 黙って受理されます（応答なし）。
+
+実装は ``Imervue/mcp_server/`` にあります:
+
+* ``server.py`` — プロトコルループ + ツールレジストリ。
+* ``tools.py`` — ハンドラ関数とデフォルトのツール定義。
+* ``__main__.py`` — ``python -m Imervue.mcp_server`` のエントリポイント。
+
+カスタムツールは、:class:`MCPServer` を手動で構築し、:meth:`MCPServer.register` を
+呼び出し、:meth:`MCPServer.handle_message` にメッセージを渡す（または組み込みの
+:func:`run` ヘルパーで stdio ループを駆動する）ことで登録できます。
