@@ -27,6 +27,26 @@ class ReleaseEntry:
 # "refactored Y to use Z". Internal cleanup belongs in the commit log.
 RELEASE_HISTORY: list[ReleaseEntry] = [
     ReleaseEntry(
+        version="1.0.70",
+        bullets=[
+            "Paint gains the darkroom-toning trio — Dodge, Burn and Sponge"
+            " brushes for local lightening, darkening and saturation.",
+            "MCP server adds image tools — watermark, frame, collage, crop,"
+            " resize, rotate — plus a collection-stats summary, typed results"
+            " with output schemas, and live progress on long operations.",
+            "Two new MCP prompts: composition critique and technical-issue"
+            " flagging.",
+            "Richer Smart Album & search filters: tag exclusion, aspect, file"
+            " age, size, width/height, camera/lens, filename regex & glob, and"
+            " a rating ceiling.",
+            "Smart Albums export / import to a portable JSON file.",
+            "Related-tag suggestions in the keyword editor, drawn from tag"
+            " co-occurrence.",
+            "Calendar grouping by hour and a collection ratings / labels"
+            " summary.",
+        ],
+    ),
+    ReleaseEntry(
         version="1.0.28",
         bullets=[
             "Recycle Bin dialog — restore or permanently delete pending"
