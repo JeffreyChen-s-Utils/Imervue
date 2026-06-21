@@ -11,6 +11,7 @@ functions so they can be unit-tested without a GL context.
 """
 from __future__ import annotations
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -46,8 +47,33 @@ from Imervue.image.video_frames import is_video_path
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
+logger = logging.getLogger("Imervue.gpu_image_view.overlay_painter")
+
 _FONT_SEGOE_UI = "Segoe UI"
 _FONT_CONSOLAS = "Consolas"
+
+
+def _run_overlay_layers(p: QPainter, layers: list) -> list[str]:
+    """Call each ``layer(p)``, isolating failures.
+
+    Every overlay layer is composited onto one off-screen image that is blitted
+    in a single ``drawImage`` at the end, so an unguarded exception in any one
+    layer would discard the WHOLE overlay (filmstrip + chrome) for the frame —
+    and, by unwinding past the view's ``painter.end()``, leave the widget
+    QPainter open and corrupt the next GL frame (dropping the minimap too).
+    Guarding each layer keeps one bad layer from taking the rest down; the
+    failure is logged so the real cause surfaces. Returns the names of the
+    layers that raised.
+    """
+    failed: list[str] = []
+    for layer in layers:
+        try:
+            layer(p)
+        except Exception:  # noqa: BLE001 - one bad layer must not drop the overlay
+            name = getattr(layer, "__name__", repr(layer))
+            logger.exception("Overlay layer %s failed; skipped this frame", name)
+            failed.append(name)
+    return failed
 # Repaint cadence for the tile-wall placeholder spinner + fade-in pump.
 _PLACEHOLDER_TICK_MS = 80
 
@@ -319,7 +345,11 @@ class OverlayPainter:
         self.draw_tile_placeholders(painter)
 
     def paint(self, painter: QPainter) -> None:  # pragma: no cover - GL compositing
-        layers = self.collect_layers()
+        try:
+            layers = self.collect_layers()
+        except Exception:  # noqa: BLE001 - layer selection must not drop the overlay
+            logger.exception("Overlay layer collection failed this frame")
+            return
         if not layers:
             return
         view = self.view
@@ -333,8 +363,7 @@ class OverlayPainter:
         p = QPainter(img)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        for layer in layers:
-            layer(p)
+        _run_overlay_layers(p, layers)
         p.end()
         painter.drawImage(0, 0, img)
 

@@ -14,6 +14,7 @@ import pytest
 from Imervue.gpu_image_view.overlay_painter import (
     OverlayPainter,
     _rgba_to_pixmap,
+    _run_overlay_layers,
     clamp_loupe_magnification,
     debug_hud_lines,
     favorites_set,
@@ -363,3 +364,42 @@ class TestFormatExifOsdLines:
 
     def test_empty_returns_no_lines(self):
         assert format_exif_osd_lines({}) == []
+
+
+# ---------------------------------------------------------------
+# _run_overlay_layers — one failing layer must not drop the rest
+# ---------------------------------------------------------------
+class TestRunOverlayLayers:
+    def test_one_failing_layer_does_not_skip_the_others(self):
+        calls = []
+
+        def good_a(_p):
+            calls.append("a")
+
+        def boom(_p):
+            raise ValueError("layer blew up")
+
+        def good_b(_p):
+            calls.append("b")
+
+        failed = _run_overlay_layers(object(), [good_a, boom, good_b])
+        # The filmstrip / minimap chrome (good layers) still draw despite the
+        # bad one — the whole overlay no longer vanishes for the frame.
+        assert calls == ["a", "b"]
+        assert failed == ["boom"]
+
+    def test_all_layers_run_when_none_fail(self):
+        calls = []
+        layers = [lambda _p, i=i: calls.append(i) for i in range(3)]
+        assert _run_overlay_layers(object(), layers) == []
+        assert calls == [0, 1, 2]
+
+    def test_empty_layer_list_is_a_no_op(self):
+        assert _run_overlay_layers(object(), []) == []
+
+    def test_failure_uses_layer_name(self):
+        def draw_video_badge(_p):
+            raise RuntimeError("no poster")
+
+        assert _run_overlay_layers(object(), [draw_video_badge]) == [
+            "draw_video_badge"]
