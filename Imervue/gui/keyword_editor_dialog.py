@@ -47,6 +47,32 @@ def keywords_to_text(keywords: list[str]) -> str:
     return ", ".join(keywords)
 
 
+_MAX_SUGGESTIONS = 8
+
+
+def rank_suggestions(
+    current: list[str],
+    related_by_tag: dict[str, list[tuple[str, int]]],
+    *,
+    limit: int = _MAX_SUGGESTIONS,
+) -> list[str]:
+    """Aggregate per-keyword related tags into a ranked suggestion list.
+
+    *related_by_tag* maps each current keyword to its ``[(tag, count)]`` list
+    of co-occurring tags. Counts are summed across the current keywords, tags
+    already present are excluded, and the result is ordered by descending total
+    then tag name, capped at *limit*.
+    """
+    have = set(current)
+    scores: dict[str, int] = {}
+    for keyword in current:
+        for tag, count in related_by_tag.get(keyword, []):
+            if tag not in have:
+                scores[tag] = scores.get(tag, 0) + count
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    return [tag for tag, _ in ranked[:limit]]
+
+
 class KeywordEditorDialog(QDialog):
     """Edit the XMP descriptive metadata (title / creator / description / keywords)."""
 
@@ -75,6 +101,12 @@ class KeywordEditorDialog(QDialog):
         layout.addWidget(QLabel(
             lang.get("keyword_editor_keywords", "Keywords (comma-separated):")))
         layout.addWidget(self._keywords_edit)
+        suggest_btn = QPushButton(
+            lang.get("keyword_editor_suggest", "Suggest related tags"))
+        suggest_btn.clicked.connect(self._refresh_suggestions)
+        layout.addWidget(suggest_btn)
+        self._suggestions_row = QHBoxLayout()
+        layout.addLayout(self._suggestions_row)
         layout.addWidget(QLabel(lang.get("keyword_editor_description", "Description:")))
         layout.addWidget(self._desc_edit)
         layout.addLayout(self._build_buttons(lang))
@@ -89,6 +121,34 @@ class KeywordEditorDialog(QDialog):
         row.addWidget(cancel)
         row.addWidget(save)
         return row
+
+    def _compute_suggestions(self) -> list[str]:
+        from Imervue.library.tag_relations import suggest_related
+        current = parse_keywords(self._keywords_edit.text())
+        related = {keyword: suggest_related(keyword) for keyword in current}
+        return rank_suggestions(current, related)
+
+    def _clear_suggestions(self) -> None:
+        while self._suggestions_row.count():
+            item = self._suggestions_row.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _refresh_suggestions(self) -> None:
+        self._clear_suggestions()
+        for tag in self._compute_suggestions():
+            button = QPushButton(f"+ {tag}")
+            button.clicked.connect(lambda _checked=False, t=tag: self._add_keyword(t))
+            self._suggestions_row.addWidget(button)
+        self._suggestions_row.addStretch(1)
+
+    def _add_keyword(self, tag: str) -> None:
+        current = parse_keywords(self._keywords_edit.text())
+        if tag not in current:
+            current.append(tag)
+            self._keywords_edit.setText(keywords_to_text(current))
+        self._refresh_suggestions()
 
     def _save(self) -> None:
         data = XmpData(

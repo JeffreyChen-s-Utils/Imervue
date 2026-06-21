@@ -53,6 +53,7 @@ english_word_dict = {
     "keyword_editor_title_label": "Title:",
     "keyword_editor_creator": "Creator:",
     "keyword_editor_keywords": "Keywords (comma-separated):",
+    "keyword_editor_suggest": "Suggest related tags",
     "keyword_editor_description": "Description:",
     "keyword_editor_saved": "Saved metadata to {path}",
     "batch_index_keywords": "Index Keywords",

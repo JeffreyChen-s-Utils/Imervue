@@ -30,6 +30,7 @@ chinese_word_dict = {
     "keyword_editor_title_label": "标题：",
     "keyword_editor_creator": "作者：",
     "keyword_editor_keywords": "关键字（逗号分隔）：",
+    "keyword_editor_suggest": "建议相关标签",
     "keyword_editor_description": "说明：",
     "keyword_editor_saved": "已将元数据保存到 {path}",
     "batch_index_keywords": "索引关键字",

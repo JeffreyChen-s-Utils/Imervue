@@ -30,6 +30,7 @@ traditional_chinese_word_dict = {
     "keyword_editor_title_label": "標題：",
     "keyword_editor_creator": "作者：",
     "keyword_editor_keywords": "關鍵字（逗號分隔）：",
+    "keyword_editor_suggest": "建議相關標籤",
     "keyword_editor_description": "說明：",
     "keyword_editor_saved": "已將中介資料儲存到 {path}",
     "batch_index_keywords": "索引關鍵字",

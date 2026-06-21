@@ -38,6 +38,7 @@ korean_word_dict = {
     "keyword_editor_title_label": "제목:",
     "keyword_editor_creator": "작성자:",
     "keyword_editor_keywords": "키워드(쉼표로 구분):",
+    "keyword_editor_suggest": "관련 태그 제안",
     "keyword_editor_description": "설명:",
     "keyword_editor_saved": "{path}에 메타데이터를 저장했습니다",
     "batch_index_keywords": "키워드 색인",

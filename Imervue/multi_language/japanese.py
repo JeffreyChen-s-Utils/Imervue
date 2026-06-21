@@ -41,6 +41,7 @@ japanese_word_dict = {
     "keyword_editor_title_label": "タイトル:",
     "keyword_editor_creator": "作成者:",
     "keyword_editor_keywords": "キーワード（カンマ区切り）:",
+    "keyword_editor_suggest": "関連タグを提案",
     "keyword_editor_description": "説明:",
     "keyword_editor_saved": "{path} にメタデータを保存しました",
     "batch_index_keywords": "キーワードを索引",
