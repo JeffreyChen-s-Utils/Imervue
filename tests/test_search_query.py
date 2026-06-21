@@ -97,6 +97,11 @@ def test_age_older_sets_date_to():
     assert abs(rules["date_to"] - (time.time() - 7 * 86400)) < 5
 
 
+def test_camera_and_lens_tokens():
+    assert parse_query("camera:Canon")["camera"] == "Canon"
+    assert parse_query("lens:50mm")["lens"] == "50mm"
+
+
 def test_width_and_height_bounds():
     assert parse_query("width:>1920")["min_width"] == 1920
     assert parse_query("width:<800")["max_width"] == 800

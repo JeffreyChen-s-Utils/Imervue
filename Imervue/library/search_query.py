@@ -162,6 +162,16 @@ def _apply_size(value: str, _acc: dict, rules: dict) -> None:
     rules["max_size" if "<" in value else "min_size"] = size
 
 
+def _apply_camera(value: str, _acc: dict, rules: dict) -> None:
+    """``camera:Canon`` matches the EXIF make / model (substring)."""
+    rules["camera"] = value
+
+
+def _apply_lens(value: str, _acc: dict, rules: dict) -> None:
+    """``lens:24-70`` matches the EXIF lens model (substring)."""
+    rules["lens"] = value
+
+
 def _apply_regex(value: str, _acc: dict, rules: dict) -> None:
     """``re:IMG_\\d+`` matches the filename against a regular expression."""
     rules["name_regex"] = value
@@ -188,6 +198,8 @@ _FIELD_HANDLERS = {
     "size": _apply_size,
     "width": _apply_width,
     "height": _apply_height,
+    "camera": _apply_camera,
+    "lens": _apply_lens,
     "re": _apply_regex,
     "regex": _apply_regex,
     "glob": _apply_glob,

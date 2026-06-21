@@ -15,6 +15,8 @@ A rules dict supports these keys (all optional):
     - name_contains:     str
     - name_regex:        str             regex matched against the filename
     - name_glob:         str             shell glob matched against the filename
+    - camera:            str             substring matched against EXIF make/model
+    - lens:              str             substring matched against EXIF lens model
     - date_from / date_to: float         Unix timestamp, mtime
 """
 from __future__ import annotations
@@ -85,12 +87,40 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     place = rules.get("place")
     if place:
         result = _apply_place_filter(result, place)
+    result = _apply_exif_filters(result, rules)
     missing = rules.get("missing")
     if missing:
         from Imervue.library.metadata_audit import paths_missing
         incomplete = set(paths_missing(result, missing))
         result = [p for p in result if p in incomplete]
     return result
+
+
+def _contains_ci(needle: str, haystack: str) -> bool:
+    return needle.lower() in haystack.lower()
+
+
+def _apply_exif_filters(paths: list[str], rules: dict) -> list[str]:
+    """Keep paths whose EXIF make/model (``camera``) or lens (``lens``) match.
+
+    Runs late (after the cheap filters) because it reads EXIF per file.
+    Untagged images carry no camera/lens, so a camera/lens rule drops them.
+    """
+    camera = rules.get("camera")
+    lens = rules.get("lens")
+    if not camera and not lens:
+        return paths
+    from Imervue.image.info import get_exif_data
+    out: list[str] = []
+    for path in paths:
+        exif = get_exif_data(Path(path))
+        body = f"{exif.get('Make', '')} {exif.get('Model', '')}"
+        if camera and not _contains_ci(camera, body):
+            continue
+        if lens and not _contains_ci(lens, str(exif.get("LensModel", ""))):
+            continue
+        out.append(path)
+    return out
 
 
 def _apply_place_filter(paths: list[str], place: str) -> list[str]:

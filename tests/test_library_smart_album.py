@@ -209,6 +209,34 @@ class TestApplyToPaths:
         result = smart_album.apply_to_paths([a, b], {"name_glob": "*.png"})
         assert result == [a]
 
+    def test_camera_filter_matches_make_model(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        exif = {
+            a: {"Make": "Canon", "Model": "EOS R5"},
+            b: {"Make": "NIKON", "Model": "Z6"},
+        }
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
+        assert smart_album.apply_to_paths([a, b], {"camera": "canon"}) == [a]
+
+    def test_lens_filter_matches_lens_model(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        exif = {
+            a: {"LensModel": "RF24-70mm F2.8 L"},
+            b: {"LensModel": "EF50mm F1.8"},
+        }
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
+        assert smart_album.apply_to_paths([a, b], {"lens": "24-70"}) == [a]
+
+    def test_camera_filter_drops_untagged(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: {})
+        assert smart_album.apply_to_paths([a], {"camera": "canon"}) == []
+
     def test_min_width_and_height_filter(self, tmp_path):
         wide = _make_image(tmp_path / "wide.png", 200, 50)
         tall = _make_image(tmp_path / "tall.png", 50, 200)
