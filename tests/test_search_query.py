@@ -97,6 +97,13 @@ def test_age_older_sets_date_to():
     assert abs(rules["date_to"] - (time.time() - 7 * 86400)) < 5
 
 
+def test_width_and_height_bounds():
+    assert parse_query("width:>1920")["min_width"] == 1920
+    assert parse_query("width:<800")["max_width"] == 800
+    assert parse_query("height:1080")["min_height"] == 1080
+    assert parse_query("height:<600")["max_height"] == 600
+
+
 def test_size_with_units():
     assert parse_query("size:>1mb")["min_size"] == 1024 ** 2
     assert parse_query("size:<500kb")["max_size"] == 500 * 1024

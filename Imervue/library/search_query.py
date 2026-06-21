@@ -125,6 +125,24 @@ def _apply_age(value: str, _acc: dict, rules: dict) -> None:
     rules["date_from" if "<" in value else "date_to"] = cutoff
 
 
+def _set_int_range(value: str, rules: dict, min_key: str, max_key: str) -> None:
+    """``<N`` sets *max_key*, otherwise *min_key*, from the integer in *value*."""
+    match = _DIGITS.search(value)
+    if match is None:
+        return
+    rules[max_key if "<" in value else min_key] = int(match.group(1))
+
+
+def _apply_width(value: str, _acc: dict, rules: dict) -> None:
+    """``width:>1920`` / ``width:<800`` bound the pixel width."""
+    _set_int_range(value, rules, "min_width", "max_width")
+
+
+def _apply_height(value: str, _acc: dict, rules: dict) -> None:
+    """``height:>1080`` / ``height:<600`` bound the pixel height."""
+    _set_int_range(value, rules, "min_height", "max_height")
+
+
 def _parse_size_bytes(value: str) -> int | None:
     """Parse ``500kb`` / ``1.5mb`` / ``2048`` into bytes; None if unrecognised."""
     match = _FLOAT.search(value)
@@ -168,6 +186,8 @@ _FIELD_HANDLERS = {
     "aspect": _apply_aspect,
     "age": _apply_age,
     "size": _apply_size,
+    "width": _apply_width,
+    "height": _apply_height,
     "re": _apply_regex,
     "regex": _apply_regex,
     "glob": _apply_glob,

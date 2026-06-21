@@ -156,6 +156,26 @@ class TestApplyToPaths:
         result = smart_album.apply_to_paths([wide, tall], {"min_aspect": 1.5})
         assert result == [wide]
 
+    def test_max_width_keeps_small_images(self, tmp_path):
+        small = _make_image(tmp_path / "small.png", 100, 100)
+        big = _make_image(tmp_path / "big.png", 400, 100)
+        result = smart_album.apply_to_paths([small, big], {"max_width": 200})
+        assert result == [small]
+
+    def test_min_height_keeps_tall_images(self, tmp_path):
+        short = _make_image(tmp_path / "short.png", 100, 100)
+        tall = _make_image(tmp_path / "tall.png", 100, 400)
+        result = smart_album.apply_to_paths([short, tall], {"min_height": 200})
+        assert result == [tall]
+
+    def test_combined_width_and_height_bounds(self, tmp_path):
+        match = _make_image(tmp_path / "m.png", 300, 300)
+        too_wide = _make_image(tmp_path / "w.png", 900, 300)
+        result = smart_album.apply_to_paths(
+            [match, too_wide], {"min_width": 200, "max_width": 500}
+        )
+        assert result == [match]
+
     def test_max_aspect_keeps_tall_images(self, tmp_path):
         wide = _make_image(tmp_path / "wide.png", 200, 100)
         tall = _make_image(tmp_path / "tall.png", 100, 200)
