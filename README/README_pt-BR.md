@@ -197,7 +197,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Triagem (Culling)** — flag de 3 estados compatível com outros gerenciadores de fotos XMP-aware (`P` = manter, `Shift+X` = rejeitar, `U` = remover marca); filtrar por estado; exclusão em lote de rejeitados
 - **Tags hierárquicas** — caminhos em árvore como `animal/cat/british`; descendentes são correspondidos automaticamente
 - **Tags & Albums** com filtragem multi-tag AND/OR
-- **Smart Albums** — salva consultas baseadas em regras (extensão / resolução / avaliação / cor / triagem / tags) e reaplica com um clique
+- **Smart Albums** — salva consultas baseadas em regras e reaplica com um clique; os filtros abrangem extensão, resolução e **proporção**, **tamanho de arquivo**, **piso / teto** de avaliação, cor, triagem, tags (incl. **exclusão**), **câmera / lente**, **regex / glob de nome de arquivo** e **idade do arquivo**, além de **exportar / importar** para um arquivo JSON portável
 - **Empilhar pares RAW+JPEG** — colapsa capturas de mesmo nome em um único tile; o RAW continua acessível como irmão
 - **Notas por imagem** no painel EXIF — salvamento com debounce, persiste entre sessões
 - **Staging Tray** — cesta entre pastas que sobrevive a reinicializações; mover / copiar / exportar em lote
@@ -219,7 +219,8 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Busca fuzzy por nome de arquivo** com destaque de substring
 - **Buscar Imagens Similares** — pHash (DCT 64 bits) com distância de Hamming ajustável
-- **Library Search** — índice multi-raiz SQLite consultável por extensão / tamanho / dimensões / nome de arquivo
+- **Library Search** — índice multi-raiz SQLite com uma DSL de consulta compacta: palavras-chave, tags (incl. negação), avaliações, cor, extensão, lugar, triagem, favoritos, proporção, idade, tamanho, dimensões, câmera / lente e regex / glob de nome de arquivo
+- **Find Similar (average hash)** — pHash e dHash são acompanhados por um average-hash (aHash) opcional para uma métrica complementar de quase duplicatas
 - **Busca Semântica (CLIP)** — consultas em linguagem natural ("golden retriever na neve") via embeddings em cache; degrada graciosamente quando `open_clip_torch` + `torch` não estão instalados
 - **Auto-Tag** — classificação heurística com upgrade opcional CLIP ONNX
 
@@ -227,6 +228,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Painel lateral EXIF** com grupos colapsáveis + faixa inline de 0-5 estrelas
 - Diálogo de **editor EXIF**
+- **Editor de palavras-chave** — título / autor / descrição / palavras-chave, com **sugestões de tags relacionadas** extraídas da coocorrência de tags
 - Diálogo de **informações da imagem** (dimensões / tamanho / datas)
 - **Sidecars XMP** (`.xmp` companheiros) — avaliação / título / descrição / palavras-chave / etiqueta de cor com round-trip para interoperabilidade com outros gerenciadores XMP-aware (XML seguro via `defusedxml`)
 - **Editor de Geotag GPS** — lê GPS EXIF existente, escreve nova lat/lon via piexif (JPEG)
@@ -312,9 +314,11 @@ Registre programas (seu editor de imagem / … / …) em **File > External Edito
 
 A aba **Paint** é um estúdio raster completo embutido como seu próprio `QMainWindow` com menus, faixa de ferramentas à esquerda, barra de opções sensível ao contexto e uma coluna de docks com abas à direita. Edição de documentos multi-aba — abra muitos desenhos ao mesmo tempo, cada um com sua própria pilha de undo.
 
-### Ferramentas (24)
+### Ferramentas (27)
 
-Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varinha / Seleção Rápida · Mover · Texto · Gradiente · Desfocar · Smudge · Caneta · Carimbo de Clonagem · Balão de Fala · Retângulo · Elipse · Linha · Polígono · Recorte · Transformar · Mão · Zoom
+Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varinha / Seleção Rápida · Mover · Texto · Gradiente · Desfocar · Smudge · Dodge · Burn · Sponge · Caneta · Carimbo de Clonagem · Balão de Fala · Retângulo · Elipse · Linha · Polígono · Recorte · Transformar · Mão · Zoom
+
+O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (saturar / dessaturar) — pinta ajustes locais de tom e croma, ponderados pelo pincel e por uma máscara de sombras / meios-tons / realces.
 
 Atalhos de tecla única: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
@@ -736,14 +740,31 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
+Ferramentas selecionadas (22 no total — lista completa na documentação). Toda
+ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
+destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
+longa duração transmitem `notifications/progress`.
+
 | Ferramenta | Finalidade |
 |------|---------|
 | `list_images` | Listar arquivos de imagem em uma pasta (recursivo opcional) |
-| `read_image_metadata` | Dimensões, formato, EXIF e sidecar XMP |
-| `read_xmp_tags` | Caminho rápido apenas XMP: avaliação, etiqueta, palavras-chave |
-| `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | Construir um rig `.puppet` a partir de um PNG (auto-mesh + parâmetros padrão) |
-| `puppet_inspect` | Abrir um `.puppet` e retornar seu inventário |
+| `read_image_metadata` / `read_xmp_tags` | Dimensões, formato, EXIF, sidecar XMP (avaliação, etiqueta, palavras-chave) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Análise sem referência: estatísticas por canal, colorfulness/entropia/contraste, histograma + clipping, pontuação de desfoque |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Prévia em base64, texto via Tesseract, grupos de quase duplicatas por hash perceptual (com progresso) |
+| `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionais) |
+| `apply_watermark` / `apply_frame` | Gravar uma marca d'água de texto ou uma moldura passe-partout / Polaroid + legenda |
+| `build_collage` | Compor imagens em uma montagem em grade (com progresso) |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas |
+| `collection_stats` | Resumo de avaliação / favorito / etiqueta de cor / triagem da pasta |
+| `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
+| `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
+
+### Prompts
+
+Quatro prompts reutilizáveis: `caption_image`, `suggest_edits`, `analyze_composition`
+(crítica de composição guiada por saliência) e `flag_issues` (triagem de nitidez +
+qualidade + clipping). Os argumentos dos prompts podem ser completados via
+`completion/complete`.
 
 ### Configuração
 

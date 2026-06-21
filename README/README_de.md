@@ -197,7 +197,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects
 - **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht
 - **Tags & Albums** mit Multi-Tag-AND/OR-Filterung
-- **Smart Albums** — Regelbasierte Abfragen speichern (Endung / Auflösung / Rating / Farbe / Cull / Tags) und mit einem Klick erneut anwenden
+- **Smart Albums** — Regelbasierte Abfragen speichern und mit einem Klick erneut anwenden; die Filter umfassen Endung, Auflösung & **Seitenverhältnis**, **Dateigröße**, Rating-**Unter- / Obergrenze**, Farbe, Cull, Tags (inkl. **Ausschluss**), **Kamera / Objektiv**, **Dateiname-Regex / -Glob** und **Dateialter**, plus **Export / Import** in eine portable JSON-Datei
 - **Stack RAW+JPEG-Paare** — Aufnahmen mit gleichem Stamm in ein Tile zusammenfassen; RAW bleibt als Geschwister erreichbar
 - **Per-Image-Notes** in der EXIF-Sidebar — Entprelltes Speichern, sitzungsübergreifend persistent
 - **Staging Tray** — Ordnerübergreifender Korb, der Neustarts überlebt; Bulk-Move / Copy / Export
@@ -219,7 +219,8 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **Fuzzy-Dateinamensuche** mit Substring-Highlighting
 - **Find Similar Images** — pHash (64-Bit DCT) mit einstellbarer Hamming-Distanz
-- **Library Search** — SQLite-Multi-Root-Index, abfragbar nach Endung / Größe / Maßen / Dateiname
+- **Library Search** — SQLite-Multi-Root-Index mit einer kompakten Query-DSL: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob
+- **Find Similar (Average Hash)** — pHash und dHash werden durch einen optionalen Average-Hash (aHash) zu einer komplementären Near-Duplicate-Metrik verbunden
 - **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings; deaktiviert sich elegant, wenn `open_clip_torch` + `torch` nicht installiert sind
 - **Auto-Tag** — Heuristische Klassifikation mit optionalem CLIP-ONNX-Upgrade
 
@@ -227,6 +228,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **EXIF-Sidebar** mit aufklappbaren Gruppen + Inline-0-5-Sterne-Strip
 - **EXIF-Editor**-Dialog
+- **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz
 - **Image-Info**-Dialog (Maße / Größe / Datums)
 - **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`)
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon via piexif schreiben (JPEG)
@@ -312,9 +314,11 @@ Programme (Ihr Bildeditor / … / …) unter **File > External Editors…** regi
 
 Der **Paint**-Tab ist ein vollwertiges Raster-Paint-Studio, das als eigenes `QMainWindow` eingebettet ist, mit Menüs, linker Tool-Leiste, kontextsensitiver Options-Bar und einer getabbten rechten Dock-Spalte. Multi-Tab-Dokumentbearbeitung — viele Zeichnungen gleichzeitig öffnen, jede mit eigenem Undo-Stack.
 
-### Tools (24)
+### Tools (27)
 
-Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
+Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
+
+Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Sättigen / Entsättigen) — malt lokale Tonwert- und Chroma-Anpassungen, gewichtet durch den Brush und eine Schatten- / Mitten- / Lichter-Maske.
 
 Einzelbuchstaben-Shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
@@ -762,14 +766,30 @@ python -m Imervue.mcp_server
 
 ### Tools
 
+Ausgewählte Tools (22 insgesamt — vollständige Liste in der Doku). Jedes Tool
+bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
+gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
+`notifications/progress`.
+
 | Tool | Zweck |
 |------|---------|
 | `list_images` | Bilddateien in einem Ordner auflisten (rekursiv optional) |
-| `read_image_metadata` | Dimensionen, Format, EXIF und XMP-Sidecar |
-| `read_xmp_tags` | XMP-only Fast-Path: Rating, Label, Keywords |
-| `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP konvertieren |
-| `puppet_from_png` | Ein `.puppet`-Rig aus einem PNG bauen (Auto-Mesh + Standardparameter) |
-| `puppet_inspect` | Ein `.puppet` öffnen und sein Inventar zurückgeben |
+| `read_image_metadata` / `read_xmp_tags` | Dimensionen, Format, EXIF, XMP-Sidecar (Rating, Label, Keywords) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | No-Reference-Analyse: Per-Kanal-Statistiken, Colourfulness/Entropie/Kontrast, Histogramm + Clipping, Blur-Score |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64-Vorschau, Tesseract-Text, Perceptual-Hash-Near-Duplicate-Gruppen (mit Fortschritt) |
+| `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP konvertieren (+ optional HEIC / AVIF / JXL) |
+| `apply_watermark` / `apply_frame` | Ein Text-Wasserzeichen oder einen Passepartout- / Polaroid-Rahmen + Caption einbrennen |
+| `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip |
+| `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
+| `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
+| `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
+
+### Prompts
+
+Vier wiederverwendbare Prompts: `caption_image`, `suggest_edits`, `analyze_composition`
+(saliency-getriebene Kompositionskritik) und `flag_issues` (Schärfe- + Qualitäts- +
+Clipping-Triage). Prompt-Argumente sind via `completion/complete` vervollständigbar.
 
 ### Verdrahtung
 

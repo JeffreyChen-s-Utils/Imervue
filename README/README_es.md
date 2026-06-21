@@ -197,7 +197,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Culling** — bandera de 3 estados compatible con otros gestores de fotos XMP-aware (`P` = elegir, `Shift+X` = rechazar, `U` = quitar bandera); filtra por estado; borrado masivo de rechazadas
 - **Etiquetas jerárquicas** — rutas en árbol como `animal/cat/british`; los descendientes se emparejan automáticamente
 - **Tags & Albums** con filtrado multietiqueta AND/OR
-- **Álbumes inteligentes** — guarda consultas basadas en reglas (extensión / resolución / calificación / color / culling / etiquetas) y reaplica con un clic
+- **Álbumes inteligentes** — guarda consultas basadas en reglas y reaplica con un clic; los filtros abarcan extensión, resolución y **relación de aspecto**, **tamaño de archivo**, **piso / techo** de calificación, color, culling, etiquetas (incl. **exclusión**), **cámara / objetivo**, **regex / glob de nombre de archivo** y **antigüedad del archivo**, además de **exportar / importar** a un archivo JSON portable
 - **Apilamiento de pares RAW+JPEG** — colapsa capturas con el mismo nombre base en un solo mosaico; el RAW sigue accesible como hermano
 - **Notas por imagen** en la barra lateral EXIF — guardado con debounce, persiste entre sesiones
 - **Bandeja de preparación** — cesta entre carpetas que sobrevive a los reinicios; mover / copiar / exportar en masa
@@ -219,7 +219,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 - **Búsqueda difusa de nombres** con resaltado de subcadenas
 - **Encontrar imágenes similares** — pHash (DCT de 64 bits) con distancia de Hamming ajustable
-- **Búsqueda en biblioteca** — índice SQLite multi-raíz consultable por extensión / tamaño / dimensiones / nombre
+- **Búsqueda en biblioteca** — índice SQLite multi-raíz con un DSL de consulta compacto: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo
+- **Encontrar similares (average hash)** — pHash y dHash se complementan con un average-hash (aHash) opcional como métrica adicional de casi-duplicados
 - **Búsqueda semántica (CLIP)** — consultas en lenguaje natural ("golden retriever en la nieve") vía embeddings en caché; se desactiva con gracia si `open_clip_torch` + `torch` no están instalados
 - **Auto-etiquetado** — clasificación heurística con upgrade opcional CLIP ONNX
 
@@ -227,6 +228,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 - **Barra lateral EXIF** con grupos colapsables + tira en línea de 0-5 estrellas
 - Diálogo **editor EXIF**
+- **Editor de palabras clave** — título / autor / descripción / palabras clave, con **sugerencias de etiquetas relacionadas** derivadas de la coocurrencia de etiquetas
 - Diálogo de **información de imagen** (dimensiones / tamaño / fechas)
 - **Sidecars XMP** (archivos `.xmp` acompañantes) — ida y vuelta de calificación / título / descripción / palabras clave / etiqueta de color para interoperabilidad con otros gestores de fotos XMP-aware (XML seguro vía `defusedxml`)
 - **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon vía piexif (JPEG)
@@ -312,9 +314,11 @@ Registra programas (tu editor de imágenes / … / …) en **File > External Edi
 
 La pestaña **Paint** es un estudio de pintura rasterizada con todas las funciones, integrado como su propia `QMainWindow` con menús, tira de herramientas a la izquierda, barra de opciones sensible al contexto, y columna de docks pestañeada a la derecha. Edición de documentos multipestaña — abre muchos dibujos a la vez, cada uno con su propia pila de deshacer.
 
-### Herramientas (24)
+### Herramientas (27)
 
-Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selección rápida · Mover · Texto · Gradiente · Desenfoque · Difuminar · Pluma · Tampón de clonar · Bocadillo · Rectángulo · Elipse · Línea · Polígono · Recorte · Transformar · Mano · Zoom
+Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selección rápida · Mover · Texto · Gradiente · Desenfoque · Difuminar · Dodge · Burn · Sponge · Pluma · Tampón de clonar · Bocadillo · Rectángulo · Elipse · Línea · Polígono · Recorte · Transformar · Mano · Zoom
+
+El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (saturar / desaturar) — pinta ajustes locales de tono y croma, ponderados por el pincel y una máscara de sombras / medios tonos / luces.
 
 Atajos de una letra: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
@@ -760,14 +764,30 @@ python -m Imervue.mcp_server
 
 ### Herramientas
 
+Herramientas seleccionadas (22 en total — lista completa en la documentación). Cada herramienta
+anuncia un `outputSchema` JSON y `annotations` de solo lectura / destructivas, devuelve su
+resultado como `structuredContent`, y las herramientas de larga duración transmiten
+`notifications/progress`.
+
 | Herramienta | Propósito |
 |------|---------|
 | `list_images` | Lista archivos de imagen en una carpeta (recursión opcional) |
-| `read_image_metadata` | Dimensiones, formato, EXIF y sidecar XMP |
-| `read_xmp_tags` | Ruta rápida solo-XMP: calificación, etiqueta, palabras clave |
-| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | Construir un rig `.puppet` desde un PNG (auto-mesh + parámetros estándar) |
-| `puppet_inspect` | Abrir un `.puppet` y devolver su inventario |
+| `read_image_metadata` / `read_xmp_tags` | Dimensiones, formato, EXIF, sidecar XMP (calificación, etiqueta, palabras clave) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Análisis sin referencia: estadísticas por canal, colorido/entropía/contraste, histograma + recorte, puntuación de desenfoque |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Vista previa en base64, texto con Tesseract, grupos de casi-duplicados por hash perceptual (con progreso) |
+| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionales) |
+| `apply_watermark` / `apply_frame` | Estampar una marca de agua de texto o un marco mate / Polaroid + leyenda |
+| `build_collage` | Componer imágenes en un montaje en cuadrícula (con progreso) |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión que preserva el aspecto, rotación / volteo sin pérdida |
+| `collection_stats` | Resumen de calificación / favorito / etiqueta de color / culling de una carpeta |
+| `reverse_geocode` / `extract_video_frame` | GPS → ciudad sin conexión, decodificar un fotograma de vídeo a imagen fija |
+| `puppet_from_png` / `puppet_inspect` | Construir un rig `.puppet` desde un PNG; abrir uno y devolver su inventario |
+
+### Prompts
+
+Cuatro prompts reutilizables: `caption_image`, `suggest_edits`, `analyze_composition`
+(crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad
++ recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
 
 ### Cableado
 

@@ -197,7 +197,7 @@ python -m Imervue /path/to/folder
 - **컬링(Culling)** — 다른 XMP 인식 사진 관리자의 3상태 플래그 (`P` = pick, `Shift+X` = reject, `U` = unflag); 상태별 필터링; 거부된 사진 일괄 삭제
 - **계층 태그** — `animal/cat/british` 같은 트리 경로; 하위 항목 자동 매칭
 - **Tags & Albums** — 다중 태그 AND / OR 필터링
-- **스마트 앨범** — 규칙 기반 쿼리(확장자 / 해상도 / 별점 / 색상 / 컬링 / 태그)를 저장하고 클릭 한 번으로 재적용
+- **스마트 앨범** — 규칙 기반 쿼리를 저장하고 클릭 한 번으로 재적용; 필터는 확장자, 해상도 및 **종횡비**, **파일 크기**, 별점 **하한 / 상한**, 색상, 컬링, 태그(**제외** 포함), **카메라 / 렌즈**, **파일명 정규식 / glob**, **파일 경과 시간**을 아우르며, 휴대 가능한 JSON 파일로의 **내보내기 / 가져오기**도 지원
 - **RAW+JPEG 쌍 스택** — 동일 파일 스템의 캡처를 하나의 타일로 접기; RAW는 형제 항목으로 여전히 접근 가능
 - **이미지별 메모** — EXIF 사이드바에서 자동 디바운스 저장, 세션 간 영구 보존
 - **스테이징 트레이** — 폴더를 가로지르는 바구니, 재시작 후에도 유지; 일괄 이동 / 복사 / 내보내기
@@ -219,7 +219,8 @@ python -m Imervue /path/to/folder
 
 - **퍼지 파일명 검색** + 부분 문자열 하이라이트
 - **유사 이미지 찾기** — pHash (64-bit DCT), 조정 가능한 Hamming 거리
-- **라이브러리 검색** — SQLite 다중 루트 인덱스; 확장자 / 크기 / 해상도 / 파일명으로 쿼리
+- **라이브러리 검색** — SQLite 다중 루트 인덱스와 간결한 쿼리 DSL: 키워드, 태그(부정 포함), 별점, 색상, 확장자, 장소, 컬링, 즐겨찾기, 종횡비, 경과 시간, 크기, 해상도, 카메라 / 렌즈, 파일명 정규식 / glob
+- **유사 항목 찾기 (average hash)** — pHash와 dHash에 선택적 average-hash(aHash)를 결합하여 보완적인 근접 중복 메트릭 제공
 - **시맨틱 검색 (CLIP)** — 캐시된 임베딩을 통한 자연어 쿼리 ("눈 속의 골든 리트리버"); `open_clip_torch` + `torch`가 설치되지 않으면 우아하게 비활성화
 - **자동 태그** — 휴리스틱 분류 + 선택적 CLIP ONNX 업그레이드
 
@@ -227,6 +228,7 @@ python -m Imervue /path/to/folder
 
 - **EXIF 사이드바** — 접을 수 있는 그룹 + 인라인 0-5 별점 스트립
 - **EXIF 편집기** 다이얼로그
+- **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
 - **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱)
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기 (JPEG)
@@ -312,9 +314,11 @@ python -m Imervue /path/to/folder
 
 **Paint** 탭은 자체 `QMainWindow`에 임베드된 본격 래스터 페인트 스튜디오로, 메뉴, 왼쪽 도구 스트립, 컨텍스트 감지 옵션 바, 오른쪽 탭형 도크 컬럼을 갖춥니다. 멀티탭 도큐먼트 편집 — 여러 그림을 동시에 열고 각각 독립적인 실행 취소 스택을 보유합니다.
 
-### 도구 (24개)
+### 도구 (27개)
 
-브러시 · 지우개 · 채우기 · 스포이드 · 사각형 / 올가미 / 마법봉 / 빠른 선택 · 이동 · 텍스트 · 그라데이션 · 블러 · 스머지 · 펜 · 클론 스탬프 · 말풍선 · 사각형 · 타원 · 직선 · 다각형 · 자르기 · 변형 · 핸드 · 줌
+브러시 · 지우개 · 채우기 · 스포이드 · 사각형 / 올가미 / 마법봉 / 빠른 선택 · 이동 · 텍스트 · 그라데이션 · 블러 · 스머지 · 닷지 · 번 · 스펀지 · 펜 · 클론 스탬프 · 말풍선 · 사각형 · 타원 · 직선 · 다각형 · 자르기 · 변형 · 핸드 · 줌
+
+암실 토닝 3종 — **닷지(Dodge)**(밝게), **번(Burn)**(어둡게), **스펀지(Sponge)**(채도 증가 / 감소) — 은 브러시와 그림자 / 미드톤 / 하이라이트 마스크로 가중치를 적용하여 로컬 톤 및 채도 조정을 칠합니다.
 
 단일 키 단축키: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; 도형 변형은 `Shift+R/E/I/P`.
 
@@ -710,14 +714,31 @@ python -m Imervue.mcp_server
 
 ### 도구
 
+선택된 도구(총 22개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+`outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
+`structuredContent`로 반환하며, 장시간 실행 도구는
+`notifications/progress`를 스트리밍합니다.
+
 | 도구 | 용도 |
 |------|---------|
 | `list_images` | 폴더의 이미지 파일 목록 (재귀 옵션) |
-| `read_image_metadata` | 크기, 포맷, EXIF, XMP 사이드카 |
-| `read_xmp_tags` | XMP 전용 빠른 경로: 별점, 라벨, 키워드 |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 |
-| `puppet_from_png` | PNG에서 `.puppet` 리그 빌드 (auto-mesh + 표준 파라미터) |
-| `puppet_inspect` | `.puppet`을 열고 인벤토리 반환 |
+| `read_image_metadata` / `read_xmp_tags` | 크기, 포맷, EXIF, XMP 사이드카 (별점, 라벨, 키워드) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 무참조 분석: 채널별 통계, 색채도/엔트로피/대비, 히스토그램 + 클리핑, 블러 점수 |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64 미리보기, Tesseract 텍스트, perceptual-hash 근접 중복 그룹 (진행률 포함) |
+| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 (+ 선택적 HEIC / AVIF / JXL) |
+| `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
+| `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
+| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전 |
+| `collection_stats` | 폴더 별점 / 즐겨찾기 / 컬러 라벨 / 컬링 요약 |
+| `reverse_geocode` / `extract_video_frame` | 오프라인 GPS → 도시, 비디오 프레임 한 장을 정지 이미지로 디코딩 |
+| `puppet_from_png` / `puppet_inspect` | PNG에서 `.puppet` 리그 빌드; `.puppet`을 열고 인벤토리 반환 |
+
+### 프롬프트
+
+네 가지 재사용 가능한 프롬프트: `caption_image`, `suggest_edits`,
+`analyze_composition`(saliency 기반 구도 비평), `flag_issues`(샤프니스 +
+품질 + 클리핑 분류). 프롬프트 인자는 `completion/complete`를 통해 자동
+완성할 수 있습니다.
 
 ### 연결
 

@@ -566,6 +566,10 @@ Palette d'outils (bande de gauche)
    * - Flou / Doigt
      - ``R``
      - Manipulation locale des pixels
+   * - Dodge / Burn / Sponge
+     -
+     - Virage de chambre noire — éclaircir, assombrir ou saturer /
+       désaturer localement, pondéré par le pinceau et un masque de plage tonale
    * - Plume (Bézier)
      - ``P``
      - Tracé vectoriel avec édition des ancres et poignées
@@ -2422,10 +2426,47 @@ Outils disponibles
      - Ouvre une archive ``.puppet`` et renvoie un inventaire structuré :
        drawables, déformateurs, paramètres, mouvements, expressions, zones de
        contact, parties, mélanges de paramètres et rigs physiques.
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - Moyenne/min/max/écart-type/médiane par canal, métriques de qualité sans
+       référence (colorimétrie, entropie, contraste, densité de bords, bruit),
+       et l'histogramme à 256 classes avec fractions d'écrêtage sur/sous-exposé.
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Score de flou par variance laplacienne, texte OCR Tesseract (dégradation
+       propre en son absence), et un aperçu PNG base64 borné.
+   * - ``find_similar``
+     - Regroupe les images quasi-doublons par hachage perceptuel (seuil de
+       Hamming). Rapporte la progression par fichier lorsqu'un jeton de
+       progression est fourni.
+   * - ``apply_watermark`` / ``apply_frame``
+     - Incruster un filigrane texte, ou encadrer l'image dans un passe-partout /
+       cadre Polaroid avec une légende optionnelle.
+   * - ``build_collage``
+     - Compose plusieurs images en une mosaïque en grille (colonnes, taille de
+       cellule, espacement, marge, arrière-plan configurables). Rapporte la progression.
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - Recadrage en boîte de pixels, redimensionnement préservant le rapport, et
+       rotation 90/180/270 sans perte ou retournement horizontal/vertical.
+   * - ``collection_stats``
+     - Synthétise les notes, favoris, étiquettes de couleur et états de tri d'un
+       dossier (comptes, distribution 0–5 étoiles et moyenne).
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - Résout des coordonnées GPS vers la ville la plus proche hors ligne, et
+       décode une image d'une vidéo en photo fixe.
 
-Tous les outils renvoient des charges utiles sérialisées en JSON dans l'enveloppe
-``content`` / ``text`` de MCP ; les charges structurées peuvent être analysées
-depuis le champ ``text`` côté client.
+Chaque outil annonce un ``outputSchema`` JSON et des ``annotations`` lecture seule /
+destructrices, et retourne son résultat sous forme de ``structuredContent`` aux côtés
+de l'enveloppe texte (selon MCP 2025-11-25), afin que les clients consomment des charges
+typées sans réanalyse. Les outils de longue durée diffusent ``notifications/progress``
+lorsque l'appelant fournit un jeton de progression.
+
+Prompts
+^^^^^^^
+
+Le serveur expose quatre prompts via ``prompts/list`` / ``prompts/get`` :
+``caption_image``, ``suggest_edits``, ``analyze_composition`` (une critique de
+composition pilotée par la saillance) et ``flag_issues`` (un triage netteté
++ qualité + écrêtage). Les arguments des prompts peuvent être complétés via
+``completion/complete``.
 
 Claude Code (niveau projet)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

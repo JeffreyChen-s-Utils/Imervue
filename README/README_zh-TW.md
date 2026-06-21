@@ -196,7 +196,7 @@ python -m Imervue /path/to/folder
 - **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕
 - **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫
 - **Tags & Albums** 含多標籤 AND / OR 過濾
-- **智慧相簿** — 儲存規則式查詢（副檔名 / 解析度 / 評等 / 顏色 / 挑片 / 標籤）並一鍵重新套用
+- **智慧相簿** — 儲存規則式查詢並一鍵重新套用；過濾條件涵蓋副檔名、解析度與 **長寬比**、**檔案大小**、評等 **下限 / 上限**、顏色、挑片、標籤（含 **排除**）、**相機 / 鏡頭**、**檔名 regex / glob** 以及 **檔案年齡**，並可 **匯出 / 匯入** 成可攜的 JSON 檔
 - **疊合 RAW+JPEG 對** — 將同檔名擷取折疊成單一磁磚；RAW 仍可從手足存取
 - **每圖筆記** — 在 EXIF 側欄，自動防抖儲存，跨工作階段持久
 - **暫存盤** — 跨資料夾籃，重啟後保留；批次移動 / 複製 / 匯出
@@ -218,7 +218,8 @@ python -m Imervue /path/to/folder
 
 - **模糊檔名搜尋** 含子字串高亮
 - **找相似** — pHash（64-bit DCT）含可調 Hamming 距離
-- **圖庫搜尋** — SQLite 多根索引；查詢副檔名 / 大小 / 尺寸 / 檔名
+- **圖庫搜尋** — SQLite 多根索引，搭配精簡的查詢 DSL：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob
+- **找相似（average hash）** — pHash 與 dHash 再搭配選用的 average-hash（aHash），提供互補的近重複度量
 - **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」）透過快取的 embedding；`open_clip_torch` + `torch` 未安裝時優雅停用
 - **自動標籤** — 啟發式分類 + 選用 CLIP ONNX 升級
 
@@ -226,6 +227,7 @@ python -m Imervue /path/to/folder
 
 - **EXIF 側欄** 含可折疊群組 + 內嵌 0-5 星評等列
 - **EXIF 編輯器** 對話框
+- **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
 - **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度（JPEG）
@@ -311,9 +313,11 @@ python -m Imervue /path/to/folder
 
 **Paint** 分頁是完整功能的點陣繪圖工作室，以獨立 `QMainWindow` 嵌入，含選單、左工具列、上下文敏感的選項列、右側分頁式擺放欄。多文件編輯 — 同時開多張圖，每張有獨立復原堆疊。
 
-### 工具（24）
+### 工具（27）
 
-筆刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速選取 · 移動 · 文字 · 漸層 · 模糊 · 塗抹 · 鋼筆 · 仿製圖章 · 對話框 · 矩形 · 橢圓 · 線條 · 多邊形 · 裁切 · 變形 · 抓手 · 縮放
+筆刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速選取 · 移動 · 文字 · 漸層 · 模糊 · 塗抹 · Dodge · Burn · Sponge · 鋼筆 · 仿製圖章 · 對話框 · 矩形 · 橢圓 · 線條 · 多邊形 · 裁切 · 變形 · 抓手 · 縮放
+
+暗房調色三件組 — **Dodge**（提亮）、**Burn**（加深）與 **Sponge**（加 / 減飽和度）— 在局部繪製色調與彩度調整，依筆刷與陰影 / 中間調 / 高光遮罩加權。
 
 單鍵快捷：`B / E / G / I / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形狀變體。
 
@@ -711,14 +715,29 @@ python -m Imervue.mcp_server
 
 ### 工具
 
+精選工具（共 22 個 — 完整清單見文件）。每個工具都會宣告 JSON
+`outputSchema` 與唯讀 / 破壞性的 `annotations`，並把結果以
+`structuredContent` 回傳；長時間執行的工具會串流 `notifications/progress`。
+
 | 工具 | 用途 |
 |------|---------|
 | `list_images` | 列出資料夾中的影像（可選遞迴） |
-| `read_image_metadata` | 尺寸 / 格式 / EXIF / XMP 邊車檔 |
-| `read_xmp_tags` | XMP-only 快路徑：評等、標籤、關鍵字 |
-| `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | 從 PNG 建構 `.puppet` rig（auto-mesh + 標準參數） |
-| `puppet_inspect` | 開啟 `.puppet` 回傳清單 |
+| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP 邊車檔（評等、色標、關鍵字） |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 無參考分析：各通道統計、colourfulness/entropy/對比、直方圖 + 裁切、模糊分數 |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64 預覽、Tesseract 文字、perceptual-hash 近重複分組（含進度） |
+| `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP（+ 選用 HEIC / AVIF / JXL） |
+| `apply_watermark` / `apply_frame` | 燒入文字浮水印，或加 matte / 拍立得相框 + 說明文字 |
+| `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉 |
+| `collection_stats` | 資料夾的評等 / 收藏 / 色標 / 挑片彙整 |
+| `reverse_geocode` / `extract_video_frame` | 離線 GPS → 城市、把影片一格解碼成靜態影像 |
+| `puppet_from_png` / `puppet_inspect` | 從 PNG 建構 `.puppet` rig；開啟一個並回傳清單 |
+
+### Prompts
+
+四個可重用的 prompt：`caption_image`、`suggest_edits`、`analyze_composition`
+（以 saliency 為基礎的構圖評析）與 `flag_issues`（銳利度 + 品質 + 裁切的
+分流檢查）。prompt 的引數可透過 `completion/complete` 自動補全。
 
 ### 配置
 

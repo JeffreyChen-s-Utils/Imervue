@@ -197,7 +197,7 @@ python -m Imervue /path/to/folder
 - **カリング**(Culling)— other XMP-aware photo managers 式の 3 状態フラグ(`P` = キープ、`Shift+X` = 拒否、`U` = フラグ解除)。状態でフィルタ、拒否済みの一括削除
 - **階層タグ** — `animal/cat/british` のようなツリーパス。子孫が自動的にマッチ
 - **Tags & Albums** マルチタグ AND / OR フィルタ
-- **スマートアルバム** — ルールベースのクエリ(拡張子 / 解像度 / レーティング / カラー / カリング / タグ)を保存し、ワンクリックで再適用
+- **スマートアルバム** — ルールベースのクエリを保存し、ワンクリックで再適用。フィルタは拡張子、解像度 & **アスペクト比**、**ファイルサイズ**、レーティングの **下限 / 上限**、カラー、カリング、タグ(**除外**を含む)、**カメラ / レンズ**、**ファイル名の正規表現 / glob**、**ファイルの経過時間** にまたがり、さらにポータブルな JSON ファイルへの **エクスポート / インポート** が可能
 - **RAW+JPEG ペアのスタック** — 同名キャプチャを単一タイルに折りたたみ。RAW はサイブリングとして引き続きアクセス可能
 - **画像ごとのメモ** — EXIF サイドバーに、デバウンス付き自動保存、セッション間で永続化
 - **ステージングトレイ** — フォルダ間で持続するバスケット。再起動後も保持。一括移動 / コピー / エクスポート
@@ -219,7 +219,8 @@ python -m Imervue /path/to/folder
 
 - **ファジーファイル名検索** 部分文字列ハイライト付き
 - **類似画像検索** — pHash(64-bit DCT)調整可能なハミング距離
-- **ライブラリ検索** — SQLite マルチルートインデックス。拡張子 / サイズ / 寸法 / ファイル名でクエリ可能
+- **ライブラリ検索** — SQLite マルチルートインデックスに、コンパクトなクエリ DSL を併用: キーワード、タグ(否定を含む)、レーティング、カラー、拡張子、場所、カリング、お気に入り、アスペクト比、経過時間、サイズ、寸法、カメラ / レンズ、ファイル名の正規表現 / glob
+- **類似検索(average hash)** — pHash と dHash に、補完的な近似重複メトリックとしてオプションの average-hash(aHash)を組み合わせ
 - **セマンティック検索(CLIP)** — 自然言語クエリ(「雪の中のゴールデンレトリバー」など)をキャッシュ済み embedding で実行。`open_clip_torch` + `torch` が未インストール時は優雅に無効化
 - **自動タグ付け** — ヒューリスティック分類 + 任意の CLIP ONNX アップグレード
 
@@ -227,6 +228,7 @@ python -m Imervue /path/to/folder
 
 - **EXIF サイドバー** 折りたたみ可能なグループ + インラインの 0-5 つ星評価ストリップ
 - **EXIF エディタ** ダイアログ
+- **キーワードエディタ** — タイトル / 作成者 / 説明 / キーワード。タグの共起から導いた **関連タグの提案** 付き
 - **画像情報** ダイアログ(寸法 / サイズ / 日付)
 - **XMP サイドカー**(`.xmp` コンパニオン)— レーティング / タイトル / 説明 / キーワード / カラーラベルを other XMP-aware photo managers と双方向同期(`defusedxml` で安全に解析)
 - **GPS ジオタグエディタ** — EXIF GPS の緯度経度を読み書き(JPEG)
@@ -312,9 +314,11 @@ python -m Imervue /path/to/folder
 
 **Paint** タブは本格的なラスター描画スタジオで、独立した `QMainWindow` として埋め込まれています。メニュー、左ツールストリップ、コンテキスト対応のオプションバー、右側のタブ式ドックカラムを備えています。マルチドキュメント編集 — 複数の絵を同時に開け、それぞれが独自の undo スタックを持ちます。
 
-### ツール(24)
+### ツール(27)
 
-ブラシ · 消しゴム · 塗りつぶし · スポイト · 矩形 / 投げ縄 / マジックワンド / クイック選択 · 移動 · テキスト · グラデーション · ぼかし · 指先 · ペン · クローンスタンプ · 吹き出し · 矩形 · 楕円 · 直線 · 多角形 · クロップ · 変形 · ハンド · ズーム
+ブラシ · 消しゴム · 塗りつぶし · スポイト · 矩形 / 投げ縄 / マジックワンド / クイック選択 · 移動 · テキスト · グラデーション · ぼかし · 指先 · 覆い焼き · 焼き込み · スポンジ · ペン · クローンスタンプ · 吹き出し · 矩形 · 楕円 · 直線 · 多角形 · クロップ · 変形 · ハンド · ズーム
+
+暗室トーニングの 3 兄弟 — **覆い焼き(Dodge)**(明るく)、**焼き込み(Burn)**(暗く)、**スポンジ(Sponge)**(彩度を上げ / 下げ)— は、ブラシとシャドウ / 中間調 / ハイライトマスクで重み付けして、局所的な階調とクロマの調整を描き込みます。
 
 シングルキーショートカット: `B / E / G / I / V / T / U / R / P / S / C / Z / H`。`Shift+R/E/I/P` で図形バリアントを切り替え。
 
@@ -712,14 +716,30 @@ python -m Imervue.mcp_server
 
 ### ツール
 
+主なツール(全 22 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
+の `outputSchema` と read-only / destructive の `annotations` を公開し、結果を
+`structuredContent` として返します。長時間実行されるツールは
+`notifications/progress` をストリーミングします。
+
 | ツール | 用途 |
 |------|---------|
 | `list_images` | フォルダ内の画像をリスト(再帰オプション付き) |
-| `read_image_metadata` | 寸法 / フォーマット / EXIF / XMP サイドカー |
-| `read_xmp_tags` | XMP 専用ファストパス: レーティング、ラベル、キーワード |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 間で変換 |
-| `puppet_from_png` | PNG から `.puppet` rig を構築(auto-mesh + 標準パラメーター) |
-| `puppet_inspect` | `.puppet` を開いてインベントリを返す |
+| `read_image_metadata` / `read_xmp_tags` | 寸法、フォーマット、EXIF、XMP サイドカー(レーティング、ラベル、キーワード) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 参照なし解析: チャンネルごとの統計、colourfulness / entropy / contrast、ヒストグラム + クリッピング、ブラースコア |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64 プレビュー、Tesseract テキスト、知覚ハッシュによる近似重複グループ(進捗付き) |
+| `convert_format` | PNG / JPEG / WebP / TIFF / BMP(+ オプションで HEIC / AVIF / JXL)間で変換 |
+| `apply_watermark` / `apply_frame` | テキストウォーターマークを焼き込み、またはマット / ポラロイドフレーム + キャプションを追加 |
+| `build_collage` | 複数の画像をグリッドモンタージュに合成(進捗付き) |
+| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転 |
+| `collection_stats` | フォルダのレーティング / お気に入り / カラーラベル / カリングのサマリー |
+| `reverse_geocode` / `extract_video_frame` | オフラインで GPS → 都市名、動画の 1 フレームを静止画にデコード |
+| `puppet_from_png` / `puppet_inspect` | PNG から `.puppet` rig を構築。`.puppet` を開いてインベントリを返す |
+
+### プロンプト
+
+4 つの再利用可能なプロンプト: `caption_image`、`suggest_edits`、`analyze_composition`
+(saliency 駆動の構図批評)、`flag_issues`(sharpness + quality + clipping の
+トリアージ)。プロンプトの引数は `completion/complete` で補完できます。
 
 ### 設定
 
