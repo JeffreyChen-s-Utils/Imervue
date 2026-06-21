@@ -21,6 +21,7 @@ _DIGITS = re.compile(r"(\d+)")
 _FLOAT = re.compile(r"(\d+(?:\.\d+)?)")
 _TRUE = {"1", "true", "yes", "y", "on"}
 _SECONDS_PER_DAY = 86400.0
+_SIZE_UNITS = {"b": 1, "kb": 1024, "mb": 1024 ** 2, "gb": 1024 ** 3}
 _LIST_KEYS = {
     "kw": "tags", "keyword": "tags", "tag": "tags", "tags": "tags",
     "color": "colors", "colour": "colors",
@@ -124,6 +125,25 @@ def _apply_age(value: str, _acc: dict, rules: dict) -> None:
     rules["date_from" if "<" in value else "date_to"] = cutoff
 
 
+def _parse_size_bytes(value: str) -> int | None:
+    """Parse ``500kb`` / ``1.5mb`` / ``2048`` into bytes; None if unrecognised."""
+    match = _FLOAT.search(value)
+    if match is None:
+        return None
+    unit = value[match.end():].strip().lower()
+    if unit and unit not in _SIZE_UNITS:
+        return None
+    return int(float(match.group(1)) * _SIZE_UNITS.get(unit, 1))
+
+
+def _apply_size(value: str, _acc: dict, rules: dict) -> None:
+    """``size:>1mb`` sets a floor, ``size:<500kb`` a ceiling (kb/mb/gb units)."""
+    size = _parse_size_bytes(value)
+    if size is None:
+        return
+    rules["max_size" if "<" in value else "min_size"] = size
+
+
 def _apply_regex(value: str, _acc: dict, rules: dict) -> None:
     """``re:IMG_\\d+`` matches the filename against a regular expression."""
     rules["name_regex"] = value
@@ -147,6 +167,7 @@ _FIELD_HANDLERS = {
     "favourite": _apply_fav,
     "aspect": _apply_aspect,
     "age": _apply_age,
+    "size": _apply_size,
     "re": _apply_regex,
     "regex": _apply_regex,
     "glob": _apply_glob,

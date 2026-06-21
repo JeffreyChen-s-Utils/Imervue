@@ -97,6 +97,22 @@ def test_age_older_sets_date_to():
     assert abs(rules["date_to"] - (time.time() - 7 * 86400)) < 5
 
 
+def test_size_with_units():
+    assert parse_query("size:>1mb")["min_size"] == 1024 ** 2
+    assert parse_query("size:<500kb")["max_size"] == 500 * 1024
+    assert parse_query("size:>=2gb")["min_size"] == 2 * 1024 ** 3
+
+
+def test_size_bare_number_is_bytes_floor():
+    assert parse_query("size:2048")["min_size"] == 2048
+
+
+def test_size_unknown_unit_ignored():
+    rules = parse_query("size:>5tb")
+    assert "min_size" not in rules
+    assert "max_size" not in rules
+
+
 def test_regex_and_glob_filename_patterns():
     assert parse_query(r"re:IMG_\d+")["name_regex"] == r"IMG_\d+"
     assert parse_query("regex:^DSC")["name_regex"] == "^DSC"
