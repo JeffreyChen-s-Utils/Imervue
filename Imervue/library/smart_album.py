@@ -12,11 +12,15 @@ A rules dict supports these keys (all optional):
     - tags_any / tags_all: list[str]     hierarchical tag paths
     - tags_exclude:      list[str]       hierarchical tag paths to exclude
     - name_contains:     str
+    - name_regex:        str             regex matched against the filename
+    - name_glob:         str             shell glob matched against the filename
     - date_from / date_to: float         Unix timestamp, mtime
 """
 from __future__ import annotations
 
+import fnmatch
 import json
+import re
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -72,6 +76,7 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     if name_contains:
         q = name_contains.lower()
         result = [p for p in result if q in Path(p).name.lower()]
+    result = _apply_name_pattern_filters(result, rules)
     result = _apply_user_setting_filters(result, rules)
     result = _apply_index_filters(result, rules)
     result = _apply_size_filters(result, rules)
@@ -130,6 +135,22 @@ def generate_location_albums(paths: Iterable[str]) -> int:
     for name, rules in albums:
         save(name, rules)
     return len(albums)
+
+
+def _apply_name_pattern_filters(paths: list[str], rules: dict) -> list[str]:
+    """Filter by a filename regex (``name_regex``) and/or glob (``name_glob``)."""
+    name_regex = rules.get("name_regex")
+    if name_regex:
+        try:
+            compiled = re.compile(name_regex)
+        except re.error:
+            return []  # an unparsable pattern matches nothing
+        paths = [p for p in paths if compiled.search(Path(p).name)]
+    name_glob = rules.get("name_glob")
+    if name_glob:
+        pattern = name_glob.lower()
+        paths = [p for p in paths if fnmatch.fnmatch(Path(p).name.lower(), pattern)]
+    return paths
 
 
 def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:

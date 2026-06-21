@@ -97,6 +97,12 @@ def test_age_older_sets_date_to():
     assert abs(rules["date_to"] - (time.time() - 7 * 86400)) < 5
 
 
+def test_regex_and_glob_filename_patterns():
+    assert parse_query(r"re:IMG_\d+")["name_regex"] == r"IMG_\d+"
+    assert parse_query("regex:^DSC")["name_regex"] == "^DSC"
+    assert parse_query("glob:*.png")["name_glob"] == "*.png"
+
+
 def test_empty_query_is_empty_rules():
     assert parse_query("   ") == {}
 

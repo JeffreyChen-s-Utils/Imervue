@@ -172,6 +172,23 @@ class TestApplyToPaths:
             user_setting_dict["image_ratings"] = {}
         assert result == [a]
 
+    def test_name_regex_matches_filename(self, tmp_path):
+        a = _touch(tmp_path / "IMG_0001.png")
+        b = _touch(tmp_path / "snapshot.png")
+        result = smart_album.apply_to_paths([a, b], {"name_regex": r"IMG_\d+"})
+        assert result == [a]
+
+    def test_invalid_name_regex_matches_nothing(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        result = smart_album.apply_to_paths([a], {"name_regex": "("})  # unbalanced
+        assert result == []
+
+    def test_name_glob_is_case_insensitive(self, tmp_path):
+        a = _touch(tmp_path / "Photo.PNG")
+        b = _touch(tmp_path / "clip.mp4")
+        result = smart_album.apply_to_paths([a, b], {"name_glob": "*.png"})
+        assert result == [a]
+
     def test_min_width_and_height_filter(self, tmp_path):
         wide = _make_image(tmp_path / "wide.png", 200, 50)
         tall = _make_image(tmp_path / "tall.png", 50, 200)

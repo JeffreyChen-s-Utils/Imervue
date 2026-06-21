@@ -124,6 +124,16 @@ def _apply_age(value: str, _acc: dict, rules: dict) -> None:
     rules["date_from" if "<" in value else "date_to"] = cutoff
 
 
+def _apply_regex(value: str, _acc: dict, rules: dict) -> None:
+    """``re:IMG_\\d+`` matches the filename against a regular expression."""
+    rules["name_regex"] = value
+
+
+def _apply_glob(value: str, _acc: dict, rules: dict) -> None:
+    """``glob:*.png`` matches the filename against a shell glob pattern."""
+    rules["name_glob"] = value
+
+
 _FIELD_HANDLERS = {
     "ext": _apply_ext,
     "type": _apply_type,
@@ -137,6 +147,9 @@ _FIELD_HANDLERS = {
     "favourite": _apply_fav,
     "aspect": _apply_aspect,
     "age": _apply_age,
+    "re": _apply_regex,
+    "regex": _apply_regex,
+    "glob": _apply_glob,
 }
 
 
