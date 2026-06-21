@@ -60,36 +60,6 @@ class TestFitToCanvas:
         assert out.dtype == np.uint8
 
 
-class TestBlend:
-    def test_t_zero_returns_a(self):
-        a = np.full((4, 4, 3), 10, dtype=np.uint8)
-        b = np.full((4, 4, 3), 200, dtype=np.uint8)
-        out = sm._blend(a, b, 0.0)
-        np.testing.assert_array_equal(out, a)
-
-    def test_t_one_returns_b(self):
-        a = np.full((4, 4, 3), 10, dtype=np.uint8)
-        b = np.full((4, 4, 3), 200, dtype=np.uint8)
-        out = sm._blend(a, b, 1.0)
-        np.testing.assert_array_equal(out, b)
-
-    def test_t_half_is_midpoint(self):
-        a = np.full((2, 2, 3), 0, dtype=np.uint8)
-        b = np.full((2, 2, 3), 100, dtype=np.uint8)
-        out = sm._blend(a, b, 0.5)
-        assert (out == 50).all()
-
-    def test_t_is_clamped_low(self):
-        a = np.zeros((2, 2, 3), dtype=np.uint8)
-        b = np.full((2, 2, 3), 99, dtype=np.uint8)
-        np.testing.assert_array_equal(sm._blend(a, b, -5.0), a)
-
-    def test_t_is_clamped_high(self):
-        a = np.zeros((2, 2, 3), dtype=np.uint8)
-        b = np.full((2, 2, 3), 99, dtype=np.uint8)
-        np.testing.assert_array_equal(sm._blend(a, b, 2.5), b)
-
-
 class TestGenerateValidation:
     def test_empty_list_raises(self, tmp_path):
         with pytest.raises(ValueError, match="at least one image"):

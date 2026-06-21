@@ -24,8 +24,9 @@ class SlideshowOptions:
     height: int = 1080
     fps: int = 24
     hold_seconds: float = 3.0
-    fade_seconds: float = 0.5  # 0 disables fades
+    fade_seconds: float = 0.5  # 0 disables transitions
     quality: int = 8  # imageio ffmpeg "quality" (1-10, higher = better)
+    transition: str = "fade"  # see slideshow_effects.TRANSITIONS
 
 
 def _fit_to_canvas(rgb: np.ndarray, width: int, height: int) -> np.ndarray:
@@ -59,12 +60,6 @@ def _load_as_rgb(path: str) -> np.ndarray | None:
     return None
 
 
-def _blend(a: np.ndarray, b: np.ndarray, t: float) -> np.ndarray:
-    """Linear blend from ``a`` to ``b`` at position ``t`` in [0, 1]."""
-    t = max(0.0, min(1.0, t))
-    return (a.astype(np.float32) * (1.0 - t) + b.astype(np.float32) * t).astype(np.uint8)
-
-
 def _write_slide(writer, frame: np.ndarray, frames: int) -> None:
     for _ in range(frames):
         writer.append_data(frame)
@@ -72,12 +67,14 @@ def _write_slide(writer, frame: np.ndarray, frames: int) -> None:
 
 def _write_fade(
     writer, prev: np.ndarray, nxt: np.ndarray, frames: int,
+    transition: str = "fade",
 ) -> None:
     if frames <= 0:
         return
+    from Imervue.export.slideshow_effects import transition_frame
     for i in range(1, frames + 1):
         t = i / (frames + 1)
-        writer.append_data(_blend(prev, nxt, t))
+        writer.append_data(transition_frame(prev, nxt, transition, t))
 
 
 def generate_slideshow_mp4(
@@ -121,7 +118,8 @@ def generate_slideshow_mp4(
                 continue
             canvas = _fit_to_canvas(rgb, options.width, options.height)
             if prev_canvas is not None and fade_frames > 0:
-                _write_fade(writer, prev_canvas, canvas, fade_frames)
+                _write_fade(writer, prev_canvas, canvas, fade_frames,
+                            options.transition)
             _write_slide(writer, canvas, hold_frames)
             prev_canvas = canvas
     finally:
