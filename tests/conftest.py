@@ -35,7 +35,11 @@ _rng = np.random.default_rng(seed=0xC0FFEE)
 # non-zero even though every test passed.
 #
 # Two layers defend against this. PRIMARY: a ``tryfirst`` ``pytest_unconfigure``
-# hook ``os._exit(0)``s a *passing* CI session. ``pytest_unconfigure`` runs
+# hook hard-terminates a *passing* CI session (see ``_hard_exit_zero``). On
+# Windows even ``os._exit`` routes through ``ExitProcess``, which STILL runs
+# DLL_PROCESS_DETACH — and the Qt/shiboken DLL teardown is exactly what
+# segfaults — so we ``TerminateProcess`` ourselves instead, skipping detach.
+# ``pytest_unconfigure`` runs
 # after ``pytest_sessionfinish`` has completed — including the terminal
 # reporter's hookwrapper that prints the summary banner — so the banner is on
 # screen, and ``tryfirst`` makes us the first unconfigure step so we exit before
@@ -60,15 +64,30 @@ def pytest_unconfigure(config):  # noqa: ARG001
     """Hard-exit a green CI session before the native teardown segfault.
 
     The summary banner has already printed by now; on CI a passing session
-    ``os._exit(0)``s immediately, skipping session-fixture teardown, the rest of
-    unconfigure and interpreter finalisation, none of which can then dereference
-    a stale shiboken wrapper. A failing session (or any local run) falls through
-    to normal teardown so real failures and new ``__del__`` bugs still surface.
+    terminates immediately, skipping session-fixture teardown, the rest of
+    unconfigure and the process exit path that finalises a stale shiboken
+    wrapper. A failing session (or any local run) falls through to normal
+    teardown so real failures and new ``__del__`` bugs still surface.
     """
     if os.environ.get("CI") == "true" and _pytest_exit_status == 0:
         sys.stdout.flush()
         sys.stderr.flush()
-        os._exit(0)
+        _hard_exit_zero()
+
+
+def _hard_exit_zero() -> None:
+    """Terminate this process with code 0 without running native teardown.
+
+    ``os._exit`` is not enough on Windows: it calls ``ExitProcess``, which still
+    runs DLL_PROCESS_DETACH, and the Qt/shiboken DLL teardown is what segfaults.
+    ``TerminateProcess`` on our own process skips detach entirely. On other
+    platforms ``os._exit`` already avoids the offending finalisation.
+    """
+    if sys.platform == "win32":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), 0)
+    os._exit(0)
 
 
 def _force_clean_exit() -> None:
