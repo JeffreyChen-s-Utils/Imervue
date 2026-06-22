@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from Imervue.library.search_query import parse_query
 
 
@@ -70,8 +72,8 @@ def test_bare_dash_word_is_free_text_not_exclusion():
 
 
 def test_aspect_operators_set_bounds():
-    assert parse_query("aspect:>1.5")["min_aspect"] == 1.5
-    assert parse_query("aspect:<0.8")["max_aspect"] == 0.8
+    assert parse_query("aspect:>1.5")["min_aspect"] == pytest.approx(1.5)
+    assert parse_query("aspect:<0.8")["max_aspect"] == pytest.approx(0.8)
 
 
 def test_rating_ceiling_with_less_than():

@@ -8,19 +8,21 @@ from __future__ import annotations
 
 from typing import Any
 
+_PATH_ARG_DESC = "Absolute path to the image."
+
 _PROMPTS: list[dict[str, Any]] = [
     {
         "name": "caption_image",
         "description": "Embed an image thumbnail and ask for a concise caption / alt-text.",
         "arguments": [
-            {"name": "path", "description": "Absolute path to the image.", "required": True},
+            {"name": "path", "description": _PATH_ARG_DESC, "required": True},
         ],
     },
     {
         "name": "suggest_edits",
         "description": "Provide the histogram + quality metrics and ask for concrete edits.",
         "arguments": [
-            {"name": "path", "description": "Absolute path to the image.", "required": True},
+            {"name": "path", "description": _PATH_ARG_DESC, "required": True},
             {"name": "style", "description": "Optional look, e.g. 'portrait'.",
              "required": False},
         ],
@@ -32,7 +34,7 @@ _PROMPTS: list[dict[str, Any]] = [
             "ask for a composition critique (rule-of-thirds, balance, framing)."
         ),
         "arguments": [
-            {"name": "path", "description": "Absolute path to the image.", "required": True},
+            {"name": "path", "description": _PATH_ARG_DESC, "required": True},
             {"name": "focus", "description": "Optional aspect to emphasise, e.g. 'balance'.",
              "required": False},
         ],
@@ -44,7 +46,7 @@ _PROMPTS: list[dict[str, Any]] = [
             "a triaged list of technical issues with severities and fixes."
         ),
         "arguments": [
-            {"name": "path", "description": "Absolute path to the image.", "required": True},
+            {"name": "path", "description": _PATH_ARG_DESC, "required": True},
         ],
     },
 ]

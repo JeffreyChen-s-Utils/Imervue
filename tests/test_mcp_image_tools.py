@@ -136,7 +136,7 @@ def test_collection_stats_summarises_folder(tmp_path):
         stats = collection_stats(str(tmp_path))
         assert stats["total"] == 2
         assert stats["rated"] == 1
-        assert stats["average_rating"] == 4.0
+        assert stats["average_rating"] == pytest.approx(4.0)
         assert stats["cull"]["pick"] == 1
         assert stats["cull"]["unflagged"] == 1
     finally:
@@ -355,9 +355,10 @@ def test_build_collage_grid_dimensions(tmp_path):
     assert dst.exists()
     assert result["image_count"] == 3
     assert result["columns"] == 2
-    # 3 images, 2 columns -> 2 rows. width = 2*5 + 2*100 + 1*10 = 220.
+    # 3 images in 2 columns spans 2 rows; width is 220: two 5px margins,
+    # two 100px cells, one 10px gutter.
     assert result["width"] == 220
-    # height = 2*5 + 2*80 + 1*10 = 180.
+    # height is 180: two 5px margins, two 80px cells, one 10px gutter.
     assert result["height"] == 180
 
 

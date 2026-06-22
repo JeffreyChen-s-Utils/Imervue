@@ -27,11 +27,11 @@ def _unit_quad():
 
 
 def test_triangle_area_right_triangle():
-    assert triangle_area((0, 0), (2, 0), (0, 2)) == 2.0
+    assert triangle_area((0, 0), (2, 0), (0, 2)) == pytest.approx(2.0)
 
 
 def test_collinear_triangle_has_zero_area():
-    assert triangle_area((0, 0), (1, 1), (2, 2)) == 0.0
+    assert triangle_area((0, 0), (1, 1), (2, 2)) == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

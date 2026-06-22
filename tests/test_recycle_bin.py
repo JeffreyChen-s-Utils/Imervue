@@ -488,7 +488,7 @@ def test_undo_delete_external_pops_without_touching_images():
     view.undo_stack.append(
         {"mode": "delete_external", "deleted_paths": ["/folder"], "restored": False})
 
-    undo_delete(view)
+    undo_delete(view)  # NOSONAR: test double stands in for the production view
     assert view.undo_stack == []        # the external action was popped (undone)
     assert view.model.images == ["/x"]  # a folder is not re-inserted as an image
 

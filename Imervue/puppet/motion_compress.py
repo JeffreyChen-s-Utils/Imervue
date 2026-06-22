@@ -12,6 +12,7 @@ original everywhere. Pure data work — no Qt, no numpy.
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import cast
 
 from Imervue.puppet.document import Motion, MotionSegment, MotionTrack
 
@@ -70,7 +71,9 @@ def compress_motion(motion: Motion, *, tol: float) -> Motion:
     All non-track fields (duration, loop, fades, sound, group) are preserved.
     """
     tracks = [compress_track(track, tol=tol) for track in motion.tracks]
-    return replace(motion, tracks=tracks)
+    # ``replace`` is typed as returning the dataclass type; make it explicit
+    # for analysers that don't infer it (Sonar S5886).
+    return cast(Motion, replace(motion, tracks=tracks))
 
 
 # ---------------------------------------------------------------------------

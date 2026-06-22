@@ -18,7 +18,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 _LEADING_INT = re.compile(r"\d+")
-_CONSTRAINT = re.compile(r"^(>=|<=|==|!=|>|<)\s*(.+)$")
+# ``\s*`` then ``\S`` (disjoint classes) gives a single, unambiguous split
+# point — no catastrophic backtracking on a run of spaces (Sonar S5852).
+_CONSTRAINT = re.compile(r"^(>=|<=|==|!=|>|<)\s*(\S.*)$")
 
 
 def parse_version(version: str) -> tuple[int, ...]:

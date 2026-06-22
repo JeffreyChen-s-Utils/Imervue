@@ -20,7 +20,7 @@ def test_layout_options_resolves_grid_and_caption():
     opts = layout_options("compact")
     assert (opts.rows, opts.cols) == (8, 6)
     assert opts.caption is False
-    assert opts.margin_mm == 5.0
+    assert opts.margin_mm == pytest.approx(5.0)
 
 
 def test_layout_options_applies_output_params():

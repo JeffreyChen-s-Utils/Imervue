@@ -8,6 +8,7 @@ without a progress parameter (or calls without a token) stay silent.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.mcp_server.progress import ProgressReporter, progress_token
@@ -146,7 +147,7 @@ def test_build_collage_emits_progress_with_token(tmp_path):
     assert len(updates) == 3
     assert all(u["progressToken"] == "tok-1" for u in updates)
     assert [u["progress"] for u in updates] == [1.0, 2.0, 3.0]
-    assert updates[-1]["total"] == 3.0
+    assert updates[-1]["total"] == pytest.approx(3.0)
 
 
 def test_find_similar_emits_progress_with_token(tmp_path):
@@ -163,7 +164,7 @@ def test_find_similar_emits_progress_with_token(tmp_path):
     assert len(updates) == 3
     assert all(u["progressToken"] == "fs-1" for u in updates)
     assert [u["progress"] for u in updates] == [1.0, 2.0, 3.0]
-    assert updates[-1]["total"] == 3.0
+    assert updates[-1]["total"] == pytest.approx(3.0)
 
 
 def test_build_collage_without_token_is_silent(tmp_path):

@@ -1,6 +1,8 @@
 """Tests for motion track keyframe compression."""
 from __future__ import annotations
 
+import pytest
+
 from Imervue.puppet.document import Motion, MotionSegment, MotionTrack
 from Imervue.puppet.motion_compress import (
     compress_motion,
@@ -116,9 +118,9 @@ def test_compress_motion_preserves_metadata():
     motion = Motion("Idle", duration=2.0, loop=True, tracks=[track],
                     fade_in_duration=0.3, group="Idle")
     out = compress_motion(motion, tol=0.01)
-    assert out.duration == 2.0
+    assert out.duration == pytest.approx(2.0)
     assert out.loop is True
-    assert out.fade_in_duration == 0.3
+    assert out.fade_in_duration == pytest.approx(0.3)
     assert out.group == "Idle"
     assert count_keys(out.tracks[0]) == 2
 

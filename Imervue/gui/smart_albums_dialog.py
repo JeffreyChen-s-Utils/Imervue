@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 _COLORS = ("red", "yellow", "green", "blue", "purple")
 _CULL_VALUES = ("", "pick", "reject", "unflagged")
+_SMART_ALBUMS_TITLE = "Smart Albums"
 
 
 class SmartAlbumsDialog(QDialog):
@@ -30,7 +31,7 @@ class SmartAlbumsDialog(QDialog):
         super().__init__(ui)
         self._ui = ui
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("smart_albums_title", "Smart Albums"))
+        self.setWindowTitle(lang.get("smart_albums_title", _SMART_ALBUMS_TITLE))
         self.resize(560, 520)
 
         layout = QVBoxLayout(self)
@@ -240,7 +241,7 @@ class SmartAlbumsDialog(QDialog):
         from Imervue.library import album_io
         count = album_io.export_albums(path)
         QMessageBox.information(
-            self, lang.get("smart_albums_title", "Smart Albums"),
+            self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE),
             lang.get("smart_albums_exported", "Exported {n} album(s)").format(n=count),
         )
 
@@ -256,12 +257,12 @@ class SmartAlbumsDialog(QDialog):
             count = album_io.import_albums(path)
         except (ValueError, OSError) as exc:
             QMessageBox.warning(
-                self, lang.get("smart_albums_title", "Smart Albums"), str(exc),
+                self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE), str(exc),
             )
             return
         self._refresh_list()
         QMessageBox.information(
-            self, lang.get("smart_albums_title", "Smart Albums"),
+            self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE),
             lang.get("smart_albums_imported", "Imported {n} album(s)").format(n=count),
         )
 

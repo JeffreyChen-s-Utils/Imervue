@@ -67,7 +67,7 @@ def dodge_burn_dab(
         )
     _validate_range(range_mode)
     amount = float(max(-1.0, min(1.0, amount)))
-    if amount == 0.0:
+    if not amount:  # clamped to [-1, 1]; only an exact zero is a no-op
         return (0, 0, 0, 0)
     h, w = canvas.shape[:2]
     kh, kw = kernel.shape

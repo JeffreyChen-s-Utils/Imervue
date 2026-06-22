@@ -55,7 +55,7 @@ def test_dissolve_is_stable_between_frames():
 def test_slide_left_pushes_next_in_from_the_right():
     prev = _solid(10, h=4, w=10)
     nxt = _solid(200, h=4, w=10)
-    out = transition_frame(prev, nxt, "slide_left", 0.5)  # shift = 5
+    out = transition_frame(prev, nxt, "slide_left", 0.5)  # shifts in by 5 px
     assert np.all(out[:, :5] == 10)    # left half still the old frame
     assert np.all(out[:, 5:] == 200)   # right half is the incoming frame
 
@@ -63,7 +63,7 @@ def test_slide_left_pushes_next_in_from_the_right():
 def test_wipe_left_reveals_from_the_left_edge():
     prev = _solid(10, h=4, w=10)
     nxt = _solid(200, h=4, w=10)
-    out = transition_frame(prev, nxt, "wipe_left", 0.3)  # split = 3
+    out = transition_frame(prev, nxt, "wipe_left", 0.3)  # splits at 3 px
     assert np.all(out[:, :3] == 200)
     assert np.all(out[:, 3:] == 10)
 
@@ -71,7 +71,7 @@ def test_wipe_left_reveals_from_the_left_edge():
 def test_slide_up_moves_vertically():
     prev = _solid(10, h=10, w=4)
     nxt = _solid(200, h=10, w=4)
-    out = transition_frame(prev, nxt, "slide_up", 0.5)  # shift = 5
+    out = transition_frame(prev, nxt, "slide_up", 0.5)  # shifts up by 5 px
     assert np.all(out[:5] == 10)
     assert np.all(out[5:] == 200)
 
