@@ -82,10 +82,18 @@ def _hard_exit_zero() -> None:
     runs DLL_PROCESS_DETACH, and the Qt/shiboken DLL teardown is what segfaults.
     ``TerminateProcess`` on our own process skips detach entirely. On other
     platforms ``os._exit`` already avoids the offending finalisation.
+
+    The handle types MUST be declared: ``GetCurrentProcess`` returns the
+    ``(HANDLE)-1`` pseudo-handle, and with ctypes' default 32-bit ``c_int``
+    return type that gets truncated to an invalid handle, so
+    ``TerminateProcess`` silently no-ops and we fall through to the crashing
+    ``os._exit``. Declaring ``c_void_p`` keeps the full 64-bit handle.
     """
     if sys.platform == "win32":
         import ctypes
         kernel32 = ctypes.windll.kernel32
+        kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+        kernel32.TerminateProcess.argtypes = (ctypes.c_void_p, ctypes.c_uint)
         kernel32.TerminateProcess(kernel32.GetCurrentProcess(), 0)
     os._exit(0)
 
