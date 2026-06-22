@@ -503,8 +503,9 @@ def find_similar(
     from Imervue.image.perceptual_hash import find_similar as _find
     on_progress = None
     if progress is not None:
-        def on_progress(done: int, total: int) -> None:
+        def report_progress(done: int, total: int) -> None:
             progress.report(done, total=total, message=f"hashed {done}/{total}")
+        on_progress = report_progress
     groups = _find(sorted(paths), int(threshold), on_progress=on_progress)
     return {
         "folder": str(base),
