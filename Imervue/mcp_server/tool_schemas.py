@@ -27,6 +27,7 @@ _INT: dict[str, Any] = {"type": "integer"}
 _NUM: dict[str, Any] = {"type": "number"}
 _BOOL: dict[str, Any] = {"type": "boolean"}
 _STR_OR_NULL: dict[str, Any] = {"type": ["string", "null"]}
+_NUM_OR_NULL: dict[str, Any] = {"type": ["number", "null"]}
 
 
 def _obj(properties: dict[str, Any], required: list[str]) -> dict[str, Any]:
@@ -104,6 +105,44 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
                 "error": _STR,
             },
             ["path"],
+        ),
+    },
+    "extract_gps": {
+        "annotations": _read_only("Extract GPS"),
+        "output_schema": _obj(
+            {
+                "path": _STR,
+                "has_gps": _BOOL,
+                "latitude": _NUM_OR_NULL,
+                "longitude": _NUM_OR_NULL,
+            },
+            ["path", "has_gps", "latitude", "longitude"],
+        ),
+    },
+    "dominant_colors": {
+        "annotations": _read_only("Dominant colors"),
+        "output_schema": _obj(
+            {
+                "path": _STR,
+                "color_count": _INT,
+                "colors": _arr(_obj(
+                    {"rgb": _INT_ARRAY, "hex": _STR, "pixel_count": _INT},
+                    ["rgb", "hex", "pixel_count"],
+                )),
+            },
+            ["path", "color_count", "colors"],
+        ),
+    },
+    "error_level_analysis": {
+        "annotations": _read_only("Error level analysis"),
+        "output_schema": _obj(
+            {
+                "path": _STR,
+                "width": _INT,
+                "height": _INT,
+                "data_uri": _STR,
+            },
+            ["path", "width", "height", "data_uri"],
         ),
     },
     "read_xmp_tags": {

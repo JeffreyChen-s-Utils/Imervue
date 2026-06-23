@@ -178,7 +178,8 @@ def test_reverse_geocode_conforms_to_schema(server):
 @pytest.mark.parametrize("name", [
     "read_image_metadata", "read_xmp_tags", "sharpness_score",
     "image_statistics", "quality_metrics", "read_histogram",
-    "ocr_text", "image_thumbnail",
+    "ocr_text", "image_thumbnail", "extract_gps", "dominant_colors",
+    "error_level_analysis",
 ])
 def test_image_tool_structured_content_conforms(server, sample_png, name):
     response = server.handle_message(_request(

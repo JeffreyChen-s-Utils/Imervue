@@ -539,6 +539,100 @@ def collection_stats(folder: str, *, recursive: bool = False) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# extract_gps
+# ---------------------------------------------------------------------------
+
+
+def extract_gps(path: str) -> dict[str, Any]:
+    """Read GPS latitude/longitude from an image's EXIF (offline).
+
+    Returns ``has_gps`` plus signed decimal ``latitude`` / ``longitude``
+    (positive = N/E), or nulls when the image carries no GPS record. Chain it
+    into ``reverse_geocode`` to turn the coordinates into a place name.
+    """
+    from Imervue.image.gps import extract_gps as _extract
+    img_path = _validated_file(path)
+    coords = _extract(img_path)
+    if coords is None:
+        return {
+            "path": str(img_path), "has_gps": False,
+            "latitude": None, "longitude": None,
+        }
+    lat, lon = coords
+    return {
+        "path": str(img_path), "has_gps": True,
+        "latitude": lat, "longitude": lon,
+    }
+
+
+# ---------------------------------------------------------------------------
+# dominant_colors
+# ---------------------------------------------------------------------------
+
+
+def _color_entry(entry: Any) -> dict[str, Any]:
+    r, g, b = entry.color
+    return {
+        "rgb": [r, g, b],
+        "hex": f"#{r:02x}{g:02x}{b:02x}",
+        "pixel_count": entry.pixel_count,
+    }
+
+
+def dominant_colors(path: str, n_colors: int = 8) -> dict[str, Any]:
+    """Return the image's dominant colour palette (median-cut), dominant first.
+
+    Each entry carries its ``rgb`` triplet, a ``hex`` string and the
+    ``pixel_count`` of its bucket. ``n_colors`` is clamped to the palette
+    extractor's supported range.
+    """
+    from Imervue.paint.palette_extract import (
+        PALETTE_MAX,
+        PALETTE_MIN,
+        extract_palette,
+    )
+    img_path = _validated_file(path)
+    count = max(PALETTE_MIN, min(PALETTE_MAX, int(n_colors)))
+    palette = extract_palette(_load_rgba_array(img_path), n_colors=count)
+    colors = [_color_entry(entry) for entry in palette]
+    return {"path": str(img_path), "color_count": len(colors), "colors": colors}
+
+
+# ---------------------------------------------------------------------------
+# error_level_analysis
+# ---------------------------------------------------------------------------
+
+
+def error_level_analysis(
+    path: str, quality: int = 90, scale: int = 15,
+) -> dict[str, Any]:
+    """Return a JPEG-recompression Error-Level-Analysis map as a PNG data URI.
+
+    Regions edited after the last save compress differently and light up
+    against the background — a quick tamper / authenticity check. ``quality``
+    (1-100) and ``scale`` (amplification) are clamped by the analyser.
+    """
+    import base64
+    import io
+
+    from PIL import Image
+
+    from Imervue.image.ela import error_level_analysis as _ela
+    img_path = _validated_file(path)
+    ela_rgba = _ela(_load_rgba_array(img_path), int(quality), int(scale))
+    height, width = int(ela_rgba.shape[0]), int(ela_rgba.shape[1])
+    buffer = io.BytesIO()
+    Image.fromarray(ela_rgba, mode="RGBA").save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return {
+        "path": str(img_path),
+        "width": width,
+        "height": height,
+        "data_uri": f"data:image/png;base64,{encoded}",
+    }
+
+
+# ---------------------------------------------------------------------------
 # apply_watermark
 # ---------------------------------------------------------------------------
 
@@ -912,6 +1006,59 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": read_xmp_tags,
+    },
+    {
+        "name": "extract_gps",
+        "description": (
+            "Read GPS latitude/longitude from an image's EXIF. Returns has_gps "
+            "and signed decimal coordinates (null when absent); chain into "
+            "reverse_geocode for a place name."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": extract_gps,
+    },
+    {
+        "name": "dominant_colors",
+        "description": (
+            "Extract the dominant colour palette (median-cut), dominant first. "
+            "Each colour carries rgb, hex and pixel_count."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "n_colors": {
+                    "type": "integer", "minimum": 1, "maximum": 64, "default": 8,
+                },
+            },
+            "required": ["path"],
+        },
+        "handler": dominant_colors,
+    },
+    {
+        "name": "error_level_analysis",
+        "description": (
+            "Return a JPEG-recompression Error-Level-Analysis map as a PNG data "
+            "URI — regions edited after the last save light up against the rest."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "quality": {
+                    "type": "integer", "minimum": 1, "maximum": 100, "default": 90,
+                },
+                "scale": {
+                    "type": "integer", "minimum": 1, "maximum": 100, "default": 15,
+                },
+            },
+            "required": ["path"],
+        },
+        "handler": error_level_analysis,
     },
     {
         "name": "convert_format",
