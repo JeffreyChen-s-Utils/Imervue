@@ -39,7 +39,7 @@ def test_lut_clamps_out_of_range_params():
 
 
 def test_lut_high_threshold_keeps_low_tones():
-    lut = solarize_lut(threshold=1.0, mix=1.0)  # cutoff = 255
+    lut = solarize_lut(threshold=1.0, mix=1.0)  # cutoff at the top of the range
     assert lut[128] == 128       # below cutoff: unchanged
     assert lut[255] == 0         # at cutoff: inverted
 

@@ -55,7 +55,7 @@ def apply_glow(
     _validate(arr)
     amount = float(min(1.0, max(0.0, amount)))
     threshold = float(min(1.0, max(0.0, threshold)))
-    if amount == 0.0:
+    if not amount:  # clamped to [0, 1]; only an exact zero is a no-op
         return arr.copy()
     base = arr[..., :_RGB_CHANNELS].astype(np.float32) / _MAX
     blurred = np.stack(

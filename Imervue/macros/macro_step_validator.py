@@ -76,6 +76,28 @@ def deduplicate_consecutive(steps: Sequence[MacroStep]) -> list[MacroStep]:
     return out
 
 
+def _tag_ops_by_tag(steps: Sequence[MacroStep]) -> dict[str, list[tuple[int, str]]]:
+    """Group ``(index, action)`` of every add/remove-tag step by its tag name."""
+    by_tag: dict[str, list[tuple[int, str]]] = {}
+    for index, step in enumerate(steps):
+        if step.action not in (_ADD_TAG, _REMOVE_TAG):
+            continue
+        tag = step.kwargs.get(_TAG_KEY) if isinstance(step.kwargs, dict) else None
+        if isinstance(tag, str):
+            by_tag.setdefault(tag, []).append((index, step.action))
+    return by_tag
+
+
+def _cancelling_pairs(ops: list[tuple[int, str]]) -> list[tuple[int, int]]:
+    """Return adjacent add->remove index pairs within one tag's op sequence."""
+    return [
+        (first_index, second_index)
+        for (first_index, first_op), (second_index, second_op)
+        in zip(ops, ops[1:], strict=False)
+        if first_op == _ADD_TAG and second_op == _REMOVE_TAG
+    ]
+
+
 def find_redundant_tag_pairs(steps: Sequence[MacroStep]) -> list[tuple[int, int]]:
     """Return ``(add_index, remove_index)`` pairs that cancel out.
 
@@ -83,17 +105,7 @@ def find_redundant_tag_pairs(steps: Sequence[MacroStep]) -> list[tuple[int, int]
     followed by a ``remove_tag`` of the same tag is a net no-op. Returned sorted
     by add index.
     """
-    by_tag: dict[str, list[tuple[int, str]]] = {}
-    for index, step in enumerate(steps):
-        if step.action in (_ADD_TAG, _REMOVE_TAG):
-            tag = step.kwargs.get(_TAG_KEY) if isinstance(step.kwargs, dict) else None
-            if isinstance(tag, str):
-                by_tag.setdefault(tag, []).append((index, step.action))
     pairs: list[tuple[int, int]] = []
-    for ops in by_tag.values():
-        for (first_index, first_op), (second_index, second_op) in zip(
-            ops, ops[1:], strict=False,
-        ):
-            if first_op == _ADD_TAG and second_op == _REMOVE_TAG:
-                pairs.append((first_index, second_index))
+    for ops in _tag_ops_by_tag(steps).values():
+        pairs.extend(_cancelling_pairs(ops))
     return sorted(pairs)

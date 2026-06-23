@@ -21,4 +21,4 @@ def test_dialog_has_perceptual_checkbox_default_off(qapp):
 
 def test_open_guard_no_images_is_noop():
     viewer = SimpleNamespace(model=SimpleNamespace(images=[]), current_index=-1)
-    open_gradient_map_dialog(viewer)
+    open_gradient_map_dialog(viewer)  # NOSONAR

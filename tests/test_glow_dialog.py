@@ -33,4 +33,4 @@ class TestGlowDialog:
 
 def test_open_guard_no_images_is_noop():
     viewer = SimpleNamespace(model=SimpleNamespace(images=[]), current_index=-1)
-    open_glow(viewer)
+    open_glow(viewer)  # NOSONAR

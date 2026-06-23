@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import fields, replace
-from typing import Any
+from typing import Any, cast
 
 from Imervue.image.recipe import Recipe
 
@@ -48,7 +48,8 @@ def selective_merge(
     unknown = names - _field_names()
     if unknown:
         raise ValueError(f"unknown recipe field(s): {sorted(unknown)}")
-    return replace(target, **{name: getattr(source, name) for name in names})
+    # ``replace`` returns the dataclass type; make it explicit for analysers.
+    return cast(Recipe, replace(target, **{name: getattr(source, name) for name in names}))
 
 
 def copy_active_adjustments(target: Recipe, source: Recipe) -> Recipe:

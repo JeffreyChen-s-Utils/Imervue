@@ -32,4 +32,4 @@ class TestSolarizeDialog:
 def test_open_guard_no_images_is_noop():
     # No current image → returns without constructing a dialog or raising.
     viewer = SimpleNamespace(model=SimpleNamespace(images=[]), current_index=-1)
-    open_solarize(viewer)
+    open_solarize(viewer)  # NOSONAR

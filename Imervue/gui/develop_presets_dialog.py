@@ -29,6 +29,8 @@ from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_
 
 logger = logging.getLogger("Imervue.gui.develop_presets_dialog")
 
+_DIALOG_TITLE = "Develop Presets"
+
 
 class DevelopPresetsDialog(QDialog):
     """Save / apply / rename / delete named develop presets."""
@@ -37,7 +39,7 @@ class DevelopPresetsDialog(QDialog):
         super().__init__(parent)
         self._viewer = viewer
         self._store = DevelopPresetStore(user_setting_dict)
-        self.setWindowTitle("Develop Presets")
+        self.setWindowTitle(_DIALOG_TITLE)
         self.resize(360, 420)
         self._list = QListWidget(self)
         layout = QVBoxLayout(self)
@@ -139,7 +141,7 @@ class DevelopPresetsDialog(QDialog):
         count = apply_recipe_to_paths(recipe, self._target_paths(), recipe_store)
         self._reload_current()
         QMessageBox.information(
-            self, "Develop Presets", f"Applied to {count} image(s).")
+            self, _DIALOG_TITLE, f"Applied to {count} image(s).")
 
     def _merge_selection(self) -> None:
         recipe = self._selected_recipe()
@@ -148,7 +150,7 @@ class DevelopPresetsDialog(QDialog):
         count = merge_recipe_into_paths(recipe, self._target_paths(), recipe_store)
         self._reload_current()
         QMessageBox.information(
-            self, "Develop Presets", f"Merged adjustments into {count} image(s).")
+            self, _DIALOG_TITLE, f"Merged adjustments into {count} image(s).")
 
     def _selected_recipe(self) -> Recipe | None:
         name = self._selected_name()

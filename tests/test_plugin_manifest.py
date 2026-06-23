@@ -33,7 +33,8 @@ def test_parse_version_drops_pre_release_suffix():
 def test_parse_version_unparseable_is_empty():
     assert parse_version("") == ()
     assert parse_version("abc") == ()
-    assert parse_version(None) == ()  # NOSONAR: negative test of the non-str guard
+    # Negative test of the non-str guard.
+    assert parse_version(None) == ()  # NOSONAR
 
 
 # ---------------------------------------------------------------------------

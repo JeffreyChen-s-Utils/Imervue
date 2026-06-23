@@ -68,7 +68,8 @@ def test_summarize_unknown_label_counts_as_none():
 
 
 def test_summarize_handles_non_list_favourites():
-    stats = _summarize(["a"], {}, None, {}, {})  # NOSONAR: negative test of the non-list guard
+    # Negative test of the non-list guard.
+    stats = _summarize(["a"], {}, None, {}, {})  # NOSONAR
     assert stats["favorites"] == 0
 
 

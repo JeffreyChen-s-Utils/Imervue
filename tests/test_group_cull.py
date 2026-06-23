@@ -112,7 +112,7 @@ def test_score_paths_errors_score_lowest():
         return 0.5
 
     scores = score_paths(["ok", "bad"], scorer)
-    assert scores["ok"] == 0.5
+    assert scores["ok"] == pytest.approx(0.5)
     assert scores["bad"] == float("-inf")
 
 

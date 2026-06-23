@@ -23,7 +23,8 @@ def test_extract_placeholders():
 
 
 def test_extract_placeholders_none_text():
-    assert extract_placeholders(None) == set()  # NOSONAR: negative test of the non-str guard
+    # Negative test of the non-str guard.
+    assert extract_placeholders(None) == set()  # NOSONAR
     assert extract_placeholders("plain") == set()
 
 
