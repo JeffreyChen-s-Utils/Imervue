@@ -193,7 +193,7 @@ python -m Imervue /path/to/folder
 - **書籤** — 最多 5000 個路徑
 - **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）
 - **顏色標籤** — other XMP-aware photo managers 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
-- **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕
+- **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
 - **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫
 - **Tags & Albums** 含多標籤 AND / OR 過濾
 - **智慧相簿** — 儲存規則式查詢並一鍵重新套用；過濾條件涵蓋副檔名、解析度與 **長寬比**、**檔案大小**、評等 **下限 / 上限**、顏色、挑片、標籤（含 **排除**）、**相機 / 鏡頭**、**檔名 regex / glob** 以及 **檔案年齡**，並可 **匯出 / 匯入** 成可攜的 JSON 檔
@@ -227,7 +227,7 @@ python -m Imervue /path/to/folder
 
 - **EXIF 側欄** 含可折疊群組 + 內嵌 0-5 星評等列
 - **EXIF 編輯器** 對話框
-- **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**
+- **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**，以及 **受控詞彙展開**（輸入葉節點關鍵字會自動套用其祖先＋同義詞，詞彙為可編輯的階層結構）
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
 - **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度（JPEG）
@@ -269,6 +269,14 @@ python -m Imervue /path/to/folder
 - **套用 .cube LUT** — 載入任何 Adobe 3D LUT（最高 64³），trilinear 插值，混合強度滑桿
 - **分離色調** — 旗標式陰影 / 高光色相 + 飽和度，含平衡樞紐
 
+### 創意效果
+
+- **曝色反轉（Solarize）** — 暗房式色調反轉（閾值 + 混合）
+- **柔光暈染（Diffuse Glow / Orton）** — 柔焦高光暈染（強度 / 半徑 / 高光閾值）
+- **漸層映射（Gradient Map）** — 亮度 → 調色盤，可選 **感知（OkLCH）** 插值模式，讓飽和漸層的中點維持鮮豔而不變灰
+- **有序抖動（Ordered Dither）** — Bayer 矩陣量化至 N 階（保留極值）
+- **顯影預設** — 儲存 recipe 後可整份 **套用**，或只 **合併** 其有設定的調整到其他影像（保留各影像自身的裁切等）
+
 ### 局部調整
 
 - **筆刷 / 放射 / 線性漸層遮罩**，含每遮罩的曝光 / 亮度 / 對比 / 飽和度 / 白平衡偏移 + 羽化滑桿
@@ -298,7 +306,7 @@ python -m Imervue /path/to/folder
 - **批次操作** — 重命名、移動 / 複製、旋轉選取影像
 - **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
 - **網頁圖庫 HTML** — 自包含資料夾含 `index.html` + JPEG 縮圖 + 內嵌燈箱
-- **幻燈片 MP4** — H.264 影片，FPS / 每張保留秒數 / 淡入淡出可設（`imageio-ffmpeg`）
+- **幻燈片 MP4** — H.264 影片，FPS / 每張保留秒數 / 淡入淡出 / 溶接 / 滑入 / 抹除轉場可設（`imageio-ffmpeg`）
 - **列印佈局** — 多頁 PDF（A4/A3/Letter/Legal）含網格 / 邊距 / 裝訂溝 / 裁切標記
 - **軟校樣** — 載入 ICC profile、模擬目標色域、用洋紅色標示超出色域的像素
 - **虛擬副本** — 每影像命名的 recipe 快照；可切換不同風格而不弄丟主本
@@ -715,7 +723,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精選工具（共 22 個 — 完整清單見文件）。每個工具都會宣告 JSON
+精選工具（共 28 個 — 完整清單見文件）。每個工具都會宣告 JSON
 `outputSchema` 與唯讀 / 破壞性的 `annotations`，並把結果以
 `structuredContent` 回傳；長時間執行的工具會串流 `notifications/progress`。
 
@@ -730,6 +738,10 @@ python -m Imervue.mcp_server
 | `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
 | `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉 |
 | `collection_stats` | 資料夾的評等 / 收藏 / 色標 / 挑片彙整 |
+| `search_images` | 以 smart-album 查詢 DSL 篩選資料夾（路徑 / EXIF / 大小 / 尺寸） |
+| `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / 占比） |
+| `error_level_analysis` | JPEG 重壓的竄改鑑識圖（PNG data URI） |
+| `solarize_image` / `glow_image` | 套用曝色反轉或柔光暈染並存檔 |
 | `reverse_geocode` / `extract_video_frame` | 離線 GPS → 城市、把影片一格解碼成靜態影像 |
 | `puppet_from_png` / `puppet_inspect` | 從 PNG 建構 `.puppet` rig；開啟一個並回傳清單 |
 

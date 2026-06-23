@@ -2111,7 +2111,10 @@ flag-based three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
 ``Culling`` applies the filter via a dialog and also exposes a **Delete all
-rejects** button that permanently removes the flagged files from disk.
+rejects** button that permanently removes the flagged files from disk. The same
+dialog's **Pick sharpest per similar group** button groups the folder's
+near-duplicates by perceptual hash, scores each by sharpness, and marks the
+sharpest frame of every group as a pick and the rest as rejects.
 
 Staging Tray
 ^^^^^^^^^^^^
@@ -2417,6 +2420,18 @@ Available Tools
    * - ``reverse_geocode`` / ``extract_video_frame``
      - Resolve GPS coordinates to the nearest city offline, and decode
        one frame of a video to a still image.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Read EXIF GPS latitude/longitude (chains into ``reverse_geocode``);
+       extract a median-cut colour palette (rgb / hex / pixel share).
+   * - ``error_level_analysis``
+     - JPEG-recompression Error-Level-Analysis tamper map as a PNG data
+       URI (edited regions light up against the background).
+   * - ``search_images``
+     - Filter a folder with the smart-album query DSL (extension / name /
+       size / dimensions / aspect / EXIF camera / lens / place).
+   * - ``solarize_image`` / ``glow_image``
+     - Apply a solarize tone reversal or a diffuse-glow / Orton bloom and
+       save the result.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
