@@ -145,6 +145,18 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["path", "width", "height", "data_uri"],
         ),
     },
+    "search_images": {
+        "annotations": _read_only("Search images"),
+        "output_schema": _obj(
+            {
+                "folder": _STR,
+                "query": _STR,
+                "count": _INT,
+                "matches": _STR_ARRAY,
+            },
+            ["folder", "query", "count", "matches"],
+        ),
+    },
     "read_xmp_tags": {
         "annotations": _read_only("Read XMP tags"),
         "output_schema": _obj(

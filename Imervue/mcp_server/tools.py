@@ -633,6 +633,51 @@ def error_level_analysis(
 
 
 # ---------------------------------------------------------------------------
+# search_images
+# ---------------------------------------------------------------------------
+
+# Query fields whose data lives in the running app (user settings / library
+# database), so they cannot be evaluated by the standalone MCP server.
+_STATEFUL_QUERY_FIELDS = (
+    "min_rating", "max_rating", "favorites_only", "color_labels",
+    "tags_any", "tags_all", "tags_exclude", "cull",
+)
+
+
+def search_images(
+    folder: str, query: str, *, recursive: bool = False,
+) -> dict[str, Any]:
+    """Search a folder with the smart-album query DSL and return matching paths.
+
+    Parses *query* (e.g. ``ext:png name:sunset width:>1920 aspect:>1.5``) into
+    smart-album rules and filters the folder's images. Path, name, size,
+    dimension and EXIF (camera / lens / place) filters work fully; rating /
+    favourite / colour-label / tag / cull filters depend on the running app's
+    settings and library database, so a query using those fields is rejected.
+    """
+    from Imervue.library.search_query import parse_query
+    from Imervue.library.smart_album import apply_to_paths
+    base = _validated_dir(folder)
+    rules = parse_query(query)
+    unsupported = sorted(field for field in _STATEFUL_QUERY_FIELDS if rules.get(field))
+    if unsupported:
+        raise ValueError(
+            "query uses fields unavailable in the standalone server: "
+            + ", ".join(unsupported),
+        )
+    iterator = base.rglob("*") if recursive else base.iterdir()
+    paths = sorted(
+        str(p) for p in iterator
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+    )
+    matches = apply_to_paths(paths, rules)
+    return {
+        "folder": str(base), "query": query,
+        "count": len(matches), "matches": matches,
+    }
+
+
+# ---------------------------------------------------------------------------
 # apply_watermark
 # ---------------------------------------------------------------------------
 
@@ -1133,6 +1178,26 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": error_level_analysis,
+    },
+    {
+        "name": "search_images",
+        "description": (
+            "Search a folder with the smart-album query DSL (e.g. "
+            "'ext:png name:sunset width:>1920 aspect:>1.5 size:>2mb camera:canon'). "
+            "Returns matching paths. Path/name/size/dimension/EXIF filters work; "
+            "rating/favourite/colour/tag/cull fields are rejected as they need "
+            "the running app's database."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder": {"type": "string", "description": "Directory to search."},
+                "query": {"type": "string", "description": "Smart-album query DSL."},
+                "recursive": {"type": "boolean", "default": False},
+            },
+            "required": ["folder", "query"],
+        },
+        "handler": search_images,
     },
     {
         "name": "convert_format",

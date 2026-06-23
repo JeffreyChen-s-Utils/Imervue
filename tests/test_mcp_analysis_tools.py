@@ -13,6 +13,7 @@ from Imervue.mcp_server.tools import (
     dominant_colors,
     error_level_analysis,
     extract_gps,
+    search_images,
 )
 
 
@@ -115,3 +116,46 @@ def test_error_level_analysis_clamps_quality(tmp_path):
     # Out-of-range quality is clamped inside the analyser, not raised.
     result = error_level_analysis(path, quality=9000, scale=1)
     assert result["data_uri"].startswith("data:image/png;base64,")
+
+
+# ---------------------------------------------------------------------------
+# search_images
+# ---------------------------------------------------------------------------
+
+
+def _png(tmp_path, name, size=(16, 16)):
+    arr = np.zeros((size[1], size[0], 3), dtype=np.uint8)
+    path = tmp_path / name
+    Image.fromarray(arr).save(path, format="PNG")
+    return path
+
+
+def test_search_images_by_extension(tmp_path):
+    _png(tmp_path, "a.png")
+    Image.fromarray(np.zeros((8, 8, 3), dtype=np.uint8)).save(
+        tmp_path / "b.jpg", format="JPEG")
+    result = search_images(str(tmp_path), "ext:png")
+    assert result["count"] == 1
+    assert result["matches"][0].endswith("a.png")
+
+
+def test_search_images_by_name_and_dimension(tmp_path):
+    _png(tmp_path, "sunset_wide.png", size=(120, 20))
+    _png(tmp_path, "narrow.png", size=(20, 20))
+    by_name = search_images(str(tmp_path), "name:sunset")
+    assert [m.split("\\")[-1].split("/")[-1] for m in by_name["matches"]] == [
+        "sunset_wide.png"]
+    by_dim = search_images(str(tmp_path), "width:>100")
+    assert by_dim["count"] == 1
+
+
+@pytest.mark.parametrize("query", ["rating:>=3", "tag:trip"])
+def test_search_images_rejects_stateful_fields(tmp_path, query):
+    _png(tmp_path, "x.png")
+    with pytest.raises(ValueError, match="unavailable in the standalone server"):
+        search_images(str(tmp_path), query)
+
+
+def test_search_images_missing_folder_raises(tmp_path):
+    with pytest.raises((FileNotFoundError, ValueError, NotADirectoryError)):
+        search_images(str(tmp_path / "nope"), "ext:png")
