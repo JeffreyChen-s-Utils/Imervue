@@ -107,6 +107,17 @@ class KeywordEditorDialog(QDialog):
         layout.addWidget(suggest_btn)
         self._suggestions_row = QHBoxLayout()
         layout.addLayout(self._suggestions_row)
+
+        vocab_row = QHBoxLayout()
+        expand_btn = QPushButton(
+            lang.get("keyword_editor_expand", "Expand via vocabulary"))
+        expand_btn.clicked.connect(self._expand_via_vocabulary)
+        edit_vocab_btn = QPushButton(
+            lang.get("keyword_editor_edit_vocab", "Edit vocabulary…"))
+        edit_vocab_btn.clicked.connect(self._edit_vocabulary)
+        vocab_row.addWidget(expand_btn)
+        vocab_row.addWidget(edit_vocab_btn)
+        layout.addLayout(vocab_row)
         layout.addWidget(QLabel(lang.get("keyword_editor_description", "Description:")))
         layout.addWidget(self._desc_edit)
         layout.addLayout(self._build_buttons(lang))
@@ -149,6 +160,18 @@ class KeywordEditorDialog(QDialog):
             current.append(tag)
             self._keywords_edit.setText(keywords_to_text(current))
         self._refresh_suggestions()
+
+    def _expand_via_vocabulary(self) -> None:
+        from Imervue.library.keyword_vocabulary_store import (
+            expand_with_stored_vocabulary,
+        )
+        current = parse_keywords(self._keywords_edit.text())
+        expanded = expand_with_stored_vocabulary(current)
+        self._keywords_edit.setText(keywords_to_text(expanded))
+
+    def _edit_vocabulary(self) -> None:  # pragma: no cover - opens modal dialog
+        from Imervue.gui.keyword_vocabulary_dialog import KeywordVocabularyDialog
+        KeywordVocabularyDialog(self).exec()
 
     def _save(self) -> None:
         data = XmpData(

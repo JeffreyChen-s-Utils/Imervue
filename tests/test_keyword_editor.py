@@ -107,6 +107,23 @@ def _suggestion_labels(dialog):
     return labels
 
 
+def test_dialog_expand_via_vocabulary(qapp, tmp_path):
+    from Imervue.gui.keyword_editor_dialog import KeywordEditorDialog
+    from Imervue.library.keyword_vocabulary_store import set_vocabulary_text
+
+    set_vocabulary_text("animal\n\tdog\n\t\tLabrador {lab}\n")
+    path = tmp_path / "photo.jpg"
+    path.write_bytes(b"\x00")
+    dialog = KeywordEditorDialog(object(), str(path))
+    try:
+        dialog._keywords_edit.setText("Labrador")
+        dialog._expand_via_vocabulary()
+        assert parse_keywords(dialog._keywords_edit.text()) == [
+            "Labrador", "lab", "dog", "animal"]
+    finally:
+        dialog.deleteLater()
+
+
 def test_dialog_suggests_and_adds_related_tag(qapp, tmp_path):
     from Imervue.gui.keyword_editor_dialog import KeywordEditorDialog
     # Co-occurrence in the index: beach & sunset together on two images.
