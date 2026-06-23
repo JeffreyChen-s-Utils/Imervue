@@ -7,6 +7,7 @@ from Imervue.image.develop_presets import (
     PRESETS_KEY,
     DevelopPresetStore,
     apply_recipe_to_paths,
+    merge_recipe_into_paths,
 )
 from Imervue.image.recipe import Recipe
 
@@ -19,6 +20,19 @@ class _FakeStore:
 
     def set_for_path(self, path, recipe):
         self.calls.append((path, recipe))
+
+
+class _DictStore:
+    """Read/write recipe store backed by a dict (for merge tests)."""
+
+    def __init__(self, initial=None):
+        self._data: dict[str, Recipe] = dict(initial or {})
+
+    def get_for_path(self, path):
+        return self._data.get(path)
+
+    def set_for_path(self, path, recipe):
+        self._data[path] = recipe
 
 
 class TestDevelopPresetStore:
@@ -103,3 +117,29 @@ class TestApplyRecipeToPaths:
         store = _FakeStore()
         assert apply_recipe_to_paths(Recipe(), [], store) == 0
         assert store.calls == []
+
+
+class TestMergeRecipeIntoPaths:
+    def test_overlays_active_fields_keeping_existing(self):
+        store = _DictStore({"a": Recipe(crop=(0, 0, 10, 10), contrast=0.2)})
+        n = merge_recipe_into_paths(Recipe(exposure=1.0), ["a"], store)
+        assert n == 1
+        merged = store.get_for_path("a")
+        assert merged.exposure == pytest.approx(1.0)   # from the preset
+        assert merged.crop == (0, 0, 10, 10)           # kept from existing
+        assert merged.contrast == pytest.approx(0.2)   # kept from existing
+
+    def test_applies_to_path_without_existing_recipe(self):
+        store = _DictStore()
+        merge_recipe_into_paths(Recipe(exposure=0.5), ["new"], store)
+        assert store.get_for_path("new").exposure == pytest.approx(0.5)
+
+    def test_preset_does_not_clobber_with_its_defaults(self):
+        # The preset leaves brightness at default -> existing brightness survives.
+        store = _DictStore({"a": Recipe(brightness=0.4)})
+        merge_recipe_into_paths(Recipe(exposure=1.0), ["a"], store)
+        assert store.get_for_path("a").brightness == pytest.approx(0.4)
+
+    def test_empty_paths_merges_nothing(self):
+        store = _DictStore()
+        assert merge_recipe_into_paths(Recipe(exposure=1.0), [], store) == 0

@@ -18,7 +18,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.image.develop_presets import DevelopPresetStore, apply_recipe_to_paths
+from Imervue.image.develop_presets import (
+    DevelopPresetStore,
+    apply_recipe_to_paths,
+    merge_recipe_into_paths,
+)
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
@@ -50,6 +54,7 @@ class DevelopPresetsDialog(QDialog):
         apply_row = QHBoxLayout()
         self._add_button(apply_row, "Apply to Current", self._apply_current)
         self._add_button(apply_row, "Apply to Selection", self._apply_selection)
+        self._add_button(apply_row, "Merge Adjustments", self._merge_selection)
         outer.addLayout(manage)
         outer.addLayout(apply_row)
         return outer
@@ -135,6 +140,15 @@ class DevelopPresetsDialog(QDialog):
         self._reload_current()
         QMessageBox.information(
             self, "Develop Presets", f"Applied to {count} image(s).")
+
+    def _merge_selection(self) -> None:
+        recipe = self._selected_recipe()
+        if recipe is None:
+            return
+        count = merge_recipe_into_paths(recipe, self._target_paths(), recipe_store)
+        self._reload_current()
+        QMessageBox.information(
+            self, "Develop Presets", f"Merged adjustments into {count} image(s).")
 
     def _selected_recipe(self) -> Recipe | None:
         name = self._selected_name()

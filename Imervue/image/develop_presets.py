@@ -82,3 +82,21 @@ def apply_recipe_to_paths(recipe: Recipe, paths: Iterable[str], store) -> int:
         store.set_for_path(str(path), Recipe.from_dict(payload))
         count += 1
     return count
+
+
+def merge_recipe_into_paths(recipe: Recipe, paths: Iterable[str], store) -> int:
+    """Overlay only *recipe*'s active fields onto each path's existing recipe.
+
+    Unlike :func:`apply_recipe_to_paths` (which replaces the whole recipe), this
+    keeps each image's own settings (crop, and any field the preset leaves at
+    its default) and copies over just the fields the preset sets away from
+    default, via :func:`recipe_diff.copy_active_adjustments`. Returns the count.
+    """
+    from Imervue.image.recipe_diff import copy_active_adjustments
+    count = 0
+    for path in paths:
+        key = str(path)
+        existing = store.get_for_path(key) or Recipe()
+        store.set_for_path(key, copy_active_adjustments(existing, recipe))
+        count += 1
+    return count
