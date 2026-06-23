@@ -997,6 +997,45 @@ def solarize_image(
 
 
 # ---------------------------------------------------------------------------
+# glow_image
+# ---------------------------------------------------------------------------
+
+
+def glow_image(
+    source: str,
+    destination: str,
+    *,
+    amount: float = 0.5,
+    radius: int = 15,
+    threshold: float = 0.0,
+) -> dict[str, Any]:
+    """Apply a diffuse-glow / Orton bloom to ``source`` and save to ``destination``.
+
+    ``amount`` (0-1) is the glow opacity, ``radius`` the blur radius and
+    ``threshold`` (0-1) the brightness above which regions bloom (0 = whole
+    frame). The destination format follows its suffix. Returns the destination
+    path, the resulting dimensions and size in bytes.
+    """
+    from PIL import Image
+
+    from Imervue.image.glow import apply_glow as _glow
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    result = _glow(
+        _load_rgba_array(src), float(amount), int(radius), float(threshold),
+    )
+    height, width = int(result.shape[0]), int(result.shape[1])
+    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": width,
+        "height": height,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1476,6 +1515,33 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": solarize_image,
+    },
+    {
+        "name": "glow_image",
+        "description": (
+            "Apply a diffuse-glow / Orton soft-focus bloom and save the result. "
+            "amount (0-1) is the glow opacity, radius the blur size, threshold "
+            "(0-1) the brightness above which regions bloom (0 = whole frame). "
+            "The destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "amount": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+                "radius": {
+                    "type": "integer", "minimum": 1, "maximum": 200, "default": 15,
+                },
+                "threshold": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": glow_image,
     },
 ]
 
