@@ -28,8 +28,8 @@ from Imervue.library.keyword_vocabulary_store import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 _HELP = (
-    "One keyword per line; indent with tabs for hierarchy; put synonyms in "
-    "braces, e.g. Labrador {lab} {lab retriever}."
+    "One keyword per line; indent with tabs to nest; put synonyms after the "
+    "name in curly braces."
 )
 
 
