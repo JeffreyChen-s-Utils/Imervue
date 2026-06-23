@@ -9,7 +9,7 @@ Pure ranking — no I/O, no Qt; the caller supplies the score map.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 _MISSING_SCORE = float("-inf")
@@ -58,3 +58,38 @@ def plan_group_cull(
     picks = [decision.keep for decision in decisions]
     rejects = [path for decision in decisions for path in decision.reject]
     return picks, rejects
+
+
+def score_paths(
+    paths: Sequence[str], scorer: Callable[[str], float],
+) -> dict[str, float]:
+    """Map *scorer* over *paths*; a path whose scorer raises scores lowest.
+
+    ``OSError`` / ``ValueError`` from *scorer* (e.g. an unreadable or corrupt
+    image) map to the lowest score so the path is never picked as the keeper.
+    """
+    scores: dict[str, float] = {}
+    for path in paths:
+        try:
+            scores[path] = float(scorer(path))
+        except (OSError, ValueError):
+            scores[path] = _MISSING_SCORE
+    return scores
+
+
+def plan_cull_for_paths(
+    paths: Sequence[str],
+    *,
+    group_fn: Callable[[list[str]], list[list[str]]],
+    score_fn: Callable[[str], float],
+) -> tuple[list[str], list[str]]:
+    """Group *paths*, score the grouped paths, and return the cull plan.
+
+    *group_fn* partitions the paths into similarity / burst groups; *score_fn*
+    rates a single path (higher = keep). Pure given those injected callables —
+    the heavy grouping / decoding lives in the caller's functions.
+    """
+    groups = group_fn(list(paths))
+    flat = sorted({path for group in groups for path in group})
+    scores = score_paths(flat, score_fn)
+    return plan_group_cull(groups, scores)
