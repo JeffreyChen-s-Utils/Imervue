@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.paint.gradient_perceptual import (
+from Imervue.image.gradient_perceptual import (
     mix_colors_perceptual,
     oklab_to_oklch,
     oklab_to_rgb,
