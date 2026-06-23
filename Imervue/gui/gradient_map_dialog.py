@@ -85,6 +85,11 @@ class GradientMapDialog(QDialog):
             lambda v: self._intensity_label.setText(f"{v}%"),
         )
 
+        self._perceptual = QCheckBox(
+            lang.get("gradient_map_perceptual", "Perceptual (OkLCH)"),
+        )
+        self._perceptual.setChecked(opts.perceptual)
+
         layout = QVBoxLayout(self)
         layout.addLayout(self._build_form(lang))
         layout.addStretch(1)
@@ -108,6 +113,7 @@ class GradientMapDialog(QDialog):
             lang.get("gradient_map_intensity", "Intensity:"),
             _slider_with_label(self._intensity, self._intensity_label),
         )
+        form.addRow(self._perceptual)
         return form
 
     def _build_button_box(self) -> QDialogButtonBox:
@@ -131,6 +137,7 @@ class GradientMapDialog(QDialog):
         recipe.extra["gradient_map"] = GradientMapOptions(
             enabled=self._enable.isChecked(),
             intensity=self._intensity.value() / _INTENSITY_STEPS,
+            perceptual=self._perceptual.isChecked(),
             stops=list(stops),
         ).to_dict()
         recipe_store.set_for_path(self._path, recipe)
