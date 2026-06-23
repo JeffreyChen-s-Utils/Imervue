@@ -194,7 +194,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Marque-pages** — jusqu'à 5000 chemins
 - **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`)
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
-- **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés
+- **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
 - **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus
 - **Tags & Albums** avec filtrage multi-étiquettes AND/OR
 - **Albums intelligents** — enregistrer des requêtes basées sur des règles et les réappliquer en un clic ; les filtres couvrent l'extension, la résolution et le **rapport d'aspect**, la **taille de fichier**, la note **plancher / plafond**, la couleur, le tri, les étiquettes (y compris l'**exclusion**), le **boîtier / objectif**, le **regex / glob de nom de fichier** et l'**ancienneté du fichier**, plus l'**export / import** vers un fichier JSON portable
@@ -228,7 +228,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 - **Barre latérale EXIF** avec groupes repliables + bande de notation 0-5 étoiles intégrée
 - Boîte de dialogue **Éditeur EXIF**
-- **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes
+- **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
 - **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur pour l'interopérabilité avec d'autres gestionnaires photo XMP (XML sécurisé via `defusedxml`)
 - **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes via piexif (JPEG)
@@ -270,6 +270,14 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Appliquer un LUT .cube** — charger n'importe quel LUT 3D Adobe (jusqu'à 64³), interpolation trilinéaire, mélange via curseur d'intensité
 - **Split Toning** — teinte + saturation par drapeau pour les ombres / hautes lumières avec pivot d'équilibre
 
+### Effets créatifs
+
+- **Solarize** — inversion tonale de style chambre noire (seuil + mix)
+- **Diffuse Glow / Orton** — bloom de hautes lumières en flou diffus (intensité / rayon / seuil de hautes lumières)
+- **Gradient Map** — luminance → palette, avec un mode d'interpolation perceptuel (OkLCH) optionnel qui conserve la vivacité des dégradés saturés jusqu'au point médian au lieu de les griser
+- **Ordered Dither** — quantification par matrice de Bayer sur N niveaux (extrêmes préservés)
+- **Préréglages de développement** — enregistrer une recette, puis l'appliquer en bloc ou n'en fusionner que les ajustements actifs sur d'autres images (en conservant le recadrage propre à chaque image, etc.)
+
 ### Ajustements locaux
 
 - **Masques par pinceau / radial / dégradé linéaire** avec deltas d'exposition / luminosité / contraste / saturation / balance des blancs par masque + curseur de feather
@@ -299,7 +307,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées
 - **PDF planche-contact** — grille multi-pages avec légendes (A4 / A3 / Letter / Legal)
 - **Galerie web HTML** — dossier autonome avec `index.html` + miniatures JPEG + lightbox en ligne
-- **Diaporama MP4** — vidéo H.264 avec FPS / temps d'affichage par image / transitions par fondu configurables (`imageio-ffmpeg`)
+- **Diaporama MP4** — vidéo H.264 avec FPS / temps d'affichage par image / transitions par fondu / dissolution / glissement / balayage configurables (`imageio-ffmpeg`)
 - **Mise en page d'impression** — feuille PDF multi-pages avec taille de page / orientation / grille / marges / gouttière / traits de coupe configurables
 - **Soft Proof** — charger un profil ICC, simuler le gamut de destination, mettre en évidence les pixels hors gamut en magenta
 - **Copies virtuelles** — instantanés de recette nommés par image ; basculer entre les styles sans perdre le master
@@ -719,7 +727,7 @@ python -m Imervue.mcp_server
 
 ### Outils
 
-Outils sélectionnés (22 au total — liste complète dans la documentation). Chaque outil
+Outils sélectionnés (28 au total — liste complète dans la documentation). Chaque outil
 annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
 son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
 `notifications/progress`.
@@ -735,6 +743,10 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `build_collage` | Composer des images en une mosaïque en grille (avec progression) |
 | `crop_image` / `resize_image` / `rotate_image` | Recadrage en pixels, redimensionnement préservant le rapport, rotation / retournement sans perte |
 | `collection_stats` | Synthèse note / favori / étiquette de couleur / tri d'un dossier |
+| `search_images` | Filtrer un dossier avec le DSL de requête des albums intelligents (chemin / EXIF / taille / dimensions) |
+| `extract_gps` / `dominant_colors` | Lire les coordonnées GPS EXIF (chaîné dans `reverse_geocode`) ; palette de couleurs median-cut (rgb / hex / part) |
+| `error_level_analysis` | Carte de falsification par recompression JPEG sous forme de data URI PNG |
+| `solarize_image` / `glow_image` | Appliquer une inversion tonale de solarisation ou un bloom diffuse-glow et enregistrer |
 | `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
 | `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
 

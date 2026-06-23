@@ -194,7 +194,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Favoritos** — até 5000 caminhos
 - **Avaliações** — 0 a 5 estrelas (`1`–`5`) + coração de favorito (`0`)
 - **Etiquetas de cor** — bandeiras vermelho/amarelo/verde/azul/roxo (`F1`–`F5`)
-- **Triagem (Culling)** — flag de 3 estados compatível com outros gerenciadores de fotos XMP-aware (`P` = manter, `Shift+X` = rejeitar, `U` = remover marca); filtrar por estado; exclusão em lote de rejeitados
+- **Triagem (Culling)** — flag de 3 estados compatível com outros gerenciadores de fotos XMP-aware (`P` = manter, `Shift+X` = rejeitar, `U` = remover marca); filtrar por estado; exclusão em lote de rejeitados; a triagem automática escolhe o quadro mais nítido de cada grupo de quase duplicatas e rejeita os demais
 - **Tags hierárquicas** — caminhos em árvore como `animal/cat/british`; descendentes são correspondidos automaticamente
 - **Tags & Albums** com filtragem multi-tag AND/OR
 - **Smart Albums** — salva consultas baseadas em regras e reaplica com um clique; os filtros abrangem extensão, resolução e **proporção**, **tamanho de arquivo**, **piso / teto** de avaliação, cor, triagem, tags (incl. **exclusão**), **câmera / lente**, **regex / glob de nome de arquivo** e **idade do arquivo**, além de **exportar / importar** para um arquivo JSON portável
@@ -228,7 +228,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Painel lateral EXIF** com grupos colapsáveis + faixa inline de 0-5 estrelas
 - Diálogo de **editor EXIF**
-- **Editor de palavras-chave** — título / autor / descrição / palavras-chave, com **sugestões de tags relacionadas** extraídas da coocorrência de tags
+- **Editor de palavras-chave** — título / autor / descrição / palavras-chave, com **sugestões de tags relacionadas** extraídas da coocorrência de tags e expansão de vocabulário controlado (uma palavra-chave folha aplica automaticamente seus ancestrais + sinônimos de um vocabulário hierárquico editável)
 - Diálogo de **informações da imagem** (dimensões / tamanho / datas)
 - **Sidecars XMP** (`.xmp` companheiros) — avaliação / título / descrição / palavras-chave / etiqueta de cor com round-trip para interoperabilidade com outros gerenciadores XMP-aware (XML seguro via `defusedxml`)
 - **Editor de Geotag GPS** — lê GPS EXIF existente, escreve nova lat/lon via piexif (JPEG)
@@ -270,6 +270,14 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 - **Aplicar LUT .cube** — carrega qualquer LUT 3D Adobe (até 64³), interpola trilinearmente, mistura com slider de intensidade
 - **Split Toning** — matiz + saturação de sombras / realces baseado em flags com pivô de balanço
 
+### Efeitos criativos
+
+- **Solarize** — inversão tonal estilo câmara escura (limiar + mix)
+- **Diffuse Glow / Orton** — brilho suave de realces com foco difuso (quantidade / raio / limiar de realces)
+- **Gradient Map** — luminância → paleta, com um modo opcional de interpolação perceptual (OkLCH) que mantém gradientes saturados vívidos ao longo do ponto médio em vez de acinzentá-los
+- **Ordered Dither** — quantização por matriz de Bayer em N níveis (extremos preservados)
+- **Presets de revelação** — salve uma recipe e depois aplique-a por inteiro ou mescle apenas seus ajustes ativos sobre outras imagens (preservando o recorte próprio de cada imagem, etc.)
+
 ### Ajustes locais
 
 - **Máscaras de pincel / radial / gradiente linear** com deltas por máscara de exposição / brilho / contraste / saturação / balanço de branco + slider de feathering
@@ -299,7 +307,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 - **Operações em lote** — renomear, mover/copiar, rotacionar imagens selecionadas
 - **PDF de Contact Sheet** — grade em várias páginas com legendas (A4 / A3 / Letter / Legal)
 - **HTML de Galeria Web** — pasta autocontida com `index.html` + miniaturas JPEG + lightbox embutido
-- **Slideshow MP4** — vídeo H.264 com FPS / tempo por imagem / transições de fade configuráveis (`imageio-ffmpeg`)
+- **Slideshow MP4** — vídeo H.264 com FPS / tempo por imagem / transições de fade / dissolução / slide / wipe configuráveis (`imageio-ffmpeg`)
 - **Print Layout** — folha PDF em várias páginas com tamanho / orientação / grade / margens / sangria / marcas de corte configuráveis
 - **Soft Proof** — carrega um perfil ICC, simula o gamut de destino, destaca pixels fora do gamut em magenta
 - **Cópias Virtuais** — snapshots de recipe nomeados por imagem; alterne entre visuais sem perder o mestre
@@ -740,7 +748,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (22 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (28 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -756,6 +764,10 @@ longa duração transmitem `notifications/progress`.
 | `build_collage` | Compor imagens em uma montagem em grade (com progresso) |
 | `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas |
 | `collection_stats` | Resumo de avaliação / favorito / etiqueta de cor / triagem da pasta |
+| `search_images` | Filtra uma pasta com a DSL de consulta dos smart albums (caminho / EXIF / tamanho / dimensões) |
+| `extract_gps` / `dominant_colors` | Lê coordenadas GPS do EXIF (encadeia com `reverse_geocode`); paleta de cores por median-cut (rgb / hex / proporção) |
+| `error_level_analysis` | Mapa de adulteração por recompressão JPEG como um PNG data URI |
+| `solarize_image` / `glow_image` | Aplica uma inversão tonal solarize ou um brilho difuso e salva |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
 

@@ -194,7 +194,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Bookmarks** — Bis zu 5000 Pfade
 - **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`)
 - **Color Labels** — Flag-basiert rot/gelb/grün/blau/lila (`F1`–`F5`)
-- **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects
+- **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
 - **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht
 - **Tags & Albums** mit Multi-Tag-AND/OR-Filterung
 - **Smart Albums** — Regelbasierte Abfragen speichern und mit einem Klick erneut anwenden; die Filter umfassen Endung, Auflösung & **Seitenverhältnis**, **Dateigröße**, Rating-**Unter- / Obergrenze**, Farbe, Cull, Tags (inkl. **Ausschluss**), **Kamera / Objektiv**, **Dateiname-Regex / -Glob** und **Dateialter**, plus **Export / Import** in eine portable JSON-Datei
@@ -228,7 +228,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **EXIF-Sidebar** mit aufklappbaren Gruppen + Inline-0-5-Sterne-Strip
 - **EXIF-Editor**-Dialog
-- **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz
+- **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)
 - **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`)
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon via piexif schreiben (JPEG)
@@ -270,6 +270,14 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 - **Apply .cube LUT** — beliebige Adobe-3D-LUT laden (bis 64³), trilinear interpolieren, mit Intensitäts-Slider mischen
 - **Split Toning** — Flag-basiert Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
 
+### Kreative Effekte
+
+- **Solarize** — Tonumkehr im Dunkelkammer-Stil (Schwellwert + Mix)
+- **Diffuse Glow / Orton** — Weichzeichner-Highlight-Bloom (Stärke / Radius / Highlight-Schwellwert)
+- **Gradient Map** — Luminanz → Palette, mit optionalem perzeptuellem (OkLCH) Interpolationsmodus, der gesättigte Verläufe durch den Mittelpunkt hindurch lebendig hält, statt sie auszugrauen
+- **Ordered Dither** — Bayer-Matrix-Quantisierung auf N Stufen (Extreme bleiben erhalten)
+- **Develop-Presets** — ein Rezept speichern und es dann komplett anwenden oder nur seine aktiven Anpassungen auf andere Bilder mergen (wobei der eigene Crop usw. jedes Bildes erhalten bleibt)
+
 ### Lokale Anpassungen
 
 - **Brush- / Radial- / Linear-Gradient-Masken** mit pro-Maske Belichtungs- / Helligkeits- / Kontrast- / Sättigungs- / Weißabgleich-Deltas + Feder-Slider
@@ -299,7 +307,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 - **Batch-Operationen** — Umbenennen, Verschieben/Kopieren, ausgewählte Bilder drehen
 - **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — eigenständiger Ordner mit `index.html` + JPEG-Thumbs + Inline-Lightbox
-- **Slideshow MP4** — H.264-Video mit konfigurierbarer FPS / Halten pro Bild / Fade-Übergängen (`imageio-ffmpeg`)
+- **Slideshow MP4** — H.264-Video mit konfigurierbarer FPS / Halten pro Bild / Fade- / Dissolve- / Slide- / Wipe-Übergängen (`imageio-ffmpeg`)
 - **Print Layout** — mehrseitige PDF mit konfigurierbarer Seitengröße / Orientierung / Grid / Margins / Gutter / Schnittmarken
 - **Soft Proof** — ICC-Profil laden, Zielfarbraum simulieren, Out-of-Gamut-Pixel in Magenta markieren
 - **Virtual Copies** — benannte Rezept-Snapshots pro Bild; zwischen Looks wechseln, ohne das Master zu verlieren
@@ -766,7 +774,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (22 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (28 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -782,6 +790,10 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
 | `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip |
 | `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
+| `search_images` | Einen Ordner mit der Smart-Album-Query-DSL filtern (Pfad / EXIF / Größe / Maße) |
+| `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |
+| `error_level_analysis` | JPEG-Rekompressions-Manipulationskarte als PNG-Data-URI |
+| `solarize_image` / `glow_image` | Eine Solarisations-Tonumkehr oder einen Diffuse-Glow-Bloom anwenden und speichern |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
 
