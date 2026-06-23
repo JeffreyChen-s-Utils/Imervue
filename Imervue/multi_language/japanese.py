@@ -2167,4 +2167,9 @@ japanese_word_dict = {
     "vocab_help": "1行に1キーワード。タブでインデントして階層化し、同義語は名前の後の波括弧内に記述します。",
     "keyword_editor_expand": "語彙で展開",
     "keyword_editor_edit_vocab": "語彙を編集…",
+    "macro_cleanup": "検証 / クリーンアップ",
+    "macro_cleanup_dedup": "{n} 個の重複ステップを削除しました。",
+    "macro_cleanup_unknown": "不明なアクション（再生時にスキップ）: {a}",
+    "macro_cleanup_redundant": "{n} 組のタグ追加/削除が相殺します。",
+    "macro_cleanup_clean": "マクロはすでにクリーンです。",
 }

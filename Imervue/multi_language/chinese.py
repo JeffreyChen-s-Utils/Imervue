@@ -2154,4 +2154,9 @@ chinese_word_dict = {
     "vocab_help": "每行一个关键字；用 Tab 缩进建立层级；同义词放在名称后的大括号内。",
     "keyword_editor_expand": "依词汇展开",
     "keyword_editor_edit_vocab": "编辑词汇…",
+    "macro_cleanup": "验证／清理",
+    "macro_cleanup_dedup": "已移除 {n} 个重复步骤。",
+    "macro_cleanup_unknown": "未知动作（重放时跳过）：{a}",
+    "macro_cleanup_redundant": "{n} 组标签增删互相抵消。",
+    "macro_cleanup_clean": "宏已是干净的。",
 }

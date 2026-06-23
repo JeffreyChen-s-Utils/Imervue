@@ -2165,4 +2165,9 @@ korean_word_dict = {
     "vocab_help": "한 줄에 키워드 하나; 탭으로 들여써 계층 구성; 동의어는 이름 뒤 중괄호 안에 입력.",
     "keyword_editor_expand": "어휘로 확장",
     "keyword_editor_edit_vocab": "어휘 편집…",
+    "macro_cleanup": "검증 / 정리",
+    "macro_cleanup_dedup": "중복 단계 {n}개를 제거했습니다.",
+    "macro_cleanup_unknown": "알 수 없는 동작(재생 시 건너뜀): {a}",
+    "macro_cleanup_redundant": "태그 추가/제거 {n}쌍이 상쇄됩니다.",
+    "macro_cleanup_clean": "매크로가 이미 깨끗합니다.",
 }

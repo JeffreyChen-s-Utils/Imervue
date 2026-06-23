@@ -2188,4 +2188,9 @@ english_word_dict = {
     "vocab_help": "One keyword per line; indent with tabs to nest; put synonyms after the name in curly braces.",
     "keyword_editor_expand": "Expand via vocabulary",
     "keyword_editor_edit_vocab": "Edit vocabulary…",
+    "macro_cleanup": "Validate / Clean up",
+    "macro_cleanup_dedup": "Removed {n} duplicate step(s).",
+    "macro_cleanup_unknown": "Unknown actions (skipped on replay): {a}",
+    "macro_cleanup_redundant": "{n} add/remove-tag pair(s) cancel out.",
+    "macro_cleanup_clean": "Macro is already clean.",
 }

@@ -2153,4 +2153,9 @@ traditional_chinese_word_dict = {
     "vocab_help": "每行一個關鍵字；用 Tab 縮排建立階層；同義詞放在名稱後的大括號內。",
     "keyword_editor_expand": "依詞彙展開",
     "keyword_editor_edit_vocab": "編輯詞彙…",
+    "macro_cleanup": "驗證／清理",
+    "macro_cleanup_dedup": "已移除 {n} 個重複步驟。",
+    "macro_cleanup_unknown": "未知動作（重播時略過）：{a}",
+    "macro_cleanup_redundant": "{n} 組標籤增刪互相抵消。",
+    "macro_cleanup_clean": "巨集已是乾淨的。",
 }
