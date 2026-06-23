@@ -39,6 +39,7 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.viewport_math import visible_image_rect
 from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
 from Imervue.image.histogram import compute_clipping, compute_histogram
@@ -182,14 +183,17 @@ def place_hud_box(sx: int, sy: int, size: int, box_w: int, box_h: int,
 def visible_pixel_bounds(zoom: float, off_x: float, off_y: float,
                          view_w: int, view_h: int,
                          img_w: int, img_h: int) -> tuple[int, int, int, int]:
-    """Clamp the visible image-pixel rectangle to the image bounds."""
-    left = -off_x / zoom
-    top = -off_y / zoom
-    right = left + view_w / zoom
-    bottom = top + view_h / zoom
+    """Clamp the visible image-pixel rectangle to the image bounds.
+
+    Delegates the screen->image geometry to ``viewport_math.visible_image_rect``
+    and applies this HUD's integer-pixel-coverage convention (floor the top-left,
+    round the bottom-right up by one).
+    """
+    x0, y0, x1, y1 = visible_image_rect(
+        (view_w, view_h), (img_w, img_h), (off_x, off_y), zoom)
     return (
-        max(0, int(left)), max(0, int(top)),
-        min(img_w, int(right) + 1), min(img_h, int(bottom) + 1),
+        max(0, int(x0)), max(0, int(y0)),
+        min(img_w, int(x1) + 1), min(img_h, int(y1) + 1),
     )
 
 
