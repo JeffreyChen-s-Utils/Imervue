@@ -962,6 +962,41 @@ def rotate_image(source: str, destination: str, operation: str) -> dict[str, Any
 
 
 # ---------------------------------------------------------------------------
+# solarize_image
+# ---------------------------------------------------------------------------
+
+
+def solarize_image(
+    source: str,
+    destination: str,
+    *,
+    threshold: float = 0.5,
+    mix: float = 1.0,
+) -> dict[str, Any]:
+    """Apply a solarize tone reversal to ``source`` and save it to ``destination``.
+
+    Tones at or above ``threshold`` (0-1) are inverted; ``mix`` (0-1) blends the
+    result toward the original. The destination format follows its suffix.
+    Returns the destination path, the resulting dimensions and size in bytes.
+    """
+    from PIL import Image
+
+    from Imervue.image.solarize import apply_solarize as _solarize
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    result = _solarize(_load_rgba_array(src), float(threshold), float(mix))
+    height, width = int(result.shape[0]), int(result.shape[1])
+    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": width,
+        "height": height,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1418,6 +1453,29 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination", "operation"],
         },
         "handler": rotate_image,
+    },
+    {
+        "name": "solarize_image",
+        "description": (
+            "Apply a solarize tone reversal and save the result. Tones at or "
+            "above threshold (0-1) are inverted; mix (0-1) blends back toward "
+            "the original. The destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "threshold": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+                "mix": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": solarize_image,
     },
 ]
 

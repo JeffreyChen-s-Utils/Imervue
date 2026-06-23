@@ -411,4 +411,17 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
              "width", "height", "size_bytes"],
         ),
     },
+    "solarize_image": {
+        "annotations": _writes_file("Solarize image"),
+        "output_schema": _obj(
+            {
+                "source": _STR,
+                "destination": _STR,
+                "width": _INT,
+                "height": _INT,
+                "size_bytes": _INT,
+            },
+            ["source", "destination", "width", "height", "size_bytes"],
+        ),
+    },
 }
