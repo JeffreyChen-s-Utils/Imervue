@@ -216,6 +216,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_posterize(ui))
     _add_action(sub, lang, "solarize_title", "Solarize",
                 lambda: _open_solarize(ui))
+    _add_action(sub, lang, "glow_title", "Diffuse Glow",
+                lambda: _open_glow(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -440,6 +442,11 @@ def _open_posterize(ui: ImervueMainWindow) -> None:
 def _open_solarize(ui: ImervueMainWindow) -> None:
     from Imervue.gui.solarize_dialog import open_solarize
     open_solarize(ui.viewer)
+
+
+def _open_glow(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.glow_dialog import open_glow
+    open_glow(ui.viewer)
 
 
 def _open_levels(ui: ImervueMainWindow) -> None:
