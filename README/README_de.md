@@ -276,6 +276,17 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 - **Diffuse Glow / Orton** — Weichzeichner-Highlight-Bloom (Stärke / Radius / Highlight-Schwellwert)
 - **Gradient Map** — Luminanz → Palette, mit optionalem perzeptuellem (OkLCH) Interpolationsmodus, der gesättigte Verläufe durch den Mittelpunkt hindurch lebendig hält, statt sie auszugrauen
 - **Ordered Dither** — Bayer-Matrix-Quantisierung auf N Stufen (Extreme bleiben erhalten)
+- **Graduated Density (Graduated Density)** — linearer ND-Verlauf nach Winkel / Härte / Offset mit optionaler Tönung, für Himmel und Vordergründe
+- **Tone Equalizer (Tone Equalizer)** — unabhängige Belichtung pro Luminanzzone (Schatten bis Lichter) über eine geglättete Maske
+- **Detail Equalizer (Detail Equalizer)** — Kontrast pro Frequenzband neu gewichten (feine Textur vs. grober Kontrast), über einen einzelnen Clarity-Slider hinaus
+- **Filmic Tone Map (Filmic Tone Map)** — reines Reinhard- / Hable-Highlight-Rolloff mit gepivotetem Kontrast und Sättigungswiederherstellung, für kontrastreiche Einzelbelichtungen
+- **Velvia (Velvia)** — luminanzgewichteter Sättigungsboost, der gedämpfte Farben verstärkt und dabei die Schatten schont
+- **Film Negative (Film Negative)** — ein gescanntes Farbnegativ invertieren, die orangefarbene Filmbasis herausrechnen, mit Ausgabe-Gamma
+- **Defringe (Defringe)** — violette / grüne Farbsaum-Säume chromatischer Aberration an kontrastreichen Kanten entsättigen
+- **Emboss (Emboss)** — Relief aus gerichtetem Licht über einem Luminanz-Höhenfeld
+- **Polar Coordinates (Polar Coordinates)** — ein Bild in eine Scheibe wickeln oder es abrollen (Tiny-Planet / Polar-Inversion)
+- **Kaleidoscope (Kaleidoscope)** — einen Winkel-Keil in n-fache Symmetrie spiegeln
+- **Frosted Glass (Frosted Glass)** — deterministisches seed-basiertes lokales Pixel-Streuen
 - **Develop-Presets** — ein Rezept speichern und es dann komplett anwenden oder nur seine aktiven Anpassungen auf andere Bilder mergen (wobei der eigene Crop usw. jedes Bildes erhalten bleibt)
 
 ### Lokale Anpassungen
@@ -716,7 +727,7 @@ Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größ
 - **Views** — Timeline · Calendar · Map
 - **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Soft Proof
+- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
 - **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
 - **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
 
@@ -774,7 +785,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (28 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (36 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -794,6 +805,9 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |
 | `error_level_analysis` | JPEG-Rekompressions-Manipulationskarte als PNG-Data-URI |
 | `solarize_image` / `glow_image` | Eine Solarisations-Tonumkehr oder einen Diffuse-Glow-Bloom anwenden und speichern |
+| `velvia_image` / `emboss_image` / `defringe_image` | Velvia-Sättigungsboost, Relief aus gerichtetem Licht, Entsättigung von Kanten-Farbsäumen |
+| `film_negative_image` / `graduated_density_image` | Ein gescanntes Negativ invertieren; einen linearen Graduated-Density-Verlauf anwenden |
+| `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Filmic-Highlight-Rolloff; Belichtung pro Zone; Kontrast pro Band |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
 

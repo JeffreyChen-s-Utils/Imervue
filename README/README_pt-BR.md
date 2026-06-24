@@ -276,6 +276,17 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 - **Diffuse Glow / Orton** — brilho suave de realces com foco difuso (quantidade / raio / limiar de realces)
 - **Gradient Map** — luminância → paleta, com um modo opcional de interpolação perceptual (OkLCH) que mantém gradientes saturados vívidos ao longo do ponto médio em vez de acinzentá-los
 - **Ordered Dither** — quantização por matriz de Bayer em N níveis (extremos preservados)
+- **Graduated Density** — gradiente ND linear por ângulo/dureza/deslocamento com tonalização opcional, para céus e primeiros planos
+- **Tone Equalizer** — exposição independente por zona de luminância (das sombras aos realces) sobre uma máscara suavizada
+- **Detail Equalizer** — repondera o contraste por banda de frequência (textura fina vs contraste grosseiro), além de um único slider de clareza
+- **Filmic Tone Map** — rolloff puro de realces Reinhard/Hable com contraste pivotado e restauração de saturação, para capturas únicas de alto contraste
+- **Velvia** — boost de saturação ponderado por luminância que intensifica cores apagadas poupando as sombras
+- **Film Negative** — inverte um negativo colorido escaneado, removendo a base laranja do filme, com gamma de saída
+- **Defringe** — dessatura franjas de aberração cromática roxas/verdes em bordas de alto contraste
+- **Emboss** — relevo de luz direcional a partir de um campo de altura de luminância
+- **Polar Coordinates** — envolve um quadro em um disco ou o desenrola (planeta-miniatura / inversão polar)
+- **Kaleidoscope** — espelha uma cunha angular em simetria de ordem n
+- **Frosted Glass** — espalhamento local de pixels determinístico com semente fixa
 - **Presets de revelação** — salve uma recipe e depois aplique-a por inteiro ou mescle apenas seus ajustes ativos sobre outras imagens (preservando o recorte próprio de cada imagem, etc.)
 
 ### Ajustes locais
@@ -690,7 +701,7 @@ Tudo o que você configura — posição, drivers, opacidade, click-through, tam
 - **Views** — Timeline · Calendar · Map
 - **Workflow** — Triagem · Staging Tray · Cópias Virtuais · Gerenciador de arquivos de painel duplo · Macros
 - **Export** — PDF de Contact Sheet · Galeria Web · Vídeo Slideshow (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Curva tonal · LUT .cube · Split Toning · Máscaras de ajuste local · Soft Proof
+- **Develop (Non-Destructive)** — Curva tonal · LUT .cube · Split Toning · Máscaras de ajuste local · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
 - **Retouch & Transform** — AI Image Upscale · Redução de ruído / Sharpening · Pincel de cura · Carimbo de clonagem · Detecção facial · Céu / Plano de fundo · Recorte / Endireitar · Auto-endireitar · Correção de lente
 - **Multi-Image** — Composição HDR · Costura de Panorama · Focus Stacking
 
@@ -748,7 +759,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (28 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (36 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -768,6 +779,9 @@ longa duração transmitem `notifications/progress`.
 | `extract_gps` / `dominant_colors` | Lê coordenadas GPS do EXIF (encadeia com `reverse_geocode`); paleta de cores por median-cut (rgb / hex / proporção) |
 | `error_level_analysis` | Mapa de adulteração por recompressão JPEG como um PNG data URI |
 | `solarize_image` / `glow_image` | Aplica uma inversão tonal solarize ou um brilho difuso e salva |
+| `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturação Velvia, emboss de luz direcional, dessaturação de franjas de borda |
+| `film_negative_image` / `graduated_density_image` | Inverte um negativo escaneado; aplica um gradiente de densidade graduada linear |
+| `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Rolloff filmic de realces; exposição por zona; contraste por banda |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
 
