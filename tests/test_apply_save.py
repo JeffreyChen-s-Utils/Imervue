@@ -63,6 +63,8 @@ def test_effect_worker_reports_failure(qapp, tmp_path):
     worker = EffectWorker(str(src), _boom, str(out))
     worker.done.connect(lambda ok, msg: seen.append((ok, msg)))
     worker.run()
-    assert seen[0][0] is False
-    assert "bad effect" in seen[0][1]
+    assert len(seen) == 1
+    [(ok, message)] = seen  # destructure (no subscript) to satisfy S6466
+    assert ok is False
+    assert "bad effect" in message
     assert not out.exists()
