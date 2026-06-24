@@ -276,6 +276,17 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 - **Diffuse Glow / Orton** — soft-focus highlight bloom (amount / radius / highlight-threshold)
 - **Gradient Map** — luminance → palette, with an optional **perceptual (OkLCH)** interpolation mode that keeps saturated gradients vivid through the midpoint instead of greying
 - **Ordered Dither** — Bayer-matrix quantisation to N levels (extremes preserved)
+- **Graduated Density** — linear ND gradient by angle / hardness / offset with an optional tint, for skies and foregrounds
+- **Tone Equalizer** — independent exposure per luminance zone (shadows → highlights) over a smoothed mask
+- **Detail Equalizer** — re-weight contrast per frequency band (fine texture vs coarse contrast), beyond a single clarity slider
+- **Filmic Tone Map** — pure Reinhard / Hable highlight rolloff with pivoted contrast + saturation restore, for high-contrast single exposures
+- **Velvia** — luminance-weighted saturation boost that intensifies muted colours while sparing the shadows
+- **Film Negative** — invert a scanned colour negative, dividing out the orange film base, with output gamma
+- **Defringe** — desaturate purple / green chromatic-aberration fringes on high-contrast edges
+- **Emboss** — directional-light relief from a luminance height field
+- **Polar Coordinates** — wrap a frame into a disc or unroll it (tiny-planet / polar inversion)
+- **Kaleidoscope** — mirror one angular wedge into n-fold symmetry
+- **Frosted Glass** — deterministic seeded local pixel scatter
 - **Develop Presets** — save a recipe, then **apply** it wholesale or **merge** just its active adjustments onto other images (keeping each image's own crop, etc.)
 
 ### Local adjustments
@@ -744,7 +755,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 - **Views** — Timeline · Calendar · Map
 - **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Soft Proof
+- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
 - **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
 - **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
 
@@ -802,7 +813,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Selected tools (28 in total — full list in the docs). Every tool advertises a
+Selected tools (36 in total — full list in the docs). Every tool advertises a
 JSON `outputSchema` and read-only / destructive `annotations`, returns its
 result as `structuredContent`, and long-running tools stream
 `notifications/progress`.
@@ -822,6 +833,9 @@ result as `structuredContent`, and long-running tools stream
 | `extract_gps` / `dominant_colors` | Read EXIF GPS coordinates (chains into `reverse_geocode`); median-cut colour palette (rgb / hex / share) |
 | `error_level_analysis` | JPEG-recompression tamper map as a PNG data URI |
 | `solarize_image` / `glow_image` | Apply a solarize tone reversal or diffuse-glow bloom and save |
+| `velvia_image` / `emboss_image` / `defringe_image` | Velvia saturation boost, directional-light emboss, edge-fringe desaturation |
+| `film_negative_image` / `graduated_density_image` | Invert a scanned negative; apply a linear graduated-density gradient |
+| `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Filmic highlight rolloff; per-zone exposure; per-band contrast |
 | `reverse_geocode` / `extract_video_frame` | Offline GPS → city, decode one video frame to a still |
 | `puppet_from_png` / `puppet_inspect` | Build a `.puppet` rig from a PNG; open one and return its inventory |
 

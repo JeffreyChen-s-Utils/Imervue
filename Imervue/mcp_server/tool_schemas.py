@@ -72,6 +72,20 @@ def _writes_file(title: str) -> dict[str, Any]:
     }
 
 
+def _image_save_output() -> dict[str, Any]:
+    """Output schema shared by every "apply one effect and save a copy" tool."""
+    return _obj(
+        {
+            "source": _STR,
+            "destination": _STR,
+            "width": _INT,
+            "height": _INT,
+            "size_bytes": _INT,
+        },
+        ["source", "destination", "width", "height", "size_bytes"],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Per-tool metadata. Keys MUST match the tool names in
 # ``Imervue.mcp_server.tools._TOOL_DEFINITIONS`` (enforced by tests).
@@ -448,5 +462,37 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             },
             ["source", "destination", "width", "height", "size_bytes"],
         ),
+    },
+    "velvia_image": {
+        "annotations": _writes_file("Velvia boost"),
+        "output_schema": _image_save_output(),
+    },
+    "emboss_image": {
+        "annotations": _writes_file("Emboss image"),
+        "output_schema": _image_save_output(),
+    },
+    "film_negative_image": {
+        "annotations": _writes_file("Film negative"),
+        "output_schema": _image_save_output(),
+    },
+    "defringe_image": {
+        "annotations": _writes_file("Defringe image"),
+        "output_schema": _image_save_output(),
+    },
+    "graduated_density_image": {
+        "annotations": _writes_file("Graduated density"),
+        "output_schema": _image_save_output(),
+    },
+    "filmic_tonemap_image": {
+        "annotations": _writes_file("Filmic tone map"),
+        "output_schema": _image_save_output(),
+    },
+    "tone_equalizer_image": {
+        "annotations": _writes_file("Tone equalizer"),
+        "output_schema": _image_save_output(),
+    },
+    "detail_equalizer_image": {
+        "annotations": _writes_file("Detail equalizer"),
+        "output_schema": _image_save_output(),
     },
 }

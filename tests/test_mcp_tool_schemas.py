@@ -240,6 +240,31 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     assert dst.exists()
 
 
+@pytest.mark.parametrize("name, extra", [
+    ("velvia_image", {"strength": 1.5}),
+    ("emboss_image", {"depth": 2.0}),
+    ("film_negative_image", {"gamma": 1.2}),
+    ("defringe_image", {"amount": 0.8, "hue": "green"}),
+    ("graduated_density_image", {"density_stops": 1.5}),
+    ("filmic_tonemap_image", {"mode": "hable"}),
+    ("tone_equalizer_image", {"zone_gains": [0.0, 1.0, 0.0, -1.0, 0.0]}),
+    ("detail_equalizer_image", {"band_gains": [2.0, 1.0, 1.0]}),
+])
+def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
+    dst = tmp_path / f"{name}.png"
+    response = server.handle_message(_request(
+        "tools/call",
+        {"name": name,
+         "arguments": {"source": str(sample_png), "destination": str(dst), **extra}},
+    ))
+    result = response["result"]
+    assert result["isError"] is False
+    _assert_conforms(
+        result["structuredContent"], TOOL_METADATA[name]["output_schema"],
+    )
+    assert dst.exists()
+
+
 def test_apply_frame_structured_content_conforms(server, sample_png, tmp_path):
     dst = tmp_path / "framed.png"
     response = server.handle_message(_request(

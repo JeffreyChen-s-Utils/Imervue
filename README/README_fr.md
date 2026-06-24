@@ -276,6 +276,17 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Diffuse Glow / Orton** — bloom de hautes lumières en flou diffus (intensité / rayon / seuil de hautes lumières)
 - **Gradient Map** — luminance → palette, avec un mode d'interpolation perceptuel (OkLCH) optionnel qui conserve la vivacité des dégradés saturés jusqu'au point médian au lieu de les griser
 - **Ordered Dither** — quantification par matrice de Bayer sur N niveaux (extrêmes préservés)
+- **Graduated Density** — dégradé ND linéaire par angle/dureté/décalage avec teinte optionnelle, pour les ciels et les premiers plans
+- **Tone Equalizer** — exposition indépendante par zone de luminance (des ombres aux hautes lumières) sur un masque lissé
+- **Detail Equalizer** — repondération du contraste par bande de fréquence (texture fine vs contraste grossier), au-delà d'un simple curseur de clarté
+- **Filmic Tone Map** — atténuation pure des hautes lumières Reinhard/Hable avec contraste pivoté et restauration de la saturation, pour les prises uniques à fort contraste
+- **Velvia** — boost de saturation pondéré par la luminance qui intensifie les couleurs ternes tout en épargnant les ombres
+- **Film Negative** — inverser un négatif couleur numérisé en éliminant la base orange du film, avec gamma de sortie
+- **Defringe** — désaturer les franges d'aberration chromatique violettes/vertes sur les bords à fort contraste
+- **Emboss** — relief en lumière directionnelle à partir d'un champ de hauteur de luminance
+- **Polar Coordinates** — enrouler une image en disque ou la dérouler (planète miniature / inversion polaire)
+- **Kaleidoscope** — réfléchir un secteur angulaire en symétrie d'ordre n
+- **Frosted Glass** — dispersion locale de pixels déterministe à graine fixe
 - **Préréglages de développement** — enregistrer une recette, puis l'appliquer en bloc ou n'en fusionner que les ajustements actifs sur d'autres images (en conservant le recadrage propre à chaque image, etc.)
 
 ### Ajustements locaux
@@ -669,7 +680,7 @@ Tout ce que vous réglez — position, pilotes, opacité, clic traversant, taill
 - **Vues** — Timeline · Calendar · Map
 - **Workflow** — Tri · Plateau de travail · Copies virtuelles · Gestionnaire de fichiers à deux volets · Macros
 - **Export** — PDF planche-contact · Galerie web · Diaporama vidéo (MP4) · Mise en page d'impression
-- **Develop (non destructif)** — Courbe tonale · LUT .cube · Split Toning · Masques d'ajustement local · Soft Proof
+- **Develop (non destructif)** — Courbe tonale · LUT .cube · Split Toning · Masques d'ajustement local · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
 - **Retouche et transformation** — Agrandissement d'image IA · Réduction de bruit / Accentuation · Pinceau correcteur · Tampon de clonage · Détection de visages · Ciel / Arrière-plan · Recadrage / Redressement · Redressement automatique · Correction d'objectif
 - **Multi-Image** — Fusion HDR · Assemblage panoramique · Focus Stacking
 
@@ -727,7 +738,7 @@ python -m Imervue.mcp_server
 
 ### Outils
 
-Outils sélectionnés (28 au total — liste complète dans la documentation). Chaque outil
+Outils sélectionnés (36 au total — liste complète dans la documentation). Chaque outil
 annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
 son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
 `notifications/progress`.
@@ -747,6 +758,9 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `extract_gps` / `dominant_colors` | Lire les coordonnées GPS EXIF (chaîné dans `reverse_geocode`) ; palette de couleurs median-cut (rgb / hex / part) |
 | `error_level_analysis` | Carte de falsification par recompression JPEG sous forme de data URI PNG |
 | `solarize_image` / `glow_image` | Appliquer une inversion tonale de solarisation ou un bloom diffuse-glow et enregistrer |
+| `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturation Velvia, relief en lumière directionnelle, désaturation des franges de bord |
+| `film_negative_image` / `graduated_density_image` | Inverser un négatif numérisé ; appliquer un dégradé de densité gradué linéaire |
+| `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Atténuation filmic des hautes lumières ; exposition par zone ; contraste par bande |
 | `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
 | `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
 

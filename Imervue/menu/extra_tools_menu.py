@@ -206,6 +206,12 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_colormap(ui))
     _add_action(sub, lang, "distort_title", "Distort (Swirl/Pinch/Ripple)",
                 lambda: _open_distort(ui))
+    _add_action(sub, lang, "polar_title", "Polar Coordinates",
+                lambda: _open_polar(ui))
+    _add_action(sub, lang, "kaleidoscope_title", "Kaleidoscope",
+                lambda: _open_kaleidoscope(ui))
+    _add_action(sub, lang, "frosted_title", "Frosted Glass",
+                lambda: _open_frosted_glass(ui))
     _add_action(sub, lang, "pixelsort_title", "Pixel Sort",
                 lambda: _open_pixel_sort(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
@@ -218,6 +224,22 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_solarize(ui))
     _add_action(sub, lang, "glow_title", "Diffuse Glow",
                 lambda: _open_glow(ui))
+    _add_action(sub, lang, "graduated_density_title", "Graduated Density",
+                lambda: _open_graduated_density(ui))
+    _add_action(sub, lang, "velvia_title", "Velvia",
+                lambda: _open_velvia(ui))
+    _add_action(sub, lang, "emboss_title", "Emboss",
+                lambda: _open_emboss(ui))
+    _add_action(sub, lang, "defringe_title", "Defringe",
+                lambda: _open_defringe(ui))
+    _add_action(sub, lang, "film_negative_title", "Film Negative",
+                lambda: _open_film_negative(ui))
+    _add_action(sub, lang, "filmic_title", "Filmic Tone Map",
+                lambda: _open_filmic_tonemap(ui))
+    _add_action(sub, lang, "tone_eq_title", "Tone Equalizer",
+                lambda: _open_tone_equalizer(ui))
+    _add_action(sub, lang, "detail_eq_title", "Detail Equalizer",
+                lambda: _open_detail_equalizer(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -447,6 +469,61 @@ def _open_solarize(ui: ImervueMainWindow) -> None:
 def _open_glow(ui: ImervueMainWindow) -> None:
     from Imervue.gui.glow_dialog import open_glow
     open_glow(ui.viewer)
+
+
+def _open_graduated_density(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.graduated_density_dialog import open_graduated_density
+    open_graduated_density(ui.viewer)
+
+
+def _open_velvia(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.velvia_dialog import open_velvia
+    open_velvia(ui.viewer)
+
+
+def _open_emboss(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.emboss_dialog import open_emboss
+    open_emboss(ui.viewer)
+
+
+def _open_defringe(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.defringe_dialog import open_defringe
+    open_defringe(ui.viewer)
+
+
+def _open_film_negative(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.film_negative_dialog import open_film_negative
+    open_film_negative(ui.viewer)
+
+
+def _open_filmic_tonemap(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.filmic_tonemap_dialog import open_filmic_tonemap
+    open_filmic_tonemap(ui.viewer)
+
+
+def _open_tone_equalizer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.tone_equalizer_dialog import open_tone_equalizer
+    open_tone_equalizer(ui.viewer)
+
+
+def _open_detail_equalizer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.detail_equalizer_dialog import open_detail_equalizer
+    open_detail_equalizer(ui.viewer)
+
+
+def _open_polar(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.polar_dialog import open_polar
+    open_polar(ui.viewer)
+
+
+def _open_kaleidoscope(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.kaleidoscope_dialog import open_kaleidoscope
+    open_kaleidoscope(ui.viewer)
+
+
+def _open_frosted_glass(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.frosted_glass_dialog import open_frosted_glass
+    open_frosted_glass(ui.viewer)
 
 
 def _open_levels(ui: ImervueMainWindow) -> None:

@@ -276,6 +276,17 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 - **Diffuse Glow / Orton** — resplandor suave de luces con enfoque difuso (cantidad / radio / umbral de luces)
 - **Gradient Map** — luminancia → paleta, con un modo opcional de interpolación perceptual (OkLCH) que mantiene vivos los gradientes saturados a través del punto medio en lugar de agrisarlos
 - **Ordered Dither** — cuantización por matriz de Bayer a N niveles (extremos preservados)
+- **Densidad graduada (Graduated Density)** — degradado ND lineal por ángulo / dureza / desplazamiento con tinte opcional, para cielos y primeros planos
+- **Ecualizador de tono (Tone Equalizer)** — exposición independiente por zona de luminancia (de sombras a luces) sobre una máscara suavizada
+- **Ecualizador de detalle (Detail Equalizer)** — reponderar el contraste por banda de frecuencia (textura fina vs. contraste grueso), más allá de un único control de claridad
+- **Mapeo tonal fílmico (Filmic Tone Map)** — caída de luces pura Reinhard / Hable con contraste pivoteado y restauración de saturación, para exposiciones únicas de alto contraste
+- **Velvia (Velvia)** — refuerzo de saturación ponderado por luminancia que intensifica los colores apagados sin tocar las sombras
+- **Negativo de película (Film Negative)** — invierte un negativo de color escaneado, descontando la base naranja de la película, con gamma de salida
+- **Defringe (Defringe)** — desatura los flecos púrpura / verde de aberración cromática en bordes de alto contraste
+- **Relieve (Emboss)** — relieve de luz direccional a partir de un campo de altura de luminancia
+- **Coordenadas polares (Polar Coordinates)** — envuelve un fotograma en un disco o lo desenrolla (tiny-planet / inversión polar)
+- **Caleidoscopio (Kaleidoscope)** — refleja una cuña angular en simetría de n pliegues
+- **Vidrio esmerilado (Frosted Glass)** — dispersión local de píxeles determinista basada en semilla
 - **Predefinidos de revelado** — guarda una recipe y luego aplícala por completo o fusiona solo sus ajustes activos sobre otras imágenes (conservando el recorte propio de cada imagen, etc.)
 
 ### Ajustes locales
@@ -714,7 +725,7 @@ Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño
 - **Vistas** — Timeline · Calendar · Map
 - **Flujo de trabajo** — Culling · Bandeja de preparación · Copias virtuales · Gestor de archivos de doble panel · Macros
 - **Exportar** — PDF de hoja de contactos · Galería web · Vídeo de presentación (MP4) · Diseño de impresión
-- **Revelado (no destructivo)** — Curva tonal · LUT .cube · Split Toning · Máscaras de ajuste local · Soft Proof
+- **Revelado (no destructivo)** — Curva tonal · LUT .cube · Split Toning · Máscaras de ajuste local · Densidad graduada · Velvia · Relieve · Defringe · Negativo de película · Mapeo tonal fílmico · Ecualizador de tono / detalle · Polar · Caleidoscopio · Vidrio esmerilado · Soft Proof
 - **Retoque y transformación** — Escalado de imágenes por IA · Reducción de ruido / enfoque · Pincel de saneamiento · Tampón de clonar · Detección de rostros · Cielo / Fondo · Recortar / Enderezar · Auto-enderezar · Corrección de lente
 - **Multi-imagen** — Fusión HDR · Costura panorámica · Apilamiento de foco
 
@@ -772,7 +783,7 @@ python -m Imervue.mcp_server
 
 ### Herramientas
 
-Herramientas seleccionadas (28 en total — lista completa en la documentación). Cada herramienta
+Herramientas seleccionadas (36 en total — lista completa en la documentación). Cada herramienta
 anuncia un `outputSchema` JSON y `annotations` de solo lectura / destructivas, devuelve su
 resultado como `structuredContent`, y las herramientas de larga duración transmiten
 `notifications/progress`.
@@ -792,6 +803,9 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 | `extract_gps` / `dominant_colors` | Lee coordenadas GPS de EXIF (encadena con `reverse_geocode`); paleta de colores por median-cut (rgb / hex / proporción) |
 | `error_level_analysis` | Mapa de manipulación por recompresión JPEG como un PNG data URI |
 | `solarize_image` / `glow_image` | Aplica una inversión tonal solarize o un resplandor difuso y guarda |
+| `velvia_image` / `emboss_image` / `defringe_image` | Refuerzo de saturación Velvia, relieve de luz direccional, desaturación de flecos de borde |
+| `film_negative_image` / `graduated_density_image` | Invierte un negativo escaneado; aplica un degradado lineal de densidad graduada |
+| `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Caída fílmica de luces; exposición por zona; contraste por banda |
 | `reverse_geocode` / `extract_video_frame` | GPS → ciudad sin conexión, decodificar un fotograma de vídeo a imagen fija |
 | `puppet_from_png` / `puppet_inspect` | Construir un rig `.puppet` desde un PNG; abrir uno y devolver su inventario |
 
