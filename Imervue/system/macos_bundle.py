@@ -12,6 +12,7 @@ from __future__ import annotations
 BUNDLE_IDENTIFIER = "com.imervue.viewer"
 
 # Extension → Uniform Type Identifier for the formats Imervue opens.
+_RAW_UTI = "public.camera-raw-image"
 _UTI_BY_EXT: dict[str, str] = {
     ".png": "public.png",
     ".jpg": "public.jpeg",
@@ -24,12 +25,12 @@ _UTI_BY_EXT: dict[str, str] = {
     ".heic": "public.heic",
     ".heif": "public.heif",
     ".avif": "public.avif",
-    ".cr2": "public.camera-raw-image",
-    ".nef": "public.camera-raw-image",
-    ".arw": "public.camera-raw-image",
-    ".dng": "public.camera-raw-image",
-    ".raf": "public.camera-raw-image",
-    ".orf": "public.camera-raw-image",
+    ".cr2": _RAW_UTI,
+    ".nef": _RAW_UTI,
+    ".arw": _RAW_UTI,
+    ".dng": _RAW_UTI,
+    ".raf": _RAW_UTI,
+    ".orf": _RAW_UTI,
 }
 
 

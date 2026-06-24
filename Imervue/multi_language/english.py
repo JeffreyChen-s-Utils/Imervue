@@ -346,7 +346,7 @@ english_word_dict = {
     "exif_edit_user_comment": "User Comment",
     # Export dialog
     "export_title": "Export Image",
-    "export_format": "Format:",
+    "export_format": "Format:",  # NOSONAR
     "export_quality": "Quality:",
     "export_browse": "Browse...",
     "export_save": _ENGLISH_SAVE,
@@ -1668,7 +1668,7 @@ english_word_dict = {
     "pano_title": "Panorama Stitch",
     "pano_add": _ENGLISH_ADD_IMAGES,
     "pano_clear": "Clear",
-    "pano_mode": "Mode:",
+    "pano_mode": "Mode:",  # NOSONAR
     "pano_mode_panorama": "Panorama",
     "pano_mode_scans": "Scans (flat documents)",
     "pano_crop": "Crop black borders",
@@ -1700,7 +1700,7 @@ english_word_dict = {
     "local_contrast_clarity": "Clarity:",
     "local_contrast_texture": "Texture:",
     "local_contrast_apply": "Apply & Save",
-    "local_contrast_done": "Saved {path}",
+    "local_contrast_done": "Saved {path}",  # NOSONAR
     "local_contrast_failed": "Adjustment failed",
 
     # --- Image Inspector (scopes) ---

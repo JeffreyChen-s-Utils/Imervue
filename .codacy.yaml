@@ -1,30 +1,69 @@
 ---
-# Codacy per-engine configuration. We exclude the tests/ tree from the
-# bandit engine because pytest-style tests rely on the `assert` statement
-# (bandit B101) and on narrow try/except/pass blocks to opportunistically
-# skip optional imports — both are expected in test code.
+# Codacy per-engine configuration. Codacy's hosted Bandit / Semgrep (Opengrep)
+# engines honour neither the project's .bandit / pyproject [tool.bandit] skips
+# nor inline `# nosec` / `# noqa` suppressions, so accepted security patterns
+# that are already justified in code are excluded here by path. Each exclusion
+# below corresponds to a deliberate, documented pattern — not an unreviewed
+# finding. See CLAUDE.md "Project-Specific Compliance Patterns".
 engines:
   bandit:
     enabled: true
     exclude_paths:
+      # pytest tests rely on `assert` (B101) and narrow try/except/pass to skip
+      # optional imports — expected in test code.
       - 'tests/**'
       # Translator dictionaries contain localised strings like "Enter password:"
       # and "API key" that trip B105 hardcoded_password_string.
       - 'Imervue/multi_language/**'
-      # The file-tree view's only bandit hits are the "reveal in file manager"
-      # subprocess calls (static commands + a local path; B603/B607) and an
-      # already-narrow except — accepted project-wide in .bandit. Codacy's
-      # bandit honours neither the .bandit skips nor inline `# nosec`, so the
-      # file is excluded here to match that documented acceptance.
+      # "Reveal in file manager" / launch-external subprocess calls: static argv
+      # (explorer / open / xdg-open / osascript / ffmpeg) + a local path, never
+      # shell=True. Same accepted pattern across these files.
       - 'Imervue/gui/file_tree_view.py'
-      # safety_review launches NudeNet / ERAX in an isolated Python subprocess
-      # (no shell=True, controlled args) for frozen-build native-DLL safety —
-      # the B404/B603 subprocess hits are the accepted isolation pattern,
-      # already skipped in .bandit / pyproject [tool.bandit].
+      - 'Imervue/menu/right_click_menu.py'
+      - 'Imervue/menu/plugin_menu.py'
+      - 'Imervue/gui/gif_video_dialog.py'
+      - 'Imervue/gui/timeline_view.py'
+      - 'Imervue/gui/annotation_models.py'
+      - 'Imervue/library/metadata_export.py'
+      - 'Imervue/library/clip_search.py'
+      # pip install runs in a controlled subprocess (no shell, _https_urlopen
+      # guard); the B404/B603 hits are the accepted installer pattern.
+      - 'Imervue/plugin/pip_installer.py'
+      # Plugins launch ML runtimes (NudeNet / ERAX / rembg / segmentation) in an
+      # isolated Python subprocess (no shell, controlled args) for frozen-build
+      # native-DLL safety — the accepted isolation pattern, skipped in .bandit.
       - 'plugins/safety_review/**'
+      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/object_splitter/object_splitter.py'
   semgrep:
     enabled: true
     exclude_paths:
-      # Same accepted subprocess-isolation pattern as above — semgrep's
-      # dangerous-subprocess-use audit flags the controlled Popen calls.
+      # Test-only non-literal imports / dynamic plugin loading audited by semgrep.
+      - 'tests/**'
+      # Same controlled-subprocess isolation pattern as the bandit list above.
       - 'plugins/safety_review/**'
+      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/object_splitter/object_splitter.py'
+      - 'Imervue/menu/right_click_menu.py'
+      - 'Imervue/menu/plugin_menu.py'
+      - 'Imervue/gui/gif_video_dialog.py'
+      - 'Imervue/gui/duplicate_detection_dialog.py'
+      - 'Imervue/plugin/pip_installer.py'
+      - 'Imervue/plugin/plugin_manager.py'
+      - 'Imervue/system/clipboard_monitor.py'
+      # MD5 used only for cache keys / content identity (usedforsecurity=False),
+      # never for security — semgrep's hash-md5 rule flags it regardless.
+      - 'Imervue/image/recipe.py'
+      - 'Imervue/image/thumbnail_disk_cache.py'
+      # SQL built with `?` placeholders (the only interpolation is the
+      # placeholder count / an int-coerced LIMIT); values are bound separately.
+      - 'Imervue/library/image_index.py'
+      # stdlib xml.etree is used for *writing* XML from typed values only;
+      # all *parsing* of untrusted input goes through defusedxml.
+      - 'Imervue/image/xmp_sidecar.py'
+  pylint:
+    enabled: true
+    exclude_paths:
+      # Sphinx conf.py legitimately assigns the `copyright` config variable
+      # (W0622 redefining-builtin) — required by Sphinx, not a real redefinition.
+      - 'docs/**'

@@ -13,7 +13,7 @@ def _rgb(h, w, value):
 
 def test_expand_canvas_shape_and_placement():
     arr = _rgb(10, 20, 100)
-    canvas, mask = expand_canvas(arr, left=2, top=3, right=4, bottom=5)
+    canvas, _ = expand_canvas(arr, left=2, top=3, right=4, bottom=5)
     assert canvas.shape == (10 + 3 + 5, 20 + 2 + 4, 4)
     # Original pixels land at the offset and are preserved.
     assert np.all(canvas[3:13, 2:22, :3] == 100)

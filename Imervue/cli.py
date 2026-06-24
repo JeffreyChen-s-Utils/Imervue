@@ -31,6 +31,8 @@ _IMAGE_EXTS = frozenset({
 _FORMAT_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 _BYTES_PER_KB = 1024.0
 _CLI_VERSION = "1.0"
+_NO_INPUTS = "no input images found"
+_EMIT_JSON = "emit JSON"
 
 
 def iter_image_paths(inputs: Iterable[str], *, recursive: bool) -> list[Path]:
@@ -263,7 +265,7 @@ def run(args) -> int:
         return _MULTI_COMMANDS[args.command](args)
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
-        print("no input images found", file=sys.stderr)
+        print(_NO_INPUTS, file=sys.stderr)
         return 1
     if args.command in _REPORTERS:
         return _report(args, paths, _REPORTERS[args.command])
@@ -368,7 +370,7 @@ def cmd_collage(args) -> int:
     """Composite many inputs into one grid montage."""
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
-        print("no input images found", file=sys.stderr)
+        print(_NO_INPUTS, file=sys.stderr)
         return 1
     try:
         out = _checked_path(args.out)
@@ -421,7 +423,7 @@ def cmd_preset(args) -> int:
         return 1
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
-        print("no input images found", file=sys.stderr)
+        print(_NO_INPUTS, file=sys.stderr)
         return 1
     args.recipe = recipe
     return _write(args, paths, op_preset, "_preset", lambda _a: ".png")
@@ -447,7 +449,7 @@ def cmd_pipeline(args) -> int:
     """Apply an ordered JSON pipeline of operations to each input image."""
     try:
         steps = load_pipeline(args.file)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     errors = validate_pipeline(steps)
@@ -457,7 +459,7 @@ def cmd_pipeline(args) -> int:
         return 2
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
-        print("no input images found", file=sys.stderr)
+        print(_NO_INPUTS, file=sys.stderr)
         return 1
     args.pipeline_steps = steps
     return _write(args, paths, op_pipeline, "_pipeline", lambda _a: ".png")
@@ -486,11 +488,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     info = subs.add_parser("info", help="print image dimensions / format")
     _add_common(info)
-    info.add_argument("--json", action="store_true", help="emit JSON")
+    info.add_argument("--json", action="store_true", help=_EMIT_JSON)
 
     stats = subs.add_parser("stats", help="print no-reference quality metrics")
     _add_common(stats)
-    stats.add_argument("--json", action="store_true", help="emit JSON")
+    stats.add_argument("--json", action="store_true", help=_EMIT_JSON)
 
     convert = subs.add_parser("convert", help="convert format")
     _add_common(convert)
@@ -561,7 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(pipeline)
 
     list_ops = subs.add_parser("list-ops", help="list available subcommands")
-    list_ops.add_argument("--json", action="store_true", help="emit JSON")
+    list_ops.add_argument("--json", action="store_true", help=_EMIT_JSON)
     return parser
 
 

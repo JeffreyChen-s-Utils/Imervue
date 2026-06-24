@@ -53,6 +53,26 @@ def _tr(key: str, default: str) -> str:
     return language_wrapper.language_word_dict.get(key, default)
 
 
+def _parse_scheduled_events(raw: object) -> list[ScheduledEvent]:
+    """Build the scheduled-event list from raw form data, skipping bad entries."""
+    events: list[ScheduledEvent] = []
+    for entry in raw or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            every = float(entry.get("every_seconds", 0))
+        except (TypeError, ValueError):
+            continue
+        messages = entry.get("messages", []) or []
+        if every <= 0 or not isinstance(messages, list):
+            continue
+        events.append(ScheduledEvent(
+            every_seconds=every,
+            messages=[str(m) for m in messages if isinstance(m, str)],
+        ))
+    return events
+
+
 def script_from_form_data(data: dict) -> PetScript:
     """Convert the dialog's flat form-data dict into a
     :class:`PetScript`. Used by the dialog's OK path; also a clean
@@ -68,24 +88,6 @@ def script_from_form_data(data: dict) -> PetScript:
     * ``motion_lines`` (dict[str, list[str]])
     * ``scheduled`` (list[dict] — each ``{every_seconds, messages}``)
     """
-    scheduled_raw = data.get("scheduled", []) or []
-    scheduled: list[ScheduledEvent] = []
-    for entry in scheduled_raw:
-        if not isinstance(entry, dict):
-            continue
-        try:
-            every = float(entry.get("every_seconds", 0))
-        except (TypeError, ValueError):
-            continue
-        if every <= 0:
-            continue
-        messages = entry.get("messages", []) or []
-        if not isinstance(messages, list):
-            continue
-        scheduled.append(ScheduledEvent(
-            every_seconds=every,
-            messages=[str(m) for m in messages if isinstance(m, str)],
-        ))
     return PetScript(
         name=str(data.get("name", "")),
         greetings=list(_string_list(data.get("greetings"))),
@@ -105,7 +107,7 @@ def script_from_form_data(data: dict) -> PetScript:
             for k, v in (data.get("motion_lines") or {}).items()
             if isinstance(k, str) and k
         },
-        scheduled=scheduled,
+        scheduled=_parse_scheduled_events(data.get("scheduled")),
     )
 
 

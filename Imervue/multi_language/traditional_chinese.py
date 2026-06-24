@@ -1666,7 +1666,7 @@ traditional_chinese_word_dict = {
     "local_contrast_clarity": "清晰度：",
     "local_contrast_texture": "紋理：",
     "local_contrast_apply": "套用並儲存",
-    "local_contrast_done": "已儲存 {path}",
+    "local_contrast_done": "已儲存 {path}",  # NOSONAR
     "local_contrast_failed": "調整失敗",
 
     # --- Image Inspector (scopes) ---

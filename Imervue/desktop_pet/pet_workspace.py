@@ -49,6 +49,7 @@ def _tr(key: str, default: str) -> str:
     return language_wrapper.language_word_dict.get(key, default)
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
+_MUTED_LABEL_STYLE = "color: #888;"
 
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
 """Repo-root relative path used for the test that verifies the
@@ -152,7 +153,7 @@ class PetWorkspace(QWidget):
         layout.addStretch(1)
 
         self._status = QLabel("")
-        self._status.setStyleSheet("color: #888;")
+        self._status.setStyleSheet(_MUTED_LABEL_STYLE)
         layout.addWidget(self._status)
 
     def _build_rig_group(self) -> QGroupBox:
@@ -176,7 +177,7 @@ class PetWorkspace(QWidget):
         self._current_rig_label = QLabel(
             _tr("desktop_pet_no_rig", "No rig loaded"),
         )
-        self._current_rig_label.setStyleSheet("color: #888;")
+        self._current_rig_label.setStyleSheet(_MUTED_LABEL_STYLE)
         layout.addWidget(self._current_rig_label)
         return group
 
@@ -356,7 +357,7 @@ class PetWorkspace(QWidget):
         self._current_script_label = QLabel(
             self._format_script_label(settings.get("script_path", "")),
         )
-        self._current_script_label.setStyleSheet("color: #888;")
+        self._current_script_label.setStyleSheet(_MUTED_LABEL_STYLE)
         layout.addWidget(self._current_script_label)
         return group
 

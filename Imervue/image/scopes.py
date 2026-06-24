@@ -38,7 +38,7 @@ def _downscale_width(rgb: np.ndarray) -> np.ndarray:
 
 def _channel_waveform(plane: np.ndarray) -> np.ndarray:
     """Return a ``SCOPE_HEIGHT`` x W uint8 intensity map for one 8-bit plane."""
-    height, width = plane.shape
+    _, width = plane.shape
     # Offset each column into its own 256-bin block so one bincount does all.
     flat = plane.astype(np.int64) + _LEVELS * np.arange(width)[None, :]
     counts = np.bincount(flat.ravel(), minlength=_LEVELS * width)
