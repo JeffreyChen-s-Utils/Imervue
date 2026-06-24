@@ -15,6 +15,7 @@ The handlers live in their own module so:
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -1011,6 +1012,30 @@ def rotate_image(source: str, destination: str, operation: str) -> dict[str, Any
 # ---------------------------------------------------------------------------
 
 
+def _apply_effect_and_save(
+    source: str, destination: str, transform: Callable[[Any], Any],
+) -> dict[str, Any]:
+    """Load *source* as RGBA, run *transform*, save to *destination*, report stats.
+
+    The shared body of every "apply one effect and save a copy" tool: returns the
+    source and destination paths, the result dimensions and the file size.
+    """
+    from PIL import Image
+
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    result = transform(_load_rgba_array(src))
+    height, width = int(result.shape[0]), int(result.shape[1])
+    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": width,
+        "height": height,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
 def solarize_image(
     source: str,
     destination: str,
@@ -1021,24 +1046,13 @@ def solarize_image(
     """Apply a solarize tone reversal to ``source`` and save it to ``destination``.
 
     Tones at or above ``threshold`` (0-1) are inverted; ``mix`` (0-1) blends the
-    result toward the original. The destination format follows its suffix.
-    Returns the destination path, the resulting dimensions and size in bytes.
+    result toward the original.
     """
-    from PIL import Image
-
-    from Imervue.image.solarize import apply_solarize as _solarize
-    src = _validated_file(source)
-    dst = _validated_destination(destination)
-    result = _solarize(_load_rgba_array(src), float(threshold), float(mix))
-    height, width = int(result.shape[0]), int(result.shape[1])
-    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
-    return {
-        "source": str(src),
-        "destination": str(dst),
-        "width": width,
-        "height": height,
-        "size_bytes": int(dst.stat().st_size),
-    }
+    from Imervue.image.solarize import apply_solarize
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_solarize(arr, float(threshold), float(mix)),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1057,27 +1071,99 @@ def glow_image(
     """Apply a diffuse-glow / Orton bloom to ``source`` and save to ``destination``.
 
     ``amount`` (0-1) is the glow opacity, ``radius`` the blur radius and
-    ``threshold`` (0-1) the brightness above which regions bloom (0 = whole
-    frame). The destination format follows its suffix. Returns the destination
-    path, the resulting dimensions and size in bytes.
+    ``threshold`` (0-1) the brightness above which regions bloom (0 = whole frame).
     """
-    from PIL import Image
-
-    from Imervue.image.glow import apply_glow as _glow
-    src = _validated_file(source)
-    dst = _validated_destination(destination)
-    result = _glow(
-        _load_rgba_array(src), float(amount), int(radius), float(threshold),
+    from Imervue.image.glow import apply_glow
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_glow(arr, float(amount), int(radius), float(threshold)),
     )
-    height, width = int(result.shape[0]), int(result.shape[1])
-    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
-    return {
-        "source": str(src),
-        "destination": str(dst),
-        "width": width,
-        "height": height,
-        "size_bytes": int(dst.stat().st_size),
-    }
+
+
+# ---------------------------------------------------------------------------
+# tonal / colour effects
+# ---------------------------------------------------------------------------
+
+
+def velvia_image(
+    source: str, destination: str, *,
+    strength: float = 1.0, luminance_protection: float = 0.5,
+) -> dict[str, Any]:
+    """Apply a Velvia luminance-weighted saturation boost and save the result."""
+    from Imervue.image.velvia import apply_velvia
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_velvia(arr, float(strength), float(luminance_protection)),
+    )
+
+
+def emboss_image(
+    source: str, destination: str, *,
+    azimuth_deg: float = 135.0, elevation_deg: float = 45.0,
+    depth: float = 1.0, grayscale: bool = True,
+) -> dict[str, Any]:
+    """Apply a directional-light emboss relief and save the result."""
+    from Imervue.image.emboss import apply_emboss
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_emboss(
+            arr, float(azimuth_deg), float(elevation_deg), float(depth), bool(grayscale),
+        ),
+    )
+
+
+def film_negative_image(
+    source: str, destination: str, *, gamma: float = 1.0,
+) -> dict[str, Any]:
+    """Invert a scanned colour negative (auto film base) and save the positive."""
+    from Imervue.image.film_negative import apply_film_negative
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_film_negative(arr, None, float(gamma)),
+    )
+
+
+def defringe_image(
+    source: str, destination: str, *,
+    amount: float = 1.0, edge_threshold: float = 0.1, hue: str = "purple",
+) -> dict[str, Any]:
+    """Desaturate purple/green chromatic-aberration edge fringes and save the result."""
+    from Imervue.image.defringe import apply_defringe
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_defringe(arr, float(amount), float(edge_threshold), str(hue)),
+    )
+
+
+def graduated_density_image(
+    source: str, destination: str, *,
+    angle_deg: float = 0.0, density_stops: float = 1.0,
+    hardness: float = 0.5, offset: float = 0.0,
+) -> dict[str, Any]:
+    """Apply a linear graduated neutral-density gradient and save the result."""
+    from Imervue.image.graduated_density import apply_graduated_density
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_graduated_density(
+            arr, float(angle_deg), float(density_stops), float(hardness), float(offset),
+        ),
+    )
+
+
+def filmic_tonemap_image(
+    source: str, destination: str, *,
+    exposure: float = 0.0, white_point: float = 4.0,
+    contrast: float = 1.0, saturation: float = 1.0, mode: str = "reinhard",
+) -> dict[str, Any]:
+    """Apply a filmic (Reinhard/Hable) tone-map highlight rolloff and save the result."""
+    from Imervue.image.filmic_tonemap import apply_filmic_tonemap
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_filmic_tonemap(
+            arr, float(exposure), float(white_point),
+            float(contrast), float(saturation), str(mode),
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1607,6 +1693,159 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": glow_image,
+    },
+    {
+        "name": "velvia_image",
+        "description": (
+            "Apply a Velvia luminance-weighted saturation boost: intensifies "
+            "muted colours while sparing already-saturated ones and the shadows."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "strength": {
+                    "type": "number", "minimum": -1, "maximum": 4, "default": 1.0,
+                },
+                "luminance_protection": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": velvia_image,
+    },
+    {
+        "name": "emboss_image",
+        "description": (
+            "Apply a directional-light emboss relief, shading the luminance as a "
+            "height field lit from a chosen azimuth and elevation."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "azimuth_deg": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 135.0,
+                },
+                "elevation_deg": {
+                    "type": "number", "minimum": 0, "maximum": 90, "default": 45.0,
+                },
+                "depth": {
+                    "type": "number", "minimum": 0, "maximum": 10, "default": 1.0,
+                },
+                "grayscale": {"type": "boolean", "default": True},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": emboss_image,
+    },
+    {
+        "name": "film_negative_image",
+        "description": (
+            "Invert a scanned colour negative to a positive, dividing out the "
+            "auto-estimated orange film base, with an optional output gamma."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "gamma": {
+                    "type": "number", "minimum": 0.1, "maximum": 6, "default": 1.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": film_negative_image,
+    },
+    {
+        "name": "defringe_image",
+        "description": (
+            "Desaturate purple/green chromatic-aberration fringes on high-contrast "
+            "edges, leaving flat colour untouched."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "amount": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+                "edge_threshold": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.1,
+                },
+                "hue": {
+                    "type": "string", "enum": ["purple", "green", "all"],
+                    "default": "purple",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": defringe_image,
+    },
+    {
+        "name": "graduated_density_image",
+        "description": (
+            "Apply a linear graduated neutral-density gradient: darken one side of "
+            "the frame along an angled line, by a number of exposure stops."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "angle_deg": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 0.0,
+                },
+                "density_stops": {
+                    "type": "number", "minimum": -8, "maximum": 8, "default": 1.0,
+                },
+                "hardness": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+                "offset": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": graduated_density_image,
+    },
+    {
+        "name": "filmic_tonemap_image",
+        "description": (
+            "Apply a filmic Reinhard or Hable tone-map: compress highlights into a "
+            "soft rolloff with pivoted contrast and a saturation restore."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "exposure": {
+                    "type": "number", "minimum": -6, "maximum": 6, "default": 0.0,
+                },
+                "white_point": {
+                    "type": "number", "minimum": 0.1, "maximum": 64, "default": 4.0,
+                },
+                "contrast": {
+                    "type": "number", "minimum": 0.1, "maximum": 4, "default": 1.0,
+                },
+                "saturation": {
+                    "type": "number", "minimum": 0, "maximum": 4, "default": 1.0,
+                },
+                "mode": {
+                    "type": "string", "enum": ["reinhard", "hable"],
+                    "default": "reinhard",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": filmic_tonemap_image,
     },
 ]
 
