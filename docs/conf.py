@@ -2,7 +2,8 @@
 
 project = "Imervue"
 author = "Imervue Contributors"
-copyright = "2024-2026, Imervue Contributors"
+# Sphinx alias for ``copyright`` that avoids shadowing the builtin (Pylint W0622).
+project_copyright = "2024-2026, Imervue Contributors"
 release = "1.0"
 
 extensions = [

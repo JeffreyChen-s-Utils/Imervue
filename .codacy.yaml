@@ -35,7 +35,8 @@ engines:
       - 'plugins/safety_review/**'
       - 'plugins/ai_background_remover/ai_background_remover.py'
       - 'plugins/object_splitter/object_splitter.py'
-  semgrep:
+  # Codacy's Semgrep engine is published under the "opengrep" slug.
+  opengrep:
     enabled: true
     exclude_paths:
       # Test-only non-literal imports / dynamic plugin loading audited by semgrep.
@@ -61,9 +62,3 @@ engines:
       # stdlib xml.etree is used for *writing* XML from typed values only;
       # all *parsing* of untrusted input goes through defusedxml.
       - 'Imervue/image/xmp_sidecar.py'
-  pylint:
-    enabled: true
-    exclude_paths:
-      # Sphinx conf.py legitimately assigns the `copyright` config variable
-      # (W0622 redefining-builtin) — required by Sphinx, not a real redefinition.
-      - 'docs/**'
