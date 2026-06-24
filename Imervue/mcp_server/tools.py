@@ -1196,6 +1196,68 @@ def detail_equalizer_image(
 
 
 # ---------------------------------------------------------------------------
+# stylize / artistic effects
+# ---------------------------------------------------------------------------
+
+
+def colormap_image(
+    source: str, destination: str, *, name: str = "viridis",
+) -> dict[str, Any]:
+    """Re-colour ``source`` luminance through a named colour map and save the result."""
+    from Imervue.image.colormap import apply_colormap
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_colormap(arr, str(name)),
+    )
+
+
+def false_color_image(source: str, destination: str) -> dict[str, Any]:
+    """Map ``source`` luminance to a false-colour exposure scale and save the result."""
+    from Imervue.image.false_color import false_color
+    return _apply_effect_and_save(source, destination, false_color)
+
+
+def dither_image(
+    source: str, destination: str, *, levels: int = 2,
+) -> dict[str, Any]:
+    """Ordered-dither ``source`` to ``levels`` tones per channel and save the result."""
+    from Imervue.image.dither import ordered_dither
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: ordered_dither(arr, int(levels)),
+    )
+
+
+def split_toning_image(
+    source: str, destination: str, *,
+    shadow_hue: float = 210.0, shadow_saturation: float = 0.0,
+    highlight_hue: float = 45.0, highlight_saturation: float = 0.0,
+    balance: float = 0.0,
+) -> dict[str, Any]:
+    """Tint shadows and highlights with separate hues weighted by luminance, then save."""
+    from Imervue.image.split_toning import apply_split_toning
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_split_toning(
+            arr, float(shadow_hue), float(shadow_saturation),
+            float(highlight_hue), float(highlight_saturation), float(balance),
+        ),
+    )
+
+
+def pixel_sort_image(
+    source: str, destination: str, *,
+    lower: int = 60, upper: int = 200, vertical: bool = False,
+) -> dict[str, Any]:
+    """Sort pixels within brightness bands (``lower``-``upper``) and save the result."""
+    from Imervue.image.pixel_sort import pixel_sort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: pixel_sort(arr, int(lower), int(upper), vertical=bool(vertical)),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1922,6 +1984,116 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": detail_equalizer_image,
+    },
+    {
+        "name": "colormap_image",
+        "description": (
+            "Re-colour the image by mapping its luminance through a perceptual "
+            "colour map (viridis, magma or jet)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "name": {
+                    "type": "string",
+                    "enum": ["viridis", "magma", "jet"],
+                    "default": "viridis",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": colormap_image,
+    },
+    {
+        "name": "false_color_image",
+        "description": (
+            "Map luminance to a false-colour exposure scale (blacks through "
+            "whites), the way a video monitor flags clipping."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": false_color_image,
+    },
+    {
+        "name": "dither_image",
+        "description": (
+            "Ordered (Bayer) dither the image to a small number of tones per "
+            "channel, trading colour depth for a retro halftone look."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "levels": {
+                    "type": "integer", "minimum": 2, "maximum": 8, "default": 2,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": dither_image,
+    },
+    {
+        "name": "split_toning_image",
+        "description": (
+            "Tint shadows and highlights with separate hues, weighted by "
+            "luminance, with a balance control for the split point."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "shadow_hue": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 210.0,
+                },
+                "shadow_saturation": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+                "highlight_hue": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 45.0,
+                },
+                "highlight_saturation": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+                "balance": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": split_toning_image,
+    },
+    {
+        "name": "pixel_sort_image",
+        "description": (
+            "Pixel-sort the image: reorder pixels by brightness within contiguous "
+            "bands bounded by lower/upper thresholds, for a glitch-art smear."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "lower": {
+                    "type": "integer", "minimum": 0, "maximum": 255, "default": 60,
+                },
+                "upper": {
+                    "type": "integer", "minimum": 0, "maximum": 255, "default": 200,
+                },
+                "vertical": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": pixel_sort_image,
     },
 ]
 

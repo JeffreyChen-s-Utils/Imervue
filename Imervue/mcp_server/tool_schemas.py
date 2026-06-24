@@ -495,4 +495,24 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Detail equalizer"),
         "output_schema": _image_save_output(),
     },
+    "colormap_image": {
+        "annotations": _writes_file("Colour map"),
+        "output_schema": _image_save_output(),
+    },
+    "false_color_image": {
+        "annotations": _writes_file("False colour"),
+        "output_schema": _image_save_output(),
+    },
+    "dither_image": {
+        "annotations": _writes_file("Dither image"),
+        "output_schema": _image_save_output(),
+    },
+    "split_toning_image": {
+        "annotations": _writes_file("Split toning"),
+        "output_schema": _image_save_output(),
+    },
+    "pixel_sort_image": {
+        "annotations": _writes_file("Pixel sort"),
+        "output_schema": _image_save_output(),
+    },
 }

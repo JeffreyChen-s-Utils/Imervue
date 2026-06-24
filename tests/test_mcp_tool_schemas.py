@@ -249,6 +249,11 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("filmic_tonemap_image", {"mode": "hable"}),
     ("tone_equalizer_image", {"zone_gains": [0.0, 1.0, 0.0, -1.0, 0.0]}),
     ("detail_equalizer_image", {"band_gains": [2.0, 1.0, 1.0]}),
+    ("colormap_image", {"name": "magma"}),
+    ("false_color_image", {}),
+    ("dither_image", {"levels": 4}),
+    ("split_toning_image", {"shadow_saturation": 0.5, "highlight_saturation": 0.5}),
+    ("pixel_sort_image", {"lower": 40, "upper": 220, "vertical": True}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"
