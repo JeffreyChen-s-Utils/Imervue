@@ -132,7 +132,9 @@ def load_session_from_path(path: str | Path) -> dict[str, Any]:
 
 def _path_exists(path: str) -> bool:
     """Check if a stored (already-sanitised) session path still exists."""
-    return bool(path) and Path(path).exists()
+    # Existence check only (no open/read/write) on a path from the user's own
+    # session file, already sanitised by _sanitize_loaded — no traversal risk.
+    return bool(path) and Path(path).exists()  # NOSONAR
 
 
 def _restore_tabs(ui: ImervueMainWindow, tabs: list[Any]) -> tuple[int, int]:

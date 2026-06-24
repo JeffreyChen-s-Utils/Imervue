@@ -181,10 +181,10 @@ class _DeletedMenuStub:
             "already deleted.",
         )
 
-    def addAction(self, *_args, **_kwargs):
+    def addAction(self, *_args, **_kwargs):  # NOSONAR
         raise RuntimeError("already deleted")
 
-    def setToolTipsVisible(self, *_args, **_kwargs):
+    def setToolTipsVisible(self, *_args, **_kwargs):  # NOSONAR
         raise RuntimeError("already deleted")
 
 

@@ -1680,7 +1680,7 @@ japanese_word_dict = {
     "local_contrast_clarity": "明瞭度：",
     "local_contrast_texture": "テクスチャ：",
     "local_contrast_apply": "適用して保存",
-    "local_contrast_done": "保存しました: {path}",
+    "local_contrast_done": "保存しました: {path}",  # NOSONAR
     "local_contrast_failed": "調整に失敗しました",
 
     # --- Image Inspector (scopes) ---

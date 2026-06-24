@@ -16,6 +16,7 @@ from urllib.parse import quote, unquote
 
 _SCHEME = "imervue://image/"
 _METADATA_SUFFIX = "/metadata"
+_PNG_MIME = "image/png"
 _PAGE_SIZE = 100
 
 
@@ -63,7 +64,7 @@ def list_resources(root: str | None, cursor: str | None = None) -> dict[str, Any
             {
                 "uri": image_uri(p),
                 "name": Path(p).name,
-                "mimeType": "image/png",
+                "mimeType": _PNG_MIME,
                 "description": "Image thumbnail (read for a preview).",
             }
             for p in page
@@ -82,7 +83,7 @@ def list_resource_templates() -> dict[str, Any]:
                 "uriTemplate": f"{_SCHEME}{{path}}",
                 "name": "Image thumbnail",
                 "description": "Base64 PNG preview of an image.",
-                "mimeType": "image/png",
+                "mimeType": _PNG_MIME,
             },
             {
                 "uriTemplate": f"{_SCHEME}{{path}}{_METADATA_SUFFIX}",
@@ -128,4 +129,4 @@ def _thumbnail_contents(uri: str, path: str) -> dict[str, Any]:
     image_path = _validated_image(path)
     thumb = image_thumbnail(str(image_path))
     base64_png = thumb["data_uri"].split(",", 1)[1]
-    return {"contents": [{"uri": uri, "mimeType": "image/png", "blob": base64_png}]}
+    return {"contents": [{"uri": uri, "mimeType": _PNG_MIME, "blob": base64_png}]}

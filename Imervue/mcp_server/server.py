@@ -33,6 +33,7 @@ from typing import Any, TextIO
 logger = logging.getLogger("Imervue.mcp_server")
 
 PROTOCOL_VERSION: str = "2025-03-26"
+_PARAMS_NOT_OBJECT = "params must be an object"
 SERVER_NAME: str = "imervue"
 SERVER_VERSION: str = "1.0.0"
 
@@ -131,7 +132,7 @@ class MCPServer:
 
     def _on_completion_complete(self, msg_id: Any, params: dict) -> dict:
         if not isinstance(params, dict):
-            raise _MCPError(-32602, "params must be an object")
+            raise _MCPError(-32602, _PARAMS_NOT_OBJECT)
         from Imervue.mcp_server.completion import complete
         return _success(msg_id, complete(params.get("ref"), params.get("argument") or {}))
 
@@ -148,7 +149,7 @@ class MCPServer:
 
     def _on_resources_read(self, msg_id: Any, params: dict) -> dict:
         if not isinstance(params, dict):
-            raise _MCPError(-32602, "params must be an object")
+            raise _MCPError(-32602, _PARAMS_NOT_OBJECT)
         from Imervue.mcp_server.resources import ResourceError, read_resource
         try:
             return _success(msg_id, read_resource(params.get("uri")))
@@ -199,7 +200,7 @@ class MCPServer:
 
     def _on_prompts_get(self, msg_id: Any, params: dict) -> dict:
         if not isinstance(params, dict):
-            raise _MCPError(-32602, "params must be an object")
+            raise _MCPError(-32602, _PARAMS_NOT_OBJECT)
         name = params.get("name")
         if not isinstance(name, str):
             raise _MCPError(-32602, "params.name must be a string")
@@ -217,7 +218,7 @@ class MCPServer:
 
     def _on_tools_call(self, msg_id: Any, params: dict) -> dict:
         if not isinstance(params, dict):
-            raise _MCPError(-32602, "params must be an object")
+            raise _MCPError(-32602, _PARAMS_NOT_OBJECT)
         name = params.get("name")
         if not isinstance(name, str):
             raise _MCPError(-32602, "params.name must be a string")
@@ -273,7 +274,7 @@ _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
 
 def _required_uri(params: dict) -> str:
     if not isinstance(params, dict):
-        raise _MCPError(-32602, "params must be an object")
+        raise _MCPError(-32602, _PARAMS_NOT_OBJECT)
     uri = params.get("uri")
     if not isinstance(uri, str) or not uri:
         raise _MCPError(-32602, "params.uri must be a non-empty string")
