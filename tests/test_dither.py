@@ -14,10 +14,28 @@ def _gradient_rgba(h=32, w=32):
     return np.concatenate([rgb, alpha], axis=2)
 
 
+def _solid_rgba(value, h=8, w=8):
+    arr = np.full((h, w, 4), value, dtype=np.uint8)
+    arr[..., 3] = 255
+    return arr
+
+
 def test_two_levels_are_pure_black_white():
     out = ordered_dither(_gradient_rgba(), levels=2)
     assert set(np.unique(out[..., :3]).tolist()) <= {0, 255}
     assert np.all(out[..., 3] == 255)
+
+
+def test_pure_white_stays_white():
+    # Regression: the threshold-0 Bayer cell used to round 0.5 down to black,
+    # speckling pure white. Floor-based quantisation keeps the extreme exact.
+    out = ordered_dither(_solid_rgba(255), levels=2)
+    assert np.all(out[..., :3] == 255)
+
+
+def test_pure_black_stays_black():
+    out = ordered_dither(_solid_rgba(0), levels=2)
+    assert np.all(out[..., :3] == 0)
 
 
 def test_shape_and_alpha_preserved():

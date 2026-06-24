@@ -26,6 +26,7 @@ class GradientMapOptions:
 
     enabled: bool = False
     intensity: float = 1.0
+    perceptual: bool = False  # interpolate stops in OkLCH instead of sRGB
     stops: list[tuple[float, list[int]]] = field(
         default_factory=lambda: [
             (0.0, [0, 0, 0]),
@@ -37,6 +38,7 @@ class GradientMapOptions:
         return {
             "enabled": bool(self.enabled),
             "intensity": float(self.intensity),
+            "perceptual": bool(self.perceptual),
             "stops": [(float(p), [int(c) for c in rgb])
                       for (p, rgb) in self.stops],
         }
@@ -51,6 +53,7 @@ class GradientMapOptions:
                 intensity=_clamp_float(
                     data.get("intensity", 1.0), INTENSITY_MIN, INTENSITY_MAX,
                 ),
+                perceptual=bool(data.get("perceptual", False)),
                 stops=_normalise_stops(data.get("stops")),
             )
         except (TypeError, ValueError):
@@ -95,7 +98,7 @@ def apply_gradient_map(arr: np.ndarray, options: GradientMapOptions) -> np.ndarr
             f"apply_gradient_map expects HxWx4 uint8 RGBA, got {arr.shape} {arr.dtype}"
         )
 
-    lut = _build_gradient_lut(options.stops)  # shape (256, 3) uint8
+    lut = _build_gradient_lut(options.stops, options.perceptual)  # (256, 3) uint8
     luma = (
         0.2126 * arr[..., 0]
         + 0.7152 * arr[..., 1]
@@ -117,8 +120,17 @@ def apply_gradient_map(arr: np.ndarray, options: GradientMapOptions) -> np.ndarr
     return out
 
 
-def _build_gradient_lut(stops: list[tuple[float, list[int]]]) -> np.ndarray:
-    """Pre-compute a 256×3 uint8 LUT from the stop list via linear interpolation."""
+def _build_gradient_lut(
+    stops: list[tuple[float, list[int]]], perceptual: bool = False,
+) -> np.ndarray:
+    """Pre-compute a 256×3 uint8 LUT from the stop list.
+
+    Linear sRGB interpolation by default; ``perceptual`` interpolates each
+    segment in OkLCH so saturated gradients keep their colour through the
+    midpoint instead of greying.
+    """
+    if perceptual:
+        return _build_perceptual_lut(stops)
     positions = np.array([s[0] for s in stops], dtype=np.float32)
     colours = np.array([s[1] for s in stops], dtype=np.float32)
     indices = np.linspace(0.0, 1.0, 256, dtype=np.float32)
@@ -126,3 +138,32 @@ def _build_gradient_lut(stops: list[tuple[float, list[int]]]) -> np.ndarray:
     for ch in range(3):
         lut[:, ch] = np.interp(indices, positions, colours[:, ch])
     return np.clip(lut + 0.5, 0, 255).astype(np.uint8)
+
+
+def _segment_index(positions: list[float], p: float) -> int:
+    """Index of the stop segment containing position ``p`` (assumes sorted)."""
+    last = len(positions) - 2
+    k = 0
+    while k < last and positions[k + 1] <= p:
+        k += 1
+    return k
+
+
+def _build_perceptual_lut(stops: list[tuple[float, list[int]]]) -> np.ndarray:
+    """Build the LUT by mixing adjacent stops in OkLCH (perceptual)."""
+    from Imervue.image.gradient_perceptual import mix_colors_perceptual
+    positions = [float(s[0]) for s in stops]
+    colours = [tuple(int(c) for c in s[1]) for s in stops]
+    lut = np.zeros((256, 3), dtype=np.uint8)
+    for i in range(256):
+        p = i / 255.0
+        if p <= positions[0]:
+            lut[i] = colours[0]
+        elif p >= positions[-1]:
+            lut[i] = colours[-1]
+        else:
+            k = _segment_index(positions, p)
+            span = positions[k + 1] - positions[k]
+            t = (p - positions[k]) / span if span > 0 else 0.0
+            lut[i] = mix_colors_perceptual(colours[k], colours[k + 1], t, mode="oklch")
+    return lut

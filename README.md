@@ -194,10 +194,10 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Bookmarks** — up to 5000 paths
 - **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`)
 - **Color labels** — flag-based red/yellow/green/blue/purple (`F1`–`F5`)
-- **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects
+- **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects; **auto-cull** picks the sharpest frame per near-duplicate group and rejects the rest
 - **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically
 - **Tags & Albums** with multi-tag AND/OR filtering
-- **Smart Albums** — save rule-based queries (extension / resolution / rating / color / cull / tags) and reapply with one click
+- **Smart Albums** — save rule-based queries and reapply with one click; filters span extension, resolution & **aspect**, **file size**, rating **floor / ceiling**, colour, cull, tags (incl. **exclusion**), **camera / lens**, **filename regex / glob** and **file age**, plus **export / import** to a portable JSON file
 - **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling
 - **Per-image notes** in the EXIF sidebar — debounced save, persists across sessions
 - **Staging Tray** — cross-folder basket that survives restarts; bulk move / copy / export
@@ -219,7 +219,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Fuzzy filename search** with substring highlighting
 - **Find Similar Images** — pHash (64-bit DCT) with adjustable Hamming distance
-- **Library Search** — SQLite multi-root index queryable by extension / size / dimensions / filename
+- **Library Search** — SQLite multi-root index with a compact query DSL: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob
+- **Find Similar (average hash)** — pHash and dHash are joined by an optional average-hash (aHash) for a complementary near-duplicate metric
 - **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings; gracefully unavailable when `open_clip_torch` + `torch` aren't installed
 - **Auto-Tag** — heuristic classification with optional CLIP ONNX upgrade
 
@@ -227,6 +228,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **EXIF sidebar** with collapsible groups + inline 0-5 star strip
 - **EXIF editor** dialog
+- **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)
 - **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`)
 - **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon via piexif (JPEG)
@@ -268,6 +270,14 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 - **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³), trilinear-interpolate, blend with an intensity slider
 - **Split Toning** — flag-based shadow / highlight hue + saturation with a balance pivot
 
+### Creative effects
+
+- **Solarize** — darkroom-style tone reversal (threshold + mix)
+- **Diffuse Glow / Orton** — soft-focus highlight bloom (amount / radius / highlight-threshold)
+- **Gradient Map** — luminance → palette, with an optional **perceptual (OkLCH)** interpolation mode that keeps saturated gradients vivid through the midpoint instead of greying
+- **Ordered Dither** — Bayer-matrix quantisation to N levels (extremes preserved)
+- **Develop Presets** — save a recipe, then **apply** it wholesale or **merge** just its active adjustments onto other images (keeping each image's own crop, etc.)
+
 ### Local adjustments
 
 - **Brush / radial / linear gradient masks** with per-mask exposure / brightness / contrast / saturation / white-balance deltas + feather slider
@@ -297,7 +307,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 - **Batch operations** — rename, move/copy, rotate selected images
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox
-- **Slideshow MP4** — H.264 video with configurable FPS / hold-per-image / fade transitions (`imageio-ffmpeg`)
+- **Slideshow MP4** — H.264 video with configurable FPS / hold-per-image / fade / dissolve / slide / wipe transitions (`imageio-ffmpeg`)
 - **Print Layout** — multi-page PDF sheet with configurable page size / orientation / grid / margins / gutter / crop marks
 - **Soft Proof** — load an ICC profile, simulate destination gamut, highlight out-of-gamut pixels in magenta
 - **Virtual Copies** — named recipe snapshots per image; flip between looks without losing the master
@@ -312,9 +322,11 @@ Register programs (your image editor /  / …) under **File > External Editors�
 
 The **Paint** tab is a full-featured raster paint studio embedded as its own `QMainWindow` with menus, left tool strip, context-sensitive options bar, and a tabbed right-side dock column. Multi-tab document editing — open many drawings at once, each with its own undo stack.
 
-### Tools (24)
+### Tools (27)
 
-Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
+Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
+
+The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (saturate / desaturate) — paint local tonal and chroma adjustments, weighted by the brush and a shadows / midtones / highlights mask.
 
 Single-letter shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
 
@@ -790,14 +802,34 @@ python -m Imervue.mcp_server
 
 ### Tools
 
+Selected tools (28 in total — full list in the docs). Every tool advertises a
+JSON `outputSchema` and read-only / destructive `annotations`, returns its
+result as `structuredContent`, and long-running tools stream
+`notifications/progress`.
+
 | Tool | Purpose |
 |------|---------|
 | `list_images` | List image files in a folder (recursive optional) |
-| `read_image_metadata` | Dimensions, format, EXIF, and XMP sidecar |
-| `read_xmp_tags` | XMP-only fast path: rating, label, keywords |
-| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | Build a `.puppet` rig from a PNG (auto-mesh + standard parameters) |
-| `puppet_inspect` | Open a `.puppet` and return its inventory |
+| `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, XMP sidecar (rating, label, keywords) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | No-reference analysis: per-channel stats, colourfulness/entropy/contrast, histogram + clipping, blur score |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64 preview, Tesseract text, perceptual-hash near-duplicate groups (with progress) |
+| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP (+ optional HEIC / AVIF / JXL) |
+| `apply_watermark` / `apply_frame` | Burn in a text watermark or a matte / Polaroid frame + caption |
+| `build_collage` | Composite images into a grid montage (with progress) |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip |
+| `collection_stats` | Folder rating / favourite / colour-label / cull summary |
+| `search_images` | Filter a folder with the smart-album query DSL (path / EXIF / size / dimensions) |
+| `extract_gps` / `dominant_colors` | Read EXIF GPS coordinates (chains into `reverse_geocode`); median-cut colour palette (rgb / hex / share) |
+| `error_level_analysis` | JPEG-recompression tamper map as a PNG data URI |
+| `solarize_image` / `glow_image` | Apply a solarize tone reversal or diffuse-glow bloom and save |
+| `reverse_geocode` / `extract_video_frame` | Offline GPS → city, decode one video frame to a still |
+| `puppet_from_png` / `puppet_inspect` | Build a `.puppet` rig from a PNG; open one and return its inventory |
+
+### Prompts
+
+Four reusable prompts: `caption_image`, `suggest_edits`, `analyze_composition`
+(saliency-driven composition critique) and `flag_issues` (sharpness + quality
++ clipping triage). Prompt arguments are completable via `completion/complete`.
 
 ### Wiring
 

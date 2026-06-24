@@ -3,18 +3,27 @@ Smart Albums — persist a filter query and reapply it later.
 
 A rules dict supports these keys (all optional):
     - exts:              list[str]       file extensions without dot
-    - min_width / min_height / min_size / max_size:  int
+    - min_width / max_width / min_height / max_height:  int
+    - min_size / max_size:  int
+    - min_aspect / max_aspect: float     width / height ratio bounds
     - color_labels:      list[str]       colour names (see color_labels.COLORS)
-    - min_rating:        int             1-5 (inclusive)
+    - min_rating / max_rating: int       1-5 (inclusive)
     - favorites_only:    bool
     - cull:              str             'pick' | 'reject' | 'unflagged'
     - tags_any / tags_all: list[str]     hierarchical tag paths
+    - tags_exclude:      list[str]       hierarchical tag paths to exclude
     - name_contains:     str
+    - name_regex:        str             regex matched against the filename
+    - name_glob:         str             shell glob matched against the filename
+    - camera:            str             substring matched against EXIF make/model
+    - lens:              str             substring matched against EXIF lens model
     - date_from / date_to: float         Unix timestamp, mtime
 """
 from __future__ import annotations
 
+import fnmatch
 import json
+import re
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -70,6 +79,7 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     if name_contains:
         q = name_contains.lower()
         result = [p for p in result if q in Path(p).name.lower()]
+    result = _apply_name_pattern_filters(result, rules)
     result = _apply_user_setting_filters(result, rules)
     result = _apply_index_filters(result, rules)
     result = _apply_size_filters(result, rules)
@@ -77,12 +87,40 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     place = rules.get("place")
     if place:
         result = _apply_place_filter(result, place)
+    result = _apply_exif_filters(result, rules)
     missing = rules.get("missing")
     if missing:
         from Imervue.library.metadata_audit import paths_missing
         incomplete = set(paths_missing(result, missing))
         result = [p for p in result if p in incomplete]
     return result
+
+
+def _contains_ci(needle: str, haystack: str) -> bool:
+    return needle.lower() in haystack.lower()
+
+
+def _apply_exif_filters(paths: list[str], rules: dict) -> list[str]:
+    """Keep paths whose EXIF make/model (``camera``) or lens (``lens``) match.
+
+    Runs late (after the cheap filters) because it reads EXIF per file.
+    Untagged images carry no camera/lens, so a camera/lens rule drops them.
+    """
+    camera = rules.get("camera")
+    lens = rules.get("lens")
+    if not camera and not lens:
+        return paths
+    from Imervue.image.info import get_exif_data
+    out: list[str] = []
+    for path in paths:
+        exif = get_exif_data(Path(path))
+        body = f"{exif.get('Make', '')} {exif.get('Model', '')}"
+        if camera and not _contains_ci(camera, body):
+            continue
+        if lens and not _contains_ci(lens, str(exif.get("LensModel", ""))):
+            continue
+        out.append(path)
+    return out
 
 
 def _apply_place_filter(paths: list[str], place: str) -> list[str]:
@@ -130,6 +168,22 @@ def generate_location_albums(paths: Iterable[str]) -> int:
     return len(albums)
 
 
+def _apply_name_pattern_filters(paths: list[str], rules: dict) -> list[str]:
+    """Filter by a filename regex (``name_regex``) and/or glob (``name_glob``)."""
+    name_regex = rules.get("name_regex")
+    if name_regex:
+        try:
+            compiled = re.compile(name_regex)
+        except re.error:
+            return []  # an unparsable pattern matches nothing
+        paths = [p for p in paths if compiled.search(Path(p).name)]
+    name_glob = rules.get("name_glob")
+    if name_glob:
+        pattern = name_glob.lower()
+        paths = [p for p in paths if fnmatch.fnmatch(Path(p).name.lower(), pattern)]
+    return paths
+
+
 def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:
     from Imervue.user_settings.color_labels import filter_by_color
     from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -145,6 +199,11 @@ def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:
     if min_rating:
         ratings = user_setting_dict.get("image_ratings", {})
         paths = [p for p in paths if int(ratings.get(p, 0)) >= int(min_rating)]
+
+    max_rating = rules.get("max_rating")
+    if max_rating is not None:
+        ratings = user_setting_dict.get("image_ratings", {})
+        paths = [p for p in paths if int(ratings.get(p, 0)) <= int(max_rating)]
 
     if rules.get("favorites_only"):
         favs = user_setting_dict.get("image_favorites", [])
@@ -170,6 +229,13 @@ def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
         for t in tags_all:
             tagged = set(image_index.images_with_tag(t))
             paths = [p for p in paths if p in tagged]
+
+    tags_exclude = rules.get("tags_exclude") or []
+    if tags_exclude:
+        excluded: set[str] = set()
+        for t in tags_exclude:
+            excluded.update(image_index.images_with_tag(t))
+        paths = [p for p in paths if p not in excluded]
 
     date_from = rules.get("date_from")
     date_to = rules.get("date_to")
@@ -198,17 +264,49 @@ def _apply_size_filters(paths: list[str], rules: dict) -> list[str]:
     return out
 
 
+def _aspect_ok(
+    width: int, height: int, min_aspect, max_aspect,
+) -> bool:
+    """True when ``width / height`` falls within the aspect bounds (if any)."""
+    if min_aspect is None and max_aspect is None:
+        return True
+    if height == 0:
+        return False
+    aspect = width / height
+    if min_aspect is not None and aspect < float(min_aspect):
+        return False
+    return not (max_aspect is not None and aspect > float(max_aspect))
+
+
+_DIMENSION_KEYS = (
+    "min_width", "max_width", "min_height", "max_height",
+    "min_aspect", "max_aspect",
+)
+
+
+def _dims_ok(width: int, height: int, rules: dict) -> bool:
+    """True when ``width`` / ``height`` satisfy the min/max pixel bounds."""
+    min_w, max_w = rules.get("min_width"), rules.get("max_width")
+    min_h, max_h = rules.get("min_height"), rules.get("max_height")
+    if min_w and width < int(min_w):
+        return False
+    if max_w and width > int(max_w):
+        return False
+    if min_h and height < int(min_h):
+        return False
+    return not (max_h and height > int(max_h))
+
+
 def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
-    """Filter by pixel dimensions (``min_width`` / ``min_height``).
+    """Filter by pixel dimensions (min/max width & height) and aspect.
 
     Reads only the image header (no full decode) and runs after the cheaper
     filters, so it touches the smallest possible set. Unreadable images can't
     satisfy a dimension rule, so they're dropped.
     """
-    min_w = rules.get("min_width")
-    min_h = rules.get("min_height")
-    if not min_w and not min_h:
+    if not any(rules.get(key) for key in _DIMENSION_KEYS):
         return paths
+    min_aspect, max_aspect = rules.get("min_aspect"), rules.get("max_aspect")
     from PIL import Image
     out: list[str] = []
     for p in paths:
@@ -217,11 +315,10 @@ def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
                 width, height = im.size
         except OSError:
             continue
-        if min_w and width < int(min_w):
-            continue
-        if min_h and height < int(min_h):
-            continue
-        out.append(p)
+        if _dims_ok(width, height, rules) and _aspect_ok(
+            width, height, min_aspect, max_aspect,
+        ):
+            out.append(p)
     return out
 
 

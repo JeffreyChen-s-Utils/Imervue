@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QListWidget, QSpinBox, QCheckBox, QComboBox, QMessageBox,
+    QListWidget, QSpinBox, QCheckBox, QComboBox, QMessageBox, QFileDialog,
 )
 
 from Imervue.library import smart_album
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 _COLORS = ("red", "yellow", "green", "blue", "purple")
 _CULL_VALUES = ("", "pick", "reject", "unflagged")
+_SMART_ALBUMS_TITLE = "Smart Albums"
 
 
 class SmartAlbumsDialog(QDialog):
@@ -30,7 +31,7 @@ class SmartAlbumsDialog(QDialog):
         super().__init__(ui)
         self._ui = ui
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("smart_albums_title", "Smart Albums"))
+        self.setWindowTitle(lang.get("smart_albums_title", _SMART_ALBUMS_TITLE))
         self.resize(560, 520)
 
         layout = QVBoxLayout(self)
@@ -52,7 +53,11 @@ class SmartAlbumsDialog(QDialog):
         del_btn.clicked.connect(self._delete)
         auto_btn = QPushButton(lang.get("smart_albums_auto", "Auto by location"))
         auto_btn.clicked.connect(self._auto_by_location)
-        for b in (save_btn, apply_btn, del_btn, auto_btn):
+        export_btn = QPushButton(lang.get("smart_albums_export", "Export…"))
+        export_btn.clicked.connect(self._export)
+        import_btn = QPushButton(lang.get("smart_albums_import", "Import…"))
+        import_btn.clicked.connect(self._import)
+        for b in (save_btn, apply_btn, del_btn, auto_btn, export_btn, import_btn):
             row.addWidget(b)
         layout.addLayout(row)
 
@@ -224,6 +229,42 @@ class SmartAlbumsDialog(QDialog):
             self._ui.toast.info(
                 lang.get("smart_albums_auto_none", "No geotagged images found"),
             )
+
+    def _export(self) -> None:
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getSaveFileName(
+            self, lang.get("smart_albums_export", "Export…"),
+            "smart_albums.json", "JSON (*.json)",
+        )
+        if not path:
+            return
+        from Imervue.library import album_io
+        count = album_io.export_albums(path)
+        QMessageBox.information(
+            self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE),
+            lang.get("smart_albums_exported", "Exported {n} album(s)").format(n=count),
+        )
+
+    def _import(self) -> None:
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getOpenFileName(
+            self, lang.get("smart_albums_import", "Import…"), "", "JSON (*.json)",
+        )
+        if not path:
+            return
+        from Imervue.library import album_io
+        try:
+            count = album_io.import_albums(path)
+        except (ValueError, OSError) as exc:
+            QMessageBox.warning(
+                self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE), str(exc),
+            )
+            return
+        self._refresh_list()
+        QMessageBox.information(
+            self, lang.get("smart_albums_title", _SMART_ALBUMS_TITLE),
+            lang.get("smart_albums_imported", "Imported {n} album(s)").format(n=count),
+        )
 
     def _delete(self) -> None:
         name = self._name_edit.text().strip()

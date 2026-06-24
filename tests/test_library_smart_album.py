@@ -112,6 +112,24 @@ class TestApplyToPaths:
         )
         assert result == [a]
 
+    def test_tags_exclude_drops_tagged_paths(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        image_index.add_image_tag(b, "reject")
+        result = smart_album.apply_to_paths([a, b], {"tags_exclude": ["reject"]})
+        assert result == [a]
+
+    def test_tags_exclude_narrows_an_inclusion(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        image_index.add_image_tag(a, "trip")
+        image_index.add_image_tag(b, "trip")
+        image_index.add_image_tag(b, "reject")
+        result = smart_album.apply_to_paths(
+            [a, b], {"tags_all": ["trip"], "tags_exclude": ["reject"]}
+        )
+        assert result == [a]
+
     def test_min_size_filter(self, tmp_path):
         small = tmp_path / "small.bin"
         small.write_bytes(b"\x00" * 100)
@@ -131,6 +149,93 @@ class TestApplyToPaths:
             [str(small), str(big)], {"max_size": 1000}
         )
         assert result == [str(small)]
+
+    def test_min_aspect_keeps_wide_images(self, tmp_path):
+        wide = _make_image(tmp_path / "wide.png", 200, 100)   # aspect 2.0
+        tall = _make_image(tmp_path / "tall.png", 100, 200)   # aspect 0.5
+        result = smart_album.apply_to_paths([wide, tall], {"min_aspect": 1.5})
+        assert result == [wide]
+
+    def test_max_width_keeps_small_images(self, tmp_path):
+        small = _make_image(tmp_path / "small.png", 100, 100)
+        big = _make_image(tmp_path / "big.png", 400, 100)
+        result = smart_album.apply_to_paths([small, big], {"max_width": 200})
+        assert result == [small]
+
+    def test_min_height_keeps_tall_images(self, tmp_path):
+        short = _make_image(tmp_path / "short.png", 100, 100)
+        tall = _make_image(tmp_path / "tall.png", 100, 400)
+        result = smart_album.apply_to_paths([short, tall], {"min_height": 200})
+        assert result == [tall]
+
+    def test_combined_width_and_height_bounds(self, tmp_path):
+        match = _make_image(tmp_path / "m.png", 300, 300)
+        too_wide = _make_image(tmp_path / "w.png", 900, 300)
+        result = smart_album.apply_to_paths(
+            [match, too_wide], {"min_width": 200, "max_width": 500}
+        )
+        assert result == [match]
+
+    def test_max_aspect_keeps_tall_images(self, tmp_path):
+        wide = _make_image(tmp_path / "wide.png", 200, 100)
+        tall = _make_image(tmp_path / "tall.png", 100, 200)
+        result = smart_album.apply_to_paths([wide, tall], {"max_aspect": 1.0})
+        assert result == [tall]
+
+    def test_max_rating_keeps_low_rated(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        user_setting_dict["image_ratings"] = {a: 2, b: 5}
+        try:
+            result = smart_album.apply_to_paths([a, b], {"max_rating": 3})
+        finally:
+            user_setting_dict["image_ratings"] = {}
+        assert result == [a]
+
+    def test_name_regex_matches_filename(self, tmp_path):
+        a = _touch(tmp_path / "IMG_0001.png")
+        b = _touch(tmp_path / "snapshot.png")
+        result = smart_album.apply_to_paths([a, b], {"name_regex": r"IMG_\d+"})
+        assert result == [a]
+
+    def test_invalid_name_regex_matches_nothing(self, tmp_path):
+        a = _touch(tmp_path / "a.png")
+        result = smart_album.apply_to_paths([a], {"name_regex": "("})  # unbalanced
+        assert result == []
+
+    def test_name_glob_is_case_insensitive(self, tmp_path):
+        a = _touch(tmp_path / "Photo.PNG")
+        b = _touch(tmp_path / "clip.mp4")
+        result = smart_album.apply_to_paths([a, b], {"name_glob": "*.png"})
+        assert result == [a]
+
+    def test_camera_filter_matches_make_model(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        exif = {
+            a: {"Make": "Canon", "Model": "EOS R5"},
+            b: {"Make": "NIKON", "Model": "Z6"},
+        }
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
+        assert smart_album.apply_to_paths([a, b], {"camera": "canon"}) == [a]
+
+    def test_lens_filter_matches_lens_model(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        b = _touch(tmp_path / "b.png")
+        exif = {
+            a: {"LensModel": "RF24-70mm F2.8 L"},
+            b: {"LensModel": "EF50mm F1.8"},
+        }
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
+        assert smart_album.apply_to_paths([a, b], {"lens": "24-70"}) == [a]
+
+    def test_camera_filter_drops_untagged(self, tmp_path, monkeypatch):
+        a = _touch(tmp_path / "a.png")
+        from Imervue.image import info
+        monkeypatch.setattr(info, "get_exif_data", lambda p: {})
+        assert smart_album.apply_to_paths([a], {"camera": "canon"}) == []
 
     def test_min_width_and_height_filter(self, tmp_path):
         wide = _make_image(tmp_path / "wide.png", 200, 50)

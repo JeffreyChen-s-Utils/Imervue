@@ -34,12 +34,21 @@ _rng = np.random.default_rng(seed=0xC0FFEE)
 # ``__del__`` dereferences freed memory → access violation. The process exits
 # non-zero even though every test passed.
 #
-# We capture pytest's intended exit code via ``pytest_sessionfinish`` and
-# register an ``atexit`` handler that calls ``os._exit`` with it. ``atexit``
-# fires AFTER all session fixtures and pytest's own cleanup but BEFORE
-# module deallocation, so we skip the unsafe finalisation pass entirely.
-# Registering at module-load time puts us first in the LIFO queue → we
-# run last, after every other atexit handler has had its turn.
+# Two layers defend against this. PRIMARY: a ``tryfirst`` ``pytest_unconfigure``
+# hook hard-terminates a *passing* CI session (see ``_hard_exit_zero``). On
+# Windows even ``os._exit`` routes through ``ExitProcess``, which STILL runs
+# DLL_PROCESS_DETACH — and the Qt/shiboken DLL teardown is exactly what
+# segfaults — so we ``TerminateProcess`` ourselves instead, skipping detach.
+# ``pytest_unconfigure`` runs
+# after ``pytest_sessionfinish`` has completed — including the terminal
+# reporter's hookwrapper that prints the summary banner — so the banner is on
+# screen, and ``tryfirst`` makes us the first unconfigure step so we exit before
+# any later teardown, pytest finalisation or interpreter shutdown can finalise a
+# stale shiboken wrapper and segfault. (Exiting from ``pytest_sessionfinish``
+# does NOT work: that hook runs *inside* the reporter's wrapper, before its
+# post-yield summary print, so the banner is lost.) FALLBACK: an ``atexit``
+# handler that ``os._exit``s with the captured code, covering a failing CI
+# session that reaches interpreter shutdown without the hook having exited.
 
 _pytest_exit_status: int = 0
 
@@ -50,12 +59,53 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     _pytest_exit_status = int(exitstatus)
 
 
-def _force_clean_exit() -> None:
-    """Skip module finalisation to dodge the Qt teardown segfault.
+@pytest.hookimpl(tryfirst=True)
+def pytest_unconfigure(config):  # noqa: ARG001
+    """Hard-exit a green CI session before the native teardown segfault.
 
-    Only fires under headless CI — local runs do interpreter cleanup
-    normally so any new ``__del__`` bug shows up immediately during
-    development instead of being masked.
+    The summary banner has already printed by now; on CI a passing session
+    terminates immediately, skipping session-fixture teardown, the rest of
+    unconfigure and the process exit path that finalises a stale shiboken
+    wrapper. A failing session (or any local run) falls through to normal
+    teardown so real failures and new ``__del__`` bugs still surface.
+    """
+    if os.environ.get("CI") == "true" and _pytest_exit_status == 0:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        _hard_exit_zero()
+
+
+def _hard_exit_zero() -> None:
+    """Terminate this process with code 0 without running native teardown.
+
+    ``os._exit`` is not enough on Windows: it calls ``ExitProcess``, which still
+    runs DLL_PROCESS_DETACH, and the Qt/shiboken DLL teardown is what segfaults.
+    ``TerminateProcess`` on our own process skips detach entirely. On other
+    platforms ``os._exit`` already avoids the offending finalisation.
+
+    The handle types MUST be declared: ``GetCurrentProcess`` returns the
+    ``(HANDLE)-1`` pseudo-handle, and with ctypes' default 32-bit ``c_int``
+    return type that gets truncated to an invalid handle, so
+    ``TerminateProcess`` silently no-ops and we fall through to the crashing
+    ``os._exit``. Declaring ``c_void_p`` keeps the full 64-bit handle.
+    """
+    if sys.platform == "win32":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+        kernel32.TerminateProcess.argtypes = (ctypes.c_void_p, ctypes.c_uint)
+        kernel32.TerminateProcess(kernel32.GetCurrentProcess(), 0)
+    os._exit(0)
+
+
+def _force_clean_exit() -> None:
+    """Fallback skip of module finalisation to dodge the Qt teardown segfault.
+
+    The ``pytest_unconfigure`` hook already exits a passing CI session; this
+    covers the remaining path (a failing CI session reaching interpreter
+    shutdown). Only fires under headless CI — local runs do interpreter cleanup
+    normally so any new ``__del__`` bug shows up immediately during development
+    instead of being masked.
     """
     if os.environ.get("CI") != "true":
         return

@@ -8,6 +8,7 @@ from Imervue.image.gradient_map import (
     INTENSITY_MAX,
     INTENSITY_MIN,
     GradientMapOptions,
+    _build_gradient_lut,
     apply_gradient_map,
 )
 
@@ -38,6 +39,39 @@ def test_round_trip_preserves_stops():
     assert restored.stops == [(0.0, [10, 20, 30]),
                               (0.5, [100, 50, 0]),
                               (1.0, [255, 200, 100])]
+
+
+def test_perceptual_flag_round_trips():
+    opts = GradientMapOptions(enabled=True, perceptual=True)
+    assert GradientMapOptions.from_dict(opts.to_dict()).perceptual is True
+    assert GradientMapOptions().perceptual is False
+
+
+# ---------------------------------------------------------------------------
+# Perceptual LUT
+# ---------------------------------------------------------------------------
+
+
+def _spread(rgb):
+    return int(max(rgb)) - int(min(rgb))
+
+
+def test_linear_midpoint_of_blue_yellow_is_grey():
+    lut = _build_gradient_lut([(0.0, [0, 0, 255]), (1.0, [255, 255, 0])])
+    assert _spread(lut[128]) <= 5  # sRGB midpoint greys out
+
+
+def test_perceptual_midpoint_keeps_colour():
+    lut = _build_gradient_lut(
+        [(0.0, [0, 0, 255]), (1.0, [255, 255, 0])], perceptual=True)
+    assert _spread(lut[128]) > 20  # OkLCH keeps the midpoint colourful
+
+
+def test_perceptual_lut_endpoints_match_stops():
+    lut = _build_gradient_lut(
+        [(0.0, [10, 20, 30]), (1.0, [200, 100, 50])], perceptual=True)
+    assert tuple(int(c) for c in lut[0]) == (10, 20, 30)
+    assert tuple(int(c) for c in lut[255]) == (200, 100, 50)
 
 
 def test_intensity_clamped():

@@ -122,17 +122,32 @@ def delete_selected_tiles(main_gui):
 
     main_gui.update()
 
+def _refresh_tree_pending(main_gui) -> None:
+    """Re-sync the file tree's hidden rows to the current pending set."""
+    tree = getattr(getattr(main_gui, "main_window", None), "tree", None)
+    refresh = getattr(tree, "refresh_pending_hidden", None)
+    if callable(refresh):
+        refresh()
+
+
 def undo_delete(main_gui: GPUImageView):
     from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 
     if not main_gui.undo_stack:
         return
 
-    action = main_gui.undo_stack.pop()
-
-    if action.get("mode") != "delete":
+    mode = main_gui.undo_stack[-1].get("mode")
+    if mode == "delete_external":
+        # A folder / file-tree soft-delete: undo just un-hides it (it was never
+        # moved). Popping it also stops the shutdown commit from trashing it.
+        main_gui.undo_stack.pop()
+        _refresh_tree_pending(main_gui)
+        main_gui.update()
+        return
+    if mode != "delete":
         return
 
+    action = main_gui.undo_stack.pop()
     paths = action["deleted_paths"]
     indices = action["indices"]
 
@@ -158,16 +173,25 @@ def undo_delete(main_gui: GPUImageView):
 
 
 def commit_pending_deletions(main_gui: _UndoStackOwner):
+    from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
     for action in main_gui.undo_stack:
         # 跳過已還原的動作
         if action.get("restored", False):
             continue
 
+        external = action.get("mode") == "delete_external"
         for path in action.get("deleted_paths", []):
             try:
-                if Path(path).exists():
+                if not Path(path).exists():
+                    continue
+                # Folders / file-tree deletions were only hidden, never moved —
+                # send them to the OS trash now (recoverable). Viewer-list image
+                # soft-deletes are unlinked as before.
+                if external:
+                    _send_to_trash(path)
+                else:
                     Path(path).unlink()
-                    logger.info(f"Permanent delete: {path}")
+                logger.info(f"Permanent delete: {path}")
             except Exception as e:
                 logger.exception(f"Failed to permanently delete {path}: {e}")
 

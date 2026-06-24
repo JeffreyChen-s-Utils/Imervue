@@ -34,6 +34,14 @@ _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
 # Optional-backend output formats, routed through save_formats (HEIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
+_RGB_MAX = 255
+_DEFAULT_WATERMARK_COLOR = (_RGB_MAX, _RGB_MAX, _RGB_MAX)
+_DEFAULT_FRAME_TEXT_COLOR = (40, 40, 40)
+_WATERMARK_CORNERS = frozenset({
+    "top-left", "top-right", "bottom-left", "bottom-right", "center",
+})
+# Destination formats that can't carry alpha — flatten to RGB before saving.
+_NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 
 
 # ---------------------------------------------------------------------------
@@ -472,11 +480,19 @@ def image_thumbnail(path: str, max_size: int = 256) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) -> dict[str, Any]:
+def find_similar(
+    folder: str,
+    *,
+    threshold: int = 5,
+    recursive: bool = False,
+    progress: Any = None,
+) -> dict[str, Any]:
     """Group near-duplicate images in *folder* by perceptual (dHash) similarity.
 
     ``threshold`` is the maximum Hamming distance (0 = identical hash, higher =
     more tolerant). Returns the groups (each a list of paths) of size > 1.
+    ``progress`` is an optional reporter injected by the server; each hashed
+    image advances it.
     """
     base = _validated_dir(folder)
     iterator = base.rglob("*") if recursive else base.iterdir()
@@ -485,12 +501,582 @@ def find_similar(folder: str, *, threshold: int = 5, recursive: bool = False) ->
         if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
     ]
     from Imervue.image.perceptual_hash import find_similar as _find
-    groups = _find(sorted(paths), int(threshold))
+    on_progress = None
+    if progress is not None:
+        def report_progress(done: int, total: int) -> None:
+            progress.report(done, total=total, message=f"hashed {done}/{total}")
+        on_progress = report_progress
+    groups = _find(sorted(paths), int(threshold), on_progress=on_progress)
     return {
         "folder": str(base),
         "threshold": int(threshold),
         "group_count": len(groups),
         "groups": groups,
+    }
+
+
+# ---------------------------------------------------------------------------
+# collection_stats
+# ---------------------------------------------------------------------------
+
+
+def collection_stats(folder: str, *, recursive: bool = False) -> dict[str, Any]:
+    """Summarise a folder's ratings, favourites, colour labels and cull states.
+
+    Returns total / rated / unrated counts, a 0-5 star distribution and
+    average, favourite count, a colour-label tally and a pick/reject/unflagged
+    cull tally. Reads ratings and labels from the user's settings and cull
+    states from the library index.
+    """
+    base = _validated_dir(folder)
+    iterator = base.rglob("*") if recursive else base.iterdir()
+    paths = sorted(
+        str(p) for p in iterator
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+    )
+    from Imervue.library.collection_stats import summarize
+    return {"folder": str(base), **summarize(paths)}
+
+
+# ---------------------------------------------------------------------------
+# extract_gps
+# ---------------------------------------------------------------------------
+
+
+def extract_gps(path: str) -> dict[str, Any]:
+    """Read GPS latitude/longitude from an image's EXIF (offline).
+
+    Returns ``has_gps`` plus signed decimal ``latitude`` / ``longitude``
+    (positive = N/E), or nulls when the image carries no GPS record. Chain it
+    into ``reverse_geocode`` to turn the coordinates into a place name.
+    """
+    from Imervue.image.gps import extract_gps as _extract
+    img_path = _validated_file(path)
+    coords = _extract(img_path)
+    if coords is None:
+        return {
+            "path": str(img_path), "has_gps": False,
+            "latitude": None, "longitude": None,
+        }
+    lat, lon = coords
+    return {
+        "path": str(img_path), "has_gps": True,
+        "latitude": lat, "longitude": lon,
+    }
+
+
+# ---------------------------------------------------------------------------
+# dominant_colors
+# ---------------------------------------------------------------------------
+
+
+def _color_entry(entry: Any) -> dict[str, Any]:
+    r, g, b = entry.color
+    return {
+        "rgb": [r, g, b],
+        "hex": f"#{r:02x}{g:02x}{b:02x}",
+        "pixel_count": entry.pixel_count,
+    }
+
+
+def dominant_colors(path: str, n_colors: int = 8) -> dict[str, Any]:
+    """Return the image's dominant colour palette (median-cut), dominant first.
+
+    Each entry carries its ``rgb`` triplet, a ``hex`` string and the
+    ``pixel_count`` of its bucket. ``n_colors`` is clamped to the palette
+    extractor's supported range.
+    """
+    from Imervue.paint.palette_extract import (
+        PALETTE_MAX,
+        PALETTE_MIN,
+        extract_palette,
+    )
+    img_path = _validated_file(path)
+    count = max(PALETTE_MIN, min(PALETTE_MAX, int(n_colors)))
+    palette = extract_palette(_load_rgba_array(img_path), n_colors=count)
+    colors = [_color_entry(entry) for entry in palette]
+    return {"path": str(img_path), "color_count": len(colors), "colors": colors}
+
+
+# ---------------------------------------------------------------------------
+# error_level_analysis
+# ---------------------------------------------------------------------------
+
+
+def error_level_analysis(
+    path: str, quality: int = 90, scale: int = 15,
+) -> dict[str, Any]:
+    """Return a JPEG-recompression Error-Level-Analysis map as a PNG data URI.
+
+    Regions edited after the last save compress differently and light up
+    against the background — a quick tamper / authenticity check. ``quality``
+    (1-100) and ``scale`` (amplification) are clamped by the analyser.
+    """
+    import base64
+    import io
+
+    from PIL import Image
+
+    from Imervue.image.ela import error_level_analysis as _ela
+    img_path = _validated_file(path)
+    ela_rgba = _ela(_load_rgba_array(img_path), int(quality), int(scale))
+    height, width = int(ela_rgba.shape[0]), int(ela_rgba.shape[1])
+    buffer = io.BytesIO()
+    Image.fromarray(ela_rgba, mode="RGBA").save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return {
+        "path": str(img_path),
+        "width": width,
+        "height": height,
+        "data_uri": f"data:image/png;base64,{encoded}",
+    }
+
+
+# ---------------------------------------------------------------------------
+# search_images
+# ---------------------------------------------------------------------------
+
+# Query fields whose data lives in the running app (user settings / library
+# database), so they cannot be evaluated by the standalone MCP server.
+_STATEFUL_QUERY_FIELDS = (
+    "min_rating", "max_rating", "favorites_only", "color_labels",
+    "tags_any", "tags_all", "tags_exclude", "cull",
+)
+
+
+def search_images(
+    folder: str, query: str, *, recursive: bool = False,
+) -> dict[str, Any]:
+    """Search a folder with the smart-album query DSL and return matching paths.
+
+    Parses *query* (e.g. ``ext:png name:sunset width:>1920 aspect:>1.5``) into
+    smart-album rules and filters the folder's images. Path, name, size,
+    dimension and EXIF (camera / lens / place) filters work fully; rating /
+    favourite / colour-label / tag / cull filters depend on the running app's
+    settings and library database, so a query using those fields is rejected.
+    """
+    from Imervue.library.search_query import parse_query
+    from Imervue.library.smart_album import apply_to_paths
+    base = _validated_dir(folder)
+    rules = parse_query(query)
+    unsupported = sorted(field for field in _STATEFUL_QUERY_FIELDS if rules.get(field))
+    if unsupported:
+        raise ValueError(
+            "query uses fields unavailable in the standalone server: "
+            + ", ".join(unsupported),
+        )
+    iterator = base.rglob("*") if recursive else base.iterdir()
+    paths = sorted(
+        str(p) for p in iterator
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+    )
+    matches = apply_to_paths(paths, rules)
+    return {
+        "folder": str(base), "query": query,
+        "count": len(matches), "matches": matches,
+    }
+
+
+# ---------------------------------------------------------------------------
+# apply_watermark
+# ---------------------------------------------------------------------------
+
+
+def _validated_rgb_triplet(
+    color: Any, default: tuple[int, int, int],
+) -> tuple[int, int, int]:
+    """Coerce a JSON ``[r, g, b]`` array into a clamped uint8 RGB tuple."""
+    if color is None:
+        return default
+    if (not isinstance(color, (list, tuple)) or len(color) != 3
+            or not all(isinstance(c, int) for c in color)):
+        raise ValueError("color must be a list of three integers 0-255")
+    return tuple(max(0, min(_RGB_MAX, int(c))) for c in color)
+
+
+def _save_image_to(dst: Path, img: Any) -> None:
+    """Save a PIL image to ``dst``, flattening alpha for formats lacking it."""
+    fmt = dst.suffix.lower().lstrip(".")
+    to_save = img.convert("RGB") if fmt in _NO_ALPHA_FORMATS else img
+    to_save.save(dst)
+
+
+def apply_watermark(
+    source: str,
+    destination: str,
+    text: str,
+    *,
+    corner: str = "bottom-right",
+    opacity: float = 0.6,
+    font_fraction: float = 0.035,
+    color: list[int] | None = None,
+    shadow: bool = True,
+) -> dict[str, Any]:
+    """Render a text watermark onto ``source`` and save it to ``destination``.
+
+    The destination format is taken from its suffix; formats that can't carry
+    alpha (JPEG / BMP) are flattened to RGB first. Returns the destination
+    path, its size in bytes and the corner used.
+    """
+    src = _validated_file(source)
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("text must be a non-empty string")
+    if corner not in _WATERMARK_CORNERS:
+        raise ValueError(
+            f"corner must be one of {sorted(_WATERMARK_CORNERS)}, got {corner!r}",
+        )
+    dst = _validated_destination(destination)
+    rgb = _validated_rgb_triplet(color, _DEFAULT_WATERMARK_COLOR)
+    from PIL import Image
+    from Imervue.image.watermark import WatermarkOptions
+    from Imervue.image.watermark import apply_watermark as _apply
+    opts = WatermarkOptions(
+        text=text, corner=corner, opacity=float(opacity),
+        font_fraction=float(font_fraction), color=rgb, shadow=bool(shadow),
+    )
+    with Image.open(src) as opened:
+        _save_image_to(dst, _apply(opened, opts))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "size_bytes": int(dst.stat().st_size),
+        "corner": corner,
+    }
+
+
+# ---------------------------------------------------------------------------
+# apply_frame
+# ---------------------------------------------------------------------------
+
+
+def apply_frame(
+    source: str,
+    destination: str,
+    *,
+    border: int = 40,
+    color: list[int] | None = None,
+    bottom_extra: int = 0,
+    caption: str = "",
+    text_color: list[int] | None = None,
+) -> dict[str, Any]:
+    """Wrap an image in a matte border (+ optional caption) and save it.
+
+    ``border`` is the matte width in pixels, ``bottom_extra`` adds a thicker
+    Polaroid-style bottom band, and ``caption`` is burned into that band.
+    The destination format follows its suffix. Returns the destination path,
+    its size in bytes and the framed dimensions.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    frame_rgb = _validated_rgb_triplet(color, _DEFAULT_WATERMARK_COLOR)
+    text_rgb = _validated_rgb_triplet(text_color, _DEFAULT_FRAME_TEXT_COLOR)
+    from PIL import Image
+    from Imervue.image.photo_frame import FrameOptions, add_frame
+    opts = FrameOptions(
+        border=max(0, int(border)), color=frame_rgb,
+        bottom_extra=max(0, int(bottom_extra)),
+        caption=str(caption), text_color=text_rgb,
+    )
+    framed = add_frame(_load_rgba_array(src), opts)
+    with Image.fromarray(framed, "RGBA") as out:
+        _save_image_to(dst, out)
+    height, width = framed.shape[:2]
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "size_bytes": int(dst.stat().st_size),
+        "width": int(width),
+        "height": int(height),
+    }
+
+
+def _validated_destination(destination: str) -> Path:
+    """Return the destination Path, requiring its parent directory to exist."""
+    dst = Path(destination)
+    if not dst.parent.exists():
+        raise ValueError(f"destination parent {dst.parent} does not exist")
+    return dst
+
+
+# ---------------------------------------------------------------------------
+# build_collage
+# ---------------------------------------------------------------------------
+
+_COLLAGE_MAX_IMAGES = 200
+
+
+def build_collage(
+    sources: list[str],
+    destination: str,
+    *,
+    columns: int = 3,
+    cell_width: int = 400,
+    cell_height: int = 400,
+    gap: int = 12,
+    margin: int = 20,
+    background: list[int] | None = None,
+    progress: Any = None,
+) -> dict[str, Any]:
+    """Composite several images into a grid montage and save it.
+
+    Each source is letterboxed and centred in an equal ``cell_width`` x
+    ``cell_height`` cell; ``gap`` separates cells and ``margin`` frames the
+    grid. The destination format follows its suffix. Returns the destination
+    path, image count, column count, output dimensions and size in bytes.
+
+    ``progress`` is an optional reporter injected by the server when the
+    caller passes a progressToken; each loaded source advances it.
+    """
+    if not isinstance(sources, (list, tuple)) or not sources:
+        raise ValueError("sources must be a non-empty list of image paths")
+    if len(sources) > _COLLAGE_MAX_IMAGES:
+        raise ValueError(f"collage supports at most {_COLLAGE_MAX_IMAGES} images")
+    dst = _validated_destination(destination)
+    rgb = _validated_rgb_triplet(background, _DEFAULT_WATERMARK_COLOR)
+    total = len(sources)
+    arrays = []
+    for index, src in enumerate(sources, start=1):
+        arrays.append(_load_rgba_array(_validated_file(src)))
+        if progress is not None:
+            progress.report(index, total=total, message=f"loaded {index}/{total}")
+    cols = max(1, int(columns))
+    from PIL import Image
+    from Imervue.image.collage import build_collage as _build
+    collage = _build(
+        arrays, cols,
+        cell=(max(1, int(cell_width)), max(1, int(cell_height))),
+        gap=max(0, int(gap)), margin=max(0, int(margin)), background=rgb,
+    )
+    with Image.fromarray(collage, "RGBA") as out:
+        _save_image_to(dst, out)
+    height, width = collage.shape[:2]
+    return {
+        "destination": str(dst),
+        "image_count": len(arrays),
+        "columns": cols,
+        "width": int(width),
+        "height": int(height),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# crop_image
+# ---------------------------------------------------------------------------
+
+
+def crop_image(
+    source: str,
+    destination: str,
+    *,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+) -> dict[str, Any]:
+    """Crop a rectangular region out of an image and save it.
+
+    ``x`` / ``y`` are the top-left corner and ``width`` / ``height`` the box
+    size, all in source pixels. The box must lie fully inside the image. The
+    destination format follows its suffix. Returns the destination path, the
+    cropped dimensions and the size in bytes.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    left, top = int(x), int(y)
+    box_w, box_h = int(width), int(height)
+    if box_w <= 0 or box_h <= 0:
+        raise ValueError("width and height must be positive")
+    if left < 0 or top < 0:
+        raise ValueError("x and y must be non-negative")
+    from PIL import Image
+    with Image.open(src) as opened:
+        img_w, img_h = opened.size
+        if left + box_w > img_w or top + box_h > img_h:
+            raise ValueError(
+                f"crop box ({left},{top},{box_w}x{box_h}) exceeds "
+                f"image {img_w}x{img_h}",
+            )
+        _save_image_to(dst, opened.crop((left, top, left + box_w, top + box_h)))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": box_w,
+        "height": box_h,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# resize_image
+# ---------------------------------------------------------------------------
+
+
+def _resize_dims(
+    src_w: int, src_h: int, width: int | None, height: int | None,
+) -> tuple[int, int]:
+    """Resolve a resize target, preserving aspect when one edge is omitted."""
+    if width is not None and height is not None:
+        return (width, height)
+    if width is not None:
+        return (width, max(1, round(src_h * (width / src_w))))
+    return (max(1, round(src_w * (height / src_h))), height)
+
+
+def resize_image(
+    source: str,
+    destination: str,
+    *,
+    width: int | None = None,
+    height: int | None = None,
+) -> dict[str, Any]:
+    """Resize an image and save it.
+
+    Pass both ``width`` and ``height`` for an exact resize, or just one to
+    scale the other proportionally. The destination format follows its
+    suffix. Returns the destination path, the new dimensions and size in bytes.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    target_w = None if width is None else int(width)
+    target_h = None if height is None else int(height)
+    if target_w is None and target_h is None:
+        raise ValueError("at least one of width or height is required")
+    if (target_w is not None and target_w <= 0) or (
+        target_h is not None and target_h <= 0
+    ):
+        raise ValueError("width and height must be positive")
+    from PIL import Image
+    with Image.open(src) as opened:
+        src_w, src_h = opened.size
+        target = _resize_dims(src_w, src_h, target_w, target_h)
+        _save_image_to(dst, opened.resize(target, Image.Resampling.LANCZOS))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": target[0],
+        "height": target[1],
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# rotate_image
+# ---------------------------------------------------------------------------
+
+# Operation name -> PIL transpose attribute. Rotations are clockwise; PIL's
+# ROTATE_n constants are counter-clockwise, hence the 90/270 swap.
+_ROTATE_OPERATIONS: dict[str, str] = {
+    "rotate_90": "ROTATE_270",
+    "rotate_180": "ROTATE_180",
+    "rotate_270": "ROTATE_90",
+    "flip_horizontal": "FLIP_LEFT_RIGHT",
+    "flip_vertical": "FLIP_TOP_BOTTOM",
+}
+
+
+def rotate_image(source: str, destination: str, operation: str) -> dict[str, Any]:
+    """Rotate (clockwise) or flip an image by a fixed operation and save it.
+
+    ``operation`` is one of ``rotate_90`` / ``rotate_180`` / ``rotate_270`` /
+    ``flip_horizontal`` / ``flip_vertical``. These are lossless orientation
+    changes. The destination format follows its suffix. Returns the
+    destination path, the operation, the resulting dimensions and size.
+    """
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    transpose_name = _ROTATE_OPERATIONS.get(operation)
+    if transpose_name is None:
+        raise ValueError(
+            f"operation must be one of {sorted(_ROTATE_OPERATIONS)}, "
+            f"got {operation!r}",
+        )
+    from PIL import Image
+    with Image.open(src) as opened:
+        result = opened.transpose(getattr(Image.Transpose, transpose_name))
+        width, height = result.size
+        _save_image_to(dst, result)
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "operation": operation,
+        "width": int(width),
+        "height": int(height),
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# solarize_image
+# ---------------------------------------------------------------------------
+
+
+def solarize_image(
+    source: str,
+    destination: str,
+    *,
+    threshold: float = 0.5,
+    mix: float = 1.0,
+) -> dict[str, Any]:
+    """Apply a solarize tone reversal to ``source`` and save it to ``destination``.
+
+    Tones at or above ``threshold`` (0-1) are inverted; ``mix`` (0-1) blends the
+    result toward the original. The destination format follows its suffix.
+    Returns the destination path, the resulting dimensions and size in bytes.
+    """
+    from PIL import Image
+
+    from Imervue.image.solarize import apply_solarize as _solarize
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    result = _solarize(_load_rgba_array(src), float(threshold), float(mix))
+    height, width = int(result.shape[0]), int(result.shape[1])
+    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": width,
+        "height": height,
+        "size_bytes": int(dst.stat().st_size),
+    }
+
+
+# ---------------------------------------------------------------------------
+# glow_image
+# ---------------------------------------------------------------------------
+
+
+def glow_image(
+    source: str,
+    destination: str,
+    *,
+    amount: float = 0.5,
+    radius: int = 15,
+    threshold: float = 0.0,
+) -> dict[str, Any]:
+    """Apply a diffuse-glow / Orton bloom to ``source`` and save to ``destination``.
+
+    ``amount`` (0-1) is the glow opacity, ``radius`` the blur radius and
+    ``threshold`` (0-1) the brightness above which regions bloom (0 = whole
+    frame). The destination format follows its suffix. Returns the destination
+    path, the resulting dimensions and size in bytes.
+    """
+    from PIL import Image
+
+    from Imervue.image.glow import apply_glow as _glow
+    src = _validated_file(source)
+    dst = _validated_destination(destination)
+    result = _glow(
+        _load_rgba_array(src), float(amount), int(radius), float(threshold),
+    )
+    height, width = int(result.shape[0]), int(result.shape[1])
+    _save_image_to(dst, Image.fromarray(result, mode="RGBA"))
+    return {
+        "source": str(src),
+        "destination": str(dst),
+        "width": width,
+        "height": height,
+        "size_bytes": int(dst.stat().st_size),
     }
 
 
@@ -539,6 +1125,79 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": read_xmp_tags,
+    },
+    {
+        "name": "extract_gps",
+        "description": (
+            "Read GPS latitude/longitude from an image's EXIF. Returns has_gps "
+            "and signed decimal coordinates (null when absent); chain into "
+            "reverse_geocode for a place name."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": extract_gps,
+    },
+    {
+        "name": "dominant_colors",
+        "description": (
+            "Extract the dominant colour palette (median-cut), dominant first. "
+            "Each colour carries rgb, hex and pixel_count."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "n_colors": {
+                    "type": "integer", "minimum": 1, "maximum": 64, "default": 8,
+                },
+            },
+            "required": ["path"],
+        },
+        "handler": dominant_colors,
+    },
+    {
+        "name": "error_level_analysis",
+        "description": (
+            "Return a JPEG-recompression Error-Level-Analysis map as a PNG data "
+            "URI — regions edited after the last save light up against the rest."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "quality": {
+                    "type": "integer", "minimum": 1, "maximum": 100, "default": 90,
+                },
+                "scale": {
+                    "type": "integer", "minimum": 1, "maximum": 100, "default": 15,
+                },
+            },
+            "required": ["path"],
+        },
+        "handler": error_level_analysis,
+    },
+    {
+        "name": "search_images",
+        "description": (
+            "Search a folder with the smart-album query DSL (e.g. "
+            "'ext:png name:sunset width:>1920 aspect:>1.5 size:>2mb camera:canon'). "
+            "Returns matching paths. Path/name/size/dimension/EXIF filters work; "
+            "rating/favourite/colour/tag/cull fields are rejected as they need "
+            "the running app's database."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder": {"type": "string", "description": "Directory to search."},
+                "query": {"type": "string", "description": "Smart-album query DSL."},
+                "recursive": {"type": "boolean", "default": False},
+            },
+            "required": ["folder", "query"],
+        },
+        "handler": search_images,
     },
     {
         "name": "convert_format",
@@ -725,6 +1384,230 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
         "handler": find_similar,
     },
+    {
+        "name": "collection_stats",
+        "description": (
+            "Summarise a folder's images: total / rated / unrated counts, a 0-5 "
+            "star distribution and average, favourite count, a colour-label "
+            "tally and a pick/reject/unflagged cull tally. Set recursive=true to "
+            "walk subfolders."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder": {"type": "string"},
+                "recursive": {"type": "boolean", "default": False},
+            },
+            "required": ["folder"],
+        },
+        "handler": collection_stats,
+    },
+    {
+        "name": "apply_watermark",
+        "description": (
+            "Render a text watermark onto an image and save it to a destination "
+            "path. corner is one of top-left / top-right / bottom-left / "
+            "bottom-right / center; opacity and font_fraction are 0..1 fractions; "
+            "color is an [r, g, b] triplet. The destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "text": {"type": "string", "description": "Watermark text (non-empty)."},
+                "corner": {
+                    "type": "string",
+                    "enum": ["top-left", "top-right", "bottom-left",
+                             "bottom-right", "center"],
+                    "default": "bottom-right",
+                },
+                "opacity": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.6},
+                "font_fraction": {
+                    "type": "number", "minimum": 0.005, "maximum": 0.2, "default": 0.035,
+                },
+                "color": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [255, 255, 255],
+                },
+                "shadow": {"type": "boolean", "default": True},
+            },
+            "required": ["source", "destination", "text"],
+        },
+        "handler": apply_watermark,
+    },
+    {
+        "name": "apply_frame",
+        "description": (
+            "Wrap an image in a coloured matte border and save it to a "
+            "destination path. border is the matte width in pixels; bottom_extra "
+            "adds a thicker Polaroid-style bottom band; caption is burned into "
+            "that band. color and text_color are [r, g, b] triplets."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "border": {"type": "integer", "minimum": 0, "default": 40},
+                "color": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [255, 255, 255],
+                },
+                "bottom_extra": {"type": "integer", "minimum": 0, "default": 0},
+                "caption": {"type": "string", "default": ""},
+                "text_color": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [40, 40, 40],
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": apply_frame,
+    },
+    {
+        "name": "build_collage",
+        "description": (
+            "Composite several images into a grid montage and save it. Each "
+            "source is letterboxed into an equal cell_width x cell_height cell; "
+            "columns sets the grid width, gap separates cells and margin frames "
+            "the grid. background is an [r, g, b] triplet."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sources": {
+                    "type": "array", "items": {"type": "string"}, "minItems": 1,
+                },
+                "destination": {"type": "string"},
+                "columns": {"type": "integer", "minimum": 1, "default": 3},
+                "cell_width": {"type": "integer", "minimum": 1, "default": 400},
+                "cell_height": {"type": "integer", "minimum": 1, "default": 400},
+                "gap": {"type": "integer", "minimum": 0, "default": 12},
+                "margin": {"type": "integer", "minimum": 0, "default": 20},
+                "background": {
+                    "type": "array", "items": {"type": "integer"},
+                    "minItems": 3, "maxItems": 3, "default": [255, 255, 255],
+                },
+            },
+            "required": ["sources", "destination"],
+        },
+        "handler": build_collage,
+    },
+    {
+        "name": "crop_image",
+        "description": (
+            "Crop a rectangular region out of an image and save it. x / y are "
+            "the top-left corner and width / height the box size, all in source "
+            "pixels; the box must lie fully inside the image. The destination "
+            "format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "x": {"type": "integer", "minimum": 0},
+                "y": {"type": "integer", "minimum": 0},
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1},
+            },
+            "required": ["source", "destination", "x", "y", "width", "height"],
+        },
+        "handler": crop_image,
+    },
+    {
+        "name": "resize_image",
+        "description": (
+            "Resize an image and save it. Pass both width and height for an "
+            "exact resize, or just one to scale the other proportionally. The "
+            "destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": resize_image,
+    },
+    {
+        "name": "rotate_image",
+        "description": (
+            "Rotate (clockwise) or flip an image by a fixed, lossless operation "
+            "and save it. operation is one of rotate_90 / rotate_180 / "
+            "rotate_270 / flip_horizontal / flip_vertical. The destination "
+            "format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "operation": {
+                    "type": "string",
+                    "enum": ["rotate_90", "rotate_180", "rotate_270",
+                             "flip_horizontal", "flip_vertical"],
+                },
+            },
+            "required": ["source", "destination", "operation"],
+        },
+        "handler": rotate_image,
+    },
+    {
+        "name": "solarize_image",
+        "description": (
+            "Apply a solarize tone reversal and save the result. Tones at or "
+            "above threshold (0-1) are inverted; mix (0-1) blends back toward "
+            "the original. The destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "threshold": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+                "mix": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": solarize_image,
+    },
+    {
+        "name": "glow_image",
+        "description": (
+            "Apply a diffuse-glow / Orton soft-focus bloom and save the result. "
+            "amount (0-1) is the glow opacity, radius the blur size, threshold "
+            "(0-1) the brightness above which regions bloom (0 = whole frame). "
+            "The destination format follows its suffix."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "amount": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+                "radius": {
+                    "type": "integer", "minimum": 1, "maximum": 200, "default": 15,
+                },
+                "threshold": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": glow_image,
+    },
 ]
 
 
@@ -734,13 +1617,18 @@ def register_default_tools(server: MCPServer) -> None:
     Called once from :func:`Imervue.mcp_server.server.run` and from
     tests that want the default tool set. Tests that want to register
     a custom subset should drop straight into ``server.register``
-    instead of using this helper."""
+    instead of using this helper. Output schemas and annotations are
+    pulled from :data:`Imervue.mcp_server.tool_schemas.TOOL_METADATA`."""
+    from Imervue.mcp_server.tool_schemas import TOOL_METADATA
     for entry in _TOOL_DEFINITIONS:
+        meta = TOOL_METADATA.get(entry["name"], {})
         server.register(
             name=entry["name"],
             description=entry["description"],
             input_schema=entry["input_schema"],
             handler=entry["handler"],
+            output_schema=meta.get("output_schema"),
+            annotations=meta.get("annotations"),
         )
 
 

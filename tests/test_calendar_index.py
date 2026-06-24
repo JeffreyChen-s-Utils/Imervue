@@ -67,3 +67,50 @@ class TestGrouping:
             files.append(str(p))
         hist = ci.date_histogram(files)
         assert hist[_dt.date(2024, 1, 5)] == 3
+
+
+class TestCaptureDatetime:
+    def test_keeps_exif_time(self, tmp_path):
+        p = tmp_path / "a.jpg"
+        _write_jpeg_with_date(p, "2024:07:15 14:30:45")
+        assert ci.capture_datetime(str(p)) == _dt.datetime(2024, 7, 15, 14, 30, 45)
+
+    def test_mtime_fallback_keeps_hour(self, tmp_path):
+        p = tmp_path / "b.jpg"
+        _write_jpeg_with_date(p, None)
+        past = _dt.datetime(2020, 3, 10, 9, 0, 0).timestamp()
+        os.utime(p, (past, past))
+        assert ci.capture_datetime(str(p)).hour == 9
+
+    def test_missing_returns_unknown_datetime(self, tmp_path):
+        assert ci.capture_datetime(str(tmp_path / "no.jpg")) == ci.UNKNOWN_DATETIME
+
+
+class TestHourGrouping:
+    def test_group_by_hour_buckets_same_hour(self, monkeypatch):
+        times = {
+            "a": _dt.datetime(2024, 1, 1, 9, 15),
+            "b": _dt.datetime(2024, 1, 1, 9, 45),
+            "c": _dt.datetime(2024, 1, 1, 14, 0),
+        }
+        monkeypatch.setattr(ci, "capture_datetime", lambda p: times[str(p)])
+        groups = ci.group_by_hour(["a", "b", "c"])
+        assert groups[_dt.datetime(2024, 1, 1, 9, 0)] == ["a", "b"]
+        assert groups[_dt.datetime(2024, 1, 1, 14, 0)] == ["c"]
+
+    def test_hour_histogram_counts_hour_of_day(self, monkeypatch):
+        times = {
+            "a": _dt.datetime(2024, 1, 1, 9, 0),
+            "b": _dt.datetime(2024, 3, 5, 9, 30),   # same hour, different day
+            "c": _dt.datetime(2024, 1, 1, 18, 0),
+        }
+        monkeypatch.setattr(ci, "capture_datetime", lambda p: times[str(p)])
+        assert ci.hour_histogram(["a", "b", "c"]) == {9: 2, 18: 1}
+
+    def test_group_by_hour_unknown_bucket(self, monkeypatch):
+        monkeypatch.setattr(ci, "capture_datetime", lambda p: ci.UNKNOWN_DATETIME)
+        assert ci.group_by_hour(["x"]) == {ci.UNKNOWN_DATETIME: ["x"]}
+
+    def test_hour_histogram_skips_unknown(self, monkeypatch):
+        monkeypatch.setattr(ci, "capture_datetime", lambda p: ci.UNKNOWN_DATETIME)
+        assert ci.hour_histogram(["x"]) == {}

@@ -576,6 +576,10 @@ Paleta de herramientas (Banda izquierda)
    * - Desenfoque / Difuminar
      - ``R``
      - Manipulación local de píxeles
+   * - Dodge / Burn / Sponge
+     -
+     - Tonificación de cuarto oscuro — aclara, oscurece o satura /
+       desatura localmente, ponderado por el pincel y una máscara de rango tonal
    * - Pluma (Bezier)
      - ``P``
      - Ruta vectorial con edición de anclas / manejadores
@@ -2420,10 +2424,45 @@ Herramientas disponibles
      - Abre un archivo ``.puppet`` y devuelve un inventario estructurado: drawables,
        deformers, parameters, motions, expressions, hit areas, parts, mezclas de parámetros
        y rigs físicos.
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - Media/mín/máx/desv/mediana por canal, métricas de calidad sin referencia
+       (colorido, entropía, contraste, densidad de bordes, ruido) y el histograma de
+       256 contenedores con fracciones de recorte por exceso/defecto.
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Puntuación de desenfoque por varianza Laplaciana, texto OCR de Tesseract (degrada
+       con gracia cuando no está) y una vista previa PNG en base64 acotada.
+   * - ``find_similar``
+     - Agrupa imágenes casi-duplicadas por hash perceptual (umbral de Hamming). Reporta
+       el progreso por archivo cuando se proporciona un token de progreso.
+   * - ``apply_watermark`` / ``apply_frame``
+     - Estampa una marca de agua de texto, o envuelve la imagen en un marco mate /
+       Polaroid con una leyenda opcional.
+   * - ``build_collage``
+     - Compone varias imágenes en un montaje en cuadrícula (columnas, tamaño de celda,
+       separación, margen y fondo configurables). Reporta el progreso.
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - Recorte por caja de píxeles, redimensión que preserva el aspecto y rotación
+       sin pérdida de 90/180/270 o volteo horizontal/vertical.
+   * - ``collection_stats``
+     - Resume las calificaciones, favoritos, etiquetas de color y estados de culling de
+       una carpeta (conteos, distribución de 0–5 estrellas y promedio).
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - Resuelve coordenadas GPS a la ciudad más cercana sin conexión, y decodifica un
+       fotograma de un vídeo a una imagen fija.
 
-Todas las herramientas devuelven payloads serializados como JSON en el sobre
-``content`` / ``text`` de MCP; los payloads estructurados pueden parsearse de vuelta desde
-el campo ``text`` en el lado del cliente.
+Cada herramienta anuncia un ``outputSchema`` JSON y ``annotations`` de solo lectura /
+destructivas, y devuelve su resultado como ``structuredContent`` junto al sobre de texto
+(según MCP 2025-11-25), de modo que los clientes consumen payloads tipados sin volver a
+parsearlos. Las herramientas de larga duración transmiten ``notifications/progress`` cuando
+quien las invoca pasa un token de progreso.
+
+Prompts
+^^^^^^^
+
+El servidor expone cuatro prompts vía ``prompts/list`` / ``prompts/get``:
+``caption_image``, ``suggest_edits``, ``analyze_composition`` (una crítica de composición
+guiada por saliencia) y ``flag_issues`` (un triaje de nitidez + calidad + recorte). Los
+argumentos de los prompts se pueden autocompletar a través de ``completion/complete``.
 
 Claude Code (a nivel de proyecto)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

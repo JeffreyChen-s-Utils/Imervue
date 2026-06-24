@@ -569,6 +569,10 @@ Werkzeugpalette (linke Leiste)
    * - Weichzeichnen / Verschmieren
      - ``R``
      - Lokale Pixelmanipulation
+   * - Dodge / Burn / Sponge
+     -
+     - Dunkelkammer-Toning — lokal aufhellen, abdunkeln oder sättigen /
+       entsättigen, gewichtet durch den Brush und eine Tonwertbereichs-Maske
    * - Pen (Bezier)
      - ``P``
      - Vektorpfad mit Anker- / Griff-Bearbeitung
@@ -2460,10 +2464,46 @@ Verfügbare Werkzeuge
      - Ein ``.puppet``-Archiv öffnen und ein strukturiertes Inventar zurückgeben:
        Drawables, Deformer, Parameter, Motions, Ausdrücke, Hit-Areas, Parts,
        Parameter-Blends und Physik-Rigs.
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - Per-Kanal-Mittelwert/Min/Max/Std/Median, No-Reference-Qualitätsmetriken
+       (Colourfulness, Entropie, Kontrast, Kantendichte, Rauschen) und das
+       256-Bin-Histogramm mit Over-/Under-Clipping-Anteilen.
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Laplacian-Varianz-Blur-Score, Tesseract-OCR-Text (graceful, wenn nicht
+       vorhanden) und eine begrenzte Base64-PNG-Vorschau.
+   * - ``find_similar``
+     - Near-Duplicate-Bilder per Perceptual-Hash (Hamming-Schwellwert) gruppieren.
+       Meldet Per-Datei-Fortschritt, wenn ein Progress-Token übergeben wird.
+   * - ``apply_watermark`` / ``apply_frame``
+     - Ein Text-Wasserzeichen einbrennen oder das Bild in einen Passepartout- /
+       Polaroid-Rahmen mit optionaler Caption fassen.
+   * - ``build_collage``
+     - Mehrere Bilder zu einer Grid-Montage komponieren (konfigurierbare Spalten,
+       Zellengröße, Abstand, Rand, Hintergrund). Meldet Fortschritt.
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - Pixel-Box-Crop, seitenverhältniserhaltendes Resize und verlustfreies
+       90/180/270-Rotate oder Horizontal-/Vertikal-Flip.
+   * - ``collection_stats``
+     - Ratings, Favoriten, Farbetiketten und Cull-Zustände eines Ordners
+       zusammenfassen (Counts, 0–5-Sterne-Verteilung und Durchschnitt).
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - GPS-Koordinaten offline zur nächsten Stadt auflösen und einen Frame eines
+       Videos zu einem Standbild dekodieren.
 
-Alle Werkzeuge geben JSON-serialisierte Payloads im MCP-``content`` /
-``text``-Umschlag zurück; strukturierte Payloads können clientseitig aus dem
-``text``-Feld zurückgeparst werden.
+Jedes Werkzeug bewirbt ein JSON-``outputSchema`` und Read-only- /
+Destructive-``annotations`` und gibt sein Ergebnis als ``structuredContent``
+neben dem Text-Umschlag zurück (gemäß MCP 2025-11-25), sodass Clients typisierte
+Payloads ohne erneutes Parsen konsumieren. Langlaufende Werkzeuge streamen
+``notifications/progress``, wenn der Aufrufer ein Progress-Token übergibt.
+
+Prompts
+^^^^^^^
+
+Der Server stellt vier Prompts über ``prompts/list`` / ``prompts/get`` bereit:
+``caption_image``, ``suggest_edits``, ``analyze_composition`` (eine
+saliency-getriebene Kompositionskritik) und ``flag_issues`` (eine Schärfe- +
+Qualitäts- + Clipping-Triage). Prompt-Argumente sind über
+``completion/complete`` vervollständigbar.
 
 Claude Code (Projekt-Ebene)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -533,6 +533,9 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
    * - 模糊 / 塗抹
      - ``R``
      - 局部像素操作
+   * - Dodge / Burn / Sponge
+     -
+     - 暗房調色 — 局部提亮、加深、或加 / 減飽和度，依筆刷與色調範圍遮罩加權
    * - 鋼筆（貝茲）
      - ``P``
      - 向量路徑，可編輯錨點 / 控制把手
@@ -1890,9 +1893,41 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 開啟 ``.puppet`` 並回傳結構化盤點:drawables、deformers、
        parameters、motions、expressions、hit areas、parts、
        parameter blends、physics rigs。
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - 各通道 mean/min/max/std/median、無參考品質指標(colourfulness、
+       entropy、對比、邊緣密度、雜訊),以及 256-bin 直方圖含過曝 /
+       過暗的裁切比例。
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Laplacian-variance 模糊分數、Tesseract OCR 文字(缺套件時優雅
+       降級),以及限制大小的 base64 PNG 預覽。
+   * - ``find_similar``
+     - 用 perceptual hash(Hamming 門檻)把近重複圖片分組。傳入 progress
+       token 時會回報逐檔進度。
+   * - ``apply_watermark`` / ``apply_frame``
+     - 燒入文字浮水印,或把圖片包進 matte / 拍立得相框並可加說明文字。
+   * - ``build_collage``
+     - 把多張圖片合成成網格拼貼(欄數、格子大小、間距、邊距、背景皆可
+       設定)。會回報進度。
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - 像素框裁切、保留長寬比的縮放,以及無損 90/180/270 旋轉或水平 /
+       垂直翻轉。
+   * - ``collection_stats``
+     - 彙整資料夾的評等、收藏、色標與挑片狀態(計數、0–5 星分佈與平均)。
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - 離線把 GPS 座標解析成最近的城市,以及把影片的一格解碼成靜態影像。
 
-所有工具的回傳會 JSON 序列化後包進 MCP 的 ``content`` / ``text``
-信封;客戶端可從 ``text`` 欄位再 parse 回結構化資料。
+每個工具都會宣告 JSON ``outputSchema`` 與唯讀 / 破壞性的 ``annotations``,
+並把結果以 ``structuredContent`` 連同文字信封一併回傳(依 MCP 2025-11-25),
+讓客戶端不需重新 parse 就能取得型別化的 payload。長時間執行的工具在呼叫端
+傳入 progress token 時會串流 ``notifications/progress``。
+
+Prompts
+^^^^^^^
+
+伺服器透過 ``prompts/list`` / ``prompts/get`` 提供四個 prompt:
+``caption_image``、``suggest_edits``、``analyze_composition``(以
+saliency 為基礎的構圖評析)與 ``flag_issues``(銳利度 + 品質 + 裁切的
+分流檢查)。prompt 的引數可透過 ``completion/complete`` 自動補全。
 
 Claude Code(專案層級)
 ^^^^^^^^^^^^^^^^^^^^^^

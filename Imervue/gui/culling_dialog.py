@@ -6,9 +6,11 @@ opens this dialog to isolate one group or trash all rejects in a single step.
 """
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton,
     QButtonGroup, QMessageBox,
@@ -20,14 +22,44 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
+logger = logging.getLogger("Imervue.culling_dialog")
 
 _FILTER_VALUES = ("all", "pick", "reject", "unflagged")
+_SIMILAR_THRESHOLD = 5  # max Hamming distance for grouping near-duplicates
+
+
+class _AutoCullWorker(QThread):
+    """Group near-duplicates, score by sharpness, and plan picks/rejects."""
+
+    done = Signal(list, list)
+
+    def __init__(self, paths: list[str], threshold: int):
+        super().__init__()
+        self._paths = paths
+        self._threshold = threshold
+
+    def run(self) -> None:  # pragma: no cover - background I/O
+        from Imervue.gui._apply_save import load_rgba
+        from Imervue.image.perceptual_hash import find_similar
+        from Imervue.image.sharpness import sharpness_score
+        from Imervue.library.group_cull import plan_cull_for_paths
+        try:
+            picks, rejects = plan_cull_for_paths(
+                self._paths,
+                group_fn=lambda paths: find_similar(paths, self._threshold),
+                score_fn=lambda path: sharpness_score(load_rgba(path)),
+            )
+        except (OSError, ValueError) as exc:
+            logger.exception("Auto-cull failed: %s", exc)
+            picks, rejects = [], []
+        self.done.emit(picks, rejects)
 
 
 class CullingDialog(QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
+        self._worker: _AutoCullWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("culling_title", "Culling"))
         self.resize(420, 260)
@@ -60,6 +92,14 @@ class CullingDialog(QDialog):
         apply_btn = QPushButton(lang.get("culling_apply_filter", "Apply filter"))
         apply_btn.clicked.connect(self._apply_filter)
         layout.addWidget(apply_btn)
+
+        layout.addSpacing(12)
+        layout.addWidget(QLabel(lang.get("culling_auto_label", "Auto-cull:")))
+        self._auto_btn = QPushButton(
+            lang.get("culling_auto_pick", "Pick sharpest per similar group"),
+        )
+        self._auto_btn.clicked.connect(self._auto_cull)
+        layout.addWidget(self._auto_btn)
 
         layout.addSpacing(12)
         layout.addWidget(QLabel(
@@ -96,6 +136,39 @@ class CullingDialog(QDialog):
         viewer.clear_tile_grid()
         viewer.load_tile_grid_async(filtered)
         self.accept()
+
+    def _toast(self, key: str, fallback: str, **fmt) -> None:  # pragma: no cover
+        toast = getattr(self._ui, "toast", None)
+        if toast is None:
+            return
+        text = language_wrapper.language_word_dict.get(key, fallback)
+        toast.info(text.format(**fmt) if fmt else text)
+
+    def _auto_cull(self) -> None:  # pragma: no cover - Qt UI
+        if self._worker is not None:
+            return
+        viewer = self._ui.viewer
+        base = getattr(viewer, "_unfiltered_images", None) or list(viewer.model.images)
+        if not base:
+            self._toast("culling_no_images", "No images to cull")
+            return
+        self._auto_btn.setEnabled(False)
+        self._worker = _AutoCullWorker(list(base), _SIMILAR_THRESHOLD)
+        self._worker.done.connect(self._on_auto_cull_done)
+        self._worker.start()
+
+    def _on_auto_cull_done(self, picks: list, rejects: list) -> None:  # pragma: no cover
+        self._worker = None
+        self._auto_btn.setEnabled(True)
+        for path in picks:
+            image_index.set_cull_state(path, "pick")
+        for path in rejects:
+            image_index.set_cull_state(path, "reject")
+        if picks or rejects:
+            self._toast("culling_auto_done", "Picked {p}, rejected {r}",
+                        p=len(picks), r=len(rejects))
+        else:
+            self._toast("culling_auto_none", "No similar groups found")
 
     def _delete_rejects(self) -> None:
         viewer = self._ui.viewer

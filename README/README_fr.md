@@ -194,10 +194,10 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Marque-pages** — jusqu'à 5000 chemins
 - **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`)
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
-- **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés
+- **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
 - **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus
 - **Tags & Albums** avec filtrage multi-étiquettes AND/OR
-- **Albums intelligents** — enregistrer des requêtes basées sur des règles (extension / résolution / note / couleur / tri / étiquettes) et les réappliquer en un clic
+- **Albums intelligents** — enregistrer des requêtes basées sur des règles et les réappliquer en un clic ; les filtres couvrent l'extension, la résolution et le **rapport d'aspect**, la **taille de fichier**, la note **plancher / plafond**, la couleur, le tri, les étiquettes (y compris l'**exclusion**), le **boîtier / objectif**, le **regex / glob de nom de fichier** et l'**ancienneté du fichier**, plus l'**export / import** vers un fichier JSON portable
 - **Empilement des paires RAW+JPEG** — regrouper les captures de même base en une seule tuile ; le RAW reste accessible comme frère
 - **Notes par image** dans la barre latérale EXIF — sauvegarde temporisée, persistante entre sessions
 - **Plateau de travail** — panier inter-dossiers qui survit aux redémarrages ; déplacement / copie / export en masse
@@ -219,7 +219,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 - **Recherche floue par nom de fichier** avec mise en surbrillance des sous-chaînes
 - **Trouver des images similaires** — pHash (DCT 64 bits) avec distance de Hamming ajustable
-- **Recherche dans la photothèque** — index SQLite multi-racines interrogeable par extension / taille / dimensions / nom de fichier
+- **Recherche dans la photothèque** — index SQLite multi-racines avec un DSL de requête compact : mots-clés, étiquettes (y compris la négation), notes, couleur, extension, lieu, tri, favoris, rapport d'aspect, ancienneté, taille, dimensions, boîtier / objectif, et regex / glob de nom de fichier
+- **Trouver des similaires (hachage moyen)** — pHash et dHash sont complétés par un hachage moyen (aHash) optionnel pour une métrique de quasi-doublon complémentaire
 - **Recherche sémantique (CLIP)** — requêtes en langage naturel (« golden retriever dans la neige ») via des embeddings mis en cache ; indisponible proprement lorsque `open_clip_torch` + `torch` ne sont pas installés
 - **Auto-Tag** — classification heuristique avec mise à niveau CLIP ONNX optionnelle
 
@@ -227,6 +228,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 - **Barre latérale EXIF** avec groupes repliables + bande de notation 0-5 étoiles intégrée
 - Boîte de dialogue **Éditeur EXIF**
+- **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
 - **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur pour l'interopérabilité avec d'autres gestionnaires photo XMP (XML sécurisé via `defusedxml`)
 - **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes via piexif (JPEG)
@@ -268,6 +270,14 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Appliquer un LUT .cube** — charger n'importe quel LUT 3D Adobe (jusqu'à 64³), interpolation trilinéaire, mélange via curseur d'intensité
 - **Split Toning** — teinte + saturation par drapeau pour les ombres / hautes lumières avec pivot d'équilibre
 
+### Effets créatifs
+
+- **Solarize** — inversion tonale de style chambre noire (seuil + mix)
+- **Diffuse Glow / Orton** — bloom de hautes lumières en flou diffus (intensité / rayon / seuil de hautes lumières)
+- **Gradient Map** — luminance → palette, avec un mode d'interpolation perceptuel (OkLCH) optionnel qui conserve la vivacité des dégradés saturés jusqu'au point médian au lieu de les griser
+- **Ordered Dither** — quantification par matrice de Bayer sur N niveaux (extrêmes préservés)
+- **Préréglages de développement** — enregistrer une recette, puis l'appliquer en bloc ou n'en fusionner que les ajustements actifs sur d'autres images (en conservant le recadrage propre à chaque image, etc.)
+
 ### Ajustements locaux
 
 - **Masques par pinceau / radial / dégradé linéaire** avec deltas d'exposition / luminosité / contraste / saturation / balance des blancs par masque + curseur de feather
@@ -297,7 +307,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées
 - **PDF planche-contact** — grille multi-pages avec légendes (A4 / A3 / Letter / Legal)
 - **Galerie web HTML** — dossier autonome avec `index.html` + miniatures JPEG + lightbox en ligne
-- **Diaporama MP4** — vidéo H.264 avec FPS / temps d'affichage par image / transitions par fondu configurables (`imageio-ffmpeg`)
+- **Diaporama MP4** — vidéo H.264 avec FPS / temps d'affichage par image / transitions par fondu / dissolution / glissement / balayage configurables (`imageio-ffmpeg`)
 - **Mise en page d'impression** — feuille PDF multi-pages avec taille de page / orientation / grille / marges / gouttière / traits de coupe configurables
 - **Soft Proof** — charger un profil ICC, simuler le gamut de destination, mettre en évidence les pixels hors gamut en magenta
 - **Copies virtuelles** — instantanés de recette nommés par image ; basculer entre les styles sans perdre le master
@@ -312,9 +322,11 @@ Enregistrez les programmes (votre éditeur d'image / … ) sous **File > Externa
 
 L'onglet **Paint** est un studio de peinture raster complet intégré comme `QMainWindow` autonome avec menus, barre d'outils à gauche, barre d'options contextuelle, et une colonne de docks à onglets à droite. Édition multi-document — ouvrez plusieurs dessins à la fois, chacun avec sa propre pile d'annulation.
 
-### Outils (24)
+### Outils (27)
 
-Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélection rapide · Déplacer · Texte · Dégradé · Flou · Doigt · Stylo · Tampon de clonage · Bulle de dialogue · Rectangle · Ellipse · Ligne · Polygone · Recadrage · Transformer · Main · Zoom
+Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélection rapide · Déplacer · Texte · Dégradé · Flou · Doigt · Dodge · Burn · Sponge · Stylo · Tampon de clonage · Bulle de dialogue · Rectangle · Ellipse · Ligne · Polygone · Recadrage · Transformer · Main · Zoom
+
+Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (saturer / désaturer) — peint des ajustements locaux de tonalité et de chrominance, pondérés par le pinceau et un masque ombres / tons moyens / hautes lumières.
 
 Raccourcis à une lettre : `B / E / G / I / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
 
@@ -715,14 +727,34 @@ python -m Imervue.mcp_server
 
 ### Outils
 
+Outils sélectionnés (28 au total — liste complète dans la documentation). Chaque outil
+annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
+son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
+`notifications/progress`.
+
 | Outil | Rôle |
 |------|---------|
 | `list_images` | Lister les fichiers image d'un dossier (récursif optionnel) |
-| `read_image_metadata` | Dimensions, format, EXIF et fichier annexe XMP |
-| `read_xmp_tags` | Voie rapide XMP seul : note, étiquette, mots-clés |
-| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | Construire un rig `.puppet` à partir d'un PNG (auto-mesh + paramètres standards) |
-| `puppet_inspect` | Ouvrir un `.puppet` et retourner son inventaire |
+| `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, fichier annexe XMP (note, étiquette, mots-clés) |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Analyse sans référence : statistiques par canal, colorimétrie/entropie/contraste, histogramme + écrêtage, score de flou |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Aperçu base64, texte Tesseract, groupes de quasi-doublons par hachage perceptuel (avec progression) |
+| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL optionnels) |
+| `apply_watermark` / `apply_frame` | Incruster un filigrane texte ou un cadre passe-partout / Polaroid + légende |
+| `build_collage` | Composer des images en une mosaïque en grille (avec progression) |
+| `crop_image` / `resize_image` / `rotate_image` | Recadrage en pixels, redimensionnement préservant le rapport, rotation / retournement sans perte |
+| `collection_stats` | Synthèse note / favori / étiquette de couleur / tri d'un dossier |
+| `search_images` | Filtrer un dossier avec le DSL de requête des albums intelligents (chemin / EXIF / taille / dimensions) |
+| `extract_gps` / `dominant_colors` | Lire les coordonnées GPS EXIF (chaîné dans `reverse_geocode`) ; palette de couleurs median-cut (rgb / hex / part) |
+| `error_level_analysis` | Carte de falsification par recompression JPEG sous forme de data URI PNG |
+| `solarize_image` / `glow_image` | Appliquer une inversion tonale de solarisation ou un bloom diffuse-glow et enregistrer |
+| `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
+| `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
+
+### Prompts
+
+Quatre prompts réutilisables : `caption_image`, `suggest_edits`, `analyze_composition`
+(critique de composition pilotée par la saillance) et `flag_issues` (triage netteté + qualité
++ écrêtage). Les arguments des prompts peuvent être complétés via `completion/complete`.
 
 ### Câblage
 

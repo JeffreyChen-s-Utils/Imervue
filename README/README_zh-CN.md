@@ -193,10 +193,10 @@ python -m Imervue /path/to/folder
 - **书签** — 最多 5000 个路径
 - **评级** — 0-5 星（`1`-`5`）+ 收藏爱心（`0`）
 - **颜色标签** — other XMP-aware photo managers 式 红 / 黄 / 绿 / 蓝 / 紫（`F1`-`F5`）
-- **挑片**（Culling）— other XMP-aware photo managers 三状态旗标（`P` = 保留、`Shift+X` = 拒绝、`U` = 取消）；按状态过滤；批量删除拒绝
+- **挑片**（Culling）— other XMP-aware photo managers 三状态旗标（`P` = 保留、`Shift+X` = 拒绝、`U` = 取消）；按状态过滤；批量删除拒绝；**自动挑片** 会在每组近重复中挑出最清晰的一张保留、其余标为拒绝
 - **层级标签** — 树状路径如 `animal/cat/british`；自动匹配子孙
 - **Tags & Albums** 含多标签 AND / OR 过滤
-- **智能相册** — 保存规则式查询（扩展名 / 分辨率 / 评级 / 颜色 / 挑片 / 标签）并一键重新应用
+- **智能相册** — 保存规则式查询并一键重新应用；过滤条件涵盖扩展名、分辨率与 **长宽比**、**文件大小**、评级 **下限 / 上限**、颜色、挑片、标签（含 **排除**）、**相机 / 镜头**、**文件名正则 / glob** 与 **文件年龄**，并可 **导出 / 导入** 为可移植的 JSON 文件
 - **堆叠 RAW+JPEG 对** — 将同档名采集折叠成单一磁砖；RAW 仍可从同级访问
 - **每图笔记** — 在 EXIF 侧栏，自动防抖保存，跨会话持久
 - **暂存盘** — 跨文件夹篮子，重启后保留；批量移动 / 复制 / 导出
@@ -218,7 +218,8 @@ python -m Imervue /path/to/folder
 
 - **模糊文件名搜索** 含子字符串高亮
 - **找相似** — pHash（64-bit DCT）含可调 Hamming 距离
-- **图库搜索** — SQLite 多根索引；查询扩展名 / 大小 / 尺寸 / 文件名
+- **图库搜索** — SQLite 多根索引，含紧凑的查询 DSL：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob
+- **找相似（average hash）** — pHash 与 dHash 再加上可选的 average-hash（aHash），提供互补的近重复度量
 - **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"）通过缓存的 embedding；`open_clip_torch` + `torch` 未安装时优雅停用
 - **自动标签** — 启发式分类 + 可选 CLIP ONNX 升级
 
@@ -226,6 +227,7 @@ python -m Imervue /path/to/folder
 
 - **EXIF 侧栏** 含可折叠组 + 内嵌 0-5 星评级行
 - **EXIF 编辑器** 对话框
+- **关键字编辑器** — 标题 / 创作者 / 描述 / 关键字，含从标签共现得出的 **相关标签建议**，以及 **受控词汇展开**（输入叶节点关键字会自动套用其祖先＋同义词，词汇为可编辑的层级结构）
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
 - **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）
 - **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度（JPEG）
@@ -267,6 +269,14 @@ python -m Imervue /path/to/folder
 - **应用 .cube LUT** — 加载任何 Adobe 3D LUT（最高 64³），trilinear 插值，混合强度滑块
 - **分离色调** — 旗标式阴影 / 高光色相 + 饱和度，含平衡枢纽
 
+### 创意效果
+
+- **曝色反转（Solarize）** — 暗房式色调反转（阈值 + 混合）
+- **柔光晕染（Diffuse Glow / Orton）** — 柔焦高光晕染（强度 / 半径 / 高光阈值）
+- **渐变映射（Gradient Map）** — 亮度 → 调色板，可选 **感知（OkLCH）** 插值模式，让饱和渐变的中点维持鲜艳而不变灰
+- **有序抖动（Ordered Dither）** — Bayer 矩阵量化至 N 阶（保留极值）
+- **显影预设** — 保存 recipe 后可整份 **套用**，或只 **合并** 其有设定的调整到其他图片（保留各图自身的裁切等）
+
 ### 局部调整
 
 - **笔刷 / 径向 / 线性渐变蒙版**，含每蒙版的曝光 / 亮度 / 对比 / 饱和度 / 白平衡偏移 + 羽化滑块
@@ -296,7 +306,7 @@ python -m Imervue /path/to/folder
 - **批量操作** — 重命名、移动 / 复制、旋转选中图片
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
 - **网页画廊 HTML** — 自包含文件夹含 `index.html` + JPEG 缩图 + 内嵌灯箱
-- **幻灯片 MP4** — H.264 视频，FPS / 每张保留秒数 / 淡入淡出可设（`imageio-ffmpeg`）
+- **幻灯片 MP4** — H.264 视频，FPS / 每张保留秒数 / 淡入淡出 / 溶接 / 滑入 / 抹除转场可设（`imageio-ffmpeg`）
 - **打印布局** — 多页 PDF（A4/A3/Letter/Legal）含网格 / 边距 / 装订槽 / 裁切标记
 - **软打样** — 加载 ICC profile、模拟目标色域、用洋红色标示超出色域的像素
 - **虚拟副本** — 每图命名的 recipe 快照；可切换不同风格而不丢失原图
@@ -311,9 +321,11 @@ python -m Imervue /path/to/folder
 
 **Paint** 标签是完整功能的栅格绘图工作室，以独立 `QMainWindow` 嵌入，含菜单、左工具栏、上下文敏感的选项栏、右侧分页式停靠列。多文档编辑 — 同时打开多张图，每张有独立撤销栈。
 
-### 工具（24）
+### 工具（27）
 
-笔刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速选择 · 移动 · 文字 · 渐变 · 模糊 · 涂抹 · 钢笔 · 仿制图章 · 对话框 · 矩形 · 椭圆 · 直线 · 多边形 · 裁切 · 变形 · 抓手 · 缩放
+笔刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速选择 · 移动 · 文字 · 渐变 · 模糊 · 涂抹 · 减淡 · 加深 · 海绵 · 钢笔 · 仿制图章 · 对话框 · 矩形 · 椭圆 · 直线 · 多边形 · 裁切 · 变形 · 抓手 · 缩放
+
+暗房调色三件组 — **减淡**（提亮）、**加深**（压暗）与 **海绵**（增 / 减饱和度）— 按笔刷以及阴影 / 中间调 / 高光蒙版加权，对局部做色调与色度调整。
 
 单键快捷：`B / E / G / I / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形状变体。
 
@@ -711,14 +723,33 @@ python -m Imervue.mcp_server
 
 ### 工具
 
+精选工具（共 28 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
+以及只读 / 破坏性 `annotations`，将结果以 `structuredContent` 返回；长时间运行的
+工具会流式发送 `notifications/progress`。
+
 | 工具 | 用途 |
 |------|---------|
 | `list_images` | 列出文件夹中的图片（可选递归） |
-| `read_image_metadata` | 尺寸 / 格式 / EXIF / XMP 边车 |
-| `read_xmp_tags` | XMP-only 快路径：评级、标签、关键字 |
-| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP |
-| `puppet_from_png` | 从 PNG 构建 `.puppet` rig（auto-mesh + 标准参数） |
-| `puppet_inspect` | 打开 `.puppet` 返回清单 |
+| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP 边车（评级、标签、关键字） |
+| `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 无参考分析：每通道统计、色彩度 / 熵 / 对比度、直方图 + 裁剪、模糊评分 |
+| `image_thumbnail` / `ocr_text` / `find_similar` | Base64 预览、Tesseract 文字、感知哈希近重复分组（带进度） |
+| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP（+ 可选 HEIC / AVIF / JXL） |
+| `apply_watermark` / `apply_frame` | 烧入文字水印或衬边 / 拍立得相框 + 说明文字 |
+| `build_collage` | 将多张图片合成为网格拼贴（带进度） |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保持长宽比的缩放、无损旋转 / 翻转 |
+| `collection_stats` | 文件夹的评级 / 收藏 / 颜色标签 / 挑片汇总 |
+| `search_images` | 以智能相册查询 DSL 筛选文件夹（路径 / EXIF / 大小 / 尺寸） |
+| `extract_gps` / `dominant_colors` | 读取 EXIF GPS 坐标（可接 `reverse_geocode`）；median-cut 调色板（rgb / hex / 占比） |
+| `error_level_analysis` | JPEG 重压的篡改鉴识图（PNG data URI） |
+| `solarize_image` / `glow_image` | 套用曝色反转或柔光晕染并存档 |
+| `reverse_geocode` / `extract_video_frame` | 离线 GPS → 城市、把一帧视频解码成静态图 |
+| `puppet_from_png` / `puppet_inspect` | 从 PNG 构建 `.puppet` rig；打开 `.puppet` 返回其清单 |
+
+### 提示词（Prompts）
+
+四个可复用提示词：`caption_image`、`suggest_edits`、`analyze_composition`
+（显著性驱动的构图评析）与 `flag_issues`（锐度 + 质量 + 裁剪分流）。
+提示词参数可通过 `completion/complete` 自动补全。
 
 ### 配置
 

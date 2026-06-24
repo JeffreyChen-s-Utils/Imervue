@@ -493,7 +493,13 @@ class GPUImageView(QOpenGLWidget):
         painter.endNativePainting()
 
         # ===== QPainter 文字/圖形覆蓋層 =====
-        self._paint_overlay(painter)
+        # Guard the overlay pass too: an exception escaping here would skip
+        # painter.end(), leaking the widget QPainter and corrupting the next
+        # GL frame (which silently drops the minimap as well as the overlay).
+        try:
+            self._paint_overlay(painter)
+        except Exception:   # noqa: BLE001 - overlay failure must not leak the painter
+            logger.exception("Overlay paint failed this frame")
         painter.end()
 
     # ---------------------------

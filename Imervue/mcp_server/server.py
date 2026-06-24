@@ -21,6 +21,7 @@ they need to.
 """
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import os
@@ -44,6 +45,9 @@ class Tool:
     description: str
     input_schema: dict[str, Any]
     handler: Callable[..., Any]
+    output_schema: dict[str, Any] | None = None
+    annotations: dict[str, Any] | None = None
+    accepts_progress: bool = False
 
 
 @dataclass
@@ -72,12 +76,16 @@ class MCPServer:
         description: str,
         input_schema: dict[str, Any],
         handler: Callable[..., Any],
+        output_schema: dict[str, Any] | None = None,
+        annotations: dict[str, Any] | None = None,
     ) -> None:
         if name in self.tools:
             raise ValueError(f"tool {name!r} already registered")
         self.tools[name] = Tool(
             name=name, description=description,
             input_schema=input_schema, handler=handler,
+            output_schema=output_schema, annotations=annotations,
+            accepts_progress="progress" in inspect.signature(handler).parameters,
         )
 
     def handle_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
@@ -204,14 +212,7 @@ class MCPServer:
 
     def _on_tools_list(self, msg_id: Any, _params: dict) -> dict:
         return _success(msg_id, {
-            "tools": [
-                {
-                    "name": t.name,
-                    "description": t.description,
-                    "inputSchema": t.input_schema,
-                }
-                for t in self.tools.values()
-            ],
+            "tools": [_tool_descriptor(t) for t in self.tools.values()],
         })
 
     def _on_tools_call(self, msg_id: Any, params: dict) -> dict:
@@ -226,8 +227,9 @@ class MCPServer:
         args = params.get("arguments") or {}
         if not isinstance(args, dict):
             raise _MCPError(-32602, "params.arguments must be an object")
+        call_args = self._with_progress(tool, args, params)
         try:
-            raw_result = tool.handler(**args)
+            raw_result = tool.handler(**call_args)
         except TypeError as exc:
             # Bad argument shape — surface to client as a tool error
             # rather than a protocol error, so the client can retry.
@@ -236,6 +238,20 @@ class MCPServer:
             logger.exception("tool %s crashed", name)
             return _success(msg_id, _tool_error(str(exc)))
         return _success(msg_id, _tool_success(raw_result))
+
+    def _with_progress(
+        self, tool: Tool, args: dict, params: dict,
+    ) -> dict[str, Any]:
+        """Inject a ProgressReporter for tools that declare a ``progress`` param.
+
+        The reporter is bound to the request's ``_meta.progressToken`` (if any)
+        and the server's notifier, so it no-ops when the client didn't ask for
+        progress or no stream is wired."""
+        if not tool.accepts_progress:
+            return args
+        from Imervue.mcp_server.progress import ProgressReporter, progress_token
+        reporter = ProgressReporter(self.notifier, progress_token(params))
+        return {**args, "progress": reporter}
 
 
 _METHOD_HANDLERS: dict[str, Callable[[MCPServer, Any, dict], dict]] = {
@@ -280,16 +296,38 @@ def _error_response(msg_id: Any, code: int, message: str) -> dict[str, Any]:
     }
 
 
+def _tool_descriptor(tool: Tool) -> dict[str, Any]:
+    """Render one tool for ``tools/list``, including the MCP 2025-11-25
+    ``outputSchema`` and ``annotations`` fields when the tool declares them."""
+    descriptor: dict[str, Any] = {
+        "name": tool.name,
+        "description": tool.description,
+        "inputSchema": tool.input_schema,
+    }
+    if tool.output_schema is not None:
+        descriptor["outputSchema"] = tool.output_schema
+    if tool.annotations is not None:
+        descriptor["annotations"] = tool.annotations
+    return descriptor
+
+
 def _tool_success(value: Any) -> dict[str, Any]:
     """Wrap a tool's return value in the MCP ``content`` envelope.
 
     Strings come through as ``text``; everything else is JSON-encoded
-    so the client can parse the structured payload back."""
+    so the client can parse the structured payload back. Dict results are
+    additionally surfaced as ``structuredContent`` so clients can consume
+    the typed payload directly (validated against the tool's outputSchema)
+    without re-parsing the text block."""
     if isinstance(value, str):
-        text = value
-    else:
-        text = json.dumps(value, ensure_ascii=False, indent=2, default=str)
-    return {"content": [{"type": "text", "text": text}], "isError": False}
+        return {"content": [{"type": "text", "text": value}], "isError": False}
+    text = json.dumps(value, ensure_ascii=False, indent=2, default=str)
+    result: dict[str, Any] = {
+        "content": [{"type": "text", "text": text}], "isError": False,
+    }
+    if isinstance(value, dict):
+        result["structuredContent"] = value
+    return result
 
 
 def _tool_error(message: str) -> dict[str, Any]:

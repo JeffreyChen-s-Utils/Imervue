@@ -66,12 +66,43 @@ class _FileTreeView(QTreeView):
     def __init__(self, main_window: "ImervueMainWindow"):
         super().__init__()
         self._main_window = main_window
+        # Folders pending soft-deletion are kept on disk but hidden from the
+        # tree until restored or committed at shutdown; track what we hid so a
+        # restore can un-hide exactly those rows.
+        self._hidden_paths: set[str] = set()
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
         # Ctrl/Shift multi-select so batch delete / copy-paths can act on
         # several files at once. A plain single click still selects and
         # opens one file via the main window's ``clicked`` handler.
         self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+
+    def setModel(self, model) -> None:
+        super().setModel(model)
+        # Re-apply the pending-delete hidden rows whenever a directory finishes
+        # (re)loading, so navigating away and back keeps deleted folders hidden.
+        loaded = getattr(model, "directoryLoaded", None)
+        if loaded is not None:
+            loaded.connect(lambda _path: self.refresh_pending_hidden())
+
+    def refresh_pending_hidden(self) -> None:
+        """Hide rows for folders pending soft-deletion; un-hide the rest."""
+        from Imervue.gui.recycle_bin_dialog import pending_external_paths
+        viewer = getattr(self._main_window, "viewer", None)
+        pending = pending_external_paths(getattr(viewer, "undo_stack", None) or [])
+        model = self.model()
+        if model is None:
+            return
+        for path in self._hidden_paths - pending:
+            self._set_row_hidden(model, path, hidden=False)
+        for path in pending:
+            self._set_row_hidden(model, path, hidden=True)
+        self._hidden_paths = set(pending)
+
+    def _set_row_hidden(self, model, path: str, *, hidden: bool) -> None:
+        index = model.index(path)
+        if index.isValid():
+            self.setRowHidden(index.row(), index.parent(), hidden)
 
     def set_thumbnail_size(self, px: int) -> None:
         """Resize the folder preview icons (view + model) and remember it."""
@@ -494,9 +525,31 @@ class _FileTreeView(QTreeView):
             viewer.update()
 
     def _delete_external(self, path: str, notify: bool = True) -> None:
+        # Folders go through the app Recycle Bin (kept on disk + hidden, sent to
+        # the OS trash only at shutdown) so they are restorable in-app; loose
+        # non-list files still go straight to the OS trash.
+        if Path(path).is_dir():
+            self._soft_delete_folder(path, notify=notify)
+            return
         from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
         if _send_to_trash(path) and notify:
             self._notify_deleted(path)
+
+    def _soft_delete_folder(self, path: str, notify: bool = True) -> None:
+        viewer = self._main_window.viewer
+        viewer.undo_stack.append({
+            "mode": "delete_external",
+            "deleted_paths": [path],
+            "restored": False,
+        })
+        self.refresh_pending_hidden()
+        if notify and hasattr(self._main_window, "toast"):
+            lang = language_wrapper.language_word_dict
+            self._main_window.toast.info(
+                lang.get("tree_recycled", "Moved to Recycle Bin: {name}").format(
+                    name=Path(path).name,
+                ),
+            )
 
     def _notify_deleted(self, path: str) -> None:
         if not hasattr(self._main_window, "toast"):

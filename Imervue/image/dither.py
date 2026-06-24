@@ -38,15 +38,19 @@ def ordered_dither(arr: np.ndarray, levels: int = DEFAULT_LEVELS) -> np.ndarray:
     _validate(arr)
     levels = int(np.clip(levels, _MIN_LEVELS, _MAX_LEVELS))
     h, w = arr.shape[:2]
-    rgb = arr[..., :3].astype(np.float32)
-    step = _MAX_LEVEL / (levels - 1)
+    rgb = arr[..., :3].astype(np.float32) / _MAX_LEVEL  # [0, 1]
+    span = levels - 1
 
     tile = _BAYER4.shape[0]
     threshold = np.tile(_BAYER4, (-(-h // tile), -(-w // tile)))[:h, :w]
-    biased = rgb + ((threshold[..., None] - 0.5) * step)
-    quantized = np.clip(np.round(biased / step), 0, levels - 1) * step
+    # ``floor(v * span + threshold)`` keeps the extremes exact (pure white stays
+    # white, pure black stays black) and dithers only the tones in between. The
+    # earlier ``round(biased)`` form speckled pure white because numpy's
+    # banker's rounding sent the threshold-0 cell's 0.5 down to black.
+    index = np.clip(np.floor(rgb * span + threshold[..., None]), 0, span)
+    quantized = index / span
 
     out = np.empty((h, w, _RGBA_CHANNELS), dtype=np.uint8)
-    out[..., :3] = np.clip(np.rint(quantized), 0, 255).astype(np.uint8)
+    out[..., :3] = np.clip(np.rint(quantized * _MAX_LEVEL), 0, 255).astype(np.uint8)
     out[..., 3] = arr[..., 3] if arr.shape[2] == _RGBA_CHANNELS else _OPAQUE
     return out

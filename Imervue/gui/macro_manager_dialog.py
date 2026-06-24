@@ -12,6 +12,11 @@ from PySide6.QtWidgets import (
 from Imervue.macros.macro_manager import (
     manager, ACTION_REGISTRY, Macro, MacroStep,
 )
+from Imervue.macros.macro_step_validator import (
+    deduplicate_consecutive,
+    find_redundant_tag_pairs,
+    find_unknown_actions,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
 
@@ -64,6 +69,10 @@ class MacroManagerDialog(QDialog):
         replay_btn = QPushButton(lang.get("macro_replay", "Replay on selection"))
         replay_btn.clicked.connect(self._replay_selected)
         macro_btn_row.addWidget(replay_btn)
+
+        clean_btn = QPushButton(lang.get("macro_cleanup", "Validate / Clean up"))
+        clean_btn.clicked.connect(self._cleanup_macro)
+        macro_btn_row.addWidget(clean_btn)
 
         # Recording toggle
         self._record_btn = QPushButton(lang.get("macro_record_start", "Start Recording"))
@@ -191,6 +200,50 @@ class MacroManagerDialog(QDialog):
                 lang.get("macro_replayed",
                          "Replayed {name}: {count} step(s) on {files} file(s)").format(
                     name=self._current_macro.name, count=count, files=len(paths)))
+
+    def _cleanup_macro(self) -> None:
+        if self._current_macro is None:
+            return
+        lang = language_wrapper.language_word_dict
+        steps = self._current_macro.steps
+        deduped = deduplicate_consecutive(steps)
+        removed = len(steps) - len(deduped)
+        if removed:
+            cleaned = Macro(
+                name=self._current_macro.name, steps=deduped,
+                created_at=self._current_macro.created_at,
+            )
+            manager._persist(cleaned)  # noqa: SLF001 - dialog owns this API
+            schedule_save()
+            self._refresh_macro_list()
+            self._select_macro(cleaned.name)
+        lines = self._cleanup_report_lines(
+            lang, removed,
+            find_unknown_actions(steps, ACTION_REGISTRY),
+            find_redundant_tag_pairs(steps),
+        )
+        QMessageBox.information(
+            self, lang.get("macro_cleanup", "Validate / Clean up"), "\n".join(lines))
+
+    @staticmethod
+    def _cleanup_report_lines(
+        lang: dict, removed: int, unknown: list[str], redundant: list,
+    ) -> list[str]:
+        lines: list[str] = []
+        if removed:
+            lines.append(lang.get(
+                "macro_cleanup_dedup", "Removed {n} duplicate step(s).").format(n=removed))
+        if unknown:
+            lines.append(lang.get(
+                "macro_cleanup_unknown",
+                "Unknown actions (skipped on replay): {a}").format(a=", ".join(unknown)))
+        if redundant:
+            lines.append(lang.get(
+                "macro_cleanup_redundant",
+                "{n} add/remove-tag pair(s) cancel out.").format(n=len(redundant)))
+        if not lines:
+            lines.append(lang.get("macro_cleanup_clean", "Macro is already clean."))
+        return lines
 
     # ------------------------------------------------------------------
     # Steps

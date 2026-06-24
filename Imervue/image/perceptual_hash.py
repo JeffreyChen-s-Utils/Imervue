@@ -8,7 +8,7 @@ testable without a display server; the dialog now imports from here.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 from PIL import Image
 
@@ -33,20 +33,56 @@ def dhash(img: Image.Image, hash_size: int = DEFAULT_HASH_SIZE) -> int:
     return bits
 
 
+def ahash(img: Image.Image, hash_size: int = DEFAULT_HASH_SIZE) -> int:
+    """Average hash: each pixel brighter than the tile mean sets a bit.
+
+    A different sensitivity to dhash — robust to small local edits but more
+    affected by overall brightness shifts — so it complements it for
+    near-duplicate detection. Produces the same ``hash_size**2``-bit space, so
+    :func:`hamming_distance` compares an ahash with an ahash.
+    """
+    resized = img.convert("L").resize(
+        (hash_size, hash_size), Image.Resampling.LANCZOS)
+    get_pixels = getattr(resized, "get_flattened_data", None) or resized.getdata
+    pixels = list(get_pixels())
+    average = sum(pixels) / len(pixels)
+    bits = 0
+    for index, value in enumerate(pixels):
+        if value >= average:
+            bits |= 1 << index
+    return bits
+
+
 def hamming_distance(a: int, b: int) -> int:
     """Count differing bits between two hashes."""
     return bin(a ^ b).count("1")
 
 
-def hash_paths(paths: Iterable[str]) -> list[tuple[str, int]]:
-    """Return ``(path, dhash)`` for each readable image; unreadable ones skipped."""
+def hash_paths(
+    paths: Iterable[str],
+    on_progress: Callable[[int, int], None] | None = None,
+    hasher: Callable[[Image.Image], int] | None = None,
+) -> list[tuple[str, int]]:
+    """Return ``(path, hash)`` for each readable image; unreadable ones skipped.
+
+    ``hasher`` selects the perceptual hash (default :func:`dhash`; pass
+    :func:`ahash` for the average-hash variant). When ``on_progress`` is given
+    the iterable is materialised so a total is known, and the callback is
+    invoked ``(processed, total)`` after each path — including skipped ones — so
+    progress always reaches the total.
+    """
+    hash_fn = hasher or dhash
+    items = list(paths) if on_progress is not None else paths
+    total = len(items) if on_progress is not None else 0
     hashed: list[tuple[str, int]] = []
-    for path in paths:
+    for processed, path in enumerate(items, start=1):
         try:
             with Image.open(path) as img:
-                hashed.append((str(path), dhash(img)))
+                hashed.append((str(path), hash_fn(img)))
         except (OSError, ValueError):
-            continue
+            pass
+        if on_progress is not None:
+            on_progress(processed, total)
     return hashed
 
 
@@ -84,6 +120,15 @@ def group_similar(
     return groups
 
 
-def find_similar(paths: Iterable[str], threshold: int = DEFAULT_THRESHOLD) -> list[list[str]]:
-    """Hash *paths* and return groups of near-duplicate images."""
-    return group_similar(hash_paths(paths), threshold)
+def find_similar(
+    paths: Iterable[str],
+    threshold: int = DEFAULT_THRESHOLD,
+    on_progress: Callable[[int, int], None] | None = None,
+    hasher: Callable[[Image.Image], int] | None = None,
+) -> list[list[str]]:
+    """Hash *paths* and return groups of near-duplicate images.
+
+    ``on_progress`` is forwarded to :func:`hash_paths` for per-file progress;
+    ``hasher`` selects the perceptual hash (default :func:`dhash`).
+    """
+    return group_similar(hash_paths(paths, on_progress, hasher), threshold)

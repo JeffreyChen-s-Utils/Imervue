@@ -533,6 +533,10 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
    * - 模糊 / 涂抹
      - ``R``
      - 局部像素操作
+   * - 减淡 / 加深 / 海绵
+     -
+     - 暗房调色 — 按笔刷以及色调范围蒙版加权，对局部进行
+       提亮、压暗或增 / 减饱和度
    * - 钢笔（贝塞尔）
      - ``P``
      - 矢量路径，可编辑锚点 / 控制柄
@@ -2030,9 +2034,43 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 打开 ``.puppet`` 并返回结构化清单：drawables、deformers、
        parameters、motions、expressions、hit areas、parts、
        parameter blends、physics rigs。
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - 每通道均值 / 最小 / 最大 / 标准差 / 中位数、无参考质量指标
+       （色彩度、熵、对比度、边缘密度、噪点），以及 256 桶直方图与
+       过曝 / 欠曝裁剪比例。
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Laplacian 方差模糊评分、Tesseract OCR 文字（缺失时优雅降级），
+       以及有边界限制的 base64 PNG 预览。
+   * - ``find_similar``
+     - 按感知哈希（汉明阈值）将近重复图片分组。提供进度令牌时会
+       逐文件汇报进度。
+   * - ``apply_watermark`` / ``apply_frame``
+     - 烧入文字水印，或为图片套上衬边 / 拍立得相框（可选说明文字）。
+   * - ``build_collage``
+     - 将多张图片合成为网格拼贴（可配置列数、单元尺寸、间距、边距、
+       背景）。汇报进度。
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - 像素框裁切、保持长宽比的缩放，以及无损 90/180/270 旋转或
+       水平 / 垂直翻转。
+   * - ``collection_stats``
+     - 汇总文件夹的评级、收藏、颜色标签与挑片状态（计数、0–5 星
+       分布与平均值）。
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - 离线将 GPS 坐标解析到最近的城市，并把一帧视频解码成静态图。
 
-所有工具的返回会 JSON 序列化后包进 MCP 的 ``content`` / ``text``
-信封；客户端可从 ``text`` 字段再 parse 回结构化数据。
+每个工具都会公布 JSON ``outputSchema`` 以及只读 / 破坏性
+``annotations``，并在文本信封之外以 ``structuredContent`` 返回结果
+（遵循 MCP 2025-11-25），让客户端无需重新解析即可消费类型化载荷。
+长时间运行的工具在调用方传入进度令牌时会流式发送
+``notifications/progress``。
+
+Prompts（提示词）
+^^^^^^^^^^^^^^^^^^
+
+服务器通过 ``prompts/list`` / ``prompts/get`` 公开四个提示词：
+``caption_image``、``suggest_edits``、``analyze_composition``
+（显著性驱动的构图评析）与 ``flag_issues``（锐度 + 质量 + 裁剪分流）。
+提示词参数可通过 ``completion/complete`` 自动补全。
 
 Claude Code（项目级）
 ^^^^^^^^^^^^^^^^^^^^^

@@ -565,6 +565,10 @@ Tool Palette (Left Strip)
    * - Blur / Smudge
      - ``R``
      - Local pixel manipulation
+   * - Dodge / Burn / Sponge
+     -
+     - Darkroom toning — locally lighten, darken, or saturate /
+       desaturate, weighted by the brush and a tonal-range mask
    * - Pen (Bezier)
      - ``P``
      - Vector path with anchor / handle editing
@@ -2107,7 +2111,10 @@ flag-based three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
 ``Culling`` applies the filter via a dialog and also exposes a **Delete all
-rejects** button that permanently removes the flagged files from disk.
+rejects** button that permanently removes the flagged files from disk. The same
+dialog's **Pick sharpest per similar group** button groups the folder's
+near-duplicates by perceptual hash, scores each by sharpness, and marks the
+sharpest frame of every group as a pick and the rest as rejects.
 
 Staging Tray
 ^^^^^^^^^^^^
@@ -2387,10 +2394,60 @@ Available Tools
      - Open a ``.puppet`` archive and return a structured inventory:
        drawables, deformers, parameters, motions, expressions, hit
        areas, parts, parameter blends and physics rigs.
+   * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
+     - Per-channel mean/min/max/std/median, no-reference quality
+       metrics (colourfulness, entropy, contrast, edge density, noise),
+       and the 256-bin histogram with over/under clipping fractions.
+   * - ``sharpness_score`` / ``ocr_text`` / ``image_thumbnail``
+     - Laplacian-variance blur score, Tesseract OCR text (graceful when
+       absent), and a bounded base64 PNG preview.
+   * - ``find_similar``
+     - Group near-duplicate images by perceptual hash (Hamming
+       threshold). Reports per-file progress when a progress token is
+       supplied.
+   * - ``apply_watermark`` / ``apply_frame``
+     - Burn in a text watermark, or wrap the image in a matte /
+       Polaroid frame with an optional caption.
+   * - ``build_collage``
+     - Composite several images into a grid montage (configurable
+       columns, cell size, gap, margin, background). Reports progress.
+   * - ``crop_image`` / ``resize_image`` / ``rotate_image``
+     - Pixel-box crop, aspect-preserving resize, and lossless 90/180/270
+       rotation or horizontal/vertical flip.
+   * - ``collection_stats``
+     - Summarise a folder's ratings, favourites, colour labels and cull
+       states (counts, 0–5 star distribution and average).
+   * - ``reverse_geocode`` / ``extract_video_frame``
+     - Resolve GPS coordinates to the nearest city offline, and decode
+       one frame of a video to a still image.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Read EXIF GPS latitude/longitude (chains into ``reverse_geocode``);
+       extract a median-cut colour palette (rgb / hex / pixel share).
+   * - ``error_level_analysis``
+     - JPEG-recompression Error-Level-Analysis tamper map as a PNG data
+       URI (edited regions light up against the background).
+   * - ``search_images``
+     - Filter a folder with the smart-album query DSL (extension / name /
+       size / dimensions / aspect / EXIF camera / lens / place).
+   * - ``solarize_image`` / ``glow_image``
+     - Apply a solarize tone reversal or a diffuse-glow / Orton bloom and
+       save the result.
 
-All tools return JSON-serialised payloads in the MCP ``content`` /
-``text`` envelope; structured payloads can be parsed back from the
-``text`` field on the client side.
+Every tool advertises a JSON ``outputSchema`` and read-only /
+destructive ``annotations``, and returns its result as
+``structuredContent`` alongside the text envelope (per MCP 2025-11-25),
+so clients consume typed payloads without re-parsing. Long-running
+tools stream ``notifications/progress`` when the caller passes a
+progress token.
+
+Prompts
+^^^^^^^
+
+The server exposes four prompts via ``prompts/list`` / ``prompts/get``:
+``caption_image``, ``suggest_edits``, ``analyze_composition`` (a
+saliency-driven composition critique) and ``flag_issues`` (a sharpness
++ quality + clipping triage). Prompt arguments are completable through
+``completion/complete``.
 
 Claude Code (Project-Level)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

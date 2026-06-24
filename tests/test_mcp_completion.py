@@ -24,6 +24,14 @@ def test_complete_style_argument():
     assert result["completion"]["hasMore"] is False
 
 
+def test_complete_focus_argument():
+    result = complete(
+        {"type": "ref/prompt", "name": "analyze_composition"},
+        {"name": "focus", "value": "b"})
+    assert "balance" in result["completion"]["values"]
+    assert all(v.startswith("b") for v in result["completion"]["values"])
+
+
 def test_complete_unknown_argument_is_empty():
     result = complete(
         {"type": "ref/prompt", "name": "caption_image"},
