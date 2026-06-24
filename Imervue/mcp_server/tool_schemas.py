@@ -487,4 +487,12 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Filmic tone map"),
         "output_schema": _image_save_output(),
     },
+    "tone_equalizer_image": {
+        "annotations": _writes_file("Tone equalizer"),
+        "output_schema": _image_save_output(),
+    },
+    "detail_equalizer_image": {
+        "annotations": _writes_file("Detail equalizer"),
+        "output_schema": _image_save_output(),
+    },
 }

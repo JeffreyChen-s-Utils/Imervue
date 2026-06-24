@@ -1166,6 +1166,35 @@ def filmic_tonemap_image(
     )
 
 
+_TONE_EQ_DEFAULT = (0.0, 0.0, 0.0, 0.0, 0.0)
+_DETAIL_EQ_DEFAULT = (1.0, 1.0, 1.0, 1.0)
+
+
+def tone_equalizer_image(
+    source: str, destination: str, *,
+    zone_gains: list[float] | None = None, smoothing: int = 12,
+) -> dict[str, Any]:
+    """Apply per-luminance-zone exposure (shadows to highlights) and save the result."""
+    from Imervue.image.tone_equalizer import apply_tone_equalizer
+    gains = tuple(float(g) for g in (zone_gains if zone_gains is not None else _TONE_EQ_DEFAULT))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_tone_equalizer(arr, gains, int(smoothing)),
+    )
+
+
+def detail_equalizer_image(
+    source: str, destination: str, *, band_gains: list[float] | None = None,
+) -> dict[str, Any]:
+    """Re-weight contrast per detail band (finest to coarsest, 1.0 neutral) and save."""
+    from Imervue.image.detail_equalizer import apply_detail_equalizer
+    gains = tuple(float(g) for g in (band_gains if band_gains is not None else _DETAIL_EQ_DEFAULT))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_detail_equalizer(arr, gains),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
@@ -1846,6 +1875,53 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": filmic_tonemap_image,
+    },
+    {
+        "name": "tone_equalizer_image",
+        "description": (
+            "Apply a tone equalizer: independent exposure per luminance zone "
+            "(shadows to highlights, in stops) over a smoothed mask."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "zone_gains": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -4, "maximum": 4},
+                    "minItems": 2,
+                    "description": "Stop adjustments, shadows to highlights.",
+                },
+                "smoothing": {
+                    "type": "integer", "minimum": 0, "maximum": 50, "default": 12,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": tone_equalizer_image,
+    },
+    {
+        "name": "detail_equalizer_image",
+        "description": (
+            "Apply a detail equalizer: re-weight contrast per frequency band "
+            "(finest to coarsest); a gain of 1.0 is neutral."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "band_gains": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -8, "maximum": 8},
+                    "minItems": 1,
+                    "description": "Per-band gain, finest to coarsest (1.0 neutral).",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": detail_equalizer_image,
     },
 ]
 

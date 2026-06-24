@@ -236,6 +236,10 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_film_negative(ui))
     _add_action(sub, lang, "filmic_title", "Filmic Tone Map",
                 lambda: _open_filmic_tonemap(ui))
+    _add_action(sub, lang, "tone_eq_title", "Tone Equalizer",
+                lambda: _open_tone_equalizer(ui))
+    _add_action(sub, lang, "detail_eq_title", "Detail Equalizer",
+                lambda: _open_detail_equalizer(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -495,6 +499,16 @@ def _open_film_negative(ui: ImervueMainWindow) -> None:
 def _open_filmic_tonemap(ui: ImervueMainWindow) -> None:
     from Imervue.gui.filmic_tonemap_dialog import open_filmic_tonemap
     open_filmic_tonemap(ui.viewer)
+
+
+def _open_tone_equalizer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.tone_equalizer_dialog import open_tone_equalizer
+    open_tone_equalizer(ui.viewer)
+
+
+def _open_detail_equalizer(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.detail_equalizer_dialog import open_detail_equalizer
+    open_detail_equalizer(ui.viewer)
 
 
 def _open_polar(ui: ImervueMainWindow) -> None:

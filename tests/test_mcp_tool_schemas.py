@@ -247,6 +247,8 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("defringe_image", {"amount": 0.8, "hue": "green"}),
     ("graduated_density_image", {"density_stops": 1.5}),
     ("filmic_tonemap_image", {"mode": "hable"}),
+    ("tone_equalizer_image", {"zone_gains": [0.0, 1.0, 0.0, -1.0, 0.0]}),
+    ("detail_equalizer_image", {"band_gains": [2.0, 1.0, 1.0]}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"
