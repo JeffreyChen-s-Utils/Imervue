@@ -206,6 +206,12 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_colormap(ui))
     _add_action(sub, lang, "distort_title", "Distort (Swirl/Pinch/Ripple)",
                 lambda: _open_distort(ui))
+    _add_action(sub, lang, "polar_title", "Polar Coordinates",
+                lambda: _open_polar(ui))
+    _add_action(sub, lang, "kaleidoscope_title", "Kaleidoscope",
+                lambda: _open_kaleidoscope(ui))
+    _add_action(sub, lang, "frosted_title", "Frosted Glass",
+                lambda: _open_frosted_glass(ui))
     _add_action(sub, lang, "pixelsort_title", "Pixel Sort",
                 lambda: _open_pixel_sort(ui))
     _add_action(sub, lang, "film_grain_title", "Film Grain",
@@ -228,6 +234,8 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_defringe(ui))
     _add_action(sub, lang, "film_negative_title", "Film Negative",
                 lambda: _open_film_negative(ui))
+    _add_action(sub, lang, "filmic_title", "Filmic Tone Map",
+                lambda: _open_filmic_tonemap(ui))
     _add_action(sub, lang, "proof_title", "Soft Proof",
                 lambda: _open_soft_proof(ui))
 
@@ -482,6 +490,26 @@ def _open_defringe(ui: ImervueMainWindow) -> None:
 def _open_film_negative(ui: ImervueMainWindow) -> None:
     from Imervue.gui.film_negative_dialog import open_film_negative
     open_film_negative(ui.viewer)
+
+
+def _open_filmic_tonemap(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.filmic_tonemap_dialog import open_filmic_tonemap
+    open_filmic_tonemap(ui.viewer)
+
+
+def _open_polar(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.polar_dialog import open_polar
+    open_polar(ui.viewer)
+
+
+def _open_kaleidoscope(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.kaleidoscope_dialog import open_kaleidoscope
+    open_kaleidoscope(ui.viewer)
+
+
+def _open_frosted_glass(ui: ImervueMainWindow) -> None:
+    from Imervue.gui.frosted_glass_dialog import open_frosted_glass
+    open_frosted_glass(ui.viewer)
 
 
 def _open_levels(ui: ImervueMainWindow) -> None:
