@@ -39,7 +39,7 @@ def expand_codes(
     if not isinstance(codes, dict):
         raise TypeError(f"codes must be a dict, got {type(codes).__name__}")
     resolved = _substitute_codes(text, codes, delimiter)
-    return _substitute_variables(resolved, meta or {})
+    return expand_variables(resolved, meta or {})
 
 
 def _substitute_codes(text: str, codes: dict[str, str], delimiter: str) -> str:
@@ -60,7 +60,8 @@ def _substitute_codes(text: str, codes: dict[str, str], delimiter: str) -> str:
     return result
 
 
-def _substitute_variables(text: str, meta: dict[str, object]) -> str:
+def expand_variables(text: str, meta: dict[str, object]) -> str:
+    """Replace ``{variable}`` tokens in *text* from *meta*, leaving unknowns as-is."""
     def replace(match: re.Match[str]) -> str:
         key = match.group(1)
         return str(meta[key]) if key in meta else match.group(0)

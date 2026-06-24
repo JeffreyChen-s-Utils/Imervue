@@ -3,7 +3,20 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.user_settings.code_replacements import expand_codes
+from Imervue.user_settings.code_replacements import expand_codes, expand_variables
+
+
+# ---------------------------------------------------------------------------
+# expand_variables (shared with metadata_template)
+# ---------------------------------------------------------------------------
+
+
+def test_expand_variables_fills_known():
+    assert expand_variables("{a}/{b}", {"a": "x", "b": 2}) == "x/2"
+
+
+def test_expand_variables_leaves_unknown():
+    assert expand_variables("{a}/{b}", {"a": "x"}) == "x/{b}"
 
 
 # ---------------------------------------------------------------------------
