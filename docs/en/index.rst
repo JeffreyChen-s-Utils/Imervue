@@ -2320,6 +2320,36 @@ Soft Proof
 image through it and back, and highlights pixels that clipped during
 the round-trip in magenta — a quick out-of-gamut check before printing.
 
+Tonal & Creative Effects
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` gathers a set of one-shot,
+apply-and-save effects, each a thin slider dialog over a pure-NumPy transform
+(the same logic is also exposed as an MCP tool):
+
+- **Graduated Density** — a linear neutral-density gradient defined by angle,
+  hardness and offset, optionally tinted; darkens a sky or foreground without a
+  manual mask.
+- **Tone Equalizer** — independent exposure per luminance zone (one slider each
+  for blacks → whites) over a smoothed mask, so the adjustment follows the
+  scene's tones.
+- **Detail Equalizer** — a gain slider per frequency band (fine texture →
+  coarse contrast), the multi-scale alternative to a single clarity slider.
+- **Filmic Tone Map** — a Reinhard or Hable highlight rolloff with pivoted
+  contrast and a saturation restore, for high-contrast single exposures.
+- **Velvia** — a luminance-weighted saturation boost that intensifies muted
+  colours while sparing already-saturated ones and the shadows.
+- **Film Negative** — invert a scanned colour negative, dividing out the
+  auto-estimated orange film base, with an output-gamma slider.
+- **Defringe** — desaturate purple/green chromatic-aberration fringes along
+  high-contrast edges, leaving flat colour untouched.
+- **Emboss** — a directional-light relief from the luminance height field
+  (azimuth / elevation / depth + a greyscale toggle).
+- **Polar Coordinates** — wrap the frame into a disc or unroll it (the
+  tiny-planet / polar-inversion look).
+- **Kaleidoscope** — mirror one angular wedge into ``n``-fold symmetry.
+- **Frosted Glass** — a deterministic, seed-reproducible local pixel scatter.
+
 GPS Geotag
 ^^^^^^^^^^
 
@@ -2432,6 +2462,15 @@ Available Tools
    * - ``solarize_image`` / ``glow_image``
      - Apply a solarize tone reversal or a diffuse-glow / Orton bloom and
        save the result.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Velvia luminance-weighted saturation boost, directional-light emboss
+       relief, and purple/green edge-fringe desaturation.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Invert a scanned colour negative (auto film base), and apply a linear
+       graduated neutral-density gradient.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Filmic Reinhard/Hable highlight rolloff, per-luminance-zone exposure,
+       and per-frequency-band contrast.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
