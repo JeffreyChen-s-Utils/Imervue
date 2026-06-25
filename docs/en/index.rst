@@ -2495,6 +2495,9 @@ Available Tools
    * - ``auto_color_balance_image`` / ``channel_mixer_image``
      - Automatic white balance (gray-world, white-patch, percentile-stretch,
        retinex) and a 3x3 channel mixer with mono conversion.
+   * - ``lens_correction_image``
+     - Correct barrel/pincushion distortion (k1), lift or deepen the corner
+       vignette, and cancel red/blue chromatic aberration.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
