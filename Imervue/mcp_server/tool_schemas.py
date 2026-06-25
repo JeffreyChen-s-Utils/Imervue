@@ -535,4 +535,24 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Local contrast"),
         "output_schema": _image_save_output(),
     },
+    "posterize_image": {
+        "annotations": _writes_file("Posterize"),
+        "output_schema": _image_save_output(),
+    },
+    "gradient_map_image": {
+        "annotations": _writes_file("Gradient map"),
+        "output_schema": _image_save_output(),
+    },
+    "film_grain_image": {
+        "annotations": _writes_file("Film grain"),
+        "output_schema": _image_save_output(),
+    },
+    "dehaze_image": {
+        "annotations": _writes_file("Dehaze"),
+        "output_schema": _image_save_output(),
+    },
+    "distort_image": {
+        "annotations": _writes_file("Distort"),
+        "output_schema": _image_save_output(),
+    },
 }

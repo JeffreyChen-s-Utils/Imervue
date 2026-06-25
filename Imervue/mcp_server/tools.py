@@ -1325,6 +1325,78 @@ def local_contrast_image(
 
 
 # ---------------------------------------------------------------------------
+# tone-grading / lens effects
+# ---------------------------------------------------------------------------
+
+
+def posterize_image(
+    source: str, destination: str, *, levels: int = 4,
+) -> dict[str, Any]:
+    """Quantize each channel to ``levels`` discrete steps and save the result."""
+    from Imervue.image.posterize import PosterizeOptions, apply_posterize
+    options = PosterizeOptions(enabled=True, levels=int(levels))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_posterize(arr, options),
+    )
+
+
+def gradient_map_image(
+    source: str, destination: str, *,
+    intensity: float = 1.0, perceptual: bool = False,
+) -> dict[str, Any]:
+    """Map luminance through a black-to-white gradient and save the blended result."""
+    from Imervue.image.gradient_map import GradientMapOptions, apply_gradient_map
+    options = GradientMapOptions(
+        enabled=True, intensity=float(intensity), perceptual=bool(perceptual),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_gradient_map(arr, options),
+    )
+
+
+def film_grain_image(
+    source: str, destination: str, *,
+    intensity: float = 0.25, size: int = 1,
+    monochrome: bool = True, seed: int = 0,
+) -> dict[str, Any]:
+    """Add tunable Gaussian film grain to the image and save the result."""
+    from Imervue.image.film_grain import FilmGrainOptions, apply_film_grain
+    options = FilmGrainOptions(
+        enabled=True, intensity=float(intensity), size=int(size),
+        monochrome=bool(monochrome), seed=int(seed),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_film_grain(arr, options),
+    )
+
+
+def dehaze_image(
+    source: str, destination: str, *, strength: float = 0.5,
+) -> dict[str, Any]:
+    """Remove atmospheric haze (dark-channel prior) by ``strength`` and save."""
+    from Imervue.image.dehaze import dehaze
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: dehaze(arr, float(strength)),
+    )
+
+
+def distort_image(
+    source: str, destination: str, *,
+    mode: str = "swirl", strength: float = 0.5,
+) -> dict[str, Any]:
+    """Warp the image with a swirl, pinch or ripple distortion and save the result."""
+    from Imervue.image.distort import distort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: distort(arr, str(mode), float(strength)),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -2265,6 +2337,112 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": local_contrast_image,
+    },
+    {
+        "name": "posterize_image",
+        "description": (
+            "Posterize: quantize each channel to a small number of discrete "
+            "levels for a flat, banded poster look."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "levels": {
+                    "type": "integer", "minimum": 2, "maximum": 64, "default": 4,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": posterize_image,
+    },
+    {
+        "name": "gradient_map_image",
+        "description": (
+            "Gradient map: remap luminance through a black-to-white gradient "
+            "and blend it over the original by an intensity factor."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+                "perceptual": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": gradient_map_image,
+    },
+    {
+        "name": "film_grain_image",
+        "description": (
+            "Add Gaussian film grain: tunable intensity and clump size, "
+            "monochrome or per-channel, with a reproducible seed."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.25,
+                },
+                "size": {
+                    "type": "integer", "minimum": 1, "maximum": 8, "default": 1,
+                },
+                "monochrome": {"type": "boolean", "default": True},
+                "seed": {"type": "integer", "minimum": 0, "default": 0},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": film_grain_image,
+    },
+    {
+        "name": "dehaze_image",
+        "description": (
+            "Dehaze: estimate atmospheric light with a dark-channel prior and "
+            "recover contrast and colour through the haze, by a strength factor."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "strength": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": dehaze_image,
+    },
+    {
+        "name": "distort_image",
+        "description": (
+            "Geometric distortion: swirl around the centre, pinch/bulge, or a "
+            "sinusoidal ripple. Strength runs -1 to 1 (sign flips the direction)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["swirl", "pinch", "ripple"],
+                    "default": "swirl",
+                },
+                "strength": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.5,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": distort_image,
     },
 ]
 

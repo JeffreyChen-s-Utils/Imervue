@@ -259,6 +259,11 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("frosted_glass_image", {"radius": 6, "seed": 1}),
     ("clahe_image", {"clip_limit": 3.0, "tiles": 4}),
     ("local_contrast_image", {"clarity": 0.5, "texture": 0.4}),
+    ("posterize_image", {"levels": 6}),
+    ("gradient_map_image", {"intensity": 0.8, "perceptual": True}),
+    ("film_grain_image", {"intensity": 0.4, "size": 2, "seed": 3}),
+    ("dehaze_image", {"strength": 0.7}),
+    ("distort_image", {"mode": "ripple", "strength": 0.6}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"
