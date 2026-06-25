@@ -126,8 +126,16 @@ def _box_blur(field: np.ndarray, radius: int) -> np.ndarray:
     radius = max(1, int(radius))
     kernel = 2 * radius + 1
     arr = np.pad(field, radius, mode="edge")
+    # A leading zero row/column before each windowed difference keeps the
+    # summed-area output the same size as the input. Without it the cumulative
+    # sum is one element short and the blurred field shrinks by a pixel per
+    # axis, which then fails to broadcast against the image.
     csum = np.cumsum(arr, axis=0)
+    csum = np.concatenate([np.zeros((1, csum.shape[1]), dtype=csum.dtype), csum])
     arr = csum[kernel:, :] - csum[:-kernel, :]
     csum = np.cumsum(arr, axis=1)
+    csum = np.concatenate(
+        [np.zeros((csum.shape[0], 1), dtype=csum.dtype), csum], axis=1,
+    )
     arr = csum[:, kernel:] - csum[:, :-kernel]
     return arr.astype(np.float32) / (kernel * kernel)
