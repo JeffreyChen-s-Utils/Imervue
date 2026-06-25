@@ -2471,6 +2471,12 @@ Available Tools
    * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
      - Filmic Reinhard/Hable highlight rolloff, per-luminance-zone exposure,
        and per-frequency-band contrast.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolour luminance through a viridis/magma/jet perceptual map, or map
+       it to a false-colour exposure scale.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Ordered (Bayer) dither to a few tones per channel, shadow/highlight
+       split-toning, and brightness-band pixel sorting.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
