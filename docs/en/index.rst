@@ -2477,6 +2477,12 @@ Available Tools
    * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
      - Ordered (Bayer) dither to a few tones per channel, shadow/highlight
        split-toning, and brightness-band pixel sorting.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Warp between rectangular and polar coordinates (tiny-planet), or mirror
+       the frame into a number of kaleidoscope wedges.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Random-neighbour frosted-glass scatter, contrast-limited adaptive
+       histogram equalization, and midtone clarity + fine-detail texture.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as

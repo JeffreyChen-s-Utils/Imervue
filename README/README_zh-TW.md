@@ -734,7 +734,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精選工具（共 41 個 — 完整清單見文件）。每個工具都會宣告 JSON
+精選工具（共 46 個 — 完整清單見文件）。每個工具都會宣告 JSON
 `outputSchema` 與唯讀 / 破壞性的 `annotations`，並把結果以
 `structuredContent` 回傳；長時間執行的工具會串流 `notifications/progress`。
 
@@ -758,6 +758,8 @@ python -m Imervue.mcp_server
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | 電影調色高光滾降；分區曝光；分頻帶對比 |
 | `colormap_image` / `false_color_image` | 以 viridis / magma / jet 感知色彩映射重新上色；偽彩曝光尺標 |
 | `dither_image` / `split_toning_image` / `pixel_sort_image` | Bayer 有序抖動；陰影／高光分離色調；亮度帶像素排序 |
+| `polar_image` / `kaleidoscope_image` | 極座標／反極座標扭曲（小行星）；鏡射成萬花筒楔形 |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | 隨機鄰點毛玻璃散射；CLAHE 局部均衡；清晰度＋紋理局部對比 |
 | `reverse_geocode` / `extract_video_frame` | 離線 GPS → 城市、把影片一格解碼成靜態影像 |
 | `puppet_from_png` / `puppet_inspect` | 從 PNG 建構 `.puppet` rig；開啟一個並回傳清單 |
 
