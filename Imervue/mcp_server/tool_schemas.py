@@ -495,4 +495,84 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Detail equalizer"),
         "output_schema": _image_save_output(),
     },
+    "colormap_image": {
+        "annotations": _writes_file("Colour map"),
+        "output_schema": _image_save_output(),
+    },
+    "false_color_image": {
+        "annotations": _writes_file("False colour"),
+        "output_schema": _image_save_output(),
+    },
+    "dither_image": {
+        "annotations": _writes_file("Dither image"),
+        "output_schema": _image_save_output(),
+    },
+    "split_toning_image": {
+        "annotations": _writes_file("Split toning"),
+        "output_schema": _image_save_output(),
+    },
+    "pixel_sort_image": {
+        "annotations": _writes_file("Pixel sort"),
+        "output_schema": _image_save_output(),
+    },
+    "polar_image": {
+        "annotations": _writes_file("Polar warp"),
+        "output_schema": _image_save_output(),
+    },
+    "kaleidoscope_image": {
+        "annotations": _writes_file("Kaleidoscope"),
+        "output_schema": _image_save_output(),
+    },
+    "frosted_glass_image": {
+        "annotations": _writes_file("Frosted glass"),
+        "output_schema": _image_save_output(),
+    },
+    "clahe_image": {
+        "annotations": _writes_file("CLAHE"),
+        "output_schema": _image_save_output(),
+    },
+    "local_contrast_image": {
+        "annotations": _writes_file("Local contrast"),
+        "output_schema": _image_save_output(),
+    },
+    "posterize_image": {
+        "annotations": _writes_file("Posterize"),
+        "output_schema": _image_save_output(),
+    },
+    "gradient_map_image": {
+        "annotations": _writes_file("Gradient map"),
+        "output_schema": _image_save_output(),
+    },
+    "film_grain_image": {
+        "annotations": _writes_file("Film grain"),
+        "output_schema": _image_save_output(),
+    },
+    "dehaze_image": {
+        "annotations": _writes_file("Dehaze"),
+        "output_schema": _image_save_output(),
+    },
+    "distort_image": {
+        "annotations": _writes_file("Distort"),
+        "output_schema": _image_save_output(),
+    },
+    "levels_image": {
+        "annotations": _writes_file("Levels"),
+        "output_schema": _image_save_output(),
+    },
+    "auto_color_balance_image": {
+        "annotations": _writes_file("Auto colour balance"),
+        "output_schema": _image_save_output(),
+    },
+    "channel_mixer_image": {
+        "annotations": _writes_file("Channel mixer"),
+        "output_schema": _image_save_output(),
+    },
+    "curve_image": {
+        "annotations": _writes_file("Tone curve"),
+        "output_schema": _image_save_output(),
+    },
+    "lens_correction_image": {
+        "annotations": _writes_file("Lens correction"),
+        "output_schema": _image_save_output(),
+    },
 }

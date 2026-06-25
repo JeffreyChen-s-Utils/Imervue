@@ -738,7 +738,7 @@ python -m Imervue.mcp_server
 
 ### Outils
 
-Outils sélectionnés (36 au total — liste complète dans la documentation). Chaque outil
+Outils sélectionnés (57 au total — liste complète dans la documentation). Chaque outil
 annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
 son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
 `notifications/progress`.
@@ -761,6 +761,15 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturation Velvia, relief en lumière directionnelle, désaturation des franges de bord |
 | `film_negative_image` / `graduated_density_image` | Inverser un négatif numérisé ; appliquer un dégradé de densité gradué linéaire |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Atténuation filmic des hautes lumières ; exposition par zone ; contraste par bande |
+| `colormap_image` / `false_color_image` | Recoloriser la luminance via une palette viridis/magma/jet ; échelle d'exposition en fausses couleurs |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Tramage Bayer ordonné ; virage partiel ombres/hautes lumières ; tri de pixels par bande de luminosité |
+| `polar_image` / `kaleidoscope_image` | Distorsion vers/depuis le polaire (tiny-planet) ; miroir en quartiers de kaléidoscope |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Diffusion verre dépoli par voisin aléatoire ; égalisation locale CLAHE ; contraste local clarté + texture |
+| `posterize_image` / `gradient_map_image` | Quantifier les canaux en paliers ; remapper la luminance via un dégradé |
+| `film_grain_image` / `dehaze_image` / `distort_image` | Grain gaussien réglable ; suppression de brume par canal sombre ; distorsion tourbillon/pincement/ondulation |
+| `levels_image` / `curve_image` | Niveaux point noir/blanc + gamma ; courbe tonale (courbe en S / éclaircir les ombres / comprimer les hautes lumières) |
+| `auto_color_balance_image` / `channel_mixer_image` | Balance des blancs automatique (4 méthodes) ; mélangeur de couches 3×3 + conversion mono |
+| `lens_correction_image` | Corriger la distorsion (k1), le vignettage et l'aberration chromatique rouge/bleue |
 | `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
 | `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
 

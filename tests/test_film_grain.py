@@ -150,6 +150,25 @@ def test_rejects_non_rgba():
         apply_film_grain(arr, FilmGrainOptions(enabled=True))
 
 
+@pytest.mark.parametrize("size", [2, 3, SIZE_MAX])
+@pytest.mark.parametrize("shape", [(24, 32), (31, 17), (16, 16)])
+@pytest.mark.parametrize("monochrome", [True, False])
+def test_blurred_grain_preserves_shape(size, shape, monochrome):
+    """A clump ``size`` > 1 box-blurs the noise; the result must stay HxWx4.
+
+    Regression: the summed-area box blur dropped one pixel per axis, so the
+    blurred noise field failed to broadcast against the image for any size > 1.
+    """
+    base = _solid(shape[0], shape[1], (100, 110, 120))
+    opts = FilmGrainOptions(
+        enabled=True, intensity=0.5, size=size, monochrome=monochrome, seed=7,
+    )
+    out = apply_film_grain(base, opts)
+    assert out.shape == base.shape
+    assert out.dtype == np.uint8
+    assert not np.array_equal(out[..., :3], base[..., :3])
+
+
 # ---------------------------------------------------------------------------
 # Recipe integration
 # ---------------------------------------------------------------------------

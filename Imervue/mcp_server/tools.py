@@ -1196,6 +1196,320 @@ def detail_equalizer_image(
 
 
 # ---------------------------------------------------------------------------
+# stylize / artistic effects
+# ---------------------------------------------------------------------------
+
+
+def colormap_image(
+    source: str, destination: str, *, name: str = "viridis",
+) -> dict[str, Any]:
+    """Re-colour ``source`` luminance through a named colour map and save the result."""
+    from Imervue.image.colormap import apply_colormap
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_colormap(arr, str(name)),
+    )
+
+
+def false_color_image(source: str, destination: str) -> dict[str, Any]:
+    """Map ``source`` luminance to a false-colour exposure scale and save the result."""
+    from Imervue.image.false_color import false_color
+    return _apply_effect_and_save(source, destination, false_color)
+
+
+def dither_image(
+    source: str, destination: str, *, levels: int = 2,
+) -> dict[str, Any]:
+    """Ordered-dither ``source`` to ``levels`` tones per channel and save the result."""
+    from Imervue.image.dither import ordered_dither
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: ordered_dither(arr, int(levels)),
+    )
+
+
+def split_toning_image(
+    source: str, destination: str, *,
+    shadow_hue: float = 210.0, shadow_saturation: float = 0.0,
+    highlight_hue: float = 45.0, highlight_saturation: float = 0.0,
+    balance: float = 0.0,
+) -> dict[str, Any]:
+    """Tint shadows and highlights with separate hues weighted by luminance, then save."""
+    from Imervue.image.split_toning import apply_split_toning
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_split_toning(
+            arr, float(shadow_hue), float(shadow_saturation),
+            float(highlight_hue), float(highlight_saturation), float(balance),
+        ),
+    )
+
+
+def pixel_sort_image(
+    source: str, destination: str, *,
+    lower: int = 60, upper: int = 200, vertical: bool = False,
+) -> dict[str, Any]:
+    """Sort pixels within brightness bands (``lower``-``upper``) and save the result."""
+    from Imervue.image.pixel_sort import pixel_sort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: pixel_sort(arr, int(lower), int(upper), vertical=bool(vertical)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# geometric / detail effects
+# ---------------------------------------------------------------------------
+
+
+def polar_image(
+    source: str, destination: str, *,
+    to_polar: bool = True, invert: bool = False,
+) -> dict[str, Any]:
+    """Warp ``source`` between rectangular and polar coordinates and save the result."""
+    from Imervue.image.polar import polar_distort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: polar_distort(arr, bool(to_polar), bool(invert)),
+    )
+
+
+def kaleidoscope_image(
+    source: str, destination: str, *,
+    segments: int = 6, angle_deg: float = 0.0,
+) -> dict[str, Any]:
+    """Mirror ``source`` into ``segments`` kaleidoscope wedges and save the result."""
+    import math
+
+    from Imervue.image.kaleidoscope import kaleidoscope
+    angle_offset = math.radians(float(angle_deg))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: kaleidoscope(arr, int(segments), None, angle_offset),
+    )
+
+
+def frosted_glass_image(
+    source: str, destination: str, *, radius: int = 4, seed: int = 0,
+) -> dict[str, Any]:
+    """Scatter each pixel to a random neighbour within ``radius`` and save the result."""
+    from Imervue.image.frosted_glass import frosted_glass
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: frosted_glass(arr, int(radius), int(seed)),
+    )
+
+
+def clahe_image(
+    source: str, destination: str, *,
+    clip_limit: float = 2.0, tiles: int = 8,
+) -> dict[str, Any]:
+    """Apply contrast-limited adaptive histogram equalization and save the result."""
+    from Imervue.image.clahe import apply_clahe
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_clahe(arr, float(clip_limit), int(tiles)),
+    )
+
+
+def local_contrast_image(
+    source: str, destination: str, *,
+    clarity: float = 0.0, texture: float = 0.0,
+) -> dict[str, Any]:
+    """Add midtone clarity and fine-detail texture local contrast, then save."""
+    from Imervue.image.local_contrast import apply_clarity, apply_texture
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_texture(apply_clarity(arr, float(clarity)), float(texture)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# tone-grading / lens effects
+# ---------------------------------------------------------------------------
+
+
+def posterize_image(
+    source: str, destination: str, *, levels: int = 4,
+) -> dict[str, Any]:
+    """Quantize each channel to ``levels`` discrete steps and save the result."""
+    from Imervue.image.posterize import PosterizeOptions, apply_posterize
+    options = PosterizeOptions(enabled=True, levels=int(levels))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_posterize(arr, options),
+    )
+
+
+def gradient_map_image(
+    source: str, destination: str, *,
+    intensity: float = 1.0, perceptual: bool = False,
+) -> dict[str, Any]:
+    """Map luminance through a black-to-white gradient and save the blended result."""
+    from Imervue.image.gradient_map import GradientMapOptions, apply_gradient_map
+    options = GradientMapOptions(
+        enabled=True, intensity=float(intensity), perceptual=bool(perceptual),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_gradient_map(arr, options),
+    )
+
+
+def film_grain_image(
+    source: str, destination: str, *,
+    intensity: float = 0.25, size: int = 1,
+    monochrome: bool = True, seed: int = 0,
+) -> dict[str, Any]:
+    """Add tunable Gaussian film grain to the image and save the result."""
+    from Imervue.image.film_grain import FilmGrainOptions, apply_film_grain
+    options = FilmGrainOptions(
+        enabled=True, intensity=float(intensity), size=int(size),
+        monochrome=bool(monochrome), seed=int(seed),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_film_grain(arr, options),
+    )
+
+
+def dehaze_image(
+    source: str, destination: str, *, strength: float = 0.5,
+) -> dict[str, Any]:
+    """Remove atmospheric haze (dark-channel prior) by ``strength`` and save."""
+    from Imervue.image.dehaze import dehaze
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: dehaze(arr, float(strength)),
+    )
+
+
+def distort_image(
+    source: str, destination: str, *,
+    mode: str = "swirl", strength: float = 0.5,
+) -> dict[str, Any]:
+    """Warp the image with a swirl, pinch or ripple distortion and save the result."""
+    from Imervue.image.distort import distort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: distort(arr, str(mode), float(strength)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# colour-grading / curve effects
+# ---------------------------------------------------------------------------
+
+
+def levels_image(
+    source: str, destination: str, *,
+    black: int = 0, white: int = 255, gamma: float = 1.0,
+) -> dict[str, Any]:
+    """Remap tones with input black/white points and a gamma, then save."""
+    from Imervue.image.levels import LevelsOptions, apply_levels
+    options = LevelsOptions(
+        enabled=True, black=int(black), white=int(white), gamma=float(gamma),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_levels(arr, options),
+    )
+
+
+def auto_color_balance_image(
+    source: str, destination: str, *,
+    method: str = "percentile_stretch", intensity: float = 1.0,
+    percentile: float = 1.0, retinex_radius: int = 24,
+) -> dict[str, Any]:
+    """Auto white-balance / colour-cast correction by the chosen method, then save."""
+    from Imervue.image.auto_color_balance import AutoBalanceOptions, auto_balance
+    options = AutoBalanceOptions(
+        method=str(method), intensity=float(intensity),
+        percentile=float(percentile), retinex_radius=int(retinex_radius),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: auto_balance(arr, options),
+    )
+
+
+def channel_mixer_image(
+    source: str, destination: str, *,
+    red: list[float] | None = None, green: list[float] | None = None,
+    blue: list[float] | None = None, offsets: list[float] | None = None,
+    monochrome: bool = False,
+) -> dict[str, Any]:
+    """Remix output channels from a 3x3 weight matrix plus offsets, then save."""
+    from Imervue.image.channel_mixer import ChannelMixerOptions, apply_channel_mixer
+    options = ChannelMixerOptions(
+        enabled=True,
+        red=[float(v) for v in (red if red is not None else [1.0, 0.0, 0.0])],
+        green=[float(v) for v in (green if green is not None else [0.0, 1.0, 0.0])],
+        blue=[float(v) for v in (blue if blue is not None else [0.0, 0.0, 1.0])],
+        offsets=[float(v) for v in (offsets if offsets is not None else [0.0, 0.0, 0.0])],
+        monochrome=bool(monochrome),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_channel_mixer(arr, options),
+    )
+
+
+_CURVE_PRESETS = ("s_curve", "lift_shadows", "compress_highlights")
+
+
+def _curve_points(preset: str, strength: float):
+    """Return the master-curve points for a named preset."""
+    from Imervue.image import curves
+    builders = {
+        "s_curve": curves.s_curve_preset,
+        "lift_shadows": curves.lift_shadows_preset,
+        "compress_highlights": curves.compress_highlights_preset,
+    }
+    builder = builders.get(preset)
+    if builder is None:
+        raise ValueError(
+            f"unknown curve preset {preset!r}; expected one of {_CURVE_PRESETS}",
+        )
+    return builder(strength)
+
+
+def curve_image(
+    source: str, destination: str, *,
+    preset: str = "s_curve", strength: float = 0.15,
+) -> dict[str, Any]:
+    """Apply a tone-curve preset (S-curve, lift shadows, compress highlights), then save."""
+    from Imervue.image.curves import CurveOptions, apply_curves
+    options = CurveOptions(
+        enabled=True, per_channel={"rgb": _curve_points(str(preset), float(strength))},
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_curves(arr, options),
+    )
+
+
+def lens_correction_image(
+    source: str, destination: str, *,
+    k1: float = 0.0, vignette: float = 0.0,
+    ca_red: float = 0.0, ca_blue: float = 0.0,
+) -> dict[str, Any]:
+    """Correct barrel/pincushion distortion, vignette and chromatic aberration, then save."""
+    from Imervue.image.lens_correction import (
+        LensCorrectionOptions,
+        apply_lens_correction,
+    )
+    options = LensCorrectionOptions(
+        k1=float(k1), vignette=float(vignette),
+        ca_red=float(ca_red), ca_blue=float(ca_blue),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_lens_correction(arr, options),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -1922,6 +2236,481 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": detail_equalizer_image,
+    },
+    {
+        "name": "colormap_image",
+        "description": (
+            "Re-colour the image by mapping its luminance through a perceptual "
+            "colour map (viridis, magma or jet)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "name": {
+                    "type": "string",
+                    "enum": ["viridis", "magma", "jet"],
+                    "default": "viridis",
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": colormap_image,
+    },
+    {
+        "name": "false_color_image",
+        "description": (
+            "Map luminance to a false-colour exposure scale (blacks through "
+            "whites), the way a video monitor flags clipping."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": false_color_image,
+    },
+    {
+        "name": "dither_image",
+        "description": (
+            "Ordered (Bayer) dither the image to a small number of tones per "
+            "channel, trading colour depth for a retro halftone look."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "levels": {
+                    "type": "integer", "minimum": 2, "maximum": 8, "default": 2,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": dither_image,
+    },
+    {
+        "name": "split_toning_image",
+        "description": (
+            "Tint shadows and highlights with separate hues, weighted by "
+            "luminance, with a balance control for the split point."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "shadow_hue": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 210.0,
+                },
+                "shadow_saturation": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+                "highlight_hue": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 45.0,
+                },
+                "highlight_saturation": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.0,
+                },
+                "balance": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": split_toning_image,
+    },
+    {
+        "name": "pixel_sort_image",
+        "description": (
+            "Pixel-sort the image: reorder pixels by brightness within contiguous "
+            "bands bounded by lower/upper thresholds, for a glitch-art smear."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "lower": {
+                    "type": "integer", "minimum": 0, "maximum": 255, "default": 60,
+                },
+                "upper": {
+                    "type": "integer", "minimum": 0, "maximum": 255, "default": 200,
+                },
+                "vertical": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": pixel_sort_image,
+    },
+    {
+        "name": "polar_image",
+        "description": (
+            "Warp the image between rectangular and polar coordinates: wrap it "
+            "into a disc (tiny-planet) or unroll a disc back into a strip."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "to_polar": {"type": "boolean", "default": True},
+                "invert": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": polar_image,
+    },
+    {
+        "name": "kaleidoscope_image",
+        "description": (
+            "Mirror the image into a number of kaleidoscope wedges around the "
+            "centre, with an optional rotation of the wedge."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "segments": {
+                    "type": "integer", "minimum": 2, "maximum": 64, "default": 6,
+                },
+                "angle_deg": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": kaleidoscope_image,
+    },
+    {
+        "name": "frosted_glass_image",
+        "description": (
+            "Frosted-glass scatter: replace each pixel with a random neighbour "
+            "within a radius, for a textured diffusion. The seed is reproducible."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "radius": {
+                    "type": "integer", "minimum": 0, "maximum": 64, "default": 4,
+                },
+                "seed": {"type": "integer", "minimum": 0, "default": 0},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": frosted_glass_image,
+    },
+    {
+        "name": "clahe_image",
+        "description": (
+            "Contrast-limited adaptive histogram equalization: boost local "
+            "contrast per tile on the luminance, with a clip limit to cap noise."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "clip_limit": {
+                    "type": "number", "minimum": 1, "maximum": 8, "default": 2.0,
+                },
+                "tiles": {
+                    "type": "integer", "minimum": 1, "maximum": 16, "default": 8,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": clahe_image,
+    },
+    {
+        "name": "local_contrast_image",
+        "description": (
+            "Local contrast: midtone-weighted clarity at a large radius plus "
+            "fine-detail texture at a small radius (each -1 to 1, 0 neutral)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "clarity": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+                "texture": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": local_contrast_image,
+    },
+    {
+        "name": "posterize_image",
+        "description": (
+            "Posterize: quantize each channel to a small number of discrete "
+            "levels for a flat, banded poster look."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "levels": {
+                    "type": "integer", "minimum": 2, "maximum": 64, "default": 4,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": posterize_image,
+    },
+    {
+        "name": "gradient_map_image",
+        "description": (
+            "Gradient map: remap luminance through a black-to-white gradient "
+            "and blend it over the original by an intensity factor."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+                "perceptual": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": gradient_map_image,
+    },
+    {
+        "name": "film_grain_image",
+        "description": (
+            "Add Gaussian film grain: tunable intensity and clump size, "
+            "monochrome or per-channel, with a reproducible seed."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.25,
+                },
+                "size": {
+                    "type": "integer", "minimum": 1, "maximum": 8, "default": 1,
+                },
+                "monochrome": {"type": "boolean", "default": True},
+                "seed": {"type": "integer", "minimum": 0, "default": 0},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": film_grain_image,
+    },
+    {
+        "name": "dehaze_image",
+        "description": (
+            "Dehaze: estimate atmospheric light with a dark-channel prior and "
+            "recover contrast and colour through the haze, by a strength factor."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "strength": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 0.5,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": dehaze_image,
+    },
+    {
+        "name": "distort_image",
+        "description": (
+            "Geometric distortion: swirl around the centre, pinch/bulge, or a "
+            "sinusoidal ripple. Strength runs -1 to 1 (sign flips the direction)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["swirl", "pinch", "ripple"],
+                    "default": "swirl",
+                },
+                "strength": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.5,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": distort_image,
+    },
+    {
+        "name": "levels_image",
+        "description": (
+            "Levels: set input black and white points and a midtone gamma to "
+            "remap the tonal range. gamma 1.0 is neutral."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "black": {
+                    "type": "integer", "minimum": 0, "maximum": 254, "default": 0,
+                },
+                "white": {
+                    "type": "integer", "minimum": 1, "maximum": 255, "default": 255,
+                },
+                "gamma": {
+                    "type": "number", "minimum": 0.1, "maximum": 9.99, "default": 1.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": levels_image,
+    },
+    {
+        "name": "auto_color_balance_image",
+        "description": (
+            "Automatic white-balance / colour-cast correction by gray-world, "
+            "white-patch, percentile-stretch or simplified-retinex, blended by "
+            "intensity."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "gray_world", "white_patch",
+                        "percentile_stretch", "simplified_retinex",
+                    ],
+                    "default": "percentile_stretch",
+                },
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+                "percentile": {
+                    "type": "number", "minimum": 0, "maximum": 10, "default": 1.0,
+                },
+                "retinex_radius": {
+                    "type": "integer", "minimum": 4, "maximum": 64, "default": 24,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": auto_color_balance_image,
+    },
+    {
+        "name": "channel_mixer_image",
+        "description": (
+            "Channel mixer: build each output channel as a weighted sum of the "
+            "input R/G/B plus an offset. Set monochrome to fold all rows into a "
+            "tunable black-and-white conversion."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "red": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-red weights [from_r, from_g, from_b].",
+                },
+                "green": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-green weights [from_r, from_g, from_b].",
+                },
+                "blue": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-blue weights [from_r, from_g, from_b].",
+                },
+                "offsets": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -1, "maximum": 1},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Per-channel constant offset [r, g, b].",
+                },
+                "monochrome": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": channel_mixer_image,
+    },
+    {
+        "name": "curve_image",
+        "description": (
+            "Apply a master tone-curve preset: an S-curve for contrast, lift "
+            "shadows for a flat look, or compress highlights to recover detail. "
+            "strength scales the preset."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "preset": {
+                    "type": "string",
+                    "enum": ["s_curve", "lift_shadows", "compress_highlights"],
+                    "default": "s_curve",
+                },
+                "strength": {
+                    "type": "number", "minimum": 0, "maximum": 0.5, "default": 0.15,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": curve_image,
+    },
+    {
+        "name": "lens_correction_image",
+        "description": (
+            "Lens correction: remove barrel/pincushion distortion (k1), lift or "
+            "deepen corner vignette, and offset the red/blue radial scale to "
+            "cancel chromatic aberration."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "k1": {
+                    "type": "number", "minimum": -0.4, "maximum": 0.4, "default": 0.0,
+                },
+                "vignette": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+                "ca_red": {
+                    "type": "number", "minimum": -0.02, "maximum": 0.02, "default": 0.0,
+                },
+                "ca_blue": {
+                    "type": "number", "minimum": -0.02, "maximum": 0.02, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": lens_correction_image,
     },
 ]
 

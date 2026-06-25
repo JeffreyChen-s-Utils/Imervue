@@ -2471,6 +2471,33 @@ Available Tools
    * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
      - Filmic Reinhard/Hable highlight rolloff, per-luminance-zone exposure,
        and per-frequency-band contrast.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolour luminance through a viridis/magma/jet perceptual map, or map
+       it to a false-colour exposure scale.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Ordered (Bayer) dither to a few tones per channel, shadow/highlight
+       split-toning, and brightness-band pixel sorting.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Warp between rectangular and polar coordinates (tiny-planet), or mirror
+       the frame into a number of kaleidoscope wedges.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Random-neighbour frosted-glass scatter, contrast-limited adaptive
+       histogram equalization, and midtone clarity + fine-detail texture.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Quantize each channel to a few flat bands, or remap luminance through a
+       black-to-white gradient blended by intensity.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Tunable Gaussian film grain, dark-channel-prior dehaze, and swirl /
+       pinch / ripple geometric distortion.
+   * - ``levels_image`` / ``curve_image``
+     - Black/white-point and gamma levels, and a master tone-curve preset
+       (S-curve, lift shadows, compress highlights).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Automatic white balance (gray-world, white-patch, percentile-stretch,
+       retinex) and a 3x3 channel mixer with mono conversion.
+   * - ``lens_correction_image``
+     - Correct barrel/pincushion distortion (k1), lift or deepen the corner
+       vignette, and cancel red/blue chromatic aberration.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as

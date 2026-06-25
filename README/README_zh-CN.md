@@ -734,7 +734,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精选工具（共 36 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
+精选工具（共 57 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
 以及只读 / 破坏性 `annotations`，将结果以 `structuredContent` 返回；长时间运行的
 工具会流式发送 `notifications/progress`。
 
@@ -756,6 +756,15 @@ python -m Imervue.mcp_server
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia 饱和度提升、方向光浮雕、边缘色边去饱和 |
 | `film_negative_image` / `graduated_density_image` | 反转扫描负片；套用线性渐变中灰密度渐变 |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | 电影感高光滚降；逐区段曝光；逐频段对比 |
+| `colormap_image` / `false_color_image` | 以 viridis / magma / jet 感知色彩映射重新着色；伪彩曝光标尺 |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Bayer 有序抖动；阴影／高光分离色调；亮度带像素排序 |
+| `polar_image` / `kaleidoscope_image` | 极坐标／反极坐标扭曲（小行星）；镜射成万花筒楔形 |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | 随机邻点毛玻璃散射；CLAHE 局部均衡；清晰度＋纹理局部对比 |
+| `posterize_image` / `gradient_map_image` | 将各通道量化成平坦色阶；以渐变重新映射亮度 |
+| `film_grain_image` / `dehaze_image` / `distort_image` | 可调高斯颗粒；暗通道去雾；漩涡／挤压／涟漪扭曲 |
+| `levels_image` / `curve_image` | 黑白点＋gamma 色阶；S 曲线／提亮阴影／压缩高光的色调曲线 |
+| `auto_color_balance_image` / `channel_mixer_image` | 自动白平衡（4 种方法）；3×3 通道混合器＋黑白转换 |
+| `lens_correction_image` | 校正镜头桶形／枕形畸变（k1）、暗角与红／蓝色差 |
 | `reverse_geocode` / `extract_video_frame` | 离线 GPS → 城市、把一帧视频解码成静态图 |
 | `puppet_from_png` / `puppet_inspect` | 从 PNG 构建 `.puppet` rig；打开 `.puppet` 返回其清单 |
 

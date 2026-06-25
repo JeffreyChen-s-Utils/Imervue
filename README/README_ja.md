@@ -735,7 +735,7 @@ python -m Imervue.mcp_server
 
 ### ツール
 
-主なツール(全 36 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
+主なツール(全 57 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
 の `outputSchema` と read-only / destructive の `annotations` を公開し、結果を
 `structuredContent` として返します。長時間実行されるツールは
 `notifications/progress` をストリーミングします。
@@ -758,6 +758,15 @@ python -m Imervue.mcp_server
 | `velvia_image` / `emboss_image` / `defringe_image` | ベルビアの彩度ブースト、方向光のエンボス、エッジフリンジの脱色 |
 | `film_negative_image` / `graduated_density_image` | スキャンしたネガを反転、リニアな段階フィルタのグラデーションを適用 |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | フィルミックなハイライトロールオフ、ゾーンごとの露出、帯域ごとのコントラスト |
+| `colormap_image` / `false_color_image` | 輝度を viridis/magma/jet のカラーマップで再着色、フォルスカラー露出スケール |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Bayer 整列ディザ、シャドウ/ハイライトのスプリットトーン、輝度帯のピクセルソート |
+| `polar_image` / `kaleidoscope_image` | 極座標へ/から変形(タイニープラネット)、万華鏡のくさび形にミラー |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | ランダム近傍のすりガラス散乱、CLAHE 局所均等化、明瞭度＋テクスチャの局所コントラスト |
+| `posterize_image` / `gradient_map_image` | 各チャンネルを平坦な階調に量子化、グラデーションで輝度を再マッピング |
+| `film_grain_image` / `dehaze_image` / `distort_image` | 可変ガウス粒状、ダークチャンネル除霧、渦巻き/つまみ/波紋の変形 |
+| `levels_image` / `curve_image` | 黒/白点＋ガンマのレベル、トーンカーブ(S 字/シャドウ持ち上げ/ハイライト圧縮) |
+| `auto_color_balance_image` / `channel_mixer_image` | 自動ホワイトバランス(4 方式)、3×3 チャンネルミキサー＋モノクロ変換 |
+| `lens_correction_image` | 歪み(k1)、周辺光量、赤/青の色収差を補正 |
 | `reverse_geocode` / `extract_video_frame` | オフラインで GPS → 都市名、動画の 1 フレームを静止画にデコード |
 | `puppet_from_png` / `puppet_inspect` | PNG から `.puppet` rig を構築。`.puppet` を開いてインベントリを返す |
 
