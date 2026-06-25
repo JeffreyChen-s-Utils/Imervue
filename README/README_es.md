@@ -783,7 +783,7 @@ python -m Imervue.mcp_server
 
 ### Herramientas
 
-Herramientas seleccionadas (51 en total — lista completa en la documentación). Cada herramienta
+Herramientas seleccionadas (56 en total — lista completa en la documentación). Cada herramienta
 anuncia un `outputSchema` JSON y `annotations` de solo lectura / destructivas, devuelve su
 resultado como `structuredContent`, y las herramientas de larga duración transmiten
 `notifications/progress`.
@@ -812,6 +812,8 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 | `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Dispersión de vidrio esmerilado por vecino aleatorio; ecualización local CLAHE; contraste local de claridad + textura |
 | `posterize_image` / `gradient_map_image` | Cuantizar los canales en bandas planas; remapear la luminancia con un degradado |
 | `film_grain_image` / `dehaze_image` / `distort_image` | Grano gaussiano ajustable; desempañado por canal oscuro; deformación giro/pellizco/ondulación |
+| `levels_image` / `curve_image` | Niveles de punto negro/blanco + gamma; curva de tonos (curva en S / aclarar sombras / comprimir luces) |
+| `auto_color_balance_image` / `channel_mixer_image` | Balance de blancos automático (4 métodos); mezclador de canales 3×3 + conversión mono |
 | `reverse_geocode` / `extract_video_frame` | GPS → ciudad sin conexión, decodificar un fotograma de vídeo a imagen fija |
 | `puppet_from_png` / `puppet_inspect` | Construir un rig `.puppet` desde un PNG; abrir uno y devolver su inventario |
 
