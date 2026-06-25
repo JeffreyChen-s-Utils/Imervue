@@ -2489,6 +2489,12 @@ Available Tools
    * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
      - Tunable Gaussian film grain, dark-channel-prior dehaze, and swirl /
        pinch / ripple geometric distortion.
+   * - ``levels_image`` / ``curve_image``
+     - Black/white-point and gamma levels, and a master tone-curve preset
+       (S-curve, lift shadows, compress highlights).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Automatic white balance (gray-world, white-patch, percentile-stretch,
+       retinex) and a 3x3 channel mixer with mono conversion.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
