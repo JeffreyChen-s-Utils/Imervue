@@ -785,7 +785,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (41 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (46 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -810,6 +810,8 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Filmic-Highlight-Rolloff; Belichtung pro Zone; Kontrast pro Band |
 | `colormap_image` / `false_color_image` | Luminanz über eine viridis/magma/jet-Farbpalette neu einfärben; Falschfarben-Belichtungsskala |
 | `dither_image` / `split_toning_image` / `pixel_sort_image` | Geordnetes Bayer-Dithering; Split-Toning von Schatten/Lichtern; Pixel-Sortierung nach Helligkeitsband |
+| `polar_image` / `kaleidoscope_image` | Verzerrung zu/von Polarkoordinaten (Tiny-Planet); Spiegelung in Kaleidoskop-Segmente |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Frosted-Glass-Streuung mit Zufallsnachbarn; CLAHE-Lokalausgleich; Clarity + Textur als Lokalkontrast |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
 
