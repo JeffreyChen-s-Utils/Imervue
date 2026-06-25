@@ -785,7 +785,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (56 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (57 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -816,6 +816,7 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `film_grain_image` / `dehaze_image` / `distort_image` | Regelbares Gaußkorn; Dark-Channel-Entnebelung; Swirl-/Pinch-/Ripple-Verzerrung |
 | `levels_image` / `curve_image` | Schwarz-/Weißpunkt + Gamma-Tonwerte; Tonkurve (S-Kurve / Schatten anheben / Lichter komprimieren) |
 | `auto_color_balance_image` / `channel_mixer_image` | Automatischer Weißabgleich (4 Methoden); 3×3-Kanalmixer + Mono-Umwandlung |
+| `lens_correction_image` | Verzeichnung (k1), Vignette und rot/blaue chromatische Aberration korrigieren |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
 

@@ -735,7 +735,7 @@ python -m Imervue.mcp_server
 
 ### ツール
 
-主なツール(全 56 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
+主なツール(全 57 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
 の `outputSchema` と read-only / destructive の `annotations` を公開し、結果を
 `structuredContent` として返します。長時間実行されるツールは
 `notifications/progress` をストリーミングします。
@@ -766,6 +766,7 @@ python -m Imervue.mcp_server
 | `film_grain_image` / `dehaze_image` / `distort_image` | 可変ガウス粒状、ダークチャンネル除霧、渦巻き/つまみ/波紋の変形 |
 | `levels_image` / `curve_image` | 黒/白点＋ガンマのレベル、トーンカーブ(S 字/シャドウ持ち上げ/ハイライト圧縮) |
 | `auto_color_balance_image` / `channel_mixer_image` | 自動ホワイトバランス(4 方式)、3×3 チャンネルミキサー＋モノクロ変換 |
+| `lens_correction_image` | 歪み(k1)、周辺光量、赤/青の色収差を補正 |
 | `reverse_geocode` / `extract_video_frame` | オフラインで GPS → 都市名、動画の 1 フレームを静止画にデコード |
 | `puppet_from_png` / `puppet_inspect` | PNG から `.puppet` rig を構築。`.puppet` を開いてインベントリを返す |
 
