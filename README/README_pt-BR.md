@@ -759,7 +759,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (36 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (41 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -782,6 +782,8 @@ longa duração transmitem `notifications/progress`.
 | `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturação Velvia, emboss de luz direcional, dessaturação de franjas de borda |
 | `film_negative_image` / `graduated_density_image` | Inverte um negativo escaneado; aplica um gradiente de densidade graduada linear |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Rolloff filmic de realces; exposição por zona; contraste por banda |
+| `colormap_image` / `false_color_image` | Recolorir a luminância por um mapa viridis/magma/jet; escala de exposição em falsas cores |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Pontilhado Bayer ordenado; split-toning de sombras/luzes; ordenação de pixels por faixa de brilho |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
 

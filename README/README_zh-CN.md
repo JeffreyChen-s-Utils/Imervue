@@ -734,7 +734,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精选工具（共 36 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
+精选工具（共 41 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
 以及只读 / 破坏性 `annotations`，将结果以 `structuredContent` 返回；长时间运行的
 工具会流式发送 `notifications/progress`。
 
@@ -756,6 +756,8 @@ python -m Imervue.mcp_server
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia 饱和度提升、方向光浮雕、边缘色边去饱和 |
 | `film_negative_image` / `graduated_density_image` | 反转扫描负片；套用线性渐变中灰密度渐变 |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | 电影感高光滚降；逐区段曝光；逐频段对比 |
+| `colormap_image` / `false_color_image` | 以 viridis / magma / jet 感知色彩映射重新着色；伪彩曝光标尺 |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Bayer 有序抖动；阴影／高光分离色调；亮度带像素排序 |
 | `reverse_geocode` / `extract_video_frame` | 离线 GPS → 城市、把一帧视频解码成静态图 |
 | `puppet_from_png` / `puppet_inspect` | 从 PNG 构建 `.puppet` rig；打开 `.puppet` 返回其清单 |
 

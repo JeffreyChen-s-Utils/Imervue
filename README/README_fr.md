@@ -738,7 +738,7 @@ python -m Imervue.mcp_server
 
 ### Outils
 
-Outils sélectionnés (36 au total — liste complète dans la documentation). Chaque outil
+Outils sélectionnés (41 au total — liste complète dans la documentation). Chaque outil
 annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
 son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
 `notifications/progress`.
@@ -761,6 +761,8 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturation Velvia, relief en lumière directionnelle, désaturation des franges de bord |
 | `film_negative_image` / `graduated_density_image` | Inverser un négatif numérisé ; appliquer un dégradé de densité gradué linéaire |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Atténuation filmic des hautes lumières ; exposition par zone ; contraste par bande |
+| `colormap_image` / `false_color_image` | Recoloriser la luminance via une palette viridis/magma/jet ; échelle d'exposition en fausses couleurs |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Tramage Bayer ordonné ; virage partiel ombres/hautes lumières ; tri de pixels par bande de luminosité |
 | `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
 | `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
 

@@ -781,7 +781,7 @@ python -m Imervue.mcp_server
 
 ### Инструменты
 
-Избранные инструменты (всего 36 — полный список в документации). Каждый
+Избранные инструменты (всего 41 — полный список в документации). Каждый
 инструмент объявляет JSON `outputSchema` и аннотации `annotations`
 (только чтение / разрушающее действие), возвращает результат как
 `structuredContent`, а долго выполняющиеся инструменты транслируют
@@ -805,6 +805,8 @@ python -m Imervue.mcp_server
 | `velvia_image` / `emboss_image` / `defringe_image` | Повышение насыщенности Velvia, тиснение направленным светом, обесцвечивание каёмок на краях |
 | `film_negative_image` / `graduated_density_image` | Инверсия отсканированного негатива; применение линейного градиента плотности |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Кинематографический rolloff светов; экспозиция по зонам; контраст по полосам |
+| `colormap_image` / `false_color_image` | Перекраска яркости через палитру viridis/magma/jet; шкала экспозиции в ложных цветах |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Упорядоченный дизеринг Байера; раздельное тонирование теней/светов; сортировка пикселей по диапазону яркости |
 | `reverse_geocode` / `extract_video_frame` | Офлайн GPS → город, декодирование одного кадра видео в стоп-кадр |
 | `puppet_from_png` / `puppet_inspect` | Построение `.puppet` рига из PNG; открытие рига и возврат его инвентаря |
 
