@@ -555,4 +555,20 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Distort"),
         "output_schema": _image_save_output(),
     },
+    "levels_image": {
+        "annotations": _writes_file("Levels"),
+        "output_schema": _image_save_output(),
+    },
+    "auto_color_balance_image": {
+        "annotations": _writes_file("Auto colour balance"),
+        "output_schema": _image_save_output(),
+    },
+    "channel_mixer_image": {
+        "annotations": _writes_file("Channel mixer"),
+        "output_schema": _image_save_output(),
+    },
+    "curve_image": {
+        "annotations": _writes_file("Tone curve"),
+        "output_schema": _image_save_output(),
+    },
 }

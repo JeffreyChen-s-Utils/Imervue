@@ -264,6 +264,10 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("film_grain_image", {"intensity": 0.4, "size": 2, "seed": 3}),
     ("dehaze_image", {"strength": 0.7}),
     ("distort_image", {"mode": "ripple", "strength": 0.6}),
+    ("levels_image", {"black": 16, "white": 240, "gamma": 1.2}),
+    ("auto_color_balance_image", {"method": "white_patch", "intensity": 0.9}),
+    ("channel_mixer_image", {"monochrome": True, "red": [0.3, 0.5, 0.2]}),
+    ("curve_image", {"preset": "lift_shadows", "strength": 0.25}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"

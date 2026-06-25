@@ -1397,6 +1397,99 @@ def distort_image(
 
 
 # ---------------------------------------------------------------------------
+# colour-grading / curve effects
+# ---------------------------------------------------------------------------
+
+
+def levels_image(
+    source: str, destination: str, *,
+    black: int = 0, white: int = 255, gamma: float = 1.0,
+) -> dict[str, Any]:
+    """Remap tones with input black/white points and a gamma, then save."""
+    from Imervue.image.levels import LevelsOptions, apply_levels
+    options = LevelsOptions(
+        enabled=True, black=int(black), white=int(white), gamma=float(gamma),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_levels(arr, options),
+    )
+
+
+def auto_color_balance_image(
+    source: str, destination: str, *,
+    method: str = "percentile_stretch", intensity: float = 1.0,
+    percentile: float = 1.0, retinex_radius: int = 24,
+) -> dict[str, Any]:
+    """Auto white-balance / colour-cast correction by the chosen method, then save."""
+    from Imervue.image.auto_color_balance import AutoBalanceOptions, auto_balance
+    options = AutoBalanceOptions(
+        method=str(method), intensity=float(intensity),
+        percentile=float(percentile), retinex_radius=int(retinex_radius),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: auto_balance(arr, options),
+    )
+
+
+def channel_mixer_image(
+    source: str, destination: str, *,
+    red: list[float] | None = None, green: list[float] | None = None,
+    blue: list[float] | None = None, offsets: list[float] | None = None,
+    monochrome: bool = False,
+) -> dict[str, Any]:
+    """Remix output channels from a 3x3 weight matrix plus offsets, then save."""
+    from Imervue.image.channel_mixer import ChannelMixerOptions, apply_channel_mixer
+    options = ChannelMixerOptions(
+        enabled=True,
+        red=[float(v) for v in (red if red is not None else [1.0, 0.0, 0.0])],
+        green=[float(v) for v in (green if green is not None else [0.0, 1.0, 0.0])],
+        blue=[float(v) for v in (blue if blue is not None else [0.0, 0.0, 1.0])],
+        offsets=[float(v) for v in (offsets if offsets is not None else [0.0, 0.0, 0.0])],
+        monochrome=bool(monochrome),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_channel_mixer(arr, options),
+    )
+
+
+_CURVE_PRESETS = ("s_curve", "lift_shadows", "compress_highlights")
+
+
+def _curve_points(preset: str, strength: float):
+    """Return the master-curve points for a named preset."""
+    from Imervue.image import curves
+    builders = {
+        "s_curve": curves.s_curve_preset,
+        "lift_shadows": curves.lift_shadows_preset,
+        "compress_highlights": curves.compress_highlights_preset,
+    }
+    builder = builders.get(preset)
+    if builder is None:
+        raise ValueError(
+            f"unknown curve preset {preset!r}; expected one of {_CURVE_PRESETS}",
+        )
+    return builder(strength)
+
+
+def curve_image(
+    source: str, destination: str, *,
+    preset: str = "s_curve", strength: float = 0.15,
+) -> dict[str, Any]:
+    """Apply a tone-curve preset (S-curve, lift shadows, compress highlights), then save."""
+    from Imervue.image.curves import CurveOptions, apply_curves
+    options = CurveOptions(
+        enabled=True, per_channel={"rgb": _curve_points(str(preset), float(strength))},
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_curves(arr, options),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -2443,6 +2536,132 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": distort_image,
+    },
+    {
+        "name": "levels_image",
+        "description": (
+            "Levels: set input black and white points and a midtone gamma to "
+            "remap the tonal range. gamma 1.0 is neutral."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "black": {
+                    "type": "integer", "minimum": 0, "maximum": 254, "default": 0,
+                },
+                "white": {
+                    "type": "integer", "minimum": 1, "maximum": 255, "default": 255,
+                },
+                "gamma": {
+                    "type": "number", "minimum": 0.1, "maximum": 9.99, "default": 1.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": levels_image,
+    },
+    {
+        "name": "auto_color_balance_image",
+        "description": (
+            "Automatic white-balance / colour-cast correction by gray-world, "
+            "white-patch, percentile-stretch or simplified-retinex, blended by "
+            "intensity."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "gray_world", "white_patch",
+                        "percentile_stretch", "simplified_retinex",
+                    ],
+                    "default": "percentile_stretch",
+                },
+                "intensity": {
+                    "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                },
+                "percentile": {
+                    "type": "number", "minimum": 0, "maximum": 10, "default": 1.0,
+                },
+                "retinex_radius": {
+                    "type": "integer", "minimum": 4, "maximum": 64, "default": 24,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": auto_color_balance_image,
+    },
+    {
+        "name": "channel_mixer_image",
+        "description": (
+            "Channel mixer: build each output channel as a weighted sum of the "
+            "input R/G/B plus an offset. Set monochrome to fold all rows into a "
+            "tunable black-and-white conversion."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "red": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-red weights [from_r, from_g, from_b].",
+                },
+                "green": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-green weights [from_r, from_g, from_b].",
+                },
+                "blue": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -2, "maximum": 2},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Output-blue weights [from_r, from_g, from_b].",
+                },
+                "offsets": {
+                    "type": "array",
+                    "items": {"type": "number", "minimum": -1, "maximum": 1},
+                    "minItems": 3, "maxItems": 3,
+                    "description": "Per-channel constant offset [r, g, b].",
+                },
+                "monochrome": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": channel_mixer_image,
+    },
+    {
+        "name": "curve_image",
+        "description": (
+            "Apply a master tone-curve preset: an S-curve for contrast, lift "
+            "shadows for a flat look, or compress highlights to recover detail. "
+            "strength scales the preset."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "preset": {
+                    "type": "string",
+                    "enum": ["s_curve", "lift_shadows", "compress_highlights"],
+                    "default": "s_curve",
+                },
+                "strength": {
+                    "type": "number", "minimum": 0, "maximum": 0.5, "default": 0.15,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": curve_image,
     },
 ]
 
