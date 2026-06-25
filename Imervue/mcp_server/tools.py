@@ -1258,6 +1258,73 @@ def pixel_sort_image(
 
 
 # ---------------------------------------------------------------------------
+# geometric / detail effects
+# ---------------------------------------------------------------------------
+
+
+def polar_image(
+    source: str, destination: str, *,
+    to_polar: bool = True, invert: bool = False,
+) -> dict[str, Any]:
+    """Warp ``source`` between rectangular and polar coordinates and save the result."""
+    from Imervue.image.polar import polar_distort
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: polar_distort(arr, bool(to_polar), bool(invert)),
+    )
+
+
+def kaleidoscope_image(
+    source: str, destination: str, *,
+    segments: int = 6, angle_deg: float = 0.0,
+) -> dict[str, Any]:
+    """Mirror ``source`` into ``segments`` kaleidoscope wedges and save the result."""
+    import math
+
+    from Imervue.image.kaleidoscope import kaleidoscope
+    angle_offset = math.radians(float(angle_deg))
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: kaleidoscope(arr, int(segments), None, angle_offset),
+    )
+
+
+def frosted_glass_image(
+    source: str, destination: str, *, radius: int = 4, seed: int = 0,
+) -> dict[str, Any]:
+    """Scatter each pixel to a random neighbour within ``radius`` and save the result."""
+    from Imervue.image.frosted_glass import frosted_glass
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: frosted_glass(arr, int(radius), int(seed)),
+    )
+
+
+def clahe_image(
+    source: str, destination: str, *,
+    clip_limit: float = 2.0, tiles: int = 8,
+) -> dict[str, Any]:
+    """Apply contrast-limited adaptive histogram equalization and save the result."""
+    from Imervue.image.clahe import apply_clahe
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_clahe(arr, float(clip_limit), int(tiles)),
+    )
+
+
+def local_contrast_image(
+    source: str, destination: str, *,
+    clarity: float = 0.0, texture: float = 0.0,
+) -> dict[str, Any]:
+    """Add midtone clarity and fine-detail texture local contrast, then save."""
+    from Imervue.image.local_contrast import apply_clarity, apply_texture
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_texture(apply_clarity(arr, float(clarity)), float(texture)),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
 
@@ -2094,6 +2161,110 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": pixel_sort_image,
+    },
+    {
+        "name": "polar_image",
+        "description": (
+            "Warp the image between rectangular and polar coordinates: wrap it "
+            "into a disc (tiny-planet) or unroll a disc back into a strip."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "to_polar": {"type": "boolean", "default": True},
+                "invert": {"type": "boolean", "default": False},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": polar_image,
+    },
+    {
+        "name": "kaleidoscope_image",
+        "description": (
+            "Mirror the image into a number of kaleidoscope wedges around the "
+            "centre, with an optional rotation of the wedge."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "segments": {
+                    "type": "integer", "minimum": 2, "maximum": 64, "default": 6,
+                },
+                "angle_deg": {
+                    "type": "number", "minimum": 0, "maximum": 360, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": kaleidoscope_image,
+    },
+    {
+        "name": "frosted_glass_image",
+        "description": (
+            "Frosted-glass scatter: replace each pixel with a random neighbour "
+            "within a radius, for a textured diffusion. The seed is reproducible."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "radius": {
+                    "type": "integer", "minimum": 0, "maximum": 64, "default": 4,
+                },
+                "seed": {"type": "integer", "minimum": 0, "default": 0},
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": frosted_glass_image,
+    },
+    {
+        "name": "clahe_image",
+        "description": (
+            "Contrast-limited adaptive histogram equalization: boost local "
+            "contrast per tile on the luminance, with a clip limit to cap noise."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "clip_limit": {
+                    "type": "number", "minimum": 1, "maximum": 8, "default": 2.0,
+                },
+                "tiles": {
+                    "type": "integer", "minimum": 1, "maximum": 16, "default": 8,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": clahe_image,
+    },
+    {
+        "name": "local_contrast_image",
+        "description": (
+            "Local contrast: midtone-weighted clarity at a large radius plus "
+            "fine-detail texture at a small radius (each -1 to 1, 0 neutral)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "clarity": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+                "texture": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": local_contrast_image,
     },
 ]
 

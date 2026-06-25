@@ -515,4 +515,24 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Pixel sort"),
         "output_schema": _image_save_output(),
     },
+    "polar_image": {
+        "annotations": _writes_file("Polar warp"),
+        "output_schema": _image_save_output(),
+    },
+    "kaleidoscope_image": {
+        "annotations": _writes_file("Kaleidoscope"),
+        "output_schema": _image_save_output(),
+    },
+    "frosted_glass_image": {
+        "annotations": _writes_file("Frosted glass"),
+        "output_schema": _image_save_output(),
+    },
+    "clahe_image": {
+        "annotations": _writes_file("CLAHE"),
+        "output_schema": _image_save_output(),
+    },
+    "local_contrast_image": {
+        "annotations": _writes_file("Local contrast"),
+        "output_schema": _image_save_output(),
+    },
 }

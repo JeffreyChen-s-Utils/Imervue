@@ -254,6 +254,11 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("dither_image", {"levels": 4}),
     ("split_toning_image", {"shadow_saturation": 0.5, "highlight_saturation": 0.5}),
     ("pixel_sort_image", {"lower": 40, "upper": 220, "vertical": True}),
+    ("polar_image", {"to_polar": True}),
+    ("kaleidoscope_image", {"segments": 8, "angle_deg": 30.0}),
+    ("frosted_glass_image", {"radius": 6, "seed": 1}),
+    ("clahe_image", {"clip_limit": 3.0, "tiles": 4}),
+    ("local_contrast_image", {"clarity": 0.5, "texture": 0.4}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"
