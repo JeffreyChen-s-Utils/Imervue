@@ -759,7 +759,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (46 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (51 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -786,6 +786,8 @@ longa duração transmitem `notifications/progress`.
 | `dither_image` / `split_toning_image` / `pixel_sort_image` | Pontilhado Bayer ordenado; split-toning de sombras/luzes; ordenação de pixels por faixa de brilho |
 | `polar_image` / `kaleidoscope_image` | Distorção para/de polar (tiny-planet); espelhamento em cunhas de caleidoscópio |
 | `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Dispersão de vidro fosco por vizinho aleatório; equalização local CLAHE; contraste local de clareza + textura |
+| `posterize_image` / `gradient_map_image` | Quantizar os canais em faixas planas; remapear a luminância por um gradiente |
+| `film_grain_image` / `dehaze_image` / `distort_image` | Granulação gaussiana ajustável; remoção de névoa por canal escuro; distorção redemoinho/pinça/ondulação |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
 

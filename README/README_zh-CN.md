@@ -734,7 +734,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精选工具（共 46 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
+精选工具（共 51 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
 以及只读 / 破坏性 `annotations`，将结果以 `structuredContent` 返回；长时间运行的
 工具会流式发送 `notifications/progress`。
 
@@ -760,6 +760,8 @@ python -m Imervue.mcp_server
 | `dither_image` / `split_toning_image` / `pixel_sort_image` | Bayer 有序抖动；阴影／高光分离色调；亮度带像素排序 |
 | `polar_image` / `kaleidoscope_image` | 极坐标／反极坐标扭曲（小行星）；镜射成万花筒楔形 |
 | `frosted_glass_image` / `clahe_image` / `local_contrast_image` | 随机邻点毛玻璃散射；CLAHE 局部均衡；清晰度＋纹理局部对比 |
+| `posterize_image` / `gradient_map_image` | 将各通道量化成平坦色阶；以渐变重新映射亮度 |
+| `film_grain_image` / `dehaze_image` / `distort_image` | 可调高斯颗粒；暗通道去雾；漩涡／挤压／涟漪扭曲 |
 | `reverse_geocode` / `extract_video_frame` | 离线 GPS → 城市、把一帧视频解码成静态图 |
 | `puppet_from_png` / `puppet_inspect` | 从 PNG 构建 `.puppet` rig；打开 `.puppet` 返回其清单 |
 

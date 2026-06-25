@@ -733,7 +733,7 @@ python -m Imervue.mcp_server
 
 ### 도구
 
-선택된 도구(총 46개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+선택된 도구(총 51개 — 전체 목록은 문서 참고). 모든 도구는 JSON
 `outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
 `structuredContent`로 반환하며, 장시간 실행 도구는
 `notifications/progress`를 스트리밍합니다.
@@ -760,6 +760,8 @@ python -m Imervue.mcp_server
 | `dither_image` / `split_toning_image` / `pixel_sort_image` | 정렬 Bayer 디더링; 그림자/하이라이트 스플릿 토닝; 밝기 대역 픽셀 정렬 |
 | `polar_image` / `kaleidoscope_image` | 극좌표 변환/역변환(타이니 플래닛); 만화경 웨지로 미러링 |
 | `frosted_glass_image` / `clahe_image` / `local_contrast_image` | 무작위 이웃 프로스티드 글래스 산란; CLAHE 국소 균등화; 클래리티 + 텍스처 국소 대비 |
+| `posterize_image` / `gradient_map_image` | 채널을 평탄한 밴드로 양자화; 그라데이션으로 휘도 리매핑 |
+| `film_grain_image` / `dehaze_image` / `distort_image` | 가변 가우시안 그레인; 다크 채널 디헤이즈; 소용돌이/핀치/리플 왜곡 |
 | `reverse_geocode` / `extract_video_frame` | 오프라인 GPS → 도시, 비디오 프레임 한 장을 정지 이미지로 디코딩 |
 | `puppet_from_png` / `puppet_inspect` | PNG에서 `.puppet` 리그 빌드; `.puppet`을 열고 인벤토리 반환 |
 
