@@ -2483,6 +2483,12 @@ Available Tools
    * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
      - Random-neighbour frosted-glass scatter, contrast-limited adaptive
        histogram equalization, and midtone clarity + fine-detail texture.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Quantize each channel to a few flat bands, or remap luminance through a
+       black-to-white gradient blended by intensity.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Tunable Gaussian film grain, dark-channel-prior dehaze, and swirl /
+       pinch / ripple geometric distortion.
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
