@@ -571,4 +571,8 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
         "annotations": _writes_file("Tone curve"),
         "output_schema": _image_save_output(),
     },
+    "lens_correction_image": {
+        "annotations": _writes_file("Lens correction"),
+        "output_schema": _image_save_output(),
+    },
 }

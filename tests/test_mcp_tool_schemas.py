@@ -268,6 +268,7 @@ def test_glow_image_structured_content_conforms(server, sample_png, tmp_path):
     ("auto_color_balance_image", {"method": "white_patch", "intensity": 0.9}),
     ("channel_mixer_image", {"monochrome": True, "red": [0.3, 0.5, 0.2]}),
     ("curve_image", {"preset": "lift_shadows", "strength": 0.25}),
+    ("lens_correction_image", {"k1": 0.1, "vignette": 0.3, "ca_red": 0.01}),
 ])
 def test_effect_tool_structured_content_conforms(server, sample_png, tmp_path, name, extra):
     dst = tmp_path / f"{name}.png"

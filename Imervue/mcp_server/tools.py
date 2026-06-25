@@ -1489,6 +1489,26 @@ def curve_image(
     )
 
 
+def lens_correction_image(
+    source: str, destination: str, *,
+    k1: float = 0.0, vignette: float = 0.0,
+    ca_red: float = 0.0, ca_blue: float = 0.0,
+) -> dict[str, Any]:
+    """Correct barrel/pincushion distortion, vignette and chromatic aberration, then save."""
+    from Imervue.image.lens_correction import (
+        LensCorrectionOptions,
+        apply_lens_correction,
+    )
+    options = LensCorrectionOptions(
+        k1=float(k1), vignette=float(vignette),
+        ca_red=float(ca_red), ca_blue=float(ca_blue),
+    )
+    return _apply_effect_and_save(
+        source, destination,
+        lambda arr: apply_lens_correction(arr, options),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
@@ -2662,6 +2682,35 @@ _TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["source", "destination"],
         },
         "handler": curve_image,
+    },
+    {
+        "name": "lens_correction_image",
+        "description": (
+            "Lens correction: remove barrel/pincushion distortion (k1), lift or "
+            "deepen corner vignette, and offset the red/blue radial scale to "
+            "cancel chromatic aberration."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string"},
+                "destination": {"type": "string"},
+                "k1": {
+                    "type": "number", "minimum": -0.4, "maximum": 0.4, "default": 0.0,
+                },
+                "vignette": {
+                    "type": "number", "minimum": -1, "maximum": 1, "default": 0.0,
+                },
+                "ca_red": {
+                    "type": "number", "minimum": -0.02, "maximum": 0.02, "default": 0.0,
+                },
+                "ca_blue": {
+                    "type": "number", "minimum": -0.02, "maximum": 0.02, "default": 0.0,
+                },
+            },
+            "required": ["source", "destination"],
+        },
+        "handler": lens_correction_image,
     },
 ]
 
