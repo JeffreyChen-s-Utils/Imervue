@@ -231,7 +231,9 @@ class GPUImageView(QOpenGLWidget):
         )
         self.grid_mutex = QMutex()  # 保護 tile_cache 併發讀寫
         self._load_generation = 0  # 世代計數器，用來取消過期的 tile worker
-        self.active_tile_workers = []  # 用來追蹤/取消 Tile Grid 載入 worker
+        # In-flight tile/filmstrip workers — a set so each self-evicts on finish
+        # in O(1) instead of lingering until the next folder switch clears it.
+        self.active_tile_workers = set()  # 用來追蹤/取消 Tile Grid 載入 worker
         self.active_deep_zoom_worker = None  # 當前 DeepZoom 背景 worker
 
         # ===== 記憶位置 & 縮放 =====

@@ -132,6 +132,7 @@ def _refresh_tree_pending(main_gui) -> None:
 
 def undo_delete(main_gui: GPUImageView):
     from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
+    from Imervue.gpu_image_view.tile_loader import track_tile_worker
 
     if not main_gui.undo_stack:
         return
@@ -158,6 +159,9 @@ def undo_delete(main_gui: GPUImageView):
         # ===== 重新載入 thumbnail（tile grid 用）=====
         worker = LoadThumbnailWorker(path, main_gui.thumbnail_size, main_gui._load_generation)
         worker.signals.finished.connect(main_gui.add_thumbnail)
+        # Track so a folder switch mid-restore cancels these and they self-evict
+        # on finish instead of leaking until the next tile-grid load.
+        track_tile_worker(main_gui, worker)
         main_gui.thread_pool.start(worker)
 
     # ===== 如果在 deep zoom 模式，重新載入當前圖 =====

@@ -55,12 +55,40 @@ def _spawn_thumbnail_workers(view: GPUImageView, image_paths, gen: int) -> None:
     for index, path in enumerate(image_paths):
         worker = LoadThumbnailWorker(path, view.thumbnail_size, gen)
         worker.signals.finished.connect(view._on_thumbnail_loaded)
-        view.active_tile_workers.append(worker)
+        track_tile_worker(view, worker)
         # Tiles near the current selection get higher priority so a fresh
         # folder-open shows the user's viewport first even if the pool can't
         # drain the full list before they start scrolling.
         distance = abs(index - view.current_index)
         view.thumbnail_pool.start(worker, priority_for_distance(distance))
+
+
+def track_tile_worker(view: GPUImageView, worker) -> None:
+    """Register *worker* for cancellation and wire it to self-evict on finish.
+
+    ``QThreadPool`` auto-deletes each runnable once ``run()`` returns, but the
+    Python wrapper — and its ``WorkerSignals`` ``QObject`` — lingers in
+    ``active_tile_workers`` until the next folder switch clears the whole set.
+    Over a long browse of a large folder, plus one worker per filmstrip lazy
+    load, that retains a dead worker per thumbnail and makes
+    ``_cancel_tile_workers`` churn O(n) disconnect/abort calls over workers that
+    already finished. Evicting on completion keeps the set bounded to genuinely
+    in-flight workers.
+    """
+    view.active_tile_workers.add(worker)
+    worker.signals.finished.connect(
+        lambda *_args, _w=worker: discard_tile_worker(view, _w)
+    )
+
+
+def discard_tile_worker(view: GPUImageView, worker) -> None:
+    """Drop a finished/aborted *worker* from the in-flight set (idempotent).
+
+    Keyed on worker identity, so a late eviction landing after a folder switch
+    already rebuilt the set is a harmless no-op rather than a cross-generation
+    corruption.
+    """
+    view.active_tile_workers.discard(worker)
 
 
 def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
@@ -156,7 +184,7 @@ def ensure_filmstrip_thumbnail(view: GPUImageView, path: str) -> None:
     view._filmstrip_pending.add(path)
     worker = LoadThumbnailWorker(path, view.thumbnail_size, view._load_generation)
     worker.signals.finished.connect(view._on_filmstrip_thumbnail_loaded)
-    view.active_tile_workers.append(worker)
+    track_tile_worker(view, worker)
     view.thumbnail_pool.start(worker)
 
 

@@ -15,10 +15,12 @@ import pytest
 
 from Imervue.gpu_image_view import tile_loader
 from Imervue.gpu_image_view.tile_loader import (
+    discard_tile_worker,
     ensure_filmstrip_thumbnail,
     needs_filmstrip_thumbnail,
     on_filmstrip_thumbnail_loaded,
     tile_grid_needs_reload,
+    track_tile_worker,
 )
 
 
@@ -63,7 +65,7 @@ def _fake_view(images, *, generation=1, cache=None, pending=None,
         model=SimpleNamespace(images=list(images)),
         thumbnail_size=thumbnail_size,
         _load_generation=generation,
-        active_tile_workers=[],
+        active_tile_workers=set(),
         thumbnail_pool=_FakePool(),
         _tile_load_times={},
         _overlay=SimpleNamespace(ensure_fade_pump=lambda: None),
@@ -118,10 +120,11 @@ class TestEnsureFilmstripThumbnail:
         assert (worker.path, worker.size, worker.generation) == ("a.png", 128, 4)
         assert "a.png" in view._filmstrip_pending
         assert view.thumbnail_pool.started == [worker]
-        assert view.active_tile_workers == [worker]
-        # The landing callback is wired so the result reaches tile_cache.
-        assert worker.signals.finished.connected == [
-            view._on_filmstrip_thumbnail_loaded]
+        assert view.active_tile_workers == {worker}
+        # The landing callback is wired so the result reaches tile_cache; the
+        # second connection is the self-eviction wired by track_tile_worker.
+        assert view._on_filmstrip_thumbnail_loaded in worker.signals.finished.connected
+        assert len(worker.signals.finished.connected) == 2
 
     def test_second_request_while_in_flight_is_deduped(self):
         view = _fake_view(["a.png"])
@@ -204,3 +207,57 @@ class TestTileGridNeedsReload:
     def test_single_missing_image_needs_reload(self):
         cache = {"a.png": object(), "c.png": object()}
         assert tile_grid_needs_reload(cache, ["a.png", "b.png", "c.png"]) is True
+
+
+# ---------------------------------------------------------------
+# track_tile_worker / discard_tile_worker — the in-flight set self-evicts on
+# finish so a completed worker isn't retained until the next folder switch.
+# ---------------------------------------------------------------
+class TestTrackTileWorker:
+    def test_track_adds_worker_and_wires_eviction(self):
+        view = _fake_view(["a.png"])
+        worker = _FakeWorker("a.png", 256, 1)
+        track_tile_worker(view, worker)
+        assert worker in view.active_tile_workers
+        # One eviction slot is wired so the set drops the worker on finish.
+        assert len(worker.signals.finished.connected) == 1
+
+    def test_discard_removes_tracked_worker(self):
+        view = _fake_view(["a.png"])
+        worker = _FakeWorker("a.png", 256, 1)
+        view.active_tile_workers.add(worker)
+        discard_tile_worker(view, worker)
+        assert worker not in view.active_tile_workers
+
+    def test_discard_untracked_worker_is_noop(self):
+        # A late eviction landing after a folder switch rebuilt the set must be
+        # a harmless no-op (set.discard), not a KeyError (list.remove would
+        # raise). Discarding twice is also safe.
+        view = _fake_view(["a.png"])
+        worker = _FakeWorker("a.png", 256, 1)
+        discard_tile_worker(view, worker)
+        discard_tile_worker(view, worker)
+        assert worker not in view.active_tile_workers
+
+
+class TestTileWorkerSelfEviction:
+    """The wired eviction fires on the real ``finished`` signal, so the set
+    stays bounded to in-flight workers instead of leaking one per thumbnail."""
+
+    def test_finished_signal_evicts_worker(self, qapp):
+        from PySide6.QtCore import QObject, Signal
+
+        class _RealSignals(QObject):
+            finished = Signal(object, str, int)
+
+        class _RealWorker:  # hashable (SimpleNamespace defines __eq__ → unhashable)
+            def __init__(self) -> None:
+                self.signals = _RealSignals()
+
+        view = SimpleNamespace(active_tile_workers=set())
+        worker = _RealWorker()
+        track_tile_worker(view, worker)
+        assert worker in view.active_tile_workers
+        # Same-thread direct connection runs the eviction synchronously on emit.
+        worker.signals.finished.emit(None, "a.png", 0)
+        assert worker not in view.active_tile_workers
