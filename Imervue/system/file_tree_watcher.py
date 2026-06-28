@@ -156,6 +156,13 @@ class FileTreeWatchdog(QObject):
         model = self._model
         if model is None or not self._watched_path:
             return
+        # Give preview-less folders a fresh decode attempt — an external change
+        # may have added a folder's first image or settled a file that was
+        # mid-delete when its preview last failed. Folders with a decoded
+        # preview keep it, so this re-stat stays flicker-free.
+        clear_missing = getattr(model, "clear_missing_previews", None)
+        if callable(clear_missing):
+            clear_missing()
         # ``setRootPath("")`` forces Qt to drop its internal cache for the
         # directory; setting it back re-stats every visible row.
         try:

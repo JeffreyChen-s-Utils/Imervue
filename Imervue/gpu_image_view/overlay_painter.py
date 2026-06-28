@@ -775,12 +775,17 @@ class OverlayPainter:
             painter.drawRect(int(x_left), int(item_y), ITEM_WIDTH, ITEM_HEIGHT)
 
     def _filmstrip_pixmap(self, path: str):  # pragma: no cover - GL paint
-        """Cached QPixmap for *path*, built lazily from the tile thumbnail cache."""
+        """Cached QPixmap for *path*, built lazily from the tile thumbnail cache.
+
+        On a cache miss the thumbnail is requested asynchronously so a path that
+        entered deep zoom without a tile-wall pass (open-file, folder refresh
+        while zoomed) still fills in instead of staying a blank placeholder."""
         cache = self.view._filmstrip_thumb_cache
         if path in cache:
             return cache[path]
         arr = self.view.tile_cache.get(path)
         if arr is None:
+            self.view._ensure_filmstrip_thumbnail(path)
             return None
         pixmap = _rgba_to_pixmap(arr)
         cache[path] = pixmap

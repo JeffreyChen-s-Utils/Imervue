@@ -121,3 +121,38 @@ class TestSanitize:
         f.write_text(json.dumps(payload))
         data = sm.load_session_from_path(f)
         assert len(data["tabs"][0]["title"]) <= 256
+
+
+class TestRestoreBrowseMode:
+    """A grid-mode session must reopen on the wall, not in deep zoom.
+
+    ``current_image`` is always a file path, so restoring it lands in deep zoom;
+    the saved ``tile_grid_mode`` flag is what brings the wall back.
+    """
+
+    @staticmethod
+    def _ui(images):
+        viewer = _FakeViewer(images=images)
+        viewer._reloads = []
+        viewer.load_tile_grid_async = lambda paths: viewer._reloads.append(list(paths))
+        return _FakeUI(viewer), viewer
+
+    def test_grid_session_reloads_the_wall(self, sm):
+        ui, viewer = self._ui(["/a.jpg", "/b.jpg"])
+        sm._restore_browse_mode(ui, {"tile_grid_mode": True})
+        assert viewer._reloads == [["/a.jpg", "/b.jpg"]]
+
+    def test_deepzoom_session_leaves_the_wall_alone(self, sm):
+        ui, viewer = self._ui(["/a.jpg"])
+        sm._restore_browse_mode(ui, {"tile_grid_mode": False})
+        assert viewer._reloads == []
+
+    def test_missing_flag_is_a_noop(self, sm):
+        ui, viewer = self._ui(["/a.jpg"])
+        sm._restore_browse_mode(ui, {})
+        assert viewer._reloads == []
+
+    def test_grid_session_with_no_images_is_a_noop(self, sm):
+        ui, viewer = self._ui([])
+        sm._restore_browse_mode(ui, {"tile_grid_mode": True})
+        assert viewer._reloads == []

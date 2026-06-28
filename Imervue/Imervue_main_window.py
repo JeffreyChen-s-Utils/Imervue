@@ -648,10 +648,17 @@ class ImervueMainWindow(QMainWindow):
             self._view_stack.setCurrentIndex(1)
         else:
             self._view_stack.setCurrentIndex(0)
-            # If viewer was sitting on tile grid, re-render it fresh
+            # If viewer was sitting on tile grid, re-render it fresh. The wall
+            # renders straight from the tile cache with no per-tile lazy refill,
+            # so reload it whenever the cache no longer covers the folder
+            # (otherwise it would show blank placeholders).
             if self.viewer.model.images and not self.viewer.deep_zoom:
-                self.viewer.tile_grid_mode = True
-                self.viewer.update()
+                from Imervue.gpu_image_view.tile_loader import tile_grid_needs_reload
+                if tile_grid_needs_reload(self.viewer.tile_cache, self.viewer.model.images):
+                    self.viewer.load_tile_grid_async(list(self.viewer.model.images))
+                else:
+                    self.viewer.tile_grid_mode = True
+                    self.viewer.update()
 
         # Sync View menu radio buttons with the current mode
         grid_action = getattr(self, "_mode_action_grid", None)

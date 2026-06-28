@@ -172,6 +172,11 @@ class _FileTreeView(QTreeView):
             return
         path = model.filePath(root)
         if path:
+            # Re-attempt any folder whose preview is currently missing (it may
+            # have just gained an image, or recovered from a mid-delete read).
+            clear_missing = getattr(model, "clear_missing_previews", None)
+            if callable(clear_missing):
+                clear_missing()
             # setRootPath() re-stats the directory even if the value is the same
             model.setRootPath("")
             model.setRootPath(path)

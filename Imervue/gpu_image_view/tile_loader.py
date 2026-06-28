@@ -31,6 +31,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
 
     view.model.set_images(image_paths)
     view.tile_cache.clear()
+    view._filmstrip_pending.clear()
     view._delete_all_tile_textures()
     view._clear_deep_zoom()
 
@@ -101,3 +102,66 @@ def add_thumbnail(view: GPUImageView, img_data, path, generation=None) -> None:
     view._tile_load_times[path] = time.monotonic()
     view._overlay.ensure_fade_pump()
     view.update()
+
+
+def tile_grid_needs_reload(tile_cache, images) -> bool:
+    """Whether entering tile-grid mode must reload the wall instead of reusing
+    the cache.
+
+    The thumbnail wall renders straight from ``tile_cache`` and has no per-tile
+    lazy refill — a tile missing from the cache stays a blank placeholder until
+    the whole wall is reloaded. Paths that reach grid mode over a cold or only
+    partially-warmed cache must therefore trigger a reload: pressing Esc out of
+    a deep zoom that was opened through a cache-clearing route (file-tree file
+    click, recent image, bookmark jump, drag-drop), restoring a grid-mode
+    session, or toggling back from the list view.
+
+    Returns ``False`` for an empty folder (a blank wall is the correct result)
+    and when every image already has a cached thumbnail (the warm common case),
+    so the warm path keeps its scroll/zoom state and never flickers. Pure so the
+    policy is unit-testable without a Qt widget.
+    """
+    if not images:
+        return False
+    return any(image not in tile_cache for image in images)
+
+
+def needs_filmstrip_thumbnail(path, tile_cache, pending, images) -> bool:
+    """Whether *path* needs a lazy thumbnail decode for the filmstrip/preview.
+
+    The filmstrip and the deep-zoom loading preview both read their pixmaps from
+    ``tile_cache``. Skip a request when the path is falsy, already cached,
+    already in flight, or no longer in the live image list (a stale paint after
+    the folder changed). Pure so the dedup policy is unit-testable.
+    """
+    if not path or path in tile_cache or path in pending:
+        return False
+    return path in images
+
+
+def ensure_filmstrip_thumbnail(view: GPUImageView, path: str) -> None:
+    """Schedule one deduplicated thumbnail decode for a cold filmstrip path.
+
+    Normally the tile-wall loader fills ``tile_cache`` for the whole folder, but
+    paths that enter deep zoom without a wall pass — opening a file directly, or
+    a folder auto-refresh while zoomed — leave it cold, so the filmstrip and the
+    low-res loading preview render blank. This fills the gap on demand: at most
+    one worker per missing path, landing through the generation-checked
+    ``add_thumbnail`` so a folder change in flight can't insert a stale tile.
+    """
+    if not needs_filmstrip_thumbnail(
+        path, view.tile_cache, view._filmstrip_pending, view.model.images,
+    ):
+        return
+    view._filmstrip_pending.add(path)
+    worker = LoadThumbnailWorker(path, view.thumbnail_size, view._load_generation)
+    worker.signals.finished.connect(view._on_filmstrip_thumbnail_loaded)
+    view.active_tile_workers.append(worker)
+    view.thumbnail_pool.start(worker)
+
+
+def on_filmstrip_thumbnail_loaded(view: GPUImageView, img_data, path,
+                                  generation) -> None:
+    """Worker callback: clear the in-flight marker then stash the thumbnail."""
+    view._filmstrip_pending.discard(path)
+    add_thumbnail(view, img_data, path, generation)

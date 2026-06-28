@@ -184,11 +184,29 @@ def _restore_selection(ui: ImervueMainWindow, selection: list[str]) -> None:
             selected_tiles.add(path)
 
 
+def _restore_browse_mode(ui: ImervueMainWindow, data: dict[str, Any]) -> None:
+    """Re-enter tile-grid mode when the session was saved on the thumbnail wall.
+
+    ``current_image`` is always a file path (the focused tile), so
+    ``_restore_current_image`` reopens it in deep zoom. Without this, a session
+    saved while browsing the grid would always reopen in single-image view. The
+    tile wall renders straight from a cache that ``_restore_current_image`` does
+    not fill, so load it explicitly.
+    """
+    if not data.get("tile_grid_mode"):
+        return
+    viewer = getattr(ui, "viewer", None)
+    images = getattr(getattr(viewer, "model", None), "images", None)
+    if viewer is not None and images:
+        viewer.load_tile_grid_async(list(images))
+
+
 def restore_session(ui: ImervueMainWindow, data: dict[str, Any]) -> dict[str, int]:
     """Apply ``data`` to the UI best-effort. Returns counts of applied vs skipped."""
     tab_applied, tab_skipped = _restore_tabs(ui, data.get("tabs") or [])
     cur_applied, cur_skipped = _restore_current_image(ui, data.get("current_image") or "")
     _restore_selection(ui, data.get("selection") or [])
+    _restore_browse_mode(ui, data)
     return {
         "applied": tab_applied + cur_applied,
         "skipped": tab_skipped + cur_skipped,

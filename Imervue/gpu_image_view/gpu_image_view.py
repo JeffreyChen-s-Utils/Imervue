@@ -144,6 +144,11 @@ class GPUImageView(QOpenGLWidget):
         )
         # path -> QPixmap，膠卷與低解析載入預覽共用；換資料夾時清空。
         self._filmstrip_thumb_cache: dict = {}
+        # 已排程但尚未完成的膠卷縮圖載入路徑，避免每幀重複丟 worker。
+        # 膠卷與載入預覽的縮圖只來自 tile_cache；某些進入單張檢視的路徑
+        # （直接開檔、單張檢視時的資料夾刷新）不會經過 tile wall 載入，
+        # tile_cache 因此是空的，於是改在繪製時按需補載入到這裡去重。
+        self._filmstrip_pending: set[str] = set()
 
         # ===== 切換淡入轉場 =====
         # 顯示新的單張圖時讓它淡入，連續翻圖更順。可由設定關閉。
@@ -712,6 +717,20 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.tile_loader import add_thumbnail
         add_thumbnail(self, img_data, path, generation)
 
+    def _ensure_filmstrip_thumbnail(self, path: str) -> None:
+        """Lazily decode *path* into ``tile_cache`` for the filmstrip / preview.
+
+        Called from the overlay paint path when a needed thumbnail is missing
+        so the filmstrip and deep-zoom loading preview self-heal regardless of
+        how the cache went cold (open-file, folder refresh while zoomed)."""
+        from Imervue.gpu_image_view.tile_loader import ensure_filmstrip_thumbnail
+        ensure_filmstrip_thumbnail(self, path)
+
+    def _on_filmstrip_thumbnail_loaded(self, img_data, path, generation) -> None:
+        """Worker callback for a lazily-requested filmstrip thumbnail."""
+        from Imervue.gpu_image_view.tile_loader import on_filmstrip_thumbnail_loaded
+        on_filmstrip_thumbnail_loaded(self, img_data, path, generation)
+
     # ---------------------------
     # DeepZoom 非同步載入 + 預載
     # ---------------------------
@@ -962,6 +981,7 @@ class GPUImageView(QOpenGLWidget):
         self.grid_offset_y = 0
         self.focused_tile_index = NO_FOCUS
         self._filmstrip_thumb_cache.clear()
+        self._filmstrip_pending.clear()
         self._tile_load_times.clear()
 
         self.update()

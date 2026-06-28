@@ -192,3 +192,55 @@ def test_non_builtin_key_returns_false():
     view = _view()
     handler = KeyInputHandler(view)
     assert handler._handle_builtin(Qt.Key.Key_A, Qt.KeyboardModifier.NoModifier) is False
+
+
+def _grid_restore_view(images, tile_cache, saved_state=None):
+    """A minimal stub exercising only what ``_restore_grid_state`` touches."""
+    view = SimpleNamespace(
+        model=SimpleNamespace(images=list(images)),
+        tile_cache=dict(tile_cache),
+        tile_grid_mode=False,
+        _saved_tile_state=saved_state,
+        grid_offset_x=0,
+        grid_offset_y=0,
+        tile_scale=1.0,
+        _reloads=[],
+        _cleared=[],
+    )
+    view.load_tile_grid_async = lambda image_paths: view._reloads.append(list(image_paths))
+    view._clear_deep_zoom = lambda: view._cleared.append(True)
+    return view
+
+
+class TestRestoreGridState:
+    """Esc back to the wall must reload a cold cache, not paint placeholders."""
+
+    def test_cold_cache_reloads_the_wall(self):
+        view = _grid_restore_view(["a.png", "b.png"], {})
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == [["a.png", "b.png"]]
+        assert view._saved_tile_state is None
+
+    def test_partially_warmed_cache_reloads(self):
+        view = _grid_restore_view(["a.png", "b.png"], {"a.png": object()})
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == [["a.png", "b.png"]]
+
+    def test_warm_cache_restores_saved_offsets_without_reload(self):
+        view = _grid_restore_view(
+            ["a.png"],
+            {"a.png": object()},
+            saved_state={"grid_offset_x": 12, "grid_offset_y": 34, "tile_scale": 1.5},
+        )
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == []
+        assert view._cleared == [True]
+        assert view.tile_grid_mode is True
+        assert (view.grid_offset_x, view.grid_offset_y, view.tile_scale) == (12, 34, 1.5)
+        assert view._saved_tile_state is None
+
+    def test_warm_empty_folder_does_not_reload(self):
+        view = _grid_restore_view([], {})
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == []
+        assert view.tile_grid_mode is True
