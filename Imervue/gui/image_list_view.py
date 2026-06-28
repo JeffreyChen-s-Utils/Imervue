@@ -32,6 +32,11 @@ if TYPE_CHECKING:
 
 
 _THUMB_SIZE = 48
+# A row whose thumbnail fails to load (stat/decode error — usually the file is
+# mid-move/delete or briefly locked) is retried up to this many times before it
+# falls back to a placeholder, so a transient read race can't permanently blank
+# a row or strand it forever in the in-flight set.
+_MAX_THUMB_RETRIES = 2
 
 
 @dataclass
@@ -46,7 +51,10 @@ class _RowMeta:
 
 
 class _ThumbWorkerSignals(QObject):
-    done = Signal(str, QPixmap, int, int, float, float)  # path, pm, w, h, size_kb, mtime
+    # path, pm, w, h, size_kb, mtime, ok. ``ok`` is False when the stat/decode
+    # failed (transient read race), so the model can retry instead of caching a
+    # permanent placeholder or stranding the row in the in-flight set.
+    done = Signal(str, QPixmap, int, int, float, float, bool)
 
 
 class _ThumbWorker(QRunnable):
@@ -62,10 +70,6 @@ class _ThumbWorker(QRunnable):
             stat = os.stat(self.path)
             size_kb = stat.st_size / 1024
             mtime = stat.st_mtime
-        except OSError:
-            return
-
-        try:
             with Image.open(self.path) as src:
                 w, h = src.size
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
@@ -74,12 +78,15 @@ class _ThumbWorker(QRunnable):
                 from PySide6.QtGui import QImage
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
                 pm = QPixmap.fromImage(qimg.copy())
-        except Exception:
+        except Exception:  # noqa: BLE001 — stat/PIL raise many types; any failure
+            # must still emit so the model clears the in-flight marker and can
+            # retry rather than leaving the row stuck forever.
             pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
             pm.fill(QColor(40, 40, 40))
-            w = h = 0
+            self.signals.done.emit(self.path, pm, 0, 0, 0.0, 0.0, False)
+            return
 
-        self.signals.done.emit(self.path, pm, w, h, size_kb, mtime)
+        self.signals.done.emit(self.path, pm, w, h, size_kb, mtime, True)
 
 
 class ImageListModel(QAbstractTableModel):
@@ -105,6 +112,8 @@ class ImageListModel(QAbstractTableModel):
         self._rows: list[_RowMeta] = [_RowMeta(p) for p in (paths or [])]
         self._pool = QThreadPool.globalInstance()
         self._in_flight: set[str] = set()
+        # path -> transient fetch-failure retry count (see _MAX_THUMB_RETRIES)
+        self._retry: dict[str, int] = {}
 
     # --- QAbstractItemModel API ---
     def rowCount(self, parent: QModelIndex | None = None) -> int:
@@ -247,6 +256,7 @@ class ImageListModel(QAbstractTableModel):
         self.beginResetModel()
         self._rows = [_RowMeta(p) for p in paths]
         self._in_flight.clear()
+        self._retry.clear()
         self.endResetModel()
 
     def path_at(self, row: int) -> str | None:
@@ -263,25 +273,48 @@ class ImageListModel(QAbstractTableModel):
         worker.signals.done.connect(self._on_fetched)
         self._pool.start(worker)
 
-    def _on_fetched(self, path: str, pm: QPixmap, w: int, h: int,
-                    size_kb: float, mtime: float) -> None:
-        self._in_flight.discard(path)
+    def _row_index(self, path: str) -> tuple[int, _RowMeta] | None:
         for i, row in enumerate(self._rows):
-            if row.path != path:
-                continue
-            row.width = w or None
-            row.height = h or None
-            row.size_kb = size_kb
-            row.mtime = mtime
-            row.icon = QIcon(pm)
-            row.fetched = True
-            top = self.index(i, 0)
-            bot = self.index(i, self.COL_COUNT - 1)
-            self.dataChanged.emit(top, bot, [
-                Qt.ItemDataRole.DecorationRole,
-                Qt.ItemDataRole.DisplayRole,
-            ])
-            break
+            if row.path == path:
+                return i, row
+        return None
+
+    def _bump_retry(self, path: str) -> bool:
+        """Increment *path*'s retry counter; True while still under the cap."""
+        count = self._retry.get(path, 0)
+        if count >= _MAX_THUMB_RETRIES:
+            return False
+        self._retry[path] = count + 1
+        return True
+
+    @staticmethod
+    def _apply_row_meta(row: _RowMeta, pm: QPixmap, w: int, h: int,
+                        size_kb: float, mtime: float, ok: bool) -> None:
+        row.width = w or None
+        row.height = h or None
+        row.size_kb = size_kb if ok else None
+        row.mtime = mtime if ok else None
+        row.icon = QIcon(pm)
+        row.fetched = True
+
+    def _on_fetched(self, path: str, pm: QPixmap, w: int, h: int,
+                    size_kb: float, mtime: float, ok: bool) -> None:
+        self._in_flight.discard(path)
+        found = self._row_index(path)
+        if found is None:
+            return
+        i, row = found
+        if not ok and self._bump_retry(path):
+            # Transient stat/decode failure (file mid-move/locked) — retry
+            # instead of caching a permanent placeholder.
+            self._ensure_fetched(row)
+            return
+        self._retry.pop(path, None)
+        self._apply_row_meta(row, pm, w, h, size_kb, mtime, ok)
+        self.dataChanged.emit(
+            self.index(i, 0), self.index(i, self.COL_COUNT - 1),
+            [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.DisplayRole],
+        )
 
 
 _STAR_FILLED = "\u2605"
