@@ -30,17 +30,34 @@ def test_ensure_returns_bool_and_idempotent():
 
 
 def test_ensure_false_when_backend_missing(monkeypatch):
-    jxl_support.ensure_jxl_opener.cache_clear()
+    jxl_support._register_jxl_opener.cache_clear()
     monkeypatch.setitem(sys.modules, "pillow_jxl", None)
     try:
         assert jxl_support.ensure_jxl_opener() is False
     finally:
-        jxl_support.ensure_jxl_opener.cache_clear()
+        jxl_support._register_jxl_opener.cache_clear()
+
+
+def test_missing_backend_is_not_cached_and_self_heals(monkeypatch):
+    """A plugin installed after launch activates without a restart — the
+    failure is not memoised, so the next call re-probes and registers it."""
+    import types
+
+    jxl_support._register_jxl_opener.cache_clear()
+    monkeypatch.setitem(sys.modules, "pillow_jxl", None)
+    assert jxl_support.ensure_jxl_opener() is False
+    # Importing the plugin registers the codec as a side effect; a bare module
+    # object is enough to prove the re-probe succeeds once it is present.
+    monkeypatch.setitem(sys.modules, "pillow_jxl", types.ModuleType("pillow_jxl"))
+    try:
+        assert jxl_support.ensure_jxl_opener() is True
+    finally:
+        jxl_support._register_jxl_opener.cache_clear()
 
 
 def test_load_jxl_via_image_loader(tmp_path):
     pytest.importorskip("pillow_jxl")
-    jxl_support.ensure_jxl_opener.cache_clear()
+    jxl_support._register_jxl_opener.cache_clear()
     import numpy as np
     from PIL import Image
 

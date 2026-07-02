@@ -26,20 +26,31 @@ def is_heif_path(path: str) -> bool:
 
 
 @lru_cache(maxsize=1)
-def ensure_heif_opener() -> bool:
-    """Register the pillow-heif Pillow opener once; return its availability.
+def _register_heif_opener() -> bool:
+    """Import pillow-heif and register its Pillow opener (cached on success).
 
-    Memoised so the import + registration runs at most once per process.
-    Returns ``False`` (cached) when ``pillow-heif`` is not installed so callers
-    can degrade gracefully instead of crashing.
+    Raises ``ImportError`` when the backend is absent. ``lru_cache`` does not
+    memoise exceptions, so the failure is *not* cached: a backend installed
+    after launch (via the in-app pip installer) is re-probed on the next call
+    instead of being stuck at the cached failure until restart.
+    """
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    return True
+
+
+def ensure_heif_opener() -> bool:
+    """Register the pillow-heif opener once; return its availability.
+
+    The successful registration is memoised, but a missing backend returns
+    ``False`` without caching so callers degrade gracefully now and self-heal
+    if ``pillow-heif`` is installed later in the same session.
     """
     try:
-        import pillow_heif
+        return _register_heif_opener()
     except ImportError:
         logger.info("pillow-heif not installed — HEIC/AVIF files cannot be decoded.")
         return False
-    pillow_heif.register_heif_opener()
-    return True
 
 
 def needs_heif_hint(paths: list[str], opener_available: bool) -> bool:
