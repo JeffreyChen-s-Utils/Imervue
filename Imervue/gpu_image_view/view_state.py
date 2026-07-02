@@ -15,6 +15,19 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 _DEFAULT_ZOOM = 1.0
 
 
+def _current_base_dims(view: GPUImageView) -> tuple[int, int] | None:
+    """Base-level ``(w, h)`` of the image currently in deep zoom, else None.
+
+    Saved alongside the zoom so a later reload can tell whether the image's
+    geometry changed (rotate/crop) and the remembered zoom is stale.
+    """
+    dz = getattr(view, "deep_zoom", None)
+    if dz is None:
+        return None
+    base = dz.levels[0]
+    return (base.shape[1], base.shape[0])
+
+
 def save_view_state(view: GPUImageView) -> None:
     """儲存當前圖片的縮放與位置。"""
     images = view.model.images
@@ -24,6 +37,7 @@ def save_view_state(view: GPUImageView) -> None:
             "zoom": view.zoom,
             "dx": view.dz_offset_x,
             "dy": view.dz_offset_y,
+            "dims": _current_base_dims(view),
         }
 
 

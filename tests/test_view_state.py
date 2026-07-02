@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import numpy as np
+
 from Imervue.gpu_image_view import view_state
 
 
@@ -49,6 +51,21 @@ def test_save_out_of_range_index_noop():
     view = _view(["a"], current=5)
     view_state.save_view_state(view)
     assert view._view_memory == {}
+
+
+def test_save_records_base_dims_when_deep_zoom_present():
+    # The base level array is (h, w, 4); dims are stored width-first so a later
+    # reload can detect a rotate/crop and force a refit.
+    view = _view(["a"], current=0)
+    view.deep_zoom = SimpleNamespace(levels=[np.zeros((300, 400, 4), dtype=np.uint8)])
+    view_state.save_view_state(view)
+    assert view._view_memory["a"]["dims"] == (400, 300)
+
+
+def test_save_records_none_dims_without_deep_zoom():
+    view = _view(["a"], current=0)  # _view has no deep_zoom attribute
+    view_state.save_view_state(view)
+    assert view._view_memory["a"]["dims"] is None
 
 
 def test_jump_to_random_empty_noop():

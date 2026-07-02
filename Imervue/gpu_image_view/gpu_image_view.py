@@ -104,6 +104,9 @@ class GPUImageView(QOpenGLWidget):
         # Snapshot (taken before the per-load save) of whether the image being
         # loaded had a genuinely remembered view, so a fresh entry always fits.
         self._loading_was_remembered = False
+        # Base dims the remembered zoom was saved against — a mismatch on load
+        # (rotate/crop changed the geometry) forces a refit.
+        self._loading_remembered_dims = None
         # Most-recent ``resizeGL`` size — same role as the paint
         # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
         # so the initial centre uses the GL-reported logical size
@@ -563,7 +566,9 @@ class GPUImageView(QOpenGLWidget):
         """Content-fit on display unless the user has a genuine zoom-in saved
         for this image (see :func:`fit_view.should_refit_on_load`)."""
         from Imervue.gpu_image_view.fit_view import should_refit_on_load
-        return should_refit_on_load(self._loading_was_remembered, self)
+        return should_refit_on_load(
+            self._loading_was_remembered, self, self._loading_remembered_dims,
+        )
 
     def _fit_to_window(self):
         """Centre + fit the image. Called by the input controller and loaders."""
@@ -800,6 +805,11 @@ class GPUImageView(QOpenGLWidget):
         # which would otherwise pre-seed this path with the previous view's
         # leftover zoom and fool the fit-on-load decision into skipping the fit.
         self._loading_was_remembered = path in self._view_memory
+        # Also snapshot the dims the remembered zoom was saved against (before
+        # the save below overwrites this path's entry) so a geometry change
+        # since — a rotate/crop — forces a refit instead of keeping a zoom that
+        # no longer fits the swapped dimensions.
+        self._loading_remembered_dims = (self._view_memory.get(path) or {}).get("dims")
         # 儲存前一張的狀態
         self._save_view_state()
 

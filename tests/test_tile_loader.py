@@ -17,8 +17,10 @@ from Imervue.gpu_image_view import tile_loader
 from Imervue.gpu_image_view.tile_loader import (
     discard_tile_worker,
     ensure_filmstrip_thumbnail,
+    images_changed,
     needs_filmstrip_thumbnail,
     on_filmstrip_thumbnail_loaded,
+    reset_view_memory_on_switch,
     tile_grid_needs_reload,
     track_tile_worker,
 )
@@ -238,6 +240,57 @@ class TestTrackTileWorker:
         discard_tile_worker(view, worker)
         discard_tile_worker(view, worker)
         assert worker not in view.active_tile_workers
+
+
+class TestImagesChanged:
+    def test_same_list_is_not_a_change(self):
+        assert images_changed(["a.png", "b.png"], ["a.png", "b.png"]) is False
+
+    def test_same_list_by_identity(self):
+        images = ["a.png", "b.png"]
+        assert images_changed(images, images) is False
+
+    def test_different_list_is_a_change(self):
+        assert images_changed(["a.png"], ["b.png"]) is True
+
+    def test_reorder_counts_as_change(self):
+        assert images_changed(["a.png", "b.png"], ["b.png", "a.png"]) is True
+
+    def test_empty_to_populated_is_a_change(self):
+        assert images_changed([], ["a.png"]) is True
+
+    def test_both_empty_is_not_a_change(self):
+        assert images_changed([], []) is False
+
+
+class TestResetViewMemoryOnSwitch:
+    @staticmethod
+    def _view(images):
+        return SimpleNamespace(
+            model=SimpleNamespace(images=list(images)),
+            _view_memory={"old.png": {"zoom": 3.0, "dx": 5, "dy": 7}},
+            _user_locked_view=True,
+        )
+
+    def test_folder_switch_clears_memory_and_lock(self):
+        view = self._view(["old.png"])
+        assert reset_view_memory_on_switch(view, ["new.png"]) is True
+        assert view._view_memory == {}
+        assert view._user_locked_view is False
+
+    def test_same_folder_reload_keeps_memory_and_lock(self):
+        # A thumbnail-size rebuild / cold-cache refill passes the same list, so
+        # the user's remembered zoom/pan must survive.
+        view = self._view(["old.png"])
+        assert reset_view_memory_on_switch(view, ["old.png"]) is False
+        assert view._view_memory == {"old.png": {"zoom": 3.0, "dx": 5, "dy": 7}}
+        assert view._user_locked_view is True
+
+    def test_switch_to_empty_folder_clears(self):
+        view = self._view(["old.png"])
+        assert reset_view_memory_on_switch(view, []) is True
+        assert view._view_memory == {}
+        assert view._user_locked_view is False
 
 
 class TestTileWorkerSelfEviction:

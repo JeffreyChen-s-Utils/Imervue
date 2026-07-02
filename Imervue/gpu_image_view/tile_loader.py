@@ -29,6 +29,11 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
     view._load_generation += 1
     gen = view._load_generation
 
+    # Compared against the *old* list before set_images below, so a genuine
+    # folder switch drops the previous folder's per-image zoom memory and view
+    # lock — otherwise the next deep-zoom open inherits stale state and skips
+    # its auto-fit-to-window.
+    reset_view_memory_on_switch(view, image_paths)
     view.model.set_images(image_paths)
     view.tile_cache.clear()
     view._filmstrip_pending.clear()
@@ -152,6 +157,38 @@ def tile_grid_needs_reload(tile_cache, images) -> bool:
     if not images:
         return False
     return any(image not in tile_cache for image in images)
+
+
+def images_changed(current_images, new_image_paths) -> bool:
+    """Whether ``load_tile_grid_async`` is switching to a different image set.
+
+    A genuine folder switch replaces the list; a same-folder reload (thumbnail
+    size change, cold-cache refill, grid-mode session restore) passes the
+    identical paths. Only the former should reset per-folder view state. Pure so
+    the policy is unit-testable without a Qt widget.
+    """
+    return list(current_images) != list(new_image_paths)
+
+
+def reset_view_memory_on_switch(view: GPUImageView, new_image_paths) -> bool:
+    """Drop per-folder deep-zoom view memory + lock on a genuine folder switch.
+
+    ``_view_memory`` (per-image zoom/pan) and ``_user_locked_view`` (whether the
+    user has taken manual zoom/pan control) are scoped to the current folder's
+    browsing session. Carrying them across a folder switch strands the next
+    deep-zoom open with the previous folder's zoom — the resize/show fit nets
+    stay suppressed by the stale lock and the save-before-restore path seeds the
+    new image with the old zoom — so it opens without fitting to the window.
+    Clearing them makes every image in the new folder a fresh fit.
+
+    Returns ``True`` when a reset happened (list changed); a same-folder reload
+    keeps the remembered zoom/pan and returns ``False``.
+    """
+    if not images_changed(view.model.images, new_image_paths):
+        return False
+    view._view_memory.clear()
+    view._user_locked_view = False
+    return True
 
 
 def needs_filmstrip_thumbnail(path, tile_cache, pending, images) -> bool:
