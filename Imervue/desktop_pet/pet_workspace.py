@@ -100,7 +100,10 @@ class PetWorkspace(QWidget):
         the overlay shows itself automatically."""
         settings = pet_settings.load()
         last_path = str(settings.get("last_rig_path", "") or "")
-        if last_path and Path(last_path).is_file() and self.load_puppet(last_path):
+        # Reload the rig silently (show=False) so a persisted pet does not
+        # force itself open on startup — the overlay appears only when the
+        # user explicitly enabled ``show_on_launch``.
+        if last_path and Path(last_path).is_file() and self.load_puppet(last_path, show=False):
             self._reapply_persisted_toggles(settings)
             if settings.get("show_on_launch"):
                 self._show_check.setChecked(True)
@@ -454,16 +457,21 @@ class PetWorkspace(QWidget):
             return
         self.load_puppet(candidate)
 
-    def load_puppet(self, path: str | Path) -> bool:
+    def load_puppet(self, path: str | Path, *, show: bool = True) -> bool:
         """Load ``path`` into the pet overlay. Returns True on
         success. The status label surfaces failure detail.
 
-        On success the **Show pet on desktop** checkbox is ticked
-        and the overlay is shown — without that, the user clicks
-        "Load…" and sees nothing happen, since the pet's default
-        state is hidden. Setting ``checked`` after the load
-        triggers the existing ``_on_show_toggled`` slot which
-        calls ``window.show()`` for us."""
+        On an interactive load (``show=True``) the **Show pet on
+        desktop** checkbox is ticked and the overlay is shown —
+        without that, the user clicks "Load…" and sees nothing
+        happen, since the pet's default state is hidden. Setting
+        ``checked`` triggers the existing ``_on_show_toggled`` slot
+        which calls ``window.show()`` for us.
+
+        The silent session-restore path passes ``show=False`` so a
+        persisted rig is reloaded without forcing the overlay open —
+        whether it appears is then governed solely by the user's
+        ``show_on_launch`` setting."""
         window = self._ensure_pet_window()
         if not window.load_puppet_file(path):
             self._status.setText(
@@ -478,12 +486,13 @@ class PetWorkspace(QWidget):
             ),
         )
         self._status.setText("")
-        # Auto-show on first successful load so the user sees
-        # immediate feedback from the click. setChecked emits
-        # ``toggled`` only when the state actually changes, so
-        # a re-load on an already-visible pet is a cheap no-op
-        # rather than a hide-then-show flicker.
-        self._show_check.setChecked(True)
+        if show:
+            # Auto-show on first successful load so the user sees
+            # immediate feedback from the click. setChecked emits
+            # ``toggled`` only when the state actually changes, so
+            # a re-load on an already-visible pet is a cheap no-op
+            # rather than a hide-then-show flicker.
+            self._show_check.setChecked(True)
         return True
 
     # ---- pet script --------------------------------------------
