@@ -6,12 +6,71 @@ import atexit
 import os
 import sys
 from pathlib import Path
+from typing import Final
 
 import numpy as np
 import pytest
 from PIL import Image
 
 _rng = np.random.default_rng(seed=0xC0FFEE)
+
+_TEST_LAYERS: Final = ("fast", "gui", "integration")
+_GUI_FIXTURES: Final = frozenset({"qapp", "qtbot", "qapp_args", "qapp_cls"})
+_GUI_SOURCE_MARKERS: Final = (
+    "from _qt_skip import pytestmark",
+    "PySide6.QtWidgets",
+    "PySide6.QtOpenGLWidgets",
+)
+
+
+def pytest_addoption(parser):
+    """Expose a stable test-layer selector for local runs and CI."""
+    parser.addoption(
+        "--test-layer",
+        action="store",
+        choices=(*_TEST_LAYERS, "all"),
+        default="all",
+        help="run only fast, gui, integration, or all tests (default: all)",
+    )
+
+
+def _classify_test(item: pytest.Item, source_cache: dict[Path, str]) -> str:
+    """Return one exclusive layer, respecting an explicit test marker."""
+    explicit = [layer for layer in _TEST_LAYERS if item.get_closest_marker(layer)]
+    if len(explicit) > 1:
+        joined = ", ".join(explicit)
+        raise pytest.UsageError(f"{item.nodeid} has conflicting test layers: {joined}")
+    if explicit:
+        return explicit[0]
+
+    path = Path(str(item.path))
+    stem = path.stem.lower()
+    if "integration" in stem or stem.endswith("_full") or stem == "test_release_workflow":
+        return "integration"
+
+    if _GUI_FIXTURES.intersection(item.fixturenames):
+        return "gui"
+    source = source_cache.setdefault(path, path.read_text(encoding="utf-8", errors="ignore"))
+    if any(marker in source for marker in _GUI_SOURCE_MARKERS):
+        return "gui"
+    return "fast"
+
+
+def pytest_collection_modifyitems(config, items):
+    """Classify every test and deselect tests outside the requested layer."""
+    source_cache: dict[Path, str] = {}
+    selected_layer = config.getoption("--test-layer")
+    selected: list[pytest.Item] = []
+    deselected: list[pytest.Item] = []
+
+    for item in items:
+        layer = _classify_test(item, source_cache)
+        item.add_marker(getattr(pytest.mark, layer))
+        (selected if selected_layer in {"all", layer} else deselected).append(item)
+
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = selected
 
 
 # ---------------------------------------------------------------------------
