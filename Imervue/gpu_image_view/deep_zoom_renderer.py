@@ -28,6 +28,7 @@ from OpenGL.GL import (
 )
 
 from Imervue.gpu_image_view.fit_view import canvas_size, reserved_overlay_height
+from Imervue.gpu_image_view.deep_zoom_priority import prioritize_tiles
 from Imervue.gpu_image_view.minimap import minimap_geometry
 from Imervue.gpu_image_view.tile_grid_renderer import upload_minimap_texture
 
@@ -72,6 +73,15 @@ def visible_tile_range(
     bottom = top + canvas_h / scale_y
     return (int(left // tile_size), int(right // tile_size),
             int(top // tile_size), int(bottom // tile_size))
+
+
+def _cursor_pos_tuple(pos) -> tuple[float, float] | None:
+    if pos is None:
+        return None
+    try:
+        return (float(pos.x()), float(pos.y()))
+    except (TypeError, AttributeError):
+        return None
 
 
 class DeepZoomRenderer:  # pragma: no cover - GL drawing path
@@ -139,9 +149,23 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
             view.dz_offset_x, view.dz_offset_y, tile_size,
         )
 
-        for tx in range(tx0, tx1 + 1):
-            for ty in range(ty0, ty1 + 1):
-                self._draw_one_tile(level, tx, ty, tile_size, w, h)
+        tiles = [
+            (tx, ty)
+            for tx in range(tx0, tx1 + 1)
+            for ty in range(ty0, ty1 + 1)
+        ]
+        cursor = _cursor_pos_tuple(getattr(view, "last_pos", None))
+        for tx, ty in prioritize_tiles(
+            tiles,
+            tile_size=tile_size,
+            scale_x=scale_x,
+            scale_y=scale_y,
+            offset_x=view.dz_offset_x,
+            offset_y=view.dz_offset_y,
+            canvas=canvas,
+            cursor=cursor,
+        ):
+            self._draw_one_tile(level, tx, ty, tile_size, w, h)
 
     def _draw_one_tile(self, level: int, tx: int, ty: int,
                        tile_size: int, w: int, h: int) -> None:

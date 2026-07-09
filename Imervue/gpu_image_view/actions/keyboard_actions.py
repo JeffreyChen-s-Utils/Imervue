@@ -233,6 +233,7 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
     else:
         msg = lang.get("rating_cleared", "Rating cleared")
 
+    main_gui._quick_meta_hud = (msg, __import__("time").monotonic() + 1.2)
     _show_status(main_gui, msg)
 
 
