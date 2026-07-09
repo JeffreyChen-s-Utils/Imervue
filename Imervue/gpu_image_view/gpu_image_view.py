@@ -13,6 +13,7 @@ from Imervue.gpu_image_view.tile_layout import (
     resolve_thumbnail_size,
 )
 from Imervue.gpu_image_view.images.image_model import ImageModel
+from Imervue.image.browser_state import is_transient_load_error
 from Imervue.menu.right_click_menu import right_click_context_menu
 
 if TYPE_CHECKING:
@@ -76,8 +77,14 @@ class GPUImageView(QOpenGLWidget):
         self.focused_tile_index = NO_FOCUS
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
+        self.tile_errors: dict[str, str] = {}
+        self._tile_error_toasted: set[str] = set()
+        self._tile_retry_counts: dict[str, int] = {}
+        self.offline_paths: set[str] = set()
         # path -> monotonic arrival time, for the thumbnail fade-in animation.
         self._tile_load_times: dict[str, float] = {}
+        # path -> (size, mtime_ns, suffix), used to migrate tile cache on rename.
+        self._tile_file_signatures: dict[str, tuple[int, int, str]] = {}
         # Async PBO streaming uploader; allocated in initializeGL once a
         # GL context exists. Stays None (synchronous fallback) until then.
         self._tile_uploader = None
@@ -93,6 +100,9 @@ class GPUImageView(QOpenGLWidget):
         # While set (and ``deep_zoom`` is still None) the overlay shows a
         # low-res preview + "Loading…" pill instead of a blank frame.
         self._deep_zoom_loading: str | None = None
+        self._deep_zoom_error: tuple[str, str] | None = None
+        self._deep_zoom_request_id = 0
+        self._deep_zoom_retry_counts: dict[str, int] = {}
         self._saved_tile_state = None
         # True while the user is click-dragging inside the deep-zoom minimap
         # to pan the viewport.
@@ -165,6 +175,9 @@ class GPUImageView(QOpenGLWidget):
         # Lazy-init 避免在沒有 QApplication 時匯入失敗
         self._hover_controller = None
         self._hover_last_path: str | None = None
+        self._hover_tile_path: str | None = None
+        self._timeline_grouping_enabled = True
+        self._quick_meta_hud: tuple[str, float] | None = None
 
         # ===== 瀏覽歷史 =====
         # 每次進入 deep zoom 的圖片會被 push 到 history controller。
@@ -238,6 +251,7 @@ class GPUImageView(QOpenGLWidget):
         # in O(1) instead of lingering until the next folder switch clears it.
         self.active_tile_workers = set()  # 用來追蹤/取消 Tile Grid 載入 worker
         self.active_deep_zoom_worker = None  # 當前 DeepZoom 背景 worker
+        self.active_deep_zoom_preview_worker = None
 
         # ===== 記憶位置 & 縮放 =====
         self._view_memory: dict[str, dict] = {}  # path → {zoom, dx, dy}
@@ -662,6 +676,8 @@ class GPUImageView(QOpenGLWidget):
         for worker in self.active_tile_workers:
             with contextlib.suppress(RuntimeError, TypeError):
                 worker.signals.finished.disconnect()
+            with contextlib.suppress(RuntimeError, TypeError, AttributeError):
+                worker.signals.error.disconnect()
             worker.abort()
         self.active_tile_workers.clear()
 
@@ -669,8 +685,17 @@ class GPUImageView(QOpenGLWidget):
         if self.active_deep_zoom_worker is not None:
             with contextlib.suppress(RuntimeError, TypeError):
                 self.active_deep_zoom_worker.signals.finished.disconnect()
+            with contextlib.suppress(RuntimeError, TypeError, AttributeError):
+                self.active_deep_zoom_worker.signals.error.disconnect()
             self.active_deep_zoom_worker.abort()
             self.active_deep_zoom_worker = None
+        if self.active_deep_zoom_preview_worker is not None:
+            with contextlib.suppress(RuntimeError, TypeError):
+                self.active_deep_zoom_preview_worker.signals.finished.disconnect()
+            with contextlib.suppress(RuntimeError, TypeError, AttributeError):
+                self.active_deep_zoom_preview_worker.signals.error.disconnect()
+            self.active_deep_zoom_preview_worker.abort()
+            self.active_deep_zoom_preview_worker = None
 
     def _cancel_all_prefetch(self):
         """取消所有預載 worker 並清空快取。
@@ -712,6 +737,10 @@ class GPUImageView(QOpenGLWidget):
     def _on_thumbnail_loaded(self, img_data, path, generation):
         from Imervue.gpu_image_view.tile_loader import on_thumbnail_loaded
         on_thumbnail_loaded(self, img_data, path, generation)
+
+    def _on_thumbnail_error(self, path, message, generation):
+        from Imervue.gpu_image_view.tile_loader import on_thumbnail_error
+        on_thumbnail_error(self, path, message, generation)
 
     def _flush_thumbnail_progress(self) -> None:
         """Coalesced status-bar update — connected to the progress coalescer."""
@@ -800,6 +829,9 @@ class GPUImageView(QOpenGLWidget):
         restore_view_state(self, path)
 
     def load_deep_zoom_image(self, path):
+        self._deep_zoom_request_id += 1
+        request_id = self._deep_zoom_request_id
+        self._deep_zoom_error = None
         # Capture whether this image was *genuinely* remembered BEFORE the save
         # below — `_save_view_state` writes the (already-updated) current index,
         # which would otherwise pre-seed this path with the previous view's
@@ -846,12 +878,15 @@ class GPUImageView(QOpenGLWidget):
             self.update()
             return
 
-        from Imervue.image.recipe_store import recipe_store
-        recipe = recipe_store.get_for_path(path)
-        worker = LoadDeepZoomWorker(path, recipe=recipe)
-        worker.signals.finished.connect(self._on_deep_zoom_loaded)
-        self.active_deep_zoom_worker = worker
-        self.deepzoom_pool.start(worker)
+        if self._should_progressive_decode(path):
+            self._start_deep_zoom_preview_worker(path, request_id)
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(
+                300,
+                lambda p=path, req=request_id: self._start_deep_zoom_worker_if_current(p, req),
+            )
+        else:
+            self._start_deep_zoom_worker(path, request_id)
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -862,15 +897,76 @@ class GPUImageView(QOpenGLWidget):
 
         self.update()
 
-    def _on_deep_zoom_loaded(self, dzi, path):
+    def _start_deep_zoom_worker_if_current(self, path: str, request_id: int) -> None:
+        if request_id != self._deep_zoom_request_id:
+            return
+        if self._deep_zoom_loading != path:
+            return
+        self._start_deep_zoom_worker(path, request_id)
+
+    def _start_deep_zoom_worker(self, path: str, request_id: int) -> None:
+        if self.active_deep_zoom_worker is not None:
+            return
+        from Imervue.image.recipe_store import recipe_store
+        worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
+        worker.signals.finished.connect(
+            lambda dzi, p, req=request_id: self._on_deep_zoom_loaded(dzi, p, req)
+        )
+        worker.signals.error.connect(
+            lambda p, msg, req=request_id: self._on_deep_zoom_failed(p, msg, req)
+        )
+        self.active_deep_zoom_worker = worker
+        self.deepzoom_pool.start(worker)
+
+    def _start_deep_zoom_preview_worker(self, path: str, request_id: int) -> None:
+        if self.active_deep_zoom_preview_worker is not None:
+            return
+        from Imervue.image.recipe_store import recipe_store
+        worker = LoadDeepZoomWorker(
+            path,
+            recipe=recipe_store.get_for_path(path),
+            preview=True,
+        )
+        worker.signals.finished.connect(
+            lambda dzi, p, req=request_id: self._on_deep_zoom_preview_loaded(dzi, p, req)
+        )
+        worker.signals.error.connect(lambda *_args: None)
+        self.active_deep_zoom_preview_worker = worker
+        self.deepzoom_pool.start(worker)
+
+    def _should_progressive_decode(self, path: str) -> bool:
+        from Imervue.gpu_image_view.images.image_loader import _RAW_EXTS
+        if Path(path).suffix.lower() in _RAW_EXTS:
+            return True
+        try:
+            return Path(path).stat().st_size >= 60 * 1024 * 1024
+        except OSError:
+            return False
+
+    def _on_deep_zoom_loaded(self, dzi, path, request_id: int | None = None):
+        if request_id is not None and request_id != self._deep_zoom_request_id:
+            return
+        if self._deep_zoom_loading != path:
+            return
         if (not self.model.images
                 or self.current_index >= len(self.model.images)
                 or self.model.images[self.current_index] != path):
             return
 
+        if self.tile_manager is not None:
+            self.tile_manager.clear()
         self.deep_zoom = dzi
+        self._deep_zoom_loading = None
+        self._deep_zoom_error = None
+        self._deep_zoom_retry_counts.pop(path, None)
+        if hasattr(self.main_window, "clear_image_issue"):
+            self.main_window.clear_image_issue(path)
         self.tile_manager = TileManager(dzi)
         self.active_deep_zoom_worker = None
+        if self.active_deep_zoom_preview_worker is not None:
+            self.active_deep_zoom_preview_worker.abort()
+            self.active_deep_zoom_preview_worker = None
+        self.enforce_memory_pressure()
 
         # 首次進入此圖片 → 自動 fit-to-window
         cur_path = self.model.images[self.current_index]
@@ -893,6 +989,70 @@ class GPUImageView(QOpenGLWidget):
         self._notify_deep_zoom_displayed()
         self._browse.begin_image_fade_in()
         self.update()
+
+    def _on_deep_zoom_preview_loaded(self, dzi, path, request_id: int | None = None):
+        if request_id is not None and request_id != self._deep_zoom_request_id:
+            return
+        if self._deep_zoom_loading != path:
+            return
+        self.active_deep_zoom_preview_worker = None
+        if self.deep_zoom is None:
+            self.deep_zoom = dzi
+            self.tile_manager = TileManager(dzi)
+            if self._should_refit_on_load():
+                self._fit_to_window()
+        if hasattr(self.main_window, "set_status"):
+            lang = self.main_window.language_wrapper.language_word_dict
+            self.main_window.set_status(
+                lang.get("status_loading_full_image", "Loading full image...")
+            )
+        self.update()
+
+    def _on_deep_zoom_failed(self, path: str, message: str,
+                             request_id: int | None = None) -> None:
+        if request_id is not None and request_id != self._deep_zoom_request_id:
+            return
+        if self._deep_zoom_loading != path:
+            return
+        self._deep_zoom_loading = None
+        self._deep_zoom_error = (path, message or "Load failed")
+        self.active_deep_zoom_worker = None
+        self._maybe_retry_deep_zoom(path, message or "")
+        if hasattr(self.main_window, "record_image_issue"):
+            self.main_window.record_image_issue(path, message or "Load failed")
+        if path not in self.model.images:
+            self.offline_paths.add(path)
+        if hasattr(self.main_window, "toast"):
+            lang = self.main_window.language_wrapper.language_word_dict
+            self.main_window.toast.error(
+                lang.get("image_load_failed", "Couldn't load image: {name}").format(
+                    name=Path(path).name,
+                ),
+            )
+        if hasattr(self.main_window, "set_status"):
+            self.main_window.set_status(message or "Load failed")
+        self.update()
+
+    def _maybe_retry_deep_zoom(self, path: str, message: str) -> None:
+        if not is_transient_load_error(message):
+            return
+        count = self._deep_zoom_retry_counts.get(path, 0)
+        if count >= 2:
+            return
+        self._deep_zoom_retry_counts[path] = count + 1
+        request_id = self._deep_zoom_request_id
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(
+            250 * (count + 1),
+            lambda p=path, req=request_id: self._retry_deep_zoom_if_current(p, req),
+        )
+
+    def _retry_deep_zoom_if_current(self, path: str, request_id: int) -> None:
+        if request_id != self._deep_zoom_request_id:
+            return
+        if path not in self.model.images:
+            return
+        self.load_deep_zoom_image(path)
 
     def _notify_deep_zoom_displayed(self) -> None:
         """Push the edited base-level array to the deep-zoom-displayed hook."""
@@ -968,9 +1128,15 @@ class GPUImageView(QOpenGLWidget):
         if (self.deep_zoom is None
                 and self.model.images
                 and self.current_index < len(self.model.images)
-                and self.model.images[self.current_index] == path):
+                and self.model.images[self.current_index] == path
+                and self._deep_zoom_loading == path):
             self.deep_zoom = dzi
+            self._deep_zoom_loading = None
+            self._deep_zoom_error = None
             self.tile_manager = TileManager(dzi)
+            self.enforce_memory_pressure()
+            if self._should_refit_on_load():
+                self._fit_to_window()
             self._prefetch_neighbors()
             self._browse.begin_image_fade_in()
             self.update()
@@ -978,6 +1144,52 @@ class GPUImageView(QOpenGLWidget):
 
         # 否則存入預載快取
         self._prefetch.store(path, dzi)
+
+    def enforce_memory_pressure(self) -> None:
+        """Trim deep-zoom auxiliary caches when image memory is large."""
+        base = self.deep_zoom.levels[0] if self.deep_zoom is not None else None
+        if base is None:
+            return
+        base_bytes = int(base.nbytes)
+        ram_bytes = self._process_rss_bytes()
+        if base_bytes > self._vram_limit * 0.35:
+            self._cancel_all_prefetch()
+        if base_bytes > self._vram_limit * 0.20:
+            self._filmstrip_thumb_cache.clear()
+            self._filmstrip_pending.clear()
+        manager = self.tile_manager
+        cache = getattr(manager, "cache", None)
+        if cache is not None and base_bytes > self._vram_limit * 0.50:
+            manager.max_cache = 64
+            from OpenGL.GL import glDeleteTextures
+            while len(cache) > 64:
+                _, tex = cache.popitem(last=False)
+                with contextlib.suppress(Exception):
+                    glDeleteTextures([tex])
+        elif manager is not None:
+            manager.max_cache = 256
+        if ram_bytes and ram_bytes > self._ram_pressure_limit_bytes():
+            self._cancel_all_prefetch()
+            self._filmstrip_thumb_cache.clear()
+            self._filmstrip_pending.clear()
+            self.tile_cache.clear()
+            if manager is not None:
+                manager.max_cache = min(getattr(manager, "max_cache", 256), 48)
+
+    @staticmethod
+    def _process_rss_bytes() -> int:
+        with contextlib.suppress(Exception):
+            import psutil
+            return int(psutil.Process().memory_info().rss)
+        return 0
+
+    @staticmethod
+    def _ram_pressure_limit_bytes() -> int:
+        with contextlib.suppress(Exception):
+            import psutil
+            total = int(psutil.virtual_memory().total)
+            return max(768 * 1024 * 1024, int(total * 0.70))
+        return 2 * 1024 * 1024 * 1024
 
     # ---------------------------
     # 清除 Tile Grid
@@ -995,6 +1207,8 @@ class GPUImageView(QOpenGLWidget):
         self._filmstrip_thumb_cache.clear()
         self._filmstrip_pending.clear()
         self._tile_load_times.clear()
+        self._tile_file_signatures.clear()
+        self._tile_retry_counts.clear()
 
         self.update()
 

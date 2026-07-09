@@ -51,6 +51,7 @@ def _make_view(images, current=0):
         deep_zoom=None,
         tile_manager=None,
         updated=0,
+        _hover_tile_path=None,
         _on_prefetch_loaded=lambda dzi, path: None,
     )
 
@@ -135,3 +136,13 @@ def test_spawn_skips_already_cached_or_inflight():
     sched.schedule()
     started_paths = {w.path for w, _ in view.prefetch_pool.started}
     assert "img11.png" not in started_paths
+
+
+def test_hover_path_is_prefetched_first():
+    images = [f"img{i}.png" for i in range(20)]
+    view = _make_view(images, current=10)
+    view._hover_tile_path = "img2.png"
+    sched = PrefetchScheduler(view)
+    sched.schedule()
+    started_paths = [w.path for w, _ in view.prefetch_pool.started]
+    assert started_paths[0] == "img2.png"

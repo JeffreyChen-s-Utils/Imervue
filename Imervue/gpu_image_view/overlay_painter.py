@@ -97,6 +97,8 @@ _FILMSTRIP_PLACEHOLDER_RGBA = (40, 40, 40, 200)
 _FILMSTRIP_HIGHLIGHT_RGBA = (255, 199, 41, 255)
 _FILMSTRIP_BORDER_WIDTH = 3
 _LOADING_PILL_RGBA = (0, 0, 0, 170)
+_ERROR_PANEL_RGBA = (95, 28, 28, 210)
+_MISSING_PANEL_RGBA = (50, 50, 50, 215)
 # Video ▶ badge — translucent disc + opaque white play triangle.
 _VIDEO_BADGE_DISC_RGBA = (0, 0, 0, 150)
 _VIDEO_BADGE_TRI_RGBA = (255, 255, 255, 235)
@@ -229,7 +231,7 @@ def _exif_to_float(value) -> float | None:
     if value is None:
         return None
     try:
-        if isinstance(value, (tuple, list)) and len(value) == 2:
+        if isinstance(value, tuple | list) and len(value) == 2:
             num, den = value
             return num / den if den else None
         return float(value)
@@ -247,7 +249,7 @@ def _format_exposure(value) -> str | None:
 
 
 def _format_iso(value) -> str | None:
-    if isinstance(value, (tuple, list)) and value:
+    if isinstance(value, tuple | list) and value:
         value = value[0]
     try:
         return f"ISO {int(value)}"
@@ -306,13 +308,22 @@ class OverlayPainter:
             view._deep_zoom_loading and view.deep_zoom is None
             and not view.tile_grid_mode
         )
+        error_active = bool(
+            getattr(view, "_deep_zoom_error", None) and view.deep_zoom is None
+            and not view.tile_grid_mode
+        )
 
         loupe_active = (zoom_active and view._loupe_enabled
                         and view._hover_image_xy is not None)
+        tile_loupe_active = bool(
+            view.tile_grid_mode and view._loupe_enabled
+            and getattr(view, "_hover_tile_path", None) in getattr(view, "tile_cache", {})
+        )
         band_active = bool(view._zoom_band_active and view._zoom_band_start
                            and view._zoom_band_end)
         layer_table: list[tuple[bool, object]] = [
             (view.tile_grid_mode and bool(view.tile_rects), self.draw_tile_overlays),
+            (view.tile_grid_mode, self.draw_tile_state_overlays),
             # Low-res preview sits in the background, below the filmstrip and
             # chrome; the "Loading…" pill is added last so it stays on top.
             (loading_active, self.draw_loading_preview),
@@ -322,11 +333,14 @@ class OverlayPainter:
             (anim_active, self.draw_anim_indicator),
             (zoom_active and view._show_osd, self.draw_osd),
             (view._show_debug_hud, self.draw_debug_hud),
+            (self._quick_hud_active(), self.draw_quick_meta_hud),
             (pixel_active, self.draw_pixel_view),
             (loupe_active, self.draw_loupe),
+            (tile_loupe_active, self.draw_tile_loupe),
             (band_active, self.draw_zoom_band),
             (zoom_active and self._current_is_video(), self.draw_video_badge),
             (loading_active, self.draw_loading_pill),
+            (error_active, self.draw_deep_zoom_error),
         ]
         return [painter for active, painter in layer_table if active]
 
@@ -408,12 +422,20 @@ class OverlayPainter:
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
 
+        last_date = None
         for x0, y0, x1, y1, path in self.view.tile_rects:
             color_name = color_store.get(path)
             _paint_color_strip(painter, x0, y0, y1, color_name)
             _paint_favorite_badge(painter, x0, y0, path in favs, color_name)
             _paint_bookmark_badge(painter, y0, x1, path)
             _paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
+            stack_count = len(getattr(self.view, "_stack_members", {}).get(path, []))
+            _paint_stack_badge(painter, x1, y1, stack_count)
+            if getattr(self.view, "_timeline_grouping_enabled", False):
+                date_label = _mtime_date_label(path)
+                if date_label and date_label != last_date:
+                    _paint_date_chip(painter, x0, y0, date_label)
+                    last_date = date_label
             if is_video_path(path):
                 _paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
 
@@ -447,6 +469,44 @@ class OverlayPainter:
                 )
 
         self.ensure_fade_pump()
+
+    def draw_tile_state_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Draw explicit error/offline messages over failed tile slots."""
+        view = self.view
+        font = QFont(_FONT_SEGOE_UI)
+        font.setPixelSize(12)
+        font.setWeight(QFont.Weight.Bold)
+        painter.setFont(font)
+        for rect in getattr(view, "error_tile_rects", []):
+            self._draw_tile_state(
+                painter, rect,
+                view.main_window.language_wrapper.language_word_dict.get(
+                    "tile_load_failed", "Load failed",
+                ),
+                QColor(*_ERROR_PANEL_RGBA),
+            )
+        for rect in getattr(view, "missing_tile_rects", []):
+            self._draw_tile_state(
+                painter, rect,
+                view.main_window.language_wrapper.language_word_dict.get(
+                    "tile_missing", "Missing",
+                ),
+                QColor(*_MISSING_PANEL_RGBA),
+            )
+
+    @staticmethod
+    def _draw_tile_state(painter: QPainter, rect, text: str, color: QColor) -> None:
+        x0, y0, x1, y1, _path = rect
+        w, h = int(x1 - x0), int(y1 - y0)
+        if w <= 0 or h <= 0:
+            return
+        painter.fillRect(int(x0), int(y0), w, h, color)
+        painter.setPen(QColor(245, 245, 245))
+        painter.drawText(
+            int(x0), int(y0), w, h,
+            int(Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap),
+            text,
+        )
 
     def tick_placeholder(self) -> None:
         view = self.view
@@ -664,6 +724,31 @@ class OverlayPainter:
         for i, line in enumerate(lines):
             painter.drawText(x + pad_x, y + pad_y + fm.ascent() + i * line_h, line)
 
+    def _quick_hud_active(self) -> bool:
+        hud = getattr(self.view, "_quick_meta_hud", None)
+        return bool(hud and hud[1] >= time.monotonic())
+
+    def draw_quick_meta_hud(self, painter: QPainter):  # pragma: no cover - GL paint
+        hud = getattr(self.view, "_quick_meta_hud", None)
+        if not hud:
+            return
+        text, expires = hud
+        if expires < time.monotonic():
+            self.view._quick_meta_hud = None
+            return
+        font = QFont(_FONT_SEGOE_UI)
+        font.setPixelSize(22)
+        font.setWeight(QFont.Weight.Bold)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+        w = fm.horizontalAdvance(text) + 36
+        h = fm.height() + 22
+        x = int((self.view.width() - w) / 2)
+        y = 28
+        painter.fillRect(x, y, w, h, QColor(0, 0, 0, 185))
+        painter.setPen(QColor(255, 235, 145))
+        painter.drawText(x + 18, y + 12 + fm.ascent(), text)
+
     # ------------------------------------------------------------------
     # Pixel view
     # ------------------------------------------------------------------
@@ -814,6 +899,25 @@ class OverlayPainter:
                            _rgba_to_pixmap(crop))
         self._draw_loupe_frame(painter, box_x, box_y)
 
+    def draw_tile_loupe(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Tile-grid loupe: magnify the thumbnail under the cursor."""
+        view = self.view
+        path = getattr(view, "_hover_tile_path", None)
+        arr = view.tile_cache.get(path)
+        if arr is None:
+            return
+        rect = next((r for r in view.tile_rects if r[4] == path), None)
+        if rect is None:
+            return
+        x0, y0, x1, y1, _ = rect
+        box_x, box_y = place_hud_box(
+            int((x0 + x1) / 2), int((y0 + y1) / 2), _LOUPE_CURSOR_GAP,
+            LOUPE_BOX_PX, LOUPE_BOX_PX, view.width(), view.height(),
+        )
+        painter.drawPixmap(box_x, box_y, LOUPE_BOX_PX, LOUPE_BOX_PX,
+                           _rgba_to_pixmap(arr))
+        self._draw_loupe_frame(painter, box_x, box_y)
+
     def _draw_loupe_frame(self, painter: QPainter,  # pragma: no cover - GL paint
                           box_x: int, box_y: int) -> None:
         pen = QPen(QColor(*_LOUPE_BORDER_RGBA))
@@ -868,6 +972,28 @@ class OverlayPainter:
         painter.setPen(QColor(235, 235, 235))
         painter.drawText(x + pad_x, y + pad_y + fm.ascent(), text)
 
+    def draw_deep_zoom_error(self, painter: QPainter) -> None:  # pragma: no cover
+        view = self.view
+        path, _message = view._deep_zoom_error
+        lang = view.main_window.language_wrapper.language_word_dict
+        title = lang.get("image_load_failed", "Couldn't load image: {name}").format(
+            name=Path(path).name,
+        )
+        hint = lang.get("missing_relocate_hint", "Right-click to reveal or relocate")
+        font = QFont(_FONT_SEGOE_UI)
+        font.setPixelSize(15)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+        box_w = min(view.width() - 40, max(320, fm.horizontalAdvance(title) + 48))
+        box_h = fm.height() * 2 + 42
+        x = (view.width() - box_w) // 2
+        y = (view.height() - box_h) // 2
+        painter.fillRect(x, y, box_w, box_h, QColor(*_ERROR_PANEL_RGBA))
+        painter.setPen(QColor(255, 255, 255))
+        painter.drawText(x + 24, y + 22 + fm.ascent(), title)
+        painter.setPen(QColor(225, 225, 225))
+        painter.drawText(x + 24, y + 22 + fm.height() + fm.ascent(), hint)
+
 
 def _paint_play_badge(painter, badge) -> None:  # pragma: no cover - GL paint
     """Draw a translucent disc + white play triangle for a video badge."""
@@ -915,6 +1041,34 @@ def _paint_rating_badge(painter, x0, y1, rating: int) -> None:  # pragma: no cov
     painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18, QColor(0, 0, 0, 140))
     painter.setPen(QColor(255, 210, 80))
     painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
+
+
+def _paint_stack_badge(painter, x1, y1, count: int) -> None:  # pragma: no cover - GL paint
+    if count <= 1:
+        return
+    text = f"x{count}"
+    fm = painter.fontMetrics()
+    tw = fm.horizontalAdvance(text)
+    painter.fillRect(int(x1 - tw - 14), int(y1 - 20), tw + 10, 18, QColor(20, 80, 110, 190))
+    painter.setPen(QColor(230, 250, 255))
+    painter.drawText(int(x1 - tw - 9), int(y1 - 6), text)
+
+
+def _mtime_date_label(path: str) -> str:
+    try:
+        return time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path)))
+    except OSError:
+        return ""
+
+
+def _paint_date_chip(painter, x0, y0, text: str) -> None:  # pragma: no cover - GL paint
+    fm = painter.fontMetrics()
+    tw = fm.horizontalAdvance(text)
+    x = int(x0 + 4)
+    y = int(y0 + 4)
+    painter.fillRect(x, y, tw + 12, 18, QColor(0, 0, 0, 165))
+    painter.setPen(QColor(210, 230, 255))
+    painter.drawText(x + 6, y + 13, text)
 
 
 def _draw_hover_pixel_outline(painter: QPainter,  # pragma: no cover - GL paint

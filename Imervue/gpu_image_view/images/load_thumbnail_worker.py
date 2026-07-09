@@ -15,6 +15,7 @@ logger = logging.getLogger("Imervue.thumbnail_worker")
 
 class WorkerSignals(QObject):
     finished = Signal(object, str, int)  # img_data, path, generation
+    error = Signal(str, str, int)  # path, message, generation
 
 
 class LoadThumbnailWorker(QRunnable):
@@ -45,6 +46,8 @@ class LoadThumbnailWorker(QRunnable):
                 self.signals.finished.emit(img_data, self.path, self.generation)
         except Exception as e:  # noqa: BLE001
             logger.exception(f"Thumbnail load failed: {self.path} - {e}")
+            if not self._abort:
+                self.signals.error.emit(self.path, str(e), self.generation)
 
     def _try_cache_lookup(self, r_hash: str):
         if self.size is None:

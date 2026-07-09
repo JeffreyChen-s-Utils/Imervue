@@ -96,6 +96,12 @@ class TestPutGetRoundtrip:
         assert c.get(source_image, 128, recipe_hash="A") is not None
         assert c.get(source_image, 128, recipe_hash="B") is None
 
+    def test_file_overwrite_invalidates_same_path_entry(self, cache_dir, source_image):
+        c = tdc.ThumbnailDiskCache()
+        c.put(source_image, 128, _thumb())
+        Path(source_image).write_bytes(b"different payload with different size")
+        assert c.get(source_image, 128) is None
+
 
 # ---------------------------------------------------------------------------
 # Bookkeeping

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import contextlib
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QRunnable, Signal, QObject
+from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
 from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
 from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
@@ -76,6 +78,13 @@ def _load_raster(path: str) -> np.ndarray:
     return np.array(img)
 
 
+def _load_raster_thumbnail(path: str, max_edge: int = 1600) -> np.ndarray:
+    with Image.open(path) as img:
+        img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+        thumb = img.convert("RGBA") if img.mode not in ("RGB", "RGBA", "L") else img
+        return np.array(thumb)
+
+
 def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
     if img_data.ndim == 2:
         img_data = np.stack([img_data, img_data, img_data], axis=2)
@@ -112,7 +121,7 @@ def load_image_file(path, thumbnail=False, recipe=None):
         img_data = poster_frame(path)
     else:
         _ensure_optional_opener(ext)
-        img_data = _load_raster(path)
+        img_data = _load_raster_thumbnail(path) if thumbnail else _load_raster(path)
 
     img_data = _ensure_rgba(img_data)
 
@@ -140,15 +149,17 @@ def load_image_file(path, thumbnail=False, recipe=None):
 
 class _DeepZoomWorkerSignals(QObject):
     finished = Signal(object, str)  # (DeepZoomImage, path)
+    error = Signal(str, str)  # (path, message)
 
 
 class LoadDeepZoomWorker(QRunnable):
     """在背景執行緒載入全解析度圖片並建立金字塔，避免凍結 UI"""
 
-    def __init__(self, path: str, recipe=None):
+    def __init__(self, path: str, recipe=None, preview: bool = False):
         super().__init__()
         self.path = path
         self.recipe = recipe
+        self.preview = preview
         self.signals = _DeepZoomWorkerSignals()
         self._abort = False
 
@@ -159,7 +170,11 @@ class LoadDeepZoomWorker(QRunnable):
         if self._abort:
             return
         try:
-            img_data = load_image_file(self.path, thumbnail=False, recipe=self.recipe)
+            img_data = load_image_file(
+                self.path,
+                thumbnail=self.preview,
+                recipe=self.recipe,
+            )
             if self._abort:
                 return
             dzi = DeepZoomImage(img_data)
@@ -168,6 +183,54 @@ class LoadDeepZoomWorker(QRunnable):
                 self.signals.finished.emit(dzi, self.path)
         except Exception as e:
             logger.exception(f"DeepZoom load failed: {self.path} - {e}")
+            if not self._abort:
+                self.signals.error.emit(self.path, str(e))
+
+
+class _FolderScanSignals(QObject):
+    batch = Signal(str, list)
+    finished = Signal(str, list)
+
+
+class FolderScanWorker(QRunnable):
+    """Scan a folder in chunks so very large folders can appear progressively."""
+
+    def __init__(self, folder: str, batch_size: int = 256):
+        super().__init__()
+        self.folder = folder
+        self.batch_size = max(32, int(batch_size))
+        self.signals = _FolderScanSignals()
+        self._abort = False
+
+    def abort(self) -> None:
+        self._abort = True
+
+    def run(self) -> None:
+        import os
+        found: list[str] = []
+        batch: list[str] = []
+        try:
+            with os.scandir(self.folder) as it:  # NOSONAR - user-selected local folder
+                for entry in it:
+                    if self._abort:
+                        return
+                    if not entry.is_file(follow_symlinks=False):
+                        continue
+                    ext = os.path.splitext(entry.name)[1].lower()
+                    if ext not in _SUPPORTED_EXTS:
+                        continue
+                    batch.append(entry.path)
+                    found.append(entry.path)
+                    if len(batch) >= self.batch_size:
+                        self.signals.batch.emit(self.folder, _sort_for_user(batch))
+                        batch = []
+        except OSError:
+            self.signals.finished.emit(self.folder, [])
+            return
+        if batch and not self._abort:
+            self.signals.batch.emit(self.folder, _sort_for_user(batch))
+        if not self._abort:
+            self.signals.finished.emit(self.folder, _sort_for_user(found))
 
 
 # ================================================================
@@ -251,11 +314,35 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
 def _scan_images_for_user(directory: str) -> list[str]:
     """Scan + sort a folder using the user's current sort settings (single pass)."""
     from Imervue.user_settings.user_setting_dict import user_setting_dict
-    return _scan_images(
+    sort_by = user_setting_dict.get("sort_by", "name")
+    ascending = user_setting_dict.get("sort_ascending", True)
+    from Imervue.image import folder_index
+    cached = folder_index.load(directory, sort_by=sort_by, ascending=ascending)
+    if cached is not None:
+        return cached
+    images = _scan_images(
         directory,
-        sort_by=user_setting_dict.get("sort_by", "name"),
-        ascending=user_setting_dict.get("sort_ascending", True),
+        sort_by=sort_by,
+        ascending=ascending,
     )
+    folder_index.save(directory, images, sort_by=sort_by, ascending=ascending)
+    return images
+
+
+def _sort_for_user(paths: list[str]) -> list[str]:
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    sort_by = user_setting_dict.get("sort_by", "name")
+    ascending = user_setting_dict.get("sort_ascending", True)
+    result = list(paths)
+    if sort_by == "name":
+        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+    else:
+        from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
+        result.sort(
+            key=_SORT_KEYS.get(sort_by, _sort_key_name),
+            reverse=not ascending,
+        )
+    return result
 
 
 def open_path(main_gui: GPUImageView, path: str):
@@ -287,30 +374,72 @@ def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
 
 
 def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
+    _open_folder_progressive(main_gui, path_obj)
+
+
+def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     from Imervue.user_settings.recent_image import add_recent_folder
-    images = _scan_images_for_user(str(path_obj))
-    if not images:
-        # An image-less folder (e.g. a parent reached "back" via the breadcrumb)
-        # still resets the wall to a clean empty grid, instead of leaving the
-        # previous folder's thumbnails / a half-cleared blank that then breaks
-        # the next open.
-        main_gui._unfiltered_images = []
-        main_gui._stack_members = {}
-        main_gui.load_tile_grid_async([])
-        return
+    old_worker = getattr(main_gui, "_folder_scan_worker", None)
+    if old_worker is not None:
+        with contextlib.suppress(Exception):
+            old_worker.abort()
+    main_gui._folder_scan_generation = getattr(main_gui, "_folder_scan_generation", 0) + 1
+    generation = main_gui._folder_scan_generation
     main_gui.current_index = 0
-    main_gui._unfiltered_images = list(images)
-    _maybe_hint_heif(main_gui, images)
-    images, stacks = _maybe_collapse_stacks(images)
-    main_gui._stack_members = stacks
-    main_gui.load_tile_grid_async(images)
+    main_gui._unfiltered_images = []
+    main_gui._stack_members = {}
+    main_gui.load_tile_grid_async([])
+
+    worker = FolderScanWorker(str(path_obj))
+    worker.signals.batch.connect(
+        lambda folder, batch, gen=generation: _on_folder_scan_batch(
+            main_gui, folder, batch, gen,
+        )
+    )
+    worker.signals.finished.connect(
+        lambda folder, images, gen=generation: _on_folder_scan_finished(
+            main_gui, folder, images, gen,
+        )
+    )
+    main_gui._folder_scan_worker = worker
+    QThreadPool.globalInstance().start(worker)
+    main_gui.current_index = 0
     add_recent_folder(str(path_obj))
     user_setting_dict["user_last_folder"] = str(path_obj)
+
+
+def _on_folder_scan_batch(main_gui: GPUImageView, folder: str, batch: list[str],
+                          generation: int) -> None:
+    if generation != getattr(main_gui, "_folder_scan_generation", None):
+        return
+    merged = list(getattr(main_gui, "_unfiltered_images", []))
+    seen = set(merged)
+    merged.extend(path for path in batch if path not in seen)
+    _apply_folder_scan_paths(main_gui, merged)
+
+
+def _on_folder_scan_finished(main_gui: GPUImageView, folder: str, images: list[str],
+                             generation: int) -> None:
+    if generation != getattr(main_gui, "_folder_scan_generation", None):
+        return
+    main_gui._folder_scan_worker = None
+    _maybe_hint_heif(main_gui, images)
+    _apply_folder_scan_paths(main_gui, images)
     if hasattr(main_gui.main_window, "plugin_manager"):
         main_gui.main_window.plugin_manager.dispatch_folder_opened(
-            str(path_obj), images, main_gui,
+            folder, images, main_gui,
         )
+
+
+def _apply_folder_scan_paths(main_gui: GPUImageView, images: list[str]) -> None:
+    main_gui._unfiltered_images = list(images)
+    collapsed, stacks = _maybe_collapse_stacks(images)
+    main_gui._stack_members = stacks
+    if hasattr(main_gui.main_window, "_apply_refreshed_image_list"):
+        main_gui.main_window._apply_refreshed_image_list(collapsed)
+    else:
+        main_gui.load_tile_grid_async(collapsed)
 
 
 def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:

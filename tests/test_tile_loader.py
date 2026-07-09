@@ -19,8 +19,10 @@ from Imervue.gpu_image_view.tile_loader import (
     ensure_filmstrip_thumbnail,
     images_changed,
     needs_filmstrip_thumbnail,
+    on_thumbnail_error,
     on_filmstrip_thumbnail_loaded,
     reset_view_memory_on_switch,
+    sync_tile_grid_incremental,
     tile_grid_needs_reload,
     track_tile_worker,
 )
@@ -57,6 +59,14 @@ class _FakePool:
         self.started.append(worker)
 
 
+class _FakeImageModel:
+    def __init__(self, images):
+        self.images = list(images)
+
+    def set_images(self, paths):
+        self.images = list(paths)
+
+
 def _fake_view(images, *, generation=1, cache=None, pending=None,
                thumbnail_size=256):
     cache = {} if cache is None else cache
@@ -64,15 +74,32 @@ def _fake_view(images, *, generation=1, cache=None, pending=None,
     view = SimpleNamespace(
         tile_cache=cache,
         _filmstrip_pending=pending,
-        model=SimpleNamespace(images=list(images)),
+        model=_FakeImageModel(images),
         thumbnail_size=thumbnail_size,
         _load_generation=generation,
         active_tile_workers=set(),
         thumbnail_pool=_FakePool(),
         _tile_load_times={},
+        _tile_file_signatures={},
         _overlay=SimpleNamespace(ensure_fade_pump=lambda: None),
+        tile_errors={},
+        offline_paths=set(),
+        selected_tiles=set(),
+        focused_tile_index=0,
+        current_index=0,
+        tile_textures={},
+        _tile_tex_sizes={},
+        _vram_usage=0,
+        _filmstrip_thumb_cache={},
+        _tile_error_toasted=set(),
+        main_window=SimpleNamespace(),
+        _progress_coalescer=SimpleNamespace(schedule=lambda: None, force_flush=lambda: None),
     )
     view.update = lambda: None
+    view._cancel_tile_workers = lambda: None
+    view._on_thumbnail_loaded = lambda img, path, gen: tile_loader.on_thumbnail_loaded(
+        view, img, path, gen,
+    )
     view._on_filmstrip_thumbnail_loaded = (
         lambda img, path, gen: on_filmstrip_thumbnail_loaded(view, img, path, gen)
     )
@@ -181,6 +208,44 @@ class TestOnFilmstripThumbnailLoaded:
         worker.signals.finished.connected[0](img, "a.png", worker.generation)
         assert view.tile_cache["a.png"] is img
         assert view._filmstrip_pending == set()
+
+
+class TestThumbnailError:
+    def test_records_visible_error_for_current_generation(self):
+        view = _fake_view(["bad.png"], generation=3)
+        on_thumbnail_error(view, "bad.png", "decode failed", 3)
+        assert view.tile_errors["bad.png"] == "decode failed"
+
+    def test_ignores_stale_generation(self):
+        view = _fake_view(["bad.png"], generation=3)
+        on_thumbnail_error(view, "bad.png", "old", 2)
+        assert view.tile_errors == {}
+
+
+class TestSyncTileGridIncremental:
+    def test_keeps_cached_thumbnails_and_loads_only_new_paths(self):
+        cached = {"a.png": object()}
+        view = _fake_view(["a.png", "b.png"], cache=cached)
+        sync_tile_grid_incremental(view, ["a.png", "c.png"])
+        assert "a.png" in view.tile_cache
+        assert "b.png" not in view.tile_cache
+        assert view.model.images == ["a.png", "c.png"]
+        assert [w.path for w in _FakeWorker.created] == ["c.png"]
+
+    def test_renamed_file_migrates_cached_thumbnail(self, tmp_path):
+        old = tmp_path / "old.png"
+        new = tmp_path / "new.png"
+        old.write_bytes(b"same image bytes")
+        st = old.stat()
+        img = object()
+        view = _fake_view([str(old)], cache={str(old): img})
+        view._tile_file_signatures[str(old)] = (st.st_size, st.st_mtime_ns, ".png")
+        old.replace(new)
+
+        sync_tile_grid_incremental(view, [str(new)])
+
+        assert view.tile_cache == {str(new): img}
+        assert _FakeWorker.created == []
 
 
 # ---------------------------------------------------------------
