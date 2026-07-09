@@ -179,6 +179,32 @@ def test_should_refit_on_load_keeps_remembered_zoom_in():
     assert fit_view.should_refit_on_load(True, view) is False
 
 
+def test_should_refit_on_load_refits_when_dimensions_changed():
+    # A rotate swaps width/height; the remembered zoom was saved against the
+    # pre-rotation dims, so even a genuine zoom-in value must refit to the new
+    # shape instead of overflowing the canvas.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6  # would be kept if dims matched (keeps_remembered_zoom_in)
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(3000, 4000)) is True
+
+
+def test_should_refit_on_load_keeps_zoom_when_dimensions_match():
+    # Same dims (a tonal recipe edit, not a geometry change) → preserve the
+    # user's genuine zoom-in instead of snapping back to fit.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(4000, 3000)) is False
+
+
+def test_should_refit_on_load_none_dims_falls_back_to_fit_test():
+    # Legacy memory entries saved without dims → behave exactly as before.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6
+    assert fit_view.should_refit_on_load(True, view, remembered_dims=None) is False
+
+
 # ---------------------------------------------------------------------------
 # fit_to_window
 # ---------------------------------------------------------------------------

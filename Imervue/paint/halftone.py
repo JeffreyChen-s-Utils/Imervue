@@ -276,7 +276,7 @@ class ToneSettings:
             return None
         try:
             color_raw = raw.get("color", [0, 0, 0])
-            if not isinstance(color_raw, (list, tuple)) or len(color_raw) != 3:
+            if not isinstance(color_raw, list | tuple) or len(color_raw) != 3:
                 return None
             color = (
                 int(color_raw[0]), int(color_raw[1]), int(color_raw[2]),

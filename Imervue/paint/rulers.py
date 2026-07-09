@@ -424,7 +424,7 @@ def _dist_sq(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 
 def _safe_anchor(value: object) -> tuple[float, float]:
-    if isinstance(value, (list, tuple)) and len(value) == 2:
+    if isinstance(value, list | tuple) and len(value) == 2:
         try:
             return (float(value[0]), float(value[1]))
         except (TypeError, ValueError):
@@ -455,11 +455,11 @@ def _safe_vanishing_points(value: object) -> tuple[tuple[float, float], ...]:
     :data:`PERSPECTIVE_MAX_VANISHING_POINTS` since the UI affords only
     1 / 2 / 3-point perspective.
     """
-    if not isinstance(value, (list, tuple)):
+    if not isinstance(value, list | tuple):
         return ()
     out: list[tuple[float, float]] = []
     for entry in value:
-        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        if not isinstance(entry, list | tuple) or len(entry) != 2:
             continue
         try:
             out.append((float(entry[0]), float(entry[1])))
@@ -477,11 +477,11 @@ def _safe_control_points(value: object) -> tuple[tuple[float, float], ...]:
     dropped silently, the count is capped at :data:`CURVE_MAX_POINTS`,
     and the result is a fresh immutable tuple safe to share.
     """
-    if not isinstance(value, (list, tuple)):
+    if not isinstance(value, list | tuple):
         return ()
     out: list[tuple[float, float]] = []
     for entry in value:
-        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        if not isinstance(entry, list | tuple) or len(entry) != 2:
             continue
         try:
             out.append((float(entry[0]), float(entry[1])))

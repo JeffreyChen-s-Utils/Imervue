@@ -112,7 +112,7 @@ def script_from_form_data(data: dict) -> PetScript:
 
 
 def _string_list(value: object) -> tuple[str, ...]:
-    if not isinstance(value, (list, tuple)):
+    if not isinstance(value, list | tuple):
         return ()
     return tuple(str(v) for v in value if isinstance(v, str))
 

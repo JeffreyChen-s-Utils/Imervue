@@ -209,7 +209,7 @@ def _safe_pair(value, *, default):
     """Coerce a JSON-friendly entry into a ``(x, y)`` tuple."""
     if value is None:
         return default
-    if isinstance(value, (list, tuple)) and len(value) == 2:
+    if isinstance(value, list | tuple) and len(value) == 2:
         try:
             return (float(value[0]), float(value[1]))
         except (TypeError, ValueError):

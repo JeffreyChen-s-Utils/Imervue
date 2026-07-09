@@ -27,6 +27,10 @@ class SlideshowController:
         self._fade = fade
         self._running = False
         self._anim = None
+        # Remember whether the slideshow was launched from the thumbnail wall so
+        # stopping it returns the user there instead of stranding them in deep
+        # zoom on whatever image the slideshow happened to land on.
+        self._resume_to_grid = False
 
     @property
     def running(self) -> bool:
@@ -38,6 +42,7 @@ class SlideshowController:
             return
 
         # 如果目前在 tile grid，進入第一張 DeepZoom
+        self._resume_to_grid = bool(gui.tile_grid_mode)
         if gui.tile_grid_mode:
             gui.tile_grid_mode = False
             gui.current_index = 0
@@ -54,7 +59,24 @@ class SlideshowController:
             self._anim = None
         # 確保恢復不透明
         self._gui._slideshow_opacity = 1.0
+        self._restore_grid_if_resumed()
         self._gui.update()
+
+    def _restore_grid_if_resumed(self) -> None:
+        """Return to the thumbnail wall if the slideshow was started from it.
+
+        Entering deep zoom never clears the tile cache, so the wall the user
+        came from is still warm — just flip the mode back. A slideshow started
+        from deep zoom leaves the user in deep zoom, as before.
+        """
+        if not self._resume_to_grid:
+            return
+        self._resume_to_grid = False
+        gui = self._gui
+        if not gui.model.images:
+            return
+        gui._clear_deep_zoom()
+        gui.tile_grid_mode = True
 
     def set_interval(self, ms: int):
         self._timer.setInterval(ms)

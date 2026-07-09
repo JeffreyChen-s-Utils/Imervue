@@ -80,6 +80,8 @@ def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_xmp_sidecar(ui))
     _add_action(sub, lang, "geotag_title", "GPS Geotag",
                 lambda: _open_gps_geotag(ui))
+    _add_action(sub, lang, "cache_maintenance_title", "Thumbnail Cache",
+                lambda: _open_cache_maintenance(ui))
 
 
 def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
@@ -776,6 +778,11 @@ def _open_soft_proof(ui: ImervueMainWindow):
 def _open_gps_geotag(ui: ImervueMainWindow):
     from Imervue.gui.gps_geotag_dialog import open_gps_geotag
     open_gps_geotag(ui.viewer)
+
+
+def _open_cache_maintenance(ui: ImervueMainWindow):
+    from Imervue.gui.cache_maintenance_dialog import open_cache_maintenance
+    open_cache_maintenance(ui)
 
 
 def _open_print_layout(ui: ImervueMainWindow):

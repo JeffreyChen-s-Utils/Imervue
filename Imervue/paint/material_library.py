@@ -102,7 +102,7 @@ class MaterialEntry:
         if category not in MATERIAL_CATEGORIES:
             category = DEFAULT_CATEGORY
         raw_tags = raw.get("tags", ())
-        if not isinstance(raw_tags, (list, tuple)):
+        if not isinstance(raw_tags, list | tuple):
             raw_tags = ()
         return cls(
             name=str(raw.get("name") or path.stem),

@@ -101,7 +101,7 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
         ratings = user_setting_dict.get("image_ratings", {})
         rec["rating"] = int(ratings.get(path, 0))
         favs = user_setting_dict.get("image_favorites", [])
-        rec["favorite"] = bool(path in favs) if isinstance(favs, (list, set, tuple)) else False
+        rec["favorite"] = bool(path in favs) if isinstance(favs, list | set | tuple) else False
     except Exception:  # noqa: BLE001, S110  # nosec B110 - user fields optional; skip lookup errors
         pass
     try:
@@ -123,6 +123,6 @@ def _coerce_value(v: Any) -> Any:
             return v.decode("utf-8", errors="replace")
         except Exception:  # noqa: BLE001
             return repr(v)
-    if isinstance(v, (tuple, list)):
+    if isinstance(v, tuple | list):
         return str(v)
     return v

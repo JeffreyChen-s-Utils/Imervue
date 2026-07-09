@@ -64,13 +64,32 @@ def test_ensure_returns_bool_and_is_idempotent():
 
 
 def test_ensure_false_when_backend_missing(monkeypatch):
-    heif_support.ensure_heif_opener.cache_clear()
+    heif_support._register_heif_opener.cache_clear()
     monkeypatch.setitem(sys.modules, "pillow_heif", None)
     try:
         assert heif_support.ensure_heif_opener() is False
     finally:
         # Drop the cached failure so later tests re-evaluate against the real backend.
-        heif_support.ensure_heif_opener.cache_clear()
+        heif_support._register_heif_opener.cache_clear()
+
+
+def test_missing_backend_is_not_cached_and_self_heals(monkeypatch):
+    """A backend installed after launch must activate without a restart: the
+    failure is not memoised, so the next call re-probes and registers it."""
+    import types
+
+    heif_support._register_heif_opener.cache_clear()
+    monkeypatch.setitem(sys.modules, "pillow_heif", None)
+    assert heif_support.ensure_heif_opener() is False
+    # The backend "appears" mid-session — only register_heif_opener is touched.
+    registered: list = []
+    fake = types.SimpleNamespace(register_heif_opener=lambda: registered.append(True))
+    monkeypatch.setitem(sys.modules, "pillow_heif", fake)
+    try:
+        assert heif_support.ensure_heif_opener() is True
+        assert registered == [True]
+    finally:
+        heif_support._register_heif_opener.cache_clear()
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +108,7 @@ def _write_heif(path, ext):
 
 @pytest.mark.parametrize("ext", [".heic", ".avif"])
 def test_load_heif_via_image_loader(tmp_path, ext):
-    heif_support.ensure_heif_opener.cache_clear()
+    heif_support._register_heif_opener.cache_clear()
     _write_heif(tmp_path / "shot", ext)
     from Imervue.gpu_image_view.images.image_loader import load_image_file
     result = load_image_file(str((tmp_path / "shot").with_suffix(ext)))

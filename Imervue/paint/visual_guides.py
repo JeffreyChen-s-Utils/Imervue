@@ -97,7 +97,7 @@ class Guide:
         if orientation not in GUIDE_ORIENTATIONS:
             orientation = "vertical"
         color = raw.get("color")
-        if isinstance(color, (list, tuple)) and len(color) == 4:
+        if isinstance(color, list | tuple) and len(color) == 4:
             color_tuple = tuple(max(0, min(255, int(c))) for c in color)
         else:
             color_tuple = DEFAULT_GUIDE_COLOR
@@ -161,7 +161,7 @@ class GridSpec:
 
         def _coerce(key, default):
             raw_color = raw.get(key)
-            if isinstance(raw_color, (list, tuple)) and len(raw_color) == 4:
+            if isinstance(raw_color, list | tuple) and len(raw_color) == 4:
                 try:
                     return tuple(max(0, min(255, int(c))) for c in raw_color)
                 except (TypeError, ValueError):

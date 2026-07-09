@@ -74,9 +74,9 @@ class GradientStop:
         if not isinstance(raw, dict):
             raise ValueError(f"stop payload must be a dict, got {type(raw).__name__}")
         color = raw.get("color")
-        if isinstance(color, (list, tuple)) and len(color) == 4:
+        if isinstance(color, list | tuple) and len(color) == 4:
             color_tuple = tuple(max(0, min(255, int(c))) for c in color)
-        elif isinstance(color, (list, tuple)) and len(color) == 3:
+        elif isinstance(color, list | tuple) and len(color) == 3:
             color_tuple = (*tuple(max(0, min(255, int(c))) for c in color), 255)
         else:
             color_tuple = (0, 0, 0, 255)

@@ -208,9 +208,9 @@ class KeyActionDispatcher:
         view.update()
 
     def _toggle_loupe(self) -> None:
-        """Cursor-following magnifier; deep zoom only."""
+        """Cursor-following magnifier for deep zoom and tile hover."""
         view = self.view
-        if not view.deep_zoom:
+        if not (view.deep_zoom or view.tile_grid_mode):
             return
         view._loupe_enabled = not view._loupe_enabled
         if view._loupe_enabled:

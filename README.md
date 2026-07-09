@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Selected tools (36 in total — full list in the docs). Every tool advertises a
+Selected tools (57 in total — full list in the docs). Every tool advertises a
 JSON `outputSchema` and read-only / destructive `annotations`, returns its
 result as `structuredContent`, and long-running tools stream
 `notifications/progress`.
@@ -836,6 +836,15 @@ result as `structuredContent`, and long-running tools stream
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia saturation boost, directional-light emboss, edge-fringe desaturation |
 | `film_negative_image` / `graduated_density_image` | Invert a scanned negative; apply a linear graduated-density gradient |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Filmic highlight rolloff; per-zone exposure; per-band contrast |
+| `colormap_image` / `false_color_image` | Recolour luminance through viridis / magma / jet; false-colour exposure scale |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Ordered Bayer dither; shadow/highlight split-tone; brightness-band pixel sort |
+| `polar_image` / `kaleidoscope_image` | Warp to / from polar (tiny-planet); mirror into kaleidoscope wedges |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Random-neighbour frosted scatter; CLAHE local equalization; clarity + texture local contrast |
+| `posterize_image` / `gradient_map_image` | Quantize channels to flat bands; remap luminance through a gradient |
+| `film_grain_image` / `dehaze_image` / `distort_image` | Tunable Gaussian grain; dark-channel dehaze; swirl / pinch / ripple warp |
+| `levels_image` / `curve_image` | Black/white point + gamma levels; S-curve / lift-shadows / compress-highlights tone curve |
+| `auto_color_balance_image` / `channel_mixer_image` | Auto white-balance (4 methods); 3×3 channel mixer + mono conversion |
+| `lens_correction_image` | Correct distortion (k1), vignette and red/blue chromatic aberration |
 | `reverse_geocode` / `extract_video_frame` | Offline GPS → city, decode one video frame to a still |
 | `puppet_from_png` / `puppet_inspect` | Build a `.puppet` rig from a PNG; open one and return its inventory |
 

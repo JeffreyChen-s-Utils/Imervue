@@ -24,9 +24,22 @@ if sys.platform == "win32":
             with contextlib.suppress(Exception):
                 stream.reconfigure(encoding="utf-8", errors="replace")
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from Imervue.Imervue_main_window import ImervueMainWindow
+from Imervue.system.app_paths import icon_path as _app_icon_path
+
+
+def _set_windows_app_user_model_id() -> None:
+    """Set the Windows taskbar identity before the first window is created."""
+    if sys.platform != "win32":
+        return
+    try:
+        from ctypes import windll
+        windll.shell32.SetCurrentProcessExplicitAppUserModelID("Imervue")
+    except (ImportError, AttributeError, OSError):
+        pass
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Start Imervue Application")
@@ -58,7 +71,11 @@ if __name__ == "__main__":
         os.environ["QT_OPENGL"] = "software"
         os.environ["QT_ANGLE_PLATFORM"] = "warp"
 
+    _set_windows_app_user_model_id()
     app = QApplication(sys.argv)
+    icon = QIcon(str(_app_icon_path()))
+    if not icon.isNull():
+        app.setWindowIcon(icon)
     app.setQuitOnLastWindowClosed(False)
 
     # 套用使用者偏好的 UI 縮放（必須在主視窗建構前完成，否則 widget 已經量好尺寸）

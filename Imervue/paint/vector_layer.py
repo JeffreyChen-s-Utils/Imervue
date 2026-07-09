@@ -126,10 +126,10 @@ def _parse_stroke_points(
     corrupt sidecar still loads as much of the stroke as possible
     rather than collapsing the whole layer."""
     points: list[tuple[float, float]] = []
-    if not isinstance(raw_points, (list, tuple)):
+    if not isinstance(raw_points, list | tuple):
         return points
     for entry in raw_points:
-        if not (isinstance(entry, (list, tuple)) and len(entry) == 2):
+        if not (isinstance(entry, list | tuple) and len(entry) == 2):
             continue
         try:
             points.append((float(entry[0]), float(entry[1])))
@@ -144,7 +144,7 @@ def _parse_stroke_widths(
     """Per-node widths only survive the round-trip if the count
     matches the surviving point count — partial / mismatched
     arrays drop silently to "uniform width"."""
-    if not (isinstance(raw_widths, (list, tuple)) and len(raw_widths) == expected_count):
+    if not (isinstance(raw_widths, list | tuple) and len(raw_widths) == expected_count):
         return ()
     try:
         return tuple(max(1e-3, float(w)) for w in raw_widths)

@@ -59,11 +59,12 @@ class PrefetchScheduler:
             return
         needed = self._compute_targets(images)
         with QMutexLocker(self._mutex):
-            self._cancel_outdated_workers(needed)
-            self._evict_outdated_cache(needed)
+            needed_set = set(needed)
+            self._cancel_outdated_workers(needed_set)
+            self._evict_outdated_cache(needed_set)
             self._spawn_workers(needed)
 
-    def _compute_targets(self, images: list[str]) -> set[str]:
+    def _compute_targets(self, images: list[str]) -> list[str]:
         """Return the set of paths to prefetch around ``current_index``.
 
         The window is asymmetric when the user has been navigating in
@@ -79,7 +80,11 @@ class PrefetchScheduler:
             current, len(images),
             range_ahead=range_ahead, range_behind=range_behind,
         )
-        return {images[i] for i in indices}
+        targets = [images[i] for i in indices]
+        hover = getattr(self._view, "_hover_tile_path", None)
+        if hover in images and hover not in targets:
+            targets.insert(0, hover)
+        return targets
 
     def _cancel_outdated_workers(self, needed: set[str]) -> None:
         # list() required: we mutate self.workers in-loop.
@@ -105,14 +110,16 @@ class PrefetchScheduler:
         except (ValueError, AttributeError):
             return _MISSING_DISTANCE
 
-    def _spawn_workers(self, needed: set[str]) -> None:
+    def _spawn_workers(self, needed: list[str]) -> None:
         from Imervue.gpu_image_view.worker_pools import priority_for_distance
         from Imervue.image.recipe_store import recipe_store
-        for path in needed:
+        for path in sorted(needed, key=self._prefetch_priority):
             if path in self.cache or path in self.workers:
                 continue
             worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
             worker.signals.finished.connect(self._view._on_prefetch_loaded)
+            if hasattr(worker.signals, "error"):
+                worker.signals.error.connect(lambda p, _msg: self.pop_worker(p))
             self.workers[path] = worker
             # Distance-aware priority: the next neighbour the user might
             # press lands before the far-out ones, so when the pool
@@ -120,6 +127,10 @@ class PrefetchScheduler:
             # regardless of submit order.
             distance = self._distance_for(path)
             self._view.prefetch_pool.start(worker, priority_for_distance(distance))
+
+    def _prefetch_priority(self, path: str) -> tuple[int, int]:
+        hover = getattr(self._view, "_hover_tile_path", None)
+        return (0 if path == hover else 1, self._distance_for(path))
 
     # -- worker completion -------------------------------------------
 

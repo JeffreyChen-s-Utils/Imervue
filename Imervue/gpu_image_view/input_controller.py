@@ -184,7 +184,11 @@ class InputController:
             if view._loupe_enabled:
                 view.update()  # repaint so the magnifier tracks the cursor
         if view.tile_grid_mode:
+            mx, my = event.position().x(), event.position().y()
+            view._hover_tile_path = self.tile_at(mx, my)
             view._update_hover_preview(event)
+            if view._loupe_enabled and view._hover_tile_path:
+                view.update()
 
     def handle_middle_drag(self, delta) -> None:
         view = self._view

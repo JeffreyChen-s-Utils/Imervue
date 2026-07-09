@@ -29,6 +29,10 @@ PREVIEW_EXTS = frozenset({
 DEFAULT_ICON_SIZE = 32
 MIN_ICON_SIZE = 16
 MAX_ICON_SIZE = 128
+# A folder whose candidate image fails to decode (likely mid-move/delete on the
+# worker thread) is retried up to this many times before falling back to the
+# default icon, so a transient read race can't permanently blank its preview.
+MAX_PREVIEW_RETRIES = 2
 
 
 def clamp_icon_size(px: int) -> int:
@@ -54,7 +58,11 @@ def folder_preview_path(folder: str, exts: Iterable[str] = PREVIEW_EXTS) -> str 
 
 
 class _PreviewSignals(QObject):
-    done = Signal(str, QImage)   # folder, scaled thumbnail (null = no preview)
+    # folder, scaled thumbnail (null = no usable preview), had_candidate.
+    # ``had_candidate`` distinguishes "this folder has no image at all" from
+    # "an image was found but failed to decode" (a transient mid-delete read),
+    # so the model can retry the latter instead of caching a permanent blank.
+    done = Signal(str, QImage, bool)
 
 
 class _PreviewWorker(QRunnable):
@@ -70,6 +78,7 @@ class _PreviewWorker(QRunnable):
     def run(self) -> None:
         thumb = QImage()
         path = folder_preview_path(self._folder, self._exts)
+        had_candidate = path is not None
         if path is not None:
             image = QImage(path)
             if not image.isNull():
@@ -78,7 +87,7 @@ class _PreviewWorker(QRunnable):
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation,
                 )
-        self.signals.done.emit(self._folder, thumb)
+        self.signals.done.emit(self._folder, thumb, had_candidate)
 
 
 class FolderThumbnailModel(QFileSystemModel):
@@ -88,6 +97,8 @@ class FolderThumbnailModel(QFileSystemModel):
         super().__init__(parent)
         self._cache: dict[str, QIcon | None] = {}  # None = scanned, no preview
         self._pending: set[str] = set()
+        # folder -> transient decode-failure retry count (see MAX_PREVIEW_RETRIES)
+        self._retry: dict[str, int] = {}
         self._pool = QThreadPool(self)
         self._icon_size = clamp_icon_size(icon_size)
 
@@ -102,6 +113,21 @@ class FolderThumbnailModel(QFileSystemModel):
             self._icon_size = px
             self._cache.clear()
             self._pending.clear()
+            self._retry.clear()
+
+    def clear_missing_previews(self) -> None:
+        """Drop cached "no preview" markers so preview-less folders re-scan.
+
+        Called after an external change (watchdog / F5 refresh) so a folder
+        whose preview briefly failed to decode — or that just gained its first
+        image — gets a fresh attempt on the next paint. Folders that already
+        have a decoded preview keep it, so there is no flicker and no
+        re-decode storm for the common case.
+        """
+        self._cache = {
+            folder: icon for folder, icon in self._cache.items() if icon is not None
+        }
+        self._retry.clear()
 
     def data(self, index, role: int = Qt.ItemDataRole.DisplayRole):
         if (role == Qt.ItemDataRole.DecorationRole and index.column() == 0
@@ -123,9 +149,34 @@ class FolderThumbnailModel(QFileSystemModel):
         worker.signals.done.connect(self._on_preview_ready)
         self._pool.start(worker)
 
-    def _on_preview_ready(self, folder: str, thumb: QImage) -> None:
+    def _on_preview_ready(self, folder: str, thumb: QImage,
+                          had_candidate: bool) -> None:
         self._pending.discard(folder)
-        self._cache[folder] = None if thumb.isNull() else QIcon(QPixmap.fromImage(thumb))
+        if not thumb.isNull():
+            self._cache[folder] = QIcon(QPixmap.fromImage(thumb))
+            self._retry.pop(folder, None)
+            self._emit_decoration_changed(folder)
+            return
+        if had_candidate and self._bump_retry(folder):
+            # A candidate image existed but failed to decode — almost always
+            # because it was mid-move/delete when the worker read it. Retry
+            # instead of poisoning the cache with a permanent "no preview".
+            self._request_preview(folder)
+            return
+        # Genuinely no image, or repeated decode failures → default folder icon.
+        self._cache[folder] = None
+        self._retry.pop(folder, None)
+        self._emit_decoration_changed(folder)
+
+    def _bump_retry(self, folder: str) -> bool:
+        """Increment *folder*'s retry counter; True while still under the cap."""
+        count = self._retry.get(folder, 0)
+        if count >= MAX_PREVIEW_RETRIES:
+            return False
+        self._retry[folder] = count + 1
+        return True
+
+    def _emit_decoration_changed(self, folder: str) -> None:
         index = self.index(folder)
         if index.isValid():
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DecorationRole])

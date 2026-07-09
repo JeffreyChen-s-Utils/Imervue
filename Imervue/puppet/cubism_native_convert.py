@@ -499,9 +499,9 @@ def _load_referenced_motion(
     motion.group = str(group_name)
     fade_in = entry.get("FadeInTime")
     fade_out = entry.get("FadeOutTime")
-    if isinstance(fade_in, (int, float)):
+    if isinstance(fade_in, int | float):
         motion.fade_in_duration = float(fade_in)
-    if isinstance(fade_out, (int, float)):
+    if isinstance(fade_out, int | float):
         motion.fade_out_duration = float(fade_out)
     return motion, path.resolve()
 

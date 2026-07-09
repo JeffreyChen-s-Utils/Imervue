@@ -148,7 +148,16 @@ class KeyInputHandler:
         view.update()
 
     def _restore_grid_state(self) -> None:
+        from Imervue.gpu_image_view.tile_loader import tile_grid_needs_reload
         view = self._view
+        # A deep zoom reached through a cache-clearing route (open file, recent
+        # image, bookmark, drag-drop) leaves the tile cache cold, so restoring
+        # the saved grid state would show a wall of blank placeholders. Reload
+        # the wall instead whenever the cache no longer covers the folder.
+        if tile_grid_needs_reload(view.tile_cache, view.model.images):
+            view._saved_tile_state = None
+            view.load_tile_grid_async(image_paths=view.model.images)
+            return
         view._clear_deep_zoom()
         view.tile_grid_mode = True
         saved = view._saved_tile_state

@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  fast:
     runs-on: windows-latest
     # ``experimental`` toggles continue-on-error so a Python release with
     # missing upstream wheels (PySide6, rawpy, etc.) does not block CI.
@@ -24,7 +24,7 @@ jobs:
           - python-version: "3.14"
             experimental: true
 
-    name: Python ${{ matrix.python-version }}${{ matrix.experimental && ' (experimental)' || '' }}
+    name: Fast / Python ${{ matrix.python-version }}${{ matrix.experimental && ' (experimental)' || '' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel
         pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
-    - name: Run tests
+    - name: Run fast tests
       # ``PYTHONFAULTHANDLER=1`` + ``-X faulthandler`` makes the
       # interpreter print a native traceback on SIGSEGV / fatal
       # signals — keep these on so any future teardown crash is
@@ -60,4 +60,28 @@ jobs:
       env:
         PYTHONFAULTHANDLER: "1"
         PYTHONUNBUFFERED: "1"
-      run: python -X faulthandler -u -m pytest tests/ -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
+      run: python -X faulthandler -u -m pytest tests/ --test-layer=fast -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
+
+  extended:
+    runs-on: windows-latest
+    name: ${{ matrix.layer }} / Python 3.12
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: [gui, integration]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
+    - name: Run ${{ matrix.layer }} tests
+      env:
+        PYTHONFAULTHANDLER: "1"
+        PYTHONUNBUFFERED: "1"
+      run: python -X faulthandler -u -m pytest tests/ --test-layer=${{ matrix.layer }} -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception

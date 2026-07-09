@@ -207,7 +207,7 @@ def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:
 
     if rules.get("favorites_only"):
         favs = user_setting_dict.get("image_favorites", [])
-        fav_set = set(favs) if isinstance(favs, (list, set, tuple)) else set()
+        fav_set = set(favs) if isinstance(favs, list | set | tuple) else set()
         paths = [p for p in paths if p in fav_set]
     return paths
 

@@ -13,6 +13,7 @@ class TileManager:
         self.deep_zoom = deep_zoom
         self.cache = OrderedDict()
         self._current_level = -1
+        self.max_cache = _MAX_TILE_CACHE
 
     def clear(self):
         """釋放所有 GPU texture"""
@@ -30,7 +31,7 @@ class TileManager:
             return self.cache[key]
 
         # LRU 淘汰：優先淘汰不同 level 的 tile，再淘汰同 level 最舊的
-        while len(self.cache) >= _MAX_TILE_CACHE:
+        while len(self.cache) >= self.max_cache:
             victim = next((k for k in self.cache if k[0] != level), None)
             if victim is not None:
                 glDeleteTextures([self.cache.pop(victim)])

@@ -733,7 +733,7 @@ python -m Imervue.mcp_server
 
 ### 도구
 
-선택된 도구(총 36개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+선택된 도구(총 57개 — 전체 목록은 문서 참고). 모든 도구는 JSON
 `outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
 `structuredContent`로 반환하며, 장시간 실행 도구는
 `notifications/progress`를 스트리밍합니다.
@@ -756,6 +756,15 @@ python -m Imervue.mcp_server
 | `velvia_image` / `emboss_image` / `defringe_image` | 벨비아 채도 부스트, 방향광 엠보스, 가장자리 프린지 탈색 |
 | `film_negative_image` / `graduated_density_image` | 스캔한 네거티브 반전; 선형 그라데이션 농도 그라데이션 적용 |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | 필믹 하이라이트 롤오프; 영역별 노출; 대역별 대비 |
+| `colormap_image` / `false_color_image` | 휘도를 viridis/magma/jet 컬러맵으로 재착색; 폴스 컬러 노출 스케일 |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | 정렬 Bayer 디더링; 그림자/하이라이트 스플릿 토닝; 밝기 대역 픽셀 정렬 |
+| `polar_image` / `kaleidoscope_image` | 극좌표 변환/역변환(타이니 플래닛); 만화경 웨지로 미러링 |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | 무작위 이웃 프로스티드 글래스 산란; CLAHE 국소 균등화; 클래리티 + 텍스처 국소 대비 |
+| `posterize_image` / `gradient_map_image` | 채널을 평탄한 밴드로 양자화; 그라데이션으로 휘도 리매핑 |
+| `film_grain_image` / `dehaze_image` / `distort_image` | 가변 가우시안 그레인; 다크 채널 디헤이즈; 소용돌이/핀치/리플 왜곡 |
+| `levels_image` / `curve_image` | 흑/백점 + 감마 레벨; 톤 커브(S 커브 / 그림자 올리기 / 하이라이트 압축) |
+| `auto_color_balance_image` / `channel_mixer_image` | 자동 화이트 밸런스(4가지 방법); 3×3 채널 믹서 + 흑백 변환 |
+| `lens_correction_image` | 왜곡(k1), 비네팅, 적/청 색수차 보정 |
 | `reverse_geocode` / `extract_video_frame` | 오프라인 GPS → 도시, 비디오 프레임 한 장을 정지 이미지로 디코딩 |
 | `puppet_from_png` / `puppet_inspect` | PNG에서 `.puppet` 리그 빌드; `.puppet`을 열고 인벤토리 반환 |
 

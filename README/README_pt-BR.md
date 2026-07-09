@@ -759,7 +759,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (36 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (57 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -782,6 +782,15 @@ longa duração transmitem `notifications/progress`.
 | `velvia_image` / `emboss_image` / `defringe_image` | Boost de saturação Velvia, emboss de luz direcional, dessaturação de franjas de borda |
 | `film_negative_image` / `graduated_density_image` | Inverte um negativo escaneado; aplica um gradiente de densidade graduada linear |
 | `filmic_tonemap_image` / `tone_equalizer_image` / `detail_equalizer_image` | Rolloff filmic de realces; exposição por zona; contraste por banda |
+| `colormap_image` / `false_color_image` | Recolorir a luminância por um mapa viridis/magma/jet; escala de exposição em falsas cores |
+| `dither_image` / `split_toning_image` / `pixel_sort_image` | Pontilhado Bayer ordenado; split-toning de sombras/luzes; ordenação de pixels por faixa de brilho |
+| `polar_image` / `kaleidoscope_image` | Distorção para/de polar (tiny-planet); espelhamento em cunhas de caleidoscópio |
+| `frosted_glass_image` / `clahe_image` / `local_contrast_image` | Dispersão de vidro fosco por vizinho aleatório; equalização local CLAHE; contraste local de clareza + textura |
+| `posterize_image` / `gradient_map_image` | Quantizar os canais em faixas planas; remapear a luminância por um gradiente |
+| `film_grain_image` / `dehaze_image` / `distort_image` | Granulação gaussiana ajustável; remoção de névoa por canal escuro; distorção redemoinho/pinça/ondulação |
+| `levels_image` / `curve_image` | Níveis de ponto preto/branco + gama; curva de tons (curva em S / clarear sombras / comprimir luzes) |
+| `auto_color_balance_image` / `channel_mixer_image` | Balanço de branco automático (4 métodos); mixer de canais 3×3 + conversão mono |
+| `lens_correction_image` | Corrigir distorção (k1), vinheta e aberração cromática vermelha/azul |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
 

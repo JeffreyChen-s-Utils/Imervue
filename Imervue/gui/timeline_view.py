@@ -26,6 +26,10 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 _THUMB_SIZE = 96
+# A row whose thumbnail fails to decode (file mid-move/delete or briefly locked)
+# is retried up to this many times before falling back to a placeholder, so a
+# transient read race can't permanently blank the entry. Mirrors image_list_view.
+_MAX_THUMB_RETRIES = 2
 
 
 @dataclass
@@ -38,7 +42,9 @@ class _TimelineEntry:
 
 
 class _WorkerSignals(QObject):
-    done = Signal(str, QPixmap)
+    # path, pm, ok. ``ok`` is False when the decode failed (transient read race)
+    # so the model can retry instead of caching a permanent placeholder.
+    done = Signal(str, QPixmap, bool)
 
 
 class _TimelineThumbWorker(QRunnable):
@@ -55,10 +61,13 @@ class _TimelineThumbWorker(QRunnable):
                 data = im.tobytes("raw", "RGBA")
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
                 pm = QPixmap.fromImage(qimg.copy())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — any decode failure must still emit so
+            # the model clears the in-flight marker and can retry the entry.
             pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
             pm.fill(QColor(40, 40, 40))
-        self.signals.done.emit(self.path, pm)
+            self.signals.done.emit(self.path, pm, False)
+            return
+        self.signals.done.emit(self.path, pm, True)
 
 
 def _extract_date(path: str) -> datetime:
@@ -109,6 +118,8 @@ class TimelineModel(QAbstractListModel):
         self._entries = _group_entries(paths, granularity)
         self._pool = QThreadPool.globalInstance()
         self._in_flight: set[str] = set()
+        # path -> transient decode-failure retry count (see _MAX_THUMB_RETRIES)
+        self._retry: dict[str, int] = {}
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
         if parent is None:
@@ -162,15 +173,36 @@ class TimelineModel(QAbstractListModel):
         worker.signals.done.connect(self._on_thumb)
         self._pool.start(worker)
 
-    def _on_thumb(self, path: str, pm: QPixmap) -> None:
-        self._in_flight.discard(path)
+    def _entry_index(self, path: str) -> tuple[int, _TimelineEntry] | None:
         for i, entry in enumerate(self._entries):
             if entry.path == path:
-                entry.icon = QIcon(pm)
-                entry.fetched = True
-                idx = self.index(i)
-                self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DecorationRole])
-                break
+                return i, entry
+        return None
+
+    def _bump_retry(self, path: str) -> bool:
+        """Increment *path*'s retry counter; True while still under the cap."""
+        count = self._retry.get(path, 0)
+        if count >= _MAX_THUMB_RETRIES:
+            return False
+        self._retry[path] = count + 1
+        return True
+
+    def _on_thumb(self, path: str, pm: QPixmap, ok: bool) -> None:
+        self._in_flight.discard(path)
+        found = self._entry_index(path)
+        if found is None:
+            return
+        i, entry = found
+        if not ok and self._bump_retry(path):
+            # Transient decode failure (file mid-move/locked) — retry instead
+            # of caching a permanent placeholder.
+            self._ensure_fetched(entry)
+            return
+        self._retry.pop(path, None)
+        entry.icon = QIcon(pm)
+        entry.fetched = True
+        idx = self.index(i)
+        self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DecorationRole])
 
     def path_at(self, row: int) -> str | None:
         if 0 <= row < len(self._entries):

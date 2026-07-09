@@ -122,8 +122,9 @@ def test_reset_view_with_nothing_loaded_is_safe():
 class _ToggleView:
     """Attribute surface the loupe / reading-mode toggles touch."""
 
-    def __init__(self, *, deep: bool = True):
+    def __init__(self, *, deep: bool = True, grid: bool = False):
         self.deep_zoom = object() if deep else None
+        self.tile_grid_mode = grid
         self._loupe_enabled = False
         self._reading_mode = False
         self.reading_fits = 0
@@ -156,6 +157,13 @@ def test_loupe_ignored_without_deep_zoom():
     view = _ToggleView(deep=False)
     KeyActionDispatcher(view)._dispatch_toggle("loupe", None)   # noqa: SLF001
     assert view._loupe_enabled is False
+
+
+def test_loupe_toggles_in_tile_grid_mode():
+    view = _ToggleView(deep=False, grid=True)
+    dispatcher = KeyActionDispatcher(view)
+    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    assert view._loupe_enabled is True
 
 
 def test_reading_mode_toggles_and_fits_via_dispatcher():

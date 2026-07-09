@@ -100,15 +100,30 @@ def fits_within_canvas(view: GPUImageView) -> bool:
     return view.zoom <= full_fit * _FIT_EPSILON
 
 
-def should_refit_on_load(was_remembered: bool, view: GPUImageView) -> bool:
+def should_refit_on_load(
+    was_remembered: bool,
+    view: GPUImageView,
+    remembered_dims: tuple[int, int] | None = None,
+) -> bool:
     """Whether to content-fit an image on display.
 
     A fresh entry (``was_remembered`` False) always fits — so opening an image
     from the tile wall never inherits the previous view's leftover zoom. A
     genuinely remembered view is re-fit only when its whole image still fits the
     canvas; a real zoom-in is preserved.
+
+    ``remembered_dims`` is the base ``(w, h)`` the remembered zoom was saved
+    against. When the image's dimensions have since changed (a rotate swaps
+    width/height, a crop shrinks it) the remembered zoom is meaningless — at the
+    swapped dimensions a former whole-image fit reads as a zoom-in and
+    ``fits_within_canvas`` would wrongly skip the fit — so any dimension change
+    forces a refit.
     """
-    return (not was_remembered) or fits_within_canvas(view)
+    if not was_remembered:
+        return True
+    if remembered_dims is not None and tuple(remembered_dims) != _base_dimensions(view):
+        return True
+    return fits_within_canvas(view)
 
 
 def fit_to_window(view: GPUImageView) -> None:

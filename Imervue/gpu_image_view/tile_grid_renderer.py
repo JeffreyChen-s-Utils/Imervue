@@ -12,6 +12,7 @@ CI cannot exercise.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -94,6 +95,15 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         row, col = divmod(i, cols)
         x0 = col * cell + view.grid_offset_x
         y0 = row * cell + view.grid_offset_y
+        if not Path(path).exists():
+            view.offline_paths.add(path)
+            self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
+            view.missing_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
+            return
+        if path in getattr(view, "tile_errors", {}):
+            self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
+            view.error_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
+            return
         if path not in view.tile_cache:
             self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
             return
@@ -248,6 +258,8 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         # as dark squares so the grid layout is visible immediately. Stored in
         # screen coords; consumed by the overlay painter.
         view.placeholder_rects = []
+        view.error_tile_rects = []
+        view.missing_tile_rects = []
 
         # 在迴圈外設定一次 GL 狀態，避免每張 tile 都重複呼叫
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)

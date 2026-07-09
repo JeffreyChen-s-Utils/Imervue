@@ -61,6 +61,6 @@ def progress_token(params: dict[str, Any]) -> str | int | None:
     """Extract a request's ``_meta.progressToken`` (a string or int), or None."""
     meta = params.get("_meta")
     token = meta.get("progressToken") if isinstance(meta, dict) else None
-    if isinstance(token, bool) or not isinstance(token, (str, int)):
+    if isinstance(token, bool) or not isinstance(token, str | int):
         return None
     return token

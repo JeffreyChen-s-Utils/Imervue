@@ -1,5 +1,7 @@
 import logging
+import os
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, Qt, QTimer, QFileSystemWatcher
@@ -7,7 +9,7 @@ from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QSplitter, QSizePolicy,
     QStatusBar, QProgressBar, QMenu, QTabBar, QTabWidget,
-    QStackedWidget,
+    QComboBox, QDockWidget, QLineEdit, QPushButton, QStackedWidget,
 )
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
@@ -18,6 +20,18 @@ from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
 from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
 from Imervue.gui.toast import ToastManager
+from Imervue.image.browser_state import (
+    ImageFilterSpec,
+    ImageMetadataIndex,
+    _rating_matches,
+    auto_match_same_name,
+    detect_renamed_paths,
+    filter_paths,
+    migrate_view_path_state,
+    missing_paths,
+    relocate_root,
+    remove_missing,
+)
 from Imervue.integration_guide import _init_plugin_system_example
 from Imervue.menu.extra_tools_menu import build_extra_tools_menu
 from Imervue.menu.file_menu import build_file_menu
@@ -57,6 +71,35 @@ def _safe_submenus_of(parent) -> list:
     return out
 
 
+def _any_tag_label() -> str:
+    return language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag")
+
+
+def _path_matches_image_filter(path: str, tokens: list[str]) -> bool:
+    """Match simple folder filter tokens against one image path."""
+    return all(_filter_token_matches(path, token) for token in tokens)
+
+
+def _filter_token_matches(path: str, token: str) -> bool:
+    if token.startswith("tag:"):
+        from Imervue.user_settings.tags import get_tags_for_image
+        wanted = token[4:].lower()
+        return any(wanted in tag.lower() for tag in get_tags_for_image(path))
+    if token.startswith("rating:"):
+        return _rating_matches(path, token[7:])
+    if token.startswith("date:"):
+        return _date_matches(path, token[5:])
+    return token.lower() in Path(path).name.lower()
+
+
+def _date_matches(path: str, expr: str) -> bool:
+    try:
+        stamp = datetime.fromtimestamp(os.path.getmtime(path)).date().isoformat()
+    except OSError:
+        return False
+    return stamp.startswith(expr)
+
+
 class ImervueMainWindow(QMainWindow):
     def __init__(self, debug: bool = False):
         super().__init__()
@@ -81,9 +124,17 @@ class ImervueMainWindow(QMainWindow):
         # Language support
         self.language_wrapper = language_wrapper
         self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
+        self._image_metadata_index = ImageMetadataIndex()
+        self._folder_view_sessions: dict[str, dict] = dict(
+            user_setting_dict.get("folder_view_sessions") or {}
+        )
+        self._restoring_filter_controls = False
 
         self.icon_path = _app_icon_path()
         self.icon = QIcon(str(self.icon_path))
+        app = QApplication.instance()
+        if app is not None and not self.icon.isNull():
+            app.setWindowIcon(self.icon)
         self.setWindowIcon(self.icon)
 
         # ===== 頂層 QTabWidget =====
@@ -133,6 +184,22 @@ class ImervueMainWindow(QMainWindow):
         self.tree.setAnimated(False)
         self.tree.clicked.connect(self.on_file_clicked)
 
+        self.tree_search = QLineEdit()
+        self.tree_search.setClearButtonEnabled(True)
+        self.tree_search.setPlaceholderText(
+            language_wrapper.language_word_dict.get(
+                "tree_search_placeholder", "Search file tree...",
+            ),
+        )
+        self.tree_search.textChanged.connect(self.tree.set_search_text)
+
+        self._tree_panel = QWidget()
+        tree_layout = QVBoxLayout(self._tree_panel)
+        tree_layout.setContentsMargins(4, 4, 4, 4)
+        tree_layout.setSpacing(4)
+        tree_layout.addWidget(self.tree_search)
+        tree_layout.addWidget(self.tree)
+
         # 目錄載入完成後確保樹狀圖更新
         self.model.directoryLoaded.connect(self._on_directory_loaded)
 
@@ -168,6 +235,8 @@ class ImervueMainWindow(QMainWindow):
         from Imervue.gui.breadcrumb_bar import BreadcrumbBar
         self.breadcrumb = BreadcrumbBar(self)
         right_layout.addWidget(self.breadcrumb)
+
+        right_layout.addWidget(self._build_filter_row())
 
         self.filename_label = QLabel(
             language_wrapper.language_word_dict.get("main_window_current_filename")
@@ -210,37 +279,22 @@ class ImervueMainWindow(QMainWindow):
         viewer_row.setStretchFactor(1, 0)
         right_layout.addWidget(viewer_row, stretch=1)
 
-        def _on_name_changed(name):
-            base_template = language_wrapper.language_word_dict.get(
-                "main_window_current_filename_format",
-            ).format(name=name)
-            # Append "(i/n)" position info when the viewer knows its
-            # spot in the folder so the user can pace their browsing
-            # without hunting through the file list. Keep the
-            # baseline label so any locale that already localised
-            # the prefix stays untouched.
-            extras: list[str] = []
-            with contextlib.suppress(Exception):
-                images = self.viewer.model.images or []
-                idx = self.viewer.current_index
-                if 0 <= idx < len(images):
-                    extras.append(f"({idx + 1}/{len(images)})")
-            self.filename_label.setText(
-                base_template + ("  " + " ".join(extras) if extras else ""),
-            )
-            self.exif_sidebar.update_info()
-            # Keep the tab bar in lockstep with whatever image the viewer
-            # now shows. Only sync in deep-zoom mode — tile grid / folder
-            # browsing intentionally doesn't create tabs.
-            with contextlib.suppress(Exception):
-                images = self.viewer.model.images
-                idx = self.viewer.current_index
-                if self.viewer.deep_zoom and 0 <= idx < len(images):
-                    self._sync_current_tab_with_path(images[idx])
+        from Imervue.gui.image_issue_panel import ImageIssuePanel
+        self.image_issue_panel = ImageIssuePanel(self)
+        self._image_issue_dock = QDockWidget(
+            language_wrapper.language_word_dict.get(
+                "image_issues_title",
+                "Image load issues",
+            ),
+            self,
+        )
+        self._image_issue_dock.setWidget(self.image_issue_panel)
+        self._image_issue_dock.hide()
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._image_issue_dock)
 
-        self.viewer.on_filename_changed = _on_name_changed
+        self.viewer.on_filename_changed = self._on_viewer_filename_changed
 
-        splitter.addWidget(self.tree)
+        splitter.addWidget(self._tree_panel)
         splitter.addWidget(right_widget)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([400, 1000])
@@ -384,6 +438,8 @@ class ImervueMainWindow(QMainWindow):
         # ===== 資料夾監控 =====
         self._folder_watcher = QFileSystemWatcher(self)
         self._folder_watcher.directoryChanged.connect(self._on_watched_folder_changed)
+        self._folder_change_events = 0
+        self._folder_change_last_path = ""
         self._folder_refresh_timer = QTimer(self)
         self._folder_refresh_timer.setSingleShot(True)
         self._folder_refresh_timer.setInterval(500)  # 去抖動 500ms
@@ -648,10 +704,17 @@ class ImervueMainWindow(QMainWindow):
             self._view_stack.setCurrentIndex(1)
         else:
             self._view_stack.setCurrentIndex(0)
-            # If viewer was sitting on tile grid, re-render it fresh
+            # If viewer was sitting on tile grid, re-render it fresh. The wall
+            # renders straight from the tile cache with no per-tile lazy refill,
+            # so reload it whenever the cache no longer covers the folder
+            # (otherwise it would show blank placeholders).
             if self.viewer.model.images and not self.viewer.deep_zoom:
-                self.viewer.tile_grid_mode = True
-                self.viewer.update()
+                from Imervue.gpu_image_view.tile_loader import tile_grid_needs_reload
+                if tile_grid_needs_reload(self.viewer.tile_cache, self.viewer.model.images):
+                    self.viewer.load_tile_grid_async(list(self.viewer.model.images))
+                else:
+                    self.viewer.tile_grid_mode = True
+                    self.viewer.update()
 
         # Sync View menu radio buttons with the current mode
         grid_action = getattr(self, "_mode_action_grid", None)
@@ -666,7 +729,356 @@ class ImervueMainWindow(QMainWindow):
 
     def refresh_list_view(self) -> None:
         """Populate the list view from the viewer's current image list."""
-        self.image_list_view.set_paths(list(self.viewer.model.images))
+        self.image_list_view.set_paths(
+            list(self.viewer.model.images),
+            metadata_index=getattr(self, "_image_metadata_index", None),
+        )
+
+    def _build_filter_row(self) -> QWidget:
+        """Build the filename/tag/rating/date filter bar above the viewer."""
+        filter_row = QWidget()
+        filter_layout = QHBoxLayout(filter_row)
+        filter_layout.setContentsMargins(0, 0, 0, 0)
+        filter_layout.setSpacing(6)
+
+        self.image_filter = QLineEdit()
+        self.image_filter.setClearButtonEnabled(True)
+        self.image_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get(
+                "image_filter_filename_placeholder",
+                "Filename",
+            ),
+        )
+        self.image_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.image_filter, stretch=2)
+
+        self.tag_filter = QComboBox()
+        self.tag_filter.setEditable(True)
+        self.tag_filter.setMinimumWidth(120)
+        self.tag_filter.addItem(_any_tag_label(), "")
+        self.tag_filter.currentTextChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.tag_filter, stretch=1)
+
+        self.rating_filter = QComboBox()
+        self.rating_filter.setMinimumWidth(110)
+        self.rating_filter.addItem(
+            language_wrapper.language_word_dict.get("image_filter_any_rating", "Any rating"),
+            "",
+        )
+        for rating in range(1, 6):
+            self.rating_filter.addItem(f">= {rating}", f">={rating}")
+        self.rating_filter.currentIndexChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.rating_filter, stretch=0)
+
+        self.date_from_filter = QLineEdit()
+        self.date_from_filter.setClearButtonEnabled(True)
+        self.date_from_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get("image_filter_date_from", "From date"),
+        )
+        self.date_from_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.date_from_filter, stretch=1)
+
+        self.date_to_filter = QLineEdit()
+        self.date_to_filter.setClearButtonEnabled(True)
+        self.date_to_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get("image_filter_date_to", "To date"),
+        )
+        self.date_to_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.date_to_filter, stretch=1)
+
+        self.missing_batch_button = QPushButton(
+            language_wrapper.language_word_dict.get("missing_batch_menu", "Missing"),
+        )
+        self.missing_batch_button.clicked.connect(self._show_missing_batch_menu)
+        filter_layout.addWidget(self.missing_batch_button, stretch=0)
+        return filter_row
+
+    def _on_viewer_filename_changed(self, name) -> None:
+        base_template = language_wrapper.language_word_dict.get(
+            "main_window_current_filename_format",
+        ).format(name=name)
+        # Append "(i/n)" position info when the viewer knows its
+        # spot in the folder so the user can pace their browsing
+        # without hunting through the file list. Keep the
+        # baseline label so any locale that already localised
+        # the prefix stays untouched.
+        extras: list[str] = []
+        with contextlib.suppress(Exception):
+            images = self.viewer.model.images or []
+            idx = self.viewer.current_index
+            if 0 <= idx < len(images):
+                extras.append(f"({idx + 1}/{len(images)})")
+        self.filename_label.setText(
+            base_template + ("  " + " ".join(extras) if extras else ""),
+        )
+        self.exif_sidebar.update_info()
+        # Keep the tab bar in lockstep with whatever image the viewer
+        # now shows. Only sync in deep-zoom mode — tile grid / folder
+        # browsing intentionally doesn't create tabs.
+        with contextlib.suppress(Exception):
+            images = self.viewer.model.images
+            idx = self.viewer.current_index
+            if self.viewer.deep_zoom and 0 <= idx < len(images):
+                self._sync_current_tab_with_path(images[idx])
+
+    def _on_image_filter_changed(self, *_args) -> None:
+        if getattr(self, "_restoring_filter_controls", False):
+            return
+        self._apply_image_filter()
+        self._save_current_folder_session()
+
+    def _apply_image_filter(self, text: str | None = None) -> None:
+        """Filter the current folder by filename/tag/rating/date immediately."""
+        base = list(getattr(self.viewer, "_unfiltered_images", None) or self.viewer.model.images)
+        if text is None:
+            spec = self._current_filter_spec()
+            filtered = filter_paths(base, spec, self._image_metadata_index)
+        else:
+            filtered = self._filter_image_paths(base, text)
+        current = self.viewer._current_path()
+        if self.viewer.tile_grid_mode:
+            from Imervue.gpu_image_view.tile_loader import sync_tile_grid_incremental
+            sync_tile_grid_incremental(self.viewer, filtered)
+        else:
+            self.viewer.model.set_images(filtered)
+        if current in filtered:
+            self.viewer.current_index = filtered.index(current)
+        elif filtered:
+            self.viewer.current_index = 0
+        else:
+            self.viewer.current_index = 0
+        self.refresh_list_view()
+        self.viewer.update()
+
+    def _current_filter_spec(self) -> ImageFilterSpec:
+        tag = ""
+        if hasattr(self, "tag_filter"):
+            tag = self.tag_filter.currentData() or self.tag_filter.currentText()
+            if tag == _any_tag_label():
+                tag = ""
+        rating = ""
+        if hasattr(self, "rating_filter"):
+            rating = self.rating_filter.currentData() or ""
+        return ImageFilterSpec(
+            filename=self.image_filter.text() if hasattr(self, "image_filter") else "",
+            tag=str(tag or ""),
+            rating=str(rating or ""),
+            date_from=self._parse_filter_date(
+                self.date_from_filter.text() if hasattr(self, "date_from_filter") else "",
+            ),
+            date_to=self._parse_filter_date(
+                self.date_to_filter.text() if hasattr(self, "date_to_filter") else "",
+            ),
+        )
+
+    @staticmethod
+    def _parse_filter_date(value: str) -> date | None:
+        value = (value or "").strip()
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _filter_state(self) -> dict:
+        return {
+            "filename": self.image_filter.text() if hasattr(self, "image_filter") else "",
+            "tag": self.tag_filter.currentData() if hasattr(self, "tag_filter") else "",
+            "rating": self.rating_filter.currentData() if hasattr(self, "rating_filter") else "",
+            "date_from": self.date_from_filter.text() if hasattr(self, "date_from_filter") else "",
+            "date_to": self.date_to_filter.text() if hasattr(self, "date_to_filter") else "",
+        }
+
+    def _restore_filter_state(self, state: dict | None) -> None:
+        if not state:
+            state = {}
+        self._restoring_filter_controls = True
+        try:
+            if hasattr(self, "image_filter"):
+                self.image_filter.setText(str(state.get("filename") or ""))
+            if hasattr(self, "tag_filter"):
+                tag = str(state.get("tag") or "")
+                idx = self.tag_filter.findData(tag)
+                if idx >= 0:
+                    self.tag_filter.setCurrentIndex(idx)
+                else:
+                    self.tag_filter.setEditText(tag)
+            if hasattr(self, "rating_filter"):
+                rating = str(state.get("rating") or "")
+                idx = self.rating_filter.findData(rating)
+                self.rating_filter.setCurrentIndex(max(idx, 0))
+            if hasattr(self, "date_from_filter"):
+                self.date_from_filter.setText(str(state.get("date_from") or ""))
+            if hasattr(self, "date_to_filter"):
+                self.date_to_filter.setText(str(state.get("date_to") or ""))
+        finally:
+            self._restoring_filter_controls = False
+
+    def _refresh_tag_filter_options(self) -> None:
+        if not hasattr(self, "tag_filter"):
+            return
+        from Imervue.user_settings.tags import get_all_tags
+        current = self.tag_filter.currentData() or self.tag_filter.currentText() or ""
+        self._restoring_filter_controls = True
+        try:
+            self.tag_filter.clear()
+            self.tag_filter.addItem(_any_tag_label(), "")
+            for tag in sorted(get_all_tags()):
+                self.tag_filter.addItem(tag, tag)
+            idx = self.tag_filter.findData(current)
+            if idx >= 0:
+                self.tag_filter.setCurrentIndex(idx)
+            elif current:
+                self.tag_filter.setEditText(str(current))
+        finally:
+            self._restoring_filter_controls = False
+
+    def _show_missing_batch_menu(self) -> None:
+        if not hasattr(self, "missing_batch_button"):
+            return
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+        scan_action = menu.addAction(
+            lang.get("missing_batch_scan_same_name", "Auto-match same-name files"),
+        )
+        remove_action = menu.addAction(
+            lang.get("missing_batch_remove", "Remove missing from view"),
+        )
+        relocate_action = menu.addAction(
+            lang.get("missing_batch_relocate_root", "Relocate root folder..."),
+        )
+        chosen = menu.exec(self.missing_batch_button.mapToGlobal(
+            self.missing_batch_button.rect().bottomLeft(),
+        ))
+        if chosen is scan_action:
+            self._batch_auto_match_missing()
+        elif chosen is remove_action:
+            self._batch_remove_missing()
+        elif chosen is relocate_action:
+            self._batch_relocate_root()
+
+    def _missing_candidates(self) -> list[str]:
+        paths = []
+        paths.extend(getattr(self.viewer, "_unfiltered_images", []) or [])
+        paths.extend(getattr(getattr(self.viewer, "model", None), "images", []) or [])
+        if getattr(self.viewer, "_deep_zoom_error", None):
+            paths.append(self.viewer._deep_zoom_error[0])
+        seen = set()
+        unique = []
+        for path in paths:
+            if path and path not in seen:
+                seen.add(path)
+                unique.append(path)
+        return missing_paths(unique)
+
+    def _batch_auto_match_missing(self) -> None:
+        folder = self._current_view_folder()
+        mapping = auto_match_same_name(self._missing_candidates(), folder)
+        self._apply_missing_replacements(mapping)
+
+    def _batch_remove_missing(self) -> None:
+        base = list(getattr(self.viewer, "_unfiltered_images", None) or self.viewer.model.images)
+        kept = remove_missing(base)
+        removed = len(base) - len(kept)
+        self.viewer._unfiltered_images = kept
+        offline = getattr(self.viewer, "offline_paths", None)
+        if isinstance(offline, set):
+            offline.intersection_update(set(kept))
+        if hasattr(self.viewer, "tile_errors"):
+            self.viewer.tile_errors = {
+                path: msg for path, msg in getattr(self.viewer, "tile_errors", {}).items()
+                if path in kept
+            }
+        self._apply_image_filter()
+        self._toast_missing_result("missing_batch_removed_done", removed)
+
+    def _batch_relocate_root(self) -> None:
+        missing = self._missing_candidates()
+        if not missing:
+            self._toast_missing_result("missing_batch_none", 0)
+            return
+        from PySide6.QtWidgets import QFileDialog
+        lang = language_wrapper.language_word_dict
+        new_root = QFileDialog.getExistingDirectory(
+            self,
+            lang.get("missing_batch_relocate_root", "Relocate root folder..."),
+            str(Path(missing[0]).parent),
+        )
+        if not new_root:
+            return
+        old_root = self._common_missing_root(missing)
+        self._apply_missing_replacements(relocate_root(missing, old_root, new_root))
+
+    @staticmethod
+    def _common_missing_root(paths: list[str]) -> str:
+        parents = [str(Path(path).parent) for path in paths]
+        try:
+            return os.path.commonpath(parents)
+        except ValueError:
+            return parents[0] if parents else ""
+
+    def _apply_missing_replacements(self, mapping: dict[str, str]) -> None:
+        if not mapping:
+            self._toast_missing_result("missing_batch_none", 0)
+            return
+        viewer = self.viewer
+        migrate_view_path_state(viewer, mapping)
+        for old, new in mapping.items():
+            self._image_metadata_index.move(old, new)
+            self._migrate_user_path_metadata(old, new)
+        for attr in ("_unfiltered_images",):
+            paths = list(getattr(viewer, attr, []) or [])
+            setattr(viewer, attr, [mapping.get(path, path) for path in paths])
+        if getattr(viewer, "model", None) is not None:
+            viewer.model.set_images([mapping.get(path, path) for path in viewer.model.images])
+        if getattr(viewer, "_deep_zoom_error", None):
+            old_path, _ = viewer._deep_zoom_error
+            if old_path in mapping:
+                viewer._deep_zoom_error = None
+                viewer.load_deep_zoom_image(mapping[old_path])
+        self._apply_image_filter()
+        self._toast_missing_result("missing_batch_relinked_done", len(mapping))
+
+    @staticmethod
+    def _migrate_user_path_metadata(old_path: str, new_path: str) -> None:
+        ratings = user_setting_dict.get("image_ratings")
+        if isinstance(ratings, dict) and old_path in ratings and new_path not in ratings:
+            ratings[new_path] = ratings.pop(old_path)
+        tags = user_setting_dict.get("image_tags")
+        if isinstance(tags, dict):
+            for paths in tags.values():
+                if isinstance(paths, list) and old_path in paths and new_path not in paths:
+                    paths[paths.index(old_path)] = new_path
+
+    def _toast_missing_result(self, key: str, count: int) -> None:
+        if not hasattr(self, "toast"):
+            return
+        lang = language_wrapper.language_word_dict
+        fallback = {
+            "missing_batch_none": "No missing files matched",
+            "missing_batch_removed_done": "Removed {n} missing file(s)",
+            "missing_batch_relinked_done": "Relinked {n} missing file(s)",
+        }.get(key, "{n}")
+        msg = lang.get(key, fallback).format(n=count)
+        if count:
+            self.toast.success(msg)
+        else:
+            self.toast.info(msg)
+
+    def record_image_issue(self, path: str, message: str) -> None:
+        panel = getattr(self, "image_issue_panel", None)
+        if panel is not None:
+            panel.add_issue(path, message)
+
+    def clear_image_issue(self, path: str) -> None:
+        panel = getattr(self, "image_issue_panel", None)
+        if panel is not None:
+            panel.clear_issue(path)
+
+    @staticmethod
+    def _filter_image_paths(paths: list[str], query: str) -> list[str]:
+        return filter_paths(paths, ImageFilterSpec(raw_query=query))
 
     def _on_list_activated(self, path: str) -> None:
         """Double-clicking a row opens that image in the deep-zoom viewer.
@@ -777,7 +1189,7 @@ class ImervueMainWindow(QMainWindow):
         widgets = [
             self.menuBar(),
             self.statusBar(),
-            self.tree,
+            getattr(self, "_tree_panel", self.tree),
             self._tab_bar,
             self.filename_label,
         ]
@@ -844,28 +1256,192 @@ class ImervueMainWindow(QMainWindow):
             self._tree_watchdog.watch(folder)
 
     def _on_watched_folder_changed(self, _path: str):
-        """資料夾內容變更 → 啟動去抖動計時器"""
-        self._folder_refresh_timer.start()
+        """Coalesce folder-change bursts into one stable refresh."""
+        self._folder_change_events += 1
+        self._folder_change_last_path = _path
+        self._folder_refresh_timer.start(1200 if self._folder_change_events >= 8 else 500)
 
     def _do_folder_refresh(self):
         """去抖動後重新掃描資料夾並更新 tile grid"""
+        self._folder_change_events = 0
         viewer = self.viewer
-        if not viewer.model.images:
+        folder = self._current_view_folder()
+        if not folder:
             return
-        # 取得目前資料夾
-        first = viewer.model.images[0]
-        folder = str(Path(first).parent)
         if not Path(folder).is_dir():
+            self._handle_active_folder_missing(folder)
             return
 
-        from Imervue.gpu_image_view.images.image_loader import _scan_images
-        new_images = _scan_images(folder)
+        from Imervue.gpu_image_view.images.image_loader import _scan_images_for_user
+        new_images = _scan_images_for_user(folder)
+        self._image_metadata_index.prime(new_images, limit=512)
 
-        if set(new_images) != set(viewer.model.images):
-            viewer.model.images = new_images
-            if viewer.tile_grid_mode:
-                viewer.clear_tile_grid()
-                viewer.load_tile_grid_async(image_paths=new_images)
+        current_full = list(getattr(viewer, "_unfiltered_images", None) or viewer.model.images)
+        if new_images != current_full:
+            self._apply_refreshed_image_list(new_images)
+
+    def _current_view_folder(self) -> str:
+        """Folder backing the current viewer state, if any."""
+        images = self.viewer.model.images
+        if images:
+            return str(Path(images[0]).parent)
+        dirs = self._folder_watcher.directories()
+        return dirs[0] if dirs else ""
+
+    def _save_current_folder_session(self) -> None:
+        folder = self._current_view_folder()
+        if not folder:
+            return
+        viewer = self.viewer
+        scroll = 0
+        if self._browse_mode == "list" and hasattr(self, "image_list_view"):
+            with contextlib.suppress(Exception):
+                scroll = self.image_list_view.verticalScrollBar().value()
+        elif hasattr(viewer, "scroll_y"):
+            scroll = int(getattr(viewer, "scroll_y", 0))
+        self._folder_view_sessions[folder] = {
+            "filter": self._filter_state(),
+            "browse_mode": self._browse_mode,
+            "scroll": scroll,
+            "selected": list(getattr(viewer, "selected_tiles", set())),
+            "current": viewer._current_path() if hasattr(viewer, "_current_path") else "",
+        }
+        user_setting_dict["folder_view_sessions"] = self._folder_view_sessions
+        write_user_setting()
+
+    def _restore_folder_session(self, folder: str) -> None:
+        state = self._folder_view_sessions.get(folder) or {}
+        self._restore_filter_state(state.get("filter") or {})
+        selected = set(state.get("selected") or [])
+        if isinstance(getattr(self.viewer, "selected_tiles", None), set):
+            self.viewer.selected_tiles.clear()
+            self.viewer.selected_tiles.update(
+                path for path in selected if path in self.viewer.model.images
+            )
+        current = state.get("current") or ""
+        if current in self.viewer.model.images:
+            self.viewer.current_index = self.viewer.model.images.index(current)
+        self._apply_image_filter()
+        if state.get("browse_mode") in {"grid", "list"}:
+            self.set_browse_mode(state["browse_mode"])
+        scroll = int(state.get("scroll") or 0)
+        if self._browse_mode == "list" and hasattr(self, "image_list_view"):
+            QTimer.singleShot(0, lambda: self.image_list_view.verticalScrollBar().setValue(scroll))
+        elif hasattr(self.viewer, "scroll_y"):
+            self.viewer.scroll_y = scroll
+
+    def _handle_active_folder_missing(self, folder: str) -> None:
+        """Reset viewer chrome when the folder currently being browsed is gone."""
+        viewer = self.viewer
+        viewer._unfiltered_images = []
+        viewer.load_tile_grid_async([])
+        viewer.current_index = 0
+        if self._browse_mode == "list":
+            self.refresh_list_view()
+            self._view_stack.setCurrentIndex(1)
+        else:
+            self._view_stack.setCurrentIndex(0)
+
+        parent = self._nearest_existing_parent(Path(folder))
+        if parent:
+            self.model.setRootPath(parent)
+            self.tree.setRootIndex(self.model.index(parent))
+            self._clear_view_folder_watch()
+            if hasattr(self, "_tree_watchdog"):
+                self._tree_watchdog.watch(parent)
+            self.breadcrumb.set_path(parent)
+        else:
+            self.watch_folder("")
+
+        lang = language_wrapper.language_word_dict
+        self.filename_label.setText(
+            lang.get(
+                "main_window_folder_missing",
+                "Folder no longer exists: {path}",
+            ).format(path=folder),
+        )
+        if hasattr(self, "toast"):
+            self.toast.warning(
+                lang.get(
+                    "folder_removed",
+                    "Folder was removed: {name}",
+                ).format(name=Path(folder).name or folder),
+            )
+
+    def _clear_view_folder_watch(self) -> None:
+        """Stop the viewer folder watcher without changing the file-tree root."""
+        watcher = getattr(self, "_folder_watcher", None)
+        if watcher is None:
+            return
+        dirs = watcher.directories()
+        if dirs:
+            watcher.removePaths(dirs)
+
+    @staticmethod
+    def _nearest_existing_parent(path: Path) -> str:
+        """Return the nearest existing parent folder for a removed path."""
+        for candidate in (path.parent, *path.parents):
+            if candidate and candidate.is_dir():
+                return str(candidate)
+        return ""
+
+    def _apply_refreshed_image_list(self, new_images: list[str]) -> None:
+        """Update tile/list/deep-zoom state after an external folder change."""
+        viewer = self.viewer
+        old_images = list(viewer.model.images)
+        old_full = list(getattr(viewer, "_unfiltered_images", None) or old_images)
+        rename_map = detect_renamed_paths(old_full, new_images, self._image_metadata_index)
+        if rename_map:
+            migrate_view_path_state(viewer, rename_map)
+            for old, new in rename_map.items():
+                self._image_metadata_index.move(old, new)
+        old_index = viewer.current_index
+        current_path = (
+            old_images[old_index]
+            if 0 <= old_index < len(old_images) else None
+        )
+        current_path = rename_map.get(current_path, current_path)
+
+        if not new_images:
+            viewer._unfiltered_images = []
+            viewer.load_tile_grid_async([])
+            viewer.current_index = 0
+            if self._browse_mode == "list":
+                self.refresh_list_view()
+            return
+
+        viewer._unfiltered_images = list(new_images)
+        self._image_metadata_index.prime(new_images, limit=512)
+        self._refresh_tag_filter_options()
+        filtered_images = filter_paths(
+            new_images,
+            self._current_filter_spec(),
+            self._image_metadata_index,
+        )
+
+        if viewer.tile_grid_mode:
+            from Imervue.gpu_image_view.tile_loader import sync_tile_grid_incremental
+            sync_tile_grid_incremental(viewer, filtered_images)
+            return
+
+        viewer.model.set_images(filtered_images)
+        if current_path in filtered_images:
+            viewer.current_index = filtered_images.index(current_path)
+            self.refresh_list_view()
+            viewer.update()
+            return
+
+        if viewer.deep_zoom is not None and filtered_images:
+            viewer.current_index = min(old_index, len(filtered_images) - 1)
+            viewer._clear_deep_zoom()
+            viewer.tile_grid_mode = False
+            viewer.load_deep_zoom_image(filtered_images[viewer.current_index])
+        else:
+            viewer.current_index = (
+                min(old_index, len(filtered_images) - 1)
+                if filtered_images else 0
+            )
+            self.refresh_list_view()
             viewer.update()
 
     # ==========================
@@ -884,10 +1460,17 @@ class ImervueMainWindow(QMainWindow):
         """
         if Path(path).is_dir():
             # 點擊資料夾 → 導航進入並載入圖片
+            self._save_current_folder_session()
             self.model.setRootPath(path)
             self.tree.setRootIndex(self.model.index(path))
             self.viewer.clear_tile_grid()
             open_path(main_gui=self.viewer, path=path)
+            self._image_metadata_index.prime(
+                getattr(self.viewer, "_unfiltered_images", self.viewer.model.images),
+                limit=512,
+            )
+            self._refresh_tag_filter_options()
+            self._restore_folder_session(path)
             self.filename_label.setText(
                 language_wrapper.language_word_dict.get(
                     "main_window_current_folder_format"
@@ -896,6 +1479,7 @@ class ImervueMainWindow(QMainWindow):
             self.breadcrumb.set_path(path)
             self.watch_folder(path)
         elif Path(path).is_file():
+            self._save_current_folder_session()
             self.viewer.clear_tile_grid()
             open_path(main_gui=self.viewer, path=path)
             self.breadcrumb.set_path(str(Path(path).parent))
@@ -949,6 +1533,12 @@ class ImervueMainWindow(QMainWindow):
         self.model.setRootPath(folder)
         self.tree.setRootIndex(self.model.index(folder))
         open_path(main_gui=self.viewer, path=folder)
+        self._image_metadata_index.prime(
+            getattr(self.viewer, "_unfiltered_images", self.viewer.model.images),
+            limit=512,
+        )
+        self._refresh_tag_filter_options()
+        self._restore_folder_session(folder)
         self.filename_label.setText(
             language_wrapper.language_word_dict.get(
                 "main_window_current_folder_format"

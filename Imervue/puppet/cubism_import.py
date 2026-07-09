@@ -250,9 +250,9 @@ def _load_motion_entry(
     # motion3's own values when present — matches Cubism's rule.
     fade_in = entry.get("FadeInTime")
     fade_out = entry.get("FadeOutTime")
-    if isinstance(fade_in, (int, float)):
+    if isinstance(fade_in, int | float):
         motion.fade_in_duration = float(fade_in)
-    if isinstance(fade_out, (int, float)):
+    if isinstance(fade_out, int | float):
         motion.fade_out_duration = float(fade_out)
     sound_ref = entry.get("Sound")
     if isinstance(sound_ref, str) and sound_ref:

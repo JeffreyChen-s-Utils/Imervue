@@ -80,7 +80,7 @@ def test_write_snapshot_metadata_round_trips(tmp_path):
     raw = json.loads(snapshot.meta_path.read_text(encoding="utf-8"))
     assert raw["project_name"] == "Round"
     assert raw["source_hint"] == "hint"
-    assert isinstance(raw["created_at"], (int, float))
+    assert isinstance(raw["created_at"], int | float)
 
 
 def test_write_snapshot_creates_directory_if_missing(tmp_path):

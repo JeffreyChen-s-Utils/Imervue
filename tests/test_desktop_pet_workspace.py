@@ -101,6 +101,73 @@ def test_successful_load_auto_shows_pet(qapp, tmp_path, monkeypatch):
         ws.deleteLater()
 
 
+def test_load_puppet_show_false_does_not_check_box(qapp, tmp_path, monkeypatch):
+    """``load_puppet(show=False)`` loads the rig but must leave the overlay
+    hidden — the silent session-restore path relies on this so a persisted
+    pet doesn't force itself open regardless of ``show_on_launch``."""
+    from Imervue.desktop_pet.pet_window import PetWindow
+    monkeypatch.setattr(PetWindow, "load_puppet_file", lambda self, path: True)
+    ws = PetWorkspace()
+    try:
+        assert ws._show_check.isChecked() is False   # noqa: SLF001
+        assert ws.load_puppet(tmp_path / "any.puppet", show=False) is True
+        assert ws._show_check.isChecked() is False   # noqa: SLF001
+    finally:
+        if ws.pet_window() is not None:
+            ws.pet_window().hide()
+            ws.pet_window().deleteLater()
+        ws.deleteLater()
+
+
+def _restore_with_settings(monkeypatch, tmp_path, *, show_on_launch: bool):
+    """Build a workspace, plant a persisted rig, and re-run the restore.
+
+    The workspace is built first (with clean, fully-defaulted settings so
+    ``_build_ui`` has every key it reads); only then is ``load`` overridden to
+    return a persisted-rig dict, and the restore re-run explicitly.
+    """
+    from Imervue.desktop_pet import pet_workspace
+    from Imervue.desktop_pet.pet_window import PetWindow
+    monkeypatch.setattr(PetWindow, "load_puppet_file", lambda self, path: True)
+    ws = PetWorkspace()
+    rig = tmp_path / "persisted.puppet"
+    rig.write_bytes(b"PK\x03\x04")  # just needs to be a real file
+    settings = pet_workspace.pet_settings.load()  # full defaults from the isolated store
+    settings["last_rig_path"] = str(rig)
+    settings["show_on_launch"] = show_on_launch
+    monkeypatch.setattr(
+        pet_workspace.pet_settings, "load", lambda *a, **k: dict(settings),
+    )
+    ws._restore_persisted_session()   # noqa: SLF001
+    return ws
+
+
+def test_restore_does_not_show_pet_when_show_on_launch_false(qapp, tmp_path, monkeypatch):
+    """The regression: a persisted rig used to force the overlay open on every
+    launch because ``load_puppet`` auto-ticked the show box. With
+    ``show_on_launch`` disabled the pet must stay hidden."""
+    ws = _restore_with_settings(monkeypatch, tmp_path, show_on_launch=False)
+    try:
+        assert ws._show_check.isChecked() is False   # noqa: SLF001
+    finally:
+        if ws.pet_window() is not None:
+            ws.pet_window().hide()
+            ws.pet_window().deleteLater()
+        ws.deleteLater()
+
+
+def test_restore_shows_pet_when_show_on_launch_true(qapp, tmp_path, monkeypatch):
+    """When the user explicitly opted in, the overlay is restored visible."""
+    ws = _restore_with_settings(monkeypatch, tmp_path, show_on_launch=True)
+    try:
+        assert ws._show_check.isChecked() is True   # noqa: SLF001
+    finally:
+        if ws.pet_window() is not None:
+            ws.pet_window().hide()
+            ws.pet_window().deleteLater()
+        ws.deleteLater()
+
+
 def test_attach_tray_stores_reference(qapp):
     """The tray hookup is optional and goes through
     ``attach_tray``. The workspace just needs to keep the

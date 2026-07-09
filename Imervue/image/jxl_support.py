@@ -25,15 +25,26 @@ def is_jxl_path(path: str) -> bool:
 
 
 @lru_cache(maxsize=1)
+def _register_jxl_opener() -> bool:
+    """Import pillow-jxl (registers the JXL codec as a side effect; cached).
+
+    Raises ``ImportError`` when the plugin is absent. ``lru_cache`` does not
+    memoise exceptions, so the failure is not cached and a plugin installed
+    after launch self-heals on the next call instead of needing a restart.
+    """
+    import pillow_jxl  # noqa: F401  (import registers the JXL codec)
+    return True
+
+
 def ensure_jxl_opener() -> bool:
     """Register the pillow-jxl codec once; return its availability.
 
-    Importing ``pillow_jxl`` registers the JXL open/save handlers as a side
-    effect. Memoised, and returns ``False`` (cached) when the plugin is absent.
+    The successful registration is memoised, but a missing plugin returns
+    ``False`` without caching so a runtime install self-heals in the same
+    session.
     """
     try:
-        import pillow_jxl  # noqa: F401  (import registers the JXL codec)
+        return _register_jxl_opener()
     except ImportError:
         logger.info("pillow-jxl-plugin not installed — JPEG-XL files cannot be decoded.")
         return False
-    return True

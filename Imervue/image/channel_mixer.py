@@ -73,7 +73,7 @@ class ChannelMixerOptions:
 
 def _clamp_row(value, default: list[float], low: float, high: float) -> list[float]:
     """Coerce ``value`` to a 3-element float list within ``[low, high]``."""
-    if not isinstance(value, (list, tuple)) or len(value) != 3:
+    if not isinstance(value, list | tuple) or len(value) != 3:
         return list(default)
     out = []
     for v in value:

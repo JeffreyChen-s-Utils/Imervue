@@ -33,6 +33,8 @@ class TestImageListModel:
     def test_name_display_uses_basename(self, list_mod, tmp_path):
         model_cls, _ = list_mod
         path = str(tmp_path / "sub" / "pic.jpg")
+        Path(path).parent.mkdir()
+        Path(path).write_bytes(b"fake")
         m = model_cls([path])
         idx = m.index(0, model_cls.COL_NAME)
         assert m.data(idx, Qt.ItemDataRole.DisplayRole) == "pic.jpg"
@@ -60,6 +62,15 @@ class TestImageListModel:
         m = model_cls([p])
         idx = m.index(0, 0)
         assert m.data(idx, Qt.ItemDataRole.UserRole) == p
+
+    def test_missing_path_is_marked_in_name_column(self, list_mod, tmp_path):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "gone.png")
+        m = model_cls([p])
+        idx = m.index(0, model_cls.COL_NAME)
+        assert "gone.png" in m.data(idx, Qt.ItemDataRole.DisplayRole)
+        assert "Missing" in m.data(idx, Qt.ItemDataRole.DisplayRole)
+        assert m.is_missing_at(0) is True
 
     def test_rating_display_is_empty_when_unrated(self, list_mod, tmp_path):
         from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -222,3 +233,65 @@ def test_reveal_path_handles_unknown_target(qapp, tmp_path, monkeypatch):
     finally:
         view.deleteLater()
     assert opened, "reveal should delegate to QDesktopServices.openUrl"
+
+
+class TestThumbFetchRetry:
+    """A transient stat/decode failure must retry, not blank the row forever."""
+
+    @staticmethod
+    def _model(model_cls, path, monkeypatch):
+        m = model_cls([path])
+        started: list = []
+        monkeypatch.setattr(m._pool, "start", started.append)  # noqa: SLF001
+        return m, started
+
+    @staticmethod
+    def _pixmap():
+        from PySide6.QtGui import QPixmap
+        return QPixmap(48, 48)
+
+    def test_success_populates_row_and_clears_state(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._model(model_cls, p, monkeypatch)
+        m._on_fetched(p, self._pixmap(), 100, 80, 12.5, 1.0, True)  # noqa: SLF001
+        _, row = m._row_index(p)  # noqa: SLF001
+        assert row.fetched is True
+        assert (row.width, row.height) == (100, 80)
+        assert p not in m._in_flight  # noqa: SLF001
+        assert p not in m._retry  # noqa: SLF001
+
+    def test_transient_failure_requeues_without_caching(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, started = self._model(model_cls, p, monkeypatch)
+        m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+        _, row = m._row_index(p)  # noqa: SLF001
+        assert row.fetched is False           # not cached as a permanent blank
+        assert m._retry[p] == 1               # noqa: SLF001
+        assert p in m._in_flight              # re-queued  # noqa: SLF001
+        assert len(started) == 1
+
+    def test_failure_caps_then_falls_back_to_placeholder(self, list_mod, tmp_path, monkeypatch):
+        from Imervue.gui.image_list_view import _MAX_THUMB_RETRIES
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._model(model_cls, p, monkeypatch)
+        for _ in range(_MAX_THUMB_RETRIES):
+            m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+        assert m._row_index(p)[1].fetched is False  # noqa: SLF001
+        # One failure past the cap caches the placeholder so it stops retrying.
+        m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+        _, row = m._row_index(p)  # noqa: SLF001
+        assert row.fetched is True
+        assert row.width is None and row.size_kb is None
+        assert p not in m._retry  # noqa: SLF001
+
+    def test_late_callback_for_removed_path_is_ignored(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._model(model_cls, p, monkeypatch)
+        # A callback arriving after the folder changed must be a safe no-op.
+        m._on_fetched(str(tmp_path / "gone.png"), self._pixmap(),  # noqa: SLF001
+                      1, 1, 1.0, 1.0, True)
+        assert m._row_index(p)[1].fetched is False  # noqa: SLF001

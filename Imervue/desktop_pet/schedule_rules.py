@@ -70,7 +70,7 @@ def _coerce_weekdays(value: Any) -> list[int] | None:
         return None
     days = sorted({
         int(d) for d in value
-        if isinstance(d, (int, float)) and not isinstance(d, bool)
+        if isinstance(d, int | float) and not isinstance(d, bool)
         and 0 <= int(d) <= _MAX_WEEKDAY
     })
     return days or None

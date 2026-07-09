@@ -81,7 +81,7 @@ def mirror_rotation_deformer(
     if drawables is not None:
         out.drawables = list(drawables)
     anchor = out.form.get("anchor", [axis_x, 0.0])
-    if isinstance(anchor, (list, tuple)) and len(anchor) == 2:
+    if isinstance(anchor, list | tuple) and len(anchor) == 2:
         out.form["anchor"] = [2.0 * axis_x - float(anchor[0]), float(anchor[1])]
     if "angle" in out.form:
         out.form["angle"] = -float(out.form["angle"])

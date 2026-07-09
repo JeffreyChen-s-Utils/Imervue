@@ -272,9 +272,9 @@ def _clamped(settings: dict[str, Any]) -> dict[str, Any]:
     # saved position".
     pos = out.get("position")
     if (
-        not isinstance(pos, (list, tuple))
+        not isinstance(pos, list | tuple)
         or len(pos) != 2
-        or not all(isinstance(v, (int, float)) for v in pos)
+        or not all(isinstance(v, int | float) for v in pos)
     ):
         out["position"] = list(DEFAULTS["position"])
     else:

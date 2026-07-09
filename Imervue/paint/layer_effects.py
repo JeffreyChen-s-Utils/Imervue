@@ -325,12 +325,12 @@ def _unpremultiply(rgba: np.ndarray) -> np.ndarray:
 
 def _coerce_rgba(raw) -> tuple[int, int, int, int]:
     """Normalise a colour payload into an RGBA tuple, clamping values."""
-    if isinstance(raw, (list, tuple)) and len(raw) == 4:
+    if isinstance(raw, list | tuple) and len(raw) == 4:
         try:
             return tuple(max(0, min(255, int(c))) for c in raw)   # type: ignore[return-value]
         except (TypeError, ValueError):
             return (0, 0, 0, 255)
-    if isinstance(raw, (list, tuple)) and len(raw) == 3:
+    if isinstance(raw, list | tuple) and len(raw) == 3:
         try:
             return (
                 *(max(0, min(255, int(c))) for c in raw),

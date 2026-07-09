@@ -48,6 +48,8 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     # === 新增快速操作 ===
     _show_in_explorer_action(main_gui, build_right_click_menu)
     _copy_path_action(main_gui, build_right_click_menu)
+    _relocate_missing_action(main_gui, build_right_click_menu)
+    _retry_load_action(main_gui, build_right_click_menu)
     _copy_image_action(main_gui, build_right_click_menu)
     _ocr_action(main_gui, build_right_click_menu)
     _split_pages_action(main_gui, build_right_click_menu)
@@ -56,6 +58,7 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
 
     _modify_submenu(main_gui, build_right_click_menu)
     _batch_actions(main_gui, build_right_click_menu)
+    _staging_tray_actions(main_gui, build_right_click_menu)
     _delete_action(main_gui, build_right_click_menu)
     _set_wallpaper_action(main_gui, build_right_click_menu)
 
@@ -101,6 +104,8 @@ def _current_image_path(main_gui: GPUImageView) -> str | None:
     images = main_gui.model.images
     if not images:
         return None
+    if getattr(main_gui, "_deep_zoom_error", None):
+        return main_gui._deep_zoom_error[0]
     if main_gui.deep_zoom and 0 <= main_gui.current_index < len(images):
         return images[main_gui.current_index]
     return None
@@ -148,6 +153,72 @@ def _copy_path_action(main_gui: GPUImageView, menu: QMenu):
                 language_wrapper.language_word_dict.get("toast_path_copied", "Path copied")
             )
     action.triggered.connect(_do_copy_path)
+
+
+def _relocate_missing_action(main_gui: GPUImageView, menu: QMenu) -> None:
+    path = _current_image_path(main_gui)
+    if not path or Path(path).exists():
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(
+        lang.get("missing_relocate", "Relocate Missing File..."),
+    )
+    action.triggered.connect(lambda: _relocate_missing(main_gui, path))
+
+
+def _relocate_missing(main_gui: GPUImageView, old_path: str) -> None:
+    from PySide6.QtWidgets import QFileDialog
+    lang = language_wrapper.language_word_dict
+    new_path, _ = QFileDialog.getOpenFileName(
+        main_gui,
+        lang.get("missing_relocate", "Relocate Missing File..."),
+        str(Path(old_path).parent),
+        "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.gif *.svg "
+        "*.cr2 *.nef *.arw *.dng *.raf *.orf)",
+    )
+    if not new_path:
+        return
+    try:
+        idx = main_gui.model.images.index(old_path)
+    except ValueError:
+        idx = main_gui.current_index
+    if 0 <= idx < len(main_gui.model.images):
+        main_gui.model.images[idx] = new_path
+        main_gui.current_index = idx
+    main_gui.offline_paths.discard(old_path)
+    main_gui.tile_errors.pop(old_path, None)
+    main_gui._deep_zoom_error = None
+    main_gui.load_deep_zoom_image(new_path)
+
+
+def _retry_load_action(main_gui: GPUImageView, menu: QMenu) -> None:
+    path = _current_image_path(main_gui)
+    tile_path = getattr(main_gui, "_hover_tile_path", None)
+    if tile_path in getattr(main_gui, "tile_errors", {}):
+        path = tile_path
+    elif getattr(main_gui, "_deep_zoom_error", None):
+        path = main_gui._deep_zoom_error[0]
+    if not path:
+        return
+    if path not in getattr(main_gui, "tile_errors", {}) and (
+        not getattr(main_gui, "_deep_zoom_error", None)
+        or main_gui._deep_zoom_error[0] != path
+    ):
+        return
+    lang = language_wrapper.language_word_dict
+    action = menu.addAction(lang.get("image_retry_load", "Retry Load"))
+    action.triggered.connect(lambda: _retry_load(main_gui, path))
+
+
+def _retry_load(main_gui: GPUImageView, path: str) -> None:
+    if getattr(main_gui, "_deep_zoom_error", None) and main_gui._deep_zoom_error[0] == path:
+        main_gui._deep_zoom_error = None
+        main_gui.load_deep_zoom_image(path)
+        return
+    if path in getattr(main_gui, "tile_errors", {}):
+        from Imervue.gpu_image_view.tile_loader import _retry_thumbnail
+        main_gui.tile_errors.pop(path, None)
+        _retry_thumbnail(main_gui, path, main_gui._load_generation)
 
 
 # ===========================
@@ -352,6 +423,43 @@ def _batch_actions(main_gui: GPUImageView, menu: QMenu):
     date_import_action.triggered.connect(lambda: _import_by_date(main_gui))
 
     build_batch_tag_album_submenu(main_gui, list(main_gui.selected_tiles), batch_menu)
+
+
+def _staging_tray_actions(main_gui: GPUImageView, menu: QMenu) -> None:
+    if not main_gui.model.images:
+        return
+    lang = language_wrapper.language_word_dict
+    tray_menu = menu.addMenu(lang.get("staging_tray_title", "Staging Tray"))
+    add_action = tray_menu.addAction(
+        lang.get("staging_tray_add_selected", "Add selected tiles"),
+    )
+    add_action.triggered.connect(lambda: _add_to_staging_tray(main_gui))
+    open_action = tray_menu.addAction(
+        lang.get("staging_tray_open", "Open Staging Tray"),
+    )
+    open_action.triggered.connect(lambda: _open_staging_tray(main_gui))
+
+
+def _add_to_staging_tray(main_gui: GPUImageView) -> None:
+    from Imervue.library import staging_tray
+    paths = list(main_gui.selected_tiles)
+    if not paths and main_gui.deep_zoom and main_gui.model.images:
+        paths = [main_gui.model.images[main_gui.current_index]]
+    if not paths:
+        return
+    staging_tray.add_many(paths)
+    if hasattr(main_gui.main_window, "toast"):
+        lang = language_wrapper.language_word_dict
+        main_gui.main_window.toast.success(
+            lang.get("staging_tray_added", "Added {n} item(s) to tray").format(
+                n=len(paths),
+            ),
+        )
+
+
+def _open_staging_tray(main_gui: GPUImageView) -> None:
+    from Imervue.gui.staging_tray_dialog import open_staging_tray
+    open_staging_tray(main_gui.main_window)
 
 
 def _import_by_date(main_gui: GPUImageView) -> None:
