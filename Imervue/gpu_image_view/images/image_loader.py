@@ -409,7 +409,7 @@ def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     user_setting_dict["user_last_folder"] = str(path_obj)
 
 
-def _on_folder_scan_batch(main_gui: GPUImageView, folder: str, batch: list[str],
+def _on_folder_scan_batch(main_gui: GPUImageView, _folder: str, batch: list[str],
                           generation: int) -> None:
     if generation != getattr(main_gui, "_folder_scan_generation", None):
         return

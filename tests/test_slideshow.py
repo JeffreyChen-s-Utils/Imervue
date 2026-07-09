@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from Imervue.gpu_image_view.actions.slideshow import SlideshowController
 
 
@@ -54,7 +56,7 @@ def test_stop_returns_to_grid_when_started_from_grid(qapp):
     assert ctrl.running is False
     assert gui.tile_grid_mode is True       # back on the wall
     assert gui.cleared == 1                  # deep-zoom state released
-    assert gui._slideshow_opacity == 1.0
+    assert gui._slideshow_opacity == pytest.approx(1.0)
 
 
 def test_stop_stays_in_deep_zoom_when_started_from_deep_zoom(qapp):

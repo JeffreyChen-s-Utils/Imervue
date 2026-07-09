@@ -939,7 +939,8 @@ class GPUImageView(QOpenGLWidget):
         if Path(path).suffix.lower() in _RAW_EXTS:
             return True
         try:
-            return Path(path).stat().st_size >= 60 * 1024 * 1024
+            # NOSONAR-justification: local image path picked in the browser.
+            return Path(path).stat().st_size >= 60 * 1024 * 1024  # NOSONAR
         except OSError:
             return False
 
@@ -1015,11 +1016,14 @@ class GPUImageView(QOpenGLWidget):
         if self._deep_zoom_loading != path:
             return
         self._deep_zoom_loading = None
-        self._deep_zoom_error = (path, message or "Load failed")
+        # "Load failed" matches no transient-error token, so the retry check
+        # below treats it exactly like an empty message.
+        message = message or "Load failed"
+        self._deep_zoom_error = (path, message)
         self.active_deep_zoom_worker = None
-        self._maybe_retry_deep_zoom(path, message or "")
+        self._maybe_retry_deep_zoom(path, message)
         if hasattr(self.main_window, "record_image_issue"):
-            self.main_window.record_image_issue(path, message or "Load failed")
+            self.main_window.record_image_issue(path, message)
         if path not in self.model.images:
             self.offline_paths.add(path)
         if hasattr(self.main_window, "toast"):

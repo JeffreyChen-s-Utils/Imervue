@@ -1,10 +1,6 @@
 """Central image load issue panel."""
 from __future__ import annotations
 
-import contextlib
-import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -94,7 +90,8 @@ class ImageIssuePanel(QWidget):
         paths = self.selected_paths()
         if not paths:
             return
-        _reveal_path(paths[0])
+        from Imervue.gui.file_tree_view import _FileTreeView
+        _FileTreeView._open_in_explorer(paths[0])
 
     def remove_selected(self) -> None:
         paths = set(self.selected_paths())
@@ -143,13 +140,3 @@ class ImageIssuePanel(QWidget):
             item.setToolTip(path)
             item.setData(Qt.ItemDataRole.UserRole, path)
             self._list.addItem(item)
-
-
-def _reveal_path(path: str) -> None:
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", path])
-        else:
-            subprocess.Popen(["xdg-open", str(Path(path).parent)])

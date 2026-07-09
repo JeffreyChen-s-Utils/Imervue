@@ -67,7 +67,7 @@ def _spawn_thumbnail_workers(view: GPUImageView, image_paths, gen: int) -> None:
     model_positions = {path: i for i, path in enumerate(getattr(view.model, "images", []))}
     hover_path = getattr(view, "_hover_tile_path", None)
     ordered = sorted(
-        list(image_paths),
+        image_paths,
         key=lambda p: (
             0 if p == hover_path else 1,
             abs(model_positions.get(p, 0) - getattr(view, "focused_tile_index", 0)),

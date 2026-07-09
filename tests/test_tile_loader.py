@@ -101,7 +101,7 @@ def _fake_view(images, *, generation=1, cache=None, pending=None,
         view, img, path, gen,
     )
     view._on_filmstrip_thumbnail_loaded = (
-        lambda img, path, gen: on_filmstrip_thumbnail_loaded(view, img, path, gen)
+        lambda img, path, gen: on_filmstrip_thumbnail_loaded(view, img, path, gen)  # NOSONAR duck-typed stub view
     )
     return view
 
@@ -284,7 +284,7 @@ class TestTrackTileWorker:
     def test_track_adds_worker_and_wires_eviction(self):
         view = _fake_view(["a.png"])
         worker = _FakeWorker("a.png", 256, 1)
-        track_tile_worker(view, worker)
+        track_tile_worker(view, worker)  # NOSONAR duck-typed stub view
         assert worker in view.active_tile_workers
         # One eviction slot is wired so the set drops the worker on finish.
         assert len(worker.signals.finished.connected) == 1
@@ -374,7 +374,7 @@ class TestTileWorkerSelfEviction:
 
         view = SimpleNamespace(active_tile_workers=set())
         worker = _RealWorker()
-        track_tile_worker(view, worker)
+        track_tile_worker(view, worker)  # NOSONAR duck-typed stub view
         assert worker in view.active_tile_workers
         # Same-thread direct connection runs the eviction synchronously on emit.
         worker.signals.finished.emit(None, "a.png", 0)

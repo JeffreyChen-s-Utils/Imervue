@@ -146,8 +146,9 @@ def test_clip_to_uint8_range():
 
 def test_rejects_non_rgba():
     arr = np.zeros((4, 4, 3), dtype=np.uint8)
+    options = FilmGrainOptions(enabled=True)
     with pytest.raises(ValueError):
-        apply_film_grain(arr, FilmGrainOptions(enabled=True))
+        apply_film_grain(arr, options)
 
 
 @pytest.mark.parametrize("size", [2, 3, SIZE_MAX])

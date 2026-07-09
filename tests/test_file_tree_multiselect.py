@@ -141,7 +141,7 @@ def test_selected_paths_empty_when_nothing_selected(qapp, tmp_path):
 
 def test_search_text_hides_non_matching_rows(qapp, tmp_path):
     files = _make_files(tmp_path, 3)
-    tree, _main, model = _make_tree(files)
+    tree, _main, _model = _make_tree(files)
     tree.set_search_text("img_1")
     assert tree.isRowHidden(0, tree.rootIndex()) is True
     assert tree.isRowHidden(1, tree.rootIndex()) is False

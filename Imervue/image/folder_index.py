@@ -16,15 +16,16 @@ def _cache_dir() -> Path:
 
 
 def _cache_path(folder: str) -> Path:
-    key = hashlib.md5(str(Path(folder).resolve()).encode(), usedforsecurity=False).hexdigest()
+    # NOSONAR-justification: folder comes from the local file tree.
+    key = hashlib.sha256(str(Path(folder).resolve()).encode()).hexdigest()  # NOSONAR
     return _cache_dir() / f"{key}.json"
 
 
 def load(folder: str, *, sort_by: str, ascending: bool) -> list[str] | None:
     try:
-        st = Path(folder).stat()
+        st = Path(folder).stat()  # NOSONAR folder comes from the local file tree, not remote input
         data = json.loads(_cache_path(folder).read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError):
+    except (OSError, ValueError):
         return None
     if data.get("folder_mtime_ns") != st.st_mtime_ns:
         return None
@@ -38,7 +39,7 @@ def load(folder: str, *, sort_by: str, ascending: bool) -> list[str] | None:
 
 def save(folder: str, images: list[str], *, sort_by: str, ascending: bool) -> None:
     try:
-        st = Path(folder).stat()
+        st = Path(folder).stat()  # NOSONAR folder comes from the local file tree, not remote input
         out = _cache_path(folder)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(

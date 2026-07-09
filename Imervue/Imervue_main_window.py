@@ -23,6 +23,7 @@ from Imervue.gui.toast import ToastManager
 from Imervue.image.browser_state import (
     ImageFilterSpec,
     ImageMetadataIndex,
+    _rating_matches,
     auto_match_same_name,
     detect_renamed_paths,
     filter_paths,
@@ -70,51 +71,25 @@ def _safe_submenus_of(parent) -> list:
     return out
 
 
+def _any_tag_label() -> str:
+    return language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag")
+
+
 def _path_matches_image_filter(path: str, tokens: list[str]) -> bool:
     """Match simple folder filter tokens against one image path."""
-    name = Path(path).name.lower()
-    for token in tokens:
-        if token.startswith("tag:"):
-            wanted = token[4:].lower()
-            from Imervue.user_settings.tags import get_tags_for_image
-            if not any(wanted in tag.lower() for tag in get_tags_for_image(path)):
-                return False
-            continue
-        if token.startswith("rating:"):
-            if not _rating_matches(path, token[7:]):
-                return False
-            continue
-        if token.startswith("date:"):
-            if not _date_matches(path, token[5:]):
-                return False
-            continue
-        if token.lower() not in name:
-            return False
-    return True
+    return all(_filter_token_matches(path, token) for token in tokens)
 
 
-def _rating_matches(path: str, expr: str) -> bool:
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
-    try:
-        rating = int((user_setting_dict.get("image_ratings") or {}).get(path, 0))
-    except (TypeError, ValueError):
-        rating = 0
-    for op in (">=", "<=", ">", "<"):
-        if expr.startswith(op):
-            try:
-                target = int(expr[len(op):])
-            except ValueError:
-                return True
-            return {
-                ">=": rating >= target,
-                "<=": rating <= target,
-                ">": rating > target,
-                "<": rating < target,
-            }[op]
-    try:
-        return rating == int(expr)
-    except ValueError:
-        return True
+def _filter_token_matches(path: str, token: str) -> bool:
+    if token.startswith("tag:"):
+        from Imervue.user_settings.tags import get_tags_for_image
+        wanted = token[4:].lower()
+        return any(wanted in tag.lower() for tag in get_tags_for_image(path))
+    if token.startswith("rating:"):
+        return _rating_matches(path, token[7:])
+    if token.startswith("date:"):
+        return _date_matches(path, token[5:])
+    return token.lower() in Path(path).name.lower()
 
 
 def _date_matches(path: str, expr: str) -> bool:
@@ -261,66 +236,7 @@ class ImervueMainWindow(QMainWindow):
         self.breadcrumb = BreadcrumbBar(self)
         right_layout.addWidget(self.breadcrumb)
 
-        filter_row = QWidget()
-        filter_layout = QHBoxLayout(filter_row)
-        filter_layout.setContentsMargins(0, 0, 0, 0)
-        filter_layout.setSpacing(6)
-
-        self.image_filter = QLineEdit()
-        self.image_filter.setClearButtonEnabled(True)
-        self.image_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get(
-                "image_filter_filename_placeholder",
-                "Filename",
-            ),
-        )
-        self.image_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.image_filter, stretch=2)
-
-        self.tag_filter = QComboBox()
-        self.tag_filter.setEditable(True)
-        self.tag_filter.setMinimumWidth(120)
-        self.tag_filter.addItem(
-            language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag"),
-            "",
-        )
-        self.tag_filter.currentTextChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.tag_filter, stretch=1)
-
-        self.rating_filter = QComboBox()
-        self.rating_filter.setMinimumWidth(110)
-        self.rating_filter.addItem(
-            language_wrapper.language_word_dict.get("image_filter_any_rating", "Any rating"),
-            "",
-        )
-        for rating in range(1, 6):
-            self.rating_filter.addItem(f">= {rating}", f">={rating}")
-        self.rating_filter.currentIndexChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.rating_filter, stretch=0)
-
-        self.date_from_filter = QLineEdit()
-        self.date_from_filter.setClearButtonEnabled(True)
-        self.date_from_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get("image_filter_date_from", "From date"),
-        )
-        self.date_from_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.date_from_filter, stretch=1)
-
-        self.date_to_filter = QLineEdit()
-        self.date_to_filter.setClearButtonEnabled(True)
-        self.date_to_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get("image_filter_date_to", "To date"),
-        )
-        self.date_to_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.date_to_filter, stretch=1)
-
-        self.missing_batch_button = QPushButton(
-            language_wrapper.language_word_dict.get("missing_batch_menu", "Missing"),
-        )
-        self.missing_batch_button.clicked.connect(self._show_missing_batch_menu)
-        filter_layout.addWidget(self.missing_batch_button, stretch=0)
-
-        right_layout.addWidget(filter_row)
+        right_layout.addWidget(self._build_filter_row())
 
         self.filename_label = QLabel(
             language_wrapper.language_word_dict.get("main_window_current_filename")
@@ -376,35 +292,7 @@ class ImervueMainWindow(QMainWindow):
         self._image_issue_dock.hide()
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._image_issue_dock)
 
-        def _on_name_changed(name):
-            base_template = language_wrapper.language_word_dict.get(
-                "main_window_current_filename_format",
-            ).format(name=name)
-            # Append "(i/n)" position info when the viewer knows its
-            # spot in the folder so the user can pace their browsing
-            # without hunting through the file list. Keep the
-            # baseline label so any locale that already localised
-            # the prefix stays untouched.
-            extras: list[str] = []
-            with contextlib.suppress(Exception):
-                images = self.viewer.model.images or []
-                idx = self.viewer.current_index
-                if 0 <= idx < len(images):
-                    extras.append(f"({idx + 1}/{len(images)})")
-            self.filename_label.setText(
-                base_template + ("  " + " ".join(extras) if extras else ""),
-            )
-            self.exif_sidebar.update_info()
-            # Keep the tab bar in lockstep with whatever image the viewer
-            # now shows. Only sync in deep-zoom mode — tile grid / folder
-            # browsing intentionally doesn't create tabs.
-            with contextlib.suppress(Exception):
-                images = self.viewer.model.images
-                idx = self.viewer.current_index
-                if self.viewer.deep_zoom and 0 <= idx < len(images):
-                    self._sync_current_tab_with_path(images[idx])
-
-        self.viewer.on_filename_changed = _on_name_changed
+        self.viewer.on_filename_changed = self._on_viewer_filename_changed
 
         splitter.addWidget(self._tree_panel)
         splitter.addWidget(right_widget)
@@ -846,6 +734,93 @@ class ImervueMainWindow(QMainWindow):
             metadata_index=getattr(self, "_image_metadata_index", None),
         )
 
+    def _build_filter_row(self) -> QWidget:
+        """Build the filename/tag/rating/date filter bar above the viewer."""
+        filter_row = QWidget()
+        filter_layout = QHBoxLayout(filter_row)
+        filter_layout.setContentsMargins(0, 0, 0, 0)
+        filter_layout.setSpacing(6)
+
+        self.image_filter = QLineEdit()
+        self.image_filter.setClearButtonEnabled(True)
+        self.image_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get(
+                "image_filter_filename_placeholder",
+                "Filename",
+            ),
+        )
+        self.image_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.image_filter, stretch=2)
+
+        self.tag_filter = QComboBox()
+        self.tag_filter.setEditable(True)
+        self.tag_filter.setMinimumWidth(120)
+        self.tag_filter.addItem(_any_tag_label(), "")
+        self.tag_filter.currentTextChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.tag_filter, stretch=1)
+
+        self.rating_filter = QComboBox()
+        self.rating_filter.setMinimumWidth(110)
+        self.rating_filter.addItem(
+            language_wrapper.language_word_dict.get("image_filter_any_rating", "Any rating"),
+            "",
+        )
+        for rating in range(1, 6):
+            self.rating_filter.addItem(f">= {rating}", f">={rating}")
+        self.rating_filter.currentIndexChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.rating_filter, stretch=0)
+
+        self.date_from_filter = QLineEdit()
+        self.date_from_filter.setClearButtonEnabled(True)
+        self.date_from_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get("image_filter_date_from", "From date"),
+        )
+        self.date_from_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.date_from_filter, stretch=1)
+
+        self.date_to_filter = QLineEdit()
+        self.date_to_filter.setClearButtonEnabled(True)
+        self.date_to_filter.setPlaceholderText(
+            language_wrapper.language_word_dict.get("image_filter_date_to", "To date"),
+        )
+        self.date_to_filter.textChanged.connect(self._on_image_filter_changed)
+        filter_layout.addWidget(self.date_to_filter, stretch=1)
+
+        self.missing_batch_button = QPushButton(
+            language_wrapper.language_word_dict.get("missing_batch_menu", "Missing"),
+        )
+        self.missing_batch_button.clicked.connect(self._show_missing_batch_menu)
+        filter_layout.addWidget(self.missing_batch_button, stretch=0)
+        return filter_row
+
+    def _on_viewer_filename_changed(self, name) -> None:
+        base_template = language_wrapper.language_word_dict.get(
+            "main_window_current_filename_format",
+        ).format(name=name)
+        # Append "(i/n)" position info when the viewer knows its
+        # spot in the folder so the user can pace their browsing
+        # without hunting through the file list. Keep the
+        # baseline label so any locale that already localised
+        # the prefix stays untouched.
+        extras: list[str] = []
+        with contextlib.suppress(Exception):
+            images = self.viewer.model.images or []
+            idx = self.viewer.current_index
+            if 0 <= idx < len(images):
+                extras.append(f"({idx + 1}/{len(images)})")
+        self.filename_label.setText(
+            base_template + ("  " + " ".join(extras) if extras else ""),
+        )
+        self.exif_sidebar.update_info()
+        # Keep the tab bar in lockstep with whatever image the viewer
+        # now shows. Only sync in deep-zoom mode — tile grid / folder
+        # browsing intentionally doesn't create tabs.
+        with contextlib.suppress(Exception):
+            images = self.viewer.model.images
+            idx = self.viewer.current_index
+            if self.viewer.deep_zoom and 0 <= idx < len(images):
+                self._sync_current_tab_with_path(images[idx])
+
     def _on_image_filter_changed(self, *_args) -> None:
         if getattr(self, "_restoring_filter_controls", False):
             return
@@ -879,7 +854,7 @@ class ImervueMainWindow(QMainWindow):
         tag = ""
         if hasattr(self, "tag_filter"):
             tag = self.tag_filter.currentData() or self.tag_filter.currentText()
-            if tag == language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag"):
+            if tag == _any_tag_label():
                 tag = ""
         rating = ""
         if hasattr(self, "rating_filter"):
@@ -948,10 +923,7 @@ class ImervueMainWindow(QMainWindow):
         self._restoring_filter_controls = True
         try:
             self.tag_filter.clear()
-            self.tag_filter.addItem(
-                language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag"),
-                "",
-            )
+            self.tag_filter.addItem(_any_tag_label(), "")
             for tag in sorted(get_all_tags()):
                 self.tag_filter.addItem(tag, tag)
             idx = self.tag_filter.findData(current)
@@ -1061,7 +1033,7 @@ class ImervueMainWindow(QMainWindow):
         if getattr(viewer, "model", None) is not None:
             viewer.model.set_images([mapping.get(path, path) for path in viewer.model.images])
         if getattr(viewer, "_deep_zoom_error", None):
-            old_path, msg = viewer._deep_zoom_error
+            old_path, _ = viewer._deep_zoom_error
             if old_path in mapping:
                 viewer._deep_zoom_error = None
                 viewer.load_deep_zoom_image(mapping[old_path])

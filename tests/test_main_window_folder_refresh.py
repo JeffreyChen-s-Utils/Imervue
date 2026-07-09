@@ -52,7 +52,7 @@ class _FakeModel:
     def __init__(self):
         self.root_paths = []
 
-    def setRootPath(self, path):  # noqa: N802 - Qt API
+    def setRootPath(self, path):  # noqa: N802 - Qt API  # NOSONAR
         self.root_paths.append(path)
 
     def index(self, path):
@@ -63,7 +63,7 @@ class _FakeTree:
     def __init__(self):
         self.roots = []
 
-    def setRootIndex(self, index):  # noqa: N802 - Qt API
+    def setRootIndex(self, index):  # noqa: N802 - Qt API  # NOSONAR
         self.roots.append(index)
 
 
@@ -71,7 +71,7 @@ class _FakeStack:
     def __init__(self):
         self.indices = []
 
-    def setCurrentIndex(self, index):  # noqa: N802 - Qt API
+    def setCurrentIndex(self, index):  # noqa: N802 - Qt API  # NOSONAR
         self.indices.append(index)
 
 
@@ -119,7 +119,7 @@ class _StubMainWindow:
         self.watched.append(folder)
 
     def _refresh_tag_filter_options(self):
-        pass
+        """No-op: the stub has no tag-filter combo to repopulate."""
 
     def _current_filter_spec(self):
         return ImageFilterSpec()

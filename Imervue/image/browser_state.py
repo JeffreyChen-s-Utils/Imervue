@@ -127,25 +127,29 @@ def match_filter(path: str, spec: ImageFilterSpec,
     filename = spec.filename.strip().lower()
     if filename and filename not in meta.name:
         return False
-
-    if spec.tag.strip():
-        from Imervue.user_settings.tags import get_tags_for_image
-        tag = spec.tag.strip().lower()
-        if not any(tag in item.lower() for item in get_tags_for_image(path)):
-            return False
-
+    if spec.tag.strip() and not _tag_matches(path, spec.tag):
+        return False
     if spec.rating.strip() and not _rating_matches(path, spec.rating.strip()):
         return False
+    if not _date_in_range(meta.mtime_date, spec.date_from, spec.date_to):
+        return False
+    return _match_raw_query(path, spec.raw_query, meta)
 
-    if spec.date_from or spec.date_to:
-        if meta.mtime_date is None:
-            return False
-        if spec.date_from and meta.mtime_date < spec.date_from:
-            return False
-        if spec.date_to and meta.mtime_date > spec.date_to:
-            return False
 
-    return _match_raw_query(path, spec.raw_query, meta, index)
+def _tag_matches(path: str, tag: str) -> bool:
+    from Imervue.user_settings.tags import get_tags_for_image
+    wanted = tag.strip().lower()
+    return any(wanted in item.lower() for item in get_tags_for_image(path))
+
+
+def _date_in_range(actual: date | None, date_from: date | None, date_to: date | None) -> bool:
+    if not (date_from or date_to):
+        return True
+    if actual is None:
+        return False
+    if date_from and actual < date_from:
+        return False
+    return not (date_to and actual > date_to)
 
 
 def filter_paths(paths: Iterable[str], spec: ImageFilterSpec,
@@ -155,28 +159,20 @@ def filter_paths(paths: Iterable[str], spec: ImageFilterSpec,
     return [path for path in paths if match_filter(path, spec, index)]
 
 
-def _match_raw_query(path: str, query: str, meta: ImageMeta,
-                     index: ImageMetadataIndex | None) -> bool:
+def _match_raw_query(path: str, query: str, meta: ImageMeta) -> bool:
     tokens = [part for part in (query or "").split() if part]
-    for token in tokens:
-        if token.startswith("tag:"):
-            from Imervue.user_settings.tags import get_tags_for_image
-            wanted = token[4:].lower()
-            if not any(wanted in tag.lower() for tag in get_tags_for_image(path)):
-                return False
-            continue
-        if token.startswith("rating:"):
-            if not _rating_matches(path, token[7:]):
-                return False
-            continue
-        if token.startswith("date:"):
-            wanted = token[5:]
-            if meta.mtime_date is None or not meta.mtime_date.isoformat().startswith(wanted):
-                return False
-            continue
-        if token.lower() not in meta.name:
-            return False
-    return True
+    return all(_token_matches(path, token, meta) for token in tokens)
+
+
+def _token_matches(path: str, token: str, meta: ImageMeta) -> bool:
+    if token.startswith("tag:"):
+        return _tag_matches(path, token[4:])
+    if token.startswith("rating:"):
+        return _rating_matches(path, token[7:])
+    if token.startswith("date:"):
+        wanted = token[5:]
+        return meta.mtime_date is not None and meta.mtime_date.isoformat().startswith(wanted)
+    return token.lower() in meta.name
 
 
 def _rating_matches(path: str, expr: str) -> bool:
@@ -267,7 +263,7 @@ def detect_renamed_paths(old_paths: Iterable[str], new_paths: Iterable[str],
         stem = Path(new_path).stem.lower()
         old_path = max(
             candidates,
-            key=lambda p: SequenceMatcher(None, Path(p).stem.lower(), stem).ratio(),
+            key=lambda p, stem=stem: SequenceMatcher(None, Path(p).stem.lower(), stem).ratio(),
         )
         used_old.add(old_path)
         mapping[old_path] = new_path
@@ -300,7 +296,7 @@ def _sample_hash(path: str, chunk: int = 64 * 1024) -> str:
                 tail = fh.read(chunk)
     except OSError:
         return ""
-    h = hashlib.sha1(usedforsecurity=False)
+    h = hashlib.sha256()
     h.update(str(size).encode())
     h.update(head)
     h.update(tail)
