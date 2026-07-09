@@ -67,6 +67,6 @@ def _merge_unique(existing: list, incoming: list) -> list:
 def _has_value(value: object) -> bool:
     if value is None:
         return False
-    if isinstance(value, (str, list, tuple, dict)):
+    if isinstance(value, str | list | tuple | dict):
         return len(value) > 0
     return True

@@ -76,7 +76,7 @@ class LensFlareOptions:
 
 
 def _clamp_position(value) -> list[float]:
-    if not isinstance(value, (list, tuple)) or len(value) != 2:
+    if not isinstance(value, list | tuple) or len(value) != 2:
         return [0.7, 0.3]
     try:
         return [max(0.0, min(1.0, float(v))) for v in value]
@@ -89,7 +89,7 @@ def _clamp_float(value, low: float, high: float) -> float:
 
 
 def _clamp_colour(value) -> list[int]:
-    if not isinstance(value, (list, tuple)) or len(value) != 3:
+    if not isinstance(value, list | tuple) or len(value) != 3:
         return [255, 235, 180]
     try:
         return [max(0, min(255, int(c))) for c in value]

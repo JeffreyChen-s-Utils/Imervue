@@ -88,7 +88,7 @@ def _probe_gl_integer(enum: int) -> int:  # pragma: no cover - GL probe path
         val = glGetIntegerv(enum)
     except Exception:  # noqa: BLE001 - any GL failure means "unsupported"
         return 0
-    if isinstance(val, (list, tuple)):
+    if isinstance(val, list | tuple):
         return int(val[0]) if val else 0
     return int(val) if val is not None else 0
 

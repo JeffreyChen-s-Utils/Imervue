@@ -208,10 +208,10 @@ def _normalise_points(
     """
     out: list[tuple[int, int]] = []
     seen_x: set[int] = set()
-    if not isinstance(raw, (list, tuple)):
+    if not isinstance(raw, list | tuple):
         raw = ()
     for entry in raw:
-        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        if not isinstance(entry, list | tuple) or len(entry) != 2:
             continue
         try:
             x = int(round(float(entry[0])))

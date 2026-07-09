@@ -689,7 +689,7 @@ def _validated_rgb_triplet(
     """Coerce a JSON ``[r, g, b]`` array into a clamped uint8 RGB tuple."""
     if color is None:
         return default
-    if (not isinstance(color, (list, tuple)) or len(color) != 3
+    if (not isinstance(color, list | tuple) or len(color) != 3
             or not all(isinstance(c, int) for c in color)):
         raise ValueError("color must be a list of three integers 0-255")
     return tuple(max(0, min(_RGB_MAX, int(c))) for c in color)
@@ -828,7 +828,7 @@ def build_collage(
     ``progress`` is an optional reporter injected by the server when the
     caller passes a progressToken; each loaded source advances it.
     """
-    if not isinstance(sources, (list, tuple)) or not sources:
+    if not isinstance(sources, list | tuple) or not sources:
         raise ValueError("sources must be a non-empty list of image paths")
     if len(sources) > _COLLAGE_MAX_IMAGES:
         raise ValueError(f"collage supports at most {_COLLAGE_MAX_IMAGES} images")
@@ -2765,11 +2765,11 @@ def _json_safe(value: Any) -> Any:
     Bytes become hex (so the client can still see the data without
     binary-in-JSON issues); IFDRational becomes a float; tuples become
     lists; everything else falls back to ``str(value)``."""
-    if isinstance(value, (str, int, float, bool)) or value is None:
+    if isinstance(value, str | int | float | bool) or value is None:
         return value
     if isinstance(value, bytes):
         return value.hex()
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_json_safe(v) for v in value]
     if isinstance(value, dict):
         return {str(k): _json_safe(v) for k, v in value.items()}

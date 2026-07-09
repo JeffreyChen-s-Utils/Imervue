@@ -74,7 +74,7 @@ class Macro:
             if isinstance(action, str) and isinstance(kwargs, dict):
                 steps.append(MacroStep(action=action, kwargs=dict(kwargs)))
         created_at = data.get("created_at", time.time())
-        if not isinstance(created_at, (int, float)):
+        if not isinstance(created_at, int | float):
             created_at = time.time()
         return cls(name=name, steps=steps, created_at=float(created_at))
 
@@ -255,7 +255,7 @@ def _current_selection(ui: ImervueMainWindow) -> list[str]:
     if viewer is None:
         return []
     selected = getattr(viewer, "selected_tiles", None)
-    if isinstance(selected, (set, list)) and selected:
+    if isinstance(selected, set | list) and selected:
         return [p for p in selected if isinstance(p, str)]
     images = getattr(viewer.model, "images", [])
     idx = getattr(viewer, "current_index", -1)

@@ -777,7 +777,7 @@ def _clamp_brush_attr(key: str, value: Any) -> Any:
 
 
 def _safe_rgb(value: Any, default: tuple[int, int, int]) -> tuple[int, int, int]:
-    if isinstance(value, (list, tuple)) and len(value) == 3:
+    if isinstance(value, list | tuple) and len(value) == 3:
         try:
             return _clamp_rgb(tuple(int(c) for c in value))  # type: ignore[arg-type]
         except (TypeError, ValueError):
@@ -798,7 +798,7 @@ def _safe_color(
     """
     if value is None:
         return default if default is None else _clamp_rgb(default)
-    if isinstance(value, (list, tuple)) and len(value) == 3:
+    if isinstance(value, list | tuple) and len(value) == 3:
         try:
             return _clamp_rgb(tuple(int(c) for c in value))  # type: ignore[arg-type]
         except (TypeError, ValueError):
@@ -886,7 +886,7 @@ def _history_from_list(raw: Any) -> list[tuple[int, int, int]]:
         return []
     out: list[tuple[int, int, int]] = []
     for entry in raw:
-        if isinstance(entry, (list, tuple)) and len(entry) == 3:
+        if isinstance(entry, list | tuple) and len(entry) == 3:
             try:
                 out.append(_clamp_rgb(tuple(int(c) for c in entry)))  # type: ignore[arg-type]
             except (TypeError, ValueError):

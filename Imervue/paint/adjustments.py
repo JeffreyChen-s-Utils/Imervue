@@ -280,7 +280,7 @@ def _build_curve_lut(
         (
             (max(0, min(255, int(pt[0]))), max(0, min(255, int(pt[1]))))
             for pt in raw_points
-            if isinstance(pt, (list, tuple)) and len(pt) == 2
+            if isinstance(pt, list | tuple) and len(pt) == 2
         ),
         key=lambda pt: pt[0],
     )
@@ -367,7 +367,7 @@ def _apply_color_balance(image: np.ndarray, params: dict) -> np.ndarray:
 
 def _coerce_balance_triplet(value) -> tuple[float, float, float]:
     """Clamp a color-balance triplet to [-1, 1] per channel."""
-    if not isinstance(value, (list, tuple)) or len(value) != 3:
+    if not isinstance(value, list | tuple) or len(value) != 3:
         return (0.0, 0.0, 0.0)
     out = []
     for c in value:
@@ -419,7 +419,7 @@ def _apply_selective_color(image: np.ndarray, params: dict) -> np.ndarray:
 def _apply_photo_filter(image: np.ndarray, params: dict) -> np.ndarray:
     p = {**DEFAULT_PARAMS["photo_filter"], **params}
     raw_color = p.get("color") or DEFAULT_PARAMS["photo_filter"]["color"]
-    if not isinstance(raw_color, (list, tuple)) or len(raw_color) < 3:
+    if not isinstance(raw_color, list | tuple) or len(raw_color) < 3:
         raw_color = DEFAULT_PARAMS["photo_filter"]["color"]
     color = tuple(max(0, min(255, int(c))) for c in raw_color[:3])
     density = max(0.0, min(1.0, float(p.get("density", 0.25))))
@@ -590,7 +590,7 @@ def _parse_gradient_color(
     missing alpha falls back to fully opaque."""
     if raw_color is None:
         return (0, 0, 0, 255)
-    if not isinstance(raw_color, (list, tuple)) or len(raw_color) < 3:
+    if not isinstance(raw_color, list | tuple) or len(raw_color) < 3:
         return None
     try:
         if len(raw_color) >= 4:
@@ -630,7 +630,7 @@ def _coerce_mixer_row(
 ) -> tuple[float, float, float, float]:
     """Validate / clamp one (r_factor, g_factor, b_factor, constant)
     row from a channel-mixer parameter dict."""
-    if not isinstance(value, (list, tuple)) or len(value) != 4:
+    if not isinstance(value, list | tuple) or len(value) != 4:
         return default
     out = []
     for c in value:

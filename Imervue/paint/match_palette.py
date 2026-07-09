@@ -45,7 +45,7 @@ def match_palette(
         )
     cleaned: list[tuple[int, int, int]] = []
     for entry in palette_list:
-        if not isinstance(entry, (list, tuple)) or len(entry) < 3:
+        if not isinstance(entry, list | tuple) or len(entry) < 3:
             continue
         try:
             rgb = (

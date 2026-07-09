@@ -982,7 +982,7 @@ class PuppetCanvas(QOpenGLWidget):
             glVertex2f(x0, y1)
             glEnd()
         anchor = deformer.form.get("anchor") if deformer.type == "rotation" else None
-        if isinstance(anchor, (list, tuple)) and len(anchor) == 2:
+        if isinstance(anchor, list | tuple) and len(anchor) == 2:
             self._draw_anchor_ring(float(anchor[0]), float(anchor[1]))
         glEnable(GL_TEXTURE_2D)
         glColor4f(1.0, 1.0, 1.0, 1.0)

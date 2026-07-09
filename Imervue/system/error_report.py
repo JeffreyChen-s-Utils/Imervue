@@ -132,7 +132,7 @@ def _read_user_settings() -> dict:
 
 
 def _jsonable(value):
-    if isinstance(value, (set, frozenset)):
+    if isinstance(value, set | frozenset):
         return sorted(value)
     return value
 

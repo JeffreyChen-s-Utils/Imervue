@@ -86,7 +86,7 @@ class PressureCurve:
             raise ValueError("points must be a list")
         cleaned: list[tuple[float, float]] = []
         for entry in raw_points:
-            if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            if not isinstance(entry, list | tuple) or len(entry) != 2:
                 continue
             try:
                 x = max(0.0, min(1.0, float(entry[0])))

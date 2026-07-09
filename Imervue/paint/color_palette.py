@@ -77,7 +77,7 @@ class Palette:
             raise ValueError("colors must be a list")
         normalised: list[tuple[int, int, int]] = []
         for c in colors_raw:
-            if isinstance(c, (list, tuple)) and len(c) == 3:
+            if isinstance(c, list | tuple) and len(c) == 3:
                 try:
                     rgb = tuple(max(0, min(255, int(v))) for v in c)
                     normalised.append(rgb)   # type: ignore[arg-type]

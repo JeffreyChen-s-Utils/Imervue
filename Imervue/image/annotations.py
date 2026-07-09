@@ -212,7 +212,7 @@ def _coerce_points(raw: object) -> tuple[tuple[float, float], ...]:
         return ()
     out: list[tuple[float, float]] = []
     for item in raw:
-        if not isinstance(item, (list, tuple)) or len(item) != 2:
+        if not isinstance(item, list | tuple) or len(item) != 2:
             continue
         try:
             x = max(0.0, min(1.0, float(item[0])))

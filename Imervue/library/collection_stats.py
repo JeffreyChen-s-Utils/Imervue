@@ -38,7 +38,7 @@ def _summarize(
     culls: Mapping[str, str],
 ) -> dict:
     """Pure aggregation over already-gathered per-path data."""
-    fav_set = set(favourites) if isinstance(favourites, (list, set, tuple)) else set()
+    fav_set = set(favourites) if isinstance(favourites, list | set | tuple) else set()
     distribution = dict.fromkeys(range(_MAX_STARS + 1), 0)
     for path in paths:
         distribution[_star_bucket(ratings.get(path, 0))] += 1

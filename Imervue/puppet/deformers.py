@@ -244,7 +244,7 @@ def blend_forms(a: dict[str, Any], b: dict[str, Any], t: float) -> dict[str, Any
 def _lerp_value(va: Any, vb: Any, t: float) -> Any:
     if vb is None:
         return va
-    if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
+    if isinstance(va, int | float) and isinstance(vb, int | float):
         return float(va) * (1.0 - t) + float(vb) * t
     if isinstance(va, list) and isinstance(vb, list) and len(va) == len(vb):
         return [_lerp_value(va[i], vb[i], t) for i in range(len(va))]
@@ -257,6 +257,6 @@ def _lerp_value(va: Any, vb: Any, t: float) -> Any:
 
 
 def _xy(raw: Any) -> np.ndarray:
-    if isinstance(raw, (list, tuple)) and len(raw) == 2:
+    if isinstance(raw, list | tuple) and len(raw) == 2:
         return np.asarray([float(raw[0]), float(raw[1])], dtype=np.float64)
     return np.zeros(2, dtype=np.float64)

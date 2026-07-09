@@ -105,7 +105,7 @@ def manifest_from_plugin(plugin: object) -> PluginManifest:
         description=str(attr("plugin_description", "") or ""),
         author=str(attr("plugin_author", "") or ""),
         requires_imervue=str(attr("plugin_requires_imervue", "") or ""),
-        requires_packages=list(packages) if isinstance(packages, (list, tuple)) else [],
+        requires_packages=list(packages) if isinstance(packages, list | tuple) else [],
         api_version=str(attr("plugin_api_version", "") or ""),
     )
 

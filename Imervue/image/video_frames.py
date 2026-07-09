@@ -194,7 +194,7 @@ class FrameReader:
         self, meta: dict, fps: float, duration: float,
     ) -> int:
         nframes = meta.get("nframes")
-        if isinstance(nframes, (int, float)) and math.isfinite(nframes) and nframes > 0:
+        if isinstance(nframes, int | float) and math.isfinite(nframes) and nframes > 0:
             return int(nframes)
         counted = self._count_frames()
         if counted > 0:
