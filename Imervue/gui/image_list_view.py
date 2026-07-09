@@ -42,6 +42,7 @@ _MAX_THUMB_RETRIES = 2
 @dataclass
 class _RowMeta:
     path: str
+    missing: bool = False
     size_kb: float | None = None
     width: int | None = None
     height: int | None = None
@@ -107,9 +108,10 @@ class ImageListModel(QAbstractTableModel):
     COL_MTIME = 7
     COL_COUNT = 8
 
-    def __init__(self, paths: list[str] | None = None):
+    def __init__(self, paths: list[str] | None = None, metadata_index=None):
         super().__init__()
-        self._rows: list[_RowMeta] = [_RowMeta(p) for p in (paths or [])]
+        self._metadata_index = metadata_index
+        self._rows: list[_RowMeta] = [self._row_for_path(p) for p in (paths or [])]
         self._pool = QThreadPool.globalInstance()
         self._in_flight: set[str] = set()
         # path -> transient fetch-failure retry count (see _MAX_THUMB_RETRIES)
@@ -170,7 +172,7 @@ class ImageListModel(QAbstractTableModel):
         handlers = {
             self.COL_LABEL: self._label_value,
             self.COL_RATING: lambda r: _format_rating(_rating_for(r.path)),
-            self.COL_NAME: lambda r: Path(r.path).name,
+            self.COL_NAME: self._name_value,
             self.COL_RES: self._resolution_value,
             self.COL_SIZE: self._size_value,
             self.COL_TYPE: lambda r: Path(r.path).suffix.lstrip(".").upper() or "",
@@ -179,7 +181,17 @@ class ImageListModel(QAbstractTableModel):
         handler = handlers.get(col)
         return handler(row) if handler else ""
 
+    @staticmethod
+    def _name_value(row) -> str:
+        name = Path(row.path).name
+        if row.missing:
+            lang = language_wrapper.language_word_dict
+            return f"{name}  [{lang.get('tile_missing', 'Missing')}]"
+        return name
+
     def _background_value(self, row, col: int):
+        if row.missing:
+            return QColor(90, 36, 36, 140)
         if col != self.COL_LABEL:
             return None
         from Imervue.user_settings.color_labels import get_color_label, COLOR_RGB
@@ -215,6 +227,11 @@ class ImageListModel(QAbstractTableModel):
         ):
             return int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ToolTipRole:
+            if row.missing:
+                return language_wrapper.language_word_dict.get(
+                    "missing_relocate_hint",
+                    "This file is missing. Relocate it or remove it from the view.",
+                )
             return row.path
         return None
 
@@ -252,9 +269,11 @@ class ImageListModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     # --- Public helpers ---
-    def set_paths(self, paths: list[str]) -> None:
+    def set_paths(self, paths: list[str], metadata_index=None) -> None:
+        if metadata_index is not None:
+            self._metadata_index = metadata_index
         self.beginResetModel()
-        self._rows = [_RowMeta(p) for p in paths]
+        self._rows = [self._row_for_path(p) for p in paths]
         self._in_flight.clear()
         self._retry.clear()
         self.endResetModel()
@@ -263,6 +282,22 @@ class ImageListModel(QAbstractTableModel):
         if 0 <= row < len(self._rows):
             return self._rows[row].path
         return None
+
+    def is_missing_at(self, row: int) -> bool:
+        if 0 <= row < len(self._rows):
+            return self._rows[row].missing
+        return False
+
+    def _row_for_path(self, path: str) -> _RowMeta:
+        row = _RowMeta(path, missing=not Path(path).exists())
+        if self._metadata_index is None:
+            return row
+        meta = self._metadata_index.get(path)
+        row.size_kb = meta.size / 1024 if meta.size else None
+        row.width = meta.width
+        row.height = meta.height
+        row.mtime = meta.mtime_ns / 1_000_000_000 if meta.mtime_ns else None
+        return row
 
     # --- Lazy loading ---
     def _ensure_fetched(self, row: _RowMeta) -> None:
@@ -290,6 +325,7 @@ class ImageListModel(QAbstractTableModel):
     @staticmethod
     def _apply_row_meta(row: _RowMeta, pm: QPixmap, w: int, h: int,
                         size_kb: float, mtime: float, ok: bool) -> None:
+        row.missing = not ok and not Path(row.path).exists()
         row.width = w or None
         row.height = h or None
         row.size_kb = size_kb if ok else None
@@ -394,8 +430,8 @@ class ImageListView(QTableView):
         self.doubleClicked.connect(self._on_activate)
 
     # --- Public API ---
-    def set_paths(self, paths: list[str]) -> None:
-        self._model.set_paths(paths)
+    def set_paths(self, paths: list[str], metadata_index=None) -> None:
+        self._model.set_paths(paths, metadata_index=metadata_index)
 
     def selected_paths(self) -> list[str]:
         return [
@@ -448,6 +484,12 @@ class ImageListView(QTableView):
         open_action = menu.addAction(
             lang.get("image_list_action_open", "Open"),
         )
+        missing = [p for p in paths if not Path(p).exists()]
+        relocate_action = None
+        if missing:
+            relocate_action = menu.addAction(
+                lang.get("missing_relocate", "Relocate Missing File..."),
+            )
         copy_action = menu.addAction(
             lang.get("image_list_action_copy_path", "Copy path"),
         )
@@ -457,6 +499,8 @@ class ImageListView(QTableView):
         chosen = menu.exec(event.globalPos())
         if chosen is open_action:
             self.image_activated.emit(paths[0])
+        elif relocate_action is not None and chosen is relocate_action:
+            self._relocate_missing(missing[0])
         elif chosen is copy_action:
             QApplication.clipboard().setText("\n".join(paths))
         elif chosen is reveal_action:
@@ -472,6 +516,21 @@ class ImageListView(QTableView):
         from PySide6.QtGui import QDesktopServices
         folder = str(Path(path).parent)
         QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+
+    def _relocate_missing(self, old_path: str) -> None:
+        from PySide6.QtWidgets import QFileDialog
+        lang = language_wrapper.language_word_dict
+        new_path, _ = QFileDialog.getOpenFileName(
+            self,
+            lang.get("missing_relocate", "Relocate Missing File..."),
+            str(Path(old_path).parent),
+            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.gif *.svg "
+            "*.cr2 *.nef *.arw *.dng *.raf *.orf)",
+        )
+        if not new_path:
+            return
+        if hasattr(self._main_window, "_apply_missing_replacements"):
+            self._main_window._apply_missing_replacements({old_path: new_path})
 
     def paintEvent(self, event):  # noqa: N802 - Qt override
         """Draw an empty-state hint when the model has no rows.

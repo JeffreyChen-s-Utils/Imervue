@@ -33,6 +33,8 @@ class TestImageListModel:
     def test_name_display_uses_basename(self, list_mod, tmp_path):
         model_cls, _ = list_mod
         path = str(tmp_path / "sub" / "pic.jpg")
+        Path(path).parent.mkdir()
+        Path(path).write_bytes(b"fake")
         m = model_cls([path])
         idx = m.index(0, model_cls.COL_NAME)
         assert m.data(idx, Qt.ItemDataRole.DisplayRole) == "pic.jpg"
@@ -60,6 +62,15 @@ class TestImageListModel:
         m = model_cls([p])
         idx = m.index(0, 0)
         assert m.data(idx, Qt.ItemDataRole.UserRole) == p
+
+    def test_missing_path_is_marked_in_name_column(self, list_mod, tmp_path):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "gone.png")
+        m = model_cls([p])
+        idx = m.index(0, model_cls.COL_NAME)
+        assert "gone.png" in m.data(idx, Qt.ItemDataRole.DisplayRole)
+        assert "Missing" in m.data(idx, Qt.ItemDataRole.DisplayRole)
+        assert m.is_missing_at(0) is True
 
     def test_rating_display_is_empty_when_unrated(self, list_mod, tmp_path):
         from Imervue.user_settings.user_setting_dict import user_setting_dict

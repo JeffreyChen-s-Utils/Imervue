@@ -139,6 +139,58 @@ def test_selected_paths_empty_when_nothing_selected(qapp, tmp_path):
     tree.deleteLater()
 
 
+def test_search_text_hides_non_matching_rows(qapp, tmp_path):
+    files = _make_files(tmp_path, 3)
+    tree, _main, model = _make_tree(files)
+    tree.set_search_text("img_1")
+    assert tree.isRowHidden(0, tree.rootIndex()) is True
+    assert tree.isRowHidden(1, tree.rootIndex()) is False
+    assert tree.isRowHidden(2, tree.rootIndex()) is True
+    tree.set_search_text("")
+    assert tree.isRowHidden(0, tree.rootIndex()) is False
+    assert tree.isRowHidden(2, tree.rootIndex()) is False
+    tree.deleteLater()
+
+
+def test_search_keeps_parent_visible_for_matching_child(qapp, tmp_path):
+    parent = tmp_path / "album"
+    child = parent / "target.png"
+    tree, _main, model = _make_tree([parent])
+    child_item = QStandardItem(child.name)
+    child_item.setData(str(child), Qt.ItemDataRole.UserRole)
+    model.item(0, 0).appendRow(child_item)
+    tree.expand(model.index(0, 0))
+
+    tree.set_search_text("target")
+    assert tree.isRowHidden(0, tree.rootIndex()) is False
+    assert tree.isRowHidden(0, model.index(0, 0)) is False
+    tree.deleteLater()
+
+
+def test_tree_sort_persists_choice(qapp):
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    old_sort = user_setting_dict.get("tree_sort_by")
+    old_ascending = user_setting_dict.get("tree_sort_ascending")
+    tree, _main, _model = _make_tree([])
+    try:
+        tree.set_tree_sort("size", False)
+        assert user_setting_dict["tree_sort_by"] == "size"
+        assert user_setting_dict["tree_sort_ascending"] is False
+        assert tree.header().sortIndicatorSection() == 1
+        assert tree.header().sortIndicatorOrder() == Qt.SortOrder.DescendingOrder
+    finally:
+        if old_sort is None:
+            user_setting_dict.pop("tree_sort_by", None)
+        else:
+            user_setting_dict["tree_sort_by"] = old_sort
+        if old_ascending is None:
+            user_setting_dict.pop("tree_sort_ascending", None)
+        else:
+            user_setting_dict["tree_sort_ascending"] = old_ascending
+        tree.deleteLater()
+
+
 # ---------------------------------------------------------------
 # Batch delete
 # ---------------------------------------------------------------

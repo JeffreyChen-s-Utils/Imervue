@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
     QApplication, QTreeView, QFileSystemModel, QMenu,
 )
@@ -62,10 +63,21 @@ class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
     _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
+    _TREE_SORT_COLUMNS = {
+        "name": 0,
+        "size": 1,
+        "modified": 3,
+    }
+    _TREE_SORT_LANG_KEYS = {
+        "name": "sort_by_name",
+        "size": "sort_by_size",
+        "modified": "sort_by_modified",
+    }
 
     def __init__(self, main_window: "ImervueMainWindow"):
         super().__init__()
         self._main_window = main_window
+        self._search_text = ""
         # Folders pending soft-deletion are kept on disk but hidden from the
         # tree until restored or committed at shutdown; track what we hid so a
         # restore can un-hide exactly those rows.
@@ -76,6 +88,7 @@ class _FileTreeView(QTreeView):
         # several files at once. A plain single click still selects and
         # opens one file via the main window's ``clicked`` handler.
         self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+        self.setSortingEnabled(True)
 
     def setModel(self, model) -> None:
         super().setModel(model)
@@ -84,6 +97,8 @@ class _FileTreeView(QTreeView):
         loaded = getattr(model, "directoryLoaded", None)
         if loaded is not None:
             loaded.connect(lambda _path: self.refresh_pending_hidden())
+            loaded.connect(lambda _path: self.apply_search_filter())
+        self._apply_tree_sort_from_settings()
 
     def refresh_pending_hidden(self) -> None:
         """Hide rows for folders pending soft-deletion; un-hide the rest."""
@@ -181,6 +196,7 @@ class _FileTreeView(QTreeView):
             model.setRootPath("")
             model.setRootPath(path)
             self.setRootIndex(model.index(path))
+            self.apply_search_filter()
 
     def _delete_selected(self):
         self._delete_paths(self._selected_paths())
@@ -190,6 +206,7 @@ class _FileTreeView(QTreeView):
     def _show_context_menu(self, pos):
         index = self.indexAt(pos)
         if not index.isValid():
+            self._show_tree_context_menu(pos)
             return
         model: QFileSystemModel = self.model()
         path = model.filePath(index)
@@ -204,10 +221,22 @@ class _FileTreeView(QTreeView):
         else:
             self._show_single_context_menu(path, pos)
 
+    def _show_tree_context_menu(self, pos) -> None:
+        """Context menu for blank tree space: sort + refresh."""
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self)
+        self._add_sort_menu(menu)
+        menu.addSeparator()
+        action_refresh = menu.addAction(lang.get("tree_refresh", "Refresh"))
+        action_refresh.triggered.connect(self._refresh_tree)
+        menu.exec(self.viewport().mapToGlobal(pos))
+
     def _show_multi_context_menu(self, paths: list[str], pos) -> None:
         """Context menu for a multi-row selection: reveal, copy paths, delete."""
         lang = language_wrapper.language_word_dict
         menu = QMenu(self)
+        self._add_sort_menu(menu)
+        menu.addSeparator()
 
         action_explorer = menu.addAction(
             lang.get("tree_open_in_explorer", "Open in Explorer")
@@ -234,6 +263,8 @@ class _FileTreeView(QTreeView):
         lang = language_wrapper.language_word_dict
         menu = QMenu(self)
         index = self.model().index(path)
+        self._add_sort_menu(menu)
+        menu.addSeparator()
 
         # Show in Explorer
         action_explorer = menu.addAction(
@@ -306,6 +337,126 @@ class _FileTreeView(QTreeView):
         action_del.triggered.connect(lambda: self._delete_path(path))
 
         menu.exec(self.viewport().mapToGlobal(pos))
+
+    def _add_sort_menu(self, menu: QMenu) -> QMenu:
+        """Add file-tree sort controls to *menu*."""
+        lang = language_wrapper.language_word_dict
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+        sort_menu = menu.addMenu(lang.get("tree_sort_menu", "Sort Tree"))
+        current_sort = user_setting_dict.get("tree_sort_by", "name")
+        current_asc = bool(user_setting_dict.get("tree_sort_ascending", True))
+
+        sort_group = QActionGroup(sort_menu)
+        sort_group.setExclusive(True)
+        for key in ("name", "modified", "size"):
+            action = sort_menu.addAction(
+                lang.get(self._TREE_SORT_LANG_KEYS[key], key.capitalize()),
+            )
+            action.setCheckable(True)
+            action.setChecked(key == current_sort)
+            sort_group.addAction(action)
+            action.triggered.connect(
+                lambda _checked=False, k=key: self.set_tree_sort(k, current_asc),
+            )
+
+        sort_menu.addSeparator()
+
+        order_group = QActionGroup(sort_menu)
+        order_group.setExclusive(True)
+        asc_action = sort_menu.addAction(lang.get("sort_ascending", "Ascending"))
+        asc_action.setCheckable(True)
+        asc_action.setChecked(current_asc)
+        order_group.addAction(asc_action)
+        asc_action.triggered.connect(
+            lambda: self.set_tree_sort(
+                user_setting_dict.get("tree_sort_by", "name"), True,
+            ),
+        )
+
+        desc_action = sort_menu.addAction(lang.get("sort_descending", "Descending"))
+        desc_action.setCheckable(True)
+        desc_action.setChecked(not current_asc)
+        order_group.addAction(desc_action)
+        desc_action.triggered.connect(
+            lambda: self.set_tree_sort(
+                user_setting_dict.get("tree_sort_by", "name"), False,
+            ),
+        )
+        return sort_menu
+
+    def set_tree_sort(self, sort_by: str, ascending: bool) -> None:
+        """Apply and persist sorting for the file tree only."""
+        if sort_by not in self._TREE_SORT_COLUMNS:
+            sort_by = "name"
+        from Imervue.user_settings.user_setting_dict import (
+            schedule_save,
+            user_setting_dict,
+        )
+        user_setting_dict["tree_sort_by"] = sort_by
+        user_setting_dict["tree_sort_ascending"] = bool(ascending)
+        schedule_save()
+        self._apply_tree_sort(sort_by, bool(ascending))
+
+    def _apply_tree_sort_from_settings(self) -> None:
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        self._apply_tree_sort(
+            user_setting_dict.get("tree_sort_by", "name"),
+            bool(user_setting_dict.get("tree_sort_ascending", True)),
+        )
+
+    def _apply_tree_sort(self, sort_by: str, ascending: bool) -> None:
+        column = self._TREE_SORT_COLUMNS.get(sort_by, 0)
+        order = (
+            Qt.SortOrder.AscendingOrder
+            if ascending else Qt.SortOrder.DescendingOrder
+        )
+        self.sortByColumn(column, order)
+
+    def set_search_text(self, text: str) -> None:
+        """Filter currently-loaded tree rows by basename substring."""
+        self._search_text = text.strip().lower()
+        self.apply_search_filter()
+
+    def apply_search_filter(self) -> None:
+        """Show only rows matching the active search or containing matches."""
+        model = self.model()
+        if model is None:
+            return
+        root = self.rootIndex()
+        if not self._search_text:
+            self._set_subtree_hidden(root, hidden=False)
+            self.refresh_pending_hidden()
+            return
+        self._filter_children(root)
+        self.refresh_pending_hidden()
+
+    def _set_subtree_hidden(self, parent, *, hidden: bool) -> None:
+        model = self.model()
+        for row in range(model.rowCount(parent)):
+            index = model.index(row, 0, parent)
+            self.setRowHidden(row, parent, hidden)
+            self._set_subtree_hidden(index, hidden=hidden)
+
+    def _filter_children(self, parent) -> bool:
+        model = self.model()
+        any_visible = False
+        for row in range(model.rowCount(parent)):
+            index = model.index(row, 0, parent)
+            child_visible = self._filter_children(index)
+            own_match = self._index_matches_search(index)
+            visible = own_match or child_visible
+            self.setRowHidden(row, parent, not visible)
+            any_visible = any_visible or visible
+        return any_visible
+
+    def _index_matches_search(self, index) -> bool:
+        model = self.model()
+        path = ""
+        if hasattr(model, "filePath"):
+            path = model.filePath(index)
+        name = Path(path).name if path else str(index.data() or "")
+        return self._search_text in name.lower()
 
     def _create_new_folder(self, parent_dir: str) -> None:
         """Prompt for a folder name and create it under ``parent_dir``."""
@@ -576,5 +727,3 @@ class _FileTreeView(QTreeView):
                 count=count,
             )
         )
-
-
