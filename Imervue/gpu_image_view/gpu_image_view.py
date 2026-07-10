@@ -34,7 +34,7 @@ from OpenGL.GL import (
     glOrtho,
     glViewport,
 )
-from PySide6.QtCore import QThreadPool, QMutex, Qt
+from PySide6.QtCore import QThreadPool, QMutex, Qt, QTimer
 from PySide6.QtGui import QUndoStack, QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from pathlib import Path
@@ -75,12 +75,23 @@ class GPUImageView(QOpenGLWidget):
         # focused yet, so the highlight only shows once the user starts
         # keyboard-browsing and never bothers mouse-only users.
         self.focused_tile_index = NO_FOCUS
+        # The amber ring draws only while this is True — set by arrow-key
+        # navigation, cleared by mouse clicks and by (re)entering the wall,
+        # so the ring never greets the user uninvited.
+        self.focus_ring_visible = False
         self.tile_textures = {}
         self.tile_cache = {}  # path -> img_data
         self.tile_errors: dict[str, str] = {}
         self._tile_error_toasted: set[str] = set()
         self._tile_retry_counts: dict[str, int] = {}
         self.offline_paths: set[str] = set()
+        # 檔案存在檢查全部走背景掃描（tile_loader.OfflineScanWorker），
+        # paint 路徑只查 offline_paths 這個 set，不做任何檔案系統 I/O。
+        self._offline_scan_inflight = False
+        from Imervue.gpu_image_view.tile_loader import OFFLINE_SWEEP_INTERVAL_MS
+        self._offline_sweep_timer = QTimer(self)
+        self._offline_sweep_timer.setInterval(OFFLINE_SWEEP_INTERVAL_MS)
+        self._offline_sweep_timer.timeout.connect(self._tick_offline_sweep)
         # path -> monotonic arrival time, for the thumbnail fade-in animation.
         self._tile_load_times: dict[str, float] = {}
         # path -> (size, mtime_ns, suffix), used to migrate tile cache on rename.
@@ -747,6 +758,15 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.tile_loader import flush_thumbnail_progress
         flush_thumbnail_progress(self)
 
+    def _tick_offline_sweep(self) -> None:
+        """Timer tick: refresh ``offline_paths`` via a background stat sweep."""
+        from Imervue.gpu_image_view.tile_loader import tick_offline_sweep
+        tick_offline_sweep(self)
+
+    def _on_offline_scan_finished(self, missing, generation) -> None:
+        from Imervue.gpu_image_view.tile_loader import on_offline_scan_finished
+        on_offline_scan_finished(self, missing, generation)
+
     # 保持向後相容（undo_delete 使用）
     def add_thumbnail(self, img_data, path, generation=None):
         """Insert a thumbnail directly — external contract (undo_delete)."""
@@ -1199,6 +1219,8 @@ class GPUImageView(QOpenGLWidget):
     # 清除 Tile Grid
     # ---------------------------
     def clear_tile_grid(self):
+        from Imervue.gpu_image_view.tile_loader import stop_offline_sweep
+        stop_offline_sweep(self)
         self._cancel_tile_workers()
         self.tile_grid_mode = False
         self.tile_rects = []
@@ -1208,6 +1230,7 @@ class GPUImageView(QOpenGLWidget):
         self.grid_offset_x = 0
         self.grid_offset_y = 0
         self.focused_tile_index = NO_FOCUS
+        self.focus_ring_visible = False
         self._filmstrip_thumb_cache.clear()
         self._filmstrip_pending.clear()
         self._tile_load_times.clear()
@@ -1301,6 +1324,8 @@ class GPUImageView(QOpenGLWidget):
         # ===== 左鍵 =====
         if event.button() == Qt.MouseButton.LeftButton:
             if self.tile_grid_mode:
+                # 改用滑鼠操作 → 收起鍵盤焦點框
+                self.focus_ring_visible = False
                 self._drag_start_pos = event.position()
                 self._drag_end_pos = event.position()
                 self._drag_selecting = False  # 先不啟動，等拖動才算框選

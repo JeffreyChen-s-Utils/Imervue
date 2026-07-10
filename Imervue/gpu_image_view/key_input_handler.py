@@ -211,6 +211,8 @@ class KeyInputHandler:
         view.focused_tile_index = next_focus_index(
             view.focused_tile_index, _ARROW_DIRECTIONS[key], cols, count,
         )
+        # 只有方向鍵瀏覽才顯示焦點框；進入 tile 模式或滑鼠操作都不顯示。
+        view.focus_ring_visible = True
         view.grid_offset_y = scroll_offset_to_reveal(
             view.focused_tile_index, cols, cell, base_tile * draw_scale,
             view.grid_offset_y, view.height(),
@@ -235,12 +237,17 @@ class KeyInputHandler:
         return True
 
     def _focus_current_if_valid(self) -> None:
-        """Highlight the tile we were just viewing after leaving deep zoom."""
+        """Remember the tile we were just viewing after leaving deep zoom.
+
+        Only the *index* is kept (so the first arrow press continues from
+        there); the amber ring stays hidden until the user actually starts
+        arrow-key browsing."""
         view = self._view
         count = len(view.model.images)
         view.focused_tile_index = (
             view.current_index if 0 <= view.current_index < count else NO_FOCUS
         )
+        view.focus_ring_visible = False
 
     def _switch_image_by_arrow(self, key) -> bool:
         """Left / Right → previous / next image in deep zoom. True on hit."""

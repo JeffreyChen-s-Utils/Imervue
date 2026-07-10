@@ -26,6 +26,7 @@ def _view(**kw):
         "applied_labels": [],
         "updates": 0,
         "focused_tile_index": -1,
+        "focus_ring_visible": False,
         "tile_scale": 1.0,
         "tile_padding": 0,
         "grid_offset_x": 0,
@@ -165,11 +166,29 @@ def test_enter_outside_grid_not_consumed():
         Qt.Key.Key_Return, Qt.KeyboardModifier.NoModifier) is False
 
 
+def test_arrow_navigation_shows_focus_ring():
+    view = _view(tile_grid_mode=True, images=["a.png", "b.png"])
+    handler = KeyInputHandler(view)
+    assert view.focus_ring_visible is False
+    handler._handle_builtin(Qt.Key.Key_Right, Qt.KeyboardModifier.NoModifier)
+    assert view.focus_ring_visible is True
+
+
 def test_focus_current_if_valid_highlights_viewed_tile():
     view = _view(images=["a.png", "b.png", "c.png"], current_index=2)
     handler = KeyInputHandler(view)
     handler._focus_current_if_valid()
     assert view.focused_tile_index == 2
+
+
+def test_focus_current_if_valid_keeps_ring_hidden():
+    # Esc from deep zoom remembers the position for the next arrow press but
+    # must not flash the amber ring at the user.
+    view = _view(images=["a.png", "b.png"], current_index=1, focus_ring_visible=True)
+    handler = KeyInputHandler(view)
+    handler._focus_current_if_valid()
+    assert view.focused_tile_index == 1
+    assert view.focus_ring_visible is False
 
 
 def test_focus_current_if_valid_clears_when_index_out_of_range():

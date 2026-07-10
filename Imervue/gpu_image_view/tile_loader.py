@@ -15,13 +15,18 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QMutexLocker, QTimer
+from PySide6.QtCore import QMutexLocker, QObject, QRunnable, QThreadPool, QTimer, Signal
 
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
-from Imervue.image.browser_state import is_transient_load_error
+from Imervue.image.browser_state import is_missing_file_error, is_transient_load_error
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+# Low-frequency file-existence sweep — keeps every stat call off the GL paint
+# path. 4 s notices an unplugged drive promptly without hammering network
+# shares the way a per-frame check would.
+OFFLINE_SWEEP_INTERVAL_MS = 4000
 
 
 def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
@@ -52,6 +57,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
     view._tile_load_count = 0
 
     _spawn_thumbnail_workers(view, image_paths, gen)
+    start_offline_sweep(view)
 
     if hasattr(view.main_window, "show_progress"):
         view.main_window.show_progress(0, view._tile_load_total)
@@ -141,15 +147,12 @@ def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
         signatures[path] = sig
     view._overlay.ensure_fade_pump()
 
-    view._tile_load_count = len(view.tile_cache)
     # Coalesce the progress update — a folder of N thumbnails finishing in
     # quick succession otherwise re-lays out the status bar N times. The
     # coalescer caps that at one update per ~16 ms; the force-flush makes
     # sure the bar lands at 100 % even if the last tile arrived inside the
     # window.
-    view._progress_coalescer.schedule()
-    if view._tile_load_count >= getattr(view, "_tile_load_total", 0):
-        view._progress_coalescer.force_flush()
+    _bump_tile_progress(view)
     view.update()
 
 
@@ -159,10 +162,29 @@ def on_thumbnail_error(view: GPUImageView, path: str, message: str, generation: 
         return
     if path not in view.model.images:
         return
-    getattr(view, "tile_errors", {})[path] = message or "Load failed"
+    message = message or "Load failed"
+    if is_missing_file_error(message):
+        _record_missing_tile(view, path, message)
+    else:
+        _record_failed_tile(view, path, message, generation)
+    view._filmstrip_pending.discard(path)
+    _bump_tile_progress(view)
+    view.update()
+
+
+def _record_missing_tile(view: GPUImageView, path: str, message: str) -> None:
+    """A vanished file renders as a quiet 'Missing' slot, not a red failure."""
+    getattr(view, "offline_paths", set()).add(path)
+    getattr(view, "tile_errors", {}).pop(path, None)
     if hasattr(view.main_window, "record_image_issue"):
-        view.main_window.record_image_issue(path, message or "Load failed")
-    _maybe_retry_thumbnail(view, path, message or "", generation)
+        view.main_window.record_image_issue(path, message)
+
+
+def _record_failed_tile(view: GPUImageView, path: str, message: str, generation: int) -> None:
+    getattr(view, "tile_errors", {})[path] = message
+    if hasattr(view.main_window, "record_image_issue"):
+        view.main_window.record_image_issue(path, message)
+    _maybe_retry_thumbnail(view, path, message, generation)
     toasted = getattr(view, "_tile_error_toasted", set())
     if path not in toasted and hasattr(view.main_window, "toast"):
         toasted.add(path)
@@ -172,12 +194,21 @@ def on_thumbnail_error(view: GPUImageView, path: str, message: str, generation: 
                 name=Path(path).name,
             ),
         )
-    view._filmstrip_pending.discard(path)
-    view._tile_load_count = len(view.tile_cache) + len(getattr(view, "tile_errors", {}))
+
+
+def _completed_tile_count(view: GPUImageView) -> int:
+    """Tiles in a terminal state — decoded, failed, or missing on disk."""
+    done = set(view.tile_cache)
+    done.update(getattr(view, "tile_errors", {}))
+    done.update(getattr(view, "offline_paths", set()).intersection(view.model.images))
+    return len(done)
+
+
+def _bump_tile_progress(view: GPUImageView) -> None:
+    view._tile_load_count = _completed_tile_count(view)
     view._progress_coalescer.schedule()
     if view._tile_load_count >= getattr(view, "_tile_load_total", 0):
         view._progress_coalescer.force_flush()
-    view.update()
 
 
 def _maybe_retry_thumbnail(view: GPUImageView, path: str, message: str, generation: int) -> None:
@@ -375,6 +406,7 @@ def sync_tile_grid_incremental(view: GPUImageView, image_paths: list[str]) -> No
     view._tile_load_total = len(missing)
     view._tile_load_count = 0
     _spawn_thumbnail_workers(view, missing, gen)
+    start_offline_sweep(view)
     if hasattr(view.main_window, "refresh_list_view"):
         with contextlib.suppress(Exception):
             view.main_window.refresh_list_view()
@@ -404,6 +436,96 @@ def _file_signature(path: str) -> tuple[int, int, str] | None:
     except OSError:
         return None
     return (st.st_size, st.st_mtime_ns, Path(path).suffix.lower())
+
+
+class _OfflineScanSignals(QObject):
+    finished = Signal(object, int)  # missing-path set, load generation
+
+
+class OfflineScanWorker(QRunnable):
+    """Stat every folder path off the GUI thread and report the missing set."""
+
+    def __init__(self, paths: list[str], generation: int) -> None:
+        super().__init__()
+        self._paths = paths
+        self._generation = generation
+        self.signals = _OfflineScanSignals()
+
+    def run(self) -> None:
+        self.signals.finished.emit(scan_missing_paths(self._paths), self._generation)
+
+
+def scan_missing_paths(paths) -> set[str]:
+    """Pure sweep body: the subset of *paths* that no longer exist on disk."""
+    return {path for path in paths if not os.path.exists(path)}
+
+
+def start_offline_sweep(view: GPUImageView) -> None:
+    """Run an immediate existence scan, then keep it repeating on the timer.
+
+    No-op on views without the sweep timer (stub views in tests), so the
+    loaders stay callable with plain fakes.
+    """
+    timer = getattr(view, "_offline_sweep_timer", None)
+    if timer is None:
+        return
+    tick_offline_sweep(view)
+    timer.start()
+
+
+def stop_offline_sweep(view: GPUImageView) -> None:
+    timer = getattr(view, "_offline_sweep_timer", None)
+    if timer is not None:
+        timer.stop()
+
+
+def tick_offline_sweep(view: GPUImageView) -> None:
+    """Spawn one background stat sweep unless one is already in flight."""
+    if getattr(view, "_offline_scan_inflight", False):
+        return
+    if not getattr(view, "tile_grid_mode", False):
+        return
+    paths = list(view.model.images)
+    if not paths:
+        return
+    view._offline_scan_inflight = True
+    worker = OfflineScanWorker(paths, view._load_generation)
+    worker.signals.finished.connect(view._on_offline_scan_finished)
+    QThreadPool.globalInstance().start(worker)
+
+
+def on_offline_scan_finished(view: GPUImageView, missing, generation: int) -> None:
+    """Apply one sweep result: flip offline states and reload recovered tiles."""
+    view._offline_scan_inflight = False
+    if generation != view._load_generation:
+        return
+    current = set(view.model.images)
+    missing = set(missing) & current
+    offline = getattr(view, "offline_paths", set())
+    recovered = (offline & current) - missing
+    newly_missing = missing - offline
+    if not recovered and not newly_missing:
+        return
+    offline.difference_update(recovered)
+    offline.update(newly_missing)
+    _report_offline_changes(view, newly_missing, recovered, generation)
+    view.update()
+
+
+def _report_offline_changes(view: GPUImageView, newly_missing: set[str],
+                            recovered: set[str], generation: int) -> None:
+    record_issue = getattr(view.main_window, "record_image_issue", None)
+    clear_issue = getattr(view.main_window, "clear_image_issue", None)
+    if record_issue is not None:
+        for path in newly_missing:
+            record_issue(path, "File not found")
+    for path in recovered:
+        if clear_issue is not None:
+            clear_issue(path)
+        # The tile was drawn as "Missing" while offline — reload it now that
+        # the file is back (drive re-mounted, file restored).
+        if path not in view.tile_cache:
+            _retry_thumbnail(view, path, generation)
 
 
 def _detect_renamed_cached_paths(view: GPUImageView, old_images, new_images) -> dict[str, str]:

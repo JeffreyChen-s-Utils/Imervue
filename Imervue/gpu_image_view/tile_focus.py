@@ -55,6 +55,18 @@ def next_focus_index(current: int, direction: str, cols: int, count: int) -> int
     return candidate if 0 <= candidate < count else current
 
 
+def focus_ring_active(ring_visible: bool, focus_index: int, count: int) -> bool:
+    """Whether the amber keyboard-focus ring should draw this frame.
+
+    The ring is an arrow-key navigation cursor: it appears only after the
+    user actually moves focus with the keyboard (*ring_visible*) and the
+    focused index still points at a real tile. Entering the wall by mouse
+    or by leaving deep zoom keeps the index (so the next arrow press
+    continues from there) but hides the ring.
+    """
+    return ring_visible and 0 <= focus_index < count
+
+
 def scroll_offset_to_reveal(
     focus_index: int,
     cols: int,

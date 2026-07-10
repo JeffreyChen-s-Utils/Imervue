@@ -14,10 +14,33 @@ from Imervue.gpu_image_view.tile_focus import (
     NO_FOCUS,
     RIGHT,
     UP,
+    focus_ring_active,
     focus_tile_rect,
     next_focus_index,
     scroll_offset_to_reveal,
 )
+
+
+class TestFocusRingActive:
+    """The amber ring draws only after explicit arrow-key navigation."""
+
+    def test_visible_and_valid_index_draws(self):
+        assert focus_ring_active(True, 0, 10) is True
+        assert focus_ring_active(True, 9, 10) is True
+
+    def test_hidden_ring_never_draws_even_with_valid_index(self):
+        # Entering the wall (mouse or Esc from deep zoom) keeps the index but
+        # must not show the ring — the original "yellow frame on entry" bug.
+        assert focus_ring_active(False, 0, 10) is False
+
+    def test_no_focus_sentinel_never_draws(self):
+        assert focus_ring_active(True, NO_FOCUS, 10) is False
+
+    def test_index_just_outside_range_never_draws(self):
+        assert focus_ring_active(True, 10, 10) is False
+
+    def test_empty_grid_never_draws(self):
+        assert focus_ring_active(True, 0, 0) is False
 
 
 class TestNextFocusIndex:
