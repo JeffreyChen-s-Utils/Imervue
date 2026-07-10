@@ -18,6 +18,7 @@ from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
+from Imervue.gui.file_tree_sort import FileTreeSortProxy
 from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
 from Imervue.gui.toast import ToastManager
 from Imervue.image.browser_state import (
@@ -157,7 +158,10 @@ class ImervueMainWindow(QMainWindow):
         imervue_layout.addWidget(splitter)
 
         # ===== 左側檔案樹 =====
-        self.model = FolderThumbnailModel()
+        # FolderThumbnailModel 供縮圖與檔案系統存取；FileTreeSortProxy 供
+        # 具名排序鍵（含 QFileSystemModel 沒有欄位的「建立日期」），並轉發
+        # QFileSystemModel 介面，所以其餘程式照舊把它當檔案系統 model 用。
+        self.model = FileTreeSortProxy(FolderThumbnailModel())
         # 只篩選圖片格式 + 資料夾，隱藏不符合的檔案
         self.model.setNameFilters([
             "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.webp",

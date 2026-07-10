@@ -63,15 +63,20 @@ class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
     _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
+    # Raw-QFileSystemModel fallback columns, used only when the model isn't
+    # the FileTreeSortProxy (tests, plain models). "created" has no native
+    # column, so the fallback approximates it with the modified column.
     _TREE_SORT_COLUMNS = {
         "name": 0,
         "size": 1,
         "modified": 3,
+        "created": 3,
     }
     _TREE_SORT_LANG_KEYS = {
         "name": "sort_by_name",
         "size": "sort_by_size",
         "modified": "sort_by_modified",
+        "created": "sort_by_created",
     }
 
     def __init__(self, main_window: "ImervueMainWindow"):
@@ -349,7 +354,7 @@ class _FileTreeView(QTreeView):
 
         sort_group = QActionGroup(sort_menu)
         sort_group.setExclusive(True)
-        for key in ("name", "modified", "size"):
+        for key in ("name", "modified", "created", "size"):
             action = sort_menu.addAction(
                 lang.get(self._TREE_SORT_LANG_KEYS[key], key.capitalize()),
             )
@@ -406,12 +411,18 @@ class _FileTreeView(QTreeView):
         )
 
     def _apply_tree_sort(self, sort_by: str, ascending: bool) -> None:
-        column = self._TREE_SORT_COLUMNS.get(sort_by, 0)
         order = (
             Qt.SortOrder.AscendingOrder
             if ascending else Qt.SortOrder.DescendingOrder
         )
-        self.sortByColumn(column, order)
+        model = self.model()
+        if hasattr(model, "set_sort_key"):
+            # FileTreeSortProxy sorts every key (incl. creation date, which
+            # QFileSystemModel has no column for) through column 0.
+            model.set_sort_key(sort_by)
+            self.sortByColumn(0, order)
+            return
+        self.sortByColumn(self._TREE_SORT_COLUMNS.get(sort_by, 0), order)
 
     def set_search_text(self, text: str) -> None:
         """Filter currently-loaded tree rows by basename substring."""
