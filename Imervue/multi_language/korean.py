@@ -234,6 +234,7 @@ korean_word_dict = {
     "tree_recycled": "휴지통으로 이동됨: {name}",
     "tree_delete_selected": "{count}개 항목 삭제",
     "tree_deleted_batch": "{count}개 항목을 휴지통으로 이동함",
+    "tree_delete_failed_count": "{count}개 항목을 삭제하지 못했습니다",
     "tree_copy_paths": "경로 복사",
     "tree_search_placeholder": "파일 트리 검색...",
     "tree_sort_menu": "파일 트리 정렬",

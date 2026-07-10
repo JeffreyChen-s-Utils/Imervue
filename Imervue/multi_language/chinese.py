@@ -226,6 +226,7 @@ chinese_word_dict = {
     "tree_recycled": "已移至回收站：{name}",
     "tree_delete_selected": "删除 {count} 个项目",
     "tree_deleted_batch": "已将 {count} 个项目移至回收站",
+    "tree_delete_failed_count": "有 {count} 个项目删除失败",
     "tree_copy_paths": "复制路径",
     "tree_search_placeholder": "搜索文件树...",
     "tree_sort_menu": "排序文件树",

@@ -259,6 +259,8 @@ class DuplicateDetectionDialog(QDialog):
         self._gui = main_gui
         self._lang = language_wrapper.language_word_dict
         self._worker: _ScanWorker | None = None
+        self._delete_worker = None
+        self._pending_delete_items: dict = {}
         self._groups: list[list[tuple[str, int]]] = []
 
         self.setWindowTitle(
@@ -459,20 +461,32 @@ class DuplicateDetectionDialog(QDialog):
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
-        deleted = 0
-        for item, path in paths:
-            try:
-                from send2trash import send2trash
-                send2trash(path)
-                parent = item.parent()
-                if parent:
-                    parent.removeChild(item)
-                deleted += 1
-            except Exception:
-                logger.exception("Failed to delete %s", path)
+        # 移到垃圾桶是逐檔的 shell 呼叫，大量重複檔在 UI 執行緒跑會凍住
+        # 整個視窗 — 交給背景 worker，完成後再更新樹與狀態列。
+        from Imervue.system.trash_ops import FileDeleteWorker
+        self._delete_btn.setEnabled(False)
+        self._pending_delete_items = {path: item for item, path in paths}
+        self._delete_worker = FileDeleteWorker([p for _item, p in paths], self)
+        self._delete_worker.finished_with.connect(self._on_delete_finished)
+        self._delete_worker.start()
+
+    def _on_delete_finished(self, trashed: list, failed: list):
+        pending = getattr(self, "_pending_delete_items", {})
+        for path in trashed:
+            item = pending.pop(path, None)
+            parent = item.parent() if item is not None else None
+            if parent is not None:
+                parent.removeChild(item)
+        for path in failed:
+            logger.warning("Failed to delete %s", path)
+        self._pending_delete_items = {}
+        if self._delete_worker is not None:
+            self._delete_worker.deleteLater()
+            self._delete_worker = None
+        self._delete_btn.setEnabled(True)
         self._status_label.setText(
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
-                _COUNT_PLACEHOLDER, str(deleted)
+                _COUNT_PLACEHOLDER, str(len(trashed))
             ))
 
     def _select_redundant(self):
@@ -527,6 +541,13 @@ class DuplicateDetectionDialog(QDialog):
                 self._worker.disconnect()
             self._worker.wait(5000)
             self._worker = None
+        if self._delete_worker and self._delete_worker.isRunning():
+            # Let the in-flight trash batch finish — destroying a running
+            # QThread crashes; the worker has no UI dependency once detached.
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._delete_worker.disconnect()
+            self._delete_worker.wait(30000)
+            self._delete_worker = None
         super().closeEvent(event)
 
 

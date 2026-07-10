@@ -237,6 +237,7 @@ japanese_word_dict = {
     "tree_recycled": "ごみ箱に移動しました：{name}",
     "tree_delete_selected": "{count} 件を削除",
     "tree_deleted_batch": "{count} 件をゴミ箱に移動しました",
+    "tree_delete_failed_count": "{count} 件を削除できませんでした",
     "tree_copy_paths": "パスをコピー",
     "tree_search_placeholder": "ファイルツリーを検索...",
     "tree_sort_menu": "ファイルツリーを並べ替え",
