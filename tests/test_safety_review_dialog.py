@@ -207,6 +207,24 @@ def test_merge_regions_defaults_on_and_threads_to_worker(qapp, tmp_path):
     dlg.deleteLater()
 
 
+def test_dialog_is_reusable_after_a_run(qapp, tmp_path):
+    # After a run finishes the dialog must reset to a ready state (controls
+    # re-enabled, Start shown) so it can be reused without reopening.
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    dlg._rescan_current_folder()
+    dlg._lock_controls()
+    assert dlg._start_btn.isEnabled() is False
+    dlg._on_finished(1, 0, 1)
+    assert dlg._start_btn.isEnabled() is True
+    # isVisibleTo reflects the visible flag without needing the dialog shown.
+    assert dlg._start_btn.isVisibleTo(dlg) is True
+    assert dlg._mode_combo.isEnabled() is True
+    assert dlg._merge_check.isEnabled() is True
+    dlg.deleteLater()
+
+
 def test_merge_regions_can_be_disabled(qapp, tmp_path):
     _tree(tmp_path)
     dlg = _dialog(qapp)

@@ -250,7 +250,7 @@ _ANIME_NIPPLE_CLASS = 2
 _ANIME_MAKE_LOVE_CLASS = 1
 # make_love bounds the whole scene; censor only its central portion (the
 # junction sits there) so enabling it doesn't blanket the frame.
-_MAKE_LOVE_CENTER_FRAC = 0.4
+_MAKE_LOVE_CENTER_FRAC = 0.3
 # Drop a "genitalia" box if this fraction of it overlaps a detected nipple —
 # almost always a breast misclassified as genitalia.
 _NIPPLE_OVERLAP_THRESH = 0.5
@@ -446,35 +446,39 @@ def _process_single_image(
 
     iw, ih = img.width, img.height
     regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
-    if merge_regions and len(regions) > 1:
-        regions = _merge_nearby_boxes(regions, _merge_gap(regions))
-    # Precise mode segments each final region into a full-image mask; cropping
-    # it to the region below keeps it pixel-aligned. None → ellipse fallback.
+    # Precise mode segments each region into a full-image mask; cropping it to
+    # the region below keeps it pixel-aligned. None → ellipse fallback.
     seg_masks = _segment_boxes(src, regions, mode) if shape == SHAPE_PRECISE else None
     for i, region in enumerate(regions):
         seg = _crop_seg_mask(seg_masks, i, region)
         _censor_region(img, *region, block_size,
                        style=style, shape=shape, seg_mask=seg)
 
+    bridges = _junction_bridges(regions, _merge_gap(regions)) if merge_regions else []
+    for bridge in bridges:
+        # A junction bridge is a thin connector — censor it solid so no seam
+        # shows through, regardless of the chosen region shape.
+        _censor_region(img, *bridge, block_size, style=style, shape=SHAPE_RECT)
+
     _save_image(img, dst)
-    return len(regions)
+    return len(regions) + len(bridges)
 
 
-_MERGE_GAP_FRAC = 0.4  # merge boxes within 40% of the median box edge
+_MERGE_GAP_FRAC = 0.4  # bridge boxes within 40% of the median box edge
 
 
 def _boxes_touch(a, b, gap: int) -> bool:
-    """True when box *a* grown by *gap* px overlaps box *b*."""
+    """True when box *a* grown by *gap* px reaches box *b*."""
     return (a[0] - gap <= b[2] and b[0] <= a[2] + gap
             and a[1] - gap <= b[3] and b[1] <= a[3] + gap)
 
 
-def _union_box(a, b):
-    return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
+def _boxes_overlap(a, b) -> bool:
+    return min(a[2], b[2]) > max(a[0], b[0]) and min(a[3], b[3]) > max(a[1], b[1])
 
 
 def _merge_gap(boxes) -> int:
-    """Gap threshold for merging, scaled to the boxes' median short edge."""
+    """Gap threshold for bridging, scaled to the boxes' median short edge."""
     edges = [min(x2 - x1, y2 - y1) for x1, y1, x2, y2 in boxes]
     if not edges:
         return 0
@@ -482,30 +486,40 @@ def _merge_gap(boxes) -> int:
     return int(median * _MERGE_GAP_FRAC)
 
 
-def _merge_nearby_boxes(boxes, gap: int):
-    """Merge boxes that overlap or lie within *gap* px into their bounding
-    union.
+def _bridge_box(a, b):
+    """Minimal rectangle that covers the gap between two nearby boxes.
 
-    Two detected regions in contact — e.g. a penetration junction between the
-    male and female genitalia — otherwise leave the contact area itself in the
-    gap between their boxes uncensored. Merging closes that gap by censoring
-    the union as one region. Distant regions (different people) stay separate.
+    For side-by-side boxes it spans the x-gap over only their overlapping y
+    band (and vice-versa), so the junction seam is covered without the empty
+    corners a full bounding-box union would add. Falls back to the bounding
+    box when the boxes don't share a band on either axis.
     """
-    regions = [tuple(b) for b in boxes]
-    changed = True
-    while changed:
-        changed = False
-        out: list = []
-        for box in regions:
-            for i, existing in enumerate(out):
-                if _boxes_touch(box, existing, gap):
-                    out[i] = _union_box(box, existing)
-                    changed = True
-                    break
-            else:
-                out.append(box)
-        regions = out
-    return regions
+    ux = (min(a[0], b[0]), max(a[2], b[2]))
+    uy = (min(a[1], b[1]), max(a[3], b[3]))
+    x_band = (max(a[0], b[0]), min(a[2], b[2]))
+    y_band = (max(a[1], b[1]), min(a[3], b[3]))
+    if y_band[0] < y_band[1]:            # share a horizontal band → x-gap bridge
+        return (ux[0], y_band[0], ux[1], y_band[1])
+    if x_band[0] < x_band[1]:            # share a vertical band → y-gap bridge
+        return (x_band[0], uy[0], x_band[1], uy[1])
+    return (ux[0], uy[0], ux[1], uy[1])  # diagonal → bounding box
+
+
+def _junction_bridges(boxes, gap: int):
+    """Bridge rectangles for each near-but-separate pair of boxes.
+
+    A penetration junction sits in the gap between the two genital boxes;
+    bridging only that gap covers the seam while keeping each censor tight —
+    no runaway bounding-box union that swallows the area around a chain of
+    detections.
+    """
+    bridges = []
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            a, b = boxes[i], boxes[j]
+            if _boxes_touch(a, b, gap) and not _boxes_overlap(a, b):
+                bridges.append(_bridge_box(a, b))
+    return bridges
 
 
 def _crop_seg_mask(seg_masks, index: int, box):

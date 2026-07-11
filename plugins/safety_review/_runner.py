@@ -191,28 +191,36 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
 _MERGE_GAP_FRAC = 0.4
 
 
-def _merge_nearby_boxes(boxes, gap):
-    """Union boxes that overlap or lie within *gap* px, so a junction between
-    two detected regions is censored instead of left in the gap."""
+def _bridge_box(a, b):
+    """Minimal rectangle covering the gap between two nearby boxes (see
+    _detection._bridge_box)."""
+    ux = (min(a[0], b[0]), max(a[2], b[2]))
+    uy = (min(a[1], b[1]), max(a[3], b[3]))
+    x_band = (max(a[0], b[0]), min(a[2], b[2]))
+    y_band = (max(a[1], b[1]), min(a[3], b[3]))
+    if y_band[0] < y_band[1]:
+        return (ux[0], y_band[0], ux[1], y_band[1])
+    if x_band[0] < x_band[1]:
+        return (x_band[0], uy[0], x_band[1], uy[1])
+    return (ux[0], uy[0], ux[1], uy[1])
+
+
+def _junction_bridges(boxes, gap):
+    """Bridge rectangles for each near-but-separate pair (see _detection)."""
     def _touch(a, b):
         return (a[0] - gap <= b[2] and b[0] <= a[2] + gap
                 and a[1] - gap <= b[3] and b[1] <= a[3] + gap)
-    regions = [tuple(b) for b in boxes]
-    changed = True
-    while changed:
-        changed = False
-        out = []
-        for box in regions:
-            for i, ex in enumerate(out):
-                if _touch(box, ex):
-                    out[i] = (min(box[0], ex[0]), min(box[1], ex[1]),
-                              max(box[2], ex[2]), max(box[3], ex[3]))
-                    changed = True
-                    break
-            else:
-                out.append(box)
-        regions = out
-    return regions
+
+    def _overlap(a, b):
+        return (min(a[2], b[2]) > max(a[0], b[0])
+                and min(a[3], b[3]) > max(a[1], b[1]))
+    bridges = []
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            a, b = boxes[i], boxes[j]
+            if _touch(a, b) and not _overlap(a, b):
+                bridges.append(_bridge_box(a, b))
+    return bridges
 
 
 def _merge_gap(boxes):
@@ -281,7 +289,7 @@ def _detect_boxes_real(detector, src, confidence, labels):
 
 _ANIME_NIPPLE_CLASS = 2
 _ANIME_MAKE_LOVE_CLASS = 1
-_MAKE_LOVE_CENTER_FRAC = 0.4
+_MAKE_LOVE_CENTER_FRAC = 0.3
 _NIPPLE_OVERLAP_THRESH = 0.5
 
 
@@ -358,10 +366,11 @@ def _process_one(detector, src, dst, block_size, padding,
 
     iw, ih = img.width, img.height
     regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
-    if merge_regions and len(regions) > 1:
-        regions = _merge_nearby_boxes(regions, _merge_gap(regions))
     for region in regions:
         _censor_region(img, *region, block_size, style=style, shape=shape)
+    bridges = _junction_bridges(regions, _merge_gap(regions)) if merge_regions else []
+    for bridge in bridges:
+        _censor_region(img, *bridge, block_size, style=style, shape=SHAPE_RECT)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
@@ -375,7 +384,7 @@ def _process_one(detector, src, dst, block_size, padding,
         save_img = save_img.convert("RGB")
     _ensure_parent(dst)
     save_img.save(dst, format=fmt)
-    return len(regions)
+    return len(regions) + len(bridges)
 
 
 def _load_anime_model():

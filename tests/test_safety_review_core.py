@@ -87,33 +87,46 @@ def test_required_packages_auto_is_union_without_duplicates():
 
 
 # ---------------------------------------------------------------------------
-# _detection — merging nearby boxes so a junction is covered
+# _detection — bridging the junction between nearby boxes (tight, no big union)
 # ---------------------------------------------------------------------------
 
-def test_merge_leaves_distant_boxes_separate():
-    boxes = [(0, 0, 10, 10), (100, 100, 110, 110)]
-    assert set(_detection._merge_nearby_boxes(boxes, gap=2)) == set(boxes)
+def test_boxes_overlap():
+    assert _detection._boxes_overlap((0, 0, 10, 10), (5, 5, 15, 15)) is True
+    assert _detection._boxes_overlap((0, 0, 10, 10), (10, 10, 20, 20)) is False
 
 
-def test_merge_unions_overlapping_boxes():
-    boxes = [(0, 0, 20, 20), (15, 15, 30, 30)]
-    merged = _detection._merge_nearby_boxes(boxes, gap=0)
-    assert merged == [(0, 0, 30, 30)]
+def test_bridge_box_side_by_side_spans_x_over_shared_y_band():
+    # y-overlap band [5,20] × full x-span [0,44] — not the full bounding box,
+    # so the empty corners a union would add are avoided.
+    assert _detection._bridge_box((0, 0, 20, 20), (24, 5, 44, 25)) == (0, 5, 44, 20)
 
 
-def test_merge_bridges_a_small_gap():
-    # Two boxes 4 px apart — the junction between them — merge when the gap
-    # threshold reaches across.
-    boxes = [(0, 0, 20, 20), (24, 0, 44, 20)]
-    assert _detection._merge_nearby_boxes(boxes, gap=5) == [(0, 0, 44, 20)]
-    # Too small a gap keeps them apart.
-    assert len(_detection._merge_nearby_boxes(boxes, gap=2)) == 2
+def test_bridge_box_stacked_spans_y_over_shared_x_band():
+    assert _detection._bridge_box((0, 0, 20, 20), (5, 24, 25, 44)) == (5, 0, 20, 44)
 
 
-def test_merge_is_transitive_chain():
-    # A touches B touches C → all three collapse into one union.
-    boxes = [(0, 0, 10, 10), (12, 0, 22, 10), (24, 0, 34, 10)]
-    assert _detection._merge_nearby_boxes(boxes, gap=3) == [(0, 0, 34, 10)]
+def test_bridge_box_diagonal_falls_back_to_bounding_box():
+    assert _detection._bridge_box((0, 0, 10, 10), (20, 20, 30, 30)) == (0, 0, 30, 30)
+
+
+def test_junction_bridges_only_for_near_separate_pairs():
+    near = [(0, 0, 20, 20), (24, 0, 44, 20)]
+    assert _detection._junction_bridges(near, gap=6) == [(0, 0, 44, 20)]
+    # Distant → no bridge.
+    far = [(0, 0, 10, 10), (100, 100, 110, 110)]
+    assert _detection._junction_bridges(far, gap=6) == []
+    # Overlapping → already covered by the boxes, no bridge.
+    over = [(0, 0, 20, 20), (15, 15, 30, 30)]
+    assert _detection._junction_bridges(over, gap=6) == []
+
+
+def test_junction_bridges_do_not_chain_into_one_big_region():
+    # Three in a row → pairwise bridges, NOT one giant union spanning all three.
+    boxes = [(0, 0, 10, 20), (14, 0, 24, 20), (28, 0, 38, 20)]
+    bridges = _detection._junction_bridges(boxes, gap=6)
+    # Adjacent pairs bridge; the far pair (0-10 vs 28-38, gap 18) does not.
+    assert len(bridges) == 2
+    assert all(b[2] - b[0] < 38 for b in bridges)   # none spans the whole row
 
 
 def test_merge_gap_scales_with_box_size():
@@ -352,13 +365,13 @@ def test_anime_keeps_nipple_when_explicitly_requested(monkeypatch):
 
 
 def test_anime_make_love_is_shrunk_to_its_centre(monkeypatch):
-    # The whole-scene make_love box is reduced to its central 40% (the junction)
+    # The whole-scene make_love box is reduced to its central 30% (the junction)
     # so opting in doesn't blanket the frame.
     dets = [((0, 0, 100, 100), 1)]
     monkeypatch.setattr(_detection, "_get_anime_model",
                         lambda: _fake_anime_model(dets))
     assert _detection._detect_regions_anime(
-        "x.png", 0.15, frozenset({1})) == [(30, 30, 70, 70)]
+        "x.png", 0.15, frozenset({1})) == [(35, 35, 65, 65)]
 
 
 def test_detect_regions_real_filters_by_label_and_confidence():
@@ -429,7 +442,7 @@ def test_process_single_image_merges_adjacent_detections(tmp_path):
         detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
         style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT,
         merge_regions=True)
-    assert count == 1                                   # merged into one region
+    assert count == 3                                   # 2 boxes + 1 junction bridge
     out = Image.open(dst)
     assert out.getpixel((22, 25)) == (0, 0, 0)          # the junction is censored
 

@@ -486,16 +486,27 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._padding = _MODE_DEFAULTS.get(
             mode, _MODE_DEFAULTS[MODE_REAL])["padding"]
 
-    def _lock_controls(self):
-        for widget in (
+    def _controls(self):
+        return (
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
             self._shape_combo, self._merge_check, self._overwrite_check,
             self._recursive_check, self._only_censored_check,
-        ):
+        )
+
+    def _lock_controls(self):
+        for widget in self._controls():
             widget.setEnabled(False)
         for cb in self._cat_checks.values():
             cb.setEnabled(False)
+
+    def _unlock_controls(self):
+        """Re-enable the settings so the dialog is reusable for another run."""
+        for widget in self._controls():
+            widget.setEnabled(True)
+        real = self._mode_combo.currentData() == MODE_REAL
+        for cat, cb in self._cat_checks.items():
+            cb.setEnabled(not (real and cat == CAT_SEXUAL_ACT))
 
     def _failed_folder(self) -> str | None:
         """Sibling ``<folder>_censor_failed`` dir that collects copies of the
@@ -587,8 +598,11 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             ).format(count=failed, path=self._last_failed_dir)
         self._status_label.setText(msg)
         self._time_label.setText("")
-        self._cancel_btn.setText(self._lang.get("safety_review_close", "Close"))
-        self._start_btn.setVisible(False)
+        # Reset to a ready state so the dialog can be reused for another run
+        # (adjust settings / pick a new folder) instead of being reopened.
+        self._unlock_controls()
+        self._start_btn.setText(self._lang.get("safety_review_start", "Start"))
+        self._start_btn.setVisible(True)
 
         if hasattr(self._gui.main_window, "toast"):
             toast = self._gui.main_window.toast
