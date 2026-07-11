@@ -26,6 +26,7 @@ from safety_review._constants import (
     MODE_ANIME,
     MODE_AUTO,
     MODE_REAL,
+    SHAPE_ELLIPSE,
     SHAPE_RECT,
     STYLE_MOSAIC,
 )
@@ -116,6 +117,57 @@ def _resolve_destination(src: str, output_dir: str | None, overwrite: bool,
     return _non_overwrite_destination(src, output_dir)
 
 
+def _failed_destination(src: str, failed_dir: str, scan_root: str | None) -> str:
+    """Mirrored path for a failed image under *failed_dir*, keeping its name.
+
+    Uses the same relative-parent logic as the output mirror so a failed
+    image lands under the failed folder at the same subfolder position it had
+    in the scanned tree.
+    """
+    rel = _relative_parent(src, scan_root or "")
+    target_dir = Path(failed_dir) / rel if rel else Path(failed_dir)
+    return str(target_dir / Path(src).name)
+
+
+def _copy_failed(src: str, failed_dir: str, scan_root: str | None) -> None:
+    """Copy a failed original into the mirrored failed folder (best-effort)."""
+    import shutil
+    dst = _failed_destination(src, failed_dir, scan_root)
+    Path(dst).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+
+
+def _process_with_shape_fallback(run_for_shape, shape: str, retries: int = 1):
+    """Run *run_for_shape(shape)*, retrying then downgrading to ellipse before
+    giving up — so only a genuinely unprocessable image reaches the failed
+    folder.
+
+    Order of attempts: the chosen shape ``1 + retries`` times (catches a
+    transient read/lock), then one ellipse attempt (a precise/segmentation
+    hiccup still yields a censored image rather than a failure). Returns the
+    callable's result, or re-raises the last error if every attempt fails.
+    """
+    attempts = [shape] * (1 + max(0, retries))
+    if shape != SHAPE_ELLIPSE:
+        attempts.append(SHAPE_ELLIPSE)
+    last_exc: Exception | None = None
+    for attempt_shape in attempts:
+        try:
+            return run_for_shape(attempt_shape)
+        except Exception as exc:  # noqa: BLE001 — try the next fallback shape
+            last_exc = exc
+    raise last_exc
+
+
+def _write_failed_manifest(failed_dir: str, failures: list[tuple[str, str]]) -> None:
+    """Write a ``censor_failed.log`` listing each failed file and its reason,
+    so the user can see *why* each image could not be processed."""
+    manifest = Path(failed_dir) / "censor_failed.log"
+    with open(manifest, "w", encoding="utf-8") as fh:
+        for name, reason in failures:
+            fh.write(f"{name}: {reason}\n")
+
+
 class _SingleWorker(QThread):
     """In-process: detect + mosaic a single image."""
     # (step 0-3, step_text)
@@ -172,7 +224,8 @@ class _BatchWorker(QThread):
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
-                 only_censored: bool = False, shape: str = SHAPE_RECT):
+                 only_censored: bool = False, shape: str = SHAPE_RECT,
+                 failed_dir: str | None = None, scan_root: str | None = None):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
@@ -187,16 +240,29 @@ class _BatchWorker(QThread):
         self._source_root = source_root
         self._only_censored = only_censored
         self._shape = shape
+        # Where to collect copies of images that fail to process, mirroring
+        # their subfolder under scan_root. None → failures are only counted.
+        self._failed_dir = failed_dir
+        self._scan_root = scan_root
 
     def _destination(self, src: str) -> str:
         return _resolve_destination(
             src, self._output_dir, self._overwrite, self._source_root)
 
+    def _record_failure(self, src: str, exc: Exception,
+                        failures: list[tuple[str, str]]) -> None:
+        """Log the failure, and copy the original into the failed folder."""
+        logger.error("Batch safety review failed for %s: %s", src, exc)
+        failures.append((Path(src).name, str(exc)))
+        if self._failed_dir:
+            with contextlib.suppress(OSError):
+                _copy_failed(src, self._failed_dir, self._scan_root)
+
     def run(self):
         detector = _resolve_detector(self._mode)
         success = 0
-        failed = 0
         total_regions = 0
+        failures: list[tuple[str, str]] = []
         total = len(self._paths)
         t0 = time.monotonic()
 
@@ -205,21 +271,30 @@ class _BatchWorker(QThread):
             elapsed = time.monotonic() - t0
             eta = elapsed / i * (total - i) if i > 0 else 0.0
             self.progress.emit(i, total, name, elapsed, eta)
+            # Compute the destination once so retries reuse it instead of
+            # spawning "_censored_1, _2…" copies for the same source.
+            dst = self._destination(src)
+
+            def _run(shp, _src=src, _dst=dst):
+                return _process_single_image(
+                    detector, _src, _dst, self._bs, self._pad,
+                    confidence=self._conf, expand_pct=self._expand_pct,
+                    mode=self._mode, style=self._style,
+                    categories=self._categories,
+                    only_censored=self._only_censored, shape=shp)
+
             try:
-                count = _process_single_image(
-                    detector, src, self._destination(src), self._bs, self._pad,
-                    confidence=self._conf,
-                    expand_pct=self._expand_pct, mode=self._mode,
-                    style=self._style, categories=self._categories,
-                    only_censored=self._only_censored, shape=self._shape,
-                )
+                count = _process_with_shape_fallback(_run, self._shape)
                 total_regions += count
                 success += 1
-            except Exception as exc:
-                logger.error("Batch safety review failed for %s: %s", src, exc)
-                failed += 1
+            except Exception as exc:  # noqa: BLE001 — one bad image must not abort the batch
+                self._record_failure(src, exc, failures)
 
-        self.result_ready.emit(success, failed, total_regions)
+        if failures and self._failed_dir:
+            with contextlib.suppress(OSError):
+                _write_failed_manifest(self._failed_dir, failures)
+
+        self.result_ready.emit(success, len(failures), total_regions)
 
 
 def _categories_arg(categories) -> str:
@@ -310,7 +385,8 @@ class _SubprocessBatchWorker(QThread):
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
-                 only_censored: bool = False, shape: str = SHAPE_RECT):
+                 only_censored: bool = False, shape: str = SHAPE_RECT,
+                 failed_dir: str | None = None, scan_root: str | None = None):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -327,6 +403,8 @@ class _SubprocessBatchWorker(QThread):
         self._source_root = source_root or ""
         self._only_censored = only_censored
         self._shape = shape
+        self._failed_dir = failed_dir or ""
+        self._scan_root = scan_root or ""
 
     def _command(self, tmp_path: str) -> list[str]:
         return [
@@ -339,6 +417,7 @@ class _SubprocessBatchWorker(QThread):
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
             self._source_root, str(self._only_censored), self._shape,
+            self._failed_dir, self._scan_root,
         ]
 
     def _emit_progress(self, payload: str) -> None:

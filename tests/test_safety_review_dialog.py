@@ -164,3 +164,31 @@ def test_worker_gets_selected_shape(qapp, tmp_path):
         shape=dlg._shape_combo.currentData())
     assert worker._shape == SHAPE_PRECISE
     dlg.deleteLater()
+
+
+def test_failed_folder_is_a_sibling_of_the_scan_folder(qapp, tmp_path):
+    folder = tmp_path / "photos"
+    folder.mkdir()
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(folder))
+    assert dlg._failed_folder() == str(tmp_path / "photos_censor_failed")
+    dlg.deleteLater()
+
+
+def test_worker_gets_failed_dir_and_scan_root(qapp, tmp_path):
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    worker = dlg._make_worker(
+        output_dir=str(tmp_path / "out"), overwrite=False,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
+    assert worker._scan_root == str(tmp_path)
+    assert worker._failed_dir == str(tmp_path.parent / f"{tmp_path.name}_censor_failed")
+    dlg.deleteLater()
+
+
+def test_no_failed_folder_without_a_scan_folder(qapp, tmp_path):
+    dlg = _dialog(qapp)  # folder edit left blank
+    assert dlg._failed_folder() is None
+    dlg.deleteLater()

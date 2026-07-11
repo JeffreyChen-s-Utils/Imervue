@@ -319,6 +319,8 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         # Scanned folder root — set only when "include subfolders" is on, so a
         # separate-output run mirrors the subfolder tree instead of flattening.
         self._source_root: str | None = None
+        # Failed-image folder used by the most recent run (for the summary).
+        self._last_failed_dir: str | None = None
 
         self.setWindowTitle(
             self._lang.get("safety_review_scan_all_title",
@@ -490,12 +492,25 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         for cb in self._cat_checks.values():
             cb.setEnabled(False)
 
+    def _failed_folder(self) -> str | None:
+        """Sibling ``<folder>_censor_failed`` dir that collects copies of the
+        images that fail to process, mirroring their subfolder structure."""
+        root = self._folder_edit.text().strip()
+        if not root:
+            return None
+        base = Path(root)
+        return str(base.parent / f"{base.name or 'scan'}_censor_failed")
+
     def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
                      categories, shape):
         # source_root and only-censored are only meaningful for a separate-
         # output run; on overwrite each file is written back in place.
         source_root = None if overwrite else self._source_root
         only_censored = (not overwrite) and self._only_censored_check.isChecked()
+        # Failed images are always mirrored relative to the scanned folder,
+        # independent of the output/overwrite choice.
+        scan_root = self._folder_edit.text().strip() or None
+        self._last_failed_dir = self._failed_folder()
         frozen_env = self._get_frozen_env() if self._get_frozen_env else None
         if frozen_env:
             python, sp = frozen_env
@@ -504,13 +519,15 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 self._block_size, self._padding, overwrite=overwrite,
                 mode=mode, confidence=conf, expand_pct=expand,
                 style=style, categories=categories, source_root=source_root,
-                only_censored=only_censored, shape=shape)
+                only_censored=only_censored, shape=shape,
+                failed_dir=self._last_failed_dir, scan_root=scan_root)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
             style=style, categories=categories, source_root=source_root,
-            only_censored=only_censored, shape=shape)
+            only_censored=only_censored, shape=shape,
+            failed_dir=self._last_failed_dir, scan_root=scan_root)
 
     def _start(self):
         if not self._paths:
@@ -555,6 +572,11 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._finished = True
         self._progress.setValue(len(self._paths))
         msg = _format_result_message(self._lang, success, failed, total_regions)
+        if failed and self._last_failed_dir:
+            msg += "\n" + self._lang.get(
+                "safety_review_failed_folder",
+                "{count} failed image(s) copied to: {path}",
+            ).format(count=failed, path=self._last_failed_dir)
         self._status_label.setText(msg)
         self._time_label.setText("")
         self._cancel_btn.setText(self._lang.get("safety_review_close", "Close"))

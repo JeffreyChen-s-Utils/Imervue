@@ -433,6 +433,133 @@ def test_categories_arg(categories, expected):
 
 
 # ---------------------------------------------------------------------------
+# _workers — failed-image collection into a mirrored failed folder
+# ---------------------------------------------------------------------------
+
+def test_failed_destination_flat_without_scan_root(tmp_path):
+    dst = _workers._failed_destination(
+        str(tmp_path / "pic.png"), str(tmp_path / "failed"), None)
+    assert Path(dst) == tmp_path / "failed" / "pic.png"
+
+
+def test_failed_destination_mirrors_subfolder(tmp_path):
+    root = tmp_path / "src"
+    failed = tmp_path / "failed"
+    dst = _workers._failed_destination(
+        str(root / "a" / "b" / "pic.png"), str(failed), str(root))
+    assert Path(dst) == failed / "a" / "b" / "pic.png"
+
+
+def test_copy_failed_copies_original_into_mirrored_folder(tmp_path):
+    root = tmp_path / "src"
+    (root / "sub").mkdir(parents=True)
+    src = root / "sub" / "bad.png"
+    src.write_bytes(b"original-bytes")
+    failed = tmp_path / "failed"
+    _workers._copy_failed(str(src), str(failed), str(root))
+    out = failed / "sub" / "bad.png"
+    assert out.exists()
+    assert out.read_bytes() == b"original-bytes"
+    assert src.exists()  # original left in place
+
+
+def test_write_failed_manifest_lists_reasons(tmp_path):
+    failed = tmp_path / "failed"
+    failed.mkdir()
+    _workers._write_failed_manifest(
+        str(failed), [("a.png", "decode error"), ("b.png", "locked")])
+    log = (failed / "censor_failed.log").read_text(encoding="utf-8")
+    assert "a.png: decode error" in log
+    assert "b.png: locked" in log
+
+
+def test_batch_record_failure_copies_and_records(tmp_path):
+    # Exercise the worker glue via the unbound method (no QThread construction).
+    from types import SimpleNamespace
+    root = tmp_path / "src"
+    root.mkdir()
+    src = root / "bad.png"
+    src.write_bytes(b"x")
+    failed = tmp_path / "failed"
+    fake = SimpleNamespace(_failed_dir=str(failed), _scan_root=str(root))
+    failures: list[tuple[str, str]] = []
+    _workers._BatchWorker._record_failure(fake, str(src), ValueError("boom"),
+                                          failures)
+    assert failures == [("bad.png", "boom")]
+    assert (failed / "bad.png").exists()   # original collected
+
+
+def test_shape_fallback_returns_first_success():
+    calls = []
+    result = _workers._process_with_shape_fallback(
+        lambda shp: calls.append(shp) or "ok", _constants.SHAPE_PRECISE)
+    assert result == "ok"
+    assert calls == [_constants.SHAPE_PRECISE]   # succeeded first try, no retry
+
+
+def test_shape_fallback_retries_same_shape_then_succeeds():
+    calls = []
+
+    def _run(shp):
+        calls.append(shp)
+        if len(calls) == 1:
+            raise ValueError("transient")
+        return "ok"
+
+    assert _workers._process_with_shape_fallback(
+        _run, _constants.SHAPE_PRECISE) == "ok"
+    # First precise attempt failed, the retry (still precise) succeeded.
+    assert calls == [_constants.SHAPE_PRECISE, _constants.SHAPE_PRECISE]
+
+
+def test_shape_fallback_downgrades_to_ellipse():
+    calls = []
+
+    def _run(shp):
+        calls.append(shp)
+        if shp != _constants.SHAPE_ELLIPSE:
+            raise ValueError("shape failed")
+        return "ok"
+
+    assert _workers._process_with_shape_fallback(
+        _run, _constants.SHAPE_PRECISE) == "ok"
+    # Precise twice (attempt + retry), then the ellipse downgrade succeeds.
+    assert calls == [_constants.SHAPE_PRECISE, _constants.SHAPE_PRECISE,
+                     _constants.SHAPE_ELLIPSE]
+
+
+def test_shape_fallback_reraises_when_all_attempts_fail():
+    def _run(shp):
+        raise ValueError(f"nope-{shp}")
+
+    with pytest.raises(ValueError, match="nope-"):
+        _workers._process_with_shape_fallback(_run, _constants.SHAPE_PRECISE)
+
+
+def test_shape_fallback_ellipse_choice_has_no_extra_downgrade():
+    calls = []
+    with pytest.raises(ValueError):
+        _workers._process_with_shape_fallback(
+            lambda shp: calls.append(shp) or (_ for _ in ()).throw(ValueError()),
+            _constants.SHAPE_ELLIPSE)
+    # Ellipse chosen → attempt + one retry, no third (already the fallback).
+    assert calls == [_constants.SHAPE_ELLIPSE, _constants.SHAPE_ELLIPSE]
+
+
+def test_batch_record_failure_without_failed_dir_only_records(tmp_path):
+    from types import SimpleNamespace
+    src = tmp_path / "bad.png"
+    src.write_bytes(b"x")
+    fake = SimpleNamespace(_failed_dir=None, _scan_root=None)
+    failures: list[tuple[str, str]] = []
+    _workers._BatchWorker._record_failure(fake, str(src), OSError("locked"),
+                                          failures)
+    assert failures == [("bad.png", "locked")]
+    # No failed folder configured → nothing copied anywhere.
+    assert list(tmp_path.iterdir()) == [src]
+
+
+# ---------------------------------------------------------------------------
 # _workers — recursive-scan destination mirroring
 # ---------------------------------------------------------------------------
 
@@ -552,6 +679,23 @@ def test_runner_censor_rect_fills_whole_box(tmp_path):
     _runner._censor_region(img, 10, 10, 40, 40, 4,
                            style=_runner.STYLE_BLACK, shape=_runner.SHAPE_RECT)
     assert img.getpixel((11, 11)) == (0, 0, 0)
+
+
+def test_runner_failed_dest_mirrors_subfolder(tmp_path):
+    root = tmp_path / "src"
+    failed = tmp_path / "failed"
+    dst = _runner._failed_dest(str(root / "a" / "pic.png"), str(failed), str(root))
+    assert Path(dst) == failed / "a" / "pic.png"
+
+
+def test_runner_copy_failed_copies_original(tmp_path):
+    root = tmp_path / "src"
+    root.mkdir()
+    src = root / "bad.png"
+    src.write_bytes(b"orig")
+    failed = tmp_path / "failed"
+    _runner._copy_failed(str(src), str(failed), str(root))
+    assert (failed / "bad.png").read_bytes() == b"orig"
 
 
 def test_runner_batch_destination_increments_on_clash(tmp_path):

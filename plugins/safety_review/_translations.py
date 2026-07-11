@@ -66,6 +66,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "Ellipse (tighter)",
         "safety_review_shape_rect": "Rectangle (whole box)",
         "safety_review_shape_precise": "Precise (pixel-level, slower)",
+        "safety_review_failed_folder":
+            "{count} failed image(s) copied to: {path}",
         "safety_review_categories": "Detection categories:",
         "safety_review_cat_genitalia": "Genitalia (penis / vagina)",
         "safety_review_cat_anus": "Anus",
@@ -148,6 +150,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "橢圓（較貼合）",
         "safety_review_shape_rect": "矩形（整個框）",
         "safety_review_shape_precise": "精確（像素級，較慢）",
+        "safety_review_failed_folder":
+            "{count} 張失敗的圖片已複製至：{path}",
         "safety_review_categories": "\u5075\u6e2c\u985e\u5225\uff1a",
         "safety_review_cat_genitalia": "\u751f\u6b96\u5668 (\u9670\u8396 / \u9670\u9053)",
         "safety_review_cat_anus": "\u809b\u9580",
@@ -230,6 +234,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "椭圆（更贴合）",
         "safety_review_shape_rect": "矩形（整个框）",
         "safety_review_shape_precise": "精确（像素级，较慢）",
+        "safety_review_failed_folder":
+            "{count} 张失败的图片已复制至：{path}",
         "safety_review_categories": "\u68c0\u6d4b\u7c7b\u522b\uff1a",
         "safety_review_cat_genitalia": "\u751f\u6b96\u5668 (\u9634\u830e / \u9634\u9053)",
         "safety_review_cat_anus": "\u809b\u95e8",
@@ -315,6 +321,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "楕円（より密着）",
         "safety_review_shape_rect": "矩形（ボックス全体）",
         "safety_review_shape_precise": "精密（ピクセル単位、低速）",
+        "safety_review_failed_folder":
+            "失敗した {count} 件をコピーしました：{path}",
         "safety_review_categories": "\u691c\u51fa\u30ab\u30c6\u30b4\u30ea\uff1a",
         "safety_review_cat_genitalia": "\u6027\u5668 (\u30da\u30cb\u30b9 / \u30f4\u30a1\u30ae\u30ca)",
         "safety_review_cat_anus": "\u808b\u9580",
@@ -400,6 +408,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "타원 (더 밀착)",
         "safety_review_shape_rect": "사각형 (전체 박스)",
         "safety_review_shape_precise": "정밀 (픽셀 단위, 느림)",
+        "safety_review_failed_folder":
+            "실패한 이미지 {count}개를 복사함: {path}",
         "safety_review_categories": "\uac10\uc9c0 \uce74\ud14c\uace0\ub9ac:",
         "safety_review_cat_genitalia": "\uc131\uae30 (\uc74c\uacbd / \uc9c8)",
         "safety_review_cat_anus": "\ud56d\ubb38",

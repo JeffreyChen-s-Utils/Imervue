@@ -2,7 +2,7 @@
 
 Usage (frozen env):
     python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories> <shape>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored> <shape>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored> <shape> <failed_dir> <scan_root>]
 
 ``source_root`` (batch only, optional) mirrors each source's subfolder under
 ``output_dir`` so a recursive scan keeps its tree instead of flattening.
@@ -140,6 +140,27 @@ def _ensure_parent(dst):
     parent = os.path.dirname(dst)
     if parent:
         os.makedirs(parent, exist_ok=True)
+
+
+def _failed_dest(src, failed_dir, scan_root):
+    """Mirrored path for a failed image under *failed_dir*, keeping its name."""
+    target_dir = failed_dir
+    if scan_root:
+        rel = os.path.relpath(os.path.dirname(src), scan_root)
+        if rel != os.curdir and not rel.startswith(os.pardir):
+            target_dir = os.path.join(failed_dir, rel)
+    return os.path.join(target_dir, os.path.basename(src))
+
+
+def _copy_failed(src, failed_dir, scan_root):
+    """Best-effort copy of a failed original into the mirrored failed folder."""
+    import shutil
+    try:
+        dst = _failed_dest(src, failed_dir, scan_root)
+        _ensure_parent(dst)
+        shutil.copy2(src, dst)
+    except OSError:
+        pass
 
 
 def _bootstrap_site_packages(site_packages: str) -> None:
@@ -296,123 +317,133 @@ def _load_anime_model():
     return YOLO(model_path)
 
 
+def _load_detectors(det_mode):
+    """Load the detector(s) for *det_mode* → (nudenet_detector, anime_model)."""
+    if det_mode == "auto":
+        print("PROGRESS:Loading both detectors (auto mode)...", flush=True)
+        from nudenet import NudeDetector
+        return NudeDetector(), _load_anime_model()
+    if det_mode == "anime":
+        print("PROGRESS:Loading EraX anime detector...", flush=True)
+        return None, _load_anime_model()
+    from nudenet import NudeDetector
+    print("PROGRESS:Loading NudeNet detector...", flush=True)
+    return NudeDetector(), None
+
+
+def _process_one_with_fallback(run_for_shape, shape, retries=1):
+    """Run *run_for_shape(shape)*, retrying then downgrading to ellipse before
+    surfacing the error, so only a genuinely unprocessable image fails."""
+    attempts = [shape] * (1 + max(0, retries))
+    if shape != SHAPE_ELLIPSE:
+        attempts.append(SHAPE_ELLIPSE)
+    last_exc = None
+    for attempt_shape in attempts:
+        try:
+            return run_for_shape(attempt_shape)
+        except Exception as exc:
+            last_exc = exc
+    raise last_exc
+
+
+def _write_failed_log(failed_dir, failures):
+    if failures and failed_dir:
+        with open(os.path.join(failed_dir, "censor_failed.log"),
+                  "w", encoding="utf-8") as fh:
+            for fname, reason in failures:
+                fh.write(f"{fname}: {reason}\n")
+
+
+def _run_single(args):
+    if len(args) < 6:
+        print("ERROR:single mode requires: input output block_size padding",
+              flush=True)
+        sys.exit(1)
+    input_path, output_path = args[2], args[3]
+    block_size, padding = int(args[4]), int(args[5])
+    det_mode = args[6] if len(args) > 6 else "real"
+    confidence = float(args[7]) if len(args) > 7 else MIN_CONFIDENCE
+    expand_pct = int(args[8]) if len(args) > 8 else 0
+    style = args[9] if len(args) > 9 else STYLE_MOSAIC
+    categories = _parse_categories(args[10]) if len(args) > 10 else None
+    shape = args[11] if len(args) > 11 else SHAPE_RECT
+    try:
+        detector, anime_model = _load_detectors(det_mode)
+        print("PROGRESS:Detecting...", flush=True)
+        count = _process_one(detector, input_path, output_path,
+                             block_size, padding, confidence=confidence,
+                             expand_pct=expand_pct, det_mode=det_mode,
+                             anime_model=anime_model, style=style,
+                             categories=categories, shape=shape)
+        print("PROGRESS:No genitalia detected" if count == 0
+              else f"PROGRESS:Censored {count} region(s)", flush=True)
+        print(f"OK:{output_path}", flush=True)
+    except Exception as exc:
+        print(f"ERROR:{exc}", flush=True)
+        sys.exit(1)
+
+
+def _run_batch(args):
+    if len(args) < 7:
+        print("ERROR:batch mode requires: json_paths output_dir "
+              "block_size padding overwrite", flush=True)
+        sys.exit(1)
+    json_paths, output_dir = args[2], args[3]
+    block_size, padding = int(args[4]), int(args[5])
+    overwrite = args[6].lower() == "true"
+    det_mode = args[7] if len(args) > 7 else "real"
+    confidence = float(args[8]) if len(args) > 8 else MIN_CONFIDENCE
+    expand_pct = int(args[9]) if len(args) > 9 else 0
+    style = args[10] if len(args) > 10 else STYLE_MOSAIC
+    categories = _parse_categories(args[11]) if len(args) > 11 else None
+    source_root = args[12] if len(args) > 12 else ""
+    only_censored = args[13].lower() == "true" if len(args) > 13 else False
+    shape = args[14] if len(args) > 14 else SHAPE_RECT
+    failed_dir = args[15] if len(args) > 15 else ""
+    scan_root = args[16] if len(args) > 16 else ""
+
+    with open(json_paths, encoding="utf-8") as f:
+        paths = json.load(f)
+    detector, anime_model = _load_detectors(det_mode)
+
+    success = 0
+    failures = []
+    total = len(paths)
+    for i, src in enumerate(paths):
+        name = Path(src).name
+        print(f"BATCH_PROGRESS:{i}:{total}:{name}", flush=True)
+        try:
+            dst = _batch_destination(src, output_dir, overwrite, source_root)
+            _process_one_with_fallback(
+                lambda shp, _s=src, _d=dst: _process_one(
+                    detector, _s, _d, block_size, padding,
+                    confidence=confidence, expand_pct=expand_pct,
+                    det_mode=det_mode, anime_model=anime_model,
+                    style=style, categories=categories,
+                    only_censored=only_censored, shape=shp),
+                shape)
+            success += 1
+        except Exception as exc:
+            print(f"PROGRESS:Error on {name}: {exc}", flush=True)
+            failures.append((name, str(exc)))
+            if failed_dir:
+                _copy_failed(src, failed_dir, scan_root)
+
+    _write_failed_log(failed_dir, failures)
+    print(f"BATCH_OK:{success}:{len(failures)}", flush=True)
+
+
 def main() -> None:
     args = sys.argv[1:]
     if len(args) < 2:
         print("ERROR:Not enough arguments", flush=True)
         sys.exit(1)
-
-    site_packages = args[0]
+    _bootstrap_site_packages(args[0])
     mode = args[1]
-    _bootstrap_site_packages(site_packages)
-
     if mode == "single":
-        if len(args) < 6:
-            print("ERROR:single mode requires: input output block_size padding",
-                  flush=True)
-            sys.exit(1)
-        input_path, output_path = args[2], args[3]
-        block_size, padding = int(args[4]), int(args[5])
-        det_mode = args[6] if len(args) > 6 else "real"
-        confidence = float(args[7]) if len(args) > 7 else MIN_CONFIDENCE
-        expand_pct = int(args[8]) if len(args) > 8 else 0
-        style = args[9] if len(args) > 9 else STYLE_MOSAIC
-        categories = _parse_categories(args[10]) if len(args) > 10 else None
-        shape = args[11] if len(args) > 11 else SHAPE_RECT
-        try:
-            detector = None
-            anime_model = None
-            if det_mode == "auto":
-                print("PROGRESS:Loading both detectors (auto mode)...",
-                      flush=True)
-                from nudenet import NudeDetector
-                detector = NudeDetector()
-                anime_model = _load_anime_model()
-            elif det_mode == "anime":
-                print("PROGRESS:Loading EraX anime detector...", flush=True)
-                anime_model = _load_anime_model()
-            else:
-                from nudenet import NudeDetector
-                print("PROGRESS:Loading NudeNet detector...", flush=True)
-                detector = NudeDetector()
-
-            print("PROGRESS:Detecting...", flush=True)
-            count = _process_one(detector, input_path, output_path,
-                                 block_size, padding,
-                                 confidence=confidence,
-                                 expand_pct=expand_pct,
-                                 det_mode=det_mode,
-                                 anime_model=anime_model,
-                                 style=style,
-                                 categories=categories,
-                                 shape=shape)
-            if count == 0:
-                print("PROGRESS:No genitalia detected", flush=True)
-            else:
-                print(f"PROGRESS:Censored {count} region(s)", flush=True)
-            print(f"OK:{output_path}", flush=True)
-        except Exception as exc:
-            print(f"ERROR:{exc}", flush=True)
-            sys.exit(1)
-
+        _run_single(args)
     elif mode == "batch":
-        if len(args) < 7:
-            print("ERROR:batch mode requires: json_paths output_dir "
-                  "block_size padding overwrite", flush=True)
-            sys.exit(1)
-        json_paths = args[2]
-        output_dir = args[3]
-        block_size = int(args[4])
-        padding = int(args[5])
-        overwrite = args[6].lower() == "true"
-        det_mode = args[7] if len(args) > 7 else "real"
-        confidence = float(args[8]) if len(args) > 8 else MIN_CONFIDENCE
-        expand_pct = int(args[9]) if len(args) > 9 else 0
-        style = args[10] if len(args) > 10 else STYLE_MOSAIC
-        categories = _parse_categories(args[11]) if len(args) > 11 else None
-        source_root = args[12] if len(args) > 12 else ""
-        only_censored = args[13].lower() == "true" if len(args) > 13 else False
-        shape = args[14] if len(args) > 14 else SHAPE_RECT
-
-        with open(json_paths, encoding="utf-8") as f:
-            paths = json.load(f)
-
-        detector = None
-        anime_model = None
-        if det_mode == "auto":
-            print("PROGRESS:Loading both detectors (auto mode)...", flush=True)
-            from nudenet import NudeDetector
-            detector = NudeDetector()
-            anime_model = _load_anime_model()
-        elif det_mode == "anime":
-            print("PROGRESS:Loading EraX anime detector...", flush=True)
-            anime_model = _load_anime_model()
-        else:
-            from nudenet import NudeDetector
-            print("PROGRESS:Loading NudeNet detector...", flush=True)
-            detector = NudeDetector()
-
-        success = 0
-        failed = 0
-        total = len(paths)
-
-        for i, src in enumerate(paths):
-            name = Path(src).name
-            print(f"BATCH_PROGRESS:{i}:{total}:{name}", flush=True)
-            try:
-                dst = _batch_destination(src, output_dir, overwrite, source_root)
-                _process_one(detector, src, dst, block_size, padding,
-                             confidence=confidence,
-                             expand_pct=expand_pct, det_mode=det_mode,
-                             anime_model=anime_model,
-                             style=style, categories=categories,
-                             only_censored=only_censored, shape=shape)
-                success += 1
-            except Exception as exc:
-                print(f"PROGRESS:Error on {name}: {exc}", flush=True)
-                failed += 1
-
-        print(f"BATCH_OK:{success}:{failed}", flush=True)
+        _run_batch(args)
     else:
         print(f"ERROR:Unknown mode: {mode}", flush=True)
         sys.exit(1)
