@@ -293,6 +293,9 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._block_size = block_size
         self._padding = padding
         self._finished = False
+        # Scanned folder root — set only when "include subfolders" is on, so a
+        # separate-output run mirrors the subfolder tree instead of flattening.
+        self._source_root: str | None = None
 
         self.setWindowTitle(
             self._lang.get("safety_review_scan_all_title",
@@ -320,6 +323,13 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         folder_row.addWidget(self._folder_edit, 1)
         folder_row.addWidget(self._browse_folder_btn)
         layout.addLayout(folder_row)
+
+        self._recursive_check = QCheckBox(
+            self._lang.get("safety_review_include_subfolders",
+                           "Include subfolders (scan the whole tree)"))
+        self._recursive_check.toggled.connect(self._on_recursive_toggled)
+        layout.addWidget(self._recursive_check)
+
         self._count_label = QLabel("")
         layout.addWidget(self._count_label)
 
@@ -386,10 +396,29 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self, self._lang.get("safety_review_scan_folder", "Source folder"))
         if folder:
             self._folder_edit.setText(folder)
-            self._paths = _scan_folder(folder)
-            self._update_count()
+            self._rescan_current_folder()
             if not self._out_dir_edit.text():
                 self._out_dir_edit.setText(folder)
+
+    def _on_recursive_toggled(self, _checked):
+        """Re-scan the chosen folder when the subfolder option changes."""
+        if self._folder_edit.text().strip():
+            self._rescan_current_folder()
+
+    def _rescan_current_folder(self):
+        """Scan the folder in the edit box, honouring the subfolder option.
+
+        ``source_root`` is remembered only for a recursive scan so a
+        separate-output run mirrors the tree; a flat scan keeps the previous
+        behaviour of dropping every result into one output folder.
+        """
+        folder = self._folder_edit.text().strip()
+        if not folder:
+            return
+        recursive = self._recursive_check.isChecked()
+        self._paths = _scan_folder(folder, recursive=recursive)
+        self._source_root = folder if recursive else None
+        self._update_count()
 
     def _browse_out_dir(self):
         folder = QFileDialog.getExistingDirectory(
@@ -422,7 +451,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         for widget in (
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
-            self._overwrite_check,
+            self._overwrite_check, self._recursive_check,
         ):
             widget.setEnabled(False)
         for cb in self._cat_checks.values():
@@ -430,6 +459,9 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
 
     def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
                      categories):
+        # source_root is only meaningful for a separate-output run; on
+        # overwrite each file is written back in place regardless.
+        source_root = None if overwrite else self._source_root
         frozen_env = self._get_frozen_env() if self._get_frozen_env else None
         if frozen_env:
             python, sp = frozen_env
@@ -437,12 +469,12 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 python, sp, self._paths, output_dir,
                 self._block_size, self._padding, overwrite=overwrite,
                 mode=mode, confidence=conf, expand_pct=expand,
-                style=style, categories=categories)
+                style=style, categories=categories, source_root=source_root)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
-            style=style, categories=categories)
+            style=style, categories=categories, source_root=source_root)
 
     def _start(self):
         if not self._paths:

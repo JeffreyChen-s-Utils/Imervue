@@ -2,7 +2,10 @@
 
 Usage (frozen env):
     python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root>]
+
+``source_root`` (batch only, optional) mirrors each source's subfolder under
+``output_dir`` so a recursive scan keeps its tree instead of flattening.
 
 Protocol — stdout lines:
     PROGRESS:<message>
@@ -94,6 +97,27 @@ def _parse_categories(cats_str):
     if not cats_str:
         return None
     return frozenset(c.strip() for c in cats_str.split(",") if c.strip())
+
+
+def _batch_destination(src, output_dir, overwrite, source_root):
+    """Resolve one batch destination, mirroring subfolders under *source_root*
+    when given so a recursive scan keeps its tree instead of flattening."""
+    if overwrite:
+        return src
+    target_dir = output_dir
+    if source_root:
+        rel = os.path.relpath(os.path.dirname(src), source_root)
+        if rel != os.curdir and not rel.startswith(os.pardir):
+            target_dir = os.path.join(output_dir, rel)
+    os.makedirs(target_dir, exist_ok=True)
+    stem = Path(src).stem
+    suffix = Path(src).suffix or ".png"
+    dst = os.path.join(target_dir, f"{stem}_censored{suffix}")
+    counter = 1
+    while os.path.exists(dst):
+        dst = os.path.join(target_dir, f"{stem}_censored_{counter}{suffix}")
+        counter += 1
+    return dst
 
 
 def _bootstrap_site_packages(site_packages: str) -> None:
@@ -306,6 +330,7 @@ def main() -> None:
         expand_pct = int(args[9]) if len(args) > 9 else 0
         style = args[10] if len(args) > 10 else STYLE_MOSAIC
         categories = _parse_categories(args[11]) if len(args) > 11 else None
+        source_root = args[12] if len(args) > 12 else ""
 
         with open(json_paths, encoding="utf-8") as f:
             paths = json.load(f)
@@ -333,19 +358,7 @@ def main() -> None:
             name = Path(src).name
             print(f"BATCH_PROGRESS:{i}:{total}:{name}", flush=True)
             try:
-                if overwrite:
-                    dst = src
-                else:
-                    stem = Path(src).stem
-                    suffix = Path(src).suffix or ".png"
-                    dst = str(Path(output_dir) / f"{stem}_censored{suffix}")
-                    counter = 1
-                    while os.path.exists(dst):
-                        dst = str(
-                            Path(output_dir)
-                            / f"{stem}_censored_{counter}{suffix}"
-                        )
-                        counter += 1
+                dst = _batch_destination(src, output_dir, overwrite, source_root)
                 _process_one(detector, src, dst, block_size, padding,
                              confidence=confidence,
                              expand_pct=expand_pct, det_mode=det_mode,

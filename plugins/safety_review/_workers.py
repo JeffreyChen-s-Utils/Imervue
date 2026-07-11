@@ -65,6 +65,57 @@ def _non_overwrite_destination(src: str, output_dir: str) -> str:
     return dst
 
 
+def _relative_parent(src: str, source_root: str) -> str:
+    """Relative subfolder of *src* under *source_root*.
+
+    Returns ``""`` when *src* sits directly inside the root, when no root is
+    given, or when *src* lies outside it (different drive / above the root),
+    in which case the caller flattens instead of mirroring.
+    """
+    if not source_root:
+        return ""
+    try:
+        rel = os.path.relpath(str(Path(src).parent), source_root)
+    except ValueError:
+        return ""  # different drive on Windows — cannot mirror
+    if rel == os.curdir or rel.startswith(os.pardir):
+        return ""
+    return rel
+
+
+def _mirrored_destination(src: str, output_dir: str, source_root: str) -> str:
+    """Non-clobbering destination that mirrors *src*'s position under
+    *source_root* into *output_dir*.
+
+    A recursive scan keeps its subfolder tree instead of flattening every
+    match into one directory (which would collide same-named images from
+    different subfolders). Falls back to a flat destination when *src* is not
+    under *source_root*.
+    """
+    rel_parent = _relative_parent(src, source_root)
+    target_dir = Path(output_dir) / rel_parent if rel_parent else Path(output_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(src).stem
+    suffix = Path(src).suffix or ".png"
+    dst = target_dir / f"{stem}_censored{suffix}"
+    counter = 1
+    while dst.exists():
+        dst = target_dir / f"{stem}_censored_{counter}{suffix}"
+        counter += 1
+    return str(dst)
+
+
+def _resolve_destination(src: str, output_dir: str | None, overwrite: bool,
+                         source_root: str | None) -> str:
+    """Pick the output path for *src*: in-place when overwriting, mirrored
+    under *source_root* when set (recursive scan), else flat in *output_dir*."""
+    if overwrite:
+        return src
+    if source_root:
+        return _mirrored_destination(src, output_dir, source_root)
+    return _non_overwrite_destination(src, output_dir)
+
+
 class _SingleWorker(QThread):
     """In-process: detect + mosaic a single image."""
     # (step 0-3, step_text)
@@ -118,7 +169,7 @@ class _BatchWorker(QThread):
                  block_size: int, padding: int, overwrite: bool,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None):
+                 categories=None, source_root: str | None = None):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
@@ -130,11 +181,11 @@ class _BatchWorker(QThread):
         self._expand_pct = expand_pct
         self._style = style
         self._categories = categories
+        self._source_root = source_root
 
     def _destination(self, src: str) -> str:
-        if self._overwrite:
-            return src
-        return _non_overwrite_destination(src, self._output_dir)
+        return _resolve_destination(
+            src, self._output_dir, self._overwrite, self._source_root)
 
     def run(self):
         detector = _resolve_detector(self._mode)
@@ -250,7 +301,7 @@ class _SubprocessBatchWorker(QThread):
                  block_size: int, padding: int, overwrite: bool,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None):
+                 categories=None, source_root: str | None = None):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -264,6 +315,7 @@ class _SubprocessBatchWorker(QThread):
         self._expand_pct = expand_pct
         self._style = style
         self._categories = categories
+        self._source_root = source_root or ""
 
     def _command(self, tmp_path: str) -> list[str]:
         return [
@@ -275,6 +327,7 @@ class _SubprocessBatchWorker(QThread):
             self._mode, str(self._conf),
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
+            self._source_root,
         ]
 
     def _emit_progress(self, payload: str) -> None:

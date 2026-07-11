@@ -91,8 +91,16 @@ def _subprocess_kwargs() -> dict:
     return kw
 
 
-def _scan_folder(folder: str) -> list[str]:
-    """Return sorted list of image paths in *folder* (non-recursive)."""
+def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
+    """Return a sorted list of image paths in *folder*.
+
+    With *recursive* False only the folder's direct children are returned
+    (sorted by filename). With *recursive* True the whole subtree is walked
+    and the result is sorted by full path so each subfolder's images stay
+    grouped and the order is deterministic across platforms.
+    """
+    if recursive:
+        return _scan_folder_recursive(folder)
     result = []
     try:
         for entry in os.scandir(folder):
@@ -101,6 +109,17 @@ def _scan_folder(folder: str) -> list[str]:
     except OSError:
         pass
     result.sort(key=lambda p: os.path.basename(p).lower())
+    return result
+
+
+def _scan_folder_recursive(folder: str) -> list[str]:
+    """Return sorted image paths in *folder* and every subfolder below it."""
+    result = []
+    for root, _dirs, files in os.walk(folder):
+        for name in files:
+            if Path(name).suffix.lower() in _IMAGE_EXTS:
+                result.append(os.path.join(root, name))
+    result.sort(key=lambda p: p.lower())
     return result
 
 

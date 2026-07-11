@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from safety_review import _constants, _detection, _workers
+from safety_review import _constants, _detection, _runner, _workers
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +226,32 @@ def test_scan_folder_missing_dir_returns_empty(tmp_path):
     assert _detection._scan_folder(str(tmp_path / "nope")) == []
 
 
+def test_scan_folder_non_recursive_skips_subfolders(tmp_path):
+    _write_png(tmp_path / "top.png")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    _write_png(sub / "nested.png")
+    result = _detection._scan_folder(str(tmp_path))
+    names = [Path(p).name for p in result]
+    assert names == ["top.png"]
+
+
+def test_scan_folder_recursive_includes_subfolders(tmp_path):
+    _write_png(tmp_path / "top.png")
+    sub = tmp_path / "a" / "b"
+    sub.mkdir(parents=True)
+    _write_png(sub / "deep.png")
+    (tmp_path / "a" / "note.txt").write_text("skip", encoding="utf-8")
+    result = _detection._scan_folder(str(tmp_path), recursive=True)
+    names = {Path(p).name for p in result}
+    assert names == {"top.png", "deep.png"}
+
+
+def test_scan_folder_recursive_empty_tree(tmp_path):
+    (tmp_path / "sub").mkdir()
+    assert _detection._scan_folder(str(tmp_path), recursive=True) == []
+
+
 # ---------------------------------------------------------------------------
 # _detection._detect_image_mode — heuristic boundary
 # ---------------------------------------------------------------------------
@@ -272,3 +298,109 @@ def test_non_overwrite_destination_defaults_suffix_when_missing(tmp_path):
 ])
 def test_categories_arg(categories, expected):
     assert _workers._categories_arg(categories) == expected
+
+
+# ---------------------------------------------------------------------------
+# _workers — recursive-scan destination mirroring
+# ---------------------------------------------------------------------------
+
+def test_relative_parent_direct_child_is_empty(tmp_path):
+    src = tmp_path / "pic.png"
+    assert _workers._relative_parent(str(src), str(tmp_path)) == ""
+
+
+def test_relative_parent_nested_returns_subpath(tmp_path):
+    src = tmp_path / "a" / "b" / "pic.png"
+    rel = _workers._relative_parent(str(src), str(tmp_path))
+    assert Path(rel) == Path("a/b")
+
+
+def test_relative_parent_no_root_is_empty(tmp_path):
+    assert _workers._relative_parent(str(tmp_path / "pic.png"), "") == ""
+
+
+def test_relative_parent_outside_root_falls_back_to_flat(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    outside = tmp_path / "other" / "pic.png"
+    assert _workers._relative_parent(str(outside), str(root)) == ""
+
+
+def test_mirrored_destination_recreates_subfolder_tree(tmp_path):
+    root = tmp_path / "src"
+    out = tmp_path / "out"
+    out.mkdir()
+    src = root / "sub" / "deep" / "pic.png"
+    dst = _workers._mirrored_destination(str(src), str(out), str(root))
+    assert Path(dst) == out / "sub" / "deep" / "pic_censored.png"
+    # The mirrored directory is created so the worker can write straight away.
+    assert (out / "sub" / "deep").is_dir()
+
+
+def test_mirrored_destination_increments_on_clash(tmp_path):
+    root = tmp_path / "src"
+    out = tmp_path / "out"
+    out.mkdir()
+    src = root / "sub" / "pic.png"
+    first = _workers._mirrored_destination(str(src), str(out), str(root))
+    Path(first).write_text("x", encoding="utf-8")
+    second = _workers._mirrored_destination(str(src), str(out), str(root))
+    assert Path(second).name == "pic_censored_1.png"
+
+
+def test_resolve_destination_overwrite_returns_source(tmp_path):
+    src = str(tmp_path / "pic.png")
+    assert _workers._resolve_destination(src, None, True, None) == src
+
+
+def test_resolve_destination_flat_without_root(tmp_path):
+    src = str(tmp_path / "pic.png")
+    dst = _workers._resolve_destination(src, str(tmp_path), False, None)
+    assert Path(dst).name == "pic_censored.png"
+    assert Path(dst).parent == tmp_path
+
+
+def test_resolve_destination_mirrors_with_root(tmp_path):
+    root = tmp_path / "src"
+    out = tmp_path / "out"
+    out.mkdir()
+    src = str(root / "sub" / "pic.png")
+    dst = _workers._resolve_destination(src, str(out), False, str(root))
+    assert Path(dst) == out / "sub" / "pic_censored.png"
+
+
+# ---------------------------------------------------------------------------
+# _runner._batch_destination — subprocess path mirrors the same way
+# ---------------------------------------------------------------------------
+
+def test_runner_batch_destination_overwrite_returns_source(tmp_path):
+    src = str(tmp_path / "pic.png")
+    assert _runner._batch_destination(src, str(tmp_path), True, "") == src
+
+
+def test_runner_batch_destination_flat_without_root(tmp_path):
+    src = str(tmp_path / "pic.png")
+    dst = _runner._batch_destination(src, str(tmp_path), False, "")
+    assert Path(dst).name == "pic_censored.png"
+    assert Path(dst).parent == tmp_path
+
+
+def test_runner_batch_destination_mirrors_subfolder(tmp_path):
+    root = tmp_path / "src"
+    out = tmp_path / "out"
+    out.mkdir()
+    src = str(root / "a" / "b" / "pic.png")
+    dst = _runner._batch_destination(src, str(out), False, str(root))
+    assert Path(dst) == out / "a" / "b" / "pic_censored.png"
+    assert (out / "a" / "b").is_dir()
+
+
+def test_runner_batch_destination_increments_on_clash(tmp_path):
+    root = tmp_path / "src"
+    out = tmp_path / "out"
+    out.mkdir()
+    src = str(root / "sub" / "pic.png")
+    first = _runner._batch_destination(src, str(out), False, str(root))
+    Path(first).write_text("x", encoding="utf-8")
+    second = _runner._batch_destination(src, str(out), False, str(root))
+    assert Path(second).name == "pic_censored_1.png"

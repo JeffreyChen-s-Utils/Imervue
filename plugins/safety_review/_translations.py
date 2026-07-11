@@ -53,6 +53,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_scan_folder": "Source folder:",
         "safety_review_scan_folder_hint":
             "Choose a folder to scan for images",
+        "safety_review_include_subfolders":
+            "Include subfolders (scan the whole tree)",
         "safety_review_mode_auto": "Auto-detect",
         "safety_review_style": "Censor style:",
         "safety_review_style_mosaic": "Mosaic",
@@ -127,6 +129,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_scan_folder": "\u4f86\u6e90\u8cc7\u6599\u593e\uff1a",
         "safety_review_scan_folder_hint":
             "\u9078\u64c7\u8981\u6383\u63cf\u7684\u8cc7\u6599\u593e",
+        "safety_review_include_subfolders":
+            "包含子資料夾（掃描整個目錄樹）",
         "safety_review_mode_auto": "\u81ea\u52d5\u5224\u65b7",
         "safety_review_style": "\u6253\u78bc\u6a23\u5f0f\uff1a",
         "safety_review_style_mosaic": "\u99ac\u8cfd\u514b",
@@ -201,6 +205,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_scan_folder": "\u6e90\u6587\u4ef6\u5939\uff1a",
         "safety_review_scan_folder_hint":
             "\u9009\u62e9\u8981\u626b\u63cf\u7684\u6587\u4ef6\u5939",
+        "safety_review_include_subfolders":
+            "包含子文件夹（扫描整个目录树）",
         "safety_review_mode_auto": "\u81ea\u52a8\u5224\u65ad",
         "safety_review_style": "\u6253\u7801\u6837\u5f0f\uff1a",
         "safety_review_style_mosaic": "\u9a6c\u8d5b\u514b",
@@ -278,6 +284,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_scan_folder": "\u30bd\u30fc\u30b9\u30d5\u30a9\u30eb\u30c0\uff1a",
         "safety_review_scan_folder_hint":
             "\u30b9\u30ad\u30e3\u30f3\u3059\u308b\u30d5\u30a9\u30eb\u30c0\u3092\u9078\u629e",
+        "safety_review_include_subfolders":
+            "サブフォルダを含む（ツリー全体をスキャン）",
         "safety_review_mode_auto": "\u81ea\u52d5\u5224\u5b9a",
         "safety_review_style": "\u30e2\u30b6\u30a4\u30af\u30b9\u30bf\u30a4\u30eb\uff1a",
         "safety_review_style_mosaic": "\u30e2\u30b6\u30a4\u30af",
@@ -355,6 +363,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_scan_folder": "\uc18c\uc2a4 \ud3f4\ub354:",
         "safety_review_scan_folder_hint":
             "\uc2a4\ucafc\ud560 \ud3f4\ub354\ub97c \uc120\ud0dd\ud558\uc138\uc694",
+        "safety_review_include_subfolders":
+            "하위 폴더 포함 (전체 트리 스쫼)",
         "safety_review_mode_auto": "\uc790\ub3d9 \uac10\uc9c0",
         "safety_review_style": "\ubaa8\uc790\uc774\ud06c \uc2a4\ud0c0\uc77c:",
         "safety_review_style_mosaic": "\ubaa8\uc790\uc774\ud06c",
