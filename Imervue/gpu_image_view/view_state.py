@@ -29,16 +29,24 @@ def _current_base_dims(view: GPUImageView) -> tuple[int, int] | None:
 
 
 def save_view_state(view: GPUImageView) -> None:
-    """儲存當前圖片的縮放與位置。"""
-    images = view.model.images
-    if images and 0 <= view.current_index < len(images):
-        path = images[view.current_index]
-        view._view_memory[path] = {
-            "zoom": view.zoom,
-            "dx": view.dz_offset_x,
-            "dy": view.dz_offset_y,
-            "dims": _current_base_dims(view),
-        }
+    """Remember the currently-displayed image's zoom + pan.
+
+    Keyed on ``_deep_zoom_path`` — the image whose view ``view.zoom`` /
+    offsets actually reflect — NOT ``images[current_index]``. Navigation
+    advances ``current_index`` to the *incoming* image before the load runs,
+    so keying on it would save the outgoing image's zoom under the incoming
+    image's slot: the incoming entry gets corrupted and the outgoing image's
+    own view is lost. When no image is on screen there is nothing to save.
+    """
+    path = getattr(view, "_deep_zoom_path", None)
+    if not path:
+        return
+    view._view_memory[path] = {
+        "zoom": view.zoom,
+        "dx": view.dz_offset_x,
+        "dy": view.dz_offset_y,
+        "dims": _current_base_dims(view),
+    }
 
 
 def restore_view_state(view: GPUImageView, path: str) -> None:

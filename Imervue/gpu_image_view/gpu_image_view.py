@@ -111,6 +111,10 @@ class GPUImageView(QOpenGLWidget):
         # While set (and ``deep_zoom`` is still None) the overlay shows a
         # low-res preview + "Loading…" pill instead of a blank frame.
         self._deep_zoom_loading: str | None = None
+        # Path of the image currently shown (or targeted) in deep zoom — the
+        # image whose view ``zoom`` / offsets are live. Used to save the view
+        # under the right key when navigating away (see ``save_view_state``).
+        self._deep_zoom_path: str | None = None
         self._deep_zoom_error: tuple[str, str] | None = None
         self._deep_zoom_request_id = 0
         self._deep_zoom_retry_counts: dict[str, int] = {}
@@ -600,6 +604,24 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.fit_view import fit_to_window
         fit_to_window(self)
 
+    def _apply_initial_view(self) -> None:
+        """Set the zoom/offset for a freshly displayed full-res image.
+
+        A low-res progressive preview fits itself into ``view.zoom`` while the
+        full image loads, so by the time the full image lands ``view.zoom`` is
+        the preview's placeholder fit — not this image's remembered view. Re-
+        restore the image's own saved view first, so the fit-or-keep decision
+        and the kept zoom use the right values instead of the preview's fit.
+        A fresh image restores to defaults and then fits; a whole-image view
+        re-fits to the current canvas; a genuine zoom-in is preserved.
+        """
+        path = self._current_path()
+        if path is None:
+            return
+        self._restore_view_state(path)
+        if self._should_refit_on_load():
+            self._fit_to_window()
+
     def _fit_to_width(self):
         """Fit image width — external contract (key dispatcher)."""
         from Imervue.gpu_image_view.fit_view import fit_to_width
@@ -650,6 +672,7 @@ class GPUImageView(QOpenGLWidget):
     def _clear_deep_zoom(self):
         """釋放 DeepZoom 相關的 GPU 與記憶體資源"""
         self._deep_zoom_loading = None
+        self._deep_zoom_path = None
         self._stop_animation()
         if self.tile_manager is not None:
             self.tile_manager.clear()
@@ -852,21 +875,22 @@ class GPUImageView(QOpenGLWidget):
         self._deep_zoom_request_id += 1
         request_id = self._deep_zoom_request_id
         self._deep_zoom_error = None
-        # Capture whether this image was *genuinely* remembered BEFORE the save
-        # below — `_save_view_state` writes the (already-updated) current index,
-        # which would otherwise pre-seed this path with the previous view's
-        # leftover zoom and fool the fit-on-load decision into skipping the fit.
+        # Whether this image was genuinely viewed before (has a remembered
+        # view). ``save_view_state`` keys on the *outgoing* image, so it no
+        # longer corrupts this incoming path's entry — but capture the flag
+        # up front anyway as the single source of truth for the fit decision.
         self._loading_was_remembered = path in self._view_memory
-        # Also snapshot the dims the remembered zoom was saved against (before
-        # the save below overwrites this path's entry) so a geometry change
-        # since — a rotate/crop — forces a refit instead of keeping a zoom that
-        # no longer fits the swapped dimensions.
+        # Dims the remembered zoom was saved against, so a geometry change
+        # since (rotate/crop) forces a refit instead of keeping a zoom that no
+        # longer fits the swapped dimensions.
         self._loading_remembered_dims = (self._view_memory.get(path) or {}).get("dims")
-        # 儲存前一張的狀態
+        # 儲存「前一張」(目前顯示中的那張) 的狀態，key 為 _deep_zoom_path
         self._save_view_state()
 
         self._cancel_deep_zoom_worker()
         self._clear_deep_zoom()
+        # From here on the deep-zoom target is `path`; a later save keys on it.
+        self._deep_zoom_path = path
 
         self._push_history(path)
         self._restore_view_state(path)
@@ -882,8 +906,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            if self._should_refit_on_load():
-                self._fit_to_window()
+            self._apply_initial_view()
             self._init_animation(path)
             self._prefetch_neighbors()
             self._update_status_info()
@@ -989,10 +1012,8 @@ class GPUImageView(QOpenGLWidget):
             self.active_deep_zoom_preview_worker = None
         self.enforce_memory_pressure()
 
-        # 首次進入此圖片 → 自動 fit-to-window
-        cur_path = self.model.images[self.current_index]
-        if cur_path and self._should_refit_on_load():
-            self._fit_to_window()
+        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）
+        self._apply_initial_view()
 
         # 動畫偵測
         self._init_animation(path)
@@ -1020,8 +1041,10 @@ class GPUImageView(QOpenGLWidget):
         if self.deep_zoom is None:
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            if self._should_refit_on_load():
-                self._fit_to_window()
+            # The preview is a low-res placeholder — always fit it whole while
+            # the full image loads. The final view is applied on full load via
+            # ``_apply_initial_view`` (which re-restores the remembered zoom).
+            self._fit_to_window()
         if hasattr(self.main_window, "set_status"):
             lang = self.main_window.language_wrapper.language_word_dict
             self.main_window.set_status(
@@ -1159,8 +1182,7 @@ class GPUImageView(QOpenGLWidget):
             self._deep_zoom_error = None
             self.tile_manager = TileManager(dzi)
             self.enforce_memory_pressure()
-            if self._should_refit_on_load():
-                self._fit_to_window()
+            self._apply_initial_view()
             self._prefetch_neighbors()
             self._browse.begin_image_fade_in()
             self.update()
