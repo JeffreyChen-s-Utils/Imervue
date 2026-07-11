@@ -327,41 +327,18 @@ def _fake_anime_model(dets):
     return _Model()
 
 
-def test_box_overlap_frac():
-    assert _detection._box_overlap_frac((0, 0, 10, 10), (0, 0, 10, 10)) == 1.0
-    assert _detection._box_overlap_frac((0, 0, 10, 10), (20, 20, 30, 30)) == 0.0
-    assert _detection._box_overlap_frac((0, 0, 10, 10), (5, 0, 15, 10)) == 0.5
-
-
 def test_shrink_box_center():
     assert _detection._shrink_box_center((0, 0, 100, 100), 0.4) == (30, 30, 70, 70)
 
 
-def test_anime_drops_genitalia_overlapping_a_nipple(monkeypatch):
-    # A "vagina" box sitting on a detected nipple → a breast misclassified as
-    # genitalia; it must be dropped so breasts are never censored.
-    dets = [((10, 10, 30, 30), 4), ((10, 10, 30, 30), 2)]  # vagina + nipple
+def test_anime_returns_only_requested_classes(monkeypatch):
+    # No automatic dropping: exactly the requested classes come back, so a
+    # detection is never silently removed (which would look like a miss).
+    dets = [((10, 10, 30, 30), 4), ((40, 40, 60, 60), 3), ((0, 0, 5, 5), 2)]
     monkeypatch.setattr(_detection, "_get_anime_model",
                         lambda: _fake_anime_model(dets))
-    assert _detection._detect_regions_anime(
-        "x.png", 0.15, frozenset({3, 4})) == []
-
-
-def test_anime_keeps_genitalia_away_from_nipples(monkeypatch):
-    dets = [((10, 10, 30, 30), 4), ((100, 100, 120, 120), 2)]
-    monkeypatch.setattr(_detection, "_get_anime_model",
-                        lambda: _fake_anime_model(dets))
-    assert _detection._detect_regions_anime(
-        "x.png", 0.15, frozenset({3, 4})) == [(10, 10, 30, 30)]
-
-
-def test_anime_keeps_nipple_when_explicitly_requested(monkeypatch):
-    # If the user opts into nipple censoring, they are a target, not a filter.
-    dets = [((10, 10, 30, 30), 4), ((10, 10, 30, 30), 2)]
-    monkeypatch.setattr(_detection, "_get_anime_model",
-                        lambda: _fake_anime_model(dets))
-    out = _detection._detect_regions_anime("x.png", 0.15, frozenset({2, 4}))
-    assert len(out) == 2
+    out = _detection._detect_regions_anime("x.png", 0.15, frozenset({3, 4}))
+    assert set(out) == {(10, 10, 30, 30), (40, 40, 60, 60)}   # nipple excluded, none dropped
 
 
 def test_anime_make_love_is_shrunk_to_its_centre(monkeypatch):
@@ -445,6 +422,23 @@ def test_process_single_image_merges_adjacent_detections(tmp_path):
     assert count == 3                                   # 2 boxes + 1 junction bridge
     out = Image.open(dst)
     assert out.getpixel((22, 25)) == (0, 0, 0)          # the junction is censored
+
+
+def test_junction_bridge_honours_the_selected_shape(tmp_path):
+    # The bridge uses the user's chosen shape (ellipse here), not a forced rect.
+    src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+    ])
+    _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        style=_constants.STYLE_BLACK, shape=_constants.SHAPE_ELLIPSE,
+        merge_regions=True)
+    out = Image.open(dst)
+    assert out.getpixel((22, 25)) == (0, 0, 0)        # ellipse centre covers junction
+    assert out.getpixel((6, 21)) == (255, 0, 0)       # a corner clear → it's an ellipse
 
 
 def test_process_single_image_without_merge_keeps_regions_separate(tmp_path):

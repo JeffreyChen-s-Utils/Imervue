@@ -246,14 +246,10 @@ def _detect_regions_real(detector, src: str, confidence: float,
 
 # EraX YOLO class IDs referenced by name (0=anus, 1=make_love, 2=nipple,
 # 3=penis, 4=vagina).
-_ANIME_NIPPLE_CLASS = 2
 _ANIME_MAKE_LOVE_CLASS = 1
 # make_love bounds the whole scene; censor only its central portion (the
 # junction sits there) so enabling it doesn't blanket the frame.
 _MAKE_LOVE_CENTER_FRAC = 0.3
-# Drop a "genitalia" box if this fraction of it overlaps a detected nipple —
-# almost always a breast misclassified as genitalia.
-_NIPPLE_OVERLAP_THRESH = 0.5
 
 
 def _detect_anime_raw(src: str, confidence: float):
@@ -273,14 +269,6 @@ def _detect_anime_raw(src: str, confidence: float):
     return out
 
 
-def _box_overlap_frac(a, b) -> float:
-    """Fraction of box *a*'s area covered by its intersection with *b*."""
-    iw = max(0, min(a[2], b[2]) - max(a[0], b[0]))
-    ih = max(0, min(a[3], b[3]) - max(a[1], b[1]))
-    area = max(1, (a[2] - a[0]) * (a[3] - a[1]))
-    return (iw * ih) / area
-
-
 def _shrink_box_center(box, frac: float):
     """Central sub-box of *box* scaled to *frac* of each side."""
     x1, y1, x2, y2 = box
@@ -291,29 +279,21 @@ def _shrink_box_center(box, frac: float):
 
 def _detect_regions_anime(src: str, confidence: float,
                            classes: frozenset[int] = ANIME_MOSAIC_CLASSES):
-    """EraX YOLO11 detection → list of (x1, y1, x2, y2) to censor.
+    """EraX YOLO11 detection → list of (x1, y1, x2, y2) for the requested
+    *classes*.
 
-    make_love boxes (when requested) are shrunk to their centre so they cover
-    the junction without blanketing the scene. When nipples are NOT a censor
-    target, genitalia boxes that mostly overlap a detected nipple are dropped
-    as breast misclassifications.
+    Only the classes the user selected are returned — no automatic dropping of
+    detections. make_love boxes (when requested) are shrunk to their centre so
+    they cover the junction without blanketing the scene.
     """
-    raw = _detect_anime_raw(src, confidence)
-    nipples = [b for b, c in raw if c == _ANIME_NIPPLE_CLASS]
-    suppress = _ANIME_NIPPLE_CLASS not in classes and bool(nipples)
     regions = []
-    for box, cls in raw:
+    for box, cls in _detect_anime_raw(src, confidence):
         if cls not in classes:
             continue
-        if cls == _ANIME_MAKE_LOVE_CLASS:
-            regions.append(_shrink_box_center(box, _MAKE_LOVE_CENTER_FRAC))
-        elif not (suppress and _overlaps_nipple(box, nipples)):
-            regions.append(box)
+        regions.append(
+            _shrink_box_center(box, _MAKE_LOVE_CENTER_FRAC)
+            if cls == _ANIME_MAKE_LOVE_CLASS else box)
     return regions
-
-
-def _overlaps_nipple(box, nipples) -> bool:
-    return any(_box_overlap_frac(box, n) >= _NIPPLE_OVERLAP_THRESH for n in nipples)
 
 
 def _get_fastsam():
@@ -456,9 +436,9 @@ def _process_single_image(
 
     bridges = _junction_bridges(regions, _merge_gap(regions)) if merge_regions else []
     for bridge in bridges:
-        # A junction bridge is a thin connector — censor it solid so no seam
-        # shows through, regardless of the chosen region shape.
-        _censor_region(img, *bridge, block_size, style=style, shape=SHAPE_RECT)
+        # The junction bridge honours the user's chosen shape, like every other
+        # censored region (precise has no mask for a bridge → ellipse fallback).
+        _censor_region(img, *bridge, block_size, style=style, shape=shape)
 
     _save_image(img, dst)
     return len(regions) + len(bridges)
