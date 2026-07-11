@@ -189,6 +189,30 @@ def _build_shape_combo(layout, lang):
         SHAPE_PRECISE)
     shape_row.addWidget(shape_combo, 1)
     layout.addLayout(shape_row)
+
+    hint = QLabel("")
+    hint.setWordWrap(True)
+    hint.setVisible(False)
+    layout.addWidget(hint)
+
+    def _update_hint():
+        if shape_combo.currentData() != SHAPE_PRECISE:
+            hint.setVisible(False)
+            return
+        from safety_review._detection import _precise_backend_available
+        if _precise_backend_available():
+            hint.setText(lang.get(
+                "safety_review_precise_ok",
+                "Precise: real pixel-level segmentation is available."))
+        else:
+            hint.setText(lang.get(
+                "safety_review_precise_fallback",
+                "Precise will fall back to an ellipse — the segmentation model "
+                "isn't installed yet (it downloads on the first precise run)."))
+        hint.setVisible(True)
+
+    shape_combo.currentIndexChanged.connect(_update_hint)
+    _update_hint()
     return shape_combo
 
 

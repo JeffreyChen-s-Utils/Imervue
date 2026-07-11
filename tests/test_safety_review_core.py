@@ -260,6 +260,19 @@ def test_crop_seg_mask_handles_none_and_missing():
     assert cropped.size == (10, 10)
 
 
+def test_precise_backend_available_reflects_import(monkeypatch):
+    import builtins
+    real_import = builtins.__import__
+
+    def _blocked(name, *a, **k):
+        if name == "ultralytics":
+            raise ImportError("no ultralytics")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", _blocked)
+    assert _detection._precise_backend_available() is False
+
+
 def test_segment_boxes_degrades_to_none_without_model(monkeypatch):
     # No ultralytics / model → _get_fastsam raises → _segment_boxes returns None
     # so the caller falls back to the ellipse shape instead of crashing.

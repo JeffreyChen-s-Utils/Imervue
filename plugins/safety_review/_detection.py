@@ -322,6 +322,21 @@ def _fastsam_box_mask(model, src: str, box, iw: int, ih: int):
     return mask
 
 
+def _precise_backend_available() -> bool:
+    """Whether the FastSAM segmentation backend can be imported.
+
+    Precise mode only produces a real pixel mask when this is True; otherwise
+    it silently falls back to the ellipse shape. The dialog checks this so it
+    can tell the user up front instead of leaving them wondering why precise
+    looks like an ellipse.
+    """
+    try:
+        from ultralytics import FastSAM  # noqa: F401
+        return True
+    except Exception:  # noqa: BLE001 — any import failure means unavailable
+        return False
+
+
 def _segment_boxes(src: str, boxes, mode: str):
     """Best-effort per-box full-image segmentation masks for precise mode.
 
@@ -336,10 +351,14 @@ def _segment_boxes(src: str, boxes, mode: str):
         with _Img.open(src) as im:
             iw, ih = im.size
         masks = [_fastsam_box_mask(model, src, box, iw, ih) for box in boxes]
-        return masks if any(m is not None for m in masks) else None
+        if any(m is not None for m in masks):
+            return masks
+        logger.warning("Precise segmentation produced no masks for %s; "
+                       "using ellipse fallback", src)
+        return None
     except Exception:  # noqa: BLE001 — optional path, degrade to ellipse
-        logger.info("Precise segmentation unavailable; using ellipse fallback",
-                    exc_info=True)
+        logger.warning("Precise segmentation unavailable; using ellipse "
+                       "fallback", exc_info=True)
         return None
 
 
@@ -500,6 +519,23 @@ def _junction_bridges(boxes, gap: int):
             if _boxes_touch(a, b, gap) and not _boxes_overlap(a, b):
                 bridges.append(_bridge_box(a, b))
     return bridges
+
+
+def _process_manual_image(src: str, dst: str, regions, block_size: int,
+                          style: str = STYLE_MOSAIC, shape: str = SHAPE_RECT) -> int:
+    """Censor a user-supplied list of *regions* on *src* and save to *dst*.
+
+    No detection — the regions come straight from the manual editor, censored
+    with the chosen style and shape. Returns the number of regions censored.
+    """
+    from PIL import Image
+    img = Image.open(src)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGBA")
+    for region in regions:
+        _censor_region(img, *region, block_size, style=style, shape=shape)
+    _save_image(img, dst)
+    return len(regions)
 
 
 def _crop_seg_mask(seg_masks, index: int, box):

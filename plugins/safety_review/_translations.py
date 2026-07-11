@@ -66,6 +66,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "Ellipse (tighter)",
         "safety_review_shape_rect": "Rectangle (whole box)",
         "safety_review_shape_precise": "Precise (pixel-level, slower)",
+        "safety_review_precise_ok":
+            "Precise: real pixel-level segmentation is available.",
+        "safety_review_precise_fallback":
+            "Precise will fall back to an ellipse — the segmentation model isn't installed yet (it downloads on the first precise run).",
+        "safety_review_manual_title": "Manual Review & Mosaic",
+        "safety_review_manual_hint":
+            "Drag to draw a censor box. Click one to select, drag to move, right-click or press Delete to remove it.",
+        "safety_review_manual_done": "Applied {count} censor region(s)",
+        "safety_review_clear": "Clear all",
+        "safety_review_apply": "Apply",
         "safety_review_failed_folder":
             "{count} failed image(s) copied to: {path}",
         "safety_review_merge_regions":
@@ -152,6 +162,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "橢圓（較貼合）",
         "safety_review_shape_rect": "矩形（整個框）",
         "safety_review_shape_precise": "精確（像素級，較慢）",
+        "safety_review_precise_ok":
+            "精確：可使用真正的像素級分割。",
+        "safety_review_precise_fallback":
+            "精確將退回橢圓 — 分割模型尚未安裝（首次精確執行時會下載）。",
+        "safety_review_manual_title": "手動審核與打碼",
+        "safety_review_manual_hint":
+            "拖曳繪製打碼框。點選可選取、拖曳移動，右鍵或按 Delete 刪除。",
+        "safety_review_manual_done": "已套用 {count} 個打碼區域",
+        "safety_review_clear": "全部清除",
+        "safety_review_apply": "套用",
         "safety_review_failed_folder":
             "{count} 張失敗的圖片已複製至：{path}",
         "safety_review_merge_regions":
@@ -238,6 +258,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "椭圆（更贴合）",
         "safety_review_shape_rect": "矩形（整个框）",
         "safety_review_shape_precise": "精确（像素级，较慢）",
+        "safety_review_precise_ok":
+            "精确：可使用真正的像素级分割。",
+        "safety_review_precise_fallback":
+            "精确将退回椭圆 — 分割模型尚未安装（首次精确运行时会下载）。",
+        "safety_review_manual_title": "手动审核与打码",
+        "safety_review_manual_hint":
+            "拖动绘制打码框。点选可选中、拖动移动，右键或按 Delete 删除。",
+        "safety_review_manual_done": "已应用 {count} 个打码区域",
+        "safety_review_clear": "全部清除",
+        "safety_review_apply": "应用",
         "safety_review_failed_folder":
             "{count} 张失败的图片已复制至：{path}",
         "safety_review_merge_regions":
@@ -327,6 +357,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "楕円（より密着）",
         "safety_review_shape_rect": "矩形（ボックス全体）",
         "safety_review_shape_precise": "精密（ピクセル単位、低速）",
+        "safety_review_precise_ok":
+            "精密：実際のピクセル単位セグメンテーションが利用可能です。",
+        "safety_review_precise_fallback":
+            "精密は楕円にフォールバックします — セグメンテーションモデル未インストール（初回実行時にダウンロード）。",
+        "safety_review_manual_title": "手動レビューとモザイク",
+        "safety_review_manual_hint":
+            "ドラッグでモザイク枠を描画。クリックで選択、ドラッグで移動、右クリックまたは Delete で削除。",
+        "safety_review_manual_done": "{count} 個のモザイク領域を適用",
+        "safety_review_clear": "すべてクリア",
+        "safety_review_apply": "適用",
         "safety_review_failed_folder":
             "失敗した {count} 件をコピーしました：{path}",
         "safety_review_merge_regions":
@@ -416,6 +456,16 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_shape_ellipse": "타원 (더 밀착)",
         "safety_review_shape_rect": "사각형 (전체 박스)",
         "safety_review_shape_precise": "정밀 (픽셀 단위, 느림)",
+        "safety_review_precise_ok":
+            "정밀: 실제 픽셀 단위 분할을 사용할 수 있습니다.",
+        "safety_review_precise_fallback":
+            "정밀은 타원으로 대체됩니다 — 분할 모델이 아직 설치되지 않음(첫 정밀 실행 시 다운로드).",
+        "safety_review_manual_title": "수동 검토 및 모자이크",
+        "safety_review_manual_hint":
+            "드래그하여 검열 상자 그리기. 클릭하여 선택, 드래그로 이동, 우클릭 또는 Delete로 삭제.",
+        "safety_review_manual_done": "검열 영역 {count}개 적용됨",
+        "safety_review_clear": "모두 지우기",
+        "safety_review_apply": "적용",
         "safety_review_failed_folder":
             "실패한 이미지 {count}개를 복사함: {path}",
         "safety_review_merge_regions":
