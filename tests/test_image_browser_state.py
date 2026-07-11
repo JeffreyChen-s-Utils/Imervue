@@ -10,6 +10,7 @@ from Imervue.image.browser_state import (
     auto_match_same_name,
     detect_renamed_paths,
     filter_paths,
+    is_missing_file_error,
     is_transient_load_error,
     migrate_view_path_state,
     relocate_root,
@@ -91,6 +92,22 @@ def test_migrate_view_path_state_moves_cache_and_selection():
 def test_transient_load_error_detection():
     assert is_transient_load_error("The file is locked by another process")
     assert not is_transient_load_error("invalid image header")
+
+
+def test_missing_file_error_detection():
+    # str(FileNotFoundError) shapes from PIL / os on POSIX and Windows.
+    assert is_missing_file_error("[Errno 2] No such file or directory: 'a.png'")
+    assert is_missing_file_error("The system cannot find the file specified")
+    assert is_missing_file_error("The system cannot find the path specified")
+    assert is_missing_file_error("file not found: a.png")
+    assert is_missing_file_error("Path 'a.png' does not exist")
+
+
+def test_missing_file_error_rejects_other_failures():
+    assert not is_missing_file_error("invalid image header")
+    assert not is_missing_file_error("The file is locked by another process")
+    assert not is_missing_file_error("")
+    assert not is_missing_file_error(None)
 
 
 def test_metadata_index_sample_hash_tracks_same_content(tmp_path):

@@ -405,6 +405,37 @@ def test_delete_selected_tiles_records_pending_entries(tmp_path):
     assert view.model.images == [b]
 
 
+def test_delete_selected_tiles_single_pass_keeps_positions_aligned(tmp_path):
+    """The one-pass rebuild must record ascending (index, path) pairs so the
+    recycle-bin dialog and undo restore each path to its original slot."""
+    from Imervue.gpu_image_view.actions.delete import delete_selected_tiles
+
+    paths = [str(tmp_path / f"{i}.png") for i in range(6)]
+    view = _DeleteView(paths)
+    view.selected_tiles = {paths[4], paths[1], paths[2]}
+    delete_selected_tiles(view)
+
+    action = view.undo_stack[-1]
+    assert action["indices"] == [1, 2, 4]
+    assert action["deleted_paths"] == [paths[1], paths[2], paths[4]]
+    assert view.model.images == [paths[0], paths[3], paths[5]]
+    assert view.selected_tiles == set()
+    assert view.tile_selection_mode is False
+
+
+def test_delete_selected_tiles_ignores_paths_not_in_the_list(tmp_path):
+    from Imervue.gpu_image_view.actions.delete import delete_selected_tiles
+
+    a, b = (str(tmp_path / f"{name}.png") for name in "ab")
+    view = _DeleteView([a, b])
+    view.selected_tiles = {a, str(tmp_path / "stray.png")}
+    delete_selected_tiles(view)
+
+    action = view.undo_stack[-1]
+    assert action["deleted_paths"] == [a]
+    assert view.model.images == [b]
+
+
 # ---------------------------------------------------------------------------
 # Folder / external soft-delete — restorable through the Recycle Bin
 # ---------------------------------------------------------------------------

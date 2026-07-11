@@ -73,27 +73,18 @@ def delete_current_image(main_gui: GPUImageView):
 def delete_selected_tiles(main_gui):
     from OpenGL.GL import glDeleteTextures
 
-    paths = list(main_gui.selected_tiles)
-    if not paths:
+    if not main_gui.selected_tiles:
         return
 
     images = main_gui.model.images
 
-    deleted_paths = []
-    deleted_indices = []
-
-    # 先收集所有要刪除的 index，再從後往前刪除以保持 index 正確
-    items_to_delete = []
-    for path in paths:
-        if path in images:
-            idx = images.index(path)
-            items_to_delete.append((path, idx))
-
-    # 按 index 從大到小排序後刪除
-    for path, idx in sorted(items_to_delete, key=lambda x: x[1], reverse=True):
-        images.pop(idx)
-        deleted_paths.append(path)
-        deleted_indices.append(idx)
+    # 單趟掃描 + 一次重建清單。逐一 images.index()/pop() 是 O(n·m)，
+    # 大量選取時會把 UI 卡住好幾秒。
+    doomed = set(main_gui.selected_tiles)
+    removed = [(idx, path) for idx, path in enumerate(images) if path in doomed]
+    deleted_indices = [idx for idx, _path in removed]
+    deleted_paths = [path for _idx, path in removed]
+    images[:] = [path for path in images if path not in doomed]
 
     main_gui.undo_stack.append({
         "mode": "delete",
@@ -106,11 +97,13 @@ def delete_selected_tiles(main_gui):
     if hasattr(main_gui.main_window, "plugin_manager"):
         main_gui.main_window.plugin_manager.dispatch_image_deleted(deleted_paths, main_gui)
 
-    # GPU
-    for path in deleted_paths:
-        tex = main_gui.tile_textures.pop(path, None)
-        if tex is not None:
-            glDeleteTextures([tex])  # noqa: F821 — imported above
+    # GPU — 一次釋放整批紋理，避免逐張呼叫
+    textures = [
+        tex for tex in (main_gui.tile_textures.pop(p, None) for p in deleted_paths)
+        if tex is not None
+    ]
+    if textures:
+        glDeleteTextures(textures)
 
     # CPU cache
     for path in deleted_paths:

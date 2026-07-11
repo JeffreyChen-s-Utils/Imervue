@@ -12,7 +12,6 @@ CI cannot exercise.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -41,7 +40,7 @@ from OpenGL.GL import (
 import time
 
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
-from Imervue.gpu_image_view.tile_focus import focus_tile_rect
+from Imervue.gpu_image_view.tile_focus import focus_ring_active, focus_tile_rect
 from Imervue.gpu_image_view.tile_layout import tile_grid_layout
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS, fade_opacity
 
@@ -95,8 +94,9 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         row, col = divmod(i, cols)
         x0 = col * cell + view.grid_offset_x
         y0 = row * cell + view.grid_offset_y
-        if not Path(path).exists():
-            view.offline_paths.add(path)
+        # 存在檢查不在這裡做 I/O — offline_paths 由背景掃描與 worker 錯誤
+        # 回報維護（tile_loader），paint 路徑只查記憶體中的 set。
+        if path in view.offline_paths:
             self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
             view.missing_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
             return
@@ -187,7 +187,8 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
                            scaled_tile: float, vw: int, vh: int) -> None:
         view = self._view
         idx = view.focused_tile_index
-        if not 0 <= idx < len(view.model.images):
+        if not focus_ring_active(getattr(view, "focus_ring_visible", False),
+                                 idx, len(view.model.images)):
             return
         rect = focus_tile_rect(idx, cols, cell, scaled_tile,
                                view.grid_offset_x, view.grid_offset_y)

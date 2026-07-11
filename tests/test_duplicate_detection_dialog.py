@@ -67,3 +67,65 @@ def test_select_redundant_across_multiple_groups(qapp, tmp_path):
     ])
     dlg._select_redundant()
     assert _selected_paths(dlg) == {g1_small, g2_small}
+
+
+def _select_path(dlg, path):
+    for gi in range(dlg._tree.topLevelItemCount()):
+        group = dlg._tree.topLevelItem(gi)
+        for ci in range(group.childCount()):
+            child = group.child(ci)
+            if child.data(0, Qt.ItemDataRole.UserRole) == path:
+                child.setSelected(True)
+
+
+def test_delete_selected_runs_on_a_worker_and_prunes_the_tree(qapp, tmp_path, monkeypatch):
+    """The trash calls must run off the GUI thread; the tree updates on finish."""
+    from _instant_worker import InstantDeleteWorker
+    from PySide6.QtWidgets import QMessageBox
+
+    from Imervue.system import trash_ops
+
+    InstantDeleteWorker.created = []
+    monkeypatch.setattr(trash_ops, "FileDeleteWorker", InstantDeleteWorker)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+
+    keep = _png(tmp_path / "keep.png", 50, 50)
+    drop = _png(tmp_path / "drop.png", 50, 50)
+    dlg = _dialog()
+    dlg._on_result([[_entry(keep), _entry(drop)]])
+    _select_path(dlg, drop)
+
+    dlg._delete_selected()
+
+    assert len(InstantDeleteWorker.created) == 1
+    assert InstantDeleteWorker.created[0].paths == [drop]
+    remaining = {
+        dlg._tree.topLevelItem(0).child(ci).data(0, Qt.ItemDataRole.UserRole)
+        for ci in range(dlg._tree.topLevelItem(0).childCount())
+    }
+    assert remaining == {keep}
+    assert dlg._delete_btn.isEnabled() is True
+    assert dlg._delete_worker is None
+    assert "1" in dlg._status_label.text()
+
+
+def test_delete_selected_declined_confirm_spawns_nothing(qapp, tmp_path, monkeypatch):
+    from _instant_worker import InstantDeleteWorker
+    from PySide6.QtWidgets import QMessageBox
+
+    from Imervue.system import trash_ops
+
+    InstantDeleteWorker.created = []
+    monkeypatch.setattr(trash_ops, "FileDeleteWorker", InstantDeleteWorker)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.No)
+
+    target = _png(tmp_path / "t.png", 50, 50)
+    other = _png(tmp_path / "o.png", 50, 50)
+    dlg = _dialog()
+    dlg._on_result([[_entry(target), _entry(other)]])
+    _select_path(dlg, target)
+
+    dlg._delete_selected()
+    assert InstantDeleteWorker.created == []

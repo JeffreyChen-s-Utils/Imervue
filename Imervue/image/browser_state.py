@@ -330,6 +330,25 @@ def migrate_view_path_state(view, mapping: dict[str, str]) -> None:
                 data.add(new)
 
 
+def is_missing_file_error(message: str) -> bool:
+    """FileNotFoundError-style messages → the quiet 'Missing' tile state.
+
+    Distinguishes a vanished file (unplugged drive, deleted / moved image)
+    from a genuine decode failure so the wall shows 'Missing' instead of a
+    red 'Load failed' panel and skips the pointless retry."""
+    text = (message or "").lower()
+    return any(
+        token in text
+        for token in (
+            "no such file or directory",
+            "cannot find the file",
+            "cannot find the path",
+            "file not found",
+            "does not exist",
+        )
+    )
+
+
 def is_transient_load_error(message: str) -> bool:
     text = (message or "").lower()
     return any(

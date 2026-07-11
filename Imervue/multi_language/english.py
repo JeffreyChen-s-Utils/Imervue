@@ -249,6 +249,7 @@ english_word_dict = {
     "tree_recycled": "Moved to Recycle Bin: {name}",
     "tree_delete_selected": "Delete {count} Items",
     "tree_deleted_batch": "Moved {count} items to trash",
+    "tree_delete_failed_count": "Couldn't delete {count} item(s)",
     "tree_copy_paths": "Copy Paths",
     "tree_search_placeholder": "Search file tree...",
     "tree_sort_menu": "Sort Tree",

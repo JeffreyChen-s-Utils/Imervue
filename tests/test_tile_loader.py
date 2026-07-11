@@ -19,10 +19,14 @@ from Imervue.gpu_image_view.tile_loader import (
     ensure_filmstrip_thumbnail,
     images_changed,
     needs_filmstrip_thumbnail,
+    on_offline_scan_finished,
     on_thumbnail_error,
     on_filmstrip_thumbnail_loaded,
     reset_view_memory_on_switch,
+    scan_missing_paths,
+    start_offline_sweep,
     sync_tile_grid_incremental,
+    tick_offline_sweep,
     tile_grid_needs_reload,
     track_tile_worker,
 )
@@ -221,6 +225,28 @@ class TestThumbnailError:
         on_thumbnail_error(view, "bad.png", "old", 2)
         assert view.tile_errors == {}
 
+    def test_missing_file_lands_in_offline_not_errors(self):
+        # A vanished file must render as the quiet "Missing" slot, not the red
+        # "Load failed" panel, and must not queue a pointless retry.
+        view = _fake_view(["gone.png"], generation=3)
+        on_thumbnail_error(
+            view, "gone.png", "[Errno 2] No such file or directory: 'gone.png'", 3)
+        assert view.offline_paths == {"gone.png"}
+        assert view.tile_errors == {}
+        assert _FakeWorker.created == []
+
+    def test_missing_file_counts_toward_progress(self):
+        view = _fake_view(["gone.png", "b.png"], generation=3)
+        view._tile_load_total = 2
+        on_thumbnail_error(
+            view, "gone.png", "The system cannot find the file specified", 3)
+        assert view._tile_load_count == 1
+
+    def test_empty_message_defaults_to_load_failed(self):
+        view = _fake_view(["bad.png"], generation=3)
+        on_thumbnail_error(view, "bad.png", "", 3)
+        assert view.tile_errors["bad.png"] == "Load failed"
+
 
 class TestSyncTileGridIncremental:
     def test_keeps_cached_thumbnails_and_loads_only_new_paths(self):
@@ -356,6 +382,149 @@ class TestResetViewMemoryOnSwitch:
         assert reset_view_memory_on_switch(view, []) is True
         assert view._view_memory == {}
         assert view._user_locked_view is False
+
+
+# ---------------------------------------------------------------
+# Offline sweep — file-existence checks live here, never on the paint path.
+# ---------------------------------------------------------------
+class TestScanMissingPaths:
+    def test_flags_only_the_vanished_files(self, tmp_path):
+        present = tmp_path / "here.png"
+        present.write_bytes(b"x")
+        gone = str(tmp_path / "gone.png")
+        assert scan_missing_paths([str(present), gone]) == {gone}
+
+    def test_empty_input_scans_nothing(self):
+        assert scan_missing_paths([]) == set()
+
+
+class _FakePoolClass:
+    started: list = []
+
+    @classmethod
+    def globalInstance(cls):  # noqa: N802 - mirrors the Qt API
+        return cls
+
+    @classmethod
+    def start(cls, worker):
+        cls.started.append(worker)
+
+
+class TestTickOfflineSweep:
+    @pytest.fixture(autouse=True)
+    def _fake_pool(self, monkeypatch):
+        _FakePoolClass.started = []
+        monkeypatch.setattr(tile_loader, "QThreadPool", _FakePoolClass)
+
+    @staticmethod
+    def _sweep_view(images, **kw):
+        view = _fake_view(images)
+        view.tile_grid_mode = kw.pop("tile_grid_mode", True)
+        view._offline_scan_inflight = kw.pop("inflight", False)
+        view._on_offline_scan_finished = lambda missing, gen: on_offline_scan_finished(
+            view, missing, gen,
+        )
+        return view
+
+    def test_spawns_one_scan_worker(self, qapp):
+        view = self._sweep_view(["a.png"])
+        tick_offline_sweep(view)
+        assert len(_FakePoolClass.started) == 1
+        assert view._offline_scan_inflight is True
+
+    def test_skips_while_a_scan_is_in_flight(self, qapp):
+        view = self._sweep_view(["a.png"], inflight=True)
+        tick_offline_sweep(view)
+        assert _FakePoolClass.started == []
+
+    def test_skips_outside_tile_grid_mode(self, qapp):
+        view = self._sweep_view(["a.png"], tile_grid_mode=False)
+        tick_offline_sweep(view)
+        assert _FakePoolClass.started == []
+
+    def test_skips_an_empty_folder(self, qapp):
+        view = self._sweep_view([])
+        tick_offline_sweep(view)
+        assert _FakePoolClass.started == []
+
+    def test_worker_round_trip_lands_missing_set(self, qapp, tmp_path):
+        # tick → worker.run() → signal → on_offline_scan_finished, end to end.
+        gone = str(tmp_path / "gone.png")
+        view = self._sweep_view([gone])
+        tick_offline_sweep(view)
+        _FakePoolClass.started[0].run()
+        assert view.offline_paths == {gone}
+        assert view._offline_scan_inflight is False
+
+
+class TestStartStopOfflineSweep:
+    def test_start_is_a_noop_on_views_without_the_timer(self):
+        # Stub views (tests, partially built widgets) must stay usable.
+        view = _fake_view(["a.png"])
+        start_offline_sweep(view)  # must not raise
+
+    def test_start_ticks_once_and_starts_the_timer(self):
+        view = _fake_view(["a.png"])
+        view.tile_grid_mode = False  # keeps the tick itself a no-op here
+        calls = []
+        view._offline_sweep_timer = SimpleNamespace(
+            start=lambda: calls.append("start"), stop=lambda: calls.append("stop"),
+        )
+        start_offline_sweep(view)
+        assert calls == ["start"]
+        tile_loader.stop_offline_sweep(view)
+        assert calls == ["start", "stop"]
+
+
+class TestOnOfflineScanFinished:
+    @staticmethod
+    def _view_with_updates(images, offline=()):
+        view = _fake_view(images)
+        view.tile_grid_mode = True
+        view._offline_scan_inflight = True
+        view.offline_paths = set(offline)
+        view._updates = 0
+        view.update = lambda: setattr(view, "_updates", view._updates + 1)
+        return view
+
+    def test_newly_missing_paths_are_recorded(self):
+        view = self._view_with_updates(["a.png", "b.png"])
+        on_offline_scan_finished(view, {"a.png"}, 1)
+        assert view.offline_paths == {"a.png"}
+        assert view._offline_scan_inflight is False
+        assert view._updates == 1
+
+    def test_stale_generation_is_ignored_but_clears_inflight(self):
+        view = self._view_with_updates(["a.png"])
+        on_offline_scan_finished(view, {"a.png"}, 99)
+        assert view.offline_paths == set()
+        assert view._offline_scan_inflight is False
+
+    def test_paths_no_longer_in_the_folder_are_dropped(self):
+        view = self._view_with_updates(["a.png"])
+        on_offline_scan_finished(view, {"a.png", "stray.png"}, 1)
+        assert view.offline_paths == {"a.png"}
+
+    def test_recovered_path_reloads_its_thumbnail(self):
+        # File came back (drive re-mounted) → clear the offline flag and
+        # respawn a decode worker so the "Missing" slot heals.
+        view = self._view_with_updates(["back.png"], offline=["back.png"])
+        on_offline_scan_finished(view, set(), 1)
+        assert view.offline_paths == set()
+        assert [w.path for w in _FakeWorker.created] == ["back.png"]
+
+    def test_recovered_but_still_cached_path_is_not_reloaded(self):
+        view = self._view_with_updates(["back.png"], offline=["back.png"])
+        view.tile_cache["back.png"] = object()
+        on_offline_scan_finished(view, set(), 1)
+        assert view.offline_paths == set()
+        assert _FakeWorker.created == []
+
+    def test_unchanged_result_skips_the_repaint(self):
+        view = self._view_with_updates(["a.png", "gone.png"], offline=["gone.png"])
+        on_offline_scan_finished(view, {"gone.png"}, 1)
+        assert view.offline_paths == {"gone.png"}
+        assert view._updates == 0
 
 
 class TestTileWorkerSelfEviction:

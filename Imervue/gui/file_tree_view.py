@@ -43,6 +43,35 @@ def _next_duplicate_name(source: Path) -> Path:
         n += 1
 
 
+# Batches at or below this size are trashed synchronously (a handful of shell
+# operations is imperceptible); anything larger runs on a FileDeleteWorker so
+# the GUI never freezes for the duration of a large delete.
+_SYNC_DELETE_LIMIT = 8
+
+
+def _partition_delete_batch(
+    paths: Iterable[str], images: Iterable[str],
+) -> tuple[list[str], list[str], list[str]]:
+    """Split a delete batch into (viewer-list files, folders, loose files).
+
+    Viewer-list files soft-delete in memory (no disk I/O until shutdown),
+    folders soft-delete through the app Recycle Bin, and loose files are the
+    only group that needs OS-trash calls right away.
+    """
+    image_set = set(images)
+    in_list: list[str] = []
+    folders: list[str] = []
+    loose: list[str] = []
+    for path in paths:
+        if Path(path).is_dir():
+            folders.append(path)
+        elif path in image_set:
+            in_list.append(path)
+        else:
+            loose.append(path)
+    return in_list, folders, loose
+
+
 def _dedupe_paths(paths: Iterable[str]) -> list[str]:
     """Order-preserving de-duplication of paths, dropping empty strings.
 
@@ -63,15 +92,20 @@ class _FileTreeView(QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
     _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
+    # Raw-QFileSystemModel fallback columns, used only when the model isn't
+    # the FileTreeSortProxy (tests, plain models). "created" has no native
+    # column, so the fallback approximates it with the modified column.
     _TREE_SORT_COLUMNS = {
         "name": 0,
         "size": 1,
         "modified": 3,
+        "created": 3,
     }
     _TREE_SORT_LANG_KEYS = {
         "name": "sort_by_name",
         "size": "sort_by_size",
         "modified": "sort_by_modified",
+        "created": "sort_by_created",
     }
 
     def __init__(self, main_window: "ImervueMainWindow"):
@@ -82,6 +116,9 @@ class _FileTreeView(QTreeView):
         # tree until restored or committed at shutdown; track what we hid so a
         # restore can un-hide exactly those rows.
         self._hidden_paths: set[str] = set()
+        # In-flight background trash workers — referenced here so they are
+        # not garbage-collected mid-run; each self-evicts on finish.
+        self._trash_workers: set = set()
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
         # Ctrl/Shift multi-select so batch delete / copy-paths can act on
@@ -349,7 +386,7 @@ class _FileTreeView(QTreeView):
 
         sort_group = QActionGroup(sort_menu)
         sort_group.setExclusive(True)
-        for key in ("name", "modified", "size"):
+        for key in ("name", "modified", "created", "size"):
             action = sort_menu.addAction(
                 lang.get(self._TREE_SORT_LANG_KEYS[key], key.capitalize()),
             )
@@ -406,12 +443,18 @@ class _FileTreeView(QTreeView):
         )
 
     def _apply_tree_sort(self, sort_by: str, ascending: bool) -> None:
-        column = self._TREE_SORT_COLUMNS.get(sort_by, 0)
         order = (
             Qt.SortOrder.AscendingOrder
             if ascending else Qt.SortOrder.DescendingOrder
         )
-        self.sortByColumn(column, order)
+        model = self.model()
+        if hasattr(model, "set_sort_key"):
+            # FileTreeSortProxy sorts every key (incl. creation date, which
+            # QFileSystemModel has no column for) through column 0.
+            model.set_sort_key(sort_by)
+            self.sortByColumn(0, order)
+            return
+        self.sortByColumn(self._TREE_SORT_COLUMNS.get(sort_by, 0), order)
 
     def set_search_text(self, text: str) -> None:
         """Filter currently-loaded tree rows by basename substring."""
@@ -607,6 +650,8 @@ class _FileTreeView(QTreeView):
         For a single path this defers to ``_delete_path`` so the existing
         per-file toast is preserved; for a batch the individual toasts are
         suppressed and replaced with one summary so the user isn't spammed.
+        Large batches run their OS-trash calls on a background worker so
+        the GUI stays responsive for the whole delete.
         """
         existing = [p for p in paths if Path(p).exists()]
         if not existing:
@@ -614,9 +659,80 @@ class _FileTreeView(QTreeView):
         if len(existing) == 1:
             self._delete_path(existing[0])
             return
-        for path in existing:
-            self._delete_path(path, notify=False)
-        self._notify_deleted_batch(len(existing))
+        if len(existing) <= _SYNC_DELETE_LIMIT:
+            for path in existing:
+                self._delete_path(path, notify=False)
+            self._notify_deleted_batch(len(existing))
+            return
+        self._delete_batch_async(existing)
+
+    def _delete_batch_async(self, existing: list[str]) -> None:
+        """Large-batch delete: soft-delete in memory, trash on a worker."""
+        viewer = self._main_window.viewer
+        in_list, folders, loose = _partition_delete_batch(
+            existing, viewer.model.images)
+        if in_list:
+            self._batch_delete_from_viewer_list(in_list, viewer)
+        for folder in folders:
+            self._soft_delete_folder(folder, notify=False)
+        if not loose:
+            self._notify_deleted_batch(len(existing))
+            return
+        self._trash_in_background(loose, already_removed=len(existing) - len(loose))
+
+    def _batch_delete_from_viewer_list(self, paths: list[str], viewer) -> None:
+        """Soft-delete many viewer-list files in one pass.
+
+        One list rebuild, one undo entry, and one GL pass — the per-file
+        variant costs O(images) per path plus a GL context switch each,
+        which visibly hangs the UI on large selections.
+        """
+        images = viewer.model.images
+        doomed = set(paths)
+        removed = [(idx, path) for idx, path in enumerate(images) if path in doomed]
+        if not removed:
+            return
+        images[:] = [path for path in images if path not in doomed]
+        viewer.undo_stack.append({
+            "mode": "delete",
+            "deleted_paths": [path for _idx, path in removed],
+            "indices": [idx for idx, _path in removed],
+            "restored": False,
+        })
+        self._release_tile_textures(viewer, [path for _idx, path in removed])
+        for _idx, path in removed:
+            viewer.tile_cache.pop(path, None)
+        self._refresh_viewer_after_delete(viewer, images, removed[0][0])
+
+    def _trash_in_background(self, paths: list[str], already_removed: int) -> None:
+        """Move *paths* to the OS trash on a worker thread; toast on finish."""
+        from Imervue.system.trash_ops import FileDeleteWorker
+        worker = FileDeleteWorker(paths, parent=self)
+        worker.progress.connect(self._on_trash_progress)
+        worker.finished_with.connect(
+            lambda done, failed, w=worker:
+            self._on_trash_finished(w, done, failed, already_removed),
+        )
+        self._trash_workers.add(worker)
+        worker.start()
+
+    def _on_trash_progress(self, done: int, total: int) -> None:
+        if hasattr(self._main_window, "show_progress"):
+            self._main_window.show_progress(done, total)
+
+    def _on_trash_finished(self, worker, done: list[str], failed: list[str],
+                           already_removed: int) -> None:
+        self._trash_workers.discard(worker)
+        worker.deleteLater()
+        self._notify_deleted_batch(len(done) + already_removed)
+        if failed and hasattr(self._main_window, "toast"):
+            lang = language_wrapper.language_word_dict
+            self._main_window.toast.warning(
+                lang.get(
+                    "tree_delete_failed_count",
+                    "Couldn't delete {count} item(s)",
+                ).format(count=len(failed)),
+            )
 
     def _delete_path(self, path: str, notify: bool = True):
         if not Path(path).exists():
@@ -639,29 +755,39 @@ class _FileTreeView(QTreeView):
             "indices": [idx],
             "restored": False,
         })
-        tex = viewer.tile_textures.pop(path, None)
-        if tex is not None:
-            # The delete fires from a menu-action event handler, not
-            # from within ``paintGL``, so the viewer's GL context may
-            # not be current. Make it current before freeing the
-            # texture and swallow the GLError if the context is gone
-            # entirely (window already destroyed during shutdown).
-            from OpenGL.GL import glDeleteTextures
-            from PySide6.QtGui import QOpenGLContext
-            try:
-                if hasattr(viewer, "makeCurrent"):
-                    viewer.makeCurrent()
-                if QOpenGLContext.currentContext() is not None:
-                    glDeleteTextures([tex])
-            except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
-                pass
-            finally:
-                if hasattr(viewer, "doneCurrent"):
-                    viewer.doneCurrent()
+        self._release_tile_textures(viewer, [path])
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
         if notify:
             self._notify_deleted(path)
+
+    @staticmethod
+    def _release_tile_textures(viewer, paths: list[str]) -> None:
+        """Free the GL textures for *paths* under a single context switch.
+
+        The delete fires from a menu-action event handler, not from within
+        ``paintGL``, so the viewer's GL context may not be current. Make it
+        current once for the whole batch and swallow the GLError if the
+        context is gone entirely (window already destroyed during shutdown).
+        """
+        textures = [
+            tex for tex in (viewer.tile_textures.pop(p, None) for p in paths)
+            if tex is not None
+        ]
+        if not textures:
+            return
+        from OpenGL.GL import glDeleteTextures
+        from PySide6.QtGui import QOpenGLContext
+        try:
+            if hasattr(viewer, "makeCurrent"):
+                viewer.makeCurrent()
+            if QOpenGLContext.currentContext() is not None:
+                glDeleteTextures(textures)
+        except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
+            pass
+        finally:
+            if hasattr(viewer, "doneCurrent"):
+                viewer.doneCurrent()
 
     @staticmethod
     def _refresh_viewer_after_delete(viewer, images: list[str], idx: int) -> None:
