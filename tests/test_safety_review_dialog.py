@@ -192,3 +192,29 @@ def test_no_failed_folder_without_a_scan_folder(qapp, tmp_path):
     dlg = _dialog(qapp)  # folder edit left blank
     assert dlg._failed_folder() is None
     dlg.deleteLater()
+
+
+def test_merge_regions_defaults_on_and_threads_to_worker(qapp, tmp_path):
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    assert dlg._merge_check.isChecked() is True   # on by default (safety-first)
+    worker = dlg._make_worker(
+        output_dir=str(tmp_path / "out"), overwrite=False,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
+    assert worker._merge_regions is True
+    dlg.deleteLater()
+
+
+def test_merge_regions_can_be_disabled(qapp, tmp_path):
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    dlg._merge_check.setChecked(False)
+    worker = dlg._make_worker(
+        output_dir=str(tmp_path / "out"), overwrite=False,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
+    assert worker._merge_regions is False
+    dlg.deleteLater()

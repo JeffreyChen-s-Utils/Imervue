@@ -2,7 +2,7 @@
 
 Usage (frozen env):
     python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories> <shape>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored> <shape> <failed_dir> <scan_root>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored> <shape> <failed_dir> <scan_root> <merge_regions>]
 
 ``source_root`` (batch only, optional) mirrors each source's subfolder under
 ``output_dir`` so a recursive scan keeps its tree instead of flattening.
@@ -36,7 +36,7 @@ MOSAIC_LABELS = frozenset({
 })
 
 # EraX YOLO classes (anime mode): 0=anus, 1=make_love, 2=nipple, 3=penis, 4=vagina
-ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})  # anus, penis, vagina
+ANIME_MOSAIC_CLASSES = frozenset({0, 1, 3, 4})  # +make_love (junction)
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"
@@ -69,7 +69,7 @@ CAT_ANUS = "anus"
 CAT_NIPPLE = "nipple"
 CAT_SEXUAL_ACT = "sexual_act"
 
-DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
+DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS, CAT_SEXUAL_ACT})
 
 _CAT_TO_REAL_LABELS = {
     CAT_GENITALIA: frozenset({"FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED"}),
@@ -186,6 +186,40 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
+_MERGE_GAP_FRAC = 0.4
+
+
+def _merge_nearby_boxes(boxes, gap):
+    """Union boxes that overlap or lie within *gap* px, so a junction between
+    two detected regions is censored instead of left in the gap."""
+    def _touch(a, b):
+        return (a[0] - gap <= b[2] and b[0] <= a[2] + gap
+                and a[1] - gap <= b[3] and b[1] <= a[3] + gap)
+    regions = [tuple(b) for b in boxes]
+    changed = True
+    while changed:
+        changed = False
+        out = []
+        for box in regions:
+            for i, ex in enumerate(out):
+                if _touch(box, ex):
+                    out[i] = (min(box[0], ex[0]), min(box[1], ex[1]),
+                              max(box[2], ex[2]), max(box[3], ex[3]))
+                    changed = True
+                    break
+            else:
+                out.append(box)
+        regions = out
+    return regions
+
+
+def _merge_gap(boxes):
+    edges = [min(x2 - x1, y2 - y1) for x1, y1, x2, y2 in boxes]
+    if not edges:
+        return 0
+    return int(sorted(edges)[len(edges) // 2] * _MERGE_GAP_FRAC)
+
+
 def _censored_region(region, w, h, block_size, style):
     from PIL import Image
     if style == STYLE_BLACK:
@@ -259,11 +293,12 @@ def _process_one(detector, src, dst, block_size, padding,
                   confidence=MIN_CONFIDENCE,
                   expand_pct=0, det_mode="real", anime_model=None,
                   style=STYLE_MOSAIC, categories=None, only_censored=False,
-                  shape=SHAPE_RECT):
+                  shape=SHAPE_RECT, merge_regions=True):
     """Detect + censor one image.  Returns number of regions processed.
 
     With *only_censored* True a clean image (no detections) is left alone —
-    nothing is written to *dst*."""
+    nothing is written to *dst*. *merge_regions* unions overlapping/adjacent
+    boxes so a junction between two detected regions is censored."""
     from PIL import Image
 
     actual_mode = det_mode
@@ -289,10 +324,11 @@ def _process_one(detector, src, dst, block_size, padding,
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    for box in boxes:
-        ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
-        _censor_region(img, ex1, ey1, ex2, ey2, block_size,
-                       style=style, shape=shape)
+    regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
+    if merge_regions and len(regions) > 1:
+        regions = _merge_nearby_boxes(regions, _merge_gap(regions))
+    for region in regions:
+        _censor_region(img, *region, block_size, style=style, shape=shape)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
@@ -306,7 +342,7 @@ def _process_one(detector, src, dst, block_size, padding,
         save_img = save_img.convert("RGB")
     _ensure_parent(dst)
     save_img.save(dst, format=fmt)
-    return len(boxes)
+    return len(regions)
 
 
 def _load_anime_model():
@@ -401,6 +437,7 @@ def _run_batch(args):
     shape = args[14] if len(args) > 14 else SHAPE_RECT
     failed_dir = args[15] if len(args) > 15 else ""
     scan_root = args[16] if len(args) > 16 else ""
+    merge_regions = args[17].lower() != "false" if len(args) > 17 else True
 
     with open(json_paths, encoding="utf-8") as f:
         paths = json.load(f)
@@ -420,7 +457,8 @@ def _run_batch(args):
                     confidence=confidence, expand_pct=expand_pct,
                     det_mode=det_mode, anime_model=anime_model,
                     style=style, categories=categories,
-                    only_censored=only_censored, shape=shp),
+                    only_censored=only_censored, shape=shp,
+                    merge_regions=merge_regions),
                 shape)
             success += 1
         except Exception as exc:

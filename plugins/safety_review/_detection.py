@@ -359,6 +359,7 @@ def _process_single_image(
     categories=None,
     only_censored: bool = False,
     shape: str = SHAPE_RECT,
+    merge_regions: bool = True,
 ) -> int:
     """Detect + censor one image.  Returns the number of regions processed.
 
@@ -369,6 +370,10 @@ def _process_single_image(
     *shape* confines each censor to the detected rectangle, the ellipse
     inscribed in it, or (precise) a per-region segmentation mask so the
     censor hugs the region instead of blanketing the whole box.
+
+    *merge_regions* unions overlapping / adjacent boxes so the contact area
+    between two detected regions (a penetration junction) is censored instead
+    of being left in the gap between their boxes.
     """
     from PIL import Image
 
@@ -383,18 +388,67 @@ def _process_single_image(
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    # Precise mode segments each box into a full-image mask up front; cropping
-    # it to the (expanded) censor box below keeps it pixel-aligned regardless
-    # of padding / expansion. None here → _region_mask falls back to ellipse.
-    seg_masks = _segment_boxes(src, boxes, mode) if shape == SHAPE_PRECISE else None
-    for i, box in enumerate(boxes):
-        ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
-        seg = _crop_seg_mask(seg_masks, i, (ex1, ey1, ex2, ey2))
-        _censor_region(img, ex1, ey1, ex2, ey2, block_size,
+    regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
+    if merge_regions and len(regions) > 1:
+        regions = _merge_nearby_boxes(regions, _merge_gap(regions))
+    # Precise mode segments each final region into a full-image mask; cropping
+    # it to the region below keeps it pixel-aligned. None → ellipse fallback.
+    seg_masks = _segment_boxes(src, regions, mode) if shape == SHAPE_PRECISE else None
+    for i, region in enumerate(regions):
+        seg = _crop_seg_mask(seg_masks, i, region)
+        _censor_region(img, *region, block_size,
                        style=style, shape=shape, seg_mask=seg)
 
     _save_image(img, dst)
-    return len(boxes)
+    return len(regions)
+
+
+_MERGE_GAP_FRAC = 0.4  # merge boxes within 40% of the median box edge
+
+
+def _boxes_touch(a, b, gap: int) -> bool:
+    """True when box *a* grown by *gap* px overlaps box *b*."""
+    return (a[0] - gap <= b[2] and b[0] <= a[2] + gap
+            and a[1] - gap <= b[3] and b[1] <= a[3] + gap)
+
+
+def _union_box(a, b):
+    return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
+
+
+def _merge_gap(boxes) -> int:
+    """Gap threshold for merging, scaled to the boxes' median short edge."""
+    edges = [min(x2 - x1, y2 - y1) for x1, y1, x2, y2 in boxes]
+    if not edges:
+        return 0
+    median = sorted(edges)[len(edges) // 2]
+    return int(median * _MERGE_GAP_FRAC)
+
+
+def _merge_nearby_boxes(boxes, gap: int):
+    """Merge boxes that overlap or lie within *gap* px into their bounding
+    union.
+
+    Two detected regions in contact — e.g. a penetration junction between the
+    male and female genitalia — otherwise leave the contact area itself in the
+    gap between their boxes uncensored. Merging closes that gap by censoring
+    the union as one region. Distant regions (different people) stay separate.
+    """
+    regions = [tuple(b) for b in boxes]
+    changed = True
+    while changed:
+        changed = False
+        out: list = []
+        for box in regions:
+            for i, existing in enumerate(out):
+                if _boxes_touch(box, existing, gap):
+                    out[i] = _union_box(box, existing)
+                    changed = True
+                    break
+            else:
+                out.append(box)
+        regions = out
+    return regions
 
 
 def _crop_seg_mask(seg_masks, index: int, box):

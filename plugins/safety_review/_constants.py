@@ -26,8 +26,9 @@ MOSAIC_LABELS = frozenset({
 # EraX-Anti-NSFW labels (anime mode) — YOLO11 classes
 # ---------------------------------------------------------------------------
 # Classes: 0=anus, 1=make_love, 2=nipple, 3=penis, 4=vagina
-# We mosaic: anus, penis, vagina.  Skip nipple & make_love.
-ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})   # anus, penis, vagina
+# We mosaic: anus, penis, vagina, and make_love (the intercourse / junction
+# region — otherwise a penetration contact area goes uncensored). Skip nipple.
+ANIME_MOSAIC_CLASSES = frozenset({0, 1, 3, 4})   # anus, make_love, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"   # medium — best accuracy
@@ -98,7 +99,9 @@ CAT_NIPPLE = "nipple"
 CAT_SEXUAL_ACT = "sexual_act"
 
 ALL_CATEGORIES = (CAT_GENITALIA, CAT_ANUS, CAT_NIPPLE, CAT_SEXUAL_ACT)
-DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
+# Sexual act (anime make_love class) is on by default so a penetration junction
+# is caught; it maps to no NudeNet label, so it's a no-op for real photos.
+DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS, CAT_SEXUAL_ACT})
 
 _CAT_TO_REAL_LABELS: dict[str, frozenset[str]] = {
     CAT_GENITALIA: frozenset({"FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED"}),

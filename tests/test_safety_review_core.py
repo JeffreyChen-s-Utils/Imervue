@@ -55,8 +55,22 @@ def test_categories_to_real_labels_unknown_category_ignored():
 
 
 def test_categories_to_anime_classes_default():
+    # Default now includes make_love (class 1) so the intercourse / junction
+    # region is caught out of the box.
     classes = _constants._categories_to_anime_classes(None)
-    assert classes == frozenset({0, 3, 4})  # anus, penis, vagina
+    assert classes == frozenset({0, 1, 3, 4})  # anus, make_love, penis, vagina
+
+
+def test_default_categories_includes_sexual_act():
+    assert _constants.CAT_SEXUAL_ACT in _constants.DEFAULT_CATEGORIES
+
+
+def test_sexual_act_is_a_noop_for_real_photos():
+    # make_love has no NudeNet label, so enabling it by default does not change
+    # real-photo detection.
+    assert _constants._categories_to_real_labels(None) == frozenset({
+        "FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED", "ANUS_EXPOSED",
+    })
 
 
 def test_categories_to_anime_classes_sexual_act_is_make_love():
@@ -72,6 +86,41 @@ def test_required_packages_auto_is_union_without_duplicates():
     assert set(_constants.REQUIRED_PACKAGES_REAL) <= set(auto)
     assert set(_constants.REQUIRED_PACKAGES_ANIME) <= set(auto)
     assert len(auto) == len(set(auto))
+
+
+# ---------------------------------------------------------------------------
+# _detection — merging nearby boxes so a junction is covered
+# ---------------------------------------------------------------------------
+
+def test_merge_leaves_distant_boxes_separate():
+    boxes = [(0, 0, 10, 10), (100, 100, 110, 110)]
+    assert set(_detection._merge_nearby_boxes(boxes, gap=2)) == set(boxes)
+
+
+def test_merge_unions_overlapping_boxes():
+    boxes = [(0, 0, 20, 20), (15, 15, 30, 30)]
+    merged = _detection._merge_nearby_boxes(boxes, gap=0)
+    assert merged == [(0, 0, 30, 30)]
+
+
+def test_merge_bridges_a_small_gap():
+    # Two boxes 4 px apart — the junction between them — merge when the gap
+    # threshold reaches across.
+    boxes = [(0, 0, 20, 20), (24, 0, 44, 20)]
+    assert _detection._merge_nearby_boxes(boxes, gap=5) == [(0, 0, 44, 20)]
+    # Too small a gap keeps them apart.
+    assert len(_detection._merge_nearby_boxes(boxes, gap=2)) == 2
+
+
+def test_merge_is_transitive_chain():
+    # A touches B touches C → all three collapse into one union.
+    boxes = [(0, 0, 10, 10), (12, 0, 22, 10), (24, 0, 34, 10)]
+    assert _detection._merge_nearby_boxes(boxes, gap=3) == [(0, 0, 34, 10)]
+
+
+def test_merge_gap_scales_with_box_size():
+    assert _detection._merge_gap([(0, 0, 100, 40)]) == int(40 * 0.4)
+    assert _detection._merge_gap([]) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +315,40 @@ def test_process_single_image_censors_detected_box(tmp_path):
     out = Image.open(dst)
     assert out.getpixel((20, 20)) == (0, 0, 0)          # inside censored box
     assert out.getpixel((45, 45)) == (255, 0, 0)        # outside untouched
+
+
+def test_process_single_image_merges_adjacent_detections(tmp_path):
+    # Two adjacent genitalia boxes with a gap between them (the junction).
+    # With merge on, the gap between them is censored as one region.
+    src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+    ])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT,
+        merge_regions=True)
+    assert count == 1                                   # merged into one region
+    out = Image.open(dst)
+    assert out.getpixel((22, 25)) == (0, 0, 0)          # the junction is censored
+
+
+def test_process_single_image_without_merge_keeps_regions_separate(tmp_path):
+    src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+    ])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT,
+        merge_regions=False)
+    assert count == 2                                   # kept as two regions
+    out = Image.open(dst)
+    assert out.getpixel((22, 25)) == (255, 0, 0)        # junction left uncensored
 
 
 def test_process_single_image_ellipse_shape_spares_box_corner(tmp_path):

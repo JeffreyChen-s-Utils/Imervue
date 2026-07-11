@@ -225,7 +225,8 @@ class _BatchWorker(QThread):
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
                  only_censored: bool = False, shape: str = SHAPE_RECT,
-                 failed_dir: str | None = None, scan_root: str | None = None):
+                 failed_dir: str | None = None, scan_root: str | None = None,
+                 merge_regions: bool = True):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
@@ -240,6 +241,7 @@ class _BatchWorker(QThread):
         self._source_root = source_root
         self._only_censored = only_censored
         self._shape = shape
+        self._merge_regions = merge_regions
         # Where to collect copies of images that fail to process, mirroring
         # their subfolder under scan_root. None → failures are only counted.
         self._failed_dir = failed_dir
@@ -281,7 +283,8 @@ class _BatchWorker(QThread):
                     confidence=self._conf, expand_pct=self._expand_pct,
                     mode=self._mode, style=self._style,
                     categories=self._categories,
-                    only_censored=self._only_censored, shape=shp)
+                    only_censored=self._only_censored, shape=shp,
+                    merge_regions=self._merge_regions)
 
             try:
                 count = _process_with_shape_fallback(_run, self._shape)
@@ -386,7 +389,8 @@ class _SubprocessBatchWorker(QThread):
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
                  only_censored: bool = False, shape: str = SHAPE_RECT,
-                 failed_dir: str | None = None, scan_root: str | None = None):
+                 failed_dir: str | None = None, scan_root: str | None = None,
+                 merge_regions: bool = True):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -405,6 +409,7 @@ class _SubprocessBatchWorker(QThread):
         self._shape = shape
         self._failed_dir = failed_dir or ""
         self._scan_root = scan_root or ""
+        self._merge_regions = merge_regions
 
     def _command(self, tmp_path: str) -> list[str]:
         return [
@@ -417,7 +422,7 @@ class _SubprocessBatchWorker(QThread):
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
             self._source_root, str(self._only_censored), self._shape,
-            self._failed_dir, self._scan_root,
+            self._failed_dir, self._scan_root, str(self._merge_regions),
         ]
 
     def _emit_progress(self, payload: str) -> None:

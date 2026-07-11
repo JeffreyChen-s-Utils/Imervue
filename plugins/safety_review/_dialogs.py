@@ -421,6 +421,11 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
          self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        self._merge_check = QCheckBox(
+            self._lang.get("safety_review_merge_regions",
+                           "Merge nearby regions (cover the junction)"))
+        self._merge_check.setChecked(True)
+        layout.addWidget(self._merge_check)
         self._build_progress_block(layout)
         self._build_buttons(layout)
 
@@ -485,8 +490,8 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         for widget in (
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
-            self._shape_combo, self._overwrite_check, self._recursive_check,
-            self._only_censored_check,
+            self._shape_combo, self._merge_check, self._overwrite_check,
+            self._recursive_check, self._only_censored_check,
         ):
             widget.setEnabled(False)
         for cb in self._cat_checks.values():
@@ -511,6 +516,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         # independent of the output/overwrite choice.
         scan_root = self._folder_edit.text().strip() or None
         self._last_failed_dir = self._failed_folder()
+        merge_regions = self._merge_check.isChecked()
         frozen_env = self._get_frozen_env() if self._get_frozen_env else None
         if frozen_env:
             python, sp = frozen_env
@@ -520,14 +526,16 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 mode=mode, confidence=conf, expand_pct=expand,
                 style=style, categories=categories, source_root=source_root,
                 only_censored=only_censored, shape=shape,
-                failed_dir=self._last_failed_dir, scan_root=scan_root)
+                failed_dir=self._last_failed_dir, scan_root=scan_root,
+                merge_regions=merge_regions)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
             style=style, categories=categories, source_root=source_root,
             only_censored=only_censored, shape=shape,
-            failed_dir=self._last_failed_dir, scan_root=scan_root)
+            failed_dir=self._last_failed_dir, scan_root=scan_root,
+            merge_regions=merge_regions)
 
     def _start(self):
         if not self._paths:
