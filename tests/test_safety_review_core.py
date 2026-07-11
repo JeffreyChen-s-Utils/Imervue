@@ -55,22 +55,20 @@ def test_categories_to_real_labels_unknown_category_ignored():
 
 
 def test_categories_to_anime_classes_default():
-    # Default now includes make_love (class 1) so the intercourse / junction
-    # region is caught out of the box.
+    # make_love (class 1) is NOT in the default set — its box blankets the
+    # scene; the junction is covered by merging the genital boxes instead.
     classes = _constants._categories_to_anime_classes(None)
-    assert classes == frozenset({0, 1, 3, 4})  # anus, make_love, penis, vagina
+    assert classes == frozenset({0, 3, 4})  # anus, penis, vagina
 
 
-def test_default_categories_includes_sexual_act():
-    assert _constants.CAT_SEXUAL_ACT in _constants.DEFAULT_CATEGORIES
+def test_sexual_act_not_in_default_categories():
+    assert _constants.CAT_SEXUAL_ACT not in _constants.DEFAULT_CATEGORIES
 
 
-def test_sexual_act_is_a_noop_for_real_photos():
-    # make_love has no NudeNet label, so enabling it by default does not change
-    # real-photo detection.
-    assert _constants._categories_to_real_labels(None) == frozenset({
-        "FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED", "ANUS_EXPOSED",
-    })
+def test_sexual_act_still_available_as_opt_in():
+    # The category still maps to make_love for users who explicitly enable it.
+    assert _constants._categories_to_anime_classes(
+        {_constants.CAT_SEXUAL_ACT}) == frozenset({1})
 
 
 def test_categories_to_anime_classes_sexual_act_is_make_love():
@@ -261,6 +259,35 @@ def test_segment_boxes_degrades_to_none_without_model(monkeypatch):
 # ---------------------------------------------------------------------------
 # _detection._detect_regions_real — filtering by label + confidence
 # ---------------------------------------------------------------------------
+
+def test_detect_regions_anime_uses_test_time_augmentation(monkeypatch):
+    captured = {}
+
+    class _FakeXY:
+        def tolist(self):
+            return [1.0, 2.0, 3.0, 4.0]
+
+    class _FakeBox:
+        cls = [3]
+        xyxy = [_FakeXY()]
+
+    class _FakeResult:
+        boxes = [_FakeBox()]
+
+    class _FakeModel:
+        def __call__(self, src, **kw):
+            captured.update(kw)
+            return [_FakeResult()]
+
+    monkeypatch.setattr(_detection, "_get_anime_model", lambda: _FakeModel())
+    boxes = _detection._detect_regions_anime("x.png", 0.15, frozenset({3}))
+    assert captured["augment"] is True   # test-time augmentation for recall
+    assert boxes == [(1, 2, 3, 4)]
+
+
+def test_anime_default_confidence_is_lowered_for_recall():
+    assert _constants._MODE_DEFAULTS[_constants.MODE_ANIME]["confidence"] == 0.15
+
 
 def test_detect_regions_real_filters_by_label_and_confidence():
     detector = _FakeDetector([

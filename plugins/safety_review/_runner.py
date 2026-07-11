@@ -36,7 +36,9 @@ MOSAIC_LABELS = frozenset({
 })
 
 # EraX YOLO classes (anime mode): 0=anus, 1=make_love, 2=nipple, 3=penis, 4=vagina
-ANIME_MOSAIC_CLASSES = frozenset({0, 1, 3, 4})  # +make_love (junction)
+# make_love (1) is skipped — its box blankets the scene; the junction is covered
+# by merging the penis/vagina boxes instead.
+ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})  # anus, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"
@@ -69,7 +71,7 @@ CAT_ANUS = "anus"
 CAT_NIPPLE = "nipple"
 CAT_SEXUAL_ACT = "sexual_act"
 
-DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS, CAT_SEXUAL_ACT})
+DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
 
 _CAT_TO_REAL_LABELS = {
     CAT_GENITALIA: frozenset({"FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED"}),
@@ -278,7 +280,8 @@ def _detect_boxes_real(detector, src, confidence, labels):
 
 
 def _detect_boxes_anime(model, src, confidence, classes):
-    results = model(src, conf=confidence, iou=0.3, verbose=False)
+    # augment=True → test-time augmentation for better recall (see _detection).
+    results = model(src, conf=confidence, iou=0.3, verbose=False, augment=True)
     boxes = []
     for r in results:
         for box in r.boxes:

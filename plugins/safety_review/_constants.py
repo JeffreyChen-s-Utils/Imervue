@@ -26,9 +26,11 @@ MOSAIC_LABELS = frozenset({
 # EraX-Anti-NSFW labels (anime mode) — YOLO11 classes
 # ---------------------------------------------------------------------------
 # Classes: 0=anus, 1=make_love, 2=nipple, 3=penis, 4=vagina
-# We mosaic: anus, penis, vagina, and make_love (the intercourse / junction
-# region — otherwise a penetration contact area goes uncensored). Skip nipple.
-ANIME_MOSAIC_CLASSES = frozenset({0, 1, 3, 4})   # anus, make_love, penis, vagina
+# We mosaic anus, penis, vagina. make_love is NOT censored directly — its box
+# bounds the whole intercourse scene (often most of the frame), so censoring it
+# blankets the image; the junction is instead covered by merging the penis and
+# vagina boxes. Skip nipple.
+ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})   # anus, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
 _ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"   # medium — best accuracy
@@ -62,7 +64,9 @@ DEFAULT_BLOCK_SIZE = 4   # mosaic granularity — 4 px
 # padding = fixed pixels, expand_pct = expand box by % of its own size
 _MODE_DEFAULTS: dict[str, dict] = {
     MODE_REAL:  {"confidence": 0.25, "padding": 10, "expand_pct": 0},
-    MODE_ANIME: {"confidence": 0.20, "padding": 0,  "expand_pct": 0},
+    # Lower anime confidence catches more stylised / partially-drawn genitalia
+    # that the model scores less confidently than a photo.
+    MODE_ANIME: {"confidence": 0.15, "padding": 0,  "expand_pct": 0},
     MODE_AUTO:  {"confidence": 0.25, "padding": 10, "expand_pct": 0},
 }
 
@@ -99,9 +103,10 @@ CAT_NIPPLE = "nipple"
 CAT_SEXUAL_ACT = "sexual_act"
 
 ALL_CATEGORIES = (CAT_GENITALIA, CAT_ANUS, CAT_NIPPLE, CAT_SEXUAL_ACT)
-# Sexual act (anime make_love class) is on by default so a penetration junction
-# is caught; it maps to no NudeNet label, so it's a no-op for real photos.
-DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS, CAT_SEXUAL_ACT})
+# Sexual act (anime make_love) is OFF by default: its box covers nearly the
+# whole scene, so censoring it blankets the image. The junction is covered by
+# merging the genital boxes instead; the checkbox stays for opt-in use.
+DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
 
 _CAT_TO_REAL_LABELS: dict[str, frozenset[str]] = {
     CAT_GENITALIA: frozenset({"FEMALE_GENITALIA_EXPOSED", "MALE_GENITALIA_EXPOSED"}),

@@ -246,9 +246,14 @@ def _detect_regions_real(detector, src: str, confidence: float,
 
 def _detect_regions_anime(src: str, confidence: float,
                            classes: frozenset[int] = ANIME_MOSAIC_CLASSES):
-    """EraX YOLO11 detection → list of (x1, y1, x2, y2)."""
+    """EraX YOLO11 detection → list of (x1, y1, x2, y2).
+
+    ``augment=True`` runs test-time augmentation (multi-scale + flips), which
+    recovers genitalia the single-pass model scores below threshold — better
+    recall for the price of a slower inference.
+    """
     model = _get_anime_model()
-    results = model(src, conf=confidence, iou=0.3, verbose=False)
+    results = model(src, conf=confidence, iou=0.3, verbose=False, augment=True)
     boxes = []
     for r in results:
         for box in r.boxes:
