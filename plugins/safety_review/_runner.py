@@ -279,16 +279,46 @@ def _detect_boxes_real(detector, src, confidence, labels):
     ]
 
 
+_ANIME_NIPPLE_CLASS = 2
+_ANIME_MAKE_LOVE_CLASS = 1
+_MAKE_LOVE_CENTER_FRAC = 0.4
+_NIPPLE_OVERLAP_THRESH = 0.5
+
+
+def _box_overlap_frac(a, b):
+    iw = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    ih = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    area = max(1, (a[2] - a[0]) * (a[3] - a[1]))
+    return (iw * ih) / area
+
+
+def _shrink_box_center(box, frac):
+    x1, y1, x2, y2 = box
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    hw, hh = (x2 - x1) * frac / 2, (y2 - y1) * frac / 2
+    return (int(cx - hw), int(cy - hh), int(cx + hw), int(cy + hh))
+
+
 def _detect_boxes_anime(model, src, confidence, classes):
     # augment=True → test-time augmentation for better recall (see _detection).
     results = model(src, conf=confidence, iou=0.3, verbose=False, augment=True)
-    boxes = []
+    raw = []
     for r in results:
         for box in r.boxes:
-            cls_id = int(box.cls[0])
-            if cls_id in classes:
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                boxes.append((int(x1), int(y1), int(x2), int(y2)))
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            raw.append(((int(x1), int(y1), int(x2), int(y2)), int(box.cls[0])))
+    nipples = [b for b, c in raw if c == _ANIME_NIPPLE_CLASS]
+    suppress = _ANIME_NIPPLE_CLASS not in classes and bool(nipples)
+    boxes = []
+    for box, cls in raw:
+        if cls not in classes:
+            continue
+        if cls == _ANIME_MAKE_LOVE_CLASS:
+            boxes.append(_shrink_box_center(box, _MAKE_LOVE_CENTER_FRAC))
+        elif not (suppress and any(
+                _box_overlap_frac(box, n) >= _NIPPLE_OVERLAP_THRESH
+                for n in nipples)):
+            boxes.append(box)
     return boxes
 
 

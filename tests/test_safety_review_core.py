@@ -289,6 +289,78 @@ def test_anime_default_confidence_is_lowered_for_recall():
     assert _constants._MODE_DEFAULTS[_constants.MODE_ANIME]["confidence"] == 0.15
 
 
+def _fake_anime_model(dets):
+    """Fake EraX model returning canned (box, cls_id) detections."""
+    class _XY:
+        def __init__(self, b):
+            self._b = b
+
+        def tolist(self):
+            return list(self._b)
+
+    class _Box:
+        def __init__(self, b, c):
+            self.xyxy = [_XY(b)]
+            self.cls = [c]
+
+    class _Res:
+        def __init__(self, dets):
+            self.boxes = [_Box(b, c) for b, c in dets]
+
+    class _Model:
+        def __call__(self, src, **kw):
+            return [_Res(dets)]
+
+    return _Model()
+
+
+def test_box_overlap_frac():
+    assert _detection._box_overlap_frac((0, 0, 10, 10), (0, 0, 10, 10)) == 1.0
+    assert _detection._box_overlap_frac((0, 0, 10, 10), (20, 20, 30, 30)) == 0.0
+    assert _detection._box_overlap_frac((0, 0, 10, 10), (5, 0, 15, 10)) == 0.5
+
+
+def test_shrink_box_center():
+    assert _detection._shrink_box_center((0, 0, 100, 100), 0.4) == (30, 30, 70, 70)
+
+
+def test_anime_drops_genitalia_overlapping_a_nipple(monkeypatch):
+    # A "vagina" box sitting on a detected nipple → a breast misclassified as
+    # genitalia; it must be dropped so breasts are never censored.
+    dets = [((10, 10, 30, 30), 4), ((10, 10, 30, 30), 2)]  # vagina + nipple
+    monkeypatch.setattr(_detection, "_get_anime_model",
+                        lambda: _fake_anime_model(dets))
+    assert _detection._detect_regions_anime(
+        "x.png", 0.15, frozenset({3, 4})) == []
+
+
+def test_anime_keeps_genitalia_away_from_nipples(monkeypatch):
+    dets = [((10, 10, 30, 30), 4), ((100, 100, 120, 120), 2)]
+    monkeypatch.setattr(_detection, "_get_anime_model",
+                        lambda: _fake_anime_model(dets))
+    assert _detection._detect_regions_anime(
+        "x.png", 0.15, frozenset({3, 4})) == [(10, 10, 30, 30)]
+
+
+def test_anime_keeps_nipple_when_explicitly_requested(monkeypatch):
+    # If the user opts into nipple censoring, they are a target, not a filter.
+    dets = [((10, 10, 30, 30), 4), ((10, 10, 30, 30), 2)]
+    monkeypatch.setattr(_detection, "_get_anime_model",
+                        lambda: _fake_anime_model(dets))
+    out = _detection._detect_regions_anime("x.png", 0.15, frozenset({2, 4}))
+    assert len(out) == 2
+
+
+def test_anime_make_love_is_shrunk_to_its_centre(monkeypatch):
+    # The whole-scene make_love box is reduced to its central 40% (the junction)
+    # so opting in doesn't blanket the frame.
+    dets = [((0, 0, 100, 100), 1)]
+    monkeypatch.setattr(_detection, "_get_anime_model",
+                        lambda: _fake_anime_model(dets))
+    assert _detection._detect_regions_anime(
+        "x.png", 0.15, frozenset({1})) == [(30, 30, 70, 70)]
+
+
 def test_detect_regions_real_filters_by_label_and_confidence():
     detector = _FakeDetector([
         {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [1, 2, 3, 4]},

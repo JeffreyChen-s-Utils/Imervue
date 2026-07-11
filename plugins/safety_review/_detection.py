@@ -244,9 +244,20 @@ def _detect_regions_real(detector, src: str, confidence: float,
     return boxes
 
 
-def _detect_regions_anime(src: str, confidence: float,
-                           classes: frozenset[int] = ANIME_MOSAIC_CLASSES):
-    """EraX YOLO11 detection → list of (x1, y1, x2, y2).
+# EraX YOLO class IDs referenced by name (0=anus, 1=make_love, 2=nipple,
+# 3=penis, 4=vagina).
+_ANIME_NIPPLE_CLASS = 2
+_ANIME_MAKE_LOVE_CLASS = 1
+# make_love bounds the whole scene; censor only its central portion (the
+# junction sits there) so enabling it doesn't blanket the frame.
+_MAKE_LOVE_CENTER_FRAC = 0.4
+# Drop a "genitalia" box if this fraction of it overlaps a detected nipple —
+# almost always a breast misclassified as genitalia.
+_NIPPLE_OVERLAP_THRESH = 0.5
+
+
+def _detect_anime_raw(src: str, confidence: float):
+    """All EraX detections above *confidence* → list of ((x1,y1,x2,y2), cls).
 
     ``augment=True`` runs test-time augmentation (multi-scale + flips), which
     recovers genitalia the single-pass model scores below threshold — better
@@ -254,14 +265,55 @@ def _detect_regions_anime(src: str, confidence: float,
     """
     model = _get_anime_model()
     results = model(src, conf=confidence, iou=0.3, verbose=False, augment=True)
-    boxes = []
+    out = []
     for r in results:
         for box in r.boxes:
-            cls_id = int(box.cls[0])
-            if cls_id in classes:
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                boxes.append((int(x1), int(y1), int(x2), int(y2)))
-    return boxes
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            out.append(((int(x1), int(y1), int(x2), int(y2)), int(box.cls[0])))
+    return out
+
+
+def _box_overlap_frac(a, b) -> float:
+    """Fraction of box *a*'s area covered by its intersection with *b*."""
+    iw = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    ih = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    area = max(1, (a[2] - a[0]) * (a[3] - a[1]))
+    return (iw * ih) / area
+
+
+def _shrink_box_center(box, frac: float):
+    """Central sub-box of *box* scaled to *frac* of each side."""
+    x1, y1, x2, y2 = box
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    hw, hh = (x2 - x1) * frac / 2, (y2 - y1) * frac / 2
+    return (int(cx - hw), int(cy - hh), int(cx + hw), int(cy + hh))
+
+
+def _detect_regions_anime(src: str, confidence: float,
+                           classes: frozenset[int] = ANIME_MOSAIC_CLASSES):
+    """EraX YOLO11 detection → list of (x1, y1, x2, y2) to censor.
+
+    make_love boxes (when requested) are shrunk to their centre so they cover
+    the junction without blanketing the scene. When nipples are NOT a censor
+    target, genitalia boxes that mostly overlap a detected nipple are dropped
+    as breast misclassifications.
+    """
+    raw = _detect_anime_raw(src, confidence)
+    nipples = [b for b, c in raw if c == _ANIME_NIPPLE_CLASS]
+    suppress = _ANIME_NIPPLE_CLASS not in classes and bool(nipples)
+    regions = []
+    for box, cls in raw:
+        if cls not in classes:
+            continue
+        if cls == _ANIME_MAKE_LOVE_CLASS:
+            regions.append(_shrink_box_center(box, _MAKE_LOVE_CENTER_FRAC))
+        elif not (suppress and _overlaps_nipple(box, nipples)):
+            regions.append(box)
+    return regions
+
+
+def _overlaps_nipple(box, nipples) -> bool:
+    return any(_box_overlap_frac(box, n) >= _NIPPLE_OVERLAP_THRESH for n in nipples)
 
 
 def _get_fastsam():
