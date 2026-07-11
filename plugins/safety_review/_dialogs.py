@@ -357,6 +357,14 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         out_row.addWidget(self._out_browse_btn)
         layout.addLayout(out_row)
 
+        # Only meaningful for a separate-output run: write just the images
+        # that were actually censored, leaving clean ones uncopied.
+        self._only_censored_check = QCheckBox(
+            self._lang.get("safety_review_only_censored",
+                           "Only save censored images (skip unchanged copies)"))
+        self._only_censored_check.setVisible(False)
+        layout.addWidget(self._only_censored_check)
+
     def _build_progress_block(self, layout):
         self._progress = QProgressBar()
         self._progress.setValue(0)
@@ -441,6 +449,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._out_dir_label.setVisible(not checked)
         self._out_dir_edit.setVisible(not checked)
         self._out_browse_btn.setVisible(not checked)
+        self._only_censored_check.setVisible(not checked)
 
     def _on_mode_changed(self, index):
         mode = self._mode_combo.itemData(index)
@@ -452,6 +461,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
             self._overwrite_check, self._recursive_check,
+            self._only_censored_check,
         ):
             widget.setEnabled(False)
         for cb in self._cat_checks.values():
@@ -459,9 +469,10 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
 
     def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
                      categories):
-        # source_root is only meaningful for a separate-output run; on
-        # overwrite each file is written back in place regardless.
+        # source_root and only-censored are only meaningful for a separate-
+        # output run; on overwrite each file is written back in place.
         source_root = None if overwrite else self._source_root
+        only_censored = (not overwrite) and self._only_censored_check.isChecked()
         frozen_env = self._get_frozen_env() if self._get_frozen_env else None
         if frozen_env:
             python, sp = frozen_env
@@ -469,12 +480,14 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 python, sp, self._paths, output_dir,
                 self._block_size, self._padding, overwrite=overwrite,
                 mode=mode, confidence=conf, expand_pct=expand,
-                style=style, categories=categories, source_root=source_root)
+                style=style, categories=categories, source_root=source_root,
+                only_censored=only_censored)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
-            style=style, categories=categories, source_root=source_root)
+            style=style, categories=categories, source_root=source_root,
+            only_censored=only_censored)
 
     def _start(self):
         if not self._paths:

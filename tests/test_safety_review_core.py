@@ -209,6 +209,49 @@ def test_process_single_image_jpeg_dst_from_rgba_source(tmp_path):
     assert Image.open(dst).mode == "RGB"
 
 
+def test_process_single_image_only_censored_skips_clean_image(tmp_path):
+    # A clean image (no detections) must not be written to dst at all, so a
+    # separate-output run collects only the images that were censored.
+    src = _write_png(tmp_path / "in.png")
+    dst = tmp_path / "out" / "in_censored.png"
+    detector = _FakeDetector([])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0,
+        mode=_constants.MODE_REAL, only_censored=True)
+    assert count == 0
+    assert not dst.exists()
+    assert not dst.parent.exists()  # no empty output folder created
+    assert src.exists()             # original untouched
+
+
+def test_process_single_image_only_censored_still_writes_detections(tmp_path):
+    src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
+    dst = tmp_path / "out" / "sub" / "in_censored.png"
+    detector = _FakeDetector([
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
+    ])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0,
+        mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK,
+        only_censored=True)
+    assert count == 1
+    # The censored image is written and its mirrored folder created on demand.
+    assert dst.exists()
+    assert Image.open(dst).getpixel((20, 20)) == (0, 0, 0)
+
+
+def test_process_one_runner_only_censored_skips_clean_image(tmp_path):
+    src = _write_png(tmp_path / "in.png")
+    dst = tmp_path / "out" / "in_censored.png"
+    detector = _FakeDetector([])
+    count = _runner._process_one(
+        detector, str(src), str(dst), 4, 0,
+        det_mode="real", only_censored=True)
+    assert count == 0
+    assert not dst.exists()
+    assert src.exists()
+
+
 # ---------------------------------------------------------------------------
 # _detection._scan_folder
 # ---------------------------------------------------------------------------
@@ -326,15 +369,16 @@ def test_relative_parent_outside_root_falls_back_to_flat(tmp_path):
     assert _workers._relative_parent(str(outside), str(root)) == ""
 
 
-def test_mirrored_destination_recreates_subfolder_tree(tmp_path):
+def test_mirrored_destination_maps_subfolder_tree(tmp_path):
     root = tmp_path / "src"
     out = tmp_path / "out"
     out.mkdir()
     src = root / "sub" / "deep" / "pic.png"
     dst = _workers._mirrored_destination(str(src), str(out), str(root))
     assert Path(dst) == out / "sub" / "deep" / "pic_censored.png"
-    # The mirrored directory is created so the worker can write straight away.
-    assert (out / "sub" / "deep").is_dir()
+    # The path is only computed here — the directory is created at write time
+    # so a skipped clean image leaves no empty output folder behind.
+    assert not (out / "sub" / "deep").exists()
 
 
 def test_mirrored_destination_increments_on_clash(tmp_path):
@@ -343,6 +387,7 @@ def test_mirrored_destination_increments_on_clash(tmp_path):
     out.mkdir()
     src = root / "sub" / "pic.png"
     first = _workers._mirrored_destination(str(src), str(out), str(root))
+    Path(first).parent.mkdir(parents=True, exist_ok=True)
     Path(first).write_text("x", encoding="utf-8")
     second = _workers._mirrored_destination(str(src), str(out), str(root))
     assert Path(second).name == "pic_censored_1.png"
@@ -392,7 +437,8 @@ def test_runner_batch_destination_mirrors_subfolder(tmp_path):
     src = str(root / "a" / "b" / "pic.png")
     dst = _runner._batch_destination(src, str(out), False, str(root))
     assert Path(dst) == out / "a" / "b" / "pic_censored.png"
-    assert (out / "a" / "b").is_dir()
+    # Path only — directory materialised on write, not here.
+    assert not (out / "a" / "b").exists()
 
 
 def test_runner_batch_destination_increments_on_clash(tmp_path):
@@ -401,6 +447,7 @@ def test_runner_batch_destination_increments_on_clash(tmp_path):
     out.mkdir()
     src = str(root / "sub" / "pic.png")
     first = _runner._batch_destination(src, str(out), False, str(root))
+    Path(first).parent.mkdir(parents=True, exist_ok=True)
     Path(first).write_text("x", encoding="utf-8")
     second = _runner._batch_destination(src, str(out), False, str(root))
     assert Path(second).name == "pic_censored_1.png"

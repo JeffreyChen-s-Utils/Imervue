@@ -242,14 +242,28 @@ def _detect_boxes(detector, src, confidence, mode, categories):
     return _detect_regions_real(detector, src, confidence, real_labels)
 
 
+def _ensure_parent(dst: str) -> None:
+    """Create *dst*'s parent directory on demand, right before a write.
+
+    Destination helpers only compute paths; the mirrored output tree is
+    materialised here so a run that skips clean images (only-censored mode)
+    never leaves empty subfolders behind.
+    """
+    parent = os.path.dirname(dst)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
 def _copy_unchanged(src: str, dst: str) -> None:
     """Copy the source verbatim when no regions were detected."""
     if os.path.normpath(src) != os.path.normpath(dst):
         import shutil
+        _ensure_parent(dst)
         shutil.copy2(src, dst)
 
 
 def _save_image(img, dst: str) -> None:
+    _ensure_parent(dst)
     fmt = _FMT_MAP.get(Path(dst).suffix.lower(), "PNG")
     if fmt == "JPEG" and img.mode == "RGBA":
         img = img.convert("RGB")
@@ -267,13 +281,20 @@ def _process_single_image(
     mode: str = MODE_REAL,
     style: str = STYLE_MOSAIC,
     categories=None,
+    only_censored: bool = False,
 ) -> int:
-    """Detect + censor one image.  Returns the number of regions processed."""
+    """Detect + censor one image.  Returns the number of regions processed.
+
+    With *only_censored* True, an image with no detected regions is left
+    entirely alone — nothing is written to *dst* — so a separate-output run
+    collects only the images that were actually censored.
+    """
     from PIL import Image
 
     boxes = _detect_boxes(detector, src, confidence, mode, categories)
     if not boxes:
-        _copy_unchanged(src, dst)
+        if not only_censored:
+            _copy_unchanged(src, dst)
         return 0
 
     img = Image.open(src)

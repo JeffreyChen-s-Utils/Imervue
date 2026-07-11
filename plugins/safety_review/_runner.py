@@ -2,10 +2,12 @@
 
 Usage (frozen env):
     python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored>]
 
 ``source_root`` (batch only, optional) mirrors each source's subfolder under
 ``output_dir`` so a recursive scan keeps its tree instead of flattening.
+``only_censored`` (batch only, optional, "True"/"False") writes only images
+that were actually censored, leaving clean images uncopied.
 
 Protocol — stdout lines:
     PROGRESS:<message>
@@ -101,7 +103,11 @@ def _parse_categories(cats_str):
 
 def _batch_destination(src, output_dir, overwrite, source_root):
     """Resolve one batch destination, mirroring subfolders under *source_root*
-    when given so a recursive scan keeps its tree instead of flattening."""
+    when given so a recursive scan keeps its tree instead of flattening.
+
+    Only computes the path; the directory is created on demand at write time
+    so a skipped (clean) image leaves no empty output folder behind.
+    """
     if overwrite:
         return src
     target_dir = output_dir
@@ -109,7 +115,6 @@ def _batch_destination(src, output_dir, overwrite, source_root):
         rel = os.path.relpath(os.path.dirname(src), source_root)
         if rel != os.curdir and not rel.startswith(os.pardir):
             target_dir = os.path.join(output_dir, rel)
-    os.makedirs(target_dir, exist_ok=True)
     stem = Path(src).stem
     suffix = Path(src).suffix or ".png"
     dst = os.path.join(target_dir, f"{stem}_censored{suffix}")
@@ -118,6 +123,13 @@ def _batch_destination(src, output_dir, overwrite, source_root):
         dst = os.path.join(target_dir, f"{stem}_censored_{counter}{suffix}")
         counter += 1
     return dst
+
+
+def _ensure_parent(dst):
+    """Create *dst*'s parent directory on demand, right before writing."""
+    parent = os.path.dirname(dst)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
 
 
 def _bootstrap_site_packages(site_packages: str) -> None:
@@ -206,8 +218,11 @@ def _detect_boxes_anime(model, src, confidence, classes):
 def _process_one(detector, src, dst, block_size, padding,
                   confidence=MIN_CONFIDENCE,
                   expand_pct=0, det_mode="real", anime_model=None,
-                  style=STYLE_MOSAIC, categories=None):
-    """Detect + censor one image.  Returns number of regions processed."""
+                  style=STYLE_MOSAIC, categories=None, only_censored=False):
+    """Detect + censor one image.  Returns number of regions processed.
+
+    With *only_censored* True a clean image (no detections) is left alone —
+    nothing is written to *dst*."""
     from PIL import Image
 
     actual_mode = det_mode
@@ -222,8 +237,9 @@ def _process_one(detector, src, dst, block_size, padding,
         boxes = _detect_boxes_real(detector, src, confidence, labels)
 
     if not boxes:
-        if os.path.normpath(src) != os.path.normpath(dst):
+        if not only_censored and os.path.normpath(src) != os.path.normpath(dst):
             import shutil
+            _ensure_parent(dst)
             shutil.copy2(src, dst)
         return 0
 
@@ -246,6 +262,7 @@ def _process_one(detector, src, dst, block_size, padding,
     save_img = img
     if fmt == "JPEG" and save_img.mode == "RGBA":
         save_img = save_img.convert("RGB")
+    _ensure_parent(dst)
     save_img.save(dst, format=fmt)
     return len(boxes)
 
@@ -331,6 +348,7 @@ def main() -> None:
         style = args[10] if len(args) > 10 else STYLE_MOSAIC
         categories = _parse_categories(args[11]) if len(args) > 11 else None
         source_root = args[12] if len(args) > 12 else ""
+        only_censored = args[13].lower() == "true" if len(args) > 13 else False
 
         with open(json_paths, encoding="utf-8") as f:
             paths = json.load(f)
@@ -363,7 +381,8 @@ def main() -> None:
                              confidence=confidence,
                              expand_pct=expand_pct, det_mode=det_mode,
                              anime_model=anime_model,
-                             style=style, categories=categories)
+                             style=style, categories=categories,
+                             only_censored=only_censored)
                 success += 1
             except Exception as exc:
                 print(f"PROGRESS:Error on {name}: {exc}", flush=True)

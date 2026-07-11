@@ -91,3 +91,40 @@ def test_worker_drops_source_root_when_overwriting(qapp, tmp_path):
         mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
     assert worker._source_root is None
     dlg.deleteLater()
+
+
+def test_only_censored_checkbox_hidden_until_output_mode(qapp, tmp_path):
+    dlg = _dialog(qapp)
+    # isVisibleTo(dlg) reflects the local hidden flag without needing the
+    # dialog to be shown (isVisible() would be False for an unshown dialog).
+    # Overwrite is the default → the separate-output options stay hidden.
+    assert dlg._only_censored_check.isVisibleTo(dlg) is False
+    dlg._overwrite_check.setChecked(False)  # fires _on_overwrite_toggled
+    assert dlg._only_censored_check.isVisibleTo(dlg) is True
+    dlg.deleteLater()
+
+
+def test_worker_gets_only_censored_flag_for_separate_output(qapp, tmp_path):
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    dlg._overwrite_check.setChecked(False)
+    dlg._only_censored_check.setChecked(True)
+    worker = dlg._make_worker(
+        output_dir=str(tmp_path / "out"), overwrite=False,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+    assert worker._only_censored is True
+    dlg.deleteLater()
+
+
+def test_only_censored_ignored_when_overwriting(qapp, tmp_path):
+    # Even if the box was left checked, overwrite mode must not carry the flag.
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    dlg._only_censored_check.setChecked(True)
+    worker = dlg._make_worker(
+        output_dir=None, overwrite=True,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+    assert worker._only_censored is False
+    dlg.deleteLater()

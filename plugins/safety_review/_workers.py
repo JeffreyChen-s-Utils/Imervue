@@ -94,7 +94,6 @@ def _mirrored_destination(src: str, output_dir: str, source_root: str) -> str:
     """
     rel_parent = _relative_parent(src, source_root)
     target_dir = Path(output_dir) / rel_parent if rel_parent else Path(output_dir)
-    target_dir.mkdir(parents=True, exist_ok=True)
     stem = Path(src).stem
     suffix = Path(src).suffix or ".png"
     dst = target_dir / f"{stem}_censored{suffix}"
@@ -169,7 +168,8 @@ class _BatchWorker(QThread):
                  block_size: int, padding: int, overwrite: bool,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None, source_root: str | None = None):
+                 categories=None, source_root: str | None = None,
+                 only_censored: bool = False):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
@@ -182,6 +182,7 @@ class _BatchWorker(QThread):
         self._style = style
         self._categories = categories
         self._source_root = source_root
+        self._only_censored = only_censored
 
     def _destination(self, src: str) -> str:
         return _resolve_destination(
@@ -206,6 +207,7 @@ class _BatchWorker(QThread):
                     confidence=self._conf,
                     expand_pct=self._expand_pct, mode=self._mode,
                     style=self._style, categories=self._categories,
+                    only_censored=self._only_censored,
                 )
                 total_regions += count
                 success += 1
@@ -301,7 +303,8 @@ class _SubprocessBatchWorker(QThread):
                  block_size: int, padding: int, overwrite: bool,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None, source_root: str | None = None):
+                 categories=None, source_root: str | None = None,
+                 only_censored: bool = False):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -316,6 +319,7 @@ class _SubprocessBatchWorker(QThread):
         self._style = style
         self._categories = categories
         self._source_root = source_root or ""
+        self._only_censored = only_censored
 
     def _command(self, tmp_path: str) -> list[str]:
         return [
@@ -327,7 +331,7 @@ class _SubprocessBatchWorker(QThread):
             self._mode, str(self._conf),
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
-            self._source_root,
+            self._source_root, str(self._only_censored),
         ]
 
     def _emit_progress(self, payload: str) -> None:
