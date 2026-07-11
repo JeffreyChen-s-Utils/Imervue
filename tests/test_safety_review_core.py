@@ -137,6 +137,79 @@ def test_censor_blur_runs_on_region():
 
 
 # ---------------------------------------------------------------------------
+# _detection — censor shape (rect / ellipse / precise) confinement
+# ---------------------------------------------------------------------------
+
+def test_region_mask_rect_is_none():
+    assert _detection._region_mask(20, 20, _constants.SHAPE_RECT) is None
+
+
+def test_region_mask_ellipse_clears_corners():
+    mask = _detection._region_mask(20, 20, _constants.SHAPE_ELLIPSE)
+    assert mask.getpixel((10, 10)) == 255   # centre inside the ellipse
+    assert mask.getpixel((0, 0)) == 0       # corner outside
+
+
+def test_region_mask_precise_uses_supplied_mask():
+    seg = _detection._ellipse_mask(20, 20)
+    assert _detection._region_mask(20, 20, _constants.SHAPE_PRECISE, seg) is seg
+
+
+def test_region_mask_precise_without_mask_falls_back_to_ellipse():
+    mask = _detection._region_mask(20, 20, _constants.SHAPE_PRECISE, None)
+    assert mask.getpixel((10, 10)) == 255
+    assert mask.getpixel((0, 0)) == 0
+
+
+def test_censor_ellipse_keeps_box_corners_but_censors_centre():
+    img = Image.new("RGB", (50, 50), (200, 30, 30))
+    _detection._censor_region(img, 10, 10, 40, 40, 4,
+                              style=_constants.STYLE_BLACK,
+                              shape=_constants.SHAPE_ELLIPSE)
+    assert img.getpixel((25, 25)) == (0, 0, 0)        # centre censored
+    assert img.getpixel((11, 11)) == (200, 30, 30)    # box corner untouched
+    assert img.getpixel((45, 45)) == (200, 30, 30)    # outside the box untouched
+
+
+def test_censor_rect_still_fills_whole_box():
+    img = Image.new("RGB", (50, 50), (200, 30, 30))
+    _detection._censor_region(img, 10, 10, 40, 40, 4,
+                              style=_constants.STYLE_BLACK,
+                              shape=_constants.SHAPE_RECT)
+    assert img.getpixel((11, 11)) == (0, 0, 0)        # rect covers the corner
+
+
+def test_censor_precise_confines_to_segmentation_mask():
+    from PIL import Image as _Img, ImageDraw
+    img = _Img.new("RGB", (50, 50), (200, 30, 30))
+    # A tiny white square (0..5 within the box) as the "segmentation" mask.
+    seg = _Img.new("L", (30, 30), 0)
+    ImageDraw.Draw(seg).rectangle((0, 0, 5, 5), fill=255)
+    _detection._censor_region(img, 10, 10, 40, 40, 4,
+                              style=_constants.STYLE_BLACK,
+                              shape=_constants.SHAPE_PRECISE, seg_mask=seg)
+    assert img.getpixel((12, 12)) == (0, 0, 0)        # inside the seg mask
+    assert img.getpixel((30, 30)) == (200, 30, 30)    # box interior, but unmasked
+
+
+def test_crop_seg_mask_handles_none_and_missing():
+    assert _detection._crop_seg_mask(None, 0, (0, 0, 4, 4)) is None
+    assert _detection._crop_seg_mask([None], 0, (0, 0, 4, 4)) is None
+    full = _detection._ellipse_mask(20, 20)
+    cropped = _detection._crop_seg_mask([full], 0, (0, 0, 10, 10))
+    assert cropped.size == (10, 10)
+
+
+def test_segment_boxes_degrades_to_none_without_model(monkeypatch):
+    # No ultralytics / model → _get_fastsam raises → _segment_boxes returns None
+    # so the caller falls back to the ellipse shape instead of crashing.
+    def _boom():
+        raise ImportError("ultralytics not installed")
+    monkeypatch.setattr(_detection, "_get_fastsam", _boom)
+    assert _detection._segment_boxes("x.png", [(0, 0, 5, 5)], "real") is None
+
+
+# ---------------------------------------------------------------------------
 # _detection._detect_regions_real — filtering by label + confidence
 # ---------------------------------------------------------------------------
 
@@ -193,6 +266,22 @@ def test_process_single_image_censors_detected_box(tmp_path):
     out = Image.open(dst)
     assert out.getpixel((20, 20)) == (0, 0, 0)          # inside censored box
     assert out.getpixel((45, 45)) == (255, 0, 0)        # outside untouched
+
+
+def test_process_single_image_ellipse_shape_spares_box_corner(tmp_path):
+    src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 40, 40]},
+    ])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), 4, 0,
+        mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK,
+        shape=_constants.SHAPE_ELLIPSE)
+    assert count == 1
+    out = Image.open(dst)
+    assert out.getpixel((25, 25)) == (0, 0, 0)        # centre of the box censored
+    assert out.getpixel((11, 11)) == (255, 0, 0)      # box corner left clear
 
 
 def test_process_single_image_jpeg_dst_from_rgba_source(tmp_path):
@@ -439,6 +528,30 @@ def test_runner_batch_destination_mirrors_subfolder(tmp_path):
     assert Path(dst) == out / "a" / "b" / "pic_censored.png"
     # Path only — directory materialised on write, not here.
     assert not (out / "a" / "b").exists()
+
+
+def test_runner_censor_ellipse_spares_corner(tmp_path):
+    # The frozen-env runner mirrors the ellipse confinement (precise → ellipse).
+    img = Image.new("RGB", (50, 50), (10, 200, 40))
+    _runner._censor_region(img, 10, 10, 40, 40, 4,
+                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_ELLIPSE)
+    assert img.getpixel((25, 25)) == (0, 0, 0)        # centre censored
+    assert img.getpixel((11, 11)) == (10, 200, 40)    # corner spared
+
+
+def test_runner_censor_precise_degrades_to_ellipse(tmp_path):
+    img = Image.new("RGB", (50, 50), (10, 200, 40))
+    _runner._censor_region(img, 10, 10, 40, 40, 4,
+                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_PRECISE)
+    assert img.getpixel((25, 25)) == (0, 0, 0)
+    assert img.getpixel((11, 11)) == (10, 200, 40)   # ellipse fallback spares corner
+
+
+def test_runner_censor_rect_fills_whole_box(tmp_path):
+    img = Image.new("RGB", (50, 50), (10, 200, 40))
+    _runner._censor_region(img, 10, 10, 40, 40, 4,
+                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_RECT)
+    assert img.getpixel((11, 11)) == (0, 0, 0)
 
 
 def test_runner_batch_destination_increments_on_clash(tmp_path):

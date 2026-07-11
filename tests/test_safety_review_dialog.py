@@ -73,7 +73,8 @@ def test_worker_gets_source_root_for_separate_output(qapp, tmp_path):
     dlg._recursive_check.setChecked(True)
     worker = dlg._make_worker(
         output_dir=str(tmp_path / "out"), overwrite=False,
-        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
     assert isinstance(worker, _BatchWorker)
     assert worker._source_root == str(tmp_path)
     dlg.deleteLater()
@@ -88,7 +89,8 @@ def test_worker_drops_source_root_when_overwriting(qapp, tmp_path):
     dlg._recursive_check.setChecked(True)
     worker = dlg._make_worker(
         output_dir=None, overwrite=True,
-        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
     assert worker._source_root is None
     dlg.deleteLater()
 
@@ -112,7 +114,8 @@ def test_worker_gets_only_censored_flag_for_separate_output(qapp, tmp_path):
     dlg._only_censored_check.setChecked(True)
     worker = dlg._make_worker(
         output_dir=str(tmp_path / "out"), overwrite=False,
-        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
     assert worker._only_censored is True
     dlg.deleteLater()
 
@@ -125,6 +128,39 @@ def test_only_censored_ignored_when_overwriting(qapp, tmp_path):
     dlg._only_censored_check.setChecked(True)
     worker = dlg._make_worker(
         output_dir=None, overwrite=True,
-        mode="real", conf=0.25, expand=0, style="mosaic", categories=None)
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape="ellipse")
     assert worker._only_censored is False
+    dlg.deleteLater()
+
+
+def test_shape_combo_defaults_to_ellipse(qapp, tmp_path):
+    # Ellipse is the default so censoring hugs the region out of the box.
+    from safety_review._constants import SHAPE_ELLIPSE
+    dlg = _dialog(qapp)
+    assert dlg._shape_combo.currentData() == SHAPE_ELLIPSE
+    dlg.deleteLater()
+
+
+def test_shape_combo_offers_precise(qapp, tmp_path):
+    from safety_review._constants import SHAPE_PRECISE
+    dlg = _dialog(qapp)
+    values = [dlg._shape_combo.itemData(i)
+              for i in range(dlg._shape_combo.count())]
+    assert SHAPE_PRECISE in values
+    dlg.deleteLater()
+
+
+def test_worker_gets_selected_shape(qapp, tmp_path):
+    from safety_review._constants import SHAPE_PRECISE
+    _tree(tmp_path)
+    dlg = _dialog(qapp)
+    dlg._folder_edit.setText(str(tmp_path))
+    idx = dlg._shape_combo.findData(SHAPE_PRECISE)
+    dlg._shape_combo.setCurrentIndex(idx)
+    worker = dlg._make_worker(
+        output_dir=str(tmp_path / "out"), overwrite=False,
+        mode="real", conf=0.25, expand=0, style="mosaic", categories=None,
+        shape=dlg._shape_combo.currentData())
+    assert worker._shape == SHAPE_PRECISE
     dlg.deleteLater()

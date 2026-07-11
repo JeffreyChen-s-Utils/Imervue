@@ -24,6 +24,9 @@ from safety_review._constants import (
     MODE_ANIME,
     MODE_AUTO,
     MODE_REAL,
+    SHAPE_ELLIPSE,
+    SHAPE_PRECISE,
+    SHAPE_RECT,
     STYLE_BLACK,
     STYLE_BLUR,
     STYLE_MOSAIC,
@@ -45,6 +48,14 @@ _cached_detector_lock = threading.Lock()
 
 _cached_anime_model = None
 _cached_anime_lock = threading.Lock()
+
+_cached_fastsam = None
+_cached_fastsam_lock = threading.Lock()
+
+# FastSAM (ships via ultralytics) — a light segmentation model used only for
+# the optional "precise" censor shape. Auto-downloaded by ultralytics on first
+# use, like the anime YOLO weights.
+_FASTSAM_MODEL = "FastSAM-s.pt"
 
 
 def _get_detector():
@@ -160,44 +171,62 @@ def _expand_box(x1, y1, x2, y2, padding: int, expand_pct: int,
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
-def _censor_black(img, box):
-    from PIL import ImageDraw
-    ImageDraw.Draw(img).rectangle(box, fill=(0, 0, 0))
-
-
-def _censor_blur(img, box, w, h):
-    from PIL import ImageFilter
-    region = img.crop(box)
-    radius = max(max(w, h) // 5, 10)
-    blurred = region.filter(ImageFilter.GaussianBlur(radius=radius))
-    img.paste(blurred, (box[0], box[1]))
-
-
-def _censor_mosaic(img, box, w, h, block_size):
+def _censored_region(region, w, h, block_size, style):
+    """Return the censored copy of *region* (same size), for the chosen style."""
     from PIL import Image as _Img
-    region = img.crop(box)
+    if style == STYLE_BLACK:
+        return _Img.new(region.mode, (w, h), 0)
+    if style == STYLE_BLUR:
+        from PIL import ImageFilter
+        radius = max(max(w, h) // 5, 10)
+        return region.filter(ImageFilter.GaussianBlur(radius=radius))
+    # mosaic (default)
     bs = max(2, block_size)
     small = region.resize(
         (max(1, w // bs), max(1, h // bs)),
         resample=_Img.Resampling.BILINEAR,
     )
-    mosaic = small.resize((w, h), resample=_Img.Resampling.NEAREST)
-    img.paste(mosaic, (box[0], box[1]))
+    return small.resize((w, h), resample=_Img.Resampling.NEAREST)
 
 
-def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC):
-    """Apply censoring (mosaic / blur / black) to a region (in-place)."""
+def _ellipse_mask(w, h):
+    """L-mode mask (255 inside the inscribed ellipse, 0 outside)."""
+    from PIL import Image as _Img, ImageDraw
+    mask = _Img.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, w - 1, h - 1), fill=255)
+    return mask
+
+
+def _region_mask(w, h, shape, seg_mask=None):
+    """Compositing mask for the region, or ``None`` for a full-rectangle paste.
+
+    RECT → None (paste the whole box). ELLIPSE → inscribed ellipse. PRECISE →
+    the supplied per-region segmentation mask, falling back to an ellipse when
+    no mask is available (segmentation model absent / failed).
+    """
+    if shape == SHAPE_ELLIPSE:
+        return _ellipse_mask(w, h)
+    if shape == SHAPE_PRECISE:
+        return seg_mask if seg_mask is not None else _ellipse_mask(w, h)
+    return None  # SHAPE_RECT
+
+
+def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC,
+                   shape=SHAPE_RECT, seg_mask=None):
+    """Censor a region in-place, confined to *shape*.
+
+    The censored pixels are produced for the whole box, then composited back
+    through the shape mask so only the ellipse / segmentation area is replaced
+    and the rectangular corners keep their original pixels.
+    """
     w = x2 - x1
     h = y2 - y1
     if w <= 0 or h <= 0:
         return
     box = (x1, y1, x2, y2)
-    if style == STYLE_BLACK:
-        _censor_black(img, box)
-    elif style == STYLE_BLUR:
-        _censor_blur(img, box, w, h)
-    else:  # mosaic (default)
-        _censor_mosaic(img, box, w, h, block_size)
+    region = img.crop(box)
+    censored = _censored_region(region, w, h, block_size, style)
+    img.paste(censored, (x1, y1), _region_mask(w, h, shape, seg_mask))
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +257,53 @@ def _detect_regions_anime(src: str, confidence: float,
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 boxes.append((int(x1), int(y1), int(x2), int(y2)))
     return boxes
+
+
+def _get_fastsam():
+    """Return a cached FastSAM model, downloading on first call."""
+    global _cached_fastsam
+    with _cached_fastsam_lock:
+        if _cached_fastsam is None:
+            from ultralytics import FastSAM
+            _cached_fastsam = FastSAM(_FASTSAM_MODEL)
+        return _cached_fastsam
+
+
+def _fastsam_box_mask(model, src: str, box, iw: int, ih: int):
+    """Segment one detection box → a full-image ``L`` mask, or None."""
+    from PIL import Image as _Img
+    results = model(src, bboxes=[list(box)], verbose=False, retina_masks=True)
+    if not results:
+        return None
+    masks = getattr(results[0], "masks", None)
+    if masks is None or masks.data is None or len(masks.data) == 0:
+        return None
+    arr = (masks.data[0].cpu().numpy() * 255).astype("uint8")
+    mask = _Img.fromarray(arr, mode="L")
+    if mask.size != (iw, ih):
+        mask = mask.resize((iw, ih), _Img.Resampling.NEAREST)
+    return mask
+
+
+def _segment_boxes(src: str, boxes, mode: str):
+    """Best-effort per-box full-image segmentation masks for precise mode.
+
+    Returns a list aligned with *boxes* (each entry a mask or None), or None
+    when segmentation is unavailable (no ultralytics / model download failed /
+    no masks) so the caller falls back to the ellipse shape. Never raises — a
+    precise run must degrade gracefully, not crash the batch.
+    """
+    try:
+        from PIL import Image as _Img
+        model = _get_fastsam()
+        with _Img.open(src) as im:
+            iw, ih = im.size
+        masks = [_fastsam_box_mask(model, src, box, iw, ih) for box in boxes]
+        return masks if any(m is not None for m in masks) else None
+    except Exception:  # noqa: BLE001 — optional path, degrade to ellipse
+        logger.info("Precise segmentation unavailable; using ellipse fallback",
+                    exc_info=True)
+        return None
 
 
 def _detect_boxes(detector, src, confidence, mode, categories):
@@ -282,12 +358,17 @@ def _process_single_image(
     style: str = STYLE_MOSAIC,
     categories=None,
     only_censored: bool = False,
+    shape: str = SHAPE_RECT,
 ) -> int:
     """Detect + censor one image.  Returns the number of regions processed.
 
     With *only_censored* True, an image with no detected regions is left
     entirely alone — nothing is written to *dst* — so a separate-output run
     collects only the images that were actually censored.
+
+    *shape* confines each censor to the detected rectangle, the ellipse
+    inscribed in it, or (precise) a per-region segmentation mask so the
+    censor hugs the region instead of blanketing the whole box.
     """
     from PIL import Image
 
@@ -302,9 +383,23 @@ def _process_single_image(
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    for box in boxes:
+    # Precise mode segments each box into a full-image mask up front; cropping
+    # it to the (expanded) censor box below keeps it pixel-aligned regardless
+    # of padding / expansion. None here → _region_mask falls back to ellipse.
+    seg_masks = _segment_boxes(src, boxes, mode) if shape == SHAPE_PRECISE else None
+    for i, box in enumerate(boxes):
         ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
-        _censor_region(img, ex1, ey1, ex2, ey2, block_size, style=style)
+        seg = _crop_seg_mask(seg_masks, i, (ex1, ey1, ex2, ey2))
+        _censor_region(img, ex1, ey1, ex2, ey2, block_size,
+                       style=style, shape=shape, seg_mask=seg)
 
     _save_image(img, dst)
     return len(boxes)
+
+
+def _crop_seg_mask(seg_masks, index: int, box):
+    """Crop the full-image segmentation mask for *index* to *box*, or None."""
+    if not seg_masks:
+        return None
+    mask = seg_masks[index] if index < len(seg_masks) else None
+    return mask.crop(box) if mask is not None else None

@@ -1,13 +1,16 @@
 """Subprocess runner for safety review plugin.
 
 Usage (frozen env):
-    python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories>]
-    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored>]
+    python _runner.py <site_packages> single <input> <output> <block_size> <padding> [<mode> <confidence> <expand_pct> <style> <categories> <shape>]
+    python _runner.py <site_packages> batch  <json_paths> <output_dir> <block_size> <padding> <overwrite> [<mode> <confidence> <expand_pct> <style> <categories> <source_root> <only_censored> <shape>]
 
 ``source_root`` (batch only, optional) mirrors each source's subfolder under
 ``output_dir`` so a recursive scan keeps its tree instead of flattening.
 ``only_censored`` (batch only, optional, "True"/"False") writes only images
 that were actually censored, leaving clean images uncopied.
+``shape`` (optional: rect / ellipse / precise) confines the censor to the box,
+its inscribed ellipse, or a segmentation mask; precise degrades to ellipse in
+this frozen-env runner.
 
 Protocol — stdout lines:
     PROGRESS:<message>
@@ -50,6 +53,13 @@ MIN_CONFIDENCE = 0.25
 STYLE_MOSAIC = "mosaic"
 STYLE_BLUR = "blur"
 STYLE_BLACK = "black"
+
+# Censor shape. RECT = whole box, ELLIPSE = inscribed oval. In this frozen-env
+# runner PRECISE degrades to ELLIPSE (the pixel-level segmentation path lives
+# in the in-process detector); still tighter than a full rectangle.
+SHAPE_RECT = "rect"
+SHAPE_ELLIPSE = "ellipse"
+SHAPE_PRECISE = "precise"
 
 # -----------------------------------------------------------------------
 # Abstract categories → per-mode labels / class IDs
@@ -155,32 +165,41 @@ def _expand_box(x1, y1, x2, y2, padding, expand_pct, iw, ih):
     return max(0, x1), max(0, y1), min(iw, x2), min(ih, y2)
 
 
-def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC):
+def _censored_region(region, w, h, block_size, style):
     from PIL import Image
+    if style == STYLE_BLACK:
+        return Image.new(region.mode, (w, h), 0)
+    if style == STYLE_BLUR:
+        from PIL import ImageFilter
+        radius = max(max(w, h) // 5, 10)
+        return region.filter(ImageFilter.GaussianBlur(radius=radius))
+    bs = max(2, block_size)
+    small = region.resize(
+        (max(1, w // bs), max(1, h // bs)),
+        resample=Image.Resampling.BILINEAR,
+    )
+    return small.resize((w, h), resample=Image.Resampling.NEAREST)
 
+
+def _shape_mask(w, h, shape):
+    """Ellipse mask for ELLIPSE/PRECISE, or None (full rectangle) for RECT."""
+    if shape not in (SHAPE_ELLIPSE, SHAPE_PRECISE):
+        return None
+    from PIL import Image, ImageDraw
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, w - 1, h - 1), fill=255)
+    return mask
+
+
+def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC,
+                   shape=SHAPE_RECT):
     w = x2 - x1
     h = y2 - y1
     if w <= 0 or h <= 0:
         return
-    if style == STYLE_BLACK:
-        from PIL import ImageDraw
-        draw = ImageDraw.Draw(img)
-        draw.rectangle((x1, y1, x2, y2), fill=(0, 0, 0))
-    elif style == STYLE_BLUR:
-        from PIL import ImageFilter
-        region = img.crop((x1, y1, x2, y2))
-        radius = max(max(w, h) // 5, 10)
-        blurred = region.filter(ImageFilter.GaussianBlur(radius=radius))
-        img.paste(blurred, (x1, y1))
-    else:  # mosaic
-        region = img.crop((x1, y1, x2, y2))
-        bs = max(2, block_size)
-        small = region.resize(
-            (max(1, w // bs), max(1, h // bs)),
-            resample=Image.Resampling.BILINEAR,
-        )
-        mosaic = small.resize((w, h), resample=Image.Resampling.NEAREST)
-        img.paste(mosaic, (x1, y1))
+    region = img.crop((x1, y1, x2, y2))
+    censored = _censored_region(region, w, h, block_size, style)
+    img.paste(censored, (x1, y1), _shape_mask(w, h, shape))
 
 
 def _detect_image_mode(src):
@@ -218,7 +237,8 @@ def _detect_boxes_anime(model, src, confidence, classes):
 def _process_one(detector, src, dst, block_size, padding,
                   confidence=MIN_CONFIDENCE,
                   expand_pct=0, det_mode="real", anime_model=None,
-                  style=STYLE_MOSAIC, categories=None, only_censored=False):
+                  style=STYLE_MOSAIC, categories=None, only_censored=False,
+                  shape=SHAPE_RECT):
     """Detect + censor one image.  Returns number of regions processed.
 
     With *only_censored* True a clean image (no detections) is left alone —
@@ -250,7 +270,8 @@ def _process_one(detector, src, dst, block_size, padding,
     iw, ih = img.width, img.height
     for box in boxes:
         ex1, ey1, ex2, ey2 = _expand_box(*box, padding, expand_pct, iw, ih)
-        _censor_region(img, ex1, ey1, ex2, ey2, block_size, style=style)
+        _censor_region(img, ex1, ey1, ex2, ey2, block_size,
+                       style=style, shape=shape)
 
     ext = Path(dst).suffix.lower()
     fmt_map = {
@@ -297,6 +318,7 @@ def main() -> None:
         expand_pct = int(args[8]) if len(args) > 8 else 0
         style = args[9] if len(args) > 9 else STYLE_MOSAIC
         categories = _parse_categories(args[10]) if len(args) > 10 else None
+        shape = args[11] if len(args) > 11 else SHAPE_RECT
         try:
             detector = None
             anime_model = None
@@ -322,7 +344,8 @@ def main() -> None:
                                  det_mode=det_mode,
                                  anime_model=anime_model,
                                  style=style,
-                                 categories=categories)
+                                 categories=categories,
+                                 shape=shape)
             if count == 0:
                 print("PROGRESS:No genitalia detected", flush=True)
             else:
@@ -349,6 +372,7 @@ def main() -> None:
         categories = _parse_categories(args[11]) if len(args) > 11 else None
         source_root = args[12] if len(args) > 12 else ""
         only_censored = args[13].lower() == "true" if len(args) > 13 else False
+        shape = args[14] if len(args) > 14 else SHAPE_RECT
 
         with open(json_paths, encoding="utf-8") as f:
             paths = json.load(f)
@@ -382,7 +406,7 @@ def main() -> None:
                              expand_pct=expand_pct, det_mode=det_mode,
                              anime_model=anime_model,
                              style=style, categories=categories,
-                             only_censored=only_censored)
+                             only_censored=only_censored, shape=shape)
                 success += 1
             except Exception as exc:
                 print(f"PROGRESS:Error on {name}: {exc}", flush=True)

@@ -44,7 +44,11 @@ from safety_review._constants import (
     MODE_REAL,
     REQUIRED_PACKAGES_ANIME,
     REQUIRED_PACKAGES_AUTO,
+    REQUIRED_PACKAGES_PRECISE,
     REQUIRED_PACKAGES_REAL,
+    SHAPE_ELLIPSE,
+    SHAPE_PRECISE,
+    SHAPE_RECT,
     STYLE_BLACK,
     STYLE_BLUR,
     STYLE_MOSAIC,
@@ -83,13 +87,15 @@ _DEFAULT_INFO = (
 _DEFAULT_TIME = "Elapsed: {elapsed}    ETA: {eta}    (~{speed:.1f}s / image)"
 
 
-def _ensure_deps(parent, on_ready, mode: str = MODE_REAL):
+def _ensure_deps(parent, on_ready, mode: str = MODE_REAL, precise: bool = False):
     if mode == MODE_AUTO:
-        pkgs = REQUIRED_PACKAGES_AUTO
+        pkgs = list(REQUIRED_PACKAGES_AUTO)
     elif mode == MODE_ANIME:
-        pkgs = REQUIRED_PACKAGES_ANIME
+        pkgs = list(REQUIRED_PACKAGES_ANIME)
     else:
-        pkgs = REQUIRED_PACKAGES_REAL
+        pkgs = list(REQUIRED_PACKAGES_REAL)
+    if precise:
+        pkgs += [p for p in REQUIRED_PACKAGES_PRECISE if p not in pkgs]
     try:
         ensure_dependencies(parent, pkgs, on_ready)
     except Exception:
@@ -170,6 +176,22 @@ def _build_style_combo(layout, lang):
     return style_combo
 
 
+def _build_shape_combo(layout, lang):
+    shape_row = QHBoxLayout()
+    shape_row.addWidget(QLabel(lang.get("safety_review_shape", "Censor area:")))
+    shape_combo = QComboBox()
+    shape_combo.addItem(
+        lang.get("safety_review_shape_ellipse", "Ellipse (tighter)"), SHAPE_ELLIPSE)
+    shape_combo.addItem(
+        lang.get("safety_review_shape_rect", "Rectangle (whole box)"), SHAPE_RECT)
+    shape_combo.addItem(
+        lang.get("safety_review_shape_precise", "Precise (pixel-level, slower)"),
+        SHAPE_PRECISE)
+    shape_row.addWidget(shape_combo, 1)
+    layout.addLayout(shape_row)
+    return shape_combo
+
+
 def _build_spin_row(layout, label_text, spin):
     row = QHBoxLayout()
     row.addWidget(QLabel(label_text))
@@ -203,11 +225,12 @@ def _build_mode_row(layout, lang):
     """Add detection-mode combo, style combo, confidence, expand%,
     and category checkboxes to *layout*.
 
-    Returns (mode_combo, conf_spin, expand_spin, style_combo, cat_checks).
-    ``cat_checks`` is a dict  {category_name: QCheckBox}.
+    Returns (mode_combo, conf_spin, expand_spin, style_combo, cat_checks,
+    shape_combo). ``cat_checks`` is a dict  {category_name: QCheckBox}.
     """
     mode_combo = _build_mode_combo(layout, lang)
     style_combo = _build_style_combo(layout, lang)
+    shape_combo = _build_shape_combo(layout, lang)
 
     conf_spin = QDoubleSpinBox()
     conf_spin.setRange(0.01, 1.0)
@@ -242,7 +265,7 @@ def _build_mode_row(layout, lang):
     mode_combo.currentIndexChanged.connect(_on_mode_changed)
     _on_mode_changed(mode_combo.currentIndex())
 
-    return mode_combo, conf_spin, expand_spin, style_combo, cat_checks
+    return mode_combo, conf_spin, expand_spin, style_combo, cat_checks, shape_combo
 
 
 class _WorkerHostMixin:
@@ -393,7 +416,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._build_folder_row(layout)
         self._build_output_row(layout)
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
         self._build_progress_block(layout)
@@ -460,7 +483,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         for widget in (
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
-            self._overwrite_check, self._recursive_check,
+            self._shape_combo, self._overwrite_check, self._recursive_check,
             self._only_censored_check,
         ):
             widget.setEnabled(False)
@@ -468,7 +491,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             cb.setEnabled(False)
 
     def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
-                     categories):
+                     categories, shape):
         # source_root and only-censored are only meaningful for a separate-
         # output run; on overwrite each file is written back in place.
         source_root = None if overwrite else self._source_root
@@ -481,13 +504,13 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 self._block_size, self._padding, overwrite=overwrite,
                 mode=mode, confidence=conf, expand_pct=expand,
                 style=style, categories=categories, source_root=source_root,
-                only_censored=only_censored)
+                only_censored=only_censored, shape=shape)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
             style=style, categories=categories, source_root=source_root,
-            only_censored=only_censored)
+            only_censored=only_censored, shape=shape)
 
     def _start(self):
         if not self._paths:
@@ -502,6 +525,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         expand = self._expand_spin.value()
         style = self._style_combo.currentData()
         categories = _selected_categories(self._cat_checks)
+        shape = self._shape_combo.currentData()
 
         self._lock_controls()
         self._status_label.setText(
@@ -512,13 +536,15 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self._progress.setVisible(True)
             self._status_label.setText("")
             self._worker = self._make_worker(
-                output_dir, overwrite, mode, conf, expand, style, categories)
+                output_dir, overwrite, mode, conf, expand, style, categories,
+                shape)
             self._worker.progress.connect(self._on_progress)
             self._worker.result_ready.connect(self._on_finished)
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=mode)
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=mode,
+                     precise=(shape == SHAPE_PRECISE))
 
     def _on_progress(self, current, total, name, *time_args):
         self._progress.setValue(current)
@@ -577,6 +603,7 @@ class _SettingsDialogBase(_WorkerHostMixin, QDialog):
             "expand": self._expand_spin.value(),
             "style": self._style_combo.currentData(),
             "categories": _selected_categories(self._cat_checks),
+            "shape": self._shape_combo.currentData(),
         }
 
 
@@ -627,7 +654,7 @@ class SafetyReviewDialog(_SettingsDialogBase):
         layout.addWidget(info)
 
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(
             self._on_mode_changed_padding)
@@ -676,14 +703,14 @@ class SafetyReviewDialog(_SettingsDialogBase):
                 settings["bs"], settings["pad"],
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
             worker.progress.connect(self._on_progress_text)
         else:
             worker = _SingleWorker(
                 self._image_path, output, settings["bs"], settings["pad"],
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
             worker.progress.connect(self._on_progress_step)
         return worker
 
@@ -704,7 +731,8 @@ class SafetyReviewDialog(_SettingsDialogBase):
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"])
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"],
+                     precise=(settings["shape"] == SHAPE_PRECISE))
 
     def _on_progress_step(self, step: int, msg: str):
         """From _SingleWorker (int, str)."""
@@ -790,7 +818,7 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
         layout.addWidget(info)
 
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(
             self._on_mode_changed_padding)
@@ -837,12 +865,12 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
                 settings["bs"], settings["pad"], overwrite,
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
         return _BatchWorker(
             self._paths, output_dir, settings["bs"], settings["pad"], overwrite,
             mode=settings["mode"], confidence=settings["conf"],
             expand_pct=settings["expand"], style=settings["style"],
-            categories=settings["categories"])
+            categories=settings["categories"], shape=settings["shape"])
 
     def _do_run(self):
         overwrite = self._overwrite_check.isChecked()
@@ -865,7 +893,8 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"])
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"],
+                     precise=(settings["shape"] == SHAPE_PRECISE))
 
     def _on_progress(self, current, total, name, *time_args):
         self._progress.setValue(current)

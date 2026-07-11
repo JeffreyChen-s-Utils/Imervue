@@ -50,6 +50,10 @@ REQUIRED_PACKAGES_ANIME = [
 REQUIRED_PACKAGES_AUTO = REQUIRED_PACKAGES_REAL + [
     p for p in REQUIRED_PACKAGES_ANIME if p not in REQUIRED_PACKAGES_REAL
 ]
+# Precise (pixel-level) censor shape uses FastSAM, which ships with ultralytics.
+REQUIRED_PACKAGES_PRECISE = [
+    ("ultralytics", "ultralytics"),
+]
 
 DEFAULT_BLOCK_SIZE = 4   # mosaic granularity — 4 px
 
@@ -71,6 +75,19 @@ MIN_CONFIDENCE = 0.25
 STYLE_MOSAIC = "mosaic"
 STYLE_BLUR = "blur"
 STYLE_BLACK = "black"
+
+# ---------------------------------------------------------------------------
+# Censoring shape — how tightly the censor hugs the detected region
+# ---------------------------------------------------------------------------
+# RECT    — the whole (expanded) detection rectangle (fastest, coarsest).
+# ELLIPSE — only the ellipse inscribed in the box, so the rectangular corners
+#           (usually background / skin) stay clear. Geometric, no extra deps.
+# PRECISE — a pixel-level segmentation mask of the region (tightest); needs an
+#           optional segmentation model and falls back to ELLIPSE without it.
+SHAPE_RECT = "rect"
+SHAPE_ELLIPSE = "ellipse"
+SHAPE_PRECISE = "precise"
+DEFAULT_SHAPE = SHAPE_ELLIPSE
 
 # ---------------------------------------------------------------------------
 # Abstract detection categories → per-mode labels / class IDs

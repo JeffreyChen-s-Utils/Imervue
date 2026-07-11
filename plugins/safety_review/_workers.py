@@ -26,6 +26,7 @@ from safety_review._constants import (
     MODE_ANIME,
     MODE_AUTO,
     MODE_REAL,
+    SHAPE_RECT,
     STYLE_MOSAIC,
 )
 from safety_review._detection import (
@@ -127,7 +128,7 @@ class _SingleWorker(QThread):
                  block_size: int, padding: int,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None):
+                 categories=None, shape: str = SHAPE_RECT):
         super().__init__()
         self._input = input_path
         self._output = output_path
@@ -138,6 +139,7 @@ class _SingleWorker(QThread):
         self._expand_pct = expand_pct
         self._style = style
         self._categories = categories
+        self._shape = shape
 
     def run(self):
         try:
@@ -149,6 +151,7 @@ class _SingleWorker(QThread):
                 confidence=self._conf,
                 expand_pct=self._expand_pct, mode=self._mode,
                 style=self._style, categories=self._categories,
+                shape=self._shape,
             )
             self.progress.emit(2, "Saving...")
             self.progress.emit(3, "Done")
@@ -169,7 +172,7 @@ class _BatchWorker(QThread):
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
-                 only_censored: bool = False):
+                 only_censored: bool = False, shape: str = SHAPE_RECT):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
@@ -183,6 +186,7 @@ class _BatchWorker(QThread):
         self._categories = categories
         self._source_root = source_root
         self._only_censored = only_censored
+        self._shape = shape
 
     def _destination(self, src: str) -> str:
         return _resolve_destination(
@@ -207,7 +211,7 @@ class _BatchWorker(QThread):
                     confidence=self._conf,
                     expand_pct=self._expand_pct, mode=self._mode,
                     style=self._style, categories=self._categories,
-                    only_censored=self._only_censored,
+                    only_censored=self._only_censored, shape=self._shape,
                 )
                 total_regions += count
                 success += 1
@@ -232,7 +236,7 @@ class _SubprocessSingleWorker(QThread):
                  block_size: int, padding: int,
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
-                 categories=None):
+                 categories=None, shape: str = SHAPE_RECT):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -245,6 +249,7 @@ class _SubprocessSingleWorker(QThread):
         self._expand_pct = expand_pct
         self._style = style
         self._categories = categories
+        self._shape = shape
 
     def _command(self) -> list[str]:
         return [
@@ -255,6 +260,7 @@ class _SubprocessSingleWorker(QThread):
             self._mode, str(self._conf),
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
+            self._shape,
         ]
 
     def _consume(self, proc) -> bool:
@@ -304,7 +310,7 @@ class _SubprocessBatchWorker(QThread):
                  mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
-                 only_censored: bool = False):
+                 only_censored: bool = False, shape: str = SHAPE_RECT):
         super().__init__()
         self._python = python
         self._sp = site_packages
@@ -320,6 +326,7 @@ class _SubprocessBatchWorker(QThread):
         self._categories = categories
         self._source_root = source_root or ""
         self._only_censored = only_censored
+        self._shape = shape
 
     def _command(self, tmp_path: str) -> list[str]:
         return [
@@ -331,7 +338,7 @@ class _SubprocessBatchWorker(QThread):
             self._mode, str(self._conf),
             str(self._expand_pct),
             self._style, _categories_arg(self._categories),
-            self._source_root, str(self._only_censored),
+            self._source_root, str(self._only_censored), self._shape,
         ]
 
     def _emit_progress(self, payload: str) -> None:
