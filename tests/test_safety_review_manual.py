@@ -126,3 +126,63 @@ def test_apply_with_no_regions_writes_nothing(qapp, tmp_path):
     dlg._apply()
     assert not (tmp_path / "img_censored.png").exists()
     dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Auto-detect prefill
+# ---------------------------------------------------------------------------
+
+def test_add_regions_clamps_and_filters_specks(qapp, tmp_path):
+    dlg, _src = _dialog(qapp, tmp_path)   # 60x40 image
+    added = dlg._canvas.add_regions([
+        (10, 5, 40, 30),      # valid
+        (-5, -5, 100, 100),   # clamped to (0,0,60,40)
+        (0, 0, 2, 30),        # speck → dropped
+    ])
+    assert added == 2
+    regions = dlg._canvas.regions()
+    assert (10, 5, 40, 30) in regions
+    assert (0, 0, 60, 40) in regions
+    dlg.deleteLater()
+
+
+def test_on_detected_prefills_and_resets_button(qapp, tmp_path):
+    dlg, _src = _dialog(qapp, tmp_path)
+    dlg._detect_btn.setEnabled(False)
+    dlg._on_detected([(10, 5, 40, 30)])
+    assert dlg._canvas.regions() == [(10, 5, 40, 30)]
+    assert dlg._detect_btn.isEnabled() is True     # button reset for reuse
+    dlg.deleteLater()
+
+
+def test_detect_worker_emits_detected_boxes(qapp, tmp_path, monkeypatch):
+    # Drive the worker body directly with a stubbed detector + detection.
+    from safety_review import _detection, _workers
+    from safety_review._manual_dialog import _DetectWorker
+
+    src = tmp_path / "x.png"
+    Image.new("RGB", (30, 30), (0, 0, 0)).save(src)
+    monkeypatch.setattr(_workers, "_resolve_detector", lambda mode: object())
+    monkeypatch.setattr(
+        _detection, "_detect_boxes",
+        lambda det, s, conf, mode, cats: [(1, 2, 3, 4), (5, 6, 7, 8)])
+    worker = _DetectWorker(str(src), _constants.MODE_AUTO, 0.25, None)
+    got = []
+    worker.done.connect(got.append)
+    worker.run()   # the thread body, called synchronously
+    assert got == [[(1, 2, 3, 4), (5, 6, 7, 8)]]
+
+
+def test_detect_worker_reports_failure(qapp, tmp_path, monkeypatch):
+    from safety_review import _workers
+    from safety_review._manual_dialog import _DetectWorker
+
+    def _boom(mode):
+        raise RuntimeError("no model")
+
+    monkeypatch.setattr(_workers, "_resolve_detector", _boom)
+    worker = _DetectWorker("x.png", _constants.MODE_ANIME, 0.15, None)
+    errors = []
+    worker.failed.connect(errors.append)
+    worker.run()
+    assert errors == ["no model"]

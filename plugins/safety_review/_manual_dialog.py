@@ -16,7 +16,9 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+import contextlib
+
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -35,11 +37,15 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 from safety_review._constants import (
     DEFAULT_BLOCK_SIZE,
+    MODE_ANIME,
+    MODE_AUTO,
+    MODE_REAL,
     SHAPE_ELLIPSE,
     SHAPE_RECT,
     STYLE_BLACK,
     STYLE_BLUR,
     STYLE_MOSAIC,
+    _MODE_DEFAULTS,
 )
 from safety_review._detection import _process_manual_image
 from safety_review._manual import (
@@ -108,6 +114,18 @@ class _ManualCanvas(QWidget):
 
     def regions(self):
         return list(self._regions)
+
+    def add_regions(self, boxes) -> int:
+        """Append detected *boxes* (image coords), clamped and speck-filtered."""
+        iw, ih = self.image_size()
+        added = 0
+        for box in boxes:
+            region = clamp_region(tuple(box), iw, ih)
+            if is_valid_region(region):
+                self._regions.append(region)
+                added += 1
+        self.update()
+        return added
 
     def clear_regions(self):
         self._regions = []
@@ -199,14 +217,42 @@ class _ManualCanvas(QWidget):
             super().keyPressEvent(event)
 
 
+class _DetectWorker(QThread):
+    """Run the detector once (off the GUI thread) to prefill censor boxes."""
+
+    done = Signal(list)     # list of (x1, y1, x2, y2)
+    failed = Signal(str)
+
+    def __init__(self, src: str, mode: str, confidence: float, categories,
+                 parent=None):
+        super().__init__(parent)
+        self._src = src
+        self._mode = mode
+        self._conf = confidence
+        self._categories = categories
+
+    def run(self):
+        try:
+            from safety_review._detection import _detect_boxes
+            from safety_review._workers import _resolve_detector
+            detector = _resolve_detector(self._mode)
+            boxes = _detect_boxes(detector, self._src, self._conf,
+                                  self._mode, self._categories)
+            self.done.emit([tuple(int(v) for v in b) for b in boxes])
+        except Exception as exc:  # noqa: BLE001 — surface to the dialog
+            self.failed.emit(str(exc))
+
+
 class ManualReviewDialog(QDialog):
     """Draw / edit censor boxes over one image, then apply them."""
 
-    def __init__(self, main_gui, image_path: str):
+    def __init__(self, main_gui, image_path: str, get_frozen_env=None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
         self._image_path = image_path
         self._lang = language_wrapper.language_word_dict
+        self._get_frozen_env = get_frozen_env
+        self._detect_worker = None
         self.setWindowTitle(
             self._lang.get("safety_review_manual_title", "Manual Review & Mosaic"))
         self._build_ui()
@@ -221,6 +267,8 @@ class ManualReviewDialog(QDialog):
         info.setWordWrap(True)
         layout.addWidget(info)
 
+        layout.addLayout(self._build_detect_row())
+
         self._canvas = _ManualCanvas()
         scroll = QScrollArea()
         scroll.setWidget(self._canvas)
@@ -229,6 +277,24 @@ class ManualReviewDialog(QDialog):
 
         layout.addLayout(self._build_options_row())
         layout.addLayout(self._build_button_row())
+
+    def _build_detect_row(self):
+        row = QHBoxLayout()
+        self._mode_combo = QComboBox()
+        for label, data in (
+            (self._lang.get("safety_review_mode_auto", "Auto"), MODE_AUTO),
+            (self._lang.get("safety_review_mode_real", "Real Photo"), MODE_REAL),
+            (self._lang.get("safety_review_mode_anime", "Anime / Illustration"),
+             MODE_ANIME),
+        ):
+            self._mode_combo.addItem(label, data)
+        row.addWidget(self._mode_combo)
+        self._detect_btn = QPushButton(
+            self._lang.get("safety_review_autodetect", "Auto-detect & prefill"))
+        self._detect_btn.clicked.connect(self._auto_detect)
+        row.addWidget(self._detect_btn)
+        row.addStretch()
+        return row
 
     def _build_options_row(self):
         row = QHBoxLayout()
@@ -283,6 +349,55 @@ class ManualReviewDialog(QDialog):
             self._apply_btn.setEnabled(False)
             return
         self._canvas.set_image(pixmap)
+
+    def _auto_detect(self):
+        """Run the detector once and prefill the drawn boxes with its results."""
+        from safety_review._dialogs import _ensure_deps
+        mode = self._mode_combo.currentData()
+        confidence = _MODE_DEFAULTS.get(mode, _MODE_DEFAULTS[MODE_REAL])["confidence"]
+        self._detect_btn.setEnabled(False)
+        self._detect_btn.setText(
+            self._lang.get("safety_review_detecting", "Detecting..."))
+
+        def _on_ready():
+            self._detect_worker = _DetectWorker(
+                self._image_path, mode, confidence, None, self)
+            self._detect_worker.done.connect(self._on_detected)
+            self._detect_worker.failed.connect(self._on_detect_failed)
+            self._detect_worker.start()
+
+        _ensure_deps(self._gui.main_window, _on_ready, mode=mode)
+
+    def _on_detected(self, boxes):
+        added = self._canvas.add_regions(boxes)
+        self._reset_detect_button()
+        if hasattr(self._gui.main_window, "toast"):
+            self._gui.main_window.toast.info(
+                self._lang.get("safety_review_detected",
+                               "Added {count} detected region(s)").format(
+                                   count=added))
+
+    def _on_detect_failed(self, message):
+        logger.error("Manual auto-detect failed: %s", message)
+        self._reset_detect_button()
+        if hasattr(self._gui.main_window, "toast"):
+            self._gui.main_window.toast.error(
+                self._lang.get("safety_review_detect_failed",
+                               "Detection failed — draw the boxes by hand."))
+
+    def _reset_detect_button(self):
+        self._detect_worker = None
+        self._detect_btn.setEnabled(True)
+        self._detect_btn.setText(
+            self._lang.get("safety_review_autodetect", "Auto-detect & prefill"))
+
+    def closeEvent(self, event):  # noqa: N802 - Qt override
+        if self._detect_worker and self._detect_worker.isRunning():
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._detect_worker.disconnect()
+            self._detect_worker.wait(5000)
+            self._detect_worker = None
+        super().closeEvent(event)
 
     def _output_path(self) -> str:
         if self._overwrite_check.isChecked():

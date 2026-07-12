@@ -76,6 +76,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_manual_done": "Applied {count} censor region(s)",
         "safety_review_clear": "Clear all",
         "safety_review_apply": "Apply",
+        "safety_review_autodetect": "Auto-detect & prefill",
+        "safety_review_detecting": "Detecting...",
+        "safety_review_detected": "Added {count} detected region(s)",
+        "safety_review_detect_failed": "Detection failed — draw the boxes by hand.",
         "safety_review_failed_folder":
             "{count} failed image(s) copied to: {path}",
         "safety_review_merge_regions":
@@ -172,6 +176,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_manual_done": "已套用 {count} 個打碼區域",
         "safety_review_clear": "全部清除",
         "safety_review_apply": "套用",
+        "safety_review_autodetect": "自動偵測並預填",
+        "safety_review_detecting": "偵測中…",
+        "safety_review_detected": "已加入 {count} 個偵測區域",
+        "safety_review_detect_failed": "偵測失敗 — 請手動繪製框。",
         "safety_review_failed_folder":
             "{count} 張失敗的圖片已複製至：{path}",
         "safety_review_merge_regions":
@@ -268,6 +276,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_manual_done": "已应用 {count} 个打码区域",
         "safety_review_clear": "全部清除",
         "safety_review_apply": "应用",
+        "safety_review_autodetect": "自动检测并预填",
+        "safety_review_detecting": "检测中…",
+        "safety_review_detected": "已加入 {count} 个检测区域",
+        "safety_review_detect_failed": "检测失败 — 请手动绘制框。",
         "safety_review_failed_folder":
             "{count} 张失败的图片已复制至：{path}",
         "safety_review_merge_regions":
@@ -367,6 +379,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_manual_done": "{count} 個のモザイク領域を適用",
         "safety_review_clear": "すべてクリア",
         "safety_review_apply": "適用",
+        "safety_review_autodetect": "自動検出して事前入力",
+        "safety_review_detecting": "検出中…",
+        "safety_review_detected": "{count} 個の検出領域を追加",
+        "safety_review_detect_failed": "検出失敗 — 手動で枠を描画してください。",
         "safety_review_failed_folder":
             "失敗した {count} 件をコピーしました：{path}",
         "safety_review_merge_regions":
@@ -466,6 +482,10 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_manual_done": "검열 영역 {count}개 적용됨",
         "safety_review_clear": "모두 지우기",
         "safety_review_apply": "적용",
+        "safety_review_autodetect": "자동 감지 및 미리 채우기",
+        "safety_review_detecting": "감지 중…",
+        "safety_review_detected": "감지된 영역 {count}개 추가됨",
+        "safety_review_detect_failed": "감지 실패 — 상자를 수동으로 그리세요.",
         "safety_review_failed_folder":
             "실패한 이미지 {count}개를 복사함: {path}",
         "safety_review_merge_regions":

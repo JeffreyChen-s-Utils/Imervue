@@ -220,7 +220,8 @@ class SafetyReviewPlugin(ImervuePlugin):
         if not Path(path).is_file():
             return
         try:
-            dlg = ManualReviewDialog(self.viewer, path)
+            dlg = ManualReviewDialog(
+                self.viewer, path, get_frozen_env=self._get_frozen_env)
             dlg.exec()
         except Exception:
             logger.error("Manual review dialog failed", exc_info=True)
