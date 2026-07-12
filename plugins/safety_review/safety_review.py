@@ -62,6 +62,12 @@ from safety_review._dialogs import (  # noqa: F401  (public re-export)
     _build_mode_row,
     _ensure_deps,
 )
+from safety_review._manual_dialog import (  # noqa: F401  (public re-export)
+    ManualReviewDialog,
+)
+from safety_review._model_settings_dialog import (  # noqa: F401  (public re-export)
+    ModelSettingsDialog,
+)
 from safety_review._translations import _TRANSLATIONS
 
 if TYPE_CHECKING:
@@ -121,6 +127,18 @@ class SafetyReviewPlugin(ImervuePlugin):
         )
         batch.triggered.connect(self._open_batch_dialog)
 
+        # Manual review — hand-draw / adjust censor boxes on the current image
+        manual = ai_menu.addAction(
+            lang.get("safety_review_manual_title", "Manual Review & Mosaic")
+        )
+        manual.triggered.connect(self._open_manual_current)
+
+        # Detection model & classes — custom / fine-tuned model + class scheme
+        model_cfg = ai_menu.addAction(
+            lang.get("safety_review_model_settings", "Detection Model & Classes")
+        )
+        model_cfg.triggered.connect(self._open_model_settings)
+
     def on_build_context_menu(self, menu: QMenu, viewer: GPUImageView) -> None:
         lang = language_wrapper.language_word_dict
 
@@ -134,6 +152,11 @@ class SafetyReviewPlugin(ImervuePlugin):
                               "Safety Review — Quick Mosaic")
                 )
                 action.triggered.connect(lambda: self._quick_single(path))
+                manual = menu.addAction(
+                    lang.get("safety_review_manual_title",
+                              "Manual Review & Mosaic")
+                )
+                manual.triggered.connect(lambda: self._open_manual(path))
 
         # Tile grid — batch on selection
         if (viewer.tile_grid_mode and viewer.tile_selection_mode
@@ -200,6 +223,31 @@ class SafetyReviewPlugin(ImervuePlugin):
             dlg.exec()
         except Exception:
             logger.error("Single dialog failed", exc_info=True)
+
+    def _open_manual(self, path: str):
+        """Open the manual censor editor for *path* — draw / adjust by hand."""
+        if not Path(path).is_file():
+            return
+        try:
+            dlg = ManualReviewDialog(
+                self.viewer, path, get_frozen_env=self._get_frozen_env)
+            dlg.exec()
+        except Exception:
+            logger.error("Manual review dialog failed", exc_info=True)
+
+    def _open_manual_current(self):
+        """Open the manual editor for the currently-viewed image."""
+        images = self.viewer.model.images
+        if images and 0 <= self.viewer.current_index < len(images):
+            self._open_manual(images[self.viewer.current_index])
+
+    def _open_model_settings(self):
+        """Open the custom-model / class-scheme settings dialog."""
+        try:
+            dlg = ModelSettingsDialog(self.viewer.main_window)
+            dlg.exec()
+        except Exception:
+            logger.error("Model settings dialog failed", exc_info=True)
 
     def _open_batch_dialog(self):
         if (self.viewer.tile_grid_mode and self.viewer.tile_selection_mode

@@ -26,7 +26,10 @@ MOSAIC_LABELS = frozenset({
 # EraX-Anti-NSFW labels (anime mode) — YOLO11 classes
 # ---------------------------------------------------------------------------
 # Classes: 0=anus, 1=make_love, 2=nipple, 3=penis, 4=vagina
-# We mosaic: anus, penis, vagina.  Skip nipple & make_love.
+# We mosaic anus, penis, vagina. make_love is NOT censored directly — its box
+# bounds the whole intercourse scene (often most of the frame), so censoring it
+# blankets the image; the junction is instead covered by merging the penis and
+# vagina boxes. Skip nipple.
 ANIME_MOSAIC_CLASSES = frozenset({0, 3, 4})   # anus, penis, vagina
 
 _ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
@@ -50,6 +53,10 @@ REQUIRED_PACKAGES_ANIME = [
 REQUIRED_PACKAGES_AUTO = REQUIRED_PACKAGES_REAL + [
     p for p in REQUIRED_PACKAGES_ANIME if p not in REQUIRED_PACKAGES_REAL
 ]
+# Precise (pixel-level) censor shape uses FastSAM, which ships with ultralytics.
+REQUIRED_PACKAGES_PRECISE = [
+    ("ultralytics", "ultralytics"),
+]
 
 DEFAULT_BLOCK_SIZE = 4   # mosaic granularity — 4 px
 
@@ -57,7 +64,9 @@ DEFAULT_BLOCK_SIZE = 4   # mosaic granularity — 4 px
 # padding = fixed pixels, expand_pct = expand box by % of its own size
 _MODE_DEFAULTS: dict[str, dict] = {
     MODE_REAL:  {"confidence": 0.25, "padding": 10, "expand_pct": 0},
-    MODE_ANIME: {"confidence": 0.20, "padding": 0,  "expand_pct": 0},
+    # Lower anime confidence catches more stylised / partially-drawn genitalia
+    # that the model scores less confidently than a photo.
+    MODE_ANIME: {"confidence": 0.15, "padding": 0,  "expand_pct": 0},
     MODE_AUTO:  {"confidence": 0.25, "padding": 10, "expand_pct": 0},
 }
 
@@ -73,6 +82,19 @@ STYLE_BLUR = "blur"
 STYLE_BLACK = "black"
 
 # ---------------------------------------------------------------------------
+# Censoring shape — how tightly the censor hugs the detected region
+# ---------------------------------------------------------------------------
+# RECT    — the whole (expanded) detection rectangle (fastest, coarsest).
+# ELLIPSE — only the ellipse inscribed in the box, so the rectangular corners
+#           (usually background / skin) stay clear. Geometric, no extra deps.
+# PRECISE — a pixel-level segmentation mask of the region (tightest); needs an
+#           optional segmentation model and falls back to ELLIPSE without it.
+SHAPE_RECT = "rect"
+SHAPE_ELLIPSE = "ellipse"
+SHAPE_PRECISE = "precise"
+DEFAULT_SHAPE = SHAPE_ELLIPSE
+
+# ---------------------------------------------------------------------------
 # Abstract detection categories → per-mode labels / class IDs
 # ---------------------------------------------------------------------------
 CAT_GENITALIA = "genitalia"
@@ -81,6 +103,9 @@ CAT_NIPPLE = "nipple"
 CAT_SEXUAL_ACT = "sexual_act"
 
 ALL_CATEGORIES = (CAT_GENITALIA, CAT_ANUS, CAT_NIPPLE, CAT_SEXUAL_ACT)
+# Sexual act (anime make_love) is OFF by default: its box covers nearly the
+# whole scene, so censoring it blankets the image. The junction is covered by
+# merging the genital boxes instead; the checkbox stays for opt-in use.
 DEFAULT_CATEGORIES = frozenset({CAT_GENITALIA, CAT_ANUS})
 
 _CAT_TO_REAL_LABELS: dict[str, frozenset[str]] = {
