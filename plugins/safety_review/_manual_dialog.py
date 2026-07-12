@@ -17,6 +17,7 @@ import logging
 from pathlib import Path
 
 import contextlib
+import os
 
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -91,6 +93,8 @@ class _ManualCanvas(QWidget):
         self._pixmap: QPixmap | None = None
         self._scale = 1.0
         self._regions: list = []          # image-space (x1,y1,x2,y2)
+        self._classes: list = []          # class id per region (parallel)
+        self._current_class = 0           # class assigned to newly drawn boxes
         self._selected = -1
         self._drawing = False
         self._moving = False
@@ -115,22 +119,51 @@ class _ManualCanvas(QWidget):
     def regions(self):
         return list(self._regions)
 
-    def add_regions(self, boxes) -> int:
-        """Append detected *boxes* (image coords), clamped and speck-filtered."""
+    def labeled_regions(self):
+        """[(box, class_id), …] for training-label export."""
+        return list(zip(self._regions, self._classes, strict=False))
+
+    def set_current_class(self, cls: int):
+        """Class assigned to boxes drawn from now on; re-classes the selection."""
+        self._current_class = cls
+        if 0 <= self._selected < len(self._classes):
+            self._classes[self._selected] = cls
+            self.update()
+
+    def selected_class(self):
+        if 0 <= self._selected < len(self._classes):
+            return self._classes[self._selected]
+        return None
+
+    def add_regions(self, boxes, classes=None) -> int:
+        """Append detected *boxes* (image coords), clamped and speck-filtered.
+
+        *classes* (aligned with *boxes*) sets each box's class; without it the
+        current class is used.
+        """
         iw, ih = self.image_size()
         added = 0
-        for box in boxes:
+        for i, box in enumerate(boxes):
             region = clamp_region(tuple(box), iw, ih)
             if is_valid_region(region):
                 self._regions.append(region)
+                self._classes.append(
+                    classes[i] if classes is not None else self._current_class)
                 added += 1
         self.update()
         return added
 
     def clear_regions(self):
         self._regions = []
+        self._classes = []
         self._selected = -1
         self.update()
+
+    def _remove_region(self, idx: int):
+        if 0 <= idx < len(self._regions):
+            self._regions.pop(idx)
+            if idx < len(self._classes):
+                self._classes.pop(idx)
 
     # -- painting ----------------------------------------------------
 
@@ -162,7 +195,7 @@ class _ManualCanvas(QWidget):
         if event.button() == Qt.MouseButton.RightButton:
             idx = region_at(self._regions, ix, iy)
             if idx >= 0:
-                self._regions.pop(idx)
+                self._remove_region(idx)
                 self._selected = -1
                 self.update()
             return
@@ -202,6 +235,7 @@ class _ManualCanvas(QWidget):
             region = clamp_region(normalize_rect(ix0, iy0, ix1, iy1), iw, ih)
             if is_valid_region(region):
                 self._regions.append(region)
+                self._classes.append(self._current_class)
                 self._selected = len(self._regions) - 1
         self._drawing = self._moving = False
         self._draw_start = self._draw_cur = self._move_last = None
@@ -210,7 +244,7 @@ class _ManualCanvas(QWidget):
     def keyPressEvent(self, event):  # noqa: N802 - Qt override
         if (event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace)
                 and self._selected >= 0):
-            self._regions.pop(self._selected)
+            self._remove_region(self._selected)
             self._selected = -1
             self.update()
         else:
@@ -218,27 +252,25 @@ class _ManualCanvas(QWidget):
 
 
 class _DetectWorker(QThread):
-    """Run the detector once (off the GUI thread) to prefill censor boxes."""
+    """Run the detector once (off the GUI thread) to prefill labelled boxes."""
 
-    done = Signal(list)     # list of (x1, y1, x2, y2)
+    done = Signal(list)     # list of ((x1, y1, x2, y2), class_id)
     failed = Signal(str)
 
-    def __init__(self, src: str, mode: str, confidence: float, categories,
-                 parent=None):
+    def __init__(self, src: str, mode: str, confidence: float, parent=None):
         super().__init__(parent)
         self._src = src
         self._mode = mode
         self._conf = confidence
-        self._categories = categories
 
     def run(self):
         try:
-            from safety_review._detection import _detect_boxes
+            from safety_review._detection import _detect_labeled
             from safety_review._workers import _resolve_detector
             detector = _resolve_detector(self._mode)
-            boxes = _detect_boxes(detector, self._src, self._conf,
-                                  self._mode, self._categories)
-            self.done.emit([tuple(int(v) for v in b) for b in boxes])
+            labeled = _detect_labeled(detector, self._src, self._conf, self._mode)
+            self.done.emit(
+                [(tuple(int(v) for v in box), int(cls)) for box, cls in labeled])
         except Exception as exc:  # noqa: BLE001 — surface to the dialog
             self.failed.emit(str(exc))
 
@@ -275,10 +307,16 @@ class ManualReviewDialog(QDialog):
         scroll.setWidgetResizable(False)
         layout.addWidget(scroll, 1)
 
+        # Wire the class combo to the canvas now that the canvas exists — the
+        # combo index is the class id (matching the class-list order).
+        self._class_combo.currentIndexChanged.connect(self._canvas.set_current_class)
+        self._canvas.set_current_class(self._class_combo.currentIndex())
+
         layout.addLayout(self._build_options_row())
         layout.addLayout(self._build_button_row())
 
     def _build_detect_row(self):
+        from safety_review._class_config import get_classes
         row = QHBoxLayout()
         self._mode_combo = QComboBox()
         for label, data in (
@@ -294,6 +332,11 @@ class ManualReviewDialog(QDialog):
         self._detect_btn.clicked.connect(self._auto_detect)
         row.addWidget(self._detect_btn)
         row.addStretch()
+        row.addWidget(QLabel(self._lang.get("safety_review_class_label", "Class:")))
+        self._class_combo = QComboBox()
+        for cls in get_classes():
+            self._class_combo.addItem(cls)
+        row.addWidget(self._class_combo)
         return row
 
     def _build_options_row(self):
@@ -333,6 +376,10 @@ class ManualReviewDialog(QDialog):
         clear_btn = QPushButton(self._lang.get("safety_review_clear", "Clear all"))
         clear_btn.clicked.connect(self._canvas.clear_regions)
         row.addWidget(clear_btn)
+        dataset_btn = QPushButton(
+            self._lang.get("safety_review_add_to_dataset", "Add to dataset"))
+        dataset_btn.clicked.connect(self._add_to_dataset)
+        row.addWidget(dataset_btn)
         row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
         cancel_btn.clicked.connect(self.reject)
@@ -361,15 +408,17 @@ class ManualReviewDialog(QDialog):
 
         def _on_ready():
             self._detect_worker = _DetectWorker(
-                self._image_path, mode, confidence, None, self)
+                self._image_path, mode, confidence, self)
             self._detect_worker.done.connect(self._on_detected)
             self._detect_worker.failed.connect(self._on_detect_failed)
             self._detect_worker.start()
 
         _ensure_deps(self._gui.main_window, _on_ready, mode=mode)
 
-    def _on_detected(self, boxes):
-        added = self._canvas.add_regions(boxes)
+    def _on_detected(self, labeled):
+        boxes = [box for box, _cls in labeled]
+        classes = [cls for _box, cls in labeled]
+        added = self._canvas.add_regions(boxes, classes)
         self._reset_detect_button()
         if hasattr(self._gui.main_window, "toast"):
             self._gui.main_window.toast.info(
@@ -398,6 +447,46 @@ class ManualReviewDialog(QDialog):
             self._detect_worker.wait(5000)
             self._detect_worker = None
         super().closeEvent(event)
+
+    _DATASET_SETTING = "safety_review_dataset_dir"
+
+    def _dataset_dir(self):
+        """Remembered dataset folder, prompting for one the first time."""
+        from Imervue.user_settings.user_setting_dict import (
+            schedule_save,
+            user_setting_dict,
+        )
+        remembered = user_setting_dict.get(self._DATASET_SETTING)
+        if remembered and os.path.isdir(remembered):
+            return remembered
+        path = QFileDialog.getExistingDirectory(
+            self, self._lang.get("safety_review_dataset_dir", "Dataset folder"))
+        if path:
+            user_setting_dict[self._DATASET_SETTING] = path
+            schedule_save()
+            return path
+        return None
+
+    def _add_to_dataset(self):
+        """Export the current image + hand-labelled boxes as a YOLO sample."""
+        from safety_review._class_config import get_classes
+        from safety_review._dataset import export_label
+        dataset_dir = self._dataset_dir()
+        if not dataset_dir:
+            return
+        iw, ih = self._canvas.image_size()
+        try:
+            count = export_label(dataset_dir, self._image_path,
+                                 self._canvas.labeled_regions(), iw, ih,
+                                 get_classes())
+        except OSError:
+            logger.error("Dataset export failed", exc_info=True)
+            return
+        if hasattr(self._gui.main_window, "toast"):
+            self._gui.main_window.toast.success(
+                self._lang.get("safety_review_dataset_added",
+                               "Added to dataset ({count} labels)").format(
+                                   count=count))
 
     def _output_path(self) -> str:
         if self._overwrite_check.isChecked():

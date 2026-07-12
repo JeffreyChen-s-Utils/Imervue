@@ -405,6 +405,38 @@ def _detect_boxes(detector, src, confidence, mode, categories):
     return _detect_regions_real(detector, src, confidence, real_labels)
 
 
+# NudeNet label → configured class name, for labelling prefill in real mode.
+_NUDENET_LABEL_TO_CLASS = {
+    "MALE_GENITALIA_EXPOSED": "penis",
+    "FEMALE_GENITALIA_EXPOSED": "vagina",
+    "ANUS_EXPOSED": "anus",
+    "FEMALE_BREAST_EXPOSED": "nipple",
+}
+
+
+def _detect_labeled(detector, src, confidence, mode):
+    """Detect → ``[((x1,y1,x2,y2), class_id), …]`` for the manual editor's
+    prefill, so drawn boxes come pre-classified for training-label export.
+
+    Anime/YOLO gives class ids directly; NudeNet labels are mapped onto the
+    configured class names. Unmapped / out-of-range detections are dropped.
+    """
+    from safety_review._class_config import get_classes
+    classes = get_classes()
+    actual = _detect_image_mode(src) if mode == MODE_AUTO else mode
+    if actual == MODE_ANIME:
+        return [(box, cls) for box, cls in _detect_anime_raw(src, confidence)
+                if 0 <= cls < len(classes)]
+    out = []
+    for d in detector.detect(src):
+        if d["score"] < confidence:
+            continue
+        name = _NUDENET_LABEL_TO_CLASS.get(d["class"])
+        if name in classes:
+            out.append((tuple(d["box"]), classes.index(name)))
+    return out
+
+
 def _ensure_parent(dst: str) -> None:
     """Create *dst*'s parent directory on demand, right before a write.
 

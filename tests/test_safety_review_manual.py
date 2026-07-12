@@ -146,16 +146,17 @@ def test_add_regions_clamps_and_filters_specks(qapp, tmp_path):
     dlg.deleteLater()
 
 
-def test_on_detected_prefills_and_resets_button(qapp, tmp_path):
+def test_on_detected_prefills_labeled_boxes_and_resets_button(qapp, tmp_path):
     dlg, _src = _dialog(qapp, tmp_path)
     dlg._detect_btn.setEnabled(False)
-    dlg._on_detected([(10, 5, 40, 30)])
+    dlg._on_detected([((10, 5, 40, 30), 3)])
     assert dlg._canvas.regions() == [(10, 5, 40, 30)]
+    assert dlg._canvas.labeled_regions() == [((10, 5, 40, 30), 3)]  # class carried
     assert dlg._detect_btn.isEnabled() is True     # button reset for reuse
     dlg.deleteLater()
 
 
-def test_detect_worker_emits_detected_boxes(qapp, tmp_path, monkeypatch):
+def test_detect_worker_emits_labeled_boxes(qapp, tmp_path, monkeypatch):
     # Drive the worker body directly with a stubbed detector + detection.
     from safety_review import _detection, _workers
     from safety_review._manual_dialog import _DetectWorker
@@ -164,13 +165,13 @@ def test_detect_worker_emits_detected_boxes(qapp, tmp_path, monkeypatch):
     Image.new("RGB", (30, 30), (0, 0, 0)).save(src)
     monkeypatch.setattr(_workers, "_resolve_detector", lambda mode: object())
     monkeypatch.setattr(
-        _detection, "_detect_boxes",
-        lambda det, s, conf, mode, cats: [(1, 2, 3, 4), (5, 6, 7, 8)])
-    worker = _DetectWorker(str(src), _constants.MODE_AUTO, 0.25, None)
+        _detection, "_detect_labeled",
+        lambda det, s, conf, mode: [((1, 2, 3, 4), 0), ((5, 6, 7, 8), 3)])
+    worker = _DetectWorker(str(src), _constants.MODE_AUTO, 0.25)
     got = []
     worker.done.connect(got.append)
     worker.run()   # the thread body, called synchronously
-    assert got == [[(1, 2, 3, 4), (5, 6, 7, 8)]]
+    assert got == [[((1, 2, 3, 4), 0), ((5, 6, 7, 8), 3)]]
 
 
 def test_detect_worker_reports_failure(qapp, tmp_path, monkeypatch):
@@ -181,7 +182,7 @@ def test_detect_worker_reports_failure(qapp, tmp_path, monkeypatch):
         raise RuntimeError("no model")
 
     monkeypatch.setattr(_workers, "_resolve_detector", _boom)
-    worker = _DetectWorker("x.png", _constants.MODE_ANIME, 0.15, None)
+    worker = _DetectWorker("x.png", _constants.MODE_ANIME, 0.15)
     errors = []
     worker.failed.connect(errors.append)
     worker.run()
