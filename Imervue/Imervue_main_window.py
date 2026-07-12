@@ -1350,6 +1350,10 @@ class ImervueMainWindow(QMainWindow):
             "scroll": scroll,
             "selected": list(getattr(viewer, "selected_tiles", set())),
             "current": viewer._current_path() if hasattr(viewer, "_current_path") else "",
+            "deep_zoom": bool(
+                getattr(viewer, "deep_zoom", None) is not None
+                and not getattr(viewer, "tile_grid_mode", False)
+            ),
         }
         user_setting_dict["folder_view_sessions"] = self._folder_view_sessions
         write_user_setting()
@@ -1374,6 +1378,30 @@ class ImervueMainWindow(QMainWindow):
             QTimer.singleShot(0, lambda: self.image_list_view.verticalScrollBar().setValue(scroll))
         elif hasattr(self.viewer, "scroll_y"):
             self.viewer.scroll_y = scroll
+
+    def _restore_deep_zoom_if_saved(self, state: dict) -> None:
+        """Re-enter deep zoom on the remembered image after a startup restore.
+
+        Deferred to the next event-loop turn so the window has reached its
+        restored size before ``load_deep_zoom_image`` fits — otherwise the
+        image is fitted to an intermediate startup size and opens too large or
+        small. Startup-only (not folder navigation), so browsing the tree still
+        lands on the tile wall.
+        """
+        from Imervue.sessions.folder_session import deep_zoom_restore_target
+        viewer = self.viewer
+        target = deep_zoom_restore_target(
+            state, viewer.model.images, viewer.current_index)
+        if target is None:
+            return
+
+        def _enter() -> None:
+            if target in viewer.model.images:
+                viewer.current_index = viewer.model.images.index(target)
+                viewer.tile_grid_mode = False
+                viewer.load_deep_zoom_image(target)
+
+        QTimer.singleShot(0, _enter)
 
     def _handle_active_folder_missing(self, folder: str) -> None:
         """Reset viewer chrome when the folder currently being browsed is gone."""
@@ -1584,6 +1612,9 @@ class ImervueMainWindow(QMainWindow):
         )
         self._refresh_tag_filter_options()
         self._restore_folder_session(folder)
+        # Startup-only: reopen the last deep-zoom image if the session recorded
+        # one, so relaunching returns to where the user left off.
+        self._restore_deep_zoom_if_saved(self._folder_view_sessions.get(folder) or {})
         self.filename_label.setText(
             language_wrapper.language_word_dict.get(
                 "main_window_current_folder_format"
