@@ -312,7 +312,7 @@ def test_detect_regions_anime_uses_test_time_augmentation(monkeypatch):
 
 
 def test_anime_default_confidence_is_lowered_for_recall():
-    assert _constants._MODE_DEFAULTS[_constants.MODE_ANIME]["confidence"] == 0.15
+    assert _constants._MODE_DEFAULTS[_constants.MODE_ANIME]["confidence"] == pytest.approx(0.15)
 
 
 def _fake_anime_model(dets):
@@ -740,10 +740,13 @@ def test_shape_fallback_reraises_when_all_attempts_fail():
 
 def test_shape_fallback_ellipse_choice_has_no_extra_downgrade():
     calls = []
+
+    def _always_fail(shp):
+        calls.append(shp)
+        raise ValueError("boom")
+
     with pytest.raises(ValueError):
-        _workers._process_with_shape_fallback(
-            lambda shp: calls.append(shp) or (_ for _ in ()).throw(ValueError()),
-            _constants.SHAPE_ELLIPSE)
+        _workers._process_with_shape_fallback(_always_fail, _constants.SHAPE_ELLIPSE)
     # Ellipse chosen → attempt + one retry, no third (already the fallback).
     assert calls == [_constants.SHAPE_ELLIPSE, _constants.SHAPE_ELLIPSE]
 

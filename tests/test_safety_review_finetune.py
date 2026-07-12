@@ -16,8 +16,9 @@ def test_data_yaml_path_returns_existing(tmp_path):
 
 
 def test_data_yaml_path_missing_raises(tmp_path):
+    missing = str(tmp_path)
     with pytest.raises(FileNotFoundError):
-        finetune.data_yaml_path(str(tmp_path))
+        finetune.data_yaml_path(missing)
 
 
 def test_train_config_builds_expected_kwargs(tmp_path):

@@ -113,7 +113,7 @@ def test_add_to_dataset_exports_labeled_sample(qapp, tmp_path):
     dataset = tmp_path / "ds"
     dataset.mkdir()
     user_setting_dict["safety_review_dataset_dir"] = str(dataset)
-    dlg, src = _dialog(qapp, tmp_path)
+    dlg, _src = _dialog(qapp, tmp_path)
     dlg._canvas.add_regions([(10, 10, 40, 30)], [4])   # class 4 = vagina
     dlg._add_to_dataset()
     label = (dataset / "labels" / "img.txt").read_text(encoding="utf-8").strip()

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from PIL import Image
 
 from safety_review import _constants, _detection, _manual
@@ -43,8 +44,8 @@ def test_move_and_clamp_region():
 
 
 def test_fit_scale_never_upscales():
-    assert _manual.fit_scale(200, 100, 400, 400) == 1.0     # small image, no upscale
-    assert _manual.fit_scale(1000, 500, 500, 500) == 0.5    # wide image, halve
+    assert _manual.fit_scale(200, 100, 400, 400) == pytest.approx(1.0)   # no upscale
+    assert _manual.fit_scale(1000, 500, 500, 500) == pytest.approx(0.5)  # halve
 
 
 def test_coordinate_round_trip():
@@ -106,7 +107,7 @@ def test_clear_regions_empties_the_canvas(qapp, tmp_path):
 
 
 def test_apply_censors_drawn_regions_to_a_censored_copy(qapp, tmp_path):
-    dlg, src = _dialog(qapp, tmp_path, color=(200, 40, 40))
+    dlg, _src = _dialog(qapp, tmp_path, color=(200, 40, 40))
     # Simulate a hand-drawn box (image coords) without synthesising mouse events.
     dlg._canvas._regions = [(10, 10, 40, 30)]
     dlg._style_combo.setCurrentIndex(
