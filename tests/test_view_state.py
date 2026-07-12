@@ -4,6 +4,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from Imervue.gpu_image_view import view_state
 
@@ -43,7 +44,7 @@ def test_save_keys_on_displayed_path_not_current_index():
     view_state.save_view_state(view)
     assert "a" in view._view_memory
     assert "b" not in view._view_memory
-    assert view._view_memory["a"]["zoom"] == 2.0
+    assert view._view_memory["a"]["zoom"] == pytest.approx(2.0)
 
 
 def test_restore_unknown_path_resets_to_default():
