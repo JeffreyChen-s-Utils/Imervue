@@ -673,3 +673,13 @@ class TestAnnotationSave:
         assert not (real_image.parent / (real_image.name + ".tmp")).exists()
         # Recipe untouched because the save never completed.
         assert p._current.brightness == pytest.approx(0.3)
+
+
+def test_navigate_image_delegates_to_on_navigate(panel, monkeypatch):
+    """The public wrapper forwards the direction to the private handler."""
+    p, _ = panel
+    calls = []
+    monkeypatch.setattr(p, "_on_navigate_image", calls.append)
+    p.navigate_image(1)
+    p.navigate_image(-1)
+    assert calls == [1, -1]

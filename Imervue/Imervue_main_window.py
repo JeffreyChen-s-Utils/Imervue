@@ -368,6 +368,11 @@ class ImervueMainWindow(QMainWindow):
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
+        # On the Modify / Paint tabs, Left/Right should page images (like
+        # DeepZoom) instead of the tab bar's default "switch tab". Filter the
+        # tab bar's key events — it is the widget that holds focus after a tab
+        # click and consumes the arrows.
+        self._main_tabs.tabBar().installEventFilter(self)
 
         # ===== 狀態列 =====
         self._status_bar = QStatusBar()
@@ -564,6 +569,42 @@ class ImervueMainWindow(QMainWindow):
             self.paint_workspace.load_image(arr)
         except (OSError, ValueError):
             self.paint_workspace.load_image(None)
+
+    def eventFilter(self, obj, event):
+        """Route Left/Right on the Modify / Paint tab bars to image nav.
+
+        On those tabs the default tab-switch is unwanted — the user wants the
+        arrows to page images like the browse view. Every other tab / key
+        falls through to Qt's default handling.
+        """
+        from PySide6.QtCore import QEvent, Qt
+        if (obj is self._main_tabs.tabBar()
+                and event.type() == QEvent.Type.KeyPress):
+            from Imervue.gui.main_tab_nav import tab_arrow_action
+            action = tab_arrow_action(
+                self._main_tabs.currentIndex(), event.key(),
+                Qt.Key.Key_Left, Qt.Key.Key_Right,
+            )
+            if action is not None:
+                target, direction = action
+                if target == "modify":
+                    self.modify_panel.navigate_image(direction)
+                else:
+                    self._navigate_paint_image(direction)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _navigate_paint_image(self, direction: int) -> None:
+        """Page the viewer's current image and reload it into the paint canvas."""
+        from Imervue.gpu_image_view.actions.select import (
+            switch_to_next_image,
+            switch_to_previous_image,
+        )
+        if direction > 0:
+            switch_to_next_image(main_gui=self.viewer)
+        else:
+            switch_to_previous_image(main_gui=self.viewer)
+        self._bind_paint_workspace_to_current_image()
 
     # ==========================
     # 選單

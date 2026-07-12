@@ -840,6 +840,14 @@ class DevelopPanel(QWidget):
     # Image navigation (Left / Right arrow in canvas)
     # ------------------------------------------------------------------
 
+    def navigate_image(self, direction: int) -> None:
+        """Public image-nav entry point (main-window tab-bar arrow routing).
+
+        Thin wrapper over :meth:`_on_navigate_image` so callers outside the
+        canvas signal wiring don't reach into a private method.
+        """
+        self._on_navigate_image(direction)
+
     def _on_navigate_image(self, direction: int) -> None:
         """Switch to prev/next image via the viewer, then rebind the canvas."""
         from Imervue.gpu_image_view.actions.select import (
