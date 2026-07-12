@@ -47,7 +47,12 @@ _cached_detector = None
 _cached_detector_lock = threading.Lock()
 
 _cached_anime_model = None
+_cached_anime_key = None          # source the cached model was loaded from
 _cached_anime_lock = threading.Lock()
+
+# user_setting_dict key holding a path to a user-supplied / fine-tuned YOLO
+# ``.pt`` model to use instead of the downloaded EraX weights.
+CUSTOM_MODEL_SETTING = "safety_review_custom_model"
 
 _cached_fastsam = None
 _cached_fastsam_lock = threading.Lock()
@@ -68,17 +73,35 @@ def _get_detector():
         return _cached_detector
 
 
+def _custom_model_path() -> str | None:
+    """A user-supplied / fine-tuned YOLO ``.pt`` to use instead of EraX, or
+    None. Read from ``user_setting_dict`` so a fine-tuned model can be dropped
+    in without changing code."""
+    try:
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        path = user_setting_dict.get(CUSTOM_MODEL_SETTING)
+    except Exception:  # noqa: BLE001 — settings unavailable → use the default
+        return None
+    return path if path and os.path.isfile(path) else None
+
+
 def _get_anime_model():
-    """Return a cached EraX YOLO model, downloading on first call."""
-    global _cached_anime_model
+    """Return the cached YOLO model: the user's custom ``.pt`` when configured,
+    otherwise the downloaded EraX weights. Reloads if the setting changes."""
+    global _cached_anime_model, _cached_anime_key
     with _cached_anime_lock:
-        if _cached_anime_model is None:
-            from huggingface_hub import hf_hub_download
+        key = _custom_model_path() or "__erax__"
+        if _cached_anime_model is None or _cached_anime_key != key:
             from ultralytics import YOLO
-            model_path = hf_hub_download(
-                repo_id=_ERAX_REPO, filename=_ERAX_MODEL,
-                revision=_ERAX_REVISION)
-            _cached_anime_model = YOLO(model_path)
+            if key != "__erax__":
+                _cached_anime_model = YOLO(key)
+            else:
+                from huggingface_hub import hf_hub_download
+                model_path = hf_hub_download(
+                    repo_id=_ERAX_REPO, filename=_ERAX_MODEL,
+                    revision=_ERAX_REVISION)
+                _cached_anime_model = YOLO(model_path)
+            _cached_anime_key = key
         return _cached_anime_model
 
 
@@ -244,11 +267,10 @@ def _detect_regions_real(detector, src: str, confidence: float,
     return boxes
 
 
-# EraX YOLO class IDs referenced by name (0=anus, 1=make_love, 2=nipple,
-# 3=penis, 4=vagina).
-_ANIME_MAKE_LOVE_CLASS = 1
-# make_love bounds the whole scene; censor only its central portion (the
-# junction sits there) so enabling it doesn't blanket the frame.
+# The scene-level (make_love) box bounds the whole scene; censor only its
+# central portion (the junction sits there) so enabling it doesn't blanket the
+# frame. Its class id comes from the configurable class list, so a fine-tuned
+# model that renames / reorders / drops it still behaves correctly.
 _MAKE_LOVE_CENTER_FRAC = 0.3
 
 
@@ -283,16 +305,18 @@ def _detect_regions_anime(src: str, confidence: float,
     *classes*.
 
     Only the classes the user selected are returned — no automatic dropping of
-    detections. make_love boxes (when requested) are shrunk to their centre so
-    they cover the junction without blanketing the scene.
+    detections. The scene-level (make_love) box, when requested, is shrunk to
+    its centre so it covers the junction without blanketing the scene.
     """
+    from safety_review._class_config import scene_class_id
+    scene_cls = scene_class_id()
     regions = []
     for box, cls in _detect_anime_raw(src, confidence):
         if cls not in classes:
             continue
         regions.append(
             _shrink_box_center(box, _MAKE_LOVE_CENTER_FRAC)
-            if cls == _ANIME_MAKE_LOVE_CLASS else box)
+            if cls == scene_cls else box)
     return regions
 
 
@@ -368,7 +392,14 @@ def _detect_boxes(detector, src, confidence, mode, categories):
     if mode == MODE_AUTO:
         actual_mode = _detect_image_mode(src)
     if actual_mode == MODE_ANIME:
-        classes = _categories_to_anime_classes(categories)
+        # A custom / fine-tuned model may have its own (possibly new) classes,
+        # so censor the configured class ids directly; the default EraX model
+        # keeps the friendly category mapping.
+        if _custom_model_path():
+            from safety_review._class_config import censor_class_ids
+            classes = censor_class_ids()
+        else:
+            classes = _categories_to_anime_classes(categories)
         return _detect_regions_anime(src, confidence, classes)
     real_labels = _categories_to_real_labels(categories)
     return _detect_regions_real(detector, src, confidence, real_labels)
