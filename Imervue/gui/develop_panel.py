@@ -639,10 +639,10 @@ class DevelopPanel(QWidget):
         self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
         self._canvas_source_path = path
 
-        # Apply current drawing state to the new canvas
-        self._canvas.set_color(self._draw_color)
-        self._canvas.set_stroke_width(self._width_slider.value())
-        self._canvas.set_brush_opacity(self._opacity_slider.value())
+        # Re-apply the full drawing state so the active tool (mosaic, blur, …),
+        # brush, colour, stroke, opacity and font keep working after an image
+        # switch instead of silently resetting to the fresh canvas's defaults.
+        self._apply_state_to_canvas()
 
         # Allow Left/Right arrow keys to switch images
         self._canvas.navigate_image.connect(self._on_navigate_image)
@@ -739,6 +739,42 @@ class DevelopPanel(QWidget):
     # ------------------------------------------------------------------
     # Left-panel tool selection
     # ------------------------------------------------------------------
+
+    def _current_tool(self) -> str:
+        """The annotation tool whose button is checked (default ``select``)."""
+        for key, btn in self._tool_buttons.items():
+            if btn.isChecked():
+                return key
+        return "select"
+
+    def _current_brush(self) -> str:
+        """The freehand brush whose button is checked (default ``pen``)."""
+        for key, btn in self._brush_buttons.items():
+            if btn.isChecked():
+                return key
+        return "pen"
+
+    def _apply_state_to_canvas(self) -> None:
+        """Push the full current drawing state onto the live canvas.
+
+        Called after a fresh canvas is created (image switch / reload) so the
+        active tool, brush, colour, stroke, opacity and font survive instead of
+        resetting to the new canvas's defaults.
+        """
+        canvas = self._canvas
+        if canvas is None:
+            return
+        canvas.set_color(self._draw_color)
+        canvas.set_stroke_width(self._width_slider.value())
+        canvas.set_brush_opacity(self._opacity_slider.value())
+        canvas.set_brush_type(self._current_brush())
+        canvas.set_font_family(self._font_combo.currentFont().family())
+        canvas.set_font_size(self._font_size_spin.value())
+        tool = self._current_tool()
+        canvas.set_tool(tool)
+        if tool == "crop":
+            rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
+            canvas.set_crop_ratio(rw, rh)
 
     def _set_tool(self, tool: str) -> None:
         # Update button checked state
@@ -917,6 +953,19 @@ class DevelopPanel(QWidget):
     # Save annotation
     # ------------------------------------------------------------------
 
+    def _toast(self, message: str, level: str = "info") -> None:
+        """Surface a status toast via the main window, if one is available.
+
+        The Modify panel is embedded in the main window; saving used to be
+        silent, so the user couldn't tell a save had happened. Routes through
+        the shared toast so success / failure is always visible.
+        """
+        main_window = getattr(self._main_gui, "main_window", None)
+        toast = getattr(main_window, "toast", None)
+        if toast is None:
+            return
+        getattr(toast, level, toast.info)(message)
+
     def _save_annotation(self) -> None:
         """Bake annotations into the image and save back to the source file."""
         if self._canvas is None or self._canvas_source_path is None:
@@ -944,7 +993,16 @@ class DevelopPanel(QWidget):
             logger.exception("Failed to save annotation to %s", path)
             if tmp.exists():
                 tmp.unlink(missing_ok=True)
+            self._toast(
+                language_wrapper.language_word_dict.get(
+                    "annotation_save_failed", "Save failed"),
+                "warning")
             return
+
+        self._toast(
+            language_wrapper.language_word_dict.get(
+                "annotation_saved", "Saved"),
+            "success")
 
         # The recipe adjustments are now baked into the saved file — reset
         # the recipe so they won't be applied again by the viewer.

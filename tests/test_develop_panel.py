@@ -685,6 +685,46 @@ def test_navigate_image_delegates_to_on_navigate(panel, monkeypatch):
     assert calls == [1, -1]
 
 
+def test_active_tool_survives_image_switch(panel, real_image):
+    """A fresh canvas (image switch) keeps the active tool, so mosaic/blur/etc.
+    stay usable instead of silently reverting to select."""
+    p, _ = panel
+    p.bind_to_path(str(real_image))
+    p._set_tool("mosaic")
+    assert p._canvas.current_tool() == "mosaic"
+    # Re-creating the canvas is exactly what an image switch does.
+    p._create_canvas(str(real_image))
+    assert p._canvas.current_tool() == "mosaic"
+
+
+def test_save_shows_success_toast(panel, real_image):
+    from unittest.mock import MagicMock
+    p, _ = panel
+    toast = MagicMock()
+    p._main_gui.main_window.toast = toast
+    p.bind_to_path(str(real_image))
+    p._save_annotation()
+    assert toast.success.called
+
+
+def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
+    from unittest.mock import MagicMock
+    p, _ = panel
+    toast = MagicMock()
+    p._main_gui.main_window.toast = toast
+    p.bind_to_path(str(real_image))
+
+    import Imervue.gui.develop_panel as mod
+
+    def _boom(_src, _dst):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(mod.os, "replace", _boom)
+    p._save_annotation()
+    assert toast.warning.called
+    assert not toast.success.called
+
+
 class TestCanvasSplitterSizes:
     """The centre canvas must get the width left over after the side panels."""
 
