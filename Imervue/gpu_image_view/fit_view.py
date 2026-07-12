@@ -36,6 +36,21 @@ def canvas_size(view: GPUImageView) -> tuple[int, int]:
     return view.width() or 1, view.height() or 1
 
 
+def invalidate_canvas_size(view: GPUImageView) -> None:
+    """Drop the cached resizeGL size so the next fit reads live geometry.
+
+    A hidden ``QOpenGLWidget`` gets no ``resizeGL``, so any window / dock /
+    splitter relayout that happens while the viewer sits behind another main
+    tab (修改 / 繪圖) leaves ``_last_resize_size`` holding the pre-hide size.
+    Because :func:`canvas_size` prefers that non-zero cache over the live
+    ``width()/height()``, the deferred re-fit on reshow would centre the image
+    against a stale canvas and it opens at the wrong size. Resetting the cache
+    to ``(0, 0)`` on hide forces the fallback to the now-correct live size; the
+    next ``resizeGL`` repopulates it for steady-state HiDPI accuracy.
+    """
+    view._last_resize_size = (0, 0)
+
+
 def _base_dimensions(view: GPUImageView) -> tuple[int, int]:
     base = view.deep_zoom.levels[0]
     return base.shape[1], base.shape[0]

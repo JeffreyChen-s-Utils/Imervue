@@ -496,6 +496,19 @@ class GPUImageView(QOpenGLWidget):
             from PySide6.QtCore import QTimer
             QTimer.singleShot(0, self._fit_to_window)
 
+    def hideEvent(self, event):
+        """Invalidate the cached canvas size when the viewer is hidden.
+
+        While the viewer sits behind another main tab it receives no
+        ``resizeGL``, so a resize meanwhile would strand the fit math on a
+        stale size (the "wrong size after switching tabs / folders" bug). The
+        deferred ``showEvent`` fit re-runs after Qt's layout settles, so
+        dropping the cache here makes that fit read the live geometry.
+        """
+        super().hideEvent(event)
+        from Imervue.gpu_image_view.fit_view import invalidate_canvas_size
+        invalidate_canvas_size(self)
+
     # ===========================
     # 繪製
     # ===========================
