@@ -51,6 +51,10 @@ import contextlib
 # 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
 _SCREEN_ADAPT_DEBOUNCE_MS = 300
 
+# Poll interval while waiting for the async folder scan to surface the image a
+# startup deep-zoom restore is targeting (bounded by the retry count).
+_DEEP_ZOOM_RESTORE_RETRY_MS = 50
+
 
 def _safe_submenus_of(parent) -> list:
     """Return live submenus reachable from ``parent`` (a QMenuBar or
@@ -1379,29 +1383,31 @@ class ImervueMainWindow(QMainWindow):
         elif hasattr(self.viewer, "scroll_y"):
             self.viewer.scroll_y = scroll
 
-    def _restore_deep_zoom_if_saved(self, state: dict) -> None:
+    def _restore_deep_zoom_if_saved(self, state: dict, _retries: int = 60) -> None:
         """Re-enter deep zoom on the remembered image after a startup restore.
 
-        Deferred to the next event-loop turn so the window has reached its
-        restored size before ``load_deep_zoom_image`` fits — otherwise the
-        image is fitted to an intermediate startup size and opens too large or
-        small. Startup-only (not folder navigation), so browsing the tree still
-        lands on the tile wall.
+        The folder scan fills ``model.images`` asynchronously, so the target
+        may not exist yet on the first pass; retry (bounded) until it lands,
+        then open it in deep zoom. Running after the scan also means the window
+        has reached its restored size, so the fit is correct. Startup-only (not
+        folder navigation), so browsing the tree still lands on the tile wall.
         """
-        from Imervue.sessions.folder_session import deep_zoom_restore_target
+        from Imervue.sessions.folder_session import (
+            deep_zoom_restore_target,
+            should_retry_deep_zoom_restore,
+        )
         viewer = self.viewer
-        target = deep_zoom_restore_target(
-            state, viewer.model.images, viewer.current_index)
-        if target is None:
+        target = deep_zoom_restore_target(state, viewer.model.images)
+        if target is not None:
+            viewer.current_index = viewer.model.images.index(target)
+            viewer.tile_grid_mode = False
+            viewer.load_deep_zoom_image(target)
             return
-
-        def _enter() -> None:
-            if target in viewer.model.images:
-                viewer.current_index = viewer.model.images.index(target)
-                viewer.tile_grid_mode = False
-                viewer.load_deep_zoom_image(target)
-
-        QTimer.singleShot(0, _enter)
+        if _retries > 0 and should_retry_deep_zoom_restore(state, viewer.model.images):
+            QTimer.singleShot(
+                _DEEP_ZOOM_RESTORE_RETRY_MS,
+                lambda: self._restore_deep_zoom_if_saved(state, _retries - 1),
+            )
 
     def _handle_active_folder_missing(self, folder: str) -> None:
         """Reset viewer chrome when the folder currently being browsed is gone."""
