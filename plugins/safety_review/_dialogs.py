@@ -44,7 +44,11 @@ from safety_review._constants import (
     MODE_REAL,
     REQUIRED_PACKAGES_ANIME,
     REQUIRED_PACKAGES_AUTO,
+    REQUIRED_PACKAGES_PRECISE,
     REQUIRED_PACKAGES_REAL,
+    SHAPE_ELLIPSE,
+    SHAPE_PRECISE,
+    SHAPE_RECT,
     STYLE_BLACK,
     STYLE_BLUR,
     STYLE_MOSAIC,
@@ -83,13 +87,15 @@ _DEFAULT_INFO = (
 _DEFAULT_TIME = "Elapsed: {elapsed}    ETA: {eta}    (~{speed:.1f}s / image)"
 
 
-def _ensure_deps(parent, on_ready, mode: str = MODE_REAL):
+def _ensure_deps(parent, on_ready, mode: str = MODE_REAL, precise: bool = False):
     if mode == MODE_AUTO:
-        pkgs = REQUIRED_PACKAGES_AUTO
+        pkgs = list(REQUIRED_PACKAGES_AUTO)
     elif mode == MODE_ANIME:
-        pkgs = REQUIRED_PACKAGES_ANIME
+        pkgs = list(REQUIRED_PACKAGES_ANIME)
     else:
-        pkgs = REQUIRED_PACKAGES_REAL
+        pkgs = list(REQUIRED_PACKAGES_REAL)
+    if precise:
+        pkgs += [p for p in REQUIRED_PACKAGES_PRECISE if p not in pkgs]
     try:
         ensure_dependencies(parent, pkgs, on_ready)
     except Exception:
@@ -170,6 +176,46 @@ def _build_style_combo(layout, lang):
     return style_combo
 
 
+def _build_shape_combo(layout, lang):
+    shape_row = QHBoxLayout()
+    shape_row.addWidget(QLabel(lang.get("safety_review_shape", "Censor area:")))
+    shape_combo = QComboBox()
+    shape_combo.addItem(
+        lang.get("safety_review_shape_ellipse", "Ellipse (tighter)"), SHAPE_ELLIPSE)
+    shape_combo.addItem(
+        lang.get("safety_review_shape_rect", "Rectangle (whole box)"), SHAPE_RECT)
+    shape_combo.addItem(
+        lang.get("safety_review_shape_precise", "Precise (pixel-level, slower)"),
+        SHAPE_PRECISE)
+    shape_row.addWidget(shape_combo, 1)
+    layout.addLayout(shape_row)
+
+    hint = QLabel("")
+    hint.setWordWrap(True)
+    hint.setVisible(False)
+    layout.addWidget(hint)
+
+    def _update_hint():
+        if shape_combo.currentData() != SHAPE_PRECISE:
+            hint.setVisible(False)
+            return
+        from safety_review._detection import _precise_backend_available
+        if _precise_backend_available():
+            hint.setText(lang.get(
+                "safety_review_precise_ok",
+                "Precise: real pixel-level segmentation is available."))
+        else:
+            hint.setText(lang.get(
+                "safety_review_precise_fallback",
+                "Precise will fall back to an ellipse — the segmentation model "
+                "isn't installed yet (it downloads on the first precise run)."))
+        hint.setVisible(True)
+
+    shape_combo.currentIndexChanged.connect(_update_hint)
+    _update_hint()
+    return shape_combo
+
+
 def _build_spin_row(layout, label_text, spin):
     row = QHBoxLayout()
     row.addWidget(QLabel(label_text))
@@ -203,11 +249,12 @@ def _build_mode_row(layout, lang):
     """Add detection-mode combo, style combo, confidence, expand%,
     and category checkboxes to *layout*.
 
-    Returns (mode_combo, conf_spin, expand_spin, style_combo, cat_checks).
-    ``cat_checks`` is a dict  {category_name: QCheckBox}.
+    Returns (mode_combo, conf_spin, expand_spin, style_combo, cat_checks,
+    shape_combo). ``cat_checks`` is a dict  {category_name: QCheckBox}.
     """
     mode_combo = _build_mode_combo(layout, lang)
     style_combo = _build_style_combo(layout, lang)
+    shape_combo = _build_shape_combo(layout, lang)
 
     conf_spin = QDoubleSpinBox()
     conf_spin.setRange(0.01, 1.0)
@@ -242,7 +289,7 @@ def _build_mode_row(layout, lang):
     mode_combo.currentIndexChanged.connect(_on_mode_changed)
     _on_mode_changed(mode_combo.currentIndex())
 
-    return mode_combo, conf_spin, expand_spin, style_combo, cat_checks
+    return mode_combo, conf_spin, expand_spin, style_combo, cat_checks, shape_combo
 
 
 class _WorkerHostMixin:
@@ -293,6 +340,11 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._block_size = block_size
         self._padding = padding
         self._finished = False
+        # Scanned folder root — set only when "include subfolders" is on, so a
+        # separate-output run mirrors the subfolder tree instead of flattening.
+        self._source_root: str | None = None
+        # Failed-image folder used by the most recent run (for the summary).
+        self._last_failed_dir: str | None = None
 
         self.setWindowTitle(
             self._lang.get("safety_review_scan_all_title",
@@ -320,6 +372,13 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         folder_row.addWidget(self._folder_edit, 1)
         folder_row.addWidget(self._browse_folder_btn)
         layout.addLayout(folder_row)
+
+        self._recursive_check = QCheckBox(
+            self._lang.get("safety_review_include_subfolders",
+                           "Include subfolders (scan the whole tree)"))
+        self._recursive_check.toggled.connect(self._on_recursive_toggled)
+        layout.addWidget(self._recursive_check)
+
         self._count_label = QLabel("")
         layout.addWidget(self._count_label)
 
@@ -346,6 +405,14 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         out_row.addWidget(self._out_dir_edit, 1)
         out_row.addWidget(self._out_browse_btn)
         layout.addLayout(out_row)
+
+        # Only meaningful for a separate-output run: write just the images
+        # that were actually censored, leaving clean ones uncopied.
+        self._only_censored_check = QCheckBox(
+            self._lang.get("safety_review_only_censored",
+                           "Only save censored images (skip unchanged copies)"))
+        self._only_censored_check.setVisible(False)
+        layout.addWidget(self._only_censored_check)
 
     def _build_progress_block(self, layout):
         self._progress = QProgressBar()
@@ -375,9 +442,14 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._build_folder_row(layout)
         self._build_output_row(layout)
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        self._merge_check = QCheckBox(
+            self._lang.get("safety_review_merge_regions",
+                           "Merge nearby regions (cover the junction)"))
+        self._merge_check.setChecked(True)
+        layout.addWidget(self._merge_check)
         self._build_progress_block(layout)
         self._build_buttons(layout)
 
@@ -386,10 +458,29 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self, self._lang.get("safety_review_scan_folder", "Source folder"))
         if folder:
             self._folder_edit.setText(folder)
-            self._paths = _scan_folder(folder)
-            self._update_count()
+            self._rescan_current_folder()
             if not self._out_dir_edit.text():
                 self._out_dir_edit.setText(folder)
+
+    def _on_recursive_toggled(self, _checked):
+        """Re-scan the chosen folder when the subfolder option changes."""
+        if self._folder_edit.text().strip():
+            self._rescan_current_folder()
+
+    def _rescan_current_folder(self):
+        """Scan the folder in the edit box, honouring the subfolder option.
+
+        ``source_root`` is remembered only for a recursive scan so a
+        separate-output run mirrors the tree; a flat scan keeps the previous
+        behaviour of dropping every result into one output folder.
+        """
+        folder = self._folder_edit.text().strip()
+        if not folder:
+            return
+        recursive = self._recursive_check.isChecked()
+        self._paths = _scan_folder(folder, recursive=recursive)
+        self._source_root = folder if recursive else None
+        self._update_count()
 
     def _browse_out_dir(self):
         folder = QFileDialog.getExistingDirectory(
@@ -412,24 +503,55 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._out_dir_label.setVisible(not checked)
         self._out_dir_edit.setVisible(not checked)
         self._out_browse_btn.setVisible(not checked)
+        self._only_censored_check.setVisible(not checked)
 
     def _on_mode_changed(self, index):
         mode = self._mode_combo.itemData(index)
         self._padding = _MODE_DEFAULTS.get(
             mode, _MODE_DEFAULTS[MODE_REAL])["padding"]
 
-    def _lock_controls(self):
-        for widget in (
+    def _controls(self):
+        return (
             self._start_btn, self._browse_folder_btn, self._mode_combo,
             self._conf_spin, self._expand_spin, self._style_combo,
-            self._overwrite_check,
-        ):
+            self._shape_combo, self._merge_check, self._overwrite_check,
+            self._recursive_check, self._only_censored_check,
+        )
+
+    def _lock_controls(self):
+        for widget in self._controls():
             widget.setEnabled(False)
         for cb in self._cat_checks.values():
             cb.setEnabled(False)
 
+    def _unlock_controls(self):
+        """Re-enable the settings so the dialog is reusable for another run."""
+        for widget in self._controls():
+            widget.setEnabled(True)
+        real = self._mode_combo.currentData() == MODE_REAL
+        for cat, cb in self._cat_checks.items():
+            cb.setEnabled(not (real and cat == CAT_SEXUAL_ACT))
+
+    def _failed_folder(self) -> str | None:
+        """Sibling ``<folder>_censor_failed`` dir that collects copies of the
+        images that fail to process, mirroring their subfolder structure."""
+        root = self._folder_edit.text().strip()
+        if not root:
+            return None
+        base = Path(root)
+        return str(base.parent / f"{base.name or 'scan'}_censor_failed")
+
     def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
-                     categories):
+                     categories, shape):
+        # source_root and only-censored are only meaningful for a separate-
+        # output run; on overwrite each file is written back in place.
+        source_root = None if overwrite else self._source_root
+        only_censored = (not overwrite) and self._only_censored_check.isChecked()
+        # Failed images are always mirrored relative to the scanned folder,
+        # independent of the output/overwrite choice.
+        scan_root = self._folder_edit.text().strip() or None
+        self._last_failed_dir = self._failed_folder()
+        merge_regions = self._merge_check.isChecked()
         frozen_env = self._get_frozen_env() if self._get_frozen_env else None
         if frozen_env:
             python, sp = frozen_env
@@ -437,12 +559,18 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
                 python, sp, self._paths, output_dir,
                 self._block_size, self._padding, overwrite=overwrite,
                 mode=mode, confidence=conf, expand_pct=expand,
-                style=style, categories=categories)
+                style=style, categories=categories, source_root=source_root,
+                only_censored=only_censored, shape=shape,
+                failed_dir=self._last_failed_dir, scan_root=scan_root,
+                merge_regions=merge_regions)
         return _BatchWorker(
             self._paths, output_dir,
             self._block_size, self._padding, overwrite=overwrite,
             mode=mode, confidence=conf, expand_pct=expand,
-            style=style, categories=categories)
+            style=style, categories=categories, source_root=source_root,
+            only_censored=only_censored, shape=shape,
+            failed_dir=self._last_failed_dir, scan_root=scan_root,
+            merge_regions=merge_regions)
 
     def _start(self):
         if not self._paths:
@@ -457,6 +585,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         expand = self._expand_spin.value()
         style = self._style_combo.currentData()
         categories = _selected_categories(self._cat_checks)
+        shape = self._shape_combo.currentData()
 
         self._lock_controls()
         self._status_label.setText(
@@ -467,13 +596,15 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self._progress.setVisible(True)
             self._status_label.setText("")
             self._worker = self._make_worker(
-                output_dir, overwrite, mode, conf, expand, style, categories)
+                output_dir, overwrite, mode, conf, expand, style, categories,
+                shape)
             self._worker.progress.connect(self._on_progress)
             self._worker.result_ready.connect(self._on_finished)
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=mode)
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=mode,
+                     precise=(shape == SHAPE_PRECISE))
 
     def _on_progress(self, current, total, name, *time_args):
         self._progress.setValue(current)
@@ -484,10 +615,18 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         self._finished = True
         self._progress.setValue(len(self._paths))
         msg = _format_result_message(self._lang, success, failed, total_regions)
+        if failed and self._last_failed_dir:
+            msg += "\n" + self._lang.get(
+                "safety_review_failed_folder",
+                "{count} failed image(s) copied to: {path}",
+            ).format(count=failed, path=self._last_failed_dir)
         self._status_label.setText(msg)
         self._time_label.setText("")
-        self._cancel_btn.setText(self._lang.get("safety_review_close", "Close"))
-        self._start_btn.setVisible(False)
+        # Reset to a ready state so the dialog can be reused for another run
+        # (adjust settings / pick a new folder) instead of being reopened.
+        self._unlock_controls()
+        self._start_btn.setText(self._lang.get("safety_review_start", "Start"))
+        self._start_btn.setVisible(True)
 
         if hasattr(self._gui.main_window, "toast"):
             toast = self._gui.main_window.toast
@@ -532,6 +671,7 @@ class _SettingsDialogBase(_WorkerHostMixin, QDialog):
             "expand": self._expand_spin.value(),
             "style": self._style_combo.currentData(),
             "categories": _selected_categories(self._cat_checks),
+            "shape": self._shape_combo.currentData(),
         }
 
 
@@ -582,7 +722,7 @@ class SafetyReviewDialog(_SettingsDialogBase):
         layout.addWidget(info)
 
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(
             self._on_mode_changed_padding)
@@ -631,14 +771,14 @@ class SafetyReviewDialog(_SettingsDialogBase):
                 settings["bs"], settings["pad"],
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
             worker.progress.connect(self._on_progress_text)
         else:
             worker = _SingleWorker(
                 self._image_path, output, settings["bs"], settings["pad"],
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
             worker.progress.connect(self._on_progress_step)
         return worker
 
@@ -659,7 +799,8 @@ class SafetyReviewDialog(_SettingsDialogBase):
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"])
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"],
+                     precise=(settings["shape"] == SHAPE_PRECISE))
 
     def _on_progress_step(self, step: int, msg: str):
         """From _SingleWorker (int, str)."""
@@ -745,7 +886,7 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
         layout.addWidget(info)
 
         (self._mode_combo, self._conf_spin, self._expand_spin,
-         self._style_combo, self._cat_checks) = _build_mode_row(
+         self._style_combo, self._cat_checks, self._shape_combo) = _build_mode_row(
             layout, self._lang)
         self._mode_combo.currentIndexChanged.connect(
             self._on_mode_changed_padding)
@@ -792,12 +933,12 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
                 settings["bs"], settings["pad"], overwrite,
                 mode=settings["mode"], confidence=settings["conf"],
                 expand_pct=settings["expand"], style=settings["style"],
-                categories=settings["categories"])
+                categories=settings["categories"], shape=settings["shape"])
         return _BatchWorker(
             self._paths, output_dir, settings["bs"], settings["pad"], overwrite,
             mode=settings["mode"], confidence=settings["conf"],
             expand_pct=settings["expand"], style=settings["style"],
-            categories=settings["categories"])
+            categories=settings["categories"], shape=settings["shape"])
 
     def _do_run(self):
         overwrite = self._overwrite_check.isChecked()
@@ -820,7 +961,8 @@ class BatchSafetyReviewDialog(_SettingsDialogBase):
             self._worker.finished.connect(self._cleanup)
             self._worker.start()
 
-        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"])
+        _ensure_deps(self._gui.main_window, _on_deps_ready, mode=settings["mode"],
+                     precise=(settings["shape"] == SHAPE_PRECISE))
 
     def _on_progress(self, current, total, name, *time_args):
         self._progress.setValue(current)
