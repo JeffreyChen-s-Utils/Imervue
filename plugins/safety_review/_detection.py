@@ -20,6 +20,7 @@ from safety_review._constants import (
     _FMT_MAP,
     _IMAGE_EXTS,
     ANIME_MOSAIC_CLASSES,
+    ELLIPSE_COVER_FRAC,
     MIN_CONFIDENCE,
     MODE_ANIME,
     MODE_AUTO,
@@ -212,11 +213,29 @@ def _censored_region(region, w, h, block_size, style):
     return small.resize((w, h), resample=_Img.Resampling.NEAREST)
 
 
-def _ellipse_mask(w, h):
-    """L-mode mask (255 inside the inscribed ellipse, 0 outside)."""
+def _ellipse_mask(w, h, cover: float = ELLIPSE_COVER_FRAC):
+    """L-mode mask (255 inside an inset ellipse, 0 outside).
+
+    The ellipse is inset to *cover* of each axis and centred, so it hugs the
+    middle of the box rather than bulging out to touch all four edges — the
+    "tighter" the option promises. ``cover`` is clamped to ``(0, 1]``; a box so
+    small the inset would collapse it falls back to the full inscribed ellipse
+    so a tiny detection is never left uncensored.
+    """
     from PIL import Image as _Img, ImageDraw
     mask = _Img.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).ellipse((0, 0, w - 1, h - 1), fill=255)
+    cover = min(1.0, max(0.05, cover))
+    margin_x = int((w - 1) * (1.0 - cover) / 2)
+    margin_y = int((h - 1) * (1.0 - cover) / 2)
+    x2 = w - 1 - margin_x
+    y2 = h - 1 - margin_y
+    if x2 <= margin_x or y2 <= margin_y:
+        # Box too small (e.g. a 1-px edge) to inscribe an inset ellipse — fill
+        # it solid so a tiny region is still fully censored rather than left
+        # clear by a degenerate ellipse PIL won't render.
+        mask.paste(255, (0, 0, w, h))
+        return mask
+    ImageDraw.Draw(mask).ellipse((margin_x, margin_y, x2, y2), fill=255)
     return mask
 
 

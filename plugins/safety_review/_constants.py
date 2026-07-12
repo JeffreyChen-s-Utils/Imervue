@@ -94,6 +94,15 @@ SHAPE_ELLIPSE = "ellipse"
 SHAPE_PRECISE = "precise"
 DEFAULT_SHAPE = SHAPE_ELLIPSE
 
+# The inscribed ellipse touches all four box edges at their midpoints, so it
+# still visually fills a loose detection / hand-drawn box. Insetting it to this
+# fraction of each axis pulls the censor in toward the centre — the region that
+# actually holds the anatomy — so "Ellipse (tighter)" reads as tighter instead
+# of "the whole box minus the corners". Kept ≥ ~0.8 so a reasonably-placed box
+# still covers the subject; drop RECT in when full coverage is wanted, PRECISE
+# for a pixel-exact hug.
+ELLIPSE_COVER_FRAC = 0.85
+
 # ---------------------------------------------------------------------------
 # Abstract detection categories → per-mode labels / class IDs
 # ---------------------------------------------------------------------------
