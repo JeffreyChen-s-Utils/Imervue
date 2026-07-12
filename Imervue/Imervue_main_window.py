@@ -2015,6 +2015,12 @@ class ImervueMainWindow(QMainWindow):
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
 
+        # Snapshot the current folder's view state (incl. whether we're in deep
+        # zoom) BEFORE any teardown clears the viewer, so relaunching can return
+        # to where the user left off instead of always to the tile wall.
+        with contextlib.suppress(Exception):
+            self._save_current_folder_session()
+
         # --- 斷開分頁切換信號，避免銷毀過程中觸發 ---
         with contextlib.suppress(Exception):
             self._main_tabs.currentChanged.disconnect(self._on_main_tab_changed)
