@@ -474,9 +474,15 @@ class ImervueMainWindow(QMainWindow):
         self._screen_adapt_timer.setInterval(_SCREEN_ADAPT_DEBOUNCE_MS)
         self._screen_adapt_timer.timeout.connect(self._adapt_to_current_screen)
         self._last_screen_avail: tuple[int, int, int, int] | None = None
+        self._screen_signal_connected = False
 
         # ===== 還原視窗位置與大小（多螢幕適配） =====
         self._restore_window_geometry()
+        # Restoring geometry can jump the window from the primary screen it was
+        # born on to a different monitor. Listen for that (and later drags) so
+        # the view is re-fitted to the actual screen instead of keeping the
+        # first screen's size. Deferred so windowHandle() exists.
+        QTimer.singleShot(0, self._connect_screen_change_signal)
 
         # ===== Debug =====
         # Debug 模式下自動關閉
@@ -1900,13 +1906,45 @@ class ImervueMainWindow(QMainWindow):
         if timer is not None:
             timer.start()
 
+    def _connect_screen_change_signal(self) -> None:
+        """Subscribe to the window's screen-changed signal exactly once."""
+        if self._screen_signal_connected:
+            return
+        handle = self.windowHandle()
+        if handle is None:
+            return
+        handle.screenChanged.connect(self._on_screen_changed)
+        self._screen_signal_connected = True
+
+    def _on_screen_changed(self, _screen) -> None:
+        """The window moved to a different physical screen — re-fit the view.
+
+        Fires for the startup jump from the primary screen to the restored
+        screen too, so the first display no longer keeps the primary screen's
+        size / DPI. The frame rescale stays with the debounced ``moveEvent``
+        path; here we only re-fit what's shown.
+        """
+        self._refit_current_view_for_screen()
+
+    def _refit_current_view_for_screen(self) -> None:
+        """Re-fit the deep-zoom viewer and, if active, the Modify canvas."""
+        from Imervue.gui.main_tab_nav import should_refit_modify_canvas
+        self._refit_deep_zoom_image()
+        canvas = getattr(self.modify_panel, "_canvas", None)
+        if should_refit_modify_canvas(
+                self._main_tabs.currentIndex(), canvas is not None):
+            splitter = getattr(self, "_modify_splitter", None)
+            if splitter is not None:
+                self.modify_panel._size_modify_splitter(splitter)
+            QTimer.singleShot(0, canvas.update)
+
     def _adapt_to_current_screen(self) -> None:
         """Debounced ``moveEvent`` handler.
 
         When the window settles on a screen with a different available
         geometry (dragged to another monitor, or the monitor changed
         resolution), rescale the frame to keep its relative footprint and
-        re-fit the deep-zoom image so the whole picture stays visible.
+        re-fit the current view so the whole picture stays visible.
         """
         screen = self.screen()
         if screen is None:
@@ -1919,7 +1957,7 @@ class ImervueMainWindow(QMainWindow):
         # 最大化 / 全螢幕視窗由 OS 自己重排到新螢幕，只需重新 fit 圖片。
         if not (self.isMaximized() or self.isFullScreen()):
             self._rescale_window_between_screens(old_avail, new_avail)
-        self._refit_deep_zoom_image()
+        self._refit_current_view_for_screen()
 
     def _rescale_window_between_screens(self, old_avail, new_avail) -> None:
         """Keep the window's relative size / position on the new screen."""

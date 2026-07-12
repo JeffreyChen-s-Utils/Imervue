@@ -36,3 +36,12 @@ def tab_arrow_action(
     if tab_index == PAINT_TAB_INDEX:
         return ("paint", direction)
     return None
+
+
+def should_refit_modify_canvas(tab_index: int, has_canvas: bool) -> bool:
+    """Whether a screen change should re-fit the Modify canvas.
+
+    Only when the Modify tab is active and a canvas exists — the deep-zoom
+    viewer is re-fitted separately regardless of the active tab.
+    """
+    return tab_index == MODIFY_TAB_INDEX and has_canvas
