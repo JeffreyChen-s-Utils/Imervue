@@ -55,6 +55,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.develop_panel")
 
+# Preferred width of the right properties panel; also its minimum (see
+# build_right_panel). The canvas takes whatever width is left.
+_RIGHT_PANEL_WIDTH = 260
+# Floor for the centre canvas so it never collapses to nothing on a narrow
+# window — matches the AnnotationCanvas minimum.
+_MIN_CANVAS_WIDTH = 400
+
+
+def _canvas_splitter_sizes(
+    total: int, left: int, right: int, min_canvas: int = _MIN_CANVAS_WIDTH,
+) -> list[int]:
+    """Modify-splitter pane sizes ``[left, canvas, right]``.
+
+    Gives the centre annotation canvas all the width left over after the fixed
+    tool strip and the properties panel, floored at *min_canvas*. Without this
+    the canvas — inserted between two panes that already shared the full
+    width — is squeezed to its minimum and the image opens tiny.
+    """
+    left = max(0, left)
+    right = max(0, right)
+    canvas = max(min_canvas, total - left - right)
+    return [left, canvas, right]
+
 
 class DevelopPanel(QWidget):
     """Controller that builds the left/right panels for the Modify tab.
@@ -469,7 +492,7 @@ class DevelopPanel(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(panel)
-        scroll.setMinimumWidth(260)
+        scroll.setMinimumWidth(_RIGHT_PANEL_WIDTH)
         parent_splitter.addWidget(scroll)
 
     # ------------------------------------------------------------------
@@ -628,7 +651,31 @@ class DevelopPanel(QWidget):
         splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
         if splitter is not None:
             splitter.insertWidget(1, self._canvas)
-            splitter.setStretchFactor(1, 1)
+            splitter.setStretchFactor(0, 0)   # fixed tool strip
+            splitter.setStretchFactor(1, 1)    # canvas takes the slack
+            splitter.setStretchFactor(2, 0)    # properties panel
+            self._size_modify_splitter(splitter)
+
+    def _size_modify_splitter(self, splitter, _retries: int = 8) -> None:
+        """Give the centre canvas the leftover width so the image isn't tiny.
+
+        The right panel grabbed the full non-tool-strip width while the
+        splitter had only two panes, so the freshly-inserted canvas would keep
+        just its minimum. Deferred a turn when the tab isn't laid out yet
+        (width 0), so the sizes land against the real geometry — bounded so a
+        never-shown splitter can't spin forever.
+        """
+        if splitter.count() < 3:
+            return
+        total = splitter.width()
+        if total <= 0:
+            if _retries > 0:
+                QTimer.singleShot(
+                    0, lambda: self._size_modify_splitter(splitter, _retries - 1))
+            return
+        left = splitter.widget(0).sizeHint().width()
+        right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
+        splitter.setSizes(_canvas_splitter_sizes(total, left, right))
 
     def _cleanup_old_canvas(self) -> None:
         """Disconnect signals, clear undo stack, and detach the old canvas.

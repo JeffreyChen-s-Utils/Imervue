@@ -683,3 +683,50 @@ def test_navigate_image_delegates_to_on_navigate(panel, monkeypatch):
     p.navigate_image(1)
     p.navigate_image(-1)
     assert calls == [1, -1]
+
+
+class TestCanvasSplitterSizes:
+    """The centre canvas must get the width left over after the side panels."""
+
+    def test_canvas_gets_the_leftover_width(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        assert _canvas_splitter_sizes(1200, 80, 260) == [80, 860, 260]
+
+    def test_canvas_floored_on_a_narrow_window(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        # Side panels alone exceed the width → canvas clamps to its floor.
+        assert _canvas_splitter_sizes(500, 80, 260, min_canvas=400) == [80, 400, 260]
+
+    def test_negative_side_widths_are_clamped_to_zero(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        sizes = _canvas_splitter_sizes(1000, -10, -20)
+        assert sizes[0] == 0
+        assert sizes[2] == 0
+        assert sizes[1] == 1000
+
+    def test_canvas_is_the_widest_pane(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        left, canvas, right = _canvas_splitter_sizes(1600, 80, 260)
+        assert canvas > left
+        assert canvas > right
+
+    def test_size_modify_splitter_gives_canvas_the_majority(self, panel, qapp):
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QSplitter, QWidget
+        p, _ = panel
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        left = QWidget()
+        left.setFixedWidth(80)
+        splitter.addWidget(left)
+        splitter.addWidget(QWidget())            # centre canvas stand-in
+        right = QWidget()
+        right.setMinimumWidth(260)
+        splitter.addWidget(right)
+        splitter.resize(1200, 700)
+
+        p._size_modify_splitter(splitter)
+
+        sizes = splitter.sizes()
+        assert sizes[1] == max(sizes)            # canvas is the widest pane
+        splitter.setParent(None)
+        splitter.deleteLater()
