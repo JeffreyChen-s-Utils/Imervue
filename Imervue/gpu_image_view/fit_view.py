@@ -36,6 +36,17 @@ def canvas_size(view: GPUImageView) -> tuple[int, int]:
     return view.width() or 1, view.height() or 1
 
 
+def should_settle_refit(view: GPUImageView) -> bool:
+    """Whether a deferred confirmation re-fit should run after display.
+
+    True only while a deep-zoom image is shown and the user hasn't taken view
+    control, so the settle fit snaps a fresh / whole-image view to the final
+    content area — after the filmstrip band appears and the live canvas size
+    settles on deep-zoom entry — without ever overriding a deliberate zoom-in.
+    """
+    return view.deep_zoom is not None and not view._user_locked_view
+
+
 def invalidate_canvas_size(view: GPUImageView) -> None:
     """Drop the cached resizeGL size so the next fit reads live geometry.
 

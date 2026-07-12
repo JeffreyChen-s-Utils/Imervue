@@ -318,3 +318,26 @@ def test_canvas_size_uses_live_geometry_after_invalidation():
     view = _FakeView(100, 100, (640, 480), last_resize=(800, 600))
     fit_view.invalidate_canvas_size(view)
     assert fit_view.canvas_size(view) == (640, 480)
+
+
+# ---------------------------------------------------------------------------
+# should_settle_refit (deferred deep-zoom entry re-fit)
+# ---------------------------------------------------------------------------
+
+def test_should_settle_refit_true_for_unlocked_deep_zoom():
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = False
+    assert fit_view.should_settle_refit(view) is True
+
+
+def test_should_settle_refit_false_when_user_locked():
+    # A deliberate zoom-in must never be snapped back by the settle fit.
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = True
+    assert fit_view.should_settle_refit(view) is False
+
+
+def test_should_settle_refit_false_without_deep_zoom():
+    view = _FakeView(100, 100, (800, 600), deep=False)
+    view._user_locked_view = False
+    assert fit_view.should_settle_refit(view) is False

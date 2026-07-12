@@ -634,6 +634,25 @@ class GPUImageView(QOpenGLWidget):
         self._restore_view_state(path)
         if self._should_refit_on_load():
             self._fit_to_window()
+            self._schedule_settle_refit()
+
+    def _schedule_settle_refit(self) -> None:
+        """Queue a confirmation re-fit for the next event-loop turn."""
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self._settle_refit)
+
+    def _settle_refit(self) -> None:
+        """Confirm the fit after the event loop settles the deep-zoom layout.
+
+        Entering deep zoom from the tile wall makes the horizontal filmstrip
+        band appear and can realise the live canvas size a beat after the
+        synchronous fit, so the image could open at the wrong size / overlap
+        the strip. Re-fitting once here — only while the view is unlocked —
+        lands it in the correct content area. A no-op when the first fit was
+        already correct (identical zoom / offsets, no visible change)."""
+        from Imervue.gpu_image_view.fit_view import should_settle_refit
+        if should_settle_refit(self):
+            self._fit_to_window()
 
     def _fit_to_width(self):
         """Fit image width — external contract (key dispatcher)."""
