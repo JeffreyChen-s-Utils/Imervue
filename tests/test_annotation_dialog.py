@@ -140,10 +140,14 @@ class TestCoordinateMapping:
             assert back == (ix, iy)
 
     def test_image_centered_in_widget(self, canvas):
-        # 200x100 base in 400x200 widget → scale 2.0, fits exactly horizontally
+        # 200x100 base; the canvas floors at 400x300 (its minimum), so the
+        # native-size (capped, never upscaled) image is a 200x100 rect centred
+        # at offset (100, 100).
         rect = canvas._display_rect()
-        assert rect.width() == pytest.approx(400.0)
-        assert rect.height() == pytest.approx(200.0)
+        assert rect.width() == pytest.approx(200.0)
+        assert rect.height() == pytest.approx(100.0)
+        assert rect.x() == pytest.approx(100.0)
+        assert rect.y() == pytest.approx(100.0)
 
     def test_screen_to_image_handles_negative_input(self, canvas):
         # Clicking outside the displayed image (e.g. above-left of the

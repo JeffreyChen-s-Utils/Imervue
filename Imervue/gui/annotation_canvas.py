@@ -184,6 +184,19 @@ class _ModifyAnnotationCommand(QUndoCommand):
 _HANDLE_SIZE = 8  # pixels (screen space)
 
 
+def _fit_display_scale(bw: int, bh: int, cw: int, ch: int) -> float:
+    """Scale to fit a ``bw×bh`` image into a ``cw×ch`` canvas, capped at 1.0.
+
+    Never upscales — an image smaller than the canvas stays at native size and
+    is centred, matching the deep-zoom fit so the Modify view doesn't blow a
+    small image up to fill the (now full-width) canvas. Returns 0 for a
+    degenerate image / canvas so the caller can skip painting.
+    """
+    if bw <= 0 or bh <= 0 or cw <= 0 or ch <= 0:
+        return 0.0
+    return min(cw / bw, ch / bh, 1.0)
+
+
 def _apply_alpha(rgba: tuple[int, int, int, int], multiplier: float) -> QColor:
     r, g, b, a = rgba
     return QColor(r, g, b, int(a * multiplier))
@@ -419,9 +432,9 @@ class AnnotationCanvas(QWidget):
     def _display_rect(self) -> QRectF:
         bw, bh = self._base.width, self._base.height
         cw, ch = self.width(), self.height()
-        if bw == 0 or bh == 0 or cw == 0 or ch == 0:
+        scale = _fit_display_scale(bw, bh, cw, ch)
+        if scale <= 0:
             return QRectF(0, 0, 0, 0)
-        scale = min(cw / bw, ch / bh)
         dw, dh = bw * scale, bh * scale
         return QRectF((cw - dw) / 2, (ch - dh) / 2, dw, dh)
 
