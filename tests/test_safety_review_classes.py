@@ -82,8 +82,14 @@ def test_get_anime_model_loads_custom_then_reloads_on_change(tmp_path, monkeypat
         def __init__(self, path):
             loaded.append(path)
 
-    import ultralytics
-    monkeypatch.setattr(ultralytics, "YOLO", _FakeYOLO, raising=False)
+    # ultralytics is a heavy optional dep absent from the fast CI layer; inject
+    # a fake module so ``from ultralytics import YOLO`` resolves and the test
+    # runs everywhere instead of erroring on the import.
+    import sys
+    import types
+    fake = types.ModuleType("ultralytics")
+    fake.YOLO = _FakeYOLO
+    monkeypatch.setitem(sys.modules, "ultralytics", fake)
 
     a = tmp_path / "a.pt"
     a.write_bytes(b"a")

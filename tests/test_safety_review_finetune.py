@@ -42,14 +42,19 @@ def test_resolve_base_weights_passthrough_for_a_path():
 
 
 def test_resolve_base_weights_erax_downloads(monkeypatch):
-    import huggingface_hub
+    import sys
+    import types
     calls = {}
 
     def _fake(repo_id, filename, revision):
         calls.update(repo_id=repo_id, filename=filename, revision=revision)
         return "weights/erax.pt"
 
-    monkeypatch.setattr(huggingface_hub, "hf_hub_download", _fake)
+    # huggingface_hub is a heavy optional dep absent from the fast CI layer;
+    # inject a fake so the test runs everywhere.
+    fake = types.ModuleType("huggingface_hub")
+    fake.hf_hub_download = _fake
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake)
     assert finetune.resolve_base_weights("erax") == "weights/erax.pt"
     assert calls["repo_id"] == finetune._ERAX_REPO
     assert calls["revision"] == finetune._ERAX_REVISION
