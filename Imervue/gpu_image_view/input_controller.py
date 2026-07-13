@@ -274,14 +274,21 @@ class InputController:
 
     def enter_deep_zoom(self, path: str) -> None:
         view = self._view
+        # The clicked tile can already be gone from the model — the folder
+        # dropped it (delete / filter / stack collapse / watch-folder refresh)
+        # after the wall was last painted but before this click, and its rect
+        # lingers one frame. Opening the vanished path would leave the wall to
+        # start a load the completion guard then discards, stranding a stuck
+        # "Loading…" view. Ignore the stale click and stay on the wall.
+        if path not in view.model.images:
+            return
         view._saved_tile_state = {
             "grid_offset_x": view.grid_offset_x,
             "grid_offset_y": view.grid_offset_y,
             "tile_scale": view.tile_scale,
         }
         view.tile_grid_mode = False
-        if path in view.model.images:
-            view.current_index = view.model.images.index(path)
+        view.current_index = view.model.images.index(path)
         view.load_deep_zoom_image(path)
 
     def toggle_tile_selection(self, path: str) -> None:
