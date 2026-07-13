@@ -65,3 +65,31 @@ def test_restore_target_is_the_current_path():
     fake, calls = _fake(path="folder/sub/photo.cr2", should_refit=False)
     GPUImageView._apply_initial_view(fake)
     assert calls == [("restore", "folder/sub/photo.cr2")]
+
+
+def test_settle_refit_skips_when_a_newer_image_was_requested():
+    # A settle queued for an earlier image must not fit the current one — that
+    # is what clobbered a quick keyboard switch's remembered zoom-in.
+    fits: list = []
+    fake = SimpleNamespace(
+        _deep_zoom_request_id=5,
+        deep_zoom=object(),
+        _user_locked_view=False,
+        _fit_to_window=lambda: fits.append("fit"),
+    )
+    GPUImageView._settle_refit(fake, 4)   # stale → skip
+    assert fits == []
+    GPUImageView._settle_refit(fake, 5)   # current → fit
+    assert fits == ["fit"]
+
+
+def test_settle_refit_skips_when_user_locked_even_if_current():
+    fits: list = []
+    fake = SimpleNamespace(
+        _deep_zoom_request_id=3,
+        deep_zoom=object(),
+        _user_locked_view=True,           # a deliberate zoom-in
+        _fit_to_window=lambda: fits.append("fit"),
+    )
+    GPUImageView._settle_refit(fake, 3)
+    assert fits == []

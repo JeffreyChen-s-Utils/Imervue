@@ -637,19 +637,27 @@ class GPUImageView(QOpenGLWidget):
             self._schedule_settle_refit()
 
     def _schedule_settle_refit(self) -> None:
-        """Queue a confirmation re-fit for the next event-loop turn."""
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(0, self._settle_refit)
+        """Queue a confirmation re-fit for the next event-loop turn.
 
-    def _settle_refit(self) -> None:
+        Tagged with the current deep-zoom request id so a fit queued for one
+        image can't fire after a quick keyboard switch to the next — which
+        would otherwise clobber the incoming image's remembered zoom-in.
+        """
+        from PySide6.QtCore import QTimer
+        request_id = self._deep_zoom_request_id
+        QTimer.singleShot(0, lambda: self._settle_refit(request_id))
+
+    def _settle_refit(self, request_id: int) -> None:
         """Confirm the fit after the event loop settles the deep-zoom layout.
 
         Entering deep zoom from the tile wall makes the horizontal filmstrip
         band appear and can realise the live canvas size a beat after the
         synchronous fit, so the image could open at the wrong size / overlap
-        the strip. Re-fitting once here — only while the view is unlocked —
-        lands it in the correct content area. A no-op when the first fit was
-        already correct (identical zoom / offsets, no visible change)."""
+        the strip. Re-fitting once here — only while the view is unlocked and
+        no newer image has been requested since — lands it in the correct
+        content area. A no-op when the first fit was already correct."""
+        if request_id != self._deep_zoom_request_id:
+            return  # a newer navigation superseded this fit
         from Imervue.gpu_image_view.fit_view import should_settle_refit
         if should_settle_refit(self):
             self._fit_to_window()
