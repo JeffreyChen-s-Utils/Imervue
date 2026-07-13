@@ -102,6 +102,7 @@ class _StubMainWindow:
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
     _handle_active_folder_missing = ImervueMainWindow._handle_active_folder_missing
     _clear_view_folder_watch = ImervueMainWindow._clear_view_folder_watch
+    _on_list_activated = ImervueMainWindow._on_list_activated
     _filter_image_paths = staticmethod(ImervueMainWindow._filter_image_paths)
     _nearest_existing_parent = staticmethod(ImervueMainWindow._nearest_existing_parent)
 
@@ -193,6 +194,35 @@ def test_refresh_refits_kept_deep_zoom_for_filmstrip_band():
     assert win.viewer.current_index == 0
     assert win.viewer.loaded_deep_zoom == []
     assert win.viewer.settle_refit_calls == 1
+
+
+def test_list_activate_opens_row_in_deep_zoom():
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.tile_grid_mode = True
+    win._on_list_activated("/p/b.png")
+    assert win.viewer.current_index == 1
+    assert win.viewer.tile_grid_mode is False
+    assert win.viewer.loaded_deep_zoom == ["/p/b.png"]
+    assert win._view_stack.indices[-1] == 0   # swapped to the viewer
+
+
+def test_list_activate_ignores_row_removed_from_model():
+    # Stale list row: the image left the model but the table hasn't repopulated.
+    # Activating it must be a no-op — don't leave the list for a doomed load
+    # that strands a stuck "Loading…" view.
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.tile_grid_mode = True
+    win._on_list_activated("/p/gone.png")
+    assert win.viewer.loaded_deep_zoom == []
+    assert win.viewer.tile_grid_mode is True   # unchanged — still on the list
+    assert win._view_stack.indices == []       # no stack swap
+
+
+def test_list_activate_empty_path_is_noop():
+    win = _StubMainWindow(["/p/a.png"])
+    win._on_list_activated("")
+    assert win.viewer.loaded_deep_zoom == []
+    assert win._view_stack.indices == []
 
 
 def test_refresh_does_not_refit_when_not_in_deep_zoom():

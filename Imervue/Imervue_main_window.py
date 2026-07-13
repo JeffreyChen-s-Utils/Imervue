@@ -1145,8 +1145,13 @@ class ImervueMainWindow(QMainWindow):
         if not path:
             return
         images = self.viewer.model.images
-        if path in images:
-            self.viewer.current_index = images.index(path)
+        # A list row can outlive its image by a frame — a refresh dropped it
+        # from the model but the table hasn't repopulated yet. Activating the
+        # stale row would leave the list for a load the completion guard then
+        # discards, stranding a stuck "Loading…" view. Ignore it and stay put.
+        if path not in images:
+            return
+        self.viewer.current_index = images.index(path)
         self._view_stack.setCurrentIndex(0)
         self.viewer.tile_grid_mode = False
         self.viewer.load_deep_zoom_image(path)
