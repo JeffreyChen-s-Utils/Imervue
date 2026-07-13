@@ -646,6 +646,8 @@ class DevelopPanel(QWidget):
 
         # Allow Left/Right arrow keys to switch images
         self._canvas.navigate_image.connect(self._on_navigate_image)
+        # Ctrl+S saves (with a toast), matching the Save button.
+        self._canvas.save_requested.connect(self._save_annotation)
 
         # Insert the canvas into the modify splitter (index 1).
         splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
@@ -697,6 +699,8 @@ class DevelopPanel(QWidget):
             # Disconnect signals we connected
             with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._canvas.save_requested.disconnect(self._save_annotation)
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
             with contextlib.suppress(Exception):

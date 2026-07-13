@@ -228,6 +228,7 @@ class AnnotationCanvas(QWidget):
     # Emitted when the user presses Left/Right arrow to switch images.
     # The int argument is the direction: -1 for previous, +1 for next.
     navigate_image = Signal(int)
+    save_requested = Signal()
 
     def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
         super().__init__(parent)
@@ -1519,8 +1520,32 @@ class AnnotationCanvas(QWidget):
 
     # ---------- Keyboard ----------
 
+    def _handle_ctrl_key(self, key: int, shift: bool) -> bool:
+        """Ctrl-modified shortcuts (save / undo / redo). Returns True when
+        consumed.
+
+        The inline Modify panel has no menu bar, so these chords reach the
+        canvas; the host wires ``save_requested`` to its save + toast. In the
+        standalone dialog the Save/Undo/Redo QActions claim the chords first,
+        so this only takes effect where nothing else does.
+        """
+        if key == Qt.Key.Key_S:
+            self.save_requested.emit()
+            return True
+        if key == Qt.Key.Key_Z and not shift:
+            self._undo_stack.undo()
+            return True
+        if key == Qt.Key.Key_Y or (key == Qt.Key.Key_Z and shift):
+            self._undo_stack.redo()
+            return True
+        return False
+
     def keyPressEvent(self, event):
         key = event.key()
+        mods = event.modifiers()
+        if mods & Qt.KeyboardModifier.ControlModifier and self._handle_ctrl_key(
+                key, bool(mods & Qt.KeyboardModifier.ShiftModifier)):
+            return
         if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             if self._selected_id is not None:
                 sel = self._find(self._selected_id)

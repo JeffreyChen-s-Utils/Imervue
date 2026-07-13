@@ -158,6 +158,46 @@ class TestCoordinateMapping:
         assert isinstance(result[1], int)
 
 
+class TestKeyboardShortcuts:
+    """Ctrl+S / Ctrl+Z / Ctrl+Y reach the inline canvas (no menu bar there)."""
+
+    def test_ctrl_s_emits_save_requested(self, canvas):
+        from PySide6.QtCore import Qt
+        fired: list[bool] = []
+        canvas.save_requested.connect(lambda: fired.append(True))
+        assert canvas._handle_ctrl_key(Qt.Key.Key_S, shift=False) is True
+        assert fired == [True]
+
+    def test_ctrl_z_undoes_last_annotation(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        assert len(canvas._annotations) == 1
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False) is True
+        assert len(canvas._annotations) == 0
+
+    def test_ctrl_shift_z_redoes(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False)
+        assert len(canvas._annotations) == 0
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=True) is True
+        assert len(canvas._annotations) == 1
+
+    def test_ctrl_y_redoes(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False)
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Y, shift=False) is True
+        assert len(canvas._annotations) == 1
+
+    def test_unhandled_ctrl_key_returns_false(self, canvas):
+        from PySide6.QtCore import Qt
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Q, shift=False) is False
+
+
 # ---------------------------------------------------------------------------
 # Undo commands
 # ---------------------------------------------------------------------------
