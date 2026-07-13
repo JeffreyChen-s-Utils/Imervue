@@ -156,6 +156,8 @@ class DevelopPanel(QWidget):
         self._canvas: AnnotationCanvas | None = None
         self._canvas_undo_stack = QUndoStack(self)
         self._canvas_source_path: str | None = None
+        # Save-feedback toast, parented to (and freed with) the current canvas.
+        self._canvas_toast = None
 
         # Drawing state (mirrored by the right-panel controls)
         self._draw_color: tuple[int, int, int, int] = (255, 0, 0, 255)
@@ -658,18 +660,24 @@ class DevelopPanel(QWidget):
             splitter.setStretchFactor(2, 0)    # properties panel
             self._size_modify_splitter(splitter)
 
-    def _size_modify_splitter(self, splitter, _retries: int = 8) -> None:
+    def _size_modify_splitter(
+            self, splitter, _retries: int = 8, _last_total: int = -1) -> None:
         """Give the centre canvas the leftover width so the image isn't tiny.
 
         The right panel grabbed the full non-tool-strip width while the
         splitter had only two panes, so the freshly-inserted canvas would keep
-        just its minimum. Deferred a turn when the tab isn't laid out yet
-        (width 0), so the sizes land against the real geometry — bounded so a
-        never-shown splitter can't spin forever.
+        just its minimum. Entering Modify right after startup can also read an
+        intermediate width before the window/tab has settled, locking in a
+        wrong size that no later resize corrects. So re-run on the next turn
+        until the width stops changing (bounded), and no-op if the splitter was
+        destroyed before a deferred pass ran.
         """
-        if splitter.count() < 3:
-            return
-        total = splitter.width()
+        try:
+            if splitter.count() < 3:
+                return
+            total = splitter.width()
+        except RuntimeError:
+            return  # splitter destroyed before this deferred pass
         if total <= 0:
             if _retries > 0:
                 QTimer.singleShot(
@@ -678,6 +686,11 @@ class DevelopPanel(QWidget):
         left = splitter.widget(0).sizeHint().width()
         right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
         splitter.setSizes(_canvas_splitter_sizes(total, left, right))
+        # Layout may still be settling — re-run until the width is stable so an
+        # intermediate startup width isn't locked in.
+        if total != _last_total and _retries > 0:
+            QTimer.singleShot(
+                0, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
 
     def _cleanup_old_canvas(self) -> None:
         """Disconnect signals, clear undo stack, and detach the old canvas.
@@ -713,6 +726,9 @@ class DevelopPanel(QWidget):
             self._canvas.hide()
             self._canvas.setParent(None)
             self._canvas = None
+            # The toast was a child of the now-detached canvas — drop the stale
+            # reference so the next one is re-created on the new canvas.
+            self._canvas_toast = None
 
     def _destroy_canvas(self) -> None:
         self._debounce.stop()
@@ -958,17 +974,20 @@ class DevelopPanel(QWidget):
     # ------------------------------------------------------------------
 
     def _toast(self, message: str, level: str = "info") -> None:
-        """Surface a status toast via the main window, if one is available.
+        """Show a status toast on the (visible) Modify canvas.
 
-        The Modify panel is embedded in the main window; saving used to be
-        silent, so the user couldn't tell a save had happened. Routes through
-        the shared toast so success / failure is always visible.
+        The shared window toast is parented to the viewer, which is hidden
+        while the Modify tab is active, so its notifications wouldn't be seen
+        here. Parent our own toast to the canvas instead — a plain widget on
+        the active tab — so save feedback is actually visible.
         """
-        main_window = getattr(self._main_gui, "main_window", None)
-        toast = getattr(main_window, "toast", None)
-        if toast is None:
+        canvas = self._canvas
+        if canvas is None:
             return
-        getattr(toast, level, toast.info)(message)
+        from Imervue.gui.toast import ToastWidget
+        if self._canvas_toast is None:
+            self._canvas_toast = ToastWidget(canvas)
+        self._canvas_toast.show_message(message, level)
 
     def _save_annotation(self) -> None:
         """Bake annotations into the image and save back to the source file."""
@@ -1003,11 +1022,6 @@ class DevelopPanel(QWidget):
                 "warning")
             return
 
-        self._toast(
-            language_wrapper.language_word_dict.get(
-                "annotation_saved", "Saved"),
-            "success")
-
         # The recipe adjustments are now baked into the saved file — reset
         # the recipe so they won't be applied again by the viewer.
         self._current = Recipe()
@@ -1026,6 +1040,11 @@ class DevelopPanel(QWidget):
             open_path(main_gui=self._main_gui, path=path)
         except Exception:
             logger.exception("Viewer reload after annotation save failed")
+
+        # Toast AFTER the reload so it isn't torn down with the old canvas.
+        self._toast(
+            language_wrapper.language_word_dict.get("annotation_saved", "Saved"),
+            "success")
 
     # ------------------------------------------------------------------
     # Slider → recipe mapping

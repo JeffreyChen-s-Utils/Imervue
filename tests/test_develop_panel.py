@@ -697,21 +697,27 @@ def test_active_tool_survives_image_switch(panel, real_image):
     assert p._canvas.current_tool() == "mosaic"
 
 
-def test_save_shows_success_toast(panel, real_image):
-    from unittest.mock import MagicMock
+def _spy_toasts(monkeypatch):
+    """Record every (text, level) shown via the canvas ToastWidget."""
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "Imervue.gui.toast.ToastWidget.show_message",
+        lambda self, text, level="info", duration_ms=2500: calls.append((text, level)),
+    )
+    return calls
+
+
+def test_save_shows_success_toast(panel, real_image, monkeypatch):
     p, _ = panel
-    toast = MagicMock()
-    p._main_gui.main_window.toast = toast
+    calls = _spy_toasts(monkeypatch)
     p.bind_to_path(str(real_image))
     p._save_annotation()
-    assert toast.success.called
+    assert any(level == "success" for _text, level in calls)
 
 
 def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
-    from unittest.mock import MagicMock
     p, _ = panel
-    toast = MagicMock()
-    p._main_gui.main_window.toast = toast
+    calls = _spy_toasts(monkeypatch)
     p.bind_to_path(str(real_image))
 
     import Imervue.gui.develop_panel as mod
@@ -721,8 +727,16 @@ def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
 
     monkeypatch.setattr(mod.os, "replace", _boom)
     p._save_annotation()
-    assert toast.warning.called
-    assert not toast.success.called
+    assert any(level == "warning" for _text, level in calls)
+    assert not any(level == "success" for _text, level in calls)
+
+
+def test_toast_is_noop_without_a_canvas(panel, monkeypatch):
+    p, _ = panel
+    calls = _spy_toasts(monkeypatch)
+    p.bind_to_path(None)          # no canvas
+    p._toast("hi", "info")
+    assert calls == []
 
 
 class TestCanvasSplitterSizes:
