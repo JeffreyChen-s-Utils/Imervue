@@ -1481,7 +1481,14 @@ class ImervueMainWindow(QMainWindow):
             for old, new in rename_map.items():
                 self._image_metadata_index.move(old, new)
         old_index = viewer.current_index
-        current_path = (
+        # A deep-zoom load in flight (`_deep_zoom_loading`) has `deep_zoom` still
+        # None, but the user is already committed to that image — treat it as an
+        # active deep-zoom session so a refresh that reorders or drops the image
+        # keeps them in deep zoom instead of stranding a "Loading…" view that the
+        # completion guard then discards.
+        loading_path = getattr(viewer, "_deep_zoom_loading", None)
+        active_deep_zoom = viewer.deep_zoom is not None or bool(loading_path)
+        current_path = loading_path or (
             old_images[old_index]
             if 0 <= old_index < len(old_images) else None
         )
@@ -1513,10 +1520,17 @@ class ImervueMainWindow(QMainWindow):
         if current_path in filtered_images:
             viewer.current_index = filtered_images.index(current_path)
             self.refresh_list_view()
+            # The image is unchanged but the list length may have crossed the
+            # filmstrip threshold (1 <-> many), which changes the bottom band the
+            # fit letterboxes above. Re-fit so the picture doesn't open / stay at
+            # the wrong size with the strip overlapping it. A no-op once the fit
+            # is already correct or the user has taken zoom/pan control.
+            if active_deep_zoom:
+                viewer._schedule_settle_refit()
             viewer.update()
             return
 
-        if viewer.deep_zoom is not None and filtered_images:
+        if active_deep_zoom and filtered_images:
             viewer.current_index = min(old_index, len(filtered_images) - 1)
             viewer._clear_deep_zoom()
             viewer.tile_grid_mode = False

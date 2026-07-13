@@ -3,6 +3,8 @@
 ``save`` / ``restore`` remember each image's zoom + offsets so paging back
 to a previously-viewed image returns to where the user left it.
 ``jump_to_random`` powers the X-key "show me a random photo" shortcut.
+``resolve_loaded_index`` maps a just-finished deep-zoom load back to its model
+row so list churn during the load can't strand the image.
 """
 
 from __future__ import annotations
@@ -13,6 +15,30 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 _DEFAULT_ZOOM = 1.0
+
+
+def resolve_loaded_index(images: list[str], current_index: int,
+                         path: str) -> int | None:
+    """Model row to display a just-finished deep-zoom *path* at, or ``None``.
+
+    The completion handlers already established *path* is the wanted load (the
+    request id and ``_deep_zoom_loading`` both matched); this only maps it back
+    to a row. The async folder scan re-sorting, a filter change, or a
+    watch-folder refresh can reorder ``model.images`` between the click and the
+    load finishing, so ``current_index`` may no longer point at *path*. Prefer
+    that index when it still does (no lookup); otherwise re-locate *path* rather
+    than dropping the finished image on the tile wall — the "clicking an image
+    doesn't enter deep zoom" report. Return ``None`` only when *path* has
+    genuinely left the folder, the one case where discarding the load is right.
+    """
+    if not images:
+        return None
+    if 0 <= current_index < len(images) and images[current_index] == path:
+        return current_index
+    try:
+        return images.index(path)
+    except ValueError:
+        return None
 
 
 def _current_base_dims(view: GPUImageView) -> tuple[int, int] | None:
