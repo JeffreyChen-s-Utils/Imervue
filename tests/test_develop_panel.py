@@ -739,6 +739,33 @@ def test_toast_is_noop_without_a_canvas(panel, monkeypatch):
     assert calls == []
 
 
+class TestCanvasContextMenu:
+    def test_rebind_target_after_delete(self):
+        from Imervue.gui.develop_panel import _rebind_target_after_delete
+        assert _rebind_target_after_delete(["a", "b", "c"], 1) == "b"
+        assert _rebind_target_after_delete(["a"], 0) == "a"
+
+    def test_rebind_target_none_when_empty_or_out_of_range(self):
+        from Imervue.gui.develop_panel import _rebind_target_after_delete
+        assert _rebind_target_after_delete([], 0) is None
+        assert _rebind_target_after_delete(["a", "b"], 5) is None
+        assert _rebind_target_after_delete(["a", "b"], -1) is None
+
+    def test_menu_has_save_navigate_and_delete(self, panel, real_image):
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        menu = p._build_canvas_menu()
+        texts = [a.text() for a in menu.actions() if a.text()]
+        assert len(texts) == 4          # save, previous, next, delete
+        menu.setParent(None)
+        menu.deleteLater()
+
+    def test_show_menu_is_noop_without_a_bound_image(self, panel):
+        p, _ = panel
+        p.bind_to_path(None)
+        p._show_canvas_menu(None)       # must not raise / exec
+
+
 class TestCanvasSplitterSizes:
     """The centre canvas must get the width left over after the side panels."""
 

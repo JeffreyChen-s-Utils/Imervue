@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -61,6 +62,18 @@ _RIGHT_PANEL_WIDTH = 260
 # Floor for the centre canvas so it never collapses to nothing on a narrow
 # window — matches the AnnotationCanvas minimum.
 _MIN_CANVAS_WIDTH = 400
+
+
+def _rebind_target_after_delete(images: list[str], current_index: int) -> str | None:
+    """Image to rebind the Modify canvas to after deleting the current one.
+
+    ``delete_current_image`` already advanced ``current_index`` onto the next
+    surviving image; return it, or ``None`` when the folder is now empty so the
+    caller clears the canvas.
+    """
+    if images and 0 <= current_index < len(images):
+        return images[current_index]
+    return None
 
 
 def _canvas_splitter_sizes(
@@ -650,6 +663,8 @@ class DevelopPanel(QWidget):
         self._canvas.navigate_image.connect(self._on_navigate_image)
         # Ctrl+S saves (with a toast), matching the Save button.
         self._canvas.save_requested.connect(self._save_annotation)
+        # Right-click → image operations (save / navigate / delete).
+        self._canvas.context_menu_requested.connect(self._show_canvas_menu)
 
         # Insert the canvas into the modify splitter (index 1).
         splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
@@ -714,6 +729,8 @@ class DevelopPanel(QWidget):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
             with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.save_requested.disconnect(self._save_annotation)
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._canvas.context_menu_requested.disconnect(self._show_canvas_menu)
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
             with contextlib.suppress(Exception):
@@ -972,6 +989,53 @@ class DevelopPanel(QWidget):
     # ------------------------------------------------------------------
     # Save annotation
     # ------------------------------------------------------------------
+
+    def _build_canvas_menu(self) -> QMenu:
+        """Build the right-click image menu (save / navigate / delete)."""
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self._canvas)
+        menu.addAction(
+            lang.get("annotation_save", "Save"), self._save_annotation)
+        menu.addAction(
+            lang.get("right_click_menu_previous_image", "Previous Image"),
+            lambda: self._on_navigate_image(-1))
+        menu.addAction(
+            lang.get("right_click_menu_next_image", "Next Image"),
+            lambda: self._on_navigate_image(1))
+        menu.addSeparator()
+        menu.addAction(
+            lang.get("right_click_menu_delete_current", "Delete Current Image"),
+            self._delete_current_image)
+        return menu
+
+    def _show_canvas_menu(self, global_pos) -> None:
+        """Pop up the right-click image menu at *global_pos*."""
+        if self._canvas is None or self._canvas_source_path is None:
+            return
+        self._build_canvas_menu().exec(global_pos)
+
+    def _delete_current_image(self) -> None:
+        """Soft-delete the current image (undoable) and rebind to the next.
+
+        Reuses the viewer's delete so the undo stack / plugin hooks / recycle
+        flow are identical to deleting from the browse view. A GL context is
+        made current first because the viewer is hidden on the Modify tab.
+        """
+        from Imervue.gpu_image_view.actions.delete import delete_current_image
+        viewer = self._main_gui
+        images = list(getattr(viewer.model, "images", []) or [])
+        if not (0 <= viewer.current_index < len(images)):
+            return
+        with contextlib.suppress(Exception):
+            viewer.makeCurrent()
+        try:
+            delete_current_image(viewer)
+        finally:
+            with contextlib.suppress(Exception):
+                viewer.doneCurrent()
+        target = _rebind_target_after_delete(
+            list(viewer.model.images), viewer.current_index)
+        self.bind_to_path(target)
 
     def _toast(self, message: str, level: str = "info") -> None:
         """Show a status toast on the (visible) Modify canvas.

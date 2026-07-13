@@ -229,6 +229,7 @@ class AnnotationCanvas(QWidget):
     # The int argument is the direction: -1 for previous, +1 for next.
     navigate_image = Signal(int)
     save_requested = Signal()
+    context_menu_requested = Signal(object)   # global QPoint
 
     def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
         super().__init__(parent)
@@ -1539,6 +1540,15 @@ class AnnotationCanvas(QWidget):
             self._undo_stack.redo()
             return True
         return False
+
+    def contextMenuEvent(self, event):
+        """Right-click → let the host (DevelopPanel) show its image menu.
+
+        The canvas only draws with the left button, so the right button is free
+        for a context menu. The standalone dialog leaves the signal unconnected,
+        so nothing pops up there."""
+        self.context_menu_requested.emit(event.globalPos())
+        event.accept()
 
     def keyPressEvent(self, event):
         key = event.key()
