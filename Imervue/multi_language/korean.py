@@ -490,6 +490,7 @@ korean_word_dict = {
     "annotation_tool_text": "텍스트",
     "annotation_tool_mosaic": "모자이크",
     "annotation_tool_blur": "흐림",
+    "annotation_save_failed": "저장 실패",
     "annotation_mosaic_prompt_title": "모자이크 강도",
     "annotation_mosaic_prompt_label": "블록 크기(픽셀):",
     "annotation_blur_prompt_title": "흐림 강도",

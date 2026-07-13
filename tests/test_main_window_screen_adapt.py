@@ -8,6 +8,8 @@ real second monitor is needed.
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from PySide6.QtCore import QRect
 
 from Imervue.Imervue_main_window import ImervueMainWindow
@@ -45,6 +47,7 @@ class _StubMainWindow:
     _adapt_to_current_screen = ImervueMainWindow._adapt_to_current_screen
     _rescale_window_between_screens = ImervueMainWindow._rescale_window_between_screens
     _refit_deep_zoom_image = ImervueMainWindow._refit_deep_zoom_image
+    _refit_current_view_for_screen = ImervueMainWindow._refit_current_view_for_screen
 
     def __init__(self, *, screen_rect: QRect | None = None,
                  geometry: QRect | None = None, frame_extra: int = 0,
@@ -58,6 +61,10 @@ class _StubMainWindow:
         self._last_screen_avail = None
         self.viewer = _FakeViewer()
         self.set_geometry_calls: list[tuple[int, int, int, int]] = []
+        # Browse tab active, no modify canvas → the screen-refit path only
+        # touches the deep-zoom viewer, matching these tests' expectations.
+        self.modify_panel = SimpleNamespace(_canvas=None)
+        self._main_tabs = SimpleNamespace(currentIndex=lambda: 0)
 
     def screen(self):
         return self._screen

@@ -140,10 +140,14 @@ class TestCoordinateMapping:
             assert back == (ix, iy)
 
     def test_image_centered_in_widget(self, canvas):
-        # 200x100 base in 400x200 widget → scale 2.0, fits exactly horizontally
+        # 200x100 base; the canvas floors at 400x300 (its minimum), so the
+        # native-size (capped, never upscaled) image is a 200x100 rect centred
+        # at offset (100, 100).
         rect = canvas._display_rect()
-        assert rect.width() == pytest.approx(400.0)
-        assert rect.height() == pytest.approx(200.0)
+        assert rect.width() == pytest.approx(200.0)
+        assert rect.height() == pytest.approx(100.0)
+        assert rect.x() == pytest.approx(100.0)
+        assert rect.y() == pytest.approx(100.0)
 
     def test_screen_to_image_handles_negative_input(self, canvas):
         # Clicking outside the displayed image (e.g. above-left of the
@@ -152,6 +156,46 @@ class TestCoordinateMapping:
         result = canvas._screen_to_image(-50, -10)
         assert isinstance(result[0], int)
         assert isinstance(result[1], int)
+
+
+class TestKeyboardShortcuts:
+    """Ctrl+S / Ctrl+Z / Ctrl+Y reach the inline canvas (no menu bar there)."""
+
+    def test_ctrl_s_emits_save_requested(self, canvas):
+        from PySide6.QtCore import Qt
+        fired: list[bool] = []
+        canvas.save_requested.connect(lambda: fired.append(True))
+        assert canvas._handle_ctrl_key(Qt.Key.Key_S, shift=False) is True
+        assert fired == [True]
+
+    def test_ctrl_z_undoes_last_annotation(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        assert len(canvas._annotations) == 1
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False) is True
+        assert len(canvas._annotations) == 0
+
+    def test_ctrl_shift_z_redoes(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False)
+        assert len(canvas._annotations) == 0
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=True) is True
+        assert len(canvas._annotations) == 1
+
+    def test_ctrl_y_redoes(self, canvas):
+        from PySide6.QtCore import Qt
+        ann = Annotation(kind="rect", points=[(0, 0), (10, 10)])
+        canvas._undo_stack.push(_AddAnnotationCommand(canvas, ann))
+        canvas._handle_ctrl_key(Qt.Key.Key_Z, shift=False)
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Y, shift=False) is True
+        assert len(canvas._annotations) == 1
+
+    def test_unhandled_ctrl_key_returns_false(self, canvas):
+        from PySide6.QtCore import Qt
+        assert canvas._handle_ctrl_key(Qt.Key.Key_Q, shift=False) is False
 
 
 # ---------------------------------------------------------------------------

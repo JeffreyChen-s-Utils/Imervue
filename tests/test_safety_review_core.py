@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -219,6 +220,41 @@ def test_region_mask_precise_without_mask_falls_back_to_ellipse():
     mask = _detection._region_mask(20, 20, _constants.SHAPE_PRECISE, None)
     assert mask.getpixel((10, 10)) == 255
     assert mask.getpixel((0, 0)) == 0
+
+
+def test_ellipse_mask_inset_pulls_in_from_the_edges():
+    # The default inset ellipse no longer reaches the box edge midpoints — the
+    # region a full inscribed ellipse would still cover — while the centre stays
+    # censored. This is what makes "Ellipse (tighter)" actually tighter.
+    mask = _detection._ellipse_mask(100, 100)
+    assert mask.getpixel((50, 50)) == 255    # centre still covered
+    assert mask.getpixel((50, 2)) == 0       # near the top edge → now clear
+    assert mask.getpixel((2, 50)) == 0       # near the left edge → now clear
+
+
+def test_ellipse_mask_covers_less_area_than_the_full_inscribed_ellipse():
+    inset = int(np.asarray(_detection._ellipse_mask(100, 100)).sum())
+    full = int(np.asarray(_detection._ellipse_mask(100, 100, cover=1.0)).sum())
+    assert 0 < inset < full
+
+
+def test_ellipse_mask_cover_is_clamped_and_centre_always_set():
+    # cover above 1 clamps to the full inscribed ellipse; a degenerate cover
+    # clamps up to the 0.05 floor rather than producing an empty mask.
+    assert np.asarray(_detection._ellipse_mask(40, 40, cover=5.0)).sum() > 0
+    assert np.asarray(_detection._ellipse_mask(40, 40, cover=0.0)).sum() > 0
+
+
+def test_ellipse_mask_one_pixel_box_is_filled_solid():
+    # A 1-px region can't inscribe an ellipse → the guard fills it solid so the
+    # pixel is still censored instead of being left clear.
+    assert _detection._ellipse_mask(1, 1).getpixel((0, 0)) == 255
+
+
+def test_ellipse_mask_one_pixel_tall_strip_is_filled_solid():
+    mask = _detection._ellipse_mask(100, 1)
+    assert mask.getpixel((0, 0)) == 255
+    assert mask.getpixel((99, 0)) == 255
 
 
 def test_censor_ellipse_keeps_box_corners_but_censors_centre():

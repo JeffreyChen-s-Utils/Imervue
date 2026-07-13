@@ -51,6 +51,10 @@ import contextlib
 # 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
 _SCREEN_ADAPT_DEBOUNCE_MS = 300
 
+# Poll interval while waiting for the async folder scan to surface the image a
+# startup deep-zoom restore is targeting (bounded by the retry count).
+_DEEP_ZOOM_RESTORE_RETRY_MS = 50
+
 
 def _safe_submenus_of(parent) -> list:
     """Return live submenus reachable from ``parent`` (a QMenuBar or
@@ -368,6 +372,11 @@ class ImervueMainWindow(QMainWindow):
         # 切換分頁時把 viewer 移到正確的位置
         self._imervue_viewer_row = viewer_row
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
+        # On the Modify / Paint tabs, Left/Right should page images (like
+        # DeepZoom) instead of the tab bar's default "switch tab". Filter the
+        # tab bar's key events — it is the widget that holds focus after a tab
+        # click and consumes the arrows.
+        self._main_tabs.tabBar().installEventFilter(self)
 
         # ===== 狀態列 =====
         self._status_bar = QStatusBar()
@@ -465,9 +474,15 @@ class ImervueMainWindow(QMainWindow):
         self._screen_adapt_timer.setInterval(_SCREEN_ADAPT_DEBOUNCE_MS)
         self._screen_adapt_timer.timeout.connect(self._adapt_to_current_screen)
         self._last_screen_avail: tuple[int, int, int, int] | None = None
+        self._screen_signal_connected = False
 
         # ===== 還原視窗位置與大小（多螢幕適配） =====
         self._restore_window_geometry()
+        # Restoring geometry can jump the window from the primary screen it was
+        # born on to a different monitor. Listen for that (and later drags) so
+        # the view is re-fitted to the actual screen instead of keeping the
+        # first screen's size. Deferred so windowHandle() exists.
+        QTimer.singleShot(0, self._connect_screen_change_signal)
 
         # ===== Debug =====
         # Debug 模式下自動關閉
@@ -564,6 +579,42 @@ class ImervueMainWindow(QMainWindow):
             self.paint_workspace.load_image(arr)
         except (OSError, ValueError):
             self.paint_workspace.load_image(None)
+
+    def eventFilter(self, obj, event):
+        """Route Left/Right on the Modify / Paint tab bars to image nav.
+
+        On those tabs the default tab-switch is unwanted — the user wants the
+        arrows to page images like the browse view. Every other tab / key
+        falls through to Qt's default handling.
+        """
+        from PySide6.QtCore import QEvent, Qt
+        if (obj is self._main_tabs.tabBar()
+                and event.type() == QEvent.Type.KeyPress):
+            from Imervue.gui.main_tab_nav import tab_arrow_action
+            action = tab_arrow_action(
+                self._main_tabs.currentIndex(), event.key(),
+                Qt.Key.Key_Left, Qt.Key.Key_Right,
+            )
+            if action is not None:
+                target, direction = action
+                if target == "modify":
+                    self.modify_panel.navigate_image(direction)
+                else:
+                    self._navigate_paint_image(direction)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _navigate_paint_image(self, direction: int) -> None:
+        """Page the viewer's current image and reload it into the paint canvas."""
+        from Imervue.gpu_image_view.actions.select import (
+            switch_to_next_image,
+            switch_to_previous_image,
+        )
+        if direction > 0:
+            switch_to_next_image(main_gui=self.viewer)
+        else:
+            switch_to_previous_image(main_gui=self.viewer)
+        self._bind_paint_workspace_to_current_image()
 
     # ==========================
     # 選單
@@ -1309,6 +1360,10 @@ class ImervueMainWindow(QMainWindow):
             "scroll": scroll,
             "selected": list(getattr(viewer, "selected_tiles", set())),
             "current": viewer._current_path() if hasattr(viewer, "_current_path") else "",
+            "deep_zoom": bool(
+                getattr(viewer, "deep_zoom", None) is not None
+                and not getattr(viewer, "tile_grid_mode", False)
+            ),
         }
         user_setting_dict["folder_view_sessions"] = self._folder_view_sessions
         write_user_setting()
@@ -1333,6 +1388,32 @@ class ImervueMainWindow(QMainWindow):
             QTimer.singleShot(0, lambda: self.image_list_view.verticalScrollBar().setValue(scroll))
         elif hasattr(self.viewer, "scroll_y"):
             self.viewer.scroll_y = scroll
+
+    def _restore_deep_zoom_if_saved(self, state: dict, _retries: int = 60) -> None:
+        """Re-enter deep zoom on the remembered image after a startup restore.
+
+        The folder scan fills ``model.images`` asynchronously, so the target
+        may not exist yet on the first pass; retry (bounded) until it lands,
+        then open it in deep zoom. Running after the scan also means the window
+        has reached its restored size, so the fit is correct. Startup-only (not
+        folder navigation), so browsing the tree still lands on the tile wall.
+        """
+        from Imervue.sessions.folder_session import (
+            deep_zoom_restore_target,
+            should_retry_deep_zoom_restore,
+        )
+        viewer = self.viewer
+        target = deep_zoom_restore_target(state, viewer.model.images)
+        if target is not None:
+            viewer.current_index = viewer.model.images.index(target)
+            viewer.tile_grid_mode = False
+            viewer.load_deep_zoom_image(target)
+            return
+        if _retries > 0 and should_retry_deep_zoom_restore(state, viewer.model.images):
+            QTimer.singleShot(
+                _DEEP_ZOOM_RESTORE_RETRY_MS,
+                lambda: self._restore_deep_zoom_if_saved(state, _retries - 1),
+            )
 
     def _handle_active_folder_missing(self, folder: str) -> None:
         """Reset viewer chrome when the folder currently being browsed is gone."""
@@ -1543,6 +1624,9 @@ class ImervueMainWindow(QMainWindow):
         )
         self._refresh_tag_filter_options()
         self._restore_folder_session(folder)
+        # Startup-only: reopen the last deep-zoom image if the session recorded
+        # one, so relaunching returns to where the user left off.
+        self._restore_deep_zoom_if_saved(self._folder_view_sessions.get(folder) or {})
         self.filename_label.setText(
             language_wrapper.language_word_dict.get(
                 "main_window_current_folder_format"
@@ -1822,13 +1906,45 @@ class ImervueMainWindow(QMainWindow):
         if timer is not None:
             timer.start()
 
+    def _connect_screen_change_signal(self) -> None:
+        """Subscribe to the window's screen-changed signal exactly once."""
+        if self._screen_signal_connected:
+            return
+        handle = self.windowHandle()
+        if handle is None:
+            return
+        handle.screenChanged.connect(self._on_screen_changed)
+        self._screen_signal_connected = True
+
+    def _on_screen_changed(self, _screen) -> None:
+        """The window moved to a different physical screen — re-fit the view.
+
+        Fires for the startup jump from the primary screen to the restored
+        screen too, so the first display no longer keeps the primary screen's
+        size / DPI. The frame rescale stays with the debounced ``moveEvent``
+        path; here we only re-fit what's shown.
+        """
+        self._refit_current_view_for_screen()
+
+    def _refit_current_view_for_screen(self) -> None:
+        """Re-fit the deep-zoom viewer and, if active, the Modify canvas."""
+        from Imervue.gui.main_tab_nav import should_refit_modify_canvas
+        self._refit_deep_zoom_image()
+        canvas = getattr(self.modify_panel, "_canvas", None)
+        if should_refit_modify_canvas(
+                self._main_tabs.currentIndex(), canvas is not None):
+            splitter = getattr(self, "_modify_splitter", None)
+            if splitter is not None:
+                self.modify_panel._size_modify_splitter(splitter)
+            QTimer.singleShot(0, canvas.update)
+
     def _adapt_to_current_screen(self) -> None:
         """Debounced ``moveEvent`` handler.
 
         When the window settles on a screen with a different available
         geometry (dragged to another monitor, or the monitor changed
         resolution), rescale the frame to keep its relative footprint and
-        re-fit the deep-zoom image so the whole picture stays visible.
+        re-fit the current view so the whole picture stays visible.
         """
         screen = self.screen()
         if screen is None:
@@ -1841,7 +1957,7 @@ class ImervueMainWindow(QMainWindow):
         # 最大化 / 全螢幕視窗由 OS 自己重排到新螢幕，只需重新 fit 圖片。
         if not (self.isMaximized() or self.isFullScreen()):
             self._rescale_window_between_screens(old_avail, new_avail)
-        self._refit_deep_zoom_image()
+        self._refit_current_view_for_screen()
 
     def _rescale_window_between_screens(self, old_avail, new_avail) -> None:
         """Keep the window's relative size / position on the new screen."""
@@ -1942,6 +2058,12 @@ class ImervueMainWindow(QMainWindow):
     def closeEvent(self, event):
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
+
+        # Snapshot the current folder's view state (incl. whether we're in deep
+        # zoom) BEFORE any teardown clears the viewer, so relaunching can return
+        # to where the user left off instead of always to the tile wall.
+        with contextlib.suppress(Exception):
+            self._save_current_folder_session()
 
         # --- 斷開分頁切換信號，避免銷毀過程中觸發 ---
         with contextlib.suppress(Exception):

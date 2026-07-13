@@ -673,3 +673,141 @@ class TestAnnotationSave:
         assert not (real_image.parent / (real_image.name + ".tmp")).exists()
         # Recipe untouched because the save never completed.
         assert p._current.brightness == pytest.approx(0.3)
+
+
+def test_navigate_image_delegates_to_on_navigate(panel, monkeypatch):
+    """The public wrapper forwards the direction to the private handler."""
+    p, _ = panel
+    calls = []
+    monkeypatch.setattr(p, "_on_navigate_image", calls.append)
+    p.navigate_image(1)
+    p.navigate_image(-1)
+    assert calls == [1, -1]
+
+
+def test_active_tool_survives_image_switch(panel, real_image):
+    """A fresh canvas (image switch) keeps the active tool, so mosaic/blur/etc.
+    stay usable instead of silently reverting to select."""
+    p, _ = panel
+    p.bind_to_path(str(real_image))
+    p._set_tool("mosaic")
+    assert p._canvas.current_tool() == "mosaic"
+    # Re-creating the canvas is exactly what an image switch does.
+    p._create_canvas(str(real_image))
+    assert p._canvas.current_tool() == "mosaic"
+
+
+def _spy_toasts(monkeypatch):
+    """Record every (text, level) shown via the canvas ToastWidget."""
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "Imervue.gui.toast.ToastWidget.show_message",
+        lambda self, text, level="info", duration_ms=2500: calls.append((text, level)),
+    )
+    return calls
+
+
+def test_save_shows_success_toast(panel, real_image, monkeypatch):
+    p, _ = panel
+    calls = _spy_toasts(monkeypatch)
+    p.bind_to_path(str(real_image))
+    p._save_annotation()
+    assert any(level == "success" for _text, level in calls)
+
+
+def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
+    p, _ = panel
+    calls = _spy_toasts(monkeypatch)
+    p.bind_to_path(str(real_image))
+
+    import Imervue.gui.develop_panel as mod
+
+    def _boom(_src, _dst):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(mod.os, "replace", _boom)
+    p._save_annotation()
+    assert any(level == "warning" for _text, level in calls)
+    assert not any(level == "success" for _text, level in calls)
+
+
+def test_toast_is_noop_without_a_canvas(panel, monkeypatch):
+    p, _ = panel
+    calls = _spy_toasts(monkeypatch)
+    p.bind_to_path(None)          # no canvas
+    p._toast("hi", "info")
+    assert calls == []
+
+
+class TestCanvasContextMenu:
+    def test_rebind_target_after_delete(self):
+        from Imervue.gui.develop_panel import _rebind_target_after_delete
+        assert _rebind_target_after_delete(["a", "b", "c"], 1) == "b"
+        assert _rebind_target_after_delete(["a"], 0) == "a"
+
+    def test_rebind_target_none_when_empty_or_out_of_range(self):
+        from Imervue.gui.develop_panel import _rebind_target_after_delete
+        assert _rebind_target_after_delete([], 0) is None
+        assert _rebind_target_after_delete(["a", "b"], 5) is None
+        assert _rebind_target_after_delete(["a", "b"], -1) is None
+
+    def test_menu_has_save_navigate_and_delete(self, panel, real_image):
+        p, _ = panel
+        p.bind_to_path(str(real_image))
+        menu = p._build_canvas_menu()
+        texts = [a.text() for a in menu.actions() if a.text()]
+        assert len(texts) == 4          # save, previous, next, delete
+        menu.setParent(None)
+        menu.deleteLater()
+
+    def test_show_menu_is_noop_without_a_bound_image(self, panel):
+        p, _ = panel
+        p.bind_to_path(None)
+        p._show_canvas_menu(None)       # must not raise / exec
+
+
+class TestCanvasSplitterSizes:
+    """The centre canvas must get the width left over after the side panels."""
+
+    def test_canvas_gets_the_leftover_width(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        assert _canvas_splitter_sizes(1200, 80, 260) == [80, 860, 260]
+
+    def test_canvas_floored_on_a_narrow_window(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        # Side panels alone exceed the width → canvas clamps to its floor.
+        assert _canvas_splitter_sizes(500, 80, 260, min_canvas=400) == [80, 400, 260]
+
+    def test_negative_side_widths_are_clamped_to_zero(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        sizes = _canvas_splitter_sizes(1000, -10, -20)
+        assert sizes[0] == 0
+        assert sizes[2] == 0
+        assert sizes[1] == 1000
+
+    def test_canvas_is_the_widest_pane(self):
+        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        left, canvas, right = _canvas_splitter_sizes(1600, 80, 260)
+        assert canvas > left
+        assert canvas > right
+
+    def test_size_modify_splitter_gives_canvas_the_majority(self, panel, qapp):
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QSplitter, QWidget
+        p, _ = panel
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        left = QWidget()
+        left.setFixedWidth(80)
+        splitter.addWidget(left)
+        splitter.addWidget(QWidget())            # centre canvas stand-in
+        right = QWidget()
+        right.setMinimumWidth(260)
+        splitter.addWidget(right)
+        splitter.resize(1200, 700)
+
+        p._size_modify_splitter(splitter)
+
+        sizes = splitter.sizes()
+        assert sizes[1] == max(sizes)            # canvas is the widest pane
+        splitter.setParent(None)
+        splitter.deleteLater()
