@@ -36,4 +36,4 @@ def test_exact_fit_is_one():
     (100, 100, 100, 0),
 ])
 def test_degenerate_dimensions_return_zero(bw, bh, cw, ch):
-    assert _fit_display_scale(bw, bh, cw, ch) == 0.0
+    assert _fit_display_scale(bw, bh, cw, ch) == pytest.approx(0.0)
