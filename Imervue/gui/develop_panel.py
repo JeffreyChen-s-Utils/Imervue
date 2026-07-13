@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -54,6 +55,41 @@ if TYPE_CHECKING:
     from Imervue.gui.annotation_dialog import AnnotationCanvas
 
 logger = logging.getLogger("Imervue.develop_panel")
+
+# Preferred width of the right properties panel; also its minimum (see
+# build_right_panel). The canvas takes whatever width is left.
+_RIGHT_PANEL_WIDTH = 260
+# Floor for the centre canvas so it never collapses to nothing on a narrow
+# window — matches the AnnotationCanvas minimum.
+_MIN_CANVAS_WIDTH = 400
+
+
+def _rebind_target_after_delete(images: list[str], current_index: int) -> str | None:
+    """Image to rebind the Modify canvas to after deleting the current one.
+
+    ``delete_current_image`` already advanced ``current_index`` onto the next
+    surviving image; return it, or ``None`` when the folder is now empty so the
+    caller clears the canvas.
+    """
+    if images and 0 <= current_index < len(images):
+        return images[current_index]
+    return None
+
+
+def _canvas_splitter_sizes(
+    total: int, left: int, right: int, min_canvas: int = _MIN_CANVAS_WIDTH,
+) -> list[int]:
+    """Modify-splitter pane sizes ``[left, canvas, right]``.
+
+    Gives the centre annotation canvas all the width left over after the fixed
+    tool strip and the properties panel, floored at *min_canvas*. Without this
+    the canvas — inserted between two panes that already shared the full
+    width — is squeezed to its minimum and the image opens tiny.
+    """
+    left = max(0, left)
+    right = max(0, right)
+    canvas = max(min_canvas, total - left - right)
+    return [left, canvas, right]
 
 
 class DevelopPanel(QWidget):
@@ -133,6 +169,8 @@ class DevelopPanel(QWidget):
         self._canvas: AnnotationCanvas | None = None
         self._canvas_undo_stack = QUndoStack(self)
         self._canvas_source_path: str | None = None
+        # Save-feedback toast, parented to (and freed with) the current canvas.
+        self._canvas_toast = None
 
         # Drawing state (mirrored by the right-panel controls)
         self._draw_color: tuple[int, int, int, int] = (255, 0, 0, 255)
@@ -469,7 +507,7 @@ class DevelopPanel(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(panel)
-        scroll.setMinimumWidth(260)
+        scroll.setMinimumWidth(_RIGHT_PANEL_WIDTH)
         parent_splitter.addWidget(scroll)
 
     # ------------------------------------------------------------------
@@ -616,19 +654,58 @@ class DevelopPanel(QWidget):
         self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
         self._canvas_source_path = path
 
-        # Apply current drawing state to the new canvas
-        self._canvas.set_color(self._draw_color)
-        self._canvas.set_stroke_width(self._width_slider.value())
-        self._canvas.set_brush_opacity(self._opacity_slider.value())
+        # Re-apply the full drawing state so the active tool (mosaic, blur, …),
+        # brush, colour, stroke, opacity and font keep working after an image
+        # switch instead of silently resetting to the fresh canvas's defaults.
+        self._apply_state_to_canvas()
 
         # Allow Left/Right arrow keys to switch images
         self._canvas.navigate_image.connect(self._on_navigate_image)
+        # Ctrl+S saves (with a toast), matching the Save button.
+        self._canvas.save_requested.connect(self._save_annotation)
+        # Right-click → image operations (save / navigate / delete).
+        self._canvas.context_menu_requested.connect(self._show_canvas_menu)
 
         # Insert the canvas into the modify splitter (index 1).
         splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
         if splitter is not None:
             splitter.insertWidget(1, self._canvas)
-            splitter.setStretchFactor(1, 1)
+            splitter.setStretchFactor(0, 0)   # fixed tool strip
+            splitter.setStretchFactor(1, 1)    # canvas takes the slack
+            splitter.setStretchFactor(2, 0)    # properties panel
+            self._size_modify_splitter(splitter)
+
+    def _size_modify_splitter(
+            self, splitter, _retries: int = 8, _last_total: int = -1) -> None:
+        """Give the centre canvas the leftover width so the image isn't tiny.
+
+        The right panel grabbed the full non-tool-strip width while the
+        splitter had only two panes, so the freshly-inserted canvas would keep
+        just its minimum. Entering Modify right after startup can also read an
+        intermediate width before the window/tab has settled, locking in a
+        wrong size that no later resize corrects. So re-run on the next turn
+        until the width stops changing (bounded), and no-op if the splitter was
+        destroyed before a deferred pass ran.
+        """
+        try:
+            if splitter.count() < 3:
+                return
+            total = splitter.width()
+        except RuntimeError:
+            return  # splitter destroyed before this deferred pass
+        if total <= 0:
+            if _retries > 0:
+                QTimer.singleShot(
+                    0, lambda: self._size_modify_splitter(splitter, _retries - 1))
+            return
+        left = splitter.widget(0).sizeHint().width()
+        right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
+        splitter.setSizes(_canvas_splitter_sizes(total, left, right))
+        # Layout may still be settling — re-run until the width is stable so an
+        # intermediate startup width isn't locked in.
+        if total != _last_total and _retries > 0:
+            QTimer.singleShot(
+                0, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
 
     def _cleanup_old_canvas(self) -> None:
         """Disconnect signals, clear undo stack, and detach the old canvas.
@@ -650,6 +727,10 @@ class DevelopPanel(QWidget):
             # Disconnect signals we connected
             with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._canvas.save_requested.disconnect(self._save_annotation)
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._canvas.context_menu_requested.disconnect(self._show_canvas_menu)
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
             with contextlib.suppress(Exception):
@@ -662,6 +743,9 @@ class DevelopPanel(QWidget):
             self._canvas.hide()
             self._canvas.setParent(None)
             self._canvas = None
+            # The toast was a child of the now-detached canvas — drop the stale
+            # reference so the next one is re-created on the new canvas.
+            self._canvas_toast = None
 
     def _destroy_canvas(self) -> None:
         self._debounce.stop()
@@ -692,6 +776,42 @@ class DevelopPanel(QWidget):
     # ------------------------------------------------------------------
     # Left-panel tool selection
     # ------------------------------------------------------------------
+
+    def _current_tool(self) -> str:
+        """The annotation tool whose button is checked (default ``select``)."""
+        for key, btn in self._tool_buttons.items():
+            if btn.isChecked():
+                return key
+        return "select"
+
+    def _current_brush(self) -> str:
+        """The freehand brush whose button is checked (default ``pen``)."""
+        for key, btn in self._brush_buttons.items():
+            if btn.isChecked():
+                return key
+        return "pen"
+
+    def _apply_state_to_canvas(self) -> None:
+        """Push the full current drawing state onto the live canvas.
+
+        Called after a fresh canvas is created (image switch / reload) so the
+        active tool, brush, colour, stroke, opacity and font survive instead of
+        resetting to the new canvas's defaults.
+        """
+        canvas = self._canvas
+        if canvas is None:
+            return
+        canvas.set_color(self._draw_color)
+        canvas.set_stroke_width(self._width_slider.value())
+        canvas.set_brush_opacity(self._opacity_slider.value())
+        canvas.set_brush_type(self._current_brush())
+        canvas.set_font_family(self._font_combo.currentFont().family())
+        canvas.set_font_size(self._font_size_spin.value())
+        tool = self._current_tool()
+        canvas.set_tool(tool)
+        if tool == "crop":
+            rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
+            canvas.set_crop_ratio(rw, rh)
 
     def _set_tool(self, tool: str) -> None:
         # Update button checked state
@@ -840,6 +960,14 @@ class DevelopPanel(QWidget):
     # Image navigation (Left / Right arrow in canvas)
     # ------------------------------------------------------------------
 
+    def navigate_image(self, direction: int) -> None:
+        """Public image-nav entry point (main-window tab-bar arrow routing).
+
+        Thin wrapper over :meth:`_on_navigate_image` so callers outside the
+        canvas signal wiring don't reach into a private method.
+        """
+        self._on_navigate_image(direction)
+
     def _on_navigate_image(self, direction: int) -> None:
         """Switch to prev/next image via the viewer, then rebind the canvas."""
         from Imervue.gpu_image_view.actions.select import (
@@ -861,6 +989,69 @@ class DevelopPanel(QWidget):
     # ------------------------------------------------------------------
     # Save annotation
     # ------------------------------------------------------------------
+
+    def _build_canvas_menu(self) -> QMenu:
+        """Build the right-click image menu (save / navigate / delete)."""
+        lang = language_wrapper.language_word_dict
+        menu = QMenu(self._canvas)
+        menu.addAction(
+            lang.get("annotation_save", "Save"), self._save_annotation)
+        menu.addAction(
+            lang.get("right_click_menu_previous_image", "Previous Image"),
+            lambda: self._on_navigate_image(-1))
+        menu.addAction(
+            lang.get("right_click_menu_next_image", "Next Image"),
+            lambda: self._on_navigate_image(1))
+        menu.addSeparator()
+        menu.addAction(
+            lang.get("right_click_menu_delete_current", "Delete Current Image"),
+            self._delete_current_image)
+        return menu
+
+    def _show_canvas_menu(self, global_pos) -> None:
+        """Pop up the right-click image menu at *global_pos*."""
+        if self._canvas is None or self._canvas_source_path is None:
+            return
+        self._build_canvas_menu().exec(global_pos)
+
+    def _delete_current_image(self) -> None:
+        """Soft-delete the current image (undoable) and rebind to the next.
+
+        Reuses the viewer's delete so the undo stack / plugin hooks / recycle
+        flow are identical to deleting from the browse view. A GL context is
+        made current first because the viewer is hidden on the Modify tab.
+        """
+        from Imervue.gpu_image_view.actions.delete import delete_current_image
+        viewer = self._main_gui
+        images = list(getattr(viewer.model, "images", []) or [])
+        if not (0 <= viewer.current_index < len(images)):
+            return
+        with contextlib.suppress(Exception):
+            viewer.makeCurrent()
+        try:
+            delete_current_image(viewer)
+        finally:
+            with contextlib.suppress(Exception):
+                viewer.doneCurrent()
+        target = _rebind_target_after_delete(
+            list(viewer.model.images), viewer.current_index)
+        self.bind_to_path(target)
+
+    def _toast(self, message: str, level: str = "info") -> None:
+        """Show a status toast on the (visible) Modify canvas.
+
+        The shared window toast is parented to the viewer, which is hidden
+        while the Modify tab is active, so its notifications wouldn't be seen
+        here. Parent our own toast to the canvas instead — a plain widget on
+        the active tab — so save feedback is actually visible.
+        """
+        canvas = self._canvas
+        if canvas is None:
+            return
+        from Imervue.gui.toast import ToastWidget
+        if self._canvas_toast is None:
+            self._canvas_toast = ToastWidget(canvas)
+        self._canvas_toast.show_message(message, level)
 
     def _save_annotation(self) -> None:
         """Bake annotations into the image and save back to the source file."""
@@ -889,6 +1080,10 @@ class DevelopPanel(QWidget):
             logger.exception("Failed to save annotation to %s", path)
             if tmp.exists():
                 tmp.unlink(missing_ok=True)
+            self._toast(
+                language_wrapper.language_word_dict.get(
+                    "annotation_save_failed", "Save failed"),
+                "warning")
             return
 
         # The recipe adjustments are now baked into the saved file — reset
@@ -909,6 +1104,11 @@ class DevelopPanel(QWidget):
             open_path(main_gui=self._main_gui, path=path)
         except Exception:
             logger.exception("Viewer reload after annotation save failed")
+
+        # Toast AFTER the reload so it isn't torn down with the old canvas.
+        self._toast(
+            language_wrapper.language_word_dict.get("annotation_saved", "Saved"),
+            "success")
 
     # ------------------------------------------------------------------
     # Slider → recipe mapping

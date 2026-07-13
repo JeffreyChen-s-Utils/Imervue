@@ -482,6 +482,7 @@ traditional_chinese_word_dict = {
     "annotation_tool_text": "文字",
     "annotation_tool_mosaic": "馬賽克",
     "annotation_tool_blur": "模糊",
+    "annotation_save_failed": "儲存失敗",
     "annotation_mosaic_prompt_title": "馬賽克強度",
     "annotation_mosaic_prompt_label": "方塊大小（像素）：",
     "annotation_blur_prompt_title": "模糊強度",

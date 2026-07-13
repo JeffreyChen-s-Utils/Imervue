@@ -505,6 +505,7 @@ english_word_dict = {
     "annotation_tool_text": "Text",
     "annotation_tool_mosaic": "Mosaic",
     "annotation_tool_blur": "Blur",
+    "annotation_save_failed": "Save failed",
     "annotation_mosaic_prompt_title": "Mosaic strength",
     "annotation_mosaic_prompt_label": "Block size (pixels):",
     "annotation_blur_prompt_title": "Blur strength",

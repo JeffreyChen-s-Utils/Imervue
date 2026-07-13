@@ -184,6 +184,19 @@ class _ModifyAnnotationCommand(QUndoCommand):
 _HANDLE_SIZE = 8  # pixels (screen space)
 
 
+def _fit_display_scale(bw: int, bh: int, cw: int, ch: int) -> float:
+    """Scale to fit a ``bw×bh`` image into a ``cw×ch`` canvas, capped at 1.0.
+
+    Never upscales — an image smaller than the canvas stays at native size and
+    is centred, matching the deep-zoom fit so the Modify view doesn't blow a
+    small image up to fill the (now full-width) canvas. Returns 0 for a
+    degenerate image / canvas so the caller can skip painting.
+    """
+    if bw <= 0 or bh <= 0 or cw <= 0 or ch <= 0:
+        return 0.0
+    return min(cw / bw, ch / bh, 1.0)
+
+
 def _apply_alpha(rgba: tuple[int, int, int, int], multiplier: float) -> QColor:
     r, g, b, a = rgba
     return QColor(r, g, b, int(a * multiplier))
@@ -215,6 +228,8 @@ class AnnotationCanvas(QWidget):
     # Emitted when the user presses Left/Right arrow to switch images.
     # The int argument is the direction: -1 for previous, +1 for next.
     navigate_image = Signal(int)
+    save_requested = Signal()
+    context_menu_requested = Signal(object)   # global QPoint
 
     def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
         super().__init__(parent)
@@ -419,9 +434,9 @@ class AnnotationCanvas(QWidget):
     def _display_rect(self) -> QRectF:
         bw, bh = self._base.width, self._base.height
         cw, ch = self.width(), self.height()
-        if bw == 0 or bh == 0 or cw == 0 or ch == 0:
+        scale = _fit_display_scale(bw, bh, cw, ch)
+        if scale <= 0:
             return QRectF(0, 0, 0, 0)
-        scale = min(cw / bw, ch / bh)
         dw, dh = bw * scale, bh * scale
         return QRectF((cw - dw) / 2, (ch - dh) / 2, dw, dh)
 
@@ -1506,8 +1521,41 @@ class AnnotationCanvas(QWidget):
 
     # ---------- Keyboard ----------
 
+    def _handle_ctrl_key(self, key: int, shift: bool) -> bool:
+        """Ctrl-modified shortcuts (save / undo / redo). Returns True when
+        consumed.
+
+        The inline Modify panel has no menu bar, so these chords reach the
+        canvas; the host wires ``save_requested`` to its save + toast. In the
+        standalone dialog the Save/Undo/Redo QActions claim the chords first,
+        so this only takes effect where nothing else does.
+        """
+        if key == Qt.Key.Key_S:
+            self.save_requested.emit()
+            return True
+        if key == Qt.Key.Key_Z and not shift:
+            self._undo_stack.undo()
+            return True
+        if key == Qt.Key.Key_Y or (key == Qt.Key.Key_Z and shift):
+            self._undo_stack.redo()
+            return True
+        return False
+
+    def contextMenuEvent(self, event):
+        """Right-click → let the host (DevelopPanel) show its image menu.
+
+        The canvas only draws with the left button, so the right button is free
+        for a context menu. The standalone dialog leaves the signal unconnected,
+        so nothing pops up there."""
+        self.context_menu_requested.emit(event.globalPos())
+        event.accept()
+
     def keyPressEvent(self, event):
         key = event.key()
+        mods = event.modifiers()
+        if mods & Qt.KeyboardModifier.ControlModifier and self._handle_ctrl_key(
+                key, bool(mods & Qt.KeyboardModifier.ShiftModifier)):
+            return
         if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             if self._selected_id is not None:
                 sel = self._find(self._selected_id)

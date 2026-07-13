@@ -493,6 +493,7 @@ japanese_word_dict = {
     "annotation_tool_text": "テキスト",
     "annotation_tool_mosaic": "モザイク",
     "annotation_tool_blur": "ぼかし",
+    "annotation_save_failed": "保存に失敗しました",
     "annotation_mosaic_prompt_title": "モザイクの強さ",
     "annotation_mosaic_prompt_label": "ブロックサイズ（ピクセル）:",
     "annotation_blur_prompt_title": "ぼかしの強さ",
