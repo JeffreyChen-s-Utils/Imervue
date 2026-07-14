@@ -77,6 +77,36 @@ def test_save_records_none_dims_without_deep_zoom():
     assert view._view_memory["a"]["dims"] is None
 
 
+def test_resolve_loaded_index_fast_path_when_index_already_matches():
+    # current_index already points at the loaded path → return it, no lookup.
+    assert view_state.resolve_loaded_index(["a", "b", "c"], 1, "b") == 1
+
+
+def test_resolve_loaded_index_relocates_after_reorder():
+    # The scan re-sorted the list under the in-flight load; current_index is now
+    # stale. Re-locate the path instead of dropping the finished image.
+    assert view_state.resolve_loaded_index(["b", "a", "c"], 0, "c") == 2
+
+
+def test_resolve_loaded_index_relocates_when_index_out_of_range():
+    # A shorter list left current_index past the end — still locate the path.
+    assert view_state.resolve_loaded_index(["a", "b"], 5, "a") == 0
+
+
+def test_resolve_loaded_index_none_when_path_left_the_folder():
+    # Path genuinely removed → the one case where discarding the load is right.
+    assert view_state.resolve_loaded_index(["a", "b"], 0, "gone") is None
+
+
+def test_resolve_loaded_index_none_for_empty_list():
+    assert view_state.resolve_loaded_index([], 0, "a") is None
+
+
+def test_resolve_loaded_index_negative_current_relocates():
+    # A NO_FOCUS-style negative index must not index from the tail; re-locate.
+    assert view_state.resolve_loaded_index(["a", "b"], -1, "b") == 1
+
+
 def test_jump_to_random_empty_noop():
     loaded = []
     view = _view([])

@@ -74,6 +74,49 @@ def test_ocr_available_returns_bool():
     assert isinstance(ocr_available(), bool)
 
 
+def test_ocr_unavailable_is_not_cached_and_self_heals(monkeypatch):
+    """Tesseract installed after launch must activate without a restart: the
+    unavailable result is not memoised, so the next call re-probes it."""
+    import sys
+    import types
+
+    ocr._probe_tesseract.cache_clear()
+    # No pytesseract → import raises → ocr unavailable, but NOT cached.
+    monkeypatch.setitem(sys.modules, "pytesseract", None)
+    assert ocr.ocr_available() is False
+    # Tesseract "appears" mid-session — the next probe must pick it up.
+    probed: list = []
+    fake = types.SimpleNamespace(
+        get_tesseract_version=lambda: probed.append(True) or "5.3.0",
+    )
+    monkeypatch.setitem(sys.modules, "pytesseract", fake)
+    try:
+        assert ocr.ocr_available() is True
+        assert probed == [True]  # re-probed, not served from a cached failure
+    finally:
+        # Drop the cached success so later tests re-evaluate the real backend.
+        ocr._probe_tesseract.cache_clear()
+
+
+def test_ocr_available_false_when_binary_missing(monkeypatch):
+    """pytesseract present but the Tesseract binary missing → False (the
+    non-ImportError failure branch), and still not cached."""
+    import sys
+    import types
+
+    ocr._probe_tesseract.cache_clear()
+
+    def _no_binary():
+        raise OSError("tesseract is not installed or not in PATH")
+
+    fake = types.SimpleNamespace(get_tesseract_version=_no_binary)
+    monkeypatch.setitem(sys.modules, "pytesseract", fake)
+    try:
+        assert ocr.ocr_available() is False
+    finally:
+        ocr._probe_tesseract.cache_clear()
+
+
 def test_extract_words_raises_when_unavailable(monkeypatch):
     monkeypatch.setattr(ocr, "ocr_available", lambda: False)
     with pytest.raises(OcrUnavailableError):

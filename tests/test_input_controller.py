@@ -83,3 +83,42 @@ def test_zoom_band_width_limited_region_unaffected_by_band():
     InputController(view)._apply_zoom_band(_Point(100, 400), _Point(900, 600))
 
     assert view.zoom == pytest.approx(1000 / region_w)
+
+
+def _tile_view(images):
+    """Minimal stand-in exposing the state ``enter_deep_zoom`` reads/writes."""
+    return SimpleNamespace(
+        model=SimpleNamespace(images=list(images)),
+        current_index=0,
+        tile_grid_mode=True,
+        grid_offset_x=5,
+        grid_offset_y=7,
+        tile_scale=1.5,
+        loaded=[],
+    )
+
+
+def test_enter_deep_zoom_opens_clicked_tile():
+    view = _tile_view(["/p/a.png", "/p/b.png"])
+    view.load_deep_zoom_image = view.loaded.append
+    InputController(view).enter_deep_zoom("/p/b.png")
+    assert view.tile_grid_mode is False
+    assert view.current_index == 1
+    assert view.loaded == ["/p/b.png"]
+    # The wall scroll/scale is snapshotted so exiting deep zoom restores it.
+    assert view._saved_tile_state == {
+        "grid_offset_x": 5, "grid_offset_y": 7, "tile_scale": 1.5,
+    }
+
+
+def test_enter_deep_zoom_ignores_tile_removed_from_model():
+    # Stale rect: the folder dropped this path after the last wall paint. The
+    # click must be a no-op — stay on the wall, start no doomed load that the
+    # completion guard would discard into a stuck "Loading…" view.
+    view = _tile_view(["/p/a.png", "/p/b.png"])
+    view.load_deep_zoom_image = view.loaded.append
+    InputController(view).enter_deep_zoom("/p/gone.png")
+    assert view.tile_grid_mode is True     # unchanged — still on the wall
+    assert view.current_index == 0
+    assert view.loaded == []
+    assert not hasattr(view, "_saved_tile_state")

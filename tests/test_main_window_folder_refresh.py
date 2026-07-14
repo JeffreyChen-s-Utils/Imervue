@@ -21,11 +21,13 @@ class _FakeViewer:
         self.current_index = 0
         self.tile_grid_mode = False
         self.deep_zoom = object()
+        self._deep_zoom_loading = None
         self._unfiltered_images = list(images or [])
         self.loaded_grids = []
         self.loaded_deep_zoom = []
         self.update_calls = 0
         self.clear_deep_zoom_calls = 0
+        self.settle_refit_calls = 0
 
     def load_tile_grid_async(self, image_paths):
         self.loaded_grids.append(list(image_paths))
@@ -39,10 +41,15 @@ class _FakeViewer:
     def _clear_deep_zoom(self):
         self.clear_deep_zoom_calls += 1
         self.deep_zoom = None
+        self._deep_zoom_loading = None
 
     def load_deep_zoom_image(self, path):
         self.loaded_deep_zoom.append(path)
         self.deep_zoom = object()
+        self._deep_zoom_loading = None
+
+    def _schedule_settle_refit(self):
+        self.settle_refit_calls += 1
 
     def update(self):
         self.update_calls += 1
@@ -95,6 +102,7 @@ class _StubMainWindow:
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
     _handle_active_folder_missing = ImervueMainWindow._handle_active_folder_missing
     _clear_view_folder_watch = ImervueMainWindow._clear_view_folder_watch
+    _on_list_activated = ImervueMainWindow._on_list_activated
     _filter_image_paths = staticmethod(ImervueMainWindow._filter_image_paths)
     _nearest_existing_parent = staticmethod(ImervueMainWindow._nearest_existing_parent)
 
@@ -142,6 +150,90 @@ def test_refresh_deep_zoom_loads_neighbor_when_current_image_removed():
     assert win.viewer.current_index == 1
     assert win.viewer.loaded_deep_zoom == ["/p/c.png"]
     assert win.viewer.clear_deep_zoom_calls == 1
+
+
+def test_refresh_keeps_in_flight_load_when_image_still_present():
+    # The click's deep-zoom load hasn't finished (deep_zoom is None) when a
+    # folder refresh lands. The image is still in the list, so the in-flight
+    # load must be preserved (no clear / reload) and the completion handler
+    # left to display it — otherwise the click never enters deep zoom.
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.deep_zoom = None
+    win.viewer._deep_zoom_loading = "/p/b.png"
+    win.viewer.current_index = 1
+    win._apply_refreshed_image_list(["/p/b.png", "/p/c.png"])
+    assert win.viewer.current_index == 0
+    assert win.viewer.loaded_deep_zoom == []
+    assert win.viewer.clear_deep_zoom_calls == 0
+    assert win.viewer.settle_refit_calls == 1
+
+
+def test_refresh_reenters_deep_zoom_when_in_flight_image_removed():
+    # Same in-flight state, but the image being loaded has left the folder.
+    # Recognising the in-flight load (not just a finished deep_zoom) means the
+    # viewer re-enters deep zoom on a neighbour instead of stranding a stuck
+    # "Loading…" view that the completion guard would silently discard.
+    win = _StubMainWindow(["/p/a.png", "/p/b.png", "/p/c.png"])
+    win.viewer.deep_zoom = None
+    win.viewer._deep_zoom_loading = "/p/b.png"
+    win.viewer.current_index = 1
+    win._apply_refreshed_image_list(["/p/a.png", "/p/c.png"])
+    assert win.viewer.loaded_deep_zoom == ["/p/c.png"]
+    assert win.viewer.clear_deep_zoom_calls == 1
+
+
+def test_refresh_refits_kept_deep_zoom_for_filmstrip_band():
+    # A single-image folder gains a second image while the user is zoomed in on
+    # the first (fit view). The filmstrip now appears and steals bottom space,
+    # so the kept image must be re-fit — the "wrong size / strip not shown"
+    # report. The settle re-fit is scheduled; it self-cancels if the user had
+    # taken zoom control.
+    win = _StubMainWindow(["/p/a.png"])
+    win.viewer.current_index = 0
+    win._apply_refreshed_image_list(["/p/a.png", "/p/b.png"])
+    assert win.viewer.current_index == 0
+    assert win.viewer.loaded_deep_zoom == []
+    assert win.viewer.settle_refit_calls == 1
+
+
+def test_list_activate_opens_row_in_deep_zoom():
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.tile_grid_mode = True
+    win._on_list_activated("/p/b.png")
+    assert win.viewer.current_index == 1
+    assert win.viewer.tile_grid_mode is False
+    assert win.viewer.loaded_deep_zoom == ["/p/b.png"]
+    assert win._view_stack.indices[-1] == 0   # swapped to the viewer
+
+
+def test_list_activate_ignores_row_removed_from_model():
+    # Stale list row: the image left the model but the table hasn't repopulated.
+    # Activating it must be a no-op — don't leave the list for a doomed load
+    # that strands a stuck "Loading…" view.
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.tile_grid_mode = True
+    win._on_list_activated("/p/gone.png")
+    assert win.viewer.loaded_deep_zoom == []
+    assert win.viewer.tile_grid_mode is True   # unchanged — still on the list
+    assert win._view_stack.indices == []       # no stack swap
+
+
+def test_list_activate_empty_path_is_noop():
+    win = _StubMainWindow(["/p/a.png"])
+    win._on_list_activated("")
+    assert win.viewer.loaded_deep_zoom == []
+    assert win._view_stack.indices == []
+
+
+def test_refresh_does_not_refit_when_not_in_deep_zoom():
+    # In list/grid browsing (no deep-zoom image, nothing loading) the kept-image
+    # path must not schedule a deep-zoom re-fit.
+    win = _StubMainWindow(["/p/a.png", "/p/b.png"])
+    win.viewer.deep_zoom = None
+    win.viewer._deep_zoom_loading = None
+    win.viewer.current_index = 0
+    win._apply_refreshed_image_list(["/p/a.png", "/p/c.png"])
+    assert win.viewer.settle_refit_calls == 0
 
 
 def test_refresh_empty_folder_clears_viewer():

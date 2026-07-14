@@ -77,6 +77,14 @@ class SlideshowController:
             return
         gui._clear_deep_zoom()
         gui.tile_grid_mode = True
+        # Multi-select is a wall-only interaction state. A slideshow launched
+        # from the wall dived into deep zoom without touching it, so returning
+        # to a wall still flagged as "selecting" makes every tile click toggle a
+        # selection instead of opening the image — a dead end escapable only via
+        # Esc. Reset both flag and set together (a set kept without the flag is
+        # an invisible ghost selection) so the wall is click-to-open again.
+        gui.tile_selection_mode = False
+        gui.selected_tiles.clear()
 
     def set_interval(self, ms: int):
         self._timer.setInterval(ms)

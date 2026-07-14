@@ -1032,10 +1032,11 @@ class GPUImageView(QOpenGLWidget):
             return
         if self._deep_zoom_loading != path:
             return
-        if (not self.model.images
-                or self.current_index >= len(self.model.images)
-                or self.model.images[self.current_index] != path):
+        from Imervue.gpu_image_view.view_state import resolve_loaded_index
+        idx = resolve_loaded_index(self.model.images, self.current_index, path)
+        if idx is None:
             return
+        self.current_index = idx
 
         if self.tile_manager is not None:
             self.tile_manager.clear()
@@ -1212,11 +1213,12 @@ class GPUImageView(QOpenGLWidget):
         self._prefetch.pop_worker(path)
 
         # 如果使用者正在等待這張圖（prefetch worker 被當作主載入用）
+        from Imervue.gpu_image_view.view_state import resolve_loaded_index
+        idx = resolve_loaded_index(self.model.images, self.current_index, path)
         if (self.deep_zoom is None
-                and self.model.images
-                and self.current_index < len(self.model.images)
-                and self.model.images[self.current_index] == path
-                and self._deep_zoom_loading == path):
+                and self._deep_zoom_loading == path
+                and idx is not None):
+            self.current_index = idx
             self.deep_zoom = dzi
             self._deep_zoom_loading = None
             self._deep_zoom_error = None
