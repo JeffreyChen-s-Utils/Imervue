@@ -15,12 +15,13 @@ class _FakeModel:
         self.images = list(images)
 
 
-def _make_view(images, *, files_exist=True):
+def _make_view(images, *, main_window=None):
     view = SimpleNamespace(
         model=_FakeModel(images),
         current_index=0,
         tile_grid_mode=False,
         loaded=[],
+        main_window=main_window,
     )
     view._clear_deep_zoom = lambda: None
     view.load_deep_zoom_image = lambda p: view.loaded.append(p)
@@ -128,3 +129,70 @@ def test_navigate_skips_missing_file(monkeypatch):
     before = list(view.loaded)
     ctrl.back()
     assert view.loaded == before
+
+
+def test_in_folder_back_loads_directly_without_reopening(monkeypatch):
+    # The target is still a row in the current folder → load it in place; the
+    # main window's folder-reopen path must NOT be used.
+    reopened: list[str] = []
+    main_window = SimpleNamespace(navigate_to_path=reopened.append)
+    view = _make_view(["a", "b"], main_window=main_window)
+    ctrl = HistoryController(view)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("a")
+    ctrl.push("b")
+    ctrl.back()
+    assert view.loaded[-1] == "a"      # direct in-folder load
+    assert view.current_index == 0
+    assert reopened == []              # no folder reopen
+
+
+def test_cross_folder_back_reopens_via_main_window(monkeypatch):
+    # Going back reaches an image from a folder we left, so it isn't a row in
+    # the current list. Loading it directly would strand a "Loading…" view the
+    # completion guard discards, so it must route through the main window to
+    # reopen its folder in context. (back() targets the *earlier* entry, so the
+    # cross-folder image is pushed first, then the current-folder one.)
+    reopened: list[str] = []
+    main_window = SimpleNamespace(navigate_to_path=reopened.append)
+    view = _make_view(["cur1.png", "cur2.png"], main_window=main_window)
+    ctrl = HistoryController(view)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("/other/away.png")       # viewed while in another folder
+    ctrl.push("cur1.png")              # back in the current folder
+    ctrl.back()                        # → /other/away.png (not in this list)
+    assert reopened == ["/other/away.png"]  # reopened in its folder
+    assert view.loaded == []                # not loaded directly
+
+
+def test_cross_folder_back_falls_back_to_direct_load_without_main_window(monkeypatch):
+    # A detached view (no main window) can't reopen a folder — keep the previous
+    # direct-load behaviour so the controller stays usable in isolation.
+    view = _make_view(["cur1.png", "cur2.png"])  # main_window defaults to None
+    ctrl = HistoryController(view)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("/other/away.png")
+    ctrl.push("cur1.png")
+    ctrl.back()
+    assert view.loaded[-1] == "/other/away.png"
+
+
+def test_cross_folder_reopen_is_not_re_pushed_to_history(monkeypatch):
+    # Reopening through the main window ends up calling load_deep_zoom_image,
+    # which pushes history — the navigating flag must suppress that so back/
+    # forward don't corrupt the stack. Simulate the main window pushing back.
+    view = _make_view(["cur.png"])
+    ctrl = HistoryController(view)
+
+    def _reopen(path):
+        # Mirror the real flow: reopening loads the image, which re-pushes.
+        ctrl.push(path)
+
+    view.main_window = SimpleNamespace(navigate_to_path=_reopen)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("/other/away.png")
+    ctrl.push("cur.png")
+    length_before = len(ctrl._history)
+    ctrl.back()                        # → /other/away.png → reopen → re-push
+    # The reopen's push happened while navigating → suppressed, stack unchanged.
+    assert len(ctrl._history) == length_before

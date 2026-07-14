@@ -71,12 +71,36 @@ class HistoryController:
         if not Path(path).is_file():
             return
         images = view.model.images
-        if path in images:
-            view.current_index = images.index(path)
         self._navigating = True
         try:
-            view._clear_deep_zoom()
-            view.tile_grid_mode = False
-            view.load_deep_zoom_image(path)
+            if path in images:
+                view.current_index = images.index(path)
+                view._clear_deep_zoom()
+                view.tile_grid_mode = False
+                view.load_deep_zoom_image(path)
+            else:
+                self._open_cross_folder(path)
         finally:
             self._navigating = False
+
+    def _open_cross_folder(self, path: str) -> None:
+        """Show a history image that has left the current folder's list.
+
+        History spans folders, so back/forward can target an image that is no
+        longer a row in ``model.images`` — a different folder, or one since
+        filtered or removed. Loading it directly would strand a "Loading…" view
+        that the deep-zoom completion guard discards (it isn't in the list, so
+        there is no row to anchor it to). Route through the main window instead
+        so the image's own folder is reopened and it displays in context. Fall
+        back to a direct load when no main window is wired (a detached or test
+        view), which preserves the previous behaviour there.
+        """
+        view = self._view
+        navigate = getattr(getattr(view, "main_window", None),
+                           "navigate_to_path", None)
+        if callable(navigate):
+            navigate(path)
+            return
+        view._clear_deep_zoom()
+        view.tile_grid_mode = False
+        view.load_deep_zoom_image(path)
