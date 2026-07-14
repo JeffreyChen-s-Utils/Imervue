@@ -99,14 +99,31 @@ def words_to_text(words: list[OcrWord]) -> str:
 
 
 @lru_cache(maxsize=1)
+def _probe_tesseract() -> bool:
+    """Import pytesseract and confirm a working Tesseract binary (cached).
+
+    Raises on any failure (package absent, or the binary missing / broken).
+    ``lru_cache`` does not memoise exceptions, so an unavailable result is not
+    cached — a Tesseract installed after launch (via the in-app pip installer or
+    a system package) self-heals on the next call instead of staying stuck at
+    the failure until restart. Only the success is memoised. Mirrors
+    :func:`Imervue.image.heif_support.ensure_heif_opener`.
+    """
+    import pytesseract
+    pytesseract.get_tesseract_version()
+    return True
+
+
 def ocr_available() -> bool:
-    """Return True when pytesseract and a working Tesseract binary are present."""
+    """Return True when pytesseract and a working Tesseract binary are present.
+
+    The successful probe is memoised; a failure returns ``False`` without
+    caching so OCR self-heals if Tesseract is installed later in the session.
+    """
     try:
-        import pytesseract
-        pytesseract.get_tesseract_version()
+        return _probe_tesseract()
     except Exception:  # noqa: BLE001 - any failure means OCR is unavailable
         return False
-    return True
 
 
 def extract_words(image, min_confidence: float = 0.0) -> list[OcrWord]:
