@@ -23,6 +23,8 @@ class _FakeGui:
         self.loaded: list[str] = []
         self.cleared = 0
         self.updates = 0
+        self.tile_selection_mode = False
+        self.selected_tiles: set[str] = set()
 
     def load_deep_zoom_image(self, path):
         self.loaded.append(path)
@@ -83,6 +85,32 @@ def test_stop_after_images_cleared_does_not_force_grid(qapp):
     ctrl.stop()
     assert gui.tile_grid_mode is False       # nothing to show -> no forced wall
     assert gui.cleared == 0
+
+
+def test_stop_clears_wall_selection_when_returning_to_grid(qapp):
+    # Slideshow started from the wall while tiles were selected. Returning must
+    # land on a click-to-open wall, not one still stuck in multi-select where
+    # every click just toggles a selection.
+    ctrl, gui = _controller(qapp, ["a.png", "b.png"], tile_grid_mode=True)
+    gui.tile_selection_mode = True
+    gui.selected_tiles = {"a.png", "b.png"}
+    ctrl.start()
+    ctrl.stop()
+    assert gui.tile_grid_mode is True
+    assert gui.tile_selection_mode is False
+    assert gui.selected_tiles == set()
+
+
+def test_stop_keeps_selection_when_started_from_deep_zoom(qapp):
+    # Started from deep zoom (not the wall) → don't touch the wall's selection
+    # state; there's no wall round-trip to clean up.
+    ctrl, gui = _controller(qapp, ["a.png"], tile_grid_mode=False)
+    gui.tile_selection_mode = True
+    gui.selected_tiles = {"a.png"}
+    ctrl.start()
+    ctrl.stop()
+    assert gui.tile_selection_mode is True
+    assert gui.selected_tiles == {"a.png"}
 
 
 def test_resume_flag_is_reset_after_stop(qapp):
