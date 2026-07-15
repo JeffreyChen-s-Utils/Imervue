@@ -88,6 +88,6 @@ def test_despawn_shuts_the_window_down_before_deleting():
         pet_despawned=SimpleNamespace(emit=lambda pid: events.append(("emit", pid))),
     )
     assert PetRegistry.despawn(fake_reg, "x") is True
-    assert events[0] == "shutdown"          # workers stopped first
+    assert events[:1] == ["shutdown"]       # workers stopped first
     assert "hide" in events and "delete" in events
     assert ("emit", "x") in events
