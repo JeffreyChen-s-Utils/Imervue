@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from Imervue.gpu_image_view.gl_context import needs_make_current
+from Imervue.gpu_image_view.gl_context import make_current_guard, needs_make_current
 from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
@@ -82,3 +82,37 @@ def test_context_manager_releases_even_when_body_raises(qapp):
     except ValueError:
         pass
     assert calls == ["make", "body", "done"]  # doneCurrent still ran
+
+
+# ---------------------------------------------------------------------------
+# make_current_guard — the shared wrapper, and its widget delegations
+# ---------------------------------------------------------------------------
+
+def test_make_current_guard_wraps_when_not_current(qapp):
+    fake, calls = _ctx_fake(object(), valid=True)
+    with make_current_guard(fake):
+        calls.append("body")
+    assert calls == ["make", "body", "done"]
+
+
+def test_make_current_guard_is_noop_without_a_context(qapp):
+    fake, calls = _ctx_fake(None, valid=True)
+    with make_current_guard(fake):
+        calls.append("body")
+    assert calls == ["body"]
+
+
+def test_puppet_canvas_delegates_to_the_shared_guard(qapp):
+    from Imervue.puppet.canvas import PuppetCanvas
+    fake, calls = _ctx_fake(object(), valid=True)
+    with PuppetCanvas._current_gl_context(fake):
+        calls.append("body")
+    assert calls == ["make", "body", "done"]
+
+
+def test_paint_canvas_delegates_to_the_shared_guard(qapp):
+    from Imervue.paint.canvas import PaintCanvas
+    fake, calls = _ctx_fake(object(), valid=True)
+    with PaintCanvas._current_gl_context(fake):
+        calls.append("body")
+    assert calls == ["make", "body", "done"]

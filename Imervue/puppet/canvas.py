@@ -285,6 +285,14 @@ class PuppetCanvas(QOpenGLWidget):
 
     # ---- public API -----------------------------------------------------
 
+    def _current_gl_context(self):
+        """Current this widget's GL context for texture/buffer frees issued
+        outside ``paintGL`` (document swap runs from file-open / undo / a network
+        or timer callback), so ``glDelete*`` isn't dropped and the resource
+        leaked."""
+        from Imervue.gpu_image_view.gl_context import make_current_guard
+        return make_current_guard(self)
+
     def load_document(self, document: PuppetDocument | None) -> None:
         """Bind ``document`` to the canvas. Pass ``None`` to clear.
 
@@ -295,8 +303,11 @@ class PuppetCanvas(QOpenGLWidget):
         """
         self._document = document
         self._draw_list = build_draw_list(document) if document is not None else []
-        self._invalidate_texture_cache()
-        self._invalidate_buffer_cache()
+        # Frees run off paintGL (file-open / undo / pet rig swap) — need a
+        # current GL context or the textures/VBOs leak on every reload.
+        with self._current_gl_context():
+            self._invalidate_texture_cache()
+            self._invalidate_buffer_cache()
         self._user_view_locked = False
         self._parameter_values = (
             default_parameter_values(document) if document is not None else {}
@@ -661,6 +672,7 @@ class PuppetCanvas(QOpenGLWidget):
         )
 
         self.makeCurrent()
+        fbo = None
         try:
             fmt = QOpenGLFramebufferObjectFormat()
             fbo = QOpenGLFramebufferObject(width, height, fmt)
@@ -710,6 +722,10 @@ class PuppetCanvas(QOpenGLWidget):
             finally:
                 fbo.release()
         finally:
+            # Destroy the FBO while the context is still current — its C++
+            # destructor needs one, or Qt leaks the FBO's texture/renderbuffer
+            # on every call (once per NDI / virtual-camera frame).
+            fbo = None
             self.doneCurrent()
 
     # ---- rendering ------------------------------------------------------

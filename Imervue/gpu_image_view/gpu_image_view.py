@@ -720,32 +720,12 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.tile_textures import delete_all_tile_textures
         delete_all_tile_textures(self)
 
-    @contextlib.contextmanager
     def _current_gl_context(self):
-        """Make this widget's GL context current for texture frees issued
-        outside ``paintGL`` (image switch / eviction run from signal, key and
-        menu handlers), so ``glDeleteTextures`` isn't dropped and the texture
-        leaked. Re-entrant: a no-op when the context is already current (nested
-        in a paint or the close-path wrapper)."""
-        from PySide6.QtGui import QOpenGLContext
-
-        from Imervue.gpu_image_view.gl_context import needs_make_current
-        ctx = self.context()
-        made = False
-        if needs_make_current(
-            ctx is not None,
-            ctx is not None and QOpenGLContext.currentContext() is ctx,
-            self.isValid(),
-        ):
-            with contextlib.suppress(Exception):
-                self.makeCurrent()
-                made = True
-        try:
-            yield
-        finally:
-            if made:
-                with contextlib.suppress(Exception):
-                    self.doneCurrent()
+        """Current this widget's GL context for texture frees issued outside
+        ``paintGL`` (image switch / eviction from signal, key and menu handlers),
+        so ``glDeleteTextures`` isn't dropped and the texture leaked."""
+        from Imervue.gpu_image_view.gl_context import make_current_guard
+        return make_current_guard(self)
 
     def _clear_deep_zoom(self):
         """釋放 DeepZoom 相關的 GPU 與記憶體資源"""
