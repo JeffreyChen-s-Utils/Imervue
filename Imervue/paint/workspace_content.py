@@ -225,6 +225,10 @@ class ContentOpsMixin:
         # into the overlay rather than the underlying art.
         layer.image = state.buffer
         self._quick_mask_state = state
+        # Remember the layer by identity, not index — a layer added / removed /
+        # reordered while in quick-mask shifts indices, so restoring by index
+        # would write the overlay back into the wrong layer.
+        self._quick_mask_layer = layer
         document.invalidate_composite()
         canvas.update()
         return True
@@ -238,16 +242,19 @@ class ContentOpsMixin:
         state = self._quick_mask_state   # noqa: SLF001
         canvas = self.canvas()
         document = canvas.document()
-        if state.layer_index < 0 or state.layer_index >= document.layer_count:
-            # The active layer disappeared while in quick-mask mode;
-            # drop the state without touching anything.
+        layer = getattr(self, "_quick_mask_layer", None)
+        if layer is None or not any(layer is lyr for lyr in document.layers()):
+            # The masked layer was removed while in quick-mask mode; drop the
+            # state without touching anything (restoring by index could hit a
+            # different, reordered layer).
             self._quick_mask_state = None
+            self._quick_mask_layer = None
             return False
-        layer = document.layer_at(state.layer_index)
         restored, selection = exit_mode(state)
         layer.image = restored
         canvas.set_selection(selection)
         self._quick_mask_state = None
+        self._quick_mask_layer = None
         document.invalidate_composite()
         canvas.update()
         return True
