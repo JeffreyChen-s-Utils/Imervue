@@ -51,6 +51,10 @@ class _FakeViewer:
     def _schedule_settle_refit(self):
         self.settle_refit_calls += 1
 
+    def _current_path(self):
+        imgs = self.model.images
+        return imgs[self.current_index] if 0 <= self.current_index < len(imgs) else None
+
     def update(self):
         self.update_calls += 1
 
@@ -100,6 +104,8 @@ class _FakeTreeWatchdog:
 
 class _StubMainWindow:
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
+    _reconcile_deep_zoom_onto_list = ImervueMainWindow._reconcile_deep_zoom_onto_list
+    _apply_image_filter = ImervueMainWindow._apply_image_filter
     _handle_active_folder_missing = ImervueMainWindow._handle_active_folder_missing
     _clear_view_folder_watch = ImervueMainWindow._clear_view_folder_watch
     _on_list_activated = ImervueMainWindow._on_list_activated
@@ -223,6 +229,48 @@ def test_list_activate_empty_path_is_noop():
     win._on_list_activated("")
     assert win.viewer.loaded_deep_zoom == []
     assert win._view_stack.indices == []
+
+
+def _deep_zoom_filter_win(images, current):
+    win = _StubMainWindow(images)
+    win.viewer._unfiltered_images = list(images)
+    win.viewer.tile_grid_mode = False
+    win.viewer.deep_zoom = object()
+    win.viewer.current_index = current
+    return win
+
+
+def test_filter_out_current_deep_zoom_image_reopens_a_neighbor():
+    # Filtering out the shown image must drop it (not keep rendering a phantom)
+    # and reopen a surviving neighbour — the fix that mirrors the folder-refresh
+    # path into _apply_image_filter.
+    win = _deep_zoom_filter_win(["/p/keep1.png", "/p/drop.png", "/p/keep2.png"], 1)
+    win._apply_image_filter(text="keep")
+    assert "/p/drop.png" not in win.viewer.model.images
+    assert win.viewer.clear_deep_zoom_calls == 1
+    assert win.viewer.loaded_deep_zoom and "keep" in win.viewer.loaded_deep_zoom[-1]
+
+
+def test_filter_keeping_current_deep_zoom_image_schedules_refit():
+    # Same image survives but the count crosses many->1, changing the reserved
+    # filmstrip band → a settle re-fit must be scheduled, and no reload.
+    win = _deep_zoom_filter_win(["/p/keep.png", "/p/a.png", "/p/b.png"], 0)
+    win._apply_image_filter(text="keep")
+    assert win.viewer.model.images == ["/p/keep.png"]
+    assert win.viewer.loaded_deep_zoom == []
+    assert win.viewer.settle_refit_calls == 1
+    assert win.viewer.clear_deep_zoom_calls == 0
+
+
+def test_filter_to_empty_while_deep_zoom_drops_phantom_and_returns_to_wall():
+    # No matches while zoomed in → clear the orphaned image and fall back to the
+    # (empty) wall instead of freezing on a phantom.
+    win = _deep_zoom_filter_win(["/p/a.png", "/p/b.png"], 0)
+    win._apply_image_filter(text="zzz-no-match")
+    assert win.viewer.model.images == []
+    assert win.viewer.clear_deep_zoom_calls == 1
+    assert win.viewer.tile_grid_mode is True
+    assert win.viewer.loaded_deep_zoom == []
 
 
 def test_refresh_does_not_refit_when_not_in_deep_zoom():

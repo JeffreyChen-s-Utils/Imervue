@@ -884,26 +884,27 @@ class ImervueMainWindow(QMainWindow):
 
     def _apply_image_filter(self, text: str | None = None) -> None:
         """Filter the current folder by filename/tag/rating/date immediately."""
-        base = list(getattr(self.viewer, "_unfiltered_images", None) or self.viewer.model.images)
+        viewer = self.viewer
+        base = list(getattr(viewer, "_unfiltered_images", None) or viewer.model.images)
         if text is None:
-            spec = self._current_filter_spec()
-            filtered = filter_paths(base, spec, self._image_metadata_index)
+            filtered = filter_paths(base, self._current_filter_spec(), self._image_metadata_index)
         else:
             filtered = self._filter_image_paths(base, text)
-        current = self.viewer._current_path()
-        if self.viewer.tile_grid_mode:
+        current = viewer._current_path()
+        if viewer.tile_grid_mode:
             from Imervue.gpu_image_view.tile_loader import sync_tile_grid_incremental
-            sync_tile_grid_incremental(self.viewer, filtered)
-        else:
-            self.viewer.model.set_images(filtered)
-        if current in filtered:
-            self.viewer.current_index = filtered.index(current)
-        elif filtered:
-            self.viewer.current_index = 0
-        else:
-            self.viewer.current_index = 0
-        self.refresh_list_view()
-        self.viewer.update()
+            sync_tile_grid_incremental(viewer, filtered)
+            viewer.current_index = filtered.index(current) if current in filtered else 0
+            self.refresh_list_view()
+            viewer.update()
+            return
+        # In deep zoom / list mode: reconcile the shown image with the filter so a
+        # filtered-out current image is dropped (not left as a phantom) and a
+        # threshold cross re-fits — same handling as an external folder refresh.
+        self._reconcile_deep_zoom_onto_list(
+            filtered, getattr(viewer, "_deep_zoom_loading", None) or current,
+            viewer.current_index,
+        )
 
     def _current_filter_spec(self) -> ImageFilterSpec:
         tag = ""
@@ -1492,7 +1493,6 @@ class ImervueMainWindow(QMainWindow):
         # keeps them in deep zoom instead of stranding a "Loading…" view that the
         # completion guard then discards.
         loading_path = getattr(viewer, "_deep_zoom_loading", None)
-        active_deep_zoom = viewer.deep_zoom is not None or bool(loading_path)
         current_path = loading_path or (
             old_images[old_index]
             if 0 <= old_index < len(old_images) else None
@@ -1521,32 +1521,57 @@ class ImervueMainWindow(QMainWindow):
             sync_tile_grid_incremental(viewer, filtered_images)
             return
 
-        viewer.model.set_images(filtered_images)
-        if current_path in filtered_images:
-            viewer.current_index = filtered_images.index(current_path)
+        self._reconcile_deep_zoom_onto_list(filtered_images, current_path, old_index)
+
+    def _reconcile_deep_zoom_onto_list(self, filtered: list[str],
+                                       current: str | None, old_index: int) -> None:
+        """Settle the viewer onto *filtered*, keeping or reopening the deep-zoom
+        image. Shared by the folder-refresh and the filter paths so the deep-zoom
+        reconciliation can't drift between them. Callers handle the tile-grid and
+        wholly-empty-folder cases before delegating here.
+
+        ``current`` is the path that should stay shown (the loading target when a
+        load is in flight, else the displayed image).
+        """
+        viewer = self.viewer
+        viewer.model.set_images(filtered)
+        active_deep_zoom = (
+            viewer.deep_zoom is not None
+            or bool(getattr(viewer, "_deep_zoom_loading", None))
+        )
+        if current in filtered:
+            viewer.current_index = filtered.index(current)
             self.refresh_list_view()
-            # The image is unchanged but the list length may have crossed the
-            # filmstrip threshold (1 <-> many), which changes the bottom band the
-            # fit letterboxes above. Re-fit so the picture doesn't open / stay at
-            # the wrong size with the strip overlapping it. A no-op once the fit
-            # is already correct or the user has taken zoom/pan control.
+            # Same image, but the list length may have crossed the filmstrip
+            # threshold (1 <-> many), changing the reserved bottom band the fit
+            # letterboxes above. Re-fit so it doesn't stay the wrong size with the
+            # strip overlapping it. A no-op once the fit is correct or the user
+            # has taken zoom/pan control.
             if active_deep_zoom:
                 viewer._schedule_settle_refit()
             viewer.update()
             return
 
-        if active_deep_zoom and filtered_images:
-            viewer.current_index = min(old_index, len(filtered_images) - 1)
+        if active_deep_zoom and filtered:
+            # The shown image left the visible list — reopen a neighbour so the
+            # viewer never keeps rendering a filtered-out / removed picture.
+            viewer.current_index = min(old_index, len(filtered) - 1)
             viewer._clear_deep_zoom()
             viewer.tile_grid_mode = False
-            viewer.load_deep_zoom_image(filtered_images[viewer.current_index])
-        else:
-            viewer.current_index = (
-                min(old_index, len(filtered_images) - 1)
-                if filtered_images else 0
-            )
-            self.refresh_list_view()
-            viewer.update()
+            viewer.load_deep_zoom_image(filtered[viewer.current_index])
+            return
+
+        if active_deep_zoom:
+            # Nothing left to show — drop the orphaned deep-zoom image and fall
+            # back to the (empty) wall instead of freezing on a phantom.
+            viewer._clear_deep_zoom()
+            viewer.tile_grid_mode = True
+
+        viewer.current_index = (
+            min(old_index, len(filtered) - 1) if filtered else 0
+        )
+        self.refresh_list_view()
+        viewer.update()
 
     # ==========================
     # 點擊檔案
