@@ -89,12 +89,12 @@ class AutoStraightenDialog(QDialog):
         self._angle.setDecimals(2)
         self._angle.setSingleStep(0.1)
 
-        detect_btn = QPushButton(lang.get("autostr_detect", "Detect angle"))
-        detect_btn.clicked.connect(self._detect)
+        self._detect_btn = QPushButton(lang.get("autostr_detect", "Detect angle"))
+        self._detect_btn.clicked.connect(self._detect)
 
         angle_row = QHBoxLayout()
         angle_row.addWidget(self._angle, 1)
-        angle_row.addWidget(detect_btn)
+        angle_row.addWidget(self._detect_btn)
 
         form = QFormLayout()
         form.addRow(lang.get("autostr_angle", "Rotation (°):"), angle_row)
@@ -138,7 +138,30 @@ class AutoStraightenDialog(QDialog):
         if fn:
             self._out_edit.setText(fn)
 
+    def _set_running(self, running: bool) -> None:
+        """Disable both entry points while a worker runs.
+
+        Detect and Apply share ``self._worker``; letting the user start one
+        while the other is mid-flight would reassign ``self._worker`` and drop
+        the only Python reference to the still-running QThread, so shiboken
+        would delete the C++ thread while it runs ("QThread: Destroyed while
+        thread is still running" → abort).
+        """
+        self._detect_btn.setEnabled(not running)
+        self._run_btn.setEnabled(not running)
+
+    def _worker_busy(self) -> bool:
+        return self._worker is not None and self._worker.isRunning()
+
+    def _wait_worker(self) -> None:
+        """Block until any running worker finishes so it is never destroyed mid-run."""
+        if self._worker_busy():
+            self._worker.wait()
+
     def _detect(self) -> None:
+        if self._worker_busy():
+            return
+        self._set_running(True)
         self._progress.setVisible(True)
         self._worker = _DetectWorker(self._path)
         self._worker.done.connect(self._on_detect_done)
@@ -146,15 +169,18 @@ class AutoStraightenDialog(QDialog):
 
     def _on_detect_done(self, ok: bool, angle: float) -> None:
         self._progress.setVisible(False)
+        self._set_running(False)
         if ok:
             self._angle.setValue(float(angle))
 
     def _apply(self) -> None:
+        if self._worker_busy():
+            return
         out = self._out_edit.text().strip()
         if not out:
             return
         Path(out).parent.mkdir(parents=True, exist_ok=True)
-        self._run_btn.setEnabled(False)
+        self._set_running(True)
         self._progress.setVisible(True)
         self._worker = _ApplyWorker(self._path, out, self._angle.value())
         self._worker.done.connect(self._on_apply_done)
@@ -163,9 +189,14 @@ class AutoStraightenDialog(QDialog):
     def _on_apply_done(self, ok: bool, info: str) -> None:
         _ = info
         self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
+        self._set_running(False)
         if ok:
             self.accept()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        # Don't let the dialog be destroyed with a live worker thread.
+        self._wait_worker()
+        super().closeEvent(event)
 
 
 def open_auto_straighten(viewer: GPUImageView) -> None:
