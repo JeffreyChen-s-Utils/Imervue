@@ -263,9 +263,13 @@ class _EndpointHandle(QGraphicsEllipseItem):
 
     def itemChange(self, change, value):  # type: ignore[override]
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            self._view.update_endpoint(
-                self._segment_index, value, is_start=self._is_start,
-            )
+            # Defer the model update: it rebuilds the scene, which deletes THIS
+            # handle — doing it synchronously would return into super().itemChange
+            # on a freed C++ object. singleShot(0) runs it after we return.
+            from PySide6.QtCore import QPointF, QTimer
+            seg, is_start, pos = self._segment_index, self._is_start, QPointF(value)
+            QTimer.singleShot(
+                0, lambda: self._view.update_endpoint(seg, pos, is_start=is_start))
         return super().itemChange(change, value)
 
 
@@ -295,7 +299,12 @@ class _ControlHandle(QGraphicsEllipseItem):
 
     def itemChange(self, change, value):  # type: ignore[override]
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            self._view.update_control(self._segment_index, self._field, value)
+            # Defer the rebuild — see _EndpointHandle.itemChange (it deletes this
+            # handle, so a synchronous call is a use-after-free).
+            from PySide6.QtCore import QPointF, QTimer
+            seg, field, pos = self._segment_index, self._field, QPointF(value)
+            QTimer.singleShot(
+                0, lambda: self._view.update_control(seg, field, pos))
         return super().itemChange(change, value)
 
 
