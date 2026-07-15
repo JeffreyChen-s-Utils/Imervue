@@ -149,3 +149,20 @@ class PetCanvasDrivers:
         return (
             self.webcam_tracker is not None and self.webcam_tracker.is_enabled()
         )
+
+    def shutdown(self) -> None:
+        """Stop every optional driver (camera, virtual camera, idle, gaze).
+
+        Called on pet despawn so the webcam is released (the camera LED goes
+        off), the virtual-camera stream closes, and the idle/gaze timers stop.
+        Disables the drivers directly — no settings are persisted, so a respawn
+        restores what the user had enabled.
+        """
+        import contextlib
+        for driver in (
+            self.webcam_tracker, self.virtual_camera,
+            self.idle_driver, self.idle_cycler, self.mouse_gaze,
+        ):
+            if driver is not None:
+                with contextlib.suppress(Exception):
+                    driver.set_enabled(False)

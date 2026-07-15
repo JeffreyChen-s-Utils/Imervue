@@ -18,6 +18,7 @@ and keeps the workspace + tray talking to the right ``PetWindow``.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from PySide6.QtCore import QObject, Signal
@@ -80,6 +81,13 @@ class PetRegistry(QObject):
         window = self._pets.pop(pet_id, None)
         if window is None:
             return False
+        # Stop the pet's background workers / OS hooks first — deleteLater frees
+        # the C++ QObject but leaves the camera open, the webhook port bound and
+        # the global hotkey hook installed otherwise.
+        shutdown = getattr(window, "shutdown", None)
+        if callable(shutdown):
+            with contextlib.suppress(Exception):
+                shutdown()
         try:
             window.hide()
         finally:

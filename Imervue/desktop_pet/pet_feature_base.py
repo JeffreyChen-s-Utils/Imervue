@@ -124,6 +124,19 @@ class IntegrationController:
             and bool(self._client.is_running())   # type: ignore[attr-defined]
         )
 
+    def shutdown(self) -> None:
+        """Stop the worker WITHOUT persisting a disabled state.
+
+        Used on pet despawn / app close to release the port / OS hook / socket,
+        while leaving the enabled setting intact so a respawn restores it —
+        unlike ``set_enabled(False)``, which persists the off state.
+        """
+        client = self._client
+        if client is not None:
+            import contextlib
+            with contextlib.suppress(Exception):
+                client.stop()   # type: ignore[attr-defined]
+
 
 def merge_bindings(
     defaults: dict[str, str], persisted: object,
