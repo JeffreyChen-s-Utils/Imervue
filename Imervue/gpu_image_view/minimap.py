@@ -33,9 +33,47 @@ def minimap_geometry(
     if mm_h > max_h:
         mm_h = max_h
         mm_w = int(mm_h * aspect)
+    # An extreme aspect (e.g. a 10x10000 strip) collapses the derived side to 0,
+    # giving an invisible / zero-area minimap that still divides in the drawing
+    # math. Floor both so it stays a real (if thin) clickable rectangle.
+    mm_w = max(1, mm_w)
+    mm_h = max(1, mm_h)
     mm_x = int(view_w - mm_w - margin)
     mm_y = int(view_h - mm_h - margin)
     return mm_x, mm_y, mm_w, mm_h
+
+
+def viewport_box_rect(
+    rect: tuple[float, float, float, float],
+    img_w: float,
+    img_h: float,
+    dz_offset_x: float,
+    dz_offset_y: float,
+    zoom: float,
+    canvas_w: float,
+    content_h: float,
+) -> tuple[float, float, float, float]:
+    """Return the ``(x0, y0, x1, y1)`` "you are here" box inside the minimap.
+
+    The visible region is the content area — the canvas minus the reserved
+    overlay band — so ``content_h`` (not the full canvas height) bounds the box;
+    using the full height would draw the box extending past what's actually
+    visible whenever the bottom rows sit hidden behind the band.
+    """
+    mm_x, mm_y, mm_w, mm_h = rect
+    z = max(zoom, 1e-9)
+    vp_left = -dz_offset_x / z
+    vp_top = -dz_offset_y / z
+    vp_right = vp_left + canvas_w / z
+    vp_bottom = vp_top + content_h / z
+    sx = mm_w / max(img_w, 1e-9)
+    sy = mm_h / max(img_h, 1e-9)
+    return (
+        mm_x + max(0, vp_left * sx),
+        mm_y + max(0, vp_top * sy),
+        mm_x + min(mm_w, vp_right * sx),
+        mm_y + min(mm_h, vp_bottom * sy),
+    )
 
 
 def point_in_rect(px: float, py: float, rect: tuple[float, float, float, float]) -> bool:
