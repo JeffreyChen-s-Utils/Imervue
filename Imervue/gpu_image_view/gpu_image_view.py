@@ -709,20 +709,48 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.tile_textures import delete_all_tile_textures
         delete_all_tile_textures(self)
 
+    @contextlib.contextmanager
+    def _current_gl_context(self):
+        """Make this widget's GL context current for texture frees issued
+        outside ``paintGL`` (image switch / eviction run from signal, key and
+        menu handlers), so ``glDeleteTextures`` isn't dropped and the texture
+        leaked. Re-entrant: a no-op when the context is already current (nested
+        in a paint or the close-path wrapper)."""
+        from PySide6.QtGui import QOpenGLContext
+
+        from Imervue.gpu_image_view.gl_context import needs_make_current
+        ctx = self.context()
+        made = False
+        if needs_make_current(
+            ctx is not None,
+            ctx is not None and QOpenGLContext.currentContext() is ctx,
+            self.isValid(),
+        ):
+            with contextlib.suppress(Exception):
+                self.makeCurrent()
+                made = True
+        try:
+            yield
+        finally:
+            if made:
+                with contextlib.suppress(Exception):
+                    self.doneCurrent()
+
     def _clear_deep_zoom(self):
         """釋放 DeepZoom 相關的 GPU 與記憶體資源"""
         self._deep_zoom_loading = None
         self._deep_zoom_path = None
         self._stop_animation()
-        if self.tile_manager is not None:
-            self.tile_manager.clear()
-            self.tile_manager = None
+        # Texture frees need a current GL context — this runs off paintGL.
+        with self._current_gl_context():
+            if self.tile_manager is not None:
+                self.tile_manager.clear()
+                self.tile_manager = None
+            if self._minimap_tex is not None:
+                glDeleteTextures([self._minimap_tex])
+                self._minimap_tex = None
+                self._minimap_dzi = None
         self.deep_zoom = None
-        # 清除 minimap texture
-        if self._minimap_tex is not None:
-            glDeleteTextures([self._minimap_tex])
-            self._minimap_tex = None
-            self._minimap_dzi = None
         # 離開 deep zoom → 收起「修改」選單（若主視窗還在）。
         self._set_modify_menu_visible(False)
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
@@ -1057,7 +1085,9 @@ class GPUImageView(QOpenGLWidget):
         self.current_index = idx
 
         if self.tile_manager is not None:
-            self.tile_manager.clear()
+            # Off-paintGL free — needs a current GL context or it leaks.
+            with self._current_gl_context():
+                self.tile_manager.clear()
         self.deep_zoom = dzi
         self.tile_manager = TileManager(dzi)
         self.active_deep_zoom_worker = None
@@ -1260,10 +1290,12 @@ class GPUImageView(QOpenGLWidget):
         if cache is not None and base_bytes > self._vram_limit * 0.50:
             manager.max_cache = 64
             from OpenGL.GL import glDeleteTextures
-            while len(cache) > 64:
-                _, tex = cache.popitem(last=False)
-                with contextlib.suppress(Exception):
-                    glDeleteTextures([tex])
+            # Trim runs from the display path, off paintGL — free in-context.
+            with self._current_gl_context():
+                while len(cache) > 64:
+                    _, tex = cache.popitem(last=False)
+                    with contextlib.suppress(Exception):
+                        glDeleteTextures([tex])
         elif manager is not None:
             manager.max_cache = 256
         if ram_bytes and ram_bytes > self._ram_pressure_limit_bytes():
