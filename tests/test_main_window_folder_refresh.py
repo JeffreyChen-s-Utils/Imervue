@@ -4,6 +4,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from Imervue.Imervue_main_window import ImervueMainWindow
+from Imervue.gpu_image_view.actions.delete import pending_deleted_paths
 from Imervue.image.browser_state import ImageFilterSpec, ImageMetadataIndex
 
 
@@ -22,6 +23,7 @@ class _FakeViewer:
         self.tile_grid_mode = False
         self.deep_zoom = object()
         self._deep_zoom_loading = None
+        self.undo_stack = []
         self._unfiltered_images = list(images or [])
         self.loaded_grids = []
         self.loaded_deep_zoom = []
@@ -271,6 +273,41 @@ def test_filter_to_empty_while_deep_zoom_drops_phantom_and_returns_to_wall():
     assert win.viewer.clear_deep_zoom_calls == 1
     assert win.viewer.tile_grid_mode is True
     assert win.viewer.loaded_deep_zoom == []
+
+
+def test_pending_deleted_paths_collects_unrestored_deletes():
+    stack = [
+        {"mode": "delete", "deleted_paths": ["/p/a.png"], "restored": False},
+        {"mode": "delete_external", "deleted_paths": ["/p/dir"], "restored": False},
+        {"mode": "delete", "deleted_paths": ["/p/b.png"], "restored": True},  # undone
+        {"mode": "edit", "deleted_paths": ["/p/c.png"]},  # not a delete
+    ]
+    assert pending_deleted_paths(stack) == {"/p/a.png", "/p/dir"}
+
+
+def test_pending_deleted_paths_empty_stack():
+    assert pending_deleted_paths([]) == set()
+
+
+def test_filter_excludes_soft_deleted_image():
+    # A soft-deleted image lingers in _unfiltered_images (unlinked at shutdown);
+    # a filter change must not resurrect it.
+    win = _deep_zoom_filter_win(["/p/a.png", "/p/b.png"], 0)  # showing a
+    win.viewer.undo_stack = [
+        {"mode": "delete", "deleted_paths": ["/p/b.png"], "restored": False}]
+    win._apply_image_filter()  # no text → spec keeps all, minus pending
+    assert win.viewer.model.images == ["/p/a.png"]
+
+
+def test_refresh_excludes_soft_deleted_image_from_disk_rescan():
+    # A folder rescan re-includes the still-on-disk file; it must stay dropped.
+    win = _StubMainWindow(["/p/a.png"])
+    win.viewer.current_index = 0
+    win.viewer.undo_stack = [
+        {"mode": "delete", "deleted_paths": ["/p/b.png"], "restored": False}]
+    win._apply_refreshed_image_list(["/p/a.png", "/p/b.png"])
+    assert "/p/b.png" not in win.viewer.model.images
+    assert win.viewer._unfiltered_images == ["/p/a.png"]
 
 
 def test_tab_change_saves_outgoing_view_before_clearing(tmp_path, monkeypatch):

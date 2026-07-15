@@ -884,8 +884,14 @@ class ImervueMainWindow(QMainWindow):
 
     def _apply_image_filter(self, text: str | None = None) -> None:
         """Filter the current folder by filename/tag/rating/date immediately."""
+        from Imervue.gpu_image_view.actions.delete import pending_deleted_paths
         viewer = self.viewer
         base = list(getattr(viewer, "_unfiltered_images", None) or viewer.model.images)
+        # Soft-deleted images linger in _unfiltered_images (the file is only
+        # unlinked at shutdown); drop them so a filter change can't resurrect them.
+        pending = pending_deleted_paths(getattr(viewer, "undo_stack", []))
+        if pending:
+            base = [p for p in base if p not in pending]
         if text is None:
             filtered = filter_paths(base, self._current_filter_spec(), self._image_metadata_index)
         else:
@@ -1478,7 +1484,14 @@ class ImervueMainWindow(QMainWindow):
 
     def _apply_refreshed_image_list(self, new_images: list[str]) -> None:
         """Update tile/list/deep-zoom state after an external folder change."""
+        from Imervue.gpu_image_view.actions.delete import pending_deleted_paths
         viewer = self.viewer
+        # A fresh disk scan re-includes soft-deleted files (unlinked only at
+        # shutdown); drop them so a watch-folder refresh or folder revisit can't
+        # resurrect them.
+        pending = pending_deleted_paths(getattr(viewer, "undo_stack", []))
+        if pending:
+            new_images = [p for p in new_images if p not in pending]
         old_images = list(viewer.model.images)
         old_full = list(getattr(viewer, "_unfiltered_images", None) or old_images)
         rename_map = detect_renamed_paths(old_full, new_images, self._image_metadata_index)

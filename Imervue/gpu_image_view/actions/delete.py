@@ -14,6 +14,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.delete")
 
+# Undo-stack modes that represent a still-pending soft deletion (the file is
+# hidden from the list but kept on disk until restore or the shutdown commit).
+_PENDING_DELETE_MODES = ("delete", "delete_external")
+
+
+def pending_deleted_paths(undo_stack: list[dict]) -> set[str]:
+    """Paths soft-deleted but not yet restored (nor committed to disk).
+
+    A soft delete only pops the path from ``model.images``; the file stays on
+    disk and in ``_unfiltered_images``. Rebuilding the visible list from either
+    (a filter change or a folder rescan) would otherwise resurrect it, undoing
+    the delete. Excluding this set at those rebuild points keeps it gone —
+    ``undo_delete`` pops the action, so the path leaves the set and reappears.
+    """
+    return {
+        path
+        for action in undo_stack
+        if action.get("mode") in _PENDING_DELETE_MODES and not action.get("restored")
+        for path in action.get("deleted_paths", [])
+    }
+
 
 class _UndoStackOwner(Protocol):
     """Minimal duck-typed surface that ``commit_pending_deletions`` requires.
