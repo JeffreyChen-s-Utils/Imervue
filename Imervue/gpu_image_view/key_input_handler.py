@@ -121,7 +121,14 @@ class KeyInputHandler:
             view.selected_tiles.clear()
             view.update()
             return True
-        if view.deep_zoom or view.active_deep_zoom_worker:
+        # Also catch the in-flight loading states where ``deep_zoom`` is still
+        # None: waiting on a promoted prefetch worker, or the 0–300 ms
+        # progressive-preview window (only the preview worker is set). Without
+        # this, Escape (and the arrow keys, gated on ``deep_zoom``) do nothing
+        # and a stuck load has no keyboard way back to the wall.
+        if (view.deep_zoom or view.active_deep_zoom_worker
+                or getattr(view, "_deep_zoom_loading", None)
+                or getattr(view, "active_deep_zoom_preview_worker", None)):
             self.exit_deep_zoom_to_grid()
             return True
         return False

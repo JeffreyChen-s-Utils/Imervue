@@ -56,6 +56,15 @@ class TestDeepZoomImage:
         level, _ = dzi.get_level(0.001)
         assert level == len(dzi.levels) - 1
 
+    def test_get_level_handles_nonpositive_zoom(self):
+        """A stray zoom <= 0 must not raise a log2 domain error; it maps to the
+        deepest (most zoomed-out) level."""
+        img = np.zeros((2048, 2048, 4), dtype=np.uint8)
+        dzi = DeepZoomImage(img)
+        deepest = len(dzi.levels) - 1
+        assert dzi.get_level(0.0)[0] == deepest
+        assert dzi.get_level(-5.0)[0] == deepest
+
     def test_rgb_input(self):
         """3-channel input should work."""
         img = np.zeros((1024, 1024, 3), dtype=np.uint8)

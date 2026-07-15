@@ -27,6 +27,8 @@ def _fake(*, path="img.png", should_refit=True):
         _should_refit_on_load=lambda: should_refit,
         _fit_to_window=lambda: calls.append(("fit",)),
         _schedule_settle_refit=lambda: calls.append(("settle",)),
+        _browse=SimpleNamespace(clamp_pan=lambda: calls.append(("clamp",))),
+        _user_locked_view=False,
     )
     return fake, calls
 
@@ -42,10 +44,12 @@ def test_restores_remembered_view_before_deciding():
 
 def test_keeps_remembered_zoom_in_without_fitting():
     # A genuine remembered zoom-in → restore it, do NOT re-fit, and do NOT
-    # queue a settle re-fit that would snap the zoom-in back.
+    # queue a settle re-fit that would snap the zoom-in back. But clamp its pan
+    # on-screen and lock the view so the next resize can't refit it away.
     fake, calls = _fake(should_refit=False)
     GPUImageView._apply_initial_view(fake)
-    assert calls == [("restore", "img.png")]  # restored, not re-fit
+    assert calls == [("restore", "img.png"), ("clamp",)]  # restored, clamped
+    assert fake._user_locked_view is True
 
 
 def test_no_current_path_is_a_noop():
@@ -64,7 +68,7 @@ def test_no_current_path_is_a_noop():
 def test_restore_target_is_the_current_path():
     fake, calls = _fake(path="folder/sub/photo.cr2", should_refit=False)
     GPUImageView._apply_initial_view(fake)
-    assert calls == [("restore", "folder/sub/photo.cr2")]
+    assert calls == [("restore", "folder/sub/photo.cr2"), ("clamp",)]
 
 
 def test_settle_refit_skips_when_a_newer_image_was_requested():

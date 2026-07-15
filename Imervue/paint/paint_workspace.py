@@ -194,8 +194,11 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         tab switch would leave the dispatcher talking to the previous
         tab's pixel buffer.
         """
-        from Imervue.paint.undo_stack import UndoStack
-        self._undo_stack = UndoStack(self._canvas.document())
+        # One undo stack per canvas (keyed by the canvas), resolved lazily by
+        # the ``_undo_stack`` property. A single shared stack stayed bound to the
+        # first document forever, so after a tab switch / open Ctrl+Z applied one
+        # document's history to another — a silent, destructive corruption.
+        self._undo_stacks: dict = {}
         self._dispatcher = ToolDispatcher(
             self._state,
             image_provider=lambda: self._canvas.current_image(),
@@ -335,6 +338,25 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             logger.warning("dropped file %r could not be opened: %s", path, exc)
 
     # ---- undo / redo + history feedback --------------------------------
+
+    @property
+    def _undo_stack(self):
+        """The active canvas's undo stack (created on demand).
+
+        Per-canvas so a tab switch can't apply one document's history to
+        another. Recreated when the canvas's *document object* is replaced
+        wholesale (open file / new document) — matching the old ``clear()``
+        intent — while a mere in-place mutation (a brush dab) keeps the same
+        object and so the same history.
+        """
+        from Imervue.paint.undo_stack import UndoStack
+        canvas = self._canvas
+        document = canvas.document()
+        stack = self._undo_stacks.get(canvas)
+        if stack is None or stack.document is not document:
+            stack = UndoStack(document)
+            self._undo_stacks[canvas] = stack
+        return stack
 
     def _on_dispatcher_commit(self) -> None:
         """Push an undo snapshot after the dispatcher commits a stroke.

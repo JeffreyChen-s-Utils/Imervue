@@ -258,6 +258,14 @@ class ToolDispatcher:
         Single-shot tools (fill, wand) commit immediately on press.
         Tools that don't mutate pixels never commit.
         """
+        # Commit a gesture that's already in flight on its release/leave even if
+        # the user switched to a non-mutating tool (hand / eyedropper) mid-stroke
+        # — otherwise the flag never clears and the stroke merges into the next
+        # one's undo step. Checked before the mutating-tool guard for that reason.
+        if evt.phase in ("release", "leave") and self._gesture_pending_commit:
+            self._gesture_pending_commit = False
+            self._commit_undo()
+            return
         if tool_name not in self._MUTATING_TOOLS:
             return
         if tool_name in self._SINGLE_SHOT_TOOLS:
@@ -266,10 +274,6 @@ class ToolDispatcher:
             return
         if evt.phase == "press" and handled:
             self._gesture_pending_commit = True
-            return
-        if evt.phase in ("release", "leave") and self._gesture_pending_commit:
-            self._gesture_pending_commit = False
-            self._commit_undo()
 
     @property
     def last_damage(self):

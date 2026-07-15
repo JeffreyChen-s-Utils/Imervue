@@ -52,6 +52,7 @@ class DeflickerDialog(QDialog):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._paths = [p for p in image_paths if p.lower().endswith(_SUPPORTED_EXTS)]
+        self._worker: DeflickerWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("deflicker_title", "Deflicker (Time-lapse)"))
         self.setMinimumWidth(440)
@@ -105,6 +106,10 @@ class DeflickerDialog(QDialog):
         return buttons
 
     def _start(self) -> None:
+        # Guard against a second start (double Enter / OK) while one is running —
+        # it would orphan the first QThread and crash on its destruction.
+        if self._worker is not None and self._worker.isRunning():
+            return
         if not self._paths:
             self.reject()
             return
@@ -133,6 +138,12 @@ class DeflickerDialog(QDialog):
             )
         self.accept()
 
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        # Don't let the dialog be destroyed with a live worker thread.
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait()
+        super().closeEvent(event)
+
 
 class DeflickerWorker(QThread):
     """Background worker that emits progress and writes corrected frames."""
@@ -146,40 +157,43 @@ class DeflickerWorker(QThread):
         self._options = options
 
     def run(self) -> None:  # pragma: no cover - thread entry
-        frames = []
-        for idx, path in enumerate(self._paths):
-            try:
-                frames.append(_load_rgba(path))
-            except (OSError, ValueError):
-                logger.warning("Skipping unreadable frame: %s", path)
-                frames.append(None)
-            self.progress.emit(idx + 1)
-
-        valid_frames = [f for f in frames if f is not None]
-        if not valid_frames:
-            self.finished_with_count.emit(0)
-            return
-        means = frame_luminance_means(valid_frames)
-        gains = compute_gain_factors(means, self._options)
-
         written = 0
-        gain_iter = iter(gains.tolist())
-        for path, frame in zip(self._paths, frames, strict=False):
-            if frame is None:
-                continue
-            try:
-                gain = next(gain_iter)
-            except StopIteration:
-                break
-            corrected = apply_gain(frame, gain)
-            out_dir = Path(path).parent / "deflickered"
-            out_dir.mkdir(exist_ok=True)
-            out_path = out_dir / Path(path).name
-            try:
-                Image.fromarray(corrected, mode="RGBA").save(str(out_path))
-                written += 1
-            except OSError:
-                logger.warning("Failed to write %s", out_path)
+        try:
+            frames = []
+            for idx, path in enumerate(self._paths):
+                try:
+                    frames.append(_load_rgba(path))
+                except (OSError, ValueError):
+                    logger.warning("Skipping unreadable frame: %s", path)
+                    frames.append(None)
+                self.progress.emit(idx + 1)
+
+            valid_frames = [f for f in frames if f is not None]
+            if valid_frames:
+                means = frame_luminance_means(valid_frames)
+                gains = compute_gain_factors(means, self._options)
+                gain_iter = iter(gains.tolist())
+                for path, frame in zip(self._paths, frames, strict=False):
+                    if frame is None:
+                        continue
+                    try:
+                        gain = next(gain_iter)
+                    except StopIteration:
+                        break
+                    corrected = apply_gain(frame, gain)
+                    out_dir = Path(path).parent / "deflickered"
+                    out_path = out_dir / Path(path).name
+                    try:
+                        # mkdir is inside the try too — a read-only folder must
+                        # skip this frame, not abort the whole run.
+                        out_dir.mkdir(exist_ok=True)
+                        Image.fromarray(corrected, mode="RGBA").save(str(out_path))
+                        written += 1
+                    except OSError:
+                        logger.warning("Failed to write %s", out_path)
+        except Exception as exc:  # noqa: BLE001 - worker must always report
+            # Otherwise finished_with_count never fires and the dialog hangs.
+            logger.exception("Deflicker failed: %s", exc)
         self.finished_with_count.emit(written)
 
 

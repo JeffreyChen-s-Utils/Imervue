@@ -98,6 +98,16 @@ def _tile_view(images):
     )
 
 
+def test_minimap_recenter_centres_in_content_area_not_full_canvas():
+    # 1000x1000 image in a 1000x1000 canvas → 152 px reserved band, content 848.
+    # A click at the minimap's vertical centre (image row 500) must be centred at
+    # content_h/2, NOT the full canvas centre (which would land it ~76 px low).
+    view = _band_view(1000, 1000, (1000, 1000), zoom=2.0)
+    InputController(view)._recenter_on_minimap(_Point(50, 50), (0, 0, 100, 100), 2.0)
+    content_h = 1000 - fit_view.reserved_overlay_height(view)
+    assert view.dz_offset_y == pytest.approx(content_h / 2 - 500 * 2.0)
+
+
 def test_enter_deep_zoom_opens_clicked_tile():
     view = _tile_view(["/p/a.png", "/p/b.png"])
     view.load_deep_zoom_image = view.loaded.append

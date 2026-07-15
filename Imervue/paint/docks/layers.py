@@ -29,6 +29,19 @@ from Imervue.paint.docks._helpers import (
 )
 
 
+def _layer_index_for_row(visible_indices, row: int) -> int:
+    """Map a dock row to the true layer index, honouring the search filter.
+
+    The dock draws the stack newest-first (each row is ``insertItem(0, …)``), so
+    the visible rows are the filtered layer indices in DESCENDING order. Reduces
+    to ``layer_count - 1 - row`` when nothing is filtered; the old arithmetic
+    ignored the filter and selected the wrong layer while a search was active.
+    Returns ``-1`` for an out-of-range row.
+    """
+    ordered = sorted(visible_indices, reverse=True)
+    return ordered[row] if 0 <= row < len(ordered) else -1
+
+
 class LayerDock(QDockWidget):
     """Layer list bound to a :class:`Imervue.paint.document.PaintDocument`.
 
@@ -189,6 +202,14 @@ class LayerDock(QDockWidget):
     def set_document(self, document) -> None:
         if self._document is document:
             return
+        # Drop the previous document's listener before rebinding — otherwise
+        # every background document keeps this dock's refresh callback, and a
+        # mutation there (autosave, an undo on another tab) spuriously fires
+        # refresh() and resets the selected row.
+        old_unsubscribe = getattr(self, "_unsubscribe", None)
+        if callable(old_unsubscribe):
+            old_unsubscribe()
+        self._unsubscribe = None
         self._document = document
         if document is None:
             self._list.clear()
@@ -380,7 +401,7 @@ class LayerDock(QDockWidget):
     def _row_to_layer_index(self, row: int) -> int:
         if self._document is None:
             return -1
-        return self._document.layer_count - 1 - row
+        return _layer_index_for_row(self._filtered_indices(), row)
 
 
 # ---------------------------------------------------------------------------

@@ -646,9 +646,22 @@ class PaintCanvas(QOpenGLWidget):
         Stored verbatim so callers can swap the source mid-session
         (e.g. when the active animation changes).
         """
+        # Free the outgoing texture before dropping its handle. This runs off
+        # paintGL (the animation source is swapped from a signal), so it needs a
+        # current GL context or the texture is orphaned on every swap — it has
+        # no other free path.
+        if self._onion_skin_texture is not None:
+            import contextlib
+            with self._current_gl_context(), contextlib.suppress(Exception):
+                glDeleteTextures(1, [self._onion_skin_texture])
         self._onion_skin_source = callable_or_none
         self._onion_skin_texture = None   # force re-upload of new buffers
         self._onion_skin_buffer_id = None
+
+    def _current_gl_context(self):
+        """Current this widget's GL context for frees issued outside paintGL."""
+        from Imervue.gpu_image_view.gl_context import make_current_guard
+        return make_current_guard(self)
 
     def set_size_hud(self, hud, tool_state) -> None:
         """Wire the brush-size HUD overlay.

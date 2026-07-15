@@ -15,21 +15,24 @@ MAX_BOOKMARKS = 5000
 # read_user_setting() loads from disk).
 
 _bookmark_set: set[str] = set()
-_cached_list_id: int = 0
+# Hold the backing list OBJECT (not its id()): keeping the reference alive means
+# a freed list's address can't be reused for a new one and compare equal, which
+# an id()-based cache was vulnerable to (a profile switch serving a stale set).
+_cached_list: list[str] | None = None
 
 
 def _ensure_set_synced() -> set[str]:
     """Return the membership set, rebuilding it if the backing list was swapped out."""
-    global _bookmark_set, _cached_list_id
+    global _bookmark_set, _cached_list
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     lst = user_setting_dict.get("bookmarks")
     if lst is None:
         _bookmark_set = set()
-        _cached_list_id = 0
+        _cached_list = None
         return _bookmark_set
-    if id(lst) != _cached_list_id:
+    if lst is not _cached_list:
         _bookmark_set = set(lst)
-        _cached_list_id = id(lst)
+        _cached_list = lst
     return _bookmark_set
 
 
@@ -44,8 +47,8 @@ def add_bookmark(path: str) -> bool:
     if path in bookmark_set:
         return False
     bookmarks = user_setting_dict.setdefault("bookmarks", [])
-    # setdefault may have created a new list; re-sync the id cache.
-    if id(bookmarks) != _cached_list_id:
+    # setdefault may have created a new list; re-sync against the new object.
+    if bookmarks is not _cached_list:
         bookmark_set = _ensure_set_synced()
     bookmarks.append(path)
     bookmark_set.add(path)
@@ -80,8 +83,8 @@ def is_bookmarked(path: str) -> bool:
 
 def clear_bookmarks():
     from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
-    global _bookmark_set, _cached_list_id
+    global _bookmark_set, _cached_list
     user_setting_dict["bookmarks"] = []
     _bookmark_set = set()
-    _cached_list_id = id(user_setting_dict["bookmarks"])
+    _cached_list = user_setting_dict["bookmarks"]
     schedule_save()

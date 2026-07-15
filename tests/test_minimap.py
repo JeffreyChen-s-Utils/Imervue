@@ -10,6 +10,7 @@ from Imervue.gpu_image_view.minimap import (
     minimap_geometry,
     point_in_rect,
     recenter_offsets,
+    viewport_box_rect,
 )
 
 
@@ -32,6 +33,28 @@ class TestMinimapGeometry:
         # Degenerate image height is clamped, not crashed.
         _, _, w, h = minimap_geometry(1000, 800, 100, 0)
         assert w > 0 and h > 0
+
+    def test_extreme_aspect_keeps_nonzero_dimensions(self):
+        # A 10x10000 strip would derive a 0-width minimap (invisible, and a zero
+        # divisor in the draw math) — floor it to a thin but real rectangle.
+        _, _, w, h = minimap_geometry(1000, 800, 10, 10000)
+        assert w >= 1 and h >= 1
+
+
+class TestViewportBoxRect:
+    def test_box_bounded_by_content_height_not_full_canvas(self):
+        # 1000x1000 image, 100x100 minimap at origin, zoom 1, no pan. Content
+        # height 848 (152 band) → the box bottom is 848/1000 of the strip, not
+        # the full height, so it doesn't claim the band-hidden rows are visible.
+        x0, y0, x1, y1 = viewport_box_rect((0, 0, 100, 100), 1000, 1000,
+                                           0.0, 0.0, 1.0, 1000, 848)
+        assert (x0, y0) == pytest.approx((0, 0))
+        assert x1 == pytest.approx(100)      # full width visible
+        assert y1 == pytest.approx(84.8)     # 848/1000 * 100
+
+    def test_box_guards_degenerate_zoom_and_image(self):
+        # Zero zoom / zero image dims must not raise (guarded divisors).
+        assert viewport_box_rect((0, 0, 50, 50), 0, 0, 0.0, 0.0, 0.0, 100, 80)
 
 
 class TestPointInRect:

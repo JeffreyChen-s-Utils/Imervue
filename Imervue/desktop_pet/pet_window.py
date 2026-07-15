@@ -473,6 +473,25 @@ class PetWindow(QWidget):
             self._speech.close_bubble()
         self.visibility_changed.emit(False)
 
+    def shutdown(self) -> None:
+        """Stop every background worker / OS hook this pet owns.
+
+        ``hideEvent`` only stops the repaint timers; despawn must ALSO release
+        the webcam (camera LED off), unbind the webhook port, remove the global
+        hotkey OS hook, close the twitch / OBS sockets and stop the audio
+        loopback — none of which ``deleteLater`` does, because the spawned Python
+        threads / OS hooks outlive the destroyed C++ QObject. Nothing is
+        persisted, so re-spawning restores whatever the user had enabled.
+        """
+        import contextlib
+        for controller in self._features.values():
+            with contextlib.suppress(Exception):
+                controller.shutdown()
+        with contextlib.suppress(Exception):
+            self._music_rhythm.shutdown()
+        with contextlib.suppress(Exception):
+            self._canvas_drivers.shutdown()
+
     # =====================================================================
     # Rig loading
     # =====================================================================

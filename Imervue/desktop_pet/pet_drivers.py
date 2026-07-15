@@ -83,6 +83,13 @@ class CanvasDriverController:
             and bool(self._driver.is_enabled())   # type: ignore[attr-defined]
         )
 
+    def shutdown(self) -> None:
+        """Stop the driver WITHOUT persisting a disabled state (despawn / close)."""
+        if self._driver is not None:
+            import contextlib
+            with contextlib.suppress(Exception):
+                self._driver.set_enabled(False)   # type: ignore[attr-defined]
+
 
 class MusicRhythmController(CanvasDriverController):
     """System-audio rhythm driver (WASAPI loopback → puppet motion)."""

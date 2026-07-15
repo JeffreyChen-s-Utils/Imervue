@@ -1,11 +1,14 @@
 """Tests for the animated-image (GIF / APNG / animated WebP) player."""
 from __future__ import annotations
 
+import contextlib
+
 import numpy as np
 import pytest
 from PIL import Image
 
 from Imervue.gpu_image_view.actions import animation_player as ap
+from Imervue.gpu_image_view.actions.animation_player import can_cache_pyramid
 
 
 def _make_static_png(path):
@@ -33,6 +36,9 @@ class _FakeGui:
         self.tile_manager = None
         self._histogram_cache = object()
         self.updates = 0
+
+    def _current_gl_context(self):
+        return contextlib.nullcontext()
 
     def update(self):
         self.updates += 1
@@ -179,3 +185,61 @@ class TestStop:
 class TestAnimatedExts:
     def test_covers_common_formats(self):
         assert {".gif", ".apng", ".webp", ".png"} <= ap.ANIMATED_EXTS
+
+
+class TestPyramidMemoization:
+    def test_can_cache_pyramid_budget(self):
+        assert can_cache_pyramid(0, 999, 100) is True   # first entry always fits
+        assert can_cache_pyramid(50, 40, 100) is True    # 90 <= 100
+        assert can_cache_pyramid(80, 40, 100) is False   # 120 > 100
+
+    def test_apply_frame_reuses_cached_pyramid_on_replay(self, tmp_path, qapp):
+        p = _make_gif(tmp_path / "a.gif", n_frames=3)
+        gui = _FakeGui()
+        gui.deep_zoom = object()  # non-None so _apply_frame proceeds
+        pl = ap.AnimationPlayer(gui, p)
+        pl.load()
+        pl.go_to_frame(0)
+        first = gui.deep_zoom
+        pl.go_to_frame(1)
+        assert gui.deep_zoom is not first          # different frame → rebuilt
+        pl.go_to_frame(0)
+        assert gui.deep_zoom is first              # replayed → cached pyramid
+
+    def test_apply_frame_frees_old_tiles_inside_gl_context(self, tmp_path, qapp):
+        events: list = []
+
+        class _Ctx:
+            def __enter__(self):
+                events.append("enter")
+                return self
+
+            def __exit__(self, *_a):
+                events.append("exit")
+                return False
+
+        class _TM:
+            def clear(self):
+                events.append("clear")
+
+        p = _make_gif(tmp_path / "a.gif", n_frames=2)
+        gui = _FakeGui()
+        gui.deep_zoom = object()
+        gui.tile_manager = _TM()
+        gui._current_gl_context = lambda: _Ctx()
+        pl = ap.AnimationPlayer(gui, p)
+        pl.load()
+        pl.go_to_frame(1)
+        assert events == ["enter", "clear", "exit"]  # freed in-context
+
+    def test_stop_clears_pyramid_cache(self, tmp_path, qapp):
+        p = _make_gif(tmp_path / "a.gif", n_frames=3)
+        gui = _FakeGui()
+        gui.deep_zoom = object()
+        pl = ap.AnimationPlayer(gui, p)
+        pl.load()
+        pl.go_to_frame(0)
+        assert pl._pyramid_cache            # populated
+        pl.stop()
+        assert pl._pyramid_cache == {}
+        assert pl._pyramid_bytes == 0

@@ -45,7 +45,12 @@ class EffectWorker(QThread):
             result = self._transform(load_rgba(self._path))
             Image.fromarray(result, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - a worker must always report
+            # The transform can raise anything: ImportError for an optional
+            # backend (opencv isn't a default dependency), cv2.error, MemoryError,
+            # or PIL's DecompressionBombError. Narrowing the except let those
+            # escape, so ``done`` never fired and the calling dialog hung with its
+            # Apply button disabled forever. Always report the failure instead.
             logger.exception("Effect failed: %s", exc)
             self.done.emit(False, str(exc))
 

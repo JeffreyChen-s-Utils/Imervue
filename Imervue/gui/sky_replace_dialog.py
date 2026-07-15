@@ -53,7 +53,10 @@ class _Worker(QThread):
                 arr = remove_background(arr, bg_color=(0, 0, 0, 0))
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError, RuntimeError) as exc:
+        except Exception as exc:  # noqa: BLE001 - worker must always report
+            # A cv2-backed segmentation raises ImportError (opencv is optional)
+            # or cv2.error, which the narrow except missed → done never fired and
+            # the dialog hung with Apply disabled. Always report the failure.
             logger.exception("Sky/bg replace failed: %s", exc)
             self.done.emit(False, str(exc))
 

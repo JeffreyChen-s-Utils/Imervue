@@ -156,3 +156,29 @@ class TestRestoreBrowseMode:
         ui, viewer = self._ui([])
         sm._restore_browse_mode(ui, {"tile_grid_mode": True})
         assert viewer._reloads == []
+
+
+def test_active_tab_index_prefers_a_path_match():
+    from Imervue.sessions.session_manager import active_tab_index
+    tabs = [{"path": "a.png"}, {"path": "b.png"}, {"path": "c.png"}]
+    assert active_tab_index(tabs, "c.png", 0) == 2
+
+
+def test_active_tab_index_survives_a_dropped_tab_index_shift():
+    from Imervue.sessions.session_manager import active_tab_index
+    # "a.png" was a missing file and dropped on restore; the saved index 2 is now
+    # stale, but the path re-finds the tab.
+    tabs = [{"path": "b.png"}, {"path": "c.png"}]
+    assert active_tab_index(tabs, "c.png", 2) == 1
+
+
+def test_active_tab_index_falls_back_to_the_clamped_index():
+    from Imervue.sessions.session_manager import active_tab_index
+    tabs = [{"path": "a.png"}, {"path": "b.png"}]
+    assert active_tab_index(tabs, "", 5) == 1       # no path → clamp legacy index
+    assert active_tab_index(tabs, "zzz.png", 0) == 0  # unmatched → fallback
+
+
+def test_active_tab_index_empty_tabs():
+    from Imervue.sessions.session_manager import active_tab_index
+    assert active_tab_index([], "a.png", 0) == -1

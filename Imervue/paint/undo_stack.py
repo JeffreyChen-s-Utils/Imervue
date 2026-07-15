@@ -62,6 +62,11 @@ class UndoStack:
 
     # ---- public API -----------------------------------------------------
 
+    @property
+    def document(self) -> PaintDocument:
+        """The document this stack captures — used to detect a wholesale swap."""
+        return self._document
+
     def commit(self) -> None:
         """Push the *current* state onto the undo stack.
 

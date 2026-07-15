@@ -424,6 +424,10 @@ class GPUImageView(QOpenGLWidget):
         # ask recipe_store for the new recipe and apply it.
         if self.model.images and 0 <= self.current_index < len(self.model.images) \
                 and self.model.images[self.current_index] == path:
+            # Save the live zoom/pan first: _clear_deep_zoom nulls _deep_zoom_path,
+            # so load_deep_zoom_image's own save would no-op and a tonal recipe
+            # edit would snap the view back to the entry zoom.
+            self._save_view_state()
             self._cancel_deep_zoom_worker()
             self._clear_deep_zoom()
             self.load_deep_zoom_image(path)
@@ -635,6 +639,13 @@ class GPUImageView(QOpenGLWidget):
         if self._should_refit_on_load():
             self._fit_to_window()
             self._schedule_settle_refit()
+        else:
+            # Keeping a genuine remembered zoom-in: clamp its pan to the current
+            # (maybe smaller / different-DPI) canvas so it can't open off-screen,
+            # and lock the view so the next resize's settle re-fit doesn't snap
+            # the deliberate zoom away.
+            self._browse.clamp_pan()
+            self._user_locked_view = True
 
     def _schedule_settle_refit(self) -> None:
         """Queue a confirmation re-fit for the next event-loop turn.
@@ -709,20 +720,28 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.tile_textures import delete_all_tile_textures
         delete_all_tile_textures(self)
 
+    def _current_gl_context(self):
+        """Current this widget's GL context for texture frees issued outside
+        ``paintGL`` (image switch / eviction from signal, key and menu handlers),
+        so ``glDeleteTextures`` isn't dropped and the texture leaked."""
+        from Imervue.gpu_image_view.gl_context import make_current_guard
+        return make_current_guard(self)
+
     def _clear_deep_zoom(self):
         """釋放 DeepZoom 相關的 GPU 與記憶體資源"""
         self._deep_zoom_loading = None
         self._deep_zoom_path = None
         self._stop_animation()
-        if self.tile_manager is not None:
-            self.tile_manager.clear()
-            self.tile_manager = None
+        # Texture frees need a current GL context — this runs off paintGL.
+        with self._current_gl_context():
+            if self.tile_manager is not None:
+                self.tile_manager.clear()
+                self.tile_manager = None
+            if self._minimap_tex is not None:
+                glDeleteTextures([self._minimap_tex])
+                self._minimap_tex = None
+                self._minimap_dzi = None
         self.deep_zoom = None
-        # 清除 minimap texture
-        if self._minimap_tex is not None:
-            glDeleteTextures([self._minimap_tex])
-            self._minimap_tex = None
-            self._minimap_dzi = None
         # 離開 deep zoom → 收起「修改」選單（若主視窗還在）。
         self._set_modify_menu_visible(False)
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
@@ -946,13 +965,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            self._apply_initial_view()
-            self._init_animation(path)
-            self._prefetch_neighbors()
-            self._update_status_info()
-            self._notify_deep_zoom_displayed()
-            self._browse.begin_image_fade_in()
-            self.update()
+            self._finalize_deep_zoom_display(path)
             return
 
         # ===== 快取未命中 → 背景載入（顯示載入指示，避免空白幀）=====
@@ -1027,6 +1040,30 @@ class GPUImageView(QOpenGLWidget):
         except OSError:
             return False
 
+    def _finalize_deep_zoom_display(self, path: str) -> None:
+        """Shared finalization once ``deep_zoom`` + ``tile_manager`` are set for
+        *path* — reached from a prefetch cache hit, a background load, or a
+        promoted in-flight prefetch worker.
+
+        Centralised so the three display paths can't drift: a promoted prefetch
+        previously skipped animation start, the second-monitor mirror, the
+        status readout, and the image-issue clear purely because those calls
+        were never copied into its branch.
+        """
+        self._deep_zoom_loading = None
+        self._deep_zoom_error = None
+        self._deep_zoom_retry_counts.pop(path, None)
+        if hasattr(self.main_window, "clear_image_issue"):
+            self.main_window.clear_image_issue(path)
+        self.enforce_memory_pressure()
+        self._apply_initial_view()
+        self._init_animation(path)
+        self._prefetch_neighbors()
+        self._update_status_info()
+        self._notify_deep_zoom_displayed()
+        self._browse.begin_image_fade_in()
+        self.update()
+
     def _on_deep_zoom_loaded(self, dzi, path, request_id: int | None = None):
         if request_id is not None and request_id != self._deep_zoom_request_id:
             return
@@ -1039,27 +1076,15 @@ class GPUImageView(QOpenGLWidget):
         self.current_index = idx
 
         if self.tile_manager is not None:
-            self.tile_manager.clear()
+            # Off-paintGL free — needs a current GL context or it leaks.
+            with self._current_gl_context():
+                self.tile_manager.clear()
         self.deep_zoom = dzi
-        self._deep_zoom_loading = None
-        self._deep_zoom_error = None
-        self._deep_zoom_retry_counts.pop(path, None)
-        if hasattr(self.main_window, "clear_image_issue"):
-            self.main_window.clear_image_issue(path)
         self.tile_manager = TileManager(dzi)
         self.active_deep_zoom_worker = None
         if self.active_deep_zoom_preview_worker is not None:
             self.active_deep_zoom_preview_worker.abort()
             self.active_deep_zoom_preview_worker = None
-        self.enforce_memory_pressure()
-
-        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）
-        self._apply_initial_view()
-
-        # 動畫偵測
-        self._init_animation(path)
-
-        self._prefetch_neighbors()
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -1068,10 +1093,9 @@ class GPUImageView(QOpenGLWidget):
                 )
             )
 
-        self._update_status_info()
-        self._notify_deep_zoom_displayed()
-        self._browse.begin_image_fade_in()
-        self.update()
+        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）。
+        # 共用收尾（動畫偵測、副螢幕鏡像、狀態列、預載鄰圖）。
+        self._finalize_deep_zoom_display(path)
 
     def _on_deep_zoom_preview_loaded(self, dzi, path, request_id: int | None = None):
         if request_id is not None and request_id != self._deep_zoom_request_id:
@@ -1220,18 +1244,25 @@ class GPUImageView(QOpenGLWidget):
                 and idx is not None):
             self.current_index = idx
             self.deep_zoom = dzi
-            self._deep_zoom_loading = None
-            self._deep_zoom_error = None
             self.tile_manager = TileManager(dzi)
-            self.enforce_memory_pressure()
-            self._apply_initial_view()
-            self._prefetch_neighbors()
-            self._browse.begin_image_fade_in()
-            self.update()
+            self._finalize_deep_zoom_display(path)
             return
 
         # 否則存入預載快取
         self._prefetch.store(path, dzi)
+
+    def _on_prefetch_error(self, path: str, message: str) -> None:
+        """A prefetch worker failed. Drop it, and — if the user is waiting on it
+        as the primary load (``load_deep_zoom_image`` delegated to an already
+        in-flight prefetch worker) — route to the normal failure handling.
+
+        Without this the prefetch error only popped the worker, leaving
+        ``_deep_zoom_loading`` set and ``deep_zoom`` None: a permanent "Loading…"
+        overlay with no error toast and no retry.
+        """
+        self._prefetch.pop_worker(path)
+        if self.deep_zoom is None and self._deep_zoom_loading == path:
+            self._on_deep_zoom_failed(path, message, self._deep_zoom_request_id)
 
     def enforce_memory_pressure(self) -> None:
         """Trim deep-zoom auxiliary caches when image memory is large."""
@@ -1250,10 +1281,12 @@ class GPUImageView(QOpenGLWidget):
         if cache is not None and base_bytes > self._vram_limit * 0.50:
             manager.max_cache = 64
             from OpenGL.GL import glDeleteTextures
-            while len(cache) > 64:
-                _, tex = cache.popitem(last=False)
-                with contextlib.suppress(Exception):
-                    glDeleteTextures([tex])
+            # Trim runs from the display path, off paintGL — free in-context.
+            with self._current_gl_context():
+                while len(cache) > 64:
+                    _, tex = cache.popitem(last=False)
+                    with contextlib.suppress(Exception):
+                        glDeleteTextures([tex])
         elif manager is not None:
             manager.max_cache = 256
         if ram_bytes and ram_bytes > self._ram_pressure_limit_bytes():

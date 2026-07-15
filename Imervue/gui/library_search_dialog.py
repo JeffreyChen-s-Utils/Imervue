@@ -73,9 +73,9 @@ class LibrarySearchDialog(QDialog):
         self._phash_check.setChecked(True)
         col.addWidget(self._phash_check)
 
-        scan_btn = QPushButton(lang.get("library_scan", "Scan now"))
-        scan_btn.clicked.connect(self._start_scan)
-        col.addWidget(scan_btn)
+        self._scan_btn = QPushButton(lang.get("library_scan", "Scan now"))
+        self._scan_btn.clicked.connect(self._start_scan)
+        col.addWidget(self._scan_btn)
         return w
 
     def _build_results_panel(self) -> QWidget:
@@ -145,9 +145,15 @@ class LibrarySearchDialog(QDialog):
         )
 
     def _start_scan(self) -> None:
+        # Guard against a second scan while one runs — a double-click would drop
+        # the first (unparented) thread's only reference, crashing on its
+        # destruction, and run two scanners writing the same SQLite index.
+        if self._thread is not None and self._thread.isRunning():
+            return
         roots = image_index.list_library_roots()
         if not roots:
             return
+        self._scan_btn.setEnabled(False)
         self._progress.setVisible(True)
         self._progress.setRange(0, 0)
         self._thread = LibraryScanThread(roots, with_phash=self._phash_check.isChecked())
@@ -156,6 +162,13 @@ class LibrarySearchDialog(QDialog):
         self._thread.error.connect(self._on_error)
         self._thread.start()
 
+    def _finish_scan(self) -> None:
+        self._progress.setVisible(False)
+        self._scan_btn.setEnabled(True)
+        if self._thread is not None:
+            self._thread.wait()
+            self._thread = None
+
     def _on_progress(self, current: int, total: int, path: str) -> None:
         if total > 0:
             self._progress.setRange(0, total)
@@ -163,7 +176,7 @@ class LibrarySearchDialog(QDialog):
         self._status_label.setText(f"{current}/{total}  {Path(path).name}")
 
     def _on_done(self, total: int) -> None:
-        self._progress.setVisible(False)
+        self._finish_scan()
         self._refresh_count()
         if hasattr(self._ui, "toast"):
             self._ui.toast.success(
@@ -173,9 +186,15 @@ class LibrarySearchDialog(QDialog):
             )
 
     def _on_error(self, message: str) -> None:
-        self._progress.setVisible(False)
+        self._finish_scan()
         if hasattr(self._ui, "toast"):
             self._ui.toast.error(message)
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        # Don't destroy the dialog with a live scan thread.
+        if self._thread is not None and self._thread.isRunning():
+            self._thread.wait()
+        super().closeEvent(event)
 
     def _run_search(self) -> None:
         paths = image_index.search_images(

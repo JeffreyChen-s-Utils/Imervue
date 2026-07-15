@@ -266,10 +266,19 @@ class _UpscaleWorker(QThread):
     # -- run -----------------------------------------------------------------
 
     def run(self):
-        if self._model_key.startswith(_TRAD_PREFIX):
-            self._run_traditional()
-        else:
-            self._run_ai()
+        try:
+            if self._model_key.startswith(_TRAD_PREFIX):
+                self._run_traditional()
+            else:
+                self._run_ai()
+        except Exception as exc:  # noqa: BLE001 - worker must always report
+            # The onnxruntime import, model download and session build run
+            # outside the per-image loop. If they fail (offline, HF unreachable,
+            # missing dep) the thread would die and result_ready never fire,
+            # stranding the dialog on "Downloading…" with Apply disabled forever.
+            # Report all-failed so _on_finished resets the UI and toasts.
+            logger.exception("Upscale run failed: %s", exc)
+            self.result_ready.emit(0, len(self._paths))
 
     def _run_traditional(self):
         from PIL import Image

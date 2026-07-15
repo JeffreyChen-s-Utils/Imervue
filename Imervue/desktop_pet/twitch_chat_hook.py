@@ -250,6 +250,15 @@ class TwitchChatClient(QObject):
                     self._process_line(line.decode("utf-8", errors="replace"))
         except Exception as exc:   # noqa: BLE001 - any IRC error → drop the loop
             logger.warning("twitch chat loop: %s", exc)
+        finally:
+            # The loop ended — from stop() or a dropped connection. Close the
+            # socket (don't leave it dangling until GC) and, unless this was an
+            # explicit stop(), signal the drop so any bound UI reflects it.
+            with contextlib.suppress(Exception):
+                if self._sock is not None:
+                    self._sock.close()
+            if not self._stop_flag.is_set():
+                self.connection_state_changed.emit(False)
 
     def _process_line(self, line: str) -> None:
         """Handle one IRC line. PING responds with PONG (keepalive),

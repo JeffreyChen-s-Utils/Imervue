@@ -261,6 +261,22 @@ def test_fit_to_height_fills_content_height():
     assert view.updated is True
 
 
+def test_fit_to_width_locks_the_view():
+    # An explicit fit-width is the user taking control → lock so a later resize
+    # settle re-fit can't revert it to fit-to-window.
+    view = _FakeView(1000, 500, (500, 500))
+    view._user_locked_view = False
+    fit_view.fit_to_width(view)
+    assert view._user_locked_view is True
+
+
+def test_fit_to_height_locks_the_view():
+    view = _FakeView(500, 1000, (500, 500))
+    view._user_locked_view = False
+    fit_view.fit_to_height(view)
+    assert view._user_locked_view is True
+
+
 def test_fit_to_width_no_deep_zoom_is_noop():
     view = _FakeView(0, 0, (100, 100), deep=False)
     fit_view.fit_to_width(view)

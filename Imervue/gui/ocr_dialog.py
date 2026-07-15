@@ -74,6 +74,13 @@ class OcrDialog(QDialog):
     def _copy(self) -> None:  # pragma: no cover - Qt UI
         QApplication.clipboard().setText(self._text.toPlainText())
 
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        # Don't destroy the dialog with a live worker thread.
+        worker = getattr(self, "_worker", None)
+        if worker is not None and worker.isRunning():
+            worker.wait()
+        super().closeEvent(event)
+
 
 class _OcrWorker(QThread):
     """Run OCR off the UI thread; emit the text or an error message."""

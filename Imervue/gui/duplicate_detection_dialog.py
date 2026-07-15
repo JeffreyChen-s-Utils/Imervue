@@ -465,18 +465,29 @@ class DuplicateDetectionDialog(QDialog):
         # 整個視窗 — 交給背景 worker，完成後再更新樹與狀態列。
         from Imervue.system.trash_ops import FileDeleteWorker
         self._delete_btn.setEnabled(False)
+        # Disable Scan too: a scan mid-delete clears the tree, destroying the
+        # QTreeWidgetItems held in _pending_delete_items, so _on_delete_finished
+        # would then touch deleted C++ objects and crash.
+        self._scan_btn.setEnabled(False)
+        self._select_redundant_btn.setEnabled(False)
         self._pending_delete_items = {path: item for item, path in paths}
         self._delete_worker = FileDeleteWorker([p for _item, p in paths], self)
         self._delete_worker.finished_with.connect(self._on_delete_finished)
         self._delete_worker.start()
 
     def _on_delete_finished(self, trashed: list, failed: list):
+        import contextlib
         pending = getattr(self, "_pending_delete_items", {})
         for path in trashed:
             item = pending.pop(path, None)
-            parent = item.parent() if item is not None else None
-            if parent is not None:
-                parent.removeChild(item)
+            if item is None:
+                continue
+            # The item's C++ object may already be gone (defensive); a live
+            # scan can no longer clear the tree here, but guard anyway.
+            with contextlib.suppress(RuntimeError):
+                parent = item.parent()
+                if parent is not None:
+                    parent.removeChild(item)
         for path in failed:
             logger.warning("Failed to delete %s", path)
         self._pending_delete_items = {}
@@ -484,6 +495,8 @@ class DuplicateDetectionDialog(QDialog):
             self._delete_worker.deleteLater()
             self._delete_worker = None
         self._delete_btn.setEnabled(True)
+        self._scan_btn.setEnabled(True)
+        self._select_redundant_btn.setEnabled(True)
         self._status_label.setText(
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
                 _COUNT_PLACEHOLDER, str(len(trashed))

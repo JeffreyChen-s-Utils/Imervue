@@ -100,6 +100,35 @@ def test_escape_no_state_not_consumed():
     assert consumed is False
 
 
+def test_escape_exits_while_a_load_is_in_flight_with_no_image_yet():
+    # Waiting on a promoted prefetch worker: deep_zoom/active worker are both
+    # None but a load is pending. Escape must still bail back to the wall.
+    view = _view(deep_zoom=None, active_deep_zoom_worker=None)
+    view._deep_zoom_loading = "b.png"
+    view.active_deep_zoom_preview_worker = None
+    view.main_window.isFullScreen = lambda: False
+    handler = KeyInputHandler(view)
+    exited: list = []
+    handler.exit_deep_zoom_to_grid = lambda: exited.append(True)
+    consumed = handler._handle_builtin(Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    assert consumed is True
+    assert exited == [True]
+
+
+def test_escape_exits_during_the_progressive_preview_window():
+    # 0–300 ms window: only the preview worker is set, deep_zoom still None.
+    view = _view(deep_zoom=None, active_deep_zoom_worker=None)
+    view._deep_zoom_loading = None
+    view.active_deep_zoom_preview_worker = object()
+    view.main_window.isFullScreen = lambda: False
+    handler = KeyInputHandler(view)
+    exited: list = []
+    handler.exit_deep_zoom_to_grid = lambda: exited.append(True)
+    consumed = handler._handle_builtin(Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    assert consumed is True
+    assert exited == [True]
+
+
 def test_arrow_moves_grid_focus_cursor():
     view = _view(tile_grid_mode=True, images=[f"{i}.png" for i in range(12)])
     handler = KeyInputHandler(view)

@@ -20,6 +20,21 @@ logger = logging.getLogger("Imervue.animation")
 # 支援動畫的副檔名
 ANIMATED_EXTS = {".gif", ".apng", ".webp", ".png"}
 
+# Memory budget for memoised per-frame pyramids. Small animations (the common
+# case) fit entirely, so a loop rebuilds each frame's pyramid at most once
+# instead of on every pass; a large animation stops caching past the budget and
+# falls back to rebuilding, which is no worse than before and can't blow up RAM.
+_PYRAMID_CACHE_BUDGET = 128 * 1024 * 1024
+
+
+def can_cache_pyramid(current_bytes: int, new_bytes: int, budget: int) -> bool:
+    """Whether a new frame pyramid of ``new_bytes`` still fits the budget.
+
+    Always allow the first entry (``current_bytes == 0``) so even a single huge
+    frame is cached once rather than rebuilt every loop.
+    """
+    return current_bytes == 0 or current_bytes + new_bytes <= budget
+
 
 class AnimationPlayer:
     """管理動畫幀的載入與播放計時。"""
@@ -29,6 +44,10 @@ class AnimationPlayer:
         self.path = path
         self.frames: list[np.ndarray] = []
         self.durations: list[int] = []  # 每幀毫秒
+        # Per-frame pyramid memo (index -> DeepZoomImage) so a looping animation
+        # doesn't rebuild the same pyramid every pass; bounded by a RAM budget.
+        self._pyramid_cache: dict[int, object] = {}
+        self._pyramid_bytes = 0
         self.current_frame = 0
         self.playing = False
         self.speed = 1.0
@@ -142,6 +161,8 @@ class AnimationPlayer:
         self._timer.stop()
         self.frames.clear()
         self.durations.clear()
+        self._pyramid_cache.clear()
+        self._pyramid_bytes = 0
 
     # --- internal ---
 
@@ -166,20 +187,44 @@ class AnimationPlayer:
         if frame_data is None or gui.deep_zoom is None:
             return
 
-        from Imervue.image.pyramid import DeepZoomImage
         from Imervue.image.tile_manager import TileManager
 
-        # 重建金字塔（用當前幀資料）
-        dzi = DeepZoomImage(frame_data)
+        dzi = self._pyramid_for_frame(self.current_frame, frame_data)
         gui.deep_zoom = dzi
+        # The old frame's tiles are freed off paintGL (this runs from the frame
+        # timer), so it needs a current GL context or the textures leak every
+        # frame. A view without the helper (test stub) degrades to a no-op.
+        gl_ctx = getattr(gui, "_current_gl_context", None)
         if gui.tile_manager is not None:
-            gui.tile_manager.clear()
+            if callable(gl_ctx):
+                with gl_ctx():
+                    gui.tile_manager.clear()
+            else:
+                gui.tile_manager.clear()
         gui.tile_manager = TileManager(dzi)
 
         # 清除直方圖快取
         gui._histogram_cache = None
 
         gui.update()
+
+    def _pyramid_for_frame(self, index: int, frame_data: np.ndarray):
+        """Return the frame's pyramid, building and memoising it on first use.
+
+        Rebuilding the pyramid (LANCZOS downsamples) every timer tick was the
+        per-frame cost; caching means a looped animation pays it at most once
+        per frame, within a RAM budget so a huge animation can't blow up memory.
+        """
+        cached = self._pyramid_cache.get(index)
+        if cached is not None:
+            return cached
+        from Imervue.image.pyramid import DeepZoomImage
+        dzi = DeepZoomImage(frame_data)
+        new_bytes = sum(int(level.nbytes) for level in dzi.levels)
+        if can_cache_pyramid(self._pyramid_bytes, new_bytes, _PYRAMID_CACHE_BUDGET):
+            self._pyramid_cache[index] = dzi
+            self._pyramid_bytes += new_bytes
+        return dzi
 
 
 def is_animated_file(path: str) -> bool:

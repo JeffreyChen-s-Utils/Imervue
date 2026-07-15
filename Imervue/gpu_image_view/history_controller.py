@@ -53,7 +53,9 @@ class HistoryController:
         if self._pos <= 0:
             return False
         self._pos -= 1
-        self._navigate()
+        if not self._navigate():
+            self._pos += 1  # target unreachable — don't strand the pointer
+            return False
         return True
 
     def forward(self) -> bool:
@@ -61,20 +63,30 @@ class HistoryController:
         if self._pos >= len(self._history) - 1:
             return False
         self._pos += 1
-        self._navigate()
+        if not self._navigate():
+            self._pos -= 1
+            return False
         return True
 
-    def _navigate(self) -> None:
-        """Load the image at ``_pos`` without re-pushing to the stack."""
+    def _navigate(self) -> bool:
+        """Load the image at ``_pos`` without re-pushing to the stack.
+
+        Returns True once it has loaded / reopened the target, False when the
+        entry is unreachable (the file was deleted) so the caller can roll the
+        position back instead of silently consuming a step onto a dead entry.
+        """
         view = self._view
         path = self._history[self._pos]
         if not Path(path).is_file():
-            return
+            return False
         images = view.model.images
         self._navigating = True
         try:
             if path in images:
                 view.current_index = images.index(path)
+                # Save the outgoing image's zoom/pan before the clear nulls the
+                # key, so Alt+Left then Alt+Right returns to where you left off.
+                view._save_view_state()
                 view._clear_deep_zoom()
                 view.tile_grid_mode = False
                 view.load_deep_zoom_image(path)
@@ -82,6 +94,7 @@ class HistoryController:
                 self._open_cross_folder(path)
         finally:
             self._navigating = False
+        return True
 
     def _open_cross_folder(self, path: str) -> None:
         """Show a history image that has left the current folder's list.

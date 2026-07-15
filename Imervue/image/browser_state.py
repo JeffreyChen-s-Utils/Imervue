@@ -40,8 +40,13 @@ class ImageMetadataIndex:
         meta = self._items.get(path)
         if meta is not None:
             return meta
-        meta = self._read(path)
-        self._items[path] = meta
+        meta, cacheable = self._read(path)
+        # Don't cache a transient stat failure (file mid-move, AV-locked, network
+        # blip) — the zero-metadata sentinel would otherwise stick for the whole
+        # session (dropping the image from date/size filters even after it
+        # unlocks). Re-read next time instead.
+        if cacheable:
+            self._items[path] = meta
         return meta
 
     def prime(self, paths: Iterable[str], *, limit: int | None = None) -> None:
@@ -57,7 +62,7 @@ class ImageMetadataIndex:
     def move(self, old_path: str, new_path: str) -> None:
         meta = self._items.pop(old_path, None)
         if meta is not None:
-            self._items[new_path] = self._read(new_path)
+            self._items[new_path] = self._read(new_path)[0]
         digest = self._hashes.pop(old_path, None)
         if digest is not None:
             self._hashes[new_path] = digest
@@ -72,8 +77,11 @@ class ImageMetadataIndex:
         return digest
 
     @staticmethod
-    def _read(path: str) -> ImageMeta:
+    def _read(path: str) -> tuple[ImageMeta, bool]:
+        """Return ``(metadata, cacheable)``. ``cacheable`` is False when the
+        ``stat`` failed transiently, so the caller shouldn't memoise the sentinel."""
         p = Path(path)
+        cacheable = True
         try:
             st = p.stat()
             size = st.st_size
@@ -83,6 +91,7 @@ class ImageMetadataIndex:
             size = 0
             mtime_ns = 0
             mtime_date = None
+            cacheable = False
         width = height = None
         if size:
             with contextlib.suppress(Exception):
@@ -98,7 +107,7 @@ class ImageMetadataIndex:
             mtime_date=mtime_date,
             width=width,
             height=height,
-        )
+        ), cacheable
 
 
 @dataclass(frozen=True)
@@ -123,7 +132,7 @@ class ImageFilterSpec:
 
 def match_filter(path: str, spec: ImageFilterSpec,
                  index: ImageMetadataIndex | None = None) -> bool:
-    meta = index.get(path) if index is not None else ImageMetadataIndex._read(path)
+    meta = index.get(path) if index is not None else ImageMetadataIndex._read(path)[0]
     filename = spec.filename.strip().lower()
     if filename and filename not in meta.name:
         return False
@@ -157,6 +166,28 @@ def filter_paths(paths: Iterable[str], spec: ImageFilterSpec,
     if spec.is_empty():
         return list(paths)
     return [path for path in paths if match_filter(path, spec, index)]
+
+
+def refilter_keeping_current(base: list[str], filtered: list[str],
+                             current: str | None) -> list[str]:
+    """Return *filtered*, but force *current* back in at its folder position.
+
+    Opening a specific file (a Modify save, an image-tab switch) rebuilds the
+    list from the full folder and drops the active browse filter. Re-applying
+    the filter restores it, but the explicitly-opened image must stay visible
+    even when it doesn't match — you asked to see that file — rather than the
+    filter navigating away from it. Insert it back at its position in *base* so
+    the strip/list keeps folder order. A no-op when *current* is falsy, already
+    kept, or not part of *base*.
+    """
+    if not current or current in filtered or current not in base:
+        return filtered
+    pos_of = {path: i for i, path in enumerate(base)}
+    current_pos = pos_of[current]
+    insert_at = sum(1 for path in filtered if pos_of.get(path, -1) < current_pos)
+    result = list(filtered)
+    result.insert(insert_at, current)
+    return result
 
 
 def _match_raw_query(path: str, query: str, meta: ImageMeta) -> bool:

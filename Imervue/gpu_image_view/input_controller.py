@@ -159,11 +159,15 @@ class InputController:
         self._recenter_on_minimap(pos, rect, view.zoom)
 
     def _recenter_on_minimap(self, pos, rect, zoom: float) -> None:
+        from Imervue.gpu_image_view.fit_view import content_size
         view = self._view
         base = view.deep_zoom.levels[0]
+        # Centre the clicked image point in the content area (above the reserved
+        # band), not the full canvas, so the target doesn't land ~band/2 low.
+        content_w, content_h = content_size(view)
         view.dz_offset_x, view.dz_offset_y = recenter_offsets(
             pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
-            view.width(), view.height(), zoom,
+            content_w, content_h, zoom,
         )
         view._browse.clamp_pan()
         view._user_locked_view = True

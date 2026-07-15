@@ -64,6 +64,9 @@ class BatchMotionExporter(QObject):
         self._total: int = 0
         self._written: list[str] = []
         self._active: bool = False
+        # Bumped on every motion + on stop, so a stale stop-timer from a
+        # cancelled run can't fire into a freshly started batch and truncate it.
+        self._record_seq: int = 0
         self._recorder.finished.connect(self._on_recorder_finished)
         self._recorder.failed.connect(self._on_recorder_failed)
 
@@ -113,6 +116,7 @@ class BatchMotionExporter(QObject):
         if not self._active:
             return
         self._active = False
+        self._record_seq += 1        # invalidate any pending stop-timer
         if self._recorder.is_recording():
             self._recorder.stop()
 
@@ -135,13 +139,18 @@ class BatchMotionExporter(QObject):
             self._active = False
             return
         # Stop the recorder when the motion completes; +250 ms cushion
-        # so the closing frame lands inside the clip.
+        # so the closing frame lands inside the clip. Tag the timer with the
+        # current sequence so a stale one from a cancelled run is ignored.
+        self._record_seq += 1
+        seq = self._record_seq
         QTimer.singleShot(
             int(motion.duration * 1000) + 250,
-            self._stop_current_recording,
+            lambda: self._stop_current_recording(seq),
         )
 
-    def _stop_current_recording(self) -> None:
+    def _stop_current_recording(self, seq: int) -> None:
+        if seq != self._record_seq:
+            return  # a stale stop-timer from a cancelled / superseded run
         if self._recorder.is_recording():
             self._recorder.stop()
 

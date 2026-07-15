@@ -45,7 +45,12 @@ def visible_filmstrip_items(current_index: int, count: int, strip_width: float,
     current = max(0, min(count - 1, current_index))
     step = item_width + spacing
     fit = int((strip_width + spacing) // step) if step > 0 else 1
-    visible = max(1, min(fit, count))
+    if fit < 1:
+        # Strip too narrow for even one item (a near-full-width minimap ate it);
+        # drawing one anyway would overflow past the strip and steal the
+        # minimap's clicks. Show nothing instead.
+        return []
+    visible = min(fit, count)
     start = current - visible // 2
     start = max(0, min(count - visible, start))
     total_width = visible * item_width + (visible - 1) * spacing

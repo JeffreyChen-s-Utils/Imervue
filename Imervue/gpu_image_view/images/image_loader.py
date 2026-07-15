@@ -456,6 +456,11 @@ def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
     main_gui.current_index = _locate_current_index(images, str(path_obj))
     main_gui.tile_grid_mode = False
     main_gui.load_deep_zoom_image(str(path_obj))
+    # Opening a specific file rebuilt the list from the whole folder above,
+    # dropping any active browse filter — re-apply it (keeping this file visible).
+    reapply = getattr(main_gui.main_window, "_reapply_filter_preserving_current", None)
+    if callable(reapply):
+        reapply()
     add_recent_image(str(path_obj))
     user_setting_dict["user_last_folder"] = str(dir_path)
     if hasattr(main_gui.main_window, "plugin_manager"):

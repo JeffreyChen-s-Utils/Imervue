@@ -266,21 +266,15 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
 
     def _draw_viewport_box(self, rect: tuple[int, int, int, int],
                            img_w: int, img_h: int) -> None:
+        from Imervue.gpu_image_view.fit_view import content_size
+        from Imervue.gpu_image_view.minimap import viewport_box_rect
         view = self._view
-        mm_x, mm_y, mm_w, mm_h = rect
-        canvas_w, canvas_h = canvas_size(view)
-        # 畫面可視區域在原圖座標
-        vp_left = -view.dz_offset_x / view.zoom
-        vp_top = -view.dz_offset_y / view.zoom
-        vp_right = vp_left + canvas_w / view.zoom
-        vp_bottom = vp_top + canvas_h / view.zoom
-
-        sx = mm_w / img_w
-        sy = mm_h / img_h
-        rx0 = mm_x + max(0, vp_left * sx)
-        ry0 = mm_y + max(0, vp_top * sy)
-        rx1 = mm_x + min(mm_w, vp_right * sx)
-        ry1 = mm_y + min(mm_h, vp_bottom * sy)
-
+        # Bound the box by the content area (canvas minus the reserved band), not
+        # the full canvas, so it doesn't claim the band-hidden rows are visible.
+        canvas_w, content_h = content_size(view)
+        rx0, ry0, rx1, ry1 = viewport_box_rect(
+            rect, img_w, img_h, view.dz_offset_x, view.dz_offset_y, view.zoom,
+            canvas_w, content_h,
+        )
         view.renderer.draw_colored_rect(rx0, ry0, rx1, ry1, 1.0, 1.0, 1.0, 0.8, filled=False)
         glDisable(GL_BLEND)

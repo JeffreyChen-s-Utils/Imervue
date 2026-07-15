@@ -119,7 +119,7 @@ class PrefetchScheduler:
             worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
             worker.signals.finished.connect(self._view._on_prefetch_loaded)
             if hasattr(worker.signals, "error"):
-                worker.signals.error.connect(lambda p, _msg: self.pop_worker(p))
+                worker.signals.error.connect(self._view._on_prefetch_error)
             self.workers[path] = worker
             # Distance-aware priority: the next neighbour the user might
             # press lands before the far-out ones, so when the pool
