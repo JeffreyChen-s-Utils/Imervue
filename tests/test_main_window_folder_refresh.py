@@ -5,7 +5,11 @@ from types import SimpleNamespace
 
 from Imervue.Imervue_main_window import ImervueMainWindow
 from Imervue.gpu_image_view.actions.delete import pending_deleted_paths
-from Imervue.image.browser_state import ImageFilterSpec, ImageMetadataIndex
+from Imervue.image.browser_state import (
+    ImageFilterSpec,
+    ImageMetadataIndex,
+    refilter_keeping_current,
+)
 
 
 class _FakeViewerModel:
@@ -108,6 +112,8 @@ class _StubMainWindow:
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
     _reconcile_deep_zoom_onto_list = ImervueMainWindow._reconcile_deep_zoom_onto_list
     _apply_image_filter = ImervueMainWindow._apply_image_filter
+    _reapply_filter_preserving_current = (
+        ImervueMainWindow._reapply_filter_preserving_current)
     _handle_active_folder_missing = ImervueMainWindow._handle_active_folder_missing
     _clear_view_folder_watch = ImervueMainWindow._clear_view_folder_watch
     _on_list_activated = ImervueMainWindow._on_list_activated
@@ -308,6 +314,37 @@ def test_refresh_excludes_soft_deleted_image_from_disk_rescan():
     win._apply_refreshed_image_list(["/p/a.png", "/p/b.png"])
     assert "/p/b.png" not in win.viewer.model.images
     assert win.viewer._unfiltered_images == ["/p/a.png"]
+
+
+def test_refilter_keeping_current_reinserts_at_folder_position():
+    base = ["a", "b", "c", "d"]
+    filtered = ["a", "d"]           # b, c filtered out
+    assert refilter_keeping_current(base, filtered, "c") == ["a", "c", "d"]
+
+
+def test_refilter_keeping_current_inserts_at_front_and_end():
+    assert refilter_keeping_current(["a", "b", "c"], ["b", "c"], "a") == ["a", "b", "c"]
+    assert refilter_keeping_current(["a", "b", "c"], ["a", "b"], "c") == ["a", "b", "c"]
+
+
+def test_refilter_keeping_current_noops():
+    assert refilter_keeping_current(["a", "b"], ["a", "b"], "a") == ["a", "b"]  # matches
+    assert refilter_keeping_current(["a", "b"], ["a"], None) == ["a"]           # no current
+    assert refilter_keeping_current(["a", "b"], ["a"], "z") == ["a"]            # not in base
+
+
+def test_reapply_filter_keeps_opened_file_but_hides_other_nonmatches():
+    # Opening a specific file rebuilt the list to the whole folder; re-applying
+    # the filter must hide non-matches yet keep the opened file visible/current.
+    paths = ["/p/keep.png", "/p/drop.png", "/p/other.png", "/p/keep2.png"]
+    win = _StubMainWindow(paths)
+    win.viewer._unfiltered_images = list(paths)
+    win.viewer.current_index = 1  # opened drop.png (doesn't match the filter)
+    win._current_filter_spec = lambda: ImageFilterSpec(raw_query="keep")
+    win._reapply_filter_preserving_current()
+    assert win.viewer.model.images == ["/p/keep.png", "/p/drop.png", "/p/keep2.png"]
+    assert "/p/other.png" not in win.viewer.model.images  # non-match, not opened
+    assert win.viewer.current_index == 1  # still on the opened file
 
 
 def test_tab_change_saves_outgoing_view_before_clearing(tmp_path, monkeypatch):

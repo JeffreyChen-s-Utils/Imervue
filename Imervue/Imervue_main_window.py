@@ -30,6 +30,7 @@ from Imervue.image.browser_state import (
     filter_paths,
     migrate_view_path_state,
     missing_paths,
+    refilter_keeping_current,
     relocate_root,
     remove_missing,
 )
@@ -911,6 +912,31 @@ class ImervueMainWindow(QMainWindow):
             filtered, getattr(viewer, "_deep_zoom_loading", None) or current,
             viewer.current_index,
         )
+
+    def _reapply_filter_preserving_current(self) -> None:
+        """Re-apply the active browse filter after opening a specific file.
+
+        Opening a file (a Modify save's viewer reload, an image-tab switch)
+        rebuilds the list from the whole folder via ``_open_file``, silently
+        dropping the filter — the strip/list showed every image again. Re-filter
+        the list, but keep the just-opened image current and visible even if it
+        doesn't match, so the filter governs browsing without hiding what the
+        user explicitly opened.
+        """
+        from Imervue.gpu_image_view.actions.delete import pending_deleted_paths
+        viewer = self.viewer
+        base = list(getattr(viewer, "_unfiltered_images", None) or viewer.model.images)
+        pending = pending_deleted_paths(getattr(viewer, "undo_stack", []))
+        base = [path for path in base if path not in pending]
+        filtered = filter_paths(base, self._current_filter_spec(),
+                                self._image_metadata_index)
+        current = viewer._current_path()
+        filtered = refilter_keeping_current(base, filtered, current)
+        viewer.model.set_images(filtered)
+        if current in filtered:
+            viewer.current_index = filtered.index(current)
+        self.refresh_list_view()
+        viewer.update()
 
     def _current_filter_spec(self) -> ImageFilterSpec:
         tag = ""

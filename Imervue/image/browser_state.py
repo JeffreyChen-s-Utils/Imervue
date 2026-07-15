@@ -159,6 +159,28 @@ def filter_paths(paths: Iterable[str], spec: ImageFilterSpec,
     return [path for path in paths if match_filter(path, spec, index)]
 
 
+def refilter_keeping_current(base: list[str], filtered: list[str],
+                             current: str | None) -> list[str]:
+    """Return *filtered*, but force *current* back in at its folder position.
+
+    Opening a specific file (a Modify save, an image-tab switch) rebuilds the
+    list from the full folder and drops the active browse filter. Re-applying
+    the filter restores it, but the explicitly-opened image must stay visible
+    even when it doesn't match — you asked to see that file — rather than the
+    filter navigating away from it. Insert it back at its position in *base* so
+    the strip/list keeps folder order. A no-op when *current* is falsy, already
+    kept, or not part of *base*.
+    """
+    if not current or current in filtered or current not in base:
+        return filtered
+    pos_of = {path: i for i, path in enumerate(base)}
+    current_pos = pos_of[current]
+    insert_at = sum(1 for path in filtered if pos_of.get(path, -1) < current_pos)
+    result = list(filtered)
+    result.insert(insert_at, current)
+    return result
+
+
 def _match_raw_query(path: str, query: str, meta: ImageMeta) -> bool:
     tokens = [part for part in (query or "").split() if part]
     return all(_token_matches(path, token, meta) for token in tokens)
