@@ -37,6 +37,11 @@ class _CreateWorker(QThread):
         self._width = width
         self._height = height
         self._loop = loop
+        self._abort = False
+
+    def abort(self) -> None:
+        """Ask the encode loop to stop before the next frame (Cancel / close)."""
+        self._abort = True
 
     def run(self):
         try:
@@ -44,10 +49,17 @@ class _CreateWorker(QThread):
                 self._create_gif()
             else:
                 self._create_video()
-            self.result_ready.emit(True, self._output)
         except Exception as exc:
             logger.exception(f"Create {self._fmt} failed: {exc}")
             self.result_ready.emit(False, str(exc))
+            return
+        # Single terminal emit: the create helpers raise on failure (so a
+        # missing ffmpeg or encode error can't be masked by a later success
+        # emit) and simply return early when aborted.
+        if self._abort:
+            self.result_ready.emit(False, "cancelled")
+        else:
+            self.result_ready.emit(True, self._output)
 
     def _load_and_resize(self, path: str) -> Image.Image:
         if Path(path).suffix.lower() == ".svg":
@@ -73,6 +85,8 @@ class _CreateWorker(QThread):
         frames = []
         total = len(self._paths)
         for i, path in enumerate(self._paths):
+            if self._abort:
+                return
             img = self._load_and_resize(path)
             if img.mode == "RGBA":
                 img = img.convert("RGB")
@@ -104,8 +118,7 @@ class _CreateWorker(QThread):
         # Check ffmpeg
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
-            self.result_ready.emit(False, "ffmpeg not found in PATH")
-            return
+            raise RuntimeError("ffmpeg not found in PATH")
 
         total = len(self._paths)
         tmpdir = tempfile.mkdtemp(prefix="imervue_video_")
@@ -113,6 +126,8 @@ class _CreateWorker(QThread):
         try:
             # Write frames as numbered images
             for i, path in enumerate(self._paths):
+                if self._abort:
+                    return
                 img = self._load_and_resize(path)
                 if img.mode == "RGBA":
                     img = img.convert("RGB")
@@ -120,6 +135,8 @@ class _CreateWorker(QThread):
                 img.save(str(frame_path), format="PNG")
                 self.progress.emit(i + 1, total)
 
+            if self._abort:
+                return
             # Use ffmpeg to combine
             pattern = str(Path(tmpdir) / "frame_%06d.png")
             cmd = [
@@ -142,8 +159,7 @@ class _CreateWorker(QThread):
                 kw["creationflags"] = subprocess.CREATE_NO_WINDOW
             result = subprocess.run(cmd, check=False, **kw)
             if result.returncode != 0:
-                self.result_ready.emit(False, f"ffmpeg error: {result.stderr[:200]}")
-                return
+                raise RuntimeError(f"ffmpeg error: {result.stderr[:200]}")
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -256,7 +272,7 @@ class GifVideoDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self.reject)
+        cancel_btn.clicked.connect(self._on_cancel)
         self._create_btn = QPushButton(self._lang.get("gif_video_create", "Create"))
         self._create_btn.clicked.connect(self._do_create)
         btn_row.addWidget(cancel_btn)
@@ -337,6 +353,28 @@ class GifVideoDialog(QDialog):
 
     def _cleanup_worker(self):
         self._worker = None
+
+    def _on_cancel(self):
+        """Stop an in-flight encode before rejecting.
+
+        Cancel used to call ``reject`` directly while ``_CreateWorker`` kept
+        encoding the GIF/MP4 to completion. Signal the abort first (without
+        blocking the UI) so the loop stops before the next frame.
+        """
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.abort()
+        self.reject()
+
+    def _wait_worker(self):
+        """Abort and block until the worker stops, so it is never destroyed
+        mid-run ('QThread: Destroyed while thread is still running' → abort)."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.abort()
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
 
     def _on_finished(self, success, message):
         self._progress.setVisible(False)
