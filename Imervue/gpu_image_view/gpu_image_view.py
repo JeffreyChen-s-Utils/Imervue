@@ -946,13 +946,7 @@ class GPUImageView(QOpenGLWidget):
             dzi = self._prefetch.take(path)
             self.deep_zoom = dzi
             self.tile_manager = TileManager(dzi)
-            self._apply_initial_view()
-            self._init_animation(path)
-            self._prefetch_neighbors()
-            self._update_status_info()
-            self._notify_deep_zoom_displayed()
-            self._browse.begin_image_fade_in()
-            self.update()
+            self._finalize_deep_zoom_display(path)
             return
 
         # ===== 快取未命中 → 背景載入（顯示載入指示，避免空白幀）=====
@@ -1027,6 +1021,30 @@ class GPUImageView(QOpenGLWidget):
         except OSError:
             return False
 
+    def _finalize_deep_zoom_display(self, path: str) -> None:
+        """Shared finalization once ``deep_zoom`` + ``tile_manager`` are set for
+        *path* — reached from a prefetch cache hit, a background load, or a
+        promoted in-flight prefetch worker.
+
+        Centralised so the three display paths can't drift: a promoted prefetch
+        previously skipped animation start, the second-monitor mirror, the
+        status readout, and the image-issue clear purely because those calls
+        were never copied into its branch.
+        """
+        self._deep_zoom_loading = None
+        self._deep_zoom_error = None
+        self._deep_zoom_retry_counts.pop(path, None)
+        if hasattr(self.main_window, "clear_image_issue"):
+            self.main_window.clear_image_issue(path)
+        self.enforce_memory_pressure()
+        self._apply_initial_view()
+        self._init_animation(path)
+        self._prefetch_neighbors()
+        self._update_status_info()
+        self._notify_deep_zoom_displayed()
+        self._browse.begin_image_fade_in()
+        self.update()
+
     def _on_deep_zoom_loaded(self, dzi, path, request_id: int | None = None):
         if request_id is not None and request_id != self._deep_zoom_request_id:
             return
@@ -1041,25 +1059,11 @@ class GPUImageView(QOpenGLWidget):
         if self.tile_manager is not None:
             self.tile_manager.clear()
         self.deep_zoom = dzi
-        self._deep_zoom_loading = None
-        self._deep_zoom_error = None
-        self._deep_zoom_retry_counts.pop(path, None)
-        if hasattr(self.main_window, "clear_image_issue"):
-            self.main_window.clear_image_issue(path)
         self.tile_manager = TileManager(dzi)
         self.active_deep_zoom_worker = None
         if self.active_deep_zoom_preview_worker is not None:
             self.active_deep_zoom_preview_worker.abort()
             self.active_deep_zoom_preview_worker = None
-        self.enforce_memory_pressure()
-
-        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）
-        self._apply_initial_view()
-
-        # 動畫偵測
-        self._init_animation(path)
-
-        self._prefetch_neighbors()
 
         if hasattr(self.main_window, 'set_status'):
             self.main_window.set_status(
@@ -1068,10 +1072,9 @@ class GPUImageView(QOpenGLWidget):
                 )
             )
 
-        self._update_status_info()
-        self._notify_deep_zoom_displayed()
-        self._browse.begin_image_fade_in()
-        self.update()
+        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）。
+        # 共用收尾（動畫偵測、副螢幕鏡像、狀態列、預載鄰圖）。
+        self._finalize_deep_zoom_display(path)
 
     def _on_deep_zoom_preview_loaded(self, dzi, path, request_id: int | None = None):
         if request_id is not None and request_id != self._deep_zoom_request_id:
@@ -1220,18 +1223,25 @@ class GPUImageView(QOpenGLWidget):
                 and idx is not None):
             self.current_index = idx
             self.deep_zoom = dzi
-            self._deep_zoom_loading = None
-            self._deep_zoom_error = None
             self.tile_manager = TileManager(dzi)
-            self.enforce_memory_pressure()
-            self._apply_initial_view()
-            self._prefetch_neighbors()
-            self._browse.begin_image_fade_in()
-            self.update()
+            self._finalize_deep_zoom_display(path)
             return
 
         # 否則存入預載快取
         self._prefetch.store(path, dzi)
+
+    def _on_prefetch_error(self, path: str, message: str) -> None:
+        """A prefetch worker failed. Drop it, and — if the user is waiting on it
+        as the primary load (``load_deep_zoom_image`` delegated to an already
+        in-flight prefetch worker) — route to the normal failure handling.
+
+        Without this the prefetch error only popped the worker, leaving
+        ``_deep_zoom_loading`` set and ``deep_zoom`` None: a permanent "Loading…"
+        overlay with no error toast and no retry.
+        """
+        self._prefetch.pop_worker(path)
+        if self.deep_zoom is None and self._deep_zoom_loading == path:
+            self._on_deep_zoom_failed(path, message, self._deep_zoom_request_id)
 
     def enforce_memory_pressure(self) -> None:
         """Trim deep-zoom auxiliary caches when image memory is large."""
