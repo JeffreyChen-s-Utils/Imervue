@@ -29,6 +29,25 @@ def _notify_switch(main_gui: GPUImageView, path: str) -> None:
             pm.dispatch_image_switched(path, main_gui)
 
 
+def _forget_view_on_wrap(main_gui: GPUImageView, path: str) -> None:
+    """Drop the wrapped-to image's remembered zoom so it opens fitted.
+
+    Wrapping last→first (or first→last) is conceptually restarting the browse,
+    so the target should fit the window fresh — not restore a leftover zoom-in
+    from earlier in the session. ``load_deep_zoom_image`` treats an image with
+    no ``_view_memory`` entry as a fresh entry and always content-fits it, which
+    is why the first image opened "too large" after looping past the end: its
+    remembered zoom-in was restored and kept. Only the wrap path forgets; a
+    normal prev/next still resumes where the user left off.
+
+    Guarded on ``dict`` so a stubbed/mock viewer without a real memory map is a
+    safe no-op.
+    """
+    mem = getattr(main_gui, "_view_memory", None)
+    if isinstance(mem, dict):
+        mem.pop(path, None)
+
+
 def switch_to_next_image(main_gui: GPUImageView) -> None:
     images = main_gui.model.images
 
@@ -39,6 +58,7 @@ def switch_to_next_image(main_gui: GPUImageView) -> None:
         main_gui.current_index += 1
     elif _auto_loop_enabled():
         main_gui.current_index = 0
+        _forget_view_on_wrap(main_gui, images[0])
         _toast_loop(main_gui, forward=True)
     else:
         main_gui.update()
@@ -59,6 +79,7 @@ def switch_to_previous_image(main_gui: GPUImageView) -> None:
         main_gui.current_index -= 1
     elif _auto_loop_enabled():
         main_gui.current_index = len(images) - 1
+        _forget_view_on_wrap(main_gui, images[-1])
         _toast_loop(main_gui, forward=False)
     else:
         main_gui.update()
