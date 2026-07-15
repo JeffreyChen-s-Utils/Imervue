@@ -137,6 +137,11 @@ class TabManagerMixin:
         if needs_prompt and not self._confirm_discard_unsaved(widget):
             return False
         self._tab_dirty.pop(widget, None)
+        # Drop the closed canvas's undo stack (and its snapshots) so it doesn't
+        # linger with the deleted canvas.
+        undo_stacks = getattr(self, "_undo_stacks", None)
+        if isinstance(undo_stacks, dict):
+            undo_stacks.pop(widget, None)
         self._tabs.removeTab(index)
         if widget is not None:
             widget.deleteLater()
