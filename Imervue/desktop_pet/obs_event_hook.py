@@ -114,7 +114,18 @@ class ObsEventClient(QObject):
         self._password = str(password)
 
     def is_running(self) -> bool:
-        return self._client is not None
+        # Reflect an actual drop (OBS closed / network gone), not just "a client
+        # object exists" — otherwise the menu/checkbox reads "connected" forever
+        # while no events flow. Best-effort: consult the websocket's connected
+        # flag when the library exposes one, else fall back to object presence.
+        client = self._client
+        if client is None:
+            return False
+        ws = getattr(client, "ws", None)
+        connected = getattr(ws, "connected", None) if ws is not None else None
+        if connected is not None:
+            return bool(connected)
+        return True
 
     def start(self) -> bool:
         """Open the WebSocket and register the catch-all event hook.
