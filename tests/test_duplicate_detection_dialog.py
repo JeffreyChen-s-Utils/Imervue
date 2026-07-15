@@ -129,3 +129,51 @@ def test_delete_selected_declined_confirm_spawns_nothing(qapp, tmp_path, monkeyp
 
     dlg._delete_selected()
     assert InstantDeleteWorker.created == []
+
+
+def test_delete_reenables_scan_after_finishing(qapp, tmp_path, monkeypatch):
+    """Scan is disabled for the delete's duration and re-enabled on finish, so a
+    scan can't clear the tree out from under the in-flight delete worker."""
+    from _instant_worker import InstantDeleteWorker
+    from PySide6.QtWidgets import QMessageBox
+
+    from Imervue.system import trash_ops
+
+    InstantDeleteWorker.created = []
+    monkeypatch.setattr(trash_ops, "FileDeleteWorker", InstantDeleteWorker)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+
+    keep = _png(tmp_path / "keep.png", 50, 50)
+    drop = _png(tmp_path / "drop.png", 50, 50)
+    dlg = _dialog()
+    dlg._on_result([[_entry(keep), _entry(drop)]])
+    _select_path(dlg, drop)
+    dlg._delete_selected()
+    # The instant worker finished synchronously → Scan is back on.
+    assert dlg._scan_btn.isEnabled() is True
+
+
+class _DeadItem:
+    def parent(self):
+        raise RuntimeError("Internal C++ object already deleted")
+
+
+def test_on_delete_finished_survives_a_deleted_item():
+    enabled: dict = {}
+
+    def _btn(name):
+        return SimpleNamespace(setEnabled=lambda v: enabled.__setitem__(name, v))
+
+    fake = SimpleNamespace(
+        _pending_delete_items={"a.png": _DeadItem()},
+        _delete_worker=None,
+        _delete_btn=_btn("delete"),
+        _scan_btn=_btn("scan"),
+        _select_redundant_btn=_btn("redundant"),
+        _status_label=SimpleNamespace(setText=lambda _t: None),
+        _lang={},
+    )
+    DuplicateDetectionDialog._on_delete_finished(fake, ["a.png"], [])  # no crash
+    assert enabled == {"delete": True, "scan": True, "redundant": True}
+    assert fake._pending_delete_items == {}
