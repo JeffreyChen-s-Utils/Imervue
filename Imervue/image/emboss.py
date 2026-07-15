@@ -37,6 +37,9 @@ def apply_emboss(
     relief; otherwise the original colours are modulated by the shading.
     """
     _validate(arr)
+    if arr.shape[0] < 2 or arr.shape[1] < 2:
+        # np.gradient needs >=2 samples per axis; a 1px strip has no relief.
+        return arr.copy()
     rgb = arr[..., :3].astype(np.float32)
     height = (rgb @ _LUMA_WEIGHTS) / _MAX_8BIT
     shade = emboss_shade(height, azimuth_deg, elevation_deg, depth)

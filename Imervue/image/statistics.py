@@ -23,6 +23,10 @@ _CHANNEL_NAMES = ("r", "g", "b", "luma")
 def _validate(arr: np.ndarray) -> None:
     if arr.ndim != _RGB_CHANNELS or arr.shape[2] not in (_RGB_CHANNELS, _RGBA_CHANNELS):
         raise ValueError(f"expected HxWx3/4 uint8 image, got {arr.shape}")
+    if arr.shape[0] == 0 or arr.shape[1] == 0:
+        # ``min()``/``max()`` on a zero-size plane raise a cryptic reduction
+        # error; reject the empty image up front with a clear message instead.
+        raise ValueError(f"image has no pixels: {arr.shape}")
 
 
 def _channel_stats(plane: np.ndarray) -> dict[str, float]:

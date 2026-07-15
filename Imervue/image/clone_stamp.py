@@ -125,7 +125,13 @@ def apply_clone_stamp(
         if px1 <= px0 or py1 <= py0:
             continue
         patch = np.zeros((2 * radius + 1, 2 * radius + 1, 4), dtype=np.uint8)
+        # Track which patch pixels were actually copied from the source. When the
+        # source sits within `radius` of an edge the rest of the patch stays zero
+        # (black); without gating the blend on validity that black padding bled a
+        # dark crescent into the destination.
+        valid = np.zeros((2 * radius + 1, 2 * radius + 1), dtype=np.float32)
         patch[py0 - y0:py1 - y0, px0 - x0:px1 - x0] = out[py0:py1, px0:px1]
-        mask = _feather_mask(radius, stamp.feather)
+        valid[py0 - y0:py1 - y0, px0 - x0:px1 - x0] = 1.0
+        mask = _feather_mask(radius, stamp.feather) * valid
         _blit(out, patch, int(stamp.dx), int(stamp.dy), mask)
     return out

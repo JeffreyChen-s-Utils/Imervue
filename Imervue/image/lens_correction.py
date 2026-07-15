@@ -53,6 +53,10 @@ def _undistort(arr: np.ndarray, k1: float) -> np.ndarray:
     if abs(k1) < _EPS:
         return arr
     h, w = arr.shape[:2]
+    if w < 2 or h < 2:
+        # cx/cy would be 0 for a 1px axis, so dividing by them yields NaN and a
+        # black frame. A 1px image has no distortion to correct.
+        return arr
     cx, cy = (w - 1) / 2.0, (h - 1) / 2.0
     ys, xs = np.indices((h, w), dtype=np.float32)
     dx = (xs - cx) / cx
@@ -94,6 +98,9 @@ def _devignette(arr: np.ndarray, amount: float) -> np.ndarray:
     if abs(amount) < _EPS:
         return arr
     h, w = arr.shape[:2]
+    if w < 2 or h < 2:
+        # cx/cy would be 0 for a 1px axis -> NaN gain -> black frame.
+        return arr
     cx, cy = (w - 1) / 2.0, (h - 1) / 2.0
     ys, xs = np.indices((h, w), dtype=np.float32)
     r2 = ((xs - cx) / cx) ** 2 + ((ys - cy) / cy) ** 2
