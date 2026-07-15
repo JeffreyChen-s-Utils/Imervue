@@ -53,10 +53,15 @@ def capture_session(ui: ImervueMainWindow) -> dict[str, Any]:
             selection.append(path)
 
     active_tab = ui._tab_bar.currentIndex() if hasattr(ui, "_tab_bar") else 0
+    # Also store the active tab's PATH: restore skips missing-file tabs, which
+    # shifts indices, so re-selecting by path survives that where the raw index
+    # doesn't. active_tab stays as a legacy fallback.
+    active_tab_path = tabs[active_tab]["path"] if 0 <= active_tab < len(tabs) else ""
     return {
         "version": SESSION_VERSION,
         "tabs": tabs,
         "active_tab": active_tab,
+        "active_tab_path": active_tab_path,
         "current_image": current_path,
         "selection": selection,
         "tile_grid_mode": bool(getattr(viewer, "tile_grid_mode", False)),
@@ -114,6 +119,7 @@ def _sanitize_loaded(data: dict[str, Any]) -> dict[str, Any]:
         "version": SESSION_VERSION,
         "tabs": tabs,
         "active_tab": active_tab,
+        "active_tab_path": _sanitize_path(data.get("active_tab_path")),
         "current_image": _sanitize_path(data.get("current_image")),
         "selection": selection,
         "tile_grid_mode": bool(data.get("tile_grid_mode")),
@@ -201,12 +207,40 @@ def _restore_browse_mode(ui: ImervueMainWindow, data: dict[str, Any]) -> None:
         viewer.load_tile_grid_async(list(images))
 
 
+def active_tab_index(tabs: list[Any], active_path: str, fallback_index: int) -> int:
+    """Row of the tab to activate on restore, or ``-1`` when there are none.
+
+    Prefer the tab whose path matches *active_path* — restore drops missing-file
+    tabs, so re-selecting by path survives the resulting index shift; fall back
+    to the clamped legacy index when no path matches.
+    """
+    if not tabs:
+        return -1
+    if active_path:
+        for i, tab in enumerate(tabs):
+            if (tab.get("path") if isinstance(tab, dict) else None) == active_path:
+                return i
+    return max(0, min(int(fallback_index), len(tabs) - 1))
+
+
+def _restore_active_tab(ui: ImervueMainWindow, active_path: str,
+                        fallback_index: int) -> None:
+    if not (hasattr(ui, "_image_tabs") and hasattr(ui, "_tab_bar")):
+        return
+    idx = active_tab_index(ui._image_tabs, active_path, fallback_index)
+    if idx >= 0:
+        ui._tab_bar.setCurrentIndex(idx)
+
+
 def restore_session(ui: ImervueMainWindow, data: dict[str, Any]) -> dict[str, int]:
     """Apply ``data`` to the UI best-effort. Returns counts of applied vs skipped."""
     tab_applied, tab_skipped = _restore_tabs(ui, data.get("tabs") or [])
     cur_applied, cur_skipped = _restore_current_image(ui, data.get("current_image") or "")
     _restore_selection(ui, data.get("selection") or [])
     _restore_browse_mode(ui, data)
+    # After the current image (which may itself select a tab), give the saved
+    # active tab the final say — it was never re-applied before.
+    _restore_active_tab(ui, data.get("active_tab_path") or "", data.get("active_tab") or 0)
     return {
         "applied": tab_applied + cur_applied,
         "skipped": tab_skipped + cur_skipped,
