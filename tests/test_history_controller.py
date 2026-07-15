@@ -125,6 +125,22 @@ def test_cap_evicts_oldest(monkeypatch):
     assert ctrl.back() is False
 
 
+def test_back_onto_deleted_entry_rolls_back_the_position(monkeypatch):
+    # A history entry whose file was deleted must not silently consume a step:
+    # back() returns False and leaves _pos where it was, so a later back still
+    # targets the same reachable entry.
+    view = _make_view(["a", "b"])
+    ctrl = HistoryController(view)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("a")
+    ctrl.push("b")
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: False)
+    assert ctrl.back() is False           # target unreachable
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    assert ctrl.back() is True            # pointer wasn't stranded
+    assert view.loaded[-1] == "a"
+
+
 def test_navigate_skips_missing_file(monkeypatch):
     view = _make_view(["a", "b"])
     ctrl = HistoryController(view)

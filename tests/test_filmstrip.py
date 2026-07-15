@@ -61,6 +61,12 @@ class TestVisibleFilmstripItems:
         items = visible_filmstrip_items(99, 5, 500, 100, 0)
         assert [idx for idx, _ in items] == [0, 1, 2, 3, 4]
 
+    def test_empty_when_strip_too_narrow_for_one_item(self):
+        # A near-full-width minimap can leave a strip narrower than one item;
+        # drawing one anyway would overflow the strip and steal minimap clicks.
+        items = visible_filmstrip_items(0, 5, 60, 100, 6)  # 60 < step (106)
+        assert items == []
+
 
 class TestComputeFilmstripItems:
     def _kwargs(self, **over):

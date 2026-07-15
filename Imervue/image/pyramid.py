@@ -29,6 +29,10 @@ class DeepZoomImage:
             self.levels.append(current)
 
     def get_level(self, zoom):
-        # zoom 1.0 = full res
-        level = int(max(0, min(len(self.levels)-1, -math.log2(zoom))))
+        # zoom 1.0 = full res. Floor the zoom at a tiny positive value so a stray
+        # zoom <= 0 can't raise a log2 domain error (which paintGL's try/except
+        # would swallow, blanking the image every frame); a near-zero zoom maps
+        # to the smallest (deepest) level, which is the correct zoomed-out tile.
+        safe_zoom = max(zoom, 1e-6)
+        level = int(max(0, min(len(self.levels) - 1, -math.log2(safe_zoom))))
         return level, self.levels[level]
