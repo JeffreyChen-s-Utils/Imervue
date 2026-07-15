@@ -710,7 +710,10 @@ class ImageSanitizeDialog(QDialog):
         if target_long_edge > 0 and not is_traditional:
             from Imervue.gui.ai_upscale_dialog import REQUIRED_PACKAGES
             from Imervue.plugin.pip_installer import ensure_dependencies
-            self._start_btn.setEnabled(False)
+            # Don't disable Start here — ensure_dependencies only calls on_ready on
+            # a successful install, so disabling now would strand the button if
+            # the user cancels the install prompt. _launch_worker disables it once
+            # the work actually starts.
             self._status_label.setText(
                 self._lang.get("upscale_installing",
                                "Installing dependencies..."))
