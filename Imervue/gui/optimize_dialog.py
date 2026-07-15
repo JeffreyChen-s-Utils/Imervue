@@ -96,6 +96,12 @@ class OptimizeDialog(QDialog):
         if ok:
             self.accept()
 
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        worker = getattr(self, "_worker", None)
+        if worker is not None and worker.isRunning():
+            worker.wait()
+        super().closeEvent(event)
+
 
 def open_optimize(viewer: GPUImageView) -> None:
     path = current_image_path(viewer)

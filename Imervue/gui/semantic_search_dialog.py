@@ -113,6 +113,13 @@ class SemanticSearchDialog(QDialog):
         self._set_search_enabled(True)
         self._status.setText(f"Indexed {self._index.size} image(s) — ready to search")
 
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        # Don't destroy the dialog with a live index-build thread.
+        worker = getattr(self, "_worker", None)
+        if worker is not None and worker.isRunning():
+            worker.wait()
+        super().closeEvent(event)
+
     def _set_search_enabled(self, enabled: bool) -> None:
         self._query.setEnabled(enabled)
         self._search_btn.setEnabled(enabled)
