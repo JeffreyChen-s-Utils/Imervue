@@ -263,6 +263,7 @@ class ImageOrganizerDialog(QDialog):
         src_row = QHBoxLayout()
         src_row.addWidget(QLabel(lang.get("organizer_source", "Source folder:")))
         self._src_edit = QLineEdit()
+        self._src_edit.textChanged.connect(self._invalidate_plan)
         src_row.addWidget(self._src_edit, 1)
         src_browse = QPushButton(lang.get("batch_convert_browse", "Browse..."))
         src_browse.clicked.connect(self._browse_src)
@@ -295,6 +296,7 @@ class ImageOrganizerDialog(QDialog):
         self._date_combo = QComboBox()
         self._date_combo.addItem(lang.get("organizer_date_year_month", "Year-Month"), False)
         self._date_combo.addItem(lang.get("organizer_date_year", "Year only"), True)
+        self._date_combo.currentIndexChanged.connect(self._invalidate_plan)
         self._date_row.addWidget(self._date_combo)
         self._date_row_widgets.append(self._date_combo)
         self._date_row.addStretch()
@@ -309,6 +311,7 @@ class ImageOrganizerDialog(QDialog):
         self._size_large_spin = QSpinBox()
         self._size_large_spin.setRange(1, 1000)
         self._size_large_spin.setValue(5)
+        self._size_large_spin.valueChanged.connect(self._invalidate_plan)
         self._size_row.addWidget(self._size_large_spin)
         self._size_row_widgets.append(self._size_large_spin)
         lbl3 = QLabel(lang.get("organizer_size_small", "Small threshold (MB):"))
@@ -317,6 +320,7 @@ class ImageOrganizerDialog(QDialog):
         self._size_small_spin = QSpinBox()
         self._size_small_spin.setRange(0, 999)
         self._size_small_spin.setValue(1)
+        self._size_small_spin.valueChanged.connect(self._invalidate_plan)
         self._size_row.addWidget(self._size_small_spin)
         self._size_row_widgets.append(self._size_small_spin)
         self._size_row.addStretch()
@@ -331,6 +335,7 @@ class ImageOrganizerDialog(QDialog):
         self._count_spin = QSpinBox()
         self._count_spin.setRange(1, 10000)
         self._count_spin.setValue(100)
+        self._count_spin.valueChanged.connect(self._invalidate_plan)
         self._count_row.addWidget(self._count_spin)
         self._count_row_widgets.append(self._count_spin)
         self._count_row.addStretch()
@@ -404,6 +409,21 @@ class ImageOrganizerDialog(QDialog):
         self._set_widgets_visible(self._date_row_widgets, rule == RULE_DATE)
         self._set_widgets_visible(self._size_row_widgets, rule == RULE_SIZE)
         self._set_widgets_visible(self._count_row_widgets, rule == RULE_COUNT)
+        # Changing the rule makes any previewed plan stale — force a re-Preview.
+        self._invalidate_plan()
+
+    def _invalidate_plan(self, *_args) -> None:
+        """A previewed plan is stale once any plan input changes.
+
+        ``_do_start`` executes ``_last_plan`` captured at Preview time. Without
+        this, changing the rule / options / source folder after previewing and
+        then clicking Start would move or copy files by a plan the UI no longer
+        shows (e.g. files organised into date folders while the dropdown reads
+        "File Type"). Clearing the plan and disabling Start forces the user to
+        re-Preview, so the executed plan always matches the visible settings.
+        """
+        self._last_plan = {}
+        self._start_btn.setEnabled(False)
 
     def _browse_src(self):
         folder = QFileDialog.getExistingDirectory(

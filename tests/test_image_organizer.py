@@ -13,7 +13,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from types import SimpleNamespace
+
 from Imervue.gui.image_organizer_dialog import (
+    ImageOrganizerDialog,
     _scan_folder,
     plan_organization,
     _OrganizerWorker,
@@ -281,3 +284,46 @@ class TestOrganizerWorker:
 
         assert len(results) == 1
         assert results[0][0] == 0  # nothing processed
+
+
+class TestPlanInvalidation:
+    """Changing any plan input after Preview must force a re-Preview.
+
+    ``_do_start`` executes ``_last_plan`` captured at Preview time, so a stale
+    plan would move/copy files by a rule the UI no longer shows. These drive the
+    methods unbound on fakes -- no Qt widget constructed.
+    """
+
+    def test_invalidate_clears_plan_and_disables_start(self):
+        enabled: list = []
+        fake = SimpleNamespace(
+            _last_plan={"2024-01": ["a.png"]},
+            _start_btn=SimpleNamespace(setEnabled=enabled.append),
+        )
+        ImageOrganizerDialog._invalidate_plan(fake)
+        assert fake._last_plan == {}
+        assert enabled == [False]
+
+    def test_invalidate_accepts_a_signal_argument(self):
+        # valueChanged / currentIndexChanged / textChanged all pass an argument.
+        enabled: list = []
+        fake = SimpleNamespace(
+            _last_plan={"x": ["y"]},
+            _start_btn=SimpleNamespace(setEnabled=enabled.append),
+        )
+        ImageOrganizerDialog._invalidate_plan(fake, 7)   # must not raise
+        assert fake._last_plan == {}
+        assert enabled == [False]
+
+    def test_rule_change_invalidates_plan(self):
+        calls: list = []
+        fake = SimpleNamespace(
+            _rule_combo=SimpleNamespace(currentData=lambda: RULE_SIZE),
+            _set_widgets_visible=lambda widgets, visible: None,
+            _date_row_widgets=[],
+            _size_row_widgets=[],
+            _count_row_widgets=[],
+            _invalidate_plan=lambda: calls.append("invalidate"),
+        )
+        ImageOrganizerDialog._on_rule_changed(fake, 3)
+        assert calls == ["invalidate"]
