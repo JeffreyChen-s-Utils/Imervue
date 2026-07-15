@@ -21,10 +21,17 @@ def _make_view(images, *, main_window=None):
         current_index=0,
         tile_grid_mode=False,
         loaded=[],
+        events=[],
         main_window=main_window,
     )
-    view._clear_deep_zoom = lambda: None
-    view.load_deep_zoom_image = lambda p: view.loaded.append(p)
+    view._save_view_state = lambda: view.events.append("save")
+    view._clear_deep_zoom = lambda: view.events.append("clear")
+
+    def _load(p):
+        view.loaded.append(p)
+        view.events.append("load")
+
+    view.load_deep_zoom_image = _load
     return view
 
 
@@ -129,6 +136,20 @@ def test_navigate_skips_missing_file(monkeypatch):
     before = list(view.loaded)
     ctrl.back()
     assert view.loaded == before
+
+
+def test_in_folder_navigate_saves_outgoing_view_before_clearing(monkeypatch):
+    # _clear_deep_zoom nulls the save key, so the outgoing image's zoom/pan must
+    # be saved first — Alt+Left then Alt+Right should return to where you left off.
+    view = _make_view(["a", "b"])
+    ctrl = HistoryController(view)
+    monkeypatch.setattr("pathlib.Path.is_file", lambda self: True)
+    ctrl.push("a")
+    ctrl.push("b")
+    view.events.clear()
+    ctrl.back()  # -> "a", still in the folder
+    assert view.events[:2] == ["save", "clear"]
+    assert view.events[-1] == "load"
 
 
 def test_in_folder_back_loads_directly_without_reopening(monkeypatch):

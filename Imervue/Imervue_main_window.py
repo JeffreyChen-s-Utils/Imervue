@@ -1733,6 +1733,9 @@ class ImervueMainWindow(QMainWindow):
 
         self._tab_switching = True
         try:
+            # Preserve the outgoing tab image's zoom/pan before the clear nulls
+            # the save key, so returning to it restores where you left off.
+            self.viewer._save_view_state()
             self.viewer._clear_deep_zoom()
             open_path(main_gui=self.viewer, path=path)
         except Exception:

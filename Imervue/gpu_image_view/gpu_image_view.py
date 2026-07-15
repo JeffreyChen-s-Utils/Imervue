@@ -424,6 +424,10 @@ class GPUImageView(QOpenGLWidget):
         # ask recipe_store for the new recipe and apply it.
         if self.model.images and 0 <= self.current_index < len(self.model.images) \
                 and self.model.images[self.current_index] == path:
+            # Save the live zoom/pan first: _clear_deep_zoom nulls _deep_zoom_path,
+            # so load_deep_zoom_image's own save would no-op and a tonal recipe
+            # edit would snap the view back to the entry zoom.
+            self._save_view_state()
             self._cancel_deep_zoom_worker()
             self._clear_deep_zoom()
             self.load_deep_zoom_image(path)

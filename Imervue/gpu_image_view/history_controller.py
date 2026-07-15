@@ -75,6 +75,9 @@ class HistoryController:
         try:
             if path in images:
                 view.current_index = images.index(path)
+                # Save the outgoing image's zoom/pan before the clear nulls the
+                # key, so Alt+Left then Alt+Right returns to where you left off.
+                view._save_view_state()
                 view._clear_deep_zoom()
                 view.tile_grid_mode = False
                 view.load_deep_zoom_image(path)

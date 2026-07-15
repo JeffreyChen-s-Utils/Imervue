@@ -151,3 +151,25 @@ def test_prefetch_error_only_pops_when_waiting_on_a_different_image():
     GPUImageView._on_prefetch_error(fake, "b", "decode failed")
     assert ("pop", "b") in calls
     assert not any(c[0] == "fail" for c in calls)
+
+
+# ---------------------------------------------------------------------------
+# reload_current_image_with_recipe — save the view before the pre-clear
+# ---------------------------------------------------------------------------
+
+def test_reload_with_recipe_saves_view_before_clearing():
+    # _clear_deep_zoom nulls _deep_zoom_path, so the live zoom/pan must be saved
+    # first or a tonal recipe edit snaps the view back to the entry zoom.
+    events: list = []
+    fake = SimpleNamespace(
+        model=SimpleNamespace(images=["a", "b"]),
+        current_index=0,
+        _prefetch=SimpleNamespace(discard=lambda p: events.append(("discard", p))),
+        _save_view_state=lambda: events.append("save"),
+        _cancel_deep_zoom_worker=lambda: events.append("cancel"),
+        _clear_deep_zoom=lambda: events.append("clear"),
+        load_deep_zoom_image=lambda p: events.append(("load", p)),
+        _develop_panel=None,
+    )
+    GPUImageView.reload_current_image_with_recipe(fake, "a")
+    assert events == [("discard", "a"), "save", "cancel", "clear", ("load", "a")]
