@@ -20,13 +20,19 @@ _SQUARE_RESERVE = 152
 
 
 def _view():
-    return SimpleNamespace(
+    view = SimpleNamespace(
         _filmstrip_enabled=True,
         _transition_enabled=True,
         _smooth_nav_enabled=False,
+        deep_zoom=None,
+        tile_grid_mode=False,
+        settle_refits=0,
         updates=0,
         update=lambda: None,
     )
+    view._schedule_settle_refit = lambda: setattr(
+        view, "settle_refits", view.settle_refits + 1)
+    return view
 
 
 def _clamp_view(img_w, img_h, canvas, zoom, offset):
@@ -94,3 +100,33 @@ def test_reload_settings_uses_defaults_when_unset():
     assert view._filmstrip_enabled is True
     assert view._transition_enabled is True
     assert view._smooth_nav_enabled is False
+
+
+def test_reload_settings_refits_live_deep_zoom_when_filmstrip_toggled():
+    # Toggling the filmstrip changes the reserved band → the shown image must
+    # re-fit so it isn't left cropped / gapped.
+    view = _view()
+    view.deep_zoom = object()
+    view._filmstrip_enabled = True
+    user_setting_dict["filmstrip_enabled"] = False
+    BrowseFeatures(view).reload_settings()
+    assert view._filmstrip_enabled is False
+    assert view.settle_refits == 1
+
+
+def test_reload_settings_no_refit_when_filmstrip_unchanged():
+    view = _view()
+    view.deep_zoom = object()
+    view._filmstrip_enabled = True
+    user_setting_dict["filmstrip_enabled"] = True  # same as before
+    BrowseFeatures(view).reload_settings()
+    assert view.settle_refits == 0
+
+
+def test_reload_settings_no_refit_off_the_deep_zoom_view():
+    # On the tile wall (or with no image) there's nothing to re-fit.
+    view = _view()  # deep_zoom is None
+    view._filmstrip_enabled = True
+    user_setting_dict["filmstrip_enabled"] = False
+    BrowseFeatures(view).reload_settings()
+    assert view.settle_refits == 0

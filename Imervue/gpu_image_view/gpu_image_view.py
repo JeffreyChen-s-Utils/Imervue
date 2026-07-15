@@ -635,6 +635,13 @@ class GPUImageView(QOpenGLWidget):
         if self._should_refit_on_load():
             self._fit_to_window()
             self._schedule_settle_refit()
+        else:
+            # Keeping a genuine remembered zoom-in: clamp its pan to the current
+            # (maybe smaller / different-DPI) canvas so it can't open off-screen,
+            # and lock the view so the next resize's settle re-fit doesn't snap
+            # the deliberate zoom away.
+            self._browse.clamp_pan()
+            self._user_locked_view = True
 
     def _schedule_settle_refit(self) -> None:
         """Queue a confirmation re-fit for the next event-loop turn.

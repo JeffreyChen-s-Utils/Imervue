@@ -43,12 +43,20 @@ class BrowseFeatures:
         """
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         view = self._view
+        was_filmstrip = getattr(view, "_filmstrip_enabled", True)
         view._filmstrip_enabled = bool(
             user_setting_dict.get("filmstrip_enabled", True))
         view._transition_enabled = bool(
             user_setting_dict.get("image_transition_enabled", True))
         view._smooth_nav_enabled = bool(
             user_setting_dict.get("smooth_navigation_enabled", False))
+        # Toggling the filmstrip changes the reserved bottom band, so a live
+        # deep-zoom image must re-fit or it's left cropped (band now over it) or
+        # gapped (band gone). A no-op if the user has taken zoom/pan control.
+        if (view._filmstrip_enabled != was_filmstrip
+                and view.deep_zoom is not None
+                and not view.tile_grid_mode):
+            view._schedule_settle_refit()
         view.update()
 
     # -- pan clamping -------------------------------------------------

@@ -176,6 +176,10 @@ def fit_to_width(view: GPUImageView) -> None:
     view.zoom = w / img_w
     view.dz_offset_x = 0
     view.dz_offset_y = (h - img_h * view.zoom) / 2
+    # An explicit fit-width is the user taking control; lock it so a later
+    # resize's settle re-fit doesn't silently revert it to fit-to-window
+    # (reading mode's top-aligned layout was the visible casualty).
+    view._user_locked_view = True
     view.update()
 
 
@@ -188,4 +192,5 @@ def fit_to_height(view: GPUImageView) -> None:
     view.zoom = h / img_h
     view.dz_offset_x = (w - img_w * view.zoom) / 2
     view.dz_offset_y = 0
+    view._user_locked_view = True
     view.update()
