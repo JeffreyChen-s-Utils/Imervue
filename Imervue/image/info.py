@@ -55,15 +55,22 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         info["created_time"] = ctime
         info["modified_time"] = mtime
 
-        # ===== 讀取尺寸 =====
-        cache_key = str(path)
-
-        if cache_key in main_gui.tile_cache:
-            img = main_gui.tile_cache[cache_key]
-        else:
-            img = load_image_file(path, thumbnail=True)
-
-        h, w = img.shape[:2]
+        # ===== 讀取真實尺寸 =====
+        # Read the true dimensions from the header (cheap, no full decode), NOT
+        # the tile cache / a thumbnail load — those are downscaled, so the dialog
+        # used to report the thumbnail size instead of the real image size.
+        try:
+            from PIL import Image
+            with Image.open(path) as pil_img:
+                w, h = pil_img.size
+        except Exception:
+            # Formats PIL can't header-read (some RAW) — fall back to the decoded
+            # thumbnail's shape rather than failing the whole dialog.
+            cache_key = str(path)
+            img = (main_gui.tile_cache[cache_key]
+                   if cache_key in main_gui.tile_cache
+                   else load_image_file(path, thumbnail=True))
+            h, w = img.shape[:2]
         info["width"] = w
         info["height"] = h
 

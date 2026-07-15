@@ -119,3 +119,19 @@ class TestFormatExifInfo:
         assert "CAM=Fujifilm/X-T5" in out
         assert "LENS=23mm F2" in out
         assert "ISO=400" in out
+
+
+class TestBuildImageInfoDimensions:
+    def test_reports_true_dimensions_not_the_thumbnail(self, tmp_path):
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        big = tmp_path / "big.png"
+        Image.fromarray(np.zeros((600, 800, 3), dtype=np.uint8)).save(str(big))
+        # Empty tile cache → the true-dimension (PIL header) path is used, not a
+        # downscaled thumbnail. width/height must be the real 800x600.
+        fake_gui = SimpleNamespace(tile_cache={})
+        result = info_mod.build_image_info(fake_gui, Path(str(big)))
+        assert result.get("width") == 800
+        assert result.get("height") == 600
+        assert "error" not in result

@@ -118,3 +118,27 @@ def test_metadata_index_sample_hash_tracks_same_content(tmp_path):
     b.write_bytes(payload)
     index = ImageMetadataIndex()
     assert index.sample_hash(str(a)) == index.sample_hash(str(b))
+
+
+def test_metadata_read_reports_cacheable_flag(tmp_path):
+    index = ImageMetadataIndex()
+    _meta, cacheable = index._read(str(tmp_path / "ghost.png"))
+    assert cacheable is False              # stat failed → don't memoise
+    real = tmp_path / "real.png"
+    Image.new("RGBA", (20, 10)).save(str(real))
+    _meta2, cacheable2 = index._read(str(real))
+    assert cacheable2 is True
+
+
+def test_metadata_get_does_not_cache_a_transient_stat_failure(tmp_path):
+    index = ImageMetadataIndex()
+    p = tmp_path / "img.png"
+    meta = index.get(str(p))               # absent / locked → sentinel, not cached
+    assert meta.width is None and meta.size == 0
+    assert str(p) not in index._items
+    # The file appears (unlocks) → the next get reads the real metadata and
+    # caches it, instead of being stuck on the zero-metadata sentinel.
+    Image.new("RGBA", (20, 10)).save(str(p))
+    healed = index.get(str(p))
+    assert (healed.width, healed.height) == (20, 10)
+    assert str(p) in index._items
