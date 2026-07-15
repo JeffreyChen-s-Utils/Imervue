@@ -6,10 +6,12 @@ treat the tray as an ordered, de-duplicated list of absolute paths.
 """
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Iterable
 from pathlib import Path
 
+from Imervue.image.batch_move_planner import resolve_name_collision
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
 
 
@@ -85,10 +87,20 @@ def _apply_file_op(dest: str, *, move: bool) -> tuple[int, int]:
     dest_path = Path(dest)
     if not dest_path.is_dir():
         raise NotADirectoryError(dest)
+    try:
+        claimed = set(os.listdir(dest_path))
+    except OSError:
+        claimed = set()
     ok = failed = 0
     moved_paths: list[str] = []
     for src in _tray():
-        target = dest_path / Path(src).name
+        # The tray is a cross-folder basket, so two entries can legitimately
+        # share a basename. Resolve collisions (with files already in dest AND
+        # with earlier entries in this batch) to a numbered variant so a copy /
+        # move never silently overwrites another file.
+        name = resolve_name_collision(Path(src).name, claimed)
+        claimed.add(name)
+        target = dest_path / name
         try:
             if move:
                 shutil.move(src, str(target))

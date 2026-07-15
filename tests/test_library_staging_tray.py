@@ -72,3 +72,44 @@ class TestBulkOps:
         staging_tray.add(str(tmp_path / "x.txt"))
         with pytest.raises(NotADirectoryError):
             staging_tray.move_all(str(tmp_path / "no-such-dir"))
+
+
+class TestNameCollisions:
+    """The tray is a cross-folder basket, so same-basename entries are normal
+    and must not overwrite each other or a pre-existing destination file."""
+
+    def _make(self, folder, name, text):
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_text(text)
+        return str(folder / name)
+
+    def test_copy_all_renames_same_basename_sources(self, tmp_path):
+        staging_tray.add(self._make(tmp_path / "a", "photo.jpg", "A"))
+        staging_tray.add(self._make(tmp_path / "b", "photo.jpg", "B"))
+        dest = tmp_path / "dest"
+        dest.mkdir()
+        ok, failed = staging_tray.copy_all(str(dest))
+        assert (ok, failed) == (2, 0)
+        assert sorted(p.read_text() for p in dest.iterdir()) == ["A", "B"]
+        assert (dest / "photo.jpg").exists()
+        assert (dest / "photo_1.jpg").exists()
+
+    def test_copy_all_does_not_overwrite_existing_dest_file(self, tmp_path):
+        staging_tray.add(self._make(tmp_path / "src", "photo.jpg", "NEW"))
+        dest = tmp_path / "dest"
+        dest.mkdir()
+        (dest / "photo.jpg").write_text("KEEP")
+        ok, failed = staging_tray.copy_all(str(dest))
+        assert (ok, failed) == (1, 0)
+        assert (dest / "photo.jpg").read_text() == "KEEP"     # existing preserved
+        assert (dest / "photo_1.jpg").read_text() == "NEW"    # new copy renamed
+
+    def test_move_all_renames_same_basename_sources(self, tmp_path):
+        staging_tray.add(self._make(tmp_path / "a", "doc.txt", "A"))
+        staging_tray.add(self._make(tmp_path / "b", "doc.txt", "B"))
+        dest = tmp_path / "dest"
+        dest.mkdir()
+        ok, failed = staging_tray.move_all(str(dest))
+        assert (ok, failed) == (2, 0)
+        assert sorted(p.read_text() for p in dest.iterdir()) == ["A", "B"]
+        assert staging_tray.count() == 0
