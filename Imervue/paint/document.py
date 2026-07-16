@@ -13,6 +13,7 @@ canvas's next paint pays the recomposite cost once.
 """
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable
 from typing import Any
 
@@ -59,6 +60,31 @@ class PaintDocument:
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
         self._reference_layer_index: int | None = None
+
+    def __deepcopy__(self, memo: dict) -> PaintDocument:
+        """Deep-copy the document CONTENT, not its runtime wiring.
+
+        ``_listeners`` hold bound methods of Qt widgets (the canvas, the layers
+        dock); the default deepcopy walks them into the widget tree and raises
+        ``TypeError: cannot pickle ...`` — which crashed "Duplicate page" — and
+        even when a listener survives copying, the clone would notify the
+        ORIGINAL page's widgets. A cloned document starts with no listeners and
+        cold composite caches; only the layer stack, groups, selections and
+        indices carry over.
+        """
+        clone = type(self)()
+        memo[id(self)] = clone
+        clone._layers = copy.deepcopy(self._layers, memo)
+        clone._active_index = self._active_index
+        clone._selection = (
+            None if self._selection is None else self._selection.copy()
+        )
+        clone._groups = copy.deepcopy(self._groups, memo)
+        clone._named_selections = {
+            name: mask.copy() for name, mask in self._named_selections.items()
+        }
+        clone._reference_layer_index = self._reference_layer_index
+        return clone
 
     # ---- listeners -------------------------------------------------------
 
