@@ -264,6 +264,11 @@ class TabManagerMixin:
         new_canvas = self._tabs.widget(index)
         if not isinstance(new_canvas, PaintCanvas):
             return
+        # Resolve any active quick mask on the OUTGOING tab (still ``self._canvas``)
+        # before switching, so its overlay is written back to the correct
+        # document instead of being dropped against the new tab's document.
+        if hasattr(self, "exit_quick_mask"):
+            self.exit_quick_mask()
         self._rebind_canvas_signals(self._canvas, new_canvas)
         self._canvas = new_canvas
         self._canvas.set_tool_dispatcher(self._dispatcher)

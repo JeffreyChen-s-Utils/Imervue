@@ -192,6 +192,9 @@ class ContentOpsMixin:
         """
         if not hasattr(self._canvas, "set_document"):
             return
+        # Resolve any active quick mask before the document under it changes, so
+        # the overlay is written back to the layer it was entered on.
+        self.exit_quick_mask()
         self._canvas.set_document(document)
         if hasattr(self._layer_dock, "set_document"):
             self._layer_dock.set_document(document)
@@ -229,6 +232,12 @@ class ContentOpsMixin:
         # reordered while in quick-mask shifts indices, so restoring by index
         # would write the overlay back into the wrong layer.
         self._quick_mask_layer = layer
+        # Remember the owning document too. exit_quick_mask must restore against
+        # THIS document, not whatever the active canvas shows — the user can
+        # switch tabs (a different canvas/document) while masked, and restoring
+        # against the wrong document fails the identity guard and drops the saved
+        # original pixels, leaving this layer as the red proxy (artwork lost).
+        self._quick_mask_document = document
         document.invalidate_composite()
         canvas.update()
         return True
@@ -240,8 +249,9 @@ class ContentOpsMixin:
             return False
         from Imervue.paint.quick_mask import exit_mode
         state = self._quick_mask_state   # noqa: SLF001
-        canvas = self.canvas()
-        document = canvas.document()
+        # Restore against the document the mask was entered on, not the active
+        # canvas's — they differ once the user switches tabs while masked.
+        document = getattr(self, "_quick_mask_document", None) or self.canvas().document()
         layer = getattr(self, "_quick_mask_layer", None)
         if layer is None or not any(layer is lyr for lyr in document.layers()):
             # The masked layer was removed while in quick-mask mode; drop the
@@ -249,14 +259,16 @@ class ContentOpsMixin:
             # different, reordered layer).
             self._quick_mask_state = None
             self._quick_mask_layer = None
+            self._quick_mask_document = None
             return False
         restored, selection = exit_mode(state)
         layer.image = restored
-        canvas.set_selection(selection)
+        document.set_selection(selection)
         self._quick_mask_state = None
         self._quick_mask_layer = None
+        self._quick_mask_document = None
         document.invalidate_composite()
-        canvas.update()
+        self.canvas().update()
         return True
 
     # ---- material drops ------------------------------------------------
