@@ -77,12 +77,21 @@ def _tile_lut(tile: np.ndarray, clip_limit: float) -> np.ndarray:
 
 def _interpolate(plane, luts, tile_h, tile_w):
     tiles = luts.shape[0]
-    rows = np.arange(plane.shape[0])
-    cols = np.arange(plane.shape[1])
+    h, w = plane.shape
+    # ceil division can leave trailing tiles entirely outside a small image (e.g.
+    # h=10, tiles=8 -> tiles 5-7 are empty); their LUTs are identity. Clamp the
+    # interpolation to the last tile that actually covers image data so the
+    # bottom/right edge isn't blended toward identity (under-equalised).
+    max_ty = (h - 1) // tile_h
+    max_tx = (w - 1) // tile_w
+    rows = np.arange(h)
+    cols = np.arange(w)
     ty0, wy = _tile_coords(rows, tile_h, tiles)
     tx0, wx = _tile_coords(cols, tile_w, tiles)
-    ty0, ty1, wy = ty0[:, None], np.minimum(ty0 + 1, tiles - 1)[:, None], wy[:, None]
-    tx0, tx1, wx = tx0[None, :], np.minimum(tx0 + 1, tiles - 1)[None, :], wx[None, :]
+    ty0 = np.minimum(ty0, max_ty)
+    tx0 = np.minimum(tx0, max_tx)
+    ty0, ty1, wy = ty0[:, None], np.minimum(ty0 + 1, max_ty)[:, None], wy[:, None]
+    tx0, tx1, wx = tx0[None, :], np.minimum(tx0 + 1, max_tx)[None, :], wx[None, :]
     val = plane
     top = luts[ty0, tx0, val] * (1 - wx) + luts[ty0, tx1, val] * wx
     bottom = luts[ty1, tx0, val] * (1 - wx) + luts[ty1, tx1, val] * wx
