@@ -186,17 +186,20 @@ def write_batch():
     partially-applied chunk never lands.
     """
     c = conn()
+    # Hold the (reentrant) lock for the WHOLE transaction, not just BEGIN/COMMIT.
+    # Releasing it during the body let a concurrent UI-thread write (set_cull_state
+    # / add_image_tag, sharing this connection) execute INSIDE the scanner's open
+    # transaction and get rolled back with it. The RLock lets the batch's own
+    # upsert_image re-acquire on the same thread while blocking other threads.
     with _lock:
         c.execute("BEGIN")
-    committed = False
-    try:
-        yield
-        with _lock:
+        committed = False
+        try:
+            yield
             c.execute("COMMIT")
-        committed = True
-    finally:
-        if not committed:
-            with _lock:
+            committed = True
+        finally:
+            if not committed:
                 c.execute("ROLLBACK")
 
 
