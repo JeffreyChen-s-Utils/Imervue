@@ -260,7 +260,15 @@ class GPUDabSession:
         self._vbo = 0
         self._prev_fbo = 0
         self._prev_viewport = (0, 0, 0, 0)
-        self._init_gl(layer)
+        try:
+            self._init_gl(layer)
+        except Exception:
+            # A partial _init_gl (e.g. the FBO-incomplete raise) leaves _tex/_fbo
+            # already allocated; the caller never receives an instance to dispose,
+            # so free them here. dispose() is idempotent and guards on non-zero
+            # handles, freeing exactly what was created.
+            self.dispose()
+            raise
 
     def _init_gl(self, layer: np.ndarray) -> None:  # pragma: no cover - GL only
         from OpenGL.GL import (
@@ -605,6 +613,14 @@ def _subclass():
                 self._gpu = None
                 self._gpu_layer = None
             return result
+
+        def dispose(self):  # type: ignore[override]
+            """Free the GPU session if the stroke is abandoned before ``end``
+            (e.g. the user switches tools mid-stroke). Idempotent."""
+            if self._gpu is not None:
+                self._gpu.dispose()
+                self._gpu = None
+                self._gpu_layer = None
 
         def _sync_to_layer(self, canvas):
             """Copy the FBO's pixels back into the layer numpy buffer.

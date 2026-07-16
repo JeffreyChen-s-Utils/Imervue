@@ -605,6 +605,14 @@ class BrushStroke:
         self._last = None
         return result
 
+    def dispose(self) -> None:
+        """Release any resources the stroke holds when abandoned mid-way.
+
+        A CPU stroke draws straight onto the layer buffer and owns nothing to
+        free, so the base is a no-op. GPU strokes override this to free their
+        framebuffer/textures when a tool switch cancels a stroke before ``end``.
+        """
+
 
 def _resolve_base_kernel(options: BrushStrokeOptions) -> np.ndarray:
     """Build the per-stroke base kernel — custom tip if set, else round."""

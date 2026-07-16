@@ -116,6 +116,11 @@ class BrushTool:
         return damage
 
     def cancel(self) -> None:
+        # A tool switch mid-stroke lands here instead of the release path, so the
+        # active strokes never reach end() — dispose each so a GPU stroke frees
+        # its framebuffer/textures instead of leaking them.
+        for stroke in self._strokes:
+            stroke.dispose()
         self._strokes = []
         self._stabilizer = None
         self._stroke_anchor = None
