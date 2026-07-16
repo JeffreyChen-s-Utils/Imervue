@@ -29,7 +29,7 @@ import logging
 import platform
 from dataclasses import dataclass
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Signal
 
 logger = logging.getLogger("Imervue.desktop_pet.windows_notification_hook")
 
@@ -116,11 +116,18 @@ class WindowsNotificationClient(QObject):
     """Emitted with the speech-bubble line per
     :func:`notification_to_action`. ``PetWindow`` is the consumer."""
 
+    _notification_ready = Signal(object)
+    """Internal: marshals a notification id from the WinRT callback thread onto
+    the GUI thread. A queued cross-thread signal is delivered on this object's
+    (GUI) thread; ``QTimer.singleShot`` scheduled on the loop-less WinRT thread
+    and never fired, so notifications were silently dropped."""
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._listener = None
         self._handler_token = None
         self._ignored_app_ids: tuple[str, ...] = ()
+        self._notification_ready.connect(self._fetch_and_dispatch)
 
     # ---- public API -----------------------------------------------
 
@@ -224,19 +231,18 @@ class WindowsNotificationClient(QObject):
 
     def _on_notification_changed(self, sender, args) -> None:   # noqa: ARG002
         """Fired by Windows from a background thread when a toast
-        arrives. We marshal back to the GUI thread via
-        ``QTimer.singleShot`` — Qt signals are emit-safe from any
-        thread, but the *delivery* needs the GUI loop, and we want
-        the WinRT lookups (`listener.get_notification`) to happen
-        on the GUI thread for consistency with the rest of the
-        client."""
+        arrives. We marshal back to the GUI thread via the queued
+        ``_notification_ready`` signal — signals are emit-safe from
+        any thread and are *delivered* on the receiver's (GUI)
+        thread, so the WinRT lookups (`listener.get_notification`)
+        run there for consistency with the rest of the client."""
         notification_id = getattr(args, "user_notification_id", None)
         if notification_id is None:
             return
-        QTimer.singleShot(
-            0,
-            lambda nid=notification_id: self._fetch_and_dispatch(nid),
-        )
+        # Marshal to the GUI thread via a queued signal — see _notification_ready.
+        # The WinRT thread-pool thread has no Qt event loop, so a singleShot here
+        # never delivered.
+        self._notification_ready.emit(notification_id)
 
     def _fetch_and_dispatch(self, notification_id: int) -> None:
         """GUI-thread tail of the WinRT callback: pull the

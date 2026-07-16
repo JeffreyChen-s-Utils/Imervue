@@ -36,10 +36,16 @@ class InputEngine(QObject):
     """Holds the state for the three live-input sources."""
 
     state_changed = Signal()
+    # Marshals a viseme computed on the audio thread onto the GUI thread. A
+    # queued cross-thread signal is delivered on this object's (GUI) thread;
+    # QTimer.singleShot would have scheduled on the loop-less audio thread and
+    # never fired.
+    _viseme_ready = Signal(dict)
 
     def __init__(self, canvas: PuppetCanvas, parent=None):
         super().__init__(parent)
         self._canvas = canvas
+        self._viseme_ready.connect(self._apply_viseme)
         self._blink_enabled = False
         self._drag_enabled = False
         self._lipsync_enabled = False
@@ -189,10 +195,11 @@ class InputEngine(QObject):
         if self._canvas.document() is None:
             return
         viseme = audio_to_viseme(indata, sample_rate=_AUDIO_SAMPLE_RATE)
-        # Defer the parameter writes to the Qt thread — Qt slots aren't
-        # thread-safe to call from sounddevice's callback. ``QTimer.singleShot``
-        # with a 0 ms delay queues the work onto the GUI loop.
-        QTimer.singleShot(0, lambda v=viseme: self._apply_viseme(v))
+        # Marshal onto the GUI thread. Qt slots aren't safe to call from
+        # sounddevice's callback thread, and QTimer.singleShot here would post to
+        # that loop-less thread and never run; a queued signal is delivered on
+        # the GUI thread instead.
+        self._viseme_ready.emit(viseme)
 
     def _apply_viseme(self, viseme: dict[str, float]) -> None:
         if not self._lipsync_enabled or self._canvas.document() is None:
