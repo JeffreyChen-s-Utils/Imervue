@@ -235,7 +235,11 @@ def commit_stroke_selection(workspace, params: dict) -> bool:
     selection = document.selection()
     if selection is None:
         return False
-    fg = tuple(int(c) for c in workspace.state().foreground)
+    foreground = workspace.state().foreground
+    if foreground is None:
+        # A transparent foreground has no colour to stroke with.
+        return False
+    fg = tuple(int(c) for c in foreground)
     color = (fg[0], fg[1], fg[2], 255)
     width = int(params.get("width", 2))
     placement = str(params.get("placement", DEFAULT_PLACEMENT))

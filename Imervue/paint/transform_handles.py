@@ -85,12 +85,17 @@ class TransformBox:
 
 
 def from_rect(x: float, y: float, w: float, h: float) -> TransformBox:
-    """Build a :class:`TransformBox` from an axis-aligned (x, y, w, h)."""
+    """Build a :class:`TransformBox` from an axis-aligned (x, y, w, h).
+
+    The box is centred on the rect but its size is clamped to ``MIN_BOX_SIZE`` so
+    starting the Transform tool on a sub-4px marquee doesn't raise ``ValueError``
+    out of ``TransformBox.__post_init__`` in the mouse handler.
+    """
     return TransformBox(
         cx=float(x) + float(w) / 2.0,
         cy=float(y) + float(h) / 2.0,
-        width=float(w),
-        height=float(h),
+        width=max(float(w), float(MIN_BOX_SIZE)),
+        height=max(float(h), float(MIN_BOX_SIZE)),
         rotation_deg=0.0,
     )
 
