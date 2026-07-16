@@ -48,6 +48,7 @@ from Imervue.user_settings.user_setting_dict import (
     write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
 )
 import contextlib
+import weakref
 
 # 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
 _SCREEN_ADAPT_DEBOUNCE_MS = 300
@@ -106,9 +107,25 @@ def _date_matches(path: str, expr: str) -> bool:
     return stamp.startswith(expr)
 
 
+def _other_live_windows_remain(registry, closing) -> bool:
+    """True if any live main window other than *closing* is still registered.
+
+    Pure so the last-window decision behind the ``os._exit`` on close can be
+    unit-tested with plain objects (``QApplication.topLevelWidgets`` /
+    ``isinstance`` are not fake-friendly)."""
+    return any(window is not closing for window in registry)
+
+
 class ImervueMainWindow(QMainWindow):
+    # Every live main window registers here so closeEvent can tell whether it is
+    # the LAST one. File -> New Window opens a second instance that shares this
+    # closeEvent; without the check, closing any one window ran the app-global
+    # plugin unload + os._exit and killed the whole process.
+    _live_windows: "weakref.WeakSet[ImervueMainWindow]" = weakref.WeakSet()
+
     def __init__(self, debug: bool = False):
         super().__init__()
+        ImervueMainWindow._live_windows.add(self)
 
         self.setWindowTitle("Imervue")
         self._set_app_user_model_id()
@@ -2191,6 +2208,17 @@ class ImervueMainWindow(QMainWindow):
 
         with contextlib.suppress(Exception):
             commit_pending_deletions(self.viewer)
+
+        # Only the LAST main window runs the app-global teardown below. A
+        # secondary window (File → New Window) shares this closeEvent; running
+        # the plugin unload + os._exit for it would kill the whole process and
+        # unload plugins out from under the windows that are still open.
+        ImervueMainWindow._live_windows.discard(self)
+        if _other_live_windows_remain(ImervueMainWindow._live_windows, self):
+            event.accept()
+            super().closeEvent(event)
+            self.deleteLater()
+            return
 
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):
