@@ -1,7 +1,7 @@
 """AI Smart Resize plugin — content-aware seam carving.
 
-Heavy compute on large frames; the dialog blocks until the carve
-finishes so the user sees the result without async wiring. The plugin
+Heavy compute on large frames; the carve runs on a background QThread so
+the dialog stays responsive, delivering the result via a signal. The plugin
 boundary keeps that compute (and any future ONNX-based saliency model)
 out of the main viewer's failure path.
 """
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -133,12 +133,13 @@ class AISmartResizePlugin(ImervuePlugin):
 
 
 class AISmartResizeDialog(QDialog):
-    """Pick target dimensions, apply seam-carving synchronously."""
+    """Pick target dimensions; apply seam-carving on a worker thread."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
+        self._worker: _SmartResizeWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("smart_resize_title", "AI Smart Resize"))
         self.setMinimumWidth(440)
@@ -202,35 +203,39 @@ class AISmartResizeDialog(QDialog):
         return buttons
 
     def _commit(self) -> None:
-        try:
-            arr = _load_rgba(self._path)
-        except (OSError, ValueError) as exc:
-            self._notify_failure(exc)
+        if self._worker is not None:
             return
-
         options = SmartResizeOptions(
             out_width=int(self._width.value()),
             out_height=int(self._height.value()),
             energy_boost=self._boost.value() / _BOOST_SLIDER_STEPS,
             protect_alpha=self._protect_alpha.isChecked(),
         )
-        try:
-            out_arr = smart_resize(arr, options)
-        except ValueError as exc:
-            self._notify_failure(exc)
-            return
-
         out_path = Path(self._path).with_name(
             f"{Path(self._path).stem}_smart.png",
         )
-        try:
-            Image.fromarray(out_arr, mode="RGBA").save(str(out_path))
-        except OSError as exc:
-            self._notify_failure(exc)
-            return
+        # Seam carving removes/adds seams one scanline at a time — slow; worker it.
+        self._worker = _SmartResizeWorker(self._path, options, str(out_path))
+        self._worker.done.connect(self._on_done)
+        self._worker.start()
 
-        self._notify_success(out_path)
+    def _on_done(self, ok: bool, message: str) -> None:
+        self._worker = None
+        if not ok:
+            self._notify_failure(RuntimeError(message))
+            return
+        self._notify_success(Path(message))
         self.accept()
+
+    def _wait_worker(self) -> None:
+        """Block until the worker stops so its QThread isn't destroyed mid-run
+        when the dialog closes."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
 
     def _notify_failure(self, exc: Exception) -> None:
         if hasattr(self._viewer, "main_window") and hasattr(
@@ -257,6 +262,27 @@ def _load_rgba(path: str) -> np.ndarray:
     if img.mode != "RGBA":
         img = img.convert("RGBA")
     return np.array(img)
+
+
+class _SmartResizeWorker(QThread):
+    """Run content-aware seam-carve resize off the UI thread and save it."""
+
+    done = Signal(bool, str)
+
+    def __init__(self, path: str, options: SmartResizeOptions, out_path: str):
+        super().__init__()
+        self._path = path
+        self._options = options
+        self._out_path = out_path
+
+    def run(self) -> None:  # pragma: no cover - background thread
+        try:
+            out_arr = smart_resize(_load_rgba(self._path), self._options)
+            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
+        except (OSError, ValueError) as exc:
+            self.done.emit(False, str(exc))
+            return
+        self.done.emit(True, self._out_path)
 
 
 def _peek_image_size(path: str) -> tuple[int, int]:

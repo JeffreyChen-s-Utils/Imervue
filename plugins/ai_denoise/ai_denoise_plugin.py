@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -149,12 +149,13 @@ class AIDenoisePlugin(ImervuePlugin):
 
 
 class AIDenoiseDialog(QDialog):
-    """Pick method, sliders, run synchronously on OK."""
+    """Pick method, sliders; run on a worker thread on OK."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
+        self._worker: _DenoiseWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("ai_denoise_title", "AI Denoise"))
         self.setMinimumWidth(440)
@@ -220,38 +221,44 @@ class AIDenoiseDialog(QDialog):
         return buttons
 
     def _commit(self) -> None:
-        try:
-            arr = _load_rgba(self._path)
-        except (OSError, ValueError) as exc:
-            self._notify_failure(exc)
+        if self._worker is not None:
             return
-
         method = str(self._method.currentData())
         blend = self._blend.value() / _PERCENT_STEPS
-        try:
-            if method == "bilateral":
-                out_arr = bilateral_denoise(arr, BilateralOptions(
-                    spatial_radius=int(self._radius.value()),
-                    intensity_sigma=float(self._sigma.value()),
-                    blend=blend,
-                ))
-            else:
-                out_arr = onnx_denoise(arr, method, blend=blend)
-        except (ImportError, OSError, ValueError) as exc:
-            self._notify_failure(exc)
-            return
-
+        bilateral_opts = None
+        if method == "bilateral":
+            bilateral_opts = BilateralOptions(
+                spatial_radius=int(self._radius.value()),
+                intensity_sigma=float(self._sigma.value()),
+                blend=blend,
+            )
         out_path = Path(self._path).with_name(
             f"{Path(self._path).stem}_denoised.png",
         )
-        try:
-            Image.fromarray(out_arr, mode="RGBA").save(str(out_path))
-        except OSError as exc:
-            self._notify_failure(exc)
-            return
+        # Bilateral is numpy-heavy and ONNX inference is slow — run on a worker.
+        self._worker = _DenoiseWorker(
+            self._path, method, blend, bilateral_opts, str(out_path),
+        )
+        self._worker.done.connect(self._on_done)
+        self._worker.start()
 
-        self._notify_success(out_path)
+    def _on_done(self, ok: bool, message: str) -> None:
+        self._worker = None
+        if not ok:
+            self._notify_failure(RuntimeError(message))
+            return
+        self._notify_success(Path(message))
         self.accept()
+
+    def _wait_worker(self) -> None:
+        """Block until the worker stops so its QThread isn't destroyed mid-run
+        when the dialog closes."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
 
     def _notify_failure(self, exc: Exception) -> None:
         if hasattr(self._viewer, "main_window") and hasattr(
@@ -287,3 +294,31 @@ def _load_rgba(path: str) -> np.ndarray:
     if img.mode != "RGBA":
         img = img.convert("RGBA")
     return np.array(img)
+
+
+class _DenoiseWorker(QThread):
+    """Run bilateral or ONNX denoise off the UI thread and save the result."""
+
+    done = Signal(bool, str)
+
+    def __init__(self, path: str, method: str, blend: float,
+                 bilateral_opts: BilateralOptions | None, out_path: str):
+        super().__init__()
+        self._path = path
+        self._method = method
+        self._blend = blend
+        self._bilateral_opts = bilateral_opts
+        self._out_path = out_path
+
+    def run(self) -> None:  # pragma: no cover - background thread
+        try:
+            arr = _load_rgba(self._path)
+            if self._method == "bilateral":
+                out_arr = bilateral_denoise(arr, self._bilateral_opts)
+            else:
+                out_arr = onnx_denoise(arr, self._method, blend=self._blend)
+            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
+        except (ImportError, OSError, ValueError) as exc:
+            self.done.emit(False, str(exc))
+            return
+        self.done.emit(True, self._out_path)
