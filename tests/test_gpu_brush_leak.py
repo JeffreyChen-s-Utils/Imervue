@@ -61,6 +61,45 @@ def test_gpu_stroke_dispose_frees_session_idempotently():
     assert freed == [1]
 
 
+class _FakeSignal:
+    def __init__(self):
+        self._callbacks = []
+
+    def connect(self, callback):
+        self._callbacks.append(callback)
+
+    def emit(self):
+        for callback in self._callbacks:
+            callback()
+
+
+def test_program_cache_evicts_entry_when_context_destroyed():
+    # id(ctx) is reused after a QOpenGLContext is freed; a stale cache entry
+    # would hand a new context the dead one's invalid program. The entry must be
+    # dropped the moment the context signals destruction.
+    signal = _FakeSignal()
+    ctx = SimpleNamespace(aboutToBeDestroyed=signal)
+    sentinel = object()
+    gpu_brush._PROGRAM_CACHE.pop(4242, None)
+
+    gpu_brush._cache_program(ctx, 4242, sentinel)
+    assert gpu_brush._PROGRAM_CACHE[4242] is sentinel
+
+    signal.emit()   # context destroyed
+    assert 4242 not in gpu_brush._PROGRAM_CACHE
+
+
+def test_program_cache_tolerates_context_without_signal():
+    # A context object that can't be wired must not break caching.
+    ctx = SimpleNamespace()   # no aboutToBeDestroyed
+    sentinel = object()
+    gpu_brush._PROGRAM_CACHE.pop(4243, None)
+
+    gpu_brush._cache_program(ctx, 4243, sentinel)
+    assert gpu_brush._PROGRAM_CACHE[4243] is sentinel
+    gpu_brush._PROGRAM_CACHE.pop(4243, None)
+
+
 def test_brush_tool_cancel_disposes_every_active_stroke():
     disposed: list[str] = []
     s1 = SimpleNamespace(dispose=lambda: disposed.append("s1"))

@@ -67,6 +67,7 @@ predicates, factory dispatch with stub sessions) is exercised in
 """
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import logging
 from dataclasses import dataclass
@@ -547,8 +548,24 @@ def _get_program() -> _ShaderProgram | None:  # pragma: no cover - GL only
         u_color=int(glGetUniformLocation(program, b"u_color")),
         u_opacity=int(glGetUniformLocation(program, b"u_opacity")),
     )
-    _PROGRAM_CACHE[key] = sp
+    _cache_program(ctx, key, sp)
     return sp
+
+
+def _cache_program(ctx, key: int, sp: _ShaderProgram) -> None:
+    """Store *sp* under *key* and evict it when *ctx* is destroyed.
+
+    ``id(ctx)`` is reused once the ``QOpenGLContext`` is freed, so a later
+    context can be allocated at the same address; without this eviction it would
+    be handed this dead context's now-invalid shader program (a no-op / GL error
+    stroke). Wiring ``aboutToBeDestroyed`` drops the entry the moment the context
+    goes away, so a reused id always misses and recompiles for the new context.
+    """
+    _PROGRAM_CACHE[key] = sp
+    signal = getattr(ctx, "aboutToBeDestroyed", None)
+    if signal is not None:
+        with contextlib.suppress(Exception):
+            signal.connect(lambda: _PROGRAM_CACHE.pop(key, None))
 
 
 class GPUBrushStroke:   # subclass ctor wired in __init__ to avoid import cycle
