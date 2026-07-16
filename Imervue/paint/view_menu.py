@@ -55,8 +55,10 @@ def populate_view_menu(workspace: PaintWorkspace) -> None:
         ("paint_view_onion_skin", "Onion Skin",
          bridge.toggle_onion_skin, "", True,
          bridge.onion_skin_active()),
+        # No shortcut here: the Edit menu's "Quick Mask Mode" owns Q. Binding it
+        # in both menus made Qt report an ambiguous overload and fire neither.
         ("paint_view_quick_mask", "Quick Mask",
-         bridge.toggle_quick_mask, "Q", True,
+         bridge.toggle_quick_mask, "", True,
          bridge.quick_mask_active()),
         ("paint_view_bleed_guides", "Bleed Guides",
          bridge.toggle_bleed_guides, "", True,

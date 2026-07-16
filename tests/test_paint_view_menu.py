@@ -36,6 +36,23 @@ def test_view_menu_has_documented_actions(qapp):
         ws.deleteLater()
 
 
+def test_quick_mask_q_is_bound_in_only_one_menu(qapp):
+    """Q was bound to Quick Mask in both the View and Edit menus, so Qt reported
+    an ambiguous overload and fired neither. Only the Edit menu keeps it."""
+    ws = PaintWorkspace()
+    try:
+        q_actions = [
+            action
+            for key in ("view", "edit")
+            for action in menu_for(ws, key).actions()
+            if action.shortcut().toString() == "Q"
+        ]
+        assert len(q_actions) == 1
+        assert q_actions[0] in menu_for(ws, "edit").actions()
+    finally:
+        ws.deleteLater()
+
+
 def test_view_menu_actions_have_translated_labels(qapp):
     ws = PaintWorkspace()
     try:
