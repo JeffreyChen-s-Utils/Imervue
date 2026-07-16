@@ -153,6 +153,18 @@ class ObjectRemoveDialog(QDialog):
         self._build_layout(lang)
         self._render_preview()
 
+    def _wait_workers(self) -> None:
+        """Block until the SAM-encoder and remove workers stop, so neither
+        QThread is destroyed mid-run when the dialog closes (SAM encoding and the
+        inpaint can both run for a while)."""
+        for worker in (self._worker, self._sam_worker):
+            if worker is not None and worker.isRunning():
+                worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_workers()
+        super().closeEvent(event)
+
     def _build_layout(self, lang: dict) -> None:
         layout = QVBoxLayout(self)
         layout.addWidget(self._preview)

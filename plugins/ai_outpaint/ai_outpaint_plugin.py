@@ -78,6 +78,16 @@ class OutpaintDialog(QDialog):
         layout.addWidget(self._padding)
         layout.addLayout(self._build_buttons(lang))
 
+    def _wait_worker(self) -> None:
+        """Block until the outpaint worker stops so its QThread isn't destroyed
+        mid-run when the dialog closes (a diffusion inpaint can run for a while)."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
+
     def _build_buttons(self, lang: dict) -> QHBoxLayout:
         row = QHBoxLayout()
         row.addStretch(1)
