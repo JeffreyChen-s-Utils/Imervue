@@ -174,9 +174,15 @@ class _ViewMenuBridge:
         canvas = getattr(self._workspace, "_canvas", None)   # noqa: SLF001
         if canvas is None or not hasattr(canvas, "zoom_changed"):
             return
-        canvas.zoom_changed.connect(
-            lambda *_: self.refresh_pixel_grid_label(),
-        )
+        try:
+            canvas.zoom_changed.connect(
+                lambda *_: self.refresh_pixel_grid_label(),
+            )
+        except RuntimeError:
+            # This runs from a deferred QTimer.singleShot; the canvas's C++ side
+            # can be gone already if the workspace was closed during construction
+            # ("Signal source has been deleted"). Nothing left to connect.
+            return
         self.refresh_pixel_grid_label()
 
     def refresh_pixel_grid_label(self) -> None:
