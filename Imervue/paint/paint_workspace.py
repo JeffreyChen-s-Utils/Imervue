@@ -199,6 +199,9 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         # first document forever, so after a tab switch / open Ctrl+Z applied one
         # document's history to another — a silent, destructive corruption.
         self._undo_stacks: dict = {}
+        # Seed the initial canvas's stack now so its baseline is the blank canvas
+        # and the very first stroke is undoable (see _ensure_undo_stack).
+        self._ensure_undo_stack()
         self._dispatcher = ToolDispatcher(
             self._state,
             image_provider=lambda: self._canvas.current_image(),
@@ -328,7 +331,10 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             from PIL import Image
             with Image.open(path) as img:
                 rgba = np.array(img.convert("RGBA"), dtype=np.uint8)
-            self._canvas.load_image(rgba)
+            # Route through the wrapper (not self._canvas.load_image) so the layer
+            # dock is rebound to the new document; the bare canvas call left the
+            # dock showing / mutating the replaced document.
+            self.load_image(rgba)
             from Imervue.paint import recent_files
             recent_files.add(path)
             bridge = getattr(self, "_file_menu_bridge", None)
@@ -448,6 +454,17 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         # The canvas swapped its PaintDocument; rebind the layer dock
         # so it re-subscribes and refreshes against the new stack.
         self._layer_dock.set_document(self._canvas.document())
+        self._ensure_undo_stack()
+
+    def _ensure_undo_stack(self) -> None:
+        """Force the active canvas's undo stack into existence at bind time.
+
+        Its baseline snapshots the current (blank / just-loaded) state. Left to
+        lazy creation, the first access is the first commit -- after the stroke
+        already mutated the layer -- so the baseline captured the post-stroke
+        state and the first undo restored it (a no-op), losing the pre-stroke
+        canvas."""
+        _ = self._undo_stack
 
     # ---- cursor + tool-state events ------------------------------------
 

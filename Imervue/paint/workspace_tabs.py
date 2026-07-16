@@ -114,7 +114,9 @@ class TabManagerMixin:
         canvas.new_blank_document()
         canvas.set_tool_dispatcher(self._dispatcher)
         idx = self._tabs.addTab(canvas, self._next_untitled_tab_name())
-        self._tabs.setCurrentIndex(idx)
+        self._tabs.setCurrentIndex(idx)   # -> _on_tab_changed sets self._canvas
+        # Seed the new canvas's undo stack so its first stroke is undoable.
+        self._ensure_undo_stack()
         return canvas
 
     def close_tab(self, index: int, *, force: bool = False) -> bool:
