@@ -74,7 +74,12 @@ class BatchRenameDialog(QDialog):
     def _build_name(self, path: str, idx: int) -> str:
         p = Path(path)
         tmpl = self._template.text()
-        return tmpl.format(name=p.stem, n=idx, ext=p.suffix)
+        try:
+            return tmpl.format(name=p.stem, n=idx, ext=p.suffix)
+        except (KeyError, ValueError, IndexError):
+            # A malformed template ({size}, unbalanced braces, bad index) would
+            # otherwise crash the preview / rename. Fall back to the original name.
+            return p.name
 
     def _update_preview(self):
         try:
