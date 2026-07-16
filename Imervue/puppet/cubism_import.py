@@ -133,9 +133,27 @@ def _parse_cubism_segments(raw: list[float]) -> list[MotionSegment]:
     return segments
 
 
+_SEGMENT_FLOATS = {
+    _CUBISM_LINEAR: 2,
+    _CUBISM_BEZIER: 6,
+    _CUBISM_STEPPED: 2,
+    _CUBISM_INVERSE_STEPPED: 2,
+}
+
+
 def _consume_segment(
     raw: list[float], cursor: int, seg_type: int, prev: tuple[float, float],
 ) -> tuple[MotionSegment, tuple[float, float], int]:
+    needed = _SEGMENT_FLOATS.get(seg_type)
+    if needed is None:
+        raise CubismFormatError(f"unknown Cubism segment type {seg_type}")
+    if cursor + needed > len(raw):
+        # A truncated motion3.json would otherwise raise IndexError from the
+        # unchecked raw[cursor + N] reads below, which the importer doesn't catch.
+        raise CubismFormatError(
+            f"truncated Cubism motion: segment type {seg_type} needs {needed} "
+            f"floats at {cursor}, only {len(raw)} present",
+        )
     if seg_type == _CUBISM_LINEAR:
         p1 = (float(raw[cursor]), float(raw[cursor + 1]))
         return MotionSegment(type="linear", p0=prev, p1=p1), p1, cursor + 2

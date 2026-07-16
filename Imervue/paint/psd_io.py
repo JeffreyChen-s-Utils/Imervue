@@ -696,13 +696,28 @@ def _assemble_layer_image(
     the recorded ``(top, left)`` offset. Missing alpha → fully opaque
     inside the bounds (matches PSDs from older Photoshops)."""
     image = np.zeros((h, w, 4), dtype=np.uint8)
-    if 0 in channels_raw:
-        image[top:bottom, left:right, 0] = channels_raw[0]
-    if 1 in channels_raw:
-        image[top:bottom, left:right, 1] = channels_raw[1]
-    if 2 in channels_raw:
-        image[top:bottom, left:right, 2] = channels_raw[2]
-    image[top:bottom, left:right, 3] = channels_raw.get(-1, 255)
+    # A layer can legally overhang the canvas (top<0 / left<0 / bottom>h /
+    # right>w, common in Photoshop/Krita/Procreate files). Clip the on-canvas
+    # rectangle and slice the SOURCE channels to match, or the raw-bounds source
+    # would mismatch the clamped destination and raise a broadcast ValueError.
+    dst_top, dst_left = max(0, top), max(0, left)
+    dst_bottom, dst_right = min(h, bottom), min(w, right)
+    if dst_bottom <= dst_top or dst_right <= dst_left:
+        return image   # layer is entirely off-canvas
+    src_top, src_left = dst_top - top, dst_left - left
+    src_bottom = src_top + (dst_bottom - dst_top)
+    src_right = src_left + (dst_right - dst_left)
+    dst_rows, dst_cols = slice(dst_top, dst_bottom), slice(dst_left, dst_right)
+    src_rows, src_cols = slice(src_top, src_bottom), slice(src_left, src_right)
+    for channel in (0, 1, 2):
+        if channel in channels_raw:
+            image[dst_rows, dst_cols, channel] = (
+                channels_raw[channel][src_rows, src_cols])
+    alpha = channels_raw.get(-1)
+    if alpha is None:
+        image[dst_rows, dst_cols, 3] = 255
+    else:
+        image[dst_rows, dst_cols, 3] = alpha[src_rows, src_cols]
     return image
 
 
