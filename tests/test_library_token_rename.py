@@ -11,7 +11,9 @@ import pytest
 from PIL import Image
 
 from Imervue.library.token_rename import (
+    _EPOCH,
     _apply_string_format,
+    _safe_fromtimestamp,
     apply_plan,
     preview,
 )
@@ -31,6 +33,62 @@ def three_images(tmp_path):
     for p in paths:
         _make_image(p)
     return [str(p) for p in paths]
+
+
+class TestCrossFolderConflicts:
+    """Collision detection must key on the full destination path, not the bare
+    basename: two files in different folders can render to the same name without
+    actually colliding, and keying on the basename dropped every folder after the
+    first as a false conflict."""
+
+    def test_same_name_different_folders_is_not_a_conflict(self, tmp_path):
+        a = tmp_path / "a"
+        b = tmp_path / "b"
+        a.mkdir()
+        b.mkdir()
+        _make_image(a / "x.png")
+        _make_image(b / "y.png")
+        plans = preview([str(a / "x.png"), str(b / "y.png")], "photo{ext}")
+        assert [Path(p.dst).name for p in plans] == ["photo.png", "photo.png"]
+        assert [p.conflict for p in plans] == [False, False]
+
+    def test_same_name_same_folder_is_a_conflict(self, tmp_path):
+        _make_image(tmp_path / "a.png")
+        _make_image(tmp_path / "b.png")
+        plans = preview(
+            [str(tmp_path / "a.png"), str(tmp_path / "b.png")], "same{ext}")
+        assert plans[0].conflict is False
+        assert plans[1].conflict is True   # real in-folder collision
+
+
+class TestSafeFromTimestamp:
+    """Out-of-range mtimes must not abort the whole rename preview."""
+
+    def test_far_future_clamps_to_epoch(self):
+        assert _safe_fromtimestamp(10 ** 18) == _EPOCH
+
+    def test_far_past_clamps_to_epoch(self):
+        assert _safe_fromtimestamp(-(10 ** 18)) == _EPOCH
+
+    def test_normal_timestamp_passes_through(self):
+        # A representable timestamp is returned, not the epoch fallback.
+        result = _safe_fromtimestamp(1_600_000_000)   # 2020-09-13 UTC
+        assert result.year == 2020
+
+    def test_date_token_preview_survives_bad_mtime(self, tmp_path, monkeypatch):
+        # With the raw conversion forced to raise, the guard must keep preview()
+        # alive (falling back to the epoch) instead of aborting the batch.
+        import Imervue.library.token_rename as tr
+
+        def boom(_ts):
+            raise OverflowError("out of range")
+
+        monkeypatch.setattr(
+            tr, "datetime", type("D", (), {"fromtimestamp": staticmethod(boom)}))
+        p = tmp_path / "img.png"
+        _make_image(p)
+        plans = preview([str(p)], "{date}{ext}")   # must not raise
+        assert len(plans) == 1
 
 
 class TestPreview:

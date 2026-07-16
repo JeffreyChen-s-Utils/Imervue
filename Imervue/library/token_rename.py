@@ -42,6 +42,23 @@ class RenamePlan:
     conflict: bool = False
 
 
+_EPOCH = datetime(1970, 1, 1)
+
+
+def _safe_fromtimestamp(ts: float) -> datetime:
+    """``datetime.fromtimestamp`` that never raises on a bad mtime.
+
+    A far-future timestamp raises ``OverflowError`` and a pre-1970 one raises
+    ``OSError`` on Windows; either from a single odd file would abort the whole
+    rename preview. Fall back to a fixed naive epoch (``fromtimestamp(0)`` itself
+    can raise on Windows in behind-UTC zones, so don't use it as the fallback).
+    """
+    try:
+        return datetime.fromtimestamp(ts)
+    except (OSError, OverflowError, ValueError):
+        return _EPOCH
+
+
 def preview(
     paths: list[str],
     template: str,
@@ -50,14 +67,20 @@ def preview(
 ) -> list[RenamePlan]:
     """Generate the full rename preview without touching the filesystem."""
     plans: list[RenamePlan] = []
-    dest_names: set[str] = set()
+    dest_paths: set[str] = set()
     for i, src in enumerate(paths):
         metadata = _gather_metadata(src, start + i)
         new_name = _apply_template(template, metadata)
         parent = str(Path(src).parent)
         dst = str(Path(parent) / new_name)
-        conflict = new_name in dest_names or (dst != src and os.path.exists(dst))
-        dest_names.add(new_name)
+        # Dedup on the full (case-normalized) destination path, not the bare
+        # basename: two files in different folders can legitimately render to the
+        # same name without colliding. Keying on the basename flagged the second
+        # as a conflict and apply_plan skipped it, so cross-folder renames lost
+        # every folder after the first.
+        key = os.path.normcase(dst)
+        conflict = key in dest_paths or (dst != src and os.path.exists(dst))
+        dest_paths.add(key)
         plans.append(RenamePlan(src=src, dst=dst, conflict=conflict))
     return plans
 
@@ -93,7 +116,7 @@ def _resolve_token(key: str, fmt: str | None, metadata: dict[str, str]) -> str:
         return f"{int(metadata['counter']):0{width}d}"
     if key == "date":
         ts = float(metadata["mtime"])
-        dt = datetime.fromtimestamp(ts)
+        dt = _safe_fromtimestamp(ts)
         if fmt:
             return dt.strftime(_translate_date_format(fmt))
         return dt.strftime("%Y-%m-%d")
@@ -153,7 +176,7 @@ def _gather_metadata(path: str, counter: int) -> dict[str, str]:
     except Exception:  # noqa: BLE001, S110  # nosec B110 - EXIF optional; fallback to mtime
         pass
 
-    dt = datetime.fromtimestamp(mtime) if mtime else datetime.fromtimestamp(0)
+    dt = _safe_fromtimestamp(mtime)
     return {
         "name": p.stem,
         "ext": p.suffix,
