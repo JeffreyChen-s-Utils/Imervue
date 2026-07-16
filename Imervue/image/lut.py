@@ -168,12 +168,16 @@ def _apply_3d(arr: np.ndarray, lut: CubeLut) -> np.ndarray:
 def _apply_1d(arr: np.ndarray, lut: CubeLut) -> np.ndarray:
     """Per-channel 1D LUT via linear interpolation."""
     rgb = arr[..., :3].astype(np.float32) / 255.0
+    # Normalize by the LUT's declared domain, same as _apply_3d — a 1D .cube with
+    # a non-[0, 1] DOMAIN_MIN/MAX was previously fed raw and mapped colours wrong.
+    dmin = np.array(lut.domain_min, dtype=np.float32)
+    dmax = np.array(lut.domain_max, dtype=np.float32)
+    span = np.maximum(dmax - dmin, 1e-6)
+    rgb = np.clip((rgb - dmin) / span, 0.0, 1.0)
     out = np.empty_like(rgb)
-    n = lut.size - 1
     xs = np.linspace(0.0, 1.0, lut.size)
     for c in range(3):
         out[..., c] = np.interp(rgb[..., c], xs, lut.table[:, c])
-    _ = n  # keep lint happy; size encoded in xs
     return np.clip(out, 0.0, 1.0)
 
 

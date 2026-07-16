@@ -62,7 +62,12 @@ class ImageMetadataIndex:
     def move(self, old_path: str, new_path: str) -> None:
         meta = self._items.pop(old_path, None)
         if meta is not None:
-            self._items[new_path] = self._read(new_path)[0]
+            # Mirror get(): don't cache a transient stat-failure sentinel for the
+            # rename target (mid-move / AV-locked) — re-read next time instead of
+            # dropping it from the date/size filters for the session.
+            new_meta, cacheable = self._read(new_path)
+            if cacheable:
+                self._items[new_path] = new_meta
         digest = self._hashes.pop(old_path, None)
         if digest is not None:
             self._hashes[new_path] = digest
