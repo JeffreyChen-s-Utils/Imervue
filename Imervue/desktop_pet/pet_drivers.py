@@ -233,3 +233,11 @@ class LlmDialogueController:
     def request_line(self, situation: str) -> None:
         """Fire an async line request for ``situation`` tag."""
         self.ensure_client().request_line(situation)
+
+    def shutdown(self) -> None:
+        """Mark any in-flight request dead so it can't emit on the client after
+        the window is destroyed. Called from ``PetWindow.shutdown`` on despawn —
+        ``request_line`` spawns a daemon thread that can block in ``urlopen`` for
+        seconds, well past ``deleteLater``."""
+        if self._client is not None:
+            self._client.shutdown()

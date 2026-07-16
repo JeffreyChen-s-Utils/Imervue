@@ -491,6 +491,10 @@ class PetWindow(QWidget):
             self._music_rhythm.shutdown()
         with contextlib.suppress(Exception):
             self._canvas_drivers.shutdown()
+        with contextlib.suppress(Exception):
+            # An in-flight LLM request can still be blocked in urlopen; mark it
+            # dead so its late reply doesn't emit on this soon-deleted window.
+            self._llm.shutdown()
 
     # =====================================================================
     # Rig loading
