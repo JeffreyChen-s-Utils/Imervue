@@ -68,6 +68,37 @@ def test_double_undo_restores_baseline():
     assert tuple(document.active_layer().image[0, 0]) == (0, 0, 0, 0)
 
 
+# ---------------------------------------------------------------------------
+# A whole-canvas transform changes layer dimensions; undo must not crash on a
+# stale (old-size) snapshot.
+# ---------------------------------------------------------------------------
+
+
+def test_undo_survives_a_dimension_change_after_snapshot():
+    document = _doc(4, 6)   # non-square so a 90° rotate changes the shape
+    stack = UndoStack(document)
+    document.active_layer().image[0, 0] = (255, 0, 0, 255)
+    stack.commit()                        # snapshot captured at 4x6
+    assert document.rotate_90_cw() is True  # layers become 6x4
+    # The 4x6 snapshot no longer matches the 6x4 layers -- np.copyto would raise
+    # a broadcast ValueError. _restore must skip the mismatched layer instead.
+    assert stack.undo() is True           # must not raise
+
+
+def test_reset_undo_stack_clears_and_is_guarded():
+    from types import SimpleNamespace
+
+    from Imervue.paint.image_menu import _reset_undo_stack
+
+    cleared: list = []
+    ws = SimpleNamespace(
+        _undo_stack=SimpleNamespace(clear=lambda: cleared.append(True)))
+    _reset_undo_stack(ws)
+    assert cleared == [True]
+    # A workspace with no undo stack (or mid-teardown) is a safe no-op.
+    _reset_undo_stack(SimpleNamespace())
+
+
 def test_undo_returns_false_when_stack_empty():
     document = _doc()
     stack = UndoStack(document)

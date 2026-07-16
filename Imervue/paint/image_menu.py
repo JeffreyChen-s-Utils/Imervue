@@ -10,6 +10,7 @@ document and refreshes after the mutation lands.
 """
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -120,6 +121,11 @@ class _ImageMenuBridge:
     # ---- internals ------------------------------------------------------
 
     def _refresh_canvas(self) -> None:
+        # A whole-canvas transform can change the layer dimensions, which
+        # invalidates every undo snapshot captured at the old size (restoring one
+        # into the resized layer raises a numpy broadcast ValueError on Ctrl+Z).
+        # Clear the stack so the transform is a clean barrier, not a crash.
+        _reset_undo_stack(self._workspace)
         canvas = self._workspace.canvas()
         canvas.document().invalidate_composite()
         canvas.update()
@@ -219,6 +225,18 @@ class ImageSizeDialog(QDialog):
 # ---------------------------------------------------------------------------
 
 
+def _reset_undo_stack(workspace) -> None:
+    """Clear the workspace's undo history after a whole-canvas transform.
+
+    Snapshot-based undo can't reverse a dimension change (rotate 90° / resize),
+    and a stale old-size snapshot crashes on restore, so the transform drops the
+    history and becomes an undo barrier. Guarded so a workspace without an undo
+    stack (or one mid-teardown) is a safe no-op.
+    """
+    with contextlib.suppress(Exception):
+        workspace._undo_stack.clear()  # noqa: SLF001
+
+
 def commit_image_resize(workspace, params: dict) -> bool:
     """Apply ``params`` to the workspace's active document.
 
@@ -240,6 +258,7 @@ def commit_image_resize(workspace, params: dict) -> bool:
     except ValueError:
         return False
     if ok:
+        _reset_undo_stack(workspace)
         document.invalidate_composite()
         workspace.canvas().update()
     return ok

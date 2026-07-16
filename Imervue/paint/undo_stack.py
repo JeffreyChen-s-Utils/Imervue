@@ -152,6 +152,18 @@ class UndoStack:
         for i, image in enumerate(snapshot.layer_images):
             if i >= len(layers):
                 break
+            if layers[i].image.shape != image.shape:
+                # A whole-canvas transform (rotate 90° / resize) changed this
+                # layer's dimensions after the snapshot was captured; an in-place
+                # ``np.copyto`` would raise a broadcast ValueError. Skip the stale
+                # layer instead of crashing — transforms clear the stack, so this
+                # is only a backstop for any snapshot that outlives a resize.
+                continue
             np.copyto(layers[i].image, image)
-        self._document.set_selection(snapshot.selection)
+        selection = snapshot.selection
+        if selection is not None and selection.shape[:2] != self._document.shape:
+            # A selection captured at the old size no longer maps onto the
+            # resized canvas — drop it rather than restore a mismatched mask.
+            selection = None
+        self._document.set_selection(selection)
         self._document.invalidate_composite()
