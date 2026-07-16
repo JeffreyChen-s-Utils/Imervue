@@ -263,6 +263,10 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             event.ignore()
             return
         import contextlib
+        # Stop the autosave timer so a queued tick can't fire on the torn-down
+        # canvas after close.
+        with contextlib.suppress(Exception):
+            self.stop_autosave()
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()
         super().closeEvent(event)

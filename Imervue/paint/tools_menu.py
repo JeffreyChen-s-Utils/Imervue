@@ -96,7 +96,12 @@ def populate_tools_menu(workspace: PaintWorkspace) -> None:
     bridge.refresh_check_states()
     # Update the check state whenever the user picks a different tool
     # via the toolbar / shortcut so the menu stays in sync.
-    workspace.state().subscribe(bridge._on_state_event)   # noqa: SLF001
+    unsubscribe = workspace.state().subscribe(bridge._on_state_event)   # noqa: SLF001
+    # ToolState is a process-wide singleton. A closed workspace that stays
+    # subscribed makes the next tool change call this dead bridge's slot
+    # (setChecked on a freed QAction -> RuntimeError, aborting delivery to the
+    # live subscribers). Detach when the workspace is destroyed.
+    workspace.destroyed.connect(lambda: unsubscribe())
 
 
 # ---------------------------------------------------------------------------

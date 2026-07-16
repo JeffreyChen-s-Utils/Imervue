@@ -58,11 +58,13 @@ class AutosaveMixin:
         """
         import time
         from Imervue.paint.auto_save import write_snapshot
-        document = self._canvas.document()
         target = getattr(self, "_autosave_target_dir", None)
         try:
+            document = self._canvas.document()
             snapshot = write_snapshot(document, directory=target)
-        except (OSError, ValueError):
+        except (OSError, ValueError, RuntimeError):
+            # RuntimeError: the canvas's C++ object was deleted between this timer
+            # tick being queued and firing (the window closed / a tab torn down).
             return None
         if snapshot is None:
             return None
