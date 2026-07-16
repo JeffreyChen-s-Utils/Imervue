@@ -56,6 +56,26 @@ def open_raw_efficient(path: str | Path):
     return raw
 
 
+def _wrap_close_to_release(raw, region, fd):
+    """Make ``raw.close()`` also close the mmap *region* and *fd*.
+
+    RawPy.close() only tears down the libraw context, so the mmap + fd otherwise
+    leak. Extracted so the release wiring is unit-testable without rawpy."""
+    original_close = raw.close
+
+    def _close_all() -> None:
+        try:
+            original_close()
+        finally:
+            with contextlib.suppress(Exception):
+                region.close()
+            with contextlib.suppress(Exception):
+                fd.close()
+
+    raw.close = _close_all
+    return raw
+
+
 def open_raw_via_mmap(path: str | Path):
     """Fallback path: mmap the file, hand the buffer to libraw via
     :meth:`rawpy.RawPy.open_buffer`. Used when ``open_file`` isn't
@@ -77,10 +97,6 @@ def open_raw_via_mmap(path: str | Path):
         fd.close()
         raise
     raw = rawpy.RawPy()
-    # Track the underlying handles so close() releases everything
-    # — RawPy's __exit__ doesn't know about our mmap / fd.
-    raw._imervue_mmap = region   # type: ignore[attr-defined]
-    raw._imervue_fd = fd   # type: ignore[attr-defined]
     try:
         raw.open_buffer(region)
         raw.unpack()
@@ -90,7 +106,10 @@ def open_raw_via_mmap(path: str | Path):
         region.close()
         fd.close()
         raise
-    return raw
+    # RawPy.close() (run by the caller's ``with`` / close) doesn't know about our
+    # mmap + fd, so on the success path they leaked — on Windows the file stayed
+    # mapped and could not be deleted / renamed. Wrap close() to release all three.
+    return _wrap_close_to_release(raw, region, fd)
 
 
 def file_size_supports_mmap(file_size: int, minimum_bytes: int = 1_048_576) -> bool:
