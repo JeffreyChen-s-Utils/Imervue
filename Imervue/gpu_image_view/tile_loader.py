@@ -422,12 +422,10 @@ def _drop_tile_path(view: GPUImageView, path: str) -> None:
     view._filmstrip_pending.discard(path)
     view._tile_load_times.pop(path, None)
     getattr(view, "_tile_file_signatures", {}).pop(path, None)
-    tex = view.tile_textures.pop(path, None)
-    if tex is not None:
-        from OpenGL.GL import glDeleteTextures
-        with contextlib.suppress(Exception):
-            glDeleteTextures([tex])
-        view._vram_usage -= view._tile_tex_sizes.pop(path, 0)
+    # Free under the widget's GL context and keep the VRAM accounting in sync —
+    # a bare glDeleteTextures here (off paintGL) is silently dropped and leaks.
+    from Imervue.gpu_image_view.tile_textures import free_tile_textures
+    free_tile_textures(view, (path,))
 
 
 def _file_signature(path: str) -> tuple[int, int, str] | None:
