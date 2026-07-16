@@ -121,7 +121,10 @@ def close_small_gaps(
     radius = int(max_gap)
     dilated = _dilate(line_mask, radius)
     closed = _erode(dilated, radius)
-    return closed
+    # Morphological closing is extensive (result must contain the input), but the
+    # erosion's border clamp drops ink within `radius` of the canvas edge. Union
+    # the original mask back in so edge-touching lineart is never erased.
+    return closed | line_mask
 
 
 def _dilate(mask: np.ndarray, radius: int) -> np.ndarray:
