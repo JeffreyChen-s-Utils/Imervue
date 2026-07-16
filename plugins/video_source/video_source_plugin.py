@@ -151,6 +151,24 @@ class VideoImportDialog(QDialog):
         self._update_frame_label()
         self._render_preview()
 
+    def _release(self) -> None:
+        # Wait on the extract worker so its QThread isn't destroyed mid-run, then
+        # release the ffmpeg reader (subprocess + pipes). The dialog is parented
+        # to the viewer so it isn't GC'd, and FrameReader has no __del__, so
+        # without this each open leaked an ffmpeg process for the app's lifetime.
+        import contextlib
+        worker = getattr(self, "_worker", None)
+        if worker is not None and worker.isRunning():
+            worker.wait()
+        reader = getattr(self, "_reader", None)
+        if reader is not None:
+            with contextlib.suppress(Exception):
+                reader.close()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._release()
+        super().closeEvent(event)
+
     # -- UI construction ----------------------------------------------------
 
     def _build_layout(self, lang: dict) -> None:
