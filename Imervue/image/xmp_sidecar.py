@@ -97,14 +97,24 @@ def has_sidecar(image_path: str | Path) -> bool:
 # Reading
 # ---------------------------------------------------------------------------
 
-def _find_description(root) -> object | None:
-    """Locate ``rdf:Description`` regardless of whether the root is wrapped."""
+def _find_descriptions(root) -> list:
+    """All ``rdf:Description`` nodes, whether or not the root is wrapped.
+
+    XMP legally splits properties across one ``Description`` per schema, so
+    reading only the first node dropped fields written into later ones."""
     rdf_tag = f"{{{_NS['rdf']}}}Description"
     if root.tag == rdf_tag:
-        return root
-    for elem in root.iter(rdf_tag):
-        return elem
-    return None
+        return [root]
+    return list(root.iter(rdf_tag))
+
+
+def _extract_label(desc) -> str:
+    """Pull ``xmp:Label`` from the attribute or child element, trimmed."""
+    label = desc.get(f"{{{_NS['xmp']}}}Label") or ""
+    if not label:
+        child = desc.find(f"{{{_NS['xmp']}}}Label")
+        label = (child.text or "").strip() if child is not None else ""
+    return label.strip()
 
 
 def _parse_rating(desc) -> int:
@@ -168,26 +178,30 @@ def load(image_path: str | Path) -> XmpData:
         root = tree.getroot()
     except (ET.ParseError, OSError):
         return XmpData()
-    desc = _find_description(root)
-    if desc is None:
+    descs = _find_descriptions(root)
+    if not descs:
         return XmpData()
 
-    rating = _parse_rating(desc)
-    title = _parse_alt_default(desc.find(f"{{{_NS['dc']}}}title"))
-    description = _parse_alt_default(desc.find(f"{{{_NS['dc']}}}description"))
-    keywords = _parse_bag(desc.find(f"{{{_NS['dc']}}}subject"))
-    creators = _parse_bag(desc.find(f"{{{_NS['dc']}}}creator"))
-    label = desc.get(f"{{{_NS['xmp']}}}Label") or ""
-    if not label:
-        child = desc.find(f"{{{_NS['xmp']}}}Label")
-        label = (child.text or "").strip() if child is not None else ""
+    # Merge across all Description nodes, first non-empty value per field wins.
+    rating = 0
+    title = description = label = ""
+    keywords: list[str] = []
+    creators: list[str] = []
+    for desc in descs:
+        rating = rating or _parse_rating(desc)
+        title = title or _parse_alt_default(desc.find(f"{{{_NS['dc']}}}title"))
+        description = description or _parse_alt_default(
+            desc.find(f"{{{_NS['dc']}}}description"))
+        keywords = keywords or _parse_bag(desc.find(f"{{{_NS['dc']}}}subject"))
+        creators = creators or _parse_bag(desc.find(f"{{{_NS['dc']}}}creator"))
+        label = label or _extract_label(desc)
 
     return XmpData(
         rating=rating,
         title=title,
         description=description,
         keywords=keywords,
-        color_label=label.strip(),
+        color_label=label,
         creator=creators[0] if creators else "",
     )
 
