@@ -64,8 +64,21 @@ def load_puppet(path: str | Path) -> PuppetDocument:
         raise FileNotFoundError(p)
     if not zipfile.is_zipfile(p):
         raise PuppetFormatError(f"{p} is not a zip archive")
-    with zipfile.ZipFile(p, "r") as zf:
-        return _load_from_zip(zf)
+    try:
+        with zipfile.ZipFile(p, "r") as zf:
+            return _load_from_zip(zf)
+    except PuppetFormatError:
+        raise
+    except (KeyError, TypeError, AttributeError, ValueError, IndexError,
+            zipfile.BadZipFile) as exc:
+        # The per-field parsers below are strict but not exhaustive: a manifest
+        # that is a JSON list (AttributeError on .get), a non-numeric size
+        # (ValueError from int()), or a truncated vertex pair (unpack
+        # ValueError) would otherwise escape as a raw exception past the
+        # workspace's (FileNotFoundError, PuppetFormatError) handler. Normalise
+        # every structural fault to PuppetFormatError so the caller reports it
+        # cleanly instead of crashing.
+        raise PuppetFormatError(f"malformed puppet archive {p}: {exc}") from exc
 
 
 def save_puppet(doc: PuppetDocument, path: str | Path) -> None:
@@ -150,7 +163,7 @@ def _parse_drawable(raw: dict) -> Drawable:
     blend = raw.get("blend_mode", "normal")
     if blend not in BLEND_MODES:
         raise PuppetFormatError(f"drawable {raw['id']!r} blend_mode {blend!r} not in {BLEND_MODES}")
-    indices = list(raw["indices"])
+    indices = [int(i) for i in raw["indices"]]
     if len(indices) % 3 != 0:
         raise PuppetFormatError(
             f"drawable {raw['id']!r} indices length {len(indices)} not divisible by 3"
@@ -158,6 +171,16 @@ def _parse_drawable(raw: dict) -> Drawable:
     if len(raw["vertices"]) != len(raw["uvs"]):
         raise PuppetFormatError(
             f"drawable {raw['id']!r} vertices/uvs length mismatch"
+        )
+    n_vertices = len(raw["vertices"])
+    if any(not 0 <= i < n_vertices for i in indices):
+        # An index past the vertex count would be handed straight to
+        # glDrawElements and read past the end of the vertex VBO — undefined
+        # GPU behaviour ranging from garbage geometry to a driver reset. Reject
+        # it at load time instead.
+        raise PuppetFormatError(
+            f"drawable {raw['id']!r} has a triangle index outside "
+            f"[0, {n_vertices})"
         )
     bone_weights = _parse_bone_weights(
         raw.get("bone_weights"), len(raw["vertices"]), raw["id"],

@@ -334,6 +334,104 @@ def test_load_rejects_drawable_with_vertex_uv_length_mismatch(tmp_path):
         load_puppet(out)
 
 
+def test_load_rejects_triangle_index_out_of_range(tmp_path):
+    """An index past the vertex count would be handed to glDrawElements and
+    read past the vertex VBO (undefined GPU behaviour). It must be rejected
+    at load time, not divisibility-checked and then trusted."""
+    raw = _zip_with_manifest({
+        "version": SCHEMA_VERSION,
+        "size": [512, 512],
+        "drawables": [{
+            "id": "d", "texture": "textures/x.png",
+            "vertices": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            "indices": [0, 1, 99],   # 99 >= 3 vertices
+            "uvs": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            "draw_order": 0,
+        }],
+        "deformers": [],
+        "parameters": [],
+    })
+    out = tmp_path / "oob.puppet"
+    out.write_bytes(raw)
+    with pytest.raises(PuppetFormatError, match="index outside"):
+        load_puppet(out)
+
+
+def test_load_rejects_manifest_that_is_a_list(tmp_path):
+    """A manifest whose top level is a JSON list would raise AttributeError
+    from manifest.get(); it must surface as a clean PuppetFormatError."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("puppet.json", json.dumps(["not", "a", "dict"]))
+    out = tmp_path / "list.puppet"
+    out.write_bytes(buf.getvalue())
+    with pytest.raises(PuppetFormatError):
+        load_puppet(out)
+
+
+def test_load_rejects_non_numeric_size(tmp_path):
+    """A non-numeric size raises ValueError from int(); it must surface as a
+    PuppetFormatError, not escape the workspace's error handler."""
+    raw = _zip_with_manifest({
+        "version": SCHEMA_VERSION,
+        "size": ["wide", "tall"],
+        "drawables": [],
+        "deformers": [],
+        "parameters": [],
+    })
+    out = tmp_path / "size.puppet"
+    out.write_bytes(raw)
+    with pytest.raises(PuppetFormatError):
+        load_puppet(out)
+
+
+def test_load_rejects_truncated_vertex_pair(tmp_path):
+    """A 1-element vertex would raise a tuple-unpack ValueError; it must
+    surface as a PuppetFormatError rather than crashing the caller."""
+    raw = _zip_with_manifest({
+        "version": SCHEMA_VERSION,
+        "size": [512, 512],
+        "drawables": [{
+            "id": "d", "texture": "textures/x.png",
+            "vertices": [[0.0]],   # not an [x, y] pair
+            "indices": [],
+            "uvs": [[0.0, 0.0]],
+            "draw_order": 0,
+        }],
+        "deformers": [],
+        "parameters": [],
+    })
+    out = tmp_path / "trunc.puppet"
+    out.write_bytes(raw)
+    with pytest.raises(PuppetFormatError):
+        load_puppet(out)
+
+
+def test_document_io_imports_without_qt():
+    """The puppet package must stay Qt-free for the MCP tools: importing
+    Imervue.puppet.document_io must not drag in PySide6 (the package
+    __init__ exposes PuppetWorkspace lazily via __getattr__)."""
+    import subprocess
+    import sys
+    code = (
+        "import builtins\n"
+        "_real = builtins.__import__\n"
+        "def _blocked(name, *a, **k):\n"
+        "    if name == 'PySide6' or name.startswith('PySide6.'):\n"
+        "        raise ImportError('PySide6 blocked for test')\n"
+        "    return _real(name, *a, **k)\n"
+        "builtins.__import__ = _blocked\n"
+        "import Imervue.puppet.document_io\n"
+        "print('OK')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "OK" in result.stdout
+
+
 def test_load_rejects_unknown_deformer_type(tmp_path):
     raw = _zip_with_manifest({
         "version": SCHEMA_VERSION,

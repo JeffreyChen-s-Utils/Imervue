@@ -350,6 +350,21 @@ class _MCPError(Exception):
 # ---------------------------------------------------------------------------
 
 
+def _force_utf8(stream: TextIO | None) -> None:
+    """Reconfigure a real stdio pipe to UTF-8.
+
+    On Windows a piped stdio stream defaults to the ANSI code page (e.g.
+    cp950); combined with ``ensure_ascii=False`` when serialising responses,
+    a tool result containing an emoji or out-of-code-page CJK character would
+    raise ``UnicodeEncodeError`` mid-write and kill the server. Injected test
+    streams (``StringIO``) are already text-clean and expose no
+    ``reconfigure``, so this is a no-op for them.
+    """
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8")
+
+
 def run(
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
@@ -363,6 +378,10 @@ def run(
     server = MCPServer(resource_root=os.environ.get("IMERVUE_MCP_ROOT"))
     from Imervue.mcp_server.tools import register_default_tools
     register_default_tools(server)
+    if stdin is None:
+        _force_utf8(sys.stdin)
+    if stdout is None:
+        _force_utf8(sys.stdout)
     input_stream = stdin or sys.stdin
     output_stream = stdout or sys.stdout
     server.notifier = Notifier(output_stream)

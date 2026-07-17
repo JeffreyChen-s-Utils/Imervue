@@ -112,6 +112,90 @@ def test_brush_press_paints_dab(state, canvas):
     assert canvas[32, 32, 1] == 200
 
 
+# ---------------------------------------------------------------------------
+# Gesture-tool undo arming (gradient / smudge / move return handled=False
+# on press and do their work on the drag / release).
+# ---------------------------------------------------------------------------
+
+
+def test_gesture_tool_commits_undo_when_press_not_handled(state, canvas):
+    """Regression: the undo gesture was armed only on a handled press, but
+    gradient/smudge/move return handled=False on press, so the release never
+    committed — their edits were undoable-less and never marked the tab
+    dirty, silently discarded on close."""
+    commits = []
+    disp = ToolDispatcher(
+        state, image_provider=lambda: canvas,
+        commit_undo=lambda: commits.append(True),
+    )
+    disp._maybe_commit_undo("gradient", _press(5, 5), handled=False)   # noqa: SLF001
+    disp._maybe_commit_undo("gradient", _move(20, 20), handled=True)   # noqa: SLF001
+    disp._maybe_commit_undo("gradient", _release(20, 20), handled=False)  # noqa: SLF001
+    assert commits == [True]   # exactly one undo snapshot for the whole gesture
+
+
+def test_gesture_tool_with_no_work_does_not_commit(state, canvas):
+    """A bare click that the tool doesn't act on must not burn an undo slot."""
+    commits = []
+    disp = ToolDispatcher(
+        state, image_provider=lambda: canvas,
+        commit_undo=lambda: commits.append(True),
+    )
+    disp._maybe_commit_undo("gradient", _press(5, 5), handled=False)   # noqa: SLF001
+    disp._maybe_commit_undo("gradient", _release(5, 5), handled=False)  # noqa: SLF001
+    assert commits == []
+
+
+# ---------------------------------------------------------------------------
+# Clone-stamp tool must not paint on button-less hover (mouse tracking).
+# ---------------------------------------------------------------------------
+
+_ALT_MODIFIER = 0x08000000
+
+
+def _patterned_canvas():
+    arr = np.full((80, 80, 4), 255, dtype=np.uint8)
+    arr[10:30, 10:30, 0] = 200   # red source patch
+    arr[10:30, 10:30, 1] = 0
+    arr[10:30, 10:30, 2] = 0
+    return arr
+
+
+def _alt_press(x, y):
+    return PointerEvent(phase="press", x=x, y=y, button=1,
+                        modifiers=_ALT_MODIFIER, pressure=1.0)
+
+
+def _hover(x, y):
+    # A move with no button held — exactly what setMouseTracking delivers.
+    return PointerEvent(phase="move", x=x, y=y, button=0, modifiers=0, pressure=1.0)
+
+
+def test_clone_stamp_does_not_paint_on_hover(state):
+    from Imervue.paint.tools.special import _CloneStampTool
+    canvas = _patterned_canvas()
+    before = canvas.copy()
+    tool = _CloneStampTool(state)
+    tool.handle(_alt_press(20, 20), canvas)   # set the source, no paint
+    tool.handle(_release(20, 20), canvas)
+    # Hover across the canvas with no button held — must NOT stamp a trail.
+    tool.handle(_hover(50, 50), canvas)
+    tool.handle(_hover(55, 55), canvas)
+    assert np.array_equal(canvas, before)
+
+
+def test_clone_stamp_paints_during_active_stroke(state):
+    from Imervue.paint.tools.special import _CloneStampTool
+    canvas = _patterned_canvas()
+    tool = _CloneStampTool(state)
+    tool.handle(_alt_press(20, 20), canvas)          # source = red patch
+    assert tool.handle(_press(60, 60), canvas) is True   # active stamp begins
+    tool.handle(_move(61, 60), canvas)
+    tool.handle(_release(61, 60), canvas)
+    # The destination (white) region picked up source pixels during the stroke.
+    assert not np.array_equal(canvas[55:66, 55:66], _patterned_canvas()[55:66, 55:66])
+
+
 def test_brush_move_without_press_returns_false(state, canvas):
     tool = BrushTool(state)
     assert tool.handle(_move(5, 5), canvas) is False

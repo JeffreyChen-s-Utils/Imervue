@@ -31,6 +31,49 @@ def test_notifier_send_passes_response_through():
     assert json.loads(stream.getvalue())["id"] == 7
 
 
+def test_notifier_non_ascii_needs_utf8_stream():
+    """A code-page-limited stream (the Windows piped-stdout default) raises
+    on an emoji result — the exact crash _force_utf8 exists to prevent."""
+    import pytest
+    raw = io.BytesIO()
+    ascii_stream = io.TextIOWrapper(raw, encoding="ascii", newline="")
+    with pytest.raises(UnicodeEncodeError):
+        Notifier(ascii_stream).send({"jsonrpc": "2.0", "id": 1, "result": "🎉"})
+
+
+def test_notifier_non_ascii_ok_on_utf8_stream():
+    raw = io.BytesIO()
+    utf8_stream = io.TextIOWrapper(raw, encoding="utf-8", newline="")
+    Notifier(utf8_stream).send({"jsonrpc": "2.0", "id": 1, "result": "🎉café"})
+    utf8_stream.flush()
+    assert "🎉café".encode() in raw.getvalue()
+
+
+def test_force_utf8_reconfigures_stream_encoding():
+    from Imervue.mcp_server.server import _force_utf8
+
+    class _Stream:
+        def __init__(self):
+            self.encoding = "cp950"
+            self.calls = []
+
+        def reconfigure(self, *, encoding):
+            self.encoding = encoding
+            self.calls.append(encoding)
+
+    stream = _Stream()
+    _force_utf8(stream)
+    assert stream.encoding == "utf-8"
+    assert stream.calls == ["utf-8"]
+
+
+def test_force_utf8_noop_without_reconfigure():
+    from Imervue.mcp_server.server import _force_utf8
+    # A StringIO has no reconfigure() — must be a silent no-op, not a crash.
+    _force_utf8(io.StringIO())
+    _force_utf8(None)
+
+
 def test_subscription_registry():
     reg = SubscriptionRegistry()
     assert not reg.is_subscribed("a")

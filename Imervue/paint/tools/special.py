@@ -144,6 +144,11 @@ class _CloneStampTool:
         from Imervue.paint.stamp_tool import StampState
         self._stamp = StampState()
         self._overlay_setter = overlay_setter or (lambda _overlay: None)
+        # True only between a (non-Alt) press and its release. Mouse tracking
+        # keeps delivering "move" events while no button is held, so without
+        # this latch every hover after a source is set would stamp a trail
+        # across the canvas the user never asked for.
+        self._active = False
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         from Imervue.paint.stamp_tool import stamp_dab
@@ -157,6 +162,7 @@ class _CloneStampTool:
                 # No source yet — first press without Alt does nothing
                 # so the user gets a clean affordance to set source first.
                 return False
+            self._active = True
             stamp_dab(
                 canvas, self._stamp, evt.x, evt.y,
                 size=self._state.brush.size,
@@ -164,7 +170,7 @@ class _CloneStampTool:
                 opacity=self._state.brush.opacity,
             )
             return True
-        if evt.phase == "move" and self._stamp.has_source():
+        if evt.phase == "move" and self._active and self._stamp.has_source():
             stamp_dab(
                 canvas, self._stamp, evt.x, evt.y,
                 size=self._state.brush.size,
@@ -173,11 +179,13 @@ class _CloneStampTool:
             )
             return True
         if evt.phase in ("release", "leave"):
+            self._active = False
             self._stamp.end_stroke()
             return False
         return False
 
     def cancel(self) -> None:
+        self._active = False
         self._stamp.end_stroke()
 
     def _update_source_overlay(self) -> None:
