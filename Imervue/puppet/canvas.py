@@ -12,6 +12,7 @@ spinning up a context.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import TYPE_CHECKING
 
@@ -73,6 +74,8 @@ from OpenGL.GL import (
     glEnd,
     glGenBuffers,
     glGenTextures,
+    glGetFloatv,
+    glGetIntegerv,
     glLoadIdentity,
     glMatrixMode,
     glOrtho,
@@ -89,8 +92,10 @@ from OpenGL.GL import (
     glVertex2f,
     glVertexPointer,
     glViewport,
+    GL_COLOR_CLEAR_VALUE,
     GL_MODELVIEW,
     GL_PROJECTION,
+    GL_VIEWPORT,
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QSurfaceFormat
@@ -168,6 +173,37 @@ _BLEND_FUNCS = {
 }
 
 
+@contextlib.contextmanager
+def _preserved_gl_render_state():
+    """Save and restore the clear colour, viewport, and matrix stacks.
+
+    An off-screen puppet render (virtual camera / NDI) shares the widget's GL
+    context, but the visible ``paintGL`` only issues ``glClear`` and depends on
+    the clear colour set once in ``initializeGL`` and the viewport set in
+    ``resizeGL``. Leaving the off-screen clear colour/viewport in place therefore
+    bled into the next on-screen frame — most visibly turning the desktop pet
+    into a solid magenta box for the whole time the virtual camera streamed, and
+    mis-sizing the editor render. Restoring on exit — even when the body returns
+    early or raises — also balances the projection/modelview pushes that a
+    zero-sized document used to leak until ``GL_STACK_OVERFLOW``.
+    """
+    prev_clear = glGetFloatv(GL_COLOR_CLEAR_VALUE)
+    prev_viewport = glGetIntegerv(GL_VIEWPORT)
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    try:
+        yield
+    finally:
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+        glClearColor(*(float(c) for c in prev_clear))
+        glViewport(*(int(v) for v in prev_viewport))
+
+
 class PuppetCanvas(QOpenGLWidget):
     """QOpenGLWidget that renders one ``PuppetDocument`` at a time.
 
@@ -207,9 +243,19 @@ class PuppetCanvas(QOpenGLWidget):
         fmt.setStencilBufferSize(8)
         if pet_mode:
             fmt.setAlphaBufferSize(8)
+        # Make ``fmt`` the process default only for the duration of surface
+        # creation, then restore the previous default. Leaving it set globally
+        # perturbed the format inherited by every GL widget constructed after
+        # this canvas (e.g. the main image viewer gained a stray stencil/alpha
+        # buffer depending on construction order). ``setFormat`` below is what
+        # actually binds the format to this widget.
+        prev_default = QSurfaceFormat.defaultFormat()
         QSurfaceFormat.setDefaultFormat(fmt)
-        super().__init__(parent)
-        self.setFormat(fmt)
+        try:
+            super().__init__(parent)
+            self.setFormat(fmt)
+        finally:
+            QSurfaceFormat.setDefaultFormat(prev_default)
         self._pet_mode = bool(pet_mode)
         if pet_mode:
             # The host PetWindow has WA_TranslucentBackground set,
@@ -679,46 +725,40 @@ class PuppetCanvas(QOpenGLWidget):
             if not fbo.bind():
                 return None
             try:
-                glViewport(0, 0, width, height)
-                glMatrixMode(GL_PROJECTION)
-                glPushMatrix()
-                glLoadIdentity()
-                glOrtho(0, width, height, 0, -1, 1)
-                glMatrixMode(GL_MODELVIEW)
-                glPushMatrix()
-                glLoadIdentity()
+                # The context manager snapshots the visible canvas's clear
+                # colour / viewport / matrix stacks and restores them on exit,
+                # so this shared-context off-screen render can't corrupt the
+                # next on-screen paintGL — even on the early return below.
+                with _preserved_gl_render_state():
+                    glViewport(0, 0, width, height)
+                    glMatrixMode(GL_PROJECTION)
+                    glLoadIdentity()
+                    glOrtho(0, width, height, 0, -1, 1)
+                    glMatrixMode(GL_MODELVIEW)
+                    glLoadIdentity()
 
-                # KeepAspectRatio fit of document into the FBO.
-                doc_w, doc_h = self._document.size
-                if doc_w <= 0 or doc_h <= 0:
-                    return None
-                scale = min(width / doc_w, height / doc_h)
-                pan_x = (width - doc_w * scale) / 2.0
-                pan_y = (height - doc_h * scale) / 2.0
-                glTranslatef(pan_x, pan_y, 0.0)
-                glScalef(scale, scale, 1.0)
+                    # KeepAspectRatio fit of document into the FBO.
+                    doc_w, doc_h = self._document.size
+                    if doc_w <= 0 or doc_h <= 0:
+                        return None
+                    scale = min(width / doc_w, height / doc_h)
+                    pan_x = (width - doc_w * scale) / 2.0
+                    pan_y = (height - doc_h * scale) / 2.0
+                    glTranslatef(pan_x, pan_y, 0.0)
+                    glScalef(scale, scale, 1.0)
 
-                # Clear to the requested background (transparent by
-                # default). The checker backdrop is intentionally NOT
-                # drawn — streamers chose the virtual-camera / NDI
-                # path because they want the character composited
-                # over their own scene.
-                r, g, b, a = background_rgba
-                glClearColor(float(r), float(g), float(b), float(a))
-                glClear(GL_COLOR_BUFFER_BIT)
+                    # Clear to the requested background (transparent by
+                    # default). The checker backdrop is intentionally NOT
+                    # drawn — streamers chose the virtual-camera / NDI
+                    # path because they want the character composited
+                    # over their own scene.
+                    r, g, b, a = background_rgba
+                    glClearColor(float(r), float(g), float(b), float(a))
+                    glClear(GL_COLOR_BUFFER_BIT)
 
-                self._draw_drawables()
+                    self._draw_drawables()
 
-                image = fbo.toImage()
-
-                # Restore matrices. Viewport / clear colour get
-                # reset by the next paintGL on the visible widget,
-                # so leaving them is harmless.
-                glPopMatrix()
-                glMatrixMode(GL_PROJECTION)
-                glPopMatrix()
-                glMatrixMode(GL_MODELVIEW)
-                return image
+                    return fbo.toImage()
             finally:
                 fbo.release()
         finally:
