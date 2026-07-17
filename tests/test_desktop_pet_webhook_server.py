@@ -112,6 +112,17 @@ def test_bearer_token_malformed_returns_empty():
     assert bearer_token("just-a-token") == ""
 
 
+def test_handler_sets_a_positive_request_timeout():
+    """StreamRequestHandler applies the class `timeout` to the request socket;
+    without it a client that stalls mid-body pins a handler thread forever."""
+    from Imervue.desktop_pet.webhook_server import (
+        _REQUEST_TIMEOUT_S,
+        _WebhookHandler,
+    )
+    assert _REQUEST_TIMEOUT_S > 0
+    assert _WebhookHandler.timeout == _REQUEST_TIMEOUT_S
+
+
 # ---------------------------------------------------------------
 # WebhookReceiver — lifecycle (no socket)
 # ---------------------------------------------------------------
