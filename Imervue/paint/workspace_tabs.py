@@ -293,11 +293,23 @@ class TabManagerMixin:
             except (RuntimeError, TypeError):
                 # Signal might already be disconnected (e.g. on shutdown).
                 pass
+            # The navigator -> canvas direction is wired once by
+            # _wire_canvas_signals to the initial canvas, so it must move with
+            # the active tab too; without this, dragging the navigator zoom or
+            # clicking Fit kept driving the first tab's canvas after a switch.
+            # Kept in its own try so a failed disconnect above can't skip it.
+            try:
+                self._navigator_dock.zoom_changed.disconnect(old_canvas.set_zoom)
+                self._navigator_dock.fit_requested.disconnect(old_canvas.reset_view)
+            except (RuntimeError, TypeError):
+                pass
         new_canvas.hover_changed.connect(self._on_hover_changed)
         new_canvas.image_loaded.connect(self._on_image_loaded)
         new_canvas.zoom_changed.connect(self._navigator_dock.set_zoom)
         new_canvas.zoom_changed.connect(self._on_zoom_changed_refresh_cursor)
         new_canvas.document_changed.connect(self._on_document_changed)
+        self._navigator_dock.zoom_changed.connect(new_canvas.set_zoom)
+        self._navigator_dock.fit_requested.connect(new_canvas.reset_view)
 
     def cycle_active_tab(self, direction: int) -> int:
         """Step the active paint tab by ``direction`` (+1 / -1).
