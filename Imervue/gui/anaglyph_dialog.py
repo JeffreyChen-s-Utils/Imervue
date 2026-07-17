@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui._apply_save import (
+    finalize_worker,
     apply_save_buttons,
     current_image_path,
     load_rgba,
@@ -107,7 +108,7 @@ class AnaglyphDialog(QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        finalize_worker(self)
         notify_saved(self._viewer, ok, message, "anaglyph_failed", "Anaglyph failed")
         if ok:
             self.accept()

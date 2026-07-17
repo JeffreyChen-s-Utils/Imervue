@@ -13,7 +13,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSpinBox, QVBoxLayout, QWidget
 
-from Imervue.gui._apply_save import apply_save_buttons, load_rgba, notify_saved
+from Imervue.gui._apply_save import apply_save_buttons, finalize_worker, load_rgba, notify_saved
 from Imervue.image.collage import build_collage
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -73,7 +73,7 @@ class CollageDialog(QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        finalize_worker(self)
         notify_saved(self._viewer, ok, message, "collage_failed", "Collage failed")
         if ok:
             self.accept()

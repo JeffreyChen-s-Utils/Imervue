@@ -12,7 +12,12 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
-from Imervue.gui._apply_save import apply_save_buttons, current_image_path, notify_saved
+from Imervue.gui._apply_save import (
+    apply_save_buttons,
+    current_image_path,
+    finalize_worker,
+    notify_saved,
+)
 from Imervue.image.animation_edit import OPERATIONS, edit_animation
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -80,7 +85,7 @@ class AnimationEditDialog(QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        finalize_worker(self)
         notify_saved(self._viewer, ok, message, "animedit_failed", "Animation edit failed")
         if ok:
             self.accept()
