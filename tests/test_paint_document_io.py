@@ -381,3 +381,82 @@ def test_missing_layer_binary_round_trips_to_none(tmp_path):
     save_document(doc, target)
     loaded = load_document(target)
     assert loaded.active_layer().binary is None
+
+
+# ---------------------------------------------------------------------------
+# Vector-layer / blend-if / colour-label persistence
+# ---------------------------------------------------------------------------
+
+
+def test_vector_layer_strokes_round_trip(tmp_path):
+    """Regression: a vector layer's canonical state is its stroke list;
+    saving only the raster cache silently degraded it to a raster layer
+    on reload."""
+    from Imervue.paint.vector_layer import VectorStroke
+    doc = _make_doc()
+    layer = doc.add_vector_layer(name="Ink")
+    layer.vector_data.add(VectorStroke(
+        points=((1.0, 2.0), (3.0, 4.0)),
+        width=5.0,
+        color=(10, 20, 30, 255),
+        opacity=0.8,
+    ))
+    target = tmp_path / f"vector{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+
+    restored = loaded.active_layer()
+    assert restored.vector_data is not None
+    assert len(restored.vector_data.strokes) == 1
+    stroke = restored.vector_data.strokes[0]
+    assert stroke.points == ((1.0, 2.0), (3.0, 4.0))
+    assert stroke.width == pytest.approx(5.0)
+    assert stroke.color == (10, 20, 30, 255)
+    assert stroke.opacity == pytest.approx(0.8)
+
+
+def test_missing_vector_data_round_trips_to_none(tmp_path):
+    """A plain raster layer must not come back as an (empty) vector
+    layer — ``None`` distinguishes the two."""
+    doc = _make_doc()
+    target = tmp_path / f"raster{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.active_layer().vector_data is None
+
+
+def test_layer_blend_if_round_trips(tmp_path):
+    from Imervue.paint.blend_if import BlendIf
+    doc = _make_doc()
+    doc.active_layer().blend_if = BlendIf(
+        this_min=30, this_max=200, underlying_min=10, underlying_max=240,
+    )
+    target = tmp_path / f"blendif{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+
+    restored = loaded.active_layer().blend_if
+    assert restored is not None
+    assert restored.this_min == 30
+    assert restored.this_max == 200
+    assert restored.underlying_min == 10
+    assert restored.underlying_max == 240
+
+
+def test_layer_color_label_round_trips(tmp_path):
+    from Imervue.paint.layer_model import LAYER_LABELS
+    label = LAYER_LABELS[0]
+    doc = _make_doc()
+    doc.active_layer().color_label = label
+    target = tmp_path / f"label{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.active_layer().color_label == label
+
+
+def test_invalid_color_label_round_trips_to_none(tmp_path):
+    doc = _make_doc()
+    target = tmp_path / f"nolabel{FILE_EXTENSION}"
+    save_document(doc, target)
+    loaded = load_document(target)
+    assert loaded.active_layer().color_label is None

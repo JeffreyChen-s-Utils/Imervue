@@ -22,6 +22,11 @@ from Imervue.paint.blend_modes import BLEND_MODES, blend_rgb
 # blend_modes so the brush engine and the compositor can't drift apart.
 LAYER_BLEND_MODES = BLEND_MODES
 
+# Guards the un-premultiply division where the composited alpha is zero
+# (both inputs fully transparent — the premultiplied numerator is zero
+# there too, so the quotient stays 0 rather than NaN).
+_ALPHA_EPS = 1e-6
+
 
 def composite_layer_pair(
     below: np.ndarray,
@@ -64,8 +69,23 @@ def composite_layer_pair(
         fg_a = fg_a * (mask.astype(np.float32) / 255.0)
 
     blended_rgb = blend_rgb(bg_rgb, fg_rgb, blend_mode)
-    out_rgb = bg_rgb * (1.0 - fg_a)[..., None] + blended_rgb * fg_a[..., None]
+    # Blend modes are defined against the backdrop colour; where the
+    # backdrop is (partially) transparent there is no colour to blend
+    # with, so the blended result fades toward the raw foreground.
+    blended_rgb = (
+        fg_rgb * (1.0 - bg_a)[..., None] + blended_rgb * bg_a[..., None]
+    )
     out_a = fg_a + bg_a * (1.0 - fg_a)
+    # Straight-alpha "over": weight each colour by its coverage, then
+    # un-premultiply. Every layer buffer and the GL display path use the
+    # straight-alpha convention; without the division, a semi-transparent
+    # pixel over a transparent backdrop comes out premultiplied
+    # (rgb * alpha) and darkens on every merge / flatten / region patch.
+    premul_rgb = (
+        blended_rgb * fg_a[..., None]
+        + bg_rgb * (bg_a * (1.0 - fg_a))[..., None]
+    )
+    out_rgb = premul_rgb / np.maximum(out_a, _ALPHA_EPS)[..., None]
 
     out = np.empty_like(below)
     out[..., :3] = np.clip(out_rgb * 255.0, 0.0, 255.0).astype(np.uint8)

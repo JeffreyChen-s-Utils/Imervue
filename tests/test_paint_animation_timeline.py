@@ -301,9 +301,13 @@ def test_frame_select_pastes_image_into_layer(workspace):
     canvas = workspace.canvas()
     document = canvas.document()
     layer = document.active_layer()
+    # Direct layer writes must invalidate the composite cache, same as
+    # every real mutation path (brush strokes mark dirty rects).
     layer.image[..., :3] = (10, 20, 30)
+    document.invalidate_composite()
     workspace._on_animation_add_frame()  # noqa: SLF001
     layer.image[..., :3] = (90, 90, 90)
+    document.invalidate_composite()
     workspace._on_animation_add_frame()  # noqa: SLF001
     # Now select the first frame again — layer image must revert.
     workspace._on_animation_frame_selected(0)  # noqa: SLF001

@@ -172,6 +172,42 @@ def test_named_selection_returns_independent_copy(document_with_selection):
     assert not second[0, 0]
 
 
+def test_named_selection_follows_resize(document_with_selection):
+    """Regression: geometric transforms only remapped the active
+    selection, so a named selection kept its pre-resize shape and
+    ``load_selection`` then raised ValueError. It must be resampled
+    alongside the canvas and reload cleanly."""
+    doc = document_with_selection
+    doc.save_selection("body")           # saved at 8x8
+    doc.set_selection(None)
+    assert doc.resize(4, 4) is True
+    assert doc.named_selection("body").shape == (4, 4)  # type: ignore[union-attr]
+    assert doc.load_selection("body") is True
+    assert doc.selection().shape == (4, 4)  # type: ignore[union-attr]
+
+
+def test_named_selection_follows_crop(document_with_selection):
+    doc = document_with_selection
+    doc.save_selection("body")
+    doc.set_selection(None)
+    assert doc.crop((1, 1, 4, 4)) is True
+    assert doc.named_selection("body").shape == (4, 4)  # type: ignore[union-attr]
+    assert doc.load_selection("body") is True
+
+
+def test_named_selection_follows_rotate_90(document_with_selection):
+    """A 90° rotate on a non-square doc swaps H/W; the named selection
+    must swap with it so it still maps onto the rotated canvas."""
+    doc = PaintDocument()
+    doc.load_image(np.zeros((6, 8, 4), dtype=np.uint8))
+    doc.set_selection(_selection(6, 8, 1, 4, 1, 5))
+    doc.save_selection("body")
+    doc.set_selection(None)
+    assert doc.rotate_90_cw() is True
+    assert doc.named_selection("body").shape == (8, 6)  # type: ignore[union-attr]
+    assert doc.load_selection("body") is True
+
+
 def test_save_load_named_selection_persists_through_document_io(tmp_path):
     from Imervue.paint.document_io import load_document, save_document
     doc = PaintDocument()

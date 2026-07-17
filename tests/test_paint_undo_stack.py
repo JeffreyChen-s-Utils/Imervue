@@ -140,6 +140,70 @@ def test_redo_returns_false_when_stack_empty():
 
 
 # ---------------------------------------------------------------------------
+# Structural layer changes between commits — snapshots map by identity
+# ---------------------------------------------------------------------------
+
+
+def test_undo_after_layer_add_restores_by_identity_not_index():
+    """Regression: with index-based restore, adding a layer between
+    commits made undo write another layer's captured pixels into the
+    newcomer. Snapshots now map pixels by layer identity."""
+    document = _doc()
+    layer_a = document.add_layer(name="A")
+    layer_b = document.add_layer(name="B")        # stack: [BG, A, B]
+    stack = UndoStack(document)
+    layer_a.image[0, 0] = (255, 0, 0, 255)
+    stack.commit()
+    document.set_active_layer(1)                  # insert the new layer mid-stack
+    new_layer = document.add_layer(name="New")    # stack: [BG, A, New, B]
+    new_layer.image[1, 1] = (9, 9, 9, 255)
+    stack.commit()
+    stack.undo()
+    # A keeps its stroke (it predates the restored snapshot)...
+    assert tuple(layer_a.image[0, 0]) == (255, 0, 0, 255)
+    # ...B stays empty, and the newcomer must NOT receive B's captured
+    # pixels — the snapshot simply has nothing for it.
+    assert tuple(layer_b.image[1, 1]) == (0, 0, 0, 0)
+    assert tuple(new_layer.image[1, 1]) == (9, 9, 9, 255)
+
+
+def test_undo_after_layer_move_restores_moved_layer_pixels():
+    """Reordering layers between commits must not swap their undo
+    contents — the captured image follows the layer object."""
+    document = _doc()
+    layer_a = document.add_layer(name="A")        # stack: [BG, A], active=A
+    stack = UndoStack(document)
+    layer_a.image[0, 0] = (255, 0, 0, 255)
+    stack.commit()
+    layer_a.image[0, 0] = (0, 255, 0, 255)
+    stack.commit()
+    document.move_active_layer(up=False)          # stack: [A, BG]
+    stack.undo()
+    assert tuple(layer_a.image[0, 0]) == (255, 0, 0, 255)
+    assert tuple(document.layer_at(1).image[0, 0]) == (0, 0, 0, 0)
+
+
+def test_undo_after_layer_delete_skips_the_dead_layer():
+    """Deleting a layer between commits must not shift its captured
+    pixels into the next layer down the old index order."""
+    document = _doc()
+    layer_a = document.add_layer(name="A")
+    layer_b = document.add_layer(name="B")        # stack: [BG, A, B]
+    stack = UndoStack(document)
+    layer_a.image[0, 0] = (255, 0, 0, 255)
+    layer_b.image[0, 0] = (0, 0, 255, 255)
+    stack.commit()
+    layer_b.image[0, 0] = (7, 7, 7, 255)
+    stack.commit()
+    document.set_active_layer(1)
+    document.remove_active_layer()                # stack: [BG, B]
+    del layer_a
+    stack.undo()                                  # must not raise
+    assert tuple(layer_b.image[0, 0]) == (0, 0, 255, 255)
+    assert tuple(document.layer_at(0).image[0, 0]) == (0, 0, 0, 0)
+
+
+# ---------------------------------------------------------------------------
 # Memory cap
 # ---------------------------------------------------------------------------
 

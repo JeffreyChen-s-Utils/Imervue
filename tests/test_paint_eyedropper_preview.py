@@ -83,6 +83,9 @@ def test_sample_uses_composite_when_sample_all_layers_on(workspace):
     layer = document.active_layer()
     layer.image[7, 7, :3] = (10, 20, 30)
     layer.image[7, 7, 3] = 255
+    # Direct layer writes must invalidate the composite cache, same as
+    # every real mutation path (brush strokes mark dirty rects).
+    document.invalidate_composite()
     workspace.state().eyedropper_sample_all_layers = True
     sampled = workspace._sample_eyedropper_at((7, 7))  # noqa: SLF001
     assert sampled is not None

@@ -54,6 +54,17 @@ def test_merge_layer_pair_returns_new_layer():
     assert merged is not above
 
 
+def test_merge_layer_pair_preserves_semi_transparent_rgb():
+    """Merging a soft-edged stroke onto a transparent layer must not
+    darken it — the compositor works in straight alpha, so the RGB of a
+    semi-transparent pixel over nothing stays put (regression: the old
+    math halved the RGB of an alpha-128 pixel on every merge)."""
+    below = _solid_layer("Below", (0, 0, 0, 0))
+    above = _solid_layer("Above", (200, 100, 50, 128))
+    merged = merge_layer_pair(below, above)
+    assert tuple(merged.image[0, 0]) == (200, 100, 50, 128)
+
+
 def test_merge_layer_pair_preserves_below_name_and_blend():
     below = _solid_layer("Below", (200, 0, 0, 255), opacity=0.5,
                          blend_mode="multiply")

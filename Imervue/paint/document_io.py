@@ -142,6 +142,17 @@ def _layer_meta(layer) -> dict:
         "binary": (
             layer.binary.to_dict() if layer.binary is not None else None
         ),
+        "blend_if": (
+            layer.blend_if.to_dict() if layer.blend_if is not None else None
+        ),
+        # The strokes are the vector layer's canonical state; the image
+        # is only a rasterisation cache. Dropping them silently degrades
+        # the layer to a raster layer on reload.
+        "vector_strokes": (
+            [stroke.to_dict() for stroke in layer.vector_data.strokes]
+            if layer.vector_data is not None else None
+        ),
+        "color_label": layer.color_label,
     }
 
 
@@ -276,7 +287,35 @@ def _read_layer(
         effects=tuple(_read_layer_effects(lmeta.get("effects") or [])),
         tone=ToneSettings.from_dict(lmeta.get("tone")),
         binary=BinarySettings.from_dict(lmeta.get("binary")),
+        blend_if=_read_layer_blend_if(lmeta.get("blend_if")),
+        vector_data=_read_layer_vector_data(lmeta.get("vector_strokes")),
+        color_label=_read_layer_color_label(lmeta.get("color_label")),
     )
+
+
+def _read_layer_blend_if(raw: object):
+    if not isinstance(raw, dict):
+        return None
+    from Imervue.paint.blend_if import BlendIf
+    return BlendIf.from_dict(raw)
+
+
+def _read_layer_vector_data(raw: object):
+    """``None`` means a plain raster layer; a list (even empty) means
+    the layer is a vector layer whose strokes re-rasterise on demand."""
+    if not isinstance(raw, list):
+        return None
+    from Imervue.paint.vector_layer import VectorLayerData, VectorStroke
+    strokes = [
+        VectorStroke.from_dict(entry)
+        for entry in raw if isinstance(entry, dict)
+    ]
+    return VectorLayerData(strokes=strokes)
+
+
+def _read_layer_color_label(raw: object) -> str | None:
+    from Imervue.paint.layer_model import LAYER_LABELS
+    return raw if isinstance(raw, str) and raw in LAYER_LABELS else None
 
 
 def _read_layer_image(
