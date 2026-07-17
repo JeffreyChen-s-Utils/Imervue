@@ -2177,6 +2177,12 @@ class ImervueMainWindow(QMainWindow):
             if hasattr(self, "_tree_watchdog"):
                 self._tree_watchdog.stop()
 
+        # --- 等待背景刪除 worker，避免其 QThread 在 view 銷毀時仍在執行 ---
+        # (次要視窗走 deleteLater → destroyed-while-running 崩潰；
+        #  主視窗走 os._exit → 半途中止 OS 垃圾桶批次)
+        with contextlib.suppress(Exception):
+            self.tree.shutdown()
+
         # --- 安全關閉修改面板 ---
         # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
         with contextlib.suppress(Exception):

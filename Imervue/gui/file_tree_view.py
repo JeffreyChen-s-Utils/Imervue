@@ -734,6 +734,22 @@ class _FileTreeView(QTreeView):
                 ).format(count=len(failed)),
             )
 
+    def shutdown(self) -> None:
+        """Wait for any in-flight OS-trash workers so their QThreads aren't
+        destroyed mid-run when this view (or its owning window) is torn down.
+
+        FileDeleteWorker is parented to this view; without this a secondary
+        window closing (which deleteLater's the view) would destroy a running
+        worker thread ('QThread: Destroyed while thread is still running'), and
+        the primary window's os._exit would abort an in-flight OS-trash batch
+        partway. The main window calls this from closeEvent before teardown.
+        """
+        for worker in list(self._trash_workers):
+            with contextlib.suppress(RuntimeError):
+                if worker.isRunning():
+                    worker.wait()
+        self._trash_workers.clear()
+
     def _delete_path(self, path: str, notify: bool = True):
         if not Path(path).exists():
             return
