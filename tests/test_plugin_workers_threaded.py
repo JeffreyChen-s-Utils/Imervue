@@ -19,6 +19,8 @@ import pytest
 from ai_colorize import ai_colorize_plugin as cz
 from ai_denoise import ai_denoise_plugin as dn
 from ai_motion_deblur import ai_motion_deblur_plugin as db
+from ai_object_remove import ai_object_remove_plugin as orm
+from ai_outpaint import ai_outpaint_plugin as op
 from ai_smart_resize import ai_smart_resize_plugin as sr
 from ai_style_transfer import ai_style_transfer_plugin as st
 from npr_filters import npr_filters_plugin as npr
@@ -36,6 +38,16 @@ def _capture(worker):
 
 def _boom(*_a, **_k):
     raise ValueError("kaboom")
+
+
+class _HardError(Exception):
+    """An exception outside the workers' old narrow catch tuple — stands in
+    for onnxruntime.InvalidArgument / cv2.error / PIL.DecompressionBombError,
+    all of which subclass Exception directly."""
+
+
+def _boom_hard(*_a, **_k):
+    raise _HardError("unexpected backend failure")
 
 
 # --- per-plugin worker success + failure -----------------------------------
@@ -132,6 +144,75 @@ def test_npr_worker(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(npr, "apply_npr_filter", _boom)
     ok, msg = _capture(npr._NPRFilterWorker("in.png", object(), str(tmp_path / "x.png")))
     assert not ok and "kaboom" in msg
+
+
+# --- unexpected backend errors still report (not just the narrow tuple) -----
+
+# (module, patch_load_rgba, compute_attr, worker_factory(module, out_path))
+_HARD_FAIL_CASES = [
+    (cz, True, "_colorize_dispatch",
+     lambda m, out: m._ColorizeWorker("in.png", "heuristic:sepia", 0.5, out)),
+    (dn, True, "onnx_denoise",
+     lambda m, out: m._DenoiseWorker("in.png", "some_model", 0.5, None, out)),
+    (db, True, "wiener_deblur",
+     lambda m, out: m._DeblurWorker("in.png", ("wiener", "gaussian"), 0.5, object(), out)),
+    (sr, True, "smart_resize",
+     lambda m, out: m._SmartResizeWorker("in.png", object(), out)),
+    (st, True, "stylise",
+     lambda m, out: m._StyleTransferWorker("in.png", object(), out)),
+    (npr, True, "apply_npr_filter",
+     lambda m, out: m._NPRFilterWorker("in.png", object(), out)),
+    (pm, True, "_extract_subject_mask",
+     lambda m, out: m._PortraitWorker("in.png", object(), out)),
+    (orm, False, "remove_object",
+     lambda m, out: m._RemoveWorker(_ARR.copy(), np.zeros((3, 3), np.uint8), out)),
+    (orm, False, "sam_mask",
+     lambda m, _out: m._SamMaskWorker(_ARR.copy(), (1, 1), "enc", "dec")),
+    (op, True, "outpaint",
+     lambda m, out: m._OutpaintWorker("in.png", 10, out)),
+]
+
+
+@pytest.mark.parametrize("module, patch_load, compute_attr, factory", _HARD_FAIL_CASES)
+def test_worker_reports_unexpected_error(
+    module, patch_load, compute_attr, factory, qapp, tmp_path, monkeypatch,
+):
+    """Regression: each worker caught only (ImportError, OSError, ValueError
+    [, RuntimeError]); an ORT/cv2/PIL exception outside that tuple escaped
+    run(), killing the thread with done() never emitted — the dialog then hung
+    with a permanently dead OK button. run() must report every failure."""
+    if patch_load:
+        monkeypatch.setattr(module, "_load_rgba", lambda _p: _ARR.copy())
+    monkeypatch.setattr(module, compute_attr, _boom_hard)
+    ok, msg = _capture(factory(module, str(tmp_path / "x.png")))
+    assert ok is False
+    assert "unexpected backend failure" in str(msg)
+
+
+def test_cloud_share_worker_reports_unexpected_error(qapp, monkeypatch):
+    """cloud_share's single-path catch missed http.client exceptions and its
+    batch path was unwrapped entirely — a provider error left the spinner
+    hung. Any uploader failure must now report."""
+    from cloud_share import cloud_share_plugin as cs
+    monkeypatch.setattr(
+        cs._UploadWorker, "_uploader", lambda _self: _boom_hard,
+    )
+    worker = cs._UploadWorker("imgur", ["a.png"], {"client_id": "x"})
+    ok, msg = _capture(worker)
+    assert ok is False
+    assert "unexpected backend failure" in str(msg)
+
+
+def test_cloud_share_worker_reports_batch_error(qapp, monkeypatch):
+    from cloud_share import cloud_share_plugin as cs
+    monkeypatch.setattr(cs, "upload_batch", _boom_hard)
+    monkeypatch.setattr(
+        cs._UploadWorker, "_uploader", lambda _self: (lambda _p: "link"),
+    )
+    worker = cs._UploadWorker("imgur", ["a.png", "b.png"], {"client_id": "x"})
+    ok, msg = _capture(worker)
+    assert ok is False
+    assert "unexpected backend failure" in str(msg)
 
 
 # --- every dialog waits its worker on close --------------------------------

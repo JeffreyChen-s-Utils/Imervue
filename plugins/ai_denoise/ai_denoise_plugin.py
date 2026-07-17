@@ -318,7 +318,12 @@ class _DenoiseWorker(QThread):
             else:
                 out_arr = onnx_denoise(arr, self._method, blend=self._blend)
             Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
-        except (ImportError, OSError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
+            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
+            # InvalidArgument, cv2.error, DecompressionBombError) that are not
+            # in the narrow tuple; letting them escape kills the thread with
+            # ``done`` never emitted, so the dialog hangs with a dead OK button.
+            logger.exception("denoise worker failed: %s", exc)
             self.done.emit(False, str(exc))
             return
         self.done.emit(True, self._out_path)

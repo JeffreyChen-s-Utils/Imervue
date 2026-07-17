@@ -327,7 +327,12 @@ class _RemoveWorker(QThread):
             else:
                 result = remove_object(self._arr, self._mask)
             Image.fromarray(result, mode="RGBA").save(self._out_path)
-        except (ImportError, OSError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
+            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
+            # InvalidArgument, cv2.error, DecompressionBombError) that are not
+            # in the narrow tuple; letting them escape kills the thread with
+            # ``done`` never emitted, so the dialog hangs with a dead OK button.
+            logger.exception("object-remove worker failed: %s", exc)
             self.done.emit(False, str(exc))
             return
         self.done.emit(True, self._out_path)
@@ -349,7 +354,11 @@ class _SamMaskWorker(QThread):
     def run(self) -> None:  # pragma: no cover - background thread
         try:
             mask = sam_mask(self._arr, [self._coord], [1], self._encoder, self._decoder)
-        except (ImportError, OSError, ValueError, RuntimeError) as exc:
+        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
+            # SAM's ONNX encoder/decoder raise ORT Exception subclasses outside
+            # the narrow tuple; letting them escape kills the thread with
+            # ``done`` never emitted, so the mask request never resolves.
+            logger.exception("SAM mask worker failed: %s", exc)
             self.done.emit(False, str(exc))
             return
         self.done.emit(True, mask)
