@@ -85,6 +85,21 @@ class TestParse:
         with pytest.raises(ValueError):
             lut_mod.parse_cube(path)
 
+    def test_size_directive_without_value_raises_valueerror(self, tmp_path):
+        """Regression: a truncated header (``LUT_3D_SIZE`` with no number)
+        raised IndexError, which escaped the recipe/layer callers'
+        ``except (OSError, ValueError)`` and crashed the develop render.
+        It must raise ValueError per the documented contract."""
+        path = _write(tmp_path, "trunc.cube", "LUT_3D_SIZE\n0 0 0\n")
+        with pytest.raises(ValueError):
+            lut_mod.parse_cube(path)
+
+    def test_domain_directive_with_too_few_values_raises_valueerror(self, tmp_path):
+        body = "LUT_3D_SIZE 2\nDOMAIN_MIN 0.0 0.0\n" + "0 0 0\n" * 8
+        path = _write(tmp_path, "domain.cube", body)
+        with pytest.raises(ValueError):
+            lut_mod.parse_cube(path)
+
 
 class TestApply:
     def test_identity_lut_leaves_pixels_unchanged(self, tmp_path):

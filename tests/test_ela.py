@@ -37,3 +37,18 @@ def test_quality_clamped():
 def test_bad_shape_raises():
     with pytest.raises(ValueError):
         error_level_analysis(np.zeros((8, 8), dtype=np.uint8))
+
+
+def test_large_scale_does_not_wrap_to_black():
+    """Regression: diff*scale computed in int16 overflowed for scale >= 129,
+    wrapping the strongest tamper signal to a negative value that clipped to
+    black. A large scale must monotonically brighten, never darken."""
+    # A hard edge between two blocks produces real JPEG error at the seam.
+    arr = np.zeros((32, 32, 4), dtype=np.uint8)
+    arr[..., 3] = 255
+    arr[:, 16:, :3] = 255
+    low = error_level_analysis(arr, quality=70, scale=20)
+    high = error_level_analysis(arr, quality=70, scale=200)
+    # More amplification can only brighten (or saturate) the error, never
+    # produce a darker maximum than a smaller scale did.
+    assert int(high[..., :3].max()) >= int(low[..., :3].max())

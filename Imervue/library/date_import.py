@@ -7,10 +7,13 @@ resolution) are pure and unit-tested; the orchestrator copies/moves the files.
 """
 from __future__ import annotations
 
+import logging
 import shutil
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger("Imervue.date_import")
 
 _EXIF_DATETIME = "%Y:%m:%d %H:%M:%S"
 _DEFAULT_PATTERN = "%Y/%m"
@@ -37,8 +40,9 @@ def plan_import(
 ) -> list[tuple[str, str]]:
     """Map ``(src, capture_date)`` to ``(src, dest)`` under ``dest_root/YYYY/MM``.
 
-    In-batch destination collisions get a ``_N`` suffix so two same-named files
-    from the same month do not overwrite each other.
+    Both in-batch and on-disk destination collisions get a ``_N`` suffix so a
+    same-named file — whether another item in this batch or one already sitting
+    in the target folder from a previous import — is never overwritten.
     """
     root = Path(dest_root)
     used: set[str] = set()
@@ -48,7 +52,7 @@ def plan_import(
         name = Path(src).name
         dest = folder / name
         counter = 1
-        while str(dest).lower() in used:
+        while str(dest).lower() in used or dest.exists():
             dest = folder / f"{Path(name).stem}_{counter}{Path(name).suffix}"
             counter += 1
         used.add(str(dest).lower())
@@ -82,10 +86,16 @@ def import_by_date(
             items.append((path, when))
     handled = 0
     for src, dest in plan_import(items, dest_root, pattern):
-        Path(dest).parent.mkdir(parents=True, exist_ok=True)
-        if move:
-            shutil.move(src, dest)
-        else:
-            shutil.copy2(src, dest)
+        try:
+            Path(dest).parent.mkdir(parents=True, exist_ok=True)
+            if move:
+                shutil.move(src, dest)
+            else:
+                shutil.copy2(src, dest)
+        except OSError as exc:
+            # One unreadable source / full disk / locked file must not abort
+            # the whole import — skip it and keep going so the rest land.
+            logger.warning("Failed to import %s -> %s: %s", src, dest, exc)
+            continue
         handled += 1
     return handled

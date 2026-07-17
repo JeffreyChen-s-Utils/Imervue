@@ -45,23 +45,51 @@ class _CubeHeader:
     domain_max: list[float] = field(default_factory=lambda: [1.0, 1.0, 1.0])
 
 
+def _parse_size_token(line: str) -> int:
+    """Return the integer argument of a ``LUT_*_SIZE`` directive.
+
+    A directive with no argument (a truncated / hand-edited file) would
+    otherwise raise ``IndexError`` from ``split()[1]`` and escape the
+    documented ``ValueError`` contract — and the recipe / layer callers'
+    ``except (OSError, ValueError)`` — crashing the whole develop render.
+    """
+    parts = line.split()
+    if len(parts) < 2:
+        raise ValueError(f"LUT size directive missing its value: {line!r}")
+    try:
+        return int(parts[1])
+    except ValueError as err:
+        raise ValueError(f"bad LUT size value: {line!r}") from err
+
+
+def _parse_domain_token(line: str) -> list[float]:
+    """Return the three floats of a ``DOMAIN_MIN`` / ``DOMAIN_MAX`` directive."""
+    parts = line.split()[1:4]
+    if len(parts) < 3:
+        raise ValueError(f"DOMAIN directive needs three values: {line!r}")
+    try:
+        return [float(x) for x in parts]
+    except ValueError as err:
+        raise ValueError(f"bad DOMAIN value: {line!r}") from err
+
+
 def _apply_header_directive(line: str, upper: str, header: _CubeHeader) -> bool:
     """Apply a header directive to *header*; return True if the line was handled."""
     if upper.startswith("TITLE"):
         return True
     if upper.startswith("LUT_3D_SIZE"):
-        header.size = int(line.split()[1])
+        header.size = _parse_size_token(line)
         header.is_3d = True
         return True
     if upper.startswith("LUT_1D_SIZE"):
-        header.size = int(line.split()[1])
+        header.size = _parse_size_token(line)
         header.is_3d = False
         return True
     if upper.startswith("DOMAIN_MIN"):
-        header.domain_min = [float(x) for x in line.split()[1:4]]
+        header.domain_min = _parse_domain_token(line)
         return True
     if upper.startswith("DOMAIN_MAX"):
-        header.domain_max = [float(x) for x in line.split()[1:4]]
+        header.domain_max = _parse_domain_token(line)
         return True
     return False
 

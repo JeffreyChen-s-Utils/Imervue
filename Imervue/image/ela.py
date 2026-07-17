@@ -43,7 +43,10 @@ def error_level_analysis(
         baseline = np.asarray(recompressed.convert("RGB"), dtype=np.int16)
 
     diff = np.abs(rgb.astype(np.int16) - baseline)
-    amplified = np.clip(diff * scale, 0, 255).astype(np.uint8)
+    # Amplify in int32: diff (0..255) * scale overflows int16 once scale >= 129
+    # (255*129 > 32767), wrapping the strongest tamper signal to a negative
+    # value that then clips to black — the exact opposite of the intent.
+    amplified = np.clip(diff.astype(np.int32) * scale, 0, 255).astype(np.uint8)
     out = np.empty((*rgb.shape[:2], _RGBA_CHANNELS), dtype=np.uint8)
     out[..., :3] = amplified
     out[..., 3] = _OPAQUE

@@ -35,6 +35,11 @@ _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
 # Optional-backend output formats, routed through save_formats (HEIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
+# Ceiling on any generated output buffer. The server runs synchronously with
+# no per-request memory limit and does no JSON-schema validation of arguments,
+# so an unclamped 50000x50000 target would try to allocate ~10 GB and block
+# every other request. 100 MP comfortably covers legitimate large exports.
+_MAX_OUTPUT_PIXELS = 100_000_000
 _RGB_MAX = 255
 _DEFAULT_WATERMARK_COLOR = (_RGB_MAX, _RGB_MAX, _RGB_MAX)
 _DEFAULT_FRAME_TEXT_COLOR = (40, 40, 40)
@@ -194,12 +199,16 @@ def convert_format(
         normalised = "jpeg" if fmt in {"jpg", "jpeg"} else fmt
         if normalised in {"jpeg", "webp"}:
             save_kwargs["quality"] = max(1, min(100, int(quality)))
-        # JPEG can't carry alpha — convert to RGB so a PNG-with-alpha
-        # source doesn't fail mid-save. Keep the converted handle as a
-        # separate name so we don't clobber the ``with`` binding.
-        to_save = opened.convert("RGB") if (
-            normalised == "jpeg" and opened.mode in {"RGBA", "LA"}
-        ) else opened
+        # JPEG / BMP can't carry alpha, and JPEG also can't write palette
+        # ("P") or 1-bit modes — a GIF or paletted PNG source would raise
+        # "cannot write mode P as JPEG" mid-save. Flatten anything that
+        # isn't already a directly-writable RGB/greyscale buffer, mirroring
+        # _save_image_to. Keep the converted handle under a separate name so
+        # we don't clobber the ``with`` binding.
+        needs_flatten = fmt in _NO_ALPHA_FORMATS and opened.mode not in {
+            "RGB", "L",
+        }
+        to_save = opened.convert("RGB") if needs_flatten else opened
         to_save.save(dst, format=normalised.upper(), **save_kwargs)
     return {
         "source": str(src),
@@ -834,19 +843,28 @@ def build_collage(
         raise ValueError(f"collage supports at most {_COLLAGE_MAX_IMAGES} images")
     dst = _validated_destination(destination)
     rgb = _validated_rgb_triplet(background, _DEFAULT_WATERMARK_COLOR)
+    # Resolve the geometry and reject an oversized montage BEFORE loading any
+    # source (mirrors build_collage's own width/height formula), so a caller
+    # asking for 5000px cells across 50 images can't OOM the server.
+    cols = max(1, int(columns))
+    cell_w, cell_h = max(1, int(cell_width)), max(1, int(cell_height))
+    gap_px, margin_px = max(0, int(gap)), max(0, int(margin))
+    rows = -(-len(sources) // cols)  # ceil division
+    out_w = margin_px * 2 + cols * cell_w + (cols - 1) * gap_px
+    out_h = margin_px * 2 + rows * cell_h + (rows - 1) * gap_px
+    _guard_output_pixels(out_w, out_h)
     total = len(sources)
     arrays = []
     for index, src in enumerate(sources, start=1):
         arrays.append(_load_rgba_array(_validated_file(src)))
         if progress is not None:
             progress.report(index, total=total, message=f"loaded {index}/{total}")
-    cols = max(1, int(columns))
     from PIL import Image
     from Imervue.image.collage import build_collage as _build
     collage = _build(
         arrays, cols,
-        cell=(max(1, int(cell_width)), max(1, int(cell_height))),
-        gap=max(0, int(gap)), margin=max(0, int(margin)), background=rgb,
+        cell=(cell_w, cell_h),
+        gap=gap_px, margin=margin_px, background=rgb,
     )
     with Image.fromarray(collage, "RGBA") as out:
         _save_image_to(dst, out)
@@ -913,6 +931,15 @@ def crop_image(
 # ---------------------------------------------------------------------------
 
 
+def _guard_output_pixels(width: int, height: int) -> None:
+    """Reject absurd output geometry before allocating the buffer."""
+    if width * height > _MAX_OUTPUT_PIXELS:
+        raise ValueError(
+            f"output {width}x{height} exceeds the "
+            f"{_MAX_OUTPUT_PIXELS}-pixel limit",
+        )
+
+
 def _resize_dims(
     src_w: int, src_h: int, width: int | None, height: int | None,
 ) -> tuple[int, int]:
@@ -951,6 +978,7 @@ def resize_image(
     with Image.open(src) as opened:
         src_w, src_h = opened.size
         target = _resize_dims(src_w, src_h, target_w, target_h)
+        _guard_output_pixels(*target)
         _save_image_to(dst, opened.resize(target, Image.Resampling.LANCZOS))
     return {
         "source": str(src),

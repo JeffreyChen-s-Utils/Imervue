@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from defusedxml import ElementTree as DefusedET
+from defusedxml.common import DefusedXmlException
 
 # NOTE: the values below are XML *namespace identifiers*, not network URLs.
 # XML namespaces (W3C REC-xml-names) are opaque strings that uniquely identify
@@ -176,7 +177,12 @@ def load(image_path: str | Path) -> XmpData:
     try:
         tree = DefusedET.parse(str(path))
         root = tree.getroot()
-    except (ET.ParseError, OSError):
+    except (ET.ParseError, OSError, DefusedXmlException):
+        # DefusedXmlException covers a sidecar carrying a DTD / entity /
+        # external reference (defusedxml rejects these to block XXE and
+        # billion-laughs). It subclasses ValueError, so it slipped past the
+        # old (ParseError, OSError) tuple and crashed keyword indexing /
+        # smart-album evaluation instead of degrading to an empty sidecar.
         return XmpData()
     descs = _find_descriptions(root)
     if not descs:
@@ -301,7 +307,13 @@ def save(image_path: str | Path, data: XmpData) -> Path:
 # ---------------------------------------------------------------------------
 
 def snapshot_from_settings(path: str) -> XmpData:
-    """Build an ``XmpData`` from current Imervue settings for ``path``."""
+    """Build an ``XmpData`` from current Imervue settings for ``path``.
+
+    Imervue does not track ``dc:creator`` in its own settings, so the value is
+    carried over from any existing sidecar. Without this, exporting settings
+    would blank a creator an external editor (e.g. Lightroom) had written — and
+    an otherwise-empty snapshot would delete a creator-only sidecar outright.
+    """
     from Imervue.user_settings.color_labels import get_color_label
     from Imervue.user_settings.tags import get_tags_for_image
     from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -321,6 +333,7 @@ def snapshot_from_settings(path: str) -> XmpData:
         description=str(descriptions.get(path, "")),
         keywords=list(get_tags_for_image(path)),
         color_label=get_color_label(path) or "",
+        creator=load(path).creator,
     )
 
 

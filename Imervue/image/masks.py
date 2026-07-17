@@ -147,6 +147,12 @@ def _brush_alpha(shape: tuple[int, int], mask: Mask) -> np.ndarray:
     feather = max(0.0, min(1.0, mask.feather))
     y_idx, x_idx = np.indices((h, w), dtype=np.float32)
     for pt in points[:_MAX_BRUSH_POINTS]:
+        if not isinstance(pt, dict):
+            # A persisted recipe may carry hand-edited / corrupt points
+            # (e.g. ``[x, y, r]`` lists); ``list.get`` raises AttributeError
+            # which escapes the recipe caller's (ValueError, TypeError)
+            # guard. Skip the malformed point instead of crashing render.
+            continue
         px = float(pt.get("x", 0.0))
         py = float(pt.get("y", 0.0))
         radius = max(1.0, float(pt.get("r", 20.0)))
