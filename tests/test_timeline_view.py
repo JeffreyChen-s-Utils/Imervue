@@ -15,9 +15,10 @@ def timeline_model(qapp):
     return TimelineModel
 
 
-def _pixmap():
-    from PySide6.QtGui import QPixmap
-    return QPixmap(96, 96)
+def _image():
+    # The worker now hands the model a QImage (QPixmap is GUI-thread-only).
+    from PySide6.QtGui import QImage
+    return QImage(96, 96, QImage.Format.Format_RGBA8888)
 
 
 def _build(model_cls, path, monkeypatch):
@@ -31,7 +32,7 @@ class TestTimelineThumbRetry:
     def test_success_caches_and_clears_state(self, timeline_model, tmp_path, monkeypatch):
         p = str(tmp_path / "a.png")
         m, _started = _build(timeline_model, p, monkeypatch)
-        m._on_thumb(p, _pixmap(), True)  # noqa: SLF001
+        m._on_thumb(p, _image(), True)  # noqa: SLF001
         _, entry = m._entry_index(p)  # noqa: SLF001
         assert entry.fetched is True
         assert entry.icon is not None
@@ -41,7 +42,7 @@ class TestTimelineThumbRetry:
     def test_transient_failure_requeues_without_caching(self, timeline_model, tmp_path, monkeypatch):
         p = str(tmp_path / "a.png")
         m, started = _build(timeline_model, p, monkeypatch)
-        m._on_thumb(p, _pixmap(), False)  # noqa: SLF001
+        m._on_thumb(p, _image(), False)  # noqa: SLF001
         _, entry = m._entry_index(p)  # noqa: SLF001
         assert entry.fetched is False
         assert m._retry[p] == 1  # noqa: SLF001
@@ -53,9 +54,9 @@ class TestTimelineThumbRetry:
         p = str(tmp_path / "a.png")
         m, _started = _build(timeline_model, p, monkeypatch)
         for _ in range(_MAX_THUMB_RETRIES):
-            m._on_thumb(p, _pixmap(), False)  # noqa: SLF001
+            m._on_thumb(p, _image(), False)  # noqa: SLF001
         assert m._entry_index(p)[1].fetched is False  # noqa: SLF001
-        m._on_thumb(p, _pixmap(), False)  # noqa: SLF001
+        m._on_thumb(p, _image(), False)  # noqa: SLF001
         _, entry = m._entry_index(p)  # noqa: SLF001
         assert entry.fetched is True
         assert p not in m._retry  # noqa: SLF001
@@ -63,5 +64,5 @@ class TestTimelineThumbRetry:
     def test_late_callback_for_removed_path_is_ignored(self, timeline_model, tmp_path, monkeypatch):
         p = str(tmp_path / "a.png")
         m, _started = _build(timeline_model, p, monkeypatch)
-        m._on_thumb(str(tmp_path / "gone.png"), _pixmap(), True)  # noqa: SLF001
+        m._on_thumb(str(tmp_path / "gone.png"), _image(), True)  # noqa: SLF001
         assert m._entry_index(p)[1].fetched is False  # noqa: SLF001

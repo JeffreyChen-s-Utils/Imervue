@@ -20,7 +20,7 @@ from PySide6.QtCore import (
     QAbstractTableModel, QModelIndex, Qt, QSize, QThreadPool, QRunnable,
     Signal, QObject,
 )
-from PySide6.QtGui import QIcon, QPixmap, QColor
+from PySide6.QtGui import QIcon, QImage, QPixmap, QColor
 from PySide6.QtWidgets import (
     QTableView, QHeaderView, QAbstractItemView, QStyledItemDelegate,
 )
@@ -52,10 +52,12 @@ class _RowMeta:
 
 
 class _ThumbWorkerSignals(QObject):
-    # path, pm, w, h, size_kb, mtime, ok. ``ok`` is False when the stat/decode
-    # failed (transient read race), so the model can retry instead of caching a
-    # permanent placeholder or stranding the row in the in-flight set.
-    done = Signal(str, QPixmap, int, int, float, float, bool)
+    # path, img, w, h, size_kb, mtime, ok. Carries a QImage (safe to build on a
+    # worker thread) — NOT a QPixmap, which is a QPaintDevice and undefined to
+    # create off the GUI thread. The receiving slot converts it. ``ok`` is False
+    # when the stat/decode failed (transient read race), so the model can retry
+    # instead of caching a permanent placeholder or stranding the in-flight row.
+    done = Signal(str, QImage, int, int, float, float, bool)
 
 
 class _ThumbWorker(QRunnable):
@@ -76,18 +78,18 @@ class _ThumbWorker(QRunnable):
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
                 im = src.convert("RGBA")
                 data = im.tobytes("raw", "RGBA")
-                from PySide6.QtGui import QImage
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
-                pm = QPixmap.fromImage(qimg.copy())
+                # .copy() detaches from the soon-freed `data` buffer; the GUI
+                # thread turns this QImage into a QPixmap in _on_fetched.
+                img = qimg.copy()
         except Exception:  # noqa: BLE001 — stat/PIL raise many types; any failure
             # must still emit so the model clears the in-flight marker and can
-            # retry rather than leaving the row stuck forever.
-            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
-            pm.fill(QColor(40, 40, 40))
-            self.signals.done.emit(self.path, pm, 0, 0, 0.0, 0.0, False)
+            # retry rather than leaving the row stuck forever. A null QImage tells
+            # the slot to build the placeholder pixmap on the GUI thread.
+            self.signals.done.emit(self.path, QImage(), 0, 0, 0.0, 0.0, False)
             return
 
-        self.signals.done.emit(self.path, pm, w, h, size_kb, mtime, True)
+        self.signals.done.emit(self.path, img, w, h, size_kb, mtime, True)
 
 
 class ImageListModel(QAbstractTableModel):
@@ -265,7 +267,22 @@ class ImageListModel(QAbstractTableModel):
         reverse = order == Qt.SortOrder.DescendingOrder
 
         self.layoutAboutToBeChanged.emit()
+        old_indexes = self.persistentIndexList()
+        rows_before = self._rows[:]
         self._rows.sort(key=key, reverse=reverse)
+        # Remap persistent indexes (selection / current) to their rows' new
+        # positions — without this the layoutChanged contract leaves them mapped
+        # to the old rows, so after a header sort the selection points at the
+        # wrong image. Rows keep their identity, so track by object id.
+        new_row_of = {id(r): i for i, r in enumerate(self._rows)}
+        from_indexes, to_indexes = [], []
+        for idx in old_indexes:
+            if not idx.isValid() or not 0 <= idx.row() < len(rows_before):
+                continue
+            from_indexes.append(idx)
+            to_indexes.append(
+                self.index(new_row_of[id(rows_before[idx.row()])], idx.column()))
+        self.changePersistentIndexList(from_indexes, to_indexes)
         self.layoutChanged.emit()
 
     # --- Public helpers ---
@@ -323,6 +340,17 @@ class ImageListModel(QAbstractTableModel):
         return True
 
     @staticmethod
+    def _pixmap_from_image(img: QImage) -> QPixmap:
+        """Build the thumbnail QPixmap on the GUI thread (QPixmap is a
+        QPaintDevice, so it must not be created on the worker thread). A null
+        image — the worker's failure marker — yields the dark placeholder."""
+        if img.isNull():
+            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
+            pm.fill(QColor(40, 40, 40))
+            return pm
+        return QPixmap.fromImage(img)
+
+    @staticmethod
     def _apply_row_meta(row: _RowMeta, pm: QPixmap, w: int, h: int,
                         size_kb: float, mtime: float, ok: bool) -> None:
         row.missing = not ok and not Path(row.path).exists()
@@ -333,7 +361,7 @@ class ImageListModel(QAbstractTableModel):
         row.icon = QIcon(pm)
         row.fetched = True
 
-    def _on_fetched(self, path: str, pm: QPixmap, w: int, h: int,
+    def _on_fetched(self, path: str, img: QImage, w: int, h: int,
                     size_kb: float, mtime: float, ok: bool) -> None:
         self._in_flight.discard(path)
         found = self._row_index(path)
@@ -346,7 +374,7 @@ class ImageListModel(QAbstractTableModel):
             self._ensure_fetched(row)
             return
         self._retry.pop(path, None)
-        self._apply_row_meta(row, pm, w, h, size_kb, mtime, ok)
+        self._apply_row_meta(row, self._pixmap_from_image(img), w, h, size_kb, mtime, ok)
         self.dataChanged.emit(
             self.index(i, 0), self.index(i, self.COL_COUNT - 1),
             [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.DisplayRole],

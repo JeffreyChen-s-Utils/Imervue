@@ -109,6 +109,32 @@ class TestImageListModel:
         finally:
             user_setting_dict.pop("image_ratings", None)
 
+    def test_sort_remaps_persistent_indexes(self, list_mod, tmp_path):
+        """A header sort must carry selection / current (persistent indexes)
+        with the rows they point at, not leave them mapped to the old row."""
+        from PySide6.QtCore import QPersistentModelIndex
+        model_cls, _ = list_mod
+        z = str(tmp_path / "z.png")
+        a = str(tmp_path / "a.png")
+        m = model_cls([z, a])                       # rows: [z, a]
+        tracked = QPersistentModelIndex(m.index(0, model_cls.COL_NAME))
+        assert m.path_at(tracked.row()) == z
+
+        m.sort(model_cls.COL_NAME, Qt.SortOrder.AscendingOrder)   # rows: [a, z]
+
+        assert m.path_at(1) == z
+        assert tracked.row() == 1                   # persistent index followed z
+        assert m.path_at(tracked.row()) == z
+
+    def test_pixmap_from_image_null_yields_placeholder(self, list_mod):
+        from PySide6.QtGui import QImage
+        model_cls, _ = list_mod
+        placeholder = model_cls._pixmap_from_image(QImage())  # noqa: SLF001
+        assert not placeholder.isNull()             # dark placeholder, not empty
+        real = model_cls._pixmap_from_image(          # noqa: SLF001
+            QImage(10, 10, QImage.Format.Format_RGBA8888))
+        assert (real.width(), real.height()) == (10, 10)
+
 
 class TestImageListViewBasics:
     def test_view_builds_with_empty_model(self, list_mod, qapp):
@@ -246,15 +272,16 @@ class TestThumbFetchRetry:
         return m, started
 
     @staticmethod
-    def _pixmap():
-        from PySide6.QtGui import QPixmap
-        return QPixmap(48, 48)
+    def _image():
+        # The worker now hands the model a QImage (QPixmap is GUI-thread-only).
+        from PySide6.QtGui import QImage
+        return QImage(48, 48, QImage.Format.Format_RGBA8888)
 
     def test_success_populates_row_and_clears_state(self, list_mod, tmp_path, monkeypatch):
         model_cls, _ = list_mod
         p = str(tmp_path / "a.png")
         m, _started = self._model(model_cls, p, monkeypatch)
-        m._on_fetched(p, self._pixmap(), 100, 80, 12.5, 1.0, True)  # noqa: SLF001
+        m._on_fetched(p, self._image(), 100, 80, 12.5, 1.0, True)  # noqa: SLF001
         _, row = m._row_index(p)  # noqa: SLF001
         assert row.fetched is True
         assert (row.width, row.height) == (100, 80)
@@ -265,7 +292,7 @@ class TestThumbFetchRetry:
         model_cls, _ = list_mod
         p = str(tmp_path / "a.png")
         m, started = self._model(model_cls, p, monkeypatch)
-        m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+        m._on_fetched(p, self._image(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
         _, row = m._row_index(p)  # noqa: SLF001
         assert row.fetched is False           # not cached as a permanent blank
         assert m._retry[p] == 1               # noqa: SLF001
@@ -278,10 +305,10 @@ class TestThumbFetchRetry:
         p = str(tmp_path / "a.png")
         m, _started = self._model(model_cls, p, monkeypatch)
         for _ in range(_MAX_THUMB_RETRIES):
-            m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+            m._on_fetched(p, self._image(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
         assert m._row_index(p)[1].fetched is False  # noqa: SLF001
         # One failure past the cap caches the placeholder so it stops retrying.
-        m._on_fetched(p, self._pixmap(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
+        m._on_fetched(p, self._image(), 0, 0, 0.0, 0.0, False)  # noqa: SLF001
         _, row = m._row_index(p)  # noqa: SLF001
         assert row.fetched is True
         assert row.width is None and row.size_kb is None
@@ -292,6 +319,6 @@ class TestThumbFetchRetry:
         p = str(tmp_path / "a.png")
         m, _started = self._model(model_cls, p, monkeypatch)
         # A callback arriving after the folder changed must be a safe no-op.
-        m._on_fetched(str(tmp_path / "gone.png"), self._pixmap(),  # noqa: SLF001
+        m._on_fetched(str(tmp_path / "gone.png"), self._image(),  # noqa: SLF001
                       1, 1, 1.0, 1.0, True)
         assert m._row_index(p)[1].fetched is False  # noqa: SLF001

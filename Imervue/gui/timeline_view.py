@@ -42,9 +42,12 @@ class _TimelineEntry:
 
 
 class _WorkerSignals(QObject):
-    # path, pm, ok. ``ok`` is False when the decode failed (transient read race)
-    # so the model can retry instead of caching a permanent placeholder.
-    done = Signal(str, QPixmap, bool)
+    # path, img, ok. Carries a QImage (safe to build on a worker thread) — NOT a
+    # QPixmap, which is a QPaintDevice and undefined to create off the GUI
+    # thread; the receiving slot converts it. ``ok`` is False when the decode
+    # failed (transient read race) so the model can retry instead of caching a
+    # permanent placeholder.
+    done = Signal(str, QImage, bool)
 
 
 class _TimelineThumbWorker(QRunnable):
@@ -60,14 +63,15 @@ class _TimelineThumbWorker(QRunnable):
                 im = src.convert("RGBA")
                 data = im.tobytes("raw", "RGBA")
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
-                pm = QPixmap.fromImage(qimg.copy())
+                # .copy() detaches from the soon-freed `data` buffer; the GUI
+                # thread turns this QImage into a QPixmap in _on_thumb.
+                img = qimg.copy()
         except Exception:  # noqa: BLE001 — any decode failure must still emit so
-            # the model clears the in-flight marker and can retry the entry.
-            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
-            pm.fill(QColor(40, 40, 40))
-            self.signals.done.emit(self.path, pm, False)
+            # the model clears the in-flight marker and can retry the entry. A
+            # null QImage tells the slot to build the placeholder on the GUI thread.
+            self.signals.done.emit(self.path, QImage(), False)
             return
-        self.signals.done.emit(self.path, pm, True)
+        self.signals.done.emit(self.path, img, True)
 
 
 def _extract_date(path: str) -> datetime:
@@ -187,7 +191,18 @@ class TimelineModel(QAbstractListModel):
         self._retry[path] = count + 1
         return True
 
-    def _on_thumb(self, path: str, pm: QPixmap, ok: bool) -> None:
+    @staticmethod
+    def _pixmap_from_image(img: QImage) -> QPixmap:
+        """Build the thumbnail QPixmap on the GUI thread (QPixmap is a
+        QPaintDevice, so it must not be created on the worker thread). A null
+        image — the worker's failure marker — yields the dark placeholder."""
+        if img.isNull():
+            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
+            pm.fill(QColor(40, 40, 40))
+            return pm
+        return QPixmap.fromImage(img)
+
+    def _on_thumb(self, path: str, img: QImage, ok: bool) -> None:
         self._in_flight.discard(path)
         found = self._entry_index(path)
         if found is None:
@@ -199,7 +214,7 @@ class TimelineModel(QAbstractListModel):
             self._ensure_fetched(entry)
             return
         self._retry.pop(path, None)
-        entry.icon = QIcon(pm)
+        entry.icon = QIcon(self._pixmap_from_image(img))
         entry.fetched = True
         idx = self.index(i)
         self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DecorationRole])
