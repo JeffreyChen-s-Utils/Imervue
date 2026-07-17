@@ -166,7 +166,7 @@ def test_posterize_levels_are_evenly_spaced_and_span_full_range():
         values = _distinct_channel_values(levels)
         assert len(values) == levels
         assert values[0] == 0 and values[-1] == 255
-        gaps = [b - a for a, b in zip(values, values[1:])]
+        gaps = [b - a for a, b in zip(values, values[1:], strict=False)]
         assert max(gaps) - min(gaps) <= 1   # even to within rounding
 
 
