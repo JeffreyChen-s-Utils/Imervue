@@ -144,6 +144,32 @@ def test_posterize_rejects_non_rgba():
         apply_posterize(arr, PosterizeOptions(enabled=True))
 
 
+def _distinct_channel_values(levels: int) -> list[int]:
+    base = np.zeros((1, 256, 4), dtype=np.uint8)
+    base[..., 0] = np.arange(256, dtype=np.uint8)
+    base[..., 3] = 255
+    out = apply_posterize(base, PosterizeOptions(enabled=True, levels=levels))
+    return sorted(set(np.unique(out[..., 0]).tolist()))
+
+
+def test_posterize_non_divisor_levels_gives_exactly_that_many():
+    """Regression: ``levels`` that don't divide 256 used to yield ``levels + 1``
+    bands because ``256 // levels`` truncated. 3 levels must give exactly 3."""
+    assert _distinct_channel_values(3) == [0, 128, 255]
+    assert len(_distinct_channel_values(5)) == 5
+    assert len(_distinct_channel_values(7)) == 7
+
+
+def test_posterize_levels_are_evenly_spaced_and_span_full_range():
+    """Each level is one step of 255/(levels-1) apart, endpoints included."""
+    for levels in (3, 4, 6, 9):
+        values = _distinct_channel_values(levels)
+        assert len(values) == levels
+        assert values[0] == 0 and values[-1] == 255
+        gaps = [b - a for a, b in zip(values, values[1:])]
+        assert max(gaps) - min(gaps) <= 1   # even to within rounding
+
+
 # ---------------------------------------------------------------------------
 # Recipe integration
 # ---------------------------------------------------------------------------

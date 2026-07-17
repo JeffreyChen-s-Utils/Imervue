@@ -9,6 +9,7 @@ inputs pads to the canvas with black borders rather than stretching.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -111,6 +112,7 @@ def generate_slideshow_mp4(
     fade_frames = max(0, int(round(options.fps * options.fade_seconds)))
 
     prev_canvas: np.ndarray | None = None
+    slides_written = 0
     try:
         for path in images:
             rgb = _load_as_rgb(path)
@@ -122,7 +124,17 @@ def generate_slideshow_mp4(
                             options.transition)
             _write_slide(writer, canvas, hold_frames)
             prev_canvas = canvas
+            slides_written += 1
     finally:
         writer.close()
+    if slides_written == 0:
+        # Every image failed to decode: writer.close() just finalised a valid
+        # container with zero frames — an unplayable file that used to be
+        # returned as if the export succeeded. Remove it and fail loudly.
+        with contextlib.suppress(OSError):
+            out.unlink()
+        raise RuntimeError(
+            "generate_slideshow_mp4 could not decode any of the given images"
+        )
     logger.info("Slideshow written: %s", out)
     return out
