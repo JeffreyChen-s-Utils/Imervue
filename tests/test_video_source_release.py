@@ -36,3 +36,22 @@ def test_release_is_safe_when_reader_close_raises():
 
     fake = SimpleNamespace(_reader=SimpleNamespace(close=boom), _worker=None)
     VideoImportDialog._release(fake)   # suppressed, must not raise
+
+
+def test_release_nulls_worker_and_reader():
+    fake = SimpleNamespace(
+        _reader=SimpleNamespace(close=lambda: None), _worker=None)
+    VideoImportDialog._release(fake)
+    assert fake._worker is None
+    assert fake._reader is None
+
+
+def test_release_is_idempotent_frees_reader_once():
+    """finished + closeEvent can both fire _release; the ffmpeg reader must be
+    closed exactly once, not double-closed."""
+    closed: list = []
+    fake = SimpleNamespace(
+        _reader=SimpleNamespace(close=lambda: closed.append(True)), _worker=None)
+    VideoImportDialog._release(fake)
+    VideoImportDialog._release(fake)   # reader already released -> no-op
+    assert closed == [True]

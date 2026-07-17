@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui._apply_save import finalize_worker
 from Imervue.image.video_frames import is_video_path
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -146,6 +147,11 @@ class VideoImportDialog(QDialog):
         self._debounce.setSingleShot(True)
         self._debounce.timeout.connect(self._render_preview)
         self._slider.valueChanged.connect(self._on_slider_moved)
+        # accept()/reject() (and Escape) fire ``finished`` but NOT a QCloseEvent,
+        # so releasing the ffmpeg reader only in closeEvent leaked the subprocess
+        # on every successful extract. Release on ``finished`` too; _release is
+        # idempotent so the closeEvent path double-calling it is harmless.
+        self.finished.connect(self._release)
 
         self._build_layout(lang)
         self._update_frame_label()
@@ -160,10 +166,13 @@ class VideoImportDialog(QDialog):
         worker = getattr(self, "_worker", None)
         if worker is not None and worker.isRunning():
             worker.wait()
+        self._worker = None
         reader = getattr(self, "_reader", None)
         if reader is not None:
             with contextlib.suppress(Exception):
                 reader.close()
+            # Null it so the finished + closeEvent double-call frees only once.
+            self._reader = None
 
     def closeEvent(self, event):  # noqa: N802 - Qt naming
         self._release()
@@ -268,7 +277,7 @@ class VideoImportDialog(QDialog):
         self._worker.start()
 
     def _on_extract_done(self, ok: bool, message: str, out_dir: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        finalize_worker(self)
         if not ok:
             self._notify_failure(RuntimeError(message))
             return
