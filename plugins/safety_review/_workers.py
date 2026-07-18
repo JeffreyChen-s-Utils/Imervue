@@ -21,6 +21,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from Imervue.plugin.subprocess_util import terminate_process as _terminate_process
 from safety_review._constants import (
     MIN_CONFIDENCE,
     MODE_ANIME,
@@ -304,20 +305,6 @@ class _BatchWorker(QThread):
 
 def _categories_arg(categories) -> str:
     return ",".join(sorted(categories)) if categories else ""
-
-
-def _terminate_process(proc) -> None:
-    """Kill *proc* if it's still running so a cancelled subprocess worker's
-    QThread can finish (its stdout closes) instead of blocking wait() forever."""
-    if proc is None or proc.poll() is not None:
-        return
-    with contextlib.suppress(Exception):
-        proc.terminate()
-        try:
-            proc.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
 
 
 class _SubprocessSingleWorker(QThread):

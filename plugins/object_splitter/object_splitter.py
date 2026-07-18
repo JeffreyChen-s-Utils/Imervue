@@ -5,7 +5,6 @@ and save each object as a separate PNG with transparency.
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 import subprocess
@@ -24,6 +23,7 @@ from PySide6.QtWidgets import (
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.model_dir import ensure_model_dir
+from Imervue.plugin.subprocess_util import terminate_process as _terminate_process
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
@@ -87,20 +87,6 @@ def _parse_step_line(payload: str) -> tuple[int, int, str] | None:
         return int(parts[0]), int(parts[1]), parts[2]
     except ValueError:
         return None
-
-
-def _terminate_process(proc) -> None:
-    """Kill *proc* if it is still running, so an error or early return never
-    leaves the rembg child orphaned (it is spawned detached, no window)."""
-    if proc is None or proc.poll() is not None:
-        return
-    with contextlib.suppress(Exception):
-        proc.terminate()
-        try:
-            proc.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
 
 
 class _SubprocessWorker(QThread):
