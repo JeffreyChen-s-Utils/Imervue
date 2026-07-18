@@ -167,3 +167,30 @@ def test_dialog_smoke(qapp, tmp_path):
         assert dialog._is_webdav() is False
     finally:
         dialog.deleteLater()
+
+
+def test_upload_batch_stops_early_when_cancelled():
+    # should_cancel is checked before each item; once it trips the batch stops
+    # and returns only what has already been uploaded.
+    calls: list[str] = []
+
+    def uploader(path):
+        calls.append(path)
+        return f"link:{path}"
+
+    results = uploaders.upload_batch(
+        uploader, ["a", "b", "c"], should_cancel=lambda: len(calls) >= 1)
+    assert results == [("a", "link:a")]     # stopped before "b"
+    assert calls == ["a"]
+
+
+def test_upload_batch_cancelled_before_first_item_uploads_nothing():
+    results = uploaders.upload_batch(
+        lambda p: "x", ["a", "b"], should_cancel=lambda: True)
+    assert results == []
+
+
+def test_dialog_uses_worker_host_mixin():
+    from cloud_share.cloud_share_plugin import CloudShareDialog
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    assert issubclass(CloudShareDialog, WorkerHostMixin)

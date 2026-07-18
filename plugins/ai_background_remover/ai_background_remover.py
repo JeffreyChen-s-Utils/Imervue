@@ -6,7 +6,6 @@ Dependencies are auto-installed on first use via the main app's pip installer.
 """
 from __future__ import annotations
 
-import contextlib
 import json
 import logging
 import os
@@ -27,6 +26,7 @@ from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.model_dir import ensure_model_dir
 from Imervue.plugin.subprocess_util import terminate_process
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
@@ -368,42 +368,7 @@ class _BatchRemoveWorker(QThread):
 # \u5c0d\u8a71\u6846
 # ===========================
 
-class _WorkerHostDialog(QDialog):
-    """QDialog that owns a single ``_worker`` QThread and tears it down safely
-    on BOTH Cancel (reject) and window-close.
-
-    Cancel calls ``reject()``, which does NOT deliver a ``closeEvent``, so a
-    dialog that only cleaned up in ``closeEvent`` left the detection thread
-    running and dropped its reference on a 5s wait timeout \u2014 destroying a live
-    QThread and crashing the process (0xC0000409), most visibly on
-    cancel-then-reuse. Overriding both entry points and waiting with no timeout
-    guarantees the thread has finished before its reference is dropped.
-    """
-
-    def _stop_worker(self):
-        worker = getattr(self, "_worker", None)
-        if worker is None:
-            return
-        if worker.isRunning():
-            worker.requestInterruption()
-            stop = getattr(worker, "stop", None)
-            if callable(stop):
-                stop()                       # terminate any child subprocess
-            with contextlib.suppress(RuntimeError, TypeError):
-                worker.disconnect()          # no late signals into a dead dialog
-            worker.wait()                    # no timeout: never drop a live thread
-        self._worker = None
-
-    def reject(self):
-        self._stop_worker()
-        super().reject()
-
-    def closeEvent(self, event):
-        self._stop_worker()
-        super().closeEvent(event)
-
-
-class RemoveBackgroundDialog(_WorkerHostDialog):
+class RemoveBackgroundDialog(WorkerHostMixin, QDialog):
 
     def __init__(self, main_gui: GPUImageView, image_path: str,
                  frozen_env: tuple[str, str] | None = None):
@@ -529,7 +494,7 @@ class RemoveBackgroundDialog(_WorkerHostDialog):
                 self._gui.main_window.toast.info(f"Error: {result}")
 
 
-class BatchRemoveBackgroundDialog(_WorkerHostDialog):
+class BatchRemoveBackgroundDialog(WorkerHostMixin, QDialog):
 
     def __init__(self, main_gui: GPUImageView, paths: list[str],
                  frozen_env: tuple[str, str] | None = None):

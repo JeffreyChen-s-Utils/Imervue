@@ -1,11 +1,9 @@
 """Cancel / teardown safety for the ai_background_remover plugin dialogs.
 
-Cancel (reject) used to bypass the closeEvent-only cleanup and leave the rembg
-QThread running; the closeEvent path itself dropped the reference on a 5s wait
-timeout, destroying a live thread and crashing the process (0xC0000409),
-most visibly on cancel-then-reuse. These pin the corrected stop-worker
-behaviour, the subprocess ``stop()`` terminate, and the batch interruption
-break.
+The dialogs inherit the shared :class:`WorkerHostMixin` (covered by
+``test_worker_host``); these pin the plugin-specific pieces the mixin relies on:
+each subprocess worker's ``stop()`` terminate and the in-process batch worker's
+interruption break.
 """
 from __future__ import annotations
 
@@ -32,64 +30,13 @@ class _FakeProc:
         self.calls.append("wait")
 
 
-class _FakeWorker:
-    def __init__(self, running: bool, has_stop: bool = False):
-        self._running = running
-        self.events: list[str] = []
-        if has_stop:
-            self.stop = lambda: self.events.append("stop")
-
-    def isRunning(self):   # noqa: N802 - Qt API
-        return self._running
-
-    def requestInterruption(self):   # noqa: N802 - Qt API
-        self.events.append("interrupt")
-
-    def disconnect(self):
-        self.events.append("disconnect")
-
-    def wait(self, timeout=None):
-        self.events.append("wait")
-
-
-class TestStopWorker:
-    def test_interrupts_stops_waits_and_nulls_a_running_worker(self):
-        from ai_background_remover.ai_background_remover import _WorkerHostDialog
-        worker = _FakeWorker(running=True, has_stop=True)
-        host = SimpleNamespace(_worker=worker)
-        _WorkerHostDialog._stop_worker(host)
-        # Child terminated (stop) before the thread is waited on, and the ref is
-        # dropped only after wait() — never mid-run.
-        assert worker.events == ["interrupt", "stop", "disconnect", "wait"]
-        assert host._worker is None
-
-    def test_running_worker_without_stop_still_torn_down(self):
-        from ai_background_remover.ai_background_remover import _WorkerHostDialog
-        worker = _FakeWorker(running=True, has_stop=False)
-        host = SimpleNamespace(_worker=worker)
-        _WorkerHostDialog._stop_worker(host)
-        assert worker.events == ["interrupt", "disconnect", "wait"]
-        assert host._worker is None
-
-    def test_idle_worker_just_nulled(self):
-        from ai_background_remover.ai_background_remover import _WorkerHostDialog
-        worker = _FakeWorker(running=False)
-        host = SimpleNamespace(_worker=worker)
-        _WorkerHostDialog._stop_worker(host)
-        assert worker.events == []          # not running -> no wait
-        assert host._worker is None
-
-    def test_no_worker_is_safe(self):
-        from ai_background_remover.ai_background_remover import _WorkerHostDialog
-        host = SimpleNamespace(_worker=None)
-        _WorkerHostDialog._stop_worker(host)
-        assert host._worker is None
-
-    def test_missing_worker_attr_is_safe(self):
-        from ai_background_remover.ai_background_remover import _WorkerHostDialog
-        host = SimpleNamespace()             # no _worker attribute at all
-        _WorkerHostDialog._stop_worker(host)   # must not raise
-        assert getattr(host, "_worker", None) is None
+def test_dialogs_use_the_shared_worker_host_mixin():
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    from ai_background_remover.ai_background_remover import (
+        BatchRemoveBackgroundDialog, RemoveBackgroundDialog,
+    )
+    assert issubclass(RemoveBackgroundDialog, WorkerHostMixin)
+    assert issubclass(BatchRemoveBackgroundDialog, WorkerHostMixin)
 
 
 class TestSubprocessWorkerStop:

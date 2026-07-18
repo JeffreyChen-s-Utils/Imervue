@@ -32,6 +32,7 @@ from cloud_share.uploaders import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -69,8 +70,13 @@ class CloudSharePlugin(ImervuePlugin):
             CloudShareDialog(viewer, selected).exec()
 
 
-class CloudShareDialog(QDialog):
-    """Pick a target + credentials and upload the current image."""
+class CloudShareDialog(WorkerHostMixin, QDialog):
+    """Pick a target + credentials and upload the current image.
+
+    Inherits :class:`WorkerHostMixin` so Cancel (reject) and window-close both
+    join the upload thread before it is dropped — a live QThread destroyed on
+    a mid-upload cancel would abort the process.
+    """
 
     def __init__(self, viewer: GPUImageView, paths: list[str],
                  parent: QWidget | None = None):
@@ -228,7 +234,8 @@ class _UploadWorker(QThread):
             if len(self._paths) == 1:
                 self.done.emit(True, uploader(self._paths[0]))
                 return
-            results = upload_batch(uploader, self._paths)
+            results = upload_batch(
+                uploader, self._paths, should_cancel=self.isInterruptionRequested)
             succeeded = sum(1 for _path, link in results if link)
             self.done.emit(True, f"{succeeded}/{len(results)}")
         except Exception as exc:  # noqa: BLE001 - a worker thread must always report
