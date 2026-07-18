@@ -90,6 +90,31 @@ def compute_visible_tile_paths(view: GPUImageView) -> set[str]:
     return visible
 
 
+def free_tile_textures(view: GPUImageView, paths) -> None:
+    """Free the GPU textures for *paths* and keep the VRAM accounting in sync.
+
+    These frees fire from delete / batch-rename / move / rotate / cache-drop
+    handlers — never inside ``paintGL`` — so a bare ``glDeleteTextures`` runs
+    without a current context and is silently dropped, leaking the texture. Wrap
+    them in the widget's context, and decrement ``_vram_usage`` / drop
+    ``_tile_tex_sizes`` for every freed path so the budget doesn't desync and
+    eventually refuse new uploads (the blank-wall symptom).
+    """
+    handles = []
+    freed_bytes = 0
+    for path in paths:
+        tex = view.tile_textures.pop(path, None)
+        if tex is None:
+            continue
+        handles.append(tex)
+        freed_bytes += view._tile_tex_sizes.pop(path, 0)
+    if not handles:
+        return
+    with view._current_gl_context():
+        glDeleteTextures(handles)
+    view._vram_usage = max(0, view._vram_usage - freed_bytes)
+
+
 def _evict_invisible(view: GPUImageView, visible: set[str]) -> None:  # pragma: no cover - GL delete
     """Delete GPU textures for paths not in ``visible`` until under VRAM cap."""
     # list() required because we mutate the dict inside the loop.
@@ -104,7 +129,10 @@ def _evict_invisible(view: GPUImageView, visible: set[str]) -> None:  # pragma: 
 def delete_all_tile_textures(view: GPUImageView) -> None:  # pragma: no cover - GL delete
     """Free every tile-wall texture and reset the VRAM accounting."""
     if view.tile_textures:
-        glDeleteTextures(list(view.tile_textures.values()))
+        # Runs off paintGL (main-window teardown / mode switch) — free under the
+        # widget's context or glDeleteTextures is silently dropped and leaks.
+        with view._current_gl_context():
+            glDeleteTextures(list(view.tile_textures.values()))
         view.tile_textures.clear()
     view._tile_tex_sizes.clear()
     view._vram_usage = 0

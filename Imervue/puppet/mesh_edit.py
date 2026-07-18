@@ -30,6 +30,16 @@ def find_vertex_at(
     return best_idx
 
 
+def _invalidate_rest_cache(drawable: Drawable) -> None:
+    """Drop runtime's memoised numpy rest-vertex cache after an edit.
+
+    ``runtime._rest_vertices_array`` caches ``drawable._np_rest_vertices`` and
+    never invalidates it, so a vertex edit was composed from the stale cache and
+    stayed invisible on any parameterised rig. Clear it so the next render
+    rebuilds from the mutated vertices."""
+    drawable._np_rest_vertices = None   # noqa: SLF001 — runtime's private cache
+
+
 def move_vertex(
     drawable: Drawable, index: int, x: float, y: float,
 ) -> bool:
@@ -38,6 +48,7 @@ def move_vertex(
     if index < 0 or index >= len(drawable.vertices):
         return False
     drawable.vertices[index] = (float(x), float(y))
+    _invalidate_rest_cache(drawable)
     return True
 
 
@@ -62,6 +73,7 @@ def delete_vertex(drawable: Drawable, index: int) -> bool:
             continue
         new_indices.extend(i - 1 if i > index else i for i in tri)
     drawable.indices = new_indices
+    _invalidate_rest_cache(drawable)
     return True
 
 

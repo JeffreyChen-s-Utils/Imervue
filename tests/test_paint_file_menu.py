@@ -186,9 +186,9 @@ def test_export_pages_cbz_writes_when_project_present(qapp, tmp_path):
     target = tmp_path / "comic.cbz"
     ws = PaintWorkspace()
     try:
-        ws._project = project_from_template(  # noqa: SLF001
+        ws.set_paint_project(project_from_template(
             template_by_name("manga_a5"), page_count=2,
-        )
+        ))
         bridge = ws._file_menu_bridge   # noqa: SLF001
         bridge._pick_save_file = lambda **_: str(target)  # noqa: SLF001
         bridge.export_pages_cbz()

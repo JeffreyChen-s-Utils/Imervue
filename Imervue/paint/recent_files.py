@@ -20,8 +20,6 @@ reference on the workspace.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 RECENT_FILES_KEY = "paint_recent_files"
@@ -63,7 +61,9 @@ def remove(path: str) -> None:
 
 def _load() -> list[str]:
     raw = user_setting_dict.get(RECENT_FILES_KEY) or []
-    if not isinstance(raw, Iterable):
+    # Require a list, not just any Iterable: a corrupt string setting is iterable
+    # and would otherwise be split into one entry per character.
+    if not isinstance(raw, list):
         return []
     out: list[str] = []
     for entry in raw:

@@ -272,7 +272,12 @@ class ToolDispatcher:
             if handled and evt.phase == "press":
                 self._commit_undo()
             return
-        if evt.phase == "press" and handled:
+        # Arm on the first handled press OR move. Gesture tools (gradient,
+        # smudge, move) return handled=False on press and only do their work
+        # on the drag / release, so a press-only arm never fired — their edits
+        # produced no undo snapshot and never marked the tab dirty, so the
+        # work was silently discarded on close.
+        if evt.phase in ("press", "move") and handled:
             self._gesture_pending_commit = True
 
     @property

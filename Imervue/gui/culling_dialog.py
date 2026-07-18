@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QButtonGroup, QMessageBox,
 )
 
+from Imervue.gui._apply_save import finalize_worker
 from Imervue.library import image_index
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -158,7 +159,7 @@ class CullingDialog(QDialog):
         self._worker.start()
 
     def _on_auto_cull_done(self, picks: list, rejects: list) -> None:  # pragma: no cover
-        self._worker = None
+        finalize_worker(self)
         self._auto_btn.setEnabled(True)
         for path in picks:
             image_index.set_cull_state(path, "pick")

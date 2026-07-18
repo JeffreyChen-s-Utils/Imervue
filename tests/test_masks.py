@@ -94,6 +94,31 @@ class TestGenerateAlpha:
         alpha = masks.generate_alpha((10, 10), m)
         assert (alpha == 0).all()
 
+    def test_brush_skips_non_dict_points(self):
+        """Regression: a persisted recipe may carry list-shaped points
+        (``[x, y, r]``); ``list.get`` raised AttributeError which escaped
+        the recipe caller's (ValueError, TypeError) guard. Malformed points
+        are skipped, valid ones still render."""
+        m = masks.Mask(
+            mask_type="brush",
+            params={"points": [
+                [20.0, 20.0, 10.0],                      # malformed (list)
+                {"x": 20.0, "y": 20.0, "r": 10.0},       # valid (dict)
+            ]},
+            feather=0.5,
+        )
+        alpha = masks.generate_alpha((40, 40), m)   # must not raise
+        assert alpha[20, 20] > 0.9                  # valid point rendered
+
+    def test_brush_all_points_malformed_returns_zeros(self):
+        m = masks.Mask(
+            mask_type="brush",
+            params={"points": [[1, 2, 3], "nope", 5]},
+            feather=0.5,
+        )
+        alpha = masks.generate_alpha((10, 10), m)
+        assert (alpha == 0).all()
+
 
 class TestApplyMasks:
     def test_empty_list_passes_through(self):

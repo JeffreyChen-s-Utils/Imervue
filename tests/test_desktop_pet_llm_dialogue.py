@@ -219,6 +219,41 @@ def _wait_for(qapp, predicate, timeout_s: float = 2.0) -> bool:
     return predicate()
 
 
+def test_shutdown_suppresses_late_emits(qapp):
+    """After shutdown the client must not emit -- a request still blocked in
+    urlopen would otherwise fire on a QObject the window has deleted."""
+    client = LlmDialogueClient()
+    lines: list = []
+    errors: list = []
+    client.line_received.connect(lines.append)
+    client.request_failed.connect(errors.append)
+    # Alive: the safe wrappers deliver synchronously (same-thread connection).
+    client._safe_line("hi")
+    client._safe_fail("err")
+    assert lines == ["hi"]
+    assert errors == ["err"]
+    # Dead: dropped.
+    client.shutdown()
+    client._safe_line("late")
+    client._safe_fail("late-err")
+    assert lines == ["hi"]
+    assert errors == ["err"]
+
+
+def test_controller_shutdown_marks_its_client_dead():
+    from types import SimpleNamespace
+
+    from Imervue.desktop_pet.pet_drivers import LlmDialogueController
+
+    marked: list = []
+    ctrl = SimpleNamespace(
+        _client=SimpleNamespace(shutdown=lambda: marked.append(True)))
+    LlmDialogueController.shutdown(ctrl)
+    assert marked == [True]
+    # A controller that never built a client is a safe no-op.
+    LlmDialogueController.shutdown(SimpleNamespace(_client=None))
+
+
 def test_client_request_emits_line_on_success(qapp, monkeypatch):
     """Happy path — stub the request, drive a worker through to
     completion, signal fires with the extracted line."""

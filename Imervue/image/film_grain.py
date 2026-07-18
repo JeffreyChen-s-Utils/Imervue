@@ -104,14 +104,19 @@ def apply_film_grain(arr: np.ndarray, options: FilmGrainOptions) -> np.ndarray:
 def _make_rng(arr: np.ndarray, seed: int) -> np.random.Generator:
     """Build a deterministic ``np.random.Generator`` for stable grain.
 
-    A non-zero ``seed`` is honoured directly. Otherwise we derive a seed
-    from a hash of the image dimensions so different images get different
-    grain but the same image always gets the same grain across reloads.
+    A non-zero ``seed`` is honoured directly. Otherwise we derive a seed from the
+    dimensions AND a cheap content signature, so different images get different
+    grain (dimensions alone gave two different same-resolution photos identical
+    grain) while the same image stays stable across reloads.
     """
     if seed:
         return np.random.default_rng(int(seed))
     h, w = arr.shape[:2]
-    derived = (h * 7919 + w * 31) & 0x7FFFFFFF
+    # Coarse ~16x16 strided subsample -> content signature (a few hundred pixels,
+    # so it stays cheap even on 6000x4000 exports).
+    sample = arr[:: max(1, h // 16), :: max(1, w // 16), :3]
+    content = int(sample.astype(np.int64).sum())
+    derived = (h * 7919 + w * 31 + content) & 0x7FFFFFFF
     return np.random.default_rng(int(derived))
 
 

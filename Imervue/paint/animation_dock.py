@@ -166,6 +166,12 @@ class AnimationDock(QDockWidget):
             "paint_animation_play", "▶ Play",
         ))
 
+    def hideEvent(self, event):  # noqa: N802 - Qt naming
+        # Stop playback when the dock is hidden (closed / tab switched away) so
+        # the timer doesn't keep ticking and mutating the canvas in the background.
+        self.stop_playback()
+        super().hideEvent(event)
+
     def refresh(self) -> None:
         """Re-build the thumbnail strip — call after frames change."""
         self._refresh_strip()

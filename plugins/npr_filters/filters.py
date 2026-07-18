@@ -96,7 +96,10 @@ def oil_painting(rgb: np.ndarray, levels: int) -> np.ndarray:
     smoothed = cv2.bilateralFilter(bgr, d=9, sigmaColor=75, sigmaSpace=75)
     levels_clamped = _clamp(levels, OIL_LEVELS_MIN, OIL_LEVELS_MAX)
     step = 256 // levels_clamped
-    quantised = (smoothed // step) * step + step // 2
+    # Widen before the arithmetic: in uint8, ``(v // step) * step + step // 2``
+    # can exceed 255 (levels=5 -> step=51, a 255 pixel -> 280) and wrap to a dark
+    # value BEFORE the clip, speckling bright regions. int16 keeps it in range.
+    quantised = (smoothed.astype(np.int16) // step) * step + step // 2
     quantised = np.clip(quantised, 0, 255).astype(np.uint8)
     return quantised[..., ::-1]
 

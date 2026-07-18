@@ -156,6 +156,15 @@ def test_oil_painting_quantises_to_levels(sample_rgba_array):
     assert max(unique_per_channel) <= 4
 
 
+def test_oil_painting_bright_pixels_do_not_wrap_dark():
+    # levels=5 -> step=51; the old uint8 arithmetic sent a 255 pixel to 280, which
+    # wrapped to 24 BEFORE the clip and speckled bright regions dark.
+    rgb = np.full((16, 16, 3), 255, dtype=np.uint8)
+    out = oil_painting(rgb, levels=5)
+    assert out.dtype == np.uint8
+    assert int(out.min()) >= 200
+
+
 def test_watercolor_preserves_shape(sample_rgba_array):
     out = watercolor(sample_rgba_array[..., :3], sigma_s=60, sigma_r=45)
     assert out.shape == sample_rgba_array[..., :3].shape

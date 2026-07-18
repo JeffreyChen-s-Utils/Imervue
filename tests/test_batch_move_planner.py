@@ -83,6 +83,30 @@ def test_replace_strategy():
     assert _names(plans) == ["x.png"]
 
 
+def test_replace_strategy_renumbers_sibling_sources():
+    # Two sources share a basename with no pre-existing file. 'replace' must not
+    # collapse them onto one destination (that lost the first file); the sibling
+    # is renumbered so both survive.
+    plans = plan_batch_move(["/a/x.png", "/b/x.png"], "/out", set(), strategy="replace")
+    assert [p.action for p in plans] == [ACTION_MOVE, ACTION_RENAME]
+    assert _names(plans) == ["x.png", "x_1.png"]
+
+
+def test_replace_strategy_overwrites_existing_but_keeps_siblings():
+    # First source overwrites the pre-existing file; the second (same basename)
+    # is renumbered rather than clobbering the first source's target.
+    plans = plan_batch_move(
+        ["/a/x.png", "/b/x.png"], "/out", {"x.png"}, strategy="replace")
+    assert [p.action for p in plans] == [ACTION_REPLACE, ACTION_RENAME]
+    assert _names(plans) == ["x.png", "x_1.png"]
+
+
+def test_skip_strategy_also_skips_sibling_collisions():
+    plans = plan_batch_move(["/a/x.png", "/b/x.png"], "/out", set(), strategy="skip")
+    assert [p.action for p in plans] == [ACTION_MOVE, ACTION_SKIP]
+    assert _names(plans) == ["x.png", None]
+
+
 def test_unknown_strategy_raises():
     with pytest.raises(ValueError, match="strategy must be"):
         plan_batch_move(["/a/x.png"], "/out", set(), strategy="clobber")

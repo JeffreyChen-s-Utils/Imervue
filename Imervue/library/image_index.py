@@ -20,6 +20,8 @@ import time
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
+from Imervue.library.phash import hamming, to_signed64
+
 logger = logging.getLogger("Imervue.library")
 
 _SCHEMA_VERSION = 2
@@ -186,17 +188,20 @@ def write_batch():
     partially-applied chunk never lands.
     """
     c = conn()
+    # Hold the (reentrant) lock for the WHOLE transaction, not just BEGIN/COMMIT.
+    # Releasing it during the body let a concurrent UI-thread write (set_cull_state
+    # / add_image_tag, sharing this connection) execute INSIDE the scanner's open
+    # transaction and get rolled back with it. The RLock lets the batch's own
+    # upsert_image re-acquire on the same thread while blocking other threads.
     with _lock:
         c.execute("BEGIN")
-    committed = False
-    try:
-        yield
-        with _lock:
+        committed = False
+        try:
+            yield
             c.execute("COMMIT")
-        committed = True
-    finally:
-        if not committed:
-            with _lock:
+            committed = True
+        finally:
+            if not committed:
                 c.execute("ROLLBACK")
 
 
@@ -227,6 +232,9 @@ def upsert_image(
     p = Path(path)
     c = conn()
     now = time.time()
+    # A 64-bit pHash is unsigned and routinely has its high bit set, which
+    # overflows SQLite's signed INTEGER; store the identical bits as signed.
+    stored_phash = to_signed64(phash) if phash is not None else None
     with _lock:
         c.execute(
             "INSERT INTO images(path, parent, name, ext, size, mtime,"
@@ -243,7 +251,7 @@ def upsert_image(
             " indexed_at=excluded.indexed_at",
             (
                 str(p), str(p.parent), p.name, p.suffix.lower().lstrip("."),
-                size, mtime, width, height, phash, taken_at, now,
+                size, mtime, width, height, stored_phash, taken_at, now,
             ),
         )
 
@@ -648,7 +656,10 @@ def similar_by_phash(phash: int, max_distance: int = 10, limit: int = 100) -> li
         other = r["phash"]
         if other is None:
             continue
-        dist = bin(int(phash) ^ int(other)).count("1")
+        # ``phash`` may be an in-memory unsigned hash and ``other`` the signed
+        # value read back from SQLite; ``hamming`` masks both to 64 bits so the
+        # two representations of the same pattern compare identically.
+        dist = hamming(phash, other)
         if dist <= max_distance:
             out.append((r["path"], dist))
     out.sort(key=lambda x: x[1])

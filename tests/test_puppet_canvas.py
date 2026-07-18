@@ -49,6 +49,24 @@ def test_canvas_constructs_without_document(qapp):
         c.deleteLater()
 
 
+def test_pet_mode_canvas_does_not_leak_default_surface_format(qapp):
+    """Constructing a pet-mode canvas requests an alpha buffer via a temporary
+    default QSurfaceFormat; it must restore the previous default so GL widgets
+    built afterward (e.g. the main image viewer) don't inherit a stray
+    alpha/stencil buffer depending on construction order."""
+    from PySide6.QtGui import QSurfaceFormat
+    before = QSurfaceFormat.defaultFormat()
+    before_alpha = before.alphaBufferSize()
+    before_stencil = before.stencilBufferSize()
+    c = PuppetCanvas(pet_mode=True)
+    try:
+        after = QSurfaceFormat.defaultFormat()
+        assert after.alphaBufferSize() == before_alpha
+        assert after.stencilBufferSize() == before_stencil
+    finally:
+        c.deleteLater()
+
+
 def test_load_document_builds_draw_list(qapp):
     c = PuppetCanvas()
     try:

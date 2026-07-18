@@ -82,6 +82,21 @@ class TestRoundTrip:
         sidecar.write_text("<not valid xml", encoding="utf-8")
         assert xmp.load(image_path).is_empty()
 
+    def test_sidecar_with_dtd_entity_returns_empty(self, xmp, image_path):
+        """defusedxml rejects DTD/entity declarations (XXE / billion-laughs
+        defence) with a DefusedXmlException — a ValueError subclass. The
+        loader must treat it as a bad file and degrade to empty, not raise
+        into keyword-index / smart-album callers."""
+        sidecar = xmp.sidecar_path_for(image_path)
+        sidecar.write_text(
+            '<?xml version="1.0"?>\n'
+            '<!DOCTYPE x [<!ENTITY e "value">]>\n'
+            "<x>&e;</x>\n",
+            encoding="utf-8",
+        )
+        # Must not raise:
+        assert xmp.load(image_path).is_empty()
+
 
 class TestSettingsIntegration:
     def test_export_for_includes_rating_and_tags(self, xmp, image_path):
@@ -98,6 +113,22 @@ class TestSettingsIntegration:
         assert loaded.rating == 5
         assert loaded.title == "Hero"
         assert set(loaded.keywords) == {"travel", "japan"}
+
+    def test_export_preserves_external_creator(self, xmp, image_path):
+        """Imervue doesn't track dc:creator; exporting settings must not
+        wipe a creator an external editor wrote into the sidecar."""
+        xmp.save(image_path, xmp.XmpData(creator="Ansel Adams", rating=2))
+        xmp.export_for(image_path)   # settings know nothing about creator
+        assert xmp.load(image_path).creator == "Ansel Adams"
+
+    def test_export_does_not_delete_creator_only_sidecar(self, xmp, image_path):
+        """A sidecar carrying only a creator must survive an export from
+        otherwise-empty settings, not be unlinked as 'empty'."""
+        xmp.save(image_path, xmp.XmpData(creator="Jane"))
+        assert xmp.has_sidecar(image_path)
+        xmp.export_for(image_path)
+        assert xmp.has_sidecar(image_path)
+        assert xmp.load(image_path).creator == "Jane"
 
     def test_import_for_restores_rating_and_tags(self, xmp, image_path):
         from Imervue.user_settings.tags import get_tags_for_image

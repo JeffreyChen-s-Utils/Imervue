@@ -109,15 +109,17 @@ def apply_posterize(arr: np.ndarray, options: PosterizeOptions) -> np.ndarray:
     _validate_rgba_uint8(arr)
     levels = max(POSTERIZE_MIN_LEVELS,
                  min(POSTERIZE_MAX_LEVELS, int(options.levels)))
-    # Each step is 256 / levels wide; we floor-divide then re-multiply
-    # to snap each pixel to the nearest step's bottom edge.
-    step = 256 // levels
-    rgb = arr[..., :3].astype(np.uint16)
-    snapped = (rgb // step) * step
-    # Stretch the highest step to 255 so pure-white never becomes 240-ish.
-    snapped = np.where(snapped > (255 - step), 255, snapped)
+    # Quantise to exactly ``levels`` values evenly spaced over [0, 255]
+    # (endpoints included). The old ``256 // levels`` step truncated: for a
+    # ``levels`` that doesn't divide 256 (e.g. 3 → step 85) the remainder formed
+    # an extra top band, yielding ``levels + 1`` distinct tones, and even for
+    # divisors the steps were unevenly spaced.
+    divisor = levels - 1
+    rgb = arr[..., :3].astype(np.float32)
+    bucket = np.round(rgb / 255.0 * divisor)
+    snapped = np.round(bucket / divisor * 255.0)
     out = arr.copy()
-    out[..., :3] = snapped.astype(np.uint8)
+    out[..., :3] = np.clip(snapped, 0, 255).astype(np.uint8)
     return out
 
 

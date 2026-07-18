@@ -10,6 +10,7 @@ rebuilt (matches the recent-folder behaviour in
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from pathlib import Path
 
@@ -759,6 +760,31 @@ class PuppetWorkspace(QMainWindow):
 
     def input_engine(self) -> InputEngine:
         return self._input_engine
+
+    def _shutdown_drivers(self) -> None:
+        """Stop every live-capture / output driver.
+
+        Webcam tracking and mic lip-sync hold OS devices (``cv2.VideoCapture`` /
+        a sounddevice stream) open and run background callbacks against the
+        canvas. Without this, closing the workspace left the camera + mic locked
+        until process exit, and the mic's ``_on_audio_block`` fired on the now
+        deleted ``PuppetCanvas`` (``RuntimeError: Internal C++ object already
+        deleted``). Each ``shutdown`` is guarded so one failing driver still lets
+        the rest stop.
+        """
+        for driver in (
+            getattr(self, "_webcam", None),
+            getattr(self, "_input_engine", None),
+            getattr(self, "_virtual_camera", None),
+            getattr(self, "_ndi_output", None),
+        ):
+            if driver is not None:
+                with contextlib.suppress(Exception):
+                    driver.shutdown()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._shutdown_drivers()
+        super().closeEvent(event)
 
     # ---- optional-dep install --------------------------------------
 

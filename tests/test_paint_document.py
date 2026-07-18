@@ -92,6 +92,39 @@ def test_composite_pair_rejects_mask_shape_mismatch():
         composite_layer_pair(below, above, mask=bad_mask)
 
 
+def test_composite_pair_transparent_below_keeps_straight_rgb():
+    """Straight-alpha convention: a semi-transparent colour over a fully
+    transparent backdrop keeps its RGB untouched. The old math returned
+    ``rgb * alpha`` (premultiplied), which darkened soft-brush pixels on
+    every merge / flatten / region-patch round-trip."""
+    below = np.zeros((2, 2, 4), dtype=np.uint8)
+    above = np.zeros((2, 2, 4), dtype=np.uint8)
+    above[...] = (200, 100, 50, 128)
+    out = composite_layer_pair(below, above)
+    assert tuple(out[0, 0]) == (200, 100, 50, 128)
+
+
+def test_composite_pair_semi_transparent_below_weights_by_coverage():
+    """Over a half-covered backdrop the output colour is the coverage-
+    weighted average, not the backdrop-biased lerp the old math used."""
+    below = np.zeros((1, 1, 4), dtype=np.uint8)
+    below[..., 3] = 128                      # half-covered black
+    above = np.zeros((1, 1, 4), dtype=np.uint8)
+    above[...] = (255, 255, 255, 128)        # half-covered white
+    out = composite_layer_pair(below, above)
+    # fa = ba = 128/255; out_a = fa + ba*(1-fa) ~= 0.752 -> 191
+    # rgb = (255*fa + 0*ba*(1-fa)) / out_a ~= 170
+    assert abs(int(out[0, 0, 3]) - 191) <= 1
+    assert abs(int(out[0, 0, 0]) - 170) <= 1
+
+
+def test_composite_pair_both_transparent_stays_zero():
+    below = np.zeros((2, 2, 4), dtype=np.uint8)
+    above = np.zeros((2, 2, 4), dtype=np.uint8)
+    out = composite_layer_pair(below, above)
+    np.testing.assert_array_equal(out, np.zeros_like(out))
+
+
 def test_layer_blend_modes_listed():
     assert "normal" in LAYER_BLEND_MODES
     assert "soft_light" in LAYER_BLEND_MODES
@@ -204,6 +237,31 @@ def test_mark_composite_dirty_patches_only_the_rect():
     assert id(patched) == cached_id
     expected = composite_stack(doc.layers(), doc.shape, groups=doc._groups)  # noqa: SLF001
     np.testing.assert_array_equal(patched, expected)
+
+
+def test_document_composite_cache_never_aliases_layer_buffer():
+    """The single-layer fast path returns ``layer.image`` itself; the
+    document must copy before adopting it as the patchable cache, or the
+    dirty-rect patch would write composite output into the layer."""
+    doc = PaintDocument()
+    doc.load_image(np.full((4, 4, 4), 100, dtype=np.uint8))
+    out = doc.composite()
+    assert out is not doc.layer_at(0).image
+
+
+def test_region_patch_never_writes_back_into_layer_pixels():
+    """Regression: with the cache aliasing the single layer's buffer,
+    a dirty-rect patch wrote premultiplied RGB back into the layer —
+    soft-eraser pixels darkened a little more on every dab."""
+    doc = PaintDocument()
+    doc.load_image(np.full((4, 4, 4), 200, dtype=np.uint8))
+    layer = doc.layer_at(0)
+    layer.image[1, 1] = (200, 100, 50, 128)   # soft-eraser result
+    doc.composite()
+    doc.mark_composite_dirty((0, 0, 4, 4))
+    patched = doc.composite()
+    assert tuple(layer.image[1, 1]) == (200, 100, 50, 128)
+    assert tuple(patched[1, 1]) == (200, 100, 50, 128)
 
 
 def test_mark_composite_dirty_clipped_off_canvas_is_dropped():
@@ -734,6 +792,38 @@ def test_duplicate_active_layer_carries_binary():
     duplicated = doc.active_layer()
     assert duplicated.binary is not None
     assert duplicated.binary.threshold == 180
+
+
+def test_duplicate_active_layer_carries_color_label():
+    from Imervue.paint.layer_model import LAYER_LABELS
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    doc.active_layer().color_label = LAYER_LABELS[0]
+    doc.duplicate_active_layer()
+    assert doc.active_layer().color_label == LAYER_LABELS[0]
+
+
+def test_duplicate_vector_layer_deep_copies_strokes():
+    """Regression: duplicate_active_layer dropped vector_data (silently
+    rasterising the copy) and, once carried, must deep-copy the stroke
+    list so edits on the duplicate don't mutate the original."""
+    from Imervue.paint.vector_layer import VectorStroke
+    doc = PaintDocument()
+    doc.load_image(np.zeros((4, 4, 4), dtype=np.uint8))
+    original = doc.add_vector_layer(name="Ink")
+    original.vector_data.add(VectorStroke(points=((0.0, 0.0), (1.0, 1.0))))
+
+    doc.duplicate_active_layer()
+    duplicate = doc.active_layer()
+    assert duplicate is not original
+    assert duplicate.vector_data is not None
+    assert duplicate.vector_data is not original.vector_data
+    assert len(duplicate.vector_data.strokes) == 1
+
+    # Mutating the duplicate must not touch the original's stroke list.
+    duplicate.vector_data.add(VectorStroke(points=((2.0, 2.0), (3.0, 3.0))))
+    assert len(original.vector_data.strokes) == 1
+    assert len(duplicate.vector_data.strokes) == 2
 
 
 def test_compositor_renders_binary_layer():

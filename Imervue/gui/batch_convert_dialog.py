@@ -81,6 +81,8 @@ class _ConvertWorker(QThread):
         skipped = 0
         total = len(self._paths)
         for i, src in enumerate(self._paths):
+            if self.isInterruptionRequested():
+                break
             self.progress.emit(i, total, Path(src).name)
             try:
                 if self._should_skip(src, target_ext):
@@ -366,7 +368,12 @@ class BatchConvertDialog(QDialog):
         if self._worker and self._worker.isRunning():
             with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            self._worker.wait(5000)
+            # Interrupt at the next per-image check, then wait for the thread to
+            # actually finish before dropping the reference. The old wait(5000)
+            # dropped the ref on timeout while a long batch was still running,
+            # destroying a live QThread and crashing.
+            self._worker.requestInterruption()
+            self._worker.wait()
             self._worker = None
         super().closeEvent(event)
 

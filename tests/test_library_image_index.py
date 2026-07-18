@@ -155,6 +155,19 @@ class TestPhashQuery:
         assert b in paths
         assert c not in paths
 
+    def test_high_bit_phash_stored_without_overflow(self, tmp_path):
+        """A real photo's 64-bit pHash has its high bit set, exceeding SQLite's
+        signed-INTEGER range. It must store without OverflowError and still be
+        found at Hamming distance 0 despite being reinterpreted as signed."""
+        from Imervue.library.phash import to_signed64
+        p = str(tmp_path / "photo.png")
+        unsigned = 0xAA55AA55AA55AA55  # >= 2**63
+        image_index.upsert_image(p, phash=unsigned)
+        row = image_index.get_image(p)
+        assert row["phash"] == to_signed64(unsigned)  # stored as signed twin
+        hits = image_index.similar_by_phash(unsigned, max_distance=0)
+        assert p in [path for path, _ in hits]
+
 
 class TestLibraryRoots:
     def test_add_remove_list(self, tmp_path):

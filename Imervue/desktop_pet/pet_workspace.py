@@ -600,9 +600,16 @@ class PetWorkspace(QWidget):
             self._show_check.setChecked(visible)
         finally:
             self._show_check.blockSignals(False)
+        # Keep the tray's checkable "Show pet" in sync too. Without this its state
+        # went stale, so the next tray click toggled from the wrong value and the
+        # first click was wasted (a "hide" that ran show()).
+        if self._tray is not None:
+            self._tray.sync_visibility(visible)
 
     def _on_click_through_toggled(self, checked: bool) -> None:
         self._ensure_pet_window().set_click_through(bool(checked))
+        if self._tray is not None:
+            self._tray.sync_click_through(bool(checked))
 
     def _on_anchor_toggled(self, checked: bool) -> None:
         self._ensure_pet_window().set_anchor_locked(bool(checked))

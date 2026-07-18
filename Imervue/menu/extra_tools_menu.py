@@ -124,7 +124,7 @@ def _build_cvd_submenu(parent_menu, ui: ImervueMainWindow, lang: dict) -> None:
         ("achromatopsia", "Achromatopsia (greyscale)"),
     ):
         _add_action(cvd_menu, lang, f"cvd_view_{kind}", fallback,
-                    lambda _kind=kind: _set_cvd_mode(ui, _kind))
+                    lambda checked=False, _kind=kind: _set_cvd_mode(ui, _kind))
 
 
 def _set_cvd_mode(ui: ImervueMainWindow, mode: str | None) -> None:

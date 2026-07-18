@@ -10,8 +10,18 @@ from Imervue.user_settings.recent_image import clear_recent, add_recent_folder, 
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
-def build_recent_menu(ui_we_want_to_set, menu: QMenu):
-    # ===== Recent =====
+def build_recent_menu(ui_we_want_to_set, menu: QMenu, store_refs: bool = True):
+    """Mount a *Recent* submenu under *menu*.
+
+    ``store_refs`` controls whether the created submenus are cached on
+    *ui_we_want_to_set* as ``_recent_folder_menu`` / ``_recent_image_menu`` /
+    ``_recent_menu`` — the handles ``rebuild_recent_menu`` later refreshes. The
+    menu-bar File menu needs that (True, the default). The right-click context
+    menu builds a throwaway copy and must pass ``store_refs=False``: otherwise it
+    rebinds the main window's cached handles to its own transient submenus, and
+    every subsequent ``rebuild_recent_menu`` repopulated the dismissed context
+    menu instead of the File menu — freezing the File menu's Recent lists.
+    """
     lang = language_wrapper.language_word_dict
     recent_menu = menu.addMenu(lang.get("recent_menu_title", "Recent"))
 
@@ -22,9 +32,10 @@ def build_recent_menu(ui_we_want_to_set, menu: QMenu):
         lang.get("recent_images_title", "Recent Images"),
     )
 
-    ui_we_want_to_set._recent_folder_menu = recent_folder_menu
-    ui_we_want_to_set._recent_image_menu = recent_image_menu
-    ui_we_want_to_set._recent_menu = recent_menu
+    if store_refs:
+        ui_we_want_to_set._recent_folder_menu = recent_folder_menu
+        ui_we_want_to_set._recent_image_menu = recent_image_menu
+        ui_we_want_to_set._recent_menu = recent_menu
 
     recent_menu.addSeparator()
 
@@ -35,26 +46,36 @@ def build_recent_menu(ui_we_want_to_set, menu: QMenu):
         lambda: handle_clear_recent(ui_we_want_to_set)
     )
 
-    rebuild_recent_menu(ui_we_want_to_set)
+    # Populate the submenus we just built directly, so the throwaway context-menu
+    # copy fills itself without depending on (or touching) the cached handles.
+    _populate_recent(ui_we_want_to_set, recent_folder_menu, recent_image_menu)
 
 
 def rebuild_recent_menu(ui_we_want_to_set):
-    """Refresh the *Recent Folders* / *Recent Images* submenus.
+    """Refresh the File-menu *Recent Folders* / *Recent Images* submenus.
 
-    Safe to call during application teardown: ``on_file_clicked``
-    in the main window funnels every File-menu interaction here,
-    and during close Qt sometimes fires that signal after the
-    submenu's C++ side has already been freed. The first
-    ``QMenu.clear()`` then raises ``RuntimeError`` from
-    shiboken — we treat that as "the menus are gone, nothing to
-    refresh" and bail out silently rather than poisoning the
-    user-visible shutdown with a traceback.
+    Delegates to :func:`_populate_recent` against the handles cached on the main
+    window by the File-menu :func:`build_recent_menu`. ``on_file_clicked`` funnels
+    every File-menu interaction here, so it must stay safe when those attrs are
+    missing or already torn down (see the helper).
     """
-    lang = language_wrapper.language_word_dict
     folder_menu = getattr(ui_we_want_to_set, "_recent_folder_menu", None)
     image_menu = getattr(ui_we_want_to_set, "_recent_image_menu", None)
+    _populate_recent(ui_we_want_to_set, folder_menu, image_menu)
+
+
+def _populate_recent(ui_we_want_to_set, folder_menu, image_menu):
+    """Clear and refill the two Recent submenus. Teardown-safe.
+
+    Shared by :func:`rebuild_recent_menu` (File-menu handles) and the right-click
+    :func:`build_recent_menu` (its own throwaway submenus). During close Qt can
+    fire the File-menu refresh after a submenu's C++ side is freed; the first
+    ``QMenu.clear()`` then raises ``RuntimeError`` from shiboken — treat that as
+    "the menus are gone" and bail rather than dumping a traceback.
+    """
     if folder_menu is None or image_menu is None:
         return
+    lang = language_wrapper.language_word_dict
     try:
         folder_menu.clear()
         image_menu.clear()

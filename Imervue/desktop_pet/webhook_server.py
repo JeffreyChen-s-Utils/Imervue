@@ -49,6 +49,11 @@ DEFAULT_PORT: int = 9876
 doesn't clash with common services (3000, 8080, etc.). Users can
 override via settings if 9876 conflicts with something local."""
 
+_REQUEST_TIMEOUT_S: float = 15.0
+"""Per-request socket timeout. Without it a client that opens a connection and
+stalls mid-body pins a handler thread forever (rfile.read blocks); the timeout
+lets a stuck read raise so the thread is released."""
+
 
 @dataclass(frozen=True)
 class WebhookCommand:
@@ -107,6 +112,10 @@ class _WebhookHandler(BaseHTTPRequestHandler):
 
     The owning :class:`WebhookReceiver` is reached via the
     ``server.receiver`` attribute we set in :meth:`start`."""
+
+    # StreamRequestHandler.setup applies this to the request socket, so a
+    # stalled or vanished client can't pin the handler thread indefinitely.
+    timeout = _REQUEST_TIMEOUT_S
 
     # Silence the noisy default access log; we route through our
     # own logger so users can tune verbosity uniformly. Parameter
@@ -168,6 +177,11 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             # ValueError, so the bare catch covers "malformed JSON"
             # and "non-utf8 body" without redundant subclass listing.
             self._send_json(400, {"error": "invalid json"})
+            return
+        except OSError:
+            # Socket timeout (client stalled past _REQUEST_TIMEOUT_S) or a reset
+            # mid-body. The handler thread is freed; the socket is likely dead,
+            # so don't attempt a response on it.
             return
         command = parse_payload(parsed)
         if command is None:

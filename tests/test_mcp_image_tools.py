@@ -279,6 +279,14 @@ def test_resize_image_missing_destination_parent_raises(tmp_path):
         resize_image(src, str(tmp_path / "nope" / "out.png"), width=10)
 
 
+def test_resize_image_rejects_oversized_output(tmp_path):
+    """The server does no schema validation, so an unclamped 50000x50000
+    target would try to allocate ~10 GB. It must be refused, not attempted."""
+    src = _save(tmp_path / "src.png", h=40, w=40)
+    with pytest.raises(ValueError, match="exceeds"):
+        resize_image(src, str(tmp_path / "out.png"), width=50000, height=50000)
+
+
 # ---------------------------------------------------------------------------
 # crop_image
 # ---------------------------------------------------------------------------
@@ -389,6 +397,17 @@ def test_build_collage_too_many_images_raises(tmp_path):
     src = _save(tmp_path / "a.png")
     with pytest.raises(ValueError, match="at most"):
         build_collage([src] * 201, str(tmp_path / "out.png"))
+
+
+def test_build_collage_rejects_oversized_output(tmp_path):
+    """Huge cell geometry must be rejected before any source is loaded,
+    so a caller can't OOM the synchronous server."""
+    src = _save(tmp_path / "a.png")
+    with pytest.raises(ValueError, match="exceeds"):
+        build_collage(
+            [src] * 4, str(tmp_path / "out.png"),
+            columns=2, cell_width=40000, cell_height=40000,
+        )
 
 
 def test_build_collage_missing_source_raises(tmp_path):

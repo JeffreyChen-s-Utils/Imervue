@@ -275,11 +275,29 @@ def toggle_favorite(main_gui: GPUImageView):
 
 
 def _show_status(main_gui: GPUImageView, text: str):
-    """在 filename_label 短暫顯示狀態訊息"""
-    win = main_gui.main_window
-    if hasattr(win, "filename_label"):
-        original = win.filename_label.text()
-        win.filename_label.setText(text)
+    """在 filename_label 短暫顯示狀態訊息，1.5 秒後還原真正的標題。
 
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(1500, lambda: win.filename_label.setText(original))
+    Rapid consecutive ratings must not clobber the real caption: a naive
+    singleShot captured ``filename_label.text()`` each call, so the second rating
+    captured the FIRST rating's transient text as the "original" and restored to
+    it, losing the real folder caption. A single reusable timer captures the real
+    caption only when no transient is already showing, and always restores it."""
+    win = main_gui.main_window
+    if not hasattr(win, "filename_label"):
+        return
+    from PySide6.QtCore import QTimer
+    timer = getattr(win, "_status_restore_timer", None)
+    if timer is None:
+        timer = QTimer(win)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: _restore_caption(win))
+        win._status_restore_timer = timer   # noqa: SLF001
+    if not timer.isActive():
+        # No transient is showing, so the label currently holds the real caption.
+        win._status_original_caption = win.filename_label.text()   # noqa: SLF001
+    win.filename_label.setText(text)
+    timer.start(1500)
+
+
+def _restore_caption(win) -> None:
+    win.filename_label.setText(getattr(win, "_status_original_caption", ""))

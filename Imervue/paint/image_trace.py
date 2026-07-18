@@ -193,9 +193,17 @@ def simplify_polyline(
         proj_y = y0 + t * dy
         return ((x - proj_x) ** 2 + (y - proj_y) ** 2) ** 0.5
 
-    def _simplify(start: int, end: int, keep: list[bool]) -> None:
+    keep = [False] * len(polyline)
+    keep[0] = True
+    keep[-1] = True
+    # Iterative Douglas-Peucker (explicit stack). The recursive form blew Python's
+    # ~1000-frame limit on the long, near-monotonic polylines that marching-squares
+    # produces for detailed lineart.
+    stack = [(0, len(polyline) - 1)]
+    while stack:
+        start, end = stack.pop()
         if end <= start + 1:
-            return
+            continue
         max_dist = 0.0
         max_i = start
         for i in range(start + 1, end):
@@ -207,11 +215,6 @@ def simplify_polyline(
                 max_i = i
         if max_dist > tolerance:
             keep[max_i] = True
-            _simplify(start, max_i, keep)
-            _simplify(max_i, end, keep)
-
-    keep = [False] * len(polyline)
-    keep[0] = True
-    keep[-1] = True
-    _simplify(0, len(polyline) - 1, keep)
+            stack.append((start, max_i))
+            stack.append((max_i, end))
     return [pt for pt, k in zip(polyline, keep, strict=True) if k]

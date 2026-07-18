@@ -151,6 +151,22 @@ class LlmDialogueClient(QObject):
         self._model: str = DEFAULT_MODEL
         self._persona: str = DEFAULT_PERSONA
         self._timeout_s: float = DEFAULT_TIMEOUT_S
+        self._alive: bool = True
+
+    def shutdown(self) -> None:
+        """Mark the client dead so a request still blocked in ``urlopen`` drops
+        its result instead of emitting on this QObject after the owning window
+        has been ``deleteLater``'d (which would raise ``RuntimeError: Internal
+        C++ object already deleted`` on the worker thread)."""
+        self._alive = False
+
+    def _safe_fail(self, message: str) -> None:
+        if self._alive:
+            self.request_failed.emit(message)
+
+    def _safe_line(self, line: str) -> None:
+        if self._alive:
+            self.line_received.emit(line)
 
     # ---- configuration -------------------------------------------
 
@@ -202,25 +218,25 @@ class LlmDialogueClient(QObject):
             data = _request_json(url, payload, timeout=self._timeout_s)
         except urllib.error.URLError as exc:
             logger.info("llm request URLError: %s", exc)
-            self.request_failed.emit(f"connection: {exc}")
+            self._safe_fail(f"connection: {exc}")
             return
         except OSError as exc:
             # TimeoutError is an OSError subclass on Python 3, so a
             # bare OSError catches both connect-refused and read-
             # timeout paths.
             logger.info("llm request OSError: %s", exc)
-            self.request_failed.emit(f"network: {exc}")
+            self._safe_fail(f"network: {exc}")
             return
         except ValueError as exc:
             logger.warning("llm bad URL / payload: %s", exc)
-            self.request_failed.emit(f"config: {exc}")
+            self._safe_fail(f"config: {exc}")
             return
         except Exception as exc:   # noqa: BLE001 - last-ditch safety on the worker thread
             logger.warning("llm request unexpected: %s", exc)
-            self.request_failed.emit(f"unknown: {exc}")
+            self._safe_fail(f"unknown: {exc}")
             return
         line = extract_line(data)
         if line is None:
-            self.request_failed.emit("empty response")
+            self._safe_fail("empty response")
             return
-        self.line_received.emit(line)
+        self._safe_line(line)

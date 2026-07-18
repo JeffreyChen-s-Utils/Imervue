@@ -35,7 +35,13 @@ def hide_message(arr: np.ndarray, message: str) -> np.ndarray:
     """Return a copy of *arr* with *message* embedded in its RGB LSBs."""
     _validate(arr)
     payload = message.encode("utf-8")
-    if len(payload) > capacity_bytes(arr):
+    # Check against total bits (header + payload). capacity_bytes clamps a
+    # header-sized deficit to 0, so on an image too small for even the 32-bit
+    # header an empty message slipped past and ``flat[:32] | bits`` then raised
+    # a cryptic broadcast error instead of this clear message.
+    total_bits = _HEADER_BITS + len(payload) * _BITS_PER_BYTE
+    available_bits = arr.shape[0] * arr.shape[1] * _RGB_CHANNELS
+    if total_bits > available_bits:
         raise ValueError("message too long for this image")
     header = _int_to_bits(len(payload), _HEADER_BITS)
     payload_bits = (np.unpackbits(np.frombuffer(payload, dtype=np.uint8))

@@ -31,6 +31,10 @@ def polar_distort(arr: np.ndarray, to_polar: bool = True, invert: bool = False) 
     _validate(arr)
     rgba = ensure_rgba(arr)
     height, width = rgba.shape[:2]
+    if width < 2 or height < 2:
+        # The coordinate maps divide by (width-1)/(height-1); a 1px axis would
+        # divide by zero and produce NaN samples. Nothing to warp -- return a copy.
+        return rgba.copy()
     yy, xx = np.mgrid[0:height, 0:width].astype(np.float64)
     cx, cy = (width - 1) / 2.0, (height - 1) / 2.0
     max_radius = max(1.0, min(cx, cy))

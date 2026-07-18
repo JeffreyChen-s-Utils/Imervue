@@ -84,7 +84,10 @@ def right_click_context_menu(main_gui: GPUImageView, global_pos, local_pos):
     _events_action(main_gui, build_right_click_menu)
     _maintenance_action(main_gui, build_right_click_menu)
     image_info_action(main_gui=main_gui, local_pos=local_pos, menu=build_right_click_menu)
-    build_recent_menu(main_gui.main_window, build_right_click_menu)
+    # store_refs=False: this throwaway context menu must not rebind the main
+    # window's cached Recent submenu handles, or the File menu's Recent lists
+    # freeze (every later rebuild would target these dismissed submenus).
+    build_recent_menu(main_gui.main_window, build_right_click_menu, store_refs=False)
 
     # Plugin hook: context menu
     if hasattr(main_gui.main_window, "plugin_manager"):

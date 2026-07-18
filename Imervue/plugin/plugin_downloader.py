@@ -111,19 +111,35 @@ class DownloadPluginWorker(QThread):
         self.file_infos = file_infos
 
     def run(self):
+        import os
+        import shutil
         try:
-            plugin_dir = _get_plugin_dir() / self.plugin_name
-            plugin_dir.mkdir(parents=True, exist_ok=True)
-
-            total = len(self.file_infos)
-            for i, info in enumerate(self.file_infos):
-                url = info["download_url"]
-                dest = plugin_dir / info["name"]
-                req = urllib.request.Request(url)
-                with _https_urlopen(req, timeout=30) as resp:
-                    dest.write_bytes(resp.read())
-                self.progress.emit(i + 1, total)
-
+            plugin_root = _get_plugin_dir()
+            plugin_root.mkdir(parents=True, exist_ok=True)
+            final_dir = plugin_root / self.plugin_name
+            # Download into a sibling temp dir and only swap it into place once
+            # every file lands. A mid-download failure (network drop, a null
+            # download_url) used to leave a half-written plugin dir behind, which
+            # reported as "Installed" (it keys on __init__.py existing) but was
+            # broken — and a failed re-download clobbered the working install.
+            tmp_dir = plugin_root / f".{self.plugin_name}.partial"
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                total = len(self.file_infos)
+                for i, info in enumerate(self.file_infos):
+                    url = info["download_url"]
+                    dest = tmp_dir / info["name"]
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    req = urllib.request.Request(url)
+                    with _https_urlopen(req, timeout=30) as resp:
+                        dest.write_bytes(resp.read())
+                    self.progress.emit(i + 1, total)
+                shutil.rmtree(final_dir, ignore_errors=True)
+                os.replace(tmp_dir, final_dir)
+            except Exception:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                raise
             self.result_ready.emit(self.plugin_name)
         except Exception as e:
             self.error.emit(str(e))

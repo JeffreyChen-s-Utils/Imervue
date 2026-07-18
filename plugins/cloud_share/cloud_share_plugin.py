@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
 )
 
 from cloud_share.uploaders import (
-    UploadError,
     upload_batch,
     upload_imgur,
     upload_s3_presigned,
@@ -224,18 +223,21 @@ class _UploadWorker(QThread):
         return lambda p: upload_s3_presigned(creds["s3_url"], p)
 
     def run(self) -> None:  # pragma: no cover - background thread
-        uploader = self._uploader()
-        if len(self._paths) == 1:
-            try:
-                link = uploader(self._paths[0])
-            except (UploadError, OSError, ValueError) as exc:
-                self.done.emit(False, str(exc))
+        try:
+            uploader = self._uploader()
+            if len(self._paths) == 1:
+                self.done.emit(True, uploader(self._paths[0]))
                 return
-            self.done.emit(True, link)
-            return
-        results = upload_batch(uploader, self._paths)
-        succeeded = sum(1 for _path, link in results if link)
-        self.done.emit(True, f"{succeeded}/{len(results)}")
+            results = upload_batch(uploader, self._paths)
+            succeeded = sum(1 for _path, link in results if link)
+            self.done.emit(True, f"{succeeded}/{len(results)}")
+        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
+            # HTTP-client / socket / provider failures (http.client.HTTPException,
+            # BadStatusLine) fall outside the old narrow tuple, and the batch
+            # path was not wrapped at all — either way the thread died with
+            # ``done`` never emitted and the dialog spinner hung forever.
+            logger.exception("cloud-share worker failed: %s", exc)
+            self.done.emit(False, str(exc))
 
 
 def _load_settings() -> dict:

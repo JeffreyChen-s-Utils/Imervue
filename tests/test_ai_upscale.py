@@ -246,3 +246,32 @@ class TestTraditionalMethods:
         # Every pixel should be exactly the same color
         arr = np.asarray(out_img)
         assert np.all(arr == np.array([42, 99, 200], dtype=arr.dtype))
+
+    def test_interruption_breaks_before_processing(self, tmp_path, qapp):
+        """When the thread is interrupted (closeEvent requests it), the loop
+        stops at its next per-image check without upscaling more files."""
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        src = tmp_path / "src"
+        src.mkdir()
+        for name in ("a.png", "b.png"):
+            Image.new("RGB", (8, 8), "blue").save(str(src / name))
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+
+        class _Interrupted(_UpscaleWorker):
+            def isInterruptionRequested(self):   # noqa: N802 - Qt override
+                return True
+
+        worker = _Interrupted(
+            [str(src / "a.png"), str(src / "b.png")], str(out_dir),
+            "trad:lanczos", False, scale_override=2)
+        progress, results = [], []
+        worker.progress.connect(lambda *a: progress.append(a))
+        worker.result_ready.connect(lambda s, f: results.append((s, f)))
+        worker.run()
+
+        assert progress == []                      # broke before the first image
+        assert results == [(0, 0)]                 # reported so the UI resets
+        assert list(out_dir.glob("*.png")) == []   # nothing upscaled

@@ -12,6 +12,7 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
+from Imervue.gui import _apply_save
 from Imervue.gui._apply_save import EffectWorker
 
 
@@ -60,3 +61,69 @@ def test_reports_failure_on_arbitrary_exception(tmp_path, qapp):
     worker.run()
     assert len(results) == 1
     assert results[0][0] is False
+
+
+# ---------------------------------------------------------------------------
+# finalize_worker — crash-safe QThread teardown for done slots
+# ---------------------------------------------------------------------------
+
+
+class _FakeDialog:
+    pass
+
+
+def test_finalize_worker_waits_then_clears_reference():
+    waited: list[bool] = []
+
+    class _FakeWorker:
+        def wait(self):
+            waited.append(True)
+
+    dlg = _FakeDialog()
+    dlg._worker = _FakeWorker()
+
+    _apply_save.finalize_worker(dlg)
+
+    assert waited == [True]        # waited for the thread before releasing
+    assert dlg._worker is None     # reference dropped only after the wait
+
+
+def test_finalize_worker_tolerates_missing_worker():
+    dlg = _FakeDialog()
+    dlg._worker = None
+    _apply_save.finalize_worker(dlg)   # must not raise on a None worker
+    assert dlg._worker is None
+
+
+def test_finalize_worker_waits_for_a_real_thread_before_clearing(qapp):
+    from PySide6.QtCore import QObject, QThread, Signal
+
+    class _Worker(QThread):
+        done = Signal()
+
+        def run(self):
+            self.done.emit()   # emitted as the last act, like the real workers
+
+    # A QObject dialog (like the real QDialog subclasses) so the cross-thread
+    # done -> on_done delivery is queued to this thread, not run inline on the
+    # worker thread — that queued delivery is what makes the wait() safe.
+    class _Dialog(QObject):
+        def __init__(self):
+            super().__init__()
+            self._worker = _Worker()
+
+        def on_done(self):
+            _apply_save.finalize_worker(self)
+
+    dlg = _Dialog()
+    worker = dlg._worker
+    dlg._worker.done.connect(dlg.on_done)
+    dlg._worker.start()
+
+    for _ in range(50):
+        qapp.processEvents()
+        if dlg._worker is None:
+            break
+
+    assert dlg._worker is None          # reference cleared via finalize_worker
+    assert worker.isFinished()          # and only after the thread truly stopped

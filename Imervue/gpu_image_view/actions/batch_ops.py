@@ -74,7 +74,12 @@ class BatchRenameDialog(QDialog):
     def _build_name(self, path: str, idx: int) -> str:
         p = Path(path)
         tmpl = self._template.text()
-        return tmpl.format(name=p.stem, n=idx, ext=p.suffix)
+        try:
+            return tmpl.format(name=p.stem, n=idx, ext=p.suffix)
+        except (KeyError, ValueError, IndexError):
+            # A malformed template ({size}, unbalanced braces, bad index) would
+            # otherwise crash the preview / rename. Fall back to the original name.
+            return p.name
 
     def _update_preview(self):
         try:
@@ -122,13 +127,16 @@ class BatchRenameDialog(QDialog):
         return renamed, failed
 
     def _apply_renames_to_model(self, renamed: list[tuple[str, str]]) -> None:
+        from Imervue.gpu_image_view.tile_textures import free_tile_textures
         images = self._gui.model.images
         for old, new in renamed:
             if old in images:
                 images[images.index(old)] = new
             self._gui.tile_cache.pop(old, None)
-            self._gui.tile_textures.pop(old, None)
             self._gui.selected_tiles.discard(old)
+        # Free the stale textures (renamed paths) under the GL context so they
+        # aren't orphaned on the GPU and the VRAM budget stays accurate.
+        free_tile_textures(self._gui, [old for old, _new in renamed])
 
     def _show_batch_toast(self, op: str, succeeded: int, failed: int) -> None:
         if not hasattr(self._gui.main_window, "toast"):
@@ -220,12 +228,13 @@ class BatchMoveDialog(QDialog):
         return count, failed
 
     def _remove_moved_from_model(self) -> None:
+        from Imervue.gpu_image_view.tile_textures import free_tile_textures
         images = self._gui.model.images
         for src in self._paths:
             if src in images:
                 images.remove(src)
             self._gui.tile_cache.pop(src, None)
-            self._gui.tile_textures.pop(src, None)
+        free_tile_textures(self._gui, list(self._paths))
         self._gui.selected_tiles.clear()
         self._gui.tile_selection_mode = False
         self._gui.clear_tile_grid()
@@ -245,8 +254,10 @@ class BatchMoveDialog(QDialog):
 
 def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
     """旋轉選取的圖片並儲存"""
+    from Imervue.gpu_image_view.tile_textures import free_tile_textures
     count = 0
     failed = 0
+    rotated: list[str] = []
     for path in paths:
         try:
             img = Image.open(path)
@@ -255,9 +266,11 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
             count += 1
             # 清除快取
             main_gui.tile_cache.pop(path, None)
-            main_gui.tile_textures.pop(path, None)
+            rotated.append(path)
         except Exception:
             failed += 1
+    # Free the now-stale rotated textures under the GL context (with accounting).
+    free_tile_textures(main_gui, rotated)
 
     if count:
         main_gui.selected_tiles.clear()

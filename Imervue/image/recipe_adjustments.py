@@ -86,7 +86,11 @@ def apply_whites_blacks(
         return arr
     rgb = arr[..., :3].astype(np.float32) / _MAX_BYTE
     black_point = max(0.0, blacks * -0.2)  # blacks<0 raises black_point
-    white_point = min(1.0, 1.0 - whites * -0.2)
+    # whites>0 lowers the white point so highlights stretch toward 255. The
+    # earlier ``- whites * -0.2`` added instead of subtracted, pushing the point
+    # to >1.0 for every positive value, so ``min(1.0, …)`` pinned it at 1.0 and
+    # the slider did nothing.
+    white_point = min(1.0, 1.0 - whites * 0.2)
     if white_point - black_point <= 0.01:
         return arr
     rgb = (rgb - black_point) / (white_point - black_point)

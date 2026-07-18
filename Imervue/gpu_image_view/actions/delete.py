@@ -49,7 +49,7 @@ class _UndoStackOwner(Protocol):
 
 
 def delete_current_image(main_gui: GPUImageView):
-    from OpenGL.GL import glDeleteTextures
+    from Imervue.gpu_image_view.tile_textures import free_tile_textures
 
     images = main_gui.model.images
 
@@ -74,10 +74,8 @@ def delete_current_image(main_gui: GPUImageView):
     if hasattr(main_gui.main_window, "plugin_manager"):
         main_gui.main_window.plugin_manager.dispatch_image_deleted([path_to_delete], main_gui)
 
-    # ===== 清 GPU texture =====
-    tex = main_gui.tile_textures.pop(path_to_delete, None)
-    if tex is not None:
-        glDeleteTextures([tex])
+    # ===== 清 GPU texture（帶 context + VRAM 帳目同步，避免洩漏與空白牆）=====
+    free_tile_textures(main_gui, [path_to_delete])
 
     # ===== 更新 current_index =====
     if images:
@@ -92,7 +90,7 @@ def delete_current_image(main_gui: GPUImageView):
 
 
 def delete_selected_tiles(main_gui):
-    from OpenGL.GL import glDeleteTextures
+    from Imervue.gpu_image_view.tile_textures import free_tile_textures
 
     if not main_gui.selected_tiles:
         return
@@ -118,13 +116,8 @@ def delete_selected_tiles(main_gui):
     if hasattr(main_gui.main_window, "plugin_manager"):
         main_gui.main_window.plugin_manager.dispatch_image_deleted(deleted_paths, main_gui)
 
-    # GPU — 一次釋放整批紋理，避免逐張呼叫
-    textures = [
-        tex for tex in (main_gui.tile_textures.pop(p, None) for p in deleted_paths)
-        if tex is not None
-    ]
-    if textures:
-        glDeleteTextures(textures)
+    # GPU — 一次釋放整批紋理（帶 context + VRAM 帳目同步，避免洩漏與空白牆）
+    free_tile_textures(main_gui, deleted_paths)
 
     # CPU cache
     for path in deleted_paths:

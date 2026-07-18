@@ -55,6 +55,25 @@ class EffectWorker(QThread):
             self.done.emit(False, str(exc))
 
 
+def finalize_worker(dialog) -> None:
+    """Wait for ``dialog._worker``'s thread to stop, then drop the reference.
+
+    Call this instead of ``self._worker = None`` in a worker's ``done`` slot.
+    These dialogs are usually temporaries (``Dialog(...).exec()``), so dropping
+    the last reference the moment ``done`` fires — while the OS thread is still
+    returning from ``run()`` — lets the QThread be garbage-collected mid-flight,
+    which Qt aborts with "QThread: Destroyed while thread is still running". The
+    custom ``done`` signal is emitted as the worker's final act, so ``wait()``
+    returns near-instantly; it just guarantees the thread has truly exited
+    before the reference is released. Mirrors the existing auto-straighten / OCR
+    dialogs, which already wait before nulling.
+    """
+    worker = getattr(dialog, "_worker", None)
+    if worker is not None:
+        worker.wait()
+    dialog._worker = None
+
+
 def make_slider(minimum: int, maximum: int, value: int) -> QSlider:
     """Return a horizontal :class:`QSlider` over ``[minimum, maximum]`` set to *value*."""
     slider = QSlider(Qt.Orientation.Horizontal)

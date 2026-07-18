@@ -59,18 +59,21 @@ def snap_point(
     py = float(point[1])
     activated: list[SnapTarget] = []
     best_x: SnapTarget | None = None
-    best_x_dist = float(threshold_px) + 1.0
+    # Seed at the threshold and accept ``<=`` so only targets within threshold_px
+    # snap. The old ``threshold + 1`` seed with a strict ``<`` snapped targets up
+    # to a pixel PAST the threshold.
+    best_x_dist = float(threshold_px)
     best_y: SnapTarget | None = None
-    best_y_dist = float(threshold_px) + 1.0
+    best_y_dist = float(threshold_px)
     for target in targets:
         if target.kind == "vertical":
             dist = abs(px - float(target.position))
-            if dist < best_x_dist:
+            if dist <= best_x_dist:
                 best_x_dist = dist
                 best_x = target
         else:
             dist = abs(py - float(target.position))
-            if dist < best_y_dist:
+            if dist <= best_y_dist:
                 best_y_dist = dist
                 best_y = target
 

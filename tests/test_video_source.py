@@ -145,6 +145,30 @@ def test_dialog_smoke(qapp):
         dialog.deleteLater()
 
 
+def test_finished_releases_reader(qapp):
+    """Accept/reject fire ``finished`` (not a QCloseEvent), so the ffmpeg reader
+    must be released on ``finished`` — otherwise a successful extract leaked the
+    subprocess for the app's lifetime."""
+    from video_source.video_source_plugin import VideoImportDialog
+
+    info = VideoInfo("clip.mp4", frame_count=5, fps=25.0, duration_s=0.2,
+                     width=16, height=16)
+
+    closed: list = []
+
+    class _ClosableReader(_FakeReader):
+        def close(self):
+            closed.append(True)
+
+    dialog = VideoImportDialog(object(), "clip.mp4", _ClosableReader(), info)
+    try:
+        dialog.done(0)                 # emits finished -> _release -> reader.close
+        assert closed == [True]
+        assert dialog._reader is None  # released and nulled
+    finally:
+        dialog.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # _context_video_path — which video the context menu targets
 # ---------------------------------------------------------------------------

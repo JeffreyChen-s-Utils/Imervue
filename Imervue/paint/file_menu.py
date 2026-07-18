@@ -395,14 +395,14 @@ class _FileMenuBridge:
     # ---- helpers (testable) ---------------------------------------------
 
     def _current_project(self):
-        """Return the host's PaintProject or ``None``.
+        """Return the host's :class:`PaintProject` or ``None``.
 
-        The workspace doesn't yet own a multi-page project — this is
-        the seam where a future "open project" command will plug in.
-        For now we return ``None`` so the export actions short-circuit
-        cleanly instead of crashing.
+        The workspace stores it under ``_paint_project`` (set by
+        :meth:`set_paint_project`, read by the page dock and manga menu). Reading
+        the wrong attribute (``_project``) always returned ``None``, so Export
+        Pages → CBZ / PDF silently no-opped even with a project open.
         """
-        return getattr(self._workspace, "_project", None)
+        return getattr(self._workspace, "_paint_project", None)
 
     def _pick_file(  # pragma: no cover - QFileDialog
         self, *, title_key: str, title_fallback: str, filters: list[str],

@@ -223,6 +223,26 @@ def test_scheduled_editor_messages_edit_round_trip(qapp):
         editor.deleteLater()
 
 
+def test_scheduled_editor_preserves_the_schedule_rule(qapp):
+    """Editing an entry must carry its wall-clock rule through unchanged, not
+    strip it (which turned a time-gated reminder into a 24/7 one)."""
+    from Imervue.desktop_pet.pet_script_editor import _parse_scheduled_events
+    from Imervue.desktop_pet.schedule_rules import rule_from_dict
+    rule = rule_from_dict(
+        {"start_hour": 9, "end_hour": 17, "weekdays": [0, 1, 2, 3, 4]})
+    editor = _ScheduledEditor(initial=[
+        ScheduledEvent(every_seconds=600.0, messages=["hi"], rule=rule),
+    ])
+    try:
+        editor._entries_list.setCurrentRow(0)      # noqa: SLF001
+        editor._messages.set_lines(["hi", "there"])   # noqa: SLF001
+        parsed = _parse_scheduled_events(editor.entries())
+        assert parsed[0].messages == ["hi", "there"]
+        assert parsed[0].rule == rule              # rule survived the edit
+    finally:
+        editor.deleteLater()
+
+
 # ---------------------------------------------------------------
 # PetScriptEditorDialog — end-to-end snapshot
 # ---------------------------------------------------------------

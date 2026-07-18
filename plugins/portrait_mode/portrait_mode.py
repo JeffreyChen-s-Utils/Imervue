@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -119,12 +119,13 @@ class PortraitModePlugin(ImervuePlugin):
 
 
 class PortraitModeDialog(QDialog):
-    """Slider-driven blur + feather options. Runs synchronously on OK."""
+    """Slider-driven blur + feather options. Runs on a worker thread on OK."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
+        self._worker: _PortraitWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("portrait_mode_title", "Portrait Mode"))
         self.setMinimumWidth(420)
@@ -172,34 +173,38 @@ class PortraitModeDialog(QDialog):
         return buttons
 
     def _commit(self) -> None:
-        try:
-            arr = _load_rgba(self._path)
-            mask = _extract_subject_mask(arr)
-        except (ImportError, OSError, RuntimeError, ValueError) as exc:
-            self._notify_failure(exc)
+        # Subject-mask extraction (rembg / onnxruntime) plus the blur composite
+        # can run for seconds — do them on a worker so the dialog stays live.
+        if self._worker is not None:
             return
-
         options = PortraitBlurOptions(
             blur_radius=int(self._blur.value()),
             feather_radius=int(self._feather.value()),
         )
-        try:
-            composite = apply_portrait_blur(arr, mask, options)
-        except ValueError as exc:
-            self._notify_failure(exc)
-            return
-
         out_path = Path(self._path).with_name(
             f"{Path(self._path).stem}_portrait.png",
         )
-        try:
-            Image.fromarray(composite, mode="RGBA").save(str(out_path))
-        except OSError as exc:
-            self._notify_failure(exc)
-            return
+        self._worker = _PortraitWorker(self._path, options, str(out_path))
+        self._worker.done.connect(self._on_done)
+        self._worker.start()
 
-        self._notify_success(out_path)
+    def _on_done(self, ok: bool, message: str) -> None:
+        self._worker = None
+        if not ok:
+            self._notify_failure(RuntimeError(message))
+            return
+        self._notify_success(Path(message))
         self.accept()
+
+    def _wait_worker(self) -> None:
+        """Block until the worker stops so its QThread isn't destroyed mid-run
+        when the dialog closes."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
 
     def _notify_failure(self, exc: Exception) -> None:
         if hasattr(self._viewer, "main_window") and hasattr(
@@ -248,3 +253,32 @@ def _extract_subject_mask(arr: np.ndarray) -> np.ndarray:
     if cut_arr.ndim != 3 or cut_arr.shape[2] != 4:
         raise RuntimeError("rembg returned an unexpected image shape")
     return cut_arr[..., 3]
+
+
+class _PortraitWorker(QThread):
+    """Extract the subject mask and composite the blur off the UI thread."""
+
+    done = Signal(bool, str)
+
+    def __init__(self, path: str, options: PortraitBlurOptions, out_path: str):
+        super().__init__()
+        self._path = path
+        self._options = options
+        self._out_path = out_path
+
+    def run(self) -> None:  # pragma: no cover - background thread
+        try:
+            arr = _load_rgba(self._path)
+            mask = _extract_subject_mask(arr)
+            composite = apply_portrait_blur(arr, mask, self._options)
+            Image.fromarray(composite, mode="RGBA").save(self._out_path)
+        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
+            # rembg / ONNX / cv2 / PIL raise their own Exception subclasses
+            # (ORT's InvalidArgument, cv2.error, DecompressionBombError) that
+            # are not in the narrow tuple; letting them escape kills the thread
+            # with ``done`` never emitted, so the dialog hangs with a dead OK
+            # button.
+            logger.exception("portrait worker failed: %s", exc)
+            self.done.emit(False, str(exc))
+            return
+        self.done.emit(True, self._out_path)

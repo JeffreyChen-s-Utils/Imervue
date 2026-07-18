@@ -32,14 +32,10 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_bg_remover")
-
-# \u8a2d\u5b9a\u6a94\u6848\u540d\u7a31\u3001\u7de8\u78bc\u3001\u5c64\u7d1a\u8207\u683c\u5f0f
-logging.basicConfig(
-    filename='ai_bg_remover.log',
-    filemode='w',
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
-)
+# NOTE: no logging.basicConfig here. Reconfiguring the ROOT logger at import time
+# hijacked all propagated logging into a truncated CWD file, and constructing the
+# FileHandler raised (aborting plugin load) when the CWD was read-only (a frozen
+# install under Program Files). Use the named module logger above instead.
 
 # ===========================
 # \u8def\u5f91

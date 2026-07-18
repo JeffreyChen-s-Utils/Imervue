@@ -29,6 +29,26 @@ def _notify_switch(main_gui: GPUImageView, path: str) -> None:
             pm.dispatch_image_switched(path, main_gui)
 
 
+def _forget_target_view(main_gui: GPUImageView, path: str) -> None:
+    """Drop *path*'s remembered zoom so keyboard navigation opens it fitted.
+
+    Prev/next (including the end-wrap) should show each image fitted to the
+    window, not reopen it at a leftover per-image zoom-in from earlier in the
+    session — reported as the image "not fitting the window" both when looping
+    past the end and when returning to the last image. ``load_deep_zoom_image``
+    treats an image with no ``_view_memory`` entry as a fresh entry and always
+    content-fits it, so forgetting the target's saved view before the load makes
+    it fit. Direct zoom/pan on the shown image still works; only arrow-key
+    navigation resets to a fresh fit.
+
+    Guarded on ``dict`` so a stubbed/mock viewer without a real memory map is a
+    safe no-op.
+    """
+    mem = getattr(main_gui, "_view_memory", None)
+    if isinstance(mem, dict):
+        mem.pop(path, None)
+
+
 def switch_to_next_image(main_gui: GPUImageView) -> None:
     images = main_gui.model.images
 
@@ -44,8 +64,10 @@ def switch_to_next_image(main_gui: GPUImageView) -> None:
         main_gui.update()
         return
 
-    main_gui.load_deep_zoom_image(images[main_gui.current_index])
-    _notify_switch(main_gui, images[main_gui.current_index])
+    target = images[main_gui.current_index]
+    _forget_target_view(main_gui, target)
+    main_gui.load_deep_zoom_image(target)
+    _notify_switch(main_gui, target)
     main_gui.update()
 
 
@@ -64,8 +86,10 @@ def switch_to_previous_image(main_gui: GPUImageView) -> None:
         main_gui.update()
         return
 
-    main_gui.load_deep_zoom_image(images[main_gui.current_index])
-    _notify_switch(main_gui, images[main_gui.current_index])
+    target = images[main_gui.current_index]
+    _forget_target_view(main_gui, target)
+    main_gui.load_deep_zoom_image(target)
+    _notify_switch(main_gui, target)
     main_gui.update()
 
 

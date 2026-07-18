@@ -75,6 +75,66 @@ class TestGenerateValidation:
             )
 
 
+class _FakeWriter:
+    def __init__(self):
+        self.appended: list[np.ndarray] = []
+        self.closed = False
+
+    def append_data(self, frame):
+        self.appended.append(frame)
+
+    def close(self):
+        self.closed = True
+
+
+def _install_fake_imageio(monkeypatch, writer):
+    # ``import imageio.v2 as imageio`` needs both the parent package and the
+    # submodule (linked as an attribute) in sys.modules, so imageio doesn't have
+    # to be installed for these tests to drive the write path.
+    import sys
+    import types
+    parent = types.ModuleType("imageio")
+    v2 = types.ModuleType("imageio.v2")
+    v2.get_writer = lambda *a, **k: writer
+    parent.v2 = v2
+    monkeypatch.setitem(sys.modules, "imageio", parent)
+    monkeypatch.setitem(sys.modules, "imageio.v2", v2)
+
+
+class TestGenerateFrameGuard:
+    def test_zero_decodable_images_raises_and_removes_file(self, tmp_path, monkeypatch):
+        """Regression: when every image fails to decode the writer finalised a
+        valid-but-unplayable 0-frame container and the path was returned as a
+        success. It must now raise and delete the empty file."""
+        out = tmp_path / "out.mp4"
+        out.write_bytes(b"stub")   # stand in for the writer's 0-frame container
+        writer = _FakeWriter()
+        _install_fake_imageio(monkeypatch, writer)
+        monkeypatch.setattr(sm, "_load_as_rgb", lambda path: None)
+
+        with pytest.raises(RuntimeError, match="could not decode any"):
+            sm.generate_slideshow_mp4(["a.png", "b.png"], str(out))
+
+        assert writer.closed is True     # writer always closed
+        assert writer.appended == []     # nothing written
+        assert not out.exists()          # empty file cleaned up
+
+    def test_returns_path_when_at_least_one_image_decodes(self, tmp_path, monkeypatch):
+        out = tmp_path / "ok.mp4"
+        writer = _FakeWriter()
+        _install_fake_imageio(monkeypatch, writer)
+        monkeypatch.setattr(
+            sm, "_load_as_rgb",
+            lambda path: np.full((10, 10, 3), 128, dtype=np.uint8),
+        )
+
+        result = sm.generate_slideshow_mp4(["a.png"], str(out))
+
+        assert result == out
+        assert len(writer.appended) >= 1   # at least the hold frames written
+        assert writer.closed is True
+
+
 class TestWriteSlide:
     def test_append_called_for_each_frame(self):
         calls: list[np.ndarray] = []

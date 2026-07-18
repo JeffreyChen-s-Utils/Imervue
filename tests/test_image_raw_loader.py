@@ -132,26 +132,19 @@ def test_mmap_path_uses_open_buffer(stub_rawpy, tmp_path):
         assert "open_file" not in method_names
         assert "unpack" in method_names
     finally:
-        raw.close()
-        raw._imervue_mmap.close()   # noqa: SLF001
-        raw._imervue_fd.close()   # noqa: SLF001
+        raw.close()   # wrapped close releases the mmap region + fd too
 
 
-def test_mmap_path_holds_mmap_and_fd(stub_rawpy, tmp_path):
-    """The returned instance must carry the mmap + fd so the
-    caller can release them when done. Without these refs the
-    mmap would be GC'd while libraw still holds pointers into it
-    — undefined behaviour."""
+def test_mmap_path_close_releases_the_file(stub_rawpy, tmp_path):
+    """close() must release the mmap + fd on top of the libraw context. A
+    leaked mapping keeps the file locked on Windows, so deleting it after close
+    proves everything was released."""
     rawfile = tmp_path / "fake.cr3"
     rawfile.write_bytes(b"X" * 4096)
     raw = open_raw_via_mmap(rawfile)
-    try:
-        assert hasattr(raw, "_imervue_mmap")
-        assert hasattr(raw, "_imervue_fd")
-    finally:
-        raw.close()
-        raw._imervue_mmap.close()   # noqa: SLF001
-        raw._imervue_fd.close()   # noqa: SLF001
+    raw.close()
+    rawfile.unlink()   # PermissionError here would mean the mmap/fd leaked
+    assert not rawfile.exists()
 
 
 # ---------------------------------------------------------------

@@ -214,7 +214,85 @@ def test_dialog_smoke(qapp, tmp_path):
     dialog = ObjectRemoveDialog(object(), str(path))
     try:
         dialog._on_click(dialog._preview.width() / 2, dialog._preview.height() / 2)
+        # The flood-fill now runs on a worker thread; wait for it, then pump the
+        # queued ready signal so the mask lands back on the GUI thread.
+        if dialog._mask_worker is not None:
+            dialog._mask_worker.wait(2000)
+        for _ in range(20):
+            qapp.processEvents()
+            if dialog._mask is not None:
+                break
         assert dialog._mask is not None
         assert dialog._mask.any()
     finally:
         dialog.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Flood-fill mask build moved off the GUI thread
+# ---------------------------------------------------------------------------
+
+
+class TestMaskWorker:
+    def test_worker_computes_same_mask_as_build_mask(self, qapp):
+        from ai_object_remove.ai_object_remove_plugin import _MaskWorker
+        arr = np.zeros((8, 8, 4), dtype=np.uint8)
+        arr[..., 3] = 255
+        arr[2:5, 2:5, :3] = 200          # a distinct connected region
+        worker = _MaskWorker(arr, 3, 3, 30, 0)
+        results: list = []
+        worker.ready.connect(lambda m: results.append(m))
+        worker.run()                     # synchronous — no thread started
+
+        assert len(results) == 1
+        assert np.array_equal(results[0], build_mask(arr, 3, 3, 30, 0))
+
+    def test_recompute_marks_dirty_while_worker_busy(self):
+        from types import SimpleNamespace
+
+        from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
+        ws = SimpleNamespace(_seed=(1, 1), _mask_worker=object(), _mask_dirty=False)
+        ObjectRemoveDialog._recompute_mask(ws)
+        assert ws._mask_dirty is True    # queued to re-run; no second worker
+
+    def test_recompute_noop_without_seed(self):
+        from types import SimpleNamespace
+
+        from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
+        ws = SimpleNamespace(_seed=None, _mask_worker=None, _mask_dirty=False)
+        ObjectRemoveDialog._recompute_mask(ws)
+        assert ws._mask_dirty is False
+
+    def test_on_mask_ready_reruns_when_dirty(self):
+        from types import SimpleNamespace
+
+        from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
+        recompute, rendered = [], []
+        ws = SimpleNamespace(
+            _mask_worker=SimpleNamespace(wait=lambda: None),
+            _mask_dirty=True,
+            _seed=(2, 2),
+            _render_preview=lambda: rendered.append(True),
+            _recompute_mask=lambda: recompute.append(True),
+        )
+        sentinel = object()
+        ObjectRemoveDialog._on_mask_ready(ws, sentinel)
+        assert ws._mask is sentinel
+        assert ws._mask_worker is None
+        assert rendered == [True]
+        assert recompute == [True]        # re-ran with the latest params
+
+    def test_on_mask_ready_no_rerun_when_clean(self):
+        from types import SimpleNamespace
+
+        from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
+        recompute = []
+        ws = SimpleNamespace(
+            _mask_worker=SimpleNamespace(wait=lambda: None),
+            _mask_dirty=False,
+            _seed=(2, 2),
+            _render_preview=lambda: None,
+            _recompute_mask=lambda: recompute.append(True),
+        )
+        ObjectRemoveDialog._on_mask_ready(ws, object())
+        assert recompute == []

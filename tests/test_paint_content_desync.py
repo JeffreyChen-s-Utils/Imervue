@@ -86,6 +86,7 @@ def test_exit_quick_mask_restores_the_stored_layer_after_reorder(qapp):
         layers=lambda: [other, target],
         layer_count=2,
         invalidate_composite=lambda: None,
+        set_selection=lambda s: None,
     )
     canvas = SimpleNamespace(
         document=lambda: document,
@@ -95,6 +96,7 @@ def test_exit_quick_mask_restores_the_stored_layer_after_reorder(qapp):
     host = SimpleNamespace(
         _quick_mask_state=state,
         _quick_mask_layer=target,
+        _quick_mask_document=document,
         is_quick_mask_active=lambda: True,
         canvas=lambda: canvas,
     )

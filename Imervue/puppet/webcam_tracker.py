@@ -117,6 +117,15 @@ class WebcamTracker(QObject):
     # ---- start / stop --------------------------------------------------
 
     def _start(self) -> bool:
+        # A previous _stop whose join timed out (a stuck cap.read on a
+        # disconnected camera) leaves the old thread still winding down. Starting
+        # here would clear the stop event and spawn a second thread contending
+        # for VideoCapture(0) and racing the shared _latest_* buffers. Refuse
+        # until the old thread has actually exited; the stop event is still set,
+        # so it will.
+        if self._thread is not None and self._thread.is_alive():
+            logger.warning("previous webcam thread still winding down; not restarting")
+            return False
         try:
             import cv2   # noqa: F401 - probe import
             import mediapipe   # noqa: F401 - probe import
@@ -138,9 +147,15 @@ class WebcamTracker(QObject):
     def _stop(self) -> None:
         self._stop_evt.set()
         thread = self._thread
-        self._thread = None
         if thread is not None and thread.is_alive():
             thread.join(timeout=1.0)
+        # Only drop the reference once the thread has actually exited. A timed-out
+        # join leaves a zombie still reading the camera; clearing the reference
+        # here would hide it from _start, which would then revive it into a
+        # second capture thread. Keeping the reference makes _start refuse until
+        # it dies (the stop event stays set, so it will).
+        if thread is None or not thread.is_alive():
+            self._thread = None
         self._pump_timer.stop()
 
     # ---- background loop -----------------------------------------------
@@ -211,8 +226,11 @@ class WebcamTracker(QObject):
             params = dict(self._latest_params)
         if not params:
             return
-        for param_id, value in params.items():
-            self._canvas.set_parameter_value(param_id, value)
+        # Push the whole frame's parameters in one batch. Setting them one at a
+        # time re-ran the full mesh deform + repaint per parameter (~15 per
+        # frame), collapsing the frame rate on a large rig; set_parameter_values
+        # recomputes once for the batch.
+        self._canvas.set_parameter_values(params)
 
 
 def _landmarks_to_array(face_landmarks) -> np.ndarray:  # pragma: no cover - mediapipe types

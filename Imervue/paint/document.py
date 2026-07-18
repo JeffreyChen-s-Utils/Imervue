@@ -13,6 +13,7 @@ canvas's next paint pays the recomposite cost once.
 """
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable
 from typing import Any
 
@@ -59,6 +60,31 @@ class PaintDocument:
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
         self._reference_layer_index: int | None = None
+
+    def __deepcopy__(self, memo: dict) -> PaintDocument:
+        """Deep-copy the document CONTENT, not its runtime wiring.
+
+        ``_listeners`` hold bound methods of Qt widgets (the canvas, the layers
+        dock); the default deepcopy walks them into the widget tree and raises
+        ``TypeError: cannot pickle ...`` — which crashed "Duplicate page" — and
+        even when a listener survives copying, the clone would notify the
+        ORIGINAL page's widgets. A cloned document starts with no listeners and
+        cold composite caches; only the layer stack, groups, selections and
+        indices carry over.
+        """
+        clone = type(self)()
+        memo[id(self)] = clone
+        clone._layers = copy.deepcopy(self._layers, memo)
+        clone._active_index = self._active_index
+        clone._selection = (
+            None if self._selection is None else self._selection.copy()
+        )
+        clone._groups = copy.deepcopy(self._groups, memo)
+        clone._named_selections = {
+            name: mask.copy() for name, mask in self._named_selections.items()
+        }
+        clone._reference_layer_index = self._reference_layer_index
+        return clone
 
     # ---- listeners -------------------------------------------------------
 
@@ -307,7 +333,7 @@ class PaintDocument:
         layer = self.active_layer()
         if layer is None:
             return
-        copy = Layer(
+        duplicate = Layer(
             name=f"{layer.name} copy",
             image=layer.image.copy(),
             opacity=layer.opacity,
@@ -323,9 +349,16 @@ class PaintDocument:
             effects=layer.effects,
             tone=layer.tone,
             binary=layer.binary,
+            # blend_if / vector_data carry mutable state (channel ranges,
+            # the stroke list); deep-copy them so edits on the duplicate
+            # don't bleed back into the original. Dropping vector_data
+            # entirely would silently rasterise a duplicated vector layer.
+            blend_if=copy.deepcopy(layer.blend_if),
+            vector_data=copy.deepcopy(layer.vector_data),
+            color_label=layer.color_label,
         )
         insert_at = self._active_index + 1
-        self._layers.insert(insert_at, copy)
+        self._layers.insert(insert_at, duplicate)
         self._active_index = insert_at
         self._shift_reference_for_insert(insert_at)
         self._notify()
@@ -613,6 +646,22 @@ class PaintDocument:
             raise IndexError(f"layer index {index} out of range")
         return self._layers[index]
 
+    def _remap_all_selections(
+        self, transform: Callable[[np.ndarray], np.ndarray],
+    ) -> None:
+        """Apply a geometric ``transform`` to the active selection and
+        every saved named selection so a crop / flip / rotate / resize
+        keeps them aligned with the new canvas geometry. Without this a
+        later :meth:`load_selection` would restore (or reject) a mask
+        sized for the pre-transform canvas."""
+        if self._selection is not None:
+            self._selection = transform(self._selection)
+        if self._named_selections:
+            self._named_selections = {
+                name: transform(mask)
+                for name, mask in self._named_selections.items()
+            }
+
     # ---- crop ----------------------------------------------------------
 
     def crop(self, rect: tuple[int, int, int, int]) -> bool:
@@ -625,8 +674,7 @@ class PaintDocument:
             layer.image = crop_to_rect(layer.image, rect)
             if layer.mask is not None:
                 layer.mask = crop_to_rect(layer.mask, rect)
-        if self._selection is not None:
-            self._selection = crop_to_rect(self._selection, rect)
+        self._remap_all_selections(lambda arr: crop_to_rect(arr, rect))
         self._notify()
         return True
 
@@ -674,8 +722,8 @@ class PaintDocument:
             layer.image = np.ascontiguousarray(np.fliplr(layer.image))
             if layer.mask is not None:
                 layer.mask = np.ascontiguousarray(np.fliplr(layer.mask))
-        if self._selection is not None:
-            self._selection = np.ascontiguousarray(np.fliplr(self._selection))
+        self._remap_all_selections(
+            lambda arr: np.ascontiguousarray(np.fliplr(arr)))
         self._notify()
         return True
 
@@ -687,8 +735,8 @@ class PaintDocument:
             layer.image = np.ascontiguousarray(np.flipud(layer.image))
             if layer.mask is not None:
                 layer.mask = np.ascontiguousarray(np.flipud(layer.mask))
-        if self._selection is not None:
-            self._selection = np.ascontiguousarray(np.flipud(self._selection))
+        self._remap_all_selections(
+            lambda arr: np.ascontiguousarray(np.flipud(arr)))
         self._notify()
         return True
 
@@ -704,8 +752,8 @@ class PaintDocument:
             layer.image = np.ascontiguousarray(np.rot90(layer.image, k=-1))
             if layer.mask is not None:
                 layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=-1))
-        if self._selection is not None:
-            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=-1))
+        self._remap_all_selections(
+            lambda arr: np.ascontiguousarray(np.rot90(arr, k=-1)))
         self._notify()
         return True
 
@@ -717,8 +765,8 @@ class PaintDocument:
             layer.image = np.ascontiguousarray(np.rot90(layer.image, k=1))
             if layer.mask is not None:
                 layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=1))
-        if self._selection is not None:
-            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=1))
+        self._remap_all_selections(
+            lambda arr: np.ascontiguousarray(np.rot90(arr, k=1)))
         self._notify()
         return True
 
@@ -746,10 +794,8 @@ class PaintDocument:
                 layer.mask = resize_mask(
                     layer.mask, new_w, new_h, resample=resample,
                 )
-        if self._selection is not None:
-            self._selection = resize_selection(
-                self._selection, new_w, new_h,
-            )
+        self._remap_all_selections(
+            lambda arr: resize_selection(arr, new_w, new_h))
         self._notify()
         return True
 
@@ -761,8 +807,8 @@ class PaintDocument:
             layer.image = np.ascontiguousarray(np.rot90(layer.image, k=2))
             if layer.mask is not None:
                 layer.mask = np.ascontiguousarray(np.rot90(layer.mask, k=2))
-        if self._selection is not None:
-            self._selection = np.ascontiguousarray(np.rot90(self._selection, k=2))
+        self._remap_all_selections(
+            lambda arr: np.ascontiguousarray(np.rot90(arr, k=2)))
         self._notify()
         return True
 
@@ -1242,9 +1288,7 @@ class PaintDocument:
         if shape is None:
             return None
         if self._composite_cache is None:
-            self._composite_cache = composite_stack(
-                self._layers, shape, groups=self._groups,
-            )
+            self._composite_cache = self._compute_full_composite(shape)
             self._composite_dirty_rect = None
             return self._composite_cache
         if self._composite_dirty_rect is not None:
@@ -1257,13 +1301,24 @@ class PaintDocument:
                 # A layer in the stack needs full-frame context (effects
                 # / adjustment) — fall back to a full recompose so the
                 # output still respects every layer's contract.
-                self._composite_cache = composite_stack(
-                    self._layers, shape, groups=self._groups,
-                )
+                self._composite_cache = self._compute_full_composite(shape)
             else:
                 self._composite_cache[y:y + rh, x:x + rw] = partial
             self._composite_dirty_rect = None
         return self._composite_cache
+
+    def _compute_full_composite(self, shape: tuple[int, int]) -> np.ndarray:
+        """Full stack composite that never aliases a layer's buffer.
+
+        The single-layer fast path in :func:`composite_stack` returns
+        the layer's own image object; adopting that as the patchable
+        cache would let the dirty-rect patch in :meth:`composite` write
+        composite output straight into the layer's pixels.
+        """
+        result = composite_stack(self._layers, shape, groups=self._groups)
+        if any(result is layer.image for layer in self._layers):
+            return result.copy()
+        return result
 
     def invalidate_composite(self) -> None:
         """Force the next :meth:`composite` to recompute everything."""

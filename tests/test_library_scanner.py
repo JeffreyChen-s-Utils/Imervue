@@ -122,3 +122,32 @@ class TestIndexOne:
         scanner._index_one(ghost, with_phash=False)
         # No exception, no entry.
         assert image_index.get_image(str(ghost)) is None
+
+
+class TestScanWithPhash:
+    def test_scan_with_phash_indexes_photolike_images(self, tmp_path, qapp):
+        """Regression: a non-flat image's 64-bit pHash has its high bit set,
+        which used to overflow SQLite's signed INTEGER, roll back the batch,
+        and abort the entire scan with zero images indexed. With pHash on (the
+        default), every image must now be indexed and carry a stored hash."""
+        root = tmp_path / "lib"
+        root.mkdir()
+        rng = np.random.default_rng(7)
+        paths = []
+        for i in range(3):
+            arr = (rng.random((32, 32, 3)) * 255).astype(np.uint8)
+            pth = root / f"img{i}.png"
+            Image.fromarray(arr).save(str(pth))
+            paths.append(str(pth))
+
+        s = scanner.LibraryScanner([str(root)], with_phash=True)
+        errors: list[str] = []
+        s.error.connect(errors.append)
+        s.run()
+
+        assert errors == []
+        assert image_index.count_images() == 3
+        for p in paths:
+            row = image_index.get_image(p)
+            assert row is not None
+            assert row["phash"] is not None

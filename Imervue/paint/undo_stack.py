@@ -23,6 +23,7 @@ Ctrl+Y / Ctrl+Shift+Z respectively.
 """
 from __future__ import annotations
 
+import weakref
 from dataclasses import dataclass
 
 import numpy as np
@@ -34,8 +35,17 @@ MAX_UNDO_LEVELS = 50
 
 @dataclass(frozen=True)
 class _Snapshot:
-    """One captured document state — layers + selection."""
+    """One captured document state — layers + selection.
 
+    Layer pixels are keyed by object identity (weak references), not by
+    stack position: layers can be added, removed, or reordered between
+    a capture and its restore, and an index-based mapping would write a
+    captured image into whichever layer happens to occupy the old slot.
+    Weak references keep deleted layers from being pinned in memory by
+    old snapshots.
+    """
+
+    layer_refs: tuple[weakref.ReferenceType, ...]
     layer_images: tuple[np.ndarray, ...]
     selection: np.ndarray | None
 
@@ -130,6 +140,7 @@ class UndoStack:
     def _capture(self) -> _Snapshot:
         """Snapshot every layer image + the active selection."""
         layers = self._document.layers()
+        layer_refs = tuple(weakref.ref(layer) for layer in layers)
         layer_images = tuple(
             np.ascontiguousarray(layer.image.copy()) for layer in layers
         )
@@ -138,20 +149,44 @@ class UndoStack:
             np.ascontiguousarray(selection.copy())
             if selection is not None else None
         )
-        return _Snapshot(layer_images=layer_images, selection=selection_copy)
+        return _Snapshot(
+            layer_refs=layer_refs,
+            layer_images=layer_images,
+            selection=selection_copy,
+        )
 
     def _restore(self, snapshot: _Snapshot) -> None:
         """Write a snapshot back to the document.
 
-        Layers added since the snapshot are preserved at the bottom
-        of the stack; layers removed since are not re-added (the
-        snapshot only contains what existed at capture time, so a
-        removed layer can't come back without a deeper representation).
+        Each captured image goes back into the layer object it was
+        captured from, wherever that layer now sits in the stack.
+        Layers added since the snapshot keep their pixels (the snapshot
+        has nothing for them); layers removed since are not re-added
+        (the snapshot only contains pixels, not stack structure).
         """
-        layers = self._document.layers()
-        for i, image in enumerate(snapshot.layer_images):
-            if i >= len(layers):
-                break
-            np.copyto(layers[i].image, image)
-        self._document.set_selection(snapshot.selection)
+        current = self._document.layers()
+        for ref, image in zip(
+            snapshot.layer_refs, snapshot.layer_images, strict=True,
+        ):
+            layer = ref()
+            if layer is None:
+                continue  # captured layer was deleted and collected
+            # Identity scan, not ``in`` — Layer is a dataclass whose
+            # ``==`` would compare numpy fields elementwise.
+            if not any(layer is live for live in current):
+                continue  # deleted but still referenced elsewhere
+            if layer.image.shape != image.shape:
+                # A whole-canvas transform (rotate 90° / resize) changed this
+                # layer's dimensions after the snapshot was captured; an in-place
+                # ``np.copyto`` would raise a broadcast ValueError. Skip the stale
+                # layer instead of crashing — transforms clear the stack, so this
+                # is only a backstop for any snapshot that outlives a resize.
+                continue
+            np.copyto(layer.image, image)
+        selection = snapshot.selection
+        if selection is not None and selection.shape[:2] != self._document.shape:
+            # A selection captured at the old size no longer maps onto the
+            # resized canvas — drop it rather than restore a mismatched mask.
+            selection = None
+        self._document.set_selection(selection)
         self._document.invalidate_composite()

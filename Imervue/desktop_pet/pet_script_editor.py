@@ -46,11 +46,23 @@ from Imervue.desktop_pet.pet_script import (
     PetScript,
     ScheduledEvent,
 )
+from Imervue.desktop_pet.schedule_rules import ScheduleRule, rule_from_dict
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
 def _tr(key: str, default: str) -> str:
     return language_wrapper.language_word_dict.get(key, default)
+
+
+def _coerce_rule(value: object) -> ScheduleRule | None:
+    """Normalize a carried schedule rule: keep a ScheduleRule, coerce a dict from
+    raw form data, else None. Lets the editor round-trip preserve the wall-clock
+    gating instead of silently stripping it."""
+    if isinstance(value, ScheduleRule):
+        return value
+    if isinstance(value, dict):
+        return rule_from_dict(value)
+    return None
 
 
 def _parse_scheduled_events(raw: object) -> list[ScheduledEvent]:
@@ -69,6 +81,7 @@ def _parse_scheduled_events(raw: object) -> list[ScheduledEvent]:
         events.append(ScheduledEvent(
             every_seconds=every,
             messages=[str(m) for m in messages if isinstance(m, str)],
+            rule=_coerce_rule(entry.get("rule")),
         ))
     return events
 
@@ -314,7 +327,14 @@ class _ScheduledEditor(QWidget):
     ) -> None:
         super().__init__(parent)
         self._entries: list[dict] = [
-            {"every_seconds": float(ev.every_seconds), "messages": list(ev.messages)}
+            {
+                "every_seconds": float(ev.every_seconds),
+                "messages": list(ev.messages),
+                # Carry the wall-clock rule opaquely so editing an entry doesn't
+                # strip its schedule gating (the editor only edits interval +
+                # messages, but must preserve the rule).
+                "rule": ev.rule,
+            }
             for ev in (initial or [])
         ]
         layout = QVBoxLayout(self)
@@ -354,7 +374,11 @@ class _ScheduledEditor(QWidget):
         :func:`script_from_form_data`."""
         self._flush_current()
         return [
-            {"every_seconds": e["every_seconds"], "messages": list(e["messages"])}
+            {
+                "every_seconds": e["every_seconds"],
+                "messages": list(e["messages"]),
+                "rule": e.get("rule"),
+            }
             for e in self._entries
         ]
 

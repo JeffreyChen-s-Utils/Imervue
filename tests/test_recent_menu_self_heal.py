@@ -164,6 +164,35 @@ def test_build_recent_menu_includes_clear_action(qapp):
     assert any("Clear" in t for t in titles)
 
 
+def test_context_menu_build_does_not_clobber_file_menu_refs(qapp):
+    """The right-click build (``store_refs=False``) must not rebind the main
+    window's cached Recent submenu handles. Rebinding them to the transient
+    context-menu submenus froze the File menu's Recent lists: every later
+    ``rebuild_recent_menu`` then repopulated the dismissed context menu."""
+    main = _StubMainWindow(qapp)
+    original = (
+        main._recent_folder_menu, main._recent_image_menu, main._recent_menu,
+    )
+    context = QMenu()
+    build_recent_menu(main, context, store_refs=False)
+    assert (
+        main._recent_folder_menu, main._recent_image_menu, main._recent_menu,
+    ) == original
+    # It still builds its own populated Recent submenu inside the context menu.
+    assert context.actions()
+
+
+def test_file_menu_build_rebinds_refs_to_new_submenus(qapp):
+    """The default (``store_refs=True``) path keeps caching the handles so
+    ``rebuild_recent_menu`` has something to refresh."""
+    main = _StubMainWindow(qapp)
+    stale = main._recent_menu
+    build_recent_menu(main, QMenu())
+    assert main._recent_menu is not stale
+    assert main._recent_folder_menu is not None
+    assert main._recent_image_menu is not None
+
+
 # ---------------------------------------------------------------------------
 # Teardown safety — the C++ side of the submenus may be deleted before
 # the next ``rebuild_recent_menu`` call lands.

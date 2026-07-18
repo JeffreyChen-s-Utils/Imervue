@@ -325,6 +325,29 @@ def test_convert_format_rgba_to_jpeg_drops_alpha(sample_rgba_image, tmp_path):
         assert img.mode == "RGB"
 
 
+def test_convert_format_palette_to_jpeg_flattens(tmp_path):
+    """Regression: a palette-mode ("P") source (e.g. a GIF) raised
+    "cannot write mode P as JPEG" because convert_format only flattened
+    RGBA/LA. Any non-RGB/L mode is now converted for JPEG/BMP."""
+    from PIL import Image
+    src = tmp_path / "palette.png"
+    Image.new("P", (16, 12)).save(src)
+    dst = tmp_path / "out.jpg"
+    convert_format(str(src), str(dst))   # must not raise
+    with Image.open(dst) as img:
+        assert img.format == "JPEG"
+        assert img.mode == "RGB"
+
+
+def test_convert_format_palette_to_bmp_flattens(tmp_path):
+    from PIL import Image
+    src = tmp_path / "palette.png"
+    Image.new("P", (16, 12)).save(src)
+    dst = tmp_path / "out.bmp"
+    convert_format(str(src), str(dst))   # must not raise
+    assert dst.exists()
+
+
 def test_convert_format_rejects_unsupported_destination(sample_image, tmp_path):
     with pytest.raises(ValueError):
         convert_format(str(sample_image), str(tmp_path / "out.xyz"))

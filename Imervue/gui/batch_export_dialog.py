@@ -65,11 +65,18 @@ class _ExportWorker(QThread):
         self._square_crop = square_crop
         self._dpi = dpi
         self._watermark = watermark or WatermarkOptions()
+        self._abort = False
+
+    def abort(self) -> None:
+        """Ask the export loop to stop before the next image (Cancel / close)."""
+        self._abort = True
 
     def run(self):
         success = failed = 0
         total = len(self._paths)
         for i, src in enumerate(self._paths):
+            if self._abort:
+                break
             if self._process_one(src):
                 success += 1
             else:
@@ -255,7 +262,7 @@ class BatchExportDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self.reject)
+        cancel_btn.clicked.connect(self._on_cancel)
         self._export_btn = QPushButton(self._lang.get("batch_export_start", "Export"))
         self._export_btn.clicked.connect(self._do_export)
         btn_row.addWidget(cancel_btn)
@@ -336,6 +343,29 @@ class BatchExportDialog(QDialog):
 
     def _cleanup_worker(self):
         self._worker = None
+
+    def _on_cancel(self):
+        """Stop an in-flight export before rejecting.
+
+        Cancel used to call ``reject`` directly, which returned from ``exec()``
+        but left ``_ExportWorker`` running to completion — it kept writing every
+        output file after the user cancelled. Signal the abort first (without
+        blocking the UI) so the loop stops before the next image.
+        """
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.abort()
+        self.reject()
+
+    def _wait_worker(self):
+        """Abort and block until the worker stops, so it is never destroyed
+        mid-run ('QThread: Destroyed while thread is still running' → abort)."""
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.abort()
+            self._worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_worker()
+        super().closeEvent(event)
 
     def _on_finished(self, success, failed):
         self._progress.setVisible(False)

@@ -42,9 +42,12 @@ class _TimelineEntry:
 
 
 class _WorkerSignals(QObject):
-    # path, pm, ok. ``ok`` is False when the decode failed (transient read race)
-    # so the model can retry instead of caching a permanent placeholder.
-    done = Signal(str, QPixmap, bool)
+    # path, img, ok. Carries a QImage (safe to build on a worker thread) — NOT a
+    # QPixmap, which is a QPaintDevice and undefined to create off the GUI
+    # thread; the receiving slot converts it. ``ok`` is False when the decode
+    # failed (transient read race) so the model can retry instead of caching a
+    # permanent placeholder.
+    done = Signal(str, QImage, bool)
 
 
 class _TimelineThumbWorker(QRunnable):
@@ -60,14 +63,15 @@ class _TimelineThumbWorker(QRunnable):
                 im = src.convert("RGBA")
                 data = im.tobytes("raw", "RGBA")
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
-                pm = QPixmap.fromImage(qimg.copy())
+                # .copy() detaches from the soon-freed `data` buffer; the GUI
+                # thread turns this QImage into a QPixmap in _on_thumb.
+                img = qimg.copy()
         except Exception:  # noqa: BLE001 — any decode failure must still emit so
-            # the model clears the in-flight marker and can retry the entry.
-            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
-            pm.fill(QColor(40, 40, 40))
-            self.signals.done.emit(self.path, pm, False)
+            # the model clears the in-flight marker and can retry the entry. A
+            # null QImage tells the slot to build the placeholder on the GUI thread.
+            self.signals.done.emit(self.path, QImage(), False)
             return
-        self.signals.done.emit(self.path, pm, True)
+        self.signals.done.emit(self.path, img, True)
 
 
 def _extract_date(path: str) -> datetime:
@@ -91,8 +95,23 @@ def _extract_date(path: str) -> datetime:
         return datetime.fromtimestamp(0)
 
 
-def _group_entries(paths: list[str], granularity: str = "month") -> list[_TimelineEntry]:
-    dated = sorted(((p, _extract_date(p)) for p in paths), key=lambda x: x[1], reverse=True)
+def _extract_date_fast(path: str) -> datetime:
+    """Date from file mtime only — a cheap stat with no per-file PIL open.
+
+    Used for the initial synchronous grouping so the timeline populates
+    instantly; the EXIF-based dates (which require opening every file) are
+    refined on a background thread afterwards.
+    """
+    try:
+        return datetime.fromtimestamp(Path(path).stat().st_mtime)
+    except OSError:
+        return datetime.fromtimestamp(0)
+
+
+def _group_entries(
+    paths: list[str], granularity: str = "month", date_fn=_extract_date,
+) -> list[_TimelineEntry]:
+    dated = sorted(((p, date_fn(p)) for p in paths), key=lambda x: x[1], reverse=True)
     entries: list[_TimelineEntry] = []
     last_key: str | None = None
     for path, when in dated:
@@ -112,14 +131,72 @@ def _group_key(when: datetime, granularity: str) -> str:
     return when.strftime("%Y-%m")
 
 
+class _GroupSignals(QObject):
+    ready = Signal(list)   # list[_TimelineEntry], grouped by EXIF date
+
+
+class _GroupWorker(QRunnable):
+    """Re-group paths using EXIF dates off the GUI thread — the EXIF scan opens
+    every file, which froze the model constructor for large folders."""
+
+    def __init__(self, paths: list[str], granularity: str):
+        super().__init__()
+        self._paths = paths
+        self._granularity = granularity
+        self.signals = _GroupSignals()
+
+    def run(self) -> None:
+        self.signals.ready.emit(
+            _group_entries(self._paths, self._granularity, _extract_date))
+
+
+# QThreadPool owns the C++ QRunnable but not its Python wrapper, which can be
+# garbage-collected before run() executes (clearing self.signals). Holding each
+# worker here until its ready signal fires keeps the wrapper alive across that
+# window; the set is the single owner of that guarantee (only mutated).
+_live_group_workers: set[_GroupWorker] = set()
+
+
 class TimelineModel(QAbstractListModel):
     def __init__(self, paths: list[str], granularity: str = "month"):
         super().__init__()
-        self._entries = _group_entries(paths, granularity)
+        self._granularity = granularity
+        # Group by mtime synchronously (a cheap stat, no per-file PIL open) so
+        # the view populates instantly, then refine the dates from EXIF on a
+        # background thread. The EXIF scan opened every file and used to freeze
+        # the constructor proportional to folder size.
+        self._entries = _group_entries(paths, granularity, _extract_date_fast)
         self._pool = QThreadPool.globalInstance()
         self._in_flight: set[str] = set()
         # path -> transient decode-failure retry count (see _MAX_THUMB_RETRIES)
         self._retry: dict[str, int] = {}
+        self._start_exif_refine(list(paths))
+
+    def _start_exif_refine(self, paths: list[str]) -> None:
+        if not paths:
+            return
+        worker = _GroupWorker(paths, self._granularity)
+        _live_group_workers.add(worker)
+
+        def _on_ready(entries):
+            _live_group_workers.discard(worker)
+            self._apply_refined_entries(entries)
+
+        worker.signals.ready.connect(_on_ready)
+        self._pool.start(worker)
+
+    def _apply_refined_entries(self, entries: list[_TimelineEntry]) -> None:
+        # Carry each already-loaded thumbnail across the regroup so the reset
+        # doesn't re-decode every image; only date grouping / order changed.
+        loaded = {e.path: e for e in self._entries if e.path is not None}
+        for entry in entries:
+            prior = loaded.get(entry.path)
+            if prior is not None:
+                entry.icon = prior.icon
+                entry.fetched = prior.fetched
+        self.beginResetModel()
+        self._entries = entries
+        self.endResetModel()
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
         if parent is None:
@@ -187,7 +264,18 @@ class TimelineModel(QAbstractListModel):
         self._retry[path] = count + 1
         return True
 
-    def _on_thumb(self, path: str, pm: QPixmap, ok: bool) -> None:
+    @staticmethod
+    def _pixmap_from_image(img: QImage) -> QPixmap:
+        """Build the thumbnail QPixmap on the GUI thread (QPixmap is a
+        QPaintDevice, so it must not be created on the worker thread). A null
+        image — the worker's failure marker — yields the dark placeholder."""
+        if img.isNull():
+            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
+            pm.fill(QColor(40, 40, 40))
+            return pm
+        return QPixmap.fromImage(img)
+
+    def _on_thumb(self, path: str, img: QImage, ok: bool) -> None:
         self._in_flight.discard(path)
         found = self._entry_index(path)
         if found is None:
@@ -199,7 +287,7 @@ class TimelineModel(QAbstractListModel):
             self._ensure_fetched(entry)
             return
         self._retry.pop(path, None)
-        entry.icon = QIcon(pm)
+        entry.icon = QIcon(self._pixmap_from_image(img))
         entry.fetched = True
         idx = self.index(i)
         self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DecorationRole])

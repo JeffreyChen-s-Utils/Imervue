@@ -39,7 +39,9 @@ def apply_defringe(
     """
     _validate(arr, hue)
     amount = float(np.clip(amount, 0.0, 1.0))
-    if amount < _NEAR_ZERO:
+    if amount < _NEAR_ZERO or arr.shape[0] < 2 or arr.shape[1] < 2:
+        # np.gradient (in _edge_weight) needs >=2 samples per axis; a 1px strip
+        # has no edges to defringe.
         return arr.copy()
     rgb = arr[..., :3].astype(np.float32)
     lum = rgb @ _LUMA_WEIGHTS

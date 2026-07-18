@@ -68,6 +68,81 @@ class TestAutoLoop:
         assert gui.current_index == 1
 
 
+class TestNavigationOpensFitted:
+    """Every keyboard navigation must open the target fitted, not at a leftover
+    per-image zoom.
+
+    The per-image zoom memory made an image reopen "too large" / not fitting the
+    window when navigated to -- both when looping past the end and when returning
+    to the last image. Prev/next now forgets the target's saved view so
+    ``load_deep_zoom_image`` fits it fresh.
+    """
+
+    def test_forward_wrap_forgets_target(self, nav, monkeypatch):
+        monkeypatch.setattr(nav, "_auto_loop_enabled", lambda: True)
+        gui = _make_stub_gui(["a.png", "b.png", "c.png"])
+        gui.current_index = 2  # last image
+        gui._view_memory = {"a.png": {"zoom": 3.0}, "c.png": {"zoom": 1.0}}
+
+        nav.switch_to_next_image(main_gui=gui)
+
+        assert gui.current_index == 0
+        assert "a.png" not in gui._view_memory      # wrapped-to target forgotten
+        assert "c.png" in gui._view_memory          # others untouched
+
+    def test_backward_wrap_forgets_target(self, nav, monkeypatch):
+        monkeypatch.setattr(nav, "_auto_loop_enabled", lambda: True)
+        gui = _make_stub_gui(["a.png", "b.png", "c.png"])
+        gui.current_index = 0  # first image
+        gui._view_memory = {"c.png": {"zoom": 4.0}, "a.png": {"zoom": 1.0}}
+
+        nav.switch_to_previous_image(main_gui=gui)
+
+        assert gui.current_index == 2
+        assert "c.png" not in gui._view_memory
+        assert "a.png" in gui._view_memory
+
+    def test_normal_next_forgets_target(self, nav, monkeypatch):
+        monkeypatch.setattr(nav, "_auto_loop_enabled", lambda: True)
+        gui = _make_stub_gui(["a.png", "b.png", "c.png"])
+        gui.current_index = 0
+        gui._view_memory = {"b.png": {"zoom": 2.0}, "a.png": {"zoom": 1.0}}
+
+        nav.switch_to_next_image(main_gui=gui)  # 0 -> 1, no wrap
+
+        assert gui.current_index == 1
+        assert "b.png" not in gui._view_memory   # target fitted fresh
+        assert "a.png" in gui._view_memory       # non-target untouched
+
+    def test_normal_previous_forgets_target(self, nav, monkeypatch):
+        monkeypatch.setattr(nav, "_auto_loop_enabled", lambda: True)
+        gui = _make_stub_gui(["a.png", "b.png", "c.png"])
+        gui.current_index = 2
+        gui._view_memory = {"b.png": {"zoom": 2.0}, "c.png": {"zoom": 1.0}}
+
+        nav.switch_to_previous_image(main_gui=gui)  # 2 -> 1, no wrap
+
+        assert gui.current_index == 1
+        assert "b.png" not in gui._view_memory
+        assert "c.png" in gui._view_memory
+
+    def test_forget_helper_is_safe_without_a_dict(self, nav):
+        # A stubbed viewer whose _view_memory isn't a real dict must be a no-op.
+        gui = MagicMock()  # _view_memory is an auto-mock, not a dict
+        nav._forget_target_view(gui, "x.png")   # must not raise
+        gui = MagicMock()
+        gui._view_memory = None
+        nav._forget_target_view(gui, "x.png")   # must not raise
+
+    def test_forget_helper_pops_only_the_target(self, nav):
+        gui = MagicMock()
+        gui._view_memory = {"x.png": {"zoom": 2.0}, "y.png": {"zoom": 1.0}}
+        nav._forget_target_view(gui, "x.png")
+        assert gui._view_memory == {"y.png": {"zoom": 1.0}}
+        nav._forget_target_view(gui, "missing.png")  # absent → no error
+        assert gui._view_memory == {"y.png": {"zoom": 1.0}}
+
+
 class TestCrossFolder:
     def test_no_images_is_noop(self, nav):
         gui = _make_stub_gui([])

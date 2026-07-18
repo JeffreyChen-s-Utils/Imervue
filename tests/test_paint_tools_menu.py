@@ -57,6 +57,38 @@ def test_tools_menu_lists_documented_actions(qapp):
         ws.deleteLater()
 
 
+def test_tools_menu_unsubscribes_on_workspace_destroy(qapp):
+    """ToolState is a process-wide singleton; a closed workspace that stayed
+    subscribed would call its dead bridge on the next tool change. It detaches
+    when the workspace is destroyed. Driven on a minimal QObject stand-in so the
+    real workspace's other teardown paths don't muddy the assertion."""
+    from PySide6.QtCore import QEvent, QObject
+    from PySide6.QtWidgets import QMenu
+
+    from Imervue.paint.tools_menu import populate_tools_menu
+
+    state = ts.ToolState()
+
+    class _FakeWs(QObject):
+        def __init__(self):
+            super().__init__()
+            self._tools_menu = QMenu()
+
+        def state(self):
+            return state
+
+    ws = _FakeWs()
+    before = len(state._listeners)   # noqa: SLF001
+    populate_tools_menu(ws)
+    assert len(state._listeners) == before + 1   # noqa: SLF001  subscribed
+
+    ws.deleteLater()
+    # Target only this object's deferred delete (a None receiver would also
+    # tear down real workspaces left pending by other tests).
+    qapp.sendPostedEvents(ws, QEvent.Type.DeferredDelete)
+    assert len(state._listeners) == before   # noqa: SLF001  detached on destroy
+
+
 def test_tools_menu_actions_have_translated_labels(qapp):
     ws = PaintWorkspace()
     try:

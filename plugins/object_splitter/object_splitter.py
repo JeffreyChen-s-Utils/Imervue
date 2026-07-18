@@ -5,6 +5,7 @@ and save each object as a separate PNG with transparency.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import subprocess
@@ -72,6 +73,36 @@ def _subprocess_kwargs() -> dict:
     return kw
 
 
+def _parse_step_line(payload: str) -> tuple[int, int, str] | None:
+    """Parse a ``STEP:`` payload ``"cur:total:msg"`` into ``(cur, total, msg)``.
+
+    Returns ``None`` for a malformed line so a garbled progress update is
+    skipped rather than raising ``ValueError`` — which previously aborted the
+    whole extraction and orphaned the running rembg subprocess.
+    """
+    parts = payload.split(":", 2)
+    if len(parts) != 3:
+        return None
+    try:
+        return int(parts[0]), int(parts[1]), parts[2]
+    except ValueError:
+        return None
+
+
+def _terminate_process(proc) -> None:
+    """Kill *proc* if it is still running, so an error or early return never
+    leaves the rembg child orphaned (it is spawned detached, no window)."""
+    if proc is None or proc.poll() is not None:
+        return
+    with contextlib.suppress(Exception):
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+
+
 class _SubprocessWorker(QThread):
     """Run object splitting in an external Python process (frozen env)."""
     step = Signal(int, int, str)  # current, total, message
@@ -90,6 +121,7 @@ class _SubprocessWorker(QThread):
         self._padding = padding
 
     def run(self):
+        proc = None
         try:
             cmd = [
                 self._python, str(_RUNNER_SCRIPT),
@@ -101,14 +133,14 @@ class _SubprocessWorker(QThread):
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 **_subprocess_kwargs(),
             )
-            for line in proc.stdout:
-                line = line.rstrip("\n\r")
+            for raw in proc.stdout:
+                line = raw.rstrip("\n\r")
                 if not line:
                     continue
                 if line.startswith("STEP:"):
-                    parts = line[5:].split(":", 2)
-                    if len(parts) == 3:
-                        self.step.emit(int(parts[0]), int(parts[1]), parts[2])
+                    step = _parse_step_line(line[5:])
+                    if step is not None:
+                        self.step.emit(*step)
                 elif line.startswith("OK:"):
                     self.result_ready.emit(True, line[3:])
                     proc.wait()
@@ -126,6 +158,10 @@ class _SubprocessWorker(QThread):
         except Exception as exc:
             logger.error("_SubprocessWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(False, str(exc))
+        finally:
+            # Guarantee the rembg child is reaped even if reading its output
+            # raised mid-stream or an early return skipped the wait().
+            _terminate_process(proc)
 
 
 class _InProcessWorker(QThread):

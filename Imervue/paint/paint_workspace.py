@@ -54,6 +54,7 @@ from Imervue.paint.workspace_tabs import TabManagerMixin
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
+    from Imervue.paint.undo_stack import UndoStack
 
 
 logger = logging.getLogger("Imervue.paint.workspace")
@@ -64,6 +65,17 @@ _WORKSPACE_AWARE_TOOLS = (
     "bezier_pen", "transform", "crop",
     "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
 )
+
+
+def _pointer_button_held(buttons) -> bool:
+    """True while the left mouse button is down.
+
+    Used to defer undo/redo that arrives mid-brush-stroke (Ctrl+Z with the
+    button still held): the undo would restore a committed state that the
+    in-flight stroke then overwrites when it syncs its FBO to the layer on
+    release, silently discarding the undo.
+    """
+    return bool(buttons & Qt.MouseButton.LeftButton)
 
 
 class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
@@ -199,6 +211,9 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         # first document forever, so after a tab switch / open Ctrl+Z applied one
         # document's history to another — a silent, destructive corruption.
         self._undo_stacks: dict = {}
+        # Seed the initial canvas's stack now so its baseline is the blank canvas
+        # and the very first stroke is undoable (see _ensure_undo_stack).
+        self._ensure_undo_stack()
         self._dispatcher = ToolDispatcher(
             self._state,
             image_provider=lambda: self._canvas.current_image(),
@@ -260,6 +275,10 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             event.ignore()
             return
         import contextlib
+        # Stop the autosave timer so a queued tick can't fire on the torn-down
+        # canvas after close.
+        with contextlib.suppress(Exception):
+            self.stop_autosave()
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()
         super().closeEvent(event)
@@ -328,7 +347,10 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             from PIL import Image
             with Image.open(path) as img:
                 rgba = np.array(img.convert("RGBA"), dtype=np.uint8)
-            self._canvas.load_image(rgba)
+            # Route through the wrapper (not self._canvas.load_image) so the layer
+            # dock is rebound to the new document; the bare canvas call left the
+            # dock showing / mutating the replaced document.
+            self.load_image(rgba)
             from Imervue.paint import recent_files
             recent_files.add(path)
             bridge = getattr(self, "_file_menu_bridge", None)
@@ -340,7 +362,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     # ---- undo / redo + history feedback --------------------------------
 
     @property
-    def _undo_stack(self):
+    def _undo_stack(self) -> UndoStack:
         """The active canvas's undo stack (created on demand).
 
         Per-canvas so a tab switch can't apply one document's history to
@@ -370,6 +392,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def undo(self) -> None:
         """Undo the most recent committed stroke if there is one."""
+        if self._pointer_stroke_active():
+            return
         if self._undo_stack.undo():
             self._canvas.invalidate_texture()
             self._canvas.update()
@@ -379,12 +403,21 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def redo(self) -> None:
         """Re-apply the most recently undone stroke."""
+        if self._pointer_stroke_active():
+            return
         if self._undo_stack.redo():
             self._canvas.invalidate_texture()
             self._canvas.update()
             self._notify_history_action("redo")
         else:
             self._notify_history_empty("redo")
+
+    @staticmethod
+    def _pointer_stroke_active() -> bool:
+        """Whether a mouse button is currently held (a brush stroke may be in
+        progress), so undo/redo should defer until it's released."""
+        from PySide6.QtWidgets import QApplication
+        return _pointer_button_held(QApplication.mouseButtons())
 
     def _notify_history_action(self, kind: str) -> None:
         """Toast a confirmation after a successful undo / redo.
@@ -448,6 +481,17 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         # The canvas swapped its PaintDocument; rebind the layer dock
         # so it re-subscribes and refreshes against the new stack.
         self._layer_dock.set_document(self._canvas.document())
+        self._ensure_undo_stack()
+
+    def _ensure_undo_stack(self) -> None:
+        """Force the active canvas's undo stack into existence at bind time.
+
+        Its baseline snapshots the current (blank / just-loaded) state. Left to
+        lazy creation, the first access is the first commit -- after the stroke
+        already mutated the layer -- so the baseline captured the post-stroke
+        state and the first undo restored it (a no-op), losing the pre-stroke
+        canvas."""
+        _ = self._undo_stack
 
     # ---- cursor + tool-state events ------------------------------------
 

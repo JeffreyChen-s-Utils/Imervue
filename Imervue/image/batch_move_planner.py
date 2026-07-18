@@ -68,25 +68,37 @@ def plan_batch_move(
     if strategy not in _STRATEGIES:
         raise ValueError(f"strategy must be one of {_STRATEGIES}, got {strategy!r}")
     dest = Path(dest_dir)
-    claimed = set(existing)
+    # Names already assigned as targets by THIS batch. Kept apart from
+    # ``existing`` (names already on disk) so ``replace`` can overwrite a
+    # pre-existing file while still renumbering when two sources in the batch
+    # share a basename — otherwise the second source silently overwrote the
+    # first's target and a file was lost.
+    produced: set[str] = set()
     plans: list[MovePlan] = []
     for source in sources:
         name = Path(source).name
-        if name not in claimed:
-            claimed.add(name)
+        if name not in existing and name not in produced:
+            produced.add(name)
             plans.append(MovePlan(source, str(dest / name), ACTION_MOVE, "no collision"))
         else:
-            plans.append(_resolve_collision(source, name, dest, claimed, strategy))
+            plans.append(
+                _resolve_collision(source, name, dest, existing, produced, strategy))
     return plans
 
 
 def _resolve_collision(
-    source: str, name: str, dest: Path, claimed: set[str], strategy: str,
+    source: str, name: str, dest: Path, existing: set[str], produced: set[str],
+    strategy: str,
 ) -> MovePlan:
     if strategy == STRATEGY_SKIP:
         return MovePlan(source, None, ACTION_SKIP, f"{name} already exists")
-    if strategy == STRATEGY_REPLACE:
+    if strategy == STRATEGY_REPLACE and name not in produced:
+        # Overwrites a pre-existing destination file. Safe: no earlier source in
+        # this batch has claimed this name, so nothing in the batch is clobbered.
+        produced.add(name)
         return MovePlan(source, str(dest / name), ACTION_REPLACE, f"overwrites {name}")
-    unique = resolve_name_collision(name, claimed)
-    claimed.add(unique)
+    # NUMBER strategy, or REPLACE where a sibling source already took the name:
+    # renumber so an earlier source in the batch is never overwritten.
+    unique = resolve_name_collision(name, existing | produced)
+    produced.add(unique)
     return MovePlan(source, str(dest / unique), ACTION_RENAME, f"renamed to {unique}")

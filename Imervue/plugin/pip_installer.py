@@ -617,6 +617,19 @@ class InstallDependenciesDialog(QDialog):
         self.setMinimumSize(520, 360)
         self._build_ui()
 
+    def _wait_workers(self) -> None:
+        """Block until every background worker stops, so none is destroyed
+        mid-run when the (WA_DeleteOnClose) dialog closes -- that aborts with
+        'QThread: Destroyed while thread is still running'."""
+        for attr in ("_worker", "_dl_worker", "_find_worker", "_import_worker"):
+            worker = getattr(self, attr, None)
+            if worker is not None and worker.isRunning():
+                worker.wait()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self._wait_workers()
+        super().closeEvent(event)
+
     def _build_ui(self):
         lang = language_wrapper.language_word_dict
         layout = QVBoxLayout(self)
