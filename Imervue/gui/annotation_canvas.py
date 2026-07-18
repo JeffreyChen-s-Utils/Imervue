@@ -230,6 +230,9 @@ class AnnotationCanvas(QWidget):
     navigate_image = Signal(int)
     save_requested = Signal()
     context_menu_requested = Signal(object)   # global QPoint
+    # Emitted when Delete is pressed with no annotation selected — the Modify
+    # tab wires this to trash the current image, matching the Imervue tab.
+    delete_image_requested = Signal()
 
     def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
         super().__init__(parent)
@@ -1563,6 +1566,11 @@ class AnnotationCanvas(QWidget):
                     cmd = _DeleteAnnotationCommand(self, sel)
                     self._undo_stack.push(cmd)
                     self.annotation_changed.emit()
+                return
+            # Nothing selected: Delete acts on the image itself (trash it),
+            # like the Imervue tab. Backspace is left alone to avoid surprises.
+            if key == Qt.Key.Key_Delete:
+                self.delete_image_requested.emit()
                 return
         elif key == Qt.Key.Key_Escape:
             self._selected_id = None

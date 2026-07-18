@@ -665,6 +665,9 @@ class DevelopPanel(QWidget):
         self._canvas.save_requested.connect(self._save_annotation)
         # Right-click → image operations (save / navigate / delete).
         self._canvas.context_menu_requested.connect(self._show_canvas_menu)
+        # Delete (no annotation selected) trashes the current image, matching
+        # the Imervue tab — the viewer is hidden here so it can't receive keys.
+        self._canvas.delete_image_requested.connect(self._delete_current_image)
 
         # Insert the canvas into the modify splitter (index 1).
         splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
@@ -674,6 +677,9 @@ class DevelopPanel(QWidget):
             splitter.setStretchFactor(1, 1)    # canvas takes the slack
             splitter.setStretchFactor(2, 0)    # properties panel
             self._size_modify_splitter(splitter)
+        # Focus the canvas so key shortcuts (Delete, arrows, Ctrl+S) land on it
+        # rather than a develop slider that ignores them.
+        self._canvas.setFocus()
 
     def _size_modify_splitter(
             self, splitter, _retries: int = 8, _last_total: int = -1) -> None:

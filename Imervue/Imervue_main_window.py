@@ -2009,12 +2009,22 @@ class ImervueMainWindow(QMainWindow):
         if timer is not None:
             timer.start()
 
-    def _connect_screen_change_signal(self) -> None:
-        """Subscribe to the window's screen-changed signal exactly once."""
+    def _connect_screen_change_signal(self, _retries: int = 20) -> None:
+        """Subscribe to the window's screen-changed signal exactly once.
+
+        ``windowHandle()`` can still be None on the first deferred attempt (the
+        native window isn't created until the widget is shown). A one-shot that
+        gave up then left the signal permanently unconnected, so a later
+        drag/restore to another monitor never re-fit the view. Retry on a short
+        timer until the handle exists (bounded).
+        """
         if self._screen_signal_connected:
             return
         handle = self.windowHandle()
         if handle is None:
+            if _retries > 0:
+                QTimer.singleShot(
+                    50, lambda: self._connect_screen_change_signal(_retries - 1))
             return
         handle.screenChanged.connect(self._on_screen_changed)
         self._screen_signal_connected = True
