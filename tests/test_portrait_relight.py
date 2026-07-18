@@ -162,3 +162,55 @@ def test_relight_zero_intensity_zero_temperature_returns_close_to_original(
     diff = np.abs(out[..., :3].astype(np.int16)
                   - sample_rgba_array[..., :3].astype(np.int16))
     assert diff.max() <= 1
+
+
+# ---------------------------------------------------------------------------
+# Plugin worker — relight runs off the GUI thread now
+# ---------------------------------------------------------------------------
+
+
+class TestRelightWorker:
+    def test_build_transform_heuristic_applies_relight(self, sample_rgba_array):
+        from ai_portrait_relight.ai_portrait_relight_plugin import (
+            _build_relight_transform,
+        )
+        transform = _build_relight_transform(("heuristic", None), RelightOptions())
+        out = transform(sample_rgba_array)
+        assert out.shape == sample_rgba_array.shape
+        assert out.dtype == sample_rgba_array.dtype
+
+    def test_worker_runs_heuristic_and_saves(self, tmp_path, qapp):
+        from PIL import Image
+        from ai_portrait_relight.ai_portrait_relight_plugin import (
+            _RelightWorker,
+            _build_relight_transform,
+        )
+        src = tmp_path / "p.png"
+        Image.new("RGBA", (16, 16), (120, 120, 120, 255)).save(str(src))
+        out = tmp_path / "p_relit.png"
+        transform = _build_relight_transform(("heuristic", None), RelightOptions())
+        worker = _RelightWorker(str(src), transform, str(out))
+        results: list = []
+        worker.done.connect(lambda ok, msg: results.append((ok, msg)))
+        worker.run()   # synchronous — no thread started
+
+        assert results == [(True, str(out))]
+        assert out.exists()
+
+    def test_worker_reports_failure_when_transform_raises(self, tmp_path, qapp):
+        from PIL import Image
+        from ai_portrait_relight.ai_portrait_relight_plugin import _RelightWorker
+        src = tmp_path / "p.png"
+        Image.new("RGBA", (8, 8), (10, 10, 10, 255)).save(str(src))
+
+        def _boom(_arr):
+            raise ImportError("onnxruntime missing")   # optional ONNX dep absent
+
+        worker = _RelightWorker(str(src), _boom, str(tmp_path / "o.png"))
+        results: list = []
+        worker.done.connect(lambda ok, msg: results.append((ok, msg)))
+        worker.run()
+
+        # Broad catch means the failure is always reported so the OK button
+        # doesn't hang forever.
+        assert results == [(False, "onnxruntime missing")]

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -155,13 +155,52 @@ class AIPortraitRelightPlugin(ImervuePlugin):
         AIPortraitRelightDialog(viewer, str(images[idx])).exec()
 
 
+def _build_relight_transform(method, options: RelightOptions):
+    """Return an ``rgba -> rgba`` transform bound to the chosen relight method.
+
+    ``method`` is the combo's userData tuple — ``("heuristic", None)`` or
+    ``("onnx", model_path)``. The ONNX path uses only the blend amount (the
+    model handles the lighting itself), matching the previous behaviour.
+    """
+    if method[0] == "heuristic":
+        return lambda arr: heuristic_relight(arr, options)
+    model_path = method[1]
+    blend = options.blend
+    return lambda arr: onnx_relight(arr, model_path, blend=blend)
+
+
+class _RelightWorker(QThread):
+    """Run a relight transform off the GUI thread and save the result."""
+
+    done = Signal(bool, str)   # (ok, output_path_or_error_message)
+
+    def __init__(self, path: str, transform, out_path: str):
+        super().__init__()
+        self._path = path
+        self._transform = transform
+        self._out = out_path
+
+    def run(self) -> None:
+        try:
+            out_arr = self._transform(_load_rgba(self._path))
+            Image.fromarray(out_arr, mode="RGBA").save(self._out)
+            self.done.emit(True, self._out)
+        except Exception as exc:  # noqa: BLE001 - a worker must always report
+            # Load, ONNX inference (ImportError / onnxruntime errors) and save
+            # can raise many types; narrowing let some escape so ``done`` never
+            # fired and the dialog hung. Always report the failure.
+            logger.exception("Relight failed: %s", exc)
+            self.done.emit(False, str(exc))
+
+
 class AIPortraitRelightDialog(QDialog):
-    """Pick method + light direction, run synchronously on OK."""
+    """Pick method + light direction, run the relight on a worker thread on OK."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
+        self._worker: _RelightWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("relight_title", "AI Portrait Relighting"))
         self.setMinimumWidth(440)
@@ -233,41 +272,39 @@ class AIPortraitRelightDialog(QDialog):
         return buttons
 
     def _commit(self) -> None:
-        try:
-            arr = _load_rgba(self._path)
-        except (OSError, ValueError) as exc:
-            self._notify_failure(exc)
+        # Run the relight (heuristic numpy OR neural ONNX inference) on a worker
+        # thread. The ONNX path can take seconds, and running it here froze the
+        # GUI for the whole inference.
+        if self._worker is not None:
             return
-
         method = self._method.currentData()
-        blend = self._blend.value() / _PERCENT_STEPS
-
-        try:
-            if method[0] == "heuristic":
-                out_arr = heuristic_relight(arr, RelightOptions(
-                    azimuth=float(self._azimuth.value()),
-                    elevation=float(self._elevation.value()),
-                    intensity=self._intensity.value() / _INTENSITY_STEPS,
-                    temperature=int(self._temperature.value()),
-                    blend=blend,
-                ))
-            else:
-                out_arr = onnx_relight(arr, method[1], blend=blend)
-        except (ImportError, OSError, ValueError) as exc:
-            self._notify_failure(exc)
-            return
-
+        options = RelightOptions(
+            azimuth=float(self._azimuth.value()),
+            elevation=float(self._elevation.value()),
+            intensity=self._intensity.value() / _INTENSITY_STEPS,
+            temperature=int(self._temperature.value()),
+            blend=self._blend.value() / _PERCENT_STEPS,
+        )
+        transform = _build_relight_transform(method, options)
         out_path = Path(self._path).with_name(
             f"{Path(self._path).stem}_relit.png",
         )
-        try:
-            Image.fromarray(out_arr, mode="RGBA").save(str(out_path))
-        except OSError as exc:
-            self._notify_failure(exc)
-            return
+        self._worker = _RelightWorker(self._path, transform, str(out_path))
+        self._worker.done.connect(self._on_done)
+        self._worker.start()
 
-        self._notify_success(out_path)
-        self.accept()
+    def _on_done(self, ok: bool, message: str) -> None:
+        # Wait for the thread to fully stop before dropping the reference — this
+        # dialog is a temporary, so accept() below returns from exec() and lets
+        # it be garbage-collected; dropping a live QThread reference crashes.
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker = None
+        if ok:
+            self._notify_success(Path(message))
+            self.accept()
+        else:
+            self._notify_failure(RuntimeError(message))
 
     def _notify_failure(self, exc: Exception) -> None:
         if hasattr(self._viewer, "main_window") and hasattr(
