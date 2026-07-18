@@ -1,8 +1,9 @@
-"""AI object-remove / outpaint dialogs must wait their workers on close.
+"""AI object-remove / outpaint dialogs must stop their workers on reject/close.
 
-Both started heavy QThreads (SAM encoder / diffusion inpaint) but had no
-closeEvent, so closing mid-run destroyed the thread ("QThread: Destroyed while
-thread is still running").
+Both started heavy QThreads (SAM encoder / diffusion inpaint) but tore down
+only in closeEvent (or not at all), so Cancel — which delivers no closeEvent —
+left the thread running and it was destroyed with the dialog ("QThread:
+Destroyed while thread is still running"). They now inherit WorkerHostMixin.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ from types import SimpleNamespace
 
 from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
 from ai_outpaint.ai_outpaint_plugin import OutpaintDialog
+
+_OBJ_ATTRS = ("_worker", "_sam_worker", "_mask_worker")
 
 
 def _running(waited, name):
@@ -21,25 +24,30 @@ def _running(waited, name):
     )
 
 
-def test_object_remove_waits_both_workers():
+def test_object_remove_stops_all_three_workers():
     waited: list = []
     fake = SimpleNamespace(
+        _worker_attrs=_OBJ_ATTRS,
         _worker=_running(waited, "remove"),
         _sam_worker=_running(waited, "sam"),
         _mask_worker=_running(waited, "mask"),
     )
-    ObjectRemoveDialog._wait_workers(fake)
+    ObjectRemoveDialog._stop_worker(fake)
     assert set(waited) == {"remove", "sam", "mask"}
+    assert fake._worker is None
+    assert fake._sam_worker is None
+    assert fake._mask_worker is None
 
 
 def test_object_remove_skips_finished_workers():
     waited: list = []
     fake = SimpleNamespace(
+        _worker_attrs=_OBJ_ATTRS,
         _worker=SimpleNamespace(isRunning=lambda: False, wait=lambda: waited.append("x")),
         _sam_worker=None,
         _mask_worker=None,
     )
-    ObjectRemoveDialog._wait_workers(fake)
+    ObjectRemoveDialog._stop_worker(fake)
     assert waited == []
 
 

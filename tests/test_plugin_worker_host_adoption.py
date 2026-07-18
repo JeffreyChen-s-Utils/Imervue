@@ -25,6 +25,9 @@ _DIALOGS = [
     ("ai_outpaint.ai_outpaint_plugin", "OutpaintDialog"),
     ("portrait_mode.portrait_mode", "PortraitModeDialog"),
     ("npr_filters.npr_filters_plugin", "NPRFiltersDialog"),
+    ("object_splitter.object_splitter", "ObjectSplitterDialog"),
+    ("ai_object_remove.ai_object_remove_plugin", "ObjectRemoveDialog"),
+    ("ai_portrait_relight.ai_portrait_relight_plugin", "AIPortraitRelightDialog"),
 ]
 
 
