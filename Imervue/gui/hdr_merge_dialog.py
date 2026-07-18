@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.hdr_merge import HdrOptions, merge_hdr
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -55,7 +56,7 @@ class _HdrWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class HdrMergeDialog(QDialog):
+class HdrMergeDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView):
         super().__init__(viewer)
         self._viewer = viewer

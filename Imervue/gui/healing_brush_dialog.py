@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.healing import HealingSpot, apply_healing
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -127,7 +128,7 @@ class _HealWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class HealingBrushDialog(QDialog):
+class HealingBrushDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

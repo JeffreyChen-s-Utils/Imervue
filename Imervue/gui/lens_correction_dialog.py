@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.lens_correction import LensCorrectionOptions, apply_lens_correction
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -62,7 +63,7 @@ class _LensWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class LensCorrectionDialog(QDialog):
+class LensCorrectionDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

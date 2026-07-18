@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.focus_stack import FocusStackOptions, stack_focus
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -54,7 +55,7 @@ class _StackWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class FocusStackDialog(QDialog):
+class FocusStackDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView):
         super().__init__(viewer)
         self._viewer = viewer
