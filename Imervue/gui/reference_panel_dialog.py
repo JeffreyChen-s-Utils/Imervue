@@ -56,6 +56,9 @@ class ReferencePanelDialog(QDialog):
 
         self._list = self._build_list()
         self._preview = self._build_preview(lang)
+        # Path of the image currently previewed, so a dialog resize can re-render
+        # it to the new preview size instead of leaving it at its load-time size.
+        self._preview_path: str | None = None
         self._count_label = QLabel()
 
         layout = QVBoxLayout(self)
@@ -193,22 +196,30 @@ class ReferencePanelDialog(QDialog):
 
     def _on_selection_changed(self) -> None:
         items = self._list.selectedItems()
-        if not items:
-            self._preview.setText(language_wrapper.language_word_dict.get(
-                "reference_panel_no_preview", "No reference selected.",
-            ))
+        self._preview_path = items[0].data(Qt.ItemDataRole.UserRole) if items else None
+        self._render_preview()
+
+    def _render_preview(self) -> None:
+        """Draw the selected reference at the preview's current size (called on
+        selection change and on resize, so it always fills the panel)."""
+        lang = language_wrapper.language_word_dict
+        if self._preview_path is None:
+            self._preview.setText(lang.get(
+                "reference_panel_no_preview", "No reference selected."))
             self._preview.setPixmap(QPixmap())
             return
-        path = items[0].data(Qt.ItemDataRole.UserRole)
-        pix = _load_preview_pixmap(path, self._preview.size())
+        pix = _load_preview_pixmap(self._preview_path, self._preview.size())
         if pix is None:
-            self._preview.setText(language_wrapper.language_word_dict.get(
-                "reference_panel_load_failed", "Failed to load preview.",
-            ))
+            self._preview.setText(lang.get(
+                "reference_panel_load_failed", "Failed to load preview."))
             self._preview.setPixmap(QPixmap())
             return
         self._preview.setText("")
         self._preview.setPixmap(pix)
+
+    def resizeEvent(self, event):  # noqa: N802 - Qt naming
+        super().resizeEvent(event)
+        self._render_preview()
 
     def _on_item_activated(self, item: QListWidgetItem) -> None:  # pragma: no cover - Qt UI
         path = item.data(Qt.ItemDataRole.UserRole)

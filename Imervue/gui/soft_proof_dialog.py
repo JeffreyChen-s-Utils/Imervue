@@ -35,6 +35,9 @@ class SoftProofDialog(QDialog):
         super().__init__(viewer)
         self._viewer = viewer
         self._path = path
+        # The full-size proof render, kept so a dialog resize can re-scale it to
+        # fit the preview instead of leaving it clipped / undersized.
+        self._proof_pixmap: QPixmap | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("proof_title", "Soft Proof"))
         self.setMinimumWidth(560)
@@ -101,11 +104,27 @@ class SoftProofDialog(QDialog):
         overlay[mask, 2] = 255
         qimg = QImage(overlay.data, overlay.shape[1], overlay.shape[0],
                       overlay.shape[1] * 4, QImage.Format.Format_RGBA8888).copy()
-        self._preview.setPixmap(QPixmap.fromImage(qimg))
+        self._proof_pixmap = QPixmap.fromImage(qimg)
+        self._render_proof()
         oog = int(mask.sum())
         self._status.setText(
             lang.get("proof_oog", "Out-of-gamut pixels:") + f" {oog}",
         )
+
+    def _render_proof(self) -> None:
+        """Scale the proof render to the preview's current size (called after a
+        proof and on resize, so it fills the panel without clipping)."""
+        if self._proof_pixmap is None or self._proof_pixmap.isNull():
+            return
+        self._preview.setPixmap(self._proof_pixmap.scaled(
+            self._preview.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        ))
+
+    def resizeEvent(self, event):  # noqa: N802 - Qt naming
+        super().resizeEvent(event)
+        self._render_proof()
 
 
 def open_soft_proof(viewer: GPUImageView) -> None:
