@@ -109,6 +109,10 @@ class ObjectRemoveDialog(QDialog):
         self._mask: np.ndarray | None = None
         self._worker: _RemoveWorker | None = None
         self._sam_worker: _SamMaskWorker | None = None
+        self._mask_worker: _MaskWorker | None = None
+        # A newer seed / tolerance / grow arrived while the flood-fill was
+        # running — recompute once the in-flight worker finishes.
+        self._mask_dirty = False
         self._sam_encoder, self._sam_decoder = discover_sam_models(_MODELS_DIR)
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("object_remove_title", "Remove Object"))
@@ -157,7 +161,7 @@ class ObjectRemoveDialog(QDialog):
         """Block until the SAM-encoder and remove workers stop, so neither
         QThread is destroyed mid-run when the dialog closes (SAM encoding and the
         inpaint can both run for a while)."""
-        for worker in (self._worker, self._sam_worker):
+        for worker in (self._worker, self._sam_worker, self._mask_worker):
             if worker is not None and worker.isRunning():
                 worker.wait()
 
@@ -251,11 +255,28 @@ class ObjectRemoveDialog(QDialog):
     def _recompute_mask(self) -> None:
         if self._seed is None:
             return
+        # Flood-fill on a large image can take long enough to stall the GUI, so
+        # run it on a worker. Only one runs at a time; a click / slider change
+        # while it's busy marks the result dirty and re-runs it on completion.
+        if self._mask_worker is not None:
+            self._mask_dirty = True
+            return
         sx, sy = self._seed
-        self._mask = build_mask(
+        self._mask_dirty = False
+        self._mask_worker = _MaskWorker(
             self._arr, sx, sy, self._tolerance.value(), self._grow.value(),
         )
+        self._mask_worker.ready.connect(self._on_mask_ready)
+        self._mask_worker.start()
+
+    def _on_mask_ready(self, mask: np.ndarray) -> None:
+        if self._mask_worker is not None:
+            self._mask_worker.wait()
+            self._mask_worker = None
+        self._mask = mask
         self._render_preview()
+        if self._mask_dirty and self._seed is not None:
+            self._recompute_mask()   # params changed mid-run — redo with latest
 
     def _render_preview(self) -> None:
         rgb = self._arr[..., :_RGB_STRIDE].astype(np.float32)
@@ -305,6 +326,26 @@ class ObjectRemoveDialog(QDialog):
         toast = getattr(main_window, "toast", None)
         if toast is not None:
             (toast.error if error else toast.info)(text)
+
+
+class _MaskWorker(QThread):
+    """Run the flood-fill mask build off the UI thread — on a large image the
+    fill is slow enough to stall the interactive preview."""
+
+    ready = Signal(object)   # np.ndarray mask
+
+    def __init__(self, arr: np.ndarray, sx: int, sy: int,
+                 tolerance: int, grow: int):
+        super().__init__()
+        self._arr = arr
+        self._sx = sx
+        self._sy = sy
+        self._tolerance = tolerance
+        self._grow = grow
+
+    def run(self) -> None:
+        self.ready.emit(
+            build_mask(self._arr, self._sx, self._sy, self._tolerance, self._grow))
 
 
 class _RemoveWorker(QThread):

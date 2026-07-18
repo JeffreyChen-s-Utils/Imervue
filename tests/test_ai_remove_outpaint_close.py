@@ -21,9 +21,10 @@ def test_object_remove_waits_both_workers():
     fake = SimpleNamespace(
         _worker=_running(waited, "remove"),
         _sam_worker=_running(waited, "sam"),
+        _mask_worker=_running(waited, "mask"),
     )
     ObjectRemoveDialog._wait_workers(fake)
-    assert set(waited) == {"remove", "sam"}
+    assert set(waited) == {"remove", "sam", "mask"}
 
 
 def test_object_remove_skips_finished_workers():
@@ -31,6 +32,7 @@ def test_object_remove_skips_finished_workers():
     fake = SimpleNamespace(
         _worker=SimpleNamespace(isRunning=lambda: False, wait=lambda: waited.append("x")),
         _sam_worker=None,
+        _mask_worker=None,
     )
     ObjectRemoveDialog._wait_workers(fake)
     assert waited == []
