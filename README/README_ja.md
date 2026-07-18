@@ -561,6 +561,36 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 設定した内容 — 位置、ドライバー、不透明度、クリックスルー、サイズ — はすべて起動間で記憶されます。
 
+### カスタムボイス(pet script)
+
+ペットのスピーチバブルは、自分で作成できる JSON ファイルから読み込まれます。Desktop Pet タブの **Pet script** グループで **Load script…** をクリックし、`.petscript.json` を選択します。スキーマは次のとおりです:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — クリックに対してより具体的なものが何もマッチしない場合に使用されます。
+- **`hit_responses`** — `HitArea` ごとのセリフ。キーは rig で定義されたヒットエリアの ID と一致する必要があります。
+- **`motion_lines`** — モーションごとのセリフ。ペットがその名前のモーション(ヒットエリアモーションまたはコンテキストメニューモーション)を再生したときに発火します。
+- **`scheduled`** — タイマー駆動のチャイム。各エントリは `every_seconds` 秒ごとに発火します。
+
+セリフはバケットごとにラウンドロビンで循環するので、同じセリフが 2 回連続で流れることはありません。**Reset to default** はカスタムスクリプトを破棄し、組み込みの挨拶セットを復元します。
+
+動作するサンプルは [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json) にあります。
+
 ---
 
 ## キーボード & マウスショートカット

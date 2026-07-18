@@ -1,7 +1,7 @@
 Imervue 使用手冊
 ================
 
-GPU 加速影像工作站，提供 **四個頂層分頁**。本手冊大部分內容圍繞這四個分頁組織。
+GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分內容圍繞這五個分頁組織。
 
 .. list-table::
    :header-rows: 1
@@ -17,6 +17,8 @@ GPU 加速影像工作站，提供 **四個頂層分頁**。本手冊大部分�
      - 本格的なラスター描画 風格的點陣繪圖工作室，含筆刷、圖層、動畫、漫畫工具、PSD I/O。見「Paint 分頁 — 本格的なラスター描画 風格繪圖」。
    * - **Puppet**
      - 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理。見「Puppet 分頁 — 2D 綁骨偶動畫」。
+   * - **Desktop Pet**
+     - 無邊框、透明、永遠置頂的浮層，在桌面上跑同樣的 ``.puppet`` rig，帶即時驅動（idle / blink / mic / webcam / drag-track）。見「桌寵工作區（Desktop Pet 分頁）」。
 
 接下來的「快速開始」、「參考」、「外掛系統」、「MCP 伺服器」屬於跨分頁的章節，所有分頁通用。
 
@@ -943,6 +945,20 @@ RGB 直方圖
 
 ``檔案`` > ``開新視窗``，可以同時開啟多個 Imervue 視窗，各自獨立瀏覽不同資料夾。
 
+工作區佈局預設
+--------------
+
+``檔案`` > ``Workspaces…`` 會把目前的視窗幾何、停靠面板 / 工具列排列、分隔器
+尺寸與作用中的根資料夾以一個名稱擷取下來 — 然後讓你像 other XMP-aware photo managers 切換
+*Library* / *Develop* / *Export*、或 Adobe Bridge 切換 *Metadata* / *Filmstrip*
+那樣在已儲存的佈局間切換。對話框支援 Save Current、Load、Rename、Delete。工作
+區會保存在 ``user_settings.json``（``workspaces`` key 底下），並跨工作階段保留。
+
+.. tip::
+   建立一個 **Browse** 工作區，顯示樹狀圖與縮圖網格；再建立一個獨立的
+   **Develop** 工作區，把 develop 面板最大化、樹狀圖收起。一次點擊就能把整個
+   視窗切換成各任務最合適的形狀。
+
 觸控板手勢
 ----------
 
@@ -1190,6 +1206,23 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
 取圖）計算 64 位元 DCT pHash，並依 Hamming 距離遞增列出索引中的近似圖。
 可藉由「Max distance」調整寬鬆度。
 
+語意搜尋（CLIP）
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Semantic Search`` 讓你輸入自然語言片語（例如
+*"golden retriever in snow"* 或 *"neon street at night"*），從已索引的圖庫
+回傳排序後的圖片。每張圖片會以 CLIP 視覺／語言編碼器嵌入並與其路徑一併儲
+存；文字查詢則嵌入同一向量空間，再以 cosine 相似度比對。
+
+嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``（Windows）或
+``~/.cache/imervue/clip_cache.npz``（POSIX），存成單一精簡的 ``.npz`` 檔，
+下次啟動即可略過重新編碼。只有你掃描過的路徑可供查詢 — 用對話框裡的
+``Scan Folder…`` 擴充索引。
+
+.. note::
+   語意搜尋需要選用套件 ``open_clip_torch`` 與 ``torch``。若未安裝，選單項目
+   會說明缺少什麼，其他功能仍可正常運作。
+
 自動標記
 ^^^^^^^^
 
@@ -1421,6 +1454,32 @@ bilateral 降噪，再以 unsharp mask 銳化。「僅亮度通道」會保留�
 域再轉回，並以洋紅顯示往返過程中被裁切的像素 — 列印前快速檢查
 色域的工具。
 
+色調與創意效果
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` 匯集了一組一次性、套用即存檔的
+效果，每個都是薄薄一層滑桿對話框、底層是純 NumPy 轉換（同樣的邏輯也以 MCP
+工具形式對外提供）：
+
+- **漸層減光（Graduated Density）** — 依角度、硬度與偏移定義的線性中性減光
+  漸層，可加色調；免手繪遮罩就能壓暗天空或前景。
+- **色調等化器（Tone Equalizer）** — 依亮度分區獨立調整曝光（黑 → 白各一支
+  滑桿），經平滑遮罩讓調整跟隨場景色調。
+- **細節等化器（Detail Equalizer）** — 依頻帶各一支增益滑桿（細部紋理 → 粗
+  對比），是單一清晰度滑桿的多尺度替代方案。
+- **電影調色（Filmic Tone Map）** — Reinhard 或 Hable 高光滾降加樞軸對比與飽
+  和度復原，處理高反差單張曝光。
+- **Velvia** — 亮度加權的飽和度提升，強化淡色同時保護已飽和色與陰影。
+- **負片轉正（Film Negative）** — 反轉掃描的彩色負片、扣除自動估算的橙色片
+  基，含輸出 gamma 滑桿。
+- **去色邊（Defringe）** — 去除高反差邊緣的紫／綠色像差色邊，保留平面色彩。
+- **浮雕（Emboss）** — 由亮度高度場做方向光浮雕（方位角／仰角／深度 + 灰階
+  切換）。
+- **極座標（Polar Coordinates）** — 把畫面捲成圓盤或展開（tiny-planet／極座
+  標反轉的外觀）。
+- **萬花筒（Kaleidoscope）** — 將單一角楔鏡射成 ``n`` 重對稱。
+- **毛玻璃（Frosted Glass）** — 可重現、以種子決定的局部像素散射。
+
 GPS 地理標記
 ^^^^^^^^^^^^
 
@@ -1474,6 +1533,43 @@ Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7Th 或自己�
 5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**（頭跟著游標）、**Auto-blink**（自動眨眼）、**Auto idle** + **Idle motions**（呼吸 + 隨機 idle 動作）、**Mic lip-sync**（麥克風 RMS 帶動嘴型）、**Webcam tracking**（MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
 6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
 7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
+
+``.puppet`` 檔案格式（v1）
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+一個 ``.puppet`` 檔就是一個 zip 壓縮檔：
+
+::
+
+   my_character.puppet
+   ├── puppet.json              # required — manifest, drawables, deformers, parameters
+   ├── textures/
+   │   ├── face.png             # referenced by drawables[].texture
+   │   └── body.png
+   ├── motions/                 # optional
+   │   ├── idle.json
+   │   └── wave.json
+   ├── expressions/             # optional
+   │   └── smile.json
+   └── physics.json             # optional
+
+頂層 ``puppet.json`` 範例::
+
+   {
+     "version": 1,
+     "size": [2048, 2048],
+     "drawables": [ ... ],
+     "deformers": [ ... ],
+     "parameters": [ ... ],
+     "motions": ["idle", "wave"],
+     "expressions": ["smile"],
+     "pose": {"groups": [ ... ]},
+     "physics": "physics.json"
+   }
+
+完整結構（drawables、deformers、parameters、motions、expressions、pose、
+physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 沒有
+專利二進位，可完全透過 git diff。
 
 OBS 直播整合
 ^^^^^^^^^^^^

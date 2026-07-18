@@ -611,6 +611,36 @@ Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. J
 
 Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
 
+### Eigene Stimme (Pet-Skript)
+
+Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verfassen können. Klicken Sie in der **Pet script**-Gruppe des Desktop Pet-Tabs auf **Load script…** und wählen Sie eine `.petscript.json`. Das Schema:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — verwendet, wenn nichts Spezifischeres auf einen Klick passt.
+- **`hit_responses`** — Zeilen pro `HitArea`. Die Keys müssen mit den im Rig definierten Hit-Area-IDs übereinstimmen.
+- **`motion_lines`** — Zeilen pro Motion. Werden ausgelöst, wenn das Pet eine Motion mit diesem Namen abspielt (Hit-Area-Motion oder Kontextmenü-Motion).
+- **`scheduled`** — timergesteuerte Einwürfe. Jeder Eintrag wird alle `every_seconds` Sekunden ausgelöst.
+
+Die Zeilen rotieren im Round-Robin-Verfahren pro Bucket, sodass der Benutzer dieselbe Zeile nicht zweimal hintereinander hört. **Reset to default** verwirft das benutzerdefinierte Skript und stellt den eingebauten Begrüßungssatz wieder her.
+
+Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+
 ---
 
 ## Tastatur- und Maus-Shortcuts

@@ -559,6 +559,36 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 설정한 모든 항목 — 위치, 드라이버, 불투명도, 클릭 통과, 크기 — 은 실행 사이에 기억됩니다.
 
+### 커스텀 음성 (펫 스크립트)
+
+펫의 말풍선은 직접 작성할 수 있는 JSON 파일에서 대사를 가져옵니다. Desktop Pet 탭의 **Pet script** 그룹에서 **Load script…**를 클릭하고 `.petscript.json` 파일을 선택하세요. 스키마:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — 클릭에 더 구체적으로 매칭되는 항목이 없을 때 사용됩니다.
+- **`hit_responses`** — `HitArea`별 대사. 키는 리그에 정의된 hit area ID와 일치해야 합니다.
+- **`motion_lines`** — 모션별 대사. 펫이 해당 이름의 모션(hit area 모션 또는 컨텍스트 메뉴 모션)을 재생할 때 발동됩니다.
+- **`scheduled`** — 타이머 기반 알림. 각 항목은 `every_seconds`초마다 발동됩니다.
+
+대사는 버킷별로 라운드 로빈 방식으로 순환하므로 같은 대사가 연속으로 두 번 나오지 않습니다. **Reset to default**는 커스텀 스크립트를 버리고 내장 인사말 세트를 되살립니다.
+
+동작하는 샘플은 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)에 있습니다.
+
 ---
 
 ## 키보드 및 마우스 단축키

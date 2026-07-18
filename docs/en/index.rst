@@ -1,8 +1,8 @@
 Imervue User Guide
 ==================
 
-A GPU-accelerated image workstation that ships **four top-level tabs**.
-Most of this guide is organised around those four sections.
+A GPU-accelerated image workstation that ships **five top-level tabs**.
+Most of this guide is organised around those five sections.
 
 .. list-table::
    :header-rows: 1
@@ -22,9 +22,13 @@ Most of this guide is organised around those four sections.
    * - **Puppet**
      - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
        motions, physics. See *Puppet Tab — 2D Rigged Animation*.
+   * - **Desktop Pet**
+     - Frameless, transparent, always-on-top overlay that runs the same
+       ``.puppet`` rigs on your desktop with live drivers (idle / blink / mic /
+       webcam / drag-track). See *Desktop Pet Workspace*.
 
 The *Getting Started*, *Reference*, *Plugin System*, and *MCP Server* sections
-that follow are cross-cutting — they apply across all four tabs.
+that follow are cross-cutting — they apply across all five tabs.
 
 .. contents:: Table of Contents
    :depth: 2

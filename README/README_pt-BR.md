@@ -585,6 +585,36 @@ Escolha qualquer combinação na aba ou no menu de clique direito. Cada um vem d
 
 Tudo o que você configura — posição, drivers, opacidade, click-through, tamanho — é lembrado entre lançamentos.
 
+### Voz personalizada (pet script)
+
+O balão de fala do pet vem de um arquivo JSON que você mesmo pode criar. Clique em **Load script…** no grupo **Pet script** da aba Desktop Pet e escolha um `.petscript.json`. O esquema:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — usadas quando nada mais específico corresponde a um clique.
+- **`hit_responses`** — linhas por `HitArea`. As chaves precisam corresponder aos IDs das hit areas definidos no rig.
+- **`motion_lines`** — linhas por motion. Disparam quando o pet reproduz um motion com esse nome (motion de hit area ou motion do menu de contexto).
+- **`scheduled`** — avisos disparados por temporizador. Cada entrada dispara a cada `every_seconds` segundos.
+
+As linhas alternam em round-robin por bucket para que o usuário não ouça a mesma linha duas vezes seguidas. **Reset to default** descarta o script personalizado e traz de volta o conjunto de saudações embutido.
+
+Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](examples/desktop_pet/march_7th.petscript.json).
+
 ---
 
 ## Atalhos de teclado e mouse

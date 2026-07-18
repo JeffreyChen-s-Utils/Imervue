@@ -1,8 +1,8 @@
 Imervue-Benutzerhandbuch
 ========================
 
-Eine GPU-beschleunigte Bild-Workstation, die **vier Hauptregisterkarten** bereitstellt.
-Der Großteil dieses Handbuchs ist um diese vier Abschnitte herum strukturiert.
+Eine GPU-beschleunigte Bild-Workstation, die **fünf Hauptregisterkarten** bereitstellt.
+Der Großteil dieses Handbuchs ist um diese fünf Abschnitte herum strukturiert.
 
 .. list-table::
    :header-rows: 1
@@ -22,9 +22,13 @@ Der Großteil dieses Handbuchs ist um diese vier Abschnitte herum strukturiert.
    * - **Puppet**
      - Von Grund auf neu entwickelter 2D-Rigging-Puppet-Animator — Meshes,
        Deformer, Parameter, Motions, Physik. Siehe *Puppet-Tab — 2D-Rigging-Animation*.
+   * - **Desktop Pet**
+     - Rahmenloses, transparentes Always-on-Top-Overlay, das dieselben
+       ``.puppet``-Rigs auf Ihrem Desktop mit Live-Treibern (Idle / Blink / Mic /
+       Webcam / Drag-Track) laufen lässt. Siehe *Desktop-Pet-Arbeitsbereich*.
 
 Die nachfolgenden Abschnitte *Erste Schritte*, *Referenz*, *Plugin-System* und
-*MCP-Server* sind übergreifend — sie gelten für alle vier Tabs.
+*MCP-Server* sind übergreifend — sie gelten für alle fünf Tabs.
 
 .. contents:: Inhaltsverzeichnis
    :depth: 2

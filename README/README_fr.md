@@ -564,6 +564,36 @@ Choisissez n'importe quelle combinaison depuis l'onglet ou le menu clic-droit. C
 
 Tout ce que vous réglez — position, pilotes, opacité, clic traversant, taille — est mémorisé entre les lancements.
 
+### Voix personnalisée (script du pet)
+
+La bulle de dialogue du pet puise dans un fichier JSON que vous pouvez rédiger vous-même. Cliquez sur **Load script…** dans le groupe **Pet script** de l'onglet Desktop Pet et choisissez un fichier `.petscript.json`. Le schéma :
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — utilisé lorsque rien de plus spécifique ne correspond à un clic.
+- **`hit_responses`** — lignes par `HitArea`. Les clés doivent correspondre aux identifiants de zone de contact définis dans le rig.
+- **`motion_lines`** — lignes par mouvement. Se déclenchent lorsque le pet joue un mouvement portant ce nom (mouvement de zone de contact ou mouvement du menu contextuel).
+- **`scheduled`** — annonces déclenchées par minuterie. Chaque entrée se déclenche toutes les `every_seconds` secondes.
+
+Les lignes défilent en tourniquet (round-robin) par catégorie afin que l'utilisateur n'entende pas deux fois la même ligne d'affilée. **Reset to default** abandonne le script personnalisé et rétablit l'ensemble de salutations intégré.
+
+Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+
 ---
 
 ## Raccourcis clavier et souris
