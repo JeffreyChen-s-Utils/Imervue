@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.library.clip_search import ClipSearchIndex, SearchHit
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 logger = logging.getLogger("Imervue.gui.semantic_search_dialog")
 
@@ -46,6 +47,8 @@ class _IndexBuildWorker(QThread):
     def run(self) -> None:
         total = len(self._paths)
         for done_count, path in enumerate(self._paths, start=1):
+            if self.isInterruptionRequested():
+                break               # cancelled: stop embedding, let wait() return
             try:
                 self._index.add(path)
             except Exception:  # noqa: BLE001 - one bad image must not abort the build
@@ -54,7 +57,7 @@ class _IndexBuildWorker(QThread):
         self.done.emit()
 
 
-class SemanticSearchDialog(QDialog):
+class SemanticSearchDialog(WorkerHostMixin, QDialog):
     """Type a description, rank the indexed images by semantic similarity.
 
     When *build_paths* is given the dialog embeds them in a worker first
@@ -112,13 +115,6 @@ class SemanticSearchDialog(QDialog):
         self._progress.setVisible(False)
         self._set_search_enabled(True)
         self._status.setText(f"Indexed {self._index.size} image(s) — ready to search")
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        # Don't destroy the dialog with a live index-build thread.
-        worker = getattr(self, "_worker", None)
-        if worker is not None and worker.isRunning():
-            worker.wait()
-        super().closeEvent(event)
 
     def _set_search_enabled(self, enabled: bool) -> None:
         self._query.setEnabled(enabled)

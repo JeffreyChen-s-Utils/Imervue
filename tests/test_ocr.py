@@ -141,3 +141,12 @@ def test_dialog_shows_text(qapp):
         assert dialog._text.toPlainText() != ""  # empty → fallback message
     finally:
         dialog.deleteLater()
+
+
+def test_ocr_dialog_uses_worker_host_mixin():
+    """The dialog joins the OCR thread on close via the shared mixin instead of
+    a bespoke closeEvent that Close→accept() used to bypass."""
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    from Imervue.gui.ocr_dialog import OcrDialog
+    assert issubclass(OcrDialog, WorkerHostMixin)
+    assert "closeEvent" not in OcrDialog.__dict__
