@@ -29,6 +29,10 @@ engines:
       # pip install runs in a controlled subprocess (no shell, _https_urlopen
       # guard); the B404/B603 hits are the accepted installer pattern.
       - 'Imervue/plugin/pip_installer.py'
+      # Shared terminate-then-kill helper: imports subprocess only to reap an
+      # already-spawned Popen (terminate/kill/wait) — never spawns one itself.
+      # The B404 import hit is the accepted infra pattern, skipped in .bandit.
+      - 'Imervue/plugin/subprocess_util.py'
       # Plugins launch ML runtimes (NudeNet / ERAX / rembg / segmentation) in an
       # isolated Python subprocess (no shell, controlled args) for frozen-build
       # native-DLL safety — the accepted isolation pattern, skipped in .bandit.
