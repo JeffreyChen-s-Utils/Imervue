@@ -2009,6 +2009,30 @@ class ImervueMainWindow(QMainWindow):
         if timer is not None:
             timer.start()
 
+    def resizeEvent(self, event):  # noqa: N802 — Qt naming
+        super().resizeEvent(event)
+        self._reflow_modify_canvas()
+
+    def _reflow_modify_canvas(self) -> None:
+        """Re-flow the Modify splitter and re-fit its canvas after a window /
+        screen size change.
+
+        The splitter holds absolute pane sizes, so without this the centre
+        canvas kept its old width when the window shrank and the image
+        overflowed / was cropped. Only the Modify canvas is touched — NOT the
+        deep-zoom viewer, whose user zoom must survive a plain window resize.
+        """
+        if getattr(self, "_main_tabs", None) is None:
+            return
+        from Imervue.gui.main_tab_nav import should_refit_modify_canvas
+        canvas = getattr(getattr(self, "modify_panel", None), "_canvas", None)
+        if should_refit_modify_canvas(
+                self._main_tabs.currentIndex(), canvas is not None):
+            splitter = getattr(self, "_modify_splitter", None)
+            if splitter is not None:
+                self.modify_panel._size_modify_splitter(splitter, _retries=0)
+            canvas.update()
+
     def _connect_screen_change_signal(self, _retries: int = 20) -> None:
         """Subscribe to the window's screen-changed signal exactly once.
 
