@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -164,7 +165,7 @@ class _CreateWorker(QThread):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-class GifVideoDialog(QDialog):
+class GifVideoDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_gui: GPUImageView, paths: list[str]):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
@@ -365,16 +366,6 @@ class GifVideoDialog(QDialog):
             self._worker.abort()
         self.reject()
 
-    def _wait_worker(self):
-        """Abort and block until the worker stops, so it is never destroyed
-        mid-run ('QThread: Destroyed while thread is still running' → abort)."""
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.abort()
-            self._worker.wait()
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_worker()
-        super().closeEvent(event)
 
     def _on_finished(self, success, message):
         self._progress.setVisible(False)

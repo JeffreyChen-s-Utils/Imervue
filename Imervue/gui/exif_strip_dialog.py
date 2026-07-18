@@ -24,8 +24,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -151,7 +151,7 @@ class _StripWorker(QThread):
 # Dialog
 # ---------------------------------------------------------------------------
 
-class ExifStripDialog(QDialog):
+class ExifStripDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
@@ -294,15 +294,6 @@ class ExifStripDialog(QDialog):
         self._progress.hide()
         self._start_btn.setEnabled(True)
         self._worker = None
-
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            self._worker.abort()
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._worker.disconnect()
-            self._worker.wait(5000)
-            self._worker = None
-        super().closeEvent(event)
 
 
 def open_exif_strip(main_gui: GPUImageView) -> None:

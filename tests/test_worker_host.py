@@ -46,6 +46,14 @@ class TestStopWorker:
         assert worker.events == ["interrupt", "stop", "disconnect", "wait"]
         assert host._worker is None
 
+    def test_worker_with_abort_is_aborted_before_wait(self):
+        worker = _FakeWorker(running=True)
+        worker.abort = lambda: worker.events.append("abort")
+        host = SimpleNamespace(_worker=worker)
+        WorkerHostMixin._stop_worker(host)
+        assert worker.events == ["interrupt", "abort", "disconnect", "wait"]
+        assert host._worker is None
+
     def test_idle_worker_just_nulled(self):
         worker = _FakeWorker(running=False)
         host = SimpleNamespace(_worker=worker)

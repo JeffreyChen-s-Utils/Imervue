@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QMessageBox, QLineEdit, QFileDialog,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.bookmark import (
     get_bookmarks, remove_bookmark, clear_bookmarks, add_bookmark,
@@ -77,7 +78,10 @@ class _ExistsWorker(QRunnable):
             self.signals.chunk.emit(buffer, self.generation)
 
 
-class BookmarkDialog(QDialog):
+class BookmarkDialog(WorkerHostMixin, QDialog):
+    # The background existence-check worker; the mixin joins it on reject/close.
+    _worker_attrs = ("_exists_worker",)
+
     def __init__(self, main_gui: GPUImageView):
         super().__init__(main_gui)
         self.main_gui = main_gui
@@ -343,9 +347,3 @@ class BookmarkDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             clear_bookmarks()
             self._refresh()
-
-    def closeEvent(self, event):
-        if self._exists_worker is not None:
-            self._exists_worker.abort()
-            self._exists_worker = None
-        super().closeEvent(event)

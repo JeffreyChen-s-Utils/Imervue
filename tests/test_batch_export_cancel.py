@@ -41,23 +41,23 @@ def test_on_cancel_without_running_worker_just_rejects():
     assert calls == ["reject"]
 
 
-def test_wait_worker_aborts_and_waits_a_running_worker():
+def test_dialog_uses_worker_host_mixin_for_close_teardown():
+    # closeEvent / Esc-reject teardown now comes from WorkerHostMixin, whose
+    # _stop_worker aborts and waits the worker (covered by test_worker_host).
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    assert issubclass(BatchExportDialog, WorkerHostMixin)
+    assert "closeEvent" not in BatchExportDialog.__dict__
+    assert "_wait_worker" not in BatchExportDialog.__dict__
+
+
+def test_stop_worker_aborts_and_waits_a_running_worker():
     calls: list = []
     worker = SimpleNamespace(isRunning=lambda: True,
+                             requestInterruption=lambda: None,
                              abort=lambda: calls.append("abort"),
+                             disconnect=lambda: None,
                              wait=lambda: calls.append("wait"))
-    BatchExportDialog._wait_worker(SimpleNamespace(_worker=worker))
+    host = SimpleNamespace(_worker=worker)
+    BatchExportDialog._stop_worker(host)
     assert calls == ["abort", "wait"]
-
-
-def test_wait_worker_is_a_noop_when_not_running():
-    calls: list = []
-    worker = SimpleNamespace(isRunning=lambda: False,
-                             abort=lambda: calls.append("abort"),
-                             wait=lambda: calls.append("wait"))
-    BatchExportDialog._wait_worker(SimpleNamespace(_worker=worker))
-    assert calls == []
-
-
-def test_wait_worker_handles_no_worker():
-    BatchExportDialog._wait_worker(SimpleNamespace(_worker=None))  # must not raise
+    assert host._worker is None

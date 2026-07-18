@@ -32,10 +32,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.multi_language.language_wrapper import language_wrapper
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -251,8 +251,13 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
 # Dialog
 # ---------------------------------------------------------------------------
 
-class DuplicateDetectionDialog(QDialog):
+class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
     """Scan a folder for duplicate images."""
+
+    # The scan worker (abortable) and the trash-delete worker; the mixin joins
+    # both on reject/close. FileDeleteWorker has no abort(), so it is simply
+    # waited out — the in-flight trash batch is never interrupted mid-delete.
+    _worker_attrs = ("_worker", "_delete_worker")
 
     def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
@@ -546,22 +551,6 @@ class DuplicateDetectionDialog(QDialog):
         if size < 1024 * 1024:
             return f"{size / 1024:.1f} KB"
         return f"{size / (1024 * 1024):.1f} MB"
-
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            self._worker.abort()
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._worker.disconnect()
-            self._worker.wait(5000)
-            self._worker = None
-        if self._delete_worker and self._delete_worker.isRunning():
-            # Let the in-flight trash batch finish — destroying a running
-            # QThread crashes; the worker has no UI dependency once detached.
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._delete_worker.disconnect()
-            self._delete_worker.wait(30000)
-            self._delete_worker = None
-        super().closeEvent(event)
 
 
 def open_duplicate_detection(main_gui: GPUImageView) -> None:
