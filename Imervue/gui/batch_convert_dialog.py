@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
     QUALITY_FORMATS,
@@ -129,7 +130,7 @@ class _ConvertWorker(QThread):
             os.remove(src)
 
 
-class BatchConvertDialog(QDialog):
+class BatchConvertDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_gui: GPUImageView, paths: list[str] | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
@@ -364,18 +365,6 @@ class BatchConvertDialog(QDialog):
                 if self._gui.tile_grid_mode:
                     self._gui.load_tile_grid_async(list(self._gui.model.images))
 
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._worker.disconnect()
-            # Interrupt at the next per-image check, then wait for the thread to
-            # actually finish before dropping the reference. The old wait(5000)
-            # dropped the ref on timeout while a long batch was still running,
-            # destroying a live QThread and crashing.
-            self._worker.requestInterruption()
-            self._worker.wait()
-            self._worker = None
-        super().closeEvent(event)
 
 
 def open_batch_convert(main_gui: GPUImageView):

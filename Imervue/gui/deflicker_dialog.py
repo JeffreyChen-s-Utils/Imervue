@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.deflicker import (
     DeflickerOptions,
     apply_gain,
@@ -43,7 +44,7 @@ logger = logging.getLogger("Imervue.deflicker_dialog")
 _SUPPORTED_EXTS = (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".webp")
 
 
-class DeflickerDialog(QDialog):
+class DeflickerDialog(WorkerHostMixin, QDialog):
     """Configure deflicker options, then run the worker."""
 
     def __init__(
@@ -138,11 +139,6 @@ class DeflickerDialog(QDialog):
             )
         self.accept()
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        # Don't let the dialog be destroyed with a live worker thread.
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.wait()
-        super().closeEvent(event)
 
 
 class DeflickerWorker(QThread):

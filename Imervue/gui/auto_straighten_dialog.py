@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
 from Imervue.image.geometry import straighten
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -74,7 +75,7 @@ class _ApplyWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class AutoStraightenDialog(QDialog):
+class AutoStraightenDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer
@@ -153,11 +154,6 @@ class AutoStraightenDialog(QDialog):
     def _worker_busy(self) -> bool:
         return self._worker is not None and self._worker.isRunning()
 
-    def _wait_worker(self) -> None:
-        """Block until any running worker finishes so it is never destroyed mid-run."""
-        if self._worker_busy():
-            self._worker.wait()
-
     def _detect(self) -> None:
         if self._worker_busy():
             return
@@ -193,10 +189,6 @@ class AutoStraightenDialog(QDialog):
         if ok:
             self.accept()
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        # Don't let the dialog be destroyed with a live worker thread.
-        self._wait_worker()
-        super().closeEvent(event)
 
 
 def open_auto_straighten(viewer: GPUImageView) -> None:

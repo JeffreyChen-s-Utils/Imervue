@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
     QUALITY_FORMATS,
@@ -48,8 +49,11 @@ class _SizeEstimateWorker(QThread):
             self.result_ready.emit(0, str(exc))
 
 
-class ExportDialog(QDialog):
+class ExportDialog(WorkerHostMixin, QDialog):
     """Dialog for exporting/converting images to different formats."""
+
+    # The background file-size estimator; the mixin joins it on reject/close.
+    _worker_attrs = ("_size_worker",)
 
     def __init__(self, source_path: str, parent=None):
         super().__init__(parent)
@@ -66,10 +70,6 @@ class ExportDialog(QDialog):
         self._update_default_output_path()
         self._update_size_estimate()
 
-    def closeEvent(self, event):
-        if self._size_worker and self._size_worker.isRunning():
-            self._size_worker.wait(5000)
-        super().closeEvent(event)
 
     # ------------------------------------------------------------------ UI
     def _build_ui(self) -> None:

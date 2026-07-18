@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 import contextlib
@@ -376,7 +377,7 @@ class _UpscaleWorker(QThread):
 # Dialog
 # ---------------------------------------------------------------------------
 
-class AIUpscaleDialog(QDialog):
+class AIUpscaleDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_gui: GPUImageView,
                  paths: list[str] | None = None,
                  folder: str | None = None):
@@ -683,18 +684,6 @@ class AIUpscaleDialog(QDialog):
                         self._gui.load_deep_zoom_image(
                             images[self._gui.current_index])
 
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._worker.disconnect()
-            # Ask the worker to stop at its next per-image check, then wait for
-            # it to actually finish before dropping the reference. The old
-            # wait(5000) dropped the ref on timeout — while a long batch was
-            # still running — which destroys a live QThread and crashes.
-            self._worker.requestInterruption()
-            self._worker.wait()
-            self._worker = None
-        super().closeEvent(event)
 
 
 # ---------------------------------------------------------------------------

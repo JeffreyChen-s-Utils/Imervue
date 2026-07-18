@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.library import image_index
 from Imervue.library.scanner import LibraryScanThread
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -22,7 +23,10 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 
-class LibrarySearchDialog(QDialog):
+class LibrarySearchDialog(WorkerHostMixin, QDialog):
+    # The background library-scan thread; the mixin joins it on reject/close.
+    _worker_attrs = ("_thread",)
+
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui
@@ -190,11 +194,6 @@ class LibrarySearchDialog(QDialog):
         if hasattr(self._ui, "toast"):
             self._ui.toast.error(message)
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        # Don't destroy the dialog with a live scan thread.
-        if self._thread is not None and self._thread.isRunning():
-            self._thread.wait()
-        super().closeEvent(event)
 
     def _run_search(self) -> None:
         paths = image_index.search_images(
