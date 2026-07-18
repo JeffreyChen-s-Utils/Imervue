@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -57,7 +58,7 @@ class _SheetWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class IdPhotoSheetDialog(QDialog):
+class IdPhotoSheetDialog(WorkerHostMixin, QDialog):
     """ID size + paper pickers that tile the current photo into a print sheet."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -49,7 +50,7 @@ class _MemeWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class MemeDialog(QDialog):
+class MemeDialog(WorkerHostMixin, QDialog):
     """Top/bottom caption fields applied to the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

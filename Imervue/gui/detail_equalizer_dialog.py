@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QFormLayout, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -41,7 +42,7 @@ def _two_dp(value: int) -> str:
     return f"{value / _SCALE:.2f}"
 
 
-class DetailEqualizerDialog(QDialog):
+class DetailEqualizerDialog(WorkerHostMixin, QDialog):
     """One gain slider per detail band (1.0 neutral); applies and saves a copy."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

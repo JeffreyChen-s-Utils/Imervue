@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSpinBox, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import apply_save_buttons, finalize_worker, load_rgba, notify_saved
 from Imervue.image.collage import build_collage
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -42,7 +43,7 @@ class _CollageWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class CollageDialog(QDialog):
+class CollageDialog(WorkerHostMixin, QDialog):
     """Pick a column count and composite the images into a grid."""
 
     def __init__(self, viewer: GPUImageView, paths: list[str], parent: QWidget | None = None):

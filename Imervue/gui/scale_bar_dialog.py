@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -58,7 +59,7 @@ class _ScaleBarWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class ScaleBarDialog(QDialog):
+class ScaleBarDialog(WorkerHostMixin, QDialog):
     """Pixels-per-unit + unit label, drawn onto the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

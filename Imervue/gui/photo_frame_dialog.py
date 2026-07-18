@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -48,7 +49,7 @@ class _FrameWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class PhotoFrameDialog(QDialog):
+class PhotoFrameDialog(WorkerHostMixin, QDialog):
     """Border / Polaroid-bottom / caption applied to the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

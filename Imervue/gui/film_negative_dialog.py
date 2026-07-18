@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -34,7 +35,7 @@ def _two_dp(value: int) -> str:
     return f"{value / _GAMMA_SCALE:.2f}"
 
 
-class FilmNegativeDialog(QDialog):
+class FilmNegativeDialog(WorkerHostMixin, QDialog):
     """A gamma slider that inverts the negative scan and saves the positive."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -49,7 +50,7 @@ class _FlattenWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class FlattenFieldDialog(QDialog):
+class FlattenFieldDialog(WorkerHostMixin, QDialog):
     """Degree slider + subtract/divide toggle applied to the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
