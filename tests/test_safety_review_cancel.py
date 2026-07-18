@@ -12,24 +12,25 @@ from types import SimpleNamespace
 
 
 class _FakeProc:
+    """Records the terminate/kill/wait calls it receives so the tests assert on
+    call history (which the analyser can't constant-fold), not booleans."""
+
     def __init__(self, poll_val=None, wait_timeout=False):
         self._poll = poll_val
         self._wait_timeout = wait_timeout
-        self.terminated = False
-        self.killed = False
-        self.wait_calls = 0
+        self.calls: list[str] = []
 
     def poll(self):
         return self._poll
 
     def terminate(self):
-        self.terminated = True
+        self.calls.append("terminate")
 
     def kill(self):
-        self.killed = True
+        self.calls.append("kill")
 
     def wait(self, timeout=None):
-        self.wait_calls += 1
+        self.calls.append("wait")
         if self._wait_timeout and timeout is not None:
             raise subprocess.TimeoutExpired("cmd", timeout)
 
@@ -43,19 +44,20 @@ class TestTerminateProcess:
         from safety_review._workers import _terminate_process
         proc = _FakeProc(poll_val=0)
         _terminate_process(proc)
-        assert proc.terminated is False and proc.killed is False
+        assert proc.calls == []                     # poll() not None -> untouched
 
     def test_running_is_terminated(self):
         from safety_review._workers import _terminate_process
         proc = _FakeProc(poll_val=None)
         _terminate_process(proc)
-        assert proc.terminated is True and proc.killed is False
+        assert "terminate" in proc.calls
+        assert "kill" not in proc.calls
 
     def test_escalates_to_kill_on_timeout(self):
         from safety_review._workers import _terminate_process
         proc = _FakeProc(poll_val=None, wait_timeout=True)
         _terminate_process(proc)
-        assert proc.terminated is True and proc.killed is True
+        assert "kill" in proc.calls                 # terminate timed out -> killed
 
 
 class _FakeWorker:
