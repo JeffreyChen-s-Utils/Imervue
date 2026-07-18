@@ -51,3 +51,47 @@ def test_dropped_raster_routes_through_the_load_image_wrapper(tmp_path):
     # left the layer dock bound to the replaced document).
     assert len(loaded) == 1
     assert loaded[0].shape == (4, 4, 4)
+
+
+# ---------------------------------------------------------------------------
+# Ctrl+Z mid-stroke guard — undo/redo defer while a mouse button is held
+# ---------------------------------------------------------------------------
+
+
+def test_pointer_button_held_detects_left_button():
+    from PySide6.QtCore import Qt
+
+    from Imervue.paint.paint_workspace import _pointer_button_held
+    assert _pointer_button_held(Qt.MouseButton.LeftButton) is True
+    assert _pointer_button_held(Qt.MouseButton.NoButton) is False
+    assert _pointer_button_held(Qt.MouseButton.RightButton) is False
+    assert _pointer_button_held(
+        Qt.MouseButton.LeftButton | Qt.MouseButton.RightButton) is True
+
+
+def test_undo_deferred_while_pointer_button_held():
+    undo_calls: list = []
+    ws = SimpleNamespace(
+        _pointer_stroke_active=lambda: True,
+        _undo_stack=SimpleNamespace(undo=lambda: undo_calls.append(True) or True),
+        _canvas=SimpleNamespace(invalidate_texture=lambda: None, update=lambda: None),
+        _notify_history_action=lambda k: None,
+        _notify_history_empty=lambda k: None,
+    )
+    PaintWorkspace.undo(ws)
+    assert undo_calls == []   # the undo stack is never touched mid-stroke
+
+
+def test_undo_proceeds_when_no_button_held():
+    undo_calls: list = []
+    actions: list = []
+    ws = SimpleNamespace(
+        _pointer_stroke_active=lambda: False,
+        _undo_stack=SimpleNamespace(undo=lambda: undo_calls.append(True) or True),
+        _canvas=SimpleNamespace(invalidate_texture=lambda: None, update=lambda: None),
+        _notify_history_action=lambda k: actions.append(k),
+        _notify_history_empty=lambda k: None,
+    )
+    PaintWorkspace.undo(ws)
+    assert undo_calls == [True]
+    assert actions == ["undo"]

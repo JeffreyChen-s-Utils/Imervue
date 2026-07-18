@@ -66,6 +66,17 @@ _WORKSPACE_AWARE_TOOLS = (
 )
 
 
+def _pointer_button_held(buttons) -> bool:
+    """True while the left mouse button is down.
+
+    Used to defer undo/redo that arrives mid-brush-stroke (Ctrl+Z with the
+    button still held): the undo would restore a committed state that the
+    in-flight stroke then overwrites when it syncs its FBO to the layer on
+    release, silently discarding the undo.
+    """
+    return bool(buttons & Qt.MouseButton.LeftButton)
+
+
 class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     AutosaveMixin,
     TabManagerMixin,
@@ -380,6 +391,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def undo(self) -> None:
         """Undo the most recent committed stroke if there is one."""
+        if self._pointer_stroke_active():
+            return
         if self._undo_stack.undo():
             self._canvas.invalidate_texture()
             self._canvas.update()
@@ -389,12 +402,21 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def redo(self) -> None:
         """Re-apply the most recently undone stroke."""
+        if self._pointer_stroke_active():
+            return
         if self._undo_stack.redo():
             self._canvas.invalidate_texture()
             self._canvas.update()
             self._notify_history_action("redo")
         else:
             self._notify_history_empty("redo")
+
+    @staticmethod
+    def _pointer_stroke_active() -> bool:
+        """Whether a mouse button is currently held (a brush stroke may be in
+        progress), so undo/redo should defer until it's released."""
+        from PySide6.QtWidgets import QApplication
+        return _pointer_button_held(QApplication.mouseButtons())
 
     def _notify_history_action(self, kind: str) -> None:
         """Toast a confirmation after a successful undo / redo.
