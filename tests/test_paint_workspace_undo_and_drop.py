@@ -31,7 +31,7 @@ def test_undo_stack_seeded_at_bind_makes_first_stroke_undoable():
     # Seed at bind time (blank state) as _ensure_undo_stack does, BEFORE any
     # stroke. Lazily creating the stack on the first commit captured the
     # post-stroke state as the baseline and lost the first undo.
-    stack = PaintWorkspace._undo_stack.fget(ws)
+    stack = PaintWorkspace._undo_stack.__get__(ws, PaintWorkspace)
     doc.active_layer().image[0, 0] = (255, 0, 0, 255)   # the first stroke
     stack.commit()
     assert stack.undo() is True
