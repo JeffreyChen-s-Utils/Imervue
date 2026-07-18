@@ -72,6 +72,11 @@ def save_view_state(view: GPUImageView) -> None:
         "dx": view.dz_offset_x,
         "dy": view.dz_offset_y,
         "dims": _current_base_dims(view),
+        # Whether this was a deliberate user zoom/pan (True) or a whole-image
+        # fit (False). A remembered *fit* must re-fit to the canvas on reload —
+        # a fit saved on a larger screen otherwise reads as a zoom-in on a
+        # smaller one and opens cropped. Only a genuine zoom-in is preserved.
+        "locked": bool(getattr(view, "_user_locked_view", False)),
     }
 
 

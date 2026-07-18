@@ -198,6 +198,26 @@ def test_should_refit_on_load_keeps_zoom_when_dimensions_match():
         True, view, remembered_dims=(4000, 3000)) is False
 
 
+def test_should_refit_on_load_refits_remembered_fit_on_smaller_canvas():
+    # A whole-image fit saved on a LARGER screen reloaded on a SMALLER canvas:
+    # its zoom (0.5) exceeds this canvas's fit (~0.225), so fits_within_canvas
+    # alone would mistake it for a zoom-in and keep it, opening cropped/too big.
+    # was_locked=False marks it a fit, so it re-fits.
+    view = _FakeView(4000, 3000, (1200, 675))
+    view.zoom = 0.5
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(4000, 3000), was_locked=False) is True
+
+
+def test_should_refit_on_load_keeps_locked_zoom_in_that_no_longer_fits():
+    # A deliberate user zoom-in (was_locked=True) is preserved even though it
+    # exceeds the current canvas's fit.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(4000, 3000), was_locked=True) is False
+
+
 def test_should_refit_on_load_none_dims_falls_back_to_fit_test():
     # Legacy memory entries saved without dims → behave exactly as before.
     view = _FakeView(4000, 3000, (1600, 900))

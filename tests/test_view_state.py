@@ -137,3 +137,27 @@ def test_jump_to_random_avoids_current(monkeypatch):
     assert loaded == ["a"]
     assert view.current_index == 0
     assert view.tile_grid_mode is False
+
+
+def test_save_records_locked_flag_for_a_user_zoom():
+    # A deliberate zoom-in (_user_locked_view True) is remembered as locked so
+    # the next load preserves it.
+    view = _view(["a"], current=0, deep_path="a")
+    view._user_locked_view = True
+    view_state.save_view_state(view)
+    assert view._view_memory["a"]["locked"] is True
+
+
+def test_save_records_unlocked_for_a_fit_view():
+    # A whole-image fit (_user_locked_view False) is remembered unlocked so the
+    # next load re-fits it to the current canvas instead of opening too big.
+    view = _view(["a"], current=0, deep_path="a")
+    view._user_locked_view = False
+    view_state.save_view_state(view)
+    assert view._view_memory["a"]["locked"] is False
+
+
+def test_save_defaults_locked_false_when_flag_absent():
+    view = _view(["a"], current=0, deep_path="a")   # no _user_locked_view attr
+    view_state.save_view_state(view)
+    assert view._view_memory["a"]["locked"] is False

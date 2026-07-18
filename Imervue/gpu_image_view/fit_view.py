@@ -130,6 +130,7 @@ def should_refit_on_load(
     was_remembered: bool,
     view: GPUImageView,
     remembered_dims: tuple[int, int] | None = None,
+    was_locked: bool = True,
 ) -> bool:
     """Whether to content-fit an image on display.
 
@@ -144,10 +145,19 @@ def should_refit_on_load(
     swapped dimensions a former whole-image fit reads as a zoom-in and
     ``fits_within_canvas`` would wrongly skip the fit — so any dimension change
     forces a refit.
+
+    ``was_locked`` is whether the remembered view was a deliberate user zoom-in
+    (``True``) or a whole-image fit (``False``). A remembered *fit* must re-fit
+    to the current canvas: a fit saved on a larger screen has a zoom above this
+    (smaller) canvas's fit, so ``fits_within_canvas`` would mistake it for a
+    zoom-in and open the image cropped / too big. Defaults ``True`` so callers
+    that don't distinguish keep the old fits-within-canvas behaviour.
     """
     if not was_remembered:
         return True
     if remembered_dims is not None and tuple(remembered_dims) != _base_dimensions(view):
+        return True
+    if not was_locked:
         return True
     return fits_within_canvas(view)
 
