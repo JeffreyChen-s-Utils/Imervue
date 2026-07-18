@@ -95,8 +95,23 @@ def _extract_date(path: str) -> datetime:
         return datetime.fromtimestamp(0)
 
 
-def _group_entries(paths: list[str], granularity: str = "month") -> list[_TimelineEntry]:
-    dated = sorted(((p, _extract_date(p)) for p in paths), key=lambda x: x[1], reverse=True)
+def _extract_date_fast(path: str) -> datetime:
+    """Date from file mtime only — a cheap stat with no per-file PIL open.
+
+    Used for the initial synchronous grouping so the timeline populates
+    instantly; the EXIF-based dates (which require opening every file) are
+    refined on a background thread afterwards.
+    """
+    try:
+        return datetime.fromtimestamp(Path(path).stat().st_mtime)
+    except OSError:
+        return datetime.fromtimestamp(0)
+
+
+def _group_entries(
+    paths: list[str], granularity: str = "month", date_fn=_extract_date,
+) -> list[_TimelineEntry]:
+    dated = sorted(((p, date_fn(p)) for p in paths), key=lambda x: x[1], reverse=True)
     entries: list[_TimelineEntry] = []
     last_key: str | None = None
     for path, when in dated:
@@ -116,14 +131,72 @@ def _group_key(when: datetime, granularity: str) -> str:
     return when.strftime("%Y-%m")
 
 
+class _GroupSignals(QObject):
+    ready = Signal(list)   # list[_TimelineEntry], grouped by EXIF date
+
+
+class _GroupWorker(QRunnable):
+    """Re-group paths using EXIF dates off the GUI thread — the EXIF scan opens
+    every file, which froze the model constructor for large folders."""
+
+    def __init__(self, paths: list[str], granularity: str):
+        super().__init__()
+        self._paths = paths
+        self._granularity = granularity
+        self.signals = _GroupSignals()
+
+    def run(self) -> None:
+        self.signals.ready.emit(
+            _group_entries(self._paths, self._granularity, _extract_date))
+
+
+# QThreadPool owns the C++ QRunnable but not its Python wrapper, which can be
+# garbage-collected before run() executes (clearing self.signals). Holding each
+# worker here until its ready signal fires keeps the wrapper alive across that
+# window; the set is the single owner of that guarantee (only mutated).
+_live_group_workers: set[_GroupWorker] = set()
+
+
 class TimelineModel(QAbstractListModel):
     def __init__(self, paths: list[str], granularity: str = "month"):
         super().__init__()
-        self._entries = _group_entries(paths, granularity)
+        self._granularity = granularity
+        # Group by mtime synchronously (a cheap stat, no per-file PIL open) so
+        # the view populates instantly, then refine the dates from EXIF on a
+        # background thread. The EXIF scan opened every file and used to freeze
+        # the constructor proportional to folder size.
+        self._entries = _group_entries(paths, granularity, _extract_date_fast)
         self._pool = QThreadPool.globalInstance()
         self._in_flight: set[str] = set()
         # path -> transient decode-failure retry count (see _MAX_THUMB_RETRIES)
         self._retry: dict[str, int] = {}
+        self._start_exif_refine(list(paths))
+
+    def _start_exif_refine(self, paths: list[str]) -> None:
+        if not paths:
+            return
+        worker = _GroupWorker(paths, self._granularity)
+        _live_group_workers.add(worker)
+
+        def _on_ready(entries):
+            _live_group_workers.discard(worker)
+            self._apply_refined_entries(entries)
+
+        worker.signals.ready.connect(_on_ready)
+        self._pool.start(worker)
+
+    def _apply_refined_entries(self, entries: list[_TimelineEntry]) -> None:
+        # Carry each already-loaded thumbnail across the regroup so the reset
+        # doesn't re-decode every image; only date grouping / order changed.
+        loaded = {e.path: e for e in self._entries if e.path is not None}
+        for entry in entries:
+            prior = loaded.get(entry.path)
+            if prior is not None:
+                entry.icon = prior.icon
+                entry.fetched = prior.fetched
+        self.beginResetModel()
+        self._entries = entries
+        self.endResetModel()
 
     def rowCount(self, parent: QModelIndex | None = None) -> int:
         if parent is None:
