@@ -85,6 +85,35 @@ class TestConvertWorker:
         assert len(out_files) == 1
         assert out_files[0].suffix == ".jpg"
 
+    def test_interruption_breaks_before_processing(self, tmp_path):
+        """When the thread is interrupted (closeEvent requests it), the loop
+        stops at its next per-image check without converting more files."""
+        src = tmp_path / "src"
+        src.mkdir()
+        arr = np.full((16, 16, 3), 100, dtype=np.uint8)
+        for name in ("a.png", "b.png"):
+            Image.fromarray(arr).save(str(src / name), format="PNG")
+        out = tmp_path / "out"
+        out.mkdir()
+
+        class _InterruptedWorker(_ConvertWorker):
+            def isInterruptionRequested(self):   # noqa: N802 - Qt override
+                return True
+
+        worker = _InterruptedWorker(
+            paths=[str(src / "a.png"), str(src / "b.png")],
+            output_dir=str(out), fmt="JPEG", quality=85,
+            delete_originals=False, skip_same_fmt=False,
+        )
+        progress, results = [], []
+        worker.progress.connect(lambda *a: progress.append(a))
+        worker.result_ready.connect(lambda s, f, sk: results.append((s, f, sk)))
+        worker.run()
+
+        assert progress == []                 # broke before the first image
+        assert results == [(0, 0, 0)]         # still reported so the UI resets
+        assert list(out.iterdir()) == []      # nothing converted
+
     def test_skip_same_format(self, tmp_path):
         """Should skip files already in the target format."""
         src = tmp_path / "src"

@@ -289,6 +289,8 @@ class _UpscaleWorker(QThread):
         success = failed = 0
 
         for i, src in enumerate(self._paths):
+            if self.isInterruptionRequested():
+                break
             self.progress.emit(i, total, Path(src).name)
             try:
                 img = Image.open(src)
@@ -330,6 +332,8 @@ class _UpscaleWorker(QThread):
         total = len(self._paths)
 
         for i, src in enumerate(self._paths):
+            if self.isInterruptionRequested():
+                break
             name = Path(src).name
             self.progress.emit(i, total, name)
             try:
@@ -683,7 +687,12 @@ class AIUpscaleDialog(QDialog):
         if self._worker and self._worker.isRunning():
             with contextlib.suppress(RuntimeError, TypeError):
                 self._worker.disconnect()
-            self._worker.wait(5000)
+            # Ask the worker to stop at its next per-image check, then wait for
+            # it to actually finish before dropping the reference. The old
+            # wait(5000) dropped the ref on timeout — while a long batch was
+            # still running — which destroys a live QThread and crashes.
+            self._worker.requestInterruption()
+            self._worker.wait()
             self._worker = None
         super().closeEvent(event)
 
