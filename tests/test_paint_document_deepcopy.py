@@ -13,6 +13,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 import numpy as np
+import pytest
 from PySide6.QtWidgets import QWidget
 
 from Imervue.paint.document import PaintDocument
@@ -54,7 +55,7 @@ def test_deepcopy_clones_content_independently(qapp):
 
     # Content carried over...
     assert clone.layer_at(0).name == "ink"
-    assert clone._groups["g"].opacity == 0.5
+    assert clone._groups["g"].opacity == pytest.approx(0.5)
     assert clone._named_selections["sel"].sum() == 16
     assert clone._reference_layer_index == 0
     assert clone.active_layer_index() == doc.active_layer_index()

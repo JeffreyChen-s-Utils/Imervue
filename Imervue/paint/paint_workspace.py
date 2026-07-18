@@ -54,6 +54,7 @@ from Imervue.paint.workspace_tabs import TabManagerMixin
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
+    from Imervue.paint.undo_stack import UndoStack
 
 
 logger = logging.getLogger("Imervue.paint.workspace")
@@ -361,7 +362,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     # ---- undo / redo + history feedback --------------------------------
 
     @property
-    def _undo_stack(self):
+    def _undo_stack(self) -> UndoStack:
         """The active canvas's undo stack (created on demand).
 
         Per-canvas so a tab switch can't apply one document's history to

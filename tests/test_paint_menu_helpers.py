@@ -8,6 +8,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from Imervue.paint.edit_menu import commit_stroke_selection
 from Imervue.paint.file_menu import _FileMenuBridge
@@ -61,11 +62,11 @@ def test_from_rect_clamps_tiny_selection():
     box = from_rect(10, 10, 1, 1)   # 1px marquee would raise before the clamp
     assert box.width >= MIN_BOX_SIZE
     assert box.height >= MIN_BOX_SIZE
-    assert box.cx == 10.5           # still centred on the marquee
-    assert box.cy == 10.5
+    assert box.cx == pytest.approx(10.5)   # still centred on the marquee
+    assert box.cy == pytest.approx(10.5)
 
 
 def test_from_rect_preserves_a_large_selection():
     box = from_rect(0, 0, 100, 50)
-    assert box.width == 100.0
-    assert box.height == 50.0
+    assert box.width == pytest.approx(100.0)
+    assert box.height == pytest.approx(50.0)

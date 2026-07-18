@@ -33,6 +33,7 @@ def _capture(worker):
     captured: list[tuple[bool, str]] = []
     worker.done.connect(lambda ok, msg: captured.append((ok, msg)))
     worker.run()
+    assert captured, "worker.run() must always emit done"
     return captured[-1]
 
 
