@@ -3,7 +3,8 @@
 Each dialog used to call ONNX / rembg / seam-carve / OpenCV inference directly
 in _commit on the GUI thread, freezing the UI until it finished. They now hand
 the work to a _XxxWorker(QThread) that emits done(ok, message), and each dialog
-waits its worker on close so the thread is never destroyed mid-run.
+stops its worker on reject/close (via the shared WorkerHostMixin) so the thread
+is never destroyed mid-run.
 
 The worker.run() bodies are exercised by calling run() directly (no start()), so
 the emit is captured synchronously; the heavy function and image load are
@@ -216,7 +217,7 @@ def test_cloud_share_worker_reports_batch_error(qapp, monkeypatch):
     assert "unexpected backend failure" in str(msg)
 
 
-# --- every dialog waits its worker on close --------------------------------
+# --- every dialog stops its worker on reject/close via the shared mixin -----
 
 _DIALOGS = [
     pm.PortraitModeDialog,
@@ -229,16 +230,24 @@ _DIALOGS = [
 ]
 
 
-@pytest.mark.parametrize("dialog_cls", _DIALOGS)
-def test_wait_worker_joins_running_thread(dialog_cls):
-    waited: list[str] = []
-    fake = SimpleNamespace(
-        _worker=SimpleNamespace(isRunning=lambda: True, wait=lambda: waited.append("w")),
+def _fake_running_worker(waited):
+    return SimpleNamespace(
+        isRunning=lambda: True,
+        requestInterruption=lambda: None,
+        disconnect=lambda: None,
+        wait=lambda: waited.append("w"),
     )
-    dialog_cls._wait_worker(fake)
-    assert waited == ["w"]
 
 
 @pytest.mark.parametrize("dialog_cls", _DIALOGS)
-def test_wait_worker_safe_without_a_worker(dialog_cls):
-    dialog_cls._wait_worker(SimpleNamespace(_worker=None))   # must not raise
+def test_stop_worker_joins_running_thread(dialog_cls):
+    waited: list[str] = []
+    fake = SimpleNamespace(_worker=_fake_running_worker(waited))
+    dialog_cls._stop_worker(fake)          # inherited from WorkerHostMixin
+    assert waited == ["w"]
+    assert fake._worker is None
+
+
+@pytest.mark.parametrize("dialog_cls", _DIALOGS)
+def test_stop_worker_safe_without_a_worker(dialog_cls):
+    dialog_cls._stop_worker(SimpleNamespace(_worker=None))   # must not raise

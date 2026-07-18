@@ -13,7 +13,12 @@ from ai_outpaint.ai_outpaint_plugin import OutpaintDialog
 
 
 def _running(waited, name):
-    return SimpleNamespace(isRunning=lambda: True, wait=lambda: waited.append(name))
+    return SimpleNamespace(
+        isRunning=lambda: True,
+        requestInterruption=lambda: None,
+        disconnect=lambda: None,
+        wait=lambda: waited.append(name),
+    )
 
 
 def test_object_remove_waits_both_workers():
@@ -38,11 +43,14 @@ def test_object_remove_skips_finished_workers():
     assert waited == []
 
 
-def test_outpaint_waits_running_worker():
+def test_outpaint_stops_running_worker():
+    # OutpaintDialog now inherits WorkerHostMixin; _stop_worker joins the worker.
     waited: list = []
-    OutpaintDialog._wait_worker(SimpleNamespace(_worker=_running(waited, "out")))
+    host = SimpleNamespace(_worker=_running(waited, "out"))
+    OutpaintDialog._stop_worker(host)
     assert waited == ["out"]
+    assert host._worker is None
 
 
 def test_outpaint_is_safe_without_a_worker():
-    OutpaintDialog._wait_worker(SimpleNamespace(_worker=None))   # must not raise
+    OutpaintDialog._stop_worker(SimpleNamespace(_worker=None))   # must not raise

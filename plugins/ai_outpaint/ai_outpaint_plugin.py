@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ai_outpaint.outpaint import outpaint
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -57,7 +58,7 @@ class AIOutpaintPlugin(ImervuePlugin):
             OutpaintDialog(viewer, str(images[idx])).exec()
 
 
-class OutpaintDialog(QDialog):
+class OutpaintDialog(WorkerHostMixin, QDialog):
     """Pick a border width and outpaint the current image on Apply."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
@@ -77,16 +78,6 @@ class OutpaintDialog(QDialog):
         layout.addWidget(QLabel(lang.get("outpaint_padding", "Border (px):")))
         layout.addWidget(self._padding)
         layout.addLayout(self._build_buttons(lang))
-
-    def _wait_worker(self) -> None:
-        """Block until the outpaint worker stops so its QThread isn't destroyed
-        mid-run when the dialog closes (a diffusion inpaint can run for a while)."""
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.wait()
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_worker()
-        super().closeEvent(event)
 
     def _build_buttons(self, lang: dict) -> QHBoxLayout:
         row = QHBoxLayout()

@@ -40,6 +40,7 @@ from npr_filters.filters import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -171,7 +172,7 @@ class NPRFiltersPlugin(ImervuePlugin):
         NPRFiltersDialog(viewer, str(images[idx])).exec()
 
 
-class NPRFiltersDialog(QDialog):
+class NPRFiltersDialog(WorkerHostMixin, QDialog):
     """Pick a style + tweak its dedicated knobs; run on a worker thread on OK."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
@@ -283,16 +284,6 @@ class NPRFiltersDialog(QDialog):
             return
         self._notify_success(Path(message))
         self.accept()
-
-    def _wait_worker(self) -> None:
-        """Block until the worker stops so its QThread isn't destroyed mid-run
-        when the dialog closes."""
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.wait()
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_worker()
-        super().closeEvent(event)
 
     def _notify_failure(self, exc: Exception) -> None:
         if hasattr(self._viewer, "main_window") and hasattr(
