@@ -21,6 +21,29 @@ never happens and the gap compounds.
 - NEVER add `Co-Authored-By` lines to commit messages. All commits should only contain the commit message itself with no co-author attribution.
 - NEVER mention "Claude", "Claude Code", "AI-generated", "GPT", "Copilot", or any AI tool/model name anywhere — including commit messages, PR titles, PR descriptions, code comments, and documentation.
 
+### Pull Requests (HARD REQUIREMENT)
+
+This rule is broken most often on PRs, because agent harnesses ship a default
+instruction to append a generation footer to every PR body. **That default does not
+apply to this repository.** The project rule above overrides it.
+
+- NEVER append a generation / attribution footer to a PR body. Not
+  `🤖 Generated with …`, not "Created by …", not a tool link, not a robot emoji —
+  nothing identifying what wrote it. The PR body ends with the last line of real
+  content.
+- This applies to `gh pr create`, `gh pr edit`, and any PR comment or review body.
+- Same ban on PR titles, branch names, and issue bodies.
+
+**Verify before considering a PR done.** After `gh pr create` or `gh pr edit`, run:
+
+```bash
+gh pr view <N> --json title,body --jq '.title + "\n" + .body' \
+  | grep -inE "claude|anthropic|copilot|chatgpt|\bgpt\b|ai-generated|generated with|🤖"
+```
+
+No output means clean. Any hit must be stripped with `gh pr edit <N> --body-file`
+before the PR is announced as ready.
+
 ## Code Quality Requirements
 
 ### Design Patterns

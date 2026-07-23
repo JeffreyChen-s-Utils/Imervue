@@ -287,6 +287,7 @@ chinese_word_dict = {
     # 状态栏
     "status_loading_progress": "加载中 {current}/{total}...",
     "status_loading_image": "加载图片中...",
+    "tile_wall_loading": "正在加载图片...",
     "status_ready": "就绪",
     # Toast
     "toast_path_copied": "已复制路径",

@@ -130,3 +130,119 @@ def test_reload_settings_no_refit_off_the_deep_zoom_view():
     user_setting_dict["filmstrip_enabled"] = False
     BrowseFeatures(view).reload_settings()
     assert view.settle_refits == 0
+
+
+# ---------------------------------------------------------------
+# Reading mode: scroll / bottom-anchor against the CONTENT area
+# ---------------------------------------------------------------
+# Regression: both measured the viewport as ``view.height()``. The minimap /
+# filmstrip band is drawn over the bottom of the canvas, so that stopped the
+# scroll a band-height short — the foot of every page stayed hidden behind the
+# overlay and the edge auto-advance fired against that same wrong edge.
+
+_CANVAS = (1000, 1000)
+_CONTENT_H = 1000 - _SQUARE_RESERVE          # 848
+
+
+def _reading_view(img_h, zoom=1.0, offset_y=0.0, img_w=500):
+    deep = SimpleNamespace(levels=[np.zeros((img_h, img_w, 4), dtype=np.uint8)])
+    view = SimpleNamespace(
+        deep_zoom=deep,
+        zoom=zoom,
+        dz_offset_x=0.0,
+        dz_offset_y=offset_y,
+        _last_resize_size=_CANVAS,
+        tile_grid_mode=False,
+        _filmstrip_enabled=False,
+        model=SimpleNamespace(images=[0]),
+        updates=0,
+        width=lambda: _CANVAS[0],
+        height=lambda: _CANVAS[1],
+    )
+    view.update = lambda: setattr(view, "updates", view.updates + 1)
+    view._fit_to_width = lambda: None
+    return view
+
+
+def test_reading_scroll_bottom_stops_at_the_content_area_not_the_canvas():
+    # Page 2000 px tall, already scrolled near its end. The lowest reachable
+    # offset must bottom the page at the content edge (848) so its last rows
+    # clear the band — against the raw 1000 px canvas it would stop 152 px early
+    # and those rows would sit under the minimap forever.
+    view = _reading_view(2000, offset_y=-1100.0)
+    BrowseFeatures(view).reading_wheel(-500.0)
+    assert view.dz_offset_y == _CONTENT_H - 2000
+
+
+def test_reading_scroll_advances_only_past_the_content_edge():
+    # Sitting exactly on the content-area bottom edge; one more scroll down is
+    # the page turn.
+    view = _reading_view(2000, offset_y=float(_CONTENT_H - 2000))
+    called = {}
+    import Imervue.gpu_image_view.actions.select as select_mod
+    original = select_mod.switch_to_next_image
+    select_mod.switch_to_next_image = lambda main_gui: called.setdefault("next", main_gui)
+    try:
+        BrowseFeatures(view).reading_wheel(-50.0)
+    finally:
+        select_mod.switch_to_next_image = original
+    assert called.get("next") is view
+
+
+def test_reading_page_taller_than_content_scrolls_instead_of_advancing():
+    # 900 px page: it fits the 1000 px canvas but NOT the 848 px content area,
+    # so it must scroll. Measured against the canvas it counted as "fits" and
+    # any scroll turned the page, skipping content hidden under the band.
+    view = _reading_view(900)
+    called = {}
+    import Imervue.gpu_image_view.actions.select as select_mod
+    original = select_mod.switch_to_next_image
+    select_mod.switch_to_next_image = lambda main_gui: called.setdefault("next", main_gui)
+    try:
+        BrowseFeatures(view).reading_wheel(-30.0)
+    finally:
+        select_mod.switch_to_next_image = original
+    assert called == {}
+    assert view.dz_offset_y == -30.0
+
+
+def test_reading_scroll_up_within_the_page_does_not_advance():
+    view = _reading_view(2000, offset_y=-500.0)
+    BrowseFeatures(view).reading_wheel(200.0)
+    assert view.dz_offset_y == -300.0
+    assert view.updates == 1
+
+
+def test_reading_bottom_anchor_uses_the_content_area():
+    # Paging backwards opens the previous page at its end: the page bottom must
+    # rest on the content edge, not under the band.
+    view = _reading_view(2000)
+    features = BrowseFeatures(view)
+    features._anchor_bottom = True
+    features.apply_reading_fit()
+    assert view.dz_offset_y == _CONTENT_H - 2000
+
+
+def test_reading_bottom_anchor_is_zero_for_a_page_that_fits():
+    view = _reading_view(400)
+    features = BrowseFeatures(view)
+    features._anchor_bottom = True
+    features.apply_reading_fit()
+    # Shorter than the content area → no bottom-align, and clamp_pan centres it.
+    assert view.dz_offset_y == (_CONTENT_H - 400) / 2
+
+
+def test_reading_fit_forward_opens_at_the_top():
+    view = _reading_view(2000, offset_y=-900.0)
+    features = BrowseFeatures(view)
+    features._anchor_bottom = False
+    features.apply_reading_fit()
+    assert view.dz_offset_y == 0.0
+
+
+def test_reading_bottom_anchor_resets_after_use():
+    view = _reading_view(2000)
+    features = BrowseFeatures(view)
+    features._anchor_bottom = True
+    features.apply_reading_fit()
+    assert features._anchor_bottom is False

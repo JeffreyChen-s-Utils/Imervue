@@ -287,6 +287,7 @@ traditional_chinese_word_dict = {
     # 狀態列
     "status_loading_progress": "載入中 {current}/{total}...",
     "status_loading_image": "載入圖片中...",
+    "tile_wall_loading": "正在載入圖片...",
     "status_ready": "就緒",
     # Toast
     "toast_path_copied": "已複製路徑",

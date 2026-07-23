@@ -2072,7 +2072,12 @@ class ImervueMainWindow(QMainWindow):
                 self._main_tabs.currentIndex(), canvas is not None):
             splitter = getattr(self, "_modify_splitter", None)
             if splitter is not None:
+                # Two chains, as on the deep-zoom path: the first drains Qt's
+                # queued layout, the second spans the window actually landing on
+                # the new monitor. setSizes has no per-paint net behind it, so
+                # without the second an intermediate width is locked in.
                 self.modify_panel._size_modify_splitter(splitter)
+                self.modify_panel.schedule_modify_splitter_settle(splitter)
             QTimer.singleShot(0, canvas.update)
 
     def _adapt_to_current_screen(self) -> None:

@@ -39,6 +39,12 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.tile_wall_loading import (
+    should_show_wall_loading,
+    spinner_dots,
+    spinner_phase,
+    wall_spinner_geometry,
+)
 from Imervue.gpu_image_view.viewport_math import visible_image_rect
 from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
@@ -97,6 +103,10 @@ _FILMSTRIP_PLACEHOLDER_RGBA = (40, 40, 40, 200)
 _FILMSTRIP_HIGHLIGHT_RGBA = (255, 199, 41, 255)
 _FILMSTRIP_BORDER_WIDTH = 3
 _LOADING_PILL_RGBA = (0, 0, 0, 170)
+# Gap between the centred wall spinner and its caption.
+_WALL_LABEL_GAP = 22
+# Per-tile spinner radius as a fraction of the tile's shorter edge.
+_TILE_SPINNER_RATIO = 0.12
 _ERROR_PANEL_RGBA = (95, 28, 28, 210)
 _MISSING_PANEL_RGBA = (50, 50, 50, 215)
 # Video ▶ badge — translucent disc + opaque white play triangle.
@@ -324,6 +334,7 @@ class OverlayPainter:
         layer_table: list[tuple[bool, object]] = [
             (view.tile_grid_mode and bool(view.tile_rects), self.draw_tile_overlays),
             (view.tile_grid_mode, self.draw_tile_state_overlays),
+            (self._wall_loading_active(), self.draw_wall_loading),
             # Low-res preview sits in the background, below the filmstrip and
             # chrome; the "Loading…" pill is added last so it stays on top.
             (loading_active, self.draw_loading_preview),
@@ -446,28 +457,56 @@ class OverlayPainter:
         if not rects:
             return
 
-        phase = (time.monotonic() % 1.0) * 2 * 3.14159
-        painter.setPen(QColor(140, 140, 140, 200))
-        font = QFont(_FONT_SEGOE_UI)
-        font.setPixelSize(11)
-        painter.setFont(font)
-
+        phase = spinner_phase(time.monotonic())
         for x0, y0, x1, y1 in rects:
-            cx = (x0 + x1) / 2
-            cy = (y0 + y1) / 2
-            radius = min(x1 - x0, y1 - y0) * 0.12
-            for i in range(4):
-                angle = phase + i * (3.14159 / 2)
-                dot_x = cx + radius * 1.6 * np.cos(angle)
-                dot_y = cy + radius * 1.6 * np.sin(angle)
-                alpha = 80 + int(120 * (i / 3))
-                painter.setBrush(QColor(200, 200, 200, alpha))
-                painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawEllipse(
-                    int(dot_x - radius / 3), int(dot_y - radius / 3),
-                    int(radius * 2 / 3), int(radius * 2 / 3),
-                )
+            radius = min(x1 - x0, y1 - y0) * _TILE_SPINNER_RATIO
+            self._paint_spinner(painter, (x0 + x1) / 2, (y0 + y1) / 2, radius, phase)
 
+        self.ensure_fade_pump()
+
+    @staticmethod
+    def _paint_spinner(painter: QPainter, center_x: float, center_y: float,
+                       radius: float, phase: float) -> None:  # pragma: no cover
+        """Draw one rotating-dot spinner ring centred on (*center_x*, *center_y*)."""
+        painter.setPen(Qt.PenStyle.NoPen)
+        for dot_x, dot_y, dot_radius, alpha in spinner_dots(
+            center_x, center_y, radius, phase,
+        ):
+            painter.setBrush(QColor(200, 200, 200, alpha))
+            painter.drawEllipse(
+                int(dot_x - dot_radius), int(dot_y - dot_radius),
+                int(dot_radius * 2), int(dot_radius * 2),
+            )
+
+    def _wall_loading_active(self) -> bool:
+        """Whether the wall-level "scanning folder" spinner should be drawn."""
+        view = self.view
+        images = getattr(getattr(view, "model", None), "images", None) or []
+        return should_show_wall_loading(
+            getattr(view, "tile_grid_mode", False),
+            len(images),
+            getattr(view, "_folder_scan_active", False),
+        )
+
+    def draw_wall_loading(self, painter: QPainter):  # pragma: no cover - GL paint
+        """Centred spinner + caption while a folder scan has yet to yield tiles."""
+        view = self.view
+        center_x, center_y, radius = wall_spinner_geometry(view.width(), view.height())
+        self._paint_spinner(painter, center_x, center_y, radius,
+                            spinner_phase(time.monotonic()))
+
+        lang = view.main_window.language_wrapper.language_word_dict
+        text = lang.get("tile_wall_loading", "Loading images...")
+        font = QFont(_FONT_SEGOE_UI)
+        font.setPixelSize(14)
+        painter.setFont(font)
+        fm = painter.fontMetrics()
+        painter.setPen(QColor(200, 200, 200, 220))
+        painter.drawText(
+            int(center_x - fm.horizontalAdvance(text) / 2),
+            int(center_y + radius + _WALL_LABEL_GAP + fm.ascent()),
+            text,
+        )
         self.ensure_fade_pump()
 
     def draw_tile_state_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
@@ -511,7 +550,8 @@ class OverlayPainter:
     def tick_placeholder(self) -> None:
         view = self.view
         if view.tile_grid_mode and (getattr(view, "placeholder_rects", None)
-                                    or self._tiles_fading()):
+                                    or self._tiles_fading()
+                                    or self._wall_loading_active()):
             view.update()
         elif self._placeholder_timer and self._placeholder_timer.isActive():
             self._placeholder_timer.stop()

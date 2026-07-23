@@ -83,13 +83,22 @@ class BrowseFeatures:
     # -- reading mode -------------------------------------------------
 
     def reading_wheel(self, delta: float) -> None:
-        """Reading-mode wheel: scroll the page, auto-advancing at the edges."""
+        """Reading-mode wheel: scroll the page, auto-advancing at the edges.
+
+        Scrolls against the content area, not the raw widget: the minimap /
+        filmstrip band is drawn over the bottom of the canvas, so measuring the
+        viewport as ``view.height()`` stops the scroll a band-height short and
+        the foot of every page stays hidden behind the overlay — and the
+        edge auto-advance fires against that same wrong edge.
+        """
+        from Imervue.gpu_image_view.fit_view import content_size
         from Imervue.gpu_image_view.view_nav import reading_scroll
         view = self._view
         base = view.deep_zoom.levels[0]
-        content_h = base.shape[0] * view.zoom
+        page_h = base.shape[0] * view.zoom
+        _, viewport_h = content_size(view)
         new_off, advance = reading_scroll(
-            view.dz_offset_y, content_h, view.height(), delta)
+            view.dz_offset_y, page_h, viewport_h, delta)
         view.dz_offset_y = new_off
         if advance > 0:
             from Imervue.gpu_image_view.actions.select import switch_to_next_image
@@ -109,9 +118,13 @@ class BrowseFeatures:
             return
         view._fit_to_width()
         if self._anchor_bottom:
+            from Imervue.gpu_image_view.fit_view import content_size
             from Imervue.gpu_image_view.view_nav import reading_bottom_offset
-            content_h = view.deep_zoom.levels[0].shape[0] * view.zoom
-            view.dz_offset_y = reading_bottom_offset(content_h, view.height())
+            page_h = view.deep_zoom.levels[0].shape[0] * view.zoom
+            # Bottom-align to the content area for the same reason as
+            # reading_wheel — against view.height() the page's last band-height
+            # of pixels opens underneath the minimap / filmstrip.
+            view.dz_offset_y = reading_bottom_offset(page_h, content_size(view)[1])
         else:
             view.dz_offset_y = 0.0
         self._anchor_bottom = False
