@@ -27,6 +27,7 @@ def _fake(*, path="img.png", should_refit=True):
         _should_refit_on_load=lambda: should_refit,
         _fit_to_window=lambda: calls.append(("fit",)),
         _schedule_settle_refit=lambda: calls.append(("settle",)),
+        _schedule_load_settle_refit=lambda: calls.append(("load-settle",)),
         _browse=SimpleNamespace(clamp_pan=lambda: calls.append(("clamp",))),
         _user_locked_view=False,
     )
@@ -36,10 +37,15 @@ def _fake(*, path="img.png", should_refit=True):
 def test_restores_remembered_view_before_deciding():
     # The restore MUST run before the fit decision, so a preview's leftover
     # zoom is overwritten with the image's own remembered view first. A fresh
-    # fit also queues the deferred settle re-fit (filmstrip / layout settling).
+    # fit also queues BOTH deferred confirmations: the singleShot(0) chain that
+    # drains Qt's queued layout, and the real-interval watch that spans a canvas
+    # settling slower than that (without which paging on before the correction
+    # lands just re-derives the same wrong fit from the same unsettled canvas).
     fake, calls = _fake(should_refit=True)
     GPUImageView._apply_initial_view(fake)
-    assert calls == [("restore", "img.png"), ("fit",), ("settle",)]
+    assert calls == [
+        ("restore", "img.png"), ("fit",), ("settle",), ("load-settle",),
+    ]
 
 
 def test_keeps_remembered_zoom_in_without_fitting():
@@ -60,6 +66,7 @@ def test_no_current_path_is_a_noop():
         _should_refit_on_load=lambda: True,
         _fit_to_window=lambda: calls.append(("fit",)),
         _schedule_settle_refit=lambda: calls.append(("settle",)),
+        _schedule_load_settle_refit=lambda: calls.append(("load-settle",)),
     )
     GPUImageView._apply_initial_view(fake)
     assert calls == []

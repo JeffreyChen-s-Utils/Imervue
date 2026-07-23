@@ -34,6 +34,8 @@ class _FakeViewer:
     request_screen_refit = GPUImageView.request_screen_refit
     _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
     _schedule_screen_settle_adapt = GPUImageView._schedule_screen_settle_adapt
+    _poll_settle = GPUImageView._poll_settle
+    _adapt_and_update = GPUImageView._adapt_and_update
     _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
 
     def __init__(self, *, deep: bool = True, grid: bool = False,

@@ -32,10 +32,14 @@ class _FakeView:
     """Minimal attribute surface the canvas-adapt methods touch."""
 
     _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
+    _adapt_and_update = GPUImageView._adapt_and_update
+    _poll_settle = GPUImageView._poll_settle
     _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
     _schedule_screen_settle_adapt = GPUImageView._schedule_screen_settle_adapt
+    _schedule_load_settle_refit = GPUImageView._schedule_load_settle_refit
     _schedule_settle_refit = GPUImageView._schedule_settle_refit
     _settle_refit = GPUImageView._settle_refit
+    _apply_initial_view = GPUImageView._apply_initial_view
     _on_view_shown = GPUImageView._on_view_shown
     request_screen_refit = GPUImageView.request_screen_refit
 
@@ -442,3 +446,125 @@ def test_show_without_a_deep_zoom_image_schedules_nothing(qapp):
     qapp.processEvents()
     assert view.fit_calls == 0
     assert view._user_locked_view is True   # untouched; no image to fit
+
+
+# --- _schedule_load_settle_refit: spanning a slow canvas settle ------
+# Regression: _schedule_settle_refit re-arms through singleShot(0), so its whole
+# budget elapses in a few event-loop turns. When the canvas settles slower than
+# that, the chain died before the final size existed and the image kept the size
+# it was fitted to -- and paging on did not help, because the next image ran its
+# own fit against the same unsettled canvas and landed on the same wrong size.
+
+
+def test_load_settle_keeps_confirming_on_an_unchanged_canvas(qapp):
+    # The point: unlike _schedule_settle_refit it must NOT stop just because
+    # the canvas has not moved yet -- the settle is still coming.
+    view = _FakeView()
+    view._schedule_load_settle_refit(retries=4, interval_ms=0)
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 4
+
+
+def test_load_settle_fits_against_the_size_that_arrives_late(qapp):
+    view = _FakeView()
+    view._schedule_load_settle_refit(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._last_resize_size = _SETTLED_SIZE
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 4
+    assert view._last_resize_size == _SETTLED_SIZE
+
+
+def test_load_settle_retired_by_paging_to_the_next_image(qapp):
+    # Must not keep fitting after the user paged on, or it would clobber the
+    # incoming image's restored zoom.
+    view = _FakeView()
+    view._schedule_load_settle_refit(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._deep_zoom_request_id += 1
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 1
+
+
+def test_load_settle_stops_when_the_viewer_is_hidden(qapp):
+    view = _FakeView()
+    view._schedule_load_settle_refit(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._visible = False
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 1
+
+
+def test_load_settle_leaves_a_deliberate_zoom_alone(qapp):
+    # Reading mode locks the view with fit-to-width right after the initial
+    # fit; the watch must not revert that to fit-to-window.
+    view = _FakeView(locked=True)
+    view._schedule_load_settle_refit(retries=4, interval_ms=0)
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 0
+
+
+def test_load_settle_is_bounded(qapp):
+    view = _NeverSettlingView()
+    view._schedule_load_settle_refit(retries=3, interval_ms=0)
+    _drain(qapp, view, 20)
+    assert view.fit_calls == 3
+
+
+def test_load_settle_zero_retries_schedules_nothing(qapp):
+    view = _FakeView()
+    view._schedule_load_settle_refit(retries=0, interval_ms=0)
+    _drain(qapp, view, 4)
+    assert view.fit_calls == 0
+
+
+# --- _apply_initial_view arms both chains ----------------------------
+
+
+class _InitialViewFake(_FakeView):
+    """Adds the attribute surface _apply_initial_view touches."""
+
+    def __init__(self, *, refit: bool = True, **kwargs):
+        super().__init__(**kwargs)
+        self._refit = refit
+        self.fast_chain = 0
+        self.slow_chain = 0
+        self.restored: list[str] = []
+
+    def _current_path(self) -> str:
+        return "a.png"
+
+    def _restore_view_state(self, path: str) -> None:
+        self.restored.append(path)
+
+    def _should_refit_on_load(self) -> bool:
+        return self._refit
+
+    def _schedule_settle_refit(self) -> None:
+        self.fast_chain += 1
+
+    def _schedule_load_settle_refit(self) -> None:
+        self.slow_chain += 1
+
+
+def test_initial_view_arms_the_fast_and_the_slow_chain():
+    view = _InitialViewFake()
+    view._apply_initial_view()
+    assert (view.fit_calls, view.fast_chain, view.slow_chain) == (1, 1, 1)
+    assert view.restored == ["a.png"]
+
+
+def test_initial_view_keeping_a_remembered_zoom_arms_neither(qapp):
+    # A deliberate zoom-in is preserved, so there is nothing to confirm.
+    view = _InitialViewFake(refit=False)
+    view._apply_initial_view()
+    assert (view.fit_calls, view.fast_chain, view.slow_chain) == (0, 0, 0)
+    assert (view.clamp_calls, view._user_locked_view) == (1, True)
+
+
+def test_initial_view_without_a_current_path_does_nothing():
+    view = _InitialViewFake()
+    view._current_path = lambda: None
+    view._apply_initial_view()
+    assert (view.fit_calls, view.fast_chain, view.slow_chain) == (0, 0, 0)
+    assert view.restored == []

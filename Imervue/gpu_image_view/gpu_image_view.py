@@ -53,6 +53,11 @@ _LAYOUT_SETTLE_RETRIES = 3
 # than the singleShot(0) layout-drain chain above can span.
 _SCREEN_SETTLE_INTERVAL_MS = 60
 _SCREEN_SETTLE_RETRIES = 8
+# Image-load settle watch: shorter than the screen one — the host frame draining
+# a queued layout settles far quicker than an OS-level monitor change — but
+# still on a real interval, which the singleShot(0) chain is not.
+_LOAD_SETTLE_INTERVAL_MS = 60
+_LOAD_SETTLE_RETRIES = 5
 
 
 class GPUImageView(QOpenGLWidget):
@@ -572,17 +577,70 @@ class GPUImageView(QOpenGLWidget):
         mid-watch stops rather than measuring a background page's stale
         pre-hide geometry — :meth:`_on_view_shown` re-fits on return anyway.
         """
+        generation = self._screen_settle_generation
+        self._poll_settle(
+            self._adapt_and_update,
+            lambda: generation == self._screen_settle_generation,
+            retries, interval_ms,
+        )
+
+    def _schedule_load_settle_refit(
+        self, retries: int = _LOAD_SETTLE_RETRIES,
+        interval_ms: int = _LOAD_SETTLE_INTERVAL_MS,
+    ) -> None:
+        """Keep confirming a freshly-displayed image's fit on a real interval.
+
+        :meth:`_schedule_settle_refit` re-arms through ``singleShot(0)``, so its
+        whole budget elapses in a few event-loop turns. When the canvas settles
+        on a slower timescale — the window still landing on another monitor, a
+        dock or splitter animating, the host frame draining a queued layout —
+        that chain dies before the final size exists and the image keeps the
+        size it was fitted to.
+
+        Paging on does not rescue it: the next image runs its own fit against
+        the same unsettled canvas and lands on the same wrong size, so the error
+        looks like it is being carried over from image to image when in fact
+        each one re-derives it. This watch spans the settle so the last pass
+        runs against the final canvas.
+
+        Tagged with the deep-zoom request id like the fast chain, so paging on
+        retires it instead of letting it clobber the incoming image.
+        """
+        request_id = self._deep_zoom_request_id
+        self._poll_settle(
+            lambda: self._settle_refit(request_id),
+            lambda: request_id == self._deep_zoom_request_id,
+            retries, interval_ms,
+        )
+
+    def _adapt_and_update(self) -> None:
+        """One screen-settle pass: re-adapt the view, then request a repaint."""
+        self._adapt_view_to_canvas()
+        self.update()
+
+    def _poll_settle(self, step, still_current, retries: int,
+                     interval_ms: int) -> None:
+        """Run *step* every *interval_ms* while *still_current*, bounded by
+        *retries*.
+
+        Shared by the screen-change and image-load settle watches. Both need a
+        REAL interval — a ``singleShot(0)`` chain drains Qt's queued layout and
+        nothing slower, so it cannot span a window landing on another monitor
+        or a host frame animating. Both must also stop early: *still_current*
+        carries the caller's supersession test (screen-settle generation /
+        deep-zoom request id), and a hidden viewer is dropped here because
+        measuring a background page's stale pre-hide geometry is exactly the
+        mistake these watches exist to prevent.
+        """
         from PySide6.QtCore import QTimer
         if retries <= 0:
             return
-        generation = self._screen_settle_generation
 
         def _run() -> None:
-            if generation != self._screen_settle_generation or not self.isVisible():
+            if not still_current() or not self.isVisible():
                 return
-            self._adapt_view_to_canvas()
-            self.update()
-            self._schedule_screen_settle_adapt(retries - 1, interval_ms)
+            step()
+            self._poll_settle(step, still_current, retries - 1, interval_ms)
 
         QTimer.singleShot(interval_ms, _run)
 
@@ -788,7 +846,13 @@ class GPUImageView(QOpenGLWidget):
         self._restore_view_state(path)
         if self._should_refit_on_load():
             self._fit_to_window()
+            # Two chains, for the same reason request_screen_refit arms two:
+            # the first drains Qt's queued layout immediately, the second spans
+            # a canvas that settles on a slower timescale. Without the second,
+            # paging on before the correction lands just re-derives the same
+            # wrong fit from the same unsettled canvas.
             self._schedule_settle_refit()
+            self._schedule_load_settle_refit()
         else:
             # Keeping a genuine remembered zoom-in: clamp its pan to the current
             # (maybe smaller / different-DPI) canvas so it can't open off-screen,
