@@ -48,6 +48,11 @@ logger = logging.getLogger("Imervue.gpu_image_view")
 # How many extra event-loop turns a deferred fit may wait for the canvas size
 # to stop changing (tab relayout, dock settling, a move to another monitor).
 _LAYOUT_SETTLE_RETRIES = 3
+# Screen-change settle watch: a cross-monitor move takes hundreds of ms (OS
+# re-maximise + compositor animation + the new screen's resizeGL), far longer
+# than the singleShot(0) layout-drain chain above can span.
+_SCREEN_SETTLE_INTERVAL_MS = 60
+_SCREEN_SETTLE_RETRIES = 8
 
 
 class GPUImageView(QOpenGLWidget):
@@ -502,9 +507,11 @@ class GPUImageView(QOpenGLWidget):
         zoom-in. See :func:`fit_view.refit_action` for the decision itself.
         """
         from Imervue.gpu_image_view.fit_view import (
-            REFIT_CLAMP, REFIT_FIT, refit_action,
+            REFIT_CLAMP, REFIT_FIT, canvas_size, refit_action,
         )
         action = refit_action(self)
+        logger.debug("adapt-view: action=%s canvas=%s locked=%s zoom=%.4f",
+                     action, canvas_size(self), self._user_locked_view, self.zoom)
         if action == REFIT_FIT:
             self._fit_to_window()
         elif action == REFIT_CLAMP:
@@ -515,10 +522,14 @@ class GPUImageView(QOpenGLWidget):
 
         A single ``singleShot(0)`` can still land mid-relayout: a stacked page
         only receives its real geometry after the queued layout request is
-        processed, and a move to another monitor resizes the window over
-        several event-loop turns. Fitting against that intermediate size is
-        exactly the "opens at the wrong size" bug, so re-arm (bounded) while
-        the canvas is still moving — the last fit then uses the final size.
+        processed. Fitting against that intermediate size is exactly the "opens
+        at the wrong size" bug, so re-arm (bounded) while the canvas is still
+        moving — the last fit then uses the final size.
+
+        This chain drains Qt's *queued layout*, nothing slower: every hop is a
+        ``singleShot(0)``, so the whole retry budget is spent within a few
+        event-loop turns. A screen change needs
+        :meth:`_schedule_screen_settle_adapt` instead.
         """
         from PySide6.QtCore import QTimer
         from Imervue.gpu_image_view.fit_view import canvas_size
@@ -531,6 +542,38 @@ class GPUImageView(QOpenGLWidget):
                 self._schedule_canvas_adapt(retries - 1)
 
         QTimer.singleShot(0, _run)
+
+    def _schedule_screen_settle_adapt(
+        self, retries: int = _SCREEN_SETTLE_RETRIES,
+        interval_ms: int = _SCREEN_SETTLE_INTERVAL_MS,
+    ) -> None:
+        """Keep re-adapting the view for ~half a second after a screen change.
+
+        :meth:`_schedule_canvas_adapt` chains ``singleShot(0)`` hops, so its
+        entire retry budget elapses in a few event-loop turns — microseconds.
+        Landing on another monitor takes orders of magnitude longer: the OS
+        re-maximises the window, the compositor animates the move, and the new
+        screen's ``resizeGL`` arrives well after those hops are done. The chain
+        therefore always sees an unchanged canvas, stops immediately, and
+        leaves the fit anchored to the screen the window just left.
+
+        Polling on a real interval spans the actual settle instead, so the last
+        pass runs against the final canvas whichever way the race went. Each
+        pass is pure math plus a repaint request, and
+        :func:`fit_view.refit_action` still honours a zoom the user takes
+        during the window, so the extra passes cost little and can't fight the
+        user.
+        """
+        from PySide6.QtCore import QTimer
+        if retries <= 0:
+            return
+
+        def _run() -> None:
+            self._adapt_view_to_canvas()
+            self.update()
+            self._schedule_screen_settle_adapt(retries - 1, interval_ms)
+
+        QTimer.singleShot(interval_ms, _run)
 
     def request_screen_refit(self) -> None:
         """Force a whole-image re-fit after the window changed screen.
@@ -560,7 +603,12 @@ class GPUImageView(QOpenGLWidget):
         if refit_action(self) == REFIT_NONE:
             return
         self._user_locked_view = False
+        # Two chains: the first drains Qt's queued layout immediately, the
+        # second keeps watching while the window actually settles on the new
+        # monitor (see :meth:`_schedule_screen_settle_adapt` for why the first
+        # cannot cover that on its own).
         self._schedule_canvas_adapt()
+        self._schedule_screen_settle_adapt()
 
     def showEvent(self, event):
         """Return to a whole-image fit whenever the viewer comes back into view.

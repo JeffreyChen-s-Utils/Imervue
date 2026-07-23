@@ -33,6 +33,7 @@ class _FakeViewer:
 
     request_screen_refit = GPUImageView.request_screen_refit
     _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
+    _schedule_screen_settle_adapt = GPUImageView._schedule_screen_settle_adapt
     _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
 
     def __init__(self, *, deep: bool = True, grid: bool = False,
@@ -45,6 +46,7 @@ class _FakeViewer:
         # A screen change drops the cached resizeGL size (it describes the
         # monitor just left), so the fit falls through to live geometry.
         self._live_size = (1280, 720)
+        self.zoom = 1.0
         self.fit_calls = 0
         self.update_calls = 0
         self.clamp_calls = 0

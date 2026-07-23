@@ -33,6 +33,7 @@ class _FakeView:
 
     _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
     _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
+    _schedule_screen_settle_adapt = GPUImageView._schedule_screen_settle_adapt
     _schedule_settle_refit = GPUImageView._schedule_settle_refit
     _settle_refit = GPUImageView._settle_refit
     _on_view_shown = GPUImageView._on_view_shown
@@ -49,6 +50,7 @@ class _FakeView:
         # been invalidated — the path a screen change now takes.
         self._live_size = _LIVE_SIZE
         self._deep_zoom_request_id = 1
+        self.zoom = 1.0
         self.fit_calls = 0
         self.clamp_calls = 0
         self.update_calls = 0
@@ -294,6 +296,82 @@ def test_settle_refit_leaves_a_deliberate_zoom_alone(qapp):
     for _ in range(_LAYOUT_SETTLE_RETRIES + 2):
         qapp.processEvents()
     assert view.fit_calls == 0
+
+
+# --- _schedule_screen_settle_adapt: spanning a real monitor change ----
+# Regression: _schedule_canvas_adapt chains singleShot(0), so its whole retry
+# budget elapses in a few event-loop turns. A cross-monitor move takes
+# hundreds of ms, so that chain always saw an unchanged canvas, stopped, and
+# left the image fitted to the screen the window had just left.
+
+
+def _drain(qapp, view, passes: int) -> None:
+    """Run the settle watcher's zero-interval timers to completion."""
+    for _ in range(passes):
+        qapp.processEvents()
+
+
+def test_screen_settle_keeps_adapting_on_an_unchanged_canvas(qapp):
+    # The whole point: unlike _schedule_canvas_adapt, this must NOT stop just
+    # because the canvas hasn't moved yet — the resize is still coming.
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 4
+
+
+def test_screen_settle_fits_against_the_size_that_arrives_late(qapp):
+    # The canvas only reaches the new screen's size after a couple of passes;
+    # the final fit must run against that size, not the pre-move one.
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._last_resize_size = _SETTLED_SIZE      # new screen's resizeGL lands
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 4
+    assert view._last_resize_size == _SETTLED_SIZE
+
+
+def test_screen_settle_is_bounded(qapp):
+    view = _NeverSettlingView()
+    view._schedule_screen_settle_adapt(retries=3, interval_ms=0)
+    _drain(qapp, view, 20)
+    assert view.fit_calls == 3
+
+
+def test_screen_settle_zero_retries_schedules_nothing(qapp):
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=0, interval_ms=0)
+    _drain(qapp, view, 4)
+    assert view.fit_calls == 0
+
+
+def test_screen_settle_respects_a_zoom_taken_during_the_window(qapp):
+    # The user zooms mid-settle: the remaining passes must clamp, not fit.
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._user_locked_view = True
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 1
+    assert view.clamp_calls == 3
+
+
+def test_screen_settle_stops_when_the_image_closes(qapp):
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    view.deep_zoom = None
+    _drain(qapp, view, 12)
+    assert (view.fit_calls, view.clamp_calls) == (0, 0)
+
+
+def test_screen_refit_arms_both_the_drain_and_the_settle_watch(qapp):
+    # request_screen_refit runs one immediate drain pass plus the slow watch,
+    # so a resize landing either early or late is caught.
+    view = _FakeView()
+    view.request_screen_refit()
+    _drain(qapp, view, 2)
+    assert view.fit_calls >= 1
 
 
 # --- _on_view_shown: the tab-switch-back path -------------------------
