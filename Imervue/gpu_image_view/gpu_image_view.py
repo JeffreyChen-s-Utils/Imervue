@@ -623,26 +623,19 @@ class GPUImageView(QOpenGLWidget):
         """Run *step* every *interval_ms* while *still_current*, bounded by
         *retries*.
 
-        Shared by the screen-change and image-load settle watches. Both need a
-        REAL interval — a ``singleShot(0)`` chain drains Qt's queued layout and
-        nothing slower, so it cannot span a window landing on another monitor
-        or a host frame animating. Both must also stop early: *still_current*
-        carries the caller's supersession test (screen-settle generation /
-        deep-zoom request id), and a hidden viewer is dropped here because
-        measuring a background page's stale pre-hide geometry is exactly the
-        mistake these watches exist to prevent.
+        Thin wrapper over :func:`gui.settle_poll.poll_settle` (see there for why
+        a real interval is required) that adds the one condition every viewer
+        watch shares: a hidden viewer drops out, because measuring a background
+        page's stale pre-hide geometry is exactly the mistake these watches
+        exist to prevent. *still_current* carries the caller's own supersession
+        test — the screen-settle generation or the deep-zoom request id.
         """
-        from PySide6.QtCore import QTimer
-        if retries <= 0:
-            return
-
-        def _run() -> None:
-            if not still_current() or not self.isVisible():
-                return
-            step()
-            self._poll_settle(step, still_current, retries - 1, interval_ms)
-
-        QTimer.singleShot(interval_ms, _run)
+        from Imervue.gui.settle_poll import poll_settle
+        poll_settle(
+            step,
+            lambda: still_current() and self.isVisible(),
+            retries, interval_ms,
+        )
 
     def request_screen_refit(self) -> None:
         """Force a whole-image re-fit after the window changed screen.
