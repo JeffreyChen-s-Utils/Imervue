@@ -295,6 +295,7 @@ korean_word_dict = {
     # 상태 표시줄
     "status_loading_progress": "로딩 중 {current}/{total}...",
     "status_loading_image": "이미지 로딩 중...",
+    "tile_wall_loading": "이미지를 불러오는 중...",
     "status_ready": "준비 완료",
     # Toast
     "toast_path_copied": "경로가 복사되었습니다",

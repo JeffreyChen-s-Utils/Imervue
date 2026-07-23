@@ -310,6 +310,7 @@ english_word_dict = {
     # Status bar
     "status_loading_progress": "Loading {current}/{total}...",
     "status_loading_image": "Loading image...",
+    "tile_wall_loading": "Loading images...",
     "status_ready": "Ready",
     # Toast
     "toast_path_copied": "Path copied",

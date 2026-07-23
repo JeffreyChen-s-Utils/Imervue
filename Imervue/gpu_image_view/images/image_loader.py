@@ -389,6 +389,9 @@ def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     main_gui.current_index = 0
     main_gui._unfiltered_images = []
     main_gui._stack_members = {}
+    # Set before the wall is emptied so the very first paint of the now-blank
+    # grid already shows the spinner instead of a bare dark canvas.
+    main_gui._folder_scan_active = True
     main_gui.load_tile_grid_async([])
 
     worker = FolderScanWorker(str(path_obj))
@@ -424,6 +427,9 @@ def _on_folder_scan_finished(main_gui: GPUImageView, folder: str, images: list[s
     if generation != getattr(main_gui, "_folder_scan_generation", None):
         return
     main_gui._folder_scan_worker = None
+    # Scan over — an empty wall from here on means an empty folder, not a slow
+    # one, so the spinner must stop rather than hang forever.
+    main_gui._folder_scan_active = False
     _maybe_hint_heif(main_gui, images)
     _apply_folder_scan_paths(main_gui, images)
     if hasattr(main_gui.main_window, "plugin_manager"):

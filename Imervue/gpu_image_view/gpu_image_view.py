@@ -269,6 +269,9 @@ class GPUImageView(QOpenGLWidget):
         )
         self.grid_mutex = QMutex()  # 保護 tile_cache 併發讀寫
         self._load_generation = 0  # 世代計數器，用來取消過期的 tile worker
+        # True while a folder scan is running and the wall has no images yet;
+        # drives the centred "loading" spinner so a slow scan isn't a blank view.
+        self._folder_scan_active = False
         # In-flight tile/filmstrip workers — a set so each self-evicts on finish
         # in O(1) instead of lingering until the next folder switch clears it.
         self.active_tile_workers = set()  # 用來追蹤/取消 Tile Grid 載入 worker
