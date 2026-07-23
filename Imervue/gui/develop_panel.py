@@ -59,6 +59,24 @@ logger = logging.getLogger("Imervue.develop_panel")
 # Preferred width of the right properties panel; also its minimum (see
 # build_right_panel). The canvas takes whatever width is left.
 _RIGHT_PANEL_WIDTH = 260
+# Screen-change settle watch for the Modify splitter. A cross-monitor move takes
+# hundreds of ms, far longer than the singleShot(0) chain in
+# ``_size_modify_splitter`` can span, and ``setSizes`` has no self-healing net.
+_SPLITTER_SETTLE_INTERVAL_MS = 60
+_SPLITTER_SETTLE_RETRIES = 8
+
+
+def _splitter_is_alive(splitter) -> bool:
+    """True while *splitter* still has a live C++ object behind it.
+
+    A deferred settle pass can outlive the Modify tab being torn down; touching
+    a freed QSplitter raises ``RuntimeError`` rather than returning anything.
+    """
+    try:
+        splitter.count()
+    except RuntimeError:
+        return False
+    return True
 # Floor for the centre canvas so it never collapses to nothing on a narrow
 # window — matches the AnnotationCanvas minimum.
 _MIN_CANVAS_WIDTH = 400
@@ -681,6 +699,27 @@ class DevelopPanel(QWidget):
         # rather than a develop slider that ignores them.
         self._canvas.setFocus()
 
+    @staticmethod
+    def _apply_modify_splitter_sizes(splitter) -> int:
+        """Give the centre canvas the leftover width. Returns the width used.
+
+        Returns ``0`` when the sizing could not be applied — fewer than three
+        panes, a splitter destroyed before a deferred pass ran, or a
+        not-yet-laid-out zero width — so callers can tell "done" from "retry".
+        """
+        try:
+            if splitter.count() < 3:
+                return 0
+            total = splitter.width()
+        except RuntimeError:
+            return 0  # splitter destroyed before this deferred pass
+        if total <= 0:
+            return 0
+        left = splitter.widget(0).sizeHint().width()
+        right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
+        splitter.setSizes(_canvas_splitter_sizes(total, left, right))
+        return total
+
     def _size_modify_splitter(
             self, splitter, _retries: int = 8, _last_total: int = -1) -> None:
         """Give the centre canvas the leftover width so the image isn't tiny.
@@ -692,26 +731,46 @@ class DevelopPanel(QWidget):
         wrong size that no later resize corrects. So re-run on the next turn
         until the width stops changing (bounded), and no-op if the splitter was
         destroyed before a deferred pass ran.
+
+        This chain drains Qt's queued layout and nothing slower — every hop is a
+        ``singleShot(0)``. A screen change needs
+        :meth:`schedule_modify_splitter_settle` as well.
         """
-        try:
-            if splitter.count() < 3:
-                return
-            total = splitter.width()
-        except RuntimeError:
-            return  # splitter destroyed before this deferred pass
+        total = self._apply_modify_splitter_sizes(splitter)
         if total <= 0:
             if _retries > 0:
                 QTimer.singleShot(
                     0, lambda: self._size_modify_splitter(splitter, _retries - 1))
             return
-        left = splitter.widget(0).sizeHint().width()
-        right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
-        splitter.setSizes(_canvas_splitter_sizes(total, left, right))
         # Layout may still be settling — re-run until the width is stable so an
         # intermediate startup width isn't locked in.
         if total != _last_total and _retries > 0:
             QTimer.singleShot(
                 0, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
+
+    def schedule_modify_splitter_settle(
+            self, splitter, retries: int = _SPLITTER_SETTLE_RETRIES,
+            interval_ms: int = _SPLITTER_SETTLE_INTERVAL_MS) -> None:
+        """Keep re-sizing the splitter while the window settles on a new screen.
+
+        ``setSizes`` is one-shot: a later resize rescales whatever proportions
+        are already in place rather than recomputing them, so — as this method's
+        sibling docstring says — an intermediate width is "locked in wrong and
+        no later resize corrects" it. The sibling's ``singleShot(0)`` chain
+        cannot prevent that on a screen change, because its whole budget elapses
+        in a few event-loop turns while the window takes hundreds of
+        milliseconds to land on the new monitor. Polling on a real interval
+        spans the settle, so the last pass reads the final width.
+
+        Unlike the deep-zoom canvas there is no per-paint net behind this, which
+        is why the watch matters more here than anywhere else.
+        """
+        from Imervue.gui.settle_poll import poll_settle
+        poll_settle(
+            lambda: self._apply_modify_splitter_sizes(splitter),
+            lambda: _splitter_is_alive(splitter),
+            retries, interval_ms,
+        )
 
     def _cleanup_old_canvas(self) -> None:
         """Disconnect signals, clear undo stack, and detach the old canvas.

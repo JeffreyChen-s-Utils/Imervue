@@ -264,3 +264,58 @@ def test_missing_screen_is_safe(qapp):
     win._adapt_to_current_screen()   # noqa: SLF001
     assert win._last_screen_avail is None   # noqa: SLF001
     assert win.set_geometry_calls == []
+
+
+# ---------------------------------------------------------------
+# _refit_current_view_for_screen: the Modify-tab branch
+# ---------------------------------------------------------------
+# Regression: setSizes is one-shot with no per-paint net behind it, so the
+# singleShot(0) chain alone locked in the width the window had on the screen it
+# left. The branch must arm the slow settle watch too.
+
+
+class _ModifyStub(_StubMainWindow):
+    """Main window sitting on the Modify tab with a live canvas + splitter."""
+
+    def __init__(self, *, tab_index: int = 1, has_canvas: bool = True,
+                 splitter=None):
+        super().__init__()
+        self.fast_passes: list = []
+        self.settle_watches: list = []
+        canvas = SimpleNamespace(update=lambda: None) if has_canvas else None
+        self.modify_panel = SimpleNamespace(
+            _canvas=canvas,
+            _size_modify_splitter=lambda sp: self.fast_passes.append(sp),
+            schedule_modify_splitter_settle=(
+                lambda sp: self.settle_watches.append(sp)),
+        )
+        self._main_tabs = SimpleNamespace(currentIndex=lambda: tab_index)
+        self._modify_splitter = splitter
+
+
+def test_screen_change_on_modify_arms_both_splitter_chains(qapp):
+    splitter = object()
+    win = _ModifyStub(splitter=splitter)
+    win._refit_current_view_for_screen()
+    assert win.fast_passes == [splitter]
+    assert win.settle_watches == [splitter]
+
+
+def test_screen_change_off_the_modify_tab_touches_no_splitter(qapp):
+    win = _ModifyStub(tab_index=0, splitter=object())
+    win._refit_current_view_for_screen()
+    assert (win.fast_passes, win.settle_watches) == ([], [])
+
+
+def test_screen_change_without_a_modify_canvas_touches_no_splitter(qapp):
+    win = _ModifyStub(has_canvas=False, splitter=object())
+    win._refit_current_view_for_screen()
+    assert (win.fast_passes, win.settle_watches) == ([], [])
+
+
+def test_screen_change_without_a_splitter_still_refits_the_viewer(qapp):
+    win = _ModifyStub(splitter=None)
+    win._refit_current_view_for_screen()
+    assert (win.fast_passes, win.settle_watches) == ([], [])
+    qapp.processEvents()
+    assert win.viewer.fit_calls == 1

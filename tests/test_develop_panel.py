@@ -811,3 +811,139 @@ class TestCanvasSplitterSizes:
         assert sizes[1] == max(sizes)            # canvas is the widest pane
         splitter.setParent(None)
         splitter.deleteLater()
+
+
+class TestModifySplitterSettle:
+    """The Modify splitter's screen-change settle watch.
+
+    ``setSizes`` is one-shot — a later resize rescales the proportions already
+    in place rather than recomputing them — so unlike the deep-zoom canvas there
+    is no per-paint net behind it. The ``singleShot(0)`` chain in
+    ``_size_modify_splitter`` drains Qt's queued layout and nothing slower, so a
+    cross-monitor move (hundreds of ms) would otherwise lock in the width the
+    window had on the screen it left.
+    """
+
+    @staticmethod
+    def _splitter(width=1200):
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QSplitter, QWidget
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        left = QWidget()
+        left.setFixedWidth(80)
+        splitter.addWidget(left)
+        splitter.addWidget(QWidget())
+        right = QWidget()
+        right.setMinimumWidth(260)
+        splitter.addWidget(right)
+        splitter.resize(width, 700)
+        return splitter
+
+    @staticmethod
+    def _drain(qapp, passes=20):
+        for _ in range(passes):
+            qapp.processEvents()
+
+    def test_single_pass_returns_the_width_it_used(self, panel, qapp):
+        p, _ = panel
+        splitter = self._splitter()
+        assert p._apply_modify_splitter_sizes(splitter) == splitter.width()
+        assert splitter.sizes()[1] == max(splitter.sizes())
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_single_pass_reports_zero_for_too_few_panes(self, panel, qapp):
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QSplitter, QWidget
+        p, _ = panel
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(QWidget())
+        assert p._apply_modify_splitter_sizes(splitter) == 0
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_single_pass_reports_zero_for_an_unlaid_out_splitter(self, panel, qapp):
+        p, _ = panel
+        splitter = self._splitter()
+        splitter.resize(0, 0)
+        assert p._apply_modify_splitter_sizes(splitter) == 0
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_settle_watch_keeps_resizing_across_the_interval(self, panel, qapp):
+        # The regression: it must keep re-applying while the window settles,
+        # not stop the moment the width looks unchanged.
+        p, _ = panel
+        splitter = self._splitter()
+        applied: list[int] = []
+        original = p._apply_modify_splitter_sizes
+        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
+        p.schedule_modify_splitter_settle(splitter, retries=4, interval_ms=0)
+        self._drain(qapp)
+        assert len(applied) == 4
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_settle_watch_reads_a_width_that_arrives_late(self, panel, qapp):
+        # The new screen's width lands after the first pass; the last pass must
+        # size against it, which the singleShot(0) chain never got to see.
+        p, _ = panel
+        splitter = self._splitter(800)
+        widths: list[int] = []
+        original = p._apply_modify_splitter_sizes
+        p._apply_modify_splitter_sizes = lambda sp: widths.append(original(sp))
+        p.schedule_modify_splitter_settle(splitter, retries=4, interval_ms=0)
+        qapp.processEvents()
+        splitter.resize(1600, 700)
+        self._drain(qapp)
+        assert widths[-1] == 1600
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_settle_watch_stops_when_the_splitter_dies(self, panel, qapp):
+        import Imervue.gui.develop_panel as dp
+        p, _ = panel
+        splitter = self._splitter()
+        applied: list[int] = []
+        original = p._apply_modify_splitter_sizes
+        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
+        alive = {"ok": True}
+        original_alive = dp._splitter_is_alive
+        dp._splitter_is_alive = lambda sp: alive["ok"]
+        try:
+            p.schedule_modify_splitter_settle(splitter, retries=5, interval_ms=0)
+            qapp.processEvents()
+            alive["ok"] = False          # Modify tab torn down mid-watch
+            self._drain(qapp)
+        finally:
+            dp._splitter_is_alive = original_alive
+        assert len(applied) == 1
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+    def test_settle_watch_zero_retries_schedules_nothing(self, panel, qapp):
+        p, _ = panel
+        splitter = self._splitter()
+        applied: list[int] = []
+        original = p._apply_modify_splitter_sizes
+        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
+        p.schedule_modify_splitter_settle(splitter, retries=0, interval_ms=0)
+        self._drain(qapp)
+        assert applied == []
+        splitter.setParent(None)
+        splitter.deleteLater()
+
+
+def test_splitter_is_alive_detects_a_freed_object():
+    from Imervue.gui.develop_panel import _splitter_is_alive
+
+    class _Dead:
+        def count(self):
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    class _Live:
+        def count(self):
+            return 3
+
+    assert _splitter_is_alive(_Dead()) is False
+    assert _splitter_is_alive(_Live()) is True
