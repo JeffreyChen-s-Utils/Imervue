@@ -33,7 +33,9 @@ class TestPhash:
         assert 0 <= h < (1 << 64)
 
     def test_deterministic(self, noise_png):
-        assert compute_phash(noise_png) == compute_phash(noise_png)
+        first = compute_phash(noise_png)
+        second = compute_phash(noise_png)
+        assert first == second
 
     def test_different_images_differ(self, solid_png, noise_png):
         assert compute_phash(solid_png) != compute_phash(noise_png)
