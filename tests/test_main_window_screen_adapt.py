@@ -41,7 +41,6 @@ class _FakeViewer:
         self.tile_grid_mode = grid
         self._visible = visible
         self._user_locked_view = False
-        self._pending_screen_refit = False
         self._last_resize_size = (800, 600)
         self.fit_calls = 0
         self.update_calls = 0
@@ -226,10 +225,10 @@ def test_screen_change_overrides_a_user_zoom(qapp):
     assert win.viewer._user_locked_view is False   # noqa: SLF001
 
 
-def test_screen_change_while_viewer_hidden_is_parked_for_the_next_show(qapp):
+def test_screen_change_while_viewer_hidden_is_skipped(qapp):
     # The viewer sits behind the Modify / Paint tab: a hidden stacked page
     # keeps its pre-hide geometry, so fitting now would use the OLD screen's
-    # size and the image would open wrong when the tab comes back.
+    # size. Coming back into view re-fits against the real canvas instead.
     win = _StubMainWindow()
     win.viewer = _FakeViewer(visible=False)
     _settle(win)
@@ -237,7 +236,6 @@ def test_screen_change_while_viewer_hidden_is_parked_for_the_next_show(qapp):
     win._adapt_to_current_screen()   # noqa: SLF001
     qapp.processEvents()
     assert win.viewer.fit_calls == 0
-    assert win.viewer._pending_screen_refit is True   # noqa: SLF001
 
 
 class _NoScreenWindow(_StubMainWindow):

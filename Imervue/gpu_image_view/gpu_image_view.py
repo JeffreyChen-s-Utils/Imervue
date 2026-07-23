@@ -145,10 +145,6 @@ class GPUImageView(QOpenGLWidget):
         # rather than ``self.width()`` / ``height()`` which can lag
         # the actual layout for the first frame or two.
         self._last_resize_size: tuple[int, int] = (0, 0)
-        # Set when the window changes screen while this viewer sits behind
-        # another main tab: a hidden widget has no real geometry to fit
-        # against, so the forced whole-image re-fit waits for ``showEvent``.
-        self._pending_screen_refit = False
 
 
         # ===== 圖片切換控制 =====
@@ -537,32 +533,32 @@ class GPUImageView(QOpenGLWidget):
         """Force a whole-image re-fit after the window changed screen.
 
         Landing on another monitor means "show me the whole image at THIS
-        screen's size", so this deliberately overrides a user zoom-in. While
-        the viewer sits behind another main tab it has no live geometry — a
-        hidden stacked page keeps its pre-hide size — so the request is parked
-        until ``showEvent`` rather than computed against that stale size.
+        screen's size", so this deliberately overrides a user zoom-in. A
+        hidden viewer is skipped rather than fitted against a stale size: a
+        background stacked page keeps its pre-hide geometry, and coming back
+        into view re-fits the whole image anyway (see :meth:`_on_view_shown`).
         """
         from Imervue.gpu_image_view.fit_view import REFIT_NONE, refit_action
-        if refit_action(self) == REFIT_NONE:
-            return
-        if not self.isVisible():
-            self._pending_screen_refit = True
+        if refit_action(self) == REFIT_NONE or not self.isVisible():
             return
         self._user_locked_view = False
         self._schedule_canvas_adapt()
 
     def showEvent(self, event):
-        """Adapt the view to the real canvas after Qt's first layout pass.
+        """Return to a whole-image fit whenever the viewer comes back into view.
 
-        The widget's first ``resizeGL`` lands while the host frame is still at
-        an intermediate size — the fit math anchors to that smaller width /
-        height and the image ends up half off-screen once the layout settles.
-        Deferring past the layout queue (and re-arming while the size is still
-        moving) catches the post-layout size instead.
+        Coming back — from another main tab, from the list / dual / timeline
+        view, or after the window landed on a different monitor — means the
+        canvas may be any size now, so the image always re-fits rather than
+        keeping a zoom that suited the canvas it was left on.
 
-        A screen change that arrived while this tab was in the background is
-        consumed here: it unlocks the view so the deferred pass re-fits the
-        whole image, which is the point of that override.
+        The re-fit itself is deferred: the widget's first ``resizeGL`` lands
+        while the host frame is still at an intermediate size (a background
+        stacked page only gets its real geometry after Qt drains the queued
+        layout request), and fitting against that is exactly the "opens at the
+        wrong size" bug. Only the unlock happens now — so an image that
+        finishes loading before the deferred pass can still restore and keep
+        its own remembered zoom-in.
         """
         super().showEvent(event)
         self._on_view_shown()
@@ -571,9 +567,7 @@ class GPUImageView(QOpenGLWidget):
         """Post-show half of :meth:`showEvent` — see there for the rationale."""
         if self.deep_zoom is None:
             return
-        if self._pending_screen_refit:
-            self._pending_screen_refit = False
-            self._user_locked_view = False
+        self._user_locked_view = False
         self._schedule_canvas_adapt()
 
     def hideEvent(self, event):

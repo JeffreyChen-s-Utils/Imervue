@@ -35,12 +35,10 @@ class _FakeView:
     request_screen_refit = GPUImageView.request_screen_refit
 
     def __init__(self, *, deep: bool = True, grid: bool = False,
-                 locked: bool = False, visible: bool = True,
-                 pending: bool = False):
+                 locked: bool = False, visible: bool = True):
         self.deep_zoom = object() if deep else None
         self.tile_grid_mode = grid
         self._user_locked_view = locked
-        self._pending_screen_refit = pending
         self._visible = visible
         self._last_resize_size = _START_SIZE
         self.fit_calls = 0
@@ -167,50 +165,40 @@ def test_screen_refit_on_a_visible_viewer_overrides_the_user_zoom(qapp):
     assert view.fit_calls == 1
 
 
-def test_screen_refit_on_a_hidden_viewer_is_parked_not_computed(qapp):
+def test_screen_refit_on_a_hidden_viewer_is_skipped_not_mis_computed(qapp):
     # A hidden stacked page keeps its pre-hide geometry, so fitting now would
-    # use the OLD screen's size. Park it for showEvent instead.
+    # use the OLD screen's size. Coming back into view re-fits anyway.
     view = _FakeView(visible=False)
     view.request_screen_refit()
     qapp.processEvents()
     assert view.fit_calls == 0
-    assert view._pending_screen_refit is True
 
 
-def test_screen_refit_without_deep_zoom_parks_nothing():
-    view = _FakeView(deep=False, visible=False)
+def test_screen_refit_without_deep_zoom_is_a_noop(qapp):
+    view = _FakeView(deep=False)
     view.request_screen_refit()
-    assert view._pending_screen_refit is False
+    qapp.processEvents()
+    assert view.fit_calls == 0
 
 
-def test_screen_refit_in_tile_grid_mode_parks_nothing():
-    view = _FakeView(grid=True, visible=False)
+def test_screen_refit_in_tile_grid_mode_is_a_noop(qapp):
+    view = _FakeView(grid=True)
     view.request_screen_refit()
-    assert view._pending_screen_refit is False
+    qapp.processEvents()
+    assert view.fit_calls == 0
 
 
 # --- _on_view_shown: the tab-switch-back path -------------------------
 
 
-def test_show_consumes_a_parked_screen_refit_and_unlocks(qapp):
-    # Screen changed while the Modify tab was in front; coming back must show
-    # the whole image at the new screen's size, zoom-in override included.
-    view = _FakeView(locked=True, pending=True)
-    view._on_view_shown()
-    assert view._pending_screen_refit is False
-    assert view._user_locked_view is False
-    qapp.processEvents()
-    assert view.fit_calls == 1
-
-
-def test_show_without_a_parked_refit_keeps_a_user_zoom_and_clamps(qapp):
-    # Plain tab switch back: the deliberate zoom is preserved, but the pan is
-    # re-clamped in case the window was resized while the tab was hidden.
+def test_show_always_returns_to_the_whole_image(qapp):
+    # Coming back from another tab / view mode: the canvas may be any size
+    # now, so a zoom that suited the canvas it was left on is dropped.
     view = _FakeView(locked=True)
     view._on_view_shown()
+    assert view._user_locked_view is False
     qapp.processEvents()
-    assert (view.fit_calls, view.clamp_calls) == (0, 1)
-    assert view._user_locked_view is True
+    assert (view.fit_calls, view.clamp_calls) == (1, 0)
 
 
 def test_show_refits_an_unlocked_view(qapp):
@@ -220,9 +208,20 @@ def test_show_refits_an_unlocked_view(qapp):
     assert view.fit_calls == 1
 
 
+def test_show_unlocks_immediately_so_a_loading_image_can_relock(qapp):
+    # The unlock is synchronous but the fit is deferred: an image that lands
+    # in between restores its own remembered zoom-in and re-locks, and the
+    # deferred pass must then clamp it instead of fitting it away.
+    view = _FakeView(locked=True)
+    view._on_view_shown()
+    view._user_locked_view = True          # image load restored a zoom-in
+    qapp.processEvents()
+    assert (view.fit_calls, view.clamp_calls) == (0, 1)
+
+
 def test_show_without_a_deep_zoom_image_schedules_nothing(qapp):
-    view = _FakeView(deep=False, pending=True)
+    view = _FakeView(deep=False, locked=True)
     view._on_view_shown()
     qapp.processEvents()
     assert view.fit_calls == 0
-    assert view._pending_screen_refit is True   # untouched; no image to fit
+    assert view._user_locked_view is True   # untouched; no image to fit
