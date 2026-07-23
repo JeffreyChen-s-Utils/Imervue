@@ -540,9 +540,24 @@ class GPUImageView(QOpenGLWidget):
         hidden viewer is skipped rather than fitted against a stale size: a
         background stacked page keeps its pre-hide geometry, and coming back
         into view re-fits the whole image anyway (see :meth:`_on_view_shown`).
+
+        The cached ``resizeGL`` size is dropped BEFORE the nothing-to-re-fit
+        early return below. Opening a folder lands on the tile wall, where
+        ``refit_action`` is ``REFIT_NONE``, so the return would otherwise leave
+        ``_last_resize_size`` describing the screen the window just left — and
+        :func:`fit_view.canvas_size` prefers that cache over live geometry.
+        Entering deep zoom before the new screen's ``resizeGL`` has been
+        delivered then fits the image to the OLD monitor ("it opens at the
+        other screen's size"). Invalidating here makes that fit read live
+        geometry instead; the next ``resizeGL`` repopulates the cache.
         """
-        from Imervue.gpu_image_view.fit_view import REFIT_NONE, refit_action
-        if refit_action(self) == REFIT_NONE or not self.isVisible():
+        from Imervue.gpu_image_view.fit_view import (
+            REFIT_NONE, invalidate_canvas_size, refit_action,
+        )
+        if not self.isVisible():
+            return
+        invalidate_canvas_size(self)
+        if refit_action(self) == REFIT_NONE:
             return
         self._user_locked_view = False
         self._schedule_canvas_adapt()
@@ -721,16 +736,32 @@ class GPUImageView(QOpenGLWidget):
             self._browse.clamp_pan()
             self._user_locked_view = True
 
-    def _schedule_settle_refit(self) -> None:
+    def _schedule_settle_refit(self, retries: int = _LAYOUT_SETTLE_RETRIES) -> None:
         """Queue a confirmation re-fit for the next event-loop turn.
 
         Tagged with the current deep-zoom request id so a fit queued for one
         image can't fire after a quick keyboard switch to the next — which
         would otherwise clobber the incoming image's remembered zoom-in.
+
+        Re-armed (bounded) while the canvas is still moving, for the same
+        reason :meth:`_schedule_canvas_adapt` retries: a single ``singleShot(0)``
+        can land mid-relayout — the window still settling on a new monitor, a
+        dock or splitter draining its queued layout request — and fitting
+        against that intermediate size is exactly the "opens at the wrong size"
+        bug. The last fit then uses the final size.
         """
         from PySide6.QtCore import QTimer
+        from Imervue.gpu_image_view.fit_view import canvas_size
         request_id = self._deep_zoom_request_id
-        QTimer.singleShot(0, lambda: self._settle_refit(request_id))
+        before = canvas_size(self)
+
+        def _run() -> None:
+            self._settle_refit(request_id)
+            if (retries > 0 and request_id == self._deep_zoom_request_id
+                    and canvas_size(self) != before):
+                self._schedule_settle_refit(retries - 1)
+
+        QTimer.singleShot(0, _run)
 
     def _settle_refit(self, request_id: int) -> None:
         """Confirm the fit after the event loop settles the deep-zoom layout.

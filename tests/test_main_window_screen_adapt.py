@@ -42,6 +42,9 @@ class _FakeViewer:
         self._visible = visible
         self._user_locked_view = False
         self._last_resize_size = (800, 600)
+        # A screen change drops the cached resizeGL size (it describes the
+        # monitor just left), so the fit falls through to live geometry.
+        self._live_size = (1280, 720)
         self.fit_calls = 0
         self.update_calls = 0
         self.clamp_calls = 0
@@ -49,6 +52,12 @@ class _FakeViewer:
 
     def isVisible(self) -> bool:  # noqa: N802 — Qt naming  # NOSONAR — mirrors QWidget.isVisible
         return self._visible
+
+    def width(self) -> int:
+        return self._live_size[0]
+
+    def height(self) -> int:
+        return self._live_size[1]
 
     def _clamp_pan(self):
         self.clamp_calls += 1
