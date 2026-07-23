@@ -27,7 +27,11 @@ _SELF_REFS = {"imervue", "imervue_dev"}
 _BUILD_TOOLS = {"pip", "wheel", "build", "twine", "nuitka", "ordered_set",
                 "zstandard"}
 _PIN_RE = re.compile(r'"([A-Za-z0-9_.-]+)==([0-9][^"]*)"')
-_BINARY_ONLY = "--only-binary :all:"
+_BINARY_ONLY = "--only-binary"
+# Packages that publish an sdist and no wheel. ``--only-binary :all:`` would
+# leave pip with nothing to install, so each is installed on its own; mixing
+# one into a wheels-only command is what breaks the release build.
+_SDIST_ONLY = {"nuitka"}
 
 
 def _normalise(name: str) -> str:
@@ -55,7 +59,10 @@ def _install_commands(text: str) -> list[list[str]]:
         marker = "pip install"
         if line.startswith("#") or marker not in line:
             continue
-        args = line[line.index(marker) + len(marker):].split()
+        # Drop a trailing shell comment (a NOSONAR justification, say) so its
+        # words are not mistaken for package specs.
+        tail = line[line.index(marker) + len(marker):].split(" #", 1)[0]
+        args = tail.split()
         commands.append([arg.strip('"') for arg in args])
     return commands
 
@@ -79,6 +86,22 @@ def _requirement_names() -> set[str]:
         if name not in _SELF_REFS:
             names.add(name)
     return names
+
+
+def test_install_parser_ignores_a_trailing_shell_comment():
+    # A NOSONAR justification sits on the same line as the command; its words
+    # must not be read as package specs.
+    parsed = _install_commands('  pip install "x==1.0"  # NOSONAR reason here\n')
+    assert parsed == [["x==1.0"]]
+
+
+def test_install_parser_folds_backslash_continuations():
+    text = 'pip install --only-binary :all: \\\n  "a==1" \\\n  "b==2"\n'
+    assert _install_commands(text) == [["--only-binary", ":all:", "a==1", "b==2"]]
+
+
+def test_install_parser_skips_commented_out_commands():
+    assert _install_commands("# pip install legacy\n") == []
 
 
 def test_every_runtime_requirement_is_pinned_in_the_build():
@@ -115,13 +138,27 @@ def test_no_requirements_file_is_installed_unhashed():
             assert "--require-hashes" in args
 
 
+def _installed_names(args: list[str]) -> set[str]:
+    return {_normalise(pkg.split("==")[0]) for pkg in _packages(args)}
+
+
 def test_windows_build_installs_wheels_only():
     # Source distributions run setup.py at install time; the EXE build must
-    # not execute arbitrary upstream code.
-    step = _runtime_step()
-    installs = [c for c in _install_commands(step) if _packages(c)]
+    # not execute arbitrary upstream code beyond the documented exception.
+    installs = [c for c in _install_commands(_runtime_step()) if _packages(c)]
     assert installs, "expected pip installs in the runtime-deps step"
-    assert step.count(_BINARY_ONLY) == len(installs)
+    for args in installs:
+        if _installed_names(args) <= _SDIST_ONLY:
+            continue
+        assert _BINARY_ONLY in args, f"not wheels-only: {_packages(args)}"
+
+
+def test_sdist_only_packages_are_never_mixed_into_a_wheels_only_install():
+    # The failure this guards is concrete: pip resolves nothing for a package
+    # with no wheel, so the whole command — and the release — fails.
+    for args in _install_commands(_workflow_text()):
+        if _BINARY_ONLY in args:
+            assert not _installed_names(args) & _SDIST_ONLY
 
 
 def test_the_app_itself_is_never_installed_by_the_build():

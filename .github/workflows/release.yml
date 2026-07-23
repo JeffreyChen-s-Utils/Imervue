@@ -200,7 +200,11 @@ jobs:
             "defusedxml==0.7.1" \
             "watchdog==6.0.0"
           pip install --only-binary :all: \
-            "nuitka==4.1.3" "ordered-set==4.1.0" "zstandard==0.25.0"
+            "ordered-set==4.1.0" "zstandard==0.25.0"
+          # Nuitka publishes an sdist and no wheel, so --only-binary :all:
+          # would leave pip with nothing to install. Kept on its own line so
+          # the exception cannot silently spread to the other packages.
+          pip install "nuitka==4.1.3"  # NOSONAR githubactions:S8541 - no wheel published upstream
       - name: Run Nuitka
         shell: cmd
         run: |
