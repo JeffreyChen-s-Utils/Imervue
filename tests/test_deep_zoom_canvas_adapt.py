@@ -50,6 +50,7 @@ class _FakeView:
         # been invalidated — the path a screen change now takes.
         self._live_size = _LIVE_SIZE
         self._deep_zoom_request_id = 1
+        self._screen_settle_generation = 0
         self.zoom = 1.0
         self.fit_calls = 0
         self.clamp_calls = 0
@@ -363,6 +364,36 @@ def test_screen_settle_stops_when_the_image_closes(qapp):
     view.deep_zoom = None
     _drain(qapp, view, 12)
     assert (view.fit_calls, view.clamp_calls) == (0, 0)
+
+
+def test_screen_settle_stops_when_the_viewer_is_hidden(qapp):
+    # Tabbing away mid-watch: a hidden page keeps its stale pre-hide geometry,
+    # so fitting against it would write a zoom for the wrong canvas.
+    # _on_view_shown re-fits on return, so stopping loses nothing.
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._visible = False
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 1
+
+
+def test_screen_settle_retired_by_a_newer_screen_change(qapp):
+    # Dragging across three monitors must not leave three chains fitting over
+    # each other — the newest watch is the only one that may act.
+    view = _FakeView()
+    view._schedule_screen_settle_adapt(retries=4, interval_ms=0)
+    qapp.processEvents()
+    view._screen_settle_generation += 1      # a newer screen change started
+    _drain(qapp, view, 12)
+    assert view.fit_calls == 1
+
+
+def test_screen_refit_bumps_the_settle_generation(qapp):
+    view = _FakeView()
+    before = view._screen_settle_generation
+    view.request_screen_refit()
+    assert view._screen_settle_generation == before + 1
 
 
 def test_screen_refit_arms_both_the_drain_and_the_settle_watch(qapp):

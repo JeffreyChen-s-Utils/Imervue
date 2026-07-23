@@ -46,6 +46,7 @@ class _FakeViewer:
         # A screen change drops the cached resizeGL size (it describes the
         # monitor just left), so the fit falls through to live geometry.
         self._live_size = (1280, 720)
+        self._screen_settle_generation = 0
         self.zoom = 1.0
         self.fit_calls = 0
         self.update_calls = 0

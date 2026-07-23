@@ -150,6 +150,8 @@ class GPUImageView(QOpenGLWidget):
         # rather than ``self.width()`` / ``height()`` which can lag
         # the actual layout for the first frame or two.
         self._last_resize_size: tuple[int, int] = (0, 0)
+        # Retires a screen-settle watch when a newer screen change starts.
+        self._screen_settle_generation = 0
 
 
         # ===== 圖片切換控制 =====
@@ -563,12 +565,21 @@ class GPUImageView(QOpenGLWidget):
         :func:`fit_view.refit_action` still honours a zoom the user takes
         during the window, so the extra passes cost little and can't fight the
         user.
+
+        Two guards keep the watch from writing a fit nobody asked for. A newer
+        screen change supersedes this one (dragging across three monitors must
+        not leave three chains fitting over each other), and a viewer hidden
+        mid-watch stops rather than measuring a background page's stale
+        pre-hide geometry — :meth:`_on_view_shown` re-fits on return anyway.
         """
         from PySide6.QtCore import QTimer
         if retries <= 0:
             return
+        generation = self._screen_settle_generation
 
         def _run() -> None:
+            if generation != self._screen_settle_generation or not self.isVisible():
+                return
             self._adapt_view_to_canvas()
             self.update()
             self._schedule_screen_settle_adapt(retries - 1, interval_ms)
@@ -606,7 +617,9 @@ class GPUImageView(QOpenGLWidget):
         # Two chains: the first drains Qt's queued layout immediately, the
         # second keeps watching while the window actually settles on the new
         # monitor (see :meth:`_schedule_screen_settle_adapt` for why the first
-        # cannot cover that on its own).
+        # cannot cover that on its own). Bumping the generation retires any
+        # watch still running from a previous screen change.
+        self._screen_settle_generation += 1
         self._schedule_canvas_adapt()
         self._schedule_screen_settle_adapt()
 
