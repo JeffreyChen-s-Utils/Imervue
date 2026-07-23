@@ -61,7 +61,9 @@ class TestReviewCommentsKey:
     the page sees their previous comments."""
 
     def test_stable_for_same_title(self, wg):
-        assert wg.review_comments_key("My Review") == wg.review_comments_key("My Review")
+        first = wg.review_comments_key("My Review")
+        second = wg.review_comments_key("My Review")
+        assert first == second
 
     def test_distinct_per_title(self, wg):
         a = wg.review_comments_key("Shoot A")
