@@ -28,9 +28,12 @@ _BUILD_TOOLS = {"pip", "wheel", "build", "twine", "nuitka", "ordered_set",
                 "zstandard"}
 _PIN_RE = re.compile(r'"([A-Za-z0-9_.-]+)==([0-9][^"]*)"')
 _BINARY_ONLY = "--only-binary"
-# Packages that publish an sdist and no wheel. ``--only-binary :all:`` would
-# leave pip with nothing to install, so each is installed on its own; mixing
-# one into a wheels-only command is what breaks the release build.
+_SDIST_EXEMPT = "--no-binary"
+# pip flags whose following token is a value, not a package to install.
+_VALUE_FLAGS = frozenset({_BINARY_ONLY, _SDIST_EXEMPT, "-r", "--requirement"})
+# Packages that publish an sdist and no wheel. Under ``--only-binary :all:``
+# pip resolves nothing for them, so each must be exempted by name — that is
+# the failure mode that breaks the release build.
 _SDIST_ONLY = {"nuitka"}
 
 
@@ -69,7 +72,17 @@ def _install_commands(text: str) -> list[list[str]]:
 
 def _packages(args: list[str]) -> list[str]:
     """Package specs from a pip argument list (flags and their values dropped)."""
-    return [a for a in args if not a.startswith("-") and a != ":all:"]
+    packages = []
+    skip_value = False
+    for arg in args:
+        if skip_value:
+            skip_value = False
+            continue
+        if arg.startswith("-"):
+            skip_value = arg in _VALUE_FLAGS
+            continue
+        packages.append(arg)
+    return packages
 
 
 def _workflow_pins() -> dict[str, str]:
@@ -142,23 +155,39 @@ def _installed_names(args: list[str]) -> set[str]:
     return {_normalise(pkg.split("==")[0]) for pkg in _packages(args)}
 
 
+def _exempted_names(args: list[str]) -> set[str]:
+    """Packages this command exempts from the wheels-only rule by name."""
+    exempt: set[str] = set()
+    for flag, value in zip(args, args[1:], strict=False):
+        if flag == _SDIST_EXEMPT:
+            exempt |= {_normalise(name) for name in value.split(",")}
+    return exempt
+
+
 def test_windows_build_installs_wheels_only():
     # Source distributions run setup.py at install time; the EXE build must
-    # not execute arbitrary upstream code beyond the documented exception.
+    # not execute arbitrary upstream code.
     installs = [c for c in _install_commands(_runtime_step()) if _packages(c)]
     assert installs, "expected pip installs in the runtime-deps step"
     for args in installs:
-        if _installed_names(args) <= _SDIST_ONLY:
-            continue
         assert _BINARY_ONLY in args, f"not wheels-only: {_packages(args)}"
 
 
-def test_sdist_only_packages_are_never_mixed_into_a_wheels_only_install():
-    # The failure this guards is concrete: pip resolves nothing for a package
-    # with no wheel, so the whole command — and the release — fails.
+def test_packages_without_a_wheel_are_exempted_by_name():
+    # The failure this guards is concrete: under a blanket wheels-only rule
+    # pip resolves nothing for a package that publishes no wheel, so the whole
+    # command — and the release — fails. Naming it in --no-binary is the only
+    # way to install it without weakening the rule for everything else.
     for args in _install_commands(_workflow_text()):
-        if _BINARY_ONLY in args:
-            assert not _installed_names(args) & _SDIST_ONLY
+        needs_exempting = _installed_names(args) & _SDIST_ONLY
+        missing = needs_exempting - _exempted_names(args)
+        assert not missing, f"no wheel published for: {sorted(missing)}"
+
+
+def test_the_exemption_never_covers_a_package_that_ships_wheels():
+    # A stray --no-binary entry would silently reintroduce setup.py execution.
+    for args in _install_commands(_workflow_text()):
+        assert _exempted_names(args) <= _SDIST_ONLY
 
 
 def test_the_app_itself_is_never_installed_by_the_build():

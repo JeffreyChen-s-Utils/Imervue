@@ -199,12 +199,11 @@ jobs:
             "PyOpenGL_accelerate==3.1.10" \
             "defusedxml==0.7.1" \
             "watchdog==6.0.0"
-          pip install --only-binary :all: \
-            "ordered-set==4.1.0" "zstandard==0.25.0"
-          # Nuitka publishes an sdist and no wheel, so --only-binary :all:
-          # would leave pip with nothing to install. Kept on its own line so
-          # the exception cannot silently spread to the other packages.
-          pip install "nuitka==4.1.3"  # NOSONAR githubactions:S8541 - no wheel published upstream
+          # Nuitka publishes an sdist and no wheel, so a blanket wheels-only
+          # rule would leave pip nothing to resolve. Exempt it by name rather
+          # than dropping the rule: everything else here stays wheels-only.
+          pip install --only-binary :all: --no-binary nuitka \
+            "nuitka==4.1.3" "ordered-set==4.1.0" "zstandard==0.25.0"
       - name: Run Nuitka
         shell: cmd
         run: |
