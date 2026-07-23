@@ -69,6 +69,6 @@ class WorkerHostMixin:
         self._stop_worker()
         super().reject()
 
-    def closeEvent(self, event):  # noqa: N802 - Qt API
+    def closeEvent(self, event):  # noqa: N802 - Qt API  # NOSONAR — QWidget override
         self._stop_worker()
         super().closeEvent(event)

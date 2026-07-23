@@ -17,7 +17,7 @@ class _FakeTimer:
     calls: list = []
 
     @staticmethod
-    def singleShot(ms, fn):   # noqa: N802 - mirrors Qt's API
+    def singleShot(ms, fn):   # noqa: N802 - mirrors Qt's API  # NOSONAR — mirrors QTimer.singleShot
         _FakeTimer.calls.append((ms, fn))
 
 

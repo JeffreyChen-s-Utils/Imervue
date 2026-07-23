@@ -65,10 +65,10 @@ class _FakeWorker:
         self._running = running
         self.events: list[str] = []
 
-    def isRunning(self):   # noqa: N802 - Qt API
+    def isRunning(self):   # noqa: N802 - Qt API  # NOSONAR — mirrors QThread.isRunning
         return self._running
 
-    def requestInterruption(self):   # noqa: N802 - Qt API
+    def requestInterruption(self):   # noqa: N802 - Qt API  # NOSONAR — mirrors QThread.requestInterruption
         self.events.append("interrupt")
 
     def disconnect(self):

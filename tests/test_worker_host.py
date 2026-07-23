@@ -18,10 +18,10 @@ class _FakeWorker:
         if has_stop:
             self.stop = lambda: self.events.append("stop")
 
-    def isRunning(self):   # noqa: N802 - Qt API
+    def isRunning(self):   # noqa: N802 - Qt API  # NOSONAR — mirrors QThread.isRunning
         return self._running
 
-    def requestInterruption(self):   # noqa: N802 - Qt API
+    def requestInterruption(self):   # noqa: N802 - Qt API  # NOSONAR — mirrors QThread.requestInterruption
         self.events.append("interrupt")
 
     def disconnect(self):

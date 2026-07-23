@@ -47,7 +47,7 @@ class _FakeViewer:
         self.clamp_calls = 0
         self._browse = SimpleNamespace(clamp_pan=self._clamp_pan)
 
-    def isVisible(self) -> bool:  # noqa: N802 — Qt naming
+    def isVisible(self) -> bool:  # noqa: N802 — Qt naming  # NOSONAR — mirrors QWidget.isVisible
         return self._visible
 
     def _clamp_pan(self):
