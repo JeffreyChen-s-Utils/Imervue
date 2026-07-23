@@ -377,3 +377,41 @@ def test_should_settle_refit_false_without_deep_zoom():
     view = _FakeView(100, 100, (800, 600), deep=False)
     view._user_locked_view = False
     assert fit_view.should_settle_refit(view) is False
+
+
+# ---------------------------------------------------------------------------
+# refit_action (what a canvas-size change does to the current view)
+# ---------------------------------------------------------------------------
+
+def test_refit_action_fits_an_unlocked_view():
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_FIT
+
+
+def test_refit_action_clamps_a_locked_view():
+    # A deliberate zoom-in keeps its zoom; only its pan is re-clamped so the
+    # new (maybe smaller) viewport can't strand it off-screen.
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = True
+    assert fit_view.refit_action(view) == fit_view.REFIT_CLAMP
+
+
+def test_refit_action_none_without_deep_zoom():
+    view = _FakeView(100, 100, (800, 600), deep=False)
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_NONE
+
+
+def test_refit_action_none_in_tile_grid_mode():
+    view = _FakeView(100, 100, (800, 600), grid=True)
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_NONE
+
+
+def test_refit_action_tolerates_a_view_without_the_lock_flag():
+    # Defensive: partial fakes / a view built before the flag exists must not
+    # raise — an unknown lock state reads as "whole-image", i.e. re-fit.
+    view = _FakeView(100, 100, (800, 600))
+    del view._user_locked_view
+    assert fit_view.refit_action(view) == fit_view.REFIT_FIT

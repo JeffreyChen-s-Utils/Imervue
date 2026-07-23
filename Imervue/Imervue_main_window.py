@@ -2120,21 +2120,13 @@ class ImervueMainWindow(QMainWindow):
     def _refit_deep_zoom_image(self) -> None:
         """Fit the whole deep-zoom image into the (possibly resized) canvas.
 
-        Deferred one event-loop turn so the fit math sees the canvas size
-        AFTER the ``setGeometry`` layout pass, not the mid-resize one.
-        Intentionally overrides a user zoom/pan — landing on a new screen
-        means "show me the whole image at this screen's size".
+        The viewer owns the timing: the fit is deferred until its canvas size
+        settles after the ``setGeometry`` layout pass, and parked until the
+        viewer is visible again when the screen changed while another main tab
+        was in front. Intentionally overrides a user zoom/pan — landing on a
+        new screen means "show me the whole image at this screen's size".
         """
-        viewer = self.viewer
-        if viewer.deep_zoom is None or viewer.tile_grid_mode:
-            return
-
-        def _do_fit() -> None:
-            if viewer.deep_zoom is not None and not viewer.tile_grid_mode:
-                viewer._fit_to_window()
-                viewer.update()
-
-        QTimer.singleShot(0, _do_fit)
+        self.viewer.request_screen_refit()
 
     # ==========================
     # 多螢幕視窗位置記憶

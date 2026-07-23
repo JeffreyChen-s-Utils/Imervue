@@ -21,6 +21,11 @@ _MAX_FIT_ZOOM = 1.0
 # fit (rounding) still counts as a whole-image view to re-fit, not a zoom-in.
 _FIT_EPSILON = 1.001
 
+# What a canvas-size change should do to the currently shown deep-zoom view.
+REFIT_NONE = "none"
+REFIT_FIT = "fit"
+REFIT_CLAMP = "clamp"
+
 
 def canvas_size(view: GPUImageView) -> tuple[int, int]:
     """Return the logical canvas size, preferring the last resizeGL size.
@@ -45,6 +50,29 @@ def should_settle_refit(view: GPUImageView) -> bool:
     settles on deep-zoom entry — without ever overriding a deliberate zoom-in.
     """
     return view.deep_zoom is not None and not view._user_locked_view
+
+
+def refit_action(view: GPUImageView) -> str:
+    """What a canvas-size change should do to the currently shown view.
+
+    ``REFIT_FIT`` — a whole-image view re-fits so it stays centred as docks
+    settle, the window is resized, or it lands on another monitor.
+
+    ``REFIT_CLAMP`` — a deliberate zoom-in KEEPS its zoom (the user asked for
+    it) but must have its pan re-clamped against the new viewport. Without
+    that, shrinking the canvas — a smaller screen, a restored-from-maximised
+    window, or a window resized while the viewer sat behind another main tab —
+    strands the image partly outside the visible area until the user pans it
+    back by hand.
+
+    ``REFIT_NONE`` — nothing size-sensitive is on screen (no deep-zoom image,
+    or the tile wall is showing, which lays itself out every paint).
+    """
+    if view.deep_zoom is None or getattr(view, "tile_grid_mode", False):
+        return REFIT_NONE
+    if getattr(view, "_user_locked_view", False):
+        return REFIT_CLAMP
+    return REFIT_FIT
 
 
 def invalidate_canvas_size(view: GPUImageView) -> None:
