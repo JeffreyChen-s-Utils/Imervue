@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -59,7 +60,7 @@ class _AnaglyphWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class AnaglyphDialog(QDialog):
+class AnaglyphDialog(WorkerHostMixin, QDialog):
     """Method picker + right-view chooser; the current image is the left view."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

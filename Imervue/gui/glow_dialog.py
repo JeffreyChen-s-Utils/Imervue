@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -70,7 +71,7 @@ class _GlowWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class GlowDialog(QDialog):
+class GlowDialog(WorkerHostMixin, QDialog):
     """Amount / radius / threshold sliders that glow the image and save a copy."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

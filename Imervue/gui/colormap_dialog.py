@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -48,7 +49,7 @@ class _ColormapWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class ColormapDialog(QDialog):
+class ColormapDialog(WorkerHostMixin, QDialog):
     """Colour-map picker that re-colours the current image's luminance."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from Imervue.plugin.subprocess_util import terminate_process as _terminate_process
 from safety_review._constants import (
     MIN_CONFIDENCE,
     MODE_ANIME,
@@ -269,6 +270,8 @@ class _BatchWorker(QThread):
         t0 = time.monotonic()
 
         for i, src in enumerate(self._paths):
+            if self.isInterruptionRequested():
+                break
             name = Path(src).name
             elapsed = time.monotonic() - t0
             eta = elapsed / i * (total - i) if i > 0 else 0.0
@@ -344,6 +347,9 @@ class _SubprocessSingleWorker(QThread):
     def _consume(self, proc) -> bool:
         """Drain *proc* stdout. Returns True if a terminal line was seen."""
         for raw in proc.stdout:
+            if self.isInterruptionRequested():
+                _terminate_process(proc)
+                return True
             line = raw.rstrip("\n\r")
             if not line:
                 continue
@@ -358,6 +364,7 @@ class _SubprocessSingleWorker(QThread):
         return False
 
     def run(self):
+        proc = None
         try:
             proc = subprocess.Popen(  # nosec B603,B607  # nosemgrep
                 self._command(), stdout=subprocess.PIPE,
@@ -375,6 +382,8 @@ class _SubprocessSingleWorker(QThread):
         except Exception as exc:
             logger.error("Subprocess single worker failed: %s", exc, exc_info=True)
             self.result_ready.emit(False, str(exc), 0)
+        finally:
+            _terminate_process(proc)
 
 
 class _SubprocessBatchWorker(QThread):
@@ -444,6 +453,9 @@ class _SubprocessBatchWorker(QThread):
     def _consume(self, proc) -> bool:
         """Drain *proc* stdout. Returns True if a terminal line was seen."""
         for raw in proc.stdout:
+            if self.isInterruptionRequested():
+                _terminate_process(proc)
+                return True
             line = raw.rstrip("\n\r")
             if not line:
                 continue
@@ -459,6 +471,7 @@ class _SubprocessBatchWorker(QThread):
 
     def run(self):
         tmp_path = None
+        proc = None
         try:
             with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False, encoding="utf-8",
@@ -478,6 +491,7 @@ class _SubprocessBatchWorker(QThread):
             logger.error("Subprocess batch worker failed: %s", exc, exc_info=True)
             self.result_ready.emit(0, len(self._paths), 0)
         finally:
+            _terminate_process(proc)
             if tmp_path:
                 with contextlib.suppress(OSError):
                     os.unlink(tmp_path)

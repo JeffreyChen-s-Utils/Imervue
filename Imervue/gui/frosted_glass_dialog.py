@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -35,7 +36,7 @@ _RADIUS_DEFAULT = 4
 _SEED_MAX = 9999
 
 
-class FrostedGlassDialog(QDialog):
+class FrostedGlassDialog(WorkerHostMixin, QDialog):
     """A radius slider + seed spin box that scatter pixels and save a copy."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

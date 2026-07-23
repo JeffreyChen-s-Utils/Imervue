@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.model_dir import ensure_model_dir
+from Imervue.plugin.subprocess_util import terminate_process
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
 
@@ -128,6 +130,12 @@ class _SubprocessRemoveWorker(QThread):
         self._output = output_path
         self._model = model_name
         self._alpha_matting = alpha_matting
+        self._proc = None
+
+    def stop(self):
+        """Terminate the child process so a cancelled worker's run loop (blocked
+        reading the child's stdout) unblocks and wait() returns promptly."""
+        terminate_process(self._proc)
 
     def run(self):
         try:
@@ -143,6 +151,7 @@ class _SubprocessRemoveWorker(QThread):
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
             )
+            self._proc = proc
             for line in proc.stdout:
                 line = line.rstrip("\n\r")
                 if not line:
@@ -185,6 +194,12 @@ class _SubprocessBatchWorker(QThread):
         self._output_dir = output_dir
         self._model = model_name
         self._alpha_matting = alpha_matting
+        self._proc = None
+
+    def stop(self):
+        """Terminate the child process so a cancelled worker's run loop (blocked
+        reading the child's stdout) unblocks and wait() returns promptly."""
+        terminate_process(self._proc)
 
     def run(self):
         try:
@@ -205,6 +220,7 @@ class _SubprocessBatchWorker(QThread):
             proc = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
             )
+            self._proc = proc
             for line in proc.stdout:
                 line = line.rstrip("\n\r")
                 if not line:
@@ -310,6 +326,8 @@ class _BatchRemoveWorker(QThread):
         total = len(self._paths)
 
         for i, src in enumerate(self._paths):
+            if self.isInterruptionRequested():
+                break
             try:
                 self.progress.emit(i, total, Path(src).name)
 
@@ -350,7 +368,7 @@ class _BatchRemoveWorker(QThread):
 # \u5c0d\u8a71\u6846
 # ===========================
 
-class RemoveBackgroundDialog(QDialog):
+class RemoveBackgroundDialog(WorkerHostMixin, QDialog):
 
     def __init__(self, main_gui: GPUImageView, image_path: str,
                  frozen_env: tuple[str, str] | None = None):
@@ -475,14 +493,8 @@ class RemoveBackgroundDialog(QDialog):
             if hasattr(self._gui.main_window, "toast"):
                 self._gui.main_window.toast.info(f"Error: {result}")
 
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            self._worker.wait(5000)
-            self._worker = None
-        super().closeEvent(event)
 
-
-class BatchRemoveBackgroundDialog(QDialog):
+class BatchRemoveBackgroundDialog(WorkerHostMixin, QDialog):
 
     def __init__(self, main_gui: GPUImageView, paths: list[str],
                  frozen_env: tuple[str, str] | None = None):
@@ -600,12 +612,6 @@ class BatchRemoveBackgroundDialog(QDialog):
             else:
                 self._gui.main_window.toast.success(msg)
         QTimer.singleShot(0, self.accept)
-
-    def closeEvent(self, event):
-        if self._worker and self._worker.isRunning():
-            self._worker.wait(5000)
-            self._worker = None
-        super().closeEvent(event)
 
 
 # ===========================

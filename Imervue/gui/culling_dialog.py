@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QButtonGroup, QMessageBox,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import finalize_worker
 from Imervue.library import image_index
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -56,7 +57,7 @@ class _AutoCullWorker(QThread):
         self.done.emit(picks, rejects)
 
 
-class CullingDialog(QDialog):
+class CullingDialog(WorkerHostMixin, QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui

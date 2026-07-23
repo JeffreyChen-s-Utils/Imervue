@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 import numpy as np
 from PIL import Image
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import export_presets
 from Imervue.image.recipe_store import recipe_store
 from Imervue.image.save_formats import (
@@ -134,7 +135,7 @@ def _build_output_path(src: Path, output_dir: str, ext: str) -> Path:
     return out_path
 
 
-class BatchExportDialog(QDialog):
+class BatchExportDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_gui: GPUImageView, paths: list[str]):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
@@ -356,16 +357,6 @@ class BatchExportDialog(QDialog):
             self._worker.abort()
         self.reject()
 
-    def _wait_worker(self):
-        """Abort and block until the worker stops, so it is never destroyed
-        mid-run ('QThread: Destroyed while thread is still running' → abort)."""
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.abort()
-            self._worker.wait()
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_worker()
-        super().closeEvent(event)
 
     def _on_finished(self, success, failed):
         self._progress.setVisible(False)

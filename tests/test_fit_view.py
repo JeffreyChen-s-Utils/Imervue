@@ -198,6 +198,26 @@ def test_should_refit_on_load_keeps_zoom_when_dimensions_match():
         True, view, remembered_dims=(4000, 3000)) is False
 
 
+def test_should_refit_on_load_refits_remembered_fit_on_smaller_canvas():
+    # A whole-image fit saved on a LARGER screen reloaded on a SMALLER canvas:
+    # its zoom (0.5) exceeds this canvas's fit (~0.225), so fits_within_canvas
+    # alone would mistake it for a zoom-in and keep it, opening cropped/too big.
+    # was_locked=False marks it a fit, so it re-fits.
+    view = _FakeView(4000, 3000, (1200, 675))
+    view.zoom = 0.5
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(4000, 3000), was_locked=False) is True
+
+
+def test_should_refit_on_load_keeps_locked_zoom_in_that_no_longer_fits():
+    # A deliberate user zoom-in (was_locked=True) is preserved even though it
+    # exceeds the current canvas's fit.
+    view = _FakeView(4000, 3000, (1600, 900))
+    view.zoom = 0.6
+    assert fit_view.should_refit_on_load(
+        True, view, remembered_dims=(4000, 3000), was_locked=True) is False
+
+
 def test_should_refit_on_load_none_dims_falls_back_to_fit_test():
     # Legacy memory entries saved without dims → behave exactly as before.
     view = _FakeView(4000, 3000, (1600, 900))
@@ -357,3 +377,41 @@ def test_should_settle_refit_false_without_deep_zoom():
     view = _FakeView(100, 100, (800, 600), deep=False)
     view._user_locked_view = False
     assert fit_view.should_settle_refit(view) is False
+
+
+# ---------------------------------------------------------------------------
+# refit_action (what a canvas-size change does to the current view)
+# ---------------------------------------------------------------------------
+
+def test_refit_action_fits_an_unlocked_view():
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_FIT
+
+
+def test_refit_action_clamps_a_locked_view():
+    # A deliberate zoom-in keeps its zoom; only its pan is re-clamped so the
+    # new (maybe smaller) viewport can't strand it off-screen.
+    view = _FakeView(100, 100, (800, 600))
+    view._user_locked_view = True
+    assert fit_view.refit_action(view) == fit_view.REFIT_CLAMP
+
+
+def test_refit_action_none_without_deep_zoom():
+    view = _FakeView(100, 100, (800, 600), deep=False)
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_NONE
+
+
+def test_refit_action_none_in_tile_grid_mode():
+    view = _FakeView(100, 100, (800, 600), grid=True)
+    view._user_locked_view = False
+    assert fit_view.refit_action(view) == fit_view.REFIT_NONE
+
+
+def test_refit_action_tolerates_a_view_without_the_lock_flag():
+    # Defensive: partial fakes / a view built before the flag exists must not
+    # raise — an unknown lock state reads as "whole-image", i.e. re-fit.
+    view = _FakeView(100, 100, (800, 600))
+    del view._user_locked_view
+    assert fit_view.refit_action(view) == fit_view.REFIT_FIT

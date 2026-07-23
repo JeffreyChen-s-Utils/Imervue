@@ -609,6 +609,36 @@ Elige cualquier combinación desde la pestaña o el menú del clic derecho. Cada
 
 Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño — se recuerda entre lanzamientos.
 
+### Voz personalizada (pet script)
+
+El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mismo. Haz clic en **Load script…** en el grupo **Pet script** de la pestaña Desktop Pet y elige un `.petscript.json`. El esquema:
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — se usan cuando nada más específico coincide con un clic.
+- **`hit_responses`** — líneas por `HitArea`. Las claves deben coincidir con los IDs de hit area definidos en el rig.
+- **`motion_lines`** — líneas por motion. Se disparan cuando la mascota reproduce un motion con ese nombre (motion de hit area o motion del menú contextual).
+- **`scheduled`** — avisos accionados por temporizador. Cada entrada se dispara cada `every_seconds` segundos.
+
+Las líneas rotan por turnos (round-robin) en cada grupo para que el usuario no escuche la misma línea dos veces seguidas. **Reset to default** descarta el script personalizado y restaura el conjunto de saludos integrado.
+
+Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+
 ---
 
 ## Atajos de teclado y ratón

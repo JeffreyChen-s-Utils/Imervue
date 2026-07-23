@@ -312,11 +312,25 @@ class _WorkerHostMixin:
         self._worker = None
 
     def _stop_worker(self):
-        if self._worker and self._worker.isRunning():
+        # Ask the worker to stop at its next interruption check, then wait for it
+        # to actually finish before dropping the reference. The old wait(5000)
+        # dropped the reference on timeout while the detection thread (ONNX
+        # inference) was still running, destroying a live QThread and crashing
+        # the process (0xC0000409) — most visibly on Cancel-then-reuse.
+        worker = self._worker
+        if worker is not None and worker.isRunning():
+            worker.requestInterruption()
             with contextlib.suppress(RuntimeError, TypeError):
-                self._worker.disconnect()
-            self._worker.wait(5000)
-            self._worker = None
+                worker.disconnect()
+            worker.wait()
+        self._worker = None
+
+    def reject(self):
+        # Cancel / Escape close the dialog via reject(), which does NOT deliver a
+        # QCloseEvent — so without stopping the worker here it kept running and
+        # was destroyed when the dialog was garbage-collected.
+        self._stop_worker()
+        super().reject()
 
     def closeEvent(self, event):
         self._stop_worker()

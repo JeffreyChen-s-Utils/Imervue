@@ -140,3 +140,48 @@ def test_load_preview_returns_none_on_missing_file(qapp, tmp_path):
 def test_load_thumb_icon_returns_none_on_failure(qapp, tmp_path):
     icon = _load_thumb_icon(str(tmp_path / "no-such-file.png"))
     assert icon is None
+
+
+# ---------------------------------------------------------------------------
+# Preview refits to the panel size (on selection and on resize)
+# ---------------------------------------------------------------------------
+
+
+def test_preview_pixmap_scales_to_the_target_size(qapp, tmp_path):
+    # The refit mechanism: a bigger preview area yields a bigger pixmap, so a
+    # dialog resize (which re-invokes this) fills the panel instead of leaving
+    # the reference at its load-time size.
+    from PySide6.QtCore import QSize
+    big = tmp_path / "big.png"
+    Image.new("RGBA", (800, 600), (10, 120, 200, 255)).save(str(big))
+    small = _load_preview_pixmap(str(big), QSize(120, 90))
+    large = _load_preview_pixmap(str(big), QSize(500, 380))
+    assert small is not None
+    assert large is not None
+    assert large.width() > small.width()
+    assert large.height() > small.height()
+
+
+def test_render_preview_draws_the_selected_reference(qapp, fake_ui, tmp_path):
+    big = tmp_path / "big.png"
+    Image.new("RGBA", (800, 600), (10, 120, 200, 255)).save(str(big))
+    dlg = ReferencePanelDialog(fake_ui)
+    try:
+        dlg._preview_path = str(big)
+        dlg._render_preview()
+        pm = dlg._preview.pixmap()
+        assert pm is not None
+        assert not pm.isNull()
+    finally:
+        dlg.deleteLater()
+
+
+def test_preview_clears_when_nothing_selected(qapp, fake_ui):
+    dlg = ReferencePanelDialog(fake_ui)
+    try:
+        dlg._preview_path = None
+        dlg._render_preview()
+        pm = dlg._preview.pixmap()
+        assert pm is None or pm.isNull()
+    finally:
+        dlg.deleteLater()

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     apply_save_buttons,
     current_image_path,
@@ -59,7 +60,7 @@ class _OptimizeWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class OptimizeDialog(QDialog):
+class OptimizeDialog(WorkerHostMixin, QDialog):
     """Format + KB budget that re-encodes the current image to fit."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
@@ -102,11 +103,6 @@ class OptimizeDialog(QDialog):
         if ok:
             self.accept()
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        worker = getattr(self, "_worker", None)
-        if worker is not None and worker.isRunning():
-            worker.wait()
-        super().closeEvent(event)
 
 
 def open_optimize(viewer: GPUImageView) -> None:

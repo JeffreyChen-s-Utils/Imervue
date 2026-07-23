@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -30,7 +31,7 @@ _SEGMENTS_MAX = 24
 _SEGMENTS_DEFAULT = 6
 
 
-class KaleidoscopeDialog(QDialog):
+class KaleidoscopeDialog(WorkerHostMixin, QDialog):
     """Segment-count and rotation sliders that kaleidoscope the image and save."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

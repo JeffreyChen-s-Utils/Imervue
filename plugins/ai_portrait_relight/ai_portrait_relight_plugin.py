@@ -35,6 +35,7 @@ from ai_portrait_relight.relight import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -193,8 +194,13 @@ class _RelightWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class AIPortraitRelightDialog(QDialog):
-    """Pick method + light direction, run the relight on a worker thread on OK."""
+class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
+    """Pick method + light direction, run the relight on a worker thread on OK.
+
+    Inherits :class:`WorkerHostMixin` so closing or cancelling the dialog while
+    the relight thread is running joins it first — the thread previously had no
+    close/reject teardown and was destroyed mid-run.
+    """
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)

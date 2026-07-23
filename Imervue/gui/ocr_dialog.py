@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.image.ocr import OcrUnavailableError, extract_text, ocr_available
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.ocr_dialog")
 
 
-class OcrDialog(QDialog):
+class OcrDialog(WorkerHostMixin, QDialog):
     """Show OCR text for one image with a copy button."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
@@ -54,7 +55,9 @@ class OcrDialog(QDialog):
         copy = QPushButton(lang.get("ocr_copy", "Copy"))
         copy.clicked.connect(self._copy)
         close = QPushButton(lang.get("common_close", "Close"))
-        close.clicked.connect(self.accept)
+        # close() (not accept()) so the mixin's closeEvent joins the OCR thread
+        # before the dialog is dropped — accept() delivers no closeEvent.
+        close.clicked.connect(self.close)
         row.addWidget(copy)
         row.addWidget(close)
         return row
@@ -73,14 +76,6 @@ class OcrDialog(QDialog):
 
     def _copy(self) -> None:  # pragma: no cover - Qt UI
         QApplication.clipboard().setText(self._text.toPlainText())
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        # Don't destroy the dialog with a live worker thread.
-        worker = getattr(self, "_worker", None)
-        if worker is not None and worker.isRunning():
-            worker.wait()
-        super().closeEvent(event)
-
 
 class _OcrWorker(QThread):
     """Run OCR off the UI thread; emit the text or an error message."""

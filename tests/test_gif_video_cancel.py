@@ -58,14 +58,21 @@ def test_on_cancel_without_running_worker_just_rejects():
     assert calls == ["reject"]
 
 
-def test_wait_worker_aborts_and_waits_a_running_worker():
+def test_dialog_uses_worker_host_mixin_for_close_teardown():
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    assert issubclass(GifVideoDialog, WorkerHostMixin)
+    assert "closeEvent" not in GifVideoDialog.__dict__
+    assert "_wait_worker" not in GifVideoDialog.__dict__
+
+
+def test_stop_worker_aborts_and_waits_a_running_worker():
     calls: list = []
     worker = SimpleNamespace(isRunning=lambda: True,
+                             requestInterruption=lambda: None,
                              abort=lambda: calls.append("abort"),
+                             disconnect=lambda: None,
                              wait=lambda: calls.append("wait"))
-    GifVideoDialog._wait_worker(SimpleNamespace(_worker=worker))
+    host = SimpleNamespace(_worker=worker)
+    GifVideoDialog._stop_worker(host)
     assert calls == ["abort", "wait"]
-
-
-def test_wait_worker_handles_no_worker():
-    GifVideoDialog._wait_worker(SimpleNamespace(_worker=None))  # must not raise
+    assert host._worker is None

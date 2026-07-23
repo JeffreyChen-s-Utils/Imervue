@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -41,7 +42,7 @@ def _two_dp(value: int) -> str:
     return f"{value / _SCALE:.2f}"
 
 
-class DefringeDialog(QDialog):
+class DefringeDialog(WorkerHostMixin, QDialog):
     """Amount / edge-threshold sliders + hue selector that defringe and save a copy."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

@@ -1,8 +1,8 @@
 Guía del Usuario de Imervue
 ===========================
 
-Una estación de trabajo de imágenes con aceleración GPU que incluye **cuatro pestañas
-de nivel superior**. La mayor parte de esta guía está organizada en torno a esas cuatro
+Una estación de trabajo de imágenes con aceleración GPU que incluye **cinco pestañas
+de nivel superior**. La mayor parte de esta guía está organizada en torno a esas cinco
 secciones.
 
 .. list-table::
@@ -23,9 +23,14 @@ secciones.
    * - **Puppet**
      - Animador de marionetas 2D con rig construido desde cero — mallas, deformadores,
        parámetros, movimientos, físicas. Consulte *Pestaña Puppet — Animación 2D con rig*.
+   * - **Desktop Pet**
+     - Superposición sin marco, transparente y siempre encima que ejecuta los mismos
+       rigs ``.puppet`` en su escritorio con drivers en vivo (reposo / parpadeo /
+       micrófono / cámara web / seguimiento del cursor). Consulte *Espacio de trabajo
+       Desktop Pet*.
 
 Las secciones *Primeros pasos*, *Referencia*, *Sistema de plugins* y *Servidor MCP* que
-siguen son transversales y se aplican a las cuatro pestañas.
+siguen son transversales y se aplican a las cinco pestañas.
 
 .. contents:: Tabla de contenidos
    :depth: 2
@@ -2351,6 +2356,39 @@ Soft Proof
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Soft Proof`` carga un perfil ICC, convierte
 la imagen a través de él y de vuelta, y resalta los píxeles que se recortaron durante el ida
 y vuelta en magenta — una comprobación rápida de fuera de gamut antes de imprimir.
+
+Efectos tonales y creativos
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` reúne un conjunto de efectos de
+aplicar-y-guardar de un solo paso, cada uno un fino diálogo de controles deslizantes
+sobre una transformación en NumPy puro (la misma lógica también se expone como
+herramienta MCP):
+
+- **Graduated Density** — un degradado de densidad neutra lineal definido por ángulo,
+  dureza y desplazamiento, opcionalmente teñido; oscurece un cielo o un primer plano sin
+  una máscara manual.
+- **Tone Equalizer** — exposición independiente por zona de luminancia (un control
+  deslizante para cada uno de negros → blancos) sobre una máscara suavizada, de modo que
+  el ajuste sigue los tonos de la escena.
+- **Detail Equalizer** — un control deslizante de ganancia por banda de frecuencia
+  (textura fina → contraste grueso), la alternativa multiescala a un único control de
+  claridad.
+- **Filmic Tone Map** — una caída de luces Reinhard o Hable con contraste pivoteado y
+  una restauración de saturación, para exposiciones únicas de alto contraste.
+- **Velvia** — un refuerzo de saturación ponderado por luminancia que intensifica los
+  colores apagados sin tocar los ya saturados ni las sombras.
+- **Film Negative** — invierte un negativo de color escaneado, descontando la base
+  naranja de la película estimada automáticamente, con un control de gamma de salida.
+- **Defringe** — desatura los flecos púrpura/verde de aberración cromática a lo largo de
+  los bordes de alto contraste, dejando intacto el color plano.
+- **Emboss** — un relieve de luz direccional a partir del campo de altura de luminancia
+  (azimut / elevación / profundidad + un conmutador de escala de grises).
+- **Polar Coordinates** — envuelve el fotograma en un disco o lo desenrolla (el aspecto
+  tiny-planet / de inversión polar).
+- **Kaleidoscope** — refleja una cuña angular en simetría de ``n`` pliegues.
+- **Frosted Glass** — una dispersión local de píxeles determinista y reproducible por
+  semilla.
 
 Geoetiqueta GPS
 ^^^^^^^^^^^^^^^

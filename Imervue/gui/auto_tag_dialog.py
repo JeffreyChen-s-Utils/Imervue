@@ -87,7 +87,9 @@ class AutoTagDialog(QDialog):
         self._run_btn = QPushButton(lang.get("auto_tag_run", "Run"))
         self._run_btn.clicked.connect(self._run)
         close_btn = QPushButton(lang.get("common_close", "Close"))
-        close_btn.clicked.connect(self.accept)
+        # close() (not accept()) so closeEvent joins the tagging thread first —
+        # accept() delivers no closeEvent and would drop a live thread.
+        close_btn.clicked.connect(self.close)
         btn_row.addWidget(self._run_btn)
         btn_row.addWidget(close_btn)
         layout.addLayout(btn_row)
@@ -152,6 +154,12 @@ class AutoTagDialog(QDialog):
                     "auto_tag_failed", "Auto-tag failed: {msg}"
                 ).format(msg=message)
             )
+
+    def reject(self):  # noqa: N802 - Qt override
+        # Esc / Cancel calls reject(), which delivers no closeEvent; tear the
+        # tagging thread down here too so it is never dropped while running.
+        self._teardown_thread()
+        super().reject()
 
     def closeEvent(self, event):  # noqa: N802 - Qt naming
         # Don't let the dialog be torn down with a live worker thread

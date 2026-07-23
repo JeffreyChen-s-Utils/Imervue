@@ -122,14 +122,21 @@ def upload_s3_presigned(presigned_url: str, file_path: str) -> str:
 
 def upload_batch(
     uploader: Callable[[str], str], paths: list[str],
+    should_cancel: Callable[[], bool] | None = None,
 ) -> list[tuple[str, str | None]]:
     """Upload each path via *uploader*; return ``(path, link_or_None)`` per item.
 
     A failed item is recorded as ``None`` rather than aborting the batch, so one
-    bad file does not lose the rest. Pure given an injected uploader.
+    bad file does not lose the rest. ``should_cancel``, when supplied, is checked
+    before each item and stops the batch early (already-uploaded results are
+    returned) — the dialog passes its worker's interruption flag so Cancel /
+    close returns promptly instead of waiting out the whole queue. Pure given an
+    injected uploader and predicate.
     """
     results: list[tuple[str, str | None]] = []
     for path in paths:
+        if should_cancel is not None and should_cancel():
+            break
         try:
             link: str | None = uploader(path)
         except (UploadError, OSError, ValueError):

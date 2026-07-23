@@ -74,3 +74,29 @@ class TestTerminateProcess:
         assert proc.terminated is True
         assert proc.killed is True          # escalated after the timeout
         assert proc.wait_calls == 2         # timed-out wait, then post-kill wait
+
+
+class TestSubprocessWorkerStop:
+    """The dialog's teardown calls worker.stop() to terminate the child so the
+    stdout-read loop unblocks; stop() delegates to the terminate helper."""
+
+    def test_stop_terminates_running_child(self):
+        from types import SimpleNamespace
+
+        from object_splitter.object_splitter import _SubprocessWorker
+        proc = _FakeProc(poll_val=None)
+        _SubprocessWorker.stop(SimpleNamespace(_proc=proc))
+        assert proc.terminated is True
+
+    def test_stop_without_a_child_is_noop(self):
+        from types import SimpleNamespace
+
+        from object_splitter.object_splitter import _SubprocessWorker
+        _SubprocessWorker.stop(SimpleNamespace(_proc=None))   # must not raise
+
+
+def test_dialog_uses_worker_host_mixin():
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    from object_splitter.object_splitter import ObjectSplitterDialog
+    assert issubclass(ObjectSplitterDialog, WorkerHostMixin)
+    assert "closeEvent" not in ObjectSplitterDialog.__dict__

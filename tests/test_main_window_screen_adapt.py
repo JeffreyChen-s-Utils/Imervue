@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from PySide6.QtCore import QRect
 
 from Imervue.Imervue_main_window import ImervueMainWindow
+from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 _PRIMARY = QRect(0, 0, 1920, 1080)
 _SMALLER = QRect(1920, 0, 1280, 720)
@@ -27,11 +28,30 @@ class _FakeScreen:
 
 
 class _FakeViewer:
-    def __init__(self, *, deep: bool = True, grid: bool = False):
+    """Viewer surface bound to the production screen-refit methods, so the
+    real deferral / visibility dispatch is exercised without a GL widget."""
+
+    request_screen_refit = GPUImageView.request_screen_refit
+    _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
+    _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
+
+    def __init__(self, *, deep: bool = True, grid: bool = False,
+                 visible: bool = True):
         self.deep_zoom = object() if deep else None
         self.tile_grid_mode = grid
+        self._visible = visible
+        self._user_locked_view = False
+        self._last_resize_size = (800, 600)
         self.fit_calls = 0
         self.update_calls = 0
+        self.clamp_calls = 0
+        self._browse = SimpleNamespace(clamp_pan=self._clamp_pan)
+
+    def isVisible(self) -> bool:  # noqa: N802 — Qt naming  # NOSONAR — mirrors QWidget.isVisible
+        return self._visible
+
+    def _clamp_pan(self):
+        self.clamp_calls += 1
 
     def _fit_to_window(self):
         self.fit_calls += 1
@@ -188,6 +208,32 @@ def test_deep_zoom_cleared_before_deferred_fit_is_safe(qapp):
     win._screen = _FakeScreen(QRect(_SMALLER))
     win._adapt_to_current_screen()   # noqa: SLF001
     win.viewer.deep_zoom = None
+    qapp.processEvents()
+    assert win.viewer.fit_calls == 0
+
+
+def test_screen_change_overrides_a_user_zoom(qapp):
+    # Landing on another monitor means "show the whole image at this screen's
+    # size" — the deliberate zoom-in is deliberately unlocked and re-fitted.
+    win = _StubMainWindow()
+    win.viewer._user_locked_view = True   # noqa: SLF001
+    _settle(win)
+    win._screen = _FakeScreen(QRect(_SMALLER))
+    win._adapt_to_current_screen()   # noqa: SLF001
+    qapp.processEvents()
+    assert win.viewer.fit_calls == 1
+    assert win.viewer._user_locked_view is False   # noqa: SLF001
+
+
+def test_screen_change_while_viewer_hidden_is_skipped(qapp):
+    # The viewer sits behind the Modify / Paint tab: a hidden stacked page
+    # keeps its pre-hide geometry, so fitting now would use the OLD screen's
+    # size. Coming back into view re-fits against the real canvas instead.
+    win = _StubMainWindow()
+    win.viewer = _FakeViewer(visible=False)
+    _settle(win)
+    win._screen = _FakeScreen(QRect(_SMALLER))
+    win._adapt_to_current_screen()   # noqa: SLF001
     qapp.processEvents()
     assert win.viewer.fit_calls == 0
 

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     apply_save_buttons,
     current_image_path,
@@ -48,7 +49,7 @@ class _AnimationWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class AnimationEditDialog(QDialog):
+class AnimationEditDialog(WorkerHostMixin, QDialog):
     """Operation + speed applied to the current animated image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

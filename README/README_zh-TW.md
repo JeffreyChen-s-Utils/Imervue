@@ -560,6 +560,36 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 所有設定 — 位置、驅動、不透明度、點擊穿透、尺寸 — 都會在下次啟動時記住。
 
+### 自訂語音（pet script）
+
+寵物的對話泡泡取自一個你可以自行編寫的 JSON 檔。在 Desktop Pet 分頁的 **Pet script** 群組點 **Load script…**，選一個 `.petscript.json`。結構如下：
+
+```json
+{
+  "version": 1,
+  "name": "Friendly pet",
+  "greetings": ["Hi!", "Hello!"],
+  "hit_responses": {
+    "HitAreaHead": ["Don't poke me!", "Stop!"]
+  },
+  "motion_lines": {
+    "wave": ["Hi there!"]
+  },
+  "scheduled": [
+    {"every_seconds": 1800, "messages": ["Stretch break!"]}
+  ]
+}
+```
+
+- **`greetings`** — 當沒有更精確的項目匹配某次點擊時使用。
+- **`hit_responses`** — 每個 `HitArea` 的台詞。鍵必須對應 rig 中定義的 hit-area ID。
+- **`motion_lines`** — 每個動作的台詞。當寵物播放同名動作（hit-area 動作或右鍵選單動作）時觸發。
+- **`scheduled`** — 計時器驅動的提醒。每個項目每 `every_seconds` 秒觸發一次。
+
+台詞會在各分類（bucket）中輪替（round-robin），讓使用者不會連續兩次聽到同一句。**Reset to default** 會捨棄自訂 script，恢復內建的招呼語組。
+
+可用的範例位於 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)。
+
 ---
 
 ## 鍵盤與滑鼠快捷鍵

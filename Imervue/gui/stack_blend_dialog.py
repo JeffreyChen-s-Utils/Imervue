@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.stack_blend import (
     STACK_MAX,
     STACK_MEAN,
@@ -70,7 +71,7 @@ class _StackWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class StackBlendDialog(QDialog):
+class StackBlendDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, parent: QWidget | None = None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer

@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.crop_geometry import (
     ASPECT_PRESETS,
     centered_aspect_crop,
@@ -73,7 +74,7 @@ class _Worker(QThread):
             self.done.emit(False, str(exc))
 
 
-class CropStraightenDialog(QDialog):
+class CropStraightenDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

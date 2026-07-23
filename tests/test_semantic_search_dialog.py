@@ -80,3 +80,29 @@ def test_open_dialog_warns_when_backend_unavailable(qapp, monkeypatch):
     viewer = SimpleNamespace(main_window=None, model=SimpleNamespace(images=[]))
     mod.open_semantic_search_dialog(viewer)
     assert warned == [True]
+
+
+def test_index_build_worker_breaks_on_interruption(qapp):
+    """A cancelled index build stops at its next per-image check instead of
+    embedding the whole folder, so the dialog's wait() returns promptly."""
+    from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
+    added: list = []
+    fake_index = SimpleNamespace(add=lambda p: added.append(p))
+
+    class _Interrupted(_IndexBuildWorker):
+        def isInterruptionRequested(self):   # noqa: N802 - Qt API
+            return True
+
+    worker = _Interrupted(fake_index, ["/a.png", "/b.png"])
+    done: list = []
+    worker.done.connect(lambda: done.append(True))
+    worker.run()
+
+    assert added == []          # broke before embedding any path
+    assert done == [True]       # still emits done so the dialog re-enables
+
+
+def test_dialog_uses_worker_host_mixin():
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    assert issubclass(SemanticSearchDialog, WorkerHostMixin)
+    assert "closeEvent" not in SemanticSearchDialog.__dict__

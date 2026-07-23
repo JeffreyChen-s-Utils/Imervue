@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.segmentation import remove_background, replace_sky
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -61,7 +62,7 @@ class _Worker(QThread):
             self.done.emit(False, str(exc))
 
 
-class SkyReplaceDialog(QDialog):
+class SkyReplaceDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

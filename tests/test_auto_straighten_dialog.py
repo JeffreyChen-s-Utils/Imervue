@@ -65,24 +65,40 @@ def test_apply_is_noop_while_a_worker_runs():
     assert calls == []
 
 
-def test_wait_worker_blocks_on_a_running_worker():
+def test_stop_worker_joins_a_running_worker():
+    # Teardown now comes from WorkerHostMixin, whose _stop_worker joins the
+    # worker on reject/close (auto_straighten previously only waited in
+    # closeEvent, so Esc/Cancel-reject bypassed it).
     waited = []
     worker = SimpleNamespace(isRunning=lambda: True,
+                             requestInterruption=lambda: None,
+                             disconnect=lambda: None,
                              wait=lambda: waited.append(True))
-    fake = SimpleNamespace(_worker=worker, _worker_busy=lambda: True)
-    AutoStraightenDialog._wait_worker(fake)
+    fake = SimpleNamespace(_worker=worker)
+    AutoStraightenDialog._stop_worker(fake)
     assert waited == [True]
+    assert fake._worker is None
 
 
-def test_wait_worker_skips_a_finished_worker():
+def test_stop_worker_skips_a_finished_worker():
     waited = []
     worker = SimpleNamespace(isRunning=lambda: False,
+                             requestInterruption=lambda: None,
+                             disconnect=lambda: None,
                              wait=lambda: waited.append(True))
-    fake = SimpleNamespace(_worker=worker, _worker_busy=lambda: False)
-    AutoStraightenDialog._wait_worker(fake)
+    fake = SimpleNamespace(_worker=worker)
+    AutoStraightenDialog._stop_worker(fake)
     assert waited == []
+    assert fake._worker is None
 
 
-def test_wait_worker_handles_no_worker():
-    fake = SimpleNamespace(_worker=None, _worker_busy=lambda: False)
-    AutoStraightenDialog._wait_worker(fake)  # must not raise
+def test_stop_worker_handles_no_worker():
+    fake = SimpleNamespace(_worker=None)
+    AutoStraightenDialog._stop_worker(fake)  # must not raise
+    assert fake._worker is None
+
+
+def test_dialog_uses_worker_host_mixin():
+    from Imervue.plugin.worker_host import WorkerHostMixin
+    assert issubclass(AutoStraightenDialog, WorkerHostMixin)
+    assert "closeEvent" not in AutoStraightenDialog.__dict__

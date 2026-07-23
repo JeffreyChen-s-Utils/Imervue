@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
-class PolarDialog(QDialog):
+class PolarDialog(WorkerHostMixin, QDialog):
     """Direction / invert toggles that warp between polar and rectangular, then save."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

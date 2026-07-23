@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.clone_stamp import CloneStamp, apply_clone_stamp
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -115,7 +116,7 @@ class _StampWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class CloneStampDialog(QDialog):
+class CloneStampDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

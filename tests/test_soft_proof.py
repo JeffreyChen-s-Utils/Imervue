@@ -39,3 +39,37 @@ class TestSimulateProfile:
         assert simulated.shape == arr.shape
         assert mask.shape == arr.shape[:2]
         assert mask.dtype == bool
+
+
+class TestRenderProof:
+    """The proof render is stored full-size and scaled to the preview label, so
+    a dialog resize re-fits it instead of leaving it clipped / undersized."""
+
+    def test_scales_to_preview_keeping_aspect_ratio(self, qapp):
+        from types import SimpleNamespace
+
+        from PySide6.QtGui import QPixmap
+        from PySide6.QtWidgets import QLabel
+
+        from Imervue.gui.soft_proof_dialog import SoftProofDialog
+
+        label = QLabel()
+        label.resize(300, 150)
+        host = SimpleNamespace(_proof_pixmap=QPixmap(400, 100), _preview=label)
+        SoftProofDialog._render_proof(host)
+        out = label.pixmap().size()
+        assert out.width() == 300           # width-limited (4:1 into a 2:1 box)
+        assert out.height() == 75           # aspect ratio preserved
+
+    def test_noop_without_a_proof(self, qapp):
+        from types import SimpleNamespace
+
+        from PySide6.QtWidgets import QLabel
+
+        from Imervue.gui.soft_proof_dialog import SoftProofDialog
+
+        label = QLabel()
+        host = SimpleNamespace(_proof_pixmap=None, _preview=label)
+        SoftProofDialog._render_proof(host)   # must not raise
+        pm = label.pixmap()
+        assert pm is None or pm.isNull()

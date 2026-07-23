@@ -15,6 +15,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -60,7 +61,7 @@ class _LocalContrastWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class LocalContrastDialog(QDialog):
+class LocalContrastDialog(WorkerHostMixin, QDialog):
     """Dehaze / Clarity / Texture sliders applied to the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

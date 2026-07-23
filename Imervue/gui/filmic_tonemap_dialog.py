@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -43,7 +44,7 @@ def _two_dp(value: int) -> str:
     return f"{value / _SCALE:.2f}"
 
 
-class FilmicTonemapDialog(QDialog):
+class FilmicTonemapDialog(WorkerHostMixin, QDialog):
     """Exposure / white / contrast / saturation sliders that tone-map and save."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

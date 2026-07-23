@@ -1,8 +1,8 @@
 Guia do Usuário do Imervue
 ==========================
 
-Uma estação de trabalho de imagens acelerada por GPU que oferece **quatro abas principais**.
-A maior parte deste guia está organizada em torno dessas quatro seções.
+Uma estação de trabalho de imagens acelerada por GPU que oferece **cinco abas principais**.
+A maior parte deste guia está organizada em torno dessas cinco seções.
 
 .. list-table::
    :header-rows: 1
@@ -22,9 +22,13 @@ A maior parte deste guia está organizada em torno dessas quatro seções.
    * - **Puppet**
      - Animador de fantoches 2D com rig construído do zero — meshes, deformadores, parâmetros,
        movimentos, física. Consulte *Aba Puppet — Animação 2D com Rig*.
+   * - **Desktop Pet**
+     - Sobreposição sem moldura, transparente e sempre no topo que roda os
+       mesmos rigs ``.puppet`` na sua área de trabalho com drivers ao vivo (idle /
+       blink / mic / webcam / drag-track). Consulte *Espaço de Trabalho Desktop Pet*.
 
 As seções *Primeiros Passos*, *Referência*, *Sistema de Plugins* e *Servidor MCP*
-que vêm a seguir são transversais — aplicam-se a todas as quatro abas.
+que vêm a seguir são transversais — aplicam-se a todas as cinco abas.
 
 .. contents:: Sumário
    :depth: 2
@@ -1272,7 +1276,9 @@ rodando.
        ``ParamEyeBallY``.
      - nenhuma
    * - **Mic lip-sync**
-     - A amplitude RMS do microfone dirige ``ParamMouthOpenY``. O
+     - A amplitude RMS do microfone dirige ``ParamMouthOpenY``. A
+       boca abre proporcional ao volume da sua voz, então o personagem
+       parece estar falando quando você fala.
      - ``sounddevice``
    * - **Webcam tracking**
      - O MediaPipe FaceLandmarker lê sua webcam a ~30 FPS e dirige a
@@ -2127,7 +2133,10 @@ a imagem atual ou cada miniatura selecionada, ``Shift + X`` para rejeitar, ``U``
 desmarcar. ``Filtrar`` > ``Por Estado de Cull`` mostra apenas escolhidas, rejeitadas
 ou não marcadas. ``Extra Tools`` > ``Culling`` aplica o filtro via uma caixa de diálogo
 e também expõe um botão **Excluir todas as rejeitadas** que remove permanentemente os
-arquivos marcados do disco.
+arquivos marcados do disco. O botão **Escolher a mais nítida por grupo similar** da mesma
+caixa de diálogo agrupa as quase duplicatas da pasta por hash perceptual, pontua cada uma
+pela nitidez e marca o quadro mais nítido de cada grupo como escolhido e o restante como
+rejeitado.
 
 Bandeja de Staging
 ^^^^^^^^^^^^^^^^^^
@@ -2332,6 +2341,38 @@ Soft Proof
 imagem através dele e de volta, e destaca em magenta os pixels que clipparam durante
 o round-trip — uma verificação rápida fora-de-gamut antes de imprimir.
 
+Efeitos Tonais e Criativos
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` reúne um conjunto de efeitos de
+aplicação única (apply-and-save), cada um uma caixa de diálogo enxuta de sliders
+sobre uma transformação pure-NumPy (a mesma lógica também é exposta como uma
+ferramenta MCP):
+
+- **Graduated Density** — um gradiente linear de densidade neutra definido por
+  ângulo, dureza e offset, opcionalmente tonalizado; escurece um céu ou primeiro
+  plano sem uma máscara manual.
+- **Tone Equalizer** — exposição independente por zona de luminância (um slider
+  para cada, de pretos → brancos) sobre uma máscara suavizada, para que o ajuste
+  siga os tons da cena.
+- **Detail Equalizer** — um slider de ganho por banda de frequência (textura fina
+  → contraste grosseiro), a alternativa multiescala a um único slider de clareza.
+- **Filmic Tone Map** — um rolloff de realces Reinhard ou Hable com contraste
+  pivotado e uma restauração de saturação, para capturas únicas de alto contraste.
+- **Velvia** — um boost de saturação ponderado por luminância que intensifica
+  cores apagadas enquanto poupa as já saturadas e as sombras.
+- **Film Negative** — inverte um negativo colorido escaneado, removendo a base
+  laranja do filme estimada automaticamente, com um slider de gamma de saída.
+- **Defringe** — dessatura franjas roxas/verdes de aberração cromática ao longo
+  de bordas de alto contraste, deixando a cor plana intocada.
+- **Emboss** — um relevo de luz direcional a partir do campo de altura de
+  luminância (azimute / elevação / profundidade + uma alternância para tons de cinza).
+- **Polar Coordinates** — envolve o quadro em um disco ou o desenrola (o visual
+  planeta-miniatura / inversão polar).
+- **Kaleidoscope** — espelha uma cunha angular em simetria de ordem ``n``.
+- **Frosted Glass** — um espalhamento local de pixels determinístico e
+  reproduzível por semente.
+
 Geotag GPS
 ^^^^^^^^^^
 
@@ -2435,6 +2476,55 @@ Ferramentas Disponíveis
    * - ``reverse_geocode`` / ``extract_video_frame``
      - Resolve coordenadas GPS para a cidade mais próxima offline e
        decodifica um frame de um vídeo em uma imagem estática.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Lê latitude/longitude GPS do EXIF (encadeia com ``reverse_geocode``);
+       extrai uma paleta de cores por median-cut (rgb / hex / proporção de pixels).
+   * - ``error_level_analysis``
+     - Mapa de adulteração por Error-Level-Analysis de recompressão JPEG como um
+       PNG data URI (regiões editadas se destacam contra o fundo).
+   * - ``search_images``
+     - Filtra uma pasta com a DSL de consulta dos smart albums (extensão / nome /
+       tamanho / dimensões / proporção / câmera EXIF / lente / lugar).
+   * - ``solarize_image`` / ``glow_image``
+     - Aplica uma inversão tonal solarize ou um brilho difuso / Orton e salva
+       o resultado.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Boost de saturação Velvia ponderado por luminância, relevo emboss de luz
+       direcional e dessaturação de franjas de borda roxas/verdes.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Inverte um negativo colorido escaneado (base de filme automática) e aplica
+       um gradiente linear de densidade neutra graduada.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Rolloff filmic de realces Reinhard/Hable, exposição por zona de luminância
+       e contraste por banda de frequência.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolore a luminância por um mapa perceptual viridis/magma/jet, ou a mapeia
+       para uma escala de exposição em falsas cores.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Pontilhado ordenado (Bayer) para alguns tons por canal, split-toning de
+       sombras/realces e ordenação de pixels por faixa de brilho.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Distorce entre coordenadas retangulares e polares (tiny-planet), ou espelha
+       o quadro em um número de cunhas de caleidoscópio.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Espalhamento de vidro fosco por vizinho aleatório, equalização de histograma
+       adaptativa limitada por contraste (CLAHE) e clareza de meios-tons + textura
+       de detalhes finos.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Quantiza cada canal em algumas faixas planas, ou remapeia a luminância por
+       um gradiente preto-para-branco misturado por intensidade.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Granulação de filme gaussiana ajustável, remoção de névoa por
+       dark-channel-prior e distorção geométrica de redemoinho / pinça / ondulação.
+   * - ``levels_image`` / ``curve_image``
+     - Níveis de ponto preto/branco e gama, e um preset mestre de curva de tons
+       (curva em S, clarear sombras, comprimir realces).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Balanço de branco automático (gray-world, white-patch, percentile-stretch,
+       retinex) e um mixer de canais 3x3 com conversão mono.
+   * - ``lens_correction_image``
+     - Corrige distorção barril/pincushion (k1), eleva ou aprofunda a vinheta dos
+       cantos e cancela a aberração cromática vermelha/azul.
 
 Toda ferramenta anuncia um ``outputSchema`` JSON e ``annotations`` de
 somente-leitura / destrutivas, e retorna seu resultado como

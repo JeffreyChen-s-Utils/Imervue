@@ -2009,12 +2009,46 @@ class ImervueMainWindow(QMainWindow):
         if timer is not None:
             timer.start()
 
-    def _connect_screen_change_signal(self) -> None:
-        """Subscribe to the window's screen-changed signal exactly once."""
+    def resizeEvent(self, event):  # noqa: N802 — Qt naming
+        super().resizeEvent(event)
+        self._reflow_modify_canvas()
+
+    def _reflow_modify_canvas(self) -> None:
+        """Re-flow the Modify splitter and re-fit its canvas after a window /
+        screen size change.
+
+        The splitter holds absolute pane sizes, so without this the centre
+        canvas kept its old width when the window shrank and the image
+        overflowed / was cropped. Only the Modify canvas is touched — NOT the
+        deep-zoom viewer, whose user zoom must survive a plain window resize.
+        """
+        if getattr(self, "_main_tabs", None) is None:
+            return
+        from Imervue.gui.main_tab_nav import should_refit_modify_canvas
+        canvas = getattr(getattr(self, "modify_panel", None), "_canvas", None)
+        if should_refit_modify_canvas(
+                self._main_tabs.currentIndex(), canvas is not None):
+            splitter = getattr(self, "_modify_splitter", None)
+            if splitter is not None:
+                self.modify_panel._size_modify_splitter(splitter, _retries=0)
+            canvas.update()
+
+    def _connect_screen_change_signal(self, _retries: int = 20) -> None:
+        """Subscribe to the window's screen-changed signal exactly once.
+
+        ``windowHandle()`` can still be None on the first deferred attempt (the
+        native window isn't created until the widget is shown). A one-shot that
+        gave up then left the signal permanently unconnected, so a later
+        drag/restore to another monitor never re-fit the view. Retry on a short
+        timer until the handle exists (bounded).
+        """
         if self._screen_signal_connected:
             return
         handle = self.windowHandle()
         if handle is None:
+            if _retries > 0:
+                QTimer.singleShot(
+                    50, lambda: self._connect_screen_change_signal(_retries - 1))
             return
         handle.screenChanged.connect(self._on_screen_changed)
         self._screen_signal_connected = True
@@ -2086,21 +2120,13 @@ class ImervueMainWindow(QMainWindow):
     def _refit_deep_zoom_image(self) -> None:
         """Fit the whole deep-zoom image into the (possibly resized) canvas.
 
-        Deferred one event-loop turn so the fit math sees the canvas size
-        AFTER the ``setGeometry`` layout pass, not the mid-resize one.
-        Intentionally overrides a user zoom/pan — landing on a new screen
-        means "show me the whole image at this screen's size".
+        The viewer owns the timing: the fit is deferred until its canvas size
+        settles after the ``setGeometry`` layout pass, and parked until the
+        viewer is visible again when the screen changed while another main tab
+        was in front. Intentionally overrides a user zoom/pan — landing on a
+        new screen means "show me the whole image at this screen's size".
         """
-        viewer = self.viewer
-        if viewer.deep_zoom is None or viewer.tile_grid_mode:
-            return
-
-        def _do_fit() -> None:
-            if viewer.deep_zoom is not None and not viewer.tile_grid_mode:
-                viewer._fit_to_window()
-                viewer.update()
-
-        QTimer.singleShot(0, _do_fit)
+        self.viewer.request_screen_refit()
 
     # ==========================
     # 多螢幕視窗位置記憶

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -36,7 +37,7 @@ def _two_dp(value: int) -> str:
     return f"{value / _SCALE:.2f}"
 
 
-class GraduatedDensityDialog(QDialog):
+class GraduatedDensityDialog(WorkerHostMixin, QDialog):
     """Angle / density / hardness / offset sliders that grade the frame and save."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

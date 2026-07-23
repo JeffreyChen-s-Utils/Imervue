@@ -1,8 +1,8 @@
 Guide de l'utilisateur Imervue
 ==============================
 
-Station de travail d'image accélérée par GPU offrant **quatre onglets principaux**.
-La majeure partie de ce guide est organisée autour de ces quatre sections.
+Station de travail d'image accélérée par GPU offrant **cinq onglets principaux**.
+La majeure partie de ce guide est organisée autour de ces cinq sections.
 
 .. list-table::
    :header-rows: 1
@@ -22,9 +22,14 @@ La majeure partie de ce guide est organisée autour de ces quatre sections.
    * - **Puppet**
      - Animateur de marionnettes 2D riggées conçu de zéro — maillages, déformateurs,
        paramètres, mouvements, physique. Voir *Onglet Puppet — Animation 2D riggée*.
+   * - **Desktop Pet**
+     - Superposition sans cadre, transparente et toujours au premier plan qui
+       exécute les mêmes rigs ``.puppet`` sur votre bureau avec des pilotes en
+       direct (idle / clignement / micro / webcam / suivi du curseur). Voir
+       *Espace de travail Desktop Pet*.
 
 Les sections *Pour démarrer*, *Référence*, *Système de plugins* et *Serveur MCP*
-qui suivent sont transversales — elles s'appliquent à l'ensemble des quatre onglets.
+qui suivent sont transversales — elles s'appliquent à l'ensemble des cinq onglets.
 
 .. contents:: Table des matières
    :depth: 2
@@ -1139,7 +1144,7 @@ au-dessus de toutes les autres fenêtres.
        glissement accidentel le déplace.
    * - Toujours en dessous
      - Bascule le pet de toujours-au-dessus à toujours-en-dessous.
-     - Le pet se loge derrière toutes les autres fenêtres tel un
+       Le pet se loge derrière toutes les autres fenêtres tel un
        widget de bureau. L'indicateur d'acceptation du focus est
        également désactivé afin que cliquer sur le pet ne le
        remonte pas au premier plan.
@@ -2351,6 +2356,39 @@ réseau de segmentation ; sinon la règle HSV heuristique est utilisée.
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Soft Proof`` charge un profil ICC, convertit l'
 image à travers lui puis en retour, et met en évidence en magenta les pixels qui ont clippé
 durant l'aller-retour — une vérification rapide de hors gamut avant l'impression.
+
+Effets tonaux et créatifs
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` rassemble un ensemble d'effets
+ponctuels de type appliquer-et-enregistrer, chacun étant une fine boîte de
+dialogue à curseurs au-dessus d'une transformation pure-NumPy (la même logique
+est aussi exposée comme outil MCP) :
+
+- **Graduated Density** — un dégradé de densité neutre linéaire défini par angle,
+  dureté et décalage, éventuellement teinté ; assombrit un ciel ou un premier plan
+  sans masque manuel.
+- **Tone Equalizer** — exposition indépendante par zone de luminance (un curseur
+  pour chaque plage, des noirs → aux blancs) sur un masque lissé, de sorte que
+  l'ajustement suit les tons de la scène.
+- **Detail Equalizer** — un curseur de gain par bande de fréquence (texture fine →
+  contraste grossier), l'alternative multi-échelle à un simple curseur de clarté.
+- **Filmic Tone Map** — une atténuation des hautes lumières Reinhard ou Hable avec
+  contraste pivoté et restauration de la saturation, pour les prises uniques à fort
+  contraste.
+- **Velvia** — un boost de saturation pondéré par la luminance qui intensifie les
+  couleurs ternes tout en épargnant celles déjà saturées et les ombres.
+- **Film Negative** — inverse un négatif couleur numérisé en éliminant la base
+  orange du film estimée automatiquement, avec un curseur de gamma de sortie.
+- **Defringe** — désature les franges d'aberration chromatique violettes/vertes le
+  long des bords à fort contraste, en laissant intacte la couleur uniforme.
+- **Emboss** — un relief en lumière directionnelle à partir du champ de hauteur de
+  luminance (azimut / élévation / profondeur + une bascule niveaux de gris).
+- **Polar Coordinates** — enroule l'image en disque ou la déroule (l'effet planète
+  miniature / inversion polaire).
+- **Kaleidoscope** — réfléchit un secteur angulaire en symétrie d'ordre ``n``.
+- **Frosted Glass** — une dispersion locale de pixels déterministe et reproductible
+  par graine.
 
 Géolocalisation GPS
 ^^^^^^^^^^^^^^^^^^^

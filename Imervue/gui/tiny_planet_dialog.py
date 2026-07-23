@@ -14,6 +14,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     apply_save_buttons,
@@ -52,7 +53,7 @@ class _TinyPlanetWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class TinyPlanetDialog(QDialog):
+class TinyPlanetDialog(WorkerHostMixin, QDialog):
     """Pick an output size and render the current panorama as a little planet."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

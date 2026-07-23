@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import current_image_path, finalize_worker, load_rgba, notify_saved
 from Imervue.image.steganography import capacity_bytes, hide_message, reveal_message
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -51,7 +52,7 @@ class _HideWorker(QThread):
             self.done.emit(False, str(exc))
 
 
-class SteganographyDialog(QDialog):
+class SteganographyDialog(WorkerHostMixin, QDialog):
     """Hide a message into / reveal a message from the current image."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):

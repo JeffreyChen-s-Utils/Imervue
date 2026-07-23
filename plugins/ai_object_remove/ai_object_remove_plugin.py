@@ -43,6 +43,7 @@ from ai_object_remove.sam import discover_sam_models, sam_mask
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -97,8 +98,12 @@ class _ClickLabel(QLabel):
         super().mousePressEvent(event)
 
 
-class ObjectRemoveDialog(QDialog):
+class ObjectRemoveDialog(WorkerHostMixin, QDialog):
     """Click an object, preview the mask, and inpaint it away on Apply."""
+
+    # SAM encoding, mask flood-fill and the inpaint each run on their own
+    # thread; the mixin joins all three on reject/close.
+    _worker_attrs = ("_worker", "_sam_worker", "_mask_worker")
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
@@ -156,18 +161,6 @@ class ObjectRemoveDialog(QDialog):
 
         self._build_layout(lang)
         self._render_preview()
-
-    def _wait_workers(self) -> None:
-        """Block until the SAM-encoder and remove workers stop, so neither
-        QThread is destroyed mid-run when the dialog closes (SAM encoding and the
-        inpaint can both run for a while)."""
-        for worker in (self._worker, self._sam_worker, self._mask_worker):
-            if worker is not None and worker.isRunning():
-                worker.wait()
-
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_workers()
-        super().closeEvent(event)
 
     def _build_layout(self, lang: dict) -> None:
         layout = QVBoxLayout(self)

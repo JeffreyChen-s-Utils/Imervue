@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.print_layout import PAGE_SIZES, PrintLayout, export_print_pdf
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -49,7 +50,7 @@ class _Worker(QThread):
             self.done.emit(False, str(exc))
 
 
-class PrintLayoutDialog(QDialog):
+class PrintLayoutDialog(WorkerHostMixin, QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
         self._ui = ui

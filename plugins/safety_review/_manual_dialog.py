@@ -440,12 +440,28 @@ class ManualReviewDialog(QDialog):
         self._detect_btn.setText(
             self._lang.get("safety_review_autodetect", "Auto-detect & prefill"))
 
-    def closeEvent(self, event):  # noqa: N802 - Qt override
-        if self._detect_worker and self._detect_worker.isRunning():
+    def _stop_detect_worker(self):
+        # Wait for the (parent-owned) detect thread to actually finish before
+        # dropping the reference. The old wait(5000) dropped it on timeout while
+        # the ONNX inference ran, so the still-running QThread was destroyed with
+        # the dialog — crashing the process (0xC0000409), notably on
+        # Cancel-then-reuse.
+        worker = self._detect_worker
+        if worker is not None and worker.isRunning():
+            worker.requestInterruption()
             with contextlib.suppress(RuntimeError, TypeError):
-                self._detect_worker.disconnect()
-            self._detect_worker.wait(5000)
-            self._detect_worker = None
+                worker.disconnect()
+            worker.wait()
+        self._detect_worker = None
+
+    def reject(self):  # noqa: N802 - Qt override
+        # Cancel / Escape reject the dialog without a QCloseEvent, so stop the
+        # worker here too or it outlives the dialog and is destroyed running.
+        self._stop_detect_worker()
+        super().reject()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt override
+        self._stop_detect_worker()
         super().closeEvent(event)
 
     _DATASET_SETTING = "safety_review_dataset_dir"

@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.denoise import reduce_noise, sharpen
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -66,7 +67,7 @@ class _Worker(QThread):
             self.done.emit(False, str(exc))
 
 
-class NoiseSharpenDialog(QDialog):
+class NoiseSharpenDialog(WorkerHostMixin, QDialog):
     def __init__(self, viewer: GPUImageView, path: str):
         super().__init__(viewer)
         self._viewer = viewer

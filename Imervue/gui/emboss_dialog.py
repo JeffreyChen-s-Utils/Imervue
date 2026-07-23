@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
     EffectWorker,
@@ -40,7 +41,7 @@ def _one_dp(value: int) -> str:
     return f"{value / _DEPTH_SCALE:.1f}"
 
 
-class EmbossDialog(QDialog):
+class EmbossDialog(WorkerHostMixin, QDialog):
     """Azimuth / elevation / depth sliders that emboss the image and save a copy."""
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
