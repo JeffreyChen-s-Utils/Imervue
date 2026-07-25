@@ -1,5 +1,37 @@
 # Project Guidelines
 
+## Session Progress Log — CHECK THIS FIRST
+
+`.claude/PROGRESS.md` is the hand-off file between sessions. It is gitignored scratch space:
+never a deliverable, never referenced from code or shipped docs.
+
+- **At the start of every session, read `.claude/PROGRESS.md`.** If it lists pending items, say
+  so and offer to continue them before starting anything new. If the `## Pending` section is
+  empty there is no carry-over work — proceed normally and do not mention the file again.
+- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed
+  commit, a failing gate, a follow-up the user deferred, a decision waiting on an answer. One
+  line of *what*, one line of the *next concrete step*. Long design notes belong in the code, a
+  commit message, or the PR — not here.
+- **Delete each item the moment it actually lands.** A finished item left in the file is worse
+  than no file at all.
+- **When the last pending item is done, clear the file** back to the empty template below.
+- If the file is missing, recreate it from the template.
+
+Empty template:
+
+```markdown
+# Progress Log
+
+Scratch hand-off file between sessions. Gitignored — never a deliverable, never referenced
+from code or docs. See the "Session Progress Log" section in `CLAUDE.md` for the rules.
+
+## Pending
+
+_(nothing pending)_
+
+## Notes
+```
+
 ## Definition of Done (HARD REQUIREMENT)
 
 Every feature, bug fix, refactor, or behaviour change MUST satisfy ALL of the following before it
@@ -295,6 +327,48 @@ prepends `plugins/` so each plugin folder becomes importable as a package. `test
 mirrors that injection at session-collect time, which lets tests in `tests/` import plugin
 modules with `from <plugin_name>.<module> import …`. Do not duplicate the path injection in
 individual test files.
+
+#### Mirror plugin changes to the distribution repo (HARD REQUIREMENT)
+
+Plugins ship to users through a **separate public repo**, not through the main app:
+
+- Local clone: `D:\Codes\Imervue_Plugins`
+- Remote: `https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins` (branch `main`)
+- Consumed by `Imervue/plugin/plugin_downloader.py` (`REPO_API_URL` / `RAW_BASE_URL`).
+
+**Any change to `plugins/<name>/` in this repo — new plugin, edit, rename, delete — MUST be
+mirrored into `D:\Codes\Imervue_Plugins` and pushed.** A plugin that exists only here is
+invisible to every user who installs through the plugin downloader, so the change is not done
+until both repos are updated.
+
+Layout of the distribution repo (the downloader walks exactly this shape):
+
+```
+<category>/<plugin_name>/<flat files>     e.g. plugins/ai_denoise/denoise.py
+                                               languages/spanish_translation/__init__.py
+```
+
+- Top-level directories are **categories** (`plugins/`, `languages/`); dot-directories are skipped.
+- The downloader fetches only files **directly inside** the plugin directory — nested
+  subdirectories (`models/`, `assets/`) are NOT downloaded. Keep every runtime-required file flat,
+  and keep discovering optional model files at runtime.
+
+Checklist when touching a plugin:
+
+1. Make and verify the change under `D:\Codes\Imervue\plugins\<name>\` (tests live in this repo).
+2. Commit here — remember `/plugins/` is gitignored, so new files need `git add -f`.
+3. Copy the resulting plugin directory into the matching category of `D:\Codes\Imervue_Plugins`
+   (delete the directory there for a removed plugin), then commit and push that repo.
+4. Confirm parity — the plugin folder names on both sides must match:
+
+```bash
+py -c "import os;d=lambda p:{e.name for e in os.scandir(p) if e.is_dir()};a=d(r'D:\Codes\Imervue\plugins');b=d(r'D:\Codes\Imervue_Plugins\plugins')|d(r'D:\Codes\Imervue_Plugins\languages');print(sorted(a^b))"
+```
+
+   An empty list means in sync. Anything printed is a plugin that exists on only one side.
+
+The commit-message rules above — no AI tool/model names, no `Co-Authored-By` — apply to the
+plugins repo exactly as they do here.
 
 #### When in doubt
 

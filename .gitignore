@@ -232,3 +232,6 @@ examples/puppet/char/
 
 # Cubism SDK drop folder — local-only
 /sdk/
+
+# Session hand-off scratch notes — local working state, not a deliverable.
+/.claude/PROGRESS.md
