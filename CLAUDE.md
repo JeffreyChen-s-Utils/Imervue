@@ -1,5 +1,37 @@
 # Project Guidelines
 
+## Session Progress Log — CHECK THIS FIRST
+
+`.claude/PROGRESS.md` is the hand-off file between sessions. It is gitignored scratch space:
+never a deliverable, never referenced from code or shipped docs.
+
+- **At the start of every session, read `.claude/PROGRESS.md`.** If it lists pending items, say
+  so and offer to continue them before starting anything new. If the `## Pending` section is
+  empty there is no carry-over work — proceed normally and do not mention the file again.
+- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed
+  commit, a failing gate, a follow-up the user deferred, a decision waiting on an answer. One
+  line of *what*, one line of the *next concrete step*. Long design notes belong in the code, a
+  commit message, or the PR — not here.
+- **Delete each item the moment it actually lands.** A finished item left in the file is worse
+  than no file at all.
+- **When the last pending item is done, clear the file** back to the empty template below.
+- If the file is missing, recreate it from the template.
+
+Empty template:
+
+```markdown
+# Progress Log
+
+Scratch hand-off file between sessions. Gitignored — never a deliverable, never referenced
+from code or docs. See the "Session Progress Log" section in `CLAUDE.md` for the rules.
+
+## Pending
+
+_(nothing pending)_
+
+## Notes
+```
+
 ## Definition of Done (HARD REQUIREMENT)
 
 Every feature, bug fix, refactor, or behaviour change MUST satisfy ALL of the following before it
