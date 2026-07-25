@@ -296,6 +296,48 @@ mirrors that injection at session-collect time, which lets tests in `tests/` imp
 modules with `from <plugin_name>.<module> import …`. Do not duplicate the path injection in
 individual test files.
 
+#### Mirror plugin changes to the distribution repo (HARD REQUIREMENT)
+
+Plugins ship to users through a **separate public repo**, not through the main app:
+
+- Local clone: `D:\Codes\Imervue_Plugins`
+- Remote: `https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins` (branch `main`)
+- Consumed by `Imervue/plugin/plugin_downloader.py` (`REPO_API_URL` / `RAW_BASE_URL`).
+
+**Any change to `plugins/<name>/` in this repo — new plugin, edit, rename, delete — MUST be
+mirrored into `D:\Codes\Imervue_Plugins` and pushed.** A plugin that exists only here is
+invisible to every user who installs through the plugin downloader, so the change is not done
+until both repos are updated.
+
+Layout of the distribution repo (the downloader walks exactly this shape):
+
+```
+<category>/<plugin_name>/<flat files>     e.g. plugins/ai_denoise/denoise.py
+                                               languages/spanish_translation/__init__.py
+```
+
+- Top-level directories are **categories** (`plugins/`, `languages/`); dot-directories are skipped.
+- The downloader fetches only files **directly inside** the plugin directory — nested
+  subdirectories (`models/`, `assets/`) are NOT downloaded. Keep every runtime-required file flat,
+  and keep discovering optional model files at runtime.
+
+Checklist when touching a plugin:
+
+1. Make and verify the change under `D:\Codes\Imervue\plugins\<name>\` (tests live in this repo).
+2. Commit here — remember `/plugins/` is gitignored, so new files need `git add -f`.
+3. Copy the resulting plugin directory into the matching category of `D:\Codes\Imervue_Plugins`
+   (delete the directory there for a removed plugin), then commit and push that repo.
+4. Confirm parity — the plugin folder names on both sides must match:
+
+```bash
+py -c "import os;d=lambda p:{e.name for e in os.scandir(p) if e.is_dir()};a=d(r'D:\Codes\Imervue\plugins');b=d(r'D:\Codes\Imervue_Plugins\plugins')|d(r'D:\Codes\Imervue_Plugins\languages');print(sorted(a^b))"
+```
+
+   An empty list means in sync. Anything printed is a plugin that exists on only one side.
+
+The commit-message rules above — no AI tool/model names, no `Co-Authored-By` — apply to the
+plugins repo exactly as they do here.
+
 #### When in doubt
 
 Ask: "if a user installs Imervue with the default `requirements.txt` and never touches the
