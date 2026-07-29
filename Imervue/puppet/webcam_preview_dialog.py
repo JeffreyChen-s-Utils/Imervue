@@ -194,14 +194,14 @@ def _frame_to_pixmap(
     # those bytes directly without an intermediate copy.
     # Webcam frames are usually mirrored ("selfie view"); flip
     # horizontally so the user sees themselves the right way round.
-    # QImage.mirrored() takes positional args in PySide6; horizontal
-    # flip only, no vertical.
+    # ``flipped`` rather than the two-bool ``mirrored`` overload: Qt
+    # deprecated the latter, and it warns on every frame at 30 fps.
     image = QImage(
         frame_bgr.tobytes(),
         w, h,
         w * 3,
         QImage.Format.Format_BGR888,
-    ).mirrored(True, False)
+    ).flipped(Qt.Orientation.Horizontal)
     pixmap = QPixmap.fromImage(image)
     if landmarks_norm is None or len(landmarks_norm) == 0:
         return pixmap
