@@ -641,6 +641,41 @@ def test_detect_image_mode_noisy_image_is_real(tmp_path):
     assert _detection._detect_image_mode(str(src)) == _constants.MODE_REAL
 
 
+def _write_two_tone(path: Path, left, right) -> Path:
+    """128x128 PNG split down the middle — the analysis size, so the
+    helper's resize is an identity and no seam colours are invented."""
+    arr = np.zeros((128, 128, 3), dtype=np.uint8)
+    arr[:, :64] = left
+    arr[:, 64:] = right
+    Image.fromarray(arr, "RGB").save(path, format="PNG")
+    return path
+
+
+def test_detect_image_mode_collapses_near_identical_shades(tmp_path, monkeypatch):
+    """Two tones that differ only below the quantization step count as
+    ONE colour. Pins the 3-bit bucketing that decides the heuristic —
+    a counting rewrite that dropped it would read this as two."""
+    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    src = _write_two_tone(tmp_path / "shades.png", (40, 40, 40), (42, 41, 44))
+    assert _detection._detect_image_mode(str(src)) == _constants.MODE_ANIME
+
+
+def test_detect_image_mode_counts_distinct_shades_separately(tmp_path, monkeypatch):
+    """Same shape, but the tones land in different buckets — two
+    colours, which the lowered threshold now reads as a photo. The
+    boundary is ``<``, so equal-to-threshold is REAL."""
+    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    src = _write_two_tone(tmp_path / "tones.png", (40, 40, 40), (200, 100, 50))
+    assert _detection._detect_image_mode(str(src)) == _constants.MODE_REAL
+
+
+def test_detect_image_mode_single_colour_is_below_any_threshold(tmp_path, monkeypatch):
+    """Boundary just inside: one colour against a threshold of 2."""
+    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    src = _write_two_tone(tmp_path / "solid.png", (40, 40, 40), (40, 40, 40))
+    assert _detection._detect_image_mode(str(src)) == _constants.MODE_ANIME
+
+
 # ---------------------------------------------------------------------------
 # _workers — pure path helpers
 # ---------------------------------------------------------------------------

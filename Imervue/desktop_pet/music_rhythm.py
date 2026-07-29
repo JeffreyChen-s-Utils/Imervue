@@ -1,11 +1,19 @@
 """Music-rhythm driver — pet sways to system audio.
 
-When enabled, the driver opens a WASAPI loopback stream on the
-default output device (Windows-only, via ``sounddevice``), reads
+When enabled, the driver captures the system playback mix through a
+WASAPI *loopback* endpoint (Windows-only, via ``sounddevice``), reads
 the playback envelope, and modulates the pet's head + body Z-axis
 sway so the rig physically bobs to whatever's playing. Calm tracks
 produce subtle sway; loud / percussive material drives bigger
 swings.
+
+A loopback endpoint is enumerated by PortAudio as an ordinary *input*
+device that happens to mirror a render endpoint, so the capture path is
+a plain ``InputStream`` on the index :func:`find_loopback_device`
+picks. Builds that expose no such device cannot record system audio at
+all, and the driver reports failure instead of falling back to a
+microphone — swaying to room noise would look like the feature works
+while following the wrong signal entirely.
 
 WASAPI loopback is Windows-specific. macOS / Linux fall back to
 "return False on enable" so the workspace can surface the
@@ -15,9 +23,10 @@ audio through BlackHole / PulseAudio monitor sources into a real
 input device, but that's manual setup we don't try to automate.
 
 Pure helpers (:func:`compute_envelope`, :func:`smooth_envelope`,
-:func:`envelope_to_sway`) work on numpy arrays / floats with no
-audio dependency so the tuning logic is unit-testable without
-opening a real stream.
+:func:`envelope_to_sway`, :func:`find_loopback_device`,
+:func:`capture_channel_count`, :func:`capture_sample_rate`) work on
+plain values with no audio dependency so both the tuning logic and the
+device selection are unit-testable without opening a real stream.
 """
 from __future__ import annotations
 
@@ -25,7 +34,8 @@ import logging
 import math
 import platform
 import time
-from typing import TYPE_CHECKING
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
@@ -40,9 +50,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.desktop_pet.music_rhythm")
 
 DEFAULT_SAMPLE_RATE: int = 44100
+"""Fallback only. The chosen endpoint's own rate wins — see
+:func:`capture_sample_rate`."""
+
 DEFAULT_BLOCK_SIZE: int = 1024
 """~23 ms at 44.1 kHz. Short enough to track transients
 (percussive hits) without massive CPU overhead."""
+
+MAX_CAPTURE_CHANNELS: int = 2
+"""The envelope is one RMS over the whole block, so channels past
+stereo add bandwidth without changing the number."""
+
+_LOOPBACK_MARKER = "loopback"
+_PREFERRED_HOST_API = "wasapi"
+
+# Preference ranks for a loopback capture candidate — lower wins.
+_RANK_DEFAULT_ENDPOINT_ON_WASAPI = 0
+_RANK_DEFAULT_ENDPOINT = 1
+_RANK_WASAPI = 2
+_RANK_OTHER = 3
 
 DEFAULT_SWAY_PERIOD_S: float = 0.5
 """Half-period sway — head rocks left-right roughly every half
@@ -130,6 +156,120 @@ def envelope_to_sway(
     return {PARAM_ANGLE_Z: angle_z, PARAM_BODY_ANGLE_Z: body_z}
 
 
+# ---------------------------------------------------------------------
+# Loopback capture-device selection (pure — takes plain device dicts)
+# ---------------------------------------------------------------------
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    """Best-effort int coercion; device dicts come from a C library."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _strip_loopback_marker(name: str) -> str:
+    """*name* without its loopback tag and the bracket that held it.
+
+    ``"Speakers (Realtek) [Loopback]"`` → ``"Speakers (Realtek)"``, which
+    is what matches the render endpoint the device mirrors — that one
+    carries no tag.
+    """
+    index = name.lower().find(_LOOPBACK_MARKER)
+    if index < 0:
+        return name.strip()
+    return name[:index].rstrip(" ([{-").strip()
+
+
+def _host_api_name(hostapis: Sequence[Mapping[str, Any]],
+                   info: Mapping[str, Any]) -> str:
+    """Lower-cased host-API name for *info*, or ``""`` when unresolvable."""
+    index = _as_int(info.get("hostapi"), -1)
+    if not 0 <= index < len(hostapis):
+        return ""
+    return str(hostapis[index].get("name", "")).lower()
+
+
+def _default_output_name(devices: Sequence[Mapping[str, Any]],
+                         default_output: Any) -> str:
+    """Lower-cased name of the default render endpoint, or ``""``."""
+    index = _as_int(default_output, -1)
+    if not 0 <= index < len(devices):
+        return ""
+    return str(devices[index].get("name", "")).strip().lower()
+
+
+def _rank_loopback_candidate(name: str, host_api: str, target: str) -> int:
+    """Preference rank for a loopback capture device; lower wins."""
+    on_wasapi = _PREFERRED_HOST_API in host_api
+    if target and _strip_loopback_marker(name).lower() == target:
+        return (_RANK_DEFAULT_ENDPOINT_ON_WASAPI if on_wasapi
+                else _RANK_DEFAULT_ENDPOINT)
+    return _RANK_WASAPI if on_wasapi else _RANK_OTHER
+
+
+def find_loopback_device(
+    devices: Sequence[Mapping[str, Any]],
+    hostapis: Sequence[Mapping[str, Any]],
+    default_output: Any = None,
+) -> int | None:
+    """Index of the capture device that records what the system is playing.
+
+    PortAudio exposes a render endpoint's loopback as an extra *input*
+    device whose name carries a ``[Loopback]`` tag; opening that index
+    captures the mix the user is hearing. Output-only entries are skipped
+    because an ``InputStream`` on a device with no input channels fails
+    outright, which is the trap this selection exists to avoid.
+
+    ``None`` means the running PortAudio build exposes no loopback
+    endpoint. Deliberately not a fall back to the default microphone: the
+    pet would sway convincingly to room noise and the user would have no
+    way to tell the feature was following the wrong signal.
+
+    The endpoint mirroring *default_output* wins so the pet follows what
+    the user is actually listening to, and WASAPI breaks the tie because
+    a tagged device on another host API is a virtual cable whose routing
+    we cannot verify.
+    """
+    target = _default_output_name(devices, default_output)
+    best: tuple[int, int] | None = None
+    for index, info in enumerate(devices):
+        if _as_int(info.get("max_input_channels")) <= 0:
+            continue
+        name = str(info.get("name", ""))
+        if _LOOPBACK_MARKER not in name.lower():
+            continue
+        rank = _rank_loopback_candidate(
+            name, _host_api_name(hostapis, info), target)
+        if best is None or rank < best[0]:
+            best = (rank, index)
+    return None if best is None else best[1]
+
+
+def capture_channel_count(max_input_channels: Any) -> int:
+    """Channel count to open on a loopback endpoint.
+
+    Clamped into ``[1, MAX_CAPTURE_CHANNELS]``: a mono endpoint must not
+    be asked for two, and a surround endpoint gains nothing from the
+    extra channels.
+    """
+    return max(1, min(MAX_CAPTURE_CHANNELS, _as_int(max_input_channels)))
+
+
+def capture_sample_rate(default_samplerate: Any) -> int:
+    """Sample rate to request on a loopback endpoint.
+
+    The endpoint's own rate rather than a fixed 44.1 kHz: WASAPI shared
+    mode runs at the system mixer rate and rejects anything else, so a
+    hard-coded rate fails outright on the 48 kHz devices most Windows
+    machines ship with. The envelope is an RMS, so it reads the same at
+    any rate.
+    """
+    rate = _as_int(default_samplerate)
+    return rate if rate > 0 else DEFAULT_SAMPLE_RATE
+
+
 class MusicRhythmDriver(QObject):
     """Drives the rig's Z-axis sway from the system audio envelope.
 
@@ -206,9 +346,12 @@ class MusicRhythmDriver(QObject):
     # ---- stream lifecycle ------------------------------------------
 
     def _open_stream(self) -> bool:
-        """Open a WASAPI loopback InputStream on the default output
-        device. Returns ``False`` on any failure — missing module,
-        non-Windows OS, no output device, refused permission."""
+        """Open a capture stream on the system's loopback endpoint.
+
+        Returns ``False`` on any failure — missing module, non-Windows
+        OS, a PortAudio build that enumerates no loopback endpoint,
+        refused permission.
+        """
         if platform.system() != "Windows":
             logger.info(
                 "music rhythm: WASAPI loopback is Windows-only "
@@ -223,16 +366,33 @@ class MusicRhythmDriver(QObject):
             logger.info("sounddevice not installed; music rhythm unavailable")
             return False
         try:
-            output_device = sd.default.device[1]   # (input, output)
-            settings = sd.WasapiSettings(loopback=True)
+            devices = sd.query_devices()
+            index = find_loopback_device(
+                devices, sd.query_hostapis(), sd.default.device[1],
+            )
+        except Exception as exc:   # noqa: BLE001 - sounddevice raises many types
+            logger.warning("music rhythm device query failed: %s", exc)
+            return False
+        if index is None:
+            logger.info(
+                "music rhythm: no loopback capture endpoint is available; "
+                "this PortAudio build does not expose one. Enable Stereo "
+                "Mix or install a virtual loopback cable to sync the pet "
+                "to system audio",
+            )
+            return False
+        return self._start_stream(sd, index, devices[index])
+
+    def _start_stream(self, sd, index: int, info: Mapping[str, Any]) -> bool:
+        """Open and start the capture stream on the chosen endpoint."""
+        try:
             self._stream = sd.InputStream(
-                device=output_device,
-                samplerate=DEFAULT_SAMPLE_RATE,
-                channels=2,
+                device=index,
+                samplerate=capture_sample_rate(info.get("default_samplerate")),
+                channels=capture_channel_count(info.get("max_input_channels")),
                 blocksize=DEFAULT_BLOCK_SIZE,
                 dtype="float32",
                 callback=self._on_audio_block,
-                extra_settings=settings,
             )
             self._stream.start()
         except Exception as exc:   # noqa: BLE001 - sounddevice raises many types

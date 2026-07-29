@@ -41,6 +41,12 @@ logger = logging.getLogger("Imervue.plugin.safety_review")
 # marks an image as an illustration rather than a photo.
 _ANIME_COLOR_THRESHOLD = 1500
 
+# 8-bit channels are quantized down to 5 bits before the distinct-colour
+# count so near-identical shades (JPEG noise, soft gradients) collapse
+# together instead of making every photo look like a photo by default.
+_QUANTIZE_BITS = 3
+_QUANTIZE_LEVEL_BITS = 8 - _QUANTIZE_BITS
+
 # ---------------------------------------------------------------------------
 # Cached models
 # ---------------------------------------------------------------------------
@@ -164,13 +170,23 @@ def _scan_folder_recursive(folder: str) -> list[str]:
 
 def _detect_image_mode(src: str) -> str:
     """Heuristic: anime/illustration images have fewer unique quantized colors."""
+    import numpy as np
     from PIL import Image
     img = Image.open(src).convert("RGB")
     img = img.resize((128, 128), Image.Resampling.BILINEAR)
-    quantized = set()
-    for r, g, b in img.getdata():
-        quantized.add((r >> 3, g >> 3, b >> 3))
-    return MODE_ANIME if len(quantized) < _ANIME_COLOR_THRESHOLD else MODE_REAL
+    # Vectorised rather than a per-pixel loop over ``getdata()``: that
+    # API is deprecated for removal in Pillow 14, and 16k tuples through
+    # the interpreter cost far more than the whole resize before them.
+    # Each channel is 5 bits after the shift, so packing them into one
+    # integer makes the distinct-colour count a single 1-D unique().
+    channels = np.asarray(img, dtype=np.uint32) >> _QUANTIZE_BITS
+    packed = (
+        (channels[..., 0] << (2 * _QUANTIZE_LEVEL_BITS))
+        | (channels[..., 1] << _QUANTIZE_LEVEL_BITS)
+        | channels[..., 2]
+    )
+    unique_colors = int(np.unique(packed).size)
+    return MODE_ANIME if unique_colors < _ANIME_COLOR_THRESHOLD else MODE_REAL
 
 
 def _expand_box(x1, y1, x2, y2, padding: int, expand_pct: int,
