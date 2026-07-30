@@ -1985,6 +1985,7 @@ chinese_word_dict = {
     "recycle_bin_restore": "还原",
     "recycle_bin_purge": "永久删除",
     "recycle_bin_purge_confirm": "确定永久删除 {count} 个项目？此操作无法撤销。",
+    "recycle_bin_purge_failed": "有 {count} 个项目删除失败",
     "close": "关闭",
     # 图层
     "layers_title": "图层",

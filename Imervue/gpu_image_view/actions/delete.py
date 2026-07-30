@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 # Heavy imports (OpenGL, rawpy via LoadThumbnailWorker) are deferred so this
 # module is importable in environments that ship neither — including the
-# unit tests for ``commit_pending_deletions`` which only touches the undo
-# stack and ``Path.unlink``.
+# unit tests for ``commit_pending_deletions``, which only touches the undo
+# stack and the batch-delete helpers.
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -183,28 +182,40 @@ def undo_delete(main_gui: GPUImageView):
     main_gui.update()
 
 
-def commit_pending_deletions(main_gui: _UndoStackOwner):
-    from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-    for action in main_gui.undo_stack:
-        # 跳過已還原的動作
-        if action.get("restored", False):
-            continue
+def partition_pending_deletions(undo_stack: list[dict]) -> tuple[list[str], list[str]]:
+    """Split still-pending deletions into ``(unlink_paths, trash_paths)``.
 
-        external = action.get("mode") == "delete_external"
-        for path in action.get("deleted_paths", []):
-            try:
-                if not Path(path).exists():
-                    continue
-                # Folders / file-tree deletions were only hidden, never moved —
-                # send them to the OS trash now (recoverable). Viewer-list image
-                # soft-deletes are unlinked as before.
-                if external:
-                    _send_to_trash(path)
-                else:
-                    Path(path).unlink()
-                logger.info(f"Permanent delete: {path}")
-            except Exception as e:
-                logger.exception(f"Failed to permanently delete {path}: {e}")
+    Folders / file-tree deletions were only hidden, never moved, so they go
+    to the OS trash and stay recoverable from there; viewer-list image
+    soft-deletes are unlinked outright.
+    """
+    unlink_paths: list[str] = []
+    trash_paths: list[str] = []
+    for action in undo_stack:
+        if action.get("mode") not in _PENDING_DELETE_MODES or action.get("restored"):
+            continue
+        group = (trash_paths if action.get("mode") == "delete_external"
+                 else unlink_paths)
+        group.extend(action.get("deleted_paths", []))
+    return unlink_paths, trash_paths
+
+
+def commit_pending_deletions(main_gui: _UndoStackOwner):
+    """Apply every still-pending soft deletion, then clear the undo stack.
+
+    Runs from ``closeEvent`` on the GUI thread, so the disk work is handed to
+    ``purge_batch`` in groups rather than looped per path: one ``send2trash``
+    call costs ~0.27 s on Windows however few files it carries, so a few
+    hundred pending file-tree deletions used to leave the closing window
+    unresponsive for minutes.
+    """
+    from Imervue.system.trash_ops import purge_batch
+    unlink_paths, trash_paths = partition_pending_deletions(main_gui.undo_stack)
+    if unlink_paths or trash_paths:
+        removed, failed = purge_batch(unlink_paths, trash_paths)
+        logger.info("Committed %d pending deletion(s)", len(removed))
+        for path in failed:
+            logger.warning("Failed to permanently delete: %s", path)
 
     # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()

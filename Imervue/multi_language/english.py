@@ -2019,6 +2019,7 @@ english_word_dict = {
     "recycle_bin_restore": "Restore",
     "recycle_bin_purge": "Delete Forever",
     "recycle_bin_purge_confirm": "Permanently delete {count} item(s)? This cannot be undone.",
+    "recycle_bin_purge_failed": "Couldn't delete {count} item(s)",
     "close": _ENGLISH_CLOSE,
     # Layers
     "layers_title": "Layers",

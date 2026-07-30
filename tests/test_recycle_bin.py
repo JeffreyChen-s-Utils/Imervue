@@ -1,11 +1,25 @@
-"""Tests for the Recycle Bin dialog and its undo-stack manipulation helpers."""
+"""Tests for the Recycle Bin dialog and its undo-stack manipulation helpers.
+
+Purging runs on a background worker, so dialog tests call ``_drain_purge``
+to join it before asserting on the filesystem. No test may reach the real OS
+recycle bin — ``_stub_trash`` replaces the shell call for anything external.
+"""
 from __future__ import annotations
+
+from pathlib import Path
 
 from Imervue.gui.recycle_bin_dialog import (
     list_pending_entries,
     pending_external_paths,
     remove_path_from_action,
 )
+
+
+def _drain_purge(dlg) -> None:
+    """Wait for the dialog's background purge worker to finish."""
+    worker = dlg._worker
+    if worker is not None:
+        worker.wait()
 
 
 # ---------------------------------------------------------------------------
@@ -195,9 +209,50 @@ def test_dialog_purge_removes_file(qapp, tmp_path, monkeypatch):
     dlg._tree.selectAll()
     dlg._purge_selected()
 
-    assert not target.exists()
-    # The action should have been emptied → marked restored
+    # The undo stack is updated up front; the disk work runs on a worker.
     assert viewer.undo_stack[0]["restored"] is True
+    _drain_purge(dlg)
+    assert not target.exists()
+
+
+def test_dialog_purge_batches_externals_and_keeps_images_separate(
+        qapp, tmp_path, monkeypatch):
+    """Externals go to the OS bin in one grouped call; images are unlinked."""
+    from Imervue.gui.recycle_bin_dialog import RecycleBinDialog
+    from PySide6.QtWidgets import QMessageBox
+
+    image = tmp_path / "img.png"
+    image.write_bytes(b"x")
+    folders = []
+    for i in range(3):
+        folder = tmp_path / f"album_{i}"
+        folder.mkdir()
+        folders.append(str(folder))
+    trashed = _stub_trash(monkeypatch)
+
+    viewer = _MinimalViewer()
+    viewer.undo_stack.append({
+        "mode": "delete", "deleted_paths": [str(image)], "indices": [0],
+        "restored": False,
+    })
+    for folder in folders:
+        viewer.undo_stack.append({
+            "mode": "delete_external", "deleted_paths": [folder],
+            "restored": False,
+        })
+
+    dlg = RecycleBinDialog(viewer)
+    monkeypatch.setattr(
+        QMessageBox, "question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    dlg._tree.selectAll()
+    dlg._purge_selected()
+    _drain_purge(dlg)
+
+    assert not image.exists()               # image unlinked outright
+    assert trashed.groups == [folders[::-1]]  # externals: one grouped call
+    assert all(Path(f).exists() for f in folders)  # trash call was stubbed
 
 
 def test_dialog_restore_reinserts_into_image_list(qapp, tmp_path):
@@ -245,6 +300,26 @@ class _MinimalViewer:
         self._load_generation = 0
         self.thread_pool = type("T", (), {"start": lambda *a, **kw: None})()
         self.add_thumbnail = lambda *a, **kw: None
+
+
+class _TrashSpy(list):
+    """Flat list of trashed paths that also records each grouped shell call."""
+
+    def __init__(self):
+        super().__init__()
+        self.groups: list[list[str]] = []
+
+    def record(self, paths) -> None:
+        self.groups.append(list(paths))
+        self.extend(paths)
+
+
+def _stub_trash(monkeypatch) -> _TrashSpy:
+    """Replace the shell trash call so no test touches the real recycle bin."""
+    from Imervue.system import trash_ops
+    spy = _TrashSpy()
+    monkeypatch.setattr(trash_ops, "_trash_many", spy.record)
+    return spy
 
 
 def test_restore_then_commit_does_not_unlink_restored_file(qapp, tmp_path):
@@ -311,6 +386,7 @@ def test_purge_removes_action_from_undo_stack_for_commit(qapp, tmp_path):
         )
         dlg._purge_selected()
 
+    _drain_purge(dlg)
     assert not target.exists()
     # commit must be a no-op (action is empty / restored=True)
     commit_pending_deletions(viewer)
@@ -462,7 +538,6 @@ def test_pending_external_paths_collects_unrestored_folders():
 
 def test_commit_sends_external_folder_to_trash_but_unlinks_images(tmp_path, monkeypatch):
     from Imervue.gpu_image_view.actions import delete as delete_mod
-    from Imervue.gpu_image_view.actions import keyboard_actions
 
     folder = tmp_path / "folder"
     folder.mkdir()
@@ -470,11 +545,7 @@ def test_commit_sends_external_folder_to_trash_but_unlinks_images(tmp_path, monk
     image = tmp_path / "img.png"
     image.write_bytes(b"x")
 
-    trashed: list[str] = []
-    monkeypatch.setattr(
-        keyboard_actions, "_send_to_trash",
-        lambda p: (trashed.append(p), True)[1],
-    )
+    trashed = _stub_trash(monkeypatch)
 
     view = _MinimalViewer()
     view.undo_stack.append(
@@ -490,17 +561,58 @@ def test_commit_sends_external_folder_to_trash_but_unlinks_images(tmp_path, monk
     assert not image.exists()       # the image was unlinked as before
 
 
+def test_commit_groups_externals_into_one_shell_call(tmp_path, monkeypatch):
+    # One send2trash call costs ~0.27 s whatever it carries, so committing a
+    # few hundred pending deletions per path froze the closing window. Every
+    # external in the stack must land in a single grouped call.
+    from Imervue.gpu_image_view.actions import delete as delete_mod
+
+    folders = []
+    for i in range(5):
+        folder = tmp_path / f"album_{i}"
+        folder.mkdir()
+        folders.append(str(folder))
+    trashed = _stub_trash(monkeypatch)
+
+    view = _MinimalViewer()
+    for folder in folders:
+        view.undo_stack.append(
+            {"mode": "delete_external", "deleted_paths": [folder],
+             "restored": False})
+
+    delete_mod.commit_pending_deletions(view)
+
+    assert trashed.groups == [folders]
+    assert view.undo_stack == []
+
+
+def test_partition_pending_deletions_splits_by_mode():
+    from Imervue.gpu_image_view.actions.delete import partition_pending_deletions
+
+    stack = [
+        {"mode": "delete", "deleted_paths": ["/img"], "indices": [0],
+         "restored": False},
+        {"mode": "delete_external", "deleted_paths": ["/folder"],
+         "restored": False},
+        {"mode": "delete", "deleted_paths": ["/gone"], "indices": [1],
+         "restored": True},
+        {"mode": "rotate", "deleted_paths": ["/not-a-delete"]},
+    ]
+    assert partition_pending_deletions(stack) == (["/img"], ["/folder"])
+
+
+def test_partition_pending_deletions_empty_stack():
+    from Imervue.gpu_image_view.actions.delete import partition_pending_deletions
+
+    assert partition_pending_deletions([]) == ([], [])
+
+
 def test_commit_skips_restored_external_folder(tmp_path, monkeypatch):
     from Imervue.gpu_image_view.actions import delete as delete_mod
-    from Imervue.gpu_image_view.actions import keyboard_actions
 
     folder = tmp_path / "folder"
     folder.mkdir()
-    trashed: list[str] = []
-    monkeypatch.setattr(
-        keyboard_actions, "_send_to_trash",
-        lambda p: (trashed.append(p), True)[1],
-    )
+    trashed = _stub_trash(monkeypatch)
     view = _MinimalViewer()
     view.undo_stack.append(
         {"mode": "delete_external", "deleted_paths": [str(folder)], "restored": True})

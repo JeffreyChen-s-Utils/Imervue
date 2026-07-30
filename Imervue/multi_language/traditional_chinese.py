@@ -1984,6 +1984,7 @@ traditional_chinese_word_dict = {
     "recycle_bin_restore": "還原",
     "recycle_bin_purge": "永久刪除",
     "recycle_bin_purge_confirm": "確定永久刪除 {count} 個項目？此動作無法還原。",
+    "recycle_bin_purge_failed": "有 {count} 個項目刪除失敗",
     "close": "關閉",
     # 圖層
     "layers_title": "圖層",

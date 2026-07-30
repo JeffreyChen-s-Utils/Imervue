@@ -1998,6 +1998,7 @@ japanese_word_dict = {
     "recycle_bin_restore": "復元",
     "recycle_bin_purge": "完全に削除",
     "recycle_bin_purge_confirm": "{count} 個の項目を完全に削除しますか？この操作は取り消せません。",
+    "recycle_bin_purge_failed": "{count} 件を削除できませんでした",
     "close": "閉じる",
     # レイヤー
     "layers_title": "レイヤー",

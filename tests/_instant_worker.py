@@ -39,3 +39,18 @@ class FailingDeleteWorker(InstantDeleteWorker):
     def start(self) -> None:
         for callback in self._finished_cbs:
             callback([], list(self.paths))
+
+
+class DeferredDeleteWorker(InstantDeleteWorker):
+    """Variant that stays 'in flight' until ``finish()`` is called.
+
+    Lets a test queue further deletes while a worker is running, which is
+    what the tree's trash queue exists to coalesce.
+    """
+
+    def start(self) -> None:
+        """Begin the 'thread' — it reports nothing until finish()."""
+
+    def finish(self, failed=None) -> None:
+        for callback in self._finished_cbs:
+            callback(list(self.paths), list(failed or []))

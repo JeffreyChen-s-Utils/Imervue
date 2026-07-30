@@ -17,7 +17,6 @@ from PySide6.QtGui import QStandardItem, QStandardItemModel
 
 from _instant_worker import FailingDeleteWorker, InstantDeleteWorker
 from Imervue.gui.file_tree_view import (
-    _SYNC_DELETE_LIMIT,
     _FileTreeView,
     _dedupe_paths,
     _partition_delete_batch,
@@ -222,12 +221,11 @@ def test_delete_paths_skips_missing(qapp, tmp_path, monkeypatch):
 
 
 def test_delete_paths_single_uses_per_file_toast(qapp, tmp_path, monkeypatch):
-    trashed = []
-    monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
+    _use_instant_worker(monkeypatch)
     files = _make_files(tmp_path, 1)
     tree, main, _model = _make_tree(files)
     tree._delete_paths([str(files[0])])  # noqa: SLF001
-    assert trashed == [str(files[0])]
+    assert InstantDeleteWorker.created[0].paths == [str(files[0])]
     assert len(main.toast.calls) == 1
     # Single-file message names the file.
     assert "img_0.png" in main.toast.calls[0][1]
@@ -235,12 +233,11 @@ def test_delete_paths_single_uses_per_file_toast(qapp, tmp_path, monkeypatch):
 
 
 def test_delete_paths_batch_uses_single_summary_toast(qapp, tmp_path, monkeypatch):
-    trashed = []
-    monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
+    _use_instant_worker(monkeypatch)
     files = _make_files(tmp_path, 3)
     tree, main, _model = _make_tree(files)
     tree._delete_paths([str(f) for f in files])  # noqa: SLF001
-    assert len(trashed) == 3
+    assert InstantDeleteWorker.created[0].paths == [str(f) for f in files]
     # Exactly one summary toast mentioning the count — no per-file spam.
     assert len(main.toast.calls) == 1
     assert "3" in main.toast.calls[0][1]
@@ -248,13 +245,12 @@ def test_delete_paths_batch_uses_single_summary_toast(qapp, tmp_path, monkeypatc
 
 
 def test_delete_selected_deletes_all_selected_rows(qapp, tmp_path, monkeypatch):
-    trashed = []
-    monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
+    _use_instant_worker(monkeypatch)
     files = _make_files(tmp_path, 3)
     tree, _main, model = _make_tree(files)
     _select_rows(tree, model, [0, 1, 2])
     tree._delete_selected()  # noqa: SLF001
-    assert set(trashed) == {str(f) for f in files}
+    assert set(InstantDeleteWorker.created[0].paths) == {str(f) for f in files}
     tree.deleteLater()
 
 
@@ -283,11 +279,20 @@ class TestPartitionDeleteBatch:
         assert _partition_delete_batch([gone], []) == ([], [], [gone])
 
 
-def _big_batch_tree(tmp_path, monkeypatch, count, listed=0,
-                    worker_cls=InstantDeleteWorker):
+def _use_instant_worker(monkeypatch, worker_cls=InstantDeleteWorker):
+    """Swap the OS-trash worker for the synchronous stand-in.
+
+    Every batch delete is backgrounded now, so a test that leaves the real
+    worker in place would hand files to the actual recycle bin.
+    """
     from Imervue.system import trash_ops
     InstantDeleteWorker.created = []
     monkeypatch.setattr(trash_ops, "FileDeleteWorker", worker_cls)
+
+
+def _big_batch_tree(tmp_path, monkeypatch, count, listed=0,
+                    worker_cls=InstantDeleteWorker):
+    _use_instant_worker(monkeypatch, worker_cls)
     files = [str(f) for f in _make_files(tmp_path, count)]
     tree, main, _model = _make_tree(files)
     viewer = main.viewer
@@ -301,13 +306,81 @@ def _big_batch_tree(tmp_path, monkeypatch, count, listed=0,
     return tree, main, files
 
 
-def test_small_batch_stays_synchronous(qapp, tmp_path, monkeypatch):
+def test_two_file_batch_still_goes_to_the_worker(qapp, tmp_path, monkeypatch):
+    # A per-file send2trash costs ~0.27 s whatever its size, so even the
+    # smallest multi-file batch must be grouped onto the worker instead of
+    # looping on the GUI thread.
     trashed = []
     monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
-    tree, _main, files = _big_batch_tree(tmp_path, monkeypatch, _SYNC_DELETE_LIMIT)
+    tree, _main, files = _big_batch_tree(tmp_path, monkeypatch, 2)
     tree._delete_paths(files)  # noqa: SLF001
-    assert trashed == files
-    assert InstantDeleteWorker.created == []
+    assert trashed == []
+    assert len(InstantDeleteWorker.created) == 1
+    assert InstantDeleteWorker.created[0].paths == files
+    tree.deleteLater()
+
+
+def test_single_file_delete_never_blocks_the_gui_thread(qapp, tmp_path, monkeypatch):
+    # Even one file is a ~0.27 s shell round-trip, so it goes to the worker
+    # too — nothing reaches the inline trash call any more.
+    trashed = []
+    monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
+    tree, _main, files = _big_batch_tree(tmp_path, monkeypatch, 1)
+    tree._delete_paths(files)  # noqa: SLF001
+    assert trashed == []
+    assert len(InstantDeleteWorker.created) == 1
+    assert InstantDeleteWorker.created[0].paths == files
+    tree.deleteLater()
+
+
+def test_deletes_during_a_running_worker_merge_into_one_batch(
+        qapp, tmp_path, monkeypatch):
+    # A grouped shell call costs the same as a single-file one, so a burst
+    # of Delete presses must coalesce instead of spawning a thread each.
+    from _instant_worker import DeferredDeleteWorker
+
+    tree, _main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 3, worker_cls=DeferredDeleteWorker)
+    for path in files:
+        tree._delete_paths([path])  # noqa: SLF001
+
+    created = InstantDeleteWorker.created
+    assert len(created) == 1                 # two asks queued behind the first
+    assert created[0].paths == [files[0]]
+
+    created[0].finish()                      # in-flight worker lands
+
+    assert len(created) == 2
+    assert created[1].paths == files[1:]     # both queued asks in one call
+    tree.deleteLater()
+
+
+def test_queued_deletes_each_get_their_own_toast(qapp, tmp_path, monkeypatch):
+    from _instant_worker import DeferredDeleteWorker
+
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 2, worker_cls=DeferredDeleteWorker)
+    for path in files:
+        tree._delete_paths([path])  # noqa: SLF001
+    created = InstantDeleteWorker.created
+    created[0].finish()
+    created[1].finish()
+
+    # One per-file toast per request, each naming its own file.
+    messages = [msg for _kind, msg in main.toast.calls]
+    assert len(messages) == 2
+    assert "img_0.png" in messages[0]
+    assert "img_1.png" in messages[1]
+    tree.deleteLater()
+
+
+def test_a_failed_single_delete_reports_no_success_toast(
+        qapp, tmp_path, monkeypatch):
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 1, worker_cls=FailingDeleteWorker)
+    tree._delete_paths(files)  # noqa: SLF001
+    kinds = [kind for kind, _msg in main.toast.calls]
+    assert kinds == ["warning"]
     tree.deleteLater()
 
 
@@ -315,7 +388,7 @@ def test_large_batch_routes_loose_files_to_the_worker(qapp, tmp_path, monkeypatc
     trashed = []
     monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
     tree, main, files = _big_batch_tree(
-        tmp_path, monkeypatch, _SYNC_DELETE_LIMIT + 4, listed=4)
+        tmp_path, monkeypatch, 12, listed=4)
     tree._delete_paths(files)  # noqa: SLF001
     viewer = main.viewer
     # Viewer-list files soft-deleted in one pass with a single undo entry.
@@ -335,7 +408,7 @@ def test_large_batch_routes_loose_files_to_the_worker(qapp, tmp_path, monkeypatc
 
 
 def test_large_batch_without_loose_files_toasts_immediately(qapp, tmp_path, monkeypatch):
-    count = _SYNC_DELETE_LIMIT + 2
+    count = 10
     tree, main, files = _big_batch_tree(tmp_path, monkeypatch, count, listed=count)
     tree._delete_paths(files)  # noqa: SLF001
     assert InstantDeleteWorker.created == []
@@ -346,7 +419,7 @@ def test_large_batch_without_loose_files_toasts_immediately(qapp, tmp_path, monk
 
 def test_worker_failures_surface_a_warning_toast(qapp, tmp_path, monkeypatch):
     tree, main, files = _big_batch_tree(
-        tmp_path, monkeypatch, _SYNC_DELETE_LIMIT + 4,
+        tmp_path, monkeypatch, 12,
         worker_cls=FailingDeleteWorker)
     tree._delete_paths(files)  # noqa: SLF001
     kinds = [kind for kind, _msg in main.toast.calls]
@@ -354,10 +427,32 @@ def test_worker_failures_surface_a_warning_toast(qapp, tmp_path, monkeypatch):
     tree.deleteLater()
 
 
+def test_folder_batch_refreshes_hidden_rows_once(qapp, tmp_path, monkeypatch):
+    # refresh_pending_hidden costs a model lookup per pending path, so calling
+    # it inside the per-folder loop made a folder batch quadratic.
+    _use_instant_worker(monkeypatch)
+    folders = []
+    for i in range(5):
+        folder = tmp_path / f"album_{i}"
+        folder.mkdir()
+        folders.append(str(folder))
+    tree, main, _model = _make_tree(folders)
+    main.viewer.undo_stack = []
+    calls = []
+    monkeypatch.setattr(tree, "refresh_pending_hidden", lambda: calls.append(1))
+
+    tree._delete_paths(folders)  # noqa: SLF001
+
+    assert len(calls) == 1
+    assert len(main.viewer.undo_stack) == len(folders)
+    assert all(a["mode"] == "delete_external" for a in main.viewer.undo_stack)
+    tree.deleteLater()
+
+
 def test_batch_undo_entry_restores_original_positions(qapp, tmp_path, monkeypatch):
     # The single batch undo entry must round-trip through undo_delete.
     from Imervue.gpu_image_view.actions.delete import undo_delete
-    count = _SYNC_DELETE_LIMIT + 4
+    count = 12
     tree, main, files = _big_batch_tree(tmp_path, monkeypatch, count, listed=count)
     viewer = main.viewer
     original = list(viewer.model.images)

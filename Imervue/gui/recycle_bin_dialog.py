@@ -8,8 +8,9 @@ shutdown. Until then a deletion is reversible. This dialog surfaces every
 * See exactly what will be unlinked at shutdown.
 * Restore individual items (puts the path back at its saved index and
   reloads the thumbnail).
-* Permanently delete individual items right now (unlinks immediately so
-  the action is gone from the undo stack).
+* Permanently delete individual items right now — the entry leaves the undo
+  stack immediately and the disk work runs on a background worker in
+  grouped batches (see :mod:`Imervue.system.trash_ops`).
 
 Design notes:
 
@@ -42,6 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -125,12 +127,14 @@ def remove_path_from_action(action: dict, path_idx: int) -> tuple[str, int] | No
 # ---------------------------------------------------------------------------
 
 
-class RecycleBinDialog(QDialog):
+class RecycleBinDialog(WorkerHostMixin, QDialog):
     """Lists pending soft-deletions with per-item restore / purge."""
 
     def __init__(self, viewer: GPUImageView, parent=None):
         super().__init__(parent)
         self._viewer = viewer
+        # Background purge worker, or None when idle (see WorkerHostMixin).
+        self._worker = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("recycle_bin_title", "Recycle Bin"))
         self.setModal(True)
@@ -239,7 +243,7 @@ class RecycleBinDialog(QDialog):
 
     def _restore_external(self) -> None:
         """Un-hide restored folders / files by re-syncing the file tree."""
-        tree = getattr(getattr(self._viewer, "main_window", None), "tree", None)
+        tree = getattr(self._main_window(), "tree", None)
         refresh = getattr(tree, "refresh_pending_hidden", None)
         if callable(refresh):
             refresh()
@@ -260,18 +264,34 @@ class RecycleBinDialog(QDialog):
         viewer.thread_pool.start(worker)
 
     def _purge_selected(self) -> None:
+        """Detach the selected entries, then delete them on a worker thread.
+
+        The undo stack and the list are updated immediately so the dialog
+        stays live; the disk work is batched and backgrounded because one
+        ``send2trash`` shell call costs ~0.27 s, which froze the dialog for
+        minutes when purging a few hundred entries one at a time.
+        """
         entries = self._selected_entries()
         if not entries:
             return
         if not self._confirm_purge(len(entries)):
             return
+        unlink_paths: list[str] = []
+        trash_paths: list[str] = []
         for entry in sorted(
             entries,
             key=lambda e: (e["action_idx"], e["path_idx"]),
             reverse=True,
         ):
-            self._purge_one(entry)
+            path = self._detach_entry(entry)
+            if not path:
+                continue
+            group = trash_paths if entry.get("kind") == "external" else unlink_paths
+            group.append(path)
+        if trash_paths:
+            self._restore_external()  # re-sync the tree's hidden rows once
         self.refresh()
+        self._purge_in_background(unlink_paths, trash_paths)
 
     def _confirm_purge(self, count: int) -> bool:
         lang = language_wrapper.language_word_dict
@@ -289,29 +309,57 @@ class RecycleBinDialog(QDialog):
         )
         return result == QMessageBox.StandardButton.Yes
 
-    def _purge_one(self, entry: dict) -> None:
+    def _detach_entry(self, entry: dict) -> str | None:
+        """Pop *entry*'s path out of the undo stack; returns that path."""
         viewer = self._viewer
         action_idx = entry["action_idx"]
         if action_idx >= len(viewer.undo_stack):
+            return None
+        result = remove_path_from_action(
+            viewer.undo_stack[action_idx], entry["path_idx"])
+        return result[0] if result is not None else None
+
+    def _purge_in_background(self, unlink_paths: list[str],
+                             trash_paths: list[str]) -> None:
+        """Run the actual deletions on a worker so the dialog stays responsive."""
+        if not unlink_paths and not trash_paths:
             return
-        action = viewer.undo_stack[action_idx]
-        result = remove_path_from_action(action, entry["path_idx"])
-        if result is None:
+        from Imervue.system.trash_ops import FilePurgeWorker
+        worker = FilePurgeWorker(unlink_paths, trash_paths, parent=self)
+        worker.progress.connect(self._on_purge_progress)
+        worker.finished_with.connect(self._on_purge_finished)
+        self._worker = worker
+        worker.start()
+
+    def _main_window(self):
+        return getattr(self._viewer, "main_window", None)
+
+    def _on_purge_progress(self, done: int, total: int) -> None:
+        window = self._main_window()
+        if hasattr(window, "show_progress"):
+            window.show_progress(done, total)
+
+    def _on_purge_finished(self, _removed: list, failed: list) -> None:
+        self._worker = None
+        if not failed:
             return
-        path, _ = result
-        try:
-            if path and Path(path).exists():
-                if entry.get("kind") == "external":
-                    from Imervue.gpu_image_view.actions.keyboard_actions import (
-                        _send_to_trash,
-                    )
-                    _send_to_trash(path)
-                else:
-                    Path(path).unlink()
-        except OSError as exc:
-            logger.exception("Failed to purge %s: %s", path, exc)
-        if entry.get("kind") == "external":
-            self._restore_external()  # re-sync the tree's hidden rows
+        window = self._main_window()
+        if hasattr(window, "toast"):
+            lang = language_wrapper.language_word_dict
+            window.toast.warning(
+                lang.get(
+                    "recycle_bin_purge_failed",
+                    "Couldn't delete {count} item(s)",
+                ).format(count=len(failed)),
+            )
+        logger.warning("Recycle Bin purge failed on %d path(s)", len(failed))
+
+    def accept(self):  # noqa: N802 - Qt API
+        # Close must join a running purge: this dialog is a temporary
+        # (``RecycleBinDialog(...).exec()``) whose QThread child would
+        # otherwise be destroyed mid-run.
+        self._stop_worker()
+        super().accept()
 
 
 def open_recycle_bin_dialog(viewer: GPUImageView, parent=None) -> None:
