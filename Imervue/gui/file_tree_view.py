@@ -43,12 +43,6 @@ def _next_duplicate_name(source: Path) -> Path:
         n += 1
 
 
-# Batches at or below this size are trashed synchronously (a handful of shell
-# operations is imperceptible); anything larger runs on a FileDeleteWorker so
-# the GUI never freezes for the duration of a large delete.
-_SYNC_DELETE_LIMIT = 8
-
-
 def _partition_delete_batch(
     paths: Iterable[str], images: Iterable[str],
 ) -> tuple[list[str], list[str], list[str]]:
@@ -650,8 +644,10 @@ class _FileTreeView(QTreeView):
         For a single path this defers to ``_delete_path`` so the existing
         per-file toast is preserved; for a batch the individual toasts are
         suppressed and replaced with one summary so the user isn't spammed.
-        Large batches run their OS-trash calls on a background worker so
-        the GUI stays responsive for the whole delete.
+        Every batch runs its OS-trash calls on a background worker, in
+        grouped shell operations — one ``send2trash`` call costs ~0.27 s
+        regardless of how few files it carries, so even a handful deleted
+        one at a time stalls the GUI for seconds.
         """
         existing = [p for p in paths if Path(p).exists()]
         if not existing:
@@ -659,22 +655,22 @@ class _FileTreeView(QTreeView):
         if len(existing) == 1:
             self._delete_path(existing[0])
             return
-        if len(existing) <= _SYNC_DELETE_LIMIT:
-            for path in existing:
-                self._delete_path(path, notify=False)
-            self._notify_deleted_batch(len(existing))
-            return
         self._delete_batch_async(existing)
 
     def _delete_batch_async(self, existing: list[str]) -> None:
-        """Large-batch delete: soft-delete in memory, trash on a worker."""
+        """Batch delete: soft-delete in memory, trash on a worker."""
         viewer = self._main_window.viewer
         in_list, folders, loose = _partition_delete_batch(
             existing, viewer.model.images)
         if in_list:
             self._batch_delete_from_viewer_list(in_list, viewer)
-        for folder in folders:
-            self._soft_delete_folder(folder, notify=False)
+        if folders:
+            for folder in folders:
+                self._soft_delete_folder(folder, notify=False, refresh=False)
+            # One re-sync for the whole batch. refresh_pending_hidden costs
+            # a model lookup per pending path, so refreshing inside the loop
+            # is quadratic and stalls the tree on a large folder selection.
+            self.refresh_pending_hidden()
         if not loose:
             self._notify_deleted_batch(len(existing))
             return
@@ -846,14 +842,18 @@ class _FileTreeView(QTreeView):
         if _send_to_trash(path) and notify:
             self._notify_deleted(path)
 
-    def _soft_delete_folder(self, path: str, notify: bool = True) -> None:
+    def _soft_delete_folder(self, path: str, notify: bool = True, *,
+                            refresh: bool = True) -> None:
+        """Hide *path* pending deletion. ``refresh=False`` lets a batch
+        caller re-sync the hidden rows once instead of once per folder."""
         viewer = self._main_window.viewer
         viewer.undo_stack.append({
             "mode": "delete_external",
             "deleted_paths": [path],
             "restored": False,
         })
-        self.refresh_pending_hidden()
+        if refresh:
+            self.refresh_pending_hidden()
         if notify and hasattr(self._main_window, "toast"):
             lang = language_wrapper.language_word_dict
             self._main_window.toast.info(

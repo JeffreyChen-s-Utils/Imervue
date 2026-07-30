@@ -7,7 +7,6 @@ opens this dialog to isolate one group or trash all rejects in a single step.
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QThread, Signal
@@ -173,6 +172,8 @@ class CullingDialog(WorkerHostMixin, QDialog):
             self._toast("culling_auto_none", "No similar groups found")
 
     def _delete_rejects(self) -> None:
+        if self._worker is not None:
+            return
         viewer = self._ui.viewer
         base = getattr(viewer, "_unfiltered_images", None) or list(viewer.model.images)
         rejects = image_index.filter_by_cull(base, "reject")
@@ -193,31 +194,62 @@ class CullingDialog(WorkerHostMixin, QDialog):
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return
-        deleted = self._delete_paths(rejects)
+        self._start_reject_delete(rejects, base)
+
+    def _start_reject_delete(self, rejects: list[str], base: list[str]) -> None:
+        """Delete the rejects on a worker; the dialog closes when it lands.
+
+        Removing a few hundred files plus one index write each is seconds of
+        blocking I/O, so it runs off the GUI thread and the index rows are
+        cleared in a single transaction when it finishes.
+        """
+        from Imervue.system.trash_ops import FilePurgeWorker
+        self._auto_btn.setEnabled(False)
+        worker = FilePurgeWorker(rejects, parent=self)
+        worker.progress.connect(self._on_delete_progress)
+        worker.finished_with.connect(
+            lambda _removed, failed: self._on_rejects_deleted(
+                rejects, failed, base))
+        self._worker = worker
+        worker.start()
+
+    def _on_delete_progress(self, done: int, total: int) -> None:
+        if hasattr(self._ui, "show_progress"):
+            self._ui.show_progress(done, total)
+
+    def _on_rejects_deleted(self, rejects: list[str], failed: list[str],
+                            base: list[str]) -> None:
+        """Drop everything that is no longer on disk from the grid and index.
+
+        A path the worker couldn't remove is still there, so it keeps both
+        its tile and its reject flag; anything else counts as gone, whether
+        this run unlinked it or it had already vanished.
+        """
+        finalize_worker(self)
+        self._auto_btn.setEnabled(True)
+        still_there = set(failed)
+        gone = [path for path in rejects if path not in still_there]
+        with image_index.write_batch():
+            for path in gone:
+                image_index.set_cull_state(path, "unflagged")
         if hasattr(self._ui, "toast"):
             self._ui.toast.success(
                 language_wrapper.language_word_dict.get(
                     "culling_deleted_toast", "Deleted {n} reject(s)"
-                ).format(n=deleted)
+                ).format(n=len(gone))
             )
-        reject_set = set(rejects)
-        remaining = [p for p in base if p not in reject_set]
+        gone_set = set(gone)
+        viewer = self._ui.viewer
         viewer._unfiltered_images = None
         viewer.clear_tile_grid()
-        viewer.load_tile_grid_async(remaining)
+        viewer.load_tile_grid_async([p for p in base if p not in gone_set])
         self.accept()
 
-    @staticmethod
-    def _delete_paths(paths: list[str]) -> int:
-        deleted = 0
-        for p in paths:
-            try:
-                os.remove(p)
-                image_index.set_cull_state(p, "unflagged")
-                deleted += 1
-            except OSError:
-                continue
-        return deleted
+    def accept(self):  # noqa: N802 - Qt API
+        # Join a running worker before the dialog (and its QThread child) is
+        # destroyed; QDialog.accept() does not deliver a closeEvent.
+        self._stop_worker()
+        super().accept()
 
 
 def open_culling(ui: ImervueMainWindow) -> None:
