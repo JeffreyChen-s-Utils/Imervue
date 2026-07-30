@@ -7,7 +7,9 @@ there for backwards compatibility.
 import os
 import subprocess  # nosec B404  # NOSONAR - static arg lists for trusted OS file managers
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -41,6 +43,19 @@ def _next_duplicate_name(source: Path) -> Path:
         if not candidate.exists():
             return candidate
         n += 1
+
+
+@dataclass(frozen=True)
+class _TrashRequest:
+    """One queued OS-trash ask: the paths, and how to report what landed.
+
+    Requests are merged into a single shell call, so each one carries its
+    own completion callback — a single-file delete keeps naming its file in
+    the toast even when it rides along with someone else's batch.
+    """
+
+    paths: tuple[str, ...]
+    on_done: Callable[[list[str]], None] = field(repr=False)
 
 
 def _partition_delete_batch(
@@ -113,6 +128,8 @@ class _FileTreeView(QTreeView):
         # In-flight background trash workers — referenced here so they are
         # not garbage-collected mid-run; each self-evicts on finish.
         self._trash_workers: set = set()
+        # Trash asks waiting for the in-flight worker; drained as one batch.
+        self._pending_trash: list[_TrashRequest] = []
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
         # Ctrl/Shift multi-select so batch delete / copy-paths can act on
@@ -674,7 +691,10 @@ class _FileTreeView(QTreeView):
         if not loose:
             self._notify_deleted_batch(len(existing))
             return
-        self._trash_in_background(loose, already_removed=len(existing) - len(loose))
+        self._trash_in_background(_TrashRequest(
+            tuple(loose),
+            partial(self._notify_batch_result, len(existing) - len(loose)),
+        ))
 
     def _batch_delete_from_viewer_list(self, paths: list[str], viewer) -> None:
         """Soft-delete many viewer-list files in one pass.
@@ -700,14 +720,29 @@ class _FileTreeView(QTreeView):
             viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, removed[0][0])
 
-    def _trash_in_background(self, paths: list[str], already_removed: int) -> None:
-        """Move *paths* to the OS trash on a worker thread; toast on finish."""
+    def _trash_in_background(self, request: _TrashRequest) -> None:
+        """Queue *request* for the OS-trash worker and pump the queue."""
+        self._pending_trash.append(request)
+        self._pump_trash_queue()
+
+    def _pump_trash_queue(self) -> None:
+        """Start one worker for everything queued, if none is running.
+
+        Asks that arrive while a worker is in flight wait and go over in the
+        next batch. A grouped shell call costs the same ~0.27 s as a
+        single-file one, so a burst of Delete presses collapses into one
+        round-trip instead of one thread — and none of it on the GUI thread.
+        """
+        if self._trash_workers or not self._pending_trash:
+            return
         from Imervue.system.trash_ops import FileDeleteWorker
-        worker = FileDeleteWorker(paths, parent=self)
+        batch, self._pending_trash = self._pending_trash, []
+        worker = FileDeleteWorker(
+            [path for request in batch for path in request.paths], parent=self)
         worker.progress.connect(self._on_trash_progress)
         worker.finished_with.connect(
             lambda done, failed, w=worker:
-            self._on_trash_finished(w, done, failed, already_removed),
+            self._on_trash_finished(w, batch, done, failed),
         )
         self._trash_workers.add(worker)
         worker.start()
@@ -716,11 +751,13 @@ class _FileTreeView(QTreeView):
         if hasattr(self._main_window, "show_progress"):
             self._main_window.show_progress(done, total)
 
-    def _on_trash_finished(self, worker, done: list[str], failed: list[str],
-                           already_removed: int) -> None:
+    def _on_trash_finished(self, worker, batch: list[_TrashRequest],
+                           done: list[str], failed: list[str]) -> None:
         self._trash_workers.discard(worker)
         worker.deleteLater()
-        self._notify_deleted_batch(len(done) + already_removed)
+        landed = set(done)
+        for request in batch:
+            request.on_done([p for p in request.paths if p in landed])
         if failed and hasattr(self._main_window, "toast"):
             lang = language_wrapper.language_word_dict
             self._main_window.toast.warning(
@@ -729,6 +766,16 @@ class _FileTreeView(QTreeView):
                     "Couldn't delete {count} item(s)",
                 ).format(count=len(failed)),
             )
+        self._pump_trash_queue()
+
+    def _notify_batch_result(self, already_removed: int, done: list[str]) -> None:
+        """Summary toast for a multi-file delete once its trash calls land."""
+        self._notify_deleted_batch(len(done) + already_removed)
+
+    def _notify_single_result(self, path: str, done: list[str]) -> None:
+        """Per-file toast, only if the trash call actually took the file."""
+        if done:
+            self._notify_deleted(path)
 
     def shutdown(self) -> None:
         """Wait for any in-flight OS-trash workers so their QThreads aren't
@@ -745,20 +792,33 @@ class _FileTreeView(QTreeView):
                 if worker.isRunning():
                     worker.wait()
         self._trash_workers.clear()
+        self._flush_pending_trash()
 
-    def _delete_path(self, path: str, notify: bool = True):
+    def _flush_pending_trash(self) -> None:
+        """Trash whatever is still queued inline — we are shutting down.
+
+        The worker we just joined never delivered its queued ``finished_with``
+        (no event loop is left to run the slot), so nothing will pump the
+        queue. Without this, deletes the user already confirmed would be
+        dropped on the floor.
+        """
+        batch, self._pending_trash = self._pending_trash, []
+        if not batch:
+            return
+        from Imervue.system.trash_ops import trash_batch
+        trash_batch([path for request in batch for path in request.paths])
+
+    def _delete_path(self, path: str):
         if not Path(path).exists():
             return
         viewer = self._main_window.viewer
         images = viewer.model.images
         if Path(path).is_file() and path in images:
-            self._delete_from_viewer_list(path, viewer, images, notify=notify)
+            self._delete_from_viewer_list(path, viewer, images)
         else:
-            self._delete_external(path, notify=notify)
+            self._delete_external(path)
 
-    def _delete_from_viewer_list(
-        self, path: str, viewer, images: list[str], notify: bool = True,
-    ) -> None:
+    def _delete_from_viewer_list(self, path: str, viewer, images: list[str]) -> None:
         idx = images.index(path)
         images.pop(idx)
         viewer.undo_stack.append({
@@ -770,8 +830,7 @@ class _FileTreeView(QTreeView):
         self._release_tile_textures(viewer, [path])
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
-        if notify:
-            self._notify_deleted(path)
+        self._notify_deleted(path)
 
     @staticmethod
     def _release_tile_textures(viewer, paths: list[str]) -> None:
@@ -831,16 +890,17 @@ class _FileTreeView(QTreeView):
             viewer.tile_grid_mode = True
             viewer.update()
 
-    def _delete_external(self, path: str, notify: bool = True) -> None:
+    def _delete_external(self, path: str) -> None:
         # Folders go through the app Recycle Bin (kept on disk + hidden, sent to
         # the OS trash only at shutdown) so they are restorable in-app; loose
-        # non-list files still go straight to the OS trash.
+        # non-list files go straight to the OS trash — on the worker, because
+        # even a one-file shell call blocks for ~0.27 s, which is a visible
+        # hitch every time you press Delete.
         if Path(path).is_dir():
-            self._soft_delete_folder(path, notify=notify)
+            self._soft_delete_folder(path)
             return
-        from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
-        if _send_to_trash(path) and notify:
-            self._notify_deleted(path)
+        self._trash_in_background(_TrashRequest(
+            (path,), partial(self._notify_single_result, path)))
 
     def _soft_delete_folder(self, path: str, notify: bool = True, *,
                             refresh: bool = True) -> None:

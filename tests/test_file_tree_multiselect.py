@@ -221,12 +221,11 @@ def test_delete_paths_skips_missing(qapp, tmp_path, monkeypatch):
 
 
 def test_delete_paths_single_uses_per_file_toast(qapp, tmp_path, monkeypatch):
-    trashed = []
-    monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
+    _use_instant_worker(monkeypatch)
     files = _make_files(tmp_path, 1)
     tree, main, _model = _make_tree(files)
     tree._delete_paths([str(files[0])])  # noqa: SLF001
-    assert trashed == [str(files[0])]
+    assert InstantDeleteWorker.created[0].paths == [str(files[0])]
     assert len(main.toast.calls) == 1
     # Single-file message names the file.
     assert "img_0.png" in main.toast.calls[0][1]
@@ -321,15 +320,67 @@ def test_two_file_batch_still_goes_to_the_worker(qapp, tmp_path, monkeypatch):
     tree.deleteLater()
 
 
-def test_single_file_keeps_the_direct_path(qapp, tmp_path, monkeypatch):
-    # One file is one shell call either way, so it stays inline and keeps
-    # its per-file toast.
+def test_single_file_delete_never_blocks_the_gui_thread(qapp, tmp_path, monkeypatch):
+    # Even one file is a ~0.27 s shell round-trip, so it goes to the worker
+    # too — nothing reaches the inline trash call any more.
     trashed = []
     monkeypatch.setattr(_TRASH_PATH, lambda p: trashed.append(p) or True)
     tree, _main, files = _big_batch_tree(tmp_path, monkeypatch, 1)
     tree._delete_paths(files)  # noqa: SLF001
-    assert trashed == files
-    assert InstantDeleteWorker.created == []
+    assert trashed == []
+    assert len(InstantDeleteWorker.created) == 1
+    assert InstantDeleteWorker.created[0].paths == files
+    tree.deleteLater()
+
+
+def test_deletes_during_a_running_worker_merge_into_one_batch(
+        qapp, tmp_path, monkeypatch):
+    # A grouped shell call costs the same as a single-file one, so a burst
+    # of Delete presses must coalesce instead of spawning a thread each.
+    from _instant_worker import DeferredDeleteWorker
+
+    tree, _main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 3, worker_cls=DeferredDeleteWorker)
+    for path in files:
+        tree._delete_paths([path])  # noqa: SLF001
+
+    created = InstantDeleteWorker.created
+    assert len(created) == 1                 # two asks queued behind the first
+    assert created[0].paths == [files[0]]
+
+    created[0].finish()                      # in-flight worker lands
+
+    assert len(created) == 2
+    assert created[1].paths == files[1:]     # both queued asks in one call
+    tree.deleteLater()
+
+
+def test_queued_deletes_each_get_their_own_toast(qapp, tmp_path, monkeypatch):
+    from _instant_worker import DeferredDeleteWorker
+
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 2, worker_cls=DeferredDeleteWorker)
+    for path in files:
+        tree._delete_paths([path])  # noqa: SLF001
+    created = InstantDeleteWorker.created
+    created[0].finish()
+    created[1].finish()
+
+    # One per-file toast per request, each naming its own file.
+    messages = [msg for _kind, msg in main.toast.calls]
+    assert len(messages) == 2
+    assert "img_0.png" in messages[0]
+    assert "img_1.png" in messages[1]
+    tree.deleteLater()
+
+
+def test_a_failed_single_delete_reports_no_success_toast(
+        qapp, tmp_path, monkeypatch):
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 1, worker_cls=FailingDeleteWorker)
+    tree._delete_paths(files)  # noqa: SLF001
+    kinds = [kind for kind, _msg in main.toast.calls]
+    assert kinds == ["warning"]
     tree.deleteLater()
 
 
