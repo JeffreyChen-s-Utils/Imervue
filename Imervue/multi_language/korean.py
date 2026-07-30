@@ -1996,6 +1996,7 @@ korean_word_dict = {
     "recycle_bin_restore": "복원",
     "recycle_bin_purge": "영구 삭제",
     "recycle_bin_purge_confirm": "{count}개 항목을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "recycle_bin_purge_failed": "{count}개 항목을 삭제하지 못했습니다",
     "close": "닫기",
     # 레이어
     "layers_title": "레이어",
