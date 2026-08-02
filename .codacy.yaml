@@ -15,6 +15,17 @@ engines:
       # Translator dictionaries contain localised strings like "Enter password:"
       # and "API key" that trip B105 hardcoded_password_string.
       - 'Imervue/multi_language/**'
+      # Same B105 class, plugin-delivered: the Spanish dictionary's
+      # `token_rename_*` keys (token-based batch rename) pair a "token" key with
+      # a plain UI string like "Plantilla:".
+      - 'plugins/spanish_translation/**'
+      # B105 on UI labels, not secrets: `"cloud_share_password": "Password:"` is
+      # the field caption shown next to the input. Credentials are typed by the
+      # user at upload time and never stored in source.
+      - 'plugins/cloud_share/cloud_share_plugin.py'
+      # B105 on empty defaults: `"obs_password": ""` / `"webhook_token": ""` are
+      # the unset values in the desktop-pet settings schema.
+      - 'Imervue/desktop_pet/settings.py'
       # "Reveal in file manager" / launch-external subprocess calls: static argv
       # (explorer / open / xdg-open / osascript / ffmpeg) + a local path, never
       # shell=True. Same accepted pattern across these files.
