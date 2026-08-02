@@ -16,7 +16,7 @@ def _cache_dir() -> Path:
 
 
 def _cache_path(folder: str) -> Path:
-    # NOSONAR-justification: folder comes from the local file tree.
+    # Justification: folder comes from the local file tree.
     key = hashlib.sha256(str(Path(folder).resolve()).encode()).hexdigest()  # NOSONAR
     return _cache_dir() / f"{key}.json"
 

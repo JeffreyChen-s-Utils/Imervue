@@ -531,8 +531,9 @@ pixels apagados não vazam para uma nova pintura.
    | Ferr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Os docks do lado direito (Cor, Pincel, Camada, Navegador, biblioteca de Materiais,
-Histórico, Paleta, Referência, Histograma, Animação) são organizados em abas em
+Os docks do lado direito (Cor, Pincel, Balde, Paleta, Camada, Navegador, Histórico,
+Páginas, Animação, Histograma, biblioteca de Materiais, Carimbos,
+Pose, Referência) são organizados em abas em
 uma única coluna para que a tela mantenha toda a altura visível. Arraste o título
 de qualquer dock para reorganizar ou flutuar um painel, depois salve o resultado
 via ``Configurações`` > ``Layouts de Espaço de Trabalho…``.
@@ -1860,6 +1861,12 @@ Mude o idioma da interface a partir do menu ``Idioma``:
 
 É necessária uma reinicialização após a mudança.
 
+Plugins podem adicionar idiomas próprios. **Español** é distribuído exatamente assim:
+instale o plugin ``spanish_translation`` pelo downloader de plugins e ele aparece no menu
+``Language`` ao lado dos cinco idiomas embutidos. Um plugin também pode contribuir traduções
+para um idioma existente; chaves que já existem nunca são sobrescritas, então um plugin não
+consegue quebrar uma string de fábrica.
+
 ----
 
 Referência de Atalhos de Teclado
@@ -2399,6 +2406,42 @@ Uso na Linha de Comando
    imervue /caminho/para/pasta    # Abrir uma pasta específica
    imervue --debug                # Habilitar modo debug
    imervue --software_opengl      # Usar renderização por software (quando a GPU não é suportada)
+
+CLI de lote sem interface
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` executa as operações de imagem puras a partir do shell **sem iniciar
+o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem display::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Subcomando
+     - Finalidade
+   * - ``info`` / ``stats``
+     - Dimensões e formato; métricas de qualidade sem referência (``--json`` para saída legível por máquina)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - Conversão de formato (``--format`` / ``--quality``), redimensionamento pelo lado maior, caixa de miniatura
+   * - ``watermark`` / ``optimize``
+     - Marca d'água de texto (``--text`` / ``--corner`` / ``--opacity``); codificar sob um orçamento ``--max-kb``
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - Gravar a orientação EXIF nos pixels; salvar novamente sem EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - Montagem em grade (``--columns``); 3D vermelho-ciano a partir de um par estéreo (``--method``)
+   * - ``preset`` / ``pipeline``
+     - Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado
+   * - ``list-ops``
+     - Listar todos os subcomandos (``--json`` para saída legível por máquina)
+
+Flags compartilhadas: ``--out`` (diretório de saída), ``--recursive``, ``--dry-run`` (listar ações sem escrever nada), ``--overwrite`` e ``--version``.
 
 ----
 

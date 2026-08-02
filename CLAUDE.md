@@ -269,3 +269,41 @@ Reproduce every engine locally before pushing — see gates 2-4 in **Definition 
 - **Codacy**: https://app.codacy.com/gh/JeffreyChen-s-Utils/Imervue/issues/current
 - **SonarCloud**: https://sonarcloud.io/project/overview?id=JeffreyChen-s-Utils_Imervue
   (`api/hotspots/search?projectKey=JeffreyChen-s-Utils_Imervue` works without a token)
+
+**Both dashboards read ONLY the default branch (`main`).** SonarCloud analyses no other branch,
+and Codacy loads `.codacy.yaml` from `main`. A config fix or dependency bump sitting on `dev`
+changes nothing on either dashboard until it merges — so "the numbers didn't move" after a push
+to `dev` is expected, not a failure. Querying a branch that was never analysed returns an empty
+result set, which reads like a clean report; check the branch exists before trusting a zero.
+
+API tokens live in the environment — never hardcode or echo them:
+
+```bash
+curl -u "$SonarCloudToken:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=JeffreyChen-s-Utils_Imervue"
+curl -H "project-token: $CODACY_PROJECT_TOKEN" "https://app.codacy.com/api/v3/analysis/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue"
+```
+
+Codacy reports `"analyzed": false` while a run is still in flight.
+
+## Environment Gotchas
+
+Traps specific to this machine and toolchain. Each one has silently produced a wrong result
+before — the failure mode is a command that *appears* to succeed.
+
+- **Git Bash `/tmp` is invisible to the Windows Python behind `py`.** A file written to `/tmp`
+  by a shell heredoc cannot be read back by `py`, and vice versa, so a rewrite step can report
+  success while the consumer still reads the old file. Put shared intermediates in the session
+  scratchpad directory (a real Windows path) instead.
+- **`gh pr view --json merged` is not a valid field** and the command fails outright. Use
+  `mergedAt` / `mergeCommit`. When chaining `gh pr merge` with a follow-up query, a failure in
+  the query can hide the merge command's own output — verify state separately.
+- **The full test suite exits with `STATUS_ACCESS_VIOLATION` (`0xC0000005`, surfaced as a large
+  negative exit code) *after* printing a passing summary.** Pre-existing, verified against a
+  stashed tree. Read the reported counts, not the exit code.
+- **Clipboard tests flake in full runs and pass in isolation.** `QClipboard.dataChanged` arrives
+  asynchronously via `WM_CLIPBOARDUPDATE`, so two `setImage` calls separated by one
+  `processEvents` can coalesce into a single signal. Before blaming a change, re-run the test
+  isolated *and* repeat the full run on the unchanged dependency set.
+- **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
+  ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
+  must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

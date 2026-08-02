@@ -1880,6 +1880,12 @@ Changez la langue de l'interface depuis le menu ``Langue`` :
 
 Un redémarrage est nécessaire après le changement.
 
+Les plugins peuvent ajouter leurs propres langues. **Español** est proposé exactement
+ainsi : installez le plugin ``spanish_translation`` depuis le téléchargeur de plugins et il
+apparaît dans le menu ``Language`` aux côtés des cinq langues intégrées. Un plugin peut aussi
+compléter les traductions d'une langue existante ; les clés déjà présentes ne sont jamais
+écrasées, un plugin ne peut donc pas casser une chaîne livrée.
+
 ----
 
 Référence des raccourcis clavier
@@ -2416,6 +2422,43 @@ Utilisation en ligne de commande
    imervue /path/to/folder        # Open a specific folder
    imervue --debug                # Enable debug mode
    imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+
+CLI de traitement par lots sans interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` exécute les opérations d'image pures depuis un shell **sans démarrer
+Qt**, ce qui le rend utilisable depuis des scripts, des étapes de CI et des serveurs sans
+affichage::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # affiche toutes les sous-commandes disponibles
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Sous-commande
+     - Rôle
+   * - ``info`` / ``stats``
+     - Dimensions et format ; métriques de qualité sans référence (``--json`` pour une sortie exploitable par machine)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - Conversion de format (``--format`` / ``--quality``), redimensionnement au grand côté maximal, boîte de vignette
+   * - ``watermark`` / ``optimize``
+     - Filigrane texte (``--text`` / ``--corner`` / ``--opacity``) ; encoder sous un budget ``--max-kb``
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - Défloutage par canal sombre, égalisation adaptative, tramage Bayer ordonné, swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - Appliquer l'orientation EXIF aux pixels ; réenregistrer sans EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - Montage en grille (``--columns``) ; 3D rouge-cyan à partir d'une paire stéréo (``--method``)
+   * - ``preset`` / ``pipeline``
+     - Appliquer un préréglage de développement enregistré par son nom ; exécuter un pipeline JSON ordonné
+   * - ``list-ops``
+     - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
+
+Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 
 ----
 

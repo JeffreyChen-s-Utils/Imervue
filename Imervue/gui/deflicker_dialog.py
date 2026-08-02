@@ -152,41 +152,62 @@ class DeflickerWorker(QThread):
         self._paths = paths
         self._options = options
 
+    def _load_frames(self) -> list[np.ndarray | None]:
+        """Decode every input path, reporting progress as it goes.
+
+        An unreadable frame becomes ``None`` rather than aborting the run, so
+        one bad file in a time-lapse doesn't cost the user the whole sequence.
+        The ``None`` placeholder keeps the list index-aligned with ``_paths``.
+        """
+        frames: list[np.ndarray | None] = []
+        for idx, path in enumerate(self._paths):
+            try:
+                frames.append(_load_rgba(path))
+            except (OSError, ValueError):
+                logger.warning("Skipping unreadable frame: %s", path)
+                frames.append(None)
+            self.progress.emit(idx + 1)
+        return frames
+
+    def _write_corrected(self, frames: list[np.ndarray | None]) -> int:
+        """Gain-correct the decoded frames and write them out. Returns the count."""
+        valid_frames = [f for f in frames if f is not None]
+        if not valid_frames:
+            return 0
+        means = frame_luminance_means(valid_frames)
+        gains = compute_gain_factors(means, self._options)
+        gain_iter = iter(gains.tolist())
+        written = 0
+        for path, frame in zip(self._paths, frames, strict=False):
+            if frame is None:
+                continue
+            try:
+                gain = next(gain_iter)
+            except StopIteration:
+                break
+            if self._write_one(path, apply_gain(frame, gain)):
+                written += 1
+        return written
+
+    @staticmethod
+    def _write_one(path: str, corrected: np.ndarray) -> bool:
+        """Write one corrected frame into the sibling ``deflickered`` folder."""
+        out_dir = Path(path).parent / "deflickered"
+        out_path = out_dir / Path(path).name
+        try:
+            # mkdir is inside the try too — a read-only folder must skip this
+            # frame, not abort the whole run.
+            out_dir.mkdir(exist_ok=True)
+            Image.fromarray(corrected, mode="RGBA").save(str(out_path))
+            return True
+        except OSError:
+            logger.warning("Failed to write %s", out_path)
+            return False
+
     def run(self) -> None:  # pragma: no cover - thread entry
         written = 0
         try:
-            frames = []
-            for idx, path in enumerate(self._paths):
-                try:
-                    frames.append(_load_rgba(path))
-                except (OSError, ValueError):
-                    logger.warning("Skipping unreadable frame: %s", path)
-                    frames.append(None)
-                self.progress.emit(idx + 1)
-
-            valid_frames = [f for f in frames if f is not None]
-            if valid_frames:
-                means = frame_luminance_means(valid_frames)
-                gains = compute_gain_factors(means, self._options)
-                gain_iter = iter(gains.tolist())
-                for path, frame in zip(self._paths, frames, strict=False):
-                    if frame is None:
-                        continue
-                    try:
-                        gain = next(gain_iter)
-                    except StopIteration:
-                        break
-                    corrected = apply_gain(frame, gain)
-                    out_dir = Path(path).parent / "deflickered"
-                    out_path = out_dir / Path(path).name
-                    try:
-                        # mkdir is inside the try too — a read-only folder must
-                        # skip this frame, not abort the whole run.
-                        out_dir.mkdir(exist_ok=True)
-                        Image.fromarray(corrected, mode="RGBA").save(str(out_path))
-                        written += 1
-                    except OSError:
-                        logger.warning("Failed to write %s", out_path)
+            written = self._write_corrected(self._load_frames())
         except Exception as exc:  # noqa: BLE001 - worker must always report
             # Otherwise finished_with_count never fires and the dialog hangs.
             logger.exception("Deflicker failed: %s", exc)

@@ -530,8 +530,8 @@ gelöschte Pixel beim Neumalen nicht mehr ausbluten.
    |leiste|                      | Material · …   |
    +------+----------------------+----------------+
 
-Die rechten Docks (Farbe, Brush, Layer, Navigator, Materialbibliothek, Verlauf,
-Swatch, Referenz, Histogramm, Animation) sind in einer einzigen Spalte gestapelt,
+Die rechten Docks (Farbe, Brush, Bucket, Swatches, Layers, Navigator, Verlauf,
+Pages, Animation, Histogramm, Materialbibliothek, Stamps, Pose, Referenz) sind in einer einzigen Spalte gestapelt,
 sodass die Leinwand die volle sichtbare Höhe behält. Beliebigen Dock-Titel ziehen,
 um neu anzuordnen oder ein Panel zu lösen, dann das Ergebnis über
 ``Einstellungen`` > ``Workspace-Layouts…`` speichern.
@@ -1915,6 +1915,12 @@ Die Oberflächensprache lässt sich über das ``Sprache``-Menü umschalten:
 
 Nach dem Umschalten ist ein Neustart erforderlich.
 
+Plugins können eigene Sprachen hinzufügen. **Español** wird genau so bereitgestellt:
+Installiere das Plugin ``spanish_translation`` über den Plugin-Downloader, und es erscheint im
+Menü ``Language`` neben den fünf eingebauten Sprachen. Ein Plugin kann auch Übersetzungen zu
+einer bestehenden Sprache beisteuern; bereits vorhandene Schlüssel werden nie überschrieben,
+ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen.
+
 ----
 
 Tastenkürzel-Referenz
@@ -2423,6 +2429,42 @@ Kommandozeilen-Verwendung
    imervue /path/to/folder        # Bestimmten Ordner öffnen
    imervue --debug                # Debug-Modus aktivieren
    imervue --software_opengl      # Software-Rendering verwenden (wenn GPU nicht unterstützt)
+
+Headless-Batch-CLI
+^^^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` führt die reinen Bildoperationen in der Shell aus, **ohne Qt zu
+starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display nutzbar::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Unterbefehl
+     - Zweck
+   * - ``info`` / ``stats``
+     - Maße und Format; referenzfreie Qualitätsmetriken (``--json`` für maschinenlesbare Ausgabe)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - Formatkonvertierung (``--format`` / ``--quality``), Skalierung auf maximale lange Kante, Thumbnail-Box
+   * - ``watermark`` / ``optimize``
+     - Text-Wasserzeichen (``--text`` / ``--corner`` / ``--opacity``); Kodierung unter einem ``--max-kb``-Budget
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern
+   * - ``collage`` / ``anaglyph``
+     - Raster-Montage (``--columns``); Rot-Cyan-3D aus einem Stereopaar (``--method``)
+   * - ``preset`` / ``pipeline``
+     - Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen
+   * - ``list-ops``
+     - Alle Unterbefehle auflisten (``--json`` für maschinenlesbare Ausgabe)
+
+Gemeinsame Flags: ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``--version``.
 
 ----
 

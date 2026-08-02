@@ -1263,7 +1263,7 @@ class GPUImageView(QOpenGLWidget):
         if Path(path).suffix.lower() in _RAW_EXTS:
             return True
         try:
-            # NOSONAR-justification: local image path picked in the browser.
+            # Justification: local image path picked in the browser.
             return Path(path).stat().st_size >= 60 * 1024 * 1024  # NOSONAR
         except OSError:
             return False
