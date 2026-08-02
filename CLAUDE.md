@@ -2,439 +2,270 @@
 
 ## Session Progress Log — CHECK THIS FIRST
 
-`.claude/PROGRESS.md` is the hand-off file between sessions. It is gitignored scratch space:
-never a deliverable, never referenced from code or shipped docs.
+`.claude/PROGRESS.md` is the hand-off file between sessions. Gitignored scratch space: never a
+deliverable, never referenced from code or shipped docs.
 
-- **At the start of every session, read `.claude/PROGRESS.md`.** If it lists pending items, say
-  so and offer to continue them before starting anything new. If the `## Pending` section is
-  empty there is no carry-over work — proceed normally and do not mention the file again.
-- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed
-  commit, a failing gate, a follow-up the user deferred, a decision waiting on an answer. One
-  line of *what*, one line of the *next concrete step*. Long design notes belong in the code, a
-  commit message, or the PR — not here.
-- **Delete each item the moment it actually lands.** A finished item left in the file is worse
-  than no file at all.
-- **When the last pending item is done, clear the file** back to the empty template below.
-- If the file is missing, recreate it from the template.
-
-Empty template:
-
-```markdown
-# Progress Log
-
-Scratch hand-off file between sessions. Gitignored — never a deliverable, never referenced
-from code or docs. See the "Session Progress Log" section in `CLAUDE.md` for the rules.
-
-## Pending
-
-_(nothing pending)_
-
-## Notes
-```
+- **Read it at the start of every session.** If `## Pending` lists items, say so and offer to
+  continue them before starting anything new. If it's empty, proceed and don't mention the file.
+- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed commit,
+  a failing gate, a deferred follow-up, a decision waiting on an answer. One line of *what*, one
+  line of the *next concrete step*. Design notes belong in the code, the commit, or the PR.
+- **Delete each item the moment it lands.** A finished item left behind is worse than no file.
+- When the last item is done, reset the file to `# Progress Log` + an empty `## Pending` section
+  (`_(nothing pending)_`) + `## Notes`. Recreate it from that shape if it's missing.
 
 ## Definition of Done (HARD REQUIREMENT)
 
 Every feature, bug fix, refactor, or behaviour change MUST satisfy ALL of the following before it
 can be committed. No exceptions — incomplete work stays on the working copy until the gates pass.
 
-1. **Unit tests are written and they pass.** New code without new tests is incomplete; the commit
-   fails this gate. See the **Unit Tests** section below for the exact coverage expectations.
+1. **Unit tests are written and they pass.** New code without new tests is incomplete. See
+   **Unit Tests** below for the coverage expectations.
 2. `py -m pytest tests/` runs clean (or only skips that already existed before the change).
 3. `py -m ruff check .` reports no new errors.
-4. `py -m bandit -c pyproject.toml -r Imervue/` reports `No issues identified`.
-5. The commit message contains no AI tool/model names and no `Co-Authored-By` line.
+4. `py -m bandit -c pyproject.toml -r Imervue/` reports `No issues identified` (`-c` is REQUIRED;
+   without it bandit ignores the skip config).
+5. `architecture_explore.md` is updated in the same commit — see **Architecture Map**.
+6. The commit message contains no AI tool/model names and no `Co-Authored-By` line.
 
-When you finish editing code, work through this list explicitly before staging. If a gate fails,
-fix it — do not ship around it. Skipping tests "to come back later" is not allowed because later
-never happens and the gap compounds.
+Work through this list explicitly before staging. If a gate fails, fix it — do not ship around
+it. Skipping tests "to come back later" is not allowed because later never happens.
 
-## Git Commits
+## Architecture Map — `architecture_explore.md` (HARD REQUIREMENT)
 
-- NEVER add `Co-Authored-By` lines to commit messages. All commits should only contain the commit message itself with no co-author attribution.
-- NEVER mention "Claude", "Claude Code", "AI-generated", "GPT", "Copilot", or any AI tool/model name anywhere — including commit messages, PR titles, PR descriptions, code comments, and documentation.
+`architecture_explore.md` at the repo root maps the whole tree: every package, a one-line purpose
+for every module, the cross-cutting patterns, the known traps. Unlike `.claude/PROGRESS.md` it
+**is** a tracked deliverable. A map that lags the code is worse than no map — it sends people to
+the wrong file with confidence — so it is updated **in the same commit**, never in a follow-up.
 
-### Pull Requests (HARD REQUIREMENT)
+Update it when a commit changes **structure or responsibility** (not merely when the diff is big):
 
-This rule is broken most often on PRs, because agent harnesses ship a default
-instruction to append a generation footer to every PR body. **That default does not
-apply to this repository.** The project rule above overrides it.
+- **Module added / deleted / renamed / moved** → fix its row in the owning package's table
+  (path, line count, one-line purpose).
+- **A module's purpose changed** → rewrite that row. A stale purpose is the worst kind of drift.
+- **Package or subpackage added / removed** → add or remove its section, fix the §6 contents.
+- **Cross-cutting pattern changed** (worker teardown, delete batching, settle-polling, HTTPS
+  guard, suppressions, settings persistence) → §10.
+- **Tab layout, startup sequence, or entry points changed** → §3 and §4.
+- **Architectural trap fixed or introduced, or a file crossed 1000 lines** → §12.
+- **Header** — the date / commit / branch / version line at the top must match the commit.
 
-- NEVER append a generation / attribution footer to a PR body. Not
-  `🤖 Generated with …`, not "Created by …", not a tool link, not a robot emoji —
-  nothing identifying what wrote it. The PR body ends with the last line of real
-  content.
-- This applies to `gh pr create`, `gh pr edit`, and any PR comment or review body.
-- Same ban on PR titles, branch names, and issue bodies.
+Docs-only and comment-only commits need no update, and neither does a bug fix inside an existing
+module whose purpose is unchanged.
 
-**Verify before considering a PR done.** After `gh pr create` or `gh pr edit`, run:
+§2 carries per-area file/line totals. Regenerate them, don't hand-edit:
+
+```bash
+py -c "import os;t=0;f=0
+for r,d,fs in os.walk('Imervue'):
+    d[:]=[x for x in d if x!='__pycache__']
+    for n in fs:
+        if n.endswith('.py'):
+            f+=1;t+=sum(1 for _ in open(os.path.join(r,n),encoding='utf-8'))
+print(f'Imervue: {f} files, {t} lines')"
+```
+
+## No AI Attribution (HARD REQUIREMENT)
+
+NEVER mention "Claude", "Claude Code", "AI-generated", "GPT", "Copilot", or any AI tool/model
+name — in commit messages, PR titles/bodies/comments, branch names, issue bodies, code comments,
+or documentation. Never add `Co-Authored-By`.
+
+This is broken most often on PRs, because agent harnesses ship a default instruction to append a
+generation footer to every PR body. **That default does not apply to this repository.** No
+footer, no "Created by …", no tool link, no robot emoji — the PR body ends with real content.
+Applies to `gh pr create`, `gh pr edit`, and any review or comment body.
+
+Verify after `gh pr create` / `gh pr edit` — no output means clean; any hit must be stripped with
+`gh pr edit <N> --body-file` before the PR is announced as ready:
 
 ```bash
 gh pr view <N> --json title,body --jq '.title + "\n" + .body' \
   | grep -inE "claude|anthropic|copilot|chatgpt|\bgpt\b|ai-generated|generated with|🤖"
 ```
 
-No output means clean. Any hit must be stripped with `gh pr edit <N> --body-file`
-before the PR is announced as ready.
+## Code Quality
 
-## Code Quality Requirements
+**The tool config is the source of truth, not prose.** `pyproject.toml` (`[tool.ruff]`,
+`[tool.bandit]`) and `.bandit` define the enforced rule set — ruff runs `E,F,W,B,SIM,UP,PL,S,C90,N`
+with `mccabe.max-complexity = 16` and a documented ignore list. Do not restate those rules here or
+assume limits the config has deliberately relaxed. If a rule should change, change the config.
 
-### Design Patterns
+Rules the tools do **not** catch, which still apply:
 
-- Apply appropriate design patterns (Strategy, Observer, Factory, Singleton, Command, Builder, Adapter, Decorator, etc.) where they fit naturally.
-- Prefer composition over inheritance.
-- Follow SOLID principles: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion.
-- Apply DRY (Don't Repeat Yourself) — extract shared logic into reusable components.
-- Use the existing project patterns (e.g., QThread worker pattern for background tasks, signal/slot for UI communication).
+- **File length ≤ 1000 lines** (SonarQube `python:S104`). Split large modules. The current
+  over-budget list lives in §12 of `architecture_explore.md`.
+- **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
+  repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
+  flag both; ruff does not.
+- **No commented-out code, no `TODO` / `FIXME` / `XXX`** in merged code (SonarQube `python:S1135`).
+  Git preserves history; file an issue for the follow-up.
+- **No `print()` in production code** — use the project logger (`Imervue/system/log_setup.py`,
+  `logging.getLogger("Imervue")`).
+- **`assert` is for test invariants only** — it is stripped under `python -O`, so runtime
+  validation must `raise` explicitly.
+- **Release Qt resources** (`deleteLater`, `disconnect`) so widgets and threads don't leak.
+- **MD5 / SHA-1 only for non-security use** (cache keys, de-duplication) and only with
+  `usedforsecurity=False`.
+- **Public functions and classes** should carry type hints and a one-line docstring.
 
-### Software Engineering Practices
-
-- Separate concerns: keep UI, business logic, and data access in distinct layers.
-- Write self-documenting code with clear naming; add comments only for non-obvious "why" explanations.
-- Favor immutability where practical — avoid mutating shared state.
-- Handle errors explicitly at system boundaries; propagate exceptions cleanly through internal layers.
-- Keep functions short and focused — one function, one responsibility.
-- Delete dead code immediately; do not comment it out or leave unused imports/variables.
-
-### Performance
-
-- Always consider and implement the best-performance approach for the task.
-- Use lazy loading and on-demand initialization where applicable.
-- Avoid unnecessary memory allocations and copies — reuse buffers when processing large data (images, arrays).
-- Prefer batch operations over per-item processing.
-- Use appropriate data structures (dict for O(1) lookups, deque for queue operations, set for membership tests).
-- Profile and measure before optimizing hot paths; avoid premature optimization of cold paths.
-- Use generators and iterators for large datasets to minimize memory footprint.
-- Cache expensive computations with `functools.lru_cache` or manual caching where appropriate.
-
-### Security
-
-- Never hardcode secrets, API keys, tokens, or passwords in source code — use environment variables or secure config files.
-- Validate and sanitize ALL external input (user input, file uploads, API responses, CLI arguments) at system boundaries.
-- Use parameterized queries for any database operations — never concatenate user input into SQL strings.
-- Apply the principle of least privilege — request only the minimum permissions required.
-- Avoid `eval()`, `exec()`, `pickle.loads()` on untrusted data, and `subprocess` with `shell=True`.
-- Use secure defaults: HTTPS, strong hashing (bcrypt/argon2 for passwords, SHA-256+ for integrity), constant-time comparisons for secrets.
-- Sanitize file paths to prevent path traversal attacks; reject `..` segments and absolute paths from user input.
-- Log security-relevant events but never log sensitive data (passwords, tokens, PII).
+House patterns worth following over a from-scratch design: QThread workers for background tasks,
+signal/slot for UI communication, composition over inheritance, and the pure-logic / Qt-shell
+split described in `architecture_explore.md` §10.
 
 ### Unit Tests
 
-Tests are not optional polish — they are part of the change. A feature without tests is an
-incomplete feature and MUST NOT be committed. This rule applies equally to bug fixes (regression
-test required) and refactors (existing behaviour must remain green; add a test if the refactor
-exposes a previously untested path).
+Tests are part of the change, not optional polish. Bug fixes need a regression test; refactors
+must keep existing tests green and add one if they expose a previously untested path.
 
-**Required coverage for every change:**
+**Cover, for every change:** the happy path; edge cases (empty, single-element, max-size, `None`
+/ missing keys); every `except` branch; boundary values just inside and outside each range,
+threshold or enum; and a `to_dict → from_dict → equal` round-trip for anything that serialises
+(recipe, settings, layer dict, XMP).
 
-- **Happy path** — the new code does what it advertises on a representative input.
-- **Edge cases** — empty inputs, single-element inputs, max-size inputs, None / missing keys.
-- **Error handling** — every `except` branch is exercised; invalid inputs raise the documented
-  exception or are clamped to the documented safe range.
-- **Boundary conditions** — the values just inside and just outside any range, threshold, or
-  enum. Off-by-one defects live here.
-- **Round-trips** — anything that serialises (recipe, settings, layer dict, XMP) needs a
-  `to_dict → from_dict → equal` test.
+**Write, for every feature:**
 
-**Required test types for every feature:**
+- **Pure-helper tests.** Extract pure logic out of Qt classes (see `vram_budget.py`, `layers.py`,
+  `recycle_bin_dialog.list_pending_entries`) and test it without instantiating widgets.
+- **Qt smoke test.** For a dialog, instantiate it under the `qapp` fixture and assert visible
+  state (row counts, button enable state, signal emissions). Use `monkeypatch` to auto-confirm
+  `QMessageBox` / `QFileDialog` rather than stubbing whole modules. Pass `None` as parent — a
+  transient `QWidget` parent crashes teardown.
+- **Integration test where the wiring is non-obvious** — recipe pipeline, undo stack, file-tree
+  model — on small synthetic inputs.
 
-- **Pure-helper tests.** Extract pure logic out of Qt classes into helper functions (see
-  `vram_budget.py`, `layers.py`, `recycle_bin_dialog.list_pending_entries`) and unit-test
-  those directly without instantiating Qt widgets. Cheap, fast, deterministic.
-- **Qt smoke test.** If the feature has a dialog, instantiate it under the `qapp` fixture and
-  assert the visible state (row counts, button enable state, signal emissions). Use
-  `monkeypatch` to auto-confirm `QMessageBox` / `QFileDialog` instead of stubbing whole modules.
-- **Integration test where the wiring is non-obvious.** If the feature plugs into another
-  subsystem (recipe pipeline, undo stack, file-tree model), add a test that exercises the
-  end-to-end flow on small synthetic inputs.
+**Mechanics:** `pytest` style, one test module per production module (`tests/test_<module>.py`).
+Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_array`,
+`image_folder`); don't roll your own QApplication or RNG seed. Never write to the real
+`user_setting.json` — the autouse `_isolate_user_settings` fixture redirects the path, so just
+mutate `user_setting_dict` directly. A test that was already skipping for a missing optional
+dependency may keep skipping, but every NEW test must actually run.
 
-**Mechanics:**
+### Qt / OpenGL tests on headless CI
 
-- Use `pytest` style. Module-level functions and `Test*` classes are both fine; follow the
-  style of the file you're adding to.
-- Test file naming: `tests/test_<module_name>.py`. One test module per production module.
-- Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_array`,
-  `image_folder`). Do not roll your own QApplication or RNG seed.
-- Never write to the real `user_setting.json`. The autouse `_isolate_user_settings` fixture
-  redirects the path; trust it and just mutate `user_setting_dict` directly in tests.
-- Run `py -m pytest tests/` before committing. If a test was already skipping because of a
-  missing optional dependency, leave it skipping — but every NEW test must run, not skip.
+The GitHub Actions Windows runner crashes with `Windows fatal exception: access violation` once
+enough `QOpenGLWidget` instances are built in one pytest session — the offscreen-GL surface pool
+is finite and overflowing it corrupts process memory. The trace points at
+`super().__init__(parent)` inside `PuppetCanvas.__init__` or another `QOpenGLWidget` subclass.
 
-#### Qt / OpenGL tests on headless CI
-
-The GitHub Actions Windows runner crashes with `Windows fatal exception: access
-violation` once enough `QOpenGLWidget` instances are constructed in one pytest
-session — the offscreen-GL surface pool is finite and overflowing it corrupts
-process memory. The crash trace points at `super().__init__(parent)` inside
-`PuppetCanvas.__init__` (or any other `QOpenGLWidget` subclass).
-
-Every test file that constructs `PetWindow`, `PuppetCanvas`, `PuppetWorkspace`,
-or any other `QOpenGLWidget` subclass MUST import the shared skip marker at the
-top of the module:
+Every test file constructing `PetWindow`, `PuppetCanvas`, `PuppetWorkspace`, or any other
+`QOpenGLWidget` subclass MUST import the shared skip marker at the top of the module:
 
 ```python
 from _qt_skip import pytestmark  # noqa: E402,F401
 ```
 
-`tests/_qt_skip.py` exports a `pytestmark` that skips when `CI=true` or
-`QT_QPA_PLATFORM=offscreen`. Local runs still cover the file; CI sees every
-test as `s` (skipped).
-
-Before committing any test that touches Qt/GL, invoke the project subagent
-defined at `.claude/agents/qt-headless-ci-guard.md` (via the Agent tool with
-`subagent_type: qt-headless-ci-guard`). The agent enumerates the
-GL-widget constructions in the file and confirms the marker is wired so this
-crash doesn't reappear on CI. The same guard's reference body documents the
-root cause and mitigation pattern in detail.
-
-Verification command after applying the marker:
+`tests/_qt_skip.py` skips when `CI=true` or `QT_QPA_PLATFORM=offscreen`, so local runs still
+cover the file while CI reports every test as `s`. Verify with
 `CI=true py -m pytest <file> -q` — every test in the file must report `s`.
 
-### Linter & Static Analysis Compliance (SonarQube / Codacy / pylint / flake8 / ruff)
+Before committing a test that touches Qt/GL, run the `qt-headless-ci-guard` subagent
+(`.claude/agents/qt-headless-ci-guard.md`); it enumerates the GL-widget constructions and
+confirms the marker is wired. Its reference body documents the root cause in detail.
 
-All new and modified code MUST pass the following rules without warnings. These mirror the
-default rule sets of SonarQube, Codacy, pylint, flake8, ruff, and bandit for Python.
+## Plugins vs Main Program
 
-#### Complexity & Size
+The dividing line is **dependency surface**, not "AI features go in plugins" (that grouping was
+tried and reorganised). A feature is a **plugin** when any of these hold:
 
-- **Cognitive complexity**: keep each function ≤ 15 (SonarQube `python:S3776`). Break nested
-  branches into helper functions when exceeded.
-- **Cyclomatic complexity**: keep each function ≤ 10 (pylint `R1260`, radon `C`).
-- **Function length**: ≤ 75 logical lines. Split long functions into focused helpers.
-- **File length**: ≤ 1000 lines (SonarQube `python:S104`). Split large modules.
-- **Parameter count**: ≤ 7 per function (SonarQube `python:S107`). Group related params into a
-  dataclass or dict when exceeded.
-- **Nesting depth**: ≤ 4 levels (SonarQube `python:S134`). Use early returns / guard clauses.
-- **Boolean expression complexity**: ≤ 3 operators in one expression (SonarQube `python:S1067`).
-  Extract to named booleans.
-- **Return statements**: ≤ 6 per function (pylint `R0911`).
-- **Local variables**: ≤ 15 per function (pylint `R0914`).
+1. It needs a **heavy / optional runtime dependency** (rembg, onnxruntime, torch, opencv-python,
+   downloaded model weights).
+2. It needs **failure isolation** — ML / GPU / CUDA paths that can crash must not take down the
+   viewer.
+3. It needs an **independent release cadence** via the plugin downloader.
 
-#### Duplication
+It stays in the **main program** when it runs on the default dep set (numpy, Pillow, PySide6,
+defusedxml, watchdog, imageio), its worst failure is a one-image error, and it belongs to the
+everyday browse / develop workflow.
 
-- Do NOT copy-paste blocks of ≥ 3 statements across functions or files (SonarQube
-  `common-python:DuplicatedBlocks`, Codacy duplication detector). Extract shared logic.
-- Do NOT declare the same string literal ≥ 3 times (SonarQube `python:S1192`). Assign to a
-  module-level constant.
+When in doubt: *"if a user installs with the default `requirements.txt` and never opens the
+plugin manager, should this work?"* Yes → main. No → plugin.
 
-#### Naming (PEP 8)
+Smart Crop is pure-numpy Sobel + rule-of-thirds → main. AI Denoise has a pure-numpy bilateral
+mode *and* an optional ONNX path → plugin, because the plugin gates the ONNX path and its
+bilateral logic ships inside the plugin directory, so main never imports plugin-internal code.
 
-- `snake_case` for functions, methods, variables, modules (SonarQube `python:S1542`, pylint `C0103`).
-- `PascalCase` for classes (pylint `C0103`).
-- `UPPER_CASE_WITH_UNDERSCORES` for module-level constants.
-- `_leading_underscore` for private attributes / methods.
-- No single-letter names except loop indices (`i`, `j`, `k`, `x`, `y`, `z`) or well-known math symbols.
+**Layout.** Main: `Imervue/image/<feature>.py` (pure logic) + `Imervue/gui/<feature>_dialog.py`
+(Qt shell) + a menu entry in `Imervue/menu/extra_tools_menu.py`. Plugin:
+`plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py` + **all
+pure logic inside the plugin directory** (`plugins/ai_denoise/denoise.py`) — never under
+`Imervue/image/`. Bundled models go in `plugins/<name>/models/` (gitignored) and are discovered
+at runtime so users can drop in their own.
 
-#### Errors & Exceptions
+**Testing.** `Imervue/plugin/plugin_manager.py` prepends `plugins/` to `sys.path` at runtime and
+`tests/conftest.py` mirrors that at collection time, so tests import plugin modules as
+`from <plugin_name>.<module> import …`. Don't duplicate the path injection per test file.
 
-- Never use bare `except:` — always specify the exception type (SonarQube `python:S5754`, flake8 `E722`).
-- Never write `except Exception: pass` without a logged reason and comment explaining why it is safe.
-- Never catch `BaseException` directly (covers `KeyboardInterrupt`, `SystemExit`).
-- Raise specific exception types (`ValueError`, `TypeError`, `FileNotFoundError`) instead of generic `Exception`.
-- Chain exceptions with `raise X from err` to preserve context (ruff `B904`).
-- Never use `assert` for runtime validation (assertions are stripped under `python -O`); use
-  explicit `raise` instead. `assert` is only for invariants in tests.
+### Mirror plugin changes to the distribution repo (HARD REQUIREMENT)
 
-#### Code Smells
+Plugins reach users through a **separate public repo**, not the main app:
+`D:\Codes\Imervue_Plugins` → `https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins`, branch
+**`main`** (a mirror committed only to `dev` never reaches users), consumed by
+`Imervue/plugin/plugin_downloader.py`.
 
-- No unused imports, variables, or function parameters (pyflakes `F401`, `F841`, pylint `W0612`, `W0613`).
-  Prefix intentionally unused params with `_`.
-- No commented-out code. Delete it — git preserves history.
-- No `print()` calls in production code; use the project's logger (`Imervue/utils/logging`).
-- No `TODO` / `FIXME` / `XXX` left in merged code (SonarQube `python:S1135`). File a ticket instead.
-- No magic numbers — extract to `UPPER_CASE` constants (SonarQube `python:S109`). Exceptions: `0`, `1`, `-1`, `2` in obvious contexts.
-- Use `is None` / `is not None` (never `== None` / `!= None`) (pycodestyle `E711`).
-- Use `isinstance(x, T)` instead of `type(x) == T` (pycodestyle `E721`).
-- No mutable default arguments (`def f(x=[])`) — use `None` and assign inside (ruff `B006`, pylint `W0102`).
-- No global mutable state; if unavoidable, encapsulate in a module-level class or singleton.
-- Prefer f-strings over `.format()` or `%` (ruff `UP032`).
-- Always use context managers (`with` blocks) for file / resource handles (ruff `SIM115`).
-- Prefer `dict.get(key, default)` over `if key in dict: ... else: ...` (ruff `SIM401`).
-- Use comprehensions / generator expressions instead of `map` + `lambda` or manual `append` loops when clearer.
-- Close / release Qt resources (`deleteLater`, `disconnect`) to prevent leaks.
+**Any change under `plugins/<name>/` — new, edited, renamed, deleted — MUST be mirrored and
+pushed.** A plugin that exists only here is invisible to every downloader user.
 
-#### Security (bandit / SonarQube `python:S*` security rules)
-
-- `pickle.load(s)` on untrusted data is forbidden (`B301`, SonarQube `python:S5135`).
-- `yaml.load` without `SafeLoader` is forbidden — use `yaml.safe_load` (`B506`).
-- MD5 / SHA-1 are forbidden for security purposes (hashing secrets, signatures) — use SHA-256+
-  or bcrypt / argon2 (`B303`, `B304`, SonarQube `python:S4790`). They are allowed for non-security
-  uses (cache keys, file de-duplication) ONLY with `usedforsecurity=False`.
-- `subprocess` with `shell=True` is forbidden when any argument comes from user input (`B602`).
-- Never use `eval`, `exec`, `compile` on dynamic input (`B307`).
-- Never use `tempfile.mktemp()` — use `tempfile.mkstemp()` or `NamedTemporaryFile` (`B306`).
-- Network binds must not use `0.0.0.0` unless intentional and documented (`B104`).
-- XML parsing must use `defusedxml`, never stdlib `xml.etree` on untrusted input (`B405`–`B411`).
-- Random number generation for security must use `secrets` module, not `random` (`B311`).
-
-#### Typing & Documentation
-
-- Public functions and methods SHOULD have type hints on parameters and return type.
-- Public modules and classes SHOULD have a one-line docstring describing their purpose.
-- Private helpers may omit docstrings if names are self-explanatory.
-
-#### Enforcement
-
-When writing or modifying code, mentally check each function against the above rules before
-finalising. If unavoidable rule violation (e.g. Qt callback signature forces extra parameters),
-add a `# noqa: <rule>` or equivalent suppression with a brief justification comment on the same line.
-
-## Project-Specific Compliance Patterns
-
-These patterns were established while zeroing out the Codacy / SonarCloud / bandit backlog.
-Keep following them so the CI stays green and so new maintainers have an obvious prior-art
-example to copy.
-
-### Plugins vs Main Program
-
-The line between `Imervue/` (the main package) and `plugins/<name>/` is **not** "AI features
-go in plugins" — that grouping made things inconsistent and was reorganised. The correct test
-is **dependency surface**:
-
-**A feature is a plugin when ANY of the following is true:**
-
-1. It needs a **heavy / optional runtime dependency** that we don't want to force on every user
-   (rembg, onnxruntime, torch, opencv-python, large model weights downloaded on first run).
-2. It needs **failure isolation** — ML / GPU / CUDA paths that can crash should not be allowed
-   to take down the main viewer.
-3. It needs **independent release cadence** — the team wants to ship updated models or
-   algorithms through the plugin downloader without re-shipping the main app.
-
-**A feature stays in the main program when:**
-
-- It runs on the default dep set (numpy, Pillow, PySide6, defusedxml, watchdog, imageio).
-- Failure means at worst a one-image error — not a process crash.
-- It's part of the everyday browse / develop workflow that all users should see by default.
-
-**Examples.** Smart Crop is pure-numpy Sobel + rule-of-thirds → main. AI Denoise has both a
-pure-numpy bilateral mode AND an optional ONNX path → plugin (because the plugin gates the
-ONNX path; the bilateral logic ships inside the plugin directory, not in main, so the main
-package never imports plugin-internal code).
-
-#### Directory rules
-
-- **Main program**: `Imervue/image/<feature>.py` for pure logic, `Imervue/gui/<feature>_dialog.py`
-  for the Qt front-end, menu entry registered in `Imervue/menu/extra_tools_menu.py`.
-- **Plugin**: `plugins/<name>/__init__.py` (sets `plugin_class`), `plugins/<name>/<name>_plugin.py`
-  for the plugin shell + Qt dialog, and **all pure logic lives INSIDE the plugin directory**
-  (e.g. `plugins/ai_denoise/denoise.py`). Never put plugin-internal logic under `Imervue/image/`.
-- **Models**: bundled model files go to `plugins/<name>/models/` (gitignored). Plugins discover
-  them at runtime so users can drop in their own.
-
-#### Testing plugin-internal modules
-
-Plugins are not on the default `sys.path` — at runtime `Imervue/plugin/plugin_manager.py`
-prepends `plugins/` so each plugin folder becomes importable as a package. `tests/conftest.py`
-mirrors that injection at session-collect time, which lets tests in `tests/` import plugin
-modules with `from <plugin_name>.<module> import …`. Do not duplicate the path injection in
-individual test files.
-
-#### Mirror plugin changes to the distribution repo (HARD REQUIREMENT)
-
-Plugins ship to users through a **separate public repo**, not through the main app:
-
-- Local clone: `D:\Codes\Imervue_Plugins`
-- Remote: `https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins` (branch `main`)
-- Consumed by `Imervue/plugin/plugin_downloader.py` (`REPO_API_URL` / `RAW_BASE_URL`).
-
-**Any change to `plugins/<name>/` in this repo — new plugin, edit, rename, delete — MUST be
-mirrored into `D:\Codes\Imervue_Plugins` and pushed.** A plugin that exists only here is
-invisible to every user who installs through the plugin downloader, so the change is not done
-until both repos are updated.
-
-Layout of the distribution repo (the downloader walks exactly this shape):
-
-```
-<category>/<plugin_name>/<flat files>     e.g. plugins/ai_denoise/denoise.py
-                                               languages/spanish_translation/__init__.py
-```
-
-- Top-level directories are **categories** (`plugins/`, `languages/`); dot-directories are skipped.
-- The downloader fetches only files **directly inside** the plugin directory — nested
-  subdirectories (`models/`, `assets/`) are NOT downloaded. Keep every runtime-required file flat,
-  and keep discovering optional model files at runtime.
-
-Checklist when touching a plugin:
+The downloader walks `<category>/<plugin_name>/<flat files>` (e.g. `plugins/ai_denoise/denoise.py`,
+`languages/spanish_translation/__init__.py`). Top-level directories are categories; dot-directories
+are skipped; **only files directly inside the plugin directory are fetched** — nested `models/` or
+`assets/` are not. Keep every runtime-required file flat.
 
 1. Make and verify the change under `D:\Codes\Imervue\plugins\<name>\` (tests live in this repo).
-2. Commit here — remember `/plugins/` is gitignored, so new files need `git add -f`.
-3. Copy the resulting plugin directory into the matching category of `D:\Codes\Imervue_Plugins`
-   (delete the directory there for a removed plugin), then commit and push that repo.
-4. Confirm parity — the plugin folder names on both sides must match:
+2. Commit here — `/plugins/` is gitignored, so new files need `git add -f` or they silently
+   won't commit.
+3. Copy the directory into the matching category of `D:\Codes\Imervue_Plugins` (delete it there
+   for a removed plugin), then commit and push **to `main`**.
+4. Confirm parity — an empty list means in sync. Note this compares directory names only, so it
+   cannot catch file-level drift; diff the files too when a plugin was edited rather than added:
 
 ```bash
 py -c "import os;d=lambda p:{e.name for e in os.scandir(p) if e.is_dir()};a=d(r'D:\Codes\Imervue\plugins');b=d(r'D:\Codes\Imervue_Plugins\plugins')|d(r'D:\Codes\Imervue_Plugins\languages');print(sorted(a^b))"
 ```
 
-   An empty list means in sync. Anything printed is a plugin that exists on only one side.
+The no-AI-attribution rules apply to the plugins repo exactly as they do here.
 
-The commit-message rules above — no AI tool/model names, no `Co-Authored-By` — apply to the
-plugins repo exactly as they do here.
+## Network & Supply-Chain Safety
 
-#### When in doubt
+- **Every `urllib.request.urlopen` call goes through a module-level `_https_urlopen` guard.**
+  Canonical implementations: `Imervue/plugin/pip_installer.py`, `Imervue/plugin/plugin_downloader.py`.
+  The guard `urlparse`s the URL, rejects any scheme other than `https`, then calls `urlopen` —
+  defending against `http://`, `file://` or `ftp://` slipping in from a future edit or a
+  compromised upstream string (SonarQube `python:S5332`, bandit `B310`).
+- Do NOT call `urlopen` directly in new code; import or add a local `_https_urlopen`. The call
+  inside the guard is the only allowed direct use and must carry
+  `# nosec B310  # scheme validated above`.
+- **Hugging Face downloads MUST pin a revision** — `hf_hub_download(..., revision=<sha-or-tag>)`
+  (bandit `B615`). Fall back to `info.get("revision", "main")` only when the model info dict
+  already ships an explicit per-model revision; never leave it unpinned.
 
-Ask: "if a user installs Imervue with the default `requirements.txt` and never touches the
-plugin manager, should this feature work?" If yes → main. If no → plugin.
+## Suppressions & Skip Configuration
 
-### Network & Supply-Chain Safety
+Use the right comment for the right tool — they are NOT interchangeable, and every suppression
+needs a justification on the same line (`# nosec B310  # scheme validated above`):
 
-- **All `urllib.request.urlopen` calls MUST go through a module-level `_https_urlopen` guard.**
-  Canonical implementations live in `Imervue/plugin/pip_installer.py` and
-  `Imervue/plugin/plugin_downloader.py`. The guard parses the URL with `urllib.parse.urlparse`,
-  rejects any scheme other than `https`, then calls `urlopen`. This defends against both
-  future maintainers and compromised upstream strings slipping in `http://`, `file://`, or
-  `ftp://` URLs (SonarQube `python:S5332`, bandit `B310`).
-- Do NOT call `urllib.request.urlopen` directly in new code. Import or add a local
-  `_https_urlopen` helper instead.
-- The internal `urlopen` call inside the guard is the ONLY allowed direct use, and must carry
-  `# nosec B310  # scheme validated above` on the same line.
-- **Hugging Face Hub downloads MUST pin a revision.** `hf_hub_download(...)` must pass
-  `revision=<commit-sha-or-tag>` (bandit `B615`, "unsafe download without explicit revision").
-  Default to `info.get("revision", "main")` only if the model info dict already ships an
-  explicit revision per model — never leave it fully unpinned.
+| Tool | Form | Notes |
+|---|---|---|
+| ruff / flake8 | `# noqa: <CODE>` | Must name specific codes — never bare `# noqa`. |
+| bandit | `# nosec B<NNN>` | ruff's `# noqa` does NOT suppress bandit. |
+| SonarCloud | `# NOSONAR` | For hotspots that can't be config-skipped. Does nothing inside a YAML block scalar. |
+| pylint | `# pylint: disable=<name>` | Prefer a refactor. |
 
-### Suppression Comment Conventions
+Codacy ignores inline `# nosec` / `# noqa` entirely — clear its findings via
+`.codacy.yaml` `engines.<slug>.exclude_paths` (the Semgrep slug is `opengrep`, not `semgrep`) or
+by fixing the code. `sonar-project.properties` issue-ignore rules do not apply either.
 
-Use the right comment for the right tool. They are NOT interchangeable.
+Systemic false positives are skipped at config level, never per line. `.bandit` is canonical
+(YAML, one `# B<NNN>: reason` comment per rule); `pyproject.toml` `[tool.bandit]` mirrors it —
+**keep both in sync**. `.codacy.yaml` excludes `tests/**` (pytest `assert` is B101, narrow
+`except/pass` is B110) and `Imervue/multi_language/**` (translator strings like "API key" trip
+B105). After adding a skip, verify `py -m bandit -c pyproject.toml -r Imervue/` returns
+`No issues identified`.
 
-| Tool         | Comment form                             | Placement   | Notes                                               |
-|--------------|------------------------------------------|-------------|-----------------------------------------------------|
-| ruff / flake8 | `# noqa: <CODE>` (e.g. `# noqa: S310`)  | line-level  | Must list specific codes — never bare `# noqa`.     |
-| bandit        | `# nosec B<NNN>` (e.g. `# nosec B310`)  | line-level  | ruff's `# noqa` does NOT suppress bandit.           |
-| SonarCloud    | `# NOSONAR`                              | line-level  | Use for hotspots that cannot be config-skipped (e.g. deliberate clear-text URLs in test inputs). |
-| pylint        | `# pylint: disable=<name>`               | line-level  | Prefer refactor over suppression.                   |
+## Local CI & Dashboards
 
-Every suppression MUST include a brief justification on the same line
-(`# nosec B310  # scheme validated above`). Unexplained suppressions will not pass review.
+Reproduce every engine locally before pushing — see gates 2-4 in **Definition of Done**.
 
-### Project-Wide Skip Configuration
-
-Systemic false positives are skipped at the config level, never with per-line comments. The
-authoritative skip lists live in:
-
-- `.bandit` (YAML, with per-rule justification comments) — the canonical source.
-- `pyproject.toml` `[tool.bandit]` — mirror for tooling that only reads `pyproject.toml`.
-  Keep both files in sync.
-- `.codacy.yaml` `engines.bandit.exclude_paths` — excludes `tests/**` (pytest `assert` is B101,
-  narrow `except/pass` is B110) and `Imervue/multi_language/**` (translator strings like
-  "API key" trip B105 hardcoded-password).
-
-When adding a new bandit skip:
-1. Add it to `.bandit` with a `# B<NNN>: <one-line reason>` comment.
-2. Mirror it in `pyproject.toml` `[tool.bandit].skips`.
-3. Verify locally: `py -m bandit -c pyproject.toml -r Imervue/` must return `No issues identified`.
-
-### Local CI Reproduction
-
-Before pushing, reproduce each engine locally so CI does not have to tell you:
-
-- **bandit**: `py -m bandit -c pyproject.toml -r Imervue/`
-  (the `-c` flag is REQUIRED — without it, bandit ignores the skip config).
-- **ruff**: `py -m ruff check .`
-- **pytest**: `py -m pytest tests/`
-
-### External Dashboards
-
-- **Codacy project issues**: https://app.codacy.com/gh/JeffreyChen-s-Utils/Imervue/issues/current
-- **SonarCloud project**: https://sonarcloud.io/project/overview?id=JeffreyChen-s-Utils_Imervue
-  (use `api/hotspots/search?projectKey=JeffreyChen-s-Utils_Imervue` for programmatic access
-  without a token).
+- **Codacy**: https://app.codacy.com/gh/JeffreyChen-s-Utils/Imervue/issues/current
+- **SonarCloud**: https://sonarcloud.io/project/overview?id=JeffreyChen-s-Utils_Imervue
+  (`api/hotspots/search?projectKey=JeffreyChen-s-Utils_Imervue` works without a token)
