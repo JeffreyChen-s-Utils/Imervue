@@ -109,6 +109,7 @@ pip install .
 | imageio | Bild-I/O |
 | imageio-ffmpeg | Slideshow-MP4-Export (H.264 via ffmpeg) |
 | defusedxml | Sicheres XML-Parsing (XMP-Sidecars) |
+| watchdog | Rekursive Dateibaum-Überwachung (externe Änderungen aktualisieren den Baum) |
 
 Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 
@@ -145,6 +146,30 @@ python -m Imervue /path/to/folder
 | `--software_opengl` | Software-OpenGL-Rendering verwenden (setzt `QT_OPENGL=software` und `QT_ANGLE_PLATFORM=warp`) |
 | `file` | (Positionsargument) Beim Start zu öffnende Bilddatei oder Ordner |
 
+### Headless-Batch-CLI
+
+`Imervue.cli` führt die reinen Bildoperationen in der Shell aus, **ohne Qt zu starten** — praktisch für Skripte, CI-Schritte und Server ohne Display:
+
+```bash
+py -m Imervue.cli resize photos/ --max 1600 --out web/
+py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+py -m Imervue.cli info *.png --json
+py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
+```
+
+| Unterbefehl | Zweck |
+|---|---|
+| `info` / `stats` | Maße und Format; referenzfreie Qualitätsmetriken (`--json` für maschinenlesbare Ausgabe) |
+| `convert` / `resize` / `thumbnail` | Formatkonvertierung (`--format` / `--quality`), Skalierung auf maximale lange Kante, Thumbnail-Box |
+| `watermark` / `optimize` | Text-Wasserzeichen (`--text` / `--corner` / `--opacity`); Kodierung unter einem `--max-kb`-Budget |
+| `dehaze` / `clahe` / `dither` / `distort` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple |
+| `auto-orient` / `strip` | EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern |
+| `collage` / `anaglyph` | Raster-Montage (`--columns`); Rot-Cyan-3D aus einem Stereopaar (`--method`) |
+| `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
+| `list-ops` | Alle Unterbefehle auflisten (`--json` für maschinenlesbare Ausgabe) |
+
+Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
+
 ---
 
 ## Imervue — Bildbetrachter & Bibliothek
@@ -154,8 +179,9 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Viewer
 
 - **GPU-beschleunigtes Rendering** via OpenGL (GLSL-1.20-Shader mit VBO)
-- **Deep-Zoom-Pyramide** — mehrstufige Tiles mit 512×512 und LANCZOS-Resampling, LRU-Cache bis zu 256 Tiles / 1,5 GB VRAM-Budget, anisotrope Filterung bis 8×
-- **Asynchrones Laden** — Mehrthreadiges Dekodieren mit ±3 Bildern Prefetch
+- **Deep-Zoom-Pyramide** — mehrstufige 512×512-Kacheln mit LANCZOS-Resampling; der Kachel-LRU hält 256 Einträge (harte Obergrenze 512). Das VRAM-Budget wird beim Start vom GL-Treiber ermittelt und fällt auf 1,5 GB zurück, überschreibbar über die Einstellung `vram_limit_mb` (wird geklemmt, nie stillschweigend verworfen). Anisotrope Filterung bis 8×
+- **Asynchrones Laden** — Multithread-Dekodierung mit adaptivem Prefetch-Fenster: ±3 Bilder beim Blättern, erweitert auf 5 voraus / 1 zurück, sobald du konsequent in eine Richtung blätterst
+- **Getrennte Worker-Pools** — Thumbnail-Schübe und Deep-Zoom-Dekodierungen laufen in verschiedenen Pools, sodass das Öffnen eines großen Ordners nie das Bild aushungert, das du gerade ansiehst
 - **Virtualisiertes Thumbnail-Grid** — Nur sichtbare Tiles werden gerendert; Thumbnail-Größe konfigurierbar (128 / 256 / 512 / 1024 / auto)
 - **Festplatten-Cache** — Komprimierte PNG-Thumbnails mit MD5-basierter Invalidierung unter `%LOCALAPPDATA%/Imervue/cache/thumbnails` (oder `~/.cache/imervue/thumbnails`)
 - **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung
@@ -363,9 +389,15 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 - **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (jeweils mit Live-Preview-Dialog)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
-### Docks (10, getabbed)
+### Docks (14, getabbed in 3 Clustern)
 
-Color · Brush · Layer · Navigator · Material Library · History · Swatch · Reference · Histogram · Animation. Jedes Dock ist verschiebbar / floatbar. **Settings > Workspace Layouts** speichert und ruft benannte Anordnungen ab.
+| Cluster | Docks |
+|---|---|
+| Zeichnen | Color · Brush · Bucket · Swatches |
+| Leinwand | Layers · Navigator · History · Pages · Animation · Histogram |
+| Bibliothek | Materials · Stamps · Pose · Reference |
+
+Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts** speichert und ruft benannte Anordnungen ab.
 
 ### Datei-I/O
 
@@ -815,7 +847,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (57 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (56 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -888,13 +920,17 @@ Vollständige Protokoll-Oberfläche im MCP-Abschnitt von [docs/en/index.rst](../
 
 Über das **Language**-Menü umschalten. Neustart erforderlich.
 
-Plugins können vollständig neue Sprachen via `language_wrapper.register_language()` registrieren oder Übersetzungen via `get_translations()` beisteuern. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Plugins können über `language_wrapper.register_language()` vollständig neue Sprachen registrieren oder über `get_translations()` Übersetzungen zu den eingebauten beisteuern (bestehende Schlüssel werden nie überschrieben, ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen). **Español** wird genau so bereitgestellt: Installiere das Plugin `spanish_translation` über den Downloader, und es erscheint im Menü Language neben den fünf eingebauten Sprachen. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 
 ## Benutzereinstellungen
 
-Gespeichert in `user_setting.json` im Arbeitsverzeichnis. Schlüsseleinträge:
+Gespeichert in `user_setting.json` neben der Anwendung — dem Projektstamm bei einem Quellcode-Checkout, dem Ordner mit der `.exe` bei einem eingefrorenen Build (PyInstaller **oder** Nuitka).
+
+Die Datei ist ein **Multi-Profil-Container**: Jedes Profil hält ein eigenes Einstellungs-Dictionary, sodass eine Installation getrennte Setups tragen kann (z. B. *Work* und *Personal*). Profile wechseln, anlegen, umbenennen und löschen unter **File > Profiles…**. Eine v1-Datei mit einem einzelnen Profil aus einer älteren Version wird beim ersten Lesen automatisch ins Profil `default` migriert. Schreibvorgänge werden einige Sekunden nach der letzten Änderung gebündelt und landen atomar (`.tmp`-Geschwisterdatei + `os.replace`), sodass ein unterbrochenes Speichern die Datei nie abschneidet.
+
+Wichtige Einträge im aktiven Profil:
 
 | Setting | Typ | Beschreibung |
 |---------|------|-------------|
@@ -918,38 +954,51 @@ Gespeichert in `user_setting.json` im Arbeitsverzeichnis. Schlüsseleinträge:
 
 ```
 Imervue/
-├── __main__.py              # Anwendungs-Einstiegspunkt
-├── Imervue_main_window.py   # Hauptfenster (QMainWindow) — mountet die 4 Tabs
-├── gpu_image_view/          # IMERVUE TAB — GPU-Viewer + Deep Zoom
-├── gui/                     # Dialoge und Seitenpanels (Develop, EXIF usw.)
-├── paint/                   # PAINT TAB — vollwertiger Raster-Editor
-├── puppet/                  # PUPPET TAB — 2D-Rigged-Puppet-Animator
-├── export/                  # Export-Generatoren (Contact Sheet, Web Gallery, MP4)
-├── image/                   # Bild-Utilities (Pyramide, Tile-Manager, Info)
-├── library/                 # Library-Helfer (RAW+JPEG-Stacks, Indexing)
-├── macros/                  # Macro-Aufnahme / -Wiedergabe
-├── menu/                    # Menü-Definitionen (file / tools / filter / …)
+├── __main__.py              # Einstiegspunkt der Anwendung
+├── cli.py                   # Headless-Batch-CLI (ohne Qt)
+├── Imervue_main_window.py   # Hauptfenster (QMainWindow) — hängt die 5 Tabs ein
+├── gpu_image_view/          # IMERVUE-TAB — GPU-Viewer, Deep Zoom, Kachelwand
+│   ├── actions/             #   Viewer-Aktionen (löschen / auswählen / vergleichen / Diashow)
+│   └── images/              #   Ladeschicht (Dekodier-Worker, Ordner-Scan, Prefetch)
+├── gui/                     # Qt-Hüllen — Dialoge, Seitenpanels, Entwicklungspanel, Leinwände
+├── paint/                   # PAINT-TAB — vollwertiger Raster-Editor
+│   ├── docks/               #   Dock-Panels (Farbe / Pinsel / Ebene / Material / …)
+│   └── tools/               #   Zeigerwerkzeug-Handler
+├── puppet/                  # PUPPET-TAB — 2D-Rigged-Puppet-Animator + Cubism-Interop
+├── desktop_pet/             # DESKTOP-PET-TAB — rahmenloses Overlay + Live-Treiber und Hooks
+├── image/                   # Reiner Bildkern (ohne Qt) — Recipe-Pipeline, Filter, Codecs,
+│                            #   Pyramide / Kachelmanager, XMP, pHash, Metadaten
+├── library/                 # SQLite-Bibliotheksindex, Smart Albums, CLIP-Suche, Aussortieren
+├── export/                  # Export-Generatoren (Kontaktbogen, Web-Galerie, MP4, Spickzettel)
+├── macros/                  # Makro-Aufzeichnung / -Wiedergabe
+├── menu/                    # Menüdefinitionen (file / tools / filter / Rechtsklick / …)
 ├── mcp_server/              # Model-Context-Protocol-stdio-Server
-├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko)
-├── external/                # Externe-Editor-Integration
-├── plugin/                  # Plugin-System (Base / Manager / Downloader)
-├── sessions/                # Workspace-Serialisierung
-├── system/                  # Windows-Dateiverknüpfung
-└── user_settings/           # Persistente User-Config
+├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko) + Validierung
+├── external/                # Anbindung externer Editoren
+├── plugin/                  # Plugin-System (base / manager / downloader / pip-Installer)
+├── sessions/                # Sitzungs- & Workspace-Serialisierung + Migration
+├── system/                  # OS-Integration — Themes, UI-Skalierung, Dateizuordnung,
+│                            #   Zwischenablage-Monitor, Baum-Watcher, Stapel-Papierkorb, Logging
+└── user_settings/           # Persistente Multi-Profil-Konfiguration, Tags, Bewertungen, Lesezeichen
 ```
+
+Zwei Regeln gelten im gesamten Baum:
+
+- **Reine Logik ist von Qt getrennt.** Ein Einzelbild-Werkzeug besteht normalerweise aus `image/<feature>.py` (NumPy / Pillow, importierbar aus einem Worker-Thread oder einem Test ohne Display) plus `gui/<feature>_dialog.py` (der Qt-Hülle) und einem Eintrag in `menu/extra_tools_menu.py`.
+- **Große Qt-Klassen delegieren.** `GPUImageView`, `PetWindow` und `PaintWorkspace` behalten nur die Event-Overrides und den Lebenszyklus; das Verhalten lebt in benannten Kollaboratoren (`InputController`, `OverlayPainter`, `PetInteraction`, `ToolDispatcher`, …), deren Mathematik wiederum in reine Module ausgelagert ist, die sich ohne GL-Kontext testen lassen.
 
 ### Rendering-Pipeline (Imervue-Tab)
 
 1. `GPUImageView` erbt von `QOpenGLWidget`
 2. Zwei GLSL-1.20-Programme (textured Quads + Solid-Color-Rechtecke)
-3. LRU-Texture-Cache — 256-Tile-Limit, 1,5 GB VRAM-Budget
+3. LRU-Texturcache — weiche Grenze von 256 Kacheln (harte Obergrenze 512); VRAM-Budget vom GL-Treiber ermittelt, Rückfall auf 1,5 GB, vom Benutzer überschreibbar
 4. Multi-Level-Tile-Pyramide gebaut mit LANCZOS bei 512 × 512 Tile-Größe
 5. Anisotrope Filterung bis zu 8×, wenn die Hardware es unterstützt
 6. Software-Rendering-Fallback bei fehlgeschlagener Shader-Kompilation
 
 ### Thumbnail-Cache
 
-- **Key**: MD5 von `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`
+- **Schlüssel**: MD5 von `{path}|{mtime_ns}|{file_size}|{thumbnail_size}|{recipe_hash}` — der Recipe-Hash sorgt dafür, dass eine Entwicklungsbearbeitung im Thumbnail sichtbar wird, ohne alle anderen Einträge zu invalidieren
 - **Format**: Komprimiertes PNG (`compress_level=1` — schneller Write, kleiner Footprint)
 - **Location**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Win) oder `~/.cache/imervue/thumbnails` (Linux/macOS)
 - **Invalidierung**: Automatisch bei Änderung der Datei-Metadaten

@@ -109,6 +109,7 @@ pip install .
 | imageio | E/S de imágenes |
 | imageio-ffmpeg | Exportación de presentación a MP4 (H.264 vía ffmpeg) |
 | defusedxml | Análisis seguro de XML (sidecars XMP) |
+| watchdog | Vigilancia recursiva del árbol de archivos (los cambios externos refrescan el árbol) |
 
 Opcionales (gestionados por funcionalidad; si no se instalan, la función se desactiva limpiamente):
 
@@ -145,6 +146,30 @@ python -m Imervue /path/to/folder
 | `--software_opengl` | Usa renderizado OpenGL por software (define `QT_OPENGL=software` y `QT_ANGLE_PLATFORM=warp`) |
 | `file` | (posicional) Archivo de imagen o carpeta que se abrirá al iniciar |
 
+### CLI por lotes sin interfaz
+
+`Imervue.cli` ejecuta las operaciones de imagen puras desde el shell **sin arrancar Qt**, útil para scripts, pasos de CI y servidores sin pantalla:
+
+```bash
+py -m Imervue.cli resize photos/ --max 1600 --out web/
+py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+py -m Imervue.cli info *.png --json
+py -m Imervue.cli list-ops          # imprime todos los subcomandos disponibles
+```
+
+| Subcomando | Propósito |
+|---|---|
+| `info` / `stats` | Dimensiones y formato; métricas de calidad sin referencia (`--json` para salida legible por máquina) |
+| `convert` / `resize` / `thumbnail` | Conversión de formato (`--format` / `--quality`), redimensionado por lado largo máximo, caja de miniatura |
+| `watermark` / `optimize` | Marca de agua de texto (`--text` / `--corner` / `--opacity`); codificar dentro de un presupuesto `--max-kb` |
+| `dehaze` / `clahe` / `dither` / `distort` | Eliminación de neblina por canal oscuro, ecualización adaptativa, tramado Bayer ordenado, swirl / pinch / ripple |
+| `auto-orient` / `strip` | Fijar la orientación EXIF en los píxeles; volver a guardar sin EXIF / XMP / ICC |
+| `collage` / `anaglyph` | Montaje en cuadrícula (`--columns`); 3D rojo-cian a partir de un par estéreo (`--method`) |
+| `preset` / `pipeline` | Aplicar un preajuste de revelado guardado por nombre; ejecutar una cadena JSON ordenada de operaciones |
+| `list-ops` | Listar todos los subcomandos (`--json` para salida legible por máquina) |
+
+Opciones compartidas: `--out` (directorio de salida), `--recursive`, `--dry-run` (listar acciones sin escribir nada), `--overwrite` y `--version`.
+
 ---
 
 ## Imervue — Visor y biblioteca de imágenes
@@ -154,8 +179,9 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Visor
 
 - **Renderizado acelerado por GPU** mediante OpenGL (shaders GLSL 1.20 con VBO)
-- **Pirámide de deep zoom** — mosaicos multinivel de 512×512 con remuestreo LANCZOS, caché LRU hasta 256 mosaicos / presupuesto de 1.5 GB de VRAM, filtrado anisotrópico hasta 8×
-- **Carga asíncrona** — decodificación multihilo con precarga de ±3 imágenes
+- **Pirámide de zoom profundo** — teselas multinivel de 512×512 con remuestreo LANCZOS; la LRU de teselas guarda 256 entradas (techo duro 512). El presupuesto de VRAM se sondea del controlador GL al arrancar y cae a 1,5 GB si falla, redefinible con el ajuste `vram_limit_mb` (se acota, nunca se descarta en silencio). Filtrado anisotrópico hasta 8×
+- **Carga asíncrona** — decodificación multihilo con una ventana de precarga adaptativa: ±3 imágenes al navegar, ampliándose a 5 por delante / 1 por detrás en cuanto avanzas de forma constante en una dirección
+- **Pools de trabajo separados** — las ráfagas de miniaturas y las decodificaciones de zoom profundo usan pools distintos, así abrir una carpeta grande nunca deja sin recursos a la imagen que estás mirando
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)
 - **Caché en disco** — miniaturas PNG comprimidas con invalidación basada en MD5 en `%LOCALAPPDATA%/Imervue/cache/thumbnails` (o `~/.cache/imervue/thumbnails`)
 - **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad
@@ -363,9 +389,15 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 - **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos (cada uno con diálogo de vista previa en vivo)
 - **Ayudas de vista** — Cuadrícula de píxeles · Ajustar a píxel · Ajustar a bordes · Papel cebolla · Guías de sangrado · Rotación de lienzo (`Ctrl+Shift+H` rota antihorario)
 
-### Docks (10, pestañeados)
+### Docks (14, en pestañas dentro de 3 grupos)
 
-Color · Pincel · Capa · Navegador · Biblioteca de materiales · Historial · Muestrario · Referencia · Histograma · Animación. Cada dock es movible / flotante. **Settings > Workspace Layouts** guarda y recupera disposiciones con nombre.
+| Grupo | Paneles |
+|---|---|
+| Dibujo | Color · Pincel · Cubo · Muestrario |
+| Lienzo | Capa · Navegador · Historial · Páginas · Animación · Histograma |
+| Biblioteca | Materiales · Sellos · Pose · Referencia |
+
+Cada panel es movible / flotante y se puede activar por separado desde el menú **Window**. **Settings > Workspace Layouts** guarda y recupera disposiciones con nombre.
 
 ### E/S de archivos
 
@@ -813,7 +845,7 @@ python -m Imervue.mcp_server
 
 ### Herramientas
 
-Herramientas seleccionadas (57 en total — lista completa en la documentación). Cada herramienta
+Herramientas seleccionadas (56 en total — lista completa en la documentación). Cada herramienta
 anuncia un `outputSchema` JSON y `annotations` de solo lectura / destructivas, devuelve su
 resultado como `structuredContent`, y las herramientas de larga duración transmiten
 `notifications/progress`.
@@ -886,13 +918,17 @@ Superficie completa del protocolo en la sección MCP de [docs/en/index.rst](../d
 
 Cambia desde el menú **Language**. Reinicio requerido.
 
-Los plugins pueden registrar idiomas enteramente nuevos vía `language_wrapper.register_language()`, o aportar traducciones vía `get_translations()`. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Los plugins pueden registrar idiomas completamente nuevos con `language_wrapper.register_language()`, o aportar traducciones a los integrados con `get_translations()` (las claves existentes nunca se sobrescriben, así que un plugin no puede romper una cadena de fábrica). **Español** está disponible exactamente así: instala el plugin `spanish_translation` desde el descargador y aparecerá en el menú Language junto a los cinco idiomas integrados. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 
 ## Configuración del usuario
 
-Se almacena en `user_setting.json` en el directorio de trabajo. Entradas clave:
+Se guarda en `user_setting.json` junto a la aplicación: la raíz del proyecto en una copia del código fuente, o la carpeta que contiene el `.exe` en una compilación congelada (tanto PyInstaller como Nuitka).
+
+El archivo es un **contenedor multiperfil**: cada perfil guarda un diccionario de ajustes independiente, así que una sola instalación puede llevar configuraciones separadas (por ejemplo *Work* y *Personal*). Cambia, crea, renombra y elimina perfiles en **File > Profiles…**. Un archivo v1 de perfil único heredado de una versión anterior se migra automáticamente al perfil `default` en la primera lectura. Las escrituras se agrupan unos segundos después del último cambio y se aplican de forma atómica (archivo `.tmp` hermano + `os.replace`), de modo que un guardado interrumpido nunca trunca el archivo.
+
+Entradas clave del perfil activo:
 
 | Ajuste | Tipo | Descripción |
 |---------|------|-------------|
@@ -917,37 +953,50 @@ Se almacena en `user_setting.json` en el directorio de trabajo. Entradas clave:
 ```
 Imervue/
 ├── __main__.py              # Punto de entrada de la aplicación
-├── Imervue_main_window.py   # Ventana principal (QMainWindow) — monta las 4 pestañas
-├── gpu_image_view/          # PESTAÑA IMERVUE — visor GPU + deep zoom
-├── gui/                     # Diálogos y paneles laterales (revelado, EXIF, etc.)
-├── paint/                   # PESTAÑA PAINT — editor rasterizado con todas las funciones
-├── puppet/                  # PESTAÑA PUPPET — animador 2D con esqueleto
-├── export/                  # Generadores de exportación (hoja de contactos, galería web, MP4)
-├── image/                   # Utilidades de imagen (pirámide, gestor de mosaicos, info)
-├── library/                 # Helpers de biblioteca (apilamientos RAW+JPEG, indexado)
+├── cli.py                   # CLI por lotes sin interfaz (sin Qt)
+├── Imervue_main_window.py   # Ventana principal (QMainWindow) — monta las 5 pestañas
+├── gpu_image_view/          # PESTAÑA IMERVUE — visor GPU, zoom profundo, muro de teselas
+│   ├── actions/             #   verbos del visor (borrar / seleccionar / comparar / pase)
+│   └── images/              #   capa de carga (workers de decodificación, escaneo, precarga)
+├── gui/                     # Cascarones Qt — diálogos, paneles laterales, panel de revelado, lienzos
+├── paint/                   # PESTAÑA PAINT — editor ráster completo
+│   ├── docks/               #   paneles acoplables (color / pincel / capa / material / …)
+│   └── tools/               #   manejadores de herramientas de puntero
+├── puppet/                  # PESTAÑA PUPPET — animador 2D con rig + interoperabilidad Cubism
+├── desktop_pet/             # PESTAÑA DESKTOP PET — superposición sin marco + drivers y ganchos
+├── image/                   # Núcleo de imagen puro (sin Qt) — pipeline de recipe, filtros, códecs,
+│                            #   pirámide / gestor de teselas, XMP, pHash, metadatos
+├── library/                 # Índice SQLite de biblioteca, álbumes inteligentes, búsqueda CLIP, descarte
+├── export/                  # Generadores de exportación (hoja de contactos, galería web, MP4, chuleta)
 ├── macros/                  # Grabación / reproducción de macros
-├── menu/                    # Definiciones de menú (file / tools / filter / …)
-├── mcp_server/              # Servidor stdio Model Context Protocol
-├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko)
+├── menu/                    # Definiciones de menú (file / tools / filter / clic derecho / …)
+├── mcp_server/              # Servidor stdio de Model Context Protocol
+├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko) + validación
 ├── external/                # Integración con editores externos
-├── plugin/                  # Sistema de plugins (base / manager / downloader)
-├── sessions/                # Serialización del espacio de trabajo
-├── system/                  # Asociación de archivos en Windows
-└── user_settings/           # Configuración persistente del usuario
+├── plugin/                  # Sistema de plugins (base / manager / downloader / instalador pip)
+├── sessions/                # Serialización de sesión y espacio de trabajo + migración
+├── system/                  # Integración con el SO — temas, escala de UI, asociación de archivos,
+│                            #   monitor del portapapeles, vigilante del árbol, papelera por lotes, logging
+└── user_settings/           # Configuración multiperfil persistente, etiquetas, valoraciones, marcadores
 ```
+
+Dos reglas se mantienen en todo el árbol:
+
+- **La lógica pura está separada de Qt.** Una herramienta de una sola imagen suele ser `image/<feature>.py` (NumPy / Pillow, importable desde un hilo de trabajo o un test sin pantalla) más `gui/<feature>_dialog.py` (el cascarón Qt) y una entrada en `menu/extra_tools_menu.py`.
+- **Las clases Qt grandes delegan.** `GPUImageView`, `PetWindow` y `PaintWorkspace` conservan solo las sobrescrituras de eventos y el ciclo de vida; el comportamiento vive en colaboradores con nombre (`InputController`, `OverlayPainter`, `PetInteraction`, `ToolDispatcher`, …), cuyas matemáticas se extraen de nuevo a módulos puros que se testean sin contexto GL.
 
 ### Cadena de renderizado (pestaña Imervue)
 
 1. `GPUImageView` extiende `QOpenGLWidget`
 2. Dos programas GLSL 1.20 (quads texturizados + rectángulos de color sólido)
-3. Caché LRU de texturas — límite de 256 mosaicos, presupuesto de 1.5 GB de VRAM
+3. Caché LRU de texturas — límite blando de 256 teselas (techo duro 512); presupuesto de VRAM sondeado del controlador GL, con reserva de 1,5 GB, redefinible por el usuario
 4. Pirámide de mosaicos multinivel construida con LANCZOS a tamaño de mosaico 512 × 512
 5. Filtrado anisotrópico hasta 8× cuando el hardware lo soporta
 6. Renderizado por software como respaldo si falla la compilación del shader
 
 ### Caché de miniaturas
 
-- **Clave**: MD5 de `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`
+- **Clave**: MD5 de `{path}|{mtime_ns}|{file_size}|{thumbnail_size}|{recipe_hash}` — el hash del recipe es lo que hace que una edición de revelado aparezca en la miniatura sin invalidar todas las demás entradas
 - **Formato**: PNG comprimido (`compress_level=1` — escritura rápida, huella pequeña)
 - **Ubicación**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Win) o `~/.cache/imervue/thumbnails` (Linux/macOS)
 - **Invalidación**: Automática al cambiar metadatos del archivo

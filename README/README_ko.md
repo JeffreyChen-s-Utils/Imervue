@@ -109,6 +109,7 @@ pip install .
 | imageio | 이미지 입출력 |
 | imageio-ffmpeg | 슬라이드쇼 MP4 내보내기 (ffmpeg을 통한 H.264) |
 | defusedxml | 안전한 XML 파싱 (XMP 사이드카) |
+| watchdog | 파일 트리 재귀 감시(외부 변경 시 트리 자동 새로 고침) |
 
 선택 사항 (기능별 게이트; 설치하지 않으면 해당 기능만 비활성화):
 
@@ -145,6 +146,30 @@ python -m Imervue /path/to/folder
 | `--software_opengl` | 소프트웨어 OpenGL 렌더링 사용 (`QT_OPENGL=software` 및 `QT_ANGLE_PLATFORM=warp` 설정) |
 | `file` | (위치 인자) 시작 시 열 이미지 파일 또는 폴더 |
 
+### 헤드리스 배치 CLI
+
+`Imervue.cli`는 **Qt를 시작하지 않고** 순수 이미지 연산을 셸에서 실행합니다. 스크립트, CI 단계, 디스플레이가 없는 서버에 유용합니다:
+
+```bash
+py -m Imervue.cli resize photos/ --max 1600 --out web/
+py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+py -m Imervue.cli info *.png --json
+py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 출력
+```
+
+| 서브커맨드 | 용도 |
+|---|---|
+| `info` / `stats` | 크기와 포맷, 무참조 품질 지표(`--json`으로 기계 판독 출력) |
+| `convert` / `resize` / `thumbnail` | 포맷 변환(`--format` / `--quality`), 긴 변 상한 리사이즈, 썸네일 크기 |
+| `watermark` / `optimize` | 텍스트 워터마크(`--text` / `--corner` / `--opacity`), `--max-kb` 예산 내 인코딩 |
+| `dehaze` / `clahe` / `dither` / `distort` | 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple |
+| `auto-orient` / `strip` | EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장 |
+| `collage` / `anaglyph` | 그리드 몽타주(`--columns`), 스테레오 쌍에서 적청 3D(`--method`) |
+| `preset` / `pipeline` | 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행 |
+| `list-ops` | 모든 서브커맨드 출력(`--json`으로 기계 판독 출력) |
+
+공용 플래그: `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `--version`.
+
 ---
 
 ## Imervue — 이미지 브라우저 및 라이브러리
@@ -154,8 +179,9 @@ python -m Imervue /path/to/folder
 ### 뷰어
 
 - **GPU 가속 렌더링** — OpenGL (GLSL 1.20 셰이더 + VBO)
-- **딥 줌 피라미드** — 512×512 타일의 다단계 LANCZOS 리샘플링, LRU 캐시 최대 256 타일 / 1.5 GB VRAM 예산, 최대 8× 이방성 필터링
-- **비동기 로딩** — 멀티스레드 디코딩 + ±3장 프리페치
+- **딥 줌 피라미드** — 512×512 타일 멀티레벨 LANCZOS 리샘플링. 타일 LRU는 256개 유지(하드 상한 512). VRAM 예산은 시작 시 GL 드라이버에서 탐지하며 실패 시 1.5 GB로 폴백하고, `vram_limit_mb` 설정으로 재정의 가능(클램프되며 조용히 무시되지 않음). 최대 8× 이방성 필터링
+- **비동기 로딩** — 멀티스레드 디코딩과 적응형 프리페치 창: 일반 탐색은 ±3장, 한 방향으로 계속 넘기면 앞 5장 / 뒤 1장으로 확장
+- **분리된 워커 풀** — 썸네일 폭주와 딥 줌 디코딩이 서로 다른 풀에서 동작하므로, 큰 폴더를 열어도 지금 보고 있는 이미지가 밀리지 않습니다
 - **가상화된 썸네일 그리드** — 화면에 보이는 타일만 렌더링; 썸네일 크기 설정 가능 (128 / 256 / 512 / 1024 / 자동)
 - **디스크 캐시** — MD5 기반 무효화를 사용하는 압축 PNG 썸네일, `%LOCALAPPDATA%/Imervue/cache/thumbnails` (또는 `~/.cache/imervue/thumbnails`)에 저장
 - **애니메이션 재생** — GIF / APNG, 재생 / 일시정지 / 프레임 단위 / 속도 제어 지원
@@ -363,9 +389,15 @@ python -m Imervue /path/to/folder
 - **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (각각 라이브 미리보기 다이얼로그 포함)
 - **보기 보조** — 픽셀 격자 · 픽셀에 스냅 · 가장자리에 스냅 · 어니언 스킨 · 블리드 가이드 · 캔버스 회전 (`Ctrl+Shift+H`로 반시계 방향 회전)
 
-### 도크 (10개, 탭형)
+### 도크 (14개, 3개 클러스터 탭형)
 
-Color · Brush · Layer · Navigator · 머티리얼 라이브러리 · History · Swatch · Reference · Histogram · Animation. 각 도크는 이동 / 플로팅 가능. **Settings > Workspace Layouts**로 명명된 배치를 저장 및 호출.
+| 클러스터 | 도크 |
+|---|---|
+| 드로잉 | Color · Brush · Bucket · Swatches |
+| 캔버스 | Layers · Navigator · History · Pages · Animation · Histogram |
+| 라이브러리 | Materials · Stamps · Pose · Reference |
+
+각 도크는 이동 / 플로팅 가능하며 **Window** 메뉴에서 개별로 켜고 끌 수 있습니다. **Settings > Workspace Layouts**로 명명된 배치를 저장 및 호출.
 
 ### 파일 입출력
 
@@ -737,7 +769,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | `on_plugin_loaded()` | 플러그인 인스턴스화 후 |
 | `on_plugin_unloaded()` | 앱 종료 시 |
 | `on_build_menu_bar(menu_bar)` | 기본 메뉴 바가 빌드된 후 |
-| `on_build_main_tabs(tabs)` | 내장 4개 탭이 추가된 후 |
+| `on_build_main_tabs(tabs)` | 내장 5개 탭이 추가된 후 |
 | `on_build_context_menu(menu, viewer)` | 우클릭 메뉴 열릴 때 |
 | `on_image_loaded(path, viewer)` | 딥 줌에서 이미지 로드 후 |
 | `on_folder_opened(path, images, viewer)` | 그리드에서 폴더 열린 후 |
@@ -763,7 +795,7 @@ python -m Imervue.mcp_server
 
 ### 도구
 
-선택된 도구(총 57개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+선택된 도구(총 56개 — 전체 목록은 문서 참고). 모든 도구는 JSON
 `outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
 `structuredContent`로 반환하며, 장시간 실행 도구는
 `notifications/progress`를 스트리밍합니다.
@@ -837,13 +869,17 @@ python -m Imervue.mcp_server
 
 **Language** 메뉴에서 변경합니다. 재시작이 필요합니다.
 
-플러그인은 `language_wrapper.register_language()`를 통해 완전히 새로운 언어를 등록하거나 `get_translations()`를 통해 번역을 기여할 수 있습니다. [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)를 참조하세요.
+플러그인은 `language_wrapper.register_language()`로 완전히 새로운 언어를 등록하거나, `get_translations()`로 내장 언어에 번역을 추가할 수 있습니다(기존 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다). **Español**이 바로 이 방식입니다 — 다운로더에서 `spanish_translation` 플러그인을 설치하면 다섯 개 내장 언어와 함께 언어 메뉴에 나타납니다. 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) 참조.
 
 ---
 
 ## 사용자 설정
 
-작업 디렉터리의 `user_setting.json`에 저장됩니다. 주요 항목:
+애플리케이션 옆의 `user_setting.json`에 저장됩니다 — 소스 체크아웃에서는 프로젝트 루트, 프리즈 빌드에서는 `.exe`가 있는 폴더(PyInstaller와 Nuitka 모두).
+
+이 파일은 **다중 프로필 컨테이너**입니다. 프로필마다 독립적인 설정 딕셔너리를 가지므로 하나의 설치로 서로 다른 구성(예: *Work*와 *Personal*)을 함께 둘 수 있습니다. **File > Profiles…**에서 전환 / 생성 / 이름 변경 / 삭제할 수 있습니다. 예전 릴리스의 v1 단일 프로필 파일은 처음 읽을 때 자동으로 `default` 프로필로 마이그레이션됩니다. 쓰기는 마지막 변경 후 몇 초 뒤에 모아서 수행되며 원자적으로 기록됩니다(`.tmp` 형제 파일 + `os.replace`). 따라서 저장이 중단되어도 파일이 잘리지 않습니다.
+
+활성 프로필의 주요 항목:
 
 | 설정 | 타입 | 설명 |
 |---------|------|-------------|
@@ -868,37 +904,50 @@ python -m Imervue.mcp_server
 ```
 Imervue/
 ├── __main__.py              # 애플리케이션 진입점
-├── Imervue_main_window.py   # 메인 윈도우 (QMainWindow) — 4개 탭 마운트
-├── gpu_image_view/          # IMERVUE TAB — GPU 뷰어 + 딥 줌
-├── gui/                     # 다이얼로그와 사이드 패널 (현상, EXIF 등)
-├── paint/                   # PAINT TAB — 본격 래스터 편집기
-├── puppet/                  # PUPPET TAB — 2D 리그드 퍼펫 애니메이터
-├── export/                  # 내보내기 생성기 (컨택트 시트, 웹 갤러리, MP4)
-├── image/                   # 이미지 유틸리티 (피라미드, 타일 관리자, 정보)
-├── library/                 # 라이브러리 헬퍼 (RAW+JPEG 스택, 인덱싱)
-├── macros/                  # 매크로 녹화 / 재생
-├── menu/                    # 메뉴 정의 (file / tools / filter / …)
+├── cli.py                   # 헤드리스 배치 CLI(Qt 불필요)
+├── Imervue_main_window.py   # 메인 윈도우(QMainWindow) — 5개 탭 마운트
+├── gpu_image_view/          # IMERVUE 탭 — GPU 뷰어, 딥 줌, 타일 월
+│   ├── actions/             #   뷰어 동작(삭제 / 선택 / 비교 / 슬라이드쇼)
+│   └── images/              #   로딩 계층(디코드 워커, 폴더 스캔, 프리페치)
+├── gui/                     # Qt 셸 — 대화상자, 사이드 패널, 현상 패널, 캔버스
+├── paint/                   # PAINT 탭 — 본격 래스터 편집기
+│   ├── docks/               #   도크 패널(색상 / 브러시 / 레이어 / 머티리얼 / …)
+│   └── tools/               #   포인터 툴 핸들러
+├── puppet/                  # PUPPET 탭 — 2D 리깅 퍼펫 애니메이터 + Cubism 상호운용
+├── desktop_pet/             # 데스크톱 펫 탭 — 프레임리스 오버레이 + 라이브 드라이버 및 연동
+├── image/                   # 순수 이미지 코어(Qt 비의존) — recipe 파이프라인, 필터, 코덱,
+│                            #   피라미드 / 타일 매니저, XMP, pHash, 메타데이터
+├── library/                 # SQLite 라이브러리 인덱스, 스마트 앨범, CLIP 검색, 컬링
+├── export/                  # 내보내기 생성기(컨택트 시트, 웹 갤러리, MP4, 치트시트)
+├── macros/                  # 매크로 기록 / 재생
+├── menu/                    # 메뉴 정의(file / tools / filter / 우클릭 / …)
 ├── mcp_server/              # Model Context Protocol stdio 서버
-├── multi_language/          # i18n (en / zh-tw / zh-cn / ja / ko)
-├── external/                # 외부 편집기 통합
-├── plugin/                  # 플러그인 시스템 (base / manager / downloader)
-├── sessions/                # 워크스페이스 직렬화
-├── system/                  # Windows 파일 연결
-└── user_settings/           # 영구 사용자 구성
+├── multi_language/          # i18n(en / zh-tw / zh-cn / ja / ko) + 검증
+├── external/                # 외부 편집기 연동
+├── plugin/                  # 플러그인 시스템(base / manager / downloader / pip installer)
+├── sessions/                # 세션 및 워크스페이스 직렬화 + 마이그레이션
+├── system/                  # OS 연동 — 테마, UI 스케일, 파일 연결,
+│                            #   클립보드 모니터, 트리 감시, 배치 삭제, 로깅
+└── user_settings/           # 영속 다중 프로필 설정, 태그, 별점, 북마크
 ```
+
+트리 전반에 두 가지 규칙이 적용됩니다:
+
+- **순수 로직과 Qt를 분리한다.** 단일 이미지 도구의 표준 형태는 `image/<feature>.py`(NumPy / Pillow, 워커 스레드나 디스플레이 없는 테스트에서 임포트 가능) + `gui/<feature>_dialog.py`(Qt 셸) + `menu/extra_tools_menu.py`의 항목 하나입니다.
+- **큰 Qt 클래스는 위임한다.** `GPUImageView`, `PetWindow`, `PaintWorkspace`는 이벤트 오버라이드와 수명 주기만 유지하고, 동작은 이름 있는 협력자(`InputController`, `OverlayPainter`, `PetInteraction`, `ToolDispatcher` …)에 둡니다. 그 수학은 다시 순수 모듈로 추출되어 GL 컨텍스트 없이 단위 테스트됩니다.
 
 ### 렌더링 파이프라인 (Imervue 탭)
 
 1. `GPUImageView`는 `QOpenGLWidget`을 확장
 2. 두 개의 GLSL 1.20 프로그램 (textured quads + 단색 사각형)
-3. LRU 텍스처 캐시 — 256 타일 한도, 1.5 GB VRAM 예산
+3. LRU 텍스처 캐시 — 256 타일 소프트 상한(하드 상한 512), VRAM 예산은 GL 드라이버에서 탐지하고 1.5 GB로 폴백하며 사용자가 재정의 가능
 4. 512 × 512 타일 크기로 LANCZOS를 사용해 빌드된 다단계 타일 피라미드
 5. 하드웨어가 지원할 때 최대 8× 이방성 필터링
 6. 셰이더 컴파일 실패 시 소프트웨어 렌더링 대체
 
 ### 썸네일 캐시
 
-- **키**: `{path}|{mtime_ns}|{file_size}|{thumbnail_size}`의 MD5
+- **키**: `{path}|{mtime_ns}|{file_size}|{thumbnail_size}|{recipe_hash}`의 MD5 — recipe 해시 덕분에 현상 편집이 썸네일에 반영되면서도 다른 모든 항목을 무효화하지 않습니다
 - **포맷**: 압축 PNG (`compress_level=1` — 빠른 쓰기, 작은 풋프린트)
 - **위치**: `%LOCALAPPDATA%/Imervue/cache/thumbnails` (Win) 또는 `~/.cache/imervue/thumbnails` (Linux/macOS)
 - **무효화**: 파일 메타데이터 변경 시 자동

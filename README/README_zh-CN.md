@@ -37,7 +37,7 @@
 - [使用方式](#使用方式)
 - [Imervue — 图片浏览与图库](#imervue--图片浏览与图库)
 - [Modify — 非破坏显影](#modify--非破坏显影)
-- [Paint — 本格的なラスター描画 风格绘图](#paint--本格的なラスター描画-风格绘图)
+- [Paint — 全功能栅格编辑器](#paint--全功能栅格编辑器)
 - [Puppet — 2D 绑骨偶动画](#puppet--2d-绑骨偶动画)
 - [Desktop Pet — 无边框桌面宠物](#desktop-pet--无边框桌面宠物)
 - [键盘与鼠标快捷键](#键盘与鼠标快捷键)
@@ -59,7 +59,7 @@ Imervue 是一款 GPU 加速的图像工作站，提供 **五个顶层标签**�
 |---|---|
 | **Imervue** | 浏览、查看、整理、搜索、批量处理你的图库 |
 | **Modify** | 非破坏显影管线 — 滑块、曲线、LUT、蒙版、修图、多图合成 |
-| **Paint** | 本格的なラスター描画 风格的栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O |
+| **Paint** | 全功能栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O |
 | **Puppet** | 从零打造的 2D 绑骨偶动画器 — 网格、变形器、参数、动作、物理 |
 | **Desktop Pet** | 无边框 / 透明背景 / 永远置顶的桌面宠物 overlay；用同一条 puppet runtime 带实时驱动（idle / blink / mic / webcam / drag-track） |
 
@@ -108,6 +108,7 @@ pip install .
 | imageio | 图片 I/O |
 | imageio-ffmpeg | 幻灯片 MP4 导出（H.264 通过 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 边车文件） |
+| watchdog | 递归监视文件树（外部变更自动刷新树状图） |
 
 可选（feature-gated；不装就停用该功能）：
 
@@ -144,6 +145,30 @@ python -m Imervue /path/to/folder
 | `--software_opengl` | 使用软件 OpenGL 渲染（设置 `QT_OPENGL=software` 和 `QT_ANGLE_PLATFORM=warp`） |
 | `file` | （位置参数）启动时要打开的图片或文件夹 |
 
+### 无界面批处理 CLI
+
+`Imervue.cli` 可在 shell 中执行纯图像运算，**完全不启动 Qt** —— 适合脚本、CI 步骤，以及没有显示设备的服务器：
+
+```bash
+py -m Imervue.cli resize photos/ --max 1600 --out web/
+py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+py -m Imervue.cli info *.png --json
+py -m Imervue.cli list-ops          # 列出所有可用子命令
+```
+
+| 子命令 | 用途 |
+|---|---|
+| `info` / `stats` | 尺寸与格式；无参考质量指标（`--json` 输出机器可读格式） |
+| `convert` / `resize` / `thumbnail` | 格式转换（`--format` / `--quality`）、长边上限缩放、缩略图尺寸 |
+| `watermark` / `optimize` | 文字水印（`--text` / `--corner` / `--opacity`）；在 `--max-kb` 预算内编码 |
+| `dehaze` / `clahe` / `dither` / `distort` | 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple |
+| `auto-orient` / `strip` | 把 EXIF 方向标记烘焙进像素；重存并移除 EXIF / XMP / ICC |
+| `collage` / `anaglyph` | 网格拼贴（`--columns`）；立体对转红蓝 3D（`--method`） |
+| `preset` / `pipeline` | 按名称应用已保存的显影预设；执行有序的 JSON 运算管线 |
+| `list-ops` | 列出所有子命令（`--json` 输出机器可读格式） |
+
+共用标志：`--out`（输出目录）、`--recursive`、`--dry-run`（只列出动作、不写入）、`--overwrite`、`--version`。
+
 ---
 
 ## Imervue — 图片浏览与图库
@@ -153,8 +178,9 @@ python -m Imervue /path/to/folder
 ### 查看器
 
 - **GPU 加速渲染** — OpenGL（GLSL 1.20 着色器 + VBO）
-- **深度缩放金字塔** — 512×512 磁砖多层 LANCZOS 缩放，LRU 缓存上限 256 磁砖 / 1.5 GB VRAM 预算，最高 8× 各向异性过滤
-- **异步加载** — 多线程解码 + ±3 张预取
+- **深度缩放金字塔** — 512×512 瓦片多层 LANCZOS 缩放；瓦片 LRU 保留 256 条（硬上限 512）。VRAM 预算在启动时向 GL 驱动探测，获取失败则回落 1.5 GB，可用 `vram_limit_mb` 设置覆盖（会钳制，不会被静默忽略）。最高 8× 各向异性过滤
+- **异步加载** — 多线程解码搭配自适应预取窗口：一般浏览为 ±3 张，一旦持续朝同一方向翻页便扩张为前 5 张 / 后 1 张
+- **独立工作线程池** — 缩略图爆量与深度缩放解码分属不同池，打开大文件夹时不会饿死你正在看的那张图
 - **虚拟化缩图网格** — 只渲染可见磁砖；缩图尺寸可选（128 / 256 / 512 / 1024 / 自动）
 - **磁盘缓存** — MD5 失效检测的压缩 PNG 缩图，存于 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
 - **动画播放** — GIF / APNG，含播放 / 暂停 / 逐帧 / 速度控制
@@ -328,7 +354,7 @@ python -m Imervue /path/to/folder
 
 ---
 
-## Paint — 本格的なラスター描画 风格绘图
+## Paint — 全功能栅格编辑器
 
 **Paint** 标签是完整功能的栅格绘图工作室，以独立 `QMainWindow` 嵌入，含菜单、左工具栏、上下文敏感的选项栏、右侧分页式停靠列。多文档编辑 — 同时打开多张图，每张有独立撤销栈。
 
@@ -362,9 +388,15 @@ python -m Imervue /path/to/folder
 - **滤镜** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone（每个含实时预览对话框）
 - **查看辅助** — 像素格 · 对齐像素 · 对齐边缘 · 洋葱皮 · 出血指引 · 画布旋转（`Ctrl+Shift+H` CCW 旋转）
 
-### 停靠（10 个，分页式）
+### 停靠（14 个，分 3 组以分页排列）
 
-色彩 · 笔刷 · 图层 · 导航 · 素材库 · 历史 · 色板 · 参考 · 直方图 · 动画。每个停靠可移动 / 浮动。**Settings > Workspace Layouts** 保存与召回命名排列。
+| 分组 | 面板 |
+|---|---|
+| 绘图 | 色彩 · 笔刷 · 油漆桶 · 色板 |
+| 画布 | 图层 · 导航 · 历史 · 页面 · 动画 · 直方图 |
+| 素材库 | 素材 · 印章 · 姿势 · 参考 |
+
+每个面板都可移动 / 浮动，并可在 **Window** 菜单单独开关。**Settings > Workspace Layouts** 可保存与调用命名配置。
 
 ### 文件 I/O
 
@@ -738,7 +770,7 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_plugin_loaded()` | 插件实例化后 |
 | `on_plugin_unloaded()` | App 关闭时 |
 | `on_build_menu_bar(menu_bar)` | 默认菜单栏建好后 |
-| `on_build_main_tabs(tabs)` | 内置 4 个标签加完之后 |
+| `on_build_main_tabs(tabs)` | 内置 5 个标签加完之后 |
 | `on_build_context_menu(menu, viewer)` | 右键菜单打开时 |
 | `on_image_loaded(path, viewer)` | 图片在深度缩放加载后 |
 | `on_folder_opened(path, images, viewer)` | 文件夹在网格打开后 |
@@ -764,7 +796,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精选工具（共 57 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
+精选工具（共 56 个 — 完整清单见文档）。每个工具都会公布 JSON `outputSchema`
 以及只读 / 破坏性 `annotations`，将结果以 `structuredContent` 返回；长时间运行的
 工具会流式发送 `notifications/progress`。
 
@@ -836,13 +868,17 @@ python -m Imervue.mcp_server
 
 从 **Language** 菜单切换。需重启。
 
-插件可通过 `language_wrapper.register_language()` 注册全新语言，或通过 `get_translations()` 提供翻译。详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+插件可通过 `language_wrapper.register_language()` 注册全新语言，或通过 `get_translations()` 为内置语言补充翻译（已有键永远不会被覆盖，所以插件不可能弄坏内置字符串）。**Español** 正是这样提供的 —— 从下载器安装 `spanish_translation` 插件后，它就会与五个内置语言一起出现在语言菜单中。详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 
 ## 用户设置
 
-存储在工作目录的 `user_setting.json`。关键字段：
+保存在应用程序旁的 `user_setting.json` —— 源码版本为项目根目录，冻结版本则是含 `.exe` 的文件夹（PyInstaller 与 Nuitka 皆同）。
+
+此文件是**多账号容器**：每个 profile 各自持有独立的设置字典，因此同一份安装可以同时保有不同配置（例如 *Work* 与 *Personal*）。在 **File > Profiles…** 可切换、创建、重命名与删除 profile。旧版留下的 v1 单账号文件会在首次读取时自动迁移为 `default` profile。写入会在最后一次变更后延迟数秒才批量落地，且以原子方式写入（`.tmp` 同层文件 + `os.replace`），因此保存中途被中断也不会截断文件。
+
+当前 profile 的关键条目：
 
 | 设置 | 类型 | 说明 |
 |---------|------|-------------|
@@ -866,38 +902,51 @@ python -m Imervue.mcp_server
 
 ```
 Imervue/
-├── __main__.py              # 应用程序入口
-├── Imervue_main_window.py   # 主窗口（QMainWindow）— 挂载 4 个标签
-├── gpu_image_view/          # IMERVUE 标签 — GPU viewer + 深度缩放
-├── gui/                     # 对话框与侧栏（显影、EXIF 等）
-├── paint/                   # PAINT 标签 — 本格的なラスター描画 风格栅格编辑器
-├── puppet/                  # PUPPET 标签 — 2D 绑骨偶动画器
-├── export/                  # 导出生成器（联系表、网页画廊、MP4）
-├── image/                   # 图像工具（金字塔、磁砖管理、信息）
-├── library/                 # 图库辅助（RAW+JPEG 堆叠、索引）
+├── __main__.py              # 应用程序入口点
+├── cli.py                   # 无界面批处理 CLI（不含 Qt）
+├── Imervue_main_window.py   # 主窗口（QMainWindow）— 挂载 5 个标签页
+├── gpu_image_view/          # IMERVUE 标签页 — GPU 查看器、深度缩放、瓦片墙
+│   ├── actions/             #   查看器动作（删除 / 选择 / 比对 / 幻灯片）
+│   └── images/              #   加载层（解码 worker、文件夹扫描、预取）
+├── gui/                     # Qt 外壳 — 对话框、侧边栏、显影面板、画布
+├── paint/                   # PAINT 标签页 — 全功能位图编辑器
+│   ├── docks/               #   停靠面板（颜色 / 画笔 / 图层 / 素材 / …）
+│   └── tools/               #   指针工具处理器
+├── puppet/                  # PUPPET 标签页 — 2D 绑骨偶动画器 + Cubism 互通
+├── desktop_pet/             # 桌面宠物标签页 — 无边框悬浮窗 + 实时驱动与集成
+├── image/                   # 纯图像核心（不含 Qt）— recipe 管线、滤镜、编解码、
+│                            #   金字塔 / 瓦片管理、XMP、pHash、元数据
+├── library/                 # SQLite 图库索引、智能相册、CLIP 搜索、挑片
+├── export/                  # 导出生成器（索引表、网页图库、MP4、快捷键速查表）
 ├── macros/                  # 宏录制 / 重放
-├── menu/                    # 菜单定义
+├── menu/                    # 菜单定义（file / tools / filter / 右键 / …）
 ├── mcp_server/              # Model Context Protocol stdio 服务器
-├── multi_language/          # i18n（en / zh-tw / zh-cn / ja / ko）
+├── multi_language/          # i18n（en / zh-tw / zh-cn / ja / ko）+ 验证
 ├── external/                # 外部编辑器集成
-├── plugin/                  # 插件系统（base / manager / downloader）
-├── sessions/                # 工作区序列化
-├── system/                  # Windows 文件关联
-└── user_settings/           # 持久用户配置
+├── plugin/                  # 插件系统（base / manager / downloader / pip installer）
+├── sessions/                # Session 与工作区序列化 + 迁移
+├── system/                  # 操作系统集成 — 主题、UI 缩放、文件关联、
+│                            #   剪贴板监听、树状监视、批量删除、logging
+└── user_settings/           # 持久化多账号设置、标签、评分、书签
 ```
+
+全树贯穿两条规则：
+
+- **纯运算与 Qt 分离。** 单图工具的标准形状是 `image/<feature>.py`（NumPy / Pillow，可在 worker 线程或无显示设备的测试中导入）加上 `gui/<feature>_dialog.py`（Qt 外壳），再于 `menu/extra_tools_menu.py` 注册一个入口。
+- **大型 Qt 类只做委派。** `GPUImageView`、`PetWindow` 与 `PaintWorkspace` 只保留事件覆写与生命周期；行为住在具名的协作者（`InputController`、`OverlayPainter`、`PetInteraction`、`ToolDispatcher`…）中，而它们的数学又被抽成纯模块，可在没有 GL context 的情况下单元测试。
 
 ### 渲染管线（Imervue 标签）
 
 1. `GPUImageView` 继承 `QOpenGLWidget`
 2. 两个 GLSL 1.20 程序（textured quads + solid color rectangles）
-3. LRU 纹理缓存 — 256-磁砖上限、1.5 GB VRAM 预算
+3. LRU 纹理缓存 — 256 瓦片软上限（硬上限 512）；VRAM 预算向 GL 驱动探测，回落 1.5 GB，可由用户覆盖
 4. 多层磁砖金字塔以 LANCZOS 在 512 × 512 磁砖尺寸构建
 5. 硬件支持时最高 8× 各向异性过滤
 6. 着色器编译失败时软件渲染备援
 
 ### 缩图缓存
 
-- **键**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}` 的 MD5
+- **键**：`{path}|{mtime_ns}|{file_size}|{thumbnail_size}|{recipe_hash}` 的 MD5 —— recipe hash 让显影编辑能反映到缩略图上，又不必让其他所有缓存失效
 - **格式**：压缩 PNG（`compress_level=1` — 写入快、占用小）
 - **位置**：`%LOCALAPPDATA%/Imervue/cache/thumbnails`（Win）或 `~/.cache/imervue/thumbnails`（Linux/macOS）
 - **失效**：文件元数据变动时自动
