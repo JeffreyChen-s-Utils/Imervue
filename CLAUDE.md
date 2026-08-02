@@ -297,8 +297,9 @@ before — the failure mode is a command that *appears* to succeed.
 - **`gh pr view --json merged` is not a valid field** and the command fails outright. Use
   `mergedAt` / `mergeCommit`. When chaining `gh pr merge` with a follow-up query, a failure in
   the query can hide the merge command's own output — verify state separately.
-- **The full test suite exits `-1073741819` (0xC0000005) *after* printing a passing summary.**
-  Pre-existing, verified against a stashed tree. Read the reported counts, not the exit code.
+- **The full test suite exits with `STATUS_ACCESS_VIOLATION` (`0xC0000005`, surfaced as a large
+  negative exit code) *after* printing a passing summary.** Pre-existing, verified against a
+  stashed tree. Read the reported counts, not the exit code.
 - **Clipboard tests flake in full runs and pass in isolation.** `QClipboard.dataChanged` arrives
   asynchronously via `WM_CLIPBOARDUPDATE`, so two `setImage` calls separated by one
   `processEvents` can coalesce into a single signal. Before blaming a change, re-run the test
