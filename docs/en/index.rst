@@ -526,10 +526,15 @@ so erased pixels stop bleeding into a re-paint.
    |      |                      | Material · …   |
    +------+----------------------+----------------+
 
-The right-side docks (Color, Brush, Layer, Navigator, Material library,
-History, Swatch, Reference, Histogram, Animation) are tabbed into a single
-column so the canvas keeps the full visible height. Drag any dock title to
-re-arrange or float a panel, then save the result via
+The fourteen right-side docks are tabbed into a single column so the canvas
+keeps the full visible height, grouped into three clusters:
+
+- **Drawing** — Color, Brush, Bucket, Swatches
+- **Canvas** — Layers, Navigator, History, Pages, Animation, Histogram
+- **Library** — Materials, Stamps, Pose, Reference
+
+Each dock can be toggled individually from the ``Window`` menu. Drag any dock
+title to re-arrange or float a panel, then save the result via
 ``Settings`` > ``Workspace Layouts…``.
 
 Tool Palette (Left Strip)
@@ -1844,6 +1849,12 @@ Switch the interface language from the ``Language`` menu:
 
 A restart is required after switching.
 
+Plugins can add languages of their own. **Español** ships this way — install the
+``spanish_translation`` plugin from the plugin downloader and it appears in the
+``Language`` menu alongside the five built-ins. A plugin can also contribute
+translations to an existing language; keys that already exist are never
+overwritten, so a plugin cannot break a shipped string.
+
 ----
 
 Keyboard Shortcuts Reference
@@ -2087,7 +2098,7 @@ hierarchical tags, cull state, and notes. Useful for feeding cull decisions
 into a spreadsheet or external workflow.
 
 XMP Sidecar (other XMP-aware photo managers Interop)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 ``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
@@ -2380,6 +2391,47 @@ Command-Line Usage
    imervue /path/to/folder        # Open a specific folder
    imervue --debug                # Enable debug mode
    imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+
+Headless Batch CLI
+^^^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` runs the pure image operations from a shell **without starting
+Qt**, which makes it usable from scripts, CI steps and servers with no display::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # print every available subcommand
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Subcommand
+     - Purpose
+   * - ``info`` / ``stats``
+     - Dimensions and format; no-reference quality metrics (``--json`` for
+       machine-readable output)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - Format conversion (``--format`` / ``--quality``), max-long-edge resize,
+       thumbnail box
+   * - ``watermark`` / ``optimize``
+     - Text watermark (``--text`` / ``--corner`` / ``--opacity``); encode under
+       a ``--max-kb`` budget
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - Dark-channel dehaze, adaptive equalization, ordered Bayer dither,
+       swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - Grid montage (``--columns``); red-cyan 3D from a stereo pair (``--method``)
+   * - ``preset`` / ``pipeline``
+     - Apply a saved develop preset by name; run an ordered JSON pipeline of ops
+   * - ``list-ops``
+     - List every subcommand (``--json`` for machine-readable output)
+
+Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
+(list actions, write nothing), ``--overwrite`` and ``--version``.
 
 ----
 

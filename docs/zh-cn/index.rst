@@ -1010,6 +1010,11 @@ Imervue 支持插件扩展功能。
 
 切换后需要重新启动才会生效。
 
+插件可以自行新增语言。**Español** 正是这样提供的 —— 从插件下载器安装
+``spanish_translation`` 插件后,它就会与五个内置语言一起出现在 ``Language``
+菜单中。插件也可以为已有语言补充翻译;已存在的键永远不会被覆盖,因此插件
+不可能弄坏内置字符串。
+
 ----
 
 所有快捷键一览
@@ -1994,6 +1999,42 @@ Windows 上：确认 **Hide when other app is fullscreen**
    imervue 文件夹路径             # 直接打开指定文件夹
    imervue --debug                # 启用调试模式
    imervue --software_opengl      # 使用软件渲染（显卡不支持时）
+
+无界面批处理 CLI
+^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` 可在 shell 中执行纯图像运算,**完全不启动 Qt**,
+因此适合用于脚本、CI 步骤,以及没有显示设备的服务器::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # 列出所有可用子命令
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 子命令
+     - 用途
+   * - ``info`` / ``stats``
+     - 尺寸与格式;无参考质量指标(``--json`` 输出机器可读格式)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - 格式转换(``--format`` / ``--quality``)、长边上限缩放、缩略图尺寸
+   * - ``watermark`` / ``optimize``
+     - 文字水印(``--text`` / ``--corner`` / ``--opacity``);在 ``--max-kb`` 预算内编码
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - 把 EXIF 方向标记烘焙进像素;重存并移除 EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - 网格拼贴(``--columns``);立体对转红蓝 3D(``--method``)
+   * - ``preset`` / ``pipeline``
+     - 按名称应用已保存的显影预设;执行有序的 JSON 运算管线
+   * - ``list-ops``
+     - 列出所有子命令(``--json`` 输出机器可读格式)
+
+共用标志:``--out``(输出目录)、``--recursive``、``--dry-run``(只列出动作、不写入)、``--overwrite`` 与 ``--version``。
 
 ----
 

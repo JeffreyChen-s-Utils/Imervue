@@ -538,8 +538,8 @@ que los píxeles borrados dejan de filtrarse en un repintado.
    | herr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Los docks del lado derecho (Color, Brush, Layer, Navigator, biblioteca de Material, History,
-Swatch, Reference, Histogram, Animation) están organizados como pestañas en una sola columna,
+Los docks del lado derecho (Color, Brush, Bucket, Swatches, Layers, Navigator, History,
+Pages, Animation, Histogram, Materials, Stamps, Pose, Reference) están organizados como pestañas en una sola columna,
 de modo que el lienzo mantiene la altura visible completa. Arrastre el título de cualquier dock
 para reorganizarlo o flotar un panel, después guarde el resultado mediante
 ``Settings`` > ``Workspace Layouts…``.
@@ -1882,6 +1882,12 @@ Cambie el idioma de la interfaz desde el menú ``Language``:
 
 Se requiere reiniciar tras el cambio.
 
+Los plugins pueden añadir idiomas propios. **Español** se distribuye exactamente así:
+instala el plugin ``spanish_translation`` desde el descargador de plugins y aparecerá en el
+menú ``Language`` junto a los cinco idiomas integrados. Un plugin también puede aportar
+traducciones a un idioma existente; las claves que ya existen nunca se sobrescriben, así que
+un plugin no puede romper una cadena de fábrica.
+
 ----
 
 Referencia de atajos de teclado
@@ -2416,6 +2422,42 @@ Uso desde la línea de comandos
    imervue /path/to/folder        # Open a specific folder
    imervue --debug                # Enable debug mode
    imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+
+CLI por lotes sin interfaz
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Imervue.cli`` ejecuta las operaciones de imagen puras desde el shell **sin arrancar
+Qt**, lo que lo hace utilizable desde scripts, pasos de CI y servidores sin pantalla::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # imprime todos los subcomandos disponibles
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Subcomando
+     - Propósito
+   * - ``info`` / ``stats``
+     - Dimensiones y formato; métricas de calidad sin referencia (``--json`` para salida legible por máquina)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - Conversión de formato (``--format`` / ``--quality``), redimensionado por lado largo máximo, caja de miniatura
+   * - ``watermark`` / ``optimize``
+     - Marca de agua de texto (``--text`` / ``--corner`` / ``--opacity``); codificar bajo un presupuesto ``--max-kb``
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - Eliminación de neblina por canal oscuro, ecualización adaptativa, tramado Bayer ordenado, swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - Fijar la orientación EXIF en los píxeles; volver a guardar sin EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - Montaje en cuadrícula (``--columns``); 3D rojo-cian a partir de un par estéreo (``--method``)
+   * - ``preset`` / ``pipeline``
+     - Aplicar un preajuste de revelado guardado por nombre; ejecutar una cadena JSON ordenada de operaciones
+   * - ``list-ops``
+     - Listar todos los subcomandos (``--json`` para salida legible por máquina)
+
+Opciones compartidas: ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``--version``.
 
 ----
 

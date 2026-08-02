@@ -496,8 +496,8 @@ PSD 가져오기/내보내기를 지원합니다. 탭 막대에서 전환하거�
    |      |                      | 소재 · …       |
    +------+----------------------+----------------+
 
-오른쪽 도크 (색상, 브러시, 레이어, 내비게이터, 소재 라이브러리, 히스토리,
-스와치, 참고, 히스토그램, 애니메이션) 는 단일 열에 탭으로 묶여 있어 캔버스가
+오른쪽 도크 (색상, 브러시, 버킷, 스와치, 레이어, 내비게이터, 히스토리,
+페이지, 애니메이션, 히스토그램, 소재 라이브러리, 스탬프, 포즈, 참고) 는 단일 열에 탭으로 묶여 있어 캔버스가
 표시 가능한 전체 높이를 유지합니다. 도크 제목을 끌어 재배치하거나 띄울 수
 있고, ``설정`` > ``워크스페이스 레이아웃…`` 으로 이름을 붙여 저장할 수 있습
 니다.
@@ -1037,6 +1037,11 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
 - 日本語
 
 전환 후 재시작이 필요합니다.
+
+플러그인은 자체 언어를 추가할 수 있습니다. **Español**\ 이 바로 이 방식입니다 ——
+플러그인 다운로더에서 ``spanish_translation`` 플러그인을 설치하면 다섯 개 내장 언어와 함께
+``Language`` 메뉴에 나타납니다. 플러그인은 기존 언어에 번역을 추가할 수도 있습니다. 이미
+존재하는 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다.
 
 ----
 
@@ -2056,6 +2061,42 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
    imervue /path/to/folder        # 지정한 폴더 열기
    imervue --debug                # 디버그 모드 활성화
    imervue --software_opengl      # 소프트웨어 렌더링 사용 (GPU 미지원 시)
+
+헤드리스 배치 CLI
+^^^^^^^^^^^^^^^^^
+
+``Imervue.cli``\ 는 **Qt를 시작하지 않고** 순수 이미지 연산을 셸에서 실행합니다.
+스크립트, CI 단계, 디스플레이가 없는 서버에서 쓸 수 있습니다::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 출력
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 서브커맨드
+     - 용도
+   * - ``info`` / ``stats``
+     - 크기와 포맷, 무참조 품질 지표(``--json``\ 으로 기계 판독 출력)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - 포맷 변환(``--format`` / ``--quality``), 긴 변 상한 리사이즈, 썸네일 크기
+   * - ``watermark`` / ``optimize``
+     - 텍스트 워터마크(``--text`` / ``--corner`` / ``--opacity``), ``--max-kb`` 예산 내 인코딩
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장
+   * - ``collage`` / ``anaglyph``
+     - 그리드 몽타주(``--columns``), 스테레오 쌍에서 적청 3D(``--method``)
+   * - ``preset`` / ``pipeline``
+     - 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행
+   * - ``list-ops``
+     - 모든 서브커맨드 출력(``--json``\ 으로 기계 판독 출력)
+
+공용 플래그: ``--out``(출력 디렉터리), ``--recursive``, ``--dry-run``(동작만 나열하고 쓰지 않음), ``--overwrite``, ``--version``.
 
 ----
 

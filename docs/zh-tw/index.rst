@@ -1023,6 +1023,11 @@ Imervue 支援外掛擴充功能。
 
 切換後需要重新啟動才會生效。
 
+外掛可以自行新增語言。**Español** 就是這樣提供的 —— 從外掛下載器安裝
+``spanish_translation`` 外掛後,它就會與五個內建語言一起出現在 ``Language``
+選單中。外掛也可以為既有語言補充翻譯;已存在的鍵永遠不會被覆寫,因此外掛
+不可能弄壞內建字串。
+
 ----
 
 所有快捷鍵一覽
@@ -1947,6 +1952,42 @@ Schema（有版本 — 未來的欄位會向前相容）：
    imervue 資料夾路徑             # 直接開啟指定資料夾
    imervue --debug                # 啟用除錯模式
    imervue --software_opengl      # 使用軟體渲染（顯卡不支援時）
+
+無介面批次 CLI
+^^^^^^^^^^^^^^
+
+``Imervue.cli`` 可在 shell 中執行純影像運算,**完全不啟動 Qt**,
+因此適合用於腳本、CI 步驟,以及沒有顯示裝置的伺服器::
+
+   py -m Imervue.cli resize photos/ --max 1600 --out web/
+   py -m Imervue.cli watermark a.jpg --text "(c) Me" --corner bottom-right
+   py -m Imervue.cli info *.png --json
+   py -m Imervue.cli list-ops          # 列出所有可用子指令
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 子指令
+     - 用途
+   * - ``info`` / ``stats``
+     - 尺寸與格式;無參考品質指標(``--json`` 輸出機器可讀格式)
+   * - ``convert`` / ``resize`` / ``thumbnail``
+     - 格式轉換(``--format`` / ``--quality``)、長邊上限縮放、縮圖尺寸
+   * - ``watermark`` / ``optimize``
+     - 文字浮水印(``--text`` / ``--corner`` / ``--opacity``);在 ``--max-kb`` 預算內編碼
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+     - 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple
+   * - ``auto-orient`` / ``strip``
+     - 把 EXIF 方向旗標烘焙進像素;重存並移除 EXIF / XMP / ICC
+   * - ``collage`` / ``anaglyph``
+     - 網格拼貼(``--columns``);立體對轉紅藍 3D(``--method``)
+   * - ``preset`` / ``pipeline``
+     - 依名稱套用已存的顯影預設;執行有序的 JSON 運算管線
+   * - ``list-ops``
+     - 列出所有子指令(``--json`` 輸出機器可讀格式)
+
+共用旗標:``--out``(輸出目錄)、``--recursive``、``--dry-run``(只列出動作、不寫入)、``--overwrite`` 與 ``--version``。
 
 ----
 
