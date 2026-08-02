@@ -787,7 +787,10 @@ class _FileTreeView(QTreeView):
         the primary window's os._exit would abort an in-flight OS-trash batch
         partway. The main window calls this from closeEvent before teardown.
         """
-        for worker in list(self._trash_workers):
+        # The list() copy is load-bearing, not redundant: ``_trash_workers`` is a
+        # set, and a worker finishing inside wait() fires _on_trash_finished,
+        # which discards it — mutating the set mid-iteration. Do not inline.
+        for worker in list(self._trash_workers):  # NOSONAR
             with contextlib.suppress(RuntimeError):
                 if worker.isRunning():
                     worker.wait()

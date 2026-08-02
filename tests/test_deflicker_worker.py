@@ -49,3 +49,49 @@ def test_worker_writes_and_reports_on_success(tmp_path, qapp):
     worker.run()
     assert results == [2]
     assert (tmp_path / "deflickered").is_dir()
+
+
+def test_load_frames_keeps_index_alignment_for_unreadable_input(tmp_path, qapp):
+    """An undecodable file becomes None instead of shifting later frames."""
+    paths = _frames(tmp_path, n=2)
+    broken = tmp_path / "broken.png"
+    broken.write_bytes(b"not an image")
+    ordered = [paths[0], str(broken), paths[1]]
+
+    progress: list = []
+    worker = DeflickerWorker(ordered, _opts())
+    worker.progress.connect(progress.append)
+    frames = worker._load_frames()
+
+    assert len(frames) == 3
+    assert frames[1] is None                    # the placeholder holds the slot
+    assert frames[0] is not None and frames[2] is not None
+    assert progress == [1, 2, 3]                # progress still counts every path
+
+
+def test_write_corrected_skips_none_frames(tmp_path, qapp):
+    paths = _frames(tmp_path, n=2)
+    worker = DeflickerWorker(paths, _opts())
+    frames = worker._load_frames()
+
+    assert worker._write_corrected([frames[0], None]) == 1
+    assert worker._write_corrected([None, None]) == 0
+
+
+def test_write_corrected_returns_zero_when_nothing_decoded(tmp_path, qapp):
+    worker = DeflickerWorker([str(tmp_path / "missing.png")], _opts())
+    assert worker._write_corrected([None]) == 0
+
+
+def test_write_one_reports_failure_instead_of_raising(tmp_path, qapp, monkeypatch):
+    """A read-only destination skips the frame; the run must not abort."""
+    paths = _frames(tmp_path, n=1)
+    worker = DeflickerWorker(paths, _opts())
+    frame = worker._load_frames()[0]
+
+    def _deny(*_a, **_k):
+        raise OSError("read-only volume")
+
+    monkeypatch.setattr(deflicker_dialog.Path, "mkdir", _deny)
+    assert worker._write_one(paths[0], frame) is False
+    assert worker._write_corrected([frame]) == 0

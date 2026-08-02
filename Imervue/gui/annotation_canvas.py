@@ -229,7 +229,7 @@ class AnnotationCanvas(QWidget):
     # The int argument is the direction: -1 for previous, +1 for next.
     navigate_image = Signal(int)
     save_requested = Signal()
-    context_menu_requested = Signal(object)   # global QPoint
+    context_menu_requested = Signal(object)   # a QPoint in global coordinates
     # Emitted when Delete is pressed with no annotation selected — the Modify
     # tab wires this to trash the current image, matching the Imervue tab.
     delete_image_requested = Signal()
