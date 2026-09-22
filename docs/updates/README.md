@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-16 | 2026-09-22 | Mirror safety_review 1.0.1 to Imervue_Plugins | #done #Imervue_Plugins #plugins | [2026-09](2026-09.md) |
 | U-20260922-15 | 2026-09-22 | QAction.menu() invalidated cached menus; plugin reload fixed | #done #pyside6 #plugins | [2026-09](2026-09.md) |
 | U-20260922-14 | 2026-09-22 | Imervue_Plugins: README becomes a plugin list | #done #Imervue_Plugins #docs | [2026-09](2026-09.md) |
 | U-20260922-13 | 2026-09-22 | Offer onnxruntime before the ONNX paths of six plugins | #done #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
