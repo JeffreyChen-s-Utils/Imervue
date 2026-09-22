@@ -770,24 +770,24 @@ class TestCanvasSplitterSizes:
     """The centre canvas must get the width left over after the side panels."""
 
     def test_canvas_gets_the_leftover_width(self):
-        from Imervue.gui.develop_panel import _canvas_splitter_sizes
-        assert _canvas_splitter_sizes(1200, 80, 260) == [80, 860, 260]
+        from Imervue.gui.modify_splitter import canvas_splitter_sizes
+        assert canvas_splitter_sizes(1200, 80, 260) == [80, 860, 260]
 
     def test_canvas_floored_on_a_narrow_window(self):
-        from Imervue.gui.develop_panel import _canvas_splitter_sizes
+        from Imervue.gui.modify_splitter import canvas_splitter_sizes
         # Side panels alone exceed the width → canvas clamps to its floor.
-        assert _canvas_splitter_sizes(500, 80, 260, min_canvas=400) == [80, 400, 260]
+        assert canvas_splitter_sizes(500, 80, 260, min_canvas=400) == [80, 400, 260]
 
     def test_negative_side_widths_are_clamped_to_zero(self):
-        from Imervue.gui.develop_panel import _canvas_splitter_sizes
-        sizes = _canvas_splitter_sizes(1000, -10, -20)
+        from Imervue.gui.modify_splitter import canvas_splitter_sizes
+        sizes = canvas_splitter_sizes(1000, -10, -20)
         assert sizes[0] == 0
         assert sizes[2] == 0
         assert sizes[1] == 1000
 
     def test_canvas_is_the_widest_pane(self):
-        from Imervue.gui.develop_panel import _canvas_splitter_sizes
-        left, canvas, right = _canvas_splitter_sizes(1600, 80, 260)
+        from Imervue.gui.modify_splitter import canvas_splitter_sizes
+        left, canvas, right = canvas_splitter_sizes(1600, 80, 260)
         assert canvas > left
         assert canvas > right
 
@@ -901,22 +901,22 @@ class TestModifySplitterSettle:
         splitter.deleteLater()
 
     def test_settle_watch_stops_when_the_splitter_dies(self, panel, qapp):
-        import Imervue.gui.develop_panel as dp
+        import Imervue.gui.modify_splitter as ms
         p, _ = panel
         splitter = self._splitter()
         applied: list[int] = []
         original = p._apply_modify_splitter_sizes
         p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
         alive = {"ok": True}
-        original_alive = dp._splitter_is_alive
-        dp._splitter_is_alive = lambda sp: alive["ok"]
+        original_alive = ms.splitter_is_alive
+        ms.splitter_is_alive = lambda sp: alive["ok"]
         try:
             p.schedule_modify_splitter_settle(splitter, retries=5, interval_ms=0)
             qapp.processEvents()
             alive["ok"] = False          # Modify tab torn down mid-watch
             self._drain(qapp)
         finally:
-            dp._splitter_is_alive = original_alive
+            ms.splitter_is_alive = original_alive
         assert len(applied) == 1
         splitter.setParent(None)
         splitter.deleteLater()
@@ -935,7 +935,7 @@ class TestModifySplitterSettle:
 
 
 def test_splitter_is_alive_detects_a_freed_object():
-    from Imervue.gui.develop_panel import _splitter_is_alive
+    from Imervue.gui.modify_splitter import splitter_is_alive
 
     class _Dead:
         def count(self):
@@ -945,5 +945,49 @@ def test_splitter_is_alive_detects_a_freed_object():
         def count(self):
             return 3
 
-    assert _splitter_is_alive(_Dead()) is False
-    assert _splitter_is_alive(_Live()) is True
+    assert splitter_is_alive(_Dead()) is False
+    assert splitter_is_alive(_Live()) is True
+
+
+class TestDrawingPropertyPairs:
+    """Stroke width and opacity sliders stay in step with their spin boxes."""
+
+    def test_defaults_and_layout(self, panel):
+        p, _ = panel
+        assert (p._width_slider.value(), p._width_spin.value()) == (3, 3)
+        assert (p._opacity_slider.value(), p._opacity_spin.value()) == (100, 100)
+        assert p._opacity_spin.suffix() == " %"
+        assert p._width_spin.maximumWidth() == 60
+
+    def test_width_slider_updates_spin_without_a_canvas(self, panel):
+        p, _ = panel
+        p._canvas = None
+        p._width_slider.setValue(9)
+        assert p._width_spin.value() == 9
+
+    def test_width_spin_sets_the_canvas_stroke(self, panel):
+        p, _ = panel
+        canvas = MagicMock()
+        p._canvas = canvas
+        try:
+            p._width_spin.setValue(17)
+            assert p._width_slider.value() == 17
+            canvas.set_stroke_width.assert_called_once_with(17)
+        finally:
+            p._canvas = None
+
+    def test_opacity_slider_sets_the_canvas_opacity(self, panel):
+        p, _ = panel
+        canvas = MagicMock()
+        p._canvas = canvas
+        try:
+            p._opacity_slider.setValue(35)
+            assert p._opacity_spin.value() == 35
+            canvas.set_brush_opacity.assert_called_once_with(35)
+        finally:
+            p._canvas = None
+
+    def test_pairs_are_part_of_the_interactive_widgets(self, panel):
+        p, _ = panel
+        for widget in (p._width_slider, p._width_spin, p._opacity_slider, p._opacity_spin):
+            assert widget in p._interactive_widgets

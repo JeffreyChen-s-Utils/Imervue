@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `7c14f38` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `843843f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 748 | 123,723 |
+| `tests/` | 748 | 123,785 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 182 | 45,765 |
-| `Imervue/gui/` | 145 | 30,976 |
+| `Imervue/gui/` | 147 | 31,007 |
 | `Imervue/puppet/` | 53 | 15,131 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 62 | 12,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,518** | **297,337** |
+| **總計** | **1,520** | **297,430** |
 
-其中 `Imervue/` 套件本身 708 檔 / 159,225 行。
+其中 `Imervue/` 套件本身 710 檔 / 159,256 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -509,16 +509,18 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-145 個檔、30,976 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+147 個檔、31,007 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 1,332 | **Modify 分頁面板**：`build_left_panel()` 工具列、`build_right_panel()` 顯影滑桿、內嵌 `AnnotationCanvas`。發出 `recipe_committed` signal |
+| `develop_panel.py` | 896 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_right_panel.py` | 330 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
+| `modify_splitter.py` | 133 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 1,623 | 註解畫布 widget + `QUndoCommand`（新增/刪除/修改/烘焙），支援手繪、形狀、文字、馬賽克、模糊、裁切、選取 |
 | `annotation_dialog.py` | 965 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
-| `slider_spin.py` | 68 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
+| `slider_spin.py` | 71 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `annotation_models.py` | 580 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用） |
 | `file_tree_view.py` | 945 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 150 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
@@ -919,7 +921,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-748 個檔、123,723 行。`pyproject.toml` 定義三個互斥層級 marker：
+748 個檔、123,785 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1092,7 +1094,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 
 6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
    `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
-   `document.py`(1388)、`develop_panel.py`(1332)、`puppet/canvas.py`(1308)、
+   `document.py`(1388)、`puppet/canvas.py`(1308)、
    `pet_window.py`(1184) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 

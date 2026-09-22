@@ -67,3 +67,21 @@ def test_link_existing_widgets(parent):
     spin.setValue(2)
     assert (slider.value(), spin.value()) == (2, 2)
     assert seen == [5, 2]
+
+
+def test_default_spin_width_and_spacing(parent):
+    _slider, spin, row = make_slider_spin(parent, 0, 10, 0)
+    assert spin.maximumWidth() == 70
+    assert row.spacing() == 6
+
+
+def test_custom_spin_width_and_spacing(parent):
+    _slider, spin, row = make_slider_spin(parent, 0, 10, 0, spin_width=60, spacing=4)
+    assert spin.maximumWidth() == 60
+    assert row.spacing() == 4
+
+
+def test_parent_may_be_none(qapp):
+    slider, spin, row = make_slider_spin(None, 0, 10, 5)
+    assert slider.parent() is None and spin.parent() is None
+    row.deleteLater()
