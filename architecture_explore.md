@@ -1114,8 +1114,10 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 4. **`sonar-project.properties` 的 issue-ignore 規則實際上沒有作用**，要靠改程式或
    `# NOSONAR` 清掉。
 
-5. **`gpu_image_view.py` 與 `gl_renderer.py` 使用 `from OpenGL.GL import *`**，因此在
-   `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
+5. **OpenGL 符號一律明確列名匯入**（`from OpenGL.GL import (glBindTexture, ...)`），全樹沒有 wildcard
+   import，所以也沒有 `F403/F405` 豁免。測試會在模組上 monkeypatch 這些 GL 符號（例如
+   `paint/canvas.py` 的貼圖上傳），搬動用到它們的程式碼時 patch 目標要跟著改。僅 `gl_renderer.py`、
+   `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；

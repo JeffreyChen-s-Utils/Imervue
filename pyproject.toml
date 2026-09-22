@@ -115,10 +115,9 @@ ignore = [
     # statements / args; enforce cognitive complexity (C901) instead.
     "PLR0911", "PLR0912", "PLR0913", "PLR0915",
 ]
-# McCabe ≤ 16 matches SonarQube's default cognitive-complexity threshold, and
-# keeps paint_tile_grid / _draw_freehand_qt (both 16) within budget while
-# still flagging runaway functions like mouseMoveEvent (23) and
-# keyPressEvent (87) that are suppressed per-file below.
+# McCabe ≤ 16 matches SonarQube's default cognitive-complexity threshold and
+# keeps paint_tile_grid / _draw_freehand_qt (both 16) within budget. No module
+# needs a per-file C901 exemption any more.
 mccabe.max-complexity = 16
 
 [tool.ruff.lint.per-file-ignores]
@@ -128,12 +127,9 @@ mccabe.max-complexity = 16
 # strings (CJK + Korean) routinely exceed 100 chars and splitting them
 # mid-character hurts readability.
 "plugins/**/*.py" = ["E501"]
-"Imervue/gpu_image_view/gl_renderer.py" = ["E501", "F403", "F405", "E702"]  # OpenGL.GL wildcard + GLSL strings + glTexCoord/glVertex pairs
-"Imervue/gpu_image_view/gpu_image_view.py" = ["F403", "F405", "C901"]  # OpenGL.GL wildcard + Qt keyPressEvent dispatcher
+"Imervue/gpu_image_view/gl_renderer.py" = ["E501", "E702"]  # GLSL strings + glTexCoord/glVertex pairs
 "Imervue/paint/canvas.py" = ["E702"]  # glTexCoord/glVertex pairs are clearer on one line
 "Imervue/paint/canvas_overlays.py" = ["E702"]  # same glTexCoord/glVertex pairs, moved from canvas.py
-"Imervue/gui/annotation_dialog.py" = ["C901"]        # mouseMoveEvent Qt event state machine
-"Imervue/menu/tip_menu.py" = ["E501"]                # translated help strings
 
 [tool.bandit]
 # Mirror of .bandit — kept here so tooling that only reads pyproject.toml picks
