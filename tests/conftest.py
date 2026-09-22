@@ -5,6 +5,7 @@ Pytest configuration and shared fixtures for Imervue tests.
 import atexit
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Final
 
@@ -342,6 +343,27 @@ def qapp():
     # same session unable to recreate it on some platforms. The dedicated
     # ``_qt_session_teardown`` autouse fixture below handles end-of-session
     # cleanup once all tests have finished.
+
+
+@pytest.fixture
+def pump_until(qapp):
+    """Pump the Qt event loop until *predicate* holds, or *timeout* seconds pass.
+
+    Returns the predicate's final value. Use this instead of a fixed number of
+    ``processEvents()`` passes: how many passes a queued cross-thread signal
+    needs depends on machine load, so a fixed count makes the test flaky.
+    """
+    def _pump(predicate, timeout: float = 5.0) -> bool:
+        deadline = time.monotonic() + timeout
+        while True:
+            qapp.processEvents()
+            if predicate():
+                return True
+            if time.monotonic() >= deadline:
+                return bool(predicate())
+            time.sleep(0.01)
+
+    return _pump
 
 
 @pytest.fixture(scope="session", autouse=True)

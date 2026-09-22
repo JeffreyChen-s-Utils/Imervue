@@ -201,7 +201,7 @@ def test_onnx_inpaint_missing_runtime_raises(monkeypatch):
         onnx_inpaint(_rgba(8, 8), mask, "missing_model.onnx")
 
 
-def test_dialog_smoke(qapp, tmp_path):
+def test_dialog_smoke(qapp, tmp_path, pump_until):
     from PIL import Image as PILImage
 
     from ai_object_remove.ai_object_remove_plugin import ObjectRemoveDialog
@@ -218,11 +218,7 @@ def test_dialog_smoke(qapp, tmp_path):
         # queued ready signal so the mask lands back on the GUI thread.
         if dialog._mask_worker is not None:
             dialog._mask_worker.wait(2000)
-        for _ in range(20):
-            qapp.processEvents()
-            if dialog._mask is not None:
-                break
-        assert dialog._mask is not None
+        assert pump_until(lambda: dialog._mask is not None)
         assert dialog._mask.any()
     finally:
         dialog.deleteLater()

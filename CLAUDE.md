@@ -153,6 +153,12 @@ Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_ar
 mutate `user_setting_dict` directly. A test that was already skipping for a missing optional
 dependency may keep skipping, but every NEW test must actually run.
 
+Waiting on a queued Qt signal (a worker thread's `done`, a `QTimer`) goes through the
+`pump_until(predicate, timeout=5.0)` fixture — never a fixed number of `processEvents()`
+passes, which depends on machine load and flakes under a parallel build. When the test
+started a real `QThread`, join it in a `finally`: destroying a running thread aborts the
+whole process, so a failed assertion would otherwise take the suite down with it.
+
 ### Qt / OpenGL tests on headless CI
 
 The GitHub Actions Windows runner crashes with `Windows fatal exception: access violation` once

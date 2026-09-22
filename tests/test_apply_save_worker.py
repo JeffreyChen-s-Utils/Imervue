@@ -95,7 +95,7 @@ def test_finalize_worker_tolerates_missing_worker():
     assert dlg._worker is None
 
 
-def test_finalize_worker_waits_for_a_real_thread_before_clearing(qapp):
+def test_finalize_worker_waits_for_a_real_thread_before_clearing(qapp, pump_until):
     from PySide6.QtCore import QObject, QThread, Signal
 
     class _Worker(QThread):
@@ -120,10 +120,13 @@ def test_finalize_worker_waits_for_a_real_thread_before_clearing(qapp):
     dlg._worker.done.connect(dlg.on_done)
     dlg._worker.start()
 
-    for _ in range(50):
-        qapp.processEvents()
-        if dlg._worker is None:
-            break
+    try:
+        cleared = pump_until(lambda: dlg._worker is None)
+    finally:
+        # Never leave a running QThread behind: destroying one aborts the
+        # whole process, so an assertion failure would take the suite with it.
+        worker.wait()
 
-    assert dlg._worker is None          # reference cleared via finalize_worker
+    assert cleared                      # reference cleared via finalize_worker
+    assert dlg._worker is None
     assert worker.isFinished()          # and only after the thread truly stopped
