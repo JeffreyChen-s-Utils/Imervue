@@ -10,7 +10,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 - **#4** 13 files are over the 1000-line limit (`architecture_explore.md` §12); the largest are `Imervue/mcp_server/tools.py` and `Imervue/Imervue_main_window.py`.
 - **#5** `Imervue/plugin/plugin_manifest.py` is used only by `tests/test_plugin_manifest.py`, not by `plugin_manager`, and its `plugin_requires_*` attributes are undocumented.
 - **#8** Stale metadata: `architecture_explore.md` header names `694e63c` / 1.0.86; `docs/conf.py` hardcodes `release`; `dev.toml` (name `Imervue_dev`, version 1.0.9) and `dev_requirements.txt` lack imageio-ffmpeg, defusedxml and watchdog.
-- **#9** CI does not run ruff or bandit (`.github/workflows/test.yml`); the quality gate exists only locally.
 - **#10** [DECIDE] `examples/*.puppet` (≈37 MB) is tracked; `march_7th.puppet` is a third-party character and `release.yml` packs `examples/` into the EXE — copyright and redistribution risk.
 - **#11** Plugin downloader: every top-level directory of `Imervue_Plugins` is treated as a category, so the distribution repository cannot hold any other directory (such as `docs/`). Restrict categories to `plugins` and `languages` (workspace X-18).
 - **#12** [DECIDE] `.idea/deployment.xml` is no longer tracked, but this is a public repository and every commit from `6ecc332` (2026-02-13) up to U-20260922-03 still contains it, SFTP user@IP:port included. Either rewrite history (force push to `main` and `dev`) or treat the address as public and harden or move that server (workspace S-10).
