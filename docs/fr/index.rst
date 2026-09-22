@@ -955,7 +955,7 @@ La barre d'outils **Output > Virtual camera** ouvre le flux.
 
 DirectShow / AVFoundation / v4l2loopback sont uniquement RGB — pas de canal alpha —
 donc Imervue remplit la zone hors du personnage avec
-**magenta `#FF00FF`** comme clé chromatique. Retirez-la dans OBS via le
+**magenta #FF00FF** comme clé chromatique. Retirez-la dans OBS via le
 filtre Color Key :
 
 1. Clic droit sur la source Video Capture Device > **Filters**
@@ -2015,8 +2015,8 @@ Outils et superpositions
    * - ``S``
      - Diaporama
 
-Animation
-^^^^^^^^^
+Images animées
+^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1

@@ -962,7 +962,7 @@ o OBS Studio 26+ inclui o driver *OBS Virtual Camera* no Windows / macOS
 A barra de ferramentas **Output > Virtual camera** abre o stream.
 
 DirectShow / AVFoundation / v4l2loopback são apenas RGB — sem canal alfa — então
-o Imervue preenche a área fora do personagem com **magenta `#FF00FF`** como uma
+o Imervue preenche a área fora do personagem com **magenta #FF00FF** como uma
 chave de croma. Remova-o no OBS via o filtro Color Key:
 
 1. Clique com o botão direito na fonte Video Capture Device > **Filters**
@@ -1996,8 +1996,8 @@ Ferramentas e Sobreposições
    * - ``S``
      - Slideshow
 
-Animação
-^^^^^^^^
+Imagens animadas
+^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1

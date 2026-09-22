@@ -40,3 +40,11 @@ def test_version_reader_handles_missing_file_and_key(tmp_path):
 
 def test_updates_log_is_excluded_from_the_build():
     assert "updates" in _conf()["exclude_patterns"]
+
+
+@pytest.mark.parametrize("key", ["templates_path", "html_static_path"])
+def test_configured_source_dirs_exist(key):
+    # Sphinx warns for a missing html_static_path entry, and CI builds the
+    # docs with -W, so a dangling entry fails the build.
+    for entry in _conf().get(key, []):
+        assert (_CONF.parent / entry).is_dir(), f"{key}: {entry}"

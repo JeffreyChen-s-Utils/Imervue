@@ -56,7 +56,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `examples/` | Sample `.puppet` rigs and a desktop-pet script |
 | `docs/`, `README.md`, `README/` | Sphinx docs and translated READMEs; `README.md` and `docs/en` are canonical |
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
-| `.github/workflows/` | `test.yml` (ruff + bandit lint job, pytest by layer), `release.yml` |
+| `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer), `release.yml` |
 
 ## 3. Entry points and public interfaces
 

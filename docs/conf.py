@@ -31,11 +31,9 @@ extensions = [
 
 autosectionlabel_prefix_document = True
 
-templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "updates"]
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
 html_logo = None
 html_favicon = None
 

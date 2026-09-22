@@ -964,7 +964,7 @@ verwendet ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_
 Toolbar **Output > Virtual camera** öffnet den Stream.
 
 DirectShow / AVFoundation / v4l2loopback sind nur RGB — kein Alphakanal — also
-füllt Imervue den Bereich außerhalb des Charakters mit **Magenta `#FF00FF`** als
+füllt Imervue den Bereich außerhalb des Charakters mit **Magenta #FF00FF** als
 Chroma-Key. Entfernen Sie es in OBS über den Color-Key-Filter:
 
 1. Rechtsklick auf die Video-Capture-Geräte-Quelle > **Filter**
@@ -2050,8 +2050,8 @@ Werkzeuge und Overlays
    * - ``S``
      - Diashow
 
-Animation
-^^^^^^^^^
+Animierte Bilder
+^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1

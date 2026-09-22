@@ -63,7 +63,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - 拖拽打开
      - 直接把图片或文件夹拖进窗口
    * - 从资源管理器打开
-     - 右键图片 > ``Open with Imervue``（需先注册文件关联）
+     - 右键图片 > ``Open with Imervue``\ （需先注册文件关联）
    * - 最近打开
      - ``文件`` > ``最近打开``，快速回到之前看过的文件夹
 
@@ -210,7 +210,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - 加入收藏 ❤
      - ``0``
    * - 评 1～5 星
-     - ``1`` ``2`` ``3`` ``4`` ``5``（再按一次取消）
+     - ``1`` ``2`` ``3`` ``4`` ``5``\ （再按一次取消）
 
 颜色标签 (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^
@@ -224,13 +224,13 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - 操作
      - 按键
    * - 红 / 黄 / 绿 / 蓝 / 紫
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5``（再按同一键清除）
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5``\ （再按同一键清除）
    * - 批量应用到选中
      - 框选多张缩略图后按对应 F 键
    * - 按颜色筛选
      - ``筛选`` > ``按颜色标签`` > 选择颜色／任一色／无标签
 
-状态栏会显示当前图片的颜色 chip；缩略图左边缘显示对应色条；**列表模式**有独立的「标签」与「星级」列可排序，星级列可直接点击设置 0 – 5 星。
+状态栏会显示当前图片的颜色 chip；缩略图左边缘显示对应色条；**列表模式**\ 有独立的「标签」与「星级」列可排序，星级列可直接点击设置 0 – 5 星。
 
 书签
 ^^^^
@@ -294,7 +294,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - 按评分筛选
      - ``筛选`` > ``按评分``
    * - 按颜色标签筛选
-     - ``筛选`` > ``按颜色标签``（全部／任一色／无标签／红／黄／绿／蓝／紫）
+     - ``筛选`` > ``按颜色标签``\ （全部／任一色／无标签／红／黄／绿／蓝／紫）
    * - 高级过滤
      - ``筛选`` > ``高级过滤…`` — 分辨率范围、文件大小范围、方向（横／纵／正方）、修改日期区间
    * - 清除筛选
@@ -598,7 +598,7 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 **图层 dock** 提供缩略图、可见性切换、原地重命名、拖拽排序，以及当前层的混合
 模式与不透明度。``图层`` 菜单还有：
 
-- **新建 / 矢量 / 复制 / 向下合并**（``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
+- **新建 / 矢量 / 复制 / 向下合并**\ （``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
   ``Ctrl + J`` / ``Ctrl + E``）
 - **蒙版** — 添加蒙版 / 由选区生成 / 反相 / 应用 / 删除
   （``Ctrl + Shift + M`` 添加；``Ctrl + Alt + Shift + M`` 由选区生成）
@@ -623,7 +623,7 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 
 - ``添加帧`` 将当前图层状态存为一个关键帧。
 - 点击缩略图跳到该帧。
-- ``洋葱皮``（视图菜单）以低不透明度叠加相邻帧。
+- ``洋葱皮``\ （视图菜单）以低不透明度叠加相邻帧。
 - 通过 **文件 > 导出页面** 导出（漫画阅读器用 CBZ；打印用 PDF），或
   **动画导出** 输出 MP4 / GIF。
 
@@ -665,16 +665,16 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 视图辅助
 ^^^^^^^^
 
-- **像素网格**（``Ctrl + Shift + '``）— 高倍率时显示一像素网格
+- **像素网格**\ （``Ctrl + Shift + '``）— 高倍率时显示一像素网格
 - **吸附像素 / 边缘** — 将子像素位置锁到整数坐标
 - **洋葱皮** — 动画相邻帧叠加
 - **出血指示** — 印刷出血 / 安全区指示线
-- **旋转画布**（``Ctrl + Shift + H``）— 不破坏像素的视角旋转
+- **旋转画布**\ （``Ctrl + Shift + H``）— 不破坏像素的视角旋转
 
 文件 I/O
 ^^^^^^^^
 
-- **打开 PSD…**（``Ctrl + O``）与 **另存为 PSD…**（``Ctrl + S``）— Photoshop
+- **打开 PSD…**\ （``Ctrl + O``）与 **另存为 PSD…**\ （``Ctrl + S``）— Photoshop
   图层往返，含蒙版、混合模式、图层效果
 - **导出图像…** — 拼合并保存为 PNG / JPEG / WebP / BMP / TIFF
 - **导出页面 → CBZ** / **→ PDF** — 多帧漫画文档导出
@@ -833,8 +833,8 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 尺寸不同时会自动以 Lanczos 将 B 重新采样为 A 的尺寸。超大图片内部会限制长边 ≤ 2048 px 以保持实时反应。
 
 .. seealso::
-   若想直接在主窗口并排而不打开对话框，请见 **分割视图**（``Shift + S``）与
-   **双页阅读**（``Shift + D`` / ``Ctrl + Shift + D``）。
+   若想直接在主窗口并排而不打开对话框，请见 **分割视图**\ （``Shift + S``）与
+   **双页阅读**\ （``Shift + D`` / ``Ctrl + Shift + D``）。
 
 ----
 
@@ -853,7 +853,7 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 
 按 ``Ctrl + F`` 或 ``/``，输入关键字即可搜索当前文件夹中的图片名称。
 
-搜索支持 **模糊匹配**（前缀 > 子串 > 子序列 三级排名）与 **子串高亮**。
+搜索支持 **模糊匹配**\ （前缀 > 子串 > 子序列 三级排名）与 **子串高亮**。
 按 ``Enter`` 或双击结果跳至对应图片。
 
 若想按 **编号** 跳转，改按 ``Ctrl + G`` 打开跳页对话框。
@@ -1167,20 +1167,20 @@ Imervue 支持插件扩展功能。
 图库与元数据管理
 ----------------
 
-Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
-``~/.cache/imervue/library.db``（POSIX）维护 SQLite 索引，用于跨文件夹搜索、
+Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
+``~/.cache/imervue/library.db``\ （POSIX）维护 SQLite 索引，用于跨文件夹搜索、
 分层标签、智能相册、感知哈希、笔记与分拣旗标。以下功能多数位于
-``Extra Tools``（额外功能）菜单。为方便查找，该菜单按功能分为八个子菜单：
-``Batch``（批量）、``Library & Metadata``（图库与元数据）、
-``Views``（视图）、``Workflow``（工作流程）、``Export``（导出）、
-``Develop (Non-Destructive)``（调整）、``Retouch & Transform``（修复与变形）、
-``Multi-Image``（多张合成），以下路径均以
+``Extra Tools``\ （额外功能）菜单。为方便查找，该菜单按功能分为八个子菜单：
+``Batch``\ （批量）、``Library & Metadata``\ （图库与元数据）、
+``Views``\ （视图）、``Workflow``\ （工作流程）、``Export``\ （导出）、
+``Develop (Non-Destructive)``\ （调整）、``Retouch & Transform``\ （修复与变形）、
+``Multi-Image``\ （多张合成），以下路径均以
 ``Extra Tools`` > ``<子菜单>`` > ``<工具>`` 的形式呈现。
 
 图库搜索
 ^^^^^^^^
 
-``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 支持添加多个**根目录**并在后台建立索引，
+``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 支持添加多个\ **根目录**\ 并在后台建立索引，
 之后可按扩展名、最小宽高、文件大小或文件名片段查询，并将结果作为虚拟
 相册载入查看器。
 
@@ -1230,7 +1230,7 @@ Token 批量重命名
 与笔记。方便接入电子表格或外部流程。
 
 XMP Sidecar（other XMP-aware photo managers 互通）
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``），
 让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
@@ -1278,7 +1278,7 @@ Photos 风格）。日期优先取 EXIF ``DateTimeOriginal``，否则使用文�
 拖拽至外部应用
 ^^^^^^^^^^^^^^
 
-从**已选中** tile 按住拖拽，即可将文件丢入资源管理器、Chrome、Discord 等
+从\ **已选中** tile 按住拖拽，即可将文件丢入资源管理器、Chrome、Discord 等
 支持 file URL 的应用；拖拽预览为 tile 缩略图。
 
 单张图片笔记
@@ -1346,7 +1346,7 @@ HDR 合成
 ^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四个纯 numpy 滑块：径向
-畸变 ``k1``（桶形 / 枕形）、暗角补偿，以及红 / 蓝通道色差径向缩放。
+畸变 ``k1``\ （桶形 / 枕形）、暗角补偿，以及红 / 蓝通道色差径向缩放。
 因尺寸可能改变，结果输出为新文件而非写入 recipe。
 
 地图视图
@@ -1445,19 +1445,19 @@ GPS 地理标记
 Puppet 工作区（Puppet 标签）
 ----------------------------
 
-第四个顶层标签 — **Puppet** — 是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势组、对嘴、摄像头追踪），但**不依赖任何专利 SDK**、**不使用** ``live2d-py``，采用完全开放的 ``.puppet`` 文件格式。
+第四个顶层标签 — **Puppet** — 是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势组、对嘴、摄像头追踪），但\ **不依赖任何专利 SDK**、**不使用** ``live2d-py``，采用完全开放的 ``.puppet`` 文件格式。
 
 .. note::
 
    端到端教程 — 从全新安装到 OBS 直播或产出 MP4 — 在仓库根目录的
-   ``puppet_guide.zh-CN.md``（英文版 ``puppet_guide.md``、繁体中文版 ``puppet_guide.zh-TW.md``）。
+   ``puppet_guide.zh-CN.md``\ （英文版 ``puppet_guide.md``、繁体中文版 ``puppet_guide.zh-TW.md``）。
    本章是参考手册；那份是逐步走读。
 
 端到端流程
 ^^^^^^^^^^
 
 1. **导入 PNG** — 工具栏 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、单一 drawable、可立即渲染。
-2. **加变形器** — ``Add Rotation Deformer``（锚点 + 角度）或 ``Add Warp Deformer``（rows × cols Bezier lattice；边界外顶点直通）。
+2. **加变形器** — ``Add Rotation Deformer``\ （锚点 + 角度）或 ``Add Warp Deformer``\ （rows × cols Bezier lattice；边界外顶点直通）。
 3. **加参数** — ``Add Parameter`` 在右侧 **Parameters** 停靠栏加滑块（自动命名 ``Param1``、``Param2`` …）。
 4. **设 keys** — 拖滑块到极端值、编辑 deformer form、按 **Set key**。对中立值跟另一端重复。Runtime 接着会在滑块移动时于相邻 keys 之间 lerp 各字段。
 5. **保存** — ``Save As…`` 把 rig + 纹理 + 动作 + 表情 + 物理写成单一 ``.puppet`` zip，可分享或之后用 ``Open Puppet…`` 重开。
@@ -1475,9 +1475,9 @@ Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7Th 或自己�
 
 1. **启动 Imervue**。源码运行：``python -m Imervue``；安装版：直接执行 ``Imervue`` 可执行文件 / app bundle。``examples/`` 目录已打包进 wheel 与 Nuitka EXE，rig 文件位于安装目录下。
 2. 点窗口顶部的 **Puppet** 标签。
-3. 工具栏 → **File > Examples > March 7Th**（或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
+3. 工具栏 → **File > Examples > March 7Th**\ （或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
 4. 在底部 **Motions** 停靠栏单击任一个动作条目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即开始播放；再点一次停止，或选别的动作交叉淡入。
-5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**（头跟光标）、**Auto-blink**（自动眨眼）、**Auto idle** + **Idle motions**（呼吸 + 随机 idle 动作）、**Mic lip-sync**（麦克风 RMS 带动嘴型）、**Webcam tracking**（MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
+5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**\ （头跟光标）、**Auto-blink**\ （自动眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 随机 idle 动作）、**Mic lip-sync**\ （麦克风 RMS 带动嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
 6. 工具栏 **Reset to rest** 停掉所有动作、取消勾所有实时驱动、清掉 expressions / pose 覆盖，所有参数复位 — 标准的「从头开始」按钮。
 7. 之后要打开别的 rig：**File > Open Puppet…** 从磁盘挑任何 ``.puppet`` zip；**File > Examples ▾** 始终连到内置清单。
 
@@ -1488,7 +1488,7 @@ OBS 直播整合
 
 **A. Virtual Camera** — 在 OBS"视频捕获设备"源列表里以 webcam 形式出现。``pip install pyvirtualcam`` 加上平台驱动：OBS Studio 26+（Windows/macOS）会附 *OBS Virtual Camera* 驱动，第一次打开 OBS 点 *Start Virtual Camera* 注册；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具栏 **Output > Virtual camera** 开始推流。
 
-DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**，所以 Imervue 在角色以外的区域填**洋红色 `#FF00FF`** 当色键。OBS 端去背：
+DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道**，所以 Imervue 在角色以外的区域填\ **洋红色 #FF00FF** 当色键。OBS 端去背：
 
 1. 视频捕获设备源右键 → **Filters**
 2. **Effect Filters > + > Color Key**
@@ -1535,7 +1535,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
    * - Auto-blink
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路径绕过 canvas 的 no-change-skip，避免被其他 driver 卡住）
    * - Mic lip-sync
-     - 麦克风 RMS → ``ParamMouthOpenY``（需 ``sounddevice``）
+     - 麦克风 RMS → ``ParamMouthOpenY``\ （需 ``sounddevice``）
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → 头部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；打开实时预览 dialog 显示检测到的 landmark）
    * - Auto idle / Idle motions
@@ -1570,7 +1570,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 桌宠工作区（Desktop Pet 标签）
 ------------------------------
 
-第五个标签 — **Desktop Pet**（桌宠） — 把任意 ``.puppet``
+第五个标签 — **Desktop Pet**\ （桌宠） — 把任意 ``.puppet``
 角色作为无边框、透明的浮层显示在桌面上。标签本身是控制面板；
 真正的角色是一个独立的顶层窗口，与 Puppet 运行时共享全部能力
 （动作、表情、物理、闲置驱动、麦克风 / 摄像头输入）。桌宠可以
@@ -1596,11 +1596,11 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 快速上手
 ^^^^^^^^
 
-1. 切到 **Desktop Pet**（桌宠）标签。
-2. 点击 **Load bundled March 7th**（载入内置 March 7th）使用
-   内置角色，或 **Open Puppet…**（打开 Puppet 文件…）选择自己
+1. 切到 **Desktop Pet**\ （桌宠）标签。
+2. 点击 **Load bundled March 7th**\ （载入内置 March 7th）使用
+   内置角色，或 **Open Puppet…**\ （打开 Puppet 文件…）选择自己
    的 ``.puppet`` 文件。
-3. 浮层会出现在桌面上，**Show pet on desktop**（在桌面显示
+3. 浮层会出现在桌面上，**Show pet on desktop**\ （在桌面显示
    桌宠）勾选框会被自动勾上。（如果想在不关闭 Imervue 的情况下
    隐藏桌宠，取消勾选或用系统托盘图标即可。）
 4. 把角色拖到喜欢的位置。在屏幕边缘附近松开会贴边吸附。
@@ -1616,14 +1616,14 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 
 标签提供三种加载方式：
 
-* **Open Puppet…**（打开 Puppet 文件…） — 从磁盘选择任意
+* **Open Puppet…**\ （打开 Puppet 文件…） — 从磁盘选择任意
   ``.puppet`` 文件。
-* **Load bundled March 7th**（载入内置 March 7th） — 打开内置
+* **Load bundled March 7th**\ （载入内置 March 7th） — 打开内置
   的 ``examples/puppet/march_7th.puppet``。解析器先查
-  ``examples_dir()``（对打包的 Nuitka / pip 安装版本是
+  ``examples_dir()``\ （对打包的 Nuitka / pip 安装版本是
   frozen-safe 的），再回退到相对仓库根目录的查找，所以两种运行
   方式下按钮都能正常工作。
-* **Last rig**（上一个角色） — 上次加载的角色会在 Imervue 启动
+* **Last rig**\ （上一个角色） — 上次加载的角色会在 Imervue 启动
   时从设置字段 ``last_rig_path`` 自动恢复；Desktop Pet 标签会
   不可见地重新实例化浮层，让桌宠只差一次点击就回到你离开时
   的状态。
@@ -1711,7 +1711,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 #. 如果有一个 ``HitArea`` 覆盖了被点击的 drawable，且该区域
    绑定了动作，就播放该动作。
 #. 不管动作是否播放，桌宠都可能弹出一个气泡 — 台词挑选优先级
-   见 *Pet script*（桌宠脚本）一节。
+   见 *Pet script*\ （桌宠脚本）一节。
 #. 如果没有命中区域覆盖该点击，桌宠会回退到一句问候（从脚本
    的 ``greetings`` 列表或内置回退集里选）。
 
@@ -1721,21 +1721,21 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 
 弹出一个结构如下的上下文菜单：
 
-* **Hide pet**（隐藏桌宠） — 顶层动作，关闭浮层。
-* **Live drivers**（实时驱动）子菜单 — 六个可勾选的开关
+* **Hide pet**\ （隐藏桌宠） — 顶层动作，关闭浮层。
+* **Live drivers**\ （实时驱动）子菜单 — 六个可勾选的开关
   （Auto idle、Idle motions、Auto-blink、Drag-track head、
   Mic lip-sync、Webcam tracking）。勾选状态镜像实时驱动的
   运行状态，所以菜单显示的就是当前在跑的。
-* **Play motion**（播放动作）子菜单 — 从当前角色的
+* **Play motion**\ （播放动作）子菜单 — 从当前角色的
   ``document.motions`` 列表生成。选中一项会播放该动作（如果
   脚本为它绑定了台词，还会触发桌宠的声音）。
-* **Apply expression**（应用表情）子菜单 — 从角色的
+* **Apply expression**\ （应用表情）子菜单 — 从角色的
   ``document.expressions`` 生成。选中会切换该表情的参数 overlay。
-* 五个顶层可勾选开关：**Lock position**（锁定位置）、
-  **Click-through**（穿透点击）、**Always on bottom**
-  （永远置底）、**Hide on fullscreen**（全屏时隐藏）、
-  **Speech bubble**（气泡） — 与标签里同名开关的快捷入口。
-* **Size**（尺寸）子菜单 — Small / Medium / Large；当前预设
+* 五个顶层可勾选开关：**Lock position**\ （锁定位置）、
+  **Click-through**\ （穿透点击）、**Always on bottom**
+  （永远置底）、**Hide on fullscreen**\ （全屏时隐藏）、
+  **Speech bubble**\ （气泡） — 与标签里同名开关的快捷入口。
+* **Size**\ （尺寸）子菜单 — Small / Medium / Large；当前预设
   会被勾上。
 
 没加载角色时，动作 / 表情子菜单会被禁用。
@@ -1746,9 +1746,9 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、没有 alpha 通道**
 覆盖最常用的操作：
 
 * 左键切换桌宠显示。
-* 右键打开菜单：**Show pet**（显示桌宠，可勾选）、
-  **Click-through**（穿透点击）、**Open puppet…**（打开 puppet
-  文件…）、**Hide pet**（隐藏桌宠）。
+* 右键打开菜单：**Show pet**\ （显示桌宠，可勾选）、
+  **Click-through**\ （穿透点击）、**Open puppet…**\ （打开 puppet
+  文件…）、**Hide pet**\ （隐藏桌宠）。
 * 可勾选的 Show / Click-through 项通过 ``sync_visibility`` /
   ``sync_click_through`` 镜像标签的勾选状态，所以无论用户在哪
   切换对应开关，两边都会保持同步。
@@ -1801,14 +1801,14 @@ Pet script — 自定义嗓音与定时事件
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 桌宠的气泡从一个你可以自己写的 JSON 文件取台词，文件通过标签
-里的 **Pet script**（桌宠脚本）面板加载。脚本控制四件事：
+里的 **Pet script**\ （桌宠脚本）面板加载。脚本控制四件事：
 
-* **Greetings**（问候） — 没有更具体匹配时使用的默认点击台词。
-* **Hit-area responses**（命中区域回应） — 按 ``HitArea.id``
+* **Greetings**\ （问候） — 没有更具体匹配时使用的默认点击台词。
+* **Hit-area responses**\ （命中区域回应） — 按 ``HitArea.id``
   分桶的台词。
-* **Motion lines**（动作台词） — 按动作名分桶的台词，在桌宠
+* **Motion lines**\ （动作台词） — 按动作名分桶的台词，在桌宠
   开始播放该动作时触发（无论来自命中区域还是上下文菜单）。
-* **Scheduled chimes**（定时提醒） — 定时驱动的台词，每过
+* **Scheduled chimes**\ （定时提醒） — 定时驱动的台词，每过
   ``every_seconds`` 秒（按 monotonic 墙钟）触发一次。
 
 Schema（带版本号 — 新字段向前兼容）：
@@ -1848,7 +1848,7 @@ Schema（带版本号 — 新字段向前兼容）：
 * 时间跟踪使用 ``time.monotonic``，所以挂起笔记本或调系统时钟
   也不会让排队事件批量爆发。
 
-**Reset to default**（恢复默认）会丢掉用户脚本、回到内置问候集；
+**Reset to default**\ （恢复默认）会丢掉用户脚本、回到内置问候集；
 持久化的脚本路径会被清空，下次启动不再加载。
 
 一个可用的示例位于
@@ -1932,12 +1932,12 @@ key 也能在不认识它们的旧运行时上幸存。
 #. 切到 Puppet 标签，通过 **File > Import PNG…**
    （文件 > 导入 PNG…）或 **File > Import PSD…**
    （文件 > 导入 PSD…）导入画稿，或通过
-   **File > Import Cubism…**（文件 > 导入 Cubism…）拉入
+   **File > Import Cubism…**\ （文件 > 导入 Cubism…）拉入
    Cubism 模型。
 #. 制作 rotation / warp deformer、parameters、motions、
    expressions，以及（可选）绑到身体部位的 hit areas，让 Desktop
    Pet 的左键处理器可以触发动作。
-#. 通过 **File > Save As…**（文件 > 另存为…）保存为 ``.puppet``
+#. 通过 **File > Save As…**\ （文件 > 另存为…）保存为 ``.puppet``
    zip。
 #. 切回 Desktop Pet 标签，通过 **Open Puppet…** 加载新文件。
 
@@ -1955,14 +1955,14 @@ key 也能在不认识它们的旧运行时上幸存。
 管理器会这么做）。在 Windows / macOS 上应该 "开箱即用"。
 
 **"Load bundled March 7th" 报告找不到文件。** 解析器先查
-``examples_dir()``（打包构建使用的 frozen-safe 位置），再回退
+``examples_dir()``\ （打包构建使用的 frozen-safe 位置），再回退
 到相对 CWD 的路径。如果两处都没有，状态栏会显示期望路径。
 确认随安装一起发布的 ``examples/`` 目录存在 — 源代码 checkout
 时请从仓库根目录启动 Imervue。
 
 **点击桌宠没有说话。** 三处检查：
 
-#. 确认 **Speech bubble on click**（点击时弹气泡）开关已开
+#. 确认 **Speech bubble on click**\ （点击时弹气泡）开关已开
    （在标签或右键菜单里）。
 #. 如果加载了自定义脚本，确认 JSON 能解析 — 加载错误会显示在
    标签的状态栏。
@@ -2005,7 +2005,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
 无界面批处理 CLI
 ^^^^^^^^^^^^^^^^
 
-``Imervue.cli`` 可在 shell 中执行纯图像运算,**完全不启动 Qt**,
+``Imervue.cli`` 可在 shell 中执行纯图像运算,\ **完全不启动 Qt**,
 因此适合用于脚本、CI 步骤,以及没有显示设备的服务器::
 
    py -m Imervue.cli resize photos/ --max 1600 --out web/
@@ -2036,7 +2036,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - ``list-ops``
      - 列出所有子命令(``--json`` 输出机器可读格式)
 
-共用标志:``--out``(输出目录)、``--recursive``、``--dry-run``(只列出动作、不写入)、``--overwrite`` 与 ``--version``。
+共用标志:``--out``\ (输出目录)、``--recursive``、``--dry-run``\ (只列出动作、不写入)、``--overwrite`` 与 ``--version``。
 
 ----
 
@@ -2071,7 +2071,7 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
    * - ``convert_format``
      - 图片格式转换。目标格式由目标文件的后缀决定（``png`` /
        ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``）。
-       JPEG/WebP 可选择 ``quality``（1–100）。
+       JPEG/WebP 可选择 ``quality``\ （1–100）。
    * - ``puppet_from_png``
      - 用 puppet 插件的 auto-mesh 从 PNG 建出 ``.puppet`` 动画文件。
        自动注入 Cubism 标准参数，导入后可直接被驱动。
@@ -2114,7 +2114,7 @@ Prompts（提示词）
 
 服务器通过 ``prompts/list`` / ``prompts/get`` 公开四个提示词：
 ``caption_image``、``suggest_edits``、``analyze_composition``
-（显著性驱动的构图评析）与 ``flag_issues``（锐度 + 质量 + 裁剪分流）。
+（显著性驱动的构图评析）与 ``flag_issues``\ （锐度 + 质量 + 裁剪分流）。
 提示词参数可通过 ``completion/complete`` 自动补全。
 
 Claude Code（项目级）

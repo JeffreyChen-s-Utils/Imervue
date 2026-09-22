@@ -963,7 +963,7 @@ en *Start Virtual Camera* en OBS para registrarlo); Linux usa ``v4l2loopback-dkm
 La barra de herramientas **Output > Virtual camera** abre el flujo.
 
 DirectShow / AVFoundation / v4l2loopback son sólo-RGB — sin canal alfa — por lo que Imervue
-rellena el área fuera del personaje con **magenta `#FF00FF`** como croma. Elimínelo en OBS
+rellena el área fuera del personaje con **magenta #FF00FF** como croma. Elimínelo en OBS
 mediante el filtro Color Key:
 
 1. Clic derecho en la fuente Video Capture Device > **Filters**
@@ -2017,8 +2017,8 @@ Herramientas y superposiciones
    * - ``S``
      - Presentación
 
-Animación
-^^^^^^^^^
+Imágenes animadas
+^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
