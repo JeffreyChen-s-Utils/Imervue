@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-22 | 2026-09-23 | Real-application run after the viewer split | #snapshot #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-21 | 2026-09-23 | Split GPUImageView: deep-zoom loading, fitting, prefetch and mouse become mixins | #done #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-20 | 2026-09-23 | Split PuppetWorkspace: menus, import and live outputs become mixins | #done #refactor #puppet | [2026-09](2026-09.md) |
 | U-20260923-19 | 2026-09-23 | Brush jitter changed on every reopen: seed it with CRC32, not hash() | #incident #annotation | [2026-09](2026-09.md) |
