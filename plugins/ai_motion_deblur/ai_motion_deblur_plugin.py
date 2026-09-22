@@ -42,6 +42,7 @@ from ai_motion_deblur.deblur import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -50,6 +51,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.plugin.ai_motion_deblur")
 
+# The optional ONNX path needs onnxruntime; offered for install on first use.
+ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
+
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _MODELS_DIR = _PLUGIN_DIR / "models"
 _PERCENT_STEPS = 100
@@ -57,7 +61,7 @@ _PERCENT_STEPS = 100
 
 class AIMotionDeblurPlugin(ImervuePlugin):
     plugin_name = "AI Motion Deblur"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Wiener deconvolution or ONNX-based motion deblur."
     plugin_author = "Imervue"
 
@@ -279,6 +283,17 @@ class AIMotionDeblurDialog(WorkerHostMixin, QDialog):
 
     def _commit(self) -> None:
         if self._worker is not None:
+            return
+        if self._method.currentData()[0] == "onnx":
+            # The ONNX path needs onnxruntime; offer to install it before running.
+            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+            return
+        self._start_worker()
+
+    def _start_worker(self) -> None:
+        # Also reached asynchronously after the dependency check, by which
+        # time the user may have closed the dialog.
+        if self._worker is not None or not self.isVisible():
             return
         method = self._method.currentData()
         blend = self._blend.value() / _PERCENT_STEPS

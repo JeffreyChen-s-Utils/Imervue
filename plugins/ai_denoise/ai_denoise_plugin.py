@@ -39,6 +39,7 @@ from ai_denoise.denoise import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -46,6 +47,9 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_denoise")
+
+# The optional ONNX path needs onnxruntime; offered for install on first use.
+ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _MODELS_DIR = _PLUGIN_DIR / "models"
@@ -55,7 +59,7 @@ _PERCENT_STEPS = 100
 
 class AIDenoisePlugin(ImervuePlugin):
     plugin_name = "AI Denoise"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Bilateral filter or ONNX neural denoise."
     plugin_author = "Imervue"
 
@@ -218,6 +222,17 @@ class AIDenoiseDialog(WorkerHostMixin, QDialog):
 
     def _commit(self) -> None:
         if self._worker is not None:
+            return
+        if str(self._method.currentData()) != "bilateral":
+            # The ONNX path needs onnxruntime; offer to install it before running.
+            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+            return
+        self._start_worker()
+
+    def _start_worker(self) -> None:
+        # Also reached asynchronously after the dependency check, by which
+        # time the user may have closed the dialog.
+        if self._worker is not None or not self.isVisible():
             return
         method = str(self._method.currentData())
         blend = self._blend.value() / _PERCENT_STEPS
