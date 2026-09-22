@@ -119,6 +119,10 @@ Public interfaces other code or users depend on:
   `plugins/<name>/` here must be copied to `D:\Codes\Imervue_Plugins` and pushed to `main`; keep every
   runtime-required file flat (nested `models/`, `assets/` are never fetched). Language plugins sit
   under `languages/` there, the rest under `plugins/`.
+- **Extra Tools submenu names.** Plugins in Imervue_Plugins place menu entries with
+  `main_window.findChild(QMenu, "extra_tools.<key>")` (`develop_submenu`, `retouch_submenu`, ...;
+  names set by `Imervue/menu/extra_tools_menu.py` `submenu_object_name`). Never rename or drop one;
+  `tests/test_plugin_menu_placement.py` covers the plugins that use them.
 - **Plugin dependencies.** `Imervue/plugin/pip_installer.py` installs a plugin's pip packages at
   runtime, including in frozen builds.
 - **External services.** Every download made by the plugin downloader and pip installer goes through

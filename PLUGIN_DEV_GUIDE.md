@@ -105,6 +105,19 @@ def on_build_menu_bar(self, plugin_menu):
     )
 ```
 
+To put an entry into one of the **Extra Tools** submenus instead, look the submenu up by its object name, `extra_tools.<key>`, and fall back to the Plugins menu so the entry still appears on an Imervue version that predates the names. The keys are `batch_submenu`, `library_submenu`, `views_submenu`, `workflow_submenu`, `export_submenu`, `develop_submenu`, `retouch_submenu` and `multi_image_submenu`. Match by object name, never by the visible title: titles are translated.
+
+```python
+from PySide6.QtWidgets import QMenu
+
+def on_build_menu_bar(self, plugin_menu):
+    target = self.main_window.findChild(QMenu, "extra_tools.retouch_submenu")
+    entry = (target if target is not None else plugin_menu).addAction("My Filter")
+    entry.triggered.connect(self.open_dialog)
+```
+
+Qt keeps only a weak reference to a bound-method slot. That is fine for hooks, because the plugin manager holds every plugin instance, but a helper object created inside a hook must be stored on `self` or its slots silently stop firing.
+
 #### `on_build_context_menu(menu: QMenu, viewer: GPUImageView)`
 
 Called when the right-click context menu is being built. Add items conditionally based on viewer state.
