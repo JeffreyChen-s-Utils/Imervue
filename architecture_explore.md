@@ -205,7 +205,7 @@ ImervueMainWindow
 | `__main__.py` | 102 | CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 2,296 | `ImervueMainWindow`：5 分頁協調者、狀態列、過濾列、分頁狀態機、螢幕自適應、資料夾監控 |
 | `cli.py` | 578 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
-| `integration_guide.py` | 175 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單 |
+| `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
 ### 6.2 `Imervue/system/`
 
@@ -528,7 +528,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `hover_preview.py` | 185 | 縮圖懸停放大彈窗 |
 | `image_issue_panel.py` | 143 | 圖片載入問題面板（dock） |
 | `multi_monitor_window.py` | 275 | 多螢幕鏡像視窗 |
-| `command_palette.py` | 170 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器 |
+| `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
+| `menu_tree.py` | 59 | 不經 `QAction.menu()` 走訪選單樹（`submenu_index` / `iter_menu_actions`），見 §10.10 |
 | `modify_actions_widget.py` | 204 | 共用的 Modify 動作按鈕組（選單與右鍵共用） |
 | `main_tab_nav.py` | 48 | Modify/Paint 分頁左右鍵的純路由決策 |
 | `screen_fit.py` | 63 | 換螢幕時主視窗自適應的純幾何 |
@@ -607,10 +608,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_menu.py` | 483 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 291 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 276 | 依副檔名 / 星等過濾 |
-| `plugin_menu.py` | 264 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾 |
+| `plugin_menu.py` | 341 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 193 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 175 | 依名稱 / 日期 / 大小 / 解析度排序 |
-| `language_menu.py` | 53 | 語言切換（提示重新啟動） |
+| `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
 | `modify_menu.py` | 30 | Deep-Zoom 專用的「修改」選單動作 |
 
 ### 6.14 `Imervue/paint/`
@@ -714,7 +715,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_presets.py` | 266 + `workspace_preset_dialog.py`(318) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 143 + `auto_save.py`(243) | 自動存檔與當機復原 |
 | `action_recorder.py` | 241 + `action_recorder_dialog.py`(198) | 動作錄製 / 重播 |
-| `shortcut_registry.py` | 176 + `shortcut_dialog.py`(163) + `shortcuts_dialog.py`(119) | 可自訂快捷鍵登錄 |
+| `shortcut_registry.py` | 176 + `shortcut_dialog.py`(163) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄 |
 | `tablet_mapping.py` | 231 | 數位板按鍵 → 動作對應 |
 | `recent_files.py` | 73 | 最近開啟清單 |
 | `export_presets.py` | 274 + `export_utils.py`(232) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
@@ -1033,6 +1034,15 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 一律透過 `user_settings/user_setting_dict.py`：去抖非同步存檔 + atomic `.tmp` → `os.replace()`。
 關閉前呼叫 `cancel_pending_save()` 再立即 flush。
 
+### 10.10 選單走訪不可用 `QAction.menu()`
+
+PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` wrapper 在 shiboken 擁有權樹裡
+改掛到那個暫時的 `QAction` wrapper 下；action wrapper 一被回收，menu wrapper 就被作廢，連帶其他地方
+快取的參照（`language_menu`、`_plugin_menu`、paint 的 `_<key>_menu`）都會丟出
+「Internal C++ object already deleted」，雖然 C++ 選單還活著。走訪選單一律用 `gui/menu_tree.py`
+（`findChildren(QMenu)` + `menuAction()` 對照），要找特定選單就給它 object name 再 `findChild`
+（`extra_tools.<key>`、`language_menu`、`plugin_menu`）。
+
 ---
 
 ## 11. 持久化檔案一覽
@@ -1059,7 +1069,7 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 
 2. **`plugins/` 是 gitignored。** 新增外掛檔案要 `git add -f`，否則會靜默漏掉。
    而且改完必須鏡像到 `D:\Codes\Imervue_Plugins` 的 `main` 分支才會到使用者手上；
-   專案規範裡的 parity 指令只比對「目錄名」，抓不到檔案層級的漂移。
+   `CLAUDE.md` 的 parity 指令逐檔比對內容（忽略換行符），沒有輸出才算同步。
 
 3. **完整測試套件會在全部測試通過後才以 `-1073741819`（0xC0000005）結束。**
    已在 stash 過的乾淨樹上驗證是既有現象，不是新引入的。
@@ -1070,7 +1080,7 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 5. **`gpu_image_view.py` 與 `gl_renderer.py` 使用 `from OpenGL.GL import *`**，因此在
    `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
 
-6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2296)、`canvas.py`(1853)、
+6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
    `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
    `document.py`(1388)、`develop_panel.py`(1332)、`puppet/canvas.py`(1308)、
    `tool_dispatcher.py`(1028)、`annotation_dialog.py`(1055)、`overlay_painter.py`(1121)、
@@ -1082,6 +1092,10 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 
 8. **Qt 對話框測試**：在 `qapp` fixture 下建立對話框時 parent 傳 `None`，
    不要傳暫時性的 `QWidget`，否則 teardown 會 access violation。
+
+9. **不要用 `QAction.menu()` 走訪選單**（§10.10）。它讓外掛語言從語言選單消失、讓命令面板用過之後
+   「重新載入外掛」拿到失效的 Plugins 選單。外掛的 `on_build_menu_bar` 拿到的是 Plugins `QMenu`
+   不是 `QMenuBar`，要放進 Extra Tools 子選單請 `findChild(QMenu, "extra_tools.<key>")`。
 
 
 

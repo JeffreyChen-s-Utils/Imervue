@@ -116,6 +116,8 @@ def on_build_menu_bar(self, plugin_menu):
     entry.triggered.connect(self.open_dialog)
 ```
 
+To join a submenu another plugin created (several AI plugins share "AI Tools"), look for it with `plugin_menu.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly)` and compare titles. Do not walk menus with `QAction.menu()`: on PySide6 6.11.0 and 6.11.1 it invalidates every other reference to the returned menu once the temporary action wrapper is collected, and the next call on such a reference raises "Internal C++ object already deleted".
+
 Qt keeps only a weak reference to a bound-method slot. That is fine for hooks, because the plugin manager holds every plugin instance, but a helper object created inside a hook must be stored on `self` or its slots silently stop firing.
 
 #### `on_build_context_menu(menu: QMenu, viewer: GPUImageView)`

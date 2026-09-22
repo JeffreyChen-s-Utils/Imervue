@@ -10,19 +10,28 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import shiboken6
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTreeWidget, QTreeWidgetItem,
-    QHeaderView, QTextEdit,
+    QHeaderView, QTextEdit, QMenu,
 )
 
+from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
+    from PySide6.QtGui import QAction
+
     from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.plugin.plugin_base import ImervuePlugin
+    from Imervue.plugin.plugin_manager import PluginManager
+
+# Object name of the Plugins menu. Reload looks the menu up by it instead of
+# trusting a cached wrapper (see Imervue/gui/menu_tree.py).
+PLUGIN_MENU_OBJECT_NAME = "plugin_menu"
 
 
 def _get_plugin_dir() -> Path:
@@ -39,6 +48,7 @@ def build_plugin_menu(ui: ImervueMainWindow):
     plugin_menu = ui.menuBar().addMenu(
         lang.get("plugin_menu_title", "Plugins")
     )
+    plugin_menu.setObjectName(PLUGIN_MENU_OBJECT_NAME)
 
     # ===== 插件管理對話框 =====
     manage_action = plugin_menu.addAction(
@@ -72,6 +82,70 @@ def build_plugin_menu(ui: ImervueMainWindow):
     ui._plugin_menu = plugin_menu
 
     return plugin_menu
+
+
+# ===========================
+# Entries added by plugins
+# ===========================
+
+def _address(obj) -> int:
+    return shiboken6.getCppPointer(obj)[0]
+
+
+def _menu_entries(ui: ImervueMainWindow) -> list[tuple[QMenu, QAction]]:
+    """Every ``(container, action)`` pair in the menu bar and the menus under it."""
+    bar = ui.menuBar()
+    containers = [bar, *bar.findChildren(QMenu)]
+    return [(container, action) for container in containers for action in container.actions()]
+
+
+def dispatch_plugin_menus(ui: ImervueMainWindow, manager: PluginManager, plugin_menu) -> None:
+    """Run every plugin's menu hook and remember the entries it added.
+
+    Plugins may add to the Plugins menu, to an Extra Tools submenu or to the
+    bar itself; the entries that were not there before the hooks ran are
+    stored on ``ui`` so :func:`remove_plugin_menu_entries` can take exactly
+    those out again on reload.
+    """
+    before = {(_address(c), _address(a)) for c, a in _menu_entries(ui)}
+    manager.dispatch_build_menu_bar(plugin_menu)
+    ui._plugin_menu_entries = [
+        (container, action) for container, action in _menu_entries(ui)
+        if (_address(container), _address(action)) not in before
+    ]
+
+
+def remove_plugin_menu_entries(ui: ImervueMainWindow) -> None:
+    """Remove and delete the entries the last :func:`dispatch_plugin_menus` recorded.
+
+    A plugin submenu is deleted with everything in it; plain actions are
+    deleted as well, since their plugin instance is about to be unloaded.
+    """
+    entries = getattr(ui, "_plugin_menu_entries", [])
+    index = submenu_index(ui.menuBar())
+    for container, action in reversed(entries):
+        if not (shiboken6.isValid(container) and shiboken6.isValid(action)):
+            continue
+        container.removeAction(action)
+        sub = submenu_of(action, index)
+        if sub is None:
+            action.deleteLater()
+            continue
+        # Detach first: until the deferred delete runs the submenu would still
+        # be a child, and a reloaded plugin that looks its shared submenu up
+        # with findChildren (safety_review joins "AI Tools") would fill the
+        # doomed one.
+        sub.setParent(None)
+        sub.deleteLater()
+    ui._plugin_menu_entries = []
+
+
+def _live_plugin_menu(ui: ImervueMainWindow):
+    menu = ui.findChild(QMenu, PLUGIN_MENU_OBJECT_NAME)
+    if menu is not None:
+        return menu
+    cached = getattr(ui, "_plugin_menu", None)
+    return cached if cached is not None and shiboken6.isValid(cached) else None
 
 
 # ===========================
@@ -235,12 +309,16 @@ def _reload_plugins(ui: ImervueMainWindow):
         return
 
     manager = ui.plugin_manager
+    # Take the old entries out first: they would otherwise pile up and keep
+    # calling the unloaded plugin instances.
+    remove_plugin_menu_entries(ui)
     manager.unload_all()
     manager.discover_and_load()
 
     # 重新讓插件加到 Plugin 選單
-    if hasattr(ui, '_plugin_menu'):
-        manager.dispatch_build_menu_bar(ui._plugin_menu)
+    plugin_menu = _live_plugin_menu(ui)
+    if plugin_menu is not None:
+        dispatch_plugin_menus(ui, manager, plugin_menu)
 
     loaded = len(manager.plugins)
     if hasattr(ui, "toast"):

@@ -58,26 +58,6 @@ _SCREEN_ADAPT_DEBOUNCE_MS = 300
 _DEEP_ZOOM_RESTORE_RETRY_MS = 50
 
 
-def _safe_submenus_of(parent) -> list:
-    """Return live submenus reachable from ``parent`` (a QMenuBar or
-    QMenu). Wrappers whose underlying C++ object has been freed are
-    skipped silently — see ``ImervueMainWindow._enable_tooltips_on_all_menus``.
-    Mirrors the shiboken-teardown pattern in ``paint_workspace._safe_set_checked``."""
-    out: list = []
-    try:
-        actions = parent.actions()
-    except RuntimeError:
-        return out
-    for action in actions:
-        try:
-            submenu = action.menu()
-        except RuntimeError:
-            continue
-        if submenu is not None:
-            out.append(submenu)
-    return out
-
-
 def _any_tag_label() -> str:
     return language_wrapper.language_word_dict.get("image_filter_any_tag", "Any tag")
 
@@ -654,26 +634,19 @@ class ImervueMainWindow(QMainWindow):
         self._enable_tooltips_on_all_menus()
 
     def _enable_tooltips_on_all_menus(self) -> None:
-        """Enable per-action tooltips on every top-level menu and any
-        submenus reachable from them. Safe to call repeatedly — Qt's
-        ``setToolTipsVisible`` is idempotent. Defensive against shiboken
-        wrappers whose C++ peer has been freed; skipping them costs at
-        most one menu's tooltip flag, missing them aborts startup."""
-        bar = self.menuBar()
-        if bar is None:
-            return
-        seen: set[int] = set()
-        pending: list[QMenu] = list(_safe_submenus_of(bar))
-        while pending:
-            menu = pending.pop()
-            if id(menu) in seen:
-                continue
-            seen.add(id(menu))
+        """Enable per-action tooltips on every menu of the window.
+
+        Safe to call repeatedly — Qt's ``setToolTipsVisible`` is idempotent.
+        The menus are found with ``findChildren``: walking them through
+        ``QAction.menu()`` invalidated the cached ``language_menu`` wrapper
+        (Imervue/gui/menu_tree.py), which is how plugin languages vanished
+        from the Language menu.
+        """
+        for menu in self.findChildren(QMenu):
             try:
                 menu.setToolTipsVisible(True)
             except RuntimeError:
                 continue
-            pending.extend(_safe_submenus_of(menu))
 
     # ==========================
     # 狀態列

@@ -88,3 +88,31 @@ def test_entry_falls_back_to_plugins_menu_on_older_host(
         assert calls == [cls]
     finally:
         window.deleteLater()
+
+
+def test_safety_review_reuses_the_ai_tools_submenu_without_invalidating_it(qapp):
+    """safety_review joins the "AI Tools" submenu another plugin created.
+
+    It used to find that submenu with ``QAction.menu()``, which invalidated
+    the other plugin's cached wrapper of it.
+    """
+    import gc
+
+    import shiboken6
+
+    from Imervue.multi_language.language_wrapper import language_wrapper
+
+    cls = _plugin_class("safety_review.safety_review", "SafetyReviewPlugin")
+    window, plugin_menu = _window(with_extra_tools=False)
+    try:
+        title = language_wrapper.language_word_dict.get("bg_remove_menu", "AI Tools")
+        ai_tools = plugin_menu.addMenu(title)   # as ai_background_remover does
+        ai_tools.addAction("AI Background Removal")
+        plugin = cls(window)
+        plugin.on_build_menu_bar(plugin_menu)
+        gc.collect()
+        assert shiboken6.isValid(ai_tools)
+        assert len(plugin_menu.actions()) == 1            # no second AI Tools submenu
+        assert len(ai_tools.actions()) > 2                # safety review entries joined it
+    finally:
+        window.deleteLater()
