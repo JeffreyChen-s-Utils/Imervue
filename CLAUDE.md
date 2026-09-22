@@ -2,17 +2,16 @@
 
 ## Session Progress Log — CHECK THIS FIRST
 
-`.claude/PROGRESS.md` is the hand-off file between sessions. Gitignored scratch space: never a
-deliverable, never referenced from code or shipped docs.
+`progress.md` at the repo root is the outstanding-work list and the hand-off between sessions.
+It is tracked, so keep it free of anything that should not be public.
 
-- **Read it at the start of every session.** If `## Pending` lists items, say so and offer to
+- **Read it at the start of every session.** If `## Open` lists items, say so and offer to
   continue them before starting anything new. If it's empty, proceed and don't mention the file.
-- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed commit,
-  a failing gate, a deferred follow-up, a decision waiting on an answer. One line of *what*, one
-  line of the *next concrete step*. Design notes belong in the code, the commit, or the PR.
-- **Delete each item the moment it lands.** A finished item left behind is worse than no file.
-- When the last item is done, reset the file to `# Progress Log` + an empty `## Pending` section
-  (`_(nothing pending)_`) + `## Notes`. Recreate it from that shape if it's missing.
+- **Write to it the moment something is left unfinished** — a failing gate, a deferred follow-up,
+  a decision waiting on an answer. One line of *what*, one line of the *next concrete step*.
+  Design notes belong in the code, the commit, or the PR.
+- **Delete each item the moment it lands** and record it in `docs/updates/` in the same commit
+  (see "Stage commits" below). A finished item left behind is worse than no file.
 
 ## Definition of Done (HARD REQUIREMENT)
 
@@ -34,7 +33,7 @@ it. Skipping tests "to come back later" is not allowed because later never happe
 ## Architecture Map — `architecture_explore.md` (HARD REQUIREMENT)
 
 `architecture_explore.md` at the repo root maps the whole tree: every package, a one-line purpose
-for every module, the cross-cutting patterns, the known traps. Unlike `.claude/PROGRESS.md` it
+for every module, the cross-cutting patterns, the known traps. Like `progress.md`, it
 **is** a tracked deliverable. A map that lags the code is worse than no map — it sends people to
 the wrong file with confidence — so it is updated **in the same commit**, never in a follow-up.
 
@@ -64,6 +63,19 @@ for r,d,fs in os.walk('Imervue'):
             f+=1;t+=sum(1 for _ in open(os.path.join(r,n),encoding='utf-8'))
 print(f'Imervue: {f} files, {t} lines')"
 ```
+
+## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
+
+Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
+
+- **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `progress.md`.
+  - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
+  - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+- **`progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+- **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
+- **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
+- **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
+- The update log of the plugin distribution repository `Imervue_Plugins` also lives here, tagged `#Imervue_Plugins`: a `docs/` directory there would show up as a plugin category in the downloader.
 
 ## No AI Attribution (HARD REQUIREMENT)
 
