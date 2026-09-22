@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-20 | 2026-09-23 | Split PuppetWorkspace: menus, import and live outputs become mixins | #done #refactor #puppet | [2026-09](2026-09.md) |
 | U-20260923-19 | 2026-09-23 | Brush jitter changed on every reopen: seed it with CRC32, not hash() | #incident #annotation | [2026-09](2026-09.md) |
 | U-20260923-18 | 2026-09-23 | Split the annotation canvas into drawing, crop and mosaic/blur mixins | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-17 | 2026-09-23 | Move the puppet canvas GL drawing into a mixin; render test on a real rig | #done #refactor #puppet | [2026-09](2026-09.md) |
