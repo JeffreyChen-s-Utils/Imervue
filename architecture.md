@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-22 against `381b041` on `dev`.
+> Last verified: 2026-09-23 against `59af060` on `dev`.
 
 ## 1. Purpose
 
@@ -48,7 +48,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/user_settings/` | Global settings dict (profiles, migration, debounced atomic save), tags, bookmarks, colour labels |
 | `Imervue/multi_language/` | `language_wrapper` singleton and built-in dictionaries (`english.py` is the canonical key set) |
 | `Imervue/sessions/`, `Imervue/macros/`, `Imervue/external/` | Session/workspace save-restore, macro record/replay, external-editor launcher |
-| `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, manifest checks, `WorkerHostMixin` |
+| `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, `WorkerHostMixin` |
 | `Imervue/mcp_server/` | MCP JSON-RPC 2.0 stdio server; no Qt, no optional dependencies |
 | `Imervue/cli.py` | Headless batch CLI (NumPy + Pillow paths only, never starts Qt) |
 | `plugins/` | Plugin sources (gitignored; tracked files need `git add -f`), mirrored to Imervue_Plugins |
