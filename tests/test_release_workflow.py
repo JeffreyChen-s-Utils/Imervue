@@ -249,6 +249,9 @@ REQUIRED_NUITKA_FLAGS = (
     "--standalone",
     "--windows-console-mode=disable",
     "--enable-plugin=pyside6",
+    # Plugins import Imervue modules nothing else does; without this the
+    # bundle drops them and 10 of the 17 plugins fail to load.
+    "--include-package=Imervue",
     "--include-package=qt_material",
     "--include-package=imageio",
     "--include-package=rawpy",
@@ -280,6 +283,14 @@ def test_nuitka_command_does_not_copy_plugins_as_a_data_dir(nuitka_command):
     # --include-data-dir copies "all non-code files": every plugin file is a
     # .py, so this form shipped nothing and the EXE had no plugins directory.
     assert "--include-data-dir=plugins=plugins" not in nuitka_command
+
+
+def test_pyinstaller_specs_collect_every_imervue_submodule():
+    # Same trap as the Nuitka --include-package flag: a spec that only follows
+    # the app's own imports ships no Imervue.plugin.model_dir for the plugins.
+    for name in ("Imervue.spec", "Imervue_mac.spec"):
+        text = (REPO_ROOT / name).read_text(encoding="utf-8")
+        assert "collect_submodules('Imervue')" in text, name
 
 
 def test_nuitka_docs_use_the_same_plugin_flag():

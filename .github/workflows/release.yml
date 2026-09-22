@@ -25,6 +25,13 @@
 #   - The four built-in tabs (Imervue / Modify / Paint / Puppet) all
 #     live under ``Imervue/`` and are picked up automatically by
 #     Nuitka's package walk — there's no per-tab include arg.
+#   - ``--include-package=Imervue`` compiles every submodule, not
+#     only the ones the app imports itself: plugins load from disk
+#     at run time and import modules such as
+#     ``Imervue.plugin.model_dir`` and ``Imervue.image.inpaint``
+#     that nothing else reaches. Nuitka warns that it will not
+#     re-include ``Imervue.__main__`` — that is expected in package
+#     mode and harmless.
 #   - ``--include-data-files=plugins=plugins/=**/*.py`` ships the
 #     third-party plugin directory so users can drop in / download
 #     plugins without rebuilding. It has to be the data-*files* form
@@ -215,6 +222,7 @@ jobs:
             --windows-console-mode=disable ^
             --enable-plugin=pyside6 ^
             --python-flag=-m ^
+            --include-package=Imervue ^
             --include-package=qt_material ^
             --include-package=imageio ^
             --include-package=rawpy ^

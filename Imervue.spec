@@ -34,6 +34,11 @@ binaries = []
 hiddenimports = []
 datas += collect_data_files('qt_material')
 hiddenimports += collect_submodules('PySide6')
+# Plugins import Imervue modules the app itself never imports (e.g.
+# Imervue.plugin.model_dir, Imervue.image.inpaint). They load from disk at
+# runtime, so the bundle must carry every submodule or those plugins fail
+# with ModuleNotFoundError.
+hiddenimports += collect_submodules('Imervue')
 tmp_ret = collect_all('imageio')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('rawpy')

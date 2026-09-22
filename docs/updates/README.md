@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-09 | 2026-09-23 | 10 of 17 plugins failed to load in the EXE: compile every Imervue submodule | #incident #packaging #plugins | [2026-09](2026-09.md) |
 | U-20260923-08 | 2026-09-23 | Move the OSD text and HUD geometry helpers out of overlay_painter | #done #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-07 | 2026-09-23 | The packaged EXE wrote no log; set it up before Qt is imported | #incident #packaging #logging | [2026-09](2026-09.md) |
 | U-20260923-06 | 2026-09-23 | A fixed processEvents count made a worker test fail 4 runs in 5 | #incident #tests | [2026-09](2026-09.md) |
