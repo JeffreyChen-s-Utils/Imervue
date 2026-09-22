@@ -1,10 +1,29 @@
 # -- Sphinx configuration for Imervue documentation --
 
+from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10; Read the Docs builds on 3.12
+    tomllib = None
+
+_PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
+
+
+def _project_version(pyproject: Path = _PYPROJECT) -> str:
+    """Read the package version from pyproject.toml, which CI bumps on every release."""
+    if tomllib is None or not pyproject.is_file():
+        return "unknown"
+    with pyproject.open("rb") as fh:
+        return str(tomllib.load(fh).get("project", {}).get("version", "unknown"))
+
+
 project = "Imervue"
 author = "Imervue Contributors"
 # Sphinx alias for ``copyright`` that avoids shadowing the builtin (Pylint W0622).
 project_copyright = "2024-2026, Imervue Contributors"
-release = "1.0"
+release = _project_version()
+version = ".".join(release.split(".")[:2])
 
 extensions = [
     "sphinx.ext.autosectionlabel",

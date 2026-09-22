@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03 · 對應 commit `694e63c` · 分支 `dev` · 版本 `1.0.86`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `381b041` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 731 | 121,899 |
+| `tests/` | 738 | 122,713 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,700 |
-| `Imervue/gui/` | 143 | 30,914 |
+| `Imervue/gui/` | 143 | 30,938 |
 | `Imervue/puppet/` | 53 | 15,131 |
 | `Imervue/image/` | 112 | 12,807 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 60 | 12,634 |
@@ -76,19 +76,19 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/desktop_pet/` | 32 | 8,175 |
 | `Imervue/mcp_server/` | 11 | 4,422 |
 | `Imervue/library/` | 32 | 4,140 |
-| `Imervue/menu/` | 11 | 3,463 |
+| `Imervue/menu/` | 11 | 3,481 |
 | `Imervue/` 根層 | 5 | 3,147 |
-| `Imervue/plugin/` | 9 | 2,200 |
+| `Imervue/plugin/` | 9 | 2,229 |
 | `Imervue/system/` | 15 | 1,771 |
 | `Imervue/export/` | 8 | 1,047 |
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
-| `plugins/`（17 個外掛） | 62 | 14,315 |
-| **總計** | **1,490** | **294,989** |
+| `plugins/`（17 個外掛） | 62 | 14,295 |
+| **總計** | **1,497** | **295,854** |
 
-其中 `Imervue/` 套件本身 697 檔 / 158,775 行。
+其中 `Imervue/` 套件本身 697 檔 / 158,846 行。
 
-測試碼與產品碼比約 **0.70 : 1**（122k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -908,7 +908,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-731 個檔、122,630 行。`pyproject.toml` 定義三個互斥層級 marker：
+738 個檔、122,713 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

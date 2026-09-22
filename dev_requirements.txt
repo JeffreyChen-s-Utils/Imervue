@@ -5,10 +5,13 @@ PyOpenGL
 numpy
 rawpy
 imageio
+imageio-ffmpeg
 pillow-heif
 pillow-jxl-plugin
 pytesseract
 PyOpenGL_accelerate
+defusedxml
+watchdog
 auto-py-to-exe
 twine
 build
