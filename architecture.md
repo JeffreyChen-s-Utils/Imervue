@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-23 against `59af060` on `dev`.
+> Last verified: 2026-09-23 against `39fd6cd` on `dev`.
 
 ## 1. Purpose
 
@@ -76,7 +76,9 @@ Public interfaces other code or users depend on:
   `PLUGIN_DEV_GUIDE.md`.
 - **Language API** — `language_wrapper.register_language()` and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
-- **MCP tools** — handlers in `Imervue/mcp_server/tools.py`, schemas in `tool_schemas.py`.
+- **MCP tools** — `Imervue/mcp_server/tools.py` re-exports every handler and registers the tool set;
+  handlers live in `tools_read.py` / `tools_edit.py`, definitions in `tool_defs_read.py` /
+  `tool_defs_edit.py`, output schemas in `tool_schemas.py`.
 - **On-disk formats** — `.imervue` (Paint bundle), `.puppet`, `.imervue-session.json`, XMP
   sidecars, `user_setting.json`; locations in `architecture_explore.md` §11.
 
@@ -105,7 +107,7 @@ Public interfaces other code or users depend on:
 | A develop step | `Recipe.apply` in `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
-| An MCP tool | `Imervue/mcp_server/tools.py` + `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`) |
+| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`) |
 | A CLI subcommand | `Imervue/cli.py` |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
 | A theme | `Imervue/system/themes.py` |

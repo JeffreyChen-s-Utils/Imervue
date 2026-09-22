@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `59af060` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `39fd6cd` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 743 | 123,351 |
+| `tests/` | 743 | 123,366 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,689 |
 | `Imervue/gui/` | 144 | 30,997 |
 | `Imervue/puppet/` | 53 | 15,131 |
@@ -74,7 +74,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 60 | 12,634 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 32 | 8,175 |
-| `Imervue/mcp_server/` | 11 | 4,422 |
+| `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,140 |
 | `Imervue/menu/` | 11 | 3,565 |
 | `Imervue/` 根層 | 5 | 3,091 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,503** | **296,571** |
+| **總計** | **1,508** | **296,834** |
 
-其中 `Imervue/` 套件本身 698 檔 / 158,831 行。
+其中 `Imervue/` 套件本身 703 檔 / 159,079 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -861,10 +861,15 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `server.py` | 440 | JSON-RPC 2.0 over stdio 的協定迴圈 |
-| `tools.py` | 2,812 | 56 個工具處理器（讀取類：`list_images`、`read_image_metadata`、`read_xmp_tags`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`extract_gps`… 影像處理類：`resize_image`、`crop_image`、`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
-| `tool_schemas.py` | 579 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `tools.py` 對齊） |
+| `tools.py` | 172 | 工具集的對外門面：re-export 全部 56 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
+| `tools_read.py` | 657 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
+| `tools_edit.py` | 884 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
+| `tool_support.py` | 68 | 兩組處理器共用：`IMAGE_EXTENSIONS`、`NO_ALPHA_FORMATS`、`load_rgba_array`、`validated_dir`／`validated_file`、`json_safe` |
+| `tool_defs_read.py` | 349 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
+| `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
+| `tool_schemas.py` | 579 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
 | `prompts.py` | 229 | 影像助理的 prompt 範本 |
-| `resources.py` | 133 | 把圖片暴露成可讀 MCP resource |
+| `resources.py` | 132 | 把圖片暴露成可讀 MCP resource |
 | `progress.py` | 67 | 長時間工具呼叫的進度通知 |
 | `notifications.py` | 67 | 同步 stdio 迴圈上的 server-push 通知 |
 | `completion.py` | 40 | prompt 參數值建議 |
@@ -909,7 +914,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-743 個檔、123,351 行。`pyproject.toml` 定義三個互斥層級 marker：
+743 個檔、123,366 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1084,10 +1089,10 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
    `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
    `document.py`(1388)、`develop_panel.py`(1332)、`puppet/canvas.py`(1308)、
    `tool_dispatcher.py`(1028)、`annotation_dialog.py`(1055)、`overlay_painter.py`(1121)、
-   `pet_window.py`(1184)、`mcp_server/tools.py`(2812) 仍超標 —— 這些是後續拆分的候選清單。
+   `pet_window.py`(1184) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 
-7. **MCP 工具新增流程**：`tools.py` 加處理器的同時必須在 `tool_schemas.py` 加 schema
+7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema
    （有 parity test 強制），且工具必須保持無 Qt、無選用相依。
 
 8. **Qt 對話框測試**：在 `qapp` fixture 下建立對話框時 parent 傳 `None`，

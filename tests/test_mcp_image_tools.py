@@ -6,7 +6,6 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
-    _resize_dims,
     apply_frame,
     apply_watermark,
     build_collage,
@@ -21,6 +20,7 @@ from Imervue.mcp_server.tools import (
     resize_image,
     rotate_image,
 )
+from Imervue.mcp_server.tools_edit import _resize_dims
 
 
 def _save(path, value=128, h=24, w=24):
