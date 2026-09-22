@@ -223,13 +223,32 @@ _bootstrap_tests_dir_on_path()
 # numeric suffix, and removes everything older than the most-recent
 # three. Each removal is best-effort — the same lock conditions that
 # bit pytest's own retention can bite us, but at least we keep trying.
+#
+# A directory whose ``.lock`` is fresh belongs to a pytest session that is
+# still running (pytest writes the lock when it creates the basetemp and
+# removes it at exit), so it is skipped: deleting it pulled ``tmp_path`` out
+# from under a concurrent full run and turned every later test into a setup
+# error. Like pytest, a lock older than three days is treated as dead.
 
-def _prune_old_pytest_basetemps(retain: int = 3) -> None:
+_BASETEMP_LOCK_TIMEOUT = 60 * 60 * 24 * 3  # pytest's own LOCK_TIMEOUT
+
+
+def _basetemp_in_use(path: Path, now: float) -> bool:
+    """True when ``path`` holds a pytest cleanup lock that has not expired."""
+    lock = path / ".lock"
+    try:
+        return lock.is_file() and lock.stat().st_mtime >= now - _BASETEMP_LOCK_TIMEOUT
+    except OSError:
+        return True  # unreadable lock: assume a live session owns the dir
+
+
+def _prune_old_pytest_basetemps(retain: int = 3, base: Path | None = None) -> None:
     import re
     import shutil
     import tempfile
+    import time
 
-    base = Path(tempfile.gettempdir())
+    base = Path(tempfile.gettempdir()) if base is None else base
     if not base.is_dir():
         return
     candidates: list[Path] = []
@@ -250,8 +269,10 @@ def _prune_old_pytest_basetemps(retain: int = 3) -> None:
             return -1
 
     candidates.sort(key=_suffix)
+    now = time.time()
     for old in candidates[:-retain]:
-        shutil.rmtree(old, ignore_errors=True)
+        if not _basetemp_in_use(old, now):
+            shutil.rmtree(old, ignore_errors=True)
 
 
 _prune_old_pytest_basetemps()
