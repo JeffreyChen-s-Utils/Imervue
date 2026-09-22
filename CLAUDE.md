@@ -228,11 +228,23 @@ are skipped; **only files directly inside the plugin directory are fetched** —
    won't commit.
 3. Copy the directory into the matching category of `D:\Codes\Imervue_Plugins` (delete it there
    for a removed plugin), then commit and push **to `main`**.
-4. Confirm parity — an empty list means in sync. Note this compares directory names only, so it
-   cannot catch file-level drift; diff the files too when a plugin was edited rather than added:
+4. Confirm parity — no output means in sync. The check compares plugin directories *and* the
+   content of every flat file in them (line endings ignored), so an edited file that was never
+   copied shows up as `content differs`:
 
 ```bash
-py -c "import os;d=lambda p:{e.name for e in os.scandir(p) if e.is_dir()};a=d(r'D:\Codes\Imervue\plugins');b=d(r'D:\Codes\Imervue_Plugins\plugins')|d(r'D:\Codes\Imervue_Plugins\languages');print(sorted(a^b))"
+py -c "import os
+A=r'D:\Codes\Imervue\plugins';B=r'D:\Codes\Imervue_Plugins'
+rd=lambda p:open(p,'rb').read().replace(b'\r\n',b'\n')
+fs=lambda p:{e.name for e in os.scandir(p) if e.is_file() and not e.name.endswith('.pyc')}
+m={e.name:e.path for c in ('plugins','languages') for e in os.scandir(os.path.join(B,c)) if e.is_dir()}
+s={e.name:e.path for e in os.scandir(A) if e.is_dir() and not e.name.startswith(('.','_'))}
+for n in sorted(s.keys()^m.keys()):print('plugin on one side only:',n)
+for n in sorted(s.keys()&m.keys()):
+    a,b=fs(s[n]),fs(m[n])
+    for x in sorted(a^b):print('file on one side only:',n,x)
+    for x in sorted(a&b):
+        if rd(os.path.join(s[n],x))!=rd(os.path.join(m[n],x)):print('content differs:',n,x)"
 ```
 
 The no-AI-attribution rules apply to the plugins repo exactly as they do here.

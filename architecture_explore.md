@@ -898,7 +898,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `ai_style_transfer` | 3 / 402 | ONNX 快速神經風格轉換，自動探索 `models/*.onnx` | onnxruntime |
 | `portrait_mode` | 3 / 390 | rembg 主體遮罩 + 背景模糊（假淺景深） | rembg |
 | `ai_outpaint` | 3 / 247 | 擴張畫布 + 擴散填補邊界 | — |
-| `png_to_icon` | 2 / 192 | PNG → 多尺寸 `.ico` | Pillow |
+| `png_to_icon` | 2 / 195 | PNG → 多尺寸 `.ico` + `.png`（純函式 `write_icon_set`，測試 `tests/test_png_to_icon.py`） | — (Pillow 為預設相依) |
 
 **發佈規則（硬性要求）**：`/plugins/` 在本 repo 是 gitignored（新檔要 `git add -f`），
 且外掛透過另一個公開 repo `D:\Codes\Imervue_Plugins`（remote `Jeffrey-Plugin-Repos/Imervue_Plugins`）

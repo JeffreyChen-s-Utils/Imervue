@@ -54,6 +54,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-05 | 2026-09-22 | Mirror 13 plugin files; track png_to_icon | #done #Imervue_Plugins #plugins | [2026-09](2026-09.md) |
 | U-20260922-04 | 2026-09-22 | Imervue_Plugins: stop tracking .idea/ | #done #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-03 | 2026-09-22 | Stop tracking .idea/ and the SFTP settings | #done #housekeeping | [2026-09](2026-09.md) |
 | U-20260922-02 | 2026-09-22 | Imervue_Plugins mirror drift found | #snapshot #Imervue_Plugins | [2026-09](2026-09.md) |
@@ -63,4 +64,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 4 |
+| [2026-09.md](2026-09.md) | 2026-09 | 5 |

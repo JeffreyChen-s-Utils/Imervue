@@ -6,7 +6,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- **#2** Mirror the plugin changes to `Imervue_Plugins` `main` (13 files are behind, see `docs/updates/2026-09.md` U-20260922-02) and decide whether `plugins/png_to_icon/` should be tracked here (workspace X-9).
 - **#3** [UNVERIFIED] The Spanish plugin language is missing from the Language menu: `addSeparator` raised `RuntimeError` (`imervue.log:60`, `Imervue/integration_guide.py:96-101`). Seen once, on Python 3.14; reproduce first.
 - **#4** 13 files are over the 1000-line limit (`architecture_explore.md` §12); the largest are `Imervue/mcp_server/tools.py` and `Imervue/Imervue_main_window.py`.
 - **#5** `Imervue/plugin/plugin_manifest.py` is used only by `tests/test_plugin_manifest.py`, not by `plugin_manager`, and its `plugin_requires_*` attributes are undocumented.
