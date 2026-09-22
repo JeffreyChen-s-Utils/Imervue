@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `89eb2bc` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `1a6636a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 745 | 123,578 |
+| `tests/` | 747 | 123,571 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,689 |
 | `Imervue/gui/` | 144 | 30,997 |
 | `Imervue/puppet/` | 53 | 15,131 |
 | `Imervue/image/` | 112 | 12,831 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 60 | 12,634 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 62 | 12,666 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 32 | 8,175 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,510** | **297,105** |
+| **總計** | **1,514** | **297,130** |
 
-其中 `Imervue/` 套件本身 703 檔 / 159,138 行。
+其中 `Imervue/` 套件本身 705 檔 / 159,170 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -396,7 +396,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `gl_renderer.py` | 342 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
 | `tile_grid_renderer.py` | 280 | 縮圖牆 GL 繪製 |
 | `deep_zoom_renderer.py` | 281 | Deep-zoom 圖磚 + minimap GL 繪製 |
-| `overlay_painter.py` | 1,121 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、badge、filmstrip、letterbox |
+| `overlay_painter.py` | 963 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、badge、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`） |
 | `texture_upload.py` | 163 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
 | `pbo_uploader.py` | 244 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
 | `gl_context.py` | 54 | 判斷在 `paintGL` 之外釋放材質時是否需要先 make-current |
@@ -407,6 +407,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 `view_state.py`(117) 每圖縮放記憶 + 隨機跳圖 · `view_animator.py`(207) 緩動（淡入、縮放、慣性平移）·
 `minimap.py`(109) · `tile_layout.py`(116) 格線佈局 · `tile_focus.py`(114) 鍵盤焦點游標 ·
 `filmstrip.py`(106) 底部縮圖帶佈局 · `video_badge.py`(58) ▶ 播放徽章幾何 ·
+`osd_text.py`(118) OSD／Debug HUD 的文字（檔案大小、EXIF 行）· `hud_geometry.py`(71) hover HUD 與放大鏡的擺放與取樣範圍 ·
 `screen_fit`(在 `gui/`) 與 `settle_poll`(在 `gui/`) 配合處理跨螢幕重排
 
 #### 輸入與動作路由
@@ -916,7 +917,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-745 個檔、123,578 行。`pyproject.toml` 定義三個互斥層級 marker：
+747 個檔、123,571 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1090,7 +1091,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
    `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
    `document.py`(1388)、`develop_panel.py`(1332)、`puppet/canvas.py`(1308)、
-   `tool_dispatcher.py`(1028)、`annotation_dialog.py`(1055)、`overlay_painter.py`(1121)、
+   `tool_dispatcher.py`(1028)、`annotation_dialog.py`(1055)、
    `pet_window.py`(1184) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 

@@ -39,13 +39,24 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.hud_geometry import (
+    LOUPE_BOX_PX,
+    loupe_source_rect,
+    place_hud_box,
+    visible_pixel_bounds,
+)
+from Imervue.gpu_image_view.osd_text import (
+    debug_hud_lines,
+    favorites_set,
+    format_exif_osd_lines,
+    osd_lines,
+)
 from Imervue.gpu_image_view.tile_wall_loading import (
     should_show_wall_loading,
     spinner_dots,
     spinner_phase,
     wall_spinner_geometry,
 )
-from Imervue.gpu_image_view.viewport_math import visible_image_rect
 from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
 from Imervue.image.histogram import compute_clipping, compute_histogram
@@ -84,15 +95,8 @@ def _run_overlay_layers(p: QPainter, layers: list) -> list[str]:
 # Repaint cadence for the tile-wall placeholder spinner + fade-in pump.
 _PLACEHOLDER_TICK_MS = 80
 
-_BYTES_PER_MB = 1024 * 1024
-_BYTES_PER_KB = 1024
 _PIXEL_VIEW_ZOOM = 4.0
 _PIXEL_GRID_MAX_CELLS = 40000
-# Loupe magnifier (toggle with L in deep zoom).
-LOUPE_BOX_PX = 170
-LOUPE_MAGNIFICATION = 4
-_LOUPE_MAG_MIN = 2
-_LOUPE_MAG_MAX = 16
 _LOUPE_CURSOR_GAP = 24
 _LOUPE_BORDER_RGBA = (255, 255, 255, 210)
 _LOUPE_CROSSHAIR_RGBA = (255, 80, 80, 200)
@@ -129,167 +133,6 @@ def _rgba_to_pixmap(arr: np.ndarray) -> QPixmap:
     qimg = QImage(contiguous.data, width, height, width * 4,
                   QImage.Format.Format_RGBA8888).copy()
     return QPixmap.fromImage(qimg)
-
-
-def human_file_size(path: str) -> str:
-    """Return a human-readable size for ``path``, or "—" when unavailable."""
-    try:
-        size_bytes = os.path.getsize(path)
-    except OSError:
-        return "—"
-    if size_bytes >= _BYTES_PER_MB:
-        return f"{size_bytes / _BYTES_PER_MB:.2f} MB"
-    return f"{size_bytes / _BYTES_PER_KB:.1f} KB"
-
-
-def favorites_set(favorites) -> set:
-    """Coerce a stored favorites value (set/list/None) into a set."""
-    if isinstance(favorites, set):
-        return favorites
-    try:
-        return set(favorites)
-    except TypeError:
-        return set()
-
-
-def osd_lines(path: str, width: int, height: int) -> list[str]:
-    """Build the three OSD text lines for ``path`` at ``width`` x ``height``."""
-    suffix = Path(path).suffix.lstrip(".").upper() or "—"
-    return [
-        Path(path).name,
-        f"{width} × {height}",
-        f"{suffix}   {human_file_size(path)}",
-    ]
-
-
-def debug_hud_lines(stats: dict) -> list[str]:
-    """Build the Debug-HUD text lines from a stats dict.
-
-    Keys: vram_usage, vram_limit, tile_tex, tile_cache, prefetch,
-    prefetch_workers, active_threads, max_threads, generation, zoom.
-    """
-    vram_mb = stats["vram_usage"] / _BYTES_PER_MB
-    limit_mb = stats["vram_limit"] / _BYTES_PER_MB
-    pct = (stats["vram_usage"] / stats["vram_limit"] * 100) if stats["vram_limit"] else 0
-    return [
-        f"VRAM  {vram_mb:6.1f} / {limit_mb:6.1f} MB  ({pct:4.1f}%)",
-        f"Tile tex   {stats['tile_tex']:4d}   cache {stats['tile_cache']:4d}",
-        f"Prefetch   {stats['prefetch']:4d}   workers {stats['prefetch_workers']}",
-        f"Threads    {stats['active_threads']:4d} / {stats['max_threads']}",
-        f"Gen {stats['generation']}   Zoom {stats['zoom'] * 100:.1f}%",
-    ]
-
-
-def place_hud_box(sx: int, sy: int, size: int, box_w: int, box_h: int,
-                  view_w: int, view_h: int) -> tuple[int, int]:
-    """Pick a top-left for a hover HUD box that stays inside the viewport."""
-    hx = sx + size + 12
-    hy = sy
-    if hx + box_w > view_w:
-        hx = sx - box_w - 12
-    if hy + box_h > view_h:
-        hy = view_h - box_h - 4
-    return hx, max(hy, 0)
-
-
-def visible_pixel_bounds(zoom: float, off_x: float, off_y: float,
-                         view_w: int, view_h: int,
-                         img_w: int, img_h: int) -> tuple[int, int, int, int]:
-    """Clamp the visible image-pixel rectangle to the image bounds.
-
-    Delegates the screen->image geometry to ``viewport_math.visible_image_rect``
-    and applies this HUD's integer-pixel-coverage convention (floor the top-left,
-    round the bottom-right up by one).
-    """
-    x0, y0, x1, y1 = visible_image_rect(
-        (view_w, view_h), (img_w, img_h), (off_x, off_y), zoom)
-    return (
-        max(0, int(x0)), max(0, int(y0)),
-        min(img_w, int(x1) + 1), min(img_h, int(y1) + 1),
-    )
-
-
-def clamp_loupe_magnification(magnification: int, wheel_delta: float) -> int:
-    """Step the loupe magnification by one on a wheel notch, clamped to range.
-
-    A positive *wheel_delta* (scroll up) magnifies more; the result is held in
-    ``[2, 16]`` so the loupe stays usable.
-    """
-    step = 1 if wheel_delta > 0 else -1
-    return max(_LOUPE_MAG_MIN, min(_LOUPE_MAG_MAX, magnification + step))
-
-
-def loupe_source_rect(img_x: int, img_y: int, sample_w: int, sample_h: int,
-                      img_w: int, img_h: int) -> tuple[int, int, int, int]:
-    """Image-space crop rectangle the loupe samples, centred on the cursor.
-
-    The crop keeps its requested ``sample_w`` x ``sample_h`` size (shrinking
-    only when the image itself is smaller) and is clamped so it never runs off
-    the image edge, so the magnifier always shows a full square near the border.
-    """
-    width = min(sample_w, img_w)
-    height = min(sample_h, img_h)
-    left = int(round(img_x - width / 2))
-    top = int(round(img_y - height / 2))
-    left = max(0, min(left, img_w - width))
-    top = max(0, min(top, img_h - height))
-    return left, top, left + width, top + height
-
-
-def _exif_to_float(value) -> float | None:
-    """Coerce an EXIF value (IFDRational / (num, den) / number) to a float."""
-    if value is None:
-        return None
-    try:
-        if isinstance(value, tuple | list) and len(value) == 2:
-            num, den = value
-            return num / den if den else None
-        return float(value)
-    except (TypeError, ValueError, ZeroDivisionError):
-        return None
-
-
-def _format_exposure(value) -> str | None:
-    seconds = _exif_to_float(value)
-    if seconds is None or seconds <= 0:
-        return None
-    if seconds >= 1:  # NOSONAR S2583 - FP: _exif_to_float can return (0, 1), e.g. 1/200s
-        return f"{seconds:g}s"
-    return f"1/{round(1 / seconds)}s"
-
-
-def _format_iso(value) -> str | None:
-    if isinstance(value, tuple | list) and value:
-        value = value[0]
-    try:
-        return f"ISO {int(value)}"
-    except (TypeError, ValueError):
-        return None
-
-
-def format_exif_osd_lines(exif: dict) -> list[str]:
-    """Build compact OSD lines (exposure / f-number / ISO / focal + lens).
-
-    Returns an empty list when no shooting data is present, so non-photo images
-    leave the OSD unchanged. Each field is skipped individually when missing or
-    malformed, so partial EXIF still yields a useful line.
-    """
-    if not exif:
-        return []
-    fnumber = _exif_to_float(exif.get("FNumber"))
-    focal = _exif_to_float(exif.get("FocalLength"))
-    fields = [
-        _format_exposure(exif.get("ExposureTime")),
-        f"f/{fnumber:g}" if fnumber and fnumber > 0 else None,
-        _format_iso(exif.get("ISOSpeedRatings")),
-        f"{round(focal)}mm" if focal and focal > 0 else None,
-    ]
-    primary = [field for field in fields if field]
-    lines = ["   ".join(primary)] if primary else []
-    lens = exif.get("LensModel")
-    if lens and str(lens).strip():
-        lines.append(str(lens).strip())
-    return lines
 
 
 class OverlayPainter:

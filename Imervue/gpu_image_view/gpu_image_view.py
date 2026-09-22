@@ -356,7 +356,7 @@ class GPUImageView(QOpenGLWidget):
         # L — 放大鏡 loupe：跟著游標顯示局部放大，挑片/對焦確認用
         self._loupe_enabled = False
         # Shift+滾輪 在 loupe 開啟時調整放大倍率（見 overlay_painter）。
-        from Imervue.gpu_image_view.overlay_painter import LOUPE_MAGNIFICATION
+        from Imervue.gpu_image_view.hud_geometry import LOUPE_MAGNIFICATION
         self._loupe_magnification = LOUPE_MAGNIFICATION
         # W — 閱讀模式：fit 寬度 + 垂直捲動，捲到底自動接下一張（webtoon/長圖）
         self._reading_mode = False
@@ -1598,7 +1598,7 @@ class GPUImageView(QOpenGLWidget):
             return
         if (self.deep_zoom and self._loupe_enabled
                 and event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
-            from Imervue.gpu_image_view.overlay_painter import (
+            from Imervue.gpu_image_view.hud_geometry import (
                 clamp_loupe_magnification,
             )
             self._loupe_magnification = clamp_loupe_magnification(
