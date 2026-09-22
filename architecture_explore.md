@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `0f20262` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `d9f3941` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 750 | 123,999 |
+| `tests/` | 751 | 124,041 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 185 | 45,824 |
-| `Imervue/gui/` | 147 | 31,007 |
+| `Imervue/gui/` | 150 | 31,080 |
 | `Imervue/puppet/` | 54 | 15,155 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 62 | 12,666 |
@@ -79,14 +79,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/menu/` | 11 | 3,565 |
 | `Imervue/` 根層 | 5 | 3,106 |
 | `Imervue/plugin/` | 9 | 2,109 |
-| `Imervue/system/` | 15 | 1,815 |
+| `Imervue/system/` | 16 | 1,840 |
 | `Imervue/export/` | 8 | 1,047 |
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,527** | **297,748** |
+| **總計** | **1,532** | **297,888** |
 
-其中 `Imervue/` 套件本身 715 檔 / 159,360 行。
+其中 `Imervue/` 套件本身 719 檔 / 159,458 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -216,10 +216,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `app_paths.py` | 110 | 凍結環境安全的路徑解析（icon / plugins / 設定檔），PyInstaller & Nuitka 都適用 |
-| `clipboard_monitor.py` | 145 | ShareX 式剪貼簿監聽：PrintScreen 截圖 → 自動開啟註解視窗 |
+| `clipboard_monitor.py` | 136 | ShareX 式剪貼簿監聽：PrintScreen 截圖 → 自動開啟註解視窗 |
 | `error_report.py` | 146 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
 | `file_association.py` | 240 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
 | `file_tree_watcher.py` | 172 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
+| `qimage_convert.py` | 33 | `pil_to_qimage()` / `qimage_to_pil()`：經 RGBA8888 並複製緩衝區的雙向轉換（標註與剪貼簿共用） |
 | `log_setup.py` | 83 | 集中式 logging 設定：`setup_logging()`（可重複呼叫；`app_dir()` 不可寫時退到使用者目錄；凍結時不掛 stderr handler）與 `install_exception_logging()` |
 | `macos_bundle.py` | 67 | macOS `.app` Info.plist 文件型別關聯 |
 | `onboarding.py` | 82 | 首次啟動導覽步驟註冊表 |
@@ -509,7 +510,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-147 個檔、31,007 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+150 個檔、31,080 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -518,10 +519,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `develop_panel.py` | 896 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 330 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 133 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
-| `annotation_canvas.py` | 1,623 | 註解畫布 widget + `QUndoCommand`（新增/刪除/修改/烘焙），支援手繪、形狀、文字、馬賽克、模糊、裁切、選取 |
+| `annotation_canvas.py` | 844 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
+| `annotation_drawing.py` | 416 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
+| `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
+| `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 965 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
 | `slider_spin.py` | 71 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
-| `annotation_models.py` | 580 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用） |
+| `annotation_models.py` | 591 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用） |
 | `file_tree_view.py` | 945 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 150 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 183 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
@@ -926,7 +930,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-750 個檔、123,999 行。`pyproject.toml` 定義三個互斥層級 marker：
+751 個檔、124,041 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1098,7 +1102,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
    `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
 
 6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
-   `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623) 仍超標 —— 這些是後續拆分的候選清單。
+   `gpu_image_view.py`(1758)、`workspace.py`(1680) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 
 7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema

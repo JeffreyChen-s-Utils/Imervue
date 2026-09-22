@@ -43,18 +43,17 @@ from Imervue.gui.annotation_canvas import (
     _MODE_RGBA,
     AnnotationCanvas,
     _AddAnnotationCommand,
-    _BakeDestructiveCommand,
     _DeleteAnnotationCommand,
     _ModifyAnnotationCommand,
     _point_segment_distance,
-    pil_to_qimage,
-    qimage_to_pil,
 )
+from Imervue.gui.annotation_destructive import _BakeDestructiveCommand
 from Imervue.gui.annotation_models import (
     AnnotationProject, bake,
 )
 from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.qimage_convert import pil_to_qimage, qimage_to_pil
 import contextlib
 
 logger = logging.getLogger("Imervue.annotation")
@@ -62,8 +61,9 @@ logger = logging.getLogger("Imervue.annotation")
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-# The annotation canvas, its undo commands, and the PIL<->QImage helpers now
-# live in ``annotation_canvas``; these names are re-exported here so existing
+# The annotation canvas and its undo commands live in ``annotation_canvas`` and
+# the PIL<->QImage helpers in ``system.qimage_convert``; these names are
+# re-exported here so existing
 # ``from annotation_dialog import AnnotationCanvas / _AddAnnotationCommand /
 # pil_to_qimage`` call sites and tests keep working unchanged.
 __all__ = [

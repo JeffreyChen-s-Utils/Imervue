@@ -12,7 +12,7 @@ from PIL import Image
 from PySide6.QtGui import QImage
 
 from Imervue.system.clipboard_monitor import (
-    SETTING_KEY, ClipboardMonitor, _qimage_to_pil,
+    SETTING_KEY, ClipboardMonitor,
 )
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -42,26 +42,6 @@ def reset_setting():
         user_setting_dict.pop(SETTING_KEY, None)
     else:
         user_setting_dict[SETTING_KEY] = saved
-
-
-class TestQImagePilConversion:
-    def test_round_trip_preserves_pixels(self, qapp):
-        arr = np.zeros((20, 30, 4), dtype=np.uint8)
-        arr[..., 0] = 200  # red
-        arr[..., 3] = 255
-        original = Image.fromarray(arr, "RGBA")
-        q = _pil_to_qimage(original)
-        restored = _qimage_to_pil(q)
-        assert restored.size == original.size
-        assert restored.mode == "RGBA"
-        assert np.array_equal(np.array(restored), arr)
-
-    def test_handles_solid_color(self, qapp):
-        arr = np.full((10, 10, 4), 128, dtype=np.uint8)
-        arr[..., 3] = 255
-        q = _pil_to_qimage(Image.fromarray(arr, "RGBA"))
-        restored = _qimage_to_pil(q)
-        assert (np.array(restored)[..., 0] == 128).all()
 
 
 class TestClipboardMonitorState:

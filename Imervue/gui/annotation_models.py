@@ -51,6 +51,18 @@ ALL_KINDS: tuple[AnnotationKind, ...] = (
     "freehand", "text", "mosaic", "blur",
 )
 
+# Kind, brush and canvas-tool names the annotation canvas compares against —
+# named once so a typo surfaces as a NameError instead of a silent mismatch.
+KIND_FREEHAND: AnnotationKind = "freehand"
+KIND_TEXT: AnnotationKind = "text"
+KIND_MOSAIC: AnnotationKind = "mosaic"
+KIND_BLUR: AnnotationKind = "blur"
+KIND_LINE: AnnotationKind = "line"
+KIND_ARROW: AnnotationKind = "arrow"
+TOOL_CROP = "crop"
+TOOL_SELECT = "select"
+TOOL_MOVE = "move"
+
 # Kinds that destructively modify pixels (applied before overlay pass).
 _DESTRUCTIVE: frozenset[str] = frozenset({"mosaic", "blur"})
 
