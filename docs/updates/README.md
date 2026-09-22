@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-15 | 2026-09-23 | Move the desktop pet feature toggles into a mixin | #done #refactor #desktop_pet | [2026-09](2026-09.md) |
 | U-20260923-14 | 2026-09-23 | Clipboard tests use an in-process fake, not the OS clipboard | #incident #tests | [2026-09](2026-09.md) |
 | U-20260923-13 | 2026-09-23 | Split the Modify panel: right-panel builder and splitter sizing become mixins | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-12 | 2026-09-23 | Link slider and spin pairs through one helper; annotation panel under 1000 lines | #done #refactor #gui | [2026-09](2026-09.md) |
