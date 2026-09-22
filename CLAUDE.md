@@ -330,10 +330,13 @@ before — the failure mode is a command that *appears* to succeed.
 - **The full test suite exits with `STATUS_ACCESS_VIOLATION` (`0xC0000005`, surfaced as a large
   negative exit code) *after* printing a passing summary.** Pre-existing, verified against a
   stashed tree. Read the reported counts, not the exit code.
-- **Clipboard tests flake in full runs and pass in isolation.** `QClipboard.dataChanged` arrives
-  asynchronously via `WM_CLIPBOARDUPDATE`, so two `setImage` calls separated by one
-  `processEvents` can coalesce into a single signal. Before blaming a change, re-run the test
-  isolated *and* repeat the full run on the unchanged dependency set.
+- **Tests never touch the OS clipboard — take the `fake_clipboard` fixture.** The real one is
+  shared with every other process: `QClipboard.dataChanged` arrives asynchronously via
+  `WM_CLIPBOARDUPDATE` (two quick `setImage` calls coalesce into one signal), another program
+  can hold it open so a set silently fails, and each run used to overwrite the developer's own
+  clipboard. The fixture patches `QApplication.clipboard()` with an in-process clipboard that
+  emits `dataChanged` synchronously; product code must keep going through
+  `QApplication.clipboard()` for it to take effect.
 - **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
   ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
   must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

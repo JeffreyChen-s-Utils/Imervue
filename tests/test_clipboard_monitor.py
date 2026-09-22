@@ -1,8 +1,8 @@
 """
 Tests for ClipboardMonitor — clipboard listening + dedup + enable gate.
 
-Uses the session-scoped ``qapp`` fixture from conftest. Each test cleans up
-its own clipboard state in case the test runner shares the system clipboard.
+Uses the session-scoped ``qapp`` fixture from conftest. Clipboard traffic goes
+through the in-process ``fake_clipboard`` fixture, never the OS clipboard.
 """
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from PIL import Image
 from PySide6.QtGui import QImage
-from PySide6.QtWidgets import QApplication
 
 from Imervue.system.clipboard_monitor import (
     SETTING_KEY, ClipboardMonitor, _qimage_to_pil,
@@ -28,15 +27,9 @@ def _pil_to_qimage(img: Image.Image) -> QImage:
 
 
 @pytest.fixture
-def fresh_clipboard(qapp):
-    """Snapshot and restore clipboard state around each test."""
-    cb = QApplication.clipboard()
-    saved = cb.image() if cb is not None else None
-    cb.clear()
-    yield cb
-    cb.clear()
-    if saved is not None and not saved.isNull():
-        cb.setImage(saved)
+def fresh_clipboard(fake_clipboard):
+    """An empty in-process clipboard the monitor under test listens to."""
+    return fake_clipboard
 
 
 @pytest.fixture

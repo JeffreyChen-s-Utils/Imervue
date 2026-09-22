@@ -187,7 +187,7 @@ def test_empty_state_hint_skipped_with_paths(qapp, tmp_path):
         view.deleteLater()
 
 
-def test_ctrl_c_copies_selected_paths_to_clipboard(qapp, tmp_path):
+def test_ctrl_c_copies_selected_paths_to_clipboard(qapp, tmp_path, fake_clipboard):
     """Ctrl+C on a selection writes the file paths to the system
     clipboard so the user can paste them elsewhere — common QoL
     in file browsers."""
@@ -206,7 +206,6 @@ def test_ctrl_c_copies_selected_paths_to_clipboard(qapp, tmp_path):
     try:
         view.set_paths(images)
         view.selectAll()
-        QApplication.clipboard().clear()
         evt = QKeyEvent(
             QEvent.Type.KeyPress,
             Qt.Key.Key_C,

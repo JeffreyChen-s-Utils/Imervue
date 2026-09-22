@@ -366,6 +366,64 @@ def pump_until(qapp):
     return _pump
 
 
+@pytest.fixture
+def fake_clipboard(qapp, monkeypatch):
+    """Replace ``QApplication.clipboard()`` with an in-process clipboard.
+
+    The real one is OS state shared with every other process: another program
+    can hold it open (so a set silently fails) or change it mid-test, and on
+    Windows ``dataChanged`` arrives asynchronously, so two quick sets can
+    coalesce into one signal. It also wiped the developer's own clipboard on
+    every run. The fake keeps one ``QMimeData`` and emits ``dataChanged``
+    synchronously on every change.
+    """
+    from PySide6.QtCore import QMimeData, QObject, Signal
+    from PySide6.QtGui import QImage
+    from PySide6.QtWidgets import QApplication
+
+    class _FakeClipboard(QObject):
+        dataChanged = Signal()  # noqa: N815 - mirrors QClipboard
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._mime = QMimeData()
+
+        def _replace(self, mime) -> None:
+            self._mime = mime
+            self.dataChanged.emit()
+
+        def setText(self, text, _mode=None) -> None:  # noqa: N802 - Qt API
+            mime = QMimeData()
+            mime.setText(text)
+            self._replace(mime)
+
+        def text(self, _mode=None) -> str:
+            return self._mime.text()
+
+        def setImage(self, image, _mode=None) -> None:  # noqa: N802 - Qt API
+            mime = QMimeData()
+            mime.setImageData(image)
+            self._replace(mime)
+
+        def image(self, _mode=None):
+            data = self._mime.imageData() if self._mime.hasImage() else None
+            return QImage(data) if data is not None else QImage()
+
+        def mimeData(self, _mode=None):  # noqa: N802 - Qt API
+            return self._mime
+
+        def setMimeData(self, mime, _mode=None) -> None:  # noqa: N802 - Qt API
+            self._replace(mime)
+
+        def clear(self, _mode=None) -> None:
+            self._replace(QMimeData())
+
+    fake = _FakeClipboard()
+    monkeypatch.setattr(QApplication, "clipboard", staticmethod(lambda: fake))
+    yield fake
+    fake.deleteLater()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _qt_session_teardown():
     """Shut Qt down explicitly at the very end of the session.
