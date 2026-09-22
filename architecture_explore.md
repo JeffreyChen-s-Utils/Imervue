@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `a02f750` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `905e5bb` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 752 | 124,120 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 185 | 45,824 |
+| `tests/` | 752 | 124,121 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,928 |
 | `Imervue/gui/` | 150 | 31,093 |
 | `Imervue/puppet/` | 57 | 15,218 |
 | `Imervue/image/` | 112 | 12,831 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,540** | **298,123** |
+| **總計** | **1,544** | **298,228** |
 
-其中 `Imervue/` 套件本身 726 檔 / 159,614 行。
+其中 `Imervue/` 套件本身 730 檔 / 159,718 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -630,7 +630,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-185 個檔、45,824 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,928 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -640,7 +640,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
-| `canvas.py` | 1,853 | `PaintCanvas`：GPU 加速的中央繪圖表面 |
+| `canvas.py` | 842 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
+| `canvas_overlays.py` | 536 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
+| `canvas_input.py` | 356 | `PaintCanvasInputMixin`：滑鼠／繪圖板事件轉成 `PointerEvent` 交給工具、平移、滾輪縮放、鋼筆 Enter/Esc、拖放開檔 |
+| `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
+| `pointer_event.py` | 35 | `PointerEvent`（工具收到的指標快照）與 `ToolDispatcher` 型別；不依賴 Qt widget |
 | `compositing.py` | 439 | 純 NumPy 圖層合成 |
 | `layer_model.py` | 117 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 172 | 向下合併 / 合併可見 / 平面化的純函式 |
@@ -934,7 +938,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-752 個檔、124,120 行。`pyproject.toml` 定義三個互斥層級 marker：
+752 個檔、124,121 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1105,7 +1109,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 5. **`gpu_image_view.py` 與 `gl_renderer.py` 使用 `from OpenGL.GL import *`**，因此在
    `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
 
-6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853) 仍超標 —— 這些是後續拆分的候選清單。
+6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 
 7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema
