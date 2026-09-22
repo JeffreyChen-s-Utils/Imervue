@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-24 | 2026-09-23 | Split ImervueMainWindow into eight mixins; every module under 1000 lines | #done #refactor #main_window | [2026-09](2026-09.md) |
 | U-20260923-23 | 2026-09-23 | Split PaintCanvas: overlays, input and view transform become mixins | #done #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-22 | 2026-09-23 | Real-application run after the viewer split | #snapshot #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-21 | 2026-09-23 | Split GPUImageView: deep-zoom loading, fitting, prefetch and mouse become mixins | #done #refactor #gpu_image_view | [2026-09](2026-09.md) |

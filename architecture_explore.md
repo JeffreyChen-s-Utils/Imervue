@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `905e5bb` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `5fc068d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -68,7 +68,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | --- | ---: | ---: |
 | `tests/` | 752 | 124,121 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,928 |
-| `Imervue/gui/` | 150 | 31,093 |
+| `Imervue/gui/` | 158 | 32,567 |
 | `Imervue/puppet/` | 57 | 15,218 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,746 |
@@ -77,16 +77,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,140 |
 | `Imervue/menu/` | 11 | 3,565 |
-| `Imervue/` 根層 | 5 | 3,106 |
+| `Imervue/` 根層 | 5 | 1,762 |
 | `Imervue/plugin/` | 9 | 2,109 |
 | `Imervue/system/` | 16 | 1,840 |
 | `Imervue/export/` | 8 | 1,047 |
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,544** | **298,228** |
+| **總計** | **1,552** | **298,358** |
 
-其中 `Imervue/` 套件本身 730 檔 / 159,718 行。
+其中 `Imervue/` 套件本身 738 檔 / 159,848 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -129,7 +129,7 @@ py -m Imervue [--debug] [--software_opengl] [file]
 
 ## 4. 頂層結構：一個主視窗、五個分頁
 
-`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，2,296 行）是唯一的協調者。
+`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，924 行）是唯一的協調者；篩選列、遺失檔、資料夾監看、分頁、螢幕、檢視模式、狀態列、瀏覽模式各由 `Imervue/gui/main_window_*.py` 的 mixin 提供。
 中央是一個 `QTabWidget`：
 
 ```
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 116 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 2,296 | `ImervueMainWindow`：5 分頁協調者、狀態列、過濾列、分頁狀態機、螢幕自適應、資料夾監控 |
+| `Imervue_main_window.py` | 924 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的八個 mixin |
 | `cli.py` | 578 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -514,7 +514,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-150 個檔、31,093 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+158 個檔、32,567 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -529,6 +529,14 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 965 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
 | `slider_spin.py` | 71 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
+| `main_window_filter.py` | 261 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
+| `main_window_missing.py` | 169 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
+| `main_window_folders.py` | 301 | `MainWindowFoldersMixin`：監看目前資料夾、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
+| `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
+| `main_window_screens.py` | 203 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
+| `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
+| `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
+| `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 945 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 150 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
@@ -1092,9 +1100,9 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 
 ## 12. 架構注意事項與已知陷阱
 
-1. **Modify 分頁的中央不是 viewer。** 中央是 `AnnotationCanvas`；真正的 `GPUImageView` 在該分頁是隱藏
-   的（雖有 reparent 程式碼）。鍵盤、resize、fit 行為都掛在 canvas 上。
-   `Imervue_main_window.py:348` 附近的註解已過時。
+1. **Modify 分頁的中央不是 viewer。** 中央是 `develop_panel` 在綁定圖片時插進 splitter 第 1 格的
+   `AnnotationCanvas`；`GPUImageView` 一直留在 Imervue 分頁，在 Modify 分頁是隱藏的、沒有 reparent，
+   所以收不到鍵盤與 resize。鍵盤、resize、fit 行為都掛在 canvas 上。
 
 2. **`plugins/` 是 gitignored。** 新增外掛檔案要 `git add -f`，否則會靜默漏掉。
    而且改完必須鏡像到 `D:\Codes\Imervue_Plugins` 的 `main` 分支才會到使用者手上；
@@ -1109,8 +1117,10 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 5. **`gpu_image_view.py` 與 `gl_renderer.py` 使用 `from OpenGL.GL import *`**，因此在
    `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
 
-6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268) 仍超標 —— 這些是後續拆分的候選清單。
-   （`multi_language/*.py` 是資料字典，不適用。）
+6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
+   大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
+   原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
+   測試若在原模組上 monkeypatch 某個名稱，要改到實際查找它的新模組。
 
 7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema
    （有 parity test 強制），且工具必須保持無 Qt、無選用相依。

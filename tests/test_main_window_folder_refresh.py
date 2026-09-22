@@ -351,7 +351,7 @@ def test_tab_change_saves_outgoing_view_before_clearing(tmp_path, monkeypatch):
     # _clear_deep_zoom nulls the save key, so switching tabs must save the
     # outgoing image's zoom/pan first (open_path is stubbed — we only assert
     # the save-before-clear ordering, not the reload).
-    import Imervue.Imervue_main_window as mw
+    import Imervue.gui.main_window_tabs as tabs_mod
 
     img = tmp_path / "b.png"
     img.write_bytes(b"x")
@@ -364,13 +364,13 @@ def test_tab_change_saves_outgoing_view_before_clearing(tmp_path, monkeypatch):
         _clear_deep_zoom=lambda: events.append("clear"),
     )
     monkeypatch.setattr(
-        mw, "open_path", lambda main_gui, path: events.append(("open", path)))
+        tabs_mod, "open_path", lambda main_gui, path: events.append(("open", path)))
     stub = SimpleNamespace(
         _tab_switching=False,
         _image_tabs=[{"path": str(img), "title": "b"}],
         viewer=viewer,
     )
-    mw.ImervueMainWindow._on_tab_changed(stub, 0)
+    ImervueMainWindow._on_tab_changed(stub, 0)
     assert events == ["save", "clear", ("open", str(img))]
 
 

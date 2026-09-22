@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import Imervue.Imervue_main_window as mod
+import Imervue.gui.main_window_folders as mod
 from Imervue.Imervue_main_window import ImervueMainWindow
 
 

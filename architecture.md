@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-23 against `905e5bb` on `dev`.
+> Last verified: 2026-09-23 against `5fc068d` on `dev`.
 
 ## 1. Purpose
 
@@ -34,7 +34,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | Path | Responsibility |
 | --- | --- |
 | `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
-| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget, status bar, filter row, folder watching, window geometry; delegates everything else |
+| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar and browse modes come from the `Imervue/gui/main_window_*.py` mixins |
 | `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` holds the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
 | `Imervue/gpu_image_view/` | `GPUImageView` (tile wall + deep zoom) and its collaborators; `images/` is the load path, `actions/` the viewer actions |

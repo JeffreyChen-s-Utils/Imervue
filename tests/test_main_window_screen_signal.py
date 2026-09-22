@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import Imervue.Imervue_main_window as mw
+import Imervue.gui.main_window_screens as screens_mod
 from Imervue.Imervue_main_window import ImervueMainWindow
 
 
@@ -33,7 +33,7 @@ class _FakeTimer:
 def fake_timer(monkeypatch):
     """Swap the window module's QTimer for a fresh per-test recorder."""
     timer = _FakeTimer()
-    monkeypatch.setattr(mw, "QTimer", timer)
+    monkeypatch.setattr(screens_mod, "QTimer", timer)
     return timer
 
 
