@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `e367a5c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `0f20262` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 749 | 123,906 |
+| `tests/` | 750 | 123,999 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 185 | 45,824 |
 | `Imervue/gui/` | 147 | 31,007 |
-| `Imervue/puppet/` | 53 | 15,131 |
+| `Imervue/puppet/` | 54 | 15,155 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 62 | 12,666 |
 | `Imervue/multi_language/` | 8 | 11,304 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,525** | **297,631** |
+| **總計** | **1,527** | **297,748** |
 
-其中 `Imervue/` 套件本身 714 檔 / 159,336 行。
+其中 `Imervue/` 套件本身 715 檔 / 159,360 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -745,7 +745,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-53 個檔、15,184 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+54 個檔、15,155 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -772,7 +772,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `deformers.py` | 263 | 純 NumPy deformer 實作 |
 | `physics.py` | 142 | Verlet 物理引擎 |
 | `render_prep.py` | 104 | `PuppetDocument` → GL-ready draw list |
-| `canvas.py` | 1,308 | `PuppetCanvas`（`QOpenGLWidget`）：繪製材質三角形堆疊 |
+| `canvas.py` | 796 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動；實際繪製來自 `canvas_render.py` |
+| `canvas_render.py` | 535 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
 | `clip_masks.py` | 57 | `Drawable.clip_mask` 參照解析 |
 | `ik.py` | 90 | 兩節骨骼解析式 IK |
 | `bone_weights.py` | 101 | 骨骼 LBS 權重驗證與修復 |
@@ -925,7 +926,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-749 個檔、123,906 行。`pyproject.toml` 定義三個互斥層級 marker：
+750 個檔、123,999 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1097,8 +1098,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
    `pyproject.toml` 有 per-file `F403/F405` 豁免；新增 GL 程式碼時沿用即可。
 
 6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
-   `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
-   `puppet/canvas.py`(1308) 仍超標 —— 這些是後續拆分的候選清單。
+   `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 
 7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema

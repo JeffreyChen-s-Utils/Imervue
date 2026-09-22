@@ -193,7 +193,7 @@ def test_premultiply_alpha_zeros_rgb_on_fully_transparent_pixels():
     transparent edge pixels stop leaking their white background into
     GL_LINEAR interpolation."""
     import numpy as np
-    from Imervue.puppet.canvas import _premultiply_alpha
+    from Imervue.puppet.canvas_render import _premultiply_alpha
     src = np.array([[
         [255, 255, 255, 0],   # white but fully transparent → must zero out
         [200, 100,  50, 255], # fully opaque → unchanged
@@ -207,7 +207,7 @@ def test_premultiply_alpha_scales_partial_alpha_correctly():
     """Mid-alpha pixels should have RGB scaled by alpha/255 with
     proper rounding (``(rgb * alpha + 127) // 255``)."""
     import numpy as np
-    from Imervue.puppet.canvas import _premultiply_alpha
+    from Imervue.puppet.canvas_render import _premultiply_alpha
     src = np.array([[[200, 100, 50, 128]]], dtype=np.uint8)   # alpha ~ 0.5
     out = _premultiply_alpha(src)
     # Expected: 200 * 128 / 255 ≈ 100, 100 * 128 / 255 ≈ 50, 50 * 128/255 ≈ 25
@@ -219,7 +219,7 @@ def test_premultiply_alpha_rejects_wrong_shape():
     raise rather than silently corrupt the texture upload."""
     import numpy as np
     import pytest
-    from Imervue.puppet.canvas import _premultiply_alpha
+    from Imervue.puppet.canvas_render import _premultiply_alpha
     with pytest.raises(ValueError):
         _premultiply_alpha(np.zeros((4, 4), dtype=np.uint8))
     with pytest.raises(ValueError):
