@@ -252,7 +252,8 @@ REQUIRED_NUITKA_FLAGS = (
     "--include-package=qt_material",
     "--include-package=imageio",
     "--include-package=rawpy",
-    "--include-data-dir=plugins=plugins",
+    # Plugins are .py files, which --include-data-dir refuses to copy.
+    "--include-data-files=plugins=plugins/=**/*.py",
     # Model weights must NEVER ship in the bundle (see nuitka.md §2.4).
     "--noinclude-data-files=plugins/*/models/*",
     "--noinclude-data-files=*.onnx",
@@ -273,6 +274,19 @@ REQUIRED_NUITKA_FLAGS = (
 @pytest.mark.parametrize("flag", REQUIRED_NUITKA_FLAGS)
 def test_nuitka_command_includes_flag(nuitka_command, flag):
     assert flag in nuitka_command, f"workflow Nuitka command missing flag: {flag}"
+
+
+def test_nuitka_command_does_not_copy_plugins_as_a_data_dir(nuitka_command):
+    # --include-data-dir copies "all non-code files": every plugin file is a
+    # .py, so this form shipped nothing and the EXE had no plugins directory.
+    assert "--include-data-dir=plugins=plugins" not in nuitka_command
+
+
+def test_nuitka_docs_use_the_same_plugin_flag():
+    # nuitka.md documents the command operators run by hand; a flag that only
+    # moves in the workflow leaves the doc telling people to build a broken EXE.
+    doc = (REPO_ROOT / "nuitka.md").read_text(encoding="utf-8")
+    assert doc.count('"--include-data-files=plugins=plugins/=**/*.py"') >= 4
 
 
 def test_nuitka_command_targets_imervue_package(nuitka_command):

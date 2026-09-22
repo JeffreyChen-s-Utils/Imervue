@@ -25,10 +25,13 @@
 #   - The four built-in tabs (Imervue / Modify / Paint / Puppet) all
 #     live under ``Imervue/`` and are picked up automatically by
 #     Nuitka's package walk — there's no per-tab include arg.
-#   - ``--include-data-dir=plugins=plugins`` still ships the third-
-#     party plugin directory so users can drop in / download plugins
-#     without rebuilding. The Puppet tab is no longer here (it was
-#     promoted to a built-in subpackage at Imervue/puppet/).
+#   - ``--include-data-files=plugins=plugins/=**/*.py`` ships the
+#     third-party plugin directory so users can drop in / download
+#     plugins without rebuilding. It has to be the data-*files* form
+#     with a pattern: ``--include-data-dir`` copies "all non-code
+#     files", so it skipped every plugin .py and only printed "No data
+#     files in directory 'plugins'". The Puppet tab is no longer here
+#     (it was promoted to a built-in subpackage at Imervue/puppet/).
 #   - ``--include-data-dir=examples=examples`` ships the demo
 #     ``examples/puppet/march_7th.puppet`` rig so the Puppet tab has
 #     something to open the first time a user clicks **Open Puppet…**.
@@ -218,7 +221,7 @@ jobs:
             --include-package-data=qt_material ^
             --include-package-data=imageio ^
             --include-package-data=rawpy ^
-            --include-data-dir=plugins=plugins ^
+            "--include-data-files=plugins=plugins/=**/*.py" ^
             --include-data-dir=examples=examples ^
             --noinclude-data-files=plugins/*/models/* ^
             --noinclude-data-files=examples/**/__pycache__/* ^
