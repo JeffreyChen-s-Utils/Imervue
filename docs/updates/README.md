@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-14 | 2026-09-22 | Imervue_Plugins: README becomes a plugin list | #done #Imervue_Plugins #docs | [2026-09](2026-09.md) |
 | U-20260922-13 | 2026-09-22 | Offer onnxruntime before the ONNX paths of six plugins | #done #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-12 | 2026-09-22 | Refresh stale version and dependency metadata | #done #housekeeping | [2026-09](2026-09.md) |
 | U-20260922-11 | 2026-09-22 | Concurrent pytest runs deleted each other's tmp_path | #incident #tests | [2026-09](2026-09.md) |
@@ -76,4 +77,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 13 |
+| [2026-09.md](2026-09.md) | 2026-09 | 14 |
