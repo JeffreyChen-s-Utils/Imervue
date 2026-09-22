@@ -412,6 +412,42 @@ class TestPointSegmentDistance:
 # Dialog smoke test
 # ---------------------------------------------------------------------------
 
+class TestRightPanelControls:
+    """The linked slider / spin pairs drive the canvas brush settings."""
+
+    @pytest.fixture
+    def dlg(self, qapp, base_pil):
+        dialog = AnnotationDialog(base_pil, source_path="")
+        yield dialog
+        dialog.deleteLater()
+
+    def test_defaults(self, dlg):
+        assert (dlg._width_slider.value(), dlg._width_spin.value()) == (3, 3)
+        assert (dlg._opacity_slider.value(), dlg._opacity_spin.value()) == (100, 100)
+        assert dlg._opacity_spin.suffix() == " %"
+        assert (dlg._spacing_slider.value(), dlg._spacing_spin.value()) == (8, 8)
+
+    def test_width_slider_sets_spin_and_canvas(self, dlg):
+        dlg._width_slider.setValue(12)
+        assert dlg._width_spin.value() == 12
+        assert dlg._canvas._stroke_width == 12
+
+    def test_width_spin_sets_slider_and_canvas(self, dlg):
+        dlg._width_spin.setValue(5)
+        assert dlg._width_slider.value() == 5
+        assert dlg._canvas._stroke_width == 5
+
+    def test_opacity_pair_sets_canvas(self, dlg):
+        dlg._opacity_spin.setValue(40)
+        assert dlg._opacity_slider.value() == 40
+        assert dlg._canvas._brush_opacity == 40
+
+    def test_spacing_pair_sets_canvas(self, dlg):
+        dlg._spacing_slider.setValue(20)
+        assert dlg._spacing_spin.value() == 20
+        assert dlg._canvas._brush_spacing == 20
+
+
 class TestAnnotationDialogSmoke:
     def test_constructs_without_crash(self, qapp, base_pil):
         dlg = AnnotationDialog(base_pil, source_path="")

@@ -35,7 +35,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication, QButtonGroup, QColorDialog, QDialog, QFileDialog, QFrame,
     QGridLayout, QHBoxLayout, QLabel, QMenuBar, QMessageBox, QSizePolicy,
-    QSlider, QSpinBox, QStatusBar, QToolButton, QVBoxLayout, QWidget,
+    QStatusBar, QToolButton, QVBoxLayout, QWidget,
     QWidgetAction,
 )
 
@@ -53,6 +53,7 @@ from Imervue.gui.annotation_canvas import (
 from Imervue.gui.annotation_models import (
     AnnotationProject, bake,
 )
+from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -419,6 +420,17 @@ class AnnotationEditorWidget(QWidget):
 
     # ---------- Right properties panel ----------
 
+    @staticmethod
+    def _section_label(frame: QFrame, text: str) -> QLabel:
+        """A right-panel section heading, styled through ``_QSS_PANEL_SECTION``."""
+        label = QLabel(text, frame)
+        label.setObjectName(_QSS_PANEL_SECTION)
+        return label
+
+    def _on_stroke_width_changed(self, width: int) -> None:
+        self._canvas.set_stroke_width(width)
+        self._refresh_status_bar()
+
     def _build_right_panel(self) -> QFrame:
         lang = language_wrapper.language_word_dict
         frame = QFrame(self)
@@ -449,11 +461,8 @@ class AnnotationEditorWidget(QWidget):
         lay.addSpacing(6)
 
         # ---- Color section ----
-        color_section = QLabel(
-            lang.get("annotation_color", "Color"), frame
-        )
-        color_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(color_section)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_color", "Color")))
 
         self._color = (255, 0, 0, 255)
         self._color_btn = QToolButton(frame)
@@ -470,55 +479,17 @@ class AnnotationEditorWidget(QWidget):
         lay.addSpacing(4)
 
         # ---- Stroke width section ----
-        sw_section = QLabel(
-            lang.get("annotation_stroke_width_label", "Stroke Width"), frame
-        )
-        sw_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(sw_section)
-
-        sw_row = QHBoxLayout()
-        sw_row.setContentsMargins(0, 0, 0, 0)
-        sw_row.setSpacing(6)
-
-        self._width_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._width_slider.setRange(1, 40)
-        self._width_slider.setValue(3)
-        sw_row.addWidget(self._width_slider, 1)
-
-        self._width_spin = QSpinBox(frame)
-        self._width_spin.setRange(1, 40)
-        self._width_spin.setValue(3)
-        self._width_spin.setFixedWidth(70)
-        sw_row.addWidget(self._width_spin)
-
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_stroke_width_label", "Stroke Width")))
+        self._width_slider, self._width_spin, sw_row = make_slider_spin(
+            frame, 1, 40, 3, on_change=self._on_stroke_width_changed)
         lay.addLayout(sw_row)
-
-        # Two-way sync between slider and spin, and propagate to canvas.
-        def on_slider(v: int) -> None:
-            self._width_spin.blockSignals(True)
-            self._width_spin.setValue(v)
-            self._width_spin.blockSignals(False)
-            self._canvas.set_stroke_width(v)
-            self._refresh_status_bar()
-
-        def on_spin(v: int) -> None:
-            self._width_slider.blockSignals(True)
-            self._width_slider.setValue(v)
-            self._width_slider.blockSignals(False)
-            self._canvas.set_stroke_width(v)
-            self._refresh_status_bar()
-
-        self._width_slider.valueChanged.connect(on_slider)
-        self._width_spin.valueChanged.connect(on_spin)
 
         lay.addSpacing(8)
 
         # ---- History quick actions (Undo / Redo) ----
-        hist_section = QLabel(
-            lang.get("annotation_history_section", "History"), frame
-        )
-        hist_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(hist_section)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_history_section", "History")))
 
         hist_row = QHBoxLayout()
         hist_row.setContentsMargins(0, 0, 0, 0)
@@ -547,11 +518,8 @@ class AnnotationEditorWidget(QWidget):
         lay.addSpacing(8)
 
         # ---- Brush section (freehand only) ----
-        brush_section = QLabel(
-            lang.get("annotation_brush_section", "Brush"), frame
-        )
-        brush_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(brush_section)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_brush_section", "Brush")))
 
         brush_grid = QGridLayout()
         brush_grid.setContentsMargins(0, 0, 0, 0)
@@ -586,79 +554,22 @@ class AnnotationEditorWidget(QWidget):
         lay.addSpacing(4)
 
         # Opacity slider + spin
-        op_section = QLabel(
-            lang.get("annotation_opacity", "Opacity"), frame
-        )
-        op_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(op_section)
-
-        op_row = QHBoxLayout()
-        op_row.setContentsMargins(0, 0, 0, 0)
-        op_row.setSpacing(6)
-        self._opacity_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._opacity_slider.setRange(0, 100)
-        self._opacity_slider.setValue(100)
-        op_row.addWidget(self._opacity_slider, 1)
-        self._opacity_spin = QSpinBox(frame)
-        self._opacity_spin.setRange(0, 100)
-        self._opacity_spin.setValue(100)
-        self._opacity_spin.setSuffix(" %")
-        self._opacity_spin.setFixedWidth(70)
-        op_row.addWidget(self._opacity_spin)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_opacity", "Opacity")))
+        self._opacity_slider, self._opacity_spin, op_row = make_slider_spin(
+            frame, 0, 100, 100, suffix=" %",
+            on_change=lambda v: self._canvas.set_brush_opacity(v))
         lay.addLayout(op_row)
-
-        def on_opacity_slider(v: int) -> None:
-            self._opacity_spin.blockSignals(True)
-            self._opacity_spin.setValue(v)
-            self._opacity_spin.blockSignals(False)
-            self._canvas.set_brush_opacity(v)
-
-        def on_opacity_spin(v: int) -> None:
-            self._opacity_slider.blockSignals(True)
-            self._opacity_slider.setValue(v)
-            self._opacity_slider.blockSignals(False)
-            self._canvas.set_brush_opacity(v)
-
-        self._opacity_slider.valueChanged.connect(on_opacity_slider)
-        self._opacity_spin.valueChanged.connect(on_opacity_spin)
 
         lay.addSpacing(4)
 
         # Spacing slider + spin (spray only, but always visible for clarity)
-        sp_section = QLabel(
-            lang.get("annotation_spacing", "Spacing"), frame
-        )
-        sp_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(sp_section)
-
-        sp_row = QHBoxLayout()
-        sp_row.setContentsMargins(0, 0, 0, 0)
-        sp_row.setSpacing(6)
-        self._spacing_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._spacing_slider.setRange(1, 40)
-        self._spacing_slider.setValue(8)
-        sp_row.addWidget(self._spacing_slider, 1)
-        self._spacing_spin = QSpinBox(frame)
-        self._spacing_spin.setRange(1, 40)
-        self._spacing_spin.setValue(8)
-        self._spacing_spin.setFixedWidth(70)
-        sp_row.addWidget(self._spacing_spin)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_spacing", "Spacing")))
+        self._spacing_slider, self._spacing_spin, sp_row = make_slider_spin(
+            frame, 1, 40, 8,
+            on_change=lambda v: self._canvas.set_brush_spacing(v))
         lay.addLayout(sp_row)
-
-        def on_spacing_slider(v: int) -> None:
-            self._spacing_spin.blockSignals(True)
-            self._spacing_spin.setValue(v)
-            self._spacing_spin.blockSignals(False)
-            self._canvas.set_brush_spacing(v)
-
-        def on_spacing_spin(v: int) -> None:
-            self._spacing_slider.blockSignals(True)
-            self._spacing_slider.setValue(v)
-            self._spacing_slider.blockSignals(False)
-            self._canvas.set_brush_spacing(v)
-
-        self._spacing_slider.valueChanged.connect(on_spacing_slider)
-        self._spacing_spin.valueChanged.connect(on_spacing_spin)
 
         lay.addStretch(1)
         return frame
