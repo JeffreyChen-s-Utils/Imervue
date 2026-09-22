@@ -902,3 +902,10 @@ def test_sponge_tool_cancel_clears_active_stroke(state):
     tool.cancel()
     assert tool.handle(_move(20, 20), canvas) is False
 
+
+
+def test_public_names_stay_importable_from_dispatcher():
+    # The handlers live in paint/tools/; callers import them from here.
+    from Imervue.paint import tool_dispatcher
+    for name in tool_dispatcher.__all__:
+        assert hasattr(tool_dispatcher, name), name

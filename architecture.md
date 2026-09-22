@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-23 against `b4c0407` on `dev`.
+> Last verified: 2026-09-23 against `e367a5c` on `dev`.
 
 ## 1. Purpose
 

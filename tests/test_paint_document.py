@@ -895,3 +895,22 @@ def test_divide_active_layer_clears_reference_pointing_at_source():
     doc.divide_active_layer()
     assert doc.reference_layer_index() is None
 
+
+
+def test_public_names_stay_importable_from_document():
+    # Layer, LayerGroup and the layer constants live in layer_model but callers
+    # import them from here; __all__ keeps an automatic unused-import fix from
+    # dropping them again.
+    from Imervue.paint import document, layer_model
+    for name in document.__all__:
+        assert hasattr(document, name), name
+    assert document.GROUP_BLEND_MODES is layer_model.GROUP_BLEND_MODES
+    assert document.Layer is layer_model.Layer
+
+
+def test_mixins_provide_the_moved_operations():
+    from Imervue.paint.document import PaintDocument
+    for name in ("crop", "flip_horizontal", "rotate_90_cw", "resize", "transform_canvas",
+                 "merge_down", "merge_visible", "flatten", "divide_active_layer",
+                 "create_group", "delete_group", "rename_group", "set_layer_group"):
+        assert callable(getattr(PaintDocument, name)), name
