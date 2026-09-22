@@ -769,7 +769,7 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | 插件实例化后 |
 | `on_plugin_unloaded()` | App 关闭时 |
-| `on_build_menu_bar(menu_bar)` | 默认菜单栏建好后 |
+| `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 菜单建好后 |
 | `on_build_main_tabs(tabs)` | 内置 5 个标签加完之后 |
 | `on_build_context_menu(menu, viewer)` | 右键菜单打开时 |
 | `on_image_loaded(path, viewer)` | 图片在深度缩放加载后 |

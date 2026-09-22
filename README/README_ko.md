@@ -768,7 +768,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 |------|---------|
 | `on_plugin_loaded()` | 플러그인 인스턴스화 후 |
 | `on_plugin_unloaded()` | 앱 종료 시 |
-| `on_build_menu_bar(menu_bar)` | 기본 메뉴 바가 빌드된 후 |
+| `on_build_menu_bar(plugin_menu)` | 공유 Plugins 메뉴가 빌드된 후 |
 | `on_build_main_tabs(tabs)` | 내장 5개 탭이 추가된 후 |
 | `on_build_context_menu(menu, viewer)` | 우클릭 메뉴 열릴 때 |
 | `on_image_loaded(path, viewer)` | 딥 줌에서 이미지 로드 후 |

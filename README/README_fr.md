@@ -773,8 +773,8 @@ Imervue prend en charge les plugins tiers. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | Après l'instanciation du plugin |
 | `on_plugin_unloaded()` | À la fermeture de l'application |
-| `on_build_menu_bar(menu_bar)` | Après construction de la barre de menus par défaut |
-| `on_build_main_tabs(tabs)` | Après ajout des quatre onglets intégrés |
+| `on_build_menu_bar(plugin_menu)` | Après construction du menu Plugins partagé |
+| `on_build_main_tabs(tabs)` | Après ajout des cinq onglets intégrés |
 | `on_build_context_menu(menu, viewer)` | À l'ouverture du menu clic droit |
 | `on_image_loaded(path, viewer)` | Après chargement d'une image en deep zoom |
 | `on_folder_opened(path, images, viewer)` | Après ouverture d'un dossier dans la grille |

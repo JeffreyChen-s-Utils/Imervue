@@ -820,7 +820,7 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 |------|---------|
 | `on_plugin_loaded()` | After plugin is instantiated |
 | `on_plugin_unloaded()` | At app shutdown |
-| `on_build_menu_bar(menu_bar)` | After default menu bar is built |
+| `on_build_menu_bar(plugin_menu)` | After the shared Plugins menu is built |
 | `on_build_main_tabs(tabs)` | After the five built-in tabs are added |
 | `on_build_context_menu(menu, viewer)` | When right-click menu opens |
 | `on_image_loaded(path, viewer)` | After image loads in deep zoom |

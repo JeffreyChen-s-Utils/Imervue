@@ -56,7 +56,8 @@ class ImervuePlugin:
     def on_build_menu_bar(self, plugin_menu: QMenu) -> None:
         """Called after the Plugin menu is built.
 
-        Add your own submenus or actions into the shared Plugin menu.
+        Despite the name, ``plugin_menu`` is the shared Plugin ``QMenu``, not
+        the ``QMenuBar``: add your own submenus or actions into it.
 
         Example::
 
@@ -84,8 +85,8 @@ class ImervuePlugin:
     # ===========================
 
     def on_build_main_tabs(self, tabs: QTabWidget) -> None:
-        """Called once after the built-in tabs (Imervue / Modify / Paint)
-        are added to the main window's top-level QTabWidget.
+        """Called once after the five built-in tabs (Imervue / Modify / Paint /
+        Puppet / Desktop Pet) are added to the main window's top-level QTabWidget.
 
         Append your own tab here via ``tabs.addTab(widget, label)``. Plugin
         tabs are appended in plugin discovery order, after the built-in

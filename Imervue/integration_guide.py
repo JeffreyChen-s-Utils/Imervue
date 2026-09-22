@@ -42,9 +42,9 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
 
     # Let plugins contribute top-level tabs to the main window's tab strip.
     # ``_main_tabs`` is the QTabWidget owned by ImervueMainWindow that already
-    # carries Imervue / Modify / Paint; plugin tabs append after Paint in
-    # plugin discovery order. Each call is wrapped so a single bad plugin
-    # can't tear down construction.
+    # carries Imervue / Modify / Paint / Puppet / Desktop Pet; plugin tabs
+    # append after Desktop Pet in plugin discovery order. Each call is
+    # wrapped so a single bad plugin can't tear down construction.
     tabs = getattr(main_window, "_main_tabs", None)
     if tabs is not None:
         _dispatch_main_tab_hook(manager, tabs)

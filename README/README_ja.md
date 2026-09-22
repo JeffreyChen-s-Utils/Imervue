@@ -770,7 +770,7 @@ Imervue はサードパーティプラグインをサポートします。完全
 |------|---------|
 | `on_plugin_loaded()` | プラグインがインスタンス化された後 |
 | `on_plugin_unloaded()` | アプリ終了時 |
-| `on_build_menu_bar(menu_bar)` | デフォルトメニューバー構築後 |
+| `on_build_menu_bar(plugin_menu)` | 共有の Plugins メニュー構築後 |
 | `on_build_main_tabs(tabs)` | 5 つの組み込みタブが追加された後 |
 | `on_build_context_menu(menu, viewer)` | 右クリックメニューを開いた時 |
 | `on_image_loaded(path, viewer)` | ディープズームで画像がロードされた後 |

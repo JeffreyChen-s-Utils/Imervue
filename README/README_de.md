@@ -820,8 +820,8 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | Nachdem das Plugin instanziiert wurde |
 | `on_plugin_unloaded()` | Beim App-Shutdown |
-| `on_build_menu_bar(menu_bar)` | Nachdem die Standard-Menüleiste gebaut wurde |
-| `on_build_main_tabs(tabs)` | Nachdem die vier eingebauten Tabs hinzugefügt wurden |
+| `on_build_menu_bar(plugin_menu)` | Nachdem das gemeinsame Plugins-Menü gebaut wurde |
+| `on_build_main_tabs(tabs)` | Nachdem die fünf eingebauten Tabs hinzugefügt wurden |
 | `on_build_context_menu(menu, viewer)` | Beim Öffnen des Rechtsklickmenüs |
 | `on_image_loaded(path, viewer)` | Nachdem ein Bild im Deep Zoom geladen wurde |
 | `on_folder_opened(path, images, viewer)` | Nachdem ein Ordner im Grid geöffnet wurde |

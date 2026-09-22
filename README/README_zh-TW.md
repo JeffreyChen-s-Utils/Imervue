@@ -769,7 +769,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | 外掛實例化後 |
 | `on_plugin_unloaded()` | App 關閉時 |
-| `on_build_menu_bar(menu_bar)` | 預設選單列建好後 |
+| `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 選單建好後 |
 | `on_build_main_tabs(tabs)` | 內建 5 個分頁加完之後 |
 | `on_build_context_menu(menu, viewer)` | 右鍵選單開啟時 |
 | `on_image_loaded(path, viewer)` | 影像在深度縮放載入後 |

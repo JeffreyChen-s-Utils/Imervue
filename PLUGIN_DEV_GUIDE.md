@@ -2,11 +2,13 @@
 
 ## Overview
 
-Imervue supports a plugin system that allows developers to extend the application with custom functionality. Plugins can add menu items, respond to image events, handle keyboard shortcuts, and more.
+Imervue supports a plugin system that allows developers to extend the application with custom functionality. Plugins can add menu items and top-level tabs, respond to image events, handle keyboard shortcuts, add languages, and more.
+
+Working examples are the plugins published in the distribution repository [Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins), for instance `plugins/png_to_icon/` for a small plugin and `languages/spanish_translation/` for a language plugin. **Plugins → Download Plugins** installs them.
 
 ## Quick Start
 
-1. Create a folder inside the `plugins/` directory (next to the `Imervue/` package):
+1. Create a folder inside the `plugins/` directory. In a source checkout that is the directory next to the `Imervue/` package; in a packaged build it is the `plugins/` directory next to the executable (**Plugins → Open Plugin Folder** opens it):
 
 ```
 plugins/
@@ -18,7 +20,11 @@ plugins/
 2. Define your plugin class in `my_plugin.py`:
 
 ```python
+import logging
+
 from Imervue.plugin.plugin_base import ImervuePlugin
+
+logger = logging.getLogger("Imervue.plugin.my_plugin")
 
 
 class MyPlugin(ImervuePlugin):
@@ -28,7 +34,7 @@ class MyPlugin(ImervuePlugin):
     plugin_author = "Your Name"
 
     def on_plugin_loaded(self):
-        print(f"{self.plugin_name} loaded!")
+        logger.info("%s loaded", self.plugin_name)
 ```
 
 3. Register it in `__init__.py`:
@@ -39,7 +45,7 @@ from my_plugin.my_plugin import MyPlugin
 plugin_class = MyPlugin
 ```
 
-4. Restart Imervue — your plugin will be automatically discovered and loaded.
+4. Restart Imervue (or use **Plugins → Reload Plugins**). Your plugin is discovered and loaded automatically.
 
 ## Plugin Structure
 
@@ -56,8 +62,8 @@ plugin_class = MyPlugin
 
 Every plugin instance automatically has:
 
-- `self.main_window` — The `ImervueMainWindow` instance (access menus, file tree, labels, etc.)
-- `self.viewer` — The `GPUImageView` instance (access images, zoom state, tile grid, etc.)
+- `self.main_window`: the `ImervueMainWindow` instance (menus, file tree, labels, etc.)
+- `self.viewer`: the `GPUImageView` instance (images, zoom state, tile grid, etc.)
 
 ## Available Hooks
 
@@ -70,7 +76,7 @@ Called once after the plugin is instantiated and registered. Use for initializat
 ```python
 def on_plugin_loaded(self):
     self.my_data = {}
-    print("Plugin ready!")
+    logger.info("Plugin ready")
 ```
 
 #### `on_plugin_unloaded()`
@@ -84,15 +90,15 @@ def on_plugin_unloaded(self):
 
 ### Menu Hooks
 
-#### `on_build_menu_bar(menu_bar: QMenuBar)`
+#### `on_build_menu_bar(plugin_menu: QMenu)`
 
-Called after the default menu bar is built. Add your own menus here.
+Called once after the shared **Plugins** menu is built. Despite the hook's name, the argument is that `QMenu`, not the `QMenuBar`: add a submenu or actions to it rather than a new top-level menu.
 
 ```python
 from PySide6.QtWidgets import QMessageBox
 
-def on_build_menu_bar(self, menu_bar):
-    my_menu = menu_bar.addMenu("My Plugin")
+def on_build_menu_bar(self, plugin_menu):
+    my_menu = plugin_menu.addMenu("My Plugin")
     action = my_menu.addAction("Say Hello")
     action.triggered.connect(
         lambda: QMessageBox.information(self.main_window, "Hello", "Hello from my plugin!")
@@ -113,6 +119,19 @@ def on_build_context_menu(self, menu, viewer):
         action.triggered.connect(self.do_something_else)
 ```
 
+### Tab Hooks
+
+#### `on_build_main_tabs(tabs: QTabWidget)`
+
+Called once after the five built-in tabs (Imervue / Modify / Paint / Puppet / Desktop Pet) are added to the main window's top-level `QTabWidget`, before `on_build_menu_bar`. Append your own tab with `tabs.addTab(widget, label)`; plugin tabs follow the built-in ones in plugin discovery order. An exception raised here is logged and skipped, so one plugin cannot abort startup.
+
+```python
+from PySide6.QtWidgets import QLabel
+
+def on_build_main_tabs(self, tabs):
+    tabs.addTab(QLabel("Hello from My Plugin"), "My Plugin")
+```
+
 ### Image Hooks
 
 #### `on_image_loaded(image_path: str, viewer: GPUImageView)`
@@ -121,7 +140,7 @@ Called after a single image is loaded in deep zoom mode.
 
 ```python
 def on_image_loaded(self, image_path, viewer):
-    print(f"Viewing: {image_path}")
+    logger.debug("Viewing: %s", image_path)
 ```
 
 #### `on_folder_opened(folder_path: str, image_paths: list[str], viewer: GPUImageView)`
@@ -130,7 +149,7 @@ Called after a folder is opened and images are listed in tile grid mode.
 
 ```python
 def on_folder_opened(self, folder_path, image_paths, viewer):
-    print(f"Opened folder with {len(image_paths)} images")
+    logger.debug("Opened folder with %d images", len(image_paths))
 ```
 
 #### `on_image_switched(image_path: str, viewer: GPUImageView)`
@@ -139,7 +158,7 @@ Called when the user navigates to the next/previous image.
 
 ```python
 def on_image_switched(self, image_path, viewer):
-    print(f"Switched to: {image_path}")
+    logger.debug("Switched to: %s", image_path)
 ```
 
 #### `on_image_deleted(deleted_paths: list[str], viewer: GPUImageView)`
@@ -148,7 +167,7 @@ Called after image(s) are soft-deleted (added to the undo stack).
 
 ```python
 def on_image_deleted(self, deleted_paths, viewer):
-    print(f"Deleted {len(deleted_paths)} image(s)")
+    logger.debug("Deleted %d image(s)", len(deleted_paths))
 ```
 
 ### Input Hooks
@@ -208,8 +227,9 @@ viewer.dz_offset_y      # Pan offset Y
 ```python
 self.main_window.menuBar()       # Access the menu bar
 self.main_window.filename_label  # The filename display label
-self.main_window.tree            # The file system tree view
-self.main_window.model           # The QFileSystemModel
+self.main_window.tree            # The folder tree view
+self.main_window.model           # The folder tree's sort proxy model
+self.main_window.plugin_manager  # The PluginManager (loaded plugins, hook dispatch)
 ```
 
 ## Plugin Discovery
@@ -234,6 +254,37 @@ plugins/
 ```
 
 For single-file plugins, the manager will automatically find your `ImervuePlugin` subclass. For package plugins, you should explicitly set `plugin_class` in `__init__.py`.
+
+The `plugins/` directory is put on `sys.path`, so a package plugin imports its own modules by package name (`from my_plugin.helpers import ...`). Single-file plugins work locally, but the plugin downloader only distributes package plugins.
+
+## Dependencies
+
+A plugin may use Imervue's default dependency set (PySide6, numpy, Pillow, imageio, defusedxml, watchdog) directly. Anything heavier (onnxruntime, rembg, opencv-python, torch, ...) must be requested through `ensure_dependencies`, which checks the imports and offers to pip-install whatever is missing before it calls your callback. In a packaged build the packages go into the application's own `lib/site-packages`.
+
+```python
+from Imervue.plugin.pip_installer import ensure_dependencies
+
+REQUIRED_PACKAGES = [("onnxruntime", "onnxruntime")]  # (import name, pip name)
+
+def _run_guarded(self):
+    ensure_dependencies(self.main_window, REQUIRED_PACKAGES, self._run)
+```
+
+Import the heavy package inside the code that `_run` calls, not at module level, so the plugin still loads while the package is missing.
+
+## Background Work
+
+Never block the GUI thread in a hook. Run long work in a `QThread` subclass and report back through signals.
+
+A dialog that owns a running worker must stop it on **Cancel** as well as on window close; Cancel calls `reject()`, which does not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker`: the mixin stops and joins it before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
+
+## Distributing a Plugin
+
+Plugins reach users through the [Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) repository. **Plugins → Download Plugins** reads its `main` branch:
+
+- A plugin lives under a category directory: `plugins/<name>/`, or `languages/<name>/` for a language plugin.
+- **Only the files directly inside the plugin directory are downloaded.** Subdirectories (`models/`, `assets/`, ...) are not, so keep every file the plugin needs to run flat, and discover optional files such as model weights at runtime.
+- A download replaces the installed copy of the plugin as a whole, so do not keep user data inside the plugin directory if it has to survive an update.
 
 ## Internationalization (i18n)
 
@@ -276,10 +327,10 @@ class MyPlugin(ImervuePlugin):
             },
         }
 
-    def on_build_menu_bar(self, menu_bar):
+    def on_build_menu_bar(self, plugin_menu):
         lang = language_wrapper.language_word_dict
-        my_menu = menu_bar.addMenu(lang.get("my_plugin_action", "Do Something"))
-        action = my_menu.addAction(lang.get("my_plugin_greeting", "Hello!"))
+        my_menu = plugin_menu.addMenu(lang.get("my_plugin_action", "Do Something"))
+        my_menu.addAction(lang.get("my_plugin_greeting", "Hello!"))
 ```
 
 Built-in language codes: `"English"`, `"Traditional_Chinese"`, `"Chinese"`, `"Korean"`, `"Japanese"`.
@@ -320,18 +371,19 @@ class SpanishLanguagePlugin(ImervuePlugin):
         )
 ```
 
-The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application will use the plugin-provided translations.
+The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application will use the plugin-provided translations. A built-in language code cannot be registered this way; use `get_translations()` to extend a built-in language.
 
 > **Tip:** Copy all keys from `Imervue/multi_language/english.py` as a starting template for your language plugin. Any missing keys will fall back to `None` via `dict.get()`, so make sure to translate all keys for a complete experience.
 
 ## Error Handling
 
-All plugin hooks are wrapped in try/except by the plugin manager. If your plugin raises an exception, it will be logged but won't crash the application. Check the console for error messages prefixed with your plugin name.
+All plugin hooks are wrapped in try/except by the plugin manager. If your plugin raises an exception, it is logged with its traceback but won't crash the application; look for messages prefixed with your plugin name in the console and in `imervue.log`.
+
+This only covers exceptions raised inside a hook. A crash in native code (a GPU driver, an ONNX runtime) or a `QThread` destroyed while running still takes the process down, which is why heavy work belongs in a worker (see *Background Work*).
 
 ## Tips
 
-- Check the `plugins/example_plugin/` for a complete working example.
-- Use `print()` for debugging — output appears in the console.
-- Avoid blocking the main thread in hooks. For heavy work, use `QThreadPool` or `QRunnable`.
-- Store plugin state in your plugin instance (`self.my_data = ...`). For persistent state across sessions, save to a JSON file in your plugin directory.
+- Log through `logging.getLogger("Imervue.plugin.<your_plugin>")` rather than `print()`: log records reach the console and `imervue.log`, and a packaged build has no console.
+- Keep the plugin's pure logic (image maths, file handling) in plain functions that take arrays or paths, separate from the Qt classes, so it can be unit-tested without a display.
+- Store plugin state in your plugin instance (`self.my_data = ...`). For state that must persist across sessions, write a JSON file outside the plugin directory (see *Distributing a Plugin*).
 - Don't modify internal Imervue data structures directly unless you know what you're doing. Use the provided hooks and the public API.

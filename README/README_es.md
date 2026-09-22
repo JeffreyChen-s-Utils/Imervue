@@ -818,8 +818,8 @@ Imervue soporta plugins de terceros. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DE
 |------|---------|
 | `on_plugin_loaded()` | Tras instanciar el plugin |
 | `on_plugin_unloaded()` | Al cerrar la aplicación |
-| `on_build_menu_bar(menu_bar)` | Tras construir la barra de menú predeterminada |
-| `on_build_main_tabs(tabs)` | Tras añadir las cuatro pestañas integradas |
+| `on_build_menu_bar(plugin_menu)` | Tras construir el menú Plugins compartido |
+| `on_build_main_tabs(tabs)` | Tras añadir las cinco pestañas integradas |
 | `on_build_context_menu(menu, viewer)` | Al abrirse el menú del clic derecho |
 | `on_image_loaded(path, viewer)` | Tras cargar imagen en deep zoom |
 | `on_folder_opened(path, images, viewer)` | Tras abrir carpeta en cuadrícula |

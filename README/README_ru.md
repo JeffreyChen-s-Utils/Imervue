@@ -816,8 +816,8 @@ Imervue поддерживает сторонние плагины. См. [PLUGI
 |------|---------|
 | `on_plugin_loaded()` | После инстанцирования плагина |
 | `on_plugin_unloaded()` | При завершении работы приложения |
-| `on_build_menu_bar(menu_bar)` | После построения стандартной панели меню |
-| `on_build_main_tabs(tabs)` | После добавления четырёх встроенных вкладок |
+| `on_build_menu_bar(plugin_menu)` | После построения общего меню Plugins |
+| `on_build_main_tabs(tabs)` | После добавления пяти встроенных вкладок |
 | `on_build_context_menu(menu, viewer)` | При открытии меню по правому клику |
 | `on_image_loaded(path, viewer)` | После загрузки изображения в глубоком зуме |
 | `on_folder_opened(path, images, viewer)` | После открытия папки в сетке |
