@@ -2270,6 +2270,8 @@ Double-click a row in the list to type a person name; on Save, the tags
 are written into the recipe's ``extra['face_tags']`` blob. Detection is a
 classical technique — accuracy is adequate for "show me the faces" but
 not a replacement for modern CNN-based recognition.
+It needs OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 dropped the Haar
+cascades, and the dialog then says so instead of detecting.
 
 Local Adjustment Masks
 ^^^^^^^^^^^^^^^^^^^^^^

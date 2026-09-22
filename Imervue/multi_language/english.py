@@ -1912,6 +1912,7 @@ english_word_dict = {
     "face_remove": "Remove selected",
     "face_list": "Detected faces (double-click to rename):",
     "face_found": "{n} face(s) total.",
+    "face_needs_opencv4": "Face detection needs OpenCV 4 with its Haar cascades (OpenCV 5 dropped them). Install it with: pip install \"opencv-python<5\"",
     "face_save": "Save",
 
     # --- Local Adjustment Masks ---

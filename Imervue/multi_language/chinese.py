@@ -1878,6 +1878,7 @@ chinese_word_dict = {
     "face_remove": "移除所选",
     "face_list": "检测到的脸（双击以命名）：",
     "face_found": "共 {n} 张脸。",
+    "face_needs_opencv4": "人脸检测需要附带 Haar 分类器的 OpenCV 4（OpenCV 5 已移除）。请用以下命令安装：pip install \"opencv-python<5\"",
     "face_save": "保存",
 
     # --- Local Adjustment Masks ---

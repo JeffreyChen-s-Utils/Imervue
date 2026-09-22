@@ -19,6 +19,7 @@ import logging
 import re
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -34,6 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.pip_constraints import install_command, write_constraints_file
 from Imervue.system.app_paths import (
     is_frozen as _is_frozen,
     embedded_python_dir as _embedded_python_dir_path,
@@ -531,41 +533,42 @@ class _InstallWorker(QThread):
         self._python = python_path
 
     def run(self):
-        extra_args: list[str] = []
-        if _is_frozen():
-            from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
-            target_dir = str(_frozen_site_packages())
-            extra_args = ["--target", target_dir]
-            self.log.emit(f"Frozen mode: installing to {target_dir}")
-            Path(target_dir).mkdir(parents=True, exist_ok=True)
-            if target_dir not in sys.path:
-                sys.path.insert(0, target_dir)
+        extra_args = self._frozen_target_args()
+        try:
+            with tempfile.TemporaryDirectory(
+                    prefix="imervue_pip_", ignore_cleanup_errors=True) as tmp:
+                constraints = write_constraints_file(Path(tmp))
+                ok, message = self._install_all(constraints, extra_args)
+        except OSError as exc:
+            ok, message = False, str(exc)
+        self.result_ready.emit(ok, message)
 
+    def _frozen_target_args(self) -> list[str]:
+        """Return ``--target`` args for a frozen build (creating the dir), else none."""
+        if not _is_frozen():
+            return []
+        from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
+        target_dir = str(_frozen_site_packages())
+        self.log.emit(f"Frozen mode: installing to {target_dir}")
+        Path(target_dir).mkdir(parents=True, exist_ok=True)
+        if target_dir not in sys.path:
+            sys.path.insert(0, target_dir)
+        return ["--target", target_dir]
+
+    def _install_all(self, constraints: Path, extra_args: list[str]) -> tuple[bool, str]:
+        """Install every package in turn under *constraints*; stop at the first failure."""
         for name in self._pip_names:
             self.log.emit(f"Installing {name} ...")
+            cmd = install_command(self._python, name, constraints, extra_args)
             try:
-                cmd = [
-                    self._python, "-m", "pip", "install",
-                    "--no-input",
-                    "--disable-pip-version-check",
-                    name,
-                ] + extra_args
-
                 returncode = self._run_with_live_output(cmd, timeout=600)
-                if returncode != 0:
-                    self.result_ready.emit(
-                        False,
-                        f"Failed to install {name} (exit code {returncode})",
-                    )
-                    return
             except FileNotFoundError:
-                self.result_ready.emit(False, f"Python not found: {self._python}")
-                return
+                return False, f"Python not found: {self._python}"
             except Exception as exc:
-                self.result_ready.emit(False, str(exc))
-                return
-
-        self.result_ready.emit(True, "All packages installed successfully!")
+                return False, str(exc)
+            if returncode != 0:
+                return False, f"Failed to install {name} (exit code {returncode})"
+        return True, "All packages installed successfully!"
 
     def _run_with_live_output(self, cmd: list[str], timeout: int = 600) -> int:
         """執行子程序並即時 emit 每一行輸出"""

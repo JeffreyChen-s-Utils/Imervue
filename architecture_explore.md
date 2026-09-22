@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `381b041` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `102e3d4` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,29 +66,29 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 738 | 122,713 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,700 |
-| `Imervue/gui/` | 143 | 30,938 |
+| `tests/` | 744 | 123,519 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,689 |
+| `Imervue/gui/` | 144 | 30,997 |
 | `Imervue/puppet/` | 53 | 15,131 |
-| `Imervue/image/` | 112 | 12,807 |
+| `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 60 | 12,634 |
-| `Imervue/multi_language/` | 8 | 11,299 |
+| `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 32 | 8,175 |
 | `Imervue/mcp_server/` | 11 | 4,422 |
 | `Imervue/library/` | 32 | 4,140 |
-| `Imervue/menu/` | 11 | 3,481 |
-| `Imervue/` 根層 | 5 | 3,147 |
-| `Imervue/plugin/` | 9 | 2,229 |
+| `Imervue/menu/` | 11 | 3,565 |
+| `Imervue/` 根層 | 5 | 3,091 |
+| `Imervue/plugin/` | 10 | 2,282 |
 | `Imervue/system/` | 15 | 1,771 |
 | `Imervue/export/` | 8 | 1,047 |
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
-| `plugins/`（17 個外掛） | 62 | 14,295 |
-| **總計** | **1,497** | **295,854** |
+| `plugins/`（17 個外掛） | 62 | 14,389 |
+| **總計** | **1,505** | **296,912** |
 
-其中 `Imervue/` 套件本身 697 檔 / 158,846 行。
+其中 `Imervue/` 套件本身 699 檔 / 159,004 行。
 
-測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.71 : 1**（124k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -365,7 +365,7 @@ ImervueMainWindow
 
 `xmp_sidecar.py`(387) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(77) XMP↔EXIF 評分調和 ·
 `gps.py`(87) EXIF GPS 擷取 · `gps_geotag.py`(63) 寫入 · `reverse_geocode.py`(152) 離線逆地理編碼 ·
-`geo_keywords.py`(46) 地點寫進 XMP 關鍵字 · `face_detection.py`(110) 人臉偵測與人物標籤 ·
+`geo_keywords.py`(46) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
 `annotations.py`(271) JSON sidecar 註解 · `info.py`(181) 圖片資訊組裝與對話框
 
 #### 分析 / 品質
@@ -506,7 +506,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-143 個檔、31,057 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+144 個檔、30,997 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -564,7 +564,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `crop_straighten_dialog.py`(221) · `auto_straighten_dialog.py`(199) · `lens_correction_dialog.py`(169) ·
 `smart_crop_dialog.py`(127) 顯著性裁切建議 · `tiny_planet_dialog.py`(112) ·
 `clone_stamp_dialog.py`(219) · `healing_brush_dialog.py`(254) · `sky_replace_dialog.py`(154) ·
-`portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(168) · `face_detection_dialog.py`(225) ·
+`portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(168) · `face_detection_dialog.py`(233) ·
 `hdr_merge_dialog.py`(159) · `panorama_dialog.py`(169) · `focus_stack_dialog.py`(157) ·
 `stack_blend_dialog.py`(178) · `collage_dialog.py`(89) · `deflicker_dialog.py`(208) ·
 `id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(176)
@@ -848,7 +848,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
 | `plugin_manager.py` | 229 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
 | `plugin_downloader.py` | 496 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
-| `pip_installer.py` | 963 | 外掛相依安裝器：尋找/下載 Python、安裝 pip 套件（凍結環境亦可） |
+| `pip_installer.py` | 965 | 外掛相依安裝器：尋找/下載 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔 |
+| `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `plugin_manifest.py` | 174 | manifest schema + 版本 / 相依相容性檢查 |
 | `model_dir.py` | 51 | 外掛模型目錄的共用解析 |
 | `subprocess_util.py` | 37 | 外掛 worker 呼叫子 Python 的共用 helper |
@@ -909,7 +910,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-738 個檔、122,713 行。`pyproject.toml` 定義三個互斥層級 marker：
+744 個檔、123,519 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

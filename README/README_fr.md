@@ -117,7 +117,7 @@ Optionnel (sous condition ; ne pas installer désactive proprement la fonctionna
 |---------|---------|
 | open_clip_torch + torch | Recherche sémantique CLIP (requêtes en langage naturel) |
 | onnxruntime | Agrandissement IA Real-ESRGAN / auto-étiquetage CLIP ONNX |
-| opencv-python | Fusion HDR, assemblage panoramique, focus stacking, détection de visages, pinceau correcteur |
+| opencv-python<5 | Fusion HDR, assemblage panoramique, focus stacking, détection de visages, pinceau correcteur |
 | sounddevice | Synchronisation labiale via micro pour Puppet |
 | mediapipe | Suivi facial par webcam pour Puppet |
 

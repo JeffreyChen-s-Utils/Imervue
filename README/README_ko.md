@@ -117,7 +117,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP 시맨틱 검색 (자연어 이미지 쿼리) |
 | onnxruntime | Real-ESRGAN AI 업스케일 / CLIP ONNX 자동 태그 |
-| opencv-python | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
+| opencv-python<5 | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
 | sounddevice | Puppet 마이크 입싱크 |
 | mediapipe | Puppet 웹캠 얼굴 추적 |
 

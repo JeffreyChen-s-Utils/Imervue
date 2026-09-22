@@ -2336,6 +2336,8 @@ Rechteck. Doppelklick auf eine Zeile in der Liste, um einen Personennamen einzug
 beim Speichern werden die Tags in den ``extra['face_tags']``-Blob des Recipes
 geschrieben. Detection ist eine klassische Technik — die Genauigkeit reicht für
 "Zeige mir die Gesichter", ersetzt aber keine moderne CNN-basierte Erkennung.
+Benötigt OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 enthält die
+Haar-Cascades nicht mehr, und der Dialog weist dann darauf hin, statt zu erkennen.
 
 Lokale Anpassungsmasken
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -2298,6 +2298,8 @@ doble clic en una fila de la lista para escribir el nombre de una persona; al gu
 etiquetas se escriben en el blob ``extra['face_tags']`` de la receta. La detección es una
 técnica clásica — la precisión es adecuada para "muéstrame las caras" pero no es un
 reemplazo del reconocimiento moderno basado en CNN.
+Requiere OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 eliminó los cascades
+Haar, y en ese caso el diálogo lo indica en lugar de detectar.
 
 Máscaras de ajuste local
 ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1891,6 +1891,7 @@ japanese_word_dict = {
     "face_remove": "選択を削除",
     "face_list": "検出された顔（ダブルクリックで名前入力）：",
     "face_found": "合計 {n} 顔。",
+    "face_needs_opencv4": "顔検出には Haar カスケード付きの OpenCV 4 が必要です（OpenCV 5 では削除されました）。次のコマンドでインストールしてください：pip install \"opencv-python<5\"",
     "face_save": "保存",
 
     # --- Local Adjustment Masks ---

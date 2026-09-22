@@ -2298,6 +2298,8 @@ Double-cliquez sur une ligne de la liste pour saisir un nom de personne ; à l'e
 sont écrits dans le blob ``extra['face_tags']`` de la recette. La détection est une
 technique classique — la précision est adéquate pour "montre-moi les visages" mais
 n'est pas un substitut à la reconnaissance moderne basée sur CNN.
+Nécessite OpenCV 4 (``pip install "opencv-python<5"``) : OpenCV 5 a supprimé les cascades
+de Haar, et le dialogue le signale alors au lieu de détecter.
 
 Masques d'ajustement local
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

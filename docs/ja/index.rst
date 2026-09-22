@@ -1427,6 +1427,8 @@ OpenCV inpainting（Telea / Navier-Stokes）で修復し、新規ファイルに
 を入力し保存すると、recipe の ``extra['face_tags']`` に書き込まれ
 ます。古典的手法で「顔の位置を知る」用途には十分ですが、最新の
 CNN ベース認識の代替ではありません。
+OpenCV 4 が必要です（``pip install "opencv-python<5"``）。OpenCV 5 では Haar
+分類器が削除されたため、その場合ダイアログは検出せずにその旨を表示します。
 
 ローカル調整マスク
 ^^^^^^^^^^^^^^^^^^

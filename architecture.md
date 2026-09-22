@@ -126,7 +126,9 @@ Public interfaces other code or users depend on:
   names set by `Imervue/menu/extra_tools_menu.py` `submenu_object_name`). Never rename or drop one;
   `tests/test_plugin_menu_placement.py` covers the plugins that use them.
 - **Plugin dependencies.** `Imervue/plugin/pip_installer.py` installs a plugin's pip packages at
-  runtime, including in frozen builds.
+  runtime, including in frozen builds. Every install runs under the constraints in
+  `Imervue/plugin/pip_constraints.py`, which keep all OpenCV distributions below 5: they share one
+  `cv2` directory, and OpenCV 5 dropped the Haar cascades face detection needs.
 - **External services.** Every download made by the plugin downloader and pip installer goes through
   an HTTPS-only guard; model downloads from Hugging Face must pin a revision. Codacy and SonarCloud
   analyse only the `main` branch.

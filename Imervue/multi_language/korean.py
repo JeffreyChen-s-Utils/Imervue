@@ -1889,6 +1889,7 @@ korean_word_dict = {
     "face_remove": "선택 제거",
     "face_list": "검출된 얼굴 (이름 붙이려면 더블클릭):",
     "face_found": "총 {n}개 얼굴.",
+    "face_needs_opencv4": "얼굴 감지에는 Haar 캐스케이드가 포함된 OpenCV 4가 필요합니다(OpenCV 5에서 제거됨). 다음 명령으로 설치하세요: pip install \"opencv-python<5\"",
     "face_save": "저장",
 
     # --- Local Adjustment Masks ---

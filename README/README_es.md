@@ -117,7 +117,7 @@ Opcionales (gestionados por funcionalidad; si no se instalan, la función se des
 |---------|---------|
 | open_clip_torch + torch | Búsqueda semántica con CLIP (consultas en lenguaje natural) |
 | onnxruntime | Escalado por IA con Real-ESRGAN / etiquetado automático con CLIP ONNX |
-| opencv-python | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
+| opencv-python<5 | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
 | sounddevice | Sincronización labial en Puppet desde el micrófono |
 | mediapipe | Seguimiento facial por webcam en Puppet |
 

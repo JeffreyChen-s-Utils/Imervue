@@ -117,7 +117,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP セマンティック検索(自然言語による画像検索) |
 | onnxruntime | Real-ESRGAN AI アップスケール / CLIP ONNX 自動タグ付け |
-| opencv-python | HDR 合成、パノラマ合成、フォーカススタック、顔検出、ヒーリングブラシ |
+| opencv-python<5 | HDR 合成、パノラマ合成、フォーカススタック、顔検出、ヒーリングブラシ |
 | sounddevice | Puppet マイクによるリップシンク |
 | mediapipe | Puppet ウェブカメラによる顔追跡 |
 

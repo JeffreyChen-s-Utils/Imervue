@@ -1370,6 +1370,8 @@ WebEngine 时降级为坐标列表。
 脸部并以矩形标注。在列表双击输入姓名，保存后写入 recipe 的
 ``extra['face_tags']``。此为经典算法，适合「找出脸的位置」，并
 非现代 CNN 识别的替代。
+需要 OpenCV 4（``pip install "opencv-python<5"``）：OpenCV 5 已移除 Haar
+分类器，此时对话框会给出提示而不进行检测。
 
 局部调整蒙版
 ^^^^^^^^^^^^

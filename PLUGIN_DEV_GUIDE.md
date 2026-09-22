@@ -274,7 +274,7 @@ The `plugins/` directory is put on `sys.path`, so a package plugin imports its o
 
 ## Dependencies
 
-A plugin may use Imervue's default dependency set (PySide6, numpy, Pillow, imageio, defusedxml, watchdog) directly. Anything heavier (onnxruntime, rembg, opencv-python, torch, ...) must be requested through `ensure_dependencies`, which checks the imports and offers to pip-install whatever is missing before it calls your callback. In a packaged build the packages go into the application's own `lib/site-packages`.
+A plugin may use Imervue's default dependency set (PySide6, numpy, Pillow, imageio, defusedxml, watchdog) directly. Anything heavier (onnxruntime, rembg, opencv-python, torch, ...) must be requested through `ensure_dependencies`, which checks the imports and offers to pip-install whatever is missing before it calls your callback. In a packaged build the packages go into the application's own `lib/site-packages`. Every install runs under the constraints in `Imervue/plugin/pip_constraints.py`, which currently keep every OpenCV distribution (`opencv-python`, `-headless`, `-contrib`, `-contrib-headless`) below 5, so a plugin that needs OpenCV 5 cannot install it this way.
 
 ```python
 from Imervue.plugin.pip_installer import ensure_dependencies

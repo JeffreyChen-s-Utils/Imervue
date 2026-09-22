@@ -117,7 +117,7 @@ Optional (feature-gated; omit to disable the feature cleanly):
 |---------|---------|
 | open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
 | onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
-| opencv-python | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
+| opencv-python<5 | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
 | sounddevice | Puppet lip-sync from microphone |
 | mediapipe | Puppet webcam face tracking |
 

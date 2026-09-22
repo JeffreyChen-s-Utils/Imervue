@@ -116,7 +116,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP 语义搜索 |
 | onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自动标签 |
-| opencv-python | HDR 合成、全景拼接、焦点堆叠、人脸检测、修复笔刷 |
+| opencv-python<5 | HDR 合成、全景拼接、焦点堆叠、人脸检测、修复笔刷 |
 | sounddevice | Puppet 麦克风对嘴 |
 | mediapipe | Puppet 摄像头脸部追踪 |
 

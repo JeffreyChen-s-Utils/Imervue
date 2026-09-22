@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.face_detection import (
+    FaceDetectorUnavailableError,
     FaceTag,
     detect_faces,
     face_tags_from_dict_list,
@@ -43,6 +44,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.face_detection_dialog")
 
 _PREVIEW_MAX = 720
+_NEEDS_OPENCV4 = (
+    'Face detection needs OpenCV 4 with its Haar cascades (OpenCV 5 dropped '
+    'them). Install it with: pip install "opencv-python<5"'
+)
 
 
 class _FacePreview(QWidget):
@@ -172,7 +177,11 @@ class FaceDetectionDialog(QDialog):
         lang = language_wrapper.language_word_dict
         try:
             detections = detect_faces(rgb_arr)
-        except (ValueError, RuntimeError, ImportError) as exc:
+        except (ImportError, FaceDetectorUnavailableError) as exc:
+            self._status.setText(lang.get("face_needs_opencv4", _NEEDS_OPENCV4))
+            logger.warning("Face detection unavailable: %s", exc)
+            return
+        except (ValueError, RuntimeError) as exc:
             self._status.setText(str(exc))
             logger.warning("Face detection failed: %s", exc)
             return
