@@ -24,19 +24,8 @@ from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
 
-from Imervue.paint.brush_engine import (
-    round_brush_kernel,
-    spacing_from_brush,
-)
 from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
-from Imervue.paint.gradient import render_gradient
-from Imervue.paint.selection import (
-    combine,
-    magic_wand_mask,
-    polygon_mask,
-    rectangle_mask,
-)
 # Tool handlers live in the tools package; re-exported here so the
 # dispatcher's ``_build_handlers`` and existing ``from tool_dispatcher import
 # _CropTool`` call sites keep working unchanged.
@@ -46,6 +35,22 @@ from Imervue.paint.tools.painting import (
     EyedropperTool,
     FillTool,
 )
+from Imervue.paint.tools.retouch import (
+    GradientTool,
+    SmudgeTool,
+    _BlurTool,
+    _DodgeBurnTool,
+    _SpongeTool,
+)
+from Imervue.paint.tools.select import (
+    LassoSelectTool,
+    MoveTool,
+    QuickSelectTool,
+    RectSelectTool,
+    WandSelectTool,
+    _SelectionContext,
+)
+from Imervue.paint.tools.select import translate_selection
 from Imervue.paint.tools.shapes import (
     _CropTool,
     _EllipseShapeTool,
@@ -64,6 +69,25 @@ if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
 logger = logging.getLogger("Imervue.paint.dispatcher")
+
+# The tool handlers live in the ``tools`` package; this module is where the
+# workspace and the tests import them from.
+__all__ = [
+    "ToolDispatcher",
+    "Tool",
+    "BrushTool",
+    "EraserTool",
+    "EyedropperTool",
+    "FillTool",
+    "RectSelectTool",
+    "LassoSelectTool",
+    "WandSelectTool",
+    "QuickSelectTool",
+    "GradientTool",
+    "SmudgeTool",
+    "MoveTool",
+    "translate_selection",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +150,6 @@ class ToolDispatcher:
         # canvas reads this after dispatch returns True so it can
         # upload only the dirty pixels via glTexSubImage2D instead of
         # full-frame glTexImage2D.
-        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         self._last_damage = _EMPTY_DAMAGE
         """``image_provider`` is a callable returning the live numpy
         canvas (or ``None`` if no image is loaded). ``selection_provider``
@@ -199,7 +222,6 @@ class ToolDispatcher:
         return panel_mask(layout, canvas.shape[:2], index)
 
     def __call__(self, evt: PointerEvent) -> bool:
-        from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
         canvas = self._image_provider()
         if canvas is None:
             return False
@@ -392,636 +414,13 @@ def _build_text_tool(state, selection_provider, parent_widget):
     return TextTool(state, selection_provider, parent_widget)
 
 
-class _SelectionContext:
-    """Read/write helper passed to every selection tool."""
-
-    def __init__(self, state: ToolState, provider, setter):
-        self._state = state
-        self._provider = provider
-        self._setter = setter
-
-    def existing(self) -> np.ndarray | None:
-        return self._provider()
-
-    def write(self, new_mask: np.ndarray) -> None:
-        combined = combine(self._provider(), new_mask, self._state.selection_mode)
-        self._setter(combined)
-
-    def clear(self) -> None:
-        """Drop the active selection entirely (no marquee).
-
-        The conventional click-on-empty-area-deselects gesture: a
-        rect-select press + release without movement, or any tool's
-        "you didn't draw anything" branch routes through here so the
-        next dab/fill/etc. operates against the full canvas instead
-        of inheriting a stale empty mask.
-        """
-        self._setter(None)
-
-
 # ---------------------------------------------------------------------------
 # Selection tools
 # ---------------------------------------------------------------------------
 
 
-class RectSelectTool:
-    """Drag a rectangle, commit on release using the active combine mode."""
-
-    def __init__(self, sel_ctx: _SelectionContext, overlay_setter=None):
-        self._sel = sel_ctx
-        self._start: tuple[int, int] | None = None
-        self._overlay_setter = overlay_setter or (lambda _overlay: None)
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            self._start = (int(round(evt.x)), int(round(evt.y)))
-            self._overlay_setter({
-                "kind": "rect",
-                "x0": self._start[0], "y0": self._start[1],
-                "x1": self._start[0], "y1": self._start[1],
-            })
-            return True
-        if evt.phase == "move" and self._start is not None:
-            self._overlay_setter({
-                "kind": "rect",
-                "x0": self._start[0], "y0": self._start[1],
-                "x1": int(round(evt.x)), "y1": int(round(evt.y)),
-            })
-            return True
-        if evt.phase == "release" and self._start is not None:
-            x0, y0 = self._start
-            x1, y1 = int(round(evt.x)), int(round(evt.y))
-            self._start = None
-            self._overlay_setter(None)
-            # Click without drag → clear the selection so the user can
-            # tap an empty area to deselect, the gesture every paint
-            # app honours.
-            if x0 == x1 and y0 == y1:
-                self._sel.clear()
-                return True
-            h, w = canvas.shape[:2]
-            mask = rectangle_mask(h, w, x0, y0, x1, y1)
-            self._sel.write(mask)
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._start = None
-        self._overlay_setter(None)
-
-
-class LassoSelectTool:
-    """Free-form polygon selection — close path on release."""
-
-    def __init__(self, sel_ctx: _SelectionContext, overlay_setter=None):
-        self._sel = sel_ctx
-        self._points: list[tuple[float, float]] = []
-        self._overlay_setter = overlay_setter or (lambda _overlay: None)
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            self._points = [(evt.x, evt.y)]
-            self._overlay_setter({"kind": "polyline", "points": list(self._points)})
-            return True
-        if evt.phase == "move" and self._points:
-            self._points.append((evt.x, evt.y))
-            self._overlay_setter({"kind": "polyline", "points": list(self._points)})
-            return True
-        if evt.phase == "release" and self._points:
-            self._points.append((evt.x, evt.y))
-            points = list(self._points)
-            self._points = []
-            self._overlay_setter(None)
-            # No-drag click → clear the selection (same convention as
-            # the rect-select tool's empty-rect path). "No drag"
-            # means every recorded point is within a pixel of the
-            # press point.
-            sx, sy = points[0]
-            no_drag = all(
-                abs(px - sx) < 1.0 and abs(py - sy) < 1.0
-                for px, py in points
-            )
-            if no_drag:
-                self._sel.clear()
-                return True
-            h, w = canvas.shape[:2]
-            mask = polygon_mask(h, w, points)
-            self._sel.write(mask)
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._points = []
-        self._overlay_setter(None)
-
-
-class WandSelectTool:
-    """Magic wand — click a pixel, select tolerance-matching neighbours."""
-
-    def __init__(self, sel_ctx: _SelectionContext, state: ToolState):
-        self._sel = sel_ctx
-        self._state = state
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase != "press":
-            return False
-        mask = magic_wand_mask(
-            canvas,
-            seed_x=int(round(evt.x)),
-            seed_y=int(round(evt.y)),
-            tolerance=self._state.fill.tolerance,
-            contiguous=self._state.fill.contiguous,
-        )
-        self._sel.write(mask)
-        return True
-
-    def cancel(self) -> None:
-        # Quick-select is a single-shot click — there is no mid-gesture
-        # state to roll back when the dispatcher cancels.
-        return
-
-
-class QuickSelectTool:
-    """Drag-to-paint selection — accumulate wand masks under the cursor.
-
-    Each press / move event runs a magic-wand sample at the cursor
-    and unions the result into the running selection. On release,
-    the accumulated mask becomes the new document selection through
-    the standard ``_SelectionContext.write`` path so the active
-    combine mode (replace / add / subtract / intersect) still
-    applies relative to the *pre-stroke* selection.
-    """
-
-    def __init__(self, sel_ctx: _SelectionContext, state: ToolState):
-        self._sel = sel_ctx
-        self._state = state
-        self._active = False
-        # Selection accumulated since the last press — committed via
-        # _sel.write when the gesture ends so the user's combine-mode
-        # choice applies to the whole drag rather than each sample.
-        self._accumulated: np.ndarray | None = None
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            self._active = True
-            self._accumulated = self._wand_mask(canvas, evt)
-            return True
-        if evt.phase == "move" and self._active:
-            sample = self._wand_mask(canvas, evt)
-            if self._accumulated is None:
-                self._accumulated = sample
-            else:
-                self._accumulated = np.logical_or(self._accumulated, sample)
-            return True
-        if evt.phase in ("release", "leave") and self._active:
-            self._active = False
-            if self._accumulated is not None and self._accumulated.any():
-                self._sel.write(self._accumulated)
-            self._accumulated = None
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._active = False
-        self._accumulated = None
-
-    def _wand_mask(
-        self, canvas: np.ndarray, evt: PointerEvent,
-    ) -> np.ndarray:
-        return magic_wand_mask(
-            canvas,
-            seed_x=int(round(evt.x)),
-            seed_y=int(round(evt.y)),
-            tolerance=self._state.fill.tolerance,
-            contiguous=self._state.fill.contiguous,
-        )
-
-
 # ---------------------------------------------------------------------------
 # Move tool
 # ---------------------------------------------------------------------------
-
-
-def translate_selection(
-    canvas: np.ndarray, selection: np.ndarray, dx: int, dy: int,
-) -> np.ndarray:
-    """Move the selected pixels by (dx, dy) and return the new selection.
-
-    Pure-numpy: cuts the selected RGBA pixels (clearing the original
-    location to fully-transparent) and pastes them at the offset
-    location in-place. Pixels that fall off the canvas are dropped.
-    Returns the translated selection mask so the caller can update its
-    selection storage. This function never reads or writes outside the
-    canvas bounds.
-    """
-    if canvas.ndim != 3 or canvas.shape[2] != 4 or canvas.dtype != np.uint8:
-        raise ValueError(
-            f"translate_selection expects HxWx4 uint8 RGBA, got "
-            f"{canvas.shape} {canvas.dtype}",
-        )
-    if selection.shape != canvas.shape[:2]:
-        raise ValueError(
-            f"selection shape {selection.shape} does not match "
-            f"canvas {canvas.shape[:2]}",
-        )
-    if dx == 0 and dy == 0:
-        return selection.copy()
-    h, w = canvas.shape[:2]
-    cut = canvas.copy()
-    canvas[selection] = (0, 0, 0, 0)
-
-    new_selection = np.zeros_like(selection)
-
-    src_ys, src_xs = np.nonzero(selection)
-    if len(src_ys) == 0:
-        return new_selection
-
-    dst_ys = src_ys + dy
-    dst_xs = src_xs + dx
-    valid = (dst_ys >= 0) & (dst_ys < h) & (dst_xs >= 0) & (dst_xs < w)
-    canvas[dst_ys[valid], dst_xs[valid]] = cut[src_ys[valid], src_xs[valid]]
-    new_selection[dst_ys[valid], dst_xs[valid]] = True
-    return new_selection
-
-
-class GradientTool:
-    """Drag-to-define gradient using current ToolState gradient_kind."""
-
-    def __init__(self, state: ToolState, selection_provider=None):
-        self._state = state
-        self._selection_provider = selection_provider or (lambda: None)
-        self._start: tuple[float, float] | None = None
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            self._start = (evt.x, evt.y)
-            return False
-        if evt.phase == "release" and self._start is not None:
-            start = self._start
-            self._start = None
-            painted = render_gradient(
-                canvas, start, (evt.x, evt.y),
-                fg=self._state.foreground,
-                bg=self._state.background,
-                kind=self._state.gradient_kind,
-                reverse=self._state.gradient_reverse,
-                repeat=self._state.gradient_repeat,
-                selection=self._selection_provider(),
-            )
-            return painted
-        return False
-
-    def cancel(self) -> None:
-        self._start = None
-
-
-class SmudgeTool:
-    """Drag canvas pixels along the stroke path."""
-
-    def __init__(self, state: ToolState, selection_provider=None):
-        self._state = state
-        self._selection_provider = selection_provider or (lambda: None)
-        self._kernel = None
-        self._carried = None
-        self._spacing = 1.0
-        self._last: tuple[float, float] | None = None
-        self._selection_snapshot = None
-        self._active = False
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            return self._begin(evt, canvas)
-        if evt.phase == "move" and self._active:
-            return self._extend(evt, canvas)
-        if evt.phase in ("release", "leave") and self._active:
-            self._extend(evt, canvas)
-            self._active = False
-            self._carried = None
-            self._last = None
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._active = False
-        self._carried = None
-        self._last = None
-
-    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.smudge import sample_carry
-        brush = self._state.brush
-        self._kernel = round_brush_kernel(brush.size, brush.hardness)
-        self._spacing = spacing_from_brush(brush.size, brush.hardness)
-        self._selection_snapshot = self._selection_provider()
-        self._carried = sample_carry(canvas, evt.x, evt.y, self._kernel)
-        self._last = (evt.x, evt.y)
-        self._active = True
-        return False  # press alone doesn't change pixels — wait for drag
-
-    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.brush_engine import stroke_dab_positions
-        from Imervue.paint.smudge import smudge_dab
-        if self._last is None or self._kernel is None or self._carried is None:
-            return False
-        brush = self._state.brush
-        # Smudge strength reuses the brush opacity slider — high opacity
-        # smudges aggressively, low opacity barely shifts pigment.
-        strength = max(0.05, brush.opacity)
-        for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
-            _result, self._carried = smudge_dab(
-                canvas, px, py, self._kernel, self._carried,
-                strength=strength,
-                selection=self._selection_snapshot,
-            )
-        self._last = (evt.x, evt.y)
-        return True
-
-
-class _BlurTool:
-    """Local Gaussian blur on each dab — same pointer protocol as brush."""
-
-    def __init__(self, state: ToolState, selection_provider=None):
-        self._state = state
-        self._selection_provider = selection_provider or (lambda: None)
-        self._kernel = None
-        self._spacing = 1.0
-        self._last: tuple[float, float] | None = None
-        self._selection_snapshot = None
-        self._active = False
-        self._damage = _EMPTY_DAMAGE
-
-    @property
-    def last_damage(self):
-        return self._damage
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            return self._begin(evt, canvas)
-        if evt.phase == "move" and self._active:
-            return self._extend(evt, canvas)
-        if evt.phase in ("release", "leave") and self._active:
-            self._extend(evt, canvas)
-            self._active = False
-            self._last = None
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._active = False
-        self._last = None
-        self._damage = _EMPTY_DAMAGE
-
-    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.blur import blur_dab
-        brush = self._state.brush
-        self._kernel = round_brush_kernel(brush.size, brush.hardness)
-        self._spacing = spacing_from_brush(brush.size, brush.hardness)
-        self._selection_snapshot = self._selection_provider()
-        self._last = (evt.x, evt.y)
-        self._active = True
-        rect = blur_dab(
-            canvas, evt.x, evt.y, self._kernel,
-            strength=max(0.05, brush.opacity),
-            selection=self._selection_snapshot,
-        )
-        self._damage = _damage_from_rect(rect)
-        return rect[2] > 0 and rect[3] > 0
-
-    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.blur import blur_dab
-        from Imervue.paint.brush_engine import stroke_dab_positions
-        if self._last is None or self._kernel is None:
-            return False
-        brush = self._state.brush
-        strength = max(0.05, brush.opacity)
-        union = (0, 0, 0, 0)
-        for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
-            rect = blur_dab(
-                canvas, px, py, self._kernel,
-                strength=strength,
-                selection=self._selection_snapshot,
-            )
-            union = _union_rects(union, rect)
-        self._last = (evt.x, evt.y)
-        self._damage = _damage_from_rect(union)
-        return union[2] > 0 and union[3] > 0
-
-
-class _DodgeBurnTool:
-    """Lighten (dodge) or darken (burn) each dab — brush pointer protocol.
-
-    One class backs both toolbar entries; ``mode`` fixes the sign so the
-    dodge instance always lightens and the burn instance always darkens.
-    Strength comes from the shared brush-opacity slider and the targeted
-    tonal band defaults to midtones.
-    """
-
-    def __init__(
-        self,
-        state: ToolState,
-        mode: str,
-        selection_provider=None,
-        *,
-        range_mode: str = "midtones",
-    ):
-        self._state = state
-        self._sign = 1.0 if mode == "dodge" else -1.0
-        self._range_mode = range_mode
-        self._selection_provider = selection_provider or (lambda: None)
-        self._kernel = None
-        self._spacing = 1.0
-        self._last: tuple[float, float] | None = None
-        self._selection_snapshot = None
-        self._active = False
-        self._damage = _EMPTY_DAMAGE
-
-    @property
-    def last_damage(self):
-        return self._damage
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            return self._begin(evt, canvas)
-        if evt.phase == "move" and self._active:
-            return self._extend(evt, canvas)
-        if evt.phase in ("release", "leave") and self._active:
-            self._extend(evt, canvas)
-            self._active = False
-            self._last = None
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._active = False
-        self._last = None
-        self._damage = _EMPTY_DAMAGE
-
-    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        brush = self._state.brush
-        self._kernel = round_brush_kernel(brush.size, brush.hardness)
-        self._spacing = spacing_from_brush(brush.size, brush.hardness)
-        self._selection_snapshot = self._selection_provider()
-        self._last = (evt.x, evt.y)
-        self._active = True
-        rect = self._dab(canvas, evt.x, evt.y)
-        self._damage = _damage_from_rect(rect)
-        return rect[2] > 0 and rect[3] > 0
-
-    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.brush_engine import stroke_dab_positions
-        if self._last is None or self._kernel is None:
-            return False
-        union = (0, 0, 0, 0)
-        for px, py in stroke_dab_positions(
-            self._last, (evt.x, evt.y), self._spacing,
-        ):
-            union = _union_rects(union, self._dab(canvas, px, py))
-        self._last = (evt.x, evt.y)
-        self._damage = _damage_from_rect(union)
-        return union[2] > 0 and union[3] > 0
-
-    def _dab(self, canvas: np.ndarray, px: float, py: float):
-        from Imervue.paint.dodge_burn import dodge_burn_dab
-        brush = self._state.brush
-        amount = self._sign * max(0.05, brush.opacity)
-        return dodge_burn_dab(
-            canvas, px, py, self._kernel,
-            amount=amount, range_mode=self._range_mode,
-            selection=self._selection_snapshot,
-        )
-
-
-class _SpongeTool:
-    """Locally saturate or desaturate each dab — brush pointer protocol.
-
-    Defaults to desaturate (the iconic sponge action); ``mode='saturate'``
-    flips the sign. Strength comes from the shared brush-opacity slider.
-    """
-
-    def __init__(
-        self,
-        state: ToolState,
-        selection_provider=None,
-        *,
-        mode: str = "desaturate",
-    ):
-        self._state = state
-        self._sign = 1.0 if mode == "saturate" else -1.0
-        self._selection_provider = selection_provider or (lambda: None)
-        self._kernel = None
-        self._spacing = 1.0
-        self._last: tuple[float, float] | None = None
-        self._selection_snapshot = None
-        self._active = False
-        self._damage = _EMPTY_DAMAGE
-
-    @property
-    def last_damage(self):
-        return self._damage
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            return self._begin(evt, canvas)
-        if evt.phase == "move" and self._active:
-            return self._extend(evt, canvas)
-        if evt.phase in ("release", "leave") and self._active:
-            self._extend(evt, canvas)
-            self._active = False
-            self._last = None
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._active = False
-        self._last = None
-        self._damage = _EMPTY_DAMAGE
-
-    def _begin(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        brush = self._state.brush
-        self._kernel = round_brush_kernel(brush.size, brush.hardness)
-        self._spacing = spacing_from_brush(brush.size, brush.hardness)
-        self._selection_snapshot = self._selection_provider()
-        self._last = (evt.x, evt.y)
-        self._active = True
-        rect = self._dab(canvas, evt.x, evt.y)
-        self._damage = _damage_from_rect(rect)
-        return rect[2] > 0 and rect[3] > 0
-
-    def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        from Imervue.paint.brush_engine import stroke_dab_positions
-        if self._last is None or self._kernel is None:
-            return False
-        union = (0, 0, 0, 0)
-        for px, py in stroke_dab_positions(
-            self._last, (evt.x, evt.y), self._spacing,
-        ):
-            union = _union_rects(union, self._dab(canvas, px, py))
-        self._last = (evt.x, evt.y)
-        self._damage = _damage_from_rect(union)
-        return union[2] > 0 and union[3] > 0
-
-    def _dab(self, canvas: np.ndarray, px: float, py: float):
-        from Imervue.paint.sponge import sponge_dab
-        brush = self._state.brush
-        amount = self._sign * max(0.05, brush.opacity)
-        return sponge_dab(
-            canvas, px, py, self._kernel,
-            amount=amount, selection=self._selection_snapshot,
-        )
-
-
-def _union_rects(a, b):
-    if a[2] <= 0 or a[3] <= 0:
-        return b
-    if b[2] <= 0 or b[3] <= 0:
-        return a
-    x0 = min(a[0], b[0])
-    y0 = min(a[1], b[1])
-    x1 = max(a[0] + a[2], b[0] + b[2])
-    y1 = max(a[1] + a[3], b[1] + b[3])
-    return (x0, y0, x1 - x0, y1 - y0)
-
-
-def _damage_from_rect(rect):
-    from Imervue.paint.damage import DamageRect
-    if rect[2] <= 0 or rect[3] <= 0:
-        return _EMPTY_DAMAGE
-    return DamageRect(x=rect[0], y=rect[1], w=rect[2], h=rect[3])
-
-
-class MoveTool:
-    """Drag the active selection (or the whole canvas) to a new location.
-
-    Phase 2 ships the commit-on-release variant — the canvas is mutated
-    once, on release, by the integer drag delta. Phase 3 will replace
-    this with a live floating-layer preview.
-    """
-
-    def __init__(self, state: ToolState, selection_provider, set_selection):
-        self._state = state
-        self._selection_provider = selection_provider or (lambda: None)
-        self._set_selection = set_selection or (lambda mask: None)
-        self._start: tuple[int, int] | None = None
-
-    def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
-        if evt.phase == "press":
-            self._start = (int(round(evt.x)), int(round(evt.y)))
-            return False
-        if evt.phase == "release" and self._start is not None:
-            dx = int(round(evt.x)) - self._start[0]
-            dy = int(round(evt.y)) - self._start[1]
-            self._start = None
-            if dx == 0 and dy == 0:
-                return False
-            selection = self._selection_provider()
-            if selection is None:
-                # No selection — move the whole canvas content.
-                selection = np.ones(canvas.shape[:2], dtype=np.bool_)
-            new_mask = translate_selection(canvas, selection, dx, dy)
-            self._set_selection(new_mask)
-            return True
-        return False
-
-    def cancel(self) -> None:
-        self._start = None
 
 

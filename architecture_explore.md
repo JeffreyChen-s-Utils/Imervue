@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `1a6636a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `c703b73` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 747 | 123,571 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,689 |
+| `tests/` | 747 | 123,620 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 182 | 45,765 |
 | `Imervue/gui/` | 144 | 30,997 |
 | `Imervue/puppet/` | 53 | 15,131 |
 | `Imervue/image/` | 112 | 12,831 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,514** | **297,130** |
+| **總計** | **1,516** | **297,255** |
 
-其中 `Imervue/` 套件本身 705 檔 / 159,170 行。
+其中 `Imervue/` 套件本身 707 檔 / 159,246 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -633,7 +633,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_io.py` | 446 | 原生 `.imervue` NPZ bundle 存讀 |
 | `psd_io.py` | 867 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
 | `undo_stack.py` | 193 | 每文件的 undo / redo |
-| `damage.py` | 123 | 破損矩形記帳，供部分材質上傳 |
+| `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
 | `blend_modes.py` | 64 | 共用 RGB 混色模式數學 |
 | `blend_if.py` | 334 | Blend-If：依亮度範圍決定逐像素可見度 |
 
@@ -707,7 +707,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `paint_workspace.py` | 752 | 頂層 `PaintWorkspace` widget |
-| `tool_dispatcher.py` | 1,028 | 把 `PointerEvent` 路由到作用中工具的處理器 |
+| `tool_dispatcher.py` | 426 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
 | `tool_state.py` | 897 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 426 | 工具列 |
 | `workspace_tabs.py` | 327 | 多文件分頁 |
@@ -731,10 +731,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `materials.py`(253) 素材庫 dock · `navigators.py`(248) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(138) 共用元件與圖示
 
-#### `paint/tools/`（4 檔 · 1,218 行）
+#### `paint/tools/`（6 檔 · 1,866 行）
 
 `painting.py`(417) 筆刷/橡皮/填色/滴管 · `shapes.py`(445) 形狀與裁切 ·
-`special.py`(354) 鋼筆/仿製印章/變形控點/對話氣泡
+`special.py`(354) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(302) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
+`retouch.py`(346) 漸層/塗抹/模糊/加深減淡/海綿
 
 ### 6.15 `Imervue/puppet/`
 
@@ -917,7 +918,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-747 個檔、123,571 行。`pyproject.toml` 定義三個互斥層級 marker：
+747 個檔、123,620 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1091,7 +1092,7 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 6. **檔案長度上限 1000 行**是專案規則，但 `Imervue_main_window.py`(2268)、`canvas.py`(1853)、
    `gpu_image_view.py`(1758)、`workspace.py`(1680)、`annotation_canvas.py`(1623)、
    `document.py`(1388)、`develop_panel.py`(1332)、`puppet/canvas.py`(1308)、
-   `tool_dispatcher.py`(1028)、`annotation_dialog.py`(1055)、
+   `annotation_dialog.py`(1055)、
    `pet_window.py`(1184) 仍超標 —— 這些是後續拆分的候選清單。
    （`multi_language/*.py` 是資料字典，不適用。）
 
