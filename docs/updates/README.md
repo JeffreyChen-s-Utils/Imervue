@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-11 | 2026-09-23 | Paint workspace tests waited a fixed time after show() | #incident #tests #paint | [2026-09](2026-09.md) |
 | U-20260923-10 | 2026-09-23 | Move the selection and retouch tools into paint/tools/ | #done #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-09 | 2026-09-23 | 10 of 17 plugins failed to load in the EXE: compile every Imervue submodule | #incident #packaging #plugins | [2026-09](2026-09.md) |
 | U-20260923-08 | 2026-09-23 | Move the OSD text and HUD geometry helpers out of overlay_painter | #done #refactor #gpu_image_view | [2026-09](2026-09.md) |

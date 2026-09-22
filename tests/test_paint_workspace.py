@@ -174,19 +174,18 @@ def test_workspace_navigator_zoom_slider_drives_canvas_zoom(qapp):
 
 
 @_skip_on_headless_ci
-def test_workspace_canvas_zoom_change_syncs_slider(qapp):
+def test_workspace_canvas_zoom_change_syncs_slider(qapp, pump_until):
     """Programmatic zoom (or wheel) on the canvas must move the
     Navigator slider so the two stay in sync."""
     ws = PaintWorkspace()
     try:
         ws.show()
         from PySide6.QtTest import QTest
-        QTest.qWait(20)
+        assert QTest.qWaitForWindowExposed(ws)
         ws.canvas().set_zoom(1.5)
-        QTest.qWait(20)
-        slider_value = ws._navigator_dock._zoom_slider.value()  # noqa: SLF001
+        slider = ws._navigator_dock._zoom_slider  # noqa: SLF001
         # Slider stores percentage so 1.5x → 150.
-        assert slider_value == 150
+        assert pump_until(lambda: slider.value() == 150), slider.value()
     finally:
         ws.deleteLater()
 
@@ -243,7 +242,7 @@ def test_workspace_load_image_none_keeps_paintable_layer(qapp):
 
 
 @_skip_on_headless_ci
-def test_workspace_inside_tab_widget_paints_canvas(qapp):
+def test_workspace_inside_tab_widget_paints_canvas(qapp, pump_until):
     """Regression: when the workspace is the active widget of a host
     QTabWidget (the real main-window structure), the layout converges
     to a different canvas size *after* the initial fit. Without re-
@@ -264,30 +263,32 @@ def test_workspace_inside_tab_widget_paints_canvas(qapp):
     tabs.addTab(ws, "Paint")
     tabs.setCurrentWidget(ws)
     host.show()
-    QTest.qWait(100)
     try:
+        assert QTest.qWaitForWindowExposed(host)
         ws.state().set_foreground((255, 0, 0))
         canvas = ws.canvas()
-        # Click at widget centre must land somewhere inside the document.
-        cx = canvas.width() // 2
-        cy = canvas.height() // 2
-        img_x, img_y = canvas._screen_to_image(cx, cy)  # noqa: SLF001
         h, w = canvas.current_image().shape[:2]
-        assert 0 <= img_x < w, f"image x {img_x} outside [0, {w})"
-        assert 0 <= img_y < h, f"image y {img_y} outside [0, {h})"
+
+        def _centre_inside_document() -> bool:
+            img_x, img_y = canvas._screen_to_image(  # noqa: SLF001
+                canvas.width() // 2, canvas.height() // 2)
+            return 0 <= img_x < w and 0 <= img_y < h
+
+        # The layout converges after the first fit; a click at the widget
+        # centre must end up inside the document once it has.
+        assert pump_until(_centre_inside_document)
+        centre = QPoint(canvas.width() // 2, canvas.height() // 2)
 
         before = canvas.current_image().copy()
-        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
-        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
-        assert (before != canvas.current_image()).any()
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, centre)
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, centre)
+        assert pump_until(lambda: (before != canvas.current_image()).any())
     finally:
         host.deleteLater()
 
 
 @_skip_on_headless_ci
-def test_workspace_qtest_mouse_click_paints_canvas(qapp):
+def test_workspace_qtest_mouse_click_paints_canvas(qapp, pump_until):
     """QTest-driven regression: a real Qt mouse press on a shown
     workspace must paint the active layer. This goes through the full
     mousePressEvent → _dispatch → dispatcher → brush → apply_dab path,
@@ -299,29 +300,26 @@ def test_workspace_qtest_mouse_click_paints_canvas(qapp):
     try:
         ws.resize(1200, 800)
         ws.show()
-        QTest.qWait(50)
+        assert QTest.qWaitForWindowExposed(ws)
         ws.state().set_foreground((255, 0, 0))
 
         canvas = ws.canvas()
-        before = canvas.current_image().copy()
-        cx = canvas.width() // 2
-        cy = canvas.height() // 2
-        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
-        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(cx, cy))
-        QTest.qWait(20)
-
-        after = canvas.current_image()
-        assert (before != after).any(), "real mouse click must paint the canvas"
         # Canvas has been laid out — fit must have applied (zoom > min).
         from Imervue.paint.canvas import ZOOM_MIN
-        assert canvas.zoom_factor() > ZOOM_MIN
+        assert pump_until(lambda: canvas.zoom_factor() > ZOOM_MIN)
+
+        before = canvas.current_image().copy()
+        centre = QPoint(canvas.width() // 2, canvas.height() // 2)
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, centre)
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, centre)
+        assert pump_until(lambda: (before != canvas.current_image()).any()), \
+            "real mouse click must paint the canvas"
     finally:
         ws.deleteLater()
 
 
 @_skip_on_headless_ci
-def test_workspace_layer_dock_plus_button_adds_layer(qapp):
+def test_workspace_layer_dock_plus_button_adds_layer(qapp, pump_until):
     """QTest-driven regression: clicking the LayerDock '+' button must
     add a layer to the underlying document. Goes through Qt's clicked
     signal so any wiring break (e.g. lambda capture, signal disconnect
@@ -332,7 +330,7 @@ def test_workspace_layer_dock_plus_button_adds_layer(qapp):
     ws = PaintWorkspace()
     try:
         ws.show()
-        QTest.qWait(50)
+        assert QTest.qWaitForWindowExposed(ws)
 
         dock = ws._layer_dock  # noqa: SLF001
         before_count = dock._document.layer_count  # noqa: SLF001
@@ -349,9 +347,9 @@ def test_workspace_layer_dock_plus_button_adds_layer(qapp):
         ]
         assert len(buttons) == 7
         buttons[0].click()
-        QTest.qWait(20)
 
-        assert dock._document.layer_count == before_count + 1  # noqa: SLF001
+        assert pump_until(
+            lambda: dock._document.layer_count == before_count + 1)  # noqa: SLF001
         assert dock._list.count() == before_count + 1  # noqa: SLF001
     finally:
         ws.deleteLater()
