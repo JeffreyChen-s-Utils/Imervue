@@ -398,7 +398,7 @@ This only covers exceptions raised inside a hook. A crash in native code (a GPU 
 
 ## Tips
 
-- Log through `logging.getLogger("Imervue.plugin.<your_plugin>")` rather than `print()`: log records reach the console and `imervue.log`, and a packaged build has no console.
+- Log through `logging.getLogger("Imervue.plugin.<your_plugin>")` rather than `print()`: log records reach the console and `imervue.log` (next to the executable, or under `%LOCALAPPDATA%/Imervue` when that directory is read-only), and a packaged build has no console.
 - Keep the plugin's pure logic (image maths, file handling) in plain functions that take arrays or paths, separate from the Qt classes, so it can be unit-tested without a display.
 - Store plugin state in your plugin instance (`self.my_data = ...`). For state that must persist across sessions, write a JSON file outside the plugin directory (see *Distributing a Plugin*).
 - Don't modify internal Imervue data structures directly unless you know what you're doing. Use the provided hooks and the public API.

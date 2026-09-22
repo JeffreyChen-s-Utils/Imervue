@@ -1,7 +1,7 @@
 import argparse
+import contextlib
 import os
 import sys
-import contextlib
 
 # Nuitka 打包後 OpenGL_accelerate 的 Cython 擴展無法正常運作，
 # 需在 import OpenGL 之前禁用 accelerate
@@ -24,12 +24,6 @@ if sys.platform == "win32":
             with contextlib.suppress(Exception):
                 stream.reconfigure(encoding="utf-8", errors="replace")
 
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
-
-from Imervue.Imervue_main_window import ImervueMainWindow
-from Imervue.system.app_paths import icon_path as _app_icon_path
-
 
 def _set_windows_app_user_model_id() -> None:
     """Set the Windows taskbar identity before the first window is created."""
@@ -40,6 +34,7 @@ def _set_windows_app_user_model_id() -> None:
         windll.shell32.SetCurrentProcessExplicitAppUserModelID("Imervue")
     except (ImportError, AttributeError, OSError):
         pass
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Start Imervue Application")
@@ -63,13 +58,29 @@ def parse_args():
 
     return parser.parse_args()
 
-if __name__ == "__main__":
-    # 解析參數
+
+def main() -> int:
+    """Start the GUI and return the Qt exit code.
+
+    Logging is configured before PySide6 is imported, so an import-time or
+    startup failure still lands in ``imervue.log`` — a windowed frozen build
+    leaves no other trace.
+    """
+    from Imervue.system.log_setup import install_exception_logging, setup_logging
+    setup_logging()
+    install_exception_logging()
+
     args = parse_args()
 
     if args.software_opengl:
         os.environ["QT_OPENGL"] = "software"
         os.environ["QT_ANGLE_PLATFORM"] = "warp"
+
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
+
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.system.app_paths import icon_path as _app_icon_path
 
     _set_windows_app_user_model_id()
     app = QApplication(sys.argv)
@@ -98,4 +109,8 @@ if __name__ == "__main__":
         path = os.path.abspath(args.file)
         QTimer.singleShot(100, lambda: open_path(main_gui=window.viewer, path=path))
 
-    sys.exit(app.exec())
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

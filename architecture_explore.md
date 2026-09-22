@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `39fd6cd` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `89eb2bc` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 743 | 123,366 |
+| `tests/` | 745 | 123,578 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 180 | 45,689 |
 | `Imervue/gui/` | 144 | 30,997 |
 | `Imervue/puppet/` | 53 | 15,131 |
@@ -77,16 +77,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,140 |
 | `Imervue/menu/` | 11 | 3,565 |
-| `Imervue/` 根層 | 5 | 3,091 |
+| `Imervue/` 根層 | 5 | 3,106 |
 | `Imervue/plugin/` | 9 | 2,109 |
-| `Imervue/system/` | 15 | 1,771 |
+| `Imervue/system/` | 15 | 1,815 |
 | `Imervue/export/` | 8 | 1,047 |
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,508** | **296,834** |
+| **總計** | **1,510** | **297,105** |
 
-其中 `Imervue/` 套件本身 703 檔 / 159,079 行。
+其中 `Imervue/` 套件本身 703 檔 / 159,138 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -103,7 +103,9 @@ py -m Imervue [--debug] [--software_opengl] [file]
    │
    ├─ 1. 凍結環境偵測 → 關閉 OpenGL_accelerate（Nuitka 打包後 Cython 擴充會壞）
    ├─ 2. Windows：強制 UTF-8 I/O（避免 CJK 顯示成 ?）
-   ├─ 3. _set_windows_app_user_model_id() → 工作列圖示身分
+   ├─ 3. main()：setup_logging() + install_exception_logging()（在 import PySide6 之前，
+   │      所以連啟動期的例外也會進 imervue.log）
+   ├─ 3b. _set_windows_app_user_model_id() → 工作列圖示身分
    ├─ 4. QApplication + setQuitOnLastWindowClosed(False)
    ├─ 5. read_user_setting()  ← 必須在任何 widget 之前
    │      load_and_apply_theme(app)       (system/themes.py)
@@ -202,7 +204,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `__main__.py` | 102 | CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
+| `__main__.py` | 116 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 2,296 | `ImervueMainWindow`：5 分頁協調者、狀態列、過濾列、分頁狀態機、螢幕自適應、資料夾監控 |
 | `cli.py` | 578 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -218,7 +220,7 @@ ImervueMainWindow
 | `error_report.py` | 146 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
 | `file_association.py` | 240 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
 | `file_tree_watcher.py` | 172 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
-| `log_setup.py` | 40 | 集中式 logging 設定 |
+| `log_setup.py` | 83 | 集中式 logging 設定：`setup_logging()`（可重複呼叫；`app_dir()` 不可寫時退到使用者目錄；凍結時不掛 stderr handler）與 `install_exception_logging()` |
 | `macos_bundle.py` | 67 | macOS `.app` Info.plist 文件型別關聯 |
 | `onboarding.py` | 82 | 首次啟動導覽步驟註冊表 |
 | `release_notes.py` | 112 | What's-New 對話框的版本說明資料 |
@@ -914,7 +916,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-743 個檔、123,366 行。`pyproject.toml` 定義三個互斥層級 marker：
+745 個檔、123,578 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

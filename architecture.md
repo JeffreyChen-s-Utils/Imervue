@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-23 against `39fd6cd` on `dev`.
+> Last verified: 2026-09-23 against `89eb2bc` on `dev`.
 
 ## 1. Purpose
 
@@ -84,7 +84,8 @@ Public interfaces other code or users depend on:
 
 ## 4. Main flows
 
-1. **Startup** — `Imervue/__main__.py` → `read_user_setting()` → `load_and_apply_theme()` /
+1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`
+   (before the first PySide6 import) → `read_user_setting()` → `load_and_apply_theme()` /
    `load_and_apply_from_settings()` → `ImervueMainWindow` (builds tabs, `create_menu()`) →
    `_init_plugin_system_example()` (`Imervue/integration_guide.py`) →
    `PluginManager.discover_and_load()` → optional `open_path()` for a file given on the command line.
