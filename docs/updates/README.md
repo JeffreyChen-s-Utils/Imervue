@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-03 | 2026-09-23 | Move the PySide6 pin to 6.11.2 | #done #pyside6 #release | [2026-09](2026-09.md) |
 | U-20260923-02 | 2026-09-23 | Remove the unused plugin manifest module | #done #plugins #cleanup | [2026-09](2026-09.md) |
 | U-20260923-01 | 2026-09-23 | Clear the 153 Sphinx warnings and build the docs with -W in CI | #done #docs #ci | [2026-09](2026-09.md) |
 | U-20260922-17 | 2026-09-22 | Face detection on OpenCV 5; keep plugin installs on OpenCV 4 | #done #opencv #plugins | [2026-09](2026-09.md) |

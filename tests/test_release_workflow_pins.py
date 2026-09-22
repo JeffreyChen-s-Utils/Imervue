@@ -101,6 +101,16 @@ def _requirement_names() -> set[str]:
     return names
 
 
+def _requirement_pins() -> dict[str, str]:
+    """Packages requirements.txt pins with ``==``, mapped to their version."""
+    pins = {}
+    for raw in _REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        name, sep, version = raw.split("#", 1)[0].partition("==")
+        if sep:
+            pins[_normalise(name.strip())] = version.strip()
+    return pins
+
+
 def test_install_parser_ignores_a_trailing_shell_comment():
     # A NOSONAR justification sits on the same line as the command; its words
     # must not be read as package specs.
@@ -128,9 +138,14 @@ def test_workflow_installs_nothing_beyond_requirements_and_build_tools():
 
 
 def test_pinned_version_matches_when_requirements_also_pins_it():
-    # PySide6 is pinned in requirements.txt too; the two must agree or the
-    # EXE ships a different Qt than the wheel was tested against.
-    assert _workflow_pins()["pyside6"] == "6.11.1"
+    # A package requirements.txt pins (PySide6) must get the same version in
+    # the workflow, or the EXE ships a different Qt than the wheel was tested
+    # against.
+    pins = _requirement_pins()
+    assert "pyside6" in pins
+    workflow = _workflow_pins()
+    for name, version in pins.items():
+        assert workflow.get(name) == version, name
 
 
 def test_every_installed_package_carries_an_exact_version():
