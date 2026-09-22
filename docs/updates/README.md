@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260922-10 | 2026-09-22 | Plugin downloader: two categories, one API request | #done #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-09 | 2026-09-22 | Eight plugins had no menu entry; name the Extra Tools submenus | #incident #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-08 | 2026-09-22 | Run ruff and bandit in CI | #done #ci | [2026-09](2026-09.md) |
 | U-20260922-07 | 2026-09-22 | Track the PyInstaller spec files | #done #packaging | [2026-09](2026-09.md) |
@@ -72,4 +73,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 9 |
+| [2026-09.md](2026-09.md) | 2026-09 | 10 |

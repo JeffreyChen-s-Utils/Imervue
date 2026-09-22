@@ -676,41 +676,34 @@ class TestFetchPluginListWorker:
         assert "network error" in errors[0]
 
     def test_worker_emits_results_on_success(self):
-        from Imervue.plugin.plugin_downloader import FetchPluginListWorker
+        from Imervue.plugin.plugin_downloader import RAW_BASE_URL, FetchPluginListWorker
 
-        mock_root = [
-            {"type": "dir", "name": "filters", "url": "https://api/filters"},
-        ]
-        mock_cat = [
-            {"type": "dir", "name": "blur_plugin", "url": "https://api/blur"},
-        ]
-        mock_files = [
-            {"type": "file", "name": "__init__.py", "download_url": "https://raw/init", "path": "filters/blur_plugin/__init__.py"},
-            {"type": "file", "name": "blur.py", "download_url": "https://raw/blur", "path": "filters/blur_plugin/blur.py"},
-        ]
-
-        def fake_get(url):
-            if "contents" in url:
-                return mock_root
-            elif "filters" in url and "blur" not in url:
-                return mock_cat
-            else:
-                return mock_files
+        # One recursive tree listing; only the plugins/languages categories count.
+        mock_tree = {"truncated": False, "tree": [
+            {"type": "tree", "path": "plugins"},
+            {"type": "tree", "path": "plugins/blur_plugin"},
+            {"type": "blob", "path": "plugins/blur_plugin/__init__.py"},
+            {"type": "blob", "path": "plugins/blur_plugin/blur.py"},
+            {"type": "tree", "path": "filters/other_plugin"},
+            {"type": "blob", "path": "filters/other_plugin/__init__.py"},
+        ]}
 
         worker = FetchPluginListWorker()
         results = []
         worker.result_ready.connect(results.append)
 
-        with patch("Imervue.plugin.plugin_downloader._github_get", side_effect=fake_get):
+        with patch("Imervue.plugin.plugin_downloader._github_get", return_value=mock_tree) as get:
             worker.run()
 
+        assert get.call_count == 1
         assert len(results) == 1
         data = results[0]
         assert len(data) == 1
         cat, name, files = data[0]
-        assert cat == "filters"
+        assert cat == "plugins"
         assert name == "blur_plugin"
-        assert len(files) == 2
+        assert [f["name"] for f in files] == ["__init__.py", "blur.py"]
+        assert files[0]["download_url"] == f"{RAW_BASE_URL}/plugins/blur_plugin/__init__.py"
 
 
 # ===========================

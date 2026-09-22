@@ -846,7 +846,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | --- | ---: | --- |
 | `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
 | `plugin_manager.py` | 229 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
-| `plugin_downloader.py` | 469 | 從公開發佈 repo 下載外掛。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
+| `plugin_downloader.py` | 496 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 963 | 外掛相依安裝器：尋找/下載 Python、安裝 pip 套件（凍結環境亦可） |
 | `plugin_manifest.py` | 174 | manifest schema + 版本 / 相依相容性檢查 |
 | `model_dir.py` | 51 | 外掛模型目錄的共用解析 |

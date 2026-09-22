@@ -112,13 +112,15 @@ Public interfaces other code or users depend on:
 
 ## 6. Cross-project boundaries
 
-- **Imervue_Plugins (distribution repo).** `Imervue/plugin/plugin_downloader.py` lists
-  `https://api.github.com/repos/Jeffrey-Plugin-Repos/Imervue_Plugins/contents` (raw files from
-  `main`), treats top-level non-dot directories as categories, and downloads only the files directly
-  inside `<category>/<plugin>/` into `plugins_dir()` (`<app_dir>/plugins/`). Any change under
-  `plugins/<name>/` here must be copied to `D:\Codes\Imervue_Plugins` and pushed to `main`; keep every
-  runtime-required file flat (nested `models/`, `assets/` are never fetched). Language plugins sit
-  under `languages/` there, the rest under `plugins/`.
+- **Imervue_Plugins (distribution repo).** `Imervue/plugin/plugin_downloader.py` lists the repo with
+  one recursive git-tree call on `main` (`REPO_TREE_URL`), accepts only the categories `plugins` and
+  `languages` (`PLUGIN_CATEGORIES`), and downloads only the files directly inside
+  `<category>/<plugin>/` from raw.githubusercontent into `plugins_dir()` (`<app_dir>/plugins/`).
+  Downloaders released before this change still treat every top-level non-dot directory as a
+  category, so the distribution repo must not add other directories until those are out of use.
+  Any change under `plugins/<name>/` here must be copied to `D:\Codes\Imervue_Plugins` and pushed
+  to `main`; keep every runtime-required file flat (nested `models/`, `assets/` are never fetched).
+  Language plugins sit under `languages/` there, the rest under `plugins/`.
 - **Extra Tools submenu names.** Plugins in Imervue_Plugins place menu entries with
   `main_window.findChild(QMenu, "extra_tools.<key>")` (`develop_submenu`, `retouch_submenu`, ...;
   names set by `Imervue/menu/extra_tools_menu.py` `submenu_object_name`). Never rename or drop one;
