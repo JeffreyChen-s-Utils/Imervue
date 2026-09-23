@@ -12,16 +12,12 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.segmentation import remove_background, replace_sky
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -85,13 +81,10 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
         form = QFormLayout()
         form.addRow(lang.get("sky_mode", "Operation:"), self._mode)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("sky_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("sky_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -117,12 +110,8 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("sky_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("sky_output", "Output"), "Images (*.png *.tif)")
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

@@ -1,16 +1,23 @@
-"""Row builders shared by the batch and folder-based dialogs.
+"""Row builders and path pickers shared by the batch, folder and tool dialogs.
 
-Each returns the layout plus the widgets the caller keeps a handle on, and
-leaves file dialogs, visibility and persistence to the caller.
+Each row builder returns the layout plus the widgets the caller keeps a handle
+on; its Browse button only calls the caller's slot, which typically opens the
+file dialog through ``save_path_into`` / ``open_path_into``. Visibility and
+persistence stay with the caller.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider
+from PySide6.QtWidgets import (
+    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QWidget,
+)
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+
+# Save-dialog filter shared by the single-image tool dialogs that write PNG / JPEG / TIFF.
+IMAGE_SAVE_FILTER = "Images (*.png *.jpg *.tif)"
 
 
 def path_browse_row(
@@ -44,6 +51,20 @@ def folder_picker_row(
     row, edit, _browse = path_browse_row(on_browse, browse_text=browse_text)
     row.insertWidget(0, QLabel(label))
     return row, edit
+
+
+def save_path_into(parent: QWidget, edit: QLineEdit, title: str, file_filter: str) -> None:
+    """Ask for a save path starting at ``edit``'s text; a picked path replaces it."""
+    path, _ = QFileDialog.getSaveFileName(parent, title, edit.text(), file_filter)
+    if path:
+        edit.setText(path)
+
+
+def open_path_into(parent: QWidget, edit: QLineEdit, title: str, file_filter: str) -> None:
+    """Ask for an existing file; a picked path replaces ``edit``'s text."""
+    path, _ = QFileDialog.getOpenFileName(parent, title, "", file_filter)
+    if path:
+        edit.setText(path)
 
 
 def quality_slider(lang: dict, value: int = 85) -> tuple[QLabel, QSlider]:

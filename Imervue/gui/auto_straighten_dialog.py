@@ -12,16 +12,14 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFormLayout,
     QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
 from Imervue.image.geometry import straighten
@@ -100,13 +98,10 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
         form = QFormLayout()
         form.addRow(lang.get("autostr_angle", "Rotation (°):"), angle_row)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("autostr_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("autostr_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -132,12 +127,8 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("autostr_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("autostr_output", "Output"), IMAGE_SAVE_FILTER)
 
     def _set_running(self, running: bool) -> None:
         """Disable both entry points while a worker runs.

@@ -14,8 +14,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QListWidget,
     QProgressBar,
     QPushButton,
@@ -23,6 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.print_layout import PAGE_SIZES, PrintLayout, export_print_pdf
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -89,13 +88,10 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("print_cols", "Columns:"), self._cols)
         form.addRow("", self._crop_marks)
 
-        self._out_edit = QLineEdit(str(Path.home() / "print_sheet.pdf"))
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("print_output", "Output PDF:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("print_output", "Output PDF:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(str(Path.home() / "print_sheet.pdf"))
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -138,12 +134,8 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("print_output", "Output PDF"),
-            self._out_edit.text(), "PDF (*.pdf)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("print_output", "Output PDF"), "PDF (*.pdf)")
 
     def _run(self) -> None:
         paths = [self._files.item(i).text() for i in range(self._files.count())]

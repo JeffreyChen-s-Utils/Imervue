@@ -169,3 +169,38 @@ def test_action_button_row_without_buttons_is_a_stretch(qapp):
         assert _widgets(row) == [None]
     finally:
         host.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# save_path_into / open_path_into
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("picked", "expected"), [("/new.png", "/new.png"), ("", "/old.png")])
+def test_save_path_into(qapp, monkeypatch, picked, expected):
+    from PySide6.QtWidgets import QFileDialog
+    calls = []
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(
+        lambda *args: calls.append(args) or (picked, "")))
+    edit = QLineEdit("/old.png")
+    try:
+        dialog_rows.save_path_into(None, edit, "Output", dialog_rows.IMAGE_SAVE_FILTER)
+        assert edit.text() == expected
+        assert calls == [(None, "Output", "/old.png", "Images (*.png *.jpg *.tif)")]
+    finally:
+        edit.deleteLater()
+
+
+@pytest.mark.parametrize(("picked", "expected"), [("/p.icc", "/p.icc"), ("", "/keep.icc")])
+def test_open_path_into_starts_empty(qapp, monkeypatch, picked, expected):
+    from PySide6.QtWidgets import QFileDialog
+    calls = []
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(
+        lambda *args: calls.append(args) or (picked, "")))
+    edit = QLineEdit("/keep.icc")
+    try:
+        dialog_rows.open_path_into(None, edit, "ICC profile", "ICC (*.icc)")
+        assert edit.text() == expected
+        assert calls == [(None, "ICC profile", "", "ICC (*.icc)")]
+    finally:
+        edit.deleteLater()

@@ -12,17 +12,13 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QSlider,
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.denoise import reduce_noise, sharpen
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -90,13 +86,10 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("nr_sharpen_radius", "Sharpen radius (px):"),
                     self._sharp_radius)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("nr_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("nr_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -129,12 +122,8 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("nr_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("nr_output", "Output"), IMAGE_SAVE_FILTER)
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

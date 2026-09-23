@@ -21,17 +21,15 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.healing import HealingSpot, apply_healing
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -156,13 +154,10 @@ class HealingBrushDialog(WorkerHostMixin, QDialog):
         self._canvas.changed.connect(self._update_count)
         self._update_count()
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        out_browse = QPushButton(lang.get("export_browse", "Browse..."))
-        out_browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("heal_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(out_browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("heal_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         opts_row = QHBoxLayout()
         opts_row.addWidget(QLabel(lang.get("heal_radius", "Radius:")))
@@ -219,12 +214,8 @@ class HealingBrushDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("heal_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("heal_output", "Output"), IMAGE_SAVE_FILTER)
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

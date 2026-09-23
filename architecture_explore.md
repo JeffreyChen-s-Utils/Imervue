@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `f4d50ef` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `52a073d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 766 | 126,200 |
+| `tests/` | 767 | 126,355 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,965 |
-| `Imervue/gui/` | 159 | 32,580 |
+| `Imervue/gui/` | 159 | 32,514 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,767 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,567** | **300,549** |
+| **總計** | **1,568** | **300,638** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,960 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,894 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -514,7 +514,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,580 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,514 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -528,7 +528,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 962 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
-| `dialog_rows.py` | 66 | 批次／資料夾型對話框共用的列：`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
+| `dialog_rows.py` | 87 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`IMAGE_SAVE_FILTER`；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `slider_spin.py` | 71 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `main_window_filter.py` | 261 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 169 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
@@ -569,7 +569,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `solarize_dialog.py`(140) · `velvia_dialog.py`(85) · `film_negative_dialog.py`(82) ·
 `filmic_tonemap_dialog.py`(107) · `tone_equalizer_dialog.py`(97) · `detail_equalizer_dialog.py`(92) ·
 `auto_color_balance_dialog.py`(207) · `local_contrast_dialog.py`(121) · `clahe_dialog.py`(101) ·
-`defringe_dialog.py`(96) · `graduated_density_dialog.py`(96) · `soft_proof_dialog.py`(135) ·
+`defringe_dialog.py`(96) · `graduated_density_dialog.py`(96) · `soft_proof_dialog.py`(125) ·
 `develop_presets_dialog.py`(164) · `virtual_copies_dialog.py`(160) · `before_after_dialog.py`(175) 分割滑桿對照 ·
 `layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(224) 局部調整遮罩
 
@@ -584,13 +584,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 幾何 / 修補 / 多圖
 
-`crop_straighten_dialog.py`(221) · `auto_straighten_dialog.py`(199) · `lens_correction_dialog.py`(169) ·
+`crop_straighten_dialog.py`(211) · `auto_straighten_dialog.py`(189) · `lens_correction_dialog.py`(157) ·
 `smart_crop_dialog.py`(127) 顯著性裁切建議 · `tiny_planet_dialog.py`(112) ·
-`clone_stamp_dialog.py`(219) · `healing_brush_dialog.py`(254) · `sky_replace_dialog.py`(154) ·
-`portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(168) · `face_detection_dialog.py`(233) ·
+`clone_stamp_dialog.py`(208) · `healing_brush_dialog.py`(244) · `sky_replace_dialog.py`(142) ·
+`portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(233) ·
 `hdr_merge_dialog.py`(159) · `panorama_dialog.py`(169) · `focus_stack_dialog.py`(157) ·
 `stack_blend_dialog.py`(178) · `collage_dialog.py`(89) · `deflicker_dialog.py`(208) ·
-`id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(176)
+`id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(167)
 
 #### 批次 / 匯出 / 管理
 
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-766 個檔、126,200 行。`pyproject.toml` 定義三個互斥層級 marker：
+767 個檔、126,355 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
