@@ -114,3 +114,13 @@ class TestHourGrouping:
     def test_hour_histogram_skips_unknown(self, monkeypatch):
         monkeypatch.setattr(ci, "capture_datetime", lambda p: ci.UNKNOWN_DATETIME)
         assert ci.hour_histogram(["x"]) == {}
+
+
+def test_corrupt_webp_exif_falls_back_to_mtime(tmp_path):
+    from test_read_errors import corrupt_exif_webp
+
+    p = tmp_path / "bad.webp"
+    p.write_bytes(corrupt_exif_webp())
+    stamp = _dt.datetime(2016, 3, 4, 5, 6, 7).timestamp()
+    os.utime(p, (stamp, stamp))
+    assert ci.capture_datetime(str(p)) == _dt.datetime(2016, 3, 4, 5, 6, 7)

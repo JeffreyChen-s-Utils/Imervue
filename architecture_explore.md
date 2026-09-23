@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `611364e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `9ee019c` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,16 +66,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 809 | 132,759 |
+| `tests/` | 810 | 132,888 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
 | `Imervue/gui/` | 161 | 32,798 |
 | `Imervue/puppet/` | 57 | 15,222 |
-| `Imervue/image/` | 113 | 12,869 |
+| `Imervue/image/` | 113 | 12,874 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,240 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
-| `Imervue/library/` | 32 | 4,146 |
+| `Imervue/library/` | 32 | 4,160 |
 | `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,185 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,621** | **307,508** |
+| **總計** | **1,622** | **307,656** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,359 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,378 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -297,7 +297,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-113 個模組、12,869 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+113 個模組、12,874 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -333,7 +333,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(55) EXIF orientation 烘焙
+`orientation.py`(57) EXIF orientation 烘焙
 
 #### 藝術效果 / 疊加
 
@@ -367,12 +367,12 @@ ImervueMainWindow
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
 `pyramid.py`(38) `DeepZoomImage` 金字塔 · `tile_manager.py`(94) 圖磚 LRU 快取與淘汰 ·
 `thumbnail_disk_cache.py`(234) 縮圖磁碟快取 · `folder_index.py`(59) 每資料夾圖片清單快取 ·
-`read_errors.py`(14) `IMAGE_READ_ERRORS`：Pillow 讀圖失敗會丟的例外（`OSError`、`ValueError`、`DecompressionBombError`）
+`read_errors.py`(15) `IMAGE_READ_ERRORS`：Pillow 讀圖失敗會丟的例外（`OSError`、`ValueError`、`SyntaxError`（損壞的 WebP EXIF）、`DecompressionBombError`）
 
 #### 中繼資料
 
 `xmp_sidecar.py`(386) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
-`gps.py`(86) EXIF GPS 擷取 · `gps_geotag.py`(62) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
+`gps.py`(88) EXIF GPS 擷取 · `gps_geotag.py`(62) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(45) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
 `annotations.py`(270) JSON sidecar 註解 · `info.py`(189) 圖片資訊組裝與對話框
 
@@ -500,7 +500,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
 | `stacks.py` | 89 | RAW + JPEG 配對堆疊 |
 | `events.py` | 89 | 依拍攝時間間隔把照片分成「事件」 |
-| `calendar_index.py` | 158 | 依拍攝日分桶，供 Calendar View |
+| `calendar_index.py` | 160 | 依拍攝日分桶，供 Calendar View |
 | `capture_time.py` | 49 | 批次位移 EXIF 時間戳 |
 | `date_import.py` | 101 | 依拍攝日匯入到日期資料夾 |
 | `gpx_geotag.py` | 113 | GPX 軌跡對時取得座標 |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-809 個檔、132,759 行。`pyproject.toml` 定義三個互斥層級 marker：
+810 個檔、132,888 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

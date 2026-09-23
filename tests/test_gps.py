@@ -87,3 +87,11 @@ class TestCollectGps:
         out = gps.collect_gps([str(p1), str(p2)])
         assert len(out) == 1
         assert out[0][0] == str(p2)
+
+
+def test_corrupt_webp_exif_has_no_gps(tmp_path):
+    from test_read_errors import corrupt_exif_webp
+
+    p = tmp_path / "bad.webp"
+    p.write_bytes(corrupt_exif_webp())
+    assert gps.extract_gps(str(p)) is None

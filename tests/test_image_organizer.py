@@ -370,6 +370,16 @@ class TestImageDateBucket:
         os.utime(bad, (stamp, stamp))
         assert _get_image_date(str(bad), year_only=True) == "2021"
 
+    def test_corrupt_webp_exif_falls_back_to_mtime(self, tmp_path):
+        from test_read_errors import corrupt_exif_webp
+
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.webp"
+        path.write_bytes(corrupt_exif_webp())
+        stamp = datetime(2017, 5, 1, 12).timestamp()
+        os.utime(path, (stamp, stamp))
+        assert _get_image_date(str(path), year_only=True) == "2017"
+
     def test_unparsable_exif_date_falls_back(self, tmp_path):
         from Imervue.gui.image_organizer_dialog import _get_image_date
         path = tmp_path / "a.jpg"

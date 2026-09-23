@@ -45,3 +45,13 @@ def test_transpose_swaps_axes():
 def test_unknown_code_is_identity():
     img = _asymmetric()
     assert np.array_equal(transform_for_orientation(img, 99), img)
+
+
+def test_corrupt_webp_exif_reads_as_upright(tmp_path):
+    from test_read_errors import corrupt_exif_webp
+
+    from Imervue.image.orientation import read_orientation
+
+    p = tmp_path / "bad.webp"
+    p.write_bytes(corrupt_exif_webp())
+    assert read_orientation(str(p)) == 1

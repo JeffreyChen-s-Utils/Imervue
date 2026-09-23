@@ -22,6 +22,7 @@ def _encoded(fmt: str) -> bytes:
 
 def _decode(data: bytes) -> None:
     with Image.open(io.BytesIO(data)) as img:
+        img.getexif()
         img.thumbnail((16, 16))
         img.convert("RGBA").tobytes()
 
@@ -54,3 +55,19 @@ def test_decompression_bomb_is_covered(monkeypatch):
     monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 10)
     with pytest.raises(IMAGE_READ_ERRORS):
         _decode(_encoded("PNG"))
+
+
+def corrupt_exif_webp() -> bytes:
+    """A WebP whose EXIF chunk has a broken TIFF byte-order mark."""
+    exif = Image.Exif()
+    exif[306] = "2024:01:02 03:04:05"
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8)).save(buf, "WEBP", exif=exif)
+    data = buf.getvalue()
+    assert data.count(b"MM\x00*") == 1
+    return data.replace(b"MM\x00*", b"XM\x00*")
+
+
+def test_corrupt_webp_exif_is_covered():
+    with Image.open(io.BytesIO(corrupt_exif_webp())) as img, pytest.raises(IMAGE_READ_ERRORS):
+        img.getexif()

@@ -12,6 +12,8 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 _TOP_LEFT = 1  # the "already upright" orientation
 _ORIENTATION_TAG = 0x0112
 
@@ -44,7 +46,7 @@ def read_orientation(path: str) -> int:
         with Image.open(path) as img:
             exif = img.getexif()
         return int(exif.get(_ORIENTATION_TAG, _TOP_LEFT))
-    except (OSError, ValueError, AttributeError):
+    except (*IMAGE_READ_ERRORS, AttributeError, TypeError):   # unreadable, or a non-numeric tag
         return _TOP_LEFT
 
 

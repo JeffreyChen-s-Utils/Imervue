@@ -18,6 +18,8 @@ from pathlib import Path
 
 from PIL import ExifTags, Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 logger = logging.getLogger("Imervue.gps")
 
 
@@ -42,7 +44,7 @@ def extract_gps(path: str | Path) -> tuple[float, float] | None:
     try:
         with Image.open(path) as im:
             exif = im.getexif()
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         return None
     if not exif:
         return None

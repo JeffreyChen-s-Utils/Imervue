@@ -20,6 +20,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 logger = logging.getLogger("Imervue.calendar_index")
 
 UNKNOWN_DATE = _dt.date.min  # sentinel — falsey compare with == UNKNOWN_DATE
@@ -79,7 +81,7 @@ def capture_datetime(path: str | Path) -> _dt.datetime:
     try:
         with Image.open(p) as im:
             exif = im.getexif()
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         exif = None
     if exif:
         dt = _exif_datetime(exif)
