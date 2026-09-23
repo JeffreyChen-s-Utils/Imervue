@@ -40,68 +40,87 @@ class ExifSidebar(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # 摺疊按鈕
-        self._toggle_btn = QToolButton()
-        self._toggle_btn.setText("\u276f")  # ❯
-        self._toggle_btn.setCheckable(True)
-        self._toggle_btn.setChecked(False)
-        self._toggle_btn.setFixedWidth(24)
-        self._toggle_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        self._toggle_btn.setStyleSheet(
+        self._toggle_btn = self._build_toggle_button()
+        self._content = self._build_scroll_area()
+        self._info_label = self._build_info_label()
+        lang = language_wrapper.language_word_dict
+        # 編輯按鈕
+        self._edit_btn = self._action_button(
+            lang.get("exif_edit_button", "Edit EXIF"), self._open_editor)
+        self._keywords_btn = self._action_button(
+            lang.get("keyword_editor_title", "Edit Keywords"), self._open_keyword_editor)
+        # 星等評分 — 5 顆可點擊的星，點同一顆會清除
+        self._rating_widget = _RatingStars(self._on_rating_clicked)
+        self._build_notes(lang)
+        self._content.setWidget(self._build_content_column())
+
+        h_layout = QHBoxLayout()
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.setSpacing(0)
+        h_layout.addWidget(self._toggle_btn)
+        h_layout.addWidget(self._content)
+
+        layout.addLayout(h_layout)
+
+    def _build_toggle_button(self) -> QToolButton:
+        """摺疊按鈕 — the narrow strip that collapses and expands the panel."""
+        btn = QToolButton()
+        btn.setText("\u276f")  # ❯
+        btn.setCheckable(True)
+        btn.setChecked(False)
+        btn.setFixedWidth(24)
+        btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        btn.setStyleSheet(
             "QToolButton { background: #222; color: #aaa; border: none; font-size: 14px; }"
             "QToolButton:checked { background: #333; }"
         )
-        self._toggle_btn.clicked.connect(self._toggle)
+        btn.clicked.connect(self._toggle)
+        return btn
 
-        # 內容面板
-        self._content = QScrollArea()
-        self._content.setWidgetResizable(True)
-        self._content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._content.setStyleSheet("QScrollArea { background: #1e1e1e; border: none; }")
-        self._content.setVisible(False)
+    @staticmethod
+    def _build_scroll_area() -> QScrollArea:
+        """內容面板 — vertical-only scroll area, hidden while collapsed."""
+        area = QScrollArea()
+        area.setWidgetResizable(True)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        area.setStyleSheet("QScrollArea { background: #1e1e1e; border: none; }")
+        area.setVisible(False)
+        return area
 
-        self._info_label = QLabel()
-        self._info_label.setWordWrap(True)
-        self._info_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        self._info_label.setStyleSheet(
+    def _build_info_label(self) -> QLabel:
+        """Selectable EXIF text whose map link opens the map view."""
+        label = QLabel()
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        label.setStyleSheet(
             "QLabel { color: #ccc; padding: 8px; font-size: 12px; background: #1e1e1e; }"
         )
-        self._info_label.setTextInteractionFlags(
+        label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse,
         )
-        self._info_label.setOpenExternalLinks(False)
-        self._info_label.linkActivated.connect(self._on_link_activated)
+        label.setOpenExternalLinks(False)
+        label.linkActivated.connect(self._on_link_activated)
+        return label
 
-        # 編輯按鈕
-        self._edit_btn = QPushButton(
-            language_wrapper.language_word_dict.get("exif_edit_button", "Edit EXIF")
-        )
-        self._edit_btn.setStyleSheet("QPushButton { margin: 4px; }")
-        self._edit_btn.clicked.connect(self._open_editor)
+    @staticmethod
+    def _action_button(text: str, slot) -> QPushButton:
+        """Full-width panel button with a small margin, wired to ``slot``."""
+        button = QPushButton(text)
+        button.setStyleSheet("QPushButton { margin: 4px; }")
+        button.clicked.connect(slot)
+        return button
 
-        self._keywords_btn = QPushButton(
-            language_wrapper.language_word_dict.get("keyword_editor_title", "Edit Keywords")
-        )
-        self._keywords_btn.setStyleSheet("QPushButton { margin: 4px; }")
-        self._keywords_btn.clicked.connect(self._open_keyword_editor)
-
-        # 星等評分 — 5 顆可點擊的星，點同一顆會清除
-        self._rating_widget = _RatingStars(self._on_rating_clicked)
-
-        # 備註區 — 儲存到 library SQLite index
-        self._notes_label = QLabel(
-            language_wrapper.language_word_dict.get("notes_title", "Notes")
-        )
+    def _build_notes(self, lang) -> None:
+        """備註區 — heading, editor and the debounce timer that saves to the library index."""
+        self._notes_label = QLabel(lang.get("notes_title", "Notes"))
         self._notes_label.setStyleSheet(
             "QLabel { color: #ddd; padding: 8px 8px 2px 8px;"
             " font-weight: bold; background: #1e1e1e; }"
         )
         self._notes_edit = QPlainTextEdit()
         self._notes_edit.setPlaceholderText(
-            language_wrapper.language_word_dict.get(
-                "notes_placeholder", "Write notes for this image…"
-            )
+            lang.get("notes_placeholder", "Write notes for this image…")
         )
         self._notes_edit.setFixedHeight(120)
         self._notes_edit.setStyleSheet(
@@ -115,25 +134,16 @@ class ExifSidebar(QWidget):
         self._notes_save_timer.timeout.connect(self._flush_note)
         self._notes_edit.textChanged.connect(self._notes_save_timer.start)
 
+    def _build_content_column(self) -> QWidget:
+        """Info, the two buttons, rating, then the notes, top-aligned."""
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.addWidget(self._info_label)
-        content_layout.addWidget(self._edit_btn)
-        content_layout.addWidget(self._keywords_btn)
-        content_layout.addWidget(self._rating_widget)
-        content_layout.addWidget(self._notes_label)
-        content_layout.addWidget(self._notes_edit)
+        for widget in (self._info_label, self._edit_btn, self._keywords_btn,
+                       self._rating_widget, self._notes_label, self._notes_edit):
+            content_layout.addWidget(widget)
         content_layout.addStretch()
-        self._content.setWidget(content_widget)
-
-        h_layout = QHBoxLayout()
-        h_layout.setContentsMargins(0, 0, 0, 0)
-        h_layout.setSpacing(0)
-        h_layout.addWidget(self._toggle_btn)
-        h_layout.addWidget(self._content)
-
-        layout.addLayout(h_layout)
+        return content_widget
 
     def _toggle(self):
         self._collapsed = not self._collapsed
