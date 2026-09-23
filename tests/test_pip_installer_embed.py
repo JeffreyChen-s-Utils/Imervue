@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -110,3 +112,14 @@ def test_failed_pip_install_is_reported(worker):
     worker._run_with_live_output = lambda cmd, cwd=None, timeout=None: 3
     worker.run()
     assert worker.results == [(False, "pip installation failed (exit code 3)")]
+
+
+def test_embedded_python_matches_the_frozen_build_minor_version():
+    # Packages installed through this interpreter are imported by the frozen
+    # app, so their compiled extensions need the same minor version.
+    workflow = (Path(__file__).resolve().parent.parent / ".github" / "workflows"
+                / "release.yml").read_text(encoding="utf-8")
+    versions = set(re.findall(r'python-version:\s*"(\d+\.\d+)"', workflow))
+    embed_minor = ".".join(pi._EMBED_PYTHON_VERSION.split(".")[:2])
+    assert versions == {embed_minor}
+

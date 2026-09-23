@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-51 | 2026-09-24 | Move the plugin interpreter to CPython 3.12.10 | #deps #security #plugin | [2026-09](2026-09.md) |
 | U-20260924-50 | 2026-09-24 | Verify the embeddable Python and install pip from a pinned wheel | #fix #security #supply-chain #plugin | [2026-09](2026-09.md) |
 | U-20260924-49 | 2026-09-24 | Pin the upscale models to commits and verify the face-landmark model | #fix #security #supply-chain | [2026-09](2026-09.md) |
 | U-20260924-48 | 2026-09-24 | Make the Cubism signature test pass on Python 3.10 | #tests #ci #puppet | [2026-09](2026-09.md) |

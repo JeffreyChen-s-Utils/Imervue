@@ -92,14 +92,18 @@ _ensure_frozen_site_packages_on_path()
 # 內嵌 Python 自動下載
 # ===========================
 
-_EMBED_PYTHON_VERSION = "3.12.8"
+# The last 3.12 release that ships an embeddable zip (later 3.12 releases are
+# source-only). Keep the minor version equal to the frozen build's (release.yml):
+# packages installed here are imported by the frozen app, so their cp312
+# binaries must match its interpreter.
+_EMBED_PYTHON_VERSION = "3.12.10"
 _EMBED_PYTHON_URL = (
     f"https://www.python.org/ftp/python/{_EMBED_PYTHON_VERSION}/"
     f"python-{_EMBED_PYTHON_VERSION}-embed-amd64.zip"
 )
-# SHA-256 of that zip: python.org publishes its MD5 (1e86b04bc7d27c5c06edf8f617e1184a)
-# and size (11,094,114 bytes), and a download matching both hashed to this.
-_EMBED_PYTHON_SHA256 = "8d3f33be9eb810f23c102f08475af2854e50484b8e4e06275e937be61ce3d2fb"
+# SHA-256 of that zip: python.org publishes its MD5 (fe8ef205f2e9c3ba44d0cf9954e1abd3)
+# and size (11,133,606 bytes), and a download matching both hashed to this.
+_EMBED_PYTHON_SHA256 = "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
 # pip is installed from a pinned wheel whose SHA-256 is PyPI's published digest,
 # not from get-pip.py: that script lives at a URL whose content changes with
 # every pip release, so it could not be verified before being run.
