@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.tile_focus import NO_FOCUS
 from Imervue.gpu_image_view.tile_layout import plan_tile_size_change
 from Imervue.gpu_image_view.view_state_init import (
@@ -460,7 +461,7 @@ class GPUImageView(
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
         self._hover_image_xy = None
         if hasattr(self.main_window, "clear_status_info"):
-            with contextlib.suppress(Exception):
+            with best_effort("clear the status bar info", logger):
                 self.main_window.clear_status_info()
 
     def _set_modify_menu_visible(self, visible: bool) -> None:
@@ -472,7 +473,7 @@ class GPUImageView(
         action = getattr(self.main_window, "_modify_menu_action", None)
         if action is None:
             return
-        with contextlib.suppress(Exception):
+        with best_effort("toggle the Modify menu", logger):
             action.setVisible(bool(visible))
 
     # ---------------------------

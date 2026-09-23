@@ -116,3 +116,30 @@ def test_paint_canvas_delegates_to_the_shared_guard(qapp):
     with PaintCanvas._current_gl_context(fake):
         calls.append("body")
     assert calls == ["make", "body", "done"]
+
+
+def test_failed_make_current_is_logged_and_not_released(qapp, caplog):
+    calls: list = []
+
+    def fail():
+        raise RuntimeError("no surface")
+
+    fake = SimpleNamespace(context=lambda: object(), isValid=lambda: True,
+                           makeCurrent=fail, doneCurrent=lambda: calls.append("done"))
+    with caplog.at_level("DEBUG", logger="Imervue"), make_current_guard(fake):
+        calls.append("body")
+    assert calls == ["body"]          # never made current, so never released
+    assert [r.getMessage() for r in caplog.records] == [
+        "Best-effort step failed: make the GL context current"]
+
+
+def test_failed_done_current_is_logged(qapp, caplog):
+    def fail():
+        raise RuntimeError("context lost")
+
+    fake = SimpleNamespace(context=lambda: object(), isValid=lambda: True,
+                           makeCurrent=lambda: None, doneCurrent=fail)
+    with caplog.at_level("DEBUG", logger="Imervue"), make_current_guard(fake):
+        pass
+    assert [r.getMessage() for r in caplog.records] == [
+        "Best-effort step failed: release the GL context"]

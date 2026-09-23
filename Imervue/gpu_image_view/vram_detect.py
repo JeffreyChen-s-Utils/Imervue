@@ -14,6 +14,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from OpenGL.GL import GL_NO_ERROR, glGetError, glGetIntegerv
+from OpenGL.error import GLError
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -95,7 +96,7 @@ def _probe_gl_integer(enum: int) -> int:  # pragma: no cover - GL probe path
 
 def _drain_gl_error_queue() -> None:  # pragma: no cover - GL probe path
     """Clear any GL error left by extension probes that aren't supported."""
-    with contextlib.suppress(Exception):
+    with contextlib.suppress(GLError):   # no current context: nothing to drain
         # glGetError has the side-effect of clearing the flag.
         while glGetError() != GL_NO_ERROR:  # noqa: S108
             continue

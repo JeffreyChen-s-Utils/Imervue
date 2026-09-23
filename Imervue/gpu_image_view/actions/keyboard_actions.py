@@ -4,12 +4,12 @@ Keyboard shortcut actions for GPUImageView.
 """
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
+from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -178,7 +178,7 @@ def copy_image_to_clipboard(main_gui: GPUImageView):
         return
 
     path = images[main_gui.current_index]
-    with contextlib.suppress(Exception):
+    with best_effort("copy the image to the clipboard"):
         qimg = QImage(path)
         if qimg.isNull() and main_gui.deep_zoom is not None:
             # QImage 無法直接載入（例如 SVG），從 deep zoom 金字塔取得

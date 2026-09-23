@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 
 
+from OpenGL.error import GLError
 from Imervue.image.tile_manager import TileManager
 
 
@@ -85,7 +86,7 @@ class PrefetchMemoryMixin:
             with self._current_gl_context():
                 while len(cache) > 64:
                     _, tex = cache.popitem(last=False)
-                    with contextlib.suppress(Exception):
+                    with contextlib.suppress(GLError):   # context already gone
                         glDeleteTextures([tex])
         elif manager is not None:
             manager.max_cache = 256
@@ -99,15 +100,24 @@ class PrefetchMemoryMixin:
 
     @staticmethod
     def _process_rss_bytes() -> int:
-        with contextlib.suppress(Exception):
+        try:
             import psutil
+        except ImportError:   # optional dependency
+            return 0
+        try:
             return int(psutil.Process().memory_info().rss)
-        return 0
+        except (psutil.Error, OSError):
+            return 0
 
     @staticmethod
     def _ram_pressure_limit_bytes() -> int:
-        with contextlib.suppress(Exception):
+        fallback = 2 * 1024 * 1024 * 1024
+        try:
             import psutil
+        except ImportError:   # optional dependency
+            return fallback
+        try:
             total = int(psutil.virtual_memory().total)
-            return max(768 * 1024 * 1024, int(total * 0.70))
-        return 2 * 1024 * 1024 * 1024
+        except (psutil.Error, OSError):
+            return fallback
+        return max(768 * 1024 * 1024, int(total * 0.70))

@@ -10,6 +10,7 @@ decision so it is testable without a live GL surface.
 from __future__ import annotations
 
 import contextlib
+from Imervue.system.best_effort import best_effort
 
 
 def needs_make_current(has_context: bool, is_current: bool,
@@ -42,12 +43,12 @@ def make_current_guard(widget):
         ctx is not None and QOpenGLContext.currentContext() is ctx,
         widget.isValid(),
     ):
-        with contextlib.suppress(Exception):
+        with best_effort("make the GL context current"):
             widget.makeCurrent()
             made = True
     try:
         yield
     finally:
         if made:
-            with contextlib.suppress(Exception):
+            with best_effort("release the GL context"):
                 widget.doneCurrent()

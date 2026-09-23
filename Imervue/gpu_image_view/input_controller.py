@@ -14,11 +14,11 @@ stateful glue between those helpers and the live view.
 
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.select import (
     select_tiles_in_rect,
     switch_to_next_image,
@@ -408,7 +408,7 @@ class InputController:
         center = pinch.centerPoint()
         cx = center.x() if center is not None else view.width() / 2
         cy = center.y() if center is not None else view.height() / 2
-        with contextlib.suppress(Exception):
+        with best_effort("map the gesture centre to the view"):
             local = view.mapFromGlobal(center.toPoint())
             cx, cy = local.x(), local.y()
         return cx, cy

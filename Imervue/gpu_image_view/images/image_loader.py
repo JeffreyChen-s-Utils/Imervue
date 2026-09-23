@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
-import contextlib
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
+from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
 from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
 from Imervue.image.pyramid import DeepZoomImage
@@ -382,7 +382,7 @@ def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_folder
     old_worker = getattr(main_gui, "_folder_scan_worker", None)
     if old_worker is not None:
-        with contextlib.suppress(Exception):
+        with best_effort("abort the previous folder scan"):
             old_worker.abort()
     main_gui._folder_scan_generation = getattr(main_gui, "_folder_scan_generation", 0) + 1
     generation = main_gui._folder_scan_generation
