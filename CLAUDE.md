@@ -106,7 +106,12 @@ assume limits the config has deliberately relaxed. If a rule should change, chan
 Rules the tools do **not** catch, which still apply:
 
 - **File length ≤ 1000 lines** (SonarQube `python:S104`). Split large modules. The current
-  over-budget list lives in §12 of `architecture_explore.md`.
+  over-budget list lives in §12 of `architecture_explore.md`; `tests/test_code_size_limits.py`
+  enforces it (the `multi_language` dictionaries are exempt as data).
+- **Function length ≤ 80 lines**, docstring included — enforced by the same test file. Split a
+  long function into named steps before it crosses.
+- **Every module is imported by production code** — `tests/test_unwired_modules.py` fails on a
+  new module nothing in `Imervue/` or `plugins/` imports (the pre-existing ones are listed there).
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
   repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
   flag both; ruff does not.
