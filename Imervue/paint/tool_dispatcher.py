@@ -20,6 +20,8 @@ remaining tools by registering more handlers in
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -126,6 +128,29 @@ def _strip_alt(evt: PointerEvent, alt_bit: int) -> PointerEvent:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class DispatcherHooks:
+    """Optional collaborators the workspace wires into :class:`ToolDispatcher`.
+
+    Each missing hook falls back to a no-op: ``selection_provider`` returns
+    the HxW bool selection (or ``None``) and ``set_selection`` writes one;
+    ``parent_widget`` parents modal tool dialogs; ``reference_provider`` and
+    ``composite_provider`` return the reference layer and the flattened
+    composite for sampling; ``panel_layout_provider`` returns the manga panel
+    layout for snap-to-panel strokes; ``overlay_setter`` shows or clears a
+    drag preview; ``commit_undo`` pushes one undo snapshot per committed gesture.
+    """
+
+    selection_provider: Callable[[], np.ndarray | None] | None = None
+    set_selection: Callable[[np.ndarray | None], None] | None = None
+    parent_widget: object = None
+    reference_provider: Callable[[], np.ndarray | None] | None = None
+    composite_provider: Callable[[], np.ndarray | None] | None = None
+    panel_layout_provider: Callable[[], object] | None = None
+    overlay_setter: Callable[[object], None] | None = None
+    commit_undo: Callable[[], None] | None = None
+
+
 class ToolDispatcher:
     """Callable that routes events to the active tool handler.
 
@@ -138,13 +163,7 @@ class ToolDispatcher:
 
     def __init__(
         self, state: ToolState, image_provider,
-        selection_provider=None, set_selection=None,
-        parent_widget=None,
-        reference_provider=None,
-        composite_provider=None,
-        panel_layout_provider=None,
-        overlay_setter=None,
-        commit_undo=None,
+        hooks: DispatcherHooks | None = None,
     ):
         # Damage rect from the last positively-handled event — the
         # canvas reads this after dispatch returns True so it can
@@ -152,11 +171,14 @@ class ToolDispatcher:
         # full-frame glTexImage2D.
         self._last_damage = _EMPTY_DAMAGE
         """``image_provider`` is a callable returning the live numpy
-        canvas (or ``None`` if no image is loaded). ``selection_provider``
-        (optional) returns the current HxW bool mask or ``None``;
-        ``set_selection`` (optional) writes a new mask. ``parent_widget``
-        (optional) is used as the parent for any modal tool dialogs
-        (text tool, gradient tool…) so they centre on the canvas."""
+        canvas (or ``None`` if no image is loaded); every optional
+        collaborator comes in ``hooks`` (see :class:`DispatcherHooks`)."""
+        hooks = hooks or DispatcherHooks()
+        selection_provider, set_selection = hooks.selection_provider, hooks.set_selection
+        parent_widget, reference_provider = hooks.parent_widget, hooks.reference_provider
+        composite_provider = hooks.composite_provider
+        panel_layout_provider, overlay_setter = hooks.panel_layout_provider, hooks.overlay_setter
+        commit_undo = hooks.commit_undo
         self._state = state
         self._image_provider = image_provider
         self._selection_provider = selection_provider or (lambda: None)

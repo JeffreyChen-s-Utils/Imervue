@@ -11,7 +11,7 @@ from Imervue.paint.tool_dispatcher import (
     BrushTool,
     EraserTool,
     EyedropperTool,
-    ToolDispatcher,
+    DispatcherHooks, ToolDispatcher,
     _DodgeBurnTool,
     _SpongeTool,
 )
@@ -125,8 +125,11 @@ def test_gesture_tool_commits_undo_when_press_not_handled(state, canvas):
     dirty, silently discarded on close."""
     commits = []
     disp = ToolDispatcher(
-        state, image_provider=lambda: canvas,
-        commit_undo=lambda: commits.append(True),
+        state,
+        image_provider=lambda: canvas,
+        hooks=DispatcherHooks(
+            commit_undo=lambda: commits.append(True),
+        ),
     )
     disp._maybe_commit_undo("gradient", _press(5, 5), handled=False)   # noqa: SLF001
     disp._maybe_commit_undo("gradient", _move(20, 20), handled=True)   # noqa: SLF001
@@ -138,8 +141,11 @@ def test_gesture_tool_with_no_work_does_not_commit(state, canvas):
     """A bare click that the tool doesn't act on must not burn an undo slot."""
     commits = []
     disp = ToolDispatcher(
-        state, image_provider=lambda: canvas,
-        commit_undo=lambda: commits.append(True),
+        state,
+        image_provider=lambda: canvas,
+        hooks=DispatcherHooks(
+            commit_undo=lambda: commits.append(True),
+        ),
     )
     disp._maybe_commit_undo("gradient", _press(5, 5), handled=False)   # noqa: SLF001
     disp._maybe_commit_undo("gradient", _release(5, 5), handled=False)  # noqa: SLF001
@@ -576,8 +582,11 @@ def test_brush_clips_to_panel_when_snap_to_panel_on(state, canvas):
         w_canvas, h_canvas, 2, 2, gutter=4, border_width=0,
     )
     disp = ToolDispatcher(
-        state, image_provider=lambda: canvas,
-        panel_layout_provider=lambda: layout,
+        state,
+        image_provider=lambda: canvas,
+        hooks=DispatcherHooks(
+            panel_layout_provider=lambda: layout,
+        ),
     )
     cell = layout.cells[0]
     cx = cell.x + cell.w // 2
@@ -604,8 +613,11 @@ def test_brush_does_not_clip_when_snap_to_panel_off(state, canvas):
         w_canvas, h_canvas, 2, 2, gutter=4, border_width=0,
     )
     disp = ToolDispatcher(
-        state, image_provider=lambda: canvas,
-        panel_layout_provider=lambda: layout,
+        state,
+        image_provider=lambda: canvas,
+        hooks=DispatcherHooks(
+            panel_layout_provider=lambda: layout,
+        ),
     )
     # Press on the gutter intersection — no panel under the cursor.
     disp(_press(w_canvas // 2, h_canvas // 2))
