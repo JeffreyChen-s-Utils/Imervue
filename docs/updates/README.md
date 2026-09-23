@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-41 | 2026-09-23 | Split BatchExportDialog._build_ui onto the shared dialog rows | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-40 | 2026-09-23 | Fix the culling-dialog test race: a worker ran twice | #done #tests #flaky | [2026-09](2026-09.md) |
 | U-20260923-39 | 2026-09-23 | Split BatchConvertDialog._build_ui; folder_row becomes dialog_rows | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-38 | 2026-09-23 | Split PaintCanvas.__init__ into three state initialisers | #done #refactor #paint | [2026-09](2026-09.md) |

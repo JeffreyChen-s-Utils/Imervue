@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 import numpy as np
 from PIL import Image
 
+from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import export_presets
 from Imervue.image.recipe_store import recipe_store
@@ -156,8 +157,51 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             self._lang.get("batch_export_count", "{count} image(s) selected").format(
                 count=len(self._paths))
         ))
+        layout.addLayout(self._build_preset_row())
 
-        # Presets
+        # Format
+        fmt_row = QHBoxLayout()
+        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
+        self._fmt_combo = QComboBox()
+        self._fmt_combo.addItems(available_formats())
+        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
+        fmt_row.addWidget(self._fmt_combo, 1)
+        layout.addLayout(fmt_row)
+
+        # Quality
+        self._quality_label, self._quality_slider = quality_slider(self._lang)
+        layout.addWidget(self._quality_label)
+        layout.addWidget(self._quality_slider)
+
+        layout.addWidget(self._build_resize_group())
+        layout.addWidget(self._build_watermark_group())
+
+        # Output dir
+        dir_row, self._dir_edit, _browse = path_browse_row(
+            self._browse, browse_text=self._lang.get("export_browse", "Browse..."))
+        if self._paths:
+            self._dir_edit.setText(str(Path(self._paths[0]).parent))
+        layout.addLayout(dir_row)
+
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.setVisible(False)
+        layout.addWidget(self._progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        # Buttons
+        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
+        cancel_btn.clicked.connect(self._on_cancel)
+        self._export_btn = QPushButton(self._lang.get("batch_export_start", "Export"))
+        self._export_btn.clicked.connect(self._do_export)
+        layout.addLayout(action_button_row(cancel_btn, self._export_btn))
+
+        self._on_format_changed()
+
+    def _build_preset_row(self) -> QHBoxLayout:
+        """Preset combo: "Custom" (no data) followed by every built-in preset."""
         preset_row = QHBoxLayout()
         preset_row.addWidget(QLabel(
             self._lang.get("batch_export_preset", "Preset:")
@@ -170,50 +214,34 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             self._preset_combo.addItem(preset.label, preset.key)
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_row.addWidget(self._preset_combo, 1)
-        layout.addLayout(preset_row)
+        return preset_row
 
-        # Format
-        fmt_row = QHBoxLayout()
-        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
-        self._fmt_combo = QComboBox()
-        self._fmt_combo.addItems(available_formats())
-        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
-        fmt_row.addWidget(self._fmt_combo, 1)
-        layout.addLayout(fmt_row)
+    @staticmethod
+    def _max_side_spin(value: int) -> QSpinBox:
+        """0–99999 px limit where 0 reads as "--" (no limit)."""
+        spin = QSpinBox()
+        spin.setRange(0, 99999)
+        spin.setValue(value)
+        spin.setSpecialValueText("--")
+        return spin
 
-        # Quality
-        self._quality_label = QLabel(self._lang.get("export_quality", "Quality:") + " 85")
-        self._quality_slider = QSlider(Qt.Orientation.Horizontal)
-        self._quality_slider.setRange(0, 100)
-        self._quality_slider.setValue(85)
-        self._quality_slider.valueChanged.connect(
-            lambda v: self._quality_label.setText(
-                self._lang.get("export_quality", "Quality:") + f" {v}")
-        )
-        layout.addWidget(self._quality_label)
-        layout.addWidget(self._quality_slider)
-
-        # Resize
+    def _build_resize_group(self) -> QGroupBox:
+        """Checkable (off) group holding the max width / height limits."""
         resize_grp = QGroupBox(self._lang.get("batch_export_resize", "Resize"))
         resize_grp.setCheckable(True)
         resize_grp.setChecked(False)
         self._resize_grp = resize_grp
         rlay = QHBoxLayout(resize_grp)
         rlay.addWidget(QLabel(self._lang.get("batch_export_max_width", "Max Width:")))
-        self._max_w = QSpinBox()
-        self._max_w.setRange(0, 99999)
-        self._max_w.setValue(1920)
-        self._max_w.setSpecialValueText("--")
+        self._max_w = self._max_side_spin(1920)
         rlay.addWidget(self._max_w)
         rlay.addWidget(QLabel(self._lang.get("batch_export_max_height", "Max Height:")))
-        self._max_h = QSpinBox()
-        self._max_h.setRange(0, 99999)
-        self._max_h.setValue(1080)
-        self._max_h.setSpecialValueText("--")
+        self._max_h = self._max_side_spin(1080)
         rlay.addWidget(self._max_h)
-        layout.addWidget(resize_grp)
+        return resize_grp
 
-        # Watermark
+    def _build_watermark_group(self) -> QGroupBox:
+        """Checkable (off) group: watermark text, corner (bottom-right) and opacity."""
         wm_grp = QGroupBox(self._lang.get("watermark_title", "Watermark"))
         wm_grp.setCheckable(True)
         wm_grp.setChecked(False)
@@ -222,7 +250,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         wm_text_row = QHBoxLayout()
         wm_text_row.addWidget(QLabel(self._lang.get("watermark_text", "Text:")))
         self._wm_text = QLineEdit()
-        self._wm_text.setPlaceholderText("\u00a9 Your name")
+        self._wm_text.setPlaceholderText("© Your name")
         wm_text_row.addWidget(self._wm_text, 1)
         wm_layout.addLayout(wm_text_row)
         wm_opts_row = QHBoxLayout()
@@ -238,39 +266,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._wm_opacity.setValue(60)
         wm_opts_row.addWidget(self._wm_opacity, 1)
         wm_layout.addLayout(wm_opts_row)
-        layout.addWidget(wm_grp)
-
-        # Output dir
-        dir_row = QHBoxLayout()
-        self._dir_edit = QLineEdit()
-        if self._paths:
-            self._dir_edit.setText(str(Path(self._paths[0]).parent))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        dir_row.addWidget(self._dir_edit, 1)
-        dir_row.addWidget(browse_btn)
-        layout.addLayout(dir_row)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.setVisible(False)
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        # Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self._on_cancel)
-        self._export_btn = QPushButton(self._lang.get("batch_export_start", "Export"))
-        self._export_btn.clicked.connect(self._do_export)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._export_btn)
-        layout.addLayout(btn_row)
-
-        self._on_format_changed()
+        return wm_grp
 
     def _on_format_changed(self, _text=None):
         visible = self._fmt_combo.currentText() in QUALITY_FORMATS

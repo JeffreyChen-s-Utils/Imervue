@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `305913f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `8118c00` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 765 | 126,048 |
+| `tests/` | 766 | 126,200 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,965 |
-| `Imervue/gui/` | 159 | 32,594 |
+| `Imervue/gui/` | 159 | 32,590 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,767 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,566** | **300,411** |
+| **總計** | **1,567** | **300,559** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,974 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,970 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -514,7 +514,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,594 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,590 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -594,7 +594,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(361) · `batch_export_dialog.py`(393) · `export_dialog.py`(248) ·
+`batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(248) ·
 `optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(392) · `contact_sheet_dialog.py`(199) ·
 `web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(535) ·
 `duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-765 個檔、126,048 行。`pyproject.toml` 定義三個互斥層級 marker：
+766 個檔、126,200 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
