@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from safety_review import _constants, _detection, _runner, _workers
+from safety_review import _censor_core, _constants, _detection, _runner, _workers
 
 
 # ---------------------------------------------------------------------------
@@ -92,22 +92,22 @@ def test_required_packages_auto_is_union_without_duplicates():
 # ---------------------------------------------------------------------------
 
 def test_boxes_overlap():
-    assert _detection._boxes_overlap((0, 0, 10, 10), (5, 5, 15, 15)) is True
-    assert _detection._boxes_overlap((0, 0, 10, 10), (10, 10, 20, 20)) is False
+    assert _censor_core._boxes_overlap((0, 0, 10, 10), (5, 5, 15, 15)) is True
+    assert _censor_core._boxes_overlap((0, 0, 10, 10), (10, 10, 20, 20)) is False
 
 
 def test_bridge_box_side_by_side_spans_x_over_shared_y_band():
     # y-overlap band [5,20] × full x-span [0,44] — not the full bounding box,
     # so the empty corners a union would add are avoided.
-    assert _detection._bridge_box((0, 0, 20, 20), (24, 5, 44, 25)) == (0, 5, 44, 20)
+    assert _censor_core._bridge_box((0, 0, 20, 20), (24, 5, 44, 25)) == (0, 5, 44, 20)
 
 
 def test_bridge_box_stacked_spans_y_over_shared_x_band():
-    assert _detection._bridge_box((0, 0, 20, 20), (5, 24, 25, 44)) == (5, 0, 20, 44)
+    assert _censor_core._bridge_box((0, 0, 20, 20), (5, 24, 25, 44)) == (5, 0, 20, 44)
 
 
 def test_bridge_box_diagonal_falls_back_to_bounding_box():
-    assert _detection._bridge_box((0, 0, 10, 10), (20, 20, 30, 30)) == (0, 0, 30, 30)
+    assert _censor_core._bridge_box((0, 0, 10, 10), (20, 20, 30, 30)) == (0, 0, 30, 30)
 
 
 def test_junction_bridges_only_for_near_separate_pairs():
@@ -202,22 +202,22 @@ def test_censor_blur_runs_on_region():
 # ---------------------------------------------------------------------------
 
 def test_region_mask_rect_is_none():
-    assert _detection._region_mask(20, 20, _constants.SHAPE_RECT) is None
+    assert _censor_core._region_mask(20, 20, _constants.SHAPE_RECT) is None
 
 
 def test_region_mask_ellipse_clears_corners():
-    mask = _detection._region_mask(20, 20, _constants.SHAPE_ELLIPSE)
+    mask = _censor_core._region_mask(20, 20, _constants.SHAPE_ELLIPSE)
     assert mask.getpixel((10, 10)) == 255   # centre inside the ellipse
     assert mask.getpixel((0, 0)) == 0       # corner outside
 
 
 def test_region_mask_precise_uses_supplied_mask():
-    seg = _detection._ellipse_mask(20, 20)
-    assert _detection._region_mask(20, 20, _constants.SHAPE_PRECISE, seg) is seg
+    seg = _censor_core._ellipse_mask(20, 20)
+    assert _censor_core._region_mask(20, 20, _constants.SHAPE_PRECISE, seg) is seg
 
 
 def test_region_mask_precise_without_mask_falls_back_to_ellipse():
-    mask = _detection._region_mask(20, 20, _constants.SHAPE_PRECISE, None)
+    mask = _censor_core._region_mask(20, 20, _constants.SHAPE_PRECISE, None)
     assert mask.getpixel((10, 10)) == 255
     assert mask.getpixel((0, 0)) == 0
 
@@ -226,33 +226,33 @@ def test_ellipse_mask_inset_pulls_in_from_the_edges():
     # The default inset ellipse no longer reaches the box edge midpoints — the
     # region a full inscribed ellipse would still cover — while the centre stays
     # censored. This is what makes "Ellipse (tighter)" actually tighter.
-    mask = _detection._ellipse_mask(100, 100)
+    mask = _censor_core._ellipse_mask(100, 100)
     assert mask.getpixel((50, 50)) == 255    # centre still covered
     assert mask.getpixel((50, 2)) == 0       # near the top edge → now clear
     assert mask.getpixel((2, 50)) == 0       # near the left edge → now clear
 
 
 def test_ellipse_mask_covers_less_area_than_the_full_inscribed_ellipse():
-    inset = int(np.asarray(_detection._ellipse_mask(100, 100)).sum())
-    full = int(np.asarray(_detection._ellipse_mask(100, 100, cover=1.0)).sum())
+    inset = int(np.asarray(_censor_core._ellipse_mask(100, 100)).sum())
+    full = int(np.asarray(_censor_core._ellipse_mask(100, 100, cover=1.0)).sum())
     assert 0 < inset < full
 
 
 def test_ellipse_mask_cover_is_clamped_and_centre_always_set():
     # cover above 1 clamps to the full inscribed ellipse; a degenerate cover
     # clamps up to the 0.05 floor rather than producing an empty mask.
-    assert np.asarray(_detection._ellipse_mask(40, 40, cover=5.0)).sum() > 0
-    assert np.asarray(_detection._ellipse_mask(40, 40, cover=0.0)).sum() > 0
+    assert np.asarray(_censor_core._ellipse_mask(40, 40, cover=5.0)).sum() > 0
+    assert np.asarray(_censor_core._ellipse_mask(40, 40, cover=0.0)).sum() > 0
 
 
 def test_ellipse_mask_one_pixel_box_is_filled_solid():
     # A 1-px region can't inscribe an ellipse → the guard fills it solid so the
     # pixel is still censored instead of being left clear.
-    assert _detection._ellipse_mask(1, 1).getpixel((0, 0)) == 255
+    assert _censor_core._ellipse_mask(1, 1).getpixel((0, 0)) == 255
 
 
 def test_ellipse_mask_one_pixel_tall_strip_is_filled_solid():
-    mask = _detection._ellipse_mask(100, 1)
+    mask = _censor_core._ellipse_mask(100, 1)
     assert mask.getpixel((0, 0)) == 255
     assert mask.getpixel((99, 0)) == 255
 
@@ -291,7 +291,7 @@ def test_censor_precise_confines_to_segmentation_mask():
 def test_crop_seg_mask_handles_none_and_missing():
     assert _detection._crop_seg_mask(None, 0, (0, 0, 4, 4)) is None
     assert _detection._crop_seg_mask([None], 0, (0, 0, 4, 4)) is None
-    full = _detection._ellipse_mask(20, 20)
+    full = _censor_core._ellipse_mask(20, 20)
     cropped = _detection._crop_seg_mask([full], 0, (0, 0, 10, 10))
     assert cropped.size == (10, 10)
 
@@ -671,7 +671,7 @@ def test_detect_image_mode_collapses_near_identical_shades(tmp_path, monkeypatch
     """Two tones that differ only below the quantization step count as
     ONE colour. Pins the 3-bit bucketing that decides the heuristic —
     a counting rewrite that dropped it would read this as two."""
-    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    monkeypatch.setattr(_censor_core, "_ANIME_COLOR_THRESHOLD", 2)
     src = _write_two_tone(tmp_path / "shades.png", (40, 40, 40), (42, 41, 44))
     assert _detection._detect_image_mode(str(src)) == _constants.MODE_ANIME
 
@@ -680,14 +680,14 @@ def test_detect_image_mode_counts_distinct_shades_separately(tmp_path, monkeypat
     """Same shape, but the tones land in different buckets — two
     colours, which the lowered threshold now reads as a photo. The
     boundary is ``<``, so equal-to-threshold is REAL."""
-    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    monkeypatch.setattr(_censor_core, "_ANIME_COLOR_THRESHOLD", 2)
     src = _write_two_tone(tmp_path / "tones.png", (40, 40, 40), (200, 100, 50))
     assert _detection._detect_image_mode(str(src)) == _constants.MODE_REAL
 
 
 def test_detect_image_mode_single_colour_is_below_any_threshold(tmp_path, monkeypatch):
     """Boundary just inside: one colour against a threshold of 2."""
-    monkeypatch.setattr(_detection, "_ANIME_COLOR_THRESHOLD", 2)
+    monkeypatch.setattr(_censor_core, "_ANIME_COLOR_THRESHOLD", 2)
     src = _write_two_tone(tmp_path / "solid.png", (40, 40, 40), (40, 40, 40))
     assert _detection._detect_image_mode(str(src)) == _constants.MODE_ANIME
 
@@ -953,7 +953,7 @@ def test_runner_censor_ellipse_spares_corner(tmp_path):
     # The frozen-env runner mirrors the ellipse confinement (precise → ellipse).
     img = Image.new("RGB", (50, 50), (10, 200, 40))
     _runner._censor_region(img, 10, 10, 40, 40, 4,
-                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_ELLIPSE)
+                           style=_constants.STYLE_BLACK, shape=_constants.SHAPE_ELLIPSE)
     assert img.getpixel((25, 25)) == (0, 0, 0)        # centre censored
     assert img.getpixel((11, 11)) == (10, 200, 40)    # corner spared
 
@@ -961,7 +961,7 @@ def test_runner_censor_ellipse_spares_corner(tmp_path):
 def test_runner_censor_precise_degrades_to_ellipse(tmp_path):
     img = Image.new("RGB", (50, 50), (10, 200, 40))
     _runner._censor_region(img, 10, 10, 40, 40, 4,
-                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_PRECISE)
+                           style=_constants.STYLE_BLACK, shape=_constants.SHAPE_PRECISE)
     assert img.getpixel((25, 25)) == (0, 0, 0)
     assert img.getpixel((11, 11)) == (10, 200, 40)   # ellipse fallback spares corner
 
@@ -969,7 +969,7 @@ def test_runner_censor_precise_degrades_to_ellipse(tmp_path):
 def test_runner_censor_rect_fills_whole_box(tmp_path):
     img = Image.new("RGB", (50, 50), (10, 200, 40))
     _runner._censor_region(img, 10, 10, 40, 40, 4,
-                           style=_runner.STYLE_BLACK, shape=_runner.SHAPE_RECT)
+                           style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT)
     assert img.getpixel((11, 11)) == (0, 0, 0)
 
 
