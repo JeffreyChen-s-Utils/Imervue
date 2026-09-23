@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-75 | 2026-09-23 | Resync every line count in the architecture map; flag six near-limit modules | #docs #architecture | [2026-09](2026-09.md) |
 | U-20260923-74 | 2026-09-23 | Split the main window's closeEvent (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-73 | 2026-09-23 | Split DuplicateDetectionDialog._build_ui (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-72 | 2026-09-23 | Build the CLI parser from a subcommand table (#19) | #refactor #cli | [2026-09](2026-09.md) |

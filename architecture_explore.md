@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `00ae9c4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `eb8116a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -215,46 +215,46 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `app_paths.py` | 110 | 凍結環境安全的路徑解析（icon / plugins / 設定檔），PyInstaller & Nuitka 都適用 |
+| `app_paths.py` | 109 | 凍結環境安全的路徑解析（icon / plugins / 設定檔），PyInstaller & Nuitka 都適用 |
 | `clipboard_monitor.py` | 136 | ShareX 式剪貼簿監聽：PrintScreen 截圖 → 自動開啟註解視窗 |
-| `error_report.py` | 146 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
-| `file_association.py` | 240 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
-| `file_tree_watcher.py` | 172 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
+| `error_report.py` | 145 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
+| `file_association.py` | 239 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
+| `file_tree_watcher.py` | 171 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
 | `qimage_convert.py` | 33 | `pil_to_qimage()` / `qimage_to_pil()`：經 RGBA8888 並複製緩衝區的雙向轉換（標註與剪貼簿共用） |
 | `log_setup.py` | 83 | 集中式 logging 設定：`setup_logging()`（可重複呼叫；`app_dir()` 不可寫時退到使用者目錄；凍結時不掛 stderr handler）與 `install_exception_logging()` |
-| `macos_bundle.py` | 67 | macOS `.app` Info.plist 文件型別關聯 |
-| `onboarding.py` | 82 | 首次啟動導覽步驟註冊表 |
-| `release_notes.py` | 112 | What's-New 對話框的版本說明資料 |
-| `theme_color_math.py` | 92 | WCAG 對比度數學，供主題撰寫與無障礙稽核 |
-| `themes.py` | 176 | 內建配色主題 |
-| `trash_ops.py` | 200 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
-| `ui_scale.py` | 62 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
-| `watch_folder.py` | 141 | 監控資料夾自動化：新檔案進來自動套用動作 |
+| `macos_bundle.py` | 66 | macOS `.app` Info.plist 文件型別關聯 |
+| `onboarding.py` | 81 | 首次啟動導覽步驟註冊表 |
+| `release_notes.py` | 111 | What's-New 對話框的版本說明資料 |
+| `theme_color_math.py` | 91 | WCAG 對比度數學，供主題撰寫與無障礙稽核 |
+| `themes.py` | 175 | 內建配色主題 |
+| `trash_ops.py` | 199 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
+| `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
+| `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
 ### 6.3 `Imervue/user_settings/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `user_setting_dict.py` | 338 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`） |
-| `bookmark.py` | 91 | 跨資料夾書籤 / 收藏集合 |
-| `code_replacements.py` | 70 | 片語展開（caption、keyword 用的縮寫） |
-| `color_labels.py` | 121 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
-| `metadata_template.py` | 73 | IPTC/XMP 欄位範本（stationery pad） |
-| `recent_image.py` | 66 | 最近資料夾 / 圖片追蹤，上限由設定控制 |
-| `tag_validator.py` | 107 | 標籤 / 相簿集合的完整性檢查與清理 |
-| `tags.py` | 134 | 自訂標籤與虛擬相簿管理 |
+| `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
+| `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
+| `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
+| `metadata_template.py` | 72 | IPTC/XMP 欄位範本（stationery pad） |
+| `recent_image.py` | 65 | 最近資料夾 / 圖片追蹤，上限由設定控制 |
+| `tag_validator.py` | 106 | 標籤 / 相簿集合的完整性檢查與清理 |
+| `tags.py` | 133 | 自訂標籤與虛擬相簿管理 |
 
 ### 6.4 `Imervue/multi_language/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `language_wrapper.py` | 87 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
+| `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
 | `english.py` | 2,235 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
 | `traditional_chinese.py` | 2,200 | 繁體中文 |
 | `chinese.py` | 2,201 | 簡體中文 |
 | `japanese.py` | 2,214 | 日文 |
 | `korean.py` | 2,212 | 韓文 |
-| `translation_validation.py` | 157 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
+| `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
 
@@ -262,33 +262,33 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `session_manager.py` | 248 | Session / Workspace 存檔與還原（開啟的資料夾、圖片、視圖狀態） |
-| `session_migration.py` | 134 | `.imervue-session.json` 的驗證、版本遷移與合併 |
-| `folder_session.py` | 39 | 每資料夾視圖 session 的純函式助手 |
+| `session_manager.py` | 247 | Session / Workspace 存檔與還原（開啟的資料夾、圖片、視圖狀態） |
+| `session_migration.py` | 133 | `.imervue-session.json` 的驗證、版本遷移與合併 |
+| `folder_session.py` | 38 | 每資料夾視圖 session 的純函式助手 |
 
 ### 6.6 `Imervue/macros/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `macro_manager.py` | 300 | 巨集錄製 / 重播：把一批動作套用到選取集 |
-| `macro_step_validator.py` | 112 | 錄下來的巨集步驟驗證與整理 |
+| `macro_manager.py` | 299 | 巨集錄製 / 重播：把一批動作套用到選取集 |
+| `macro_step_validator.py` | 111 | 錄下來的巨集步驟驗證與整理 |
 
 ### 6.7 `Imervue/external/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `editors.py` | 104 | 外部編輯器啟動器。設定存在 `user_setting_dict["external_editors"]`，以非阻塞 `subprocess.Popen` 啟動 |
+| `editors.py` | 103 | 外部編輯器啟動器。設定存在 `user_setting_dict["external_editors"]`，以非阻塞 `subprocess.Popen` 啟動 |
 
 ### 6.8 `Imervue/export/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `contact_sheet.py` | 187 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab） |
-| `contact_sheet_layouts.py` | 56 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
-| `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依） |
-| `gallery_sort.py` | 76 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
-| `slideshow_mp4.py` | 141 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
-| `slideshow_effects.py` | 102 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
+| `contact_sheet_layouts.py` | 55 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
+| `web_gallery.py` | 261 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依） |
+| `gallery_sort.py` | 75 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
+| `slideshow_mp4.py` | 140 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
+| `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
 | `cheat_sheet.py` | 237 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
 | `pdf_output.py` | 21 | `begin_pdf_painter`：在 `QPdfWriter` 上開啟 `QPainter`，目標無法寫入時丟 `OSError`（`QPdfWriter` 本身不丟例外，只讓 `begin` 回傳 `False`） |
 
@@ -301,89 +301,89 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `recipe.py` | 599 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`，以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效） |
+| `recipe.py` | 598 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`，以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效） |
 | `recipe_store.py` | 374 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體） |
-| `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
-| `recipe_diff.py` | 64 | 兩個 recipe 的 diff 與選擇性合併 |
-| `develop_presets.py` | 103 | 具名顯影預設與批次 recipe 同步 |
+| `recipe_adjustments.py` | 124 | `Recipe.apply` 用到的逐通道色調調整 |
+| `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
+| `develop_presets.py` | 102 | 具名顯影預設與批次 recipe 同步 |
 
 #### 色調 / 顏色
 
-`curves.py`(246) 曲線 · `tone_curve.py`(153) flag-based 曲線 · `levels.py`(96) 黑白場+gamma ·
-`channel_mixer.py`(130) 3×3 矩陣 · `hsl_mixer.py`(110) 分頻 HSL · `split_toning.py`(68) ·
-`gradient_map.py`(170) · `gradient_perceptual.py`(145) OkLab/OkLCH 感知混色 ·
-`colormap.py`(64) 科學色階 · `lut.py`(238) Adobe `.cube` 讀取與套用 ·
-`auto_color_balance.py`(191) 四種自動白平衡 · `posterize.py`(131) · `solarize.py`(52) ·
-`velvia.py`(66) 亮度加權飽和 · `film_negative.py`(68) 負片轉正 · `filmic_tonemap.py`(95) ·
-`tone_equalizer.py`(81) 分區曝光 · `soft_proof.py`(66) ICC 軟打樣 + 色域外標示
+`curves.py`(245) 曲線 · `tone_curve.py`(152) flag-based 曲線 · `levels.py`(95) 黑白場+gamma ·
+`channel_mixer.py`(129) 3×3 矩陣 · `hsl_mixer.py`(109) 分頻 HSL · `split_toning.py`(67) ·
+`gradient_map.py`(169) · `gradient_perceptual.py`(144) OkLab/OkLCH 感知混色 ·
+`colormap.py`(63) 科學色階 · `lut.py`(237) Adobe `.cube` 讀取與套用 ·
+`auto_color_balance.py`(190) 四種自動白平衡 · `posterize.py`(130) · `solarize.py`(51) ·
+`velvia.py`(65) 亮度加權飽和 · `film_negative.py`(67) 負片轉正 · `filmic_tonemap.py`(94) ·
+`tone_equalizer.py`(80) 分區曝光 · `soft_proof.py`(65) ICC 軟打樣 + 色域外標示
 
 #### 局部對比 / 細節 / 銳利化 / 降噪
 
-`local_contrast.py`(101) clarity+texture · `clahe.py`(107) · `detail_equalizer.py`(76) 分尺度對比 ·
-`denoise.py`(84) · `dehaze.py`(85) 暗通道先驗 · `defringe.py`(86) 邊緣色散 ·
-`frequency_separation.py`(125) 高低頻分離 · `focus_peaking.py`(64) · `sharpness.py`(54) ·
-`flatten_field.py`(98) 去漸層（光害/暗角）
+`local_contrast.py`(100) clarity+texture · `clahe.py`(106) · `detail_equalizer.py`(75) 分尺度對比 ·
+`denoise.py`(83) · `dehaze.py`(84) 暗通道先驗 · `defringe.py`(85) 邊緣色散 ·
+`frequency_separation.py`(124) 高低頻分離 · `focus_peaking.py`(63) · `sharpness.py`(53) ·
+`flatten_field.py`(97) 去漸層（光害/暗角）
 
 #### 幾何 / 變形
 
-`geometry.py`(151) 裁切+校正+透視 · `crop_geometry.py`(76) 純裁切幾何+三分線 ·
-`auto_straighten.py`(93) Hough 水平線偵測 · `lens_correction.py`(151) 畸變/暗角/色差 ·
-`distort.py`(66) swirl/pinch/ripple · `polar.py`(69) 極座標 · `kaleidoscope.py`(67) ·
-`equirectangular.py`(78) 360° tiny planet · `resample.py`(44) 共用反向映射重採樣 ·
-`orientation.py`(56) EXIF orientation 烘焙
+`geometry.py`(150) 裁切+校正+透視 · `crop_geometry.py`(75) 純裁切幾何+三分線 ·
+`auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
+`distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
+`equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
+`orientation.py`(55) EXIF orientation 烘焙
 
 #### 藝術效果 / 疊加
 
-`film_grain.py`(147) · `lens_flare.py`(166) · `glow.py`(71) Orton bloom · `emboss.py`(86) ·
-`frosted_glass.py`(50) · `dither.py`(57) Bayer · `pixel_sort.py`(59) · `graduated_density.py`(104) ND 漸層 ·
-`false_color.py`(57) 曝光分區上色 · `meme.py`(101) · `photo_frame.py`(68) 相框/拍立得/說明文字 ·
-`watermark.py`(138) · `scale_bar.py`(72) 比例尺 · `test_charts.py`(76) 校正圖表產生
+`film_grain.py`(146) · `lens_flare.py`(165) · `glow.py`(70) Orton bloom · `emboss.py`(85) ·
+`frosted_glass.py`(49) · `dither.py`(56) Bayer · `pixel_sort.py`(58) · `graduated_density.py`(103) ND 漸層 ·
+`false_color.py`(56) 曝光分區上色 · `meme.py`(100) · `photo_frame.py`(67) 相框/拍立得/說明文字 ·
+`watermark.py`(137) · `scale_bar.py`(71) 比例尺 · `test_charts.py`(75) 校正圖表產生
 
 #### 多影像合成
 
-`hdr_merge.py`(119) · `panorama.py`(84)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
-`stack_blend.py`(119) 統計堆疊 · `collage.py`(65) · `anaglyph.py`(80) 紅藍 3D ·
-`deflicker.py`(109) 縮時去閃 · `id_photo_sheet.py`(73) 證件照拼版 · `print_layout.py`(112) ·
-`multipage.py`(73) 多頁 PDF/TIFF 合併與拆分
+`hdr_merge.py`(118) · `panorama.py`(83)（包 OpenCV `Stitcher`） · `focus_stack.py`(121) ·
+`stack_blend.py`(118) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
+`deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(111) ·
+`multipage.py`(72) 多頁 PDF/TIFF 合併與拆分
 
 #### 遮罩 / 修補 / 圖層
 
-`masks.py`(297) 筆刷/放射/線性遮罩 · `layers.py`(255) 疊加圖層合成 · `healing.py`(104) OpenCV inpaint ·
-`clone_stamp.py`(138) · `inpaint.py`(55) 無模型擴散修補 · `segmentation.py`(131) 天空/前景/背景遮罩 ·
-`saliency.py`(171) 啟發式顯著性 + 三分法裁切建議
+`masks.py`(296) 筆刷/放射/線性遮罩 · `layers.py`(254) 疊加圖層合成 · `healing.py`(103) OpenCV inpaint ·
+`clone_stamp.py`(137) · `inpaint.py`(54) 無模型擴散修補 · `segmentation.py`(130) 天空/前景/背景遮罩 ·
+`saliency.py`(170) 啟發式顯著性 + 三分法裁切建議
 
 #### 二值化 / 文件
 
-`binarize.py`(50) Sauvola · `otsu.py`(60) · `steganography.py`(76) LSB 隱寫 ·
-`ela.py`(54) 錯誤層級分析 · `copy_move.py`(85) 複製貼上偽造偵測
+`binarize.py`(49) Sauvola · `otsu.py`(59) · `steganography.py`(75) LSB 隱寫 ·
+`ela.py`(53) 錯誤層級分析 · `copy_move.py`(84) 複製貼上偽造偵測
 
 #### I/O、格式與快取
 
-`raw_loader.py`(125) 省記憶體 RAW 載入 · `heif_support.py`(61) · `jxl_support.py`(51) ·
-`save_formats.py`(97) 輸出格式中繼資料 · `optimize.py`(74) 目標檔案大小編碼 ·
-`export_presets.py`(95) 匯出預設包 · `video_frames.py`(232) 影片解碼原語（瀏覽器與外掛共用） ·
-`pyramid.py`(39) `DeepZoomImage` 金字塔 · `tile_manager.py`(95) 圖磚 LRU 快取與淘汰 ·
-`thumbnail_disk_cache.py`(234) 縮圖磁碟快取 · `folder_index.py`(60) 每資料夾圖片清單快取 ·
+`raw_loader.py`(124) 省記憶體 RAW 載入 · `heif_support.py`(60) · `jxl_support.py`(50) ·
+`save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
+`export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
+`pyramid.py`(38) `DeepZoomImage` 金字塔 · `tile_manager.py`(94) 圖磚 LRU 快取與淘汰 ·
+`thumbnail_disk_cache.py`(234) 縮圖磁碟快取 · `folder_index.py`(59) 每資料夾圖片清單快取 ·
 `read_errors.py`(14) `IMAGE_READ_ERRORS`：Pillow 讀圖失敗會丟的例外（`OSError`、`ValueError`、`DecompressionBombError`）
 
 #### 中繼資料
 
-`xmp_sidecar.py`(387) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(77) XMP↔EXIF 評分調和 ·
-`gps.py`(87) EXIF GPS 擷取 · `gps_geotag.py`(63) 寫入 · `reverse_geocode.py`(152) 離線逆地理編碼 ·
-`geo_keywords.py`(46) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
-`annotations.py`(271) JSON sidecar 註解 · `info.py`(189) 圖片資訊組裝與對話框
+`xmp_sidecar.py`(386) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
+`gps.py`(86) EXIF GPS 擷取 · `gps_geotag.py`(62) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
+`geo_keywords.py`(45) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
+`annotations.py`(270) JSON sidecar 註解 · `info.py`(189) 圖片資訊組裝與對話框
 
 #### 分析 / 品質
 
-`histogram.py`(104) · `statistics.py`(66) 逐通道統計 + CSV · `scopes.py`(67) 波形/RGB parade ·
-`quality_metrics.py`(89) 無參考品質 · `quality_score.py`(63) 篩選用技術評分 ·
-`perceptual_hash.py`(135) pHash 與近似重複分組
+`histogram.py`(103) · `statistics.py`(65) 逐通道統計 + CSV · `scopes.py`(66) 波形/RGB parade ·
+`quality_metrics.py`(88) 無參考品質 · `quality_score.py`(62) 篩選用技術評分 ·
+`perceptual_hash.py`(134) pHash 與近似重複分組
 
 #### 其他
 
-`browser_state.py`(403) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
-`batch_move_planner.py`(105) 無碰撞批次搬移規劃 · `animation_edit.py`(96) GIF/APNG 反轉/回力鏢/速度 ·
-`caption.py`(92) 本地視覺 LLM 產生 alt-text · `ocr.py`(143) Tesseract · `portrait_retouch.py`(178) ·
+`browser_state.py`(402) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
+`batch_move_planner.py`(104) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
+`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(142) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
 
 ### 6.10 `Imervue/gpu_image_view/`
@@ -395,25 +395,25 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 975 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `gpu_image_view.py` | 996 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
 | `deep_zoom_loading.py` | 297 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 113 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
 | `gl_renderer.py` | 346 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
-| `tile_grid_renderer.py` | 280 | 縮圖牆 GL 繪製 |
-| `deep_zoom_renderer.py` | 281 | Deep-zoom 圖磚 + minimap GL 繪製 |
+| `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製 |
+| `deep_zoom_renderer.py` | 280 | Deep-zoom 圖磚 + minimap GL 繪製 |
 | `overlay_painter.py` | 963 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、badge、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`） |
-| `texture_upload.py` | 163 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
-| `pbo_uploader.py` | 244 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
-| `gl_context.py` | 54 | 判斷在 `paintGL` 之外釋放材質時是否需要先 make-current |
+| `texture_upload.py` | 162 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
+| `pbo_uploader.py` | 243 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
+| `gl_context.py` | 53 | 判斷在 `paintGL` 之外釋放材質時是否需要先 make-current |
 
 #### 視圖數學（純函式，可無 GL 測試）
 
-`viewport_math.py`(52) 螢幕↔影像座標 · `view_nav.py`(134) · `fit_view.py`(235) fit window/width/height ·
-`view_state.py`(117) 每圖縮放記憶 + 隨機跳圖 · `view_animator.py`(207) 緩動（淡入、縮放、慣性平移）·
-`minimap.py`(109) · `tile_layout.py`(116) 格線佈局 · `tile_focus.py`(114) 鍵盤焦點游標 ·
-`filmstrip.py`(106) 底部縮圖帶佈局 · `video_badge.py`(58) ▶ 播放徽章幾何 ·
+`viewport_math.py`(51) 螢幕↔影像座標 · `view_nav.py`(133) · `fit_view.py`(234) fit window/width/height ·
+`view_state.py`(116) 每圖縮放記憶 + 隨機跳圖 · `view_animator.py`(206) 緩動（淡入、縮放、慣性平移）·
+`minimap.py`(108) · `tile_layout.py`(115) 格線佈局 · `tile_focus.py`(113) 鍵盤焦點游標 ·
+`filmstrip.py`(105) 底部縮圖帶佈局 · `video_badge.py`(57) ▶ 播放徽章幾何 ·
 `osd_text.py`(118) OSD／Debug HUD 的文字（檔案大小、EXIF 行）· `hud_geometry.py`(71) hover HUD 與放大鏡的擺放與取樣範圍 ·
 `screen_fit`(在 `gui/`) 與 `settle_poll`(在 `gui/`) 配合處理跨螢幕重排
 
@@ -421,60 +421,60 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `input_controller.py` | 430 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
-| `key_input_handler.py` | 269 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
-| `key_action_dispatcher.py` | 351 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
-| `browse_features.py` | 196 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
-| `history_controller.py` | 120 | Alt+←/→ 瀏覽歷史堆疊 |
-| `drop_handler.py` | 76 | 拖放檔案/資料夾開啟 |
+| `input_controller.py` | 429 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
+| `key_input_handler.py` | 268 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
+| `key_action_dispatcher.py` | 350 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
+| `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
+| `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
+| `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
 | `clipboard_paste.py` | 96 | 剪貼簿貼上圖片並插入模型 |
-| `hover_preview_binding.py` | 56 | 縮圖懸停預覽彈窗綁定 |
-| `cull_actions.py` | 110 | 色標籤與 pick/reject 挑片狀態套用 |
-| `status_info.py` | 77 | 狀態列欄位組裝 |
+| `hover_preview_binding.py` | 55 | 縮圖懸停預覽彈窗綁定 |
+| `cull_actions.py` | 109 | 色標籤與 pick/reject 挑片狀態套用 |
+| `status_info.py` | 76 | 狀態列欄位組裝 |
 
 #### 資源管理與效能
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `tile_loader.py` | 551 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併 |
-| `tile_textures.py` | 139 | 圖磚 GPU 材質配置與 VRAM 預算淘汰 |
-| `tile_wall_loading.py` | 100 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
-| `prefetch_scheduler.py` | 177 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
-| `deep_zoom_priority.py` | 41 | 圖磚渲染優先權 |
-| `vram_budget.py` | 68 | 純函式：使用者覆寫值 + 夾限策略 |
-| `vram_detect.py` | 102 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
-| `memory_pressure.py` | 241 | 狀態列記憶體壓力指示器（綠/黃/紅 + 百分比，點擊清快取） |
-| `worker_pools.py` | 111 | 執行緒池分池策略：縮圖爆量不再和 deep-zoom worker 搶資源 |
-| `signal_coalescer.py` | 90 | 次幀 signal 合併，避免 N 個縮圖回呼各觸發一次進度更新 |
-| `cvd_view_mode.py` | 99 | 色覺障礙模擬（view-time 模組級開關，載入時套用） |
+| `tile_loader.py` | 550 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併 |
+| `tile_textures.py` | 138 | 圖磚 GPU 材質配置與 VRAM 預算淘汰 |
+| `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
+| `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
+| `deep_zoom_priority.py` | 40 | 圖磚渲染優先權 |
+| `vram_budget.py` | 67 | 純函式：使用者覆寫值 + 夾限策略 |
+| `vram_detect.py` | 101 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
+| `memory_pressure.py` | 240 | 狀態列記憶體壓力指示器（綠/黃/紅 + 百分比，點擊清快取） |
+| `worker_pools.py` | 110 | 執行緒池分池策略：縮圖爆量不再和 deep-zoom worker 搶資源 |
+| `signal_coalescer.py` | 89 | 次幀 signal 合併，避免 N 個縮圖回呼各觸發一次進度更新 |
+| `cvd_view_mode.py` | 98 | 色覺障礙模擬（view-time 模組級開關，載入時套用） |
 
 #### `gpu_image_view/images/` — 載入層
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 486 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口 |
+| `image_loader.py` | 485 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口 |
 | `load_thumbnail_worker.py` | 167 | 單張縮圖解碼 `QRunnable` |
-| `image_model.py` | 25 | `ImageModel`：目前資料夾的圖片路徑清單 |
-| `prefetch.py` | 179 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
+| `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
+| `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
 
 #### `gpu_image_view/actions/` — 檢視器動作
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `delete.py` | 222 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
+| `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
 | `batch_ops.py` | 312 | 批次重新命名 / 移動 / 複製 / 旋轉 |
 | `compare_dialog.py` | 582 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
-| `slideshow.py` | 212 | 幻燈片播放控制器 + 對話框 |
+| `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
-| `search_dialog.py` | 281 | 檔名即時搜尋 |
-| `goto_dialog.py` | 103 | Ctrl+G 跳至第 N 張 |
+| `search_dialog.py` | 280 | 檔名即時搜尋 |
+| `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
-| `lossless_rotate.py` | 132 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose |
-| `drag_out.py` | 71 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
-| `undo_commands.py` | 83 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
-| `recipe_commands.py` | 61 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
-| `undo_coalescer.py` | 62 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
+| `lossless_rotate.py` | 131 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose |
+| `drag_out.py` | 70 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
+| `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
+| `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
+| `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
 
 ### 6.11 `Imervue/library/`
 
@@ -482,37 +482,37 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_index.py` | 667 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
-| `scanner.py` | 178 | 背景掃描器，走訪 library roots 填索引 |
-| `maintenance.py` | 55 | 索引與檔案系統對帳 |
-| `smart_album.py` | 349 | Smart Albums：保存查詢並重新套用 |
-| `search_query.py` | 216 | 自由文字查詢 → Smart Album 規則 |
-| `album_io.py` | 75 | Smart Album 匯出 / 匯入為可攜 JSON |
-| `clip_search.py` | 365 | CLIP 語意搜尋（「找出符合這句話的照片」） |
-| `auto_tag.py` | 111 | 啟發式內容分類 + 選用 CLIP ONNX |
-| `phash.py` | 84 | 64-bit DCT pHash |
-| `bloom_filter.py` | 151 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
-| `dedupe_resolver.py` | 61 | 從一組重複中挑出該保留的那張 |
-| `stacks.py` | 90 | RAW + JPEG 配對堆疊 |
-| `events.py` | 90 | 依拍攝時間間隔把照片分成「事件」 |
-| `calendar_index.py` | 159 | 依拍攝日分桶，供 Calendar View |
-| `capture_time.py` | 50 | 批次位移 EXIF 時間戳 |
-| `date_import.py` | 102 | 依拍攝日匯入到日期資料夾 |
-| `gpx_geotag.py` | 114 | GPX 軌跡對時取得座標 |
-| `auto_cull.py` | 58 | 依銳利度自動剔除模糊 |
-| `quality_cull.py` | 55 | 依綜合技術品質剔除 |
-| `group_cull.py` | 96 | 每組保留最佳一張 |
-| `face_clustering.py` | 79 | 人臉特徵分群 → People Albums |
-| `keyword_index.py` | 41 | XMP sidecar 關鍵字匯入索引 |
-| `keyword_vocabulary.py` | 164 | 受控詞彙展開（Photo Mechanic 式） |
-| `keyword_vocabulary_store.py` | 45 | 詞彙的設定檔儲存 |
-| `tag_relations.py` | 50 | 標籤共現 → 相關標籤建議 |
-| `metadata_audit.py` | 41 | 找出中繼資料不完整的圖片 |
-| `metadata_export.py` | 129 | 中繼資料 CSV / JSON 匯出 |
-| `collection_stats.py` | 82 | 集合的評分/收藏/色標籤/挑片統計 |
-| `reference_pins.py` | 96 | 釘選參考圖籃子 |
-| `staging_tray.py` | 120 | 跨資料夾選取籃 |
-| `token_rename.py` | 197 | Token 式批次改名 |
+| `image_index.py` | 666 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
+| `scanner.py` | 177 | 背景掃描器，走訪 library roots 填索引 |
+| `maintenance.py` | 54 | 索引與檔案系統對帳 |
+| `smart_album.py` | 348 | Smart Albums：保存查詢並重新套用 |
+| `search_query.py` | 215 | 自由文字查詢 → Smart Album 規則 |
+| `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
+| `clip_search.py` | 364 | CLIP 語意搜尋（「找出符合這句話的照片」） |
+| `auto_tag.py` | 110 | 啟發式內容分類 + 選用 CLIP ONNX |
+| `phash.py` | 83 | 64-bit DCT pHash |
+| `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
+| `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
+| `stacks.py` | 89 | RAW + JPEG 配對堆疊 |
+| `events.py` | 89 | 依拍攝時間間隔把照片分成「事件」 |
+| `calendar_index.py` | 158 | 依拍攝日分桶，供 Calendar View |
+| `capture_time.py` | 49 | 批次位移 EXIF 時間戳 |
+| `date_import.py` | 101 | 依拍攝日匯入到日期資料夾 |
+| `gpx_geotag.py` | 113 | GPX 軌跡對時取得座標 |
+| `auto_cull.py` | 57 | 依銳利度自動剔除模糊 |
+| `quality_cull.py` | 54 | 依綜合技術品質剔除 |
+| `group_cull.py` | 95 | 每組保留最佳一張 |
+| `face_clustering.py` | 78 | 人臉特徵分群 → People Albums |
+| `keyword_index.py` | 40 | XMP sidecar 關鍵字匯入索引 |
+| `keyword_vocabulary.py` | 163 | 受控詞彙展開（Photo Mechanic 式） |
+| `keyword_vocabulary_store.py` | 44 | 詞彙的設定檔儲存 |
+| `tag_relations.py` | 49 | 標籤共現 → 相關標籤建議 |
+| `metadata_audit.py` | 40 | 找出中繼資料不完整的圖片 |
+| `metadata_export.py` | 128 | 中繼資料 CSV / JSON 匯出 |
+| `collection_stats.py` | 81 | 集合的評分/收藏/色標籤/挑片統計 |
+| `reference_pins.py` | 95 | 釘選參考圖籃子 |
+| `staging_tray.py` | 119 | 跨資料夾選取籃 |
+| `token_rename.py` | 196 | Token 式批次改名 |
 
 ### 6.12 `Imervue/gui/`
 
@@ -525,8 +525,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `develop_panel.py` | 896 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 330 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 133 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
-| `annotation_canvas.py` | 844 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
-| `annotation_drawing.py` | 416 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
+| `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
+| `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 956 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
@@ -541,86 +541,86 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
-| `file_tree_view.py` | 945 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
-| `file_tree_sort.py` | 150 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
-| `folder_thumbnail_model.py` | 183 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 593 | 清單檢視（`QTableView`，縮圖牆的替代） |
-| `dual_image_view.py` | 196 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
+| `file_tree_view.py` | 947 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
+| `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
+| `folder_thumbnail_model.py` | 182 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
+| `image_list_view.py` | 592 | 清單檢視（`QTableView`，縮圖牆的替代） |
+| `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 431 | 可收合的 EXIF 側邊欄（含星等元件） |
-| `breadcrumb_bar.py` | 148 | 麵包屑路徑列 |
-| `timeline_view.py` | 365 | 時間軸檢視（年/月/日分組） |
-| `toast.py` | 97 | Toast / snackbar 通知 |
+| `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
+| `timeline_view.py` | 364 | 時間軸檢視（年/月/日分組） |
+| `toast.py` | 96 | Toast / snackbar 通知 |
 | `hover_preview.py` | 186 | 縮圖懸停放大彈窗 |
-| `image_issue_panel.py` | 143 | 圖片載入問題面板（dock） |
-| `multi_monitor_window.py` | 275 | 多螢幕鏡像視窗 |
+| `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
+| `multi_monitor_window.py` | 274 | 多螢幕鏡像視窗 |
 | `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
 | `menu_tree.py` | 59 | 不經 `QAction.menu()` 走訪選單樹（`submenu_index` / `iter_menu_actions`），見 §10.10 |
-| `modify_actions_widget.py` | 204 | 共用的 Modify 動作按鈕組（選單與右鍵共用） |
-| `main_tab_nav.py` | 48 | Modify/Paint 分頁左右鍵的純路由決策 |
-| `screen_fit.py` | 63 | 換螢幕時主視窗自適應的純幾何 |
-| `settle_poll.py` | 54 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題） |
-| `workspace_manager.py` | 155 | 具名工作區預設（幾何 + 佈局快照） |
-| `query_search.py` | 42 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 156 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用 |
+| `modify_actions_widget.py` | 203 | 共用的 Modify 動作按鈕組（選單與右鍵共用） |
+| `main_tab_nav.py` | 47 | Modify/Paint 分頁左右鍵的純路由決策 |
+| `screen_fit.py` | 62 | 換螢幕時主視窗自適應的純幾何 |
+| `settle_poll.py` | 53 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題） |
+| `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
+| `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
+| `_apply_save.py` | 155 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用 |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
-`tone_curve_dialog.py`(289) · `levels_dialog.py`(170) · `channel_mixer_dialog.py`(149) ·
-`hsl_mixer_dialog.py`(131) · `split_toning_dialog.py`(115) · `gradient_map_dialog.py`(166) ·
-`colormap_dialog.py`(92) · `lut_dialog.py`(110) · `posterize_dialog.py`(158) ·
-`solarize_dialog.py`(140) · `velvia_dialog.py`(85) · `film_negative_dialog.py`(82) ·
-`filmic_tonemap_dialog.py`(107) · `tone_equalizer_dialog.py`(97) · `detail_equalizer_dialog.py`(92) ·
-`auto_color_balance_dialog.py`(207) · `local_contrast_dialog.py`(121) · `clahe_dialog.py`(101) ·
-`defringe_dialog.py`(96) · `graduated_density_dialog.py`(96) · `soft_proof_dialog.py`(125) ·
-`develop_presets_dialog.py`(164) · `virtual_copies_dialog.py`(160) · `before_after_dialog.py`(175) 分割滑桿對照 ·
-`layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(224) 局部調整遮罩
+`tone_curve_dialog.py`(288) · `levels_dialog.py`(169) · `channel_mixer_dialog.py`(148) ·
+`hsl_mixer_dialog.py`(130) · `split_toning_dialog.py`(114) · `gradient_map_dialog.py`(165) ·
+`colormap_dialog.py`(91) · `lut_dialog.py`(110) · `posterize_dialog.py`(157) ·
+`solarize_dialog.py`(139) · `velvia_dialog.py`(84) · `film_negative_dialog.py`(81) ·
+`filmic_tonemap_dialog.py`(106) · `tone_equalizer_dialog.py`(96) · `detail_equalizer_dialog.py`(91) ·
+`auto_color_balance_dialog.py`(206) · `local_contrast_dialog.py`(120) · `clahe_dialog.py`(100) ·
+`defringe_dialog.py`(95) · `graduated_density_dialog.py`(95) · `soft_proof_dialog.py`(125) ·
+`develop_presets_dialog.py`(163) · `virtual_copies_dialog.py`(159) · `before_after_dialog.py`(174) 分割滑桿對照 ·
+`layers_dialog.py`(448) 疊加圖層堆疊管理 · `masks_dialog.py`(223) 局部調整遮罩
 
 #### 效果 / 濾鏡對話框
 
-`glow_dialog.py`(159) · `emboss_dialog.py`(97) · `film_grain_dialog.py`(136) · `lens_flare_dialog.py`(135) ·
-`frosted_glass_dialog.py`(86) · `dither_dialog.py`(92) · `distort_dialog.py`(102) · `polar_dialog.py`(81) ·
-`kaleidoscope_dialog.py`(82) · `pixel_sort_dialog.py`(107) · `meme_dialog.py`(95) ·
-`photo_frame_dialog.py`(108) · `scale_bar_dialog.py`(107) · `anaglyph_dialog.py`(110) ·
-`frequency_separation_dialog.py`(152) 輸出兩個圖層檔 · `binarize_dialog.py`(101) · `otsu_dialog.py`(90) ·
-`flatten_field_dialog.py`(96) · `test_charts_dialog.py`(102) · `steganography_dialog.py`(119)
+`glow_dialog.py`(158) · `emboss_dialog.py`(96) · `film_grain_dialog.py`(135) · `lens_flare_dialog.py`(134) ·
+`frosted_glass_dialog.py`(85) · `dither_dialog.py`(91) · `distort_dialog.py`(101) · `polar_dialog.py`(80) ·
+`kaleidoscope_dialog.py`(81) · `pixel_sort_dialog.py`(106) · `meme_dialog.py`(94) ·
+`photo_frame_dialog.py`(107) · `scale_bar_dialog.py`(106) · `anaglyph_dialog.py`(110) ·
+`frequency_separation_dialog.py`(151) 輸出兩個圖層檔 · `binarize_dialog.py`(100) · `otsu_dialog.py`(89) ·
+`flatten_field_dialog.py`(95) · `test_charts_dialog.py`(101) · `steganography_dialog.py`(118)
 
 #### 幾何 / 修補 / 多圖
 
 `crop_straighten_dialog.py`(211) · `auto_straighten_dialog.py`(189) · `lens_correction_dialog.py`(157) ·
-`smart_crop_dialog.py`(127) 顯著性裁切建議 · `tiny_planet_dialog.py`(112) ·
+`smart_crop_dialog.py`(126) 顯著性裁切建議 · `tiny_planet_dialog.py`(111) ·
 `clone_stamp_dialog.py`(208) · `healing_brush_dialog.py`(244) · `sky_replace_dialog.py`(142) ·
-`portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(233) ·
+`portrait_retouch_dialog.py`(169) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(233) ·
 `hdr_merge_dialog.py`(150) · `panorama_dialog.py`(160) · `focus_stack_dialog.py`(148) ·
-`stack_blend_dialog.py`(169) · `collage_dialog.py`(87) · `deflicker_dialog.py`(208) ·
-`id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(167)
+`stack_blend_dialog.py`(169) · `collage_dialog.py`(87) · `deflicker_dialog.py`(228) ·
+`id_photo_sheet_dialog.py`(106) · `print_layout_dialog.py`(167)
 
 #### 批次 / 匯出 / 管理
 
 `batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(243) ·
-`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(187) ·
+`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(536) ·
 `duplicate_detection_dialog.py`(564) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(122) · `culling_dialog.py`(257) 挑片 ·
+`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
 `ai_upscale_dialog.py`(716) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
 
-`library_search_dialog.py`(228) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(171) ·
-`similar_search_dialog.py`(105) · `advanced_filter_dialog.py`(291) · `tag_album_dialog.py`(532) ·
-`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(185) · `auto_tag_dialog.py`(173) ·
-`keyword_editor_dialog.py`(218) · `keyword_vocabulary_dialog.py`(71) · `exif_editor.py`(191) ·
-`gps_geotag_dialog.py`(91) · `map_view_dialog.py`(172) OSM 底圖 · `calendar_view_dialog.py`(109) ·
-`events_dialog.py`(51) · `metadata_export_dialog.py`(95) · `xmp_sidecar_dialog.py`(121) ·
-`bookmark_dialog.py`(350) · `staging_tray_dialog.py`(185) · `reference_panel_dialog.py`(298) ·
-`image_statistics_dialog.py`(91) · `quality_report_dialog.py`(62) · `image_inspector_dialog.py`(85) 波形/parade/false colour/focus peaking ·
-`ocr_dialog.py`(115)
+`library_search_dialog.py`(227) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(170) ·
+`similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(290) · `tag_album_dialog.py`(531) ·
+`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(184) · `auto_tag_dialog.py`(172) ·
+`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(191) ·
+`gps_geotag_dialog.py`(90) · `map_view_dialog.py`(171) OSM 底圖 · `calendar_view_dialog.py`(108) ·
+`events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(120) ·
+`bookmark_dialog.py`(349) · `staging_tray_dialog.py`(184) · `reference_panel_dialog.py`(297) ·
+`image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(84) 波形/parade/false colour/focus peaking ·
+`ocr_dialog.py`(114)
 
 #### 設定 / 系統
 
-`preferences_dialog.py`(269) · `shortcut_settings_dialog.py`(405) · `profiles_dialog.py`(208) 多帳號 ·
-`workspace_dialog.py`(243) · `external_editors_settings.py`(152) · `recycle_bin_dialog.py`(368) 軟刪除回收桶 ·
-`cache_maintenance_dialog.py`(54) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(339) ·
-`dual_pane_dialog.py`(179) 雙窗格檔案管理 · `onboarding_dialog.py`(136) 首次導覽 · `whats_new_dialog.py`(144)
+`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(404) · `profiles_dialog.py`(207) 多帳號 ·
+`workspace_dialog.py`(242) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(367) 軟刪除回收桶 ·
+`cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(338) ·
+`dual_pane_dialog.py`(178) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
 
 ### 6.13 `Imervue/menu/`
 
@@ -634,10 +634,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 280 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 341 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
-| `recent_menu.py` | 193 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
+| `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 175 | 依名稱 / 日期 / 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
-| `modify_menu.py` | 30 | Deep-Zoom 專用的「修改」選單動作 |
+| `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
 
 ### 6.14 `Imervue/paint/`
 
@@ -656,114 +656,114 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `canvas_input.py` | 356 | `PaintCanvasInputMixin`：滑鼠／繪圖板事件轉成 `PointerEvent` 交給工具、平移、滾輪縮放、鋼筆 Enter/Esc、拖放開檔 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
 | `pointer_event.py` | 35 | `PointerEvent`（工具收到的指標快照）與 `ToolDispatcher` 型別；不依賴 Qt widget |
-| `compositing.py` | 439 | 純 NumPy 圖層合成 |
-| `layer_model.py` | 117 | 圖層與圖層群組資料模型 |
-| `layer_ops.py` | 172 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 446 | 原生 `.imervue` NPZ bundle 存讀 |
-| `psd_io.py` | 867 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
-| `undo_stack.py` | 193 | 每文件的 undo / redo |
+| `compositing.py` | 438 | 純 NumPy 圖層合成 |
+| `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
+| `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
+| `document_io.py` | 445 | 原生 `.imervue` NPZ bundle 存讀 |
+| `psd_io.py` | 866 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
+| `undo_stack.py` | 192 | 每文件的 undo / redo |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
-| `blend_modes.py` | 64 | 共用 RGB 混色模式數學 |
-| `blend_if.py` | 334 | Blend-If：依亮度範圍決定逐像素可見度 |
+| `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
+| `blend_if.py` | 333 | Blend-If：依亮度範圍決定逐像素可見度 |
 
 #### 筆刷引擎
 
-`brush_engine.py`(650) 純 NumPy 光柵化 · `gpu_brush.py`(682) OpenGL FBO+GLSL 加速 ·
-`brush_dynamics.py`(151) · `brush_random.py`(144) 散佈/色彩抖動/傾斜旋轉 · `brush_cursor.py`(499) 筆跡游標預覽 ·
-`brush_presets.py`(350) · `default_brush_presets.py`(165) · `brush_preset_io.py`(241) 含外部格式匯入 ·
-`brush_preset_dialog.py`(268) · `brush_kind_preview.py`(90) · `brush_tip_capture.py`(138) 從選區擷取筆尖 ·
-`custom_brush.py`(96) · `pressure_curve.py`(147) + `pressure_curve_dialog.py`(256) 筆壓曲線 ·
-`stabilizer.py`(85) 筆畫穩定器 · `catmull_rom_spline.py`(81) 平滑重採樣 · `symmetry.py`(86) 對稱繪製 ·
-`smudge.py`(147) 塗抹/混色筆 · `blur.py`(88) · `dodge_burn.py`(113) · `sponge.py`(81) ·
-`watercolor.py`(183) 濕畫法模擬 · `stamp_tool.py`(159) + `stroke_along_path.py`(100)
+`brush_engine.py`(649) 純 NumPy 光柵化 · `gpu_brush.py`(681) OpenGL FBO+GLSL 加速 ·
+`brush_dynamics.py`(150) · `brush_random.py`(143) 散佈/色彩抖動/傾斜旋轉 · `brush_cursor.py`(498) 筆跡游標預覽 ·
+`brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
+`brush_preset_dialog.py`(267) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
+`custom_brush.py`(95) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
+`stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣 · `symmetry.py`(85) 對稱繪製 ·
+`smudge.py`(146) 塗抹/混色筆 · `blur.py`(87) · `dodge_burn.py`(112) · `sponge.py`(80) ·
+`watercolor.py`(182) 濕畫法模擬 · `stamp_tool.py`(158) + `stroke_along_path.py`(99)
 
 #### 選取 / 變形
 
-`selection.py`(296) · `selection_ops.py`(326) 選區精修 · `selection_transform.py`(203) 仿射變換 ·
-`marquee.py`(94) 選區邊界線段 · `quick_mask.py`(220) 快速遮罩 · `magnetic_lasso.py`(119) 磁性套索 ·
-`stroke_selection.py`(141) 描邊選區 · `transform_handles.py`(271) · `perspective_warp.py`(203) 四角透視 ·
-`mesh_warp.py`(296) 控制網格雙線性變形 · `liquify.py`(263) + `liquify_dialog.py`(289) 液化 ·
-`crop.py`(94) + `crop_tool.py`(91) · `canvas_transforms.py`(77) · `image_resize.py`(150)
+`selection.py`(295) · `selection_ops.py`(325) 選區精修 · `selection_transform.py`(202) 仿射變換 ·
+`marquee.py`(93) 選區邊界線段 · `quick_mask.py`(219) 快速遮罩 · `magnetic_lasso.py`(118) 磁性套索 ·
+`stroke_selection.py`(140) 描邊選區 · `transform_handles.py`(270) · `perspective_warp.py`(202) 四角透視 ·
+`mesh_warp.py`(295) 控制網格雙線性變形 · `liquify.py`(262) + `liquify_dialog.py`(288) 液化 ·
+`crop.py`(93) + `crop_tool.py`(90) · `canvas_transforms.py`(76) · `image_resize.py`(149)
 
 #### 填色 / 形狀 / 向量 / 文字
 
-`fill.py`(369) 洪水填色 · `auto_region_fill.py`(254) 一次填滿所有封閉區 · `auto_base_color.py`(246) 線稿自動平塗 ·
-`divide_layer.py`(159) 依顏色拆圖層 · `pattern_fill.py`(131) · `gradient.py`(169) + `gradient_editor.py`(283) +
-`gradient_map_presets.py`(89) · `shape_engine.py`(266) + `shape_tool.py`(311) ·
-`bezier_path.py`(218) + `pen_commit.py`(107) 鋼筆工具 · `polyline_offset.py`(76) 平行曲線 ·
-`vector_layer.py`(312) 非破壞性向量線條 · `binary_layer.py`(140) 1-bit 墨線圖層 ·
-`image_trace.py`(221) 遮罩 → 輪廓向量化 · `line_cleanup.py`(169) Chaikin 平滑 + 補小縫 ·
-`text_render.py`(226) · `text_tool.py`(210) · `rich_text.py`(585) 逐字樣式 · `text_on_path.py`(174) ·
-`text_on_selection.py`(93)
+`fill.py`(368) 洪水填色 · `auto_region_fill.py`(253) 一次填滿所有封閉區 · `auto_base_color.py`(245) 線稿自動平塗 ·
+`divide_layer.py`(158) 依顏色拆圖層 · `pattern_fill.py`(130) · `gradient.py`(168) + `gradient_editor.py`(282) +
+`gradient_map_presets.py`(88) · `shape_engine.py`(265) + `shape_tool.py`(310) ·
+`bezier_path.py`(217) + `pen_commit.py`(106) 鋼筆工具 · `polyline_offset.py`(75) 平行曲線 ·
+`vector_layer.py`(311) 非破壞性向量線條 · `binary_layer.py`(139) 1-bit 墨線圖層 ·
+`image_trace.py`(220) 遮罩 → 輪廓向量化 · `line_cleanup.py`(168) Chaikin 平滑 + 補小縫 ·
+`text_render.py`(225) · `text_tool.py`(209) · `rich_text.py`(584) 逐字樣式 · `text_on_path.py`(173) ·
+`text_on_selection.py`(92)
 
 #### 顏色
 
-`color_math.py`(84) · `color_wheel.py`(263) + `color_wheel_widget.py`(205) · `color_palette.py`(169) +
-`color_palette_io.py`(304) 外部調色盤格式 · `color_sampler.py`(175) 取樣點 · `swatch_panel.py`(248) ·
-`palette_extract.py`(169) median-cut 抽色 · `match_color.py`(97) · `match_palette.py`(109) ·
-`color_management.py`(182) ICC · `color_blindness.py`(119) CVD 模擬 · `auto_correct.py`(80) ·
-`adjustments.py`(740) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(129) + `histogram_dock.py`(142)
+`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) · `color_palette.py`(168) +
+`color_palette_io.py`(303) 外部調色盤格式 · `color_sampler.py`(174) 取樣點 · `swatch_panel.py`(247) ·
+`palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) · `match_palette.py`(108) ·
+`color_management.py`(181) ICC · `color_blindness.py`(118) CVD 模擬 · `auto_correct.py`(79) ·
+`adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(578) · `manga_effects.py`(348) 速度線 + 網點 · `manga_panels.py`(263) 分鏡版面 ·
-`halftone.py`(358) 網點引擎 · `speedlines.py`(211) · `speech_bubble.py`(205) + `speech_bubbles.py`(488) 對話框氣泡 ·
-`comic_stamps.py`(267) + `stamp_dock.py`(89) · `comic_formats.py`(162) · `flash_effect.py`(133) 爆炸效果 ·
-`frame_splitter.py`(138) · `bleed_guides.py`(155) 裁切/出血/安全線 · `page_templates.py`(267) ·
-`page_numbering.py`(157) · `page_dock.py`(350) 頁面瀏覽 · `paint_project.py`(148) 多頁專案 +
-`paint_project_io.py`(112) + `paint_project_export.py`(131) · `new_project_dialog.py`(106)
+`manga_menu.py`(578) · `manga_effects.py`(347) 速度線 + 網點 · `manga_panels.py`(262) 分鏡版面 ·
+`halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) + `speech_bubbles.py`(487) 對話框氣泡 ·
+`comic_stamps.py`(266) + `stamp_dock.py`(88) · `comic_formats.py`(161) · `flash_effect.py`(132) 爆炸效果 ·
+`frame_splitter.py`(137) · `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
+`page_numbering.py`(156) · `page_dock.py`(349) 頁面瀏覽 · `paint_project.py`(147) 多頁專案 +
+`paint_project_io.py`(111) + `paint_project_export.py`(130) · `new_project_dialog.py`(105)
 
 #### 動畫
 
-`animation.py`(479) 時間軸 + 洋蔥皮 · `animation_timeline.py`(199) 純 NumPy 模型 ·
-`animation_dock.py`(290) 幀條 + 播放控制 · `animation_export.py`(166) · `timelapse.py`(127) 縮時匯出
+`animation.py`(478) 時間軸 + 洋蔥皮 · `animation_timeline.py`(198) 純 NumPy 模型 ·
+`animation_dock.py`(289) 幀條 + 播放控制 · `animation_export.py`(165) · `timelapse.py`(126) 縮時匯出
 
 #### 素材 / 參考 / 姿勢
 
-`material_library.py`(298) · `material_procedural.py`(222) 程序化材質 · `material_drop.py`(123) ·
-`save_region_as_material.py`(108) · `reference_dock.py`(257) + `reference_panel.py`(282) ·
-`pose_skeleton.py`(211) + `pose_dock.py`(186) + `pose_drop.py`(129) 2D 火柴人姿勢參考
+`material_library.py`(297) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(122) ·
+`save_region_as_material.py`(107) · `reference_dock.py`(256) + `reference_panel.py`(281) ·
+`pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
 
 #### 輔助線 / 檢視
 
-`rulers.py`(493) 繪圖輔助尺 · `smart_guides.py`(169) 智慧吸附 · `snap_guides.py`(125) ·
-`visual_guides.py`(263) 像素格線 · `view_transform.py`(147) 平移/縮放/旋轉 · `multi_view.py`(247) 同文件第二視窗 ·
-`size_hud.py`(139) + `size_hud_bridge.py`(64) 筆刷大小 HUD · `welcome_overlay.py`(223) ·
-`layer_thumbnail.py`(184) · `layer_effects.py`(342) 陰影/外光暈/描邊
+`rulers.py`(492) 繪圖輔助尺 · `smart_guides.py`(168) 智慧吸附 · `snap_guides.py`(124) ·
+`visual_guides.py`(262) 像素格線 · `view_transform.py`(146) 平移/縮放/旋轉 · `multi_view.py`(246) 同文件第二視窗 ·
+`size_hud.py`(138) + `size_hud_bridge.py`(63) 筆刷大小 HUD · `welcome_overlay.py`(222) ·
+`layer_thumbnail.py`(183) · `layer_effects.py`(341) 陰影/外光暈/描邊
 
 #### 工作區骨架與選單
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 752 | 頂層 `PaintWorkspace` widget |
+| `paint_workspace.py` | 751 | 頂層 `PaintWorkspace` widget |
 | `tool_dispatcher.py` | 426 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
-| `tool_state.py` | 897 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 426 | 工具列 |
-| `workspace_tabs.py` | 327 | 多文件分頁 |
-| `workspace_docks.py` | 419 | dock 建構與佈局持久化 |
-| `workspace_content.py` | 434 | 文件內容命令 |
-| `workspace_status.py` | 321 | 狀態列與縮放指示 |
-| `workspace_shortcuts.py` | 309 | 快捷鍵、筆刷調整、歡迎提示 |
-| `workspace_presets.py` | 266 + `workspace_preset_dialog.py`(318) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 143 + `auto_save.py`(243) | 自動存檔與當機復原 |
-| `action_recorder.py` | 241 + `action_recorder_dialog.py`(198) | 動作錄製 / 重播 |
-| `shortcut_registry.py` | 176 + `shortcut_dialog.py`(163) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄 |
-| `tablet_mapping.py` | 231 | 數位板按鍵 → 動作對應 |
-| `recent_files.py` | 73 | 最近開啟清單 |
-| `export_presets.py` | 274 + `export_utils.py`(232) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
-| `canvas_presets.py` | 185 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(91)、`file_menu.py`(540)、`edit_menu.py`(257)、`image_menu.py`(265)、`layer_menu.py`(313)、`filter_menu.py`(441)、`view_menu.py`(312)、`tools_menu.py`(130)、`settings_menu.py`(120)、`filter_preview_dialog.py`(180) |
+| `tool_state.py` | 896 | **無 Qt** 的工具狀態模型 |
+| `tool_bar.py` | 425 | 工具列 |
+| `workspace_tabs.py` | 326 | 多文件分頁 |
+| `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
+| `workspace_content.py` | 433 | 文件內容命令 |
+| `workspace_status.py` | 320 | 狀態列與縮放指示 |
+| `workspace_shortcuts.py` | 308 | 快捷鍵、筆刷調整、歡迎提示 |
+| `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(317) | 具名 dock 佈局預設 |
+| `workspace_autosave.py` | 142 + `auto_save.py`(242) | 自動存檔與當機復原 |
+| `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
+| `shortcut_registry.py` | 175 + `shortcut_dialog.py`(162) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄 |
+| `tablet_mapping.py` | 230 | 數位板按鍵 → 動作對應 |
+| `recent_files.py` | 72 | 最近開啟清單 |
+| `export_presets.py` | 273 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
+| `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(256)、`image_menu.py`(264)、`layer_menu.py`(312)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(129)、`settings_menu.py`(119)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
-`brushes.py`(445) 筆刷與填色 dock · `layers.py`(424) 圖層 dock · `color.py`(370) 顏色 dock ·
-`materials.py`(253) 素材庫 dock · `navigators.py`(248) 導覽器 / 歷史 / 頁面導覽 dock ·
+`brushes.py`(445) 筆刷與填色 dock · `layers.py`(424) 圖層 dock · `color.py`(369) 顏色 dock ·
+`materials.py`(252) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
 #### `paint/tools/`（6 檔 · 1,866 行）
 
-`painting.py`(417) 筆刷/橡皮/填色/滴管 · `shapes.py`(445) 形狀與裁切 ·
-`special.py`(354) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(302) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
+`painting.py`(416) 筆刷/橡皮/填色/滴管 · `shapes.py`(444) 形狀與裁切 ·
+`special.py`(353) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(302) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
 `retouch.py`(346) 漸層/塗抹/模糊/加深減淡/海綿
 
 ### 6.15 `Imervue/puppet/`
@@ -776,55 +776,55 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `document.py` | 396 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
-| `document_io.py` | 870 | `.puppet` zip 容器讀寫 |
-| `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
-| `cubism_native_bridge.py` | 474 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
-| `cubism_native_convert.py` | 642 | `.moc3` → `PuppetDocument` 轉換 |
-| `psd_import.py` | 187 | PSD 多圖層 → `PuppetDocument` |
-| `auto_mesh.py` | 173 | 從單張 PNG 自動生成網格 |
-| `auto_rig.py` | 403 | 依圖層命名慣例自動推導 Cubism 式綁定 |
-| `standard_params.py` | 117 | Cubism 標準參數目錄 |
-| `requirements.py` | 76 | 選用相依清單 |
+| `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
+| `document_io.py` | 869 | `.puppet` zip 容器讀寫 |
+| `cubism_import.py` | 549 | Live2D Cubism v3 檔案格式匯入 |
+| `cubism_native_bridge.py` | 473 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
+| `cubism_native_convert.py` | 641 | `.moc3` → `PuppetDocument` 轉換 |
+| `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
+| `auto_mesh.py` | 172 | 從單張 PNG 自動生成網格 |
+| `auto_rig.py` | 402 | 依圖層命名慣例自動推導 Cubism 式綁定 |
+| `standard_params.py` | 116 | Cubism 標準參數目錄 |
+| `requirements.py` | 75 | 選用相依清單 |
 
 #### 執行期（變形 / 物理 / 取樣）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `runtime.py` | 847 | **每幀參數取樣 + deformer 組合**（核心迴圈） |
-| `deformers.py` | 263 | 純 NumPy deformer 實作 |
-| `physics.py` | 142 | Verlet 物理引擎 |
-| `render_prep.py` | 104 | `PuppetDocument` → GL-ready draw list |
+| `runtime.py` | 846 | **每幀參數取樣 + deformer 組合**（核心迴圈） |
+| `deformers.py` | 262 | 純 NumPy deformer 實作 |
+| `physics.py` | 141 | Verlet 物理引擎 |
+| `render_prep.py` | 103 | `PuppetDocument` → GL-ready draw list |
 | `canvas.py` | 826 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動；實際繪製來自 `canvas_render.py` |
 | `canvas_render.py` | 535 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
-| `clip_masks.py` | 57 | `Drawable.clip_mask` 參照解析 |
-| `ik.py` | 90 | 兩節骨骼解析式 IK |
-| `bone_weights.py` | 101 | 骨骼 LBS 權重驗證與修復 |
-| `hit_test.py` | 121 | `HitArea` 純 Python 命中測試 |
-| `mesh_edit.py` | 94 · `mesh_repair.py` 230 · `symmetrize.py` 138 | 網格編輯 / 拓樸修復 / X 軸自動對稱 |
-| `operations.py` | 229 | `PuppetDocument` 的純編輯操作 |
-| `validator.py` | 297 | 靜態健康檢查 |
+| `clip_masks.py` | 56 | `Drawable.clip_mask` 參照解析 |
+| `ik.py` | 89 | 兩節骨骼解析式 IK |
+| `bone_weights.py` | 100 | 骨骼 LBS 權重驗證與修復 |
+| `hit_test.py` | 120 | `HitArea` 純 Python 命中測試 |
+| `mesh_edit.py` | 93 · `mesh_repair.py` 230 · `symmetrize.py` 138 | 網格編輯 / 拓樸修復 / X 軸自動對稱 |
+| `operations.py` | 228 | `PuppetDocument` 的純編輯操作 |
+| `validator.py` | 296 | 靜態健康檢查 |
 
 #### 動作 / 表情 / 閒置
 
-`motion_sampler.py`(149) 純取樣 · `motion_player.py`(376) Qt 播放驅動 · `motion_recorder.py`(167) 錄製 ·
-`motion_timeline.py`(356) 曲線圖編輯 · `motion_compress.py`(114) 移除冗餘關鍵幀 ·
-`motion_picker.py`(54) 群組隨機挑選 · `synth_motions.py`(287) 為轉檔 rig 合成閒置動作 ·
-`idle_driver.py`(144) · `idle_motion_cycler.py`(152) · `easing.py`(204) 緩動預設 ·
-`motion_dock.py`(194) · `expression_dock.py`(122) · `parameter_dock.py`(198) · `bone_tree_dock.py`(197)
+`motion_sampler.py`(148) 純取樣 · `motion_player.py`(375) Qt 播放驅動 · `motion_recorder.py`(166) 錄製 ·
+`motion_timeline.py`(355) 曲線圖編輯 · `motion_compress.py`(113) 移除冗餘關鍵幀 ·
+`motion_picker.py`(53) 群組隨機挑選 · `synth_motions.py`(286) 為轉檔 rig 合成閒置動作 ·
+`idle_driver.py`(143) · `idle_motion_cycler.py`(151) · `easing.py`(203) 緩動預設 ·
+`motion_dock.py`(193) · `expression_dock.py`(121) · `parameter_dock.py`(197) · `bone_tree_dock.py`(196)
 
 #### 即時輸入驅動
 
-`input_engine.py`(213) 把即時輸入灌進 canvas · `input_drivers.py`(216) 純對應函式（游標→角度參數等）·
-`mouse_gaze_driver.py`(240) 頭+眼追游標 · `webcam_tracker.py`(365) 攝影機 → 參數 ·
-`webcam_preview_dialog.py`(225) · `face_landmark_mapper.py`(213) MediaPipe FaceMesh → 參數 ·
-`audio_lipsync.py`(100) 音檔驅動嘴型
+`input_engine.py`(212) 把即時輸入灌進 canvas · `input_drivers.py`(215) 純對應函式（游標→角度參數等）·
+`mouse_gaze_driver.py`(239) 頭+眼追游標 · `webcam_tracker.py`(364) 攝影機 → 參數 ·
+`webcam_preview_dialog.py`(224) · `face_landmark_mapper.py`(212) MediaPipe FaceMesh → 參數 ·
+`audio_lipsync.py`(99) 音檔驅動嘴型
 
 #### 輸出
 
-`recorder.py`(195) 幀擷取 · `batch_export.py`(186) 每個 motion 匯出成 MP4/GIF/WebM ·
-`spritesheet.py`(68) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
-`vts_api.py`(370) VTube Studio Public API server（最小子集）
+`recorder.py`(194) 幀擷取 · `batch_export.py`(185) 每個 motion 匯出成 MP4/GIF/WebM ·
+`spritesheet.py`(67) · `virtual_camera.py`(242) 系統虛擬攝影機 · `ndi_output.py`(221) NDI 來源廣播 ·
+`vts_api.py`(369) VTube Studio Public API server（最小子集）
 
 `workspace.py`(840) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(286，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(360，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
@@ -838,56 +838,56 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `pet_window.py` | 985 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
-| `pet_feature_toggles.py` | 220 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、OBS／Twitch、虛擬攝影機、LLM、音樂律動、閒置小遊戲、通知、webhook、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
+| `pet_feature_toggles.py` | 219 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、OBS／Twitch、虛擬攝影機、LLM、音樂律動、閒置小遊戲、通知、webhook、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
 | `pet_workspace.py` | 706 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設） |
-| `pet_interaction.py` | 215 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
-| `pet_placement.py` | 154 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
-| `edge_snap.py` | 166 | 純 Python 邊緣吸附數學 |
-| `pet_context_menu.py` | 141 | 右鍵選單建構器 |
-| `pet_registry.py` | 135 | 多隻寵物的生命週期登錄表（以 pet id 為鍵） |
-| `pet_shadow.py` | 138 + `pet_shadow_controller.py`(84) | 放射漸層落地陰影（單一 draw call） |
-| `speech_bubble.py` | 209 | 對話泡泡覆蓋視窗（自動淡出） |
-| `tray_icon.py` | 152 | 系統匣切換 |
-| `settings.py` | 305 | 設定持久化（schema + 預設值 + 載入夾限） |
-| `fullscreen_detector.py` | 167 | 偵測同螢幕有全螢幕程式時自動隱藏 |
+| `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
+| `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
+| `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
+| `pet_context_menu.py` | 140 | 右鍵選單建構器 |
+| `pet_registry.py` | 134 | 多隻寵物的生命週期登錄表（以 pet id 為鍵） |
+| `pet_shadow.py` | 137 + `pet_shadow_controller.py`(83) | 放射漸層落地陰影（單一 draw call） |
+| `speech_bubble.py` | 208 | 對話泡泡覆蓋視窗（自動淡出） |
+| `tray_icon.py` | 151 | 系統匣切換 |
+| `settings.py` | 304 | 設定持久化（schema + 預設值 + 載入夾限） |
+| `fullscreen_detector.py` | 166 | 偵測同螢幕有全螢幕程式時自動隱藏 |
 
 #### 驅動與功能控制器（兩個家族）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_feature_base.py` | 171 | `FeatureHost` Protocol + `IntegrationController` 骨架 |
-| `pet_features.py` | 179 | 具體整合控制器：OBS / Twitch / Webhook / Windows 通知 / 全域熱鍵 |
-| `pet_drivers.py` | 244 | canvas 驅動控制器：音樂律動 / 閒置小遊戲 / 點擊音效 / LLM 對話 |
-| `pet_canvas_drivers.py` | 169 | canvas 輸入驅動子系統（自動眨眼 / 拖曳追頭 / 麥克風對嘴） |
+| `pet_feature_base.py` | 170 | `FeatureHost` Protocol + `IntegrationController` 骨架 |
+| `pet_features.py` | 178 | 具體整合控制器：OBS / Twitch / Webhook / Windows 通知 / 全域熱鍵 |
+| `pet_drivers.py` | 243 | canvas 驅動控制器：音樂律動 / 閒置小遊戲 / 點擊音效 / LLM 對話 |
+| `pet_canvas_drivers.py` | 168 | canvas 輸入驅動子系統（自動眨眼 / 拖曳追頭 / 麥克風對嘴） |
 
 > 這兩個家族的存在是為了把 `PetWindow` 從 god-object 拉回「協調者」。
 
 #### 外部整合
 
-`obs_event_hook.py`(194) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(278) Twitch 聊天關鍵字 ·
-`webhook_server.py`(294) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(293) Windows toast →
-`Notify` 動作 + 朗讀標題 · `hotkey_manager.py`(249) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(47) 衝突偵測 ·
-`command_parser.py`(78) 可重用的聊天指令路由器（exact / prefix / substring / regex）
+`obs_event_hook.py`(193) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(277) Twitch 聊天關鍵字 ·
+`webhook_server.py`(293) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(292) Windows toast →
+`Notify` 動作 + 朗讀標題 · `hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
+`command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex）
 
 #### 個性與行為
 
-`pet_script.py`(438) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(522) 內建編輯器 ·
-`schedule_rules.py`(102) 時段 / 星期閘門 · `idle_minigame.py`(279) 閒置好奇 / 打呵欠 ·
-`llm_dialogue.py`(243) 本地 LLM（預設 Ollama）對話 · `music_rhythm.py`(464) WASAPI loopback 抓系統音訊隨節奏擺動 ·
-`click_sfx.py`(169) 事件音效
+`pet_script.py`(437) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
+`schedule_rules.py`(101) 時段 / 星期閘門 · `idle_minigame.py`(278) 閒置好奇 / 打呵欠 ·
+`llm_dialogue.py`(242) 本地 LLM（預設 Ollama）對話 · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
+`click_sfx.py`(168) 事件音效
 
 ### 6.17 `Imervue/plugin/`
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
-| `plugin_manager.py` | 229 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
+| `plugin_manager.py` | 228 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
 | `plugin_downloader.py` | 509 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 993 | 外掛相依安裝器：尋找/下載 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
-| `model_dir.py` | 51 | 外掛模型目錄的共用解析 |
-| `subprocess_util.py` | 37 | 外掛 worker 呼叫子 Python 的共用 helper |
-| `worker_host.py` | 75 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機（約 90 個對話框使用） |
+| `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
+| `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
+| `worker_host.py` | 74 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機（約 90 個對話框使用） |
 
 ### 6.18 `Imervue/mcp_server/`
 
@@ -895,20 +895,20 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `server.py` | 440 | JSON-RPC 2.0 over stdio 的協定迴圈 |
+| `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
 | `tools.py` | 172 | 工具集的對外門面：re-export 全部 56 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
 | `tools_read.py` | 657 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
 | `tools_edit.py` | 884 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 68 | 兩組處理器共用：`IMAGE_EXTENSIONS`、`NO_ALPHA_FORMATS`、`load_rgba_array`、`validated_dir`／`validated_file`、`json_safe` |
 | `tool_defs_read.py` | 349 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
 | `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
-| `tool_schemas.py` | 579 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
-| `prompts.py` | 229 | 影像助理的 prompt 範本 |
+| `tool_schemas.py` | 578 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
+| `prompts.py` | 228 | 影像助理的 prompt 範本 |
 | `resources.py` | 132 | 把圖片暴露成可讀 MCP resource |
-| `progress.py` | 67 | 長時間工具呼叫的進度通知 |
-| `notifications.py` | 67 | 同步 stdio 迴圈上的 server-push 通知 |
-| `completion.py` | 40 | prompt 參數值建議 |
-| `logging.py` | 39 | RFC 5424 嚴重度與 emit 過濾 |
+| `progress.py` | 66 | 長時間工具呼叫的進度通知 |
+| `notifications.py` | 66 | 同步 stdio 迴圈上的 server-push 通知 |
+| `completion.py` | 39 | prompt 參數值建議 |
+| `logging.py` | 38 | RFC 5424 嚴重度與 emit 過濾 |
 
 ---
 
@@ -1136,7 +1136,10 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
    `paint/canvas.py` 的貼圖上傳），搬動用到它們的程式碼時 patch 目標要跟著改。僅 `gl_renderer.py`、
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
-6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
+6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用），
+   但有 6 個只剩不到 50 行餘裕：`gpu_image_view/gpu_image_view.py`(996)、`plugin/pip_installer.py`(993)、
+   `desktop_pet/pet_window.py`(985)、`Imervue_main_window.py`(971)、`gpu_image_view/overlay_painter.py`(963)、
+   `gui/annotation_dialog.py`(956)。要在這些檔案加程式，先拆出模組（`progress.md` #23）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
    測試若在原模組上 monkeypatch 某個名稱，要改到實際查找它的新模組。
