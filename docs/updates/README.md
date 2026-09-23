@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-79 | 2026-09-23 | Restore the app stylesheet between tests too | #tests #flaky | [2026-09](2026-09.md) |
 | U-20260923-78 | 2026-09-23 | Stop test_ui_scale's app font leaking into later test files | #tests #flaky | [2026-09](2026-09.md) |
 | U-20260923-77 | 2026-09-23 | Move the plugin installer's Python finder into python_finder (#23) | #refactor #plugin | [2026-09](2026-09.md) |
 | U-20260923-76 | 2026-09-23 | Move GPUImageView's state initialisers out of the widget (#23) | #refactor #gpu_image_view | [2026-09](2026-09.md) |

@@ -626,10 +626,10 @@ def _drain_qt_deferred_delete():
 
 
 @pytest.fixture(autouse=True)
-def _restore_app_font():
-    """Put back the QApplication font a test changed (see ``tests/_app_font.py``)."""
-    from tests._app_font import app_font_restored
-    with app_font_restored():
+def _restore_app_appearance():
+    """Put back the QApplication font and stylesheet a test changed (see ``tests/_app_appearance.py``)."""
+    from tests._app_appearance import app_appearance_restored
+    with app_appearance_restored():
         yield
 
 
