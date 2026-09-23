@@ -244,7 +244,7 @@ def _generate_error_report(ui: ImervueMainWindow) -> None:
     lang = language_wrapper.language_word_dict
     try:
         path = build_report()
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         if hasattr(ui, "toast"):
             ui.toast.error(
                 f"{lang.get('error_report_failed', 'Report failed')}: {exc}",
@@ -278,7 +278,7 @@ def _export_cheat_sheet(ui: ImervueMainWindow) -> None:
         return
     try:
         generate_cheat_sheet(out_path, CheatSheetOptions())
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         if hasattr(ui, "toast"):
             ui.toast.error(f"{lang.get('cheat_sheet_failed', 'Export failed')}: {exc}")
         return

@@ -40,6 +40,8 @@ import numpy as np
 from PIL import Image
 import contextlib
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 logger = logging.getLogger("Imervue.thumbnail_cache")
 
 _CACHE_EXT = ".png"
@@ -152,7 +154,7 @@ class ThumbnailDiskCache:
                 # uniform 4-channel array regardless of how it was stored.
                 img = src.convert("RGBA") if src.mode != "RGBA" else src
                 arr = np.array(img)
-        except (OSError, ValueError, Image.DecompressionBombError) as e:
+        except IMAGE_READ_ERRORS as e:
             # A truncated / corrupt PNG surfaces as OSError; drop it and re-render.
             logger.debug(f"Thumbnail cache read failed for {name}: {e}")
             with contextlib.suppress(OSError):
