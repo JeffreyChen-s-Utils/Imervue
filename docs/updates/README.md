@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-73 | 2026-09-23 | Split DuplicateDetectionDialog._build_ui (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-72 | 2026-09-23 | Build the CLI parser from a subcommand table (#19) | #refactor #cli | [2026-09](2026-09.md) |
 | U-20260923-71 | 2026-09-23 | Split ContactSheetDialog's constructor (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-70 | 2026-09-23 | Guard against modules no production code imports; 58 found | #tooling #architecture | [2026-09](2026-09.md) |

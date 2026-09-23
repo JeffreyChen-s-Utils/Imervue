@@ -10,6 +10,7 @@ import os
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 from PIL import Image
 from PySide6.QtCore import Qt
 
@@ -177,3 +178,85 @@ def test_on_delete_finished_survives_a_deleted_item():
     DuplicateDetectionDialog._on_delete_finished(fake, ["a.png"], [])  # no crash
     assert enabled == {"delete": True, "scan": True, "redundant": True}
     assert fake._pending_delete_items == {}
+
+
+# ---------------------------------------------------------------------------
+# Layout characterisation
+# ---------------------------------------------------------------------------
+
+def _items(layout):
+    return [layout.itemAt(i).widget() or layout.itemAt(i).layout() for i in range(layout.count())]
+
+
+@pytest.fixture
+def english(monkeypatch):
+    from Imervue.gui import duplicate_detection_dialog as mod
+    monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {})
+
+
+def test_layout_order_and_options_row(qapp, english):
+    from PySide6.QtWidgets import QCheckBox, QComboBox, QProgressBar, QSpinBox, QTreeWidget
+    dlg = _dialog()
+    try:
+        items = _items(dlg.layout())
+        assert [type(x).__name__ for x in items] == [
+            "QHBoxLayout", "QHBoxLayout", "QProgressBar", "QLabel", "QTreeWidget", "QHBoxLayout"]
+        assert dlg.layout().stretch(4) == 1
+        folder = _items(items[0])
+        assert folder[0].text() == "Source folder:" and dlg._folder_edit in folder
+        method_label, combo, thr_label, spin, recursive = _items(items[1])
+        assert (method_label.text(), thr_label.text()) == ("Method:", "Sensitivity:")
+        assert isinstance(combo, QComboBox) and combo is dlg._method_combo
+        assert [(combo.itemText(i), combo.itemData(i)) for i in range(combo.count())] == [
+            ("Exact Match (File Hash)", "exact"), ("Perceptual (Similarity)", "perceptual")]
+        assert isinstance(spin, QSpinBox) and spin is dlg._threshold_spin
+        assert (spin.minimum(), spin.maximum(), spin.value(), spin.isEnabled()) == (0, 20, 5, False)
+        assert spin.toolTip() == "Hamming distance threshold (0=exact, higher=more tolerant)"
+        assert isinstance(recursive, QCheckBox) and recursive is dlg._recursive_check
+        assert recursive.text() == "Include subfolders" and not recursive.isChecked()
+        assert isinstance(items[2], QProgressBar) and items[2].isHidden()
+        assert items[3] is dlg._status_label and items[3].text() == ""
+        tree = items[4]
+        assert isinstance(tree, QTreeWidget) and tree is dlg._tree
+        assert [tree.headerItem().text(i) for i in range(4)] == ["", "Filename", "Path", "Size"]
+        assert (tree.columnWidth(0), tree.columnWidth(1)) == (68, 200)
+        assert tree.selectionMode() == QTreeWidget.SelectionMode.ExtendedSelection
+    finally:
+        dlg.deleteLater()
+
+
+def test_method_combo_enables_the_threshold(qapp, english):
+    dlg = _dialog()
+    try:
+        dlg._method_combo.setCurrentIndex(1)
+        assert dlg._threshold_spin.isEnabled()
+        dlg._method_combo.setCurrentIndex(0)
+        assert not dlg._threshold_spin.isEnabled()
+    finally:
+        dlg.deleteLater()
+
+
+def test_button_row(qapp, english, monkeypatch):
+    calls = []
+    for slot in ("_start_scan", "_delete_selected", "_select_redundant"):
+        monkeypatch.setattr(DuplicateDetectionDialog, slot,
+                            lambda self, *_a, s=slot: calls.append(s))
+    dlg = _dialog()
+    try:
+        scan, delete, redundant, stretch, close = _items(_items(dlg.layout())[5])
+        assert (scan, delete, redundant) == (dlg._scan_btn, dlg._delete_btn,
+                                             dlg._select_redundant_btn)
+        assert [b.text() for b in (scan, delete, redundant, close)] == [
+            "Scan", "Delete Selected", "Select Redundant (keep best)", "Close"]
+        assert stretch is None
+        assert (scan.isEnabled(), delete.isEnabled(), redundant.isEnabled()) == (True, False, False)
+        scan.click()
+        for button in (delete, redundant):
+            button.setEnabled(True)
+            button.click()
+        assert calls == ["_start_scan", "_delete_selected", "_select_redundant"]
+        dlg.show()
+        close.click()
+        assert not dlg.isVisible()
+    finally:
+        dlg.deleteLater()

@@ -285,8 +285,21 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         folder_row, self._folder_edit = folder_picker_row(
             lang.get("duplicate_source", "Source folder:"), self._browse_folder)
         layout.addLayout(folder_row)
+        layout.addLayout(self._build_options_row(lang))
 
-        # Options row
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.hide()
+        layout.addWidget(self._progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        layout.addWidget(self._build_results_tree(lang), 1)
+        layout.addLayout(self._build_button_row(lang))
+
+    def _build_options_row(self, lang: dict) -> QHBoxLayout:
+        """Method combo, sensitivity spin (perceptual only) and the subfolder box."""
         opts_row = QHBoxLayout()
         opts_row.addWidget(QLabel(lang.get("duplicate_method", "Method:")))
         self._method_combo = QComboBox()
@@ -311,17 +324,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         self._recursive_check = QCheckBox(
             lang.get("duplicate_recursive", "Include subfolders"))
         opts_row.addWidget(self._recursive_check)
-        layout.addLayout(opts_row)
+        return opts_row
 
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.hide()
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        # Results tree
+    def _build_results_tree(self, lang: dict) -> QTreeWidget:
+        """Thumbnail / filename / path / size columns, multi-select."""
         self._tree = QTreeWidget()
         self._tree.setHeaderLabels([
             "",  # thumbnail
@@ -334,9 +340,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         header = self._tree.header()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self._tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
-        layout.addWidget(self._tree, 1)
+        return self._tree
 
-        # Buttons
+    def _build_button_row(self, lang: dict) -> QHBoxLayout:
+        """Scan, Delete Selected and Select Redundant (both disabled until a scan), then Close."""
         btn_row = QHBoxLayout()
         self._scan_btn = QPushButton(lang.get("duplicate_scan", "Scan"))
         self._scan_btn.clicked.connect(self._start_scan)
@@ -359,7 +366,7 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         close_btn = QPushButton(lang.get("export_cancel", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     def _browse_folder(self):
         folder = QFileDialog.getExistingDirectory(
