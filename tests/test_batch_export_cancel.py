@@ -13,12 +13,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from Imervue.gui.batch_export_dialog import BatchExportDialog, _ExportWorker
+from Imervue.gui.batch_export_dialog import BatchExportDialog, ExportSettings, _ExportWorker
 
 
 def test_export_worker_abort_stops_before_processing(qapp):
     results: list = []
-    worker = _ExportWorker(["a.png", "b.png"], "/out", "PNG", 90, False, 0, 0)
+    worker = _ExportWorker(["a.png", "b.png"], "/out", ExportSettings("PNG", 90))
     worker.result_ready.connect(lambda s, f: results.append((s, f)))
     worker.abort()
     worker.run()   # aborted before the first image -> nothing written

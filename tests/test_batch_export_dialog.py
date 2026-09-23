@@ -150,3 +150,91 @@ def test_empty_paths_leave_output_blank(qapp):
         assert _items(dlg)[0].text() == "0 image(s) selected"
     finally:
         dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Export: which settings reach the worker.
+# ---------------------------------------------------------------------------
+
+def _cfg(worker):
+    s = worker._settings  # noqa: SLF001
+    return (s.fmt, s.quality, s.resize, s.max_w, s.max_h, s.square_crop, s.dpi, s.watermark)
+
+
+@pytest.fixture
+def export(dialog, tmp_path, monkeypatch):
+    monkeypatch.setattr(mod._ExportWorker, "start", lambda self: None)  # noqa: SLF001
+
+    def run():
+        dialog._dir_edit.setText(str(tmp_path))  # noqa: SLF001
+        dialog._do_export()  # noqa: SLF001
+        return dialog._worker  # noqa: SLF001
+    return run
+
+
+def test_export_passes_the_manual_settings(dialog, export):
+    dialog._fmt_combo.setCurrentText("JPEG")  # noqa: SLF001
+    dialog._quality_slider.setValue(70)  # noqa: SLF001
+    dialog._resize_grp.setChecked(True)  # noqa: SLF001
+    dialog._max_w.setValue(800)  # noqa: SLF001
+    dialog._max_h.setValue(600)  # noqa: SLF001
+    worker = export()
+    assert worker._paths == dialog._paths  # noqa: SLF001
+    assert _cfg(worker) == ("JPEG", 70, True, 800, 600, False, 0, mod.WatermarkOptions())
+
+
+def test_export_takes_crop_and_dpi_from_the_active_preset(dialog, export):
+    preset = next(p for p in export_presets.builtin_presets() if p.square_crop or p.dpi)
+    combo = dialog._preset_combo  # noqa: SLF001
+    combo.setCurrentIndex(combo.findData(preset.key))
+    cfg = _cfg(export())
+    assert cfg[5:7] == (preset.square_crop, preset.dpi)
+    assert cfg[0] == preset.format
+
+
+def test_export_ignores_preset_extras_once_the_preset_is_cleared(dialog, export):
+    preset = next(p for p in export_presets.builtin_presets() if p.square_crop or p.dpi)
+    combo = dialog._preset_combo  # noqa: SLF001
+    combo.setCurrentIndex(combo.findData(preset.key))
+    combo.setCurrentIndex(combo.findData(None))
+    assert _cfg(export())[5:7] == (False, 0)
+
+
+# ---------------------------------------------------------------------------
+# Worker: every setting is applied to the written file.
+# ---------------------------------------------------------------------------
+
+def _run_worker(tmp_path, settings, size=(200, 100)):
+    from PIL import Image
+    src = tmp_path / "src.png"
+    Image.new("RGB", size, (200, 30, 30)).save(src)
+    out = tmp_path / "out"
+    out.mkdir()
+    worker = mod._ExportWorker([str(src)], str(out), settings)  # noqa: SLF001
+    results = []
+    worker.result_ready.connect(lambda ok, bad: results.append((ok, bad)))
+    worker.run()
+    worker.deleteLater()
+    (written,) = out.iterdir()
+    return results, Image.open(written)
+
+
+def test_worker_writes_the_format_unresized_by_default(qapp, tmp_path):
+    results, img = _run_worker(tmp_path, mod.ExportSettings("JPEG", 80))
+    assert results == [(1, 0)]
+    assert (img.format, img.size) == ("JPEG", (200, 100))
+
+
+def test_worker_resizes_within_the_limits(qapp, tmp_path):
+    for name, resize, expected in (("on", True, (50, 25)), ("off", False, (200, 100))):
+        folder = tmp_path / name
+        folder.mkdir()
+        _results, img = _run_worker(
+            folder, mod.ExportSettings("PNG", 90, resize=resize, max_w=50))
+        assert img.size == expected, name
+
+
+def test_worker_square_crops_and_stamps_dpi(qapp, tmp_path):
+    _results, img = _run_worker(tmp_path, mod.ExportSettings("PNG", 90, square_crop=True, dpi=300))
+    assert img.size == (100, 100)
+    assert tuple(round(v) for v in img.info["dpi"]) == (300, 300)

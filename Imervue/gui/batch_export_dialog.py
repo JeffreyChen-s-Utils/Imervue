@@ -5,6 +5,7 @@ Batch export — convert, resize, and compress multiple images at once.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -47,26 +48,33 @@ def _watermark_corners(lang):
     ]
 
 
+@dataclass(frozen=True)
+class ExportSettings:
+    """Format, quality, optional resize / square crop / DPI and watermark for a batch export.
+
+    ``max_w`` / ``max_h`` of 0 leave that side unbounded; nothing is resized
+    unless ``resize`` is set.
+    """
+
+    fmt: str
+    quality: int
+    resize: bool = False
+    max_w: int = 0
+    max_h: int = 0
+    square_crop: bool = False
+    dpi: int = 0
+    watermark: WatermarkOptions = field(default_factory=WatermarkOptions)
+
+
 class _ExportWorker(QThread):
     progress = Signal(int, int)  # current, total
     result_ready = Signal(int, int)  # success, failed
 
-    def __init__(
-        self, paths, output_dir, fmt, quality, resize_enabled, max_w, max_h,
-        square_crop: bool = False, dpi: int = 0,
-        watermark: WatermarkOptions | None = None,
-    ):
+    def __init__(self, paths: list[str], output_dir: str, settings: ExportSettings):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
-        self._fmt = fmt
-        self._quality = quality
-        self._resize = resize_enabled
-        self._max_w = max_w
-        self._max_h = max_h
-        self._square_crop = square_crop
-        self._dpi = dpi
-        self._watermark = watermark or WatermarkOptions()
+        self._settings = settings
         self._abort = False
 
     def abort(self) -> None:
@@ -87,29 +95,31 @@ class _ExportWorker(QThread):
         self.result_ready.emit(success, failed)
 
     def _process_one(self, src: str) -> bool:
+        s = self._settings
         try:
             img = _open_for_export(src)
             img = _apply_recipe(src, img)
-            if self._square_crop:
+            if s.square_crop:
                 img = export_presets.square_crop(img)
             img = self._resize_if_needed(img)
-            img = apply_watermark(img, self._watermark)
+            img = apply_watermark(img, s.watermark)
             out_path = _build_output_path(
-                Path(src), self._output_dir, FORMAT_EXTENSIONS.get(self._fmt, ".png"),
+                Path(src), self._output_dir, FORMAT_EXTENSIONS.get(s.fmt, ".png"),
             )
-            extra = {"dpi": (self._dpi, self._dpi)} if self._dpi > 0 else None
-            save_image(img, str(out_path), self._fmt, self._quality, extra)
+            extra = {"dpi": (s.dpi, s.dpi)} if s.dpi > 0 else None
+            save_image(img, str(out_path), s.fmt, s.quality, extra)
             return True
         except Exception as exc:
             logger.exception(f"Batch export failed for {src}: {exc}")
             return False
 
     def _resize_if_needed(self, img):
-        if not self._resize or (self._max_w <= 0 and self._max_h <= 0):
+        s = self._settings
+        if not s.resize or (s.max_w <= 0 and s.max_h <= 0):
             return img
         w, h = img.size
-        max_w = self._max_w if self._max_w > 0 else w
-        max_h = self._max_h if self._max_h > 0 else h
+        max_w = s.max_w if s.max_w > 0 else w
+        max_h = s.max_h if s.max_h > 0 else h
         if w > max_w or h > max_h:
             img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
         return img
@@ -305,24 +315,30 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._progress.setMaximum(len(self._paths))
         self._progress.setValue(0)
 
-        preset = getattr(self, "_active_preset", None)
-        preset_active = self._preset_combo.currentData() is not None
-        self._worker = _ExportWorker(
-            self._paths,
-            output_dir,
-            self._fmt_combo.currentText(),
-            self._quality_slider.value(),
-            self._resize_grp.isChecked(),
-            self._max_w.value(),
-            self._max_h.value(),
-            square_crop=preset.square_crop if preset_active and preset else False,
-            dpi=preset.dpi if preset_active and preset else 0,
-            watermark=self._collect_watermark(),
-        )
+        self._worker = _ExportWorker(self._paths, output_dir, self._collect_settings())
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_finished)
         self._worker.finished.connect(self._cleanup_worker)
         self._worker.start()
+
+    def _collect_settings(self) -> ExportSettings:
+        """Read the controls into an :class:`ExportSettings`.
+
+        Square crop and DPI come from the active preset only; editing the
+        controls after choosing one keeps them until the preset is cleared.
+        """
+        preset = getattr(self, "_active_preset", None)
+        preset_active = self._preset_combo.currentData() is not None
+        return ExportSettings(
+            fmt=self._fmt_combo.currentText(),
+            quality=self._quality_slider.value(),
+            resize=self._resize_grp.isChecked(),
+            max_w=self._max_w.value(),
+            max_h=self._max_h.value(),
+            square_crop=preset.square_crop if preset_active and preset else False,
+            dpi=preset.dpi if preset_active and preset else 0,
+            watermark=self._collect_watermark(),
+        )
 
     def _collect_watermark(self) -> WatermarkOptions:
         """Read the watermark group's current controls into a value object."""
