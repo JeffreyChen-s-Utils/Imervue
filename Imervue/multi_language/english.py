@@ -2646,4 +2646,5 @@ english_word_dict = {
     "timeline_by_day": "By day",
     "timeline_by_month": "By month",
     "timeline_by_year": "By year",
+    "paint_untitled_tab": "Untitled",
 }

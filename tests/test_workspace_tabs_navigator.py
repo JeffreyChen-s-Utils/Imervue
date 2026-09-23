@@ -94,3 +94,18 @@ def test_rebind_from_none_only_connects_new(qapp):
     nav.fit_requested.emit()
     assert new.zoom_args == [3.0]
     assert new.resets == 1
+
+
+def test_untitled_tab_name_follows_the_ui_language(monkeypatch):
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
+
+    monkeypatch.setattr(language_wrapper, "language_word_dict", traditional_chinese_word_dict)
+    titles = ["未命名-2 *", "Photo"]
+    fake = SimpleNamespace(_tabs=SimpleNamespace(count=lambda: len(titles),
+                                                 tabText=lambda i: titles[i]))
+    # Two tabs open and "未命名-3" would be next, unless taken; "-2" is taken (dirty marker ignored).
+    assert TabManagerMixin._next_untitled_tab_name(fake) == "未命名-3"
+    titles.append("未命名-4")
+    assert TabManagerMixin._next_untitled_tab_name(fake) == "未命名-5"
+

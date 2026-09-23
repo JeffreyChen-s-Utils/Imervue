@@ -2625,4 +2625,5 @@ japanese_word_dict = {
     "timeline_by_day": "日別",
     "timeline_by_month": "月別",
     "timeline_by_year": "年別",
+    "paint_untitled_tab": "無題",
 }

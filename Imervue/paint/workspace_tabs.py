@@ -186,15 +186,16 @@ class TabManagerMixin:
         return clicked is discard
 
     def _next_untitled_tab_name(self) -> str:
-        """Generate a unique 'Untitled-N' name for a new tab."""
+        """Generate a unique 'Untitled-N' name for a new tab, in the UI language."""
+        base = language_wrapper.language_word_dict.get("paint_untitled_tab", "Untitled")
         existing = {
             self._tabs.tabText(i).rstrip(" *")
             for i in range(self._tabs.count())
         }
         n = self._tabs.count() + 1
-        while f"Untitled-{n}" in existing:
+        while f"{base}-{n}" in existing:
             n += 1
-        return f"Untitled-{n}"
+        return f"{base}-{n}"
 
     def _on_tab_close_requested(self, index: int) -> None:
         self.close_tab(index)

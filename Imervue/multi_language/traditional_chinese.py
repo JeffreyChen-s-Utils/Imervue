@@ -2611,4 +2611,5 @@ traditional_chinese_word_dict = {
     "timeline_by_day": "依日",
     "timeline_by_month": "依月",
     "timeline_by_year": "依年",
+    "paint_untitled_tab": "未命名",
 }

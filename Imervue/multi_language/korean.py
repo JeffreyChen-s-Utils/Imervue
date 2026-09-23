@@ -2623,4 +2623,5 @@ korean_word_dict = {
     "timeline_by_day": "일별",
     "timeline_by_month": "월별",
     "timeline_by_year": "연도별",
+    "paint_untitled_tab": "제목 없음",
 }

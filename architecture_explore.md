@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `982ed45` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `97c579b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 826 | 135,036 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,924 |
+| `tests/` | 827 | 135,121 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,925 |
 | `Imervue/gui/` | 161 | 32,851 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,892 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,912 |
-| `Imervue/multi_language/` | 8 | 13,374 |
+| `Imervue/multi_language/` | 8 | 13,379 |
 | `Imervue/desktop_pet/` | 34 | 8,253 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,641** | **311,996** |
+| **總計** | **1,642** | **312,087** |
 
-其中 `Imervue/` 套件本身 751 檔 / 162,754 行。
+其中 `Imervue/` 套件本身 751 檔 / 162,760 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -253,11 +253,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,649 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,614 | 繁體中文 |
-| `chinese.py` | 2,615 | 簡體中文 |
-| `japanese.py` | 2,628 | 日文 |
-| `korean.py` | 2,626 | 韓文 |
+| `english.py` | 2,650 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,615 | 繁體中文 |
+| `chinese.py` | 2,616 | 簡體中文 |
+| `japanese.py` | 2,629 | 日文 |
+| `korean.py` | 2,627 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -649,7 +649,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,924 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,925 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -747,7 +747,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `tool_dispatcher.py` | 448 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
 | `tool_state.py` | 896 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 425 | 工具列 |
-| `workspace_tabs.py` | 326 | 多文件分頁 |
+| `workspace_tabs.py` | 327 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 433 | 文件內容命令 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-826 個檔、135,036 行。`pyproject.toml` 定義三個互斥層級 marker：
+827 個檔、135,121 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
