@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `fbb7900` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `e9ce354` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 769 | 126,725 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,965 |
+| `tests/` | 770 | 126,921 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,922 |
 | `Imervue/gui/` | 159 | 32,447 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,570** | **300,941** |
+| **總計** | **1,571** | **301,094** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,827 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,784 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -639,7 +639,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,965 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,922 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -704,7 +704,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(622) · `manga_effects.py`(348) 速度線 + 網點 · `manga_panels.py`(263) 分鏡版面 ·
+`manga_menu.py`(578) · `manga_effects.py`(348) 速度線 + 網點 · `manga_panels.py`(263) 分鏡版面 ·
 `halftone.py`(358) 網點引擎 · `speedlines.py`(211) · `speech_bubble.py`(205) + `speech_bubbles.py`(488) 對話框氣泡 ·
 `comic_stamps.py`(267) + `stamp_dock.py`(89) · `comic_formats.py`(162) · `flash_effect.py`(133) 爆炸效果 ·
 `frame_splitter.py`(138) · `bleed_guides.py`(155) 裁切/出血/安全線 · `page_templates.py`(267) ·
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-769 個檔、126,725 行。`pyproject.toml` 定義三個互斥層級 marker：
+770 個檔、126,921 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -173,6 +173,45 @@ class _MangaMenuBridge:
 # ---------------------------------------------------------------------------
 
 
+def _int_spin(lo: int, hi: int, value: int) -> QSpinBox:
+    """Integer spin box over ``[lo, hi]`` starting at ``value``."""
+    spin = QSpinBox()
+    spin.setRange(lo, hi)
+    spin.setValue(value)
+    return spin
+
+
+def _ratio_spin(lo: float, hi: float, value: float) -> QDoubleSpinBox:
+    """Two-decimal spin box stepping by 0.05 — the effect dialogs' ratio fields."""
+    spin = QDoubleSpinBox()
+    spin.setRange(lo, hi)
+    spin.setDecimals(2)
+    spin.setSingleStep(0.05)
+    spin.setValue(value)
+    return spin
+
+
+def _angle_spin() -> QDoubleSpinBox:
+    """-180°..180° with one decimal, starting at 0."""
+    spin = QDoubleSpinBox()
+    spin.setRange(-180.0, 180.0)
+    spin.setDecimals(1)
+    spin.setValue(0.0)
+    return spin
+
+
+def _add_ok_cancel(dialog: QDialog, form: QFormLayout) -> None:
+    """Append an OK / Cancel box to ``form`` that accepts / rejects ``dialog``."""
+    buttons = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok
+        | QDialogButtonBox.StandardButton.Cancel,
+        Qt.Orientation.Horizontal, dialog,
+    )
+    buttons.accepted.connect(dialog.accept)
+    buttons.rejected.connect(dialog.reject)
+    form.addRow(buttons)
+
+
 class PanelCutterDialog(QDialog):
     """Modal dialog collecting rows / cols / gutter / border / margin."""
 
@@ -185,32 +224,18 @@ class PanelCutterDialog(QDialog):
         self.setMinimumWidth(360)
 
         form = QFormLayout(self)
-        self._rows = self._spin(1, 12, PANEL_ROWS_DEFAULT)
-        self._cols = self._spin(1, 12, PANEL_COLS_DEFAULT)
-        self._gutter = self._spin(0, 200, PANEL_GUTTER_DEFAULT)
-        self._border = self._spin(0, 20, PANEL_BORDER_DEFAULT)
-        self._margin = self._spin(0, 200, PANEL_MARGIN_DEFAULT)
+        self._rows = _int_spin(1, 12, PANEL_ROWS_DEFAULT)
+        self._cols = _int_spin(1, 12, PANEL_COLS_DEFAULT)
+        self._gutter = _int_spin(0, 200, PANEL_GUTTER_DEFAULT)
+        self._border = _int_spin(0, 20, PANEL_BORDER_DEFAULT)
+        self._margin = _int_spin(0, 200, PANEL_MARGIN_DEFAULT)
         form.addRow(lang.get("paint_manga_rows", "Rows"), self._rows)
         form.addRow(lang.get("paint_manga_cols", "Columns"), self._cols)
         form.addRow(lang.get("paint_manga_gutter", "Gutter"), self._gutter)
         form.addRow(lang.get("paint_manga_border", "Border"), self._border)
         form.addRow(lang.get("paint_manga_margin", "Margin"), self._margin)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal, self,
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
-
-    @staticmethod
-    def _spin(lo: int, hi: int, default: int) -> QSpinBox:
-        s = QSpinBox()
-        s.setRange(lo, hi)
-        s.setValue(default)
-        return s
+        _add_ok_cancel(self, form)
 
     def values(self) -> dict[str, int]:
         return {
@@ -309,7 +334,40 @@ def _pick_color(btn: QPushButton) -> None:  # pragma: no cover - Qt UI
     _refresh_color_button(btn)
 
 
-class SpeedlineConfigDialog(QDialog):
+class _CentreControlsMixin:
+    """Auto-centre checkbox plus the x / y spin boxes it disables, for the effect dialogs."""
+
+    def _add_centre_controls(
+            self, form: QFormLayout, lang, canvas_shape: tuple[int, int]) -> None:
+        """Add the checkbox (checked) and the centre row, spin boxes starting mid-canvas."""
+        h, w = canvas_shape
+        self._auto_center = QCheckBox(
+            lang.get("paint_manga_auto_center", "Auto-centre"),
+        )
+        self._auto_center.setChecked(True)
+        form.addRow(self._auto_center)
+
+        center_row = QHBoxLayout()
+        self._center_x = _int_spin(0, max(1, w - 1), w // 2)
+        self._center_y = _int_spin(0, max(1, h - 1), h // 2)
+        center_row.addWidget(self._center_x)
+        center_row.addWidget(self._center_y)
+        form.addRow(
+            lang.get("paint_manga_center", "Centre (x, y)"), center_row,
+        )
+        self._auto_center.toggled.connect(self._center_x.setDisabled)
+        self._auto_center.toggled.connect(self._center_y.setDisabled)
+        self._center_x.setDisabled(True)
+        self._center_y.setDisabled(True)
+
+    def _centre(self) -> tuple[int, int] | None:
+        """``None`` while auto-centring, else the chosen ``(x, y)``."""
+        if self._auto_center.isChecked():
+            return None
+        return (int(self._center_x.value()), int(self._center_y.value()))
+
+
+class SpeedlineConfigDialog(_CentreControlsMixin, QDialog):
     """Configure a :class:`SpeedlineOptions` before render.
 
     Mirrors raster paint apps's effect-property dialog: every parameter is
@@ -334,7 +392,6 @@ class SpeedlineConfigDialog(QDialog):
             lang.get("paint_manga_speedlines_title", "Speedlines"),
         )
         self.setMinimumWidth(360)
-        h, w = canvas_shape
         self._canvas_shape = canvas_shape
 
         form = QFormLayout(self)
@@ -347,66 +404,31 @@ class SpeedlineConfigDialog(QDialog):
         )
         form.addRow(lang.get("paint_manga_speedlines_kind", "Kind"), self._kind)
 
-        self._count = QSpinBox()
-        self._count.setRange(LINE_COUNT_MIN, LINE_COUNT_MAX)
-        self._count.setValue(DEFAULT_LINE_COUNT)
+        self._count = _int_spin(LINE_COUNT_MIN, LINE_COUNT_MAX, DEFAULT_LINE_COUNT)
         form.addRow(lang.get("paint_manga_speedlines_count", "Count"), self._count)
 
-        self._thickness = QSpinBox()
-        self._thickness.setRange(LINE_THICKNESS_MIN, LINE_THICKNESS_MAX)
-        self._thickness.setValue(DEFAULT_LINE_THICKNESS)
+        self._thickness = _int_spin(
+            LINE_THICKNESS_MIN, LINE_THICKNESS_MAX, DEFAULT_LINE_THICKNESS)
         form.addRow(
             lang.get("paint_manga_speedlines_thickness", "Thickness"),
             self._thickness,
         )
 
-        self._auto_center = QCheckBox(
-            lang.get("paint_manga_auto_center", "Auto-centre"),
-        )
-        self._auto_center.setChecked(True)
-        form.addRow(self._auto_center)
+        self._add_centre_controls(form, lang, canvas_shape)
 
-        center_row = QHBoxLayout()
-        self._center_x = QSpinBox()
-        self._center_x.setRange(0, max(1, w - 1))
-        self._center_x.setValue(w // 2)
-        self._center_y = QSpinBox()
-        self._center_y.setRange(0, max(1, h - 1))
-        self._center_y.setValue(h // 2)
-        center_row.addWidget(self._center_x)
-        center_row.addWidget(self._center_y)
-        form.addRow(
-            lang.get("paint_manga_center", "Centre (x, y)"), center_row,
-        )
-        self._auto_center.toggled.connect(self._center_x.setDisabled)
-        self._auto_center.toggled.connect(self._center_y.setDisabled)
-        self._center_x.setDisabled(True)
-        self._center_y.setDisabled(True)
-
-        self._angle = QDoubleSpinBox()
-        self._angle.setRange(-180.0, 180.0)
-        self._angle.setDecimals(1)
-        self._angle.setValue(0.0)
+        self._angle = _angle_spin()
         form.addRow(
             lang.get("paint_manga_speedlines_angle", "Angle (°, parallel)"),
             self._angle,
         )
 
-        self._inner_radius = QDoubleSpinBox()
-        self._inner_radius.setRange(0.0, 0.95)
-        self._inner_radius.setDecimals(2)
-        self._inner_radius.setSingleStep(0.05)
-        self._inner_radius.setValue(DEFAULT_BURST_RADIUS_RATIO)
+        self._inner_radius = _ratio_spin(0.0, 0.95, DEFAULT_BURST_RADIUS_RATIO)
         form.addRow(
             lang.get("paint_manga_speedlines_inner", "Inner radius (burst)"),
             self._inner_radius,
         )
 
-        self._jitter = QDoubleSpinBox()
-        self._jitter.setRange(0.0, 1.0)
-        self._jitter.setDecimals(2)
-        self._jitter.setSingleStep(0.05)
-        self._jitter.setValue(0.4)
+        self._jitter = _ratio_spin(0.0, 1.0, 0.4)
         form.addRow(
             lang.get("paint_manga_speedlines_jitter", "Jitter"), self._jitter,
         )
@@ -416,27 +438,15 @@ class SpeedlineConfigDialog(QDialog):
             lang.get("paint_manga_speedlines_color", "Colour"), self._color,
         )
 
-        self._seed = QSpinBox()
-        self._seed.setRange(0, 1_000_000)
-        self._seed.setValue(0)
+        self._seed = _int_spin(0, 1_000_000, 0)
         form.addRow(lang.get("paint_manga_seed", "Seed"), self._seed)
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal, self,
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
+        _add_ok_cancel(self, form)
 
     def options(self):
         from Imervue.paint.speedlines import SpeedlineOptions
         rgba = self._color.property("rgba") or (0, 0, 0, 255)
-        center = (
-            None if self._auto_center.isChecked()
-            else (int(self._center_x.value()), int(self._center_y.value()))
-        )
+        center = self._centre()
         return SpeedlineOptions(
             kind=self._kind.currentText(),
             count=int(self._count.value()),
@@ -450,7 +460,7 @@ class SpeedlineConfigDialog(QDialog):
         )
 
 
-class FlashConfigDialog(QDialog):
+class FlashConfigDialog(_CentreControlsMixin, QDialog):
     """Configure a :class:`FlashOptions` before render."""
 
     def __init__(self, canvas_shape: tuple[int, int], parent=None):
@@ -467,82 +477,39 @@ class FlashConfigDialog(QDialog):
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("paint_manga_flash_title", "Action Flash"))
         self.setMinimumWidth(360)
-        h, w = canvas_shape
 
         form = QFormLayout(self)
 
-        self._spikes = QSpinBox()
-        self._spikes.setRange(FLASH_SPIKES_MIN, FLASH_SPIKES_MAX)
-        self._spikes.setValue(DEFAULT_FLASH_SPIKES)
+        self._spikes = _int_spin(FLASH_SPIKES_MIN, FLASH_SPIKES_MAX, DEFAULT_FLASH_SPIKES)
         form.addRow(
             lang.get("paint_manga_flash_spikes", "Spikes"), self._spikes,
         )
 
-        self._outer = QDoubleSpinBox()
-        self._outer.setRange(0.06, 1.5)
-        self._outer.setDecimals(2)
-        self._outer.setSingleStep(0.05)
-        self._outer.setValue(DEFAULT_OUTER_RADIUS_RATIO)
+        self._outer = _ratio_spin(0.06, 1.5, DEFAULT_OUTER_RADIUS_RATIO)
         form.addRow(
             lang.get("paint_manga_flash_outer", "Outer radius"), self._outer,
         )
 
-        self._inner = QDoubleSpinBox()
-        self._inner.setRange(0.0, 1.4)
-        self._inner.setDecimals(2)
-        self._inner.setSingleStep(0.05)
-        self._inner.setValue(DEFAULT_INNER_RADIUS_RATIO)
+        self._inner = _ratio_spin(0.0, 1.4, DEFAULT_INNER_RADIUS_RATIO)
         form.addRow(
             lang.get("paint_manga_flash_inner", "Inner radius"), self._inner,
         )
 
-        self._halo_radius = QDoubleSpinBox()
-        self._halo_radius.setRange(0.0, 2.0)
-        self._halo_radius.setDecimals(2)
-        self._halo_radius.setSingleStep(0.05)
-        self._halo_radius.setValue(DEFAULT_HALO_RADIUS_RATIO)
+        self._halo_radius = _ratio_spin(0.0, 2.0, DEFAULT_HALO_RADIUS_RATIO)
         form.addRow(
             lang.get("paint_manga_flash_halo_radius", "Halo radius"),
             self._halo_radius,
         )
 
-        self._halo_opacity = QDoubleSpinBox()
-        self._halo_opacity.setRange(0.0, 1.0)
-        self._halo_opacity.setDecimals(2)
-        self._halo_opacity.setSingleStep(0.05)
-        self._halo_opacity.setValue(DEFAULT_HALO_OPACITY)
+        self._halo_opacity = _ratio_spin(0.0, 1.0, DEFAULT_HALO_OPACITY)
         form.addRow(
             lang.get("paint_manga_flash_halo_opacity", "Halo opacity"),
             self._halo_opacity,
         )
 
-        self._auto_center = QCheckBox(
-            lang.get("paint_manga_auto_center", "Auto-centre"),
-        )
-        self._auto_center.setChecked(True)
-        form.addRow(self._auto_center)
+        self._add_centre_controls(form, lang, canvas_shape)
 
-        center_row = QHBoxLayout()
-        self._center_x = QSpinBox()
-        self._center_x.setRange(0, max(1, w - 1))
-        self._center_x.setValue(w // 2)
-        self._center_y = QSpinBox()
-        self._center_y.setRange(0, max(1, h - 1))
-        self._center_y.setValue(h // 2)
-        center_row.addWidget(self._center_x)
-        center_row.addWidget(self._center_y)
-        form.addRow(
-            lang.get("paint_manga_center", "Centre (x, y)"), center_row,
-        )
-        self._auto_center.toggled.connect(self._center_x.setDisabled)
-        self._auto_center.toggled.connect(self._center_y.setDisabled)
-        self._center_x.setDisabled(True)
-        self._center_y.setDisabled(True)
-
-        self._rotation = QDoubleSpinBox()
-        self._rotation.setRange(-180.0, 180.0)
-        self._rotation.setDecimals(1)
-        self._rotation.setValue(0.0)
+        self._rotation = _angle_spin()
         form.addRow(
             lang.get("paint_manga_flash_rotation", "Rotation (°)"),
             self._rotation,
@@ -553,14 +520,7 @@ class FlashConfigDialog(QDialog):
             lang.get("paint_manga_flash_color", "Colour"), self._color,
         )
 
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal, self,
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
+        _add_ok_cancel(self, form)
 
     def options(self):
         from Imervue.paint.flash_effect import FlashOptions
@@ -568,10 +528,7 @@ class FlashConfigDialog(QDialog):
         # FlashOptions takes RGB only — strip the alpha but keep the
         # picker's full-RGBA contract for symmetry with speedlines.
         color_rgb = tuple(int(c) for c in rgba[:3])
-        center = (
-            None if self._auto_center.isChecked()
-            else (int(self._center_x.value()), int(self._center_y.value()))
-        )
+        center = self._centre()
         return FlashOptions(
             spikes=int(self._spikes.value()),
             outer_radius_ratio=float(self._outer.value()),
