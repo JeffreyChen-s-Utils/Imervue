@@ -75,6 +75,7 @@ from OpenGL.GL import (
     glVertex2f,
     glVertexPointer,
 )
+from OpenGL.error import GLError
 
 from Imervue.puppet.clip_masks import resolve_masks
 from Imervue.puppet.render_prep import DrawCommand
@@ -478,7 +479,7 @@ class PuppetCanvasRenderMixin:
         ids: list[int] = []
         for entry in self._drawable_buffers.values():
             ids.extend([entry["vert_vbo"], entry["uv_vbo"], entry["idx_ibo"]])
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(GLError):   # context already gone
             glDeleteBuffers(len(ids), ids)
         self._drawable_buffers.clear()
 
@@ -530,6 +531,6 @@ class PuppetCanvasRenderMixin:
     def _invalidate_texture_cache(self) -> None:  # pragma: no cover - GL needs display
         if not self._texture_cache:
             return
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(GLError):   # context already gone
             glDeleteTextures(list(self._texture_cache.values()))
         self._texture_cache.clear()

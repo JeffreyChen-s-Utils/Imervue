@@ -10,7 +10,6 @@ rebuilt (matches the recent-folder behaviour in
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
 
@@ -61,6 +60,7 @@ from Imervue.puppet.webcam_tracker import WebcamTracker
 from Imervue.puppet.workspace_import import PuppetImportMixin
 from Imervue.puppet.workspace_live import PuppetLiveMixin
 from Imervue.puppet.workspace_menus import RECENT_KEY, PuppetMenusMixin
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
@@ -472,7 +472,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         until process exit, and the mic's ``_on_audio_block`` fired on the now
         deleted ``PuppetCanvas`` (``RuntimeError: Internal C++ object already
         deleted``). Each ``shutdown`` is guarded so one failing driver still lets
-        the rest stop.
+        the rest stop; the failure is logged with the driver's class name.
         """
         for driver in (
             getattr(self, "_webcam", None),
@@ -481,7 +481,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             getattr(self, "_ndi_output", None),
         ):
             if driver is not None:
-                with contextlib.suppress(Exception):
+                with best_effort(f"shut down {type(driver).__name__}", logger):
                     driver.shutdown()
 
     def closeEvent(self, event):  # noqa: N802 - Qt naming

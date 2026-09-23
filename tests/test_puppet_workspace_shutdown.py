@@ -38,10 +38,25 @@ def test_shutdown_drivers_skips_missing_and_survives_a_failure():
         raise RuntimeError("device already gone")
 
     ws = SimpleNamespace(
-        _webcam=SimpleNamespace(shutdown=boom),   # raises -> suppressed
+        _webcam=SimpleNamespace(shutdown=boom),   # raises -> logged, rest continue
         _input_engine=_driver(calls, "input"),
         _virtual_camera=None,                     # missing -> skipped
         _ndi_output=_driver(calls, "ndi"),
     )
     PuppetWorkspace._shutdown_drivers(ws)         # must not raise
     assert calls == ["input", "ndi"]
+
+
+class _Webcam:
+    def shutdown(self):
+        raise RuntimeError("device already gone")
+
+
+def test_a_failing_driver_is_logged_by_its_class_name(caplog):
+    ws = SimpleNamespace(_webcam=_Webcam(), _input_engine=None,
+                         _virtual_camera=None, _ndi_output=None)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        PuppetWorkspace._shutdown_drivers(ws)
+    (record,) = caplog.records
+    assert "shut down _Webcam" in record.getMessage()
+    assert record.exc_info[0] is RuntimeError
