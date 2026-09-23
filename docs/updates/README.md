@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-12 | 2026-09-24 | Give the library index search an ImageQuery (#24) | #refactor #library | [2026-09](2026-09.md) |
 | U-20260924-11 | 2026-09-24 | Pass polar coordinate mappings their grid, centre and size as pairs (#24) | #refactor #image | [2026-09](2026-09.md) |
 | U-20260924-10 | 2026-09-24 | Group coordinate pairs and colours in gpu_image_view's wide signatures (#24) | #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260924-09 | 2026-09-24 | Fold make_slider_spin's size keywords into a compact flag (#24) | #refactor #gui | [2026-09](2026-09.md) |

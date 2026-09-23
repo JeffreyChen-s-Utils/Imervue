@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `0b965c8` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `fd12143` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 802 | 131,942 |
+| `tests/` | 802 | 131,955 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,878 |
 | `Imervue/gui/` | 161 | 32,807 |
 | `Imervue/puppet/` | 57 | 15,221 |
@@ -75,7 +75,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,239 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
-| `Imervue/library/` | 32 | 4,140 |
+| `Imervue/library/` | 32 | 4,146 |
 | `Imervue/menu/` | 11 | 3,611 |
 | `Imervue/` 根層 | 5 | 1,535 |
 | `Imervue/plugin/` | 10 | 2,186 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,611** | **306,523** |
+| **總計** | **1,611** | **306,542** |
 
-其中 `Imervue/` 套件本身 747 檔 / 160,192 行。
+其中 `Imervue/` 套件本身 747 檔 / 160,198 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -484,7 +484,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_index.py` | 666 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
+| `image_index.py` | 672 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
 | `scanner.py` | 177 | 背景掃描器，走訪 library roots 填索引 |
 | `maintenance.py` | 54 | 索引與檔案系統對帳 |
 | `smart_album.py` | 348 | Smart Albums：保存查詢並重新套用 |
@@ -955,7 +955,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-802 個檔、131,942 行。`pyproject.toml` 定義三個互斥層級 marker：
+802 個檔、131,955 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

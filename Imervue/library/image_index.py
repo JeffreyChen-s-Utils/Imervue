@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from Imervue.library.phash import hamming, to_signed64
@@ -295,50 +296,55 @@ def count_images() -> int:
     return conn().execute("SELECT COUNT(*) AS n FROM images").fetchone()["n"]
 
 
-def search_images(
-    *,
-    parents: Sequence[str] | None = None,
-    exts: Sequence[str] | None = None,
-    min_width: int | None = None,
-    min_height: int | None = None,
-    max_size: int | None = None,
-    min_size: int | None = None,
-    name_contains: str | None = None,
-    limit: int | None = None,
-) -> list[str]:
-    """Run a parameterised search over the index — returns matching paths."""
+@dataclass(frozen=True)
+class ImageQuery:
+    """Filters for :func:`search_images`; a ``None`` / empty field leaves that filter off.
+
+    Sizes are in bytes, dimensions in pixels; ``exts`` match without the dot
+    and case-insensitively, ``name_contains`` case-insensitively.
+    """
+
+    parents: Sequence[str] | None = None
+    exts: Sequence[str] | None = None
+    min_width: int | None = None
+    min_height: int | None = None
+    max_size: int | None = None
+    min_size: int | None = None
+    name_contains: str | None = None
+    limit: int | None = None
+
+
+def _query_where(query: ImageQuery) -> tuple[list[str], list]:
+    """SQL ``WHERE`` terms and their bound values for ``query``."""
     where: list[str] = []
     args: list = []
-    if parents:
-        placeholders = ",".join("?" * len(parents))
-        where.append(f"parent IN ({placeholders})")
-        args.extend(parents)
-    if exts:
-        placeholders = ",".join("?" * len(exts))
-        where.append(f"ext IN ({placeholders})")
-        args.extend(e.lower().lstrip(".") for e in exts)
-    if min_width is not None:
-        where.append("width >= ?")
-        args.append(min_width)
-    if min_height is not None:
-        where.append("height >= ?")
-        args.append(min_height)
-    if min_size is not None:
-        where.append("size >= ?")
-        args.append(min_size)
-    if max_size is not None:
-        where.append("size <= ?")
-        args.append(max_size)
-    if name_contains:
+    if query.parents:
+        where.append(f"parent IN ({','.join('?' * len(query.parents))})")
+        args.extend(query.parents)
+    if query.exts:
+        where.append(f"ext IN ({','.join('?' * len(query.exts))})")
+        args.extend(e.lower().lstrip(".") for e in query.exts)
+    for value, term in ((query.min_width, "width >= ?"), (query.min_height, "height >= ?"),
+                        (query.min_size, "size >= ?"), (query.max_size, "size <= ?")):
+        if value is not None:
+            where.append(term)
+            args.append(value)
+    if query.name_contains:
         where.append("LOWER(name) LIKE ?")
-        args.append(f"%{name_contains.lower()}%")
+        args.append(f"%{query.name_contains.lower()}%")
+    return where, args
 
+
+def search_images(query: ImageQuery | None = None) -> list[str]:
+    """Run a parameterised search over the index — returns matching paths, newest first."""
+    query = query or ImageQuery()
+    where, args = _query_where(query)
     sql = "SELECT path FROM images"
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY taken_at DESC, mtime DESC"
-    if limit is not None:
-        sql += f" LIMIT {int(limit)}"  # nosec B608 - limit is int-coerced above
+    if query.limit is not None:
+        sql += f" LIMIT {int(query.limit)}"  # nosec B608 - limit is int-coerced above
     return [r["path"] for r in conn().execute(sql, args).fetchall()]  # nosec B608
 
 
