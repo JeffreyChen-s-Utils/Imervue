@@ -309,6 +309,22 @@ def test_precise_backend_available_reflects_import(monkeypatch):
     assert _detection._precise_backend_available() is False
 
 
+def test_precise_backend_logs_a_broken_ml_stack(monkeypatch, caplog):
+    import builtins
+    real_import = builtins.__import__
+
+    def _broken(name, *a, **k):
+        if name == "ultralytics":
+            raise OSError("[WinError 126] torch DLL failed to load")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", _broken)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        assert _detection._precise_backend_available() is False
+    assert any("FastSAM backend unavailable" in r.getMessage() and r.exc_info
+               for r in caplog.records)
+
+
 def test_segment_boxes_degrades_to_none_without_model(monkeypatch):
     # No ultralytics / model → _get_fastsam raises → _segment_boxes returns None
     # so the caller falls back to the ellipse shape instead of crashing.

@@ -1,14 +1,19 @@
-"""Guard: no ``contextlib.suppress(Exception)`` (or ``BaseException``) in product code.
+"""Guard: product code never swallows every exception without a trace.
 
-ruff's ``BLE`` rule sees ``except Exception`` but not the ``suppress`` form,
-which swallows every failure without a trace. Catch the exceptions the block
-can actually meet, or use ``Imervue.system.best_effort.best_effort``, which
-still carries on but logs the traceback. Covers ``Imervue/`` and the bundled
-``plugins/``.
+* No ``contextlib.suppress(Exception)`` (or ``BaseException``). ruff's ``BLE``
+  rule sees ``except Exception`` but not the ``suppress`` form.
+* No broad handler (``except:``, ``except Exception`` / ``BaseException``)
+  whose body neither raises, logs, nor uses the bound exception — a
+  ``# noqa: BLE001`` silences ruff but not this test.
+
+Catch the exceptions the block can actually meet, or use
+``Imervue.system.best_effort.best_effort``, which still carries on but logs the
+traceback. Covers ``Imervue/`` and the bundled ``plugins/``.
 """
 from __future__ import annotations
 
 import ast
+import textwrap
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parent.parent
@@ -41,6 +46,36 @@ def _silent_suppressions(source: str) -> list[tuple[int, str]]:
     return found
 
 
+_LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical", "log"}
+
+
+def _is_broad(node: ast.expr | None) -> bool:
+    if node is None:
+        return True
+    names = node.elts if isinstance(node, ast.Tuple) else [node]
+    return any((name.attr if isinstance(name, ast.Attribute) else getattr(name, "id", None))
+               in _BROAD for name in names)
+
+
+def _reports(handler: ast.ExceptHandler) -> bool:
+    for node in ast.walk(ast.Module(body=handler.body, type_ignores=[])):
+        if isinstance(node, ast.Raise):
+            return True
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr in _LOG_METHODS):
+            return True
+        if handler.name and isinstance(node, ast.Name) and node.id == handler.name:
+            return True
+    return False
+
+
+def _silent_handlers(source: str) -> list[int]:
+    """Return the line of every broad ``except`` in ``source`` that hides the error."""
+    return [node.lineno for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.ExceptHandler) and _is_broad(node.type)
+            and not _reports(node)]
+
+
 def _product_files():
     for root in _ROOTS:
         if not root.is_dir():
@@ -70,5 +105,37 @@ def test_no_product_code_suppresses_every_exception():
         f"{path.relative_to(_REPO).as_posix()}:{line} suppress({name})"
         for path in _product_files()
         for line, name in _silent_suppressions(path.read_text(encoding="utf-8"))
+    ]
+    assert found == []
+
+
+def test_handler_detector_flags_silent_broad_handlers_only():
+    source = textwrap.dedent("""\
+        import logging
+        log = logging.getLogger()
+        try: pass
+        except Exception: pass
+        try: pass
+        except (OSError, BaseException): x = 1
+        try: pass
+        except: pass
+        try: pass
+        except Exception: log.debug('x', exc_info=True)
+        try: pass
+        except Exception: raise
+        try: pass
+        except Exception as exc: failures.append(exc)
+        try: pass
+        except OSError: pass
+    """)
+    # Silent: plain ``Exception``, ``BaseException`` in a tuple, and a bare ``except``.
+    assert _silent_handlers(source) == [4, 6, 8]
+
+
+def test_no_product_code_hides_a_broad_exception():
+    found = [
+        f"{path.relative_to(_REPO).as_posix()}:{line}"
+        for path in _product_files()
+        for line in _silent_handlers(path.read_text(encoding="utf-8"))
     ]
     assert found == []

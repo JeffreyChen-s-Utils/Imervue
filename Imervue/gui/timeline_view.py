@@ -7,6 +7,7 @@ DateTimeOriginal when present, else file mtime.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,8 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
+
+logger = logging.getLogger("Imervue.gui.timeline_view")
 
 _THUMB_SIZE = 96
 # A row whose thumbnail fails to decode (file mid-move/delete or briefly locked)
@@ -67,9 +70,14 @@ class _TimelineThumbWorker(QRunnable):
                 # .copy() detaches from the soon-freed `data` buffer; the GUI
                 # thread turns this QImage into a QPixmap in _on_thumb.
                 img = qimg.copy()
-        except Exception:  # noqa: BLE001 — any decode failure must still emit so
-            # the model clears the in-flight marker and can retry the entry. A
-            # null QImage tells the slot to build the placeholder on the GUI thread.
+        # Any failure must still emit so the model clears the in-flight marker
+        # and can retry the entry. A null QImage tells the slot to build the
+        # placeholder on the GUI thread.
+        except IMAGE_READ_ERRORS:   # missing or unreadable file: expected
+            self.signals.done.emit(self.path, QImage(), False)
+            return
+        except Exception:  # noqa: BLE001 - worker boundary: log the bug, still emit
+            logger.exception("Timeline thumbnail worker failed for %s", self.path)
             self.signals.done.emit(self.path, QImage(), False)
             return
         self.signals.done.emit(self.path, img, True)

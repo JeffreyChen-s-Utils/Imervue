@@ -117,10 +117,13 @@ Rules the tools do **not** catch, which still apply:
   tuple, a group of settings a frozen dataclass (`SanitizeSettings`, `ExportSettings`, `ImageQuery`).
 - **Every module is imported by production code** — `tests/test_unwired_modules.py` fails on a
   new module nothing in `Imervue/` or `plugins/` imports (the pre-existing ones are listed there).
-- **No `contextlib.suppress(Exception)`** — ruff's `BLE` misses this form, so
-  `tests/test_no_silent_suppress.py` rejects it in `Imervue/` and `plugins/`. Catch what the block
-  can actually meet (`suppress(GLError)`, `suppress(*IMAGE_READ_ERRORS)`), or use
-  `Imervue.system.best_effort.best_effort("step", logger)` to carry on and log the traceback.
+- **No silently swallowed exceptions** — `tests/test_no_silent_suppress.py` rejects, in `Imervue/`
+  and `plugins/`, any `contextlib.suppress(Exception)` (ruff's `BLE` misses this form) and any
+  broad `except` whose body neither raises, logs, nor uses the bound exception (a
+  `# noqa: BLE001` silences ruff, not this test). Catch what the block can actually meet
+  (`GLError`, `IMAGE_READ_ERRORS`, `sqlite3.Error`, `OSError`), or use
+  `Imervue.system.best_effort.best_effort("step", logger)` to carry on and log the traceback. A
+  worker boundary that must always emit catches the expected errors first, then logs the rest.
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
   repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
   flag both; ruff does not.

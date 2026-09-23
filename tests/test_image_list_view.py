@@ -321,3 +321,37 @@ class TestThumbFetchRetry:
         m._on_fetched(str(tmp_path / "gone.png"), self._image(),  # noqa: SLF001
                       1, 1, 1.0, 1.0, True)
         assert m._row_index(p)[1].fetched is False  # noqa: SLF001
+
+
+def _run_list_thumb(path):
+    from Imervue.gui.image_list_view import _ThumbWorker
+
+    worker = _ThumbWorker(path)
+    emitted: list = []
+    worker.signals.done.connect(lambda *args: emitted.append(args))
+    worker.run()   # the QRunnable body, inline
+    return emitted
+
+
+def test_list_thumb_missing_file_emits_failure_quietly(qapp, tmp_path, caplog):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_list_thumb(str(tmp_path / "gone.png"))
+    assert args[-1] is False
+    assert caplog.records == []
+
+
+def test_list_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatch, caplog):
+    from Imervue.gui import image_list_view
+
+    path = tmp_path / "a.png"
+    path.write_bytes(b"x")
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("decoder bug")
+
+    monkeypatch.setattr(image_list_view.Image, "open", broken)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_list_thumb(str(path))
+    assert args[-1] is False
+    (record,) = caplog.records
+    assert record.exc_info[0] is RuntimeError

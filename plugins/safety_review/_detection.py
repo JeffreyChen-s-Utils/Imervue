@@ -87,7 +87,7 @@ def _custom_model_path() -> str | None:
     try:
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         path = user_setting_dict.get(CUSTOM_MODEL_SETTING)
-    except Exception:  # noqa: BLE001 — settings unavailable → use the default
+    except ImportError:   # running without Imervue's settings → use the default
         return None
     return path if path and os.path.isfile(path) else None
 
@@ -392,7 +392,10 @@ def _precise_backend_available() -> bool:
     try:
         from ultralytics import FastSAM  # noqa: F401
         return True
-    except Exception:  # noqa: BLE001 — any import failure means unavailable
+    # Importing ultralytics pulls in torch, which fails in open-ended ways
+    # (missing DLLs, version clashes); any failure means unavailable.
+    except Exception:  # noqa: BLE001 - optional ML stack, logged below
+        logger.debug("FastSAM backend unavailable", exc_info=True)
         return False
 
 

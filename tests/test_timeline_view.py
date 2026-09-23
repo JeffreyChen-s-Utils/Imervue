@@ -172,3 +172,37 @@ def test_extract_date_propagates_an_unexpected_reader_error(tmp_path, monkeypatc
     monkeypatch.setattr(tv.Image, "open", broken)
     with pytest.raises(RuntimeError, match="reader bug"):
         tv._extract_date(str(tmp_path / "a.png"))
+
+
+def _run_timeline_thumb(path):
+    from Imervue.gui.timeline_view import _TimelineThumbWorker
+
+    worker = _TimelineThumbWorker(path)
+    emitted: list = []
+    worker.signals.done.connect(lambda *args: emitted.append(args))
+    worker.run()   # the QRunnable body, inline
+    return emitted
+
+
+def test_timeline_thumb_missing_file_emits_failure_quietly(qapp, tmp_path, caplog):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_timeline_thumb(str(tmp_path / "gone.png"))
+    assert args[-1] is False
+    assert caplog.records == []
+
+
+def test_timeline_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatch, caplog):
+    from Imervue.gui import timeline_view
+
+    path = tmp_path / "a.png"
+    path.write_bytes(b"x")
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("decoder bug")
+
+    monkeypatch.setattr(timeline_view.Image, "open", broken)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_timeline_thumb(str(path))
+    assert args[-1] is False
+    (record,) = caplog.records
+    assert record.exc_info[0] is RuntimeError
