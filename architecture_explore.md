@@ -964,9 +964,9 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 **共用 fixture**：`qapp`、`tmp_path`、`sample_*_array`、`image_folder`、`pump_until`（等候排隊中的 Qt 訊號）、
 `fake_clipboard`（行程內剪貼簿），以及 autouse 的 `_isolate_user_settings`（把設定路徑導開，測試絕不寫真的
-`user_setting.json`）和 `os_trash`（以行程內假回收筒取代 `send2trash`，測試絕不碰系統資源回收筒）。
+`user_setting.json`）、`os_trash`（以行程內假回收筒取代 `send2trash`，測試絕不碰系統資源回收筒）和 `_restore_app_font`（還原測試改過的 QApplication 字型，避免同一 xdist worker 後續檔案的元件尺寸被放大）。
 
-**輔助模組**：`_qt_skip.py`（GL widget 的 CI skip marker）、`_instant_worker.py`、`_toast_spy.py`。
+**輔助模組**：`_qt_skip.py`（GL widget 的 CI skip marker）、`_instant_worker.py`、`_toast_spy.py`、`_app_font.py`（`app_font_restored` 字型還原 context manager）。
 
 ### Qt / OpenGL 在無頭 CI 上的硬規則
 

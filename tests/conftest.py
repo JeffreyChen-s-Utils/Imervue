@@ -625,6 +625,14 @@ def _drain_qt_deferred_delete():
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
+@pytest.fixture(autouse=True)
+def _restore_app_font():
+    """Put back the QApplication font a test changed (see ``tests/_app_font.py``)."""
+    from tests._app_font import app_font_restored
+    with app_font_restored():
+        yield
+
+
 
 
 # ===========================
