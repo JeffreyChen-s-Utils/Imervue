@@ -169,6 +169,12 @@ class PaintCanvas(
         # The accept logic lives in :meth:`dragEnterEvent`.
         self.setAcceptDrops(True)
 
+        self._init_document_and_gl_state()
+        self._init_view_state()
+        self._init_interaction_state()
+
+    def _init_document_and_gl_state(self) -> None:
+        """Document subscription plus the GL textures, upload flags and grid VBO cache."""
         self._document: PaintDocument = PaintDocument()
         # Subscribe so wholesale document mutations (add layer, set
         # layer attribute, invalidate composite, etc.) force a full
@@ -207,6 +213,8 @@ class PaintCanvas(
         self._grid_vbo_size: tuple[int, int] | None = None
         self._grid_vbo_vertices: int = 0
 
+    def _init_view_state(self) -> None:
+        """Zoom, pan, rotation, overlay toggles and the auto-fit bookkeeping."""
         self._zoom = 1.0
         self._pan_x = 0.0
         self._pan_y = 0.0
@@ -268,6 +276,8 @@ class PaintCanvas(
         # no-ops because every dab is off-canvas.
         self._user_view_locked = False
 
+    def _init_interaction_state(self) -> None:
+        """Tool dispatch, panning, pressure, marquee animation and the drag-preview overlay."""
         self._dispatcher: ToolDispatcher | None = None
         self._panning = False
         self._pan_anchor = (0, 0)
