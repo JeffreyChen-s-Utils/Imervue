@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-03 | 2026-09-24 | Split PuppetWorkspace's constructor; no function is over 80 lines any more (closes #19) | #done #refactor #puppet | [2026-09](2026-09.md) |
 | U-20260924-02 | 2026-09-24 | Split PuppetCanvas.render_offscreen_puppet into fit, frame and FBO steps (#19) | #refactor #puppet | [2026-09](2026-09.md) |
 | U-20260924-01 | 2026-09-24 | Split GPUDabSession.stamp and pin its GL call sequence (#19) | #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-89 | 2026-09-23 | Share one dab-clipping rule across every dab-based paint tool (#19) | #refactor #paint | [2026-09](2026-09.md) |

@@ -95,6 +95,13 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             Qt.ToolBarArea.TopToolBarArea, self._build_toggle_toolbar(),
         )
 
+        self._build_docks()
+        self._build_controllers()
+        self._build_status_bar()
+        self._refresh_status_for_no_document()
+
+    def _build_docks(self) -> None:
+        """Parameters / Expressions / Bones tabbed on the right, Motions at the bottom."""
         self._parameter_dock = ParameterDock(self._canvas, self, workspace=self)
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_dock,
@@ -135,6 +142,8 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             Qt.DockWidgetArea.BottomDockWidgetArea, self._motion_dock,
         )
 
+    def _build_controllers(self) -> None:
+        """Input, idle, streaming, export and recording controllers bound to the canvas."""
         self._input_engine = InputEngine(self._canvas, self)
         self._idle_driver = IdleDriver(self._canvas, self)
         self._idle_motion_cycler = IdleMotionCycler(
@@ -157,11 +166,12 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         self._motion_recorder.finished.connect(self._on_motion_recorded)
         self._canvas.hit_area_triggered.connect(self._on_hit_area_triggered)
 
+    def _build_status_bar(self) -> None:
+        """Status bar with the stretching message label."""
         self._status_label = QLabel("")
         bar = QStatusBar()
         bar.addWidget(self._status_label, stretch=1)
         self.setStatusBar(bar)
-        self._refresh_status_for_no_document()
 
     def canvas(self) -> PuppetCanvas:
         return self._canvas
