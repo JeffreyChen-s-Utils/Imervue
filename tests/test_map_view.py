@@ -44,3 +44,19 @@ def test_render_html_embeds_place_label():
     out = _render_html(group_points_by_place([("a.jpg", 48.85, 2.35)]))
     assert "Paris, France (1)" in out
     assert "__POINTS__" not in out
+
+
+def test_render_html_pins_leaflet_with_subresource_integrity():
+    # Hashes as published on leafletjs.com for 1.9.4; a tampered CDN copy is refused.
+    out = _render_html([])
+    for name, digest in (("leaflet.css", "p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="),
+                         ("leaflet.js", "20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=")):
+        start = out.index(f"leaflet@1.9.4/dist/{name}")
+        tag_end = out.index(">", start)
+        assert f'integrity="sha256-{digest}" crossorigin=""' in out[start:tag_end]
+
+
+def test_render_html_caps_the_fit_zoom():
+    out = _render_html(group_points_by_place([("a.jpg", 48.85, 2.35)]))
+    assert "{maxZoom: 12}" in out
+    assert "__FIT_MAX_ZOOM__" not in out

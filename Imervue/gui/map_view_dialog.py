@@ -33,15 +33,23 @@ logger = logging.getLogger("Imervue.map_view_dialog")
 
 _UNKNOWN_PLACE = "Unknown"
 
+# Leaflet comes from a CDN, so each file carries the Subresource Integrity hash
+# Leaflet publishes for 1.9.4: a tampered copy is refused instead of run.
+# ``fitBounds`` stops at city level, so a single place is not shown at street
+# level with nothing around it to recognise.
+_FIT_MAX_ZOOM = 12
+
 _LEAFLET_HTML = """<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
 <title>Map</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>html,body,#map{height:100%;margin:0;padding:0}</style>
 </head><body>
 <div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 var points = __POINTS__;
 var map = L.map('map');
@@ -56,7 +64,7 @@ points.forEach(function(p){
 });
 if (points.length) {
   group.addTo(map);
-  map.fitBounds(group.getBounds().pad(0.2));
+  map.fitBounds(group.getBounds().pad(0.2), {maxZoom: __FIT_MAX_ZOOM__});
 } else {
   map.setView([0, 0], 2);
 }
@@ -114,7 +122,8 @@ def _render_html(groups: list[PlaceGroup]) -> str:
          "label": html.escape(f"{g.place} ({g.count})")}
         for g in groups
     ]
-    return _LEAFLET_HTML.replace("__POINTS__", json.dumps(items))
+    return (_LEAFLET_HTML.replace("__POINTS__", json.dumps(items))
+            .replace("__FIT_MAX_ZOOM__", str(_FIT_MAX_ZOOM)))
 
 
 class MapViewDialog(QDialog):

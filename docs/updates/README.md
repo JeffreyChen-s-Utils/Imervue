@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-54 | 2026-09-24 | Pin Leaflet with Subresource Integrity; fit single places at city zoom | #fix #security #gui | [2026-09](2026-09.md) |
 | U-20260924-53 | 2026-09-24 | Show EXIF values and file names as text in the sidebar | #fix #security #gui | [2026-09](2026-09.md) |
 | U-20260924-52 | 2026-09-24 | Keep the desktop pet's credentials out of the support bundle | #fix #security #privacy | [2026-09](2026-09.md) |
 | U-20260924-51 | 2026-09-24 | Move the plugin interpreter to CPython 3.12.10 | #deps #security #plugin | [2026-09](2026-09.md) |
