@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-42 | 2026-09-24 | Refuse puppet archives that expand past 2 GiB | #fix #security #puppet | [2026-09](2026-09.md) |
 | U-20260924-41 | 2026-09-24 | Refuse plugin and file names that could leave the plugins folder | #fix #security #plugin | [2026-09](2026-09.md) |
 | U-20260924-40 | 2026-09-24 | Guard against unpickling in NumPy and PyTorch loads | #security #tests | [2026-09](2026-09.md) |
 | U-20260924-39 | 2026-09-24 | Stop unpickling the semantic-search cache | #fix #security #library | [2026-09](2026-09.md) |

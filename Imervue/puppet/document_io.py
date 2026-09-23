@@ -47,6 +47,11 @@ _PHYSICS_JSON = "physics.json"
 _TEXTURES_DIR = "textures/"
 _MOTIONS_DIR = "motions/"
 _EXPRESSIONS_DIR = "expressions/"
+# Ceiling on the total declared uncompressed size. A rig's textures are PNGs
+# that barely compress (the bundled example is ~21 MB), so this only stops a
+# zip bomb: zipfile never reads past an entry's declared size, so checking the
+# declared total before reading is enough.
+_MAX_UNCOMPRESSED_BYTES = 2 * 1024 ** 3
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +118,10 @@ def save_puppet(doc: PuppetDocument, path: str | Path) -> None:
 
 
 def _load_from_zip(zf: zipfile.ZipFile) -> PuppetDocument:
+    total = sum(info.file_size for info in zf.infolist())
+    if total > _MAX_UNCOMPRESSED_BYTES:
+        raise PuppetFormatError(
+            f"archive expands to {total:,} bytes, over the {_MAX_UNCOMPRESSED_BYTES:,} limit")
     if _PUPPET_JSON not in zf.namelist():
         raise PuppetFormatError(f"missing {_PUPPET_JSON}")
     manifest = _read_json(zf, _PUPPET_JSON)
