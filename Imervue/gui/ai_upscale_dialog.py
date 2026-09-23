@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -28,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.dialog_rows import folder_picker_row
+from Imervue.gui.dialog_rows import action_button_row, folder_picker_row, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -530,30 +529,21 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
         self._out_label = QLabel(
             self._lang.get("upscale_output", "Output folder:"))
         layout.addWidget(self._out_label)
-        out_row = QHBoxLayout()
-        self._out_edit = QLineEdit()
+        out_row, self._out_edit, self._out_browse = path_browse_row(
+            self._browse_out, browse_text=self._lang.get("export_browse", "Browse..."))
         if self._paths:
             self._out_edit.setText(str(Path(self._paths[0]).parent))
-        self._out_browse = QPushButton(
-            self._lang.get("export_browse", "Browse..."))
-        self._out_browse.clicked.connect(self._browse_out)
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(self._out_browse)
         layout.addLayout(out_row)
 
     def _build_button_row(self) -> QHBoxLayout:
         """Right-aligned Cancel and Upscale; Upscale starts enabled only with paths."""
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
         cancel_btn.clicked.connect(self.reject)
         self._start_btn = QPushButton(
             self._lang.get("upscale_start", "Upscale"))
         self._start_btn.clicked.connect(self._do_start)
         self._start_btn.setEnabled(bool(self._paths))
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._start_btn)
-        return btn_row
+        return action_button_row(cancel_btn, self._start_btn)
 
     def _update_count(self):
         count = len(self._paths)
