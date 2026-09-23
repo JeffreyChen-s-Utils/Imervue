@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-09 | 2026-09-24 | Fold make_slider_spin's size keywords into a compact flag (#24) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260924-08 | 2026-09-24 | Give the batch export worker an ExportSettings object (#24) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260924-07 | 2026-09-24 | Group the image sanitizer's options into UpscaleSpec and SanitizeSettings (#24) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260924-06 | 2026-09-24 | Tighten the complexity ceiling to the workspace's 15; file the parameter-count gap | #tooling #quality | [2026-09](2026-09.md) |

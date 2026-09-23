@@ -75,8 +75,8 @@ def test_default_spin_width_and_spacing(parent):
     assert row.spacing() == 6
 
 
-def test_custom_spin_width_and_spacing(parent):
-    _slider, spin, row = make_slider_spin(parent, 0, 10, 0, spin_width=60, spacing=4)
+def test_compact_spin_width_and_spacing(parent):
+    _slider, spin, row = make_slider_spin(parent, 0, 10, 0, compact=True)
     assert spin.maximumWidth() == 60
     assert row.spacing() == 4
 

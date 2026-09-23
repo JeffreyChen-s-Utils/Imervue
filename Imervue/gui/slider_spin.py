@@ -14,6 +14,9 @@ from PySide6.QtWidgets import QHBoxLayout, QSlider, QSpinBox, QWidget
 
 _SPIN_WIDTH = 70
 _ROW_SPACING = 6
+# Narrow side panels (Develop / Modify) use a tighter row.
+_COMPACT_SPIN_WIDTH = 60
+_COMPACT_ROW_SPACING = 4
 
 
 def link_slider_spin(
@@ -42,17 +45,18 @@ def make_slider_spin(
     *,
     on_change: Callable[[int], None] | None = None,
     suffix: str = "",
-    spin_width: int = _SPIN_WIDTH,
-    spacing: int = _ROW_SPACING,
+    compact: bool = False,
 ) -> tuple[QSlider, QSpinBox, QHBoxLayout]:
     """Build a linked horizontal slider + spin box row for ``[minimum, maximum]``.
 
     Returns the slider, the spin box and the row layout holding them; the
-    slider takes the spare width.
+    slider takes the spare width. ``compact`` narrows the spin box and the
+    gap for tight side panels.
     """
+    spin_width = _COMPACT_SPIN_WIDTH if compact else _SPIN_WIDTH
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
-    row.setSpacing(spacing)
+    row.setSpacing(_COMPACT_ROW_SPACING if compact else _ROW_SPACING)
 
     slider = QSlider(Qt.Orientation.Horizontal, parent)
     slider.setRange(minimum, maximum)

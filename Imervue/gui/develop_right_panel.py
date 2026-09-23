@@ -36,8 +36,6 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 
 # The Modify panel is narrower than the annotation dialog's properties panel.
-_SPIN_WIDTH = 60
-_ROW_SPACING = 4
 
 
 class DevelopRightPanelMixin:
@@ -115,8 +113,7 @@ class DevelopRightPanelMixin:
         layout.addWidget(sw_label)
 
         self._width_slider, self._width_spin, sw_row = make_slider_spin(
-            None, 1, 40, 3, spin_width=_SPIN_WIDTH, spacing=_ROW_SPACING,
-            on_change=self._on_stroke_width)
+            None, 1, 40, 3, compact=True, on_change=self._on_stroke_width)
         layout.addLayout(sw_row)
         self._interactive_widgets.extend([self._width_slider, self._width_spin])
 
@@ -126,8 +123,7 @@ class DevelopRightPanelMixin:
         op_label = QLabel(lang.get("annotation_opacity", "Opacity"))
         layout.addWidget(op_label)
         self._opacity_slider, self._opacity_spin, op_row = make_slider_spin(
-            None, 0, 100, 100, suffix=" %", spin_width=_SPIN_WIDTH,
-            spacing=_ROW_SPACING, on_change=self._on_opacity)
+            None, 0, 100, 100, suffix=" %", compact=True, on_change=self._on_opacity)
         layout.addLayout(op_row)
         self._interactive_widgets.extend([self._opacity_slider, self._opacity_spin])
 
