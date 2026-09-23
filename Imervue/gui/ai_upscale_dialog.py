@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.folder_row import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -96,6 +97,18 @@ REQUIRED_PACKAGES = [
     ("onnxruntime", "onnxruntime"),
     ("huggingface_hub", "huggingface_hub"),
 ]
+
+
+def fill_upscale_model_combo(combo: QComboBox, lang: dict) -> None:
+    """Add every upscale method to ``combo``: traditional (dependency-free) first, then AI.
+
+    Item text comes from ``lang`` with each method's default description as the
+    fallback; item data is the method key.
+    """
+    for methods in (TRADITIONAL_METHODS, UPSCALE_MODELS):
+        for key, info in methods.items():
+            combo.addItem(lang.get(info["desc_key"], info["desc_default"]), key)
+
 
 _IMAGE_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
@@ -412,107 +425,16 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
         info.setWordWrap(True)
         layout.addWidget(info)
 
-        # --- Source folder (shown only when no preset paths) ---
-        self._src_row_widget = QWidget()
-        src_layout = QVBoxLayout(self._src_row_widget)
-        src_layout.setContentsMargins(0, 0, 0, 0)
-        src_layout.setSpacing(4)
-
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(
-            self._lang.get("exif_strip_source", "Source folder:")))
-        self._src_edit = QLineEdit()
-        self._src_edit.textChanged.connect(self._rescan_folder)
-        src_row.addWidget(self._src_edit, 1)
-        src_browse = QPushButton(
-            self._lang.get("export_browse", "Browse..."))
-        src_browse.clicked.connect(self._browse_src)
-        src_row.addWidget(src_browse)
-        src_layout.addLayout(src_row)
-
-        self._recursive_check = QCheckBox(
-            self._lang.get("sanitize_recursive", "Include subfolders"))
-        self._recursive_check.toggled.connect(
-            lambda _: self._rescan_folder())
-        src_layout.addWidget(self._recursive_check)
-
-        layout.addWidget(self._src_row_widget)
-        if self._has_preset_paths:
-            self._src_row_widget.hide()
+        layout.addWidget(self._build_source_section())
 
         # Image count
         self._count_label = QLabel("")
         layout.addWidget(self._count_label)
 
-        # Method / model selection
-        model_row = QHBoxLayout()
-        model_row.addWidget(QLabel(
-            self._lang.get("upscale_model", "Model:")))
-        self._model_combo = QComboBox()
-        # Traditional (lossless) methods first
-        for key, info_dict in TRADITIONAL_METHODS.items():
-            label = self._lang.get(info_dict["desc_key"],
-                                   info_dict["desc_default"])
-            self._model_combo.addItem(label, key)
-        # AI models
-        for key, info_dict in UPSCALE_MODELS.items():
-            label = self._lang.get(info_dict["desc_key"],
-                                   info_dict["desc_default"])
-            self._model_combo.addItem(label, key)
-        self._model_combo.currentIndexChanged.connect(
-            self._on_method_changed)
-        self._model_combo.setToolTip(self._lang.get(
-            "upscale_model_tooltip",
-            "AI models reconstruct detail; traditional methods do "
-            "high-quality interpolation. AI is slower but recovers "
-            "fine texture and edges that resampling can't.",
-        ))
-        model_row.addWidget(self._model_combo, 1)
-        layout.addLayout(model_row)
-
-        # Scale factor (only for traditional methods)
-        self._scale_row = QHBoxLayout()
-        self._scale_label = QLabel(
-            self._lang.get("upscale_scale", "Scale factor:"))
-        self._scale_row.addWidget(self._scale_label)
-        self._scale_spin = QSpinBox()
-        self._scale_spin.setRange(2, 8)
-        self._scale_spin.setValue(2)
-        self._scale_spin.setToolTip(self._lang.get(
-            "upscale_scale_tooltip",
-            "Output multiplier — 2 doubles each side, 4 quadruples, etc.",
-        ))
-        self._scale_row.addWidget(self._scale_spin)
-        self._scale_row.addStretch()
-        layout.addLayout(self._scale_row)
-
-        # Overwrite
-        self._overwrite_check = QCheckBox(
-            self._lang.get("upscale_overwrite",
-                           "Overwrite original files"))
-        self._overwrite_check.setChecked(False)
-        self._overwrite_check.toggled.connect(self._on_overwrite_toggled)
-        self._overwrite_check.setToolTip(self._lang.get(
-            "upscale_overwrite_tooltip",
-            "Replace each source file in place. Off (default) writes "
-            "to the chosen output folder so the originals are safe.",
-        ))
-        layout.addWidget(self._overwrite_check)
-
-        # Output directory
-        self._out_label = QLabel(
-            self._lang.get("upscale_output", "Output folder:"))
-        layout.addWidget(self._out_label)
-        out_row = QHBoxLayout()
-        self._out_edit = QLineEdit()
-        if self._paths:
-            self._out_edit.setText(str(Path(self._paths[0]).parent))
-        self._out_browse = QPushButton(
-            self._lang.get("export_browse", "Browse..."))
-        self._out_browse.clicked.connect(self._browse_out)
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(self._out_browse)
-        layout.addLayout(out_row)
+        layout.addLayout(self._build_model_row())
+        layout.addLayout(self._build_scale_row())
+        layout.addWidget(self._build_overwrite_check())
+        self._add_output_rows(layout)
 
         # Progress
         self._progress = QProgressBar()
@@ -529,8 +451,98 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
 
         self._status_label = QLabel("")
         layout.addWidget(self._status_label)
+        layout.addLayout(self._build_button_row())
 
-        # Buttons
+    def _build_source_section(self) -> QWidget:
+        """Source folder row and subfolder toggle; hidden when paths were supplied."""
+        self._src_row_widget = QWidget()
+        src_layout = QVBoxLayout(self._src_row_widget)
+        src_layout.setContentsMargins(0, 0, 0, 0)
+        src_layout.setSpacing(4)
+
+        src_row, self._src_edit = folder_picker_row(
+            self._lang.get("exif_strip_source", "Source folder:"), self._browse_src,
+            browse_text=self._lang.get("export_browse", "Browse..."))
+        self._src_edit.textChanged.connect(self._rescan_folder)
+        src_layout.addLayout(src_row)
+
+        self._recursive_check = QCheckBox(
+            self._lang.get("sanitize_recursive", "Include subfolders"))
+        self._recursive_check.toggled.connect(
+            lambda _: self._rescan_folder())
+        src_layout.addWidget(self._recursive_check)
+
+        if self._has_preset_paths:
+            self._src_row_widget.hide()
+        return self._src_row_widget
+
+    def _build_model_row(self) -> QHBoxLayout:
+        """Method / model combo: traditional methods first, then the AI models."""
+        model_row = QHBoxLayout()
+        model_row.addWidget(QLabel(
+            self._lang.get("upscale_model", "Model:")))
+        self._model_combo = QComboBox()
+        fill_upscale_model_combo(self._model_combo, self._lang)
+        self._model_combo.currentIndexChanged.connect(
+            self._on_method_changed)
+        self._model_combo.setToolTip(self._lang.get(
+            "upscale_model_tooltip",
+            "AI models reconstruct detail; traditional methods do "
+            "high-quality interpolation. AI is slower but recovers "
+            "fine texture and edges that resampling can't.",
+        ))
+        model_row.addWidget(self._model_combo, 1)
+        return model_row
+
+    def _build_scale_row(self) -> QHBoxLayout:
+        """Scale factor, shown only for the traditional methods."""
+        scale_row = QHBoxLayout()
+        self._scale_label = QLabel(
+            self._lang.get("upscale_scale", "Scale factor:"))
+        scale_row.addWidget(self._scale_label)
+        self._scale_spin = QSpinBox()
+        self._scale_spin.setRange(2, 8)
+        self._scale_spin.setValue(2)
+        self._scale_spin.setToolTip(self._lang.get(
+            "upscale_scale_tooltip",
+            "Output multiplier — 2 doubles each side, 4 quadruples, etc.",
+        ))
+        scale_row.addWidget(self._scale_spin)
+        scale_row.addStretch()
+        return scale_row
+
+    def _build_overwrite_check(self) -> QCheckBox:
+        """Overwrite-in-place toggle; checking it hides the output folder row."""
+        self._overwrite_check = QCheckBox(
+            self._lang.get("upscale_overwrite",
+                           "Overwrite original files"))
+        self._overwrite_check.setChecked(False)
+        self._overwrite_check.toggled.connect(self._on_overwrite_toggled)
+        self._overwrite_check.setToolTip(self._lang.get(
+            "upscale_overwrite_tooltip",
+            "Replace each source file in place. Off (default) writes "
+            "to the chosen output folder so the originals are safe.",
+        ))
+        return self._overwrite_check
+
+    def _add_output_rows(self, layout: QVBoxLayout) -> None:
+        """Output label above the path edit + Browse row, prefilled from the first path."""
+        self._out_label = QLabel(
+            self._lang.get("upscale_output", "Output folder:"))
+        layout.addWidget(self._out_label)
+        out_row = QHBoxLayout()
+        self._out_edit = QLineEdit()
+        if self._paths:
+            self._out_edit.setText(str(Path(self._paths[0]).parent))
+        self._out_browse = QPushButton(
+            self._lang.get("export_browse", "Browse..."))
+        self._out_browse.clicked.connect(self._browse_out)
+        out_row.addWidget(self._out_edit, 1)
+        out_row.addWidget(self._out_browse)
+        layout.addLayout(out_row)
+
+    def _build_button_row(self) -> QHBoxLayout:
+        """Right-aligned Cancel and Upscale; Upscale starts enabled only with paths."""
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
@@ -541,7 +553,7 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
         self._start_btn.setEnabled(bool(self._paths))
         btn_row.addWidget(cancel_btn)
         btn_row.addWidget(self._start_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     def _update_count(self):
         count = len(self._paths)

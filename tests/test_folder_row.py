@@ -49,3 +49,14 @@ def test_browse_label_is_translated(qapp, monkeypatch):
         assert row.itemAt(0).widget().text() == ""
     finally:
         host.deleteLater()
+
+
+def test_browse_text_override(qapp, monkeypatch):
+    monkeypatch.setattr(folder_row.language_wrapper, "language_word_dict",
+                        {"batch_convert_browse": "unused"})
+    row, _edit = folder_picker_row("Src:", lambda: None, browse_text="Pick…")
+    host = _hosted(row)
+    try:
+        assert row.itemAt(2).widget().text() == "Pick…"
+    finally:
+        host.deleteLater()

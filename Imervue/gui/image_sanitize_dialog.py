@@ -608,14 +608,8 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         model_row.addWidget(QLabel(
             lang.get("upscale_model", "Model:")))
         self._model_combo = QComboBox()
-        from Imervue.gui.ai_upscale_dialog import (
-            UPSCALE_MODELS, TRADITIONAL_METHODS,
-        )
-        # Traditional methods first (no dependencies needed), then AI models
-        for methods in (TRADITIONAL_METHODS, UPSCALE_MODELS):
-            for mkey, minfo in methods.items():
-                label = lang.get(minfo["desc_key"], minfo["desc_default"])
-                self._model_combo.addItem(label, mkey)
+        from Imervue.gui.ai_upscale_dialog import fill_upscale_model_combo
+        fill_upscale_model_combo(self._model_combo, lang)
         model_row.addWidget(self._model_combo, 1)
         upscale_layout.addLayout(model_row)
 

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `f09cb50` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `4928a26` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 761 | 125,344 |
+| `tests/` | 762 | 125,554 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,955 |
-| `Imervue/gui/` | 159 | 32,562 |
+| `Imervue/gui/` | 159 | 32,570 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,767 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,562** | **299,665** |
+| **總計** | **1,563** | **299,883** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,932 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,940 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -528,7 +528,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 962 | macOS Preview 式標註對話框（存 PNG/JPEG 或存專案） |
-| `folder_row.py` | 27 | `folder_picker_row()`：「標籤＋路徑輸入框＋瀏覽…」列，資料夾型對話框共用；按鈕只呼叫回呼，檔案對話框由呼叫端負責 |
+| `folder_row.py` | 29 | `folder_picker_row()`：「標籤＋路徑輸入框＋瀏覽…」列，資料夾型對話框共用；按鈕只呼叫回呼，檔案對話框由呼叫端負責，`browse_text` 可換按鈕字 |
 | `slider_spin.py` | 71 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `main_window_filter.py` | 261 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 169 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
@@ -597,9 +597,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `batch_convert_dialog.py`(375) · `batch_export_dialog.py`(393) · `export_dialog.py`(248) ·
 `optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(392) · `contact_sheet_dialog.py`(199) ·
 `web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(535) ·
-`duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(777) 淨化重繪（剝除所有隱藏資料）·
+`duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(300) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
-`ai_upscale_dialog.py`(715) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
+`ai_upscale_dialog.py`(726) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
 
