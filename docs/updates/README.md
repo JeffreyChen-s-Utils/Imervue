@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-44 | 2026-09-23 | Build the four stacking dialogs' output rows from dialog_rows | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-43 | 2026-09-23 | Build nine tool dialogs' output rows and pickers from dialog_rows | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-42 | 2026-09-23 | Build the upscale dialog's output and button rows from dialog_rows | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-41 | 2026-09-23 | Split BatchExportDialog._build_ui onto the shared dialog rows | #done #refactor #gui | [2026-09](2026-09.md) |

@@ -21,27 +21,40 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 _IMAGES = "Images (*.png *.jpg *.tif)"
 
 # module, class, edit attribute, label, file-dialog method, title, filter,
-# default-path suffix ("" = empty edit, None = not derived from the image)
+# default-path suffix ("" = empty edit, None = not derived from the image),
+# and the file dialog's start path (``_EDIT`` = the edit's current text)
+_EDIT = object()
 _CASES = [
     ("auto_straighten_dialog", "AutoStraightenDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_straight.png"),
+     "getSaveFileName", "Output", _IMAGES, "_straight.png", _EDIT),
     ("clone_stamp_dialog", "CloneStampDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_clone.png"),
+     "getSaveFileName", "Output", _IMAGES, "_clone.png", _EDIT),
     ("crop_straighten_dialog", "CropStraightenDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_crop.png"),
+     "getSaveFileName", "Output", _IMAGES, "_crop.png", _EDIT),
     ("healing_brush_dialog", "HealingBrushDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_healed.png"),
+     "getSaveFileName", "Output", _IMAGES, "_healed.png", _EDIT),
     ("lens_correction_dialog", "LensCorrectionDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_lens.png"),
+     "getSaveFileName", "Output", _IMAGES, "_lens.png", _EDIT),
     ("noise_sharpen_dialog", "NoiseSharpenDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", _IMAGES, "_nr.png"),
+     "getSaveFileName", "Output", _IMAGES, "_nr.png", _EDIT),
     ("sky_replace_dialog", "SkyReplaceDialog", "_out_edit", "Output:",
-     "getSaveFileName", "Output", "Images (*.png *.tif)", "_sky.png"),
+     "getSaveFileName", "Output", "Images (*.png *.tif)", "_sky.png", _EDIT),
     ("print_layout_dialog", "PrintLayoutDialog", "_out_edit", "Output PDF:",
-     "getSaveFileName", "Output PDF", "PDF (*.pdf)", None),
+     "getSaveFileName", "Output PDF", "PDF (*.pdf)", None, _EDIT),
     ("soft_proof_dialog", "SoftProofDialog", "_profile_edit", "ICC profile:",
-     "getOpenFileName", "ICC profile", "ICC Profiles (*.icc *.icm)", ""),
+     "getOpenFileName", "ICC profile", "ICC Profiles (*.icc *.icm)", "", ""),
+    ("focus_stack_dialog", "FocusStackDialog", "_out_edit", "Output:",
+     "getSaveFileName", "Output", "Images (*.jpg *.png *.tif)", "", "stacked.jpg"),
+    ("hdr_merge_dialog", "HdrMergeDialog", "_out_edit", "Output:",
+     "getSaveFileName", "Output", _IMAGES, "", "merged.png"),
+    ("panorama_dialog", "PanoramaDialog", "_out_edit", "Output:",
+     "getSaveFileName", "Output", "Images (*.jpg *.png *.tif)", "", "panorama.jpg"),
+    ("stack_blend_dialog", "StackBlendDialog", "_out_edit", "Output:",
+     "getSaveFileName", "Output", _IMAGES, "", "stacked.png"),
 ]
+
+_VIEWER_ONLY = {"PrintLayoutDialog", "FocusStackDialog", "HdrMergeDialog",
+                "PanoramaDialog", "StackBlendDialog"}
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +71,7 @@ def image(tmp_path):
 
 def _build(module, cls, image):
     dialog_cls = getattr(importlib.import_module(f"Imervue.gui.{module}"), cls)
-    if cls == "PrintLayoutDialog":
+    if cls in _VIEWER_ONLY:
         return dialog_cls(None)
     return dialog_cls(None, image)
 
@@ -77,10 +90,11 @@ def _find_layout(layout, widget):
 
 
 @pytest.mark.parametrize(
-    ("module", "cls", "edit_attr", "label", "method", "title", "file_filter", "suffix"),
+    ("module", "cls", "edit_attr", "label", "method", "title", "file_filter", "suffix",
+     "start_dir"),
     _CASES, ids=[c[1] for c in _CASES])
 def test_path_row(qapp, monkeypatch, image, module, cls, edit_attr, label, method,
-                  title, file_filter, suffix):
+                  title, file_filter, suffix, start_dir):
     dialog = _build(module, cls, image)
     try:
         edit = getattr(dialog, edit_attr)
@@ -114,7 +128,7 @@ def test_path_row(qapp, monkeypatch, image, module, cls, edit_attr, label, metho
         assert edit.text() == "C:/picked/out.png"
         widgets[2].click()
         assert edit.text() == "C:/picked/out.png"
-        expected_dir = "" if method == "getOpenFileName" else start
+        expected_dir = start if start_dir is _EDIT else start_dir
         assert calls[0] == (dialog, title, expected_dir, file_filter)
     finally:
         dialog.deleteLater()

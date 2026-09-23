@@ -204,3 +204,17 @@ def test_open_path_into_starts_empty(qapp, monkeypatch, picked, expected):
         assert calls == [(None, "ICC profile", "", "ICC (*.icc)")]
     finally:
         edit.deleteLater()
+
+
+def test_save_path_into_explicit_start(qapp, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+    calls = []
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(
+        lambda *args: calls.append(args) or ("", "")))
+    edit = QLineEdit("/current.png")
+    try:
+        dialog_rows.save_path_into(None, edit, "Output", "F", start="merged.png")
+        assert calls == [(None, "Output", "merged.png", "F")]
+        assert edit.text() == "/current.png"
+    finally:
+        edit.deleteLater()

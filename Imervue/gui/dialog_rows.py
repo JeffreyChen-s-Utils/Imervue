@@ -53,9 +53,16 @@ def folder_picker_row(
     return row, edit
 
 
-def save_path_into(parent: QWidget, edit: QLineEdit, title: str, file_filter: str) -> None:
-    """Ask for a save path starting at ``edit``'s text; a picked path replaces it."""
-    path, _ = QFileDialog.getSaveFileName(parent, title, edit.text(), file_filter)
+def save_path_into(
+    parent: QWidget, edit: QLineEdit, title: str, file_filter: str,
+    *, start: str | None = None,
+) -> None:
+    """Ask for a save path; a picked path replaces ``edit``'s text.
+
+    The dialog starts at ``start`` when given, else at the edit's current text.
+    """
+    directory = edit.text() if start is None else start
+    path, _ = QFileDialog.getSaveFileName(parent, title, directory, file_filter)
     if path:
         edit.setText(path)
 
