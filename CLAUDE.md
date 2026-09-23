@@ -100,7 +100,7 @@ gh pr view <N> --json title,body --jq '.title + "\n" + .body' \
 
 **The tool config is the source of truth, not prose.** `pyproject.toml` (`[tool.ruff]`,
 `[tool.bandit]`) and `.bandit` define the enforced rule set — ruff runs `E,F,W,B,SIM,UP,PL,S,C90,N,BLE`
-with `mccabe.max-complexity = 16` and a documented ignore list. Do not restate those rules here or
+with `mccabe.max-complexity = 15` and a documented ignore list. Do not restate those rules here or
 assume limits the config has deliberately relaxed. If a rule should change, change the config.
 
 Rules the tools do **not** catch, which still apply:

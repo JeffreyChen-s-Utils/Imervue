@@ -116,10 +116,10 @@ ignore = [
     # statements / args; enforce cognitive complexity (C901) instead.
     "PLR0911", "PLR0912", "PLR0913", "PLR0915",
 ]
-# McCabe ≤ 16 matches SonarQube's default cognitive-complexity threshold and
-# keeps paint_tile_grid / _draw_freehand_qt (both 16) within budget. No module
-# needs a per-file C901 exemption any more.
-mccabe.max-complexity = 16
+# McCabe ≤ 15 is the workspace-wide ceiling (D:\Codes\CLAUDE.md, "可讀性"),
+# which a project may tighten but not relax. No module needs a per-file C901
+# exemption.
+mccabe.max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "PLR2004", "PLR0913", "PLR0915", "E501"]

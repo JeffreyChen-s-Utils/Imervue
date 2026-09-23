@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-06 | 2026-09-24 | Tighten the complexity ceiling to the workspace's 15; file the parameter-count gap | #tooling #quality | [2026-09](2026-09.md) |
 | U-20260924-05 | 2026-09-24 | Webhook 404/401 replies no longer lost to a connection reset (the "flaky" e2e test) | #bug #desktop_pet #tests | [2026-09](2026-09.md) |
 | U-20260924-04 | 2026-09-24 | Guard the function- and module-length limits with a test | #tooling #quality | [2026-09](2026-09.md) |
 | U-20260924-03 | 2026-09-24 | Split PuppetWorkspace's constructor; no function is over 80 lines any more (closes #19) | #done #refactor #puppet | [2026-09](2026-09.md) |

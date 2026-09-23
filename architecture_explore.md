@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `27cfb53` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `3be1021` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -1013,7 +1013,7 @@ py -m bandit -c pyproject.toml -r Imervue/ # 必須 "No issues identified"（-c 
 外加：commit message 不得含任何 AI 工具 / 模型名稱，不得有 `Co-Authored-By`。
 
 **ruff 設定重點**：line-length 100，啟用 `E/F/W/B/SIM/UP/PL/S/C90/N`，
-`mccabe.max-complexity = 16`（對齊 SonarQube 認知複雜度門檻）。
+`mccabe.max-complexity = 15`（工作區規則的上限，專案只能更嚴不能放寬）。
 Qt override 的 camelCase（N802/N803/N806/N815）與品牌名 `Imervue`（N999）已豁免。
 
 **外部儀表板**：Codacy（`app.codacy.com/gh/JeffreyChen-s-Utils/Imervue`）與
