@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d45dfe4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `01f2995` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 824 | 134,886 |
+| `tests/` | 824 | 134,896 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,839 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,888 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,912 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,253 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,196 |
-| **總計** | **1,639** | **309,734** |
+| **總計** | **1,639** | **309,747** |
 
-其中 `Imervue/` 套件本身 751 檔 / 160,652 行。
+其中 `Imervue/` 套件本身 751 檔 / 160,655 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -458,8 +458,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 485 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口 |
-| `load_thumbnail_worker.py` | 167 | 單張縮圖解碼 `QRunnable` |
+| `image_loader.py` | 487 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口 |
+| `load_thumbnail_worker.py` | 168 | 單張縮圖解碼 `QRunnable` |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
 
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-824 個檔、134,886 行。`pyproject.toml` 定義三個互斥層級 marker：
+824 個檔、134,896 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

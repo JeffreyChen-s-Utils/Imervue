@@ -16,9 +16,7 @@ from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-import imageio
 import numpy as np
-import rawpy
 from PIL import Image
 
 logger = logging.getLogger("Imervue.image_loader")
@@ -53,6 +51,10 @@ def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
 
 
 def _load_raw_thumbnail(raw) -> np.ndarray:
+    # Imported here: rawpy and imageio cost ~190 ms at startup, and only a
+    # RAW file needs them.
+    import imageio
+    import rawpy
     try:
         thumb = raw.extract_thumb()
         if thumb.format == rawpy.ThumbFormat.JPEG:

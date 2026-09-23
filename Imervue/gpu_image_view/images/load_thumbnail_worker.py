@@ -3,8 +3,6 @@ from pathlib import Path
 
 from PySide6.QtCore import QRunnable, Signal, QObject
 import numpy as np
-import rawpy
-import imageio
 from PIL import Image
 
 from Imervue.image.recipe_store import recipe_store
@@ -128,6 +126,9 @@ class LoadThumbnailWorker(QRunnable):
 
     def _load_raw(self) -> np.ndarray:
         """載入 RAW 圖片"""
+        # Imported here so the viewer's startup does not pay for them.
+        import imageio
+        import rawpy
         with rawpy.imread(self.path) as raw:
             try:
                 thumb = raw.extract_thumb()

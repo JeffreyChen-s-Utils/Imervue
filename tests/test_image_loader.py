@@ -153,3 +153,23 @@ class TestJxlInGrid:
         result = load_image_file(str(out))
         assert result.ndim == 3
         assert result.shape[2] == 4
+
+
+def test_opening_the_viewer_does_not_import_raw_decoders():
+    # rawpy and imageio cost ~90 ms of startup and only RAW files need them,
+    # so the loaders import them where a RAW file is decoded. Checked in a
+    # fresh interpreter, since this test session has imported everything.
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parent.parent
+    code = ("import sys; import Imervue.Imervue_main_window; "
+            "print(sorted(m for m in ('rawpy', 'imageio') if m in sys.modules))")
+    result = subprocess.run(  # noqa: S603 - fixed argv: this interpreter
+        [sys.executable, "-c", code], capture_output=True, text=True, cwd=repo,
+        timeout=120, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "[]"
+

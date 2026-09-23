@@ -36,9 +36,9 @@ class _FakeRaw:
 
 def _load(monkeypatch, thumb):
     raw = _FakeRaw(thumb)
-    real_imread = mod.rawpy.imread
+    real_imread = rawpy.imread
     # imageio's own rawpy plugin calls rawpy.imread too; only intercept ours.
-    monkeypatch.setattr(mod.rawpy, "imread",
+    monkeypatch.setattr(rawpy, "imread",
                         lambda path, *a, **k: raw if path == "shot.cr2" else real_imread(path, *a, **k))
     worker = mod.LoadThumbnailWorker("shot.cr2", size=None)
     return worker._load_raw(), raw  # noqa: SLF001

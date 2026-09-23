@@ -7,23 +7,13 @@ running ``GPUImageView``.
 """
 from __future__ import annotations
 
-import sys
-import types
 from datetime import datetime
 
 import numpy as np
 import pytest
 from PIL import Image
 
-
-# ``Imervue.image.info`` pulls in ``image_loader``, which imports the optional
-# ``rawpy`` dependency (only needed for CR2/NEF/ARW/etc. RAW support). Stub it
-# out so this test file can exercise the pure helpers without forcing rawpy on
-# the CI/dev environment.
-if "rawpy" not in sys.modules:
-    sys.modules["rawpy"] = types.ModuleType("rawpy")
-
-from Imervue.image import info as info_mod  # noqa: E402
+from Imervue.image import info as info_mod
 
 
 @pytest.fixture
