@@ -162,15 +162,16 @@ class VideoImportDialog(QDialog):
         # release the ffmpeg reader (subprocess + pipes). The dialog is parented
         # to the viewer so it isn't GC'd, and FrameReader has no __del__, so
         # without this each open leaked an ffmpeg process for the app's lifetime.
-        import contextlib
         worker = getattr(self, "_worker", None)
         if worker is not None and worker.isRunning():
             worker.wait()
         self._worker = None
         reader = getattr(self, "_reader", None)
         if reader is not None:
-            with contextlib.suppress(Exception):
+            try:
                 reader.close()
+            except Exception:  # noqa: BLE001 - any close failure is logged, release goes on
+                logger.warning("Could not close the video reader", exc_info=True)
             # Null it so the finished + closeEvent double-call frees only once.
             self._reader = None
 

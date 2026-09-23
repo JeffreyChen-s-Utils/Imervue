@@ -30,12 +30,17 @@ def test_release_waits_the_worker_then_closes_the_reader():
     assert order == ["wait", "close"]
 
 
-def test_release_is_safe_when_reader_close_raises():
+def test_release_logs_a_reader_close_failure_and_still_releases(caplog):
     def boom():
         raise RuntimeError("ffmpeg already gone")
 
     fake = SimpleNamespace(_reader=SimpleNamespace(close=boom), _worker=None)
-    VideoImportDialog._release(fake)   # suppressed, must not raise
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        VideoImportDialog._release(fake)   # must not raise
+    assert fake._reader is None
+    (record,) = caplog.records
+    assert "Could not close the video reader" in record.getMessage()
+    assert record.exc_info[0] is RuntimeError
 
 
 def test_release_nulls_worker_and_reader():

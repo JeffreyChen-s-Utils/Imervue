@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-26 | 2026-09-24 | Forbid silent suppress(Exception) and finish #25 | #done #error-handling #plugins #tests | [2026-09](2026-09.md) |
 | U-20260924-25 | 2026-09-24 | Stop the wallpaper action injecting file names into AppleScript | #fix #security #menu | [2026-09](2026-09.md) |
 | U-20260924-24 | 2026-09-24 | Narrow or log the plugin/ and entry-point suppressed failures (#25) | #refactor #error-handling #plugin | [2026-09](2026-09.md) |
 | U-20260924-23 | 2026-09-24 | Narrow or log the puppet/ suppressed failures (#25) | #refactor #error-handling #puppet | [2026-09](2026-09.md) |

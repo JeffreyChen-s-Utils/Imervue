@@ -117,6 +117,10 @@ Rules the tools do **not** catch, which still apply:
   tuple, a group of settings a frozen dataclass (`SanitizeSettings`, `ExportSettings`, `ImageQuery`).
 - **Every module is imported by production code** — `tests/test_unwired_modules.py` fails on a
   new module nothing in `Imervue/` or `plugins/` imports (the pre-existing ones are listed there).
+- **No `contextlib.suppress(Exception)`** — ruff's `BLE` misses this form, so
+  `tests/test_no_silent_suppress.py` rejects it in `Imervue/` and `plugins/`. Catch what the block
+  can actually meet (`suppress(GLError)`, `suppress(*IMAGE_READ_ERRORS)`), or use
+  `Imervue.system.best_effort.best_effort("step", logger)` to carry on and log the traceback.
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
   repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
   flag both; ruff does not.
