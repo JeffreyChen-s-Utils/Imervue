@@ -30,6 +30,8 @@ Security stance:
 """
 from __future__ import annotations
 
+import contextlib
+
 import json
 import logging
 import threading
@@ -50,6 +52,7 @@ doesn't clash with common services (3000, 8080, etc.). Users can
 override via settings if 9876 conflicts with something local."""
 
 _REQUEST_TIMEOUT_S: float = 15.0
+_MAX_BODY_BYTES = 64_000   # largest /trigger body accepted (and drained)
 """Per-request socket timeout. Without it a client that opens a connection and
 stalls mid-body pins a handler thread forever (rfile.read blocks); the timeout
 lets a stuck read raise so the thread is released."""
@@ -154,19 +157,36 @@ class _WebhookHandler(BaseHTTPRequestHandler):
             return
         self._send_json(404, {"error": "not found"})
 
+    def _content_length(self) -> int:
+        try:
+            return int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return 0
+
+    def _reject(self, status: int, error: str) -> None:
+        """Answer an early error, reading the request body first.
+
+        Closing the socket with body bytes still unread — or with them still
+        in flight, as happens on a loaded machine — makes Windows reset the
+        connection, and the client loses the reply (``WinError 10053``). A
+        body over ``_MAX_BODY_BYTES`` is not read; that client may see a reset.
+        """
+        length = self._content_length()
+        if 0 < length <= _MAX_BODY_BYTES:
+            with contextlib.suppress(OSError):   # timed out or reset: reply anyway
+                self.rfile.read(length)
+        self._send_json(status, {"error": error})
+
     def do_POST(self) -> None:   # noqa: N802 - stdlib override
         receiver = getattr(self.server, "receiver", None)
         if receiver is None or self.path != "/trigger":
-            self._send_json(404, {"error": "not found"})
+            self._reject(404, "not found")
             return
         if not self._check_auth(receiver):
-            self._send_json(401, {"error": "unauthorized"})
+            self._reject(401, "unauthorized")
             return
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            length = 0
-        if length <= 0 or length > 64_000:
+        length = self._content_length()
+        if length <= 0 or length > _MAX_BODY_BYTES:
             self._send_json(400, {"error": "missing or oversized body"})
             return
         try:
