@@ -120,7 +120,7 @@ def _reveal_in_file_manager(path: str, select: bool) -> None:
             )
     elif sys.platform == "darwin":
         subprocess.Popen(  # nosec B603,B607  # nosemgrep
-            ["open", "-R" if select else "", path],
+            ["open", "-R", path] if select else ["open", path],
         )
     else:
         target = path if Path(path).is_dir() else str(Path(path).parent)

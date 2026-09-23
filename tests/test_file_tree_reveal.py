@@ -54,3 +54,11 @@ def test_unexpected_error_propagates(monkeypatch, tmp_path):
     monkeypatch.setattr(mod.subprocess, "Popen", bug)
     with pytest.raises(RuntimeError):
         mod._FileTreeView._open_in_explorer(str(tmp_path))  # noqa: SLF001
+
+
+@pytest.mark.parametrize("select, expected", [(True, ["open", "-R"]), (False, ["open"])])
+def test_macos_reveal_or_open(monkeypatch, popen, tmp_path, select, expected):
+    """``open "" <path>`` used to be run for select=False; the empty argument made it fail."""
+    monkeypatch.setattr(sys, "platform", "darwin")
+    mod._reveal_in_file_manager(str(tmp_path), select)  # noqa: SLF001
+    assert popen == [[*expected, str(tmp_path)]]

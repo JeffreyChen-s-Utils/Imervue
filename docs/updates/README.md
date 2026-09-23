@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-17 | 2026-09-24 | macOS: open the containing folder without an empty argument | #bug #gui #macos | [2026-09](2026-09.md) |
 | U-20260924-16 | 2026-09-24 | Stop gui/ swallowing failures silently (#25) | #refactor #error-handling #gui | [2026-09](2026-09.md) |
 | U-20260924-15 | 2026-09-24 | Log best-effort failures instead of suppressing them; main window first | #refactor #error-handling #system | [2026-09](2026-09.md) |
 | U-20260924-14 | 2026-09-24 | Cap positional parameters at 7 with a guard; keyword-only options are the reasoned exception (closes #24) | #done #tooling #quality | [2026-09](2026-09.md) |
