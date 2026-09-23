@@ -160,7 +160,7 @@ def _detect_boxes_anime(model, src, confidence, classes):
     return boxes
 
 
-def _process_one(detector, src, dst, block_size, padding,
+def _process_one(detector, src, dst, *, block_size, padding,
                   confidence=MIN_CONFIDENCE,
                   expand_pct=0, det_mode="real", anime_model=None,
                   style=STYLE_MOSAIC, categories=None, only_censored=False,
@@ -195,7 +195,7 @@ def _process_one(detector, src, dst, block_size, padding,
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
+    regions = [_expand_box(*box, padding, expand_pct, iw=iw, ih=ih) for box in boxes]
     for region in regions:
         _censor_region(img, *region, block_size, style=style, shape=shape)
     bridges = _junction_bridges(regions, _merge_gap(regions)) if merge_regions else []
@@ -279,7 +279,7 @@ def _run_single(args):
         detector, anime_model = _load_detectors(det_mode)
         print("PROGRESS:Detecting...", flush=True)
         count = _process_one(detector, input_path, output_path,
-                             block_size, padding, confidence=confidence,
+                             block_size=block_size, padding=padding, confidence=confidence,
                              expand_pct=expand_pct, det_mode=det_mode,
                              anime_model=anime_model, style=style,
                              categories=categories, shape=shape)
@@ -325,7 +325,7 @@ def _run_batch(args):
             dst = _batch_destination(src, output_dir, overwrite, source_root)
             _process_one_with_fallback(
                 lambda shp, _s=src, _d=dst: _process_one(
-                    detector, _s, _d, block_size, padding,
+                    detector, _s, _d, block_size=block_size, padding=padding,
                     confidence=confidence, expand_pct=expand_pct,
                     det_mode=det_mode, anime_model=anime_model,
                     style=style, categories=categories,

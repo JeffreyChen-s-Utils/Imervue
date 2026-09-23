@@ -70,7 +70,7 @@ def _detect_image_mode(src: str) -> str:
 
 
 def _expand_box(x1, y1, x2, y2, padding: int, expand_pct: int,
-                 iw: int, ih: int):
+                 *, iw: int, ih: int):
     """Expand a bounding box by fixed padding AND/OR percentage of box size."""
     bw = x2 - x1
     bh = y2 - y1
@@ -149,7 +149,7 @@ def _region_mask(w, h, shape, seg_mask=None):
     return None  # SHAPE_RECT
 
 
-def _censor_region(img, x1, y1, x2, y2, block_size, style=STYLE_MOSAIC,
+def _censor_region(img, x1, y1, x2, y2, block_size, *, style=STYLE_MOSAIC,
                    shape=SHAPE_RECT, seg_mask=None):
     """Censor a region in-place, confined to *shape*.
 

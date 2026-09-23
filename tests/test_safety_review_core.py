@@ -140,20 +140,20 @@ def test_merge_gap_scales_with_box_size():
 # ---------------------------------------------------------------------------
 
 def test_expand_box_fixed_padding():
-    assert _detection._expand_box(10, 10, 20, 20, 5, 0, 100, 100) == (5, 5, 25, 25)
+    assert _detection._expand_box(10, 10, 20, 20, 5, 0, iw=100, ih=100) == (5, 5, 25, 25)
 
 
 def test_expand_box_percentage():
     # box is 10x10, expand 50% → 5 px each side
-    assert _detection._expand_box(10, 10, 20, 20, 0, 50, 100, 100) == (5, 5, 25, 25)
+    assert _detection._expand_box(10, 10, 20, 20, 0, 50, iw=100, ih=100) == (5, 5, 25, 25)
 
 
 def test_expand_box_clamps_to_image_bounds():
-    assert _detection._expand_box(0, 0, 10, 10, 50, 0, 30, 30) == (0, 0, 30, 30)
+    assert _detection._expand_box(0, 0, 10, 10, 50, 0, iw=30, ih=30) == (0, 0, 30, 30)
 
 
 def test_expand_box_no_expansion_when_zero():
-    assert _detection._expand_box(3, 4, 7, 9, 0, 0, 100, 100) == (3, 4, 7, 9)
+    assert _detection._expand_box(3, 4, 7, 9, 0, 0, iw=100, ih=100) == (3, 4, 7, 9)
 
 
 # ---------------------------------------------------------------------------
@@ -441,7 +441,7 @@ def test_process_single_image_no_boxes_copies_source(tmp_path):
     dst = tmp_path / "out.png"
     detector = _FakeDetector([])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL)
+        detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL)
     assert count == 0
     assert dst.exists()
     assert Image.open(dst).getpixel((25, 25)) == (123, 200, 80)
@@ -451,7 +451,7 @@ def test_process_single_image_no_boxes_same_path_is_noop(tmp_path):
     src = _write_png(tmp_path / "in.png")
     detector = _FakeDetector([])
     count = _detection._process_single_image(
-        detector, str(src), str(src), 4, 0, mode=_constants.MODE_REAL)
+        detector, str(src), str(src), block_size=4, padding=0, mode=_constants.MODE_REAL)
     assert count == 0
     assert src.exists()
 
@@ -463,7 +463,7 @@ def test_process_single_image_censors_detected_box(tmp_path):
         {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0,
+        detector, str(src), str(dst), block_size=4, padding=0,
         mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK)
     assert count == 1
     out = Image.open(dst)
@@ -481,7 +481,7 @@ def test_process_single_image_merges_adjacent_detections(tmp_path):
         {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
         style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT,
         merge_regions=True)
     assert count == 3                                   # 2 boxes + 1 junction bridge
@@ -498,7 +498,7 @@ def test_junction_bridge_honours_the_selected_shape(tmp_path):
         {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
     ])
     _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
         style=_constants.STYLE_BLACK, shape=_constants.SHAPE_ELLIPSE,
         merge_regions=True)
     out = Image.open(dst)
@@ -514,7 +514,7 @@ def test_process_single_image_without_merge_keeps_regions_separate(tmp_path):
         {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL,
+        detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
         style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT,
         merge_regions=False)
     assert count == 2                                   # kept as two regions
@@ -529,7 +529,7 @@ def test_process_single_image_ellipse_shape_spares_box_corner(tmp_path):
         {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 40, 40]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0,
+        detector, str(src), str(dst), block_size=4, padding=0,
         mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK,
         shape=_constants.SHAPE_ELLIPSE)
     assert count == 1
@@ -546,7 +546,7 @@ def test_process_single_image_jpeg_dst_from_rgba_source(tmp_path):
         {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 5, 15, 15]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0, mode=_constants.MODE_REAL)
+        detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL)
     assert count == 1
     # JPEG cannot hold alpha; saving must have converted to RGB without error.
     assert Image.open(dst).mode == "RGB"
@@ -559,7 +559,7 @@ def test_process_single_image_only_censored_skips_clean_image(tmp_path):
     dst = tmp_path / "out" / "in_censored.png"
     detector = _FakeDetector([])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0,
+        detector, str(src), str(dst), block_size=4, padding=0,
         mode=_constants.MODE_REAL, only_censored=True)
     assert count == 0
     assert not dst.exists()
@@ -574,7 +574,7 @@ def test_process_single_image_only_censored_still_writes_detections(tmp_path):
         {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
     ])
     count = _detection._process_single_image(
-        detector, str(src), str(dst), 4, 0,
+        detector, str(src), str(dst), block_size=4, padding=0,
         mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK,
         only_censored=True)
     assert count == 1
@@ -588,7 +588,7 @@ def test_process_one_runner_only_censored_skips_clean_image(tmp_path):
     dst = tmp_path / "out" / "in_censored.png"
     detector = _FakeDetector([])
     count = _runner._process_one(
-        detector, str(src), str(dst), 4, 0,
+        detector, str(src), str(dst), block_size=4, padding=0,
         det_mode="real", only_censored=True)
     assert count == 0
     assert not dst.exists()

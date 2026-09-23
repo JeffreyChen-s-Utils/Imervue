@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-38 | 2026-09-24 | Extend the size guards to the bundled plugins | #done #refactor #plugins #tests | [2026-09](2026-09.md) |
 | U-20260924-37 | 2026-09-24 | Plugins import shared helpers instead of copying them; faster object labelling | #refactor #perf #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-36 | 2026-09-24 | Share one censor implementation between the app and the frozen-build runner | #done #fix #refactor #safety_review #plugins | [2026-09](2026-09.md) |
 | U-20260924-35 | 2026-09-24 | Bring the bundled plugins under the ruff and bandit gates | #done #lint #ci #plugins | [2026-09](2026-09.md) |

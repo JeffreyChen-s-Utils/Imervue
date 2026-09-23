@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ac7cd3a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `2494109` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 817 | 134,039 |
+| `tests/` | 818 | 134,148 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,821 |
 | `Imervue/puppet/` | 57 | 15,229 |
@@ -83,8 +83,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
-| `plugins/`（17 個外掛） | 63 | 14,136 |
-| **總計** | **1,630** | **308,613** |
+| `plugins/`（17 個外掛） | 64 | 14,196 |
+| **總計** | **1,632** | **308,782** |
 
 其中 `Imervue/` 套件本身 750 檔 / 160,438 行。
 
@@ -941,7 +941,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `ai_motion_deblur` | 3 / 581 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
 | `ai_portrait_relight` | 3 / 565 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
 | `ai_smart_resize` | 3 / 524 | Seam carving 內容感知縮放 | — (重運算) |
-| `npr_filters` | 3 / 499 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
+| `npr_filters` | 3 / 502 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
 | `ai_colorize` | 3 / 505 | 黑白上色：啟發式調色盤 + ONNX | onnxruntime |
 | `cloud_share` | 3 / 485 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
 | `ai_denoise` | 3 / 458 | 雙邊濾波（純 NumPy）或 ONNX 神經降噪 | onnxruntime |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-817 個檔、134,039 行。`pyproject.toml` 定義三個互斥層級 marker：
+818 個檔、134,148 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

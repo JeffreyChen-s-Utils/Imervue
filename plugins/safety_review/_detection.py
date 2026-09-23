@@ -352,7 +352,7 @@ def _process_single_image(
     detector,
     src: str,
     dst: str,
-    block_size: int,
+    *, block_size: int,
     padding: int,
     confidence: float = MIN_CONFIDENCE,
     expand_pct: int = 0,
@@ -390,7 +390,7 @@ def _process_single_image(
         img = img.convert("RGBA")
 
     iw, ih = img.width, img.height
-    regions = [_expand_box(*box, padding, expand_pct, iw, ih) for box in boxes]
+    regions = [_expand_box(*box, padding, expand_pct, iw=iw, ih=ih) for box in boxes]
     # Precise mode segments each region into a full-image mask; cropping it to
     # the region below keeps it pixel-aligned. None → ellipse fallback.
     seg_masks = _segment_boxes(src, regions, mode) if shape == SHAPE_PRECISE else None

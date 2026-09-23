@@ -108,7 +108,8 @@ Rules the tools do **not** catch, which still apply:
 
 - **File length ≤ 1000 lines** (SonarQube `python:S104`). Split large modules. The current
   over-budget list lives in §12 of `architecture_explore.md`; `tests/test_code_size_limits.py`
-  enforces it (the `multi_language` dictionaries are exempt as data).
+  enforces it across `Imervue/` and `plugins/` (translation data is exempt: the `multi_language`
+  dictionaries and the `plugins/*_translation/` language plugins).
 - **Function length ≤ 80 lines**, docstring included — enforced by the same test file. Split a
   long function into named steps before it crosses.
 - **At most 7 positional parameters** (`self` / `cls` not counted), also enforced there. Reasoned
