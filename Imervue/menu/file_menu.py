@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QActionGroup
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMenu
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.tile_layout import is_active_thumbnail_choice
@@ -19,11 +20,38 @@ if TYPE_CHECKING:
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
-def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
+def build_file_menu(ui_we_want_to_set: ImervueMainWindow) -> QMenu:
+    """Add the File menu and the Tile Size (view) menu to the menu bar.
+
+    Returns the File menu. Side effect: stores the browse-mode actions on the
+    window as ``_mode_action_grid`` / ``_mode_action_list``.
+    """
     lang = language_wrapper.language_word_dict
     # ===== 檔案 =====
     file_menu = ui_we_want_to_set.menuBar().addMenu(lang.get("main_window_current_file"))
+    _add_open_entries(ui_we_want_to_set, file_menu, lang)
+    file_menu.addSeparator()
+    _add_delete_and_clipboard_entries(ui_we_want_to_set, file_menu, lang)
+    file_menu.addSeparator()
+    _add_file_association_entries(ui_we_want_to_set, file_menu, lang)
+    file_menu.addSeparator()
+    _add_session_and_editor_entries(ui_we_want_to_set, file_menu, lang)
+    file_menu.addSeparator()
+    _add_settings_and_exit_entries(ui_we_want_to_set, file_menu, lang)
 
+    # ===== Tile Size 選單 =====
+    view_menu = ui_we_want_to_set.menuBar().addMenu(lang.get("main_window_tile_size"))
+    _add_tile_size_entries(ui_we_want_to_set, view_menu)
+    view_menu.addSeparator()
+    _add_browse_mode_entries(ui_we_want_to_set, view_menu, lang)
+    view_menu.addSeparator()
+    _add_density_entries(ui_we_want_to_set, view_menu, lang)
+
+    return file_menu
+
+
+def _add_open_entries(ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, lang) -> None:
+    """New window, open image/folder, Recent, bookmarks, tags & albums."""
     # 新視窗
     new_window_action = file_menu.addAction(lang.get("menu_new_window", "New Window"))
     new_window_action.triggered.connect(lambda: _open_new_window(ui_we_want_to_set))
@@ -48,8 +76,10 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     tag_album_action = file_menu.addAction(lang.get("tag_album_title", "Tags & Albums"))
     tag_album_action.triggered.connect(lambda: _open_tag_album(ui_we_want_to_set))
 
-    file_menu.addSeparator()
 
+def _add_delete_and_clipboard_entries(
+        ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, lang) -> None:
+    """Recycle bin, commit pending deletions, clipboard paste and monitor toggle."""
     # 資源回收筒（檢視 / 還原 / 永久刪除待處理的軟刪除檔案）
     recycle_action = file_menu.addAction(
         lang.get("recycle_bin_title", "Recycle Bin"))
@@ -78,42 +108,46 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         lambda checked: _toggle_clipboard_monitor(ui_we_want_to_set, checked)
     )
 
-    file_menu.addSeparator()
 
+def _add_file_association_entries(
+        ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, lang) -> None:
+    """File-association submenu; adds nothing outside Windows."""
     # 檔案關聯（僅 Windows）
-    import sys
-    if sys.platform == "win32":
-        assoc_menu = file_menu.addMenu(lang.get("file_assoc_menu", "File Association"))
-        reg_action = assoc_menu.addAction(
-            lang.get("file_assoc_register", "Register 'Open with Imervue'")
-        )
-        reg_action.triggered.connect(lambda: _register_assoc(ui_we_want_to_set))
-        unreg_action = assoc_menu.addAction(
-            lang.get("file_assoc_unregister", "Remove file association")
-        )
-        unreg_action.triggered.connect(lambda: _unregister_assoc(ui_we_want_to_set))
+    if sys.platform != "win32":
+        return
+    assoc_menu = file_menu.addMenu(lang.get("file_assoc_menu", "File Association"))
+    reg_action = assoc_menu.addAction(
+        lang.get("file_assoc_register", "Register 'Open with Imervue'")
+    )
+    reg_action.triggered.connect(lambda: _register_assoc(ui_we_want_to_set))
+    unreg_action = assoc_menu.addAction(
+        lang.get("file_assoc_unregister", "Remove file association")
+    )
+    unreg_action.triggered.connect(lambda: _unregister_assoc(ui_we_want_to_set))
 
-    file_menu.addSeparator()
 
+def _add_session_and_editor_entries(
+        ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, lang) -> None:
+    """Session save/load submenu, workspaces, and the external-editor entries."""
     # Session / Workspace
     session_menu = file_menu.addMenu(lang.get("session_menu", "Session"))
     save_session_action = session_menu.addAction(
-        lang.get("session_save", "Save Session\u2026"))
+        lang.get("session_save", "Save Session…"))
     save_session_action.triggered.connect(
         lambda: _save_session(ui_we_want_to_set))
     load_session_action = session_menu.addAction(
-        lang.get("session_load", "Load Session\u2026"))
+        lang.get("session_load", "Load Session…"))
     load_session_action.triggered.connect(
         lambda: _load_session(ui_we_want_to_set))
 
     workspace_action = file_menu.addAction(
-        lang.get("workspace_menu", "Workspaces\u2026"))
+        lang.get("workspace_menu", "Workspaces…"))
     workspace_action.triggered.connect(
         lambda: _open_workspaces(ui_we_want_to_set))
 
     # 外部編輯器
     editors_action = file_menu.addAction(
-        lang.get("ext_editor_menu", "External Editors\u2026"))
+        lang.get("ext_editor_menu", "External Editors…"))
     editors_action.triggered.connect(
         lambda: _open_external_editors_settings(ui_we_want_to_set))
 
@@ -122,8 +156,10 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         lang.get("ext_editor_open_in", "Open in External Editor"))
     _populate_open_in_editor_menu(ui_we_want_to_set, open_in_menu)
 
-    file_menu.addSeparator()
 
+def _add_settings_and_exit_entries(
+        ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, lang) -> None:
+    """Shortcuts, preferences, profiles, then Exit."""
     # 自訂快捷鍵
     shortcut_action = file_menu.addAction(
         lang.get("shortcut_title", "Keyboard Shortcuts"))
@@ -146,11 +182,9 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     exit_action = file_menu.addAction(lang.get("main_window_exit"))
     exit_action.triggered.connect(ui_we_want_to_set.close)
 
-    # ===== Tile Size 選單 =====
-    view_menu = ui_we_want_to_set.menuBar().addMenu(
-        language_wrapper.language_word_dict.get("main_window_tile_size")
-    )
 
+def _add_tile_size_entries(ui_we_want_to_set: ImervueMainWindow, view_menu: QMenu) -> None:
+    """Exclusive thumbnail-size choices, the active one checked."""
     tile_group = QActionGroup(ui_we_want_to_set)
     tile_group.setExclusive(True)
 
@@ -172,8 +206,11 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
             lambda checked, s=size: ui_we_want_to_set.change_tile_size(s)
         )
 
+
+def _add_browse_mode_entries(
+        ui_we_want_to_set: ImervueMainWindow, view_menu: QMenu, lang) -> None:
+    """Grid / List browse-mode submenu; stores both actions on the window."""
     # ===== Grid / List 檢視切換 =====
-    view_menu.addSeparator()
     mode_menu = view_menu.addMenu(lang.get("view_browse_mode", "Browse Mode"))
     mode_group = QActionGroup(ui_we_want_to_set)
     mode_group.setExclusive(True)
@@ -195,8 +232,11 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
     ui_we_want_to_set._mode_action_grid = action_grid
     ui_we_want_to_set._mode_action_list = action_list
 
+
+def _add_density_entries(
+        ui_we_want_to_set: ImervueMainWindow, view_menu: QMenu, lang) -> None:
+    """Thumbnail-density submenu, the preset matching the current padding checked."""
     # ===== 縮圖排列密度 =====
-    view_menu.addSeparator()
     density_menu = view_menu.addMenu(
         lang.get("view_tile_density", "Thumbnail Density")
     )
@@ -217,8 +257,6 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow):
         a.triggered.connect(
             lambda checked, p=pad: ui_we_want_to_set.change_tile_padding(p)
         )
-
-    return file_menu
 
 
 # ==========================
