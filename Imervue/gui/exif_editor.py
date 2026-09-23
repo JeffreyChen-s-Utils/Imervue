@@ -21,9 +21,21 @@ if TYPE_CHECKING:
 def _try_import_piexif():
     try:
         import piexif
+        import piexif.helper  # a submodule ``import piexif`` does not load (UserComment)
         return piexif
     except ImportError:
         return None
+
+
+def _decode_user_comment(piexif, raw: bytes) -> str:
+    """Text of an EXIF UserComment, dropping its 8-byte character-code prefix.
+
+    A value without a recognised prefix (or too short for one) is shown as UTF-8.
+    """
+    try:
+        return piexif.helper.UserComment.load(raw)
+    except ValueError:
+        return raw.decode("utf-8", errors="replace")
 
 
 class ExifEditorDialog(QDialog):
@@ -98,7 +110,9 @@ class ExifEditorDialog(QDialog):
         if ifd_key is None:
             return
         raw = self._exif_dict.get(ifd_name, {}).get(ifd_key, b"")
-        if isinstance(raw, bytes):
+        if tag_name == "UserComment" and isinstance(raw, bytes):
+            edit.setText(_decode_user_comment(self._piexif, raw))
+        elif isinstance(raw, bytes):
             edit.setText(raw.decode("utf-8", errors="replace"))
         elif isinstance(raw, str):
             edit.setText(raw)
@@ -137,8 +151,9 @@ class ExifEditorDialog(QDialog):
             ifd = self._exif_dict.setdefault(ifd_name, {})
 
             if tag_name == "UserComment":
-                # UserComment 需要特殊編碼
-                ifd[ifd_key] = piexif.helper.UserComment.dump(text)
+                # UserComment 需要特殊編碼；非 ASCII 用 UNICODE，否則會被換成 "?"
+                encoding = "ascii" if text.isascii() else "unicode"
+                ifd[ifd_key] = piexif.helper.UserComment.dump(text, encoding=encoding)
             else:
                 ifd[ifd_key] = text.encode("utf-8")
 

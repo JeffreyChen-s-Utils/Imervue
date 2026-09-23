@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-60 | 2026-09-23 | EXIF editor: saving works again and User Comment round-trips | #bug #metadata #gui | [2026-09](2026-09.md) |
 | U-20260923-59 | 2026-09-23 | Narrow the blind excepts in menu/; share IMAGE_READ_ERRORS (BLE001 batch 4) | #refactor #error-handling #menu #image | [2026-09](2026-09.md) |
 | U-20260923-58 | 2026-09-23 | PDF exports report an unwritable target instead of claiming success | #bug #export | [2026-09](2026-09.md) |
 | U-20260923-57 | 2026-09-23 | Narrow read_json's blind except (BLE001 batch 3) | #refactor #error-handling #user_settings | [2026-09](2026-09.md) |
