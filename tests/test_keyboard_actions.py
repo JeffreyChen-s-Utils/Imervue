@@ -44,3 +44,41 @@ def test_unexpected_error_propagates(linux_fallback, tmp_path, monkeypatch):
     monkeypatch.setattr(shutil, "move", boom)
     with pytest.raises(RuntimeError):
         mod._send_to_trash(str(victim))  # noqa: SLF001
+
+
+def test_same_name_trashed_repeatedly_keeps_every_copy(linux_fallback, tmp_path):
+    """A timestamp suffix let the third copy within one second overwrite the second."""
+    for content in (b"first", b"second", b"third"):
+        folder = tmp_path / content.decode()
+        folder.mkdir()
+        victim = folder / "photo.png"
+        victim.write_bytes(content)
+        assert mod._send_to_trash(str(victim)) is True  # noqa: SLF001
+    files = linux_fallback / "files"
+    assert (files / "photo.png").read_bytes() == b"first"
+    assert (files / "photo_1.png").read_bytes() == b"second"
+    assert (files / "photo_2.png").read_bytes() == b"third"
+    assert (linux_fallback / "info" / "photo_1.png.trashinfo").is_file()
+
+
+def test_free_trash_name_skips_names_with_a_stale_trashinfo(tmp_path):
+    files, info = tmp_path / "files", tmp_path / "info"
+    files.mkdir()
+    info.mkdir()
+    (info / "a.png.trashinfo").write_text("", encoding="utf-8")
+    (files / "a_1.png").write_bytes(b"")
+    assert mod._free_trash_name(files, "a.png", info) == files / "a_2.png"  # noqa: SLF001
+    assert mod._free_trash_name(files, "a.png") == files / "a.png"  # noqa: SLF001
+
+
+def test_macos_fallback_keeps_both(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "send2trash", None)
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    for content in (b"first", b"second"):
+        folder = tmp_path / content.decode()
+        folder.mkdir()
+        (folder / "photo.png").write_bytes(content)
+        assert mod._send_to_trash(str(folder / "photo.png")) is True  # noqa: SLF001
+    trash = tmp_path / "home" / ".Trash"
+    assert sorted(p.name for p in trash.iterdir()) == ["photo.png", "photo_1.png"]

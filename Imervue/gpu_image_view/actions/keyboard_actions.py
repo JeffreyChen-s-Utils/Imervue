@@ -43,6 +43,23 @@ def _toast(main_gui: GPUImageView, text: str, level: str = "info"):
         getattr(win.toast, level, win.toast.info)(text)
 
 
+def _free_trash_name(files_dir: Path, name: str, info_dir: Path | None = None) -> Path:
+    """First of ``name``, ``stem_1.ext``, ``stem_2.ext`` … not taken in *files_dir*.
+
+    With *info_dir* (freedesktop trash) the name must also have no
+    ``.trashinfo`` there. A timestamp suffix used to collide when two files of
+    the same name were trashed within one second, and the move overwrote the
+    earlier one.
+    """
+    stem, suffix = Path(name).stem, Path(name).suffix
+    candidate, counter = name, 1
+    while (files_dir / candidate).exists() or (
+            info_dir is not None and (info_dir / f"{candidate}.trashinfo").exists()):
+        candidate = f"{stem}_{counter}{suffix}"
+        counter += 1
+    return files_dir / candidate
+
+
 def _send_to_trash(path: str) -> bool:
     """嘗試將檔案移至系統垃圾桶，回傳是否成功"""
     try:
@@ -85,18 +102,12 @@ def _send_to_trash(path: str) -> bool:
             import shutil
             trash_dir = Path.home() / ".Trash"
             trash_dir.mkdir(parents=True, exist_ok=True)
-            dest = trash_dir / Path(path).name
-            # 避免覆蓋：加時間戳
-            if dest.exists():
-                import time
-                stem = dest.stem
-                dest = trash_dir / f"{stem}_{int(time.time())}{dest.suffix}"
+            dest = _free_trash_name(trash_dir, Path(path).name)
             shutil.move(path, str(dest))
             return True
         else:
             # Linux: freedesktop.org Trash spec
             import shutil
-            import time
             # 判斷是否在同一個 mount point
             home_trash = Path.home() / ".local" / "share" / "Trash"
             files_dir = home_trash / "files"
@@ -104,14 +115,8 @@ def _send_to_trash(path: str) -> bool:
             files_dir.mkdir(parents=True, exist_ok=True)
             info_dir.mkdir(parents=True, exist_ok=True)
 
-            base_name = Path(path).name
-            dest = files_dir / base_name
-            # 避免覆蓋
-            if dest.exists():
-                stem = Path(path).stem
-                ext = Path(path).suffix
-                dest = files_dir / f"{stem}_{int(time.time())}{ext}"
-                base_name = dest.name
+            dest = _free_trash_name(files_dir, Path(path).name, info_dir)
+            base_name = dest.name
 
             # 寫入 .trashinfo
             from datetime import datetime

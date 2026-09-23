@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `b7942ed` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `3d2405f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 786 | 128,824 |
+| `tests/` | 787 | 128,924 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,484 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,799 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,818 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,195 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,589** | **303,209** |
+| **總計** | **1,590** | **303,328** |
 
-其中 `Imervue/` 套件本身 741 檔 / 159,996 行。
+其中 `Imervue/` 套件本身 741 檔 / 160,015 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -427,7 +427,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `browse_features.py` | 196 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 120 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 76 | 拖放檔案/資料夾開啟 |
-| `clipboard_paste.py` | 83 | 剪貼簿貼上圖片並插入模型 |
+| `clipboard_paste.py` | 96 | 剪貼簿貼上圖片並插入模型 |
 | `hover_preview_binding.py` | 56 | 縮圖懸停預覽彈窗綁定 |
 | `cull_actions.py` | 110 | 色標籤與 pick/reject 挑片狀態套用 |
 | `status_info.py` | 77 | 狀態列欄位組裝 |
@@ -469,7 +469,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
 | `search_dialog.py` | 281 | 檔名即時搜尋 |
 | `goto_dialog.py` | 103 | Ctrl+G 跳至第 N 張 |
-| `keyboard_actions.py` | 304 | 鍵盤快捷動作實作 |
+| `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
 | `lossless_rotate.py` | 132 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose |
 | `drag_out.py` | 71 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 83 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-786 個檔、128,824 行。`pyproject.toml` 定義三個互斥層級 marker：
+787 個檔、128,924 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
