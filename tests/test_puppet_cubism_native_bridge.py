@@ -6,6 +6,8 @@ lookup priority without needing the binary.
 """
 from __future__ import annotations
 
+import ctypes
+
 import sys
 from pathlib import Path
 
@@ -122,46 +124,53 @@ def test_load_library_raises_with_actionable_message(tmp_path, monkeypatch):
 # before ``_bind_signatures`` became table-driven.
 # ---------------------------------------------------------------------------
 
-_EXPECTED_SIGNATURES = {'csmGetDrawableBlendModes': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableConstantFlags': ("<class 'ctypes.LP_c_ubyte'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableCount': ("<class 'ctypes.c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableDrawOrders': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableDynamicFlags': ("<class 'ctypes.LP_c_ubyte'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableIds': ("<class 'ctypes.LP_c_char_p'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableIndexCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableIndices': ("<class 'ctypes.LP_LP_c_ushort'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableMaskCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableMasks': ("<class 'ctypes.LP_LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableOpacities': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableTextureIndices': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableVertexCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableVertexPositions': ("<class 'ctypes.LP_LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetDrawableVertexUvs': ("<class 'ctypes.LP_LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetMocVersion': ("<class 'ctypes.c_ulong'>",
-                      ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
- 'csmGetParameterCount': ("<class 'ctypes.c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetParameterDefaultValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetParameterIds': ("<class 'ctypes.LP_c_char_p'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetParameterMaximumValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetParameterMinimumValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetParameterValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetRenderOrders': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetSizeofModel': ("<class 'ctypes.c_ulong'>", ["<class 'ctypes.c_void_p'>"]),
- 'csmGetVersion': ("<class 'ctypes.c_ulong'>", []),
- 'csmHasMocConsistency': ("<class 'ctypes.c_long'>",
-                          ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
- 'csmInitializeModelInPlace': ("<class 'ctypes.c_void_p'>",
-                               ["<class 'ctypes.c_void_p'>",
-                                "<class 'ctypes.c_void_p'>",
-                                "<class 'ctypes.c_ulong'>"]),
- 'csmReadCanvasInfo': ('None',
-                       ["<class 'ctypes.c_void_p'>",
-                        "<class 'ctypes.LP_c_float_Array_2'>",
-                        "<class 'ctypes.LP_c_float_Array_2'>",
-                        "<class 'ctypes.LP_c_float'>"]),
- 'csmReviveMocInPlace': ("<class 'ctypes.c_void_p'>",
-                         ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
- 'csmUpdateModel': ('None', ["<class 'ctypes.c_void_p'>"])}
+def _describe(ctype) -> str:
+    """Name a ctypes type the same way on every Python version.
+
+    ``repr`` is not stable: Python 3.10 shows ``POINTER(c_float)`` as
+    ``ctypes.wintypes.LP_c_float`` once ``ctypes.wintypes`` is imported, while
+    later versions show ``ctypes.LP_c_float``. Pointers become ``*``, arrays
+    ``type[length]``.
+    """
+    if ctype is None:
+        return "None"
+    if issubclass(ctype, ctypes._Pointer):  # noqa: SLF001
+        return "*" + _describe(ctype._type_)  # noqa: SLF001
+    if issubclass(ctype, ctypes.Array):
+        return f"{_describe(ctype._type_)}[{ctype._length_}]"  # noqa: SLF001
+    return ctype.__name__
+
+
+_EXPECTED_SIGNATURES = {'csmGetDrawableBlendModes': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableConstantFlags': ('*c_ubyte', ['c_void_p']),
+ 'csmGetDrawableCount': ('c_long', ['c_void_p']),
+ 'csmGetDrawableDrawOrders': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableDynamicFlags': ('*c_ubyte', ['c_void_p']),
+ 'csmGetDrawableIds': ('*c_char_p', ['c_void_p']),
+ 'csmGetDrawableIndexCounts': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableIndices': ('**c_ushort', ['c_void_p']),
+ 'csmGetDrawableMaskCounts': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableMasks': ('**c_long', ['c_void_p']),
+ 'csmGetDrawableOpacities': ('*c_float', ['c_void_p']),
+ 'csmGetDrawableTextureIndices': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableVertexCounts': ('*c_long', ['c_void_p']),
+ 'csmGetDrawableVertexPositions': ('**c_float', ['c_void_p']),
+ 'csmGetDrawableVertexUvs': ('**c_float', ['c_void_p']),
+ 'csmGetMocVersion': ('c_ulong', ['c_void_p', 'c_ulong']),
+ 'csmGetParameterCount': ('c_long', ['c_void_p']),
+ 'csmGetParameterDefaultValues': ('*c_float', ['c_void_p']),
+ 'csmGetParameterIds': ('*c_char_p', ['c_void_p']),
+ 'csmGetParameterMaximumValues': ('*c_float', ['c_void_p']),
+ 'csmGetParameterMinimumValues': ('*c_float', ['c_void_p']),
+ 'csmGetParameterValues': ('*c_float', ['c_void_p']),
+ 'csmGetRenderOrders': ('*c_long', ['c_void_p']),
+ 'csmGetSizeofModel': ('c_ulong', ['c_void_p']),
+ 'csmGetVersion': ('c_ulong', []),
+ 'csmHasMocConsistency': ('c_long', ['c_void_p', 'c_ulong']),
+ 'csmInitializeModelInPlace': ('c_void_p', ['c_void_p', 'c_void_p', 'c_ulong']),
+ 'csmReadCanvasInfo': ('None', ['c_void_p', '*c_float[2]', '*c_float[2]', '*c_float']),
+ 'csmReviveMocInPlace': ('c_void_p', ['c_void_p', 'c_ulong']),
+ 'csmUpdateModel': ('None', ['c_void_p'])}
 
 
 def test_bind_signatures_declares_every_function_exactly():
@@ -178,6 +187,6 @@ def test_bind_signatures_declares_every_function_exactly():
 
     lib = _Lib()
     bridge._bind_signatures(lib)  # noqa: SLF001
-    actual = {name: (repr(fn.restype), [repr(a) for a in fn.argtypes])
+    actual = {name: (_describe(fn.restype), [_describe(a) for a in fn.argtypes])
               for name, fn in sorted(vars(lib).items())}
     assert actual == _EXPECTED_SIGNATURES

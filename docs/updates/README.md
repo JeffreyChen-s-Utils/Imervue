@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-48 | 2026-09-24 | Make the Cubism signature test pass on Python 3.10 | #tests #ci #puppet | [2026-09](2026-09.md) |
 | U-20260924-47 | 2026-09-24 | Send Dependabot updates to dev and keep the action pins current | #ci #deps | [2026-09](2026-09.md) |
 | U-20260924-46 | 2026-09-24 | Move CI to Node 24 actions pinned by commit | #ci #security #deps | [2026-09](2026-09.md) |
 | U-20260924-45 | 2026-09-24 | Require Pillow 12.3.0 or later | #fix #security #deps | [2026-09](2026-09.md) |
