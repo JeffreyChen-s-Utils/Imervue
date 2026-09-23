@@ -20,6 +20,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QListView
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ def _extract_date(path: str) -> datetime:
                         return datetime.strptime(str(raw), "%Y:%m:%d %H:%M:%S")
                     except ValueError:
                         pass
-    except Exception:  # noqa: BLE001, S110 - any EXIF parse failure falls back to mtime below
+    except IMAGE_READ_ERRORS:   # unreadable file or EXIF: fall back to mtime below
         pass
     try:
         mtime = Path(path).stat().st_mtime

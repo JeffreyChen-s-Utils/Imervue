@@ -4,6 +4,8 @@ Collapsible sidebar showing EXIF metadata for the current image.
 """
 from __future__ import annotations
 
+import logging
+import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +22,8 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
+
+logger = logging.getLogger("Imervue.gui.exif_sidebar")
 
 # Custom link scheme for the clickable Location line (opens the map view).
 _MAP_LINK = "imervue:open-map"
@@ -318,7 +322,8 @@ class ExifSidebar(QWidget):
         try:
             from Imervue.library import image_index
             existing = image_index.get_note(path)
-        except Exception:  # noqa: BLE001
+        except (sqlite3.Error, OSError):
+            logger.warning("Could not read the note for %s", path, exc_info=True)
             existing = ""
         self._notes_edit.blockSignals(True)
         self._notes_edit.setPlainText(existing)
@@ -332,8 +337,8 @@ class ExifSidebar(QWidget):
         try:
             from Imervue.library import image_index
             image_index.set_note(path, self._notes_edit.toPlainText())
-        except Exception:  # noqa: BLE001, S110  # nosec B110 - notes optional; swallow DB errors
-            pass
+        except (sqlite3.Error, OSError):
+            logger.warning("Could not save the note for %s", path, exc_info=True)
 
     def _on_rating_clicked(self, path: str, rating: int) -> None:
         """Persist a rating from the star strip and refresh viewer badges."""

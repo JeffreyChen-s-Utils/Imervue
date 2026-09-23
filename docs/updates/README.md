@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-29 | 2026-09-24 | Log note-save failures and narrow the gui/ silent broad handlers (#26) | #refactor #error-handling #gui | [2026-09](2026-09.md) |
 | U-20260924-28 | 2026-09-24 | Narrow or log the library/ silent broad handlers (#26) | #refactor #error-handling #library | [2026-09](2026-09.md) |
 | U-20260924-27 | 2026-09-24 | Treat a corrupt WebP EXIF block as unreadable instead of crashing | #fix #image #exif | [2026-09](2026-09.md) |
 | U-20260924-26 | 2026-09-24 | Forbid silent suppress(Exception) and finish #25 | #done #error-handling #plugins #tests | [2026-09](2026-09.md) |

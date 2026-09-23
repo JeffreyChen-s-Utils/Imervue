@@ -146,3 +146,29 @@ class TestTwoPhaseGrouping:
         applied = next(e for e in m._entries if e.path == path)
         assert applied.fetched is True          # not re-decoded after the regroup
         assert applied.icon is not None
+
+
+def test_extract_date_falls_back_to_mtime_for_a_corrupt_webp(tmp_path):
+    import os
+    from datetime import datetime
+
+    from test_read_errors import corrupt_exif_webp
+
+    from Imervue.gui import timeline_view as tv
+
+    p = tmp_path / "bad.webp"
+    p.write_bytes(corrupt_exif_webp())
+    stamp = datetime(2015, 6, 7, 8, 9, 10).timestamp()
+    os.utime(p, (stamp, stamp))
+    assert tv._extract_date(str(p)) == datetime.fromtimestamp(stamp)
+
+
+def test_extract_date_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
+    from Imervue.gui import timeline_view as tv
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(tv.Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        tv._extract_date(str(tmp_path / "a.png"))

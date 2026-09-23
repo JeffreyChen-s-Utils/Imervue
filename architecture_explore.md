@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `617dc2f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ffb27f4` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 810 | 133,018 |
+| `tests/` | 810 | 133,073 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
-| `Imervue/gui/` | 161 | 32,798 |
+| `Imervue/gui/` | 161 | 32,805 |
 | `Imervue/puppet/` | 57 | 15,222 |
 | `Imervue/image/` | 113 | 12,874 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,622** | **307,786** |
+| **總計** | **1,622** | **307,848** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,378 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,385 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -521,7 +521,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-161 個檔、32,798 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+161 個檔、32,805 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -548,14 +548,14 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_layout.py` | 299 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
-| `file_tree_view.py` | 931 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
+| `file_tree_view.py` | 932 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 182 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
 | `image_list_view.py` | 592 | 清單檢視（`QTableView`，縮圖牆的替代） |
 | `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
-| `exif_sidebar.py` | 431 | 可收合的 EXIF 側邊欄（含星等元件） |
+| `exif_sidebar.py` | 436 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
-| `timeline_view.py` | 364 | 時間軸檢視（年/月/日分組） |
+| `timeline_view.py` | 365 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `hover_preview.py` | 186 | 縮圖懸停放大彈窗 |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-810 個檔、133,018 行。`pyproject.toml` 定義三個互斥層級 marker：
+810 個檔、133,073 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

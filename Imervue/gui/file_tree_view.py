@@ -845,6 +845,7 @@ class _FileTreeView(QTreeView):
                 freed_bytes += sizes.pop(p, 0)
         if not textures:
             return
+        from OpenGL.error import GLError
         from OpenGL.GL import glDeleteTextures
         from PySide6.QtGui import QOpenGLContext
         try:
@@ -852,7 +853,7 @@ class _FileTreeView(QTreeView):
                 viewer.makeCurrent()
             if QOpenGLContext.currentContext() is not None:
                 glDeleteTextures(textures)
-        except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
+        except (GLError, RuntimeError):   # context or widget already torn down; nothing to free
             pass
         finally:
             if hasattr(viewer, "doneCurrent"):
