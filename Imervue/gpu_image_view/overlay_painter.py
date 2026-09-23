@@ -12,13 +12,12 @@ functions so they can be unit-tested without a GL context.
 from __future__ import annotations
 
 import logging
-import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer, QPointF
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -27,7 +26,6 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
     QPixmap,
-    QPolygonF,
 )
 
 from Imervue.gpu_image_view.filmstrip import (
@@ -56,6 +54,16 @@ from Imervue.gpu_image_view.tile_wall_loading import (
     spinner_dots,
     spinner_phase,
     wall_spinner_geometry,
+)
+from Imervue.gpu_image_view.tile_badges import (
+    mtime_date_label,
+    paint_bookmark_badge,
+    paint_color_strip,
+    paint_date_chip,
+    paint_favorite_badge,
+    paint_play_badge,
+    paint_rating_badge,
+    paint_stack_badge,
 )
 from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
@@ -114,8 +122,6 @@ _TILE_SPINNER_RATIO = 0.12
 _ERROR_PANEL_RGBA = (95, 28, 28, 210)
 _MISSING_PANEL_RGBA = (50, 50, 50, 215)
 # Video ▶ badge — translucent disc + opaque white play triangle.
-_VIDEO_BADGE_DISC_RGBA = (0, 0, 0, 150)
-_VIDEO_BADGE_TRI_RGBA = (255, 255, 255, 235)
 # Rubber-band zoom selection rectangle (deep zoom).
 _ZOOM_BAND_FILL_RGBA = (70, 140, 255, 40)
 _ZOOM_BAND_BORDER_RGBA = (70, 140, 255, 220)
@@ -208,7 +214,7 @@ class OverlayPainter:
     def draw_video_badge(self, painter: QPainter):  # pragma: no cover - GL paint
         """Centre a play badge over a deep-zoom video poster."""
         view = self.view
-        _paint_play_badge(painter, video_badge_geometry(0, 0, view.width(), view.height()))
+        paint_play_badge(painter, video_badge_geometry(0, 0, view.width(), view.height()))
 
     def draw_tile_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw the tile-wall QPainter overlays (labels, badges, placeholders)."""
@@ -279,19 +285,19 @@ class OverlayPainter:
         last_date = None
         for x0, y0, x1, y1, path in self.view.tile_rects:
             color_name = color_store.get(path)
-            _paint_color_strip(painter, x0, y0, y1, color_name)
-            _paint_favorite_badge(painter, x0, y0, path in favs, color_name)
-            _paint_bookmark_badge(painter, y0, x1, path)
-            _paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
+            paint_color_strip(painter, x0, y0, y1, color_name)
+            paint_favorite_badge(painter, x0, y0, path in favs, color_name)
+            paint_bookmark_badge(painter, y0, x1, path)
+            paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
             stack_count = len(getattr(self.view, "_stack_members", {}).get(path, []))
-            _paint_stack_badge(painter, x1, y1, stack_count)
+            paint_stack_badge(painter, x1, y1, stack_count)
             if getattr(self.view, "_timeline_grouping_enabled", False):
-                date_label = _mtime_date_label(path)
+                date_label = mtime_date_label(path)
                 if date_label and date_label != last_date:
-                    _paint_date_chip(painter, x0, y0, date_label)
+                    paint_date_chip(painter, x0, y0, date_label)
                     last_date = date_label
             if is_video_path(path):
-                _paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
+                paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
 
     def draw_tile_placeholders(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw a rotating dot spinner on tile slots without a thumbnail yet."""
@@ -876,82 +882,6 @@ class OverlayPainter:
         painter.drawText(x + 24, y + 22 + fm.ascent(), title)
         painter.setPen(QColor(225, 225, 225))
         painter.drawText(x + 24, y + 22 + fm.height() + fm.ascent(), hint)
-
-
-def _paint_play_badge(painter, badge) -> None:  # pragma: no cover - GL paint
-    """Draw a translucent disc + white play triangle for a video badge."""
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor(*_VIDEO_BADGE_DISC_RGBA))
-    painter.drawEllipse(QPointF(badge.cx, badge.cy), badge.radius, badge.radius)
-    painter.setBrush(QColor(*_VIDEO_BADGE_TRI_RGBA))
-    painter.drawPolygon(QPolygonF([QPointF(vx, vy) for vx, vy in badge.triangle]))
-
-
-def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:  # pragma: no cover - GL paint
-    """Left-edge 6 px colour-label strip; skipped when no label is set."""
-    from Imervue.user_settings.color_labels import COLOR_RGB
-    if not color_name or color_name not in COLOR_RGB:
-        return
-    r, g, b = COLOR_RGB[color_name]
-    painter.fillRect(int(x0), int(y0), 6, int(y1 - y0), QColor(r, g, b, 230))
-
-
-def _paint_favorite_badge(painter, x0, y0, is_fav: bool,  # pragma: no cover - GL paint
-                          color_name) -> None:
-    if not is_fav:
-        return
-    offset = 10 if color_name else 4
-    painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 90, 120))
-    painter.drawText(int(x0 + offset + 2), int(y0 + 18), "♥")
-
-
-def _paint_bookmark_badge(painter, y0, x1, path: str) -> None:  # pragma: no cover - GL paint
-    from Imervue.user_settings.bookmark import is_bookmarked
-    if not is_bookmarked(path):
-        return
-    painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 210, 80))
-    painter.drawText(int(x1 - 20), int(y0 + 18), "★")
-
-
-def _paint_rating_badge(painter, x0, y1, rating: int) -> None:  # pragma: no cover - GL paint
-    if not rating or rating <= 0:
-        return
-    badge_text = "★" * int(rating)
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(badge_text)
-    painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 210, 80))
-    painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
-
-
-def _paint_stack_badge(painter, x1, y1, count: int) -> None:  # pragma: no cover - GL paint
-    if count <= 1:
-        return
-    text = f"x{count}"
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(text)
-    painter.fillRect(int(x1 - tw - 14), int(y1 - 20), tw + 10, 18, QColor(20, 80, 110, 190))
-    painter.setPen(QColor(230, 250, 255))
-    painter.drawText(int(x1 - tw - 9), int(y1 - 6), text)
-
-
-def _mtime_date_label(path: str) -> str:
-    try:
-        return time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path)))
-    except OSError:
-        return ""
-
-
-def _paint_date_chip(painter, x0, y0, text: str) -> None:  # pragma: no cover - GL paint
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(text)
-    x = int(x0 + 4)
-    y = int(y0 + 4)
-    painter.fillRect(x, y, tw + 12, 18, QColor(0, 0, 0, 165))
-    painter.setPen(QColor(210, 230, 255))
-    painter.drawText(x + 6, y + 13, text)
 
 
 def _draw_hover_pixel_outline(painter: QPainter,  # pragma: no cover - GL paint

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `a138a69` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `8d79843` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 797 | 131,068 |
+| `tests/` | 798 | 131,191 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 160 | 32,750 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 12,868 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,891 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,219 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,604** | **305,591** |
+| **總計** | **1,606** | **305,737** |
 
-其中 `Imervue/` 套件本身 745 檔 / 160,134 行。
+其中 `Imervue/` 套件本身 746 檔 / 160,157 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -404,7 +404,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `gl_renderer.py` | 346 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
 | `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製 |
 | `deep_zoom_renderer.py` | 280 | Deep-zoom 圖磚 + minimap GL 繪製 |
-| `overlay_painter.py` | 963 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、badge、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`） |
+| `overlay_painter.py` | 893 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
+| `tile_badges.py` | 93 | 圖磚徽章繪製：色彩標籤條、收藏、書籤、星等、堆疊數、日期、影片播放圓鈕（純 `QPainter`，不需 GL） |
 | `texture_upload.py` | 162 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
 | `pbo_uploader.py` | 243 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
 | `gl_context.py` | 53 | 判斷在 `paintGL` 之外釋放材質時是否需要先 make-current |
@@ -953,7 +954,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-797 個檔、131,068 行。`pyproject.toml` 定義三個互斥層級 marker：
+798 個檔、131,191 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1141,8 +1142,8 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用），
-   但有 2 個只剩不到 50 行餘裕：
-   `gpu_image_view/overlay_painter.py`(963)、
+   但有 1 個只剩不到 50 行餘裕：
+   
    `gui/annotation_dialog.py`(956)。要在這些檔案加程式，先拆出模組（`progress.md` #23）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
