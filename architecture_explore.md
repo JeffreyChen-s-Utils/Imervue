@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `bcc5b06` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `d91fdf8` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 788 | 129,152 |
+| `tests/` | 789 | 129,255 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
-| `Imervue/gui/` | 159 | 32,485 |
+| `Imervue/gui/` | 159 | 32,467 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,818 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,591** | **303,562** |
+| **總計** | **1,592** | **303,647** |
 
-其中 `Imervue/` 套件本身 741 檔 / 160,021 行。
+其中 `Imervue/` 套件本身 741 檔 / 160,003 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -516,7 +516,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,485 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,467 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -598,7 +598,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(243) ·
 `optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(385) · `contact_sheet_dialog.py`(199) ·
-`web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(536) ·
+`web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(181) · `image_organizer_dialog.py`(536) ·
 `duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(300) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
 `ai_upscale_dialog.py`(716) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
@@ -632,7 +632,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `right_click_menu.py` | 897 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
 | `file_menu.py` | 520 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
-| `filter_menu.py` | 280 | 依副檔名 / 星等過濾 |
+| `filter_menu.py` | 280 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 341 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 193 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 175 | 依名稱 / 日期 / 大小 / 解析度排序 |
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-788 個檔、129,152 行。`pyproject.toml` 定義三個互斥層級 marker：
+789 個檔、129,255 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

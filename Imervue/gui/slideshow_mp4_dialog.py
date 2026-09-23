@@ -52,6 +52,32 @@ class _RenderWorker(QRunnable):
         self.signals.done.emit(self.out, "")
 
 
+# attribute, spin class, (min, max), default, step (None = keep), suffix,
+# label key / fallback, tooltip key / fallback — one row of the settings form each.
+_SETTINGS_ROWS = (
+    ("_width_spin", QSpinBox, (160, 7680), 1920, None, "",
+     ("slideshow_width", "Width"),
+     ("slideshow_width_tooltip", "Output video width in pixels (default 1920 = HD)")),
+    ("_height_spin", QSpinBox, (120, 4320), 1080, None, "",
+     ("slideshow_height", "Height"),
+     ("slideshow_height_tooltip", "Output video height in pixels (default 1080 = HD)")),
+    ("_fps_spin", QSpinBox, (10, 60), 24, None, "",
+     ("slideshow_fps", "FPS"),
+     ("slideshow_fps_tooltip",
+      "Frames per second — 24 is cinematic, 30 / 60 are common for screen playback")),
+    ("_hold_spin", QDoubleSpinBox, (0.2, 30.0), 3.0, 0.1, " s",
+     ("slideshow_hold", "Hold per image"),
+     ("slideshow_hold_tooltip", "Seconds each image stays on-screen before the fade")),
+    ("_fade_spin", QDoubleSpinBox, (0.0, 5.0), 0.5, 0.1, " s",
+     ("slideshow_fade_seconds", "Fade duration"),
+     ("slideshow_fade_seconds_tooltip",
+      "Cross-fade duration between consecutive images. Set to 0 for hard cuts.")),
+    ("_quality_spin", QSpinBox, (1, 10), 8, None, "",
+     ("slideshow_quality", "Quality"),
+     ("slideshow_quality_tooltip", "Encoder quality (1 worst / smallest, 10 best / largest)")),
+)
+
+
 class SlideshowMp4Dialog(QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
@@ -65,80 +91,36 @@ class SlideshowMp4Dialog(QDialog):
         layout.addWidget(QLabel(lang.get(
             "slideshow_mp4_source",
             "{count} image(s) will be rendered.").format(count=len(images))))
+        layout.addLayout(self._build_settings_form(lang))
+        layout.addLayout(self._build_button_row(lang, images))
 
+    def _build_settings_form(self, lang: dict) -> QFormLayout:
+        """Size, frame rate, timing and quality spins, stored as ``self.<attribute>``."""
         form = QFormLayout()
+        for attr, cls, (lo, hi), default, step, suffix, label, tooltip in _SETTINGS_ROWS:
+            spin = cls()
+            spin.setRange(lo, hi)
+            spin.setValue(default)
+            if step is not None:
+                spin.setSingleStep(step)
+            if suffix:
+                spin.setSuffix(suffix)
+            spin.setToolTip(lang.get(*tooltip))
+            setattr(self, attr, spin)
+            form.addRow(lang.get(*label), spin)
+        return form
 
-        self._width_spin = QSpinBox()
-        self._width_spin.setRange(160, 7680)
-        self._width_spin.setValue(1920)
-        self._width_spin.setToolTip(lang.get(
-            "slideshow_width_tooltip",
-            "Output video width in pixels (default 1920 = HD)",
-        ))
-        form.addRow(lang.get("slideshow_width", "Width"), self._width_spin)
-
-        self._height_spin = QSpinBox()
-        self._height_spin.setRange(120, 4320)
-        self._height_spin.setValue(1080)
-        self._height_spin.setToolTip(lang.get(
-            "slideshow_height_tooltip",
-            "Output video height in pixels (default 1080 = HD)",
-        ))
-        form.addRow(lang.get("slideshow_height", "Height"), self._height_spin)
-
-        self._fps_spin = QSpinBox()
-        self._fps_spin.setRange(10, 60)
-        self._fps_spin.setValue(24)
-        self._fps_spin.setToolTip(lang.get(
-            "slideshow_fps_tooltip",
-            "Frames per second — 24 is cinematic, 30 / 60 are common "
-            "for screen playback",
-        ))
-        form.addRow(lang.get("slideshow_fps", "FPS"), self._fps_spin)
-
-        self._hold_spin = QDoubleSpinBox()
-        self._hold_spin.setRange(0.2, 30.0)
-        self._hold_spin.setValue(3.0)
-        self._hold_spin.setSingleStep(0.1)
-        self._hold_spin.setSuffix(" s")
-        self._hold_spin.setToolTip(lang.get(
-            "slideshow_hold_tooltip",
-            "Seconds each image stays on-screen before the fade",
-        ))
-        form.addRow(lang.get("slideshow_hold", "Hold per image"), self._hold_spin)
-
-        self._fade_spin = QDoubleSpinBox()
-        self._fade_spin.setRange(0.0, 5.0)
-        self._fade_spin.setValue(0.5)
-        self._fade_spin.setSingleStep(0.1)
-        self._fade_spin.setSuffix(" s")
-        self._fade_spin.setToolTip(lang.get(
-            "slideshow_fade_seconds_tooltip",
-            "Cross-fade duration between consecutive images. Set to "
-            "0 for hard cuts.",
-        ))
-        form.addRow(lang.get("slideshow_fade_seconds", "Fade duration"), self._fade_spin)
-
-        self._quality_spin = QSpinBox()
-        self._quality_spin.setRange(1, 10)
-        self._quality_spin.setValue(8)
-        self._quality_spin.setToolTip(lang.get(
-            "slideshow_quality_tooltip",
-            "Encoder quality (1 worst / smallest, 10 best / largest)",
-        ))
-        form.addRow(lang.get("slideshow_quality", "Quality"), self._quality_spin)
-
-        layout.addLayout(form)
-
+    def _build_button_row(self, lang: dict, images: list[str]) -> QHBoxLayout:
+        """Right-aligned Export (for *images*) and Close."""
         btn_row = QHBoxLayout()
         btn_row.addStretch()
-        self._export_btn = QPushButton(lang.get("slideshow_export", "Export MP4\u2026"))
+        self._export_btn = QPushButton(lang.get("slideshow_export", "Export MP4…"))
         self._export_btn.clicked.connect(lambda: self._export(images))
         btn_row.addWidget(self._export_btn)
         close_btn = QPushButton(lang.get("slideshow_close", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     def _resolve_images(self) -> list[str]:
         viewer = getattr(self.ui, "viewer", None)
