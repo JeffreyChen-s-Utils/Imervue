@@ -13,6 +13,7 @@ module provides:
 """
 from __future__ import annotations
 
+import hashlib
 import importlib
 import io
 import logging
@@ -96,11 +97,36 @@ _EMBED_PYTHON_URL = (
     f"https://www.python.org/ftp/python/{_EMBED_PYTHON_VERSION}/"
     f"python-{_EMBED_PYTHON_VERSION}-embed-amd64.zip"
 )
-_GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
+# SHA-256 of that zip: python.org publishes its MD5 (1e86b04bc7d27c5c06edf8f617e1184a)
+# and size (11,094,114 bytes), and a download matching both hashed to this.
+_EMBED_PYTHON_SHA256 = "8d3f33be9eb810f23c102f08475af2854e50484b8e4e06275e937be61ce3d2fb"
+# pip is installed from a pinned wheel whose SHA-256 is PyPI's published digest,
+# not from get-pip.py: that script lives at a URL whose content changes with
+# every pip release, so it could not be verified before being run.
+_PIP_WHEEL_VERSION = "26.2.1"
+_PIP_WHEEL_NAME = f"pip-{_PIP_WHEEL_VERSION}-py3-none-any.whl"
+_PIP_WHEEL_URL = (
+    "https://files.pythonhosted.org/packages/f3/6e/"
+    f"1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/{_PIP_WHEEL_NAME}"
+)
+_PIP_WHEEL_SHA256 = "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e"
+# Runs pip straight from its wheel, as ``python -m pip`` would: pip refuses to
+# replace itself when started through any other entry point on Windows, and the
+# embeddable Python ignores PYTHONPATH because of its ._pth file.
+_PIP_FROM_WHEEL = (
+    "import runpy, sys; wheel = sys.argv[1]; sys.path.insert(0, wheel); "
+    "sys.argv = ['pip', 'install', '--no-index', '--no-warn-script-location', wheel]; "
+    "runpy.run_module('pip', run_name='__main__', alter_sys=True)"
+)
 _USER_AGENT = "Imervue/1.0"
 _UA_HEADERS = {"User-Agent": _USER_AGENT}
 _PROCESS_TIMEOUT_MSG = "Process timed out"
 _PTH_NAME_RE = re.compile(r"python[0-9._]*\._pth")
+
+
+def _matches_sha256(data: bytes, expected: str) -> bool:
+    """True if *data* hashes to the pinned hex SHA-256 *expected*."""
+    return hashlib.sha256(data).hexdigest() == expected
 
 
 class _DownloadPythonWorker(QThread):
@@ -141,15 +167,24 @@ class _DownloadPythonWorker(QThread):
             logger.exception(f"Download Python failed: {exc}")
             self.result_ready.emit(False, str(exc))
 
+    def _download_verified(self, url: str, sha256: str, what: str) -> bytes | None:
+        """Download *url*; emit a failure and return None unless its SHA-256 matches."""
+        try:
+            req = Request(url, headers=_UA_HEADERS)
+            with _https_urlopen(req, timeout=120) as resp:
+                data = resp.read()
+        except OSError as e:
+            self.result_ready.emit(False, f"Failed to download {what}: {e}")
+            return None
+        if not _matches_sha256(data, sha256):
+            self.result_ready.emit(False, f"{what} does not match its checksum; not using it")
+            return None
+        return data
+
     def _download_embed_zip(self) -> bytes | None:
         self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
-        try:
-            req = Request(_EMBED_PYTHON_URL, headers=_UA_HEADERS)
-            resp = _https_urlopen(req, timeout=120)
-            return resp.read()
-        except OSError as e:
-            self.result_ready.emit(False, f"Download failed: {e}")
-            return None
+        return self._download_verified(
+            _EMBED_PYTHON_URL, _EMBED_PYTHON_SHA256, f"Python {_EMBED_PYTHON_VERSION}")
 
     def _extract_safely(self, data: bytes, dest_dir: Path) -> bool:
         """Extract the embeddable zip to *dest_dir*, rejecting zip-slip entries."""
@@ -186,31 +221,28 @@ class _DownloadPythonWorker(QThread):
             )
 
     def _bootstrap_pip(self, dest_dir: Path, python_exe: Path) -> bool:
-        """Download get-pip.py, run it, return True on success."""
-        self.log.emit("Downloading get-pip.py ...")
-        try:
-            req = Request(_GET_PIP_URL, headers=_UA_HEADERS)
-            resp = _https_urlopen(req, timeout=120)
-            get_pip_data = resp.read()
-        except OSError as e:
-            self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
+        """Install pip from its pinned, checksum-verified wheel; True on success."""
+        self.log.emit(f"Downloading pip {_PIP_WHEEL_VERSION} ...")
+        wheel_data = self._download_verified(
+            _PIP_WHEEL_URL, _PIP_WHEEL_SHA256, f"pip {_PIP_WHEEL_VERSION}")
+        if wheel_data is None:
             return False
 
-        get_pip_path = dest_dir / "get-pip.py"
-        get_pip_path.write_bytes(get_pip_data)
+        wheel_path = dest_dir / _PIP_WHEEL_NAME
+        wheel_path.write_bytes(wheel_data)
         try:
             self.log.emit("Installing pip ...")
             returncode = self._run_with_live_output(
-                [str(python_exe), str(get_pip_path)],
+                [str(python_exe), "-c", _PIP_FROM_WHEEL, str(wheel_path)],
                 cwd=str(dest_dir),
                 timeout=300,
             )
             if returncode != 0:
                 self.result_ready.emit(
-                    False, f"get-pip.py failed (exit code {returncode})")
+                    False, f"pip installation failed (exit code {returncode})")
                 return False
         finally:
-            get_pip_path.unlink(missing_ok=True)
+            wheel_path.unlink(missing_ok=True)
         return True
 
     def _run_with_live_output(
