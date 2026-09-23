@@ -75,6 +75,9 @@ target-version = "py310"
 # of the shipped package; tuning ruff for procedural-art helpers
 # would just add noise without affecting production code.
 extend-exclude = ["build", "dist", ".venv", "venv", "docs/_build", "examples"]
+# ``/plugins/`` is gitignored (its files are force-added), so honouring
+# .gitignore would silently skip the bundled plugins in ``ruff check .``.
+respect-gitignore = false
 
 [tool.ruff.lint]
 select = [

@@ -128,7 +128,7 @@ def _reload_grid_or_deepzoom(gui) -> None:
             if images and 0 <= gui.current_index < len(images):
                 gui._clear_deep_zoom()
                 gui.load_deep_zoom_image(images[gui.current_index])
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort refresh of the host viewer; logged
         logger.debug("Viewer reload failed", exc_info=True)
 
 

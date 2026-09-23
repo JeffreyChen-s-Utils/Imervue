@@ -404,7 +404,7 @@ def _process_one_with_fallback(run_for_shape, shape, retries=1):
     for attempt_shape in attempts:
         try:
             return run_for_shape(attempt_shape)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - detector/torch fail in any way; re-raised below
             last_exc = exc
     raise last_exc
 
@@ -441,7 +441,7 @@ def _run_single(args):
         print("PROGRESS:No genitalia detected" if count == 0
               else f"PROGRESS:Censored {count} region(s)", flush=True)
         print(f"OK:{output_path}", flush=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - child-process boundary: report over the protocol
         print(f"ERROR:{exc}", flush=True)
         sys.exit(1)
 
@@ -488,7 +488,7 @@ def _run_batch(args):
                     merge_regions=merge_regions),
                 shape)
             success += 1
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - one bad image must not end the batch; recorded
             print(f"PROGRESS:Error on {name}: {exc}", flush=True)
             failures.append((name, str(exc)))
             if failed_dir:

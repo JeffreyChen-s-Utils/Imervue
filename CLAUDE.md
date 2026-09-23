@@ -21,9 +21,10 @@ can be committed. No exceptions — incomplete work stays on the working copy un
 1. **Unit tests are written and they pass.** New code without new tests is incomplete. See
    **Unit Tests** below for the coverage expectations.
 2. `py -m pytest tests/` runs clean (or only skips that already existed before the change).
-3. `py -m ruff check .` reports no new errors.
-4. `py -m bandit -c pyproject.toml -r Imervue/` reports `No issues identified` (`-c` is REQUIRED;
-   without it bandit ignores the skip config).
+3. `py -m ruff check .` reports no new errors. It covers the bundled `plugins/` too:
+   `respect-gitignore = false` in `pyproject.toml`, because `/plugins/` is gitignored.
+4. `py -m bandit -c pyproject.toml -r Imervue/ plugins/` reports `No issues identified` (`-c` is
+   REQUIRED; without it bandit ignores the skip config).
 5. `architecture_explore.md` is updated in the same commit — see **Architecture Map**.
 6. The commit message contains no AI tool/model names and no `Co-Authored-By` line.
 
@@ -311,7 +312,7 @@ Systemic false positives are skipped at config level, never per line. `.bandit` 
 (YAML, one `# B<NNN>: reason` comment per rule); `pyproject.toml` `[tool.bandit]` mirrors it —
 **keep both in sync**. `.codacy.yaml` excludes `tests/**` (pytest `assert` is B101, narrow
 `except/pass` is B110) and `Imervue/multi_language/**` (translator strings like "API key" trip
-B105). After adding a skip, verify `py -m bandit -c pyproject.toml -r Imervue/` returns
+B105). After adding a skip, verify `py -m bandit -c pyproject.toml -r Imervue/ plugins/` returns
 `No issues identified`.
 
 ## Local CI & Dashboards

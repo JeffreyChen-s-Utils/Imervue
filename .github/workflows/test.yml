@@ -28,7 +28,7 @@ jobs:
       run: python -m ruff check . --output-format=github
     - name: bandit
       # ``-c pyproject.toml`` is required, or bandit ignores the documented skips.
-      run: python -m bandit -c pyproject.toml -r Imervue/
+      run: python -m bandit -c pyproject.toml -r Imervue/ plugins/
 
   docs:
     runs-on: ubuntu-latest

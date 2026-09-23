@@ -97,7 +97,7 @@ def _run(input_path: str, output_dir: str, model_name: str,
     print(f"OK:{total_objects}", flush=True)
 
 
-def _connected_components(binary: "np.ndarray"):
+def _connected_components(binary: np.ndarray):
     """Simple BFS-based connected component labeling (no scipy needed)."""
     import numpy as np
     from collections import deque
@@ -138,6 +138,6 @@ if __name__ == "__main__":
             padding=int(sys.argv[6]),
             models_dir=sys.argv[7],
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - child-process boundary: report over the protocol
         print(f"ERROR:{exc}", flush=True)
         sys.exit(1)

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `15c73a4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `7c4dd50` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -83,8 +83,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
-| `plugins/`（17 個外掛） | 62 | 14,393 |
-| **總計** | **1,626** | **308,644** |
+| `plugins/`（17 個外掛） | 62 | 14,397 |
+| **總計** | **1,626** | **308,648** |
 
 其中 `Imervue/` 套件本身 750 檔 / 160,437 行。
 
@@ -1009,8 +1009,8 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 ```bash
 py -m pytest tests/                        # 單元測試（新程式必須有新測試）
-py -m ruff check .                         # 無新錯誤
-py -m bandit -c pyproject.toml -r Imervue/ # 必須 "No issues identified"（-c 不可省）
+py -m ruff check .                         # 無新錯誤（含 plugins/：respect-gitignore = false）
+py -m bandit -c pyproject.toml -r Imervue/ plugins/  # 必須 "No issues identified"（-c 不可省）
 ```
 
 外加：commit message 不得含任何 AI 工具 / 模型名稱，不得有 `Co-Authored-By`。

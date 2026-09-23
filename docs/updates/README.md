@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-35 | 2026-09-24 | Bring the bundled plugins under the ruff and bandit gates | #done #lint #ci #plugins | [2026-09](2026-09.md) |
 | U-20260924-34 | 2026-09-24 | Forbid silent broad handlers and finish #26 | #done #error-handling #plugins #tests | [2026-09](2026-09.md) |
 | U-20260924-33 | 2026-09-24 | Narrow the last main-program silent handlers and guard the batch-file worker (#26) | #refactor #error-handling #paint #mcp #trash | [2026-09](2026-09.md) |
 | U-20260924-32 | 2026-09-24 | Stop an old Tesseract from quitting the app through the OCR probe | #fix #ocr #error-handling | [2026-09](2026-09.md) |

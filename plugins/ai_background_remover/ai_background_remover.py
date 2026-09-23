@@ -6,6 +6,7 @@ Dependencies are auto-installed on first use via the main app's pip installer.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -152,8 +153,8 @@ class _SubprocessRemoveWorker(QThread):
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
             )
             self._proc = proc
-            for line in proc.stdout:
-                line = line.rstrip("\n\r")
+            for raw_line in proc.stdout:
+                line = raw_line.rstrip("\n\r")
                 if not line:
                     continue
                 logger.info("_SubprocessRemoveWorker: %s", line)
@@ -202,18 +203,19 @@ class _SubprocessBatchWorker(QThread):
         terminate_process(self._proc)
 
     def run(self):
+        list_path = None
         try:
-            # Write paths to temp file
-            tmp = tempfile.NamedTemporaryFile(
+            # Hand the path list to the child through a temp file.
+            with tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False, encoding="utf-8",
-            )
-            json.dump(self._paths, tmp)
-            tmp.close()
+            ) as tmp:
+                list_path = tmp.name
+                json.dump(self._paths, tmp)
 
             cmd = [
                 self._python, str(_RUNNER_SCRIPT),
                 self._site_packages, "batch",
-                tmp.name, self._output_dir, self._model,
+                list_path, self._output_dir, self._model,
                 str(self._alpha_matting), str(_MODELS_DIR),
             ]
             kw = _subprocess_kwargs()
@@ -221,8 +223,8 @@ class _SubprocessBatchWorker(QThread):
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
             )
             self._proc = proc
-            for line in proc.stdout:
-                line = line.rstrip("\n\r")
+            for raw_line in proc.stdout:
+                line = raw_line.rstrip("\n\r")
                 if not line:
                     continue
                 if line.startswith("BATCH_PROGRESS:"):
@@ -233,20 +235,22 @@ class _SubprocessBatchWorker(QThread):
                     parts = line[9:].split(":")
                     self.result_ready.emit(int(parts[0]), int(parts[1]))
                     proc.wait()
-                    os.unlink(tmp.name)
                     return
                 elif line.startswith("ERROR:"):
                     self.result_ready.emit(0, len(self._paths))
                     proc.wait()
-                    os.unlink(tmp.name)
                     return
 
             proc.wait()
-            os.unlink(tmp.name)
             self.result_ready.emit(0, len(self._paths))
         except Exception as exc:
             logger.error("_SubprocessBatchWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(0, len(self._paths))
+        finally:
+            # Removed on every path, including a Popen that never started.
+            if list_path is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(list_path)
 
 
 # ===========================
@@ -357,7 +361,7 @@ class _BatchRemoveWorker(QThread):
 
                 output_img.save(str(out_path))
                 success += 1
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - rembg/onnx fail in any way; log, go on
                 logger.error("Batch bg removal failed for %s: %s", src, exc)
                 failed += 1
 

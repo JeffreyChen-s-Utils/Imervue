@@ -147,7 +147,8 @@ Public interfaces other code or users depend on:
 Summaries only; `CLAUDE.md` is the source of truth.
 
 - Every change ships with unit tests and passes `py -m pytest tests/`, `py -m ruff check .` and
-  `py -m bandit -c pyproject.toml -r Imervue/` (CLAUDE.md "Definition of Done").
+  `py -m bandit -c pyproject.toml -r Imervue/ plugins/` (CLAUDE.md "Definition of Done"); both
+  gates cover the gitignored, force-added `plugins/`.
 - `architecture_explore.md` is updated in the same commit when structure or responsibility changes
   (CLAUDE.md "Architecture Map").
 - Commits, PRs, code comments and docs carry no tool or model attribution and no `Co-Authored-By`
