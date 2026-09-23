@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `01d4de7` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `e145169` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -76,17 +76,17 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/desktop_pet/` | 34 | 8,240 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,146 |
-| `Imervue/menu/` | 11 | 3,604 |
+| `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,185 |
-| `Imervue/system/` | 18 | 1,909 |
+| `Imervue/system/` | 19 | 1,982 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,619** | **307,345** |
+| **總計** | **1,620** | **307,390** |
 
-其中 `Imervue/` 套件本身 749 檔 / 160,314 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,359 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -229,6 +229,7 @@ ImervueMainWindow
 | `themes.py` | 175 | 內建配色主題 |
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `file_manager.py` | 40 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`、macOS `open [-R]`、Linux `xdg-open`）；檔案樹、右鍵選單、外掛選單共用 |
+| `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
 | `trash_ops.py` | 199 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
@@ -635,7 +636,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 828 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
-| `right_click_menu.py` | 898 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
+| `right_click_menu.py` | 870 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
 | `file_menu.py` | 520 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 280 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |

@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -19,6 +16,7 @@ from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
 from Imervue.gui.export_dialog import open_export_dialog
 from Imervue.gui.batch_export_dialog import open_batch_export
+from Imervue.system.wallpaper import set_desktop_wallpaper
 from Imervue.gui.gif_video_dialog import open_gif_video_dialog
 from Imervue.gui.tag_album_dialog import (
     build_tag_submenu, build_album_submenu, build_batch_tag_album_submenu,
@@ -623,33 +621,7 @@ def _set_wallpaper_action(main_gui: GPUImageView, menu: QMenu):
 
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_set_wallpaper", "Set as Wallpaper"))
-    action.triggered.connect(lambda: _set_wallpaper(path))
-
-
-def _set_wallpaper(path: str):
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            import ctypes
-            SPI_SETDESKWALLPAPER = 0x0014
-            SPIF_UPDATEINIFILE = 0x01
-            SPIF_SENDCHANGE = 0x02
-            ctypes.windll.user32.SystemParametersInfoW(
-                SPI_SETDESKWALLPAPER, 0, os.path.normpath(path),
-                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
-            )
-        elif sys.platform == "darwin":
-            script = f'''
-            tell application "Finder"
-                set desktop picture to POSIX file "{path}"
-            end tell
-            '''
-            subprocess.Popen(["osascript", "-e", script])
-        else:
-            # GNOME
-            subprocess.Popen([
-                "gsettings", "set", "org.gnome.desktop.background",
-                "picture-uri", f"file://{path}"
-            ])
+    action.triggered.connect(lambda: set_desktop_wallpaper(path))
 
 
 # ===========================
