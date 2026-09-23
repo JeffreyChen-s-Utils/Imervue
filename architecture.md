@@ -132,6 +132,11 @@ Public interfaces other code or users depend on:
   runtime, including in frozen builds. Every install runs under the constraints in
   `Imervue/plugin/pip_constraints.py`, which keep all OpenCV distributions below 5: they share one
   `cv2` directory, and OpenCV 5 dropped the Haar cascades face detection needs.
+- **`_find_python` import path.** Plugins in Imervue_Plugins (`ai_background_remover`,
+  `object_splitter`, `safety_review`) call `from Imervue.plugin.pip_installer import _find_python` to
+  get an interpreter with pip. The finder lives in `Imervue/plugin/python_finder.py`;
+  `pip_installer` re-exports it, and `tests/test_python_finder.py` checks the re-export. Keep that
+  import path working, or change those plugins in the same round.
 - **External services.** Every download made by the plugin downloader and pip installer goes through
   an HTTPS-only guard; model downloads from Hugging Face must pin a revision. Codacy and SonarCloud
   analyse only the `main` branch.

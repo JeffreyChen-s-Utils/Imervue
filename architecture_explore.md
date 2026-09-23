@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `8e70944` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `727f52b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 793 | 130,623 |
+| `tests/` | 794 | 130,713 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,451 |
 | `Imervue/puppet/` | 57 | 15,214 |
@@ -78,15 +78,15 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/library/` | 32 | 4,140 |
 | `Imervue/menu/` | 11 | 3,611 |
 | `Imervue/` 根層 | 5 | 1,809 |
-| `Imervue/plugin/` | 9 | 2,150 |
+| `Imervue/plugin/` | 10 | 2,186 |
 | `Imervue/system/` | 16 | 1,840 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,597** | **305,061** |
+| **總計** | **1,599** | **305,187** |
 
-其中 `Imervue/` 套件本身 742 檔 / 160,049 行。
+其中 `Imervue/` 套件本身 743 檔 / 160,085 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -884,7 +884,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
 | `plugin_manager.py` | 228 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
 | `plugin_downloader.py` | 509 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
-| `pip_installer.py` | 993 | 外掛相依安裝器：尋找/下載 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔 |
+| `pip_installer.py` | 811 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
+| `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
 | `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
@@ -950,7 +951,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-793 個檔、130,623 行。`pyproject.toml` 定義三個互斥層級 marker：
+794 個檔、130,713 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1138,7 +1139,7 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用），
-   但有 5 個只剩不到 50 行餘裕：`plugin/pip_installer.py`(993)、
+   但有 4 個只剩不到 50 行餘裕：
    `desktop_pet/pet_window.py`(985)、`Imervue_main_window.py`(971)、`gpu_image_view/overlay_painter.py`(963)、
    `gui/annotation_dialog.py`(956)。要在這些檔案加程式，先拆出模組（`progress.md` #23）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
