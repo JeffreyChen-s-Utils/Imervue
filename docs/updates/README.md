@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-59 | 2026-09-24 | Translate runtime-built UI keys and the built-in material names | #i18n #paint | [2026-09](2026-09.md) |
 | U-20260924-58 | 2026-09-24 | Plugins define the shared AI-menu keys they borrowed | #i18n #plugins #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-57 | 2026-09-24 | Translate the last hard-coded English dialog strings | #i18n #gui | [2026-09](2026-09.md) |
 | U-20260924-56 | 2026-09-24 | Translate 334 UI strings that every language showed in English | #i18n #gui | [2026-09](2026-09.md) |

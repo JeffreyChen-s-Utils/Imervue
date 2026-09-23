@@ -1,6 +1,7 @@
 """Material library dock."""
 from __future__ import annotations
 
+import re
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
@@ -22,6 +23,18 @@ from Imervue.paint.docks._helpers import (
     _HINT_LABEL_STYLE,
 )
 
+
+
+# Built-in procedural materials are named in English ("Dot 30%", "Coarse paper").
+# Their translations live under this prefix; a user's own material file has no
+# such key and keeps its file name.
+_BUILTIN_NAME_PREFIX = "paint_material_builtin_"
+
+
+def material_display_name(name: str, lang: dict) -> str:
+    """Return the translated label for a built-in material, else *name* unchanged."""
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return lang.get(f"{_BUILTIN_NAME_PREFIX}{slug}", name)
 
 class _MaterialThumbnailButton(QToolButton):
     """QToolButton that doubles as a drag source for its material path.
@@ -203,7 +216,7 @@ class MaterialDock(QDockWidget):
         btn = _MaterialThumbnailButton(str(entry.path), pix)
         btn.setIconSize(QPixmap(64, 64).size())
         btn.setIcon(pix)
-        btn.setText(entry.name)
+        btn.setText(material_display_name(entry.name, language_wrapper.language_word_dict))
         btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         btn.clicked.connect(
             lambda *_, p=str(entry.path): self.material_chosen.emit(p),
