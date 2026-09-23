@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -13,6 +14,8 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.image.info")
 
 
 # ==========================================================
@@ -63,7 +66,7 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
             from PIL import Image
             with Image.open(path) as pil_img:
                 w, h = pil_img.size
-        except Exception:
+        except (OSError, ValueError, Image.DecompressionBombError):
             # Formats PIL can't header-read (some RAW) — fall back to the decoded
             # thumbnail's shape rather than failing the whole dialog.
             cache_key = str(path)
@@ -78,7 +81,8 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         exif = get_exif_data(path)
         info["exif_text"] = format_exif_info(exif)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any decoder failure is shown in the dialog, logged below
+        logger.warning("Building image info for %s failed", path, exc_info=True)
         info["error"] = str(e)
 
     return info
@@ -128,7 +132,8 @@ def get_file_times(path: Path):
 
     try:
         ctime = datetime.fromtimestamp(stat.st_ctime)
-    except Exception:
+    except (OSError, OverflowError, ValueError):
+        # Out-of-range or platform-rejected timestamp.
         ctime = None
 
     return ctime, mtime
@@ -141,7 +146,9 @@ def get_file_times(path: Path):
 def get_exif_data(path: Path):
     try:
         with Image.open(path) as img:
-            exif_raw = img._getexif()
+            # Only JPEG / TIFF-family images carry the flattened ``_getexif`` view.
+            read_exif = getattr(img, "_getexif", None)
+            exif_raw = read_exif() if read_exif is not None else None
 
         if not exif_raw:
             return {}
@@ -151,7 +158,8 @@ def get_exif_data(path: Path):
             for tag, value in exif_raw.items()
         }
 
-    except Exception:
+    except Exception:  # noqa: BLE001 - PIL's EXIF parser fails in open-ended ways; logged below
+        logger.debug("EXIF read failed for %s", path, exc_info=True)
         return {}
 
 

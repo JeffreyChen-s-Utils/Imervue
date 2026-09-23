@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `ce408a5` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `fe5cb14` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 775 | 127,703 |
+| `tests/` | 775 | 127,814 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,459 |
 | `Imervue/puppet/` | 57 | 15,214 |
-| `Imervue/image/` | 112 | 12,831 |
+| `Imervue/image/` | 112 | 12,849 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,779 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,195 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,576** | **301,955** |
+| **總計** | **1,576** | **302,084** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,863 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,881 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -301,7 +301,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `recipe.py` | 599 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`，以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效） |
-| `recipe_store.py` | 367 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體） |
+| `recipe_store.py` | 374 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體） |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
 | `recipe_diff.py` | 64 | 兩個 recipe 的 diff 與選擇性合併 |
 | `develop_presets.py` | 103 | 具名顯影預設與批次 recipe 同步 |
@@ -362,14 +362,14 @@ ImervueMainWindow
 `save_formats.py`(97) 輸出格式中繼資料 · `optimize.py`(74) 目標檔案大小編碼 ·
 `export_presets.py`(95) 匯出預設包 · `video_frames.py`(232) 影片解碼原語（瀏覽器與外掛共用） ·
 `pyramid.py`(39) `DeepZoomImage` 金字塔 · `tile_manager.py`(95) 圖磚 LRU 快取與淘汰 ·
-`thumbnail_disk_cache.py`(231) 縮圖磁碟快取 · `folder_index.py`(60) 每資料夾圖片清單快取
+`thumbnail_disk_cache.py`(232) 縮圖磁碟快取 · `folder_index.py`(60) 每資料夾圖片清單快取
 
 #### 中繼資料
 
 `xmp_sidecar.py`(387) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(77) XMP↔EXIF 評分調和 ·
 `gps.py`(87) EXIF GPS 擷取 · `gps_geotag.py`(63) 寫入 · `reverse_geocode.py`(152) 離線逆地理編碼 ·
 `geo_keywords.py`(46) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
-`annotations.py`(271) JSON sidecar 註解 · `info.py`(181) 圖片資訊組裝與對話框
+`annotations.py`(271) JSON sidecar 註解 · `info.py`(188) 圖片資訊組裝與對話框
 
 #### 分析 / 品質
 
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-775 個檔、127,703 行。`pyproject.toml` 定義三個互斥層級 marker：
+775 個檔、127,814 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

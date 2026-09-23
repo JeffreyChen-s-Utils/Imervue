@@ -152,7 +152,8 @@ class ThumbnailDiskCache:
                 # uniform 4-channel array regardless of how it was stored.
                 img = src.convert("RGBA") if src.mode != "RGBA" else src
                 arr = np.array(img)
-        except Exception as e:
+        except (OSError, ValueError, Image.DecompressionBombError) as e:
+            # A truncated / corrupt PNG surfaces as OSError; drop it and re-render.
             logger.debug(f"Thumbnail cache read failed for {name}: {e}")
             with contextlib.suppress(OSError):
                 cache_file.unlink(missing_ok=True)
@@ -186,7 +187,8 @@ class ThumbnailDiskCache:
                 img = Image.fromarray(arr, mode="RGB").convert("RGBA")
             else:
                 img = Image.fromarray(arr, mode="RGBA")
-        except Exception as e:
+        except (AttributeError, IndexError, TypeError, ValueError) as e:
+            # Not an image-shaped array (no dtype / ndim, too few dims, odd channels).
             shape = getattr(img_data, "shape", None)
             logger.debug(f"Thumbnail cache: cannot interpret array shape={shape}: {e}")
             return
@@ -199,7 +201,7 @@ class ThumbnailDiskCache:
             # first few folder opens after launch.
             img.save(cache_file, format="PNG", compress_level=1)
             st = cache_file.stat()
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.debug(f"Failed to write thumbnail cache: {e}")
             return
         with self._lock:

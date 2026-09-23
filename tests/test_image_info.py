@@ -135,3 +135,36 @@ class TestBuildImageInfoDimensions:
         assert result.get("width") == 800
         assert result.get("height") == 600
         assert "error" not in result
+
+
+# ---------------------------------------------------------------------------
+# Narrowed failure handling
+# ---------------------------------------------------------------------------
+
+
+def test_png_exif_read_does_not_log_a_traceback(png_file, caplog):
+    """PNG has no ``_getexif``; that is the normal no-EXIF path, not an error."""
+    with caplog.at_level("DEBUG", logger="Imervue.image.info"):
+        assert info_mod.get_exif_data(png_file) == {}
+    assert "EXIF read failed" not in caplog.text
+
+
+def test_corrupt_exif_is_logged_and_empty(tmp_path, caplog):
+    bad = tmp_path / "bad.jpg"
+    bad.write_bytes(b"\xff\xd8\xff\xe1\x00\x10Exif\x00\x00garbage-garbage")
+    with caplog.at_level("DEBUG", logger="Imervue.image.info"):
+        assert info_mod.get_exif_data(bad) == {}
+
+
+def test_out_of_range_ctime_becomes_none(tmp_path, monkeypatch):
+    path = tmp_path / "f.bin"
+    path.write_bytes(b"x")
+
+    class _Stat:
+        st_mtime = 1_700_000_000
+        st_ctime = 10 ** 20
+
+    monkeypatch.setattr(type(path), "stat", lambda self: _Stat())
+    ctime, mtime = info_mod.get_file_times(path)
+    assert ctime is None
+    assert isinstance(mtime, datetime)
