@@ -7,6 +7,7 @@ from __future__ import annotations
 
 _TRANSLATIONS: dict[str, dict[str, str]] = {
     "English": {
+        "bg_remove_menu": "AI Tools",
         "safety_review_title": "Safety Review \u2014 Auto Mosaic",
         "safety_review_batch_title": "Batch Safety Review",
         "safety_review_scan_all": "Safety Review \u2014 Scan All Images",
@@ -100,6 +101,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_cat_sexual_act": "Sexual Act (anime only)",
     },
     "Traditional_Chinese": {
+        "bg_remove_menu": "AI 工具",
         "safety_review_title":
             "\u5b89\u5168\u5be9\u6838 \u2014 \u81ea\u52d5\u6253\u78bc",
         "safety_review_batch_title":
@@ -209,6 +211,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_cat_sexual_act": "\u6027\u884c\u70ba (\u50c5\u52d5\u756b)",
     },
     "Chinese": {
+        "bg_remove_menu": "AI 工具",
         "safety_review_title":
             "\u5b89\u5168\u5ba1\u6838 \u2014 \u81ea\u52a8\u6253\u7801",
         "safety_review_batch_title":
@@ -318,6 +321,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_cat_sexual_act": "\u6027\u884c\u4e3a (\u4ec5\u52a8\u6f2b)",
     },
     "Japanese": {
+        "bg_remove_menu": "AI ツール",
         "safety_review_title":
             "\u5b89\u5168\u5be9\u67fb \u2014 \u81ea\u52d5\u30e2\u30b6\u30a4\u30af",
         "safety_review_batch_title":
@@ -430,6 +434,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "safety_review_cat_sexual_act": "\u6027\u884c\u70ba (\u30a2\u30cb\u30e1\u306e\u307f)",
     },
     "Korean": {
+        "bg_remove_menu": "AI 도구",
         "safety_review_title":
             "\uc548\uc804 \uac80\ud1a0 \u2014 \uc790\ub3d9 \ubaa8\uc790\uc774\ud06c",
         "safety_review_batch_title":

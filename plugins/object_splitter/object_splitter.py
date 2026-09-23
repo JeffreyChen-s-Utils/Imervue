@@ -464,6 +464,7 @@ class ObjectSplitterPlugin(ImervuePlugin):
     def get_translations(self) -> dict[str, dict[str, str]]:
         return {
             "English": {
+                "bg_remove_model": "Model:",
                 "objsplit_title": "Object Splitter",
                 "objsplit_source": "Source:",
                 "objsplit_params": "Parameters",
@@ -474,6 +475,7 @@ class ObjectSplitterPlugin(ImervuePlugin):
                 "objsplit_done": "Done! Extracted {count} object(s)",
             },
             "Traditional_Chinese": {
+                "bg_remove_model": "模型：",
                 "objsplit_title": "物件分割",
                 "objsplit_source": "來源：",
                 "objsplit_params": "參數",
@@ -484,6 +486,7 @@ class ObjectSplitterPlugin(ImervuePlugin):
                 "objsplit_done": "完成！擷取了 {count} 個物件",
             },
             "Chinese": {
+                "bg_remove_model": "模型：",
                 "objsplit_title": "对象分割",
                 "objsplit_source": "来源：",
                 "objsplit_params": "参数",
@@ -494,6 +497,7 @@ class ObjectSplitterPlugin(ImervuePlugin):
                 "objsplit_done": "完成！提取了 {count} 个对象",
             },
             "Japanese": {
+                "bg_remove_model": "モデル：",
                 "objsplit_title": "オブジェクト分割",
                 "objsplit_source": "ソース：",
                 "objsplit_params": "パラメータ",
@@ -504,6 +508,7 @@ class ObjectSplitterPlugin(ImervuePlugin):
                 "objsplit_done": "完了！{count} 個のオブジェクトを抽出しました",
             },
             "Korean": {
+                "bg_remove_model": "모델:",
                 "objsplit_title": "객체 분할",
                 "objsplit_source": "소스:",
                 "objsplit_params": "매개변수",
