@@ -218,3 +218,30 @@ def test_requirements_still_carries_the_self_reference():
         if line.strip()
     ]
     assert _SELF_REFS & set(lines)
+
+
+def _requirement_specifiers() -> dict[str, str]:
+    """Version specifiers requirements.txt declares (``>=12.3.0`` and so on)."""
+    from packaging.requirements import InvalidRequirement, Requirement
+    specs = {}
+    for raw in _REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        try:
+            req = Requirement(line)
+        except InvalidRequirement:
+            continue
+        if req.specifier:
+            specs[_normalise(req.name)] = str(req.specifier)
+    return specs
+
+
+def test_workflow_pins_satisfy_every_requirement_floor():
+    # Pillow carries a security floor (>=12.3.0); the frozen build must not
+    # ship an older version than end users installing from PyPI would get.
+    from packaging.specifiers import SpecifierSet
+    specs = _requirement_specifiers()
+    assert "pillow" in specs
+    workflow = _workflow_pins()
+    for name, spec in specs.items():
+        assert workflow[name] in SpecifierSet(spec), f"{name}=={workflow[name]} fails {spec}"
+
