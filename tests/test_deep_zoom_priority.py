@@ -6,10 +6,8 @@ def test_prioritize_tiles_prefers_view_center():
     ordered = prioritize_tiles(
         tiles,
         tile_size=100,
-        scale_x=1,
-        scale_y=1,
-        offset_x=0,
-        offset_y=0,
+        scale=(1, 1),
+        offset=(0, 0),
         canvas=(500, 500),
     )
     assert ordered[0] == (2, 2)
@@ -20,10 +18,8 @@ def test_prioritize_tiles_cursor_biases_order():
     ordered = prioritize_tiles(
         tiles,
         tile_size=100,
-        scale_x=1,
-        scale_y=1,
-        offset_x=0,
-        offset_y=0,
+        scale=(1, 1),
+        offset=(0, 0),
         canvas=(500, 500),
         cursor=(40, 40),
     )

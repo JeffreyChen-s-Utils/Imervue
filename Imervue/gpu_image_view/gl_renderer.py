@@ -280,10 +280,12 @@ class GLRenderer:
         glUseProgram(0)
         self._active_program = 0
 
-    def draw_colored_rect(self, x0, y0, x1, y1, r, g, b, a, filled=True):
-        """用 shader 繪製純色矩形"""
+    def draw_colored_rect(self, rect, rgba, filled=True):
+        """用 shader 繪製純色矩形：``rect`` 為 ``(x0, y0, x1, y1)``，``rgba`` 為 0..1 的顏色。"""
         if not self.use_shaders:
-            return self._draw_colored_rect_legacy(x0, y0, x1, y1, r, g, b, a, filled)
+            return self._draw_colored_rect_legacy(rect, rgba, filled)
+        x0, y0, x1, y1 = rect
+        r, g, b, a = rgba
 
         prog = self._col_prog
         if prog != self._active_program:
@@ -333,8 +335,9 @@ class GLRenderer:
         glEnd()
 
     @staticmethod
-    def _draw_colored_rect_legacy(x0, y0, x1, y1, r, g, b, a, filled=True):
-        glColor4f(r, g, b, a)
+    def _draw_colored_rect_legacy(rect, rgba, filled=True):
+        x0, y0, x1, y1 = rect
+        glColor4f(*rgba)
         if filled:
             glBegin(GL_QUADS)
         else:

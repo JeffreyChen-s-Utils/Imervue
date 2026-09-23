@@ -166,8 +166,8 @@ class InputController:
         # band), not the full canvas, so the target doesn't land ~band/2 low.
         content_w, content_h = content_size(view)
         view.dz_offset_x, view.dz_offset_y = recenter_offsets(
-            pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
-            content_w, content_h, zoom,
+            (pos.x(), pos.y()), rect, (base.shape[1], base.shape[0]),
+            (content_w, content_h), zoom,
         )
         view._browse.clamp_pan()
         view._user_locked_view = True
