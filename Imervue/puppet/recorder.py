@@ -17,6 +17,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from OpenGL.error import GLError
 from PySide6.QtCore import QObject, QTimer, Signal
 
 if TYPE_CHECKING:
@@ -51,24 +52,28 @@ def capture_canvas_image(canvas: PuppetCanvas) -> QImage:
 def save_canvas_png(canvas: PuppetCanvas, path: str | Path) -> bool:
     """Capture ``canvas`` and save as PNG. Returns ``True`` on success.
 
-    Catches everything the GL stack might throw — CaptureError,
-    OpenGL.error.GLError (no active context on headless CI),
-    RuntimeError (shiboken-style teardown), and generic Exception (PIL
-    / image-save backends raise mixed types). The user will retry
-    after a real paint cycle anyway.
+    A failed capture — ``CaptureError`` (no framebuffer yet),
+    ``OpenGL.error.GLError`` (no active context on headless CI) or
+    ``RuntimeError`` (shiboken-style teardown) — and a destination folder
+    that cannot be created are logged and return ``False``; so does a
+    ``QImage.save`` that reports failure. The user will retry after a real
+    paint cycle anyway.
     """
     try:
         image = capture_canvas_image(canvas)
-    except Exception as exc:   # noqa: BLE001 - GL / PIL / capture backends vary
+    except (GLError, RuntimeError) as exc:   # includes CaptureError
         logger.warning("capture failed: %s", exc)
         return False
     p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
     try:
-        return bool(image.save(str(p), "PNG"))
-    except Exception as exc:   # noqa: BLE001
+        p.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
         logger.warning("png save failed: %s", exc)
         return False
+    if not image.save(str(p), "PNG"):
+        logger.warning("png save failed: %s", p)
+        return False
+    return True
 
 
 class RecordingSession(QObject):
@@ -143,7 +148,7 @@ class RecordingSession(QObject):
             return
         try:
             image = capture_canvas_image(self._canvas)
-        except Exception:   # noqa: BLE001 - GL / PIL / capture backends vary
+        except (GLError, RuntimeError):   # includes CaptureError
             # GL not ready yet on this tick — skip the frame; the
             # writer keeps running so the next ready frame extends the
             # clip naturally.

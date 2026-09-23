@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ec9ce16` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `c562f39` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,14 +66,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 811 | 133,173 |
+| `tests/` | 813 | 133,367 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
 | `Imervue/gui/` | 161 | 32,805 |
-| `Imervue/puppet/` | 57 | 15,222 |
+| `Imervue/puppet/` | 57 | 15,229 |
 | `Imervue/image/` | 113 | 12,874 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
 | `Imervue/multi_language/` | 8 | 11,304 |
-| `Imervue/desktop_pet/` | 34 | 8,240 |
+| `Imervue/desktop_pet/` | 34 | 8,243 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,160 |
 | `Imervue/menu/` | 11 | 3,576 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,623** | **307,953** |
+| **總計** | **1,625** | **308,157** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,390 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,400 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -775,7 +775,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,222 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,229 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -829,15 +829,15 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 輸出
 
-`recorder.py`(194) 幀擷取 · `batch_export.py`(185) 每個 motion 匯出成 MP4/GIF/WebM ·
-`spritesheet.py`(67) · `virtual_camera.py`(242) 系統虛擬攝影機 · `ndi_output.py`(221) NDI 來源廣播 ·
+`recorder.py`(199) 幀擷取 · `batch_export.py`(185) 每個 motion 匯出成 MP4/GIF/WebM ·
+`spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
 `vts_api.py`(369) VTube Studio Public API server（最小子集）
 
 `workspace.py`(850) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(286，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(360，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,240 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,243 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -872,8 +872,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 外部整合
 
-`obs_event_hook.py`(193) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(277) Twitch 聊天關鍵字 ·
-`webhook_server.py`(313) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(292) Windows toast →
+`obs_event_hook.py`(195) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(277) Twitch 聊天關鍵字 ·
+`webhook_server.py`(313) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(293) Windows toast →
 `Notify` 動作 + 朗讀標題 · `hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
 `command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex）
 
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-811 個檔、133,173 行。`pyproject.toml` 定義三個互斥層級 marker：
+813 個檔、133,367 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -282,3 +282,18 @@ def test_shutdown_aliases_stop(qapp, monkeypatch):
 def test_action_speech_extraction(title, body, expected_speech):
     info = NotificationInfo(app_id="x", title=title, body=body)
     assert notification_to_action(info).speech == expected_speech
+
+
+def test_notification_without_readable_app_id_is_logged(caplog):
+    from Imervue.desktop_pet.windows_notification_hook import _extract_info
+
+    class _NoAppInfo:
+        @property
+        def app_info(self):
+            raise OSError("COM error: element not found")
+
+        notification = None   # visual lookup fails too -> no title/body
+
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        assert _extract_info(_NoAppInfo()) is None
+    assert any("readable app id" in r.getMessage() and r.exc_info for r in caplog.records)

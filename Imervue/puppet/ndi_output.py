@@ -20,6 +20,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from OpenGL.error import GLError
 from PySide6.QtCore import QObject, QTimer, Signal
 
 
@@ -173,7 +174,7 @@ class NDIOutput(QObject):
                 target_w, target_h,
                 background_rgba=(0.0, 0.0, 0.0, 0.0),
             )
-        except Exception:   # noqa: BLE001 - GL surfaces vary
+        except (GLError, RuntimeError):   # no GL context this tick, or the canvas is gone
             return
         if image is None:
             return

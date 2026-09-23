@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-31 | 2026-09-24 | Narrow the puppet/ frame handlers and log desktop_pet/ payload failures (#26) | #refactor #error-handling #puppet #desktop_pet | [2026-09](2026-09.md) |
 | U-20260924-30 | 2026-09-24 | Narrow the gpu_image_view/ silent broad handlers (#26) | #refactor #error-handling #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260924-29 | 2026-09-24 | Log note-save failures and narrow the gui/ silent broad handlers (#26) | #refactor #error-handling #gui | [2026-09](2026-09.md) |
 | U-20260924-28 | 2026-09-24 | Narrow or log the library/ silent broad handlers (#26) | #refactor #error-handling #library | [2026-09](2026-09.md) |

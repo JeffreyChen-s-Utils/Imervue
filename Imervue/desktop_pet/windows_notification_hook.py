@@ -271,7 +271,8 @@ def _extract_info(user_notification) -> NotificationInfo | None:
     notifications with all kinds of malformed payloads."""
     try:
         app_id = str(user_notification.app_info.app_user_model_id or "")
-    except Exception:   # noqa: BLE001 - some apps don't expose app_info
+    except Exception:   # noqa: BLE001 - some apps don't expose app_info (WinRT raises COM errors)
+        logger.debug("Notification without a readable app id", exc_info=True)
         app_id = ""
     title = ""
     body = ""

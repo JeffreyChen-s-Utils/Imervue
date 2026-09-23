@@ -181,12 +181,14 @@ class ObsEventClient(QObject):
         if hasattr(message, "getType"):
             try:
                 event_type = str(message.getType())
-            except Exception:   # noqa: BLE001 - tolerate malformed events
+            except Exception:   # noqa: BLE001 - third-party payload; tolerate and log
+                logger.debug("Unreadable OBS event type", exc_info=True)
                 event_type = ""
         if not event_type and hasattr(message, "input"):
             try:
                 event_type = str(message.input.get("eventType", ""))
-            except Exception:   # noqa: BLE001 - tolerate malformed events
+            except Exception:   # noqa: BLE001 - third-party payload; tolerate and log
+                logger.debug("Unreadable OBS event payload", exc_info=True)
                 event_type = ""
         group = obs_event_to_group(event_type)
         if group is not None:
