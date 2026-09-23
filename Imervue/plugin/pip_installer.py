@@ -405,20 +405,41 @@ def _read_install_path(winreg, key, ver: str) -> str | None:
     return None
 
 
+# ``pip --version`` has to import pip before it answers; on a cold start or a
+# busy machine that takes several seconds, and a tight budget rejected working
+# interpreters.
+_VERIFY_TIMEOUT_S = 30.0
+
+
 def _verify_python(path: str) -> bool:
-    """驗證該路徑確實是可用的 Python 且有 pip"""
+    """驗證該路徑確實是可用的 Python 且有 pip.
+
+    Returns ``False`` — and logs why — when the interpreter cannot be started
+    (``OSError``, or ``ValueError`` for a malformed path), does not answer
+    within :data:`_VERIFY_TIMEOUT_S`, or has no working pip. Anything else is
+    a bug and propagates.
+    """
     try:
-        kw = _subprocess_kwargs()
         result = subprocess.run(
             [path, "-m", "pip", "--version"],
             capture_output=True,
-            timeout=10,
+            timeout=_VERIFY_TIMEOUT_S,
             check=False,
-            **kw,
+            **_subprocess_kwargs(),
         )
-        return result.returncode == 0
-    except Exception:
+    except subprocess.TimeoutExpired:
+        logger.warning(
+            "Python at %s did not answer `pip --version` within %.0f s",
+            path, _VERIFY_TIMEOUT_S,
+        )
         return False
+    except (OSError, ValueError) as exc:
+        logger.info("Cannot run Python at %s: %s", path, exc)
+        return False
+    if result.returncode != 0:
+        logger.info("Python at %s has no working pip (exit %d)", path, result.returncode)
+        return False
+    return True
 
 
 # ===========================

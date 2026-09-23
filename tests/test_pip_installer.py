@@ -5,6 +5,7 @@ is replaced, so no subprocess starts.
 """
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -98,3 +99,54 @@ def test_frozen_build_installs_into_the_target_dir(run_worker, monkeypatch, tmp_
     assert target.is_dir()
     assert str(target) in pip_installer.sys.path
     assert results[0][0] is True
+
+
+# ---------------------------------------------------------------------------
+# _verify_python — failure modes are specific and logged, and the probe has time
+# ---------------------------------------------------------------------------
+
+
+def _fake_run(outcome):
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return subprocess.CompletedProcess(args, outcome, b"", b"")
+
+    return run, calls
+
+
+@pytest.mark.parametrize(("outcome", "expected"), [
+    (0, True),
+    (1, False),
+    (subprocess.TimeoutExpired(["py"], 30), False),
+    (FileNotFoundError("no such file"), False),
+    (PermissionError("denied"), False),
+    (ValueError("embedded null byte"), False),
+])
+def test_verify_python_outcomes(monkeypatch, caplog, outcome, expected):
+    from Imervue.plugin import pip_installer
+    run, calls = _fake_run(outcome)
+    monkeypatch.setattr(pip_installer.subprocess, "run", run)
+    with caplog.at_level("INFO", logger="Imervue"):
+        assert pip_installer._verify_python("C:/py/python.exe") is expected  # noqa: SLF001
+    (args, kwargs), = calls
+    assert args == ["C:/py/python.exe", "-m", "pip", "--version"]
+    assert kwargs["timeout"] == pip_installer._VERIFY_TIMEOUT_S  # noqa: SLF001
+    if not expected:
+        assert "C:/py/python.exe" in caplog.text
+
+
+def test_verify_python_allows_a_slow_cold_start():
+    from Imervue.plugin import pip_installer
+    assert pip_installer._VERIFY_TIMEOUT_S >= 30  # noqa: SLF001
+
+
+def test_verify_python_does_not_swallow_unexpected_errors(monkeypatch):
+    from Imervue.plugin import pip_installer
+    run, _calls = _fake_run(RuntimeError("bug"))
+    monkeypatch.setattr(pip_installer.subprocess, "run", run)
+    with pytest.raises(RuntimeError):
+        pip_installer._verify_python("C:/py/python.exe")  # noqa: SLF001
