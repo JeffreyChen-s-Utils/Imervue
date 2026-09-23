@@ -71,3 +71,106 @@ def test_export_cancelled_is_a_no_op(qapp, monkeypatch):
     finally:
         dialog.deleteLater()
     assert called["export"] is False
+
+
+# ---------------------------------------------------------------------------
+# Layout characterisation: order, texts, ranges and wiring of every control.
+# ---------------------------------------------------------------------------
+
+_ACTIONS = [("Save", "_save"), ("Apply", "_apply"), ("Delete", "_delete"),
+            ("Auto by location", "_auto_by_location"), ("Export…", "_export"),
+            ("Import…", "_import")]
+
+
+@pytest.fixture
+def english(monkeypatch):
+    from Imervue.gui import smart_albums_dialog as mod
+    monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {})
+
+
+def _items(layout):
+    return [layout.itemAt(i).widget() or layout.itemAt(i).layout() for i in range(layout.count())]
+
+
+def test_layout_order(qapp, english):
+    dialog = _dialog()
+    try:
+        kinds = [type(x).__name__ for x in _items(dialog.layout())]
+        assert kinds == ["QLabel", "QListWidget", "QHBoxLayout", "QLabel", "QLineEdit",
+                         "QLineEdit", "QHBoxLayout", "QHBoxLayout", "QLineEdit", "QLineEdit",
+                         "QPushButton"]
+        items = _items(dialog.layout())
+        assert (items[0].text(), items[3].text(), items[10].text()) == (
+            "Saved albums", "Rules", "Close")
+        assert items[1] is dialog._list
+        assert dialog.windowTitle() == "Smart Albums"
+        assert (dialog.width(), dialog.height()) == (560, 520)
+    finally:
+        dialog.deleteLater()
+
+
+def test_action_row_texts_and_wiring(qapp, english, monkeypatch):
+    from Imervue.gui.smart_albums_dialog import SmartAlbumsDialog
+    calls = []
+    for _text, slot in _ACTIONS:
+        monkeypatch.setattr(SmartAlbumsDialog, slot, lambda self, *_a, s=slot: calls.append(s))
+    monkeypatch.setattr(SmartAlbumsDialog, "_on_album_clicked",
+                        lambda self, item: calls.append(("clicked", item.text())))
+    smart_album.save("Faves", {"min_rating": 4})
+    dialog = _dialog()
+    try:
+        row = _items(dialog.layout())[2]
+        widgets = _items(row)
+        assert widgets[0] is dialog._name_edit
+        assert dialog._name_edit.placeholderText() == "Name"
+        assert [b.text() for b in widgets[1:]] == [t for t, _s in _ACTIONS]
+        for button in widgets[1:]:
+            button.click()
+        assert calls == [s for _t, s in _ACTIONS]
+        dialog._list.itemClicked.emit(dialog._list.item(0))
+        assert calls[-1] == ("clicked", "Faves")
+    finally:
+        dialog.deleteLater()
+
+
+def test_rule_fields(qapp, english):
+    dialog = _dialog()
+    try:
+        items = _items(dialog.layout())
+        assert items[4] is dialog._ext_edit
+        assert dialog._ext_edit.placeholderText() == "extensions comma-sep (jpg,png)"
+        assert items[5] is dialog._name_contains_edit
+        assert dialog._name_contains_edit.placeholderText() == "name contains…"
+        assert _items(items[6]) == [dialog._min_w, dialog._min_h, dialog._min_rating]
+        spins = [(s.minimum(), s.maximum(), s.prefix()) for s in _items(items[6])]
+        assert spins == [(0, 20000, "min w "), (0, 20000, "min h "), (0, 5, "min★ ")]
+        assert _items(items[7]) == [dialog._color_combo, dialog._cull_combo, dialog._fav_check]
+        color = dialog._color_combo
+        assert [(color.itemText(i), color.itemData(i)) for i in range(color.count())] == [
+            ("-- any color --", ""), ("Red", "red"), ("Yellow", "yellow"), ("Green", "green"),
+            ("Blue", "blue"), ("Purple", "purple")]
+        cull = dialog._cull_combo
+        assert [(cull.itemText(i), cull.itemData(i)) for i in range(cull.count())] == [
+            ("-- any cull --", ""), ("pick", "pick"), ("reject", "reject"),
+            ("unflagged", "unflagged")]
+        assert dialog._fav_check.text() == "Favorites only"
+        assert items[8] is dialog._tags_edit
+        assert dialog._tags_edit.placeholderText() == "tags comma-sep (ALL must match)"
+        assert items[9] is dialog._place_edit
+        assert dialog._place_edit.placeholderText() == "place (City, Country)"
+    finally:
+        dialog.deleteLater()
+
+
+def test_close_button_accepts_and_list_is_filled(qapp, english):
+    from PySide6.QtWidgets import QDialog
+    smart_album.save("B", {})
+    smart_album.save("A", {})
+    dialog = _dialog()
+    try:
+        names = [dialog._list.item(i).text() for i in range(dialog._list.count())]
+        assert sorted(names) == ["A", "B"]
+        _items(dialog.layout())[10].click()
+        assert dialog.result() == QDialog.DialogCode.Accepted
+    finally:
+        dialog.deleteLater()

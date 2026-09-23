@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-65 | 2026-09-23 | Split SmartAlbumsDialog's constructor (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-64 | 2026-09-23 | Pasted and fallback-trashed files no longer overwrite each other | #bug #gpu_image_view #data-loss | [2026-09](2026-09.md) |
 | U-20260923-63 | 2026-09-23 | Enable ruff's blind-except rules (closes #21) | #done #tooling #error-handling | [2026-09](2026-09.md) |
 | U-20260923-62 | 2026-09-23 | Narrow the blind excepts in gpu_image_view/ (BLE001 batch 6) | #refactor #error-handling #gpu_image_view | [2026-09](2026-09.md) |
