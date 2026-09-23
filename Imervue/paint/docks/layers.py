@@ -5,7 +5,6 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
-    QComboBox,
     QDockWidget,
     QHBoxLayout,
     QLabel,
@@ -19,10 +18,10 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.paint import tool_state as ts
 
 from Imervue.paint.docks._helpers import (
     _array_to_icon,
+    _blend_mode_combo,
     _label_with_color_chip,
     _slider,
     _strip_color_chip,
@@ -40,6 +39,21 @@ def _layer_index_for_row(visible_indices, row: int) -> int:
     """
     ordered = sorted(visible_indices, reverse=True)
     return ordered[row] if 0 <= row < len(ordered) else -1
+
+
+def _with_shortcut(label: str, shortcuts, action_id: str) -> str:
+    """``label`` followed by the action's hotkey in brackets, when it has one.
+
+    An empty ``action_id``, an id the registry does not know, or an unbound
+    hotkey all return the bare label, so no tooltip ends in ``()``.
+    """
+    if not action_id:
+        return label
+    try:
+        hotkey = shortcuts.get(action_id)
+    except KeyError:
+        return label
+    return f"{label} ({hotkey})" if hotkey else label
 
 
 class LayerDock(QDockWidget):
@@ -66,53 +80,74 @@ class LayerDock(QDockWidget):
 
         body = QWidget()
         layout = QVBoxLayout(body)
+        self._search = self._build_search_edit(lang)
+        layout.addWidget(self._search)
+        self._list = self._build_layer_list()
+        layout.addWidget(self._list, stretch=1)
+        layout.addLayout(self._build_action_row(lang))
+        layout.addLayout(self._build_lock_row(lang))
 
-        self._search = QLineEdit()
-        self._search.setPlaceholderText(
+        layout.addWidget(QLabel(lang.get("paint_layers_opacity", "Opacity:")))
+        self._opacity = _slider(0, 100, 100)
+        self._opacity.valueChanged.connect(self._on_opacity_changed)
+        layout.addWidget(self._opacity)
+
+        layout.addWidget(QLabel(lang.get("paint_layers_blend", "Blend:")))
+        self._blend = _blend_mode_combo(lang)
+        self._blend.currentIndexChanged.connect(self._on_blend_changed)
+        layout.addWidget(self._blend)
+        layout.addStretch(1)
+
+        self.setWidget(body)
+
+        if self._document is not None:
+            self._unsubscribe = self._document.listen(self.refresh)
+            self.destroyed.connect(lambda *_: self._unsubscribe())
+            self.refresh()
+
+    def _build_search_edit(self, lang) -> QLineEdit:
+        """Clearable name filter for the layer list."""
+        search = QLineEdit()
+        search.setPlaceholderText(
             lang.get("paint_layers_search", "Search layers…"),
         )
-        self._search.setClearButtonEnabled(True)
-        self._search.setToolTip(
+        search.setClearButtonEnabled(True)
+        search.setToolTip(
             lang.get(
                 "paint_layers_search_tooltip",
                 "Filter the layer list by name — case-insensitive substring match",
             ),
         )
-        self._search.textChanged.connect(self._on_search_changed)
-        layout.addWidget(self._search)
+        search.textChanged.connect(self._on_search_changed)
+        return search
 
-        self._list = QListWidget()
-        self._list.setIconSize(
+    def _build_layer_list(self) -> QListWidget:
+        """Thumbnail list of the stack, renamed inline with F2 or a second click."""
+        from PySide6.QtWidgets import QAbstractItemView
+        layer_list = QListWidget()
+        layer_list.setIconSize(
             QPixmap(self._thumbnail_size, self._thumbnail_size).size(),
         )
-        self._list.currentRowChanged.connect(self._on_row_changed)
-        self._list.itemChanged.connect(self._on_item_changed)
+        layer_list.currentRowChanged.connect(self._on_row_changed)
+        layer_list.itemChanged.connect(self._on_item_changed)
         # F2 enters inline rename on the active layer — the page dock
         # uses the same trigger pair so the muscle memory transfers.
         # Double-click stays free for layer-mask edit so we don't add
         # DoubleClicked here.
-        from PySide6.QtWidgets import QAbstractItemView
-        self._list.setEditTriggers(
+        layer_list.setEditTriggers(
             QAbstractItemView.EditTrigger.EditKeyPressed
             | QAbstractItemView.EditTrigger.SelectedClicked,
         )
-        layout.addWidget(self._list, stretch=1)
+        return layer_list
 
+    def _build_action_row(self, lang) -> QHBoxLayout:
+        """Add / remove / move / duplicate buttons and the adjustment-layer popup."""
         row = QHBoxLayout()
         # Tooltip text appends the keybind from the shortcut registry so
         # the affordance is discoverable: hovering "+" reveals
         # ``Add layer (Ctrl+Shift+N)`` rather than just the glyph.
         from Imervue.paint.shortcut_registry import load_shortcuts
         shortcuts = load_shortcuts()
-
-        def _tooltip_with_shortcut(key: str, fallback: str, action_id: str) -> str:
-            label = lang.get(key, fallback)
-            try:
-                hotkey = shortcuts.get(action_id)
-            except KeyError:
-                return label
-            return f"{label} ({hotkey})" if hotkey else label
-
         for key, fallback, slot, tooltip_key, tooltip_fallback, action_id in (
             ("paint_layers_add", "+", self._on_add,
              "paint_layers_add_tooltip", "Add layer", "paint.layer.add"),
@@ -128,10 +163,8 @@ class LayerDock(QDockWidget):
         ):
             btn = QToolButton()
             btn.setText(lang.get(key, fallback))
-            btn.setToolTip(
-                _tooltip_with_shortcut(tooltip_key, tooltip_fallback, action_id)
-                if action_id else lang.get(tooltip_key, tooltip_fallback),
-            )
+            label = lang.get(tooltip_key, tooltip_fallback)
+            btn.setToolTip(_with_shortcut(label, shortcuts, action_id))
             btn.clicked.connect(slot)
             row.addWidget(btn)
         # Dedicated "add adjustment layer" entry — raster paint apps's Layer
@@ -152,12 +185,15 @@ class LayerDock(QDockWidget):
         adj_btn.setMenu(self._build_adjustment_menu())
         row.addWidget(adj_btn)
         row.addStretch(1)
-        layout.addLayout(row)
+        return row
 
-        # Per-layer locks — alpha lock is the most-requested affordance
-        # (Photoshop's "Transparency" lock) so we surface it on the
-        # active layer alongside opacity / blend rather than buried in
-        # a context menu.
+    def _build_lock_row(self, lang) -> QHBoxLayout:
+        """Per-layer locks.
+
+        Alpha lock is the most-requested affordance (Photoshop's
+        "Transparency" lock) so it sits on the active layer alongside
+        opacity / blend rather than buried in a context menu.
+        """
         lock_row = QHBoxLayout()
         self._lock_alpha_btn = QToolButton()
         self._lock_alpha_btn.setText(
@@ -174,30 +210,7 @@ class LayerDock(QDockWidget):
         self._lock_alpha_btn.toggled.connect(self._on_lock_alpha_toggled)
         lock_row.addWidget(self._lock_alpha_btn)
         lock_row.addStretch(1)
-        layout.addLayout(lock_row)
-
-        layout.addWidget(QLabel(lang.get("paint_layers_opacity", "Opacity:")))
-        self._opacity = _slider(0, 100, 100)
-        self._opacity.valueChanged.connect(self._on_opacity_changed)
-        layout.addWidget(self._opacity)
-
-        layout.addWidget(QLabel(lang.get("paint_layers_blend", "Blend:")))
-        self._blend = QComboBox()
-        for mode in ts.BLEND_MODES:
-            self._blend.addItem(
-                lang.get(f"paint_blend_{mode}", mode.replace("_", " ").title()),
-                userData=mode,
-            )
-        self._blend.currentIndexChanged.connect(self._on_blend_changed)
-        layout.addWidget(self._blend)
-        layout.addStretch(1)
-
-        self.setWidget(body)
-
-        if self._document is not None:
-            self._unsubscribe = self._document.listen(self.refresh)
-            self.destroyed.connect(lambda *_: self._unsubscribe())
-            self.refresh()
+        return lock_row
 
     def set_document(self, document) -> None:
         if self._document is document:

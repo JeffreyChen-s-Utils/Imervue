@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `8a6dc72` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `50bd8fd` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 756 | 124,715 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,933 |
+| `tests/` | 757 | 124,912 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,955 |
 | `Imervue/gui/` | 158 | 32,570 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,556** | **299,022** |
+| **總計** | **1,557** | **299,241** |
 
-其中 `Imervue/` 套件本身 738 檔 / 159,918 行。
+其中 `Imervue/` 套件本身 738 檔 / 159,940 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -753,9 +753,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
-`brushes.py`(444) 筆刷與填色 dock · `layers.py`(412) 圖層 dock · `color.py`(370) 顏色 dock ·
+`brushes.py`(440) 筆刷與填色 dock · `layers.py`(424) 圖層 dock · `color.py`(370) 顏色 dock ·
 `materials.py`(253) 素材庫 dock · `navigators.py`(248) 導覽器 / 歷史 / 頁面導覽 dock ·
-`_helpers.py`(138) 共用元件與圖示
+`_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
 #### `paint/tools/`（6 檔 · 1,866 行）
 

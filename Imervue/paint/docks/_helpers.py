@@ -6,6 +6,7 @@ import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
+    QComboBox,
     QSlider,
     QToolButton,
 )
@@ -29,6 +30,18 @@ def _slider(lo: int, hi: int, value: int) -> QSlider:
     s.setRange(lo, hi)
     s.setValue(value)
     return s
+
+
+def _blend_mode_combo(lang) -> QComboBox:
+    """Combo listing every blend mode, labelled from ``lang`` with the mode id as data."""
+    from Imervue.paint import tool_state as ts
+    combo = QComboBox()
+    for mode in ts.BLEND_MODES:
+        combo.addItem(
+            lang.get(f"paint_blend_{mode}", mode.replace("_", " ").title()),
+            userData=mode,
+        )
+    return combo
 
 
 def _make_swatch_button() -> QToolButton:

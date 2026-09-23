@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
 from Imervue.paint.docks._helpers import (
+    _blend_mode_combo,
     _slider,
 )
 
@@ -149,12 +150,7 @@ class BrushDock(QDockWidget):
 
     def _build_blend_combo(self, lang) -> QComboBox:
         """Blend-mode combo listing every mode the dab compositor knows."""
-        combo = QComboBox()
-        for mode in ts.BLEND_MODES:
-            combo.addItem(
-                lang.get(f"paint_blend_{mode}", mode.replace("_", " ").title()),
-                userData=mode,
-            )
+        combo = _blend_mode_combo(lang)
         combo.currentIndexChanged.connect(self._on_blend_changed)
         combo.setToolTip(lang.get(
             "paint_brush_blend_tooltip",
