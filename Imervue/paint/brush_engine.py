@@ -123,7 +123,7 @@ def apply_dab(
     if opacity <= 0.0:
         return DabResult(0, 0, 0, 0)
 
-    bbox = _dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
+    bbox = dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
     if bbox is None:
         return DabResult(0, 0, 0, 0)
     cx0, cy0, cx1, cy1, kx0, ky0, kx1, ky1 = bbox
@@ -144,7 +144,7 @@ def apply_dab(
     return DabResult(cx0, cy0, cx1 - cx0, cy1 - cy0)
 
 
-def _dab_bbox(
+def dab_bbox(
     canvas_shape: tuple[int, int],
     kernel_shape: tuple[int, int],
     cx: float,
@@ -152,10 +152,11 @@ def _dab_bbox(
 ) -> tuple[int, int, int, int, int, int, int, int] | None:
     """Clip the kernel placement against the canvas bounds.
 
-    Returns ``(cx0, cy0, cx1, cy1, kx0, ky0, kx1, ky1)`` — the canvas
-    slice and the matching kernel slice — or ``None`` when the dab is
-    fully off-canvas. Pulled out of :func:`apply_dab` so the eraser
-    path can share the bookkeeping without duplicating it.
+    The kernel's origin is ``round(c) - k // 2`` on each axis, so an even
+    kernel is biased left / up. Returns ``(cx0, cy0, cx1, cy1, kx0, ky0,
+    kx1, ky1)`` — the canvas slice and the matching kernel slice — or
+    ``None`` when the dab is fully off-canvas. Every dab-based tool (brush,
+    eraser, blur, dodge / burn, sponge, smudge, clone stamp) clips here.
     """
     kh, kw = kernel_shape
     h, w = canvas_shape
@@ -209,7 +210,7 @@ def apply_erase_dab(
     if opacity <= 0.0:
         return DabResult(0, 0, 0, 0)
 
-    bbox = _dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
+    bbox = dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
     if bbox is None:
         return DabResult(0, 0, 0, 0)
     cx0, cy0, cx1, cy1, kx0, ky0, kx1, ky1 = bbox

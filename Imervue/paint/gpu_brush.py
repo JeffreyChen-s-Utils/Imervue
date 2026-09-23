@@ -597,7 +597,7 @@ def _subclass():
     until a stroke is actually constructed — keeps import-graph
     cycles out of the module load order.
     """
-    from Imervue.paint.brush_engine import BrushStroke, DabResult, _dab_bbox
+    from Imervue.paint.brush_engine import BrushStroke, DabResult, dab_bbox
 
     class _GPUStroke(BrushStroke):
         def __init__(self, options):
@@ -663,7 +663,7 @@ def _subclass():
             opacity = self._taper_start_opacity() * float(fade)
             if opacity <= 0.0:
                 return DabResult(0, 0, 0, 0)
-            bbox = _dab_bbox(canvas.shape[:2], kernel.shape, x, y)
+            bbox = dab_bbox(canvas.shape[:2], kernel.shape, x, y)
             if bbox is None:
                 return DabResult(0, 0, 0, 0)
             cx0, cy0, cx1, cy1, *_ = bbox

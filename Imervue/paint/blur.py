@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from Imervue.paint.brush_engine import dab_bbox
+
 # A 3×3 separable Gaussian kernel — wide enough to blur, narrow
 # enough that the per-dab cost stays bounded even at brush size 200.
 _GAUSSIAN_1D = np.array([0.25, 0.5, 0.25], dtype=np.float32)
@@ -52,25 +54,10 @@ def blur_dab(
             f"blur_dab expects HxWx4 uint8 RGBA, got "
             f"{canvas.shape} {canvas.dtype}",
         )
-    h, w = canvas.shape[:2]
-    kh, kw = kernel.shape
-    # ``apply_dab`` convention: origin = round(cx) - kw//2 spans
-    # ``[origin, origin + kw)``. Even-sized kernels are biased to the
-    # left/top (matches the brush engine).
-    x0_full = int(round(cx)) - kw // 2
-    y0_full = int(round(cy)) - kh // 2
-    x0 = max(0, x0_full)
-    y0 = max(0, y0_full)
-    x1 = min(w, x0_full + kw)
-    y1 = min(h, y0_full + kh)
-    if x1 <= x0 or y1 <= y0:
+    bbox = dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
+    if bbox is None:
         return (0, 0, 0, 0)
-
-    # Kernel slice that lines up with the clipped patch.
-    kx0 = x0 - x0_full
-    ky0 = y0 - y0_full
-    kx1 = kx0 + (x1 - x0)
-    ky1 = ky0 + (y1 - y0)
+    x0, y0, x1, y1, kx0, ky0, kx1, ky1 = bbox
     patch = canvas[y0:y1, x0:x1, :3].astype(np.float32)
     kernel_slice = kernel[ky0:ky1, kx0:kx1].astype(np.float32)
     blurred = _gaussian_blur_3x3(patch)

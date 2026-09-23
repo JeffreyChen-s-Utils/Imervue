@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from Imervue.paint.brush_engine import round_brush_kernel
+from Imervue.paint.brush_engine import dab_bbox, round_brush_kernel
 from Imervue.paint.damage import EMPTY as EMPTY_DAMAGE
 from Imervue.paint.damage import DamageRect
 
@@ -103,28 +103,19 @@ def stamp_dab(
         return EMPTY_DAMAGE
 
     kernel = round_brush_kernel(size, hardness)
-    kh, kw = kernel.shape
-    half_w = kw // 2
-    half_h = kh // 2
-    dst_x0 = int(round(cx)) - half_w
-    dst_y0 = int(round(cy)) - half_h
-    dst_x1 = dst_x0 + kw
-    dst_y1 = dst_y0 + kh
-
-    h, w = canvas.shape[:2]
-    cx0 = max(0, dst_x0)
-    cy0 = max(0, dst_y0)
-    cx1 = min(w, dst_x1)
-    cy1 = min(h, dst_y1)
-    if cx1 <= cx0 or cy1 <= cy0:
+    bbox = dab_bbox(canvas.shape[:2], kernel.shape, cx, cy)
+    if bbox is None:
         return EMPTY_DAMAGE
+    cx0, cy0, cx1, cy1, kx0, ky0, kx1, ky1 = bbox
+    kh, kw = kernel.shape
+    h, w = canvas.shape[:2]
 
     src_offset_x, src_offset_y = state.offset_for((cx, cy))
     # Build the source-coordinate grid for every destination pixel.
-    src_origin_x = src_offset_x - half_w
-    src_origin_y = src_offset_y - half_h
-    src_xs = np.arange(cx0 - dst_x0, cx1 - dst_x0) + int(round(src_origin_x))
-    src_ys = np.arange(cy0 - dst_y0, cy1 - dst_y0) + int(round(src_origin_y))
+    src_origin_x = src_offset_x - kw // 2
+    src_origin_y = src_offset_y - kh // 2
+    src_xs = np.arange(kx0, kx1) + int(round(src_origin_x))
+    src_ys = np.arange(ky0, ky1) + int(round(src_origin_y))
     in_bounds_x = (src_xs >= 0) & (src_xs < w)
     in_bounds_y = (src_ys >= 0) & (src_ys < h)
     if not in_bounds_x.any() or not in_bounds_y.any():
@@ -136,10 +127,7 @@ def stamp_dab(
         valid_ys[:, None], valid_xs[None, :], :
     ].astype(np.float32) / 255.0
 
-    kernel_slice = kernel[
-        cy0 - dst_y0:cy1 - dst_y0,
-        cx0 - dst_x0:cx1 - dst_x0,
-    ] * float(opacity)
+    kernel_slice = kernel[ky0:ky1, kx0:kx1] * float(opacity)
     # Pixels whose source sample is out-of-bounds contribute zero alpha.
     valid_grid = (
         in_bounds_y[:cy1 - cy0][:, None] & in_bounds_x[:cx1 - cx0][None, :]
@@ -148,11 +136,16 @@ def stamp_dab(
     if not np.any(kernel_slice > 0):
         return EMPTY_DAMAGE
 
-    dst_view = canvas[cy0:cy1, cx0:cx1, :]
+    _composite_stamp(canvas[cy0:cy1, cx0:cx1, :], source_patch, kernel_slice)
+    return DamageRect(x=cx0, y=cy0, w=cx1 - cx0, h=cy1 - cy0)
+
+
+def _composite_stamp(dst_view: np.ndarray, source_patch: np.ndarray,
+                     kernel_slice: np.ndarray) -> None:
+    """Blend ``source_patch`` (0..1 floats) over ``dst_view`` in place, weighted by the kernel."""
     bg = dst_view.astype(np.float32) / 255.0
     a = kernel_slice[..., None]
     out = bg[..., :3] * (1.0 - a) + source_patch[..., :3] * a
     dst_view[..., :3] = np.clip(out * 255.0, 0.0, 255.0).astype(np.uint8)
     new_alpha = bg[..., 3] + (1.0 - bg[..., 3]) * kernel_slice
     dst_view[..., 3] = np.clip(new_alpha * 255.0, 0.0, 255.0).astype(np.uint8)
-    return DamageRect(x=cx0, y=cy0, w=cx1 - cx0, h=cy1 - cy0)
