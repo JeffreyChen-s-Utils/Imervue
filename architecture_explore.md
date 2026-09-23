@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `aa65e85` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `a138a69` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 796 | 130,881 |
+| `tests/` | 797 | 131,068 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
-| `Imervue/gui/` | 159 | 32,451 |
+| `Imervue/gui/` | 160 | 32,750 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 12,868 |
 | `Imervue/multi_language/` | 8 | 11,304 |
-| `Imervue/desktop_pet/` | 34 | 8,216 |
+| `Imervue/desktop_pet/` | 34 | 8,219 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,140 |
 | `Imervue/menu/` | 11 | 3,611 |
-| `Imervue/` 根層 | 5 | 1,809 |
+| `Imervue/` 根層 | 5 | 1,535 |
 | `Imervue/plugin/` | 10 | 2,186 |
 | `Imervue/system/` | 16 | 1,840 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,602** | **305,376** |
+| **總計** | **1,604** | **305,591** |
 
-其中 `Imervue/` 套件本身 744 檔 / 160,106 行。
+其中 `Imervue/` 套件本身 745 檔 / 160,134 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 116 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 971 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的八個 mixin |
+| `Imervue_main_window.py` | 697 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 577 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -517,7 +517,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,451 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+160 個檔、32,750 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -540,6 +540,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_screens.py` | 204 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
+| `main_window_layout.py` | 299 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 947 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
@@ -831,7 +832,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,216 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,219 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -952,7 +953,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-796 個檔、130,881 行。`pyproject.toml` 定義三個互斥層級 marker：
+797 個檔、131,068 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1140,8 +1141,8 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用），
-   但有 3 個只剩不到 50 行餘裕：
-   `Imervue_main_window.py`(971)、`gpu_image_view/overlay_painter.py`(963)、
+   但有 2 個只剩不到 50 行餘裕：
+   `gpu_image_view/overlay_painter.py`(963)、
    `gui/annotation_dialog.py`(956)。要在這些檔案加程式，先拆出模組（`progress.md` #23）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
