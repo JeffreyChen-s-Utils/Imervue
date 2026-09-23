@@ -159,6 +159,11 @@ passes, which depends on machine load and flakes under a parallel build. When th
 started a real `QThread`, join it in a `finally`: destroying a running thread aborts the
 whole process, so a failed assertion would otherwise take the suite down with it.
 
+A test that runs a worker's body inline (`worker.run()`) must stop the code under test from
+also calling `worker.start()` — patch the worker class's `start` to a no-op. Otherwise the
+real thread and the inline call do the same work twice and race (two deletes of one file,
+one of them logged as failed).
+
 ### Qt / OpenGL tests on headless CI
 
 The GitHub Actions Windows runner crashes with `Windows fatal exception: access violation` once
@@ -338,9 +343,9 @@ before — the failure mode is a command that *appears* to succeed.
   emits `dataChanged` synchronously; product code must keep going through
   `QApplication.clipboard()` for it to take effect.
 - **Tests never touch the OS Recycle Bin — the autouse `os_trash` fixture replaces
-  `send2trash.send2trash`.** The real shell operation is shared with every other process and
-  failed a delete test about one run in three under load; it also filled the developer's own
-  Recycle Bin. The fake removes each path, raises `FileNotFoundError` for a missing one, and
+  `send2trash.send2trash`.** The real shell operation is OS state shared with every other
+  process, costs ~0.27 s per call, and filled the developer's own Recycle Bin on every run.
+  The fake removes each path, raises `FileNotFoundError` for a missing one, and
   yields the list of trashed paths for assertions. Product code must keep importing
   `send2trash` at call time (`from send2trash import send2trash` inside the function) for the
   patch to reach it.
