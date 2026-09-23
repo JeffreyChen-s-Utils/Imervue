@@ -27,6 +27,22 @@ from Imervue.paint.docks._helpers import (
 )
 
 
+def _tipped_slider(lo: int, hi: int, value: int, on_change, tooltip: str) -> QSlider:
+    """Slider over ``[lo, hi]`` at ``value`` that calls ``on_change`` on every move."""
+    slider = _slider(lo, hi, value)
+    slider.valueChanged.connect(on_change)
+    slider.setToolTip(tooltip)
+    return slider
+
+
+def _tipped_check(text: str, on_toggle, tooltip: str) -> QCheckBox:
+    """Checkbox that calls ``on_toggle(checked)`` whenever it flips."""
+    box = QCheckBox(text)
+    box.toggled.connect(on_toggle)
+    box.setToolTip(tooltip)
+    return box
+
+
 class BrushDock(QDockWidget):
     """Brush kind, size, opacity, hardness, density, blend mode."""
 
@@ -63,10 +79,7 @@ class BrushDock(QDockWidget):
     @staticmethod
     def _percent_slider(value: int, on_change, tooltip: str) -> QSlider:
         """A 0–100 slider starting at ``value`` that calls ``on_change`` on every move."""
-        slider = _slider(0, 100, value)
-        slider.valueChanged.connect(on_change)
-        slider.setToolTip(tooltip)
-        return slider
+        return _tipped_slider(0, 100, value, on_change, tooltip)
 
     def _build_kind_combo(self, lang) -> QComboBox:
         """Brush-kind combo with a preview thumbnail per kind."""
@@ -139,14 +152,14 @@ class BrushDock(QDockWidget):
             "paint_brush_color_jitter_tooltip",
             "Random hue / luma drift along the stroke",
         ))
-        self._follow_tilt = QCheckBox(
+        self._follow_tilt = _tipped_check(
             lang.get("paint_brush_follow_tilt", "Follow pen tilt"),
+            self._on_follow_tilt_changed,
+            lang.get(
+                "paint_brush_follow_tilt_tooltip",
+                "Stretch the brush kernel along the tablet pen tilt direction",
+            ),
         )
-        self._follow_tilt.toggled.connect(self._on_follow_tilt_changed)
-        self._follow_tilt.setToolTip(lang.get(
-            "paint_brush_follow_tilt_tooltip",
-            "Stretch the brush kernel along the tablet pen tilt direction",
-        ))
 
     def _build_blend_combo(self, lang) -> QComboBox:
         """Blend-mode combo listing every mode the dab compositor knows."""
@@ -277,7 +290,6 @@ class FillDock(QDockWidget):
     """
 
     def __init__(self, state: ToolState, parent=None):
-        from PySide6.QtWidgets import QCheckBox
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_dock_fill", "Bucket"), parent)
         self._state = state
@@ -285,80 +297,8 @@ class FillDock(QDockWidget):
 
         body = QWidget()
         form = QFormLayout(body)
-
-        self._tolerance = _slider(0, 255, 32)
-        self._tolerance.valueChanged.connect(self._on_tolerance_changed)
-        self._tolerance.setToolTip(lang.get(
-            "paint_fill_tolerance_tooltip",
-            "Per-channel colour distance accepted as the same region "
-            "(0 exact, 255 anything)",
-        ))
-
-        self._contiguous = QCheckBox(
-            lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
-        )
-        self._contiguous.toggled.connect(self._on_contiguous_changed)
-        self._contiguous.setToolTip(lang.get(
-            "paint_fill_contiguous_tooltip",
-            "On: only pixels reachable from the click. Off: every "
-            "matching pixel canvas-wide.",
-        ))
-
-        self._sample_all = QCheckBox(
-            lang.get("paint_fill_sample_all", "Sample all layers"),
-        )
-        self._sample_all.toggled.connect(self._on_sample_all_changed)
-        self._sample_all.setToolTip(lang.get(
-            "paint_fill_sample_all_tooltip",
-            "Match colours against the visible composite instead of "
-            "just the active layer",
-        ))
-
-        self._use_reference = QCheckBox(
-            lang.get(
-                "paint_fill_use_reference",
-                "Use reference layer for boundaries",
-            ),
-        )
-        self._use_reference.toggled.connect(self._on_use_reference_changed)
-        self._use_reference.setToolTip(lang.get(
-            "paint_fill_use_reference_tooltip",
-            "Read connectivity from the document's pinned reference "
-            "layer (e.g. line art) so fill stops at ink boundaries "
-            "regardless of the active layer's colour",
-        ))
-
-        self._expand = _slider(ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0)
-        self._expand.valueChanged.connect(self._on_expand_changed)
-        self._expand.setToolTip(lang.get(
-            "paint_fill_expand_tooltip",
-            "Dilate the fill by N pixels after computing it — bridges "
-            "the anti-aliased halo around lineart",
-        ))
-
-        self._gap_close = _slider(
-            ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0,
-        )
-        self._gap_close.valueChanged.connect(self._on_gap_close_changed)
-        self._gap_close.setToolTip(lang.get(
-            "paint_fill_gap_close_tooltip",
-            "Bridge gaps in the lineart up to N pixels wide so fill "
-            "doesn't leak through broken pen strokes",
-        ))
-
-        form.addRow(
-            lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance,
-        )
-        form.addRow("", self._contiguous)
-        form.addRow("", self._sample_all)
-        form.addRow("", self._use_reference)
-        form.addRow(
-            lang.get("paint_fill_expand", "Expand (px):"), self._expand,
-        )
-        form.addRow(
-            lang.get("paint_fill_gap_close", "Close gap (px):"),
-            self._gap_close,
-        )
+        self._build_fill_controls(lang)
+        self._add_fill_rows(form, lang)
 
         # full-featured "fill every closed region in one click". Goes
         # to a workspace-level action so it can read the active layer
@@ -375,6 +315,71 @@ class FillDock(QDockWidget):
         self._refresh_from_state()
         self._unsubscribe = state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
+
+    def _build_fill_controls(self, lang) -> None:
+        """Tolerance, the three region checkboxes, expand and gap-close."""
+        self._tolerance = _tipped_slider(0, 255, 32, self._on_tolerance_changed, lang.get(
+            "paint_fill_tolerance_tooltip",
+            "Per-channel colour distance accepted as the same region "
+            "(0 exact, 255 anything)",
+        ))
+        self._contiguous = _tipped_check(
+            lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
+            self._on_contiguous_changed,
+            lang.get(
+                "paint_fill_contiguous_tooltip",
+                "On: only pixels reachable from the click. Off: every "
+                "matching pixel canvas-wide.",
+            ),
+        )
+        self._sample_all = _tipped_check(
+            lang.get("paint_fill_sample_all", "Sample all layers"),
+            self._on_sample_all_changed,
+            lang.get(
+                "paint_fill_sample_all_tooltip",
+                "Match colours against the visible composite instead of "
+                "just the active layer",
+            ),
+        )
+        self._use_reference = _tipped_check(
+            lang.get(
+                "paint_fill_use_reference",
+                "Use reference layer for boundaries",
+            ),
+            self._on_use_reference_changed,
+            lang.get(
+                "paint_fill_use_reference_tooltip",
+                "Read connectivity from the document's pinned reference "
+                "layer (e.g. line art) so fill stops at ink boundaries "
+                "regardless of the active layer's colour",
+            ),
+        )
+        self._expand = _tipped_slider(
+            ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0, self._on_expand_changed, lang.get(
+                "paint_fill_expand_tooltip",
+                "Dilate the fill by N pixels after computing it — bridges "
+                "the anti-aliased halo around lineart",
+            ))
+        self._gap_close = _tipped_slider(
+            ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0, self._on_gap_close_changed,
+            lang.get(
+                "paint_fill_gap_close_tooltip",
+                "Bridge gaps in the lineart up to N pixels wide so fill "
+                "doesn't leak through broken pen strokes",
+            ))
+
+    def _add_fill_rows(self, form: QFormLayout, lang) -> None:
+        """Lay the fill controls out in the dock's fixed row order."""
+        rows = [
+            (lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance),
+            ("", self._contiguous),
+            ("", self._sample_all),
+            ("", self._use_reference),
+            (lang.get("paint_fill_expand", "Expand (px):"), self._expand),
+            (lang.get("paint_fill_gap_close", "Close gap (px):"), self._gap_close),
+        ]
+        for label, widget in rows:
+            form.addRow(label, widget)
 
     def set_auto_fill_callback(self, callback) -> None:
         """Wire the workspace's auto-fill verb to the dock's button."""

@@ -158,3 +158,97 @@ def test_destroying_dock_unsubscribes(qapp, state, monkeypatch):
     widget.destroyed.emit()
     assert dropped == [True]
     widget.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# FillDock
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fill_dock(qapp, state):
+    from Imervue.paint.docks.brushes import FillDock
+    widget = FillDock(state)
+    yield widget
+    widget.deleteLater()
+
+
+def test_fill_form_rows_in_order(fill_dock):
+    d = fill_dock
+    assert _rows(d) == [
+        ("Tolerance:", d._tolerance), (None, d._contiguous),  # noqa: SLF001
+        (None, d._sample_all), (None, d._use_reference),  # noqa: SLF001
+        ("Expand (px):", d._expand), ("Close gap (px):", d._gap_close),  # noqa: SLF001
+        (None, d._auto_fill_btn),  # noqa: SLF001
+    ]
+    assert d.windowTitle() == "Bucket"
+
+
+def test_fill_controls(fill_dock):
+    d = fill_dock
+    ranges = {
+        "_tolerance": (0, 255),
+        "_expand": (ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX),
+        "_gap_close": (ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX),
+    }
+    for attr, bounds in ranges.items():
+        slider = getattr(d, attr)
+        assert isinstance(slider, QSlider), attr
+        assert (slider.minimum(), slider.maximum()) == bounds, attr
+    texts = {
+        "_contiguous": "Contiguous (only adjacent pixels)",
+        "_sample_all": "Sample all layers",
+        "_use_reference": "Use reference layer for boundaries",
+    }
+    for attr, text in texts.items():
+        box = getattr(d, attr)
+        assert isinstance(box, QCheckBox) and box.text() == text, attr
+    assert d._auto_fill_btn.text() == "Auto-fill closed regions"  # noqa: SLF001
+    tips = {
+        "_tolerance": "Per-channel colour distance",
+        "_contiguous": "On: only pixels reachable",
+        "_sample_all": "Match colours against the visible composite",
+        "_use_reference": "Read connectivity from the document's pinned reference",
+        "_expand": "Dilate the fill by N pixels",
+        "_gap_close": "Bridge gaps in the lineart",
+    }
+    for attr, prefix in tips.items():
+        assert getattr(d, attr).toolTip().startswith(prefix), attr
+
+
+def test_fill_controls_start_from_state(fill_dock, state):
+    d, fill = fill_dock, state.fill
+    assert d._tolerance.value() == int(fill.tolerance)  # noqa: SLF001
+    assert d._contiguous.isChecked() == bool(fill.contiguous)  # noqa: SLF001
+    assert d._sample_all.isChecked() == bool(fill.sample_all_layers)  # noqa: SLF001
+    assert d._use_reference.isChecked() == bool(fill.use_reference_layer)  # noqa: SLF001
+    assert d._expand.value() == int(fill.expand_px)  # noqa: SLF001
+    assert d._gap_close.value() == int(fill.gap_close_px)  # noqa: SLF001
+
+
+def test_fill_controls_write_back(fill_dock, state):
+    d = fill_dock
+    d._tolerance.setValue(77)  # noqa: SLF001
+    d._expand.setValue(min(3, ts.FILL_EXPAND_MAX))  # noqa: SLF001
+    d._gap_close.setValue(min(2, ts.FILL_GAP_CLOSE_MAX))  # noqa: SLF001
+    for attr, field in (("_contiguous", "contiguous"), ("_sample_all", "sample_all_layers"),
+                        ("_use_reference", "use_reference_layer")):
+        before = bool(getattr(state.fill, field))
+        getattr(d, attr).setChecked(not before)
+        assert bool(getattr(state.fill, field)) is (not before), attr
+    assert state.fill.tolerance == 77
+    assert state.fill.expand_px == min(3, ts.FILL_EXPAND_MAX)
+    assert state.fill.gap_close_px == min(2, ts.FILL_GAP_CLOSE_MAX)
+
+
+def test_fill_auto_button_uses_the_callback(fill_dock):
+    calls = []
+    fill_dock._auto_fill_btn.click()  # noqa: SLF001  - no callback: no-op
+    fill_dock.set_auto_fill_callback(lambda: calls.append(True))
+    fill_dock._auto_fill_btn.click()  # noqa: SLF001
+    assert calls == [True]
+
+
+def test_fill_state_event_refreshes(fill_dock, state):
+    state.set_fill(tolerance=5)
+    assert fill_dock._tolerance.value() == 5  # noqa: SLF001
