@@ -55,6 +55,15 @@ class _RenderWorker(QRunnable):
         self.signals.done.emit(self.out, "")
 
 
+def _tooltip_spin(value_range: tuple[int, int], value: int, tooltip: str) -> QSpinBox:
+    """Spin box over *value_range* starting at *value*, with *tooltip*."""
+    spin = QSpinBox()
+    spin.setRange(*value_range)
+    spin.setValue(value)
+    spin.setToolTip(tooltip)
+    return spin
+
+
 class ContactSheetDialog(QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
@@ -70,24 +79,17 @@ class ContactSheetDialog(QDialog):
             "contact_sheet_source",
             "{count} image(s) will be included.").format(count=len(images))))
 
+        layout.addLayout(self._build_settings_form(lang))
+        layout.addLayout(self._build_button_row(lang, images))
+
+    def _build_settings_form(self, lang: dict) -> QFormLayout:
+        """Grid size, page size, margin, the caption box and the optional title."""
         form = QFormLayout()
-
-        self._rows_spin = QSpinBox()
-        self._rows_spin.setRange(1, 20)
-        self._rows_spin.setValue(5)
-        self._rows_spin.setToolTip(lang.get(
-            "contact_sheet_rows_tooltip",
-            "Number of image rows per page",
-        ))
+        self._rows_spin = _tooltip_spin(
+            (1, 20), 5, lang.get("contact_sheet_rows_tooltip", "Number of image rows per page"))
         form.addRow(lang.get("contact_sheet_rows", "Rows"), self._rows_spin)
-
-        self._cols_spin = QSpinBox()
-        self._cols_spin.setRange(1, 20)
-        self._cols_spin.setValue(4)
-        self._cols_spin.setToolTip(lang.get(
-            "contact_sheet_cols_tooltip",
-            "Number of image columns per page",
-        ))
+        self._cols_spin = _tooltip_spin(
+            (1, 20), 4, lang.get("contact_sheet_cols_tooltip", "Number of image columns per page"))
         form.addRow(lang.get("contact_sheet_cols", "Columns"), self._cols_spin)
 
         self._page_combo = QComboBox()
@@ -99,14 +101,9 @@ class ContactSheetDialog(QDialog):
         ))
         form.addRow(lang.get("contact_sheet_page_size", "Page Size"), self._page_combo)
 
-        self._margin_spin = QSpinBox()
-        self._margin_spin.setRange(0, 50)
-        self._margin_spin.setValue(10)
+        self._margin_spin = _tooltip_spin((0, 50), 10, lang.get(
+            "contact_sheet_margin_tooltip", "Page margin in millimetres on every side"))
         self._margin_spin.setSuffix(" mm")
-        self._margin_spin.setToolTip(lang.get(
-            "contact_sheet_margin_tooltip",
-            "Page margin in millimetres on every side",
-        ))
         form.addRow(lang.get("contact_sheet_margin", "Margin"), self._margin_spin)
 
         self._caption_check = QCheckBox(lang.get(
@@ -123,21 +120,19 @@ class ContactSheetDialog(QDialog):
         self._title_edit.setPlaceholderText(lang.get(
             "contact_sheet_title_placeholder", "Optional title"))
         form.addRow(lang.get("contact_sheet_title_label", "Title"), self._title_edit)
+        return form
 
-        layout.addLayout(form)
-
+    def _build_button_row(self, lang: dict, images: list[str]) -> QHBoxLayout:
+        """Right-aligned Export (for *images*) and Close."""
         btn_row = QHBoxLayout()
         btn_row.addStretch()
-
-        self._export_btn = QPushButton(lang.get("contact_sheet_export", "Export PDF\u2026"))
+        self._export_btn = QPushButton(lang.get("contact_sheet_export", "Export PDF…"))
         self._export_btn.clicked.connect(lambda: self._export(images))
         btn_row.addWidget(self._export_btn)
-
         close_btn = QPushButton(lang.get("contact_sheet_close", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-
-        layout.addLayout(btn_row)
+        return btn_row
 
     # ------------------------------------------------------------------
     def _resolve_images(self) -> list[str]:
