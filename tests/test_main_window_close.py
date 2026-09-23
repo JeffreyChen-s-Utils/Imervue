@@ -130,3 +130,14 @@ def test_a_failing_step_skips_only_the_rest_of_its_group(run):
         "modify_panel.recipe_committed.disconnect", "viewer._delete_all_tile_textures",
         "viewer._clear_deep_zoom", "viewer.doneCurrent"}] + [
         "plugin_manager.dispatch_app_closing", "event.accept", "super.closeEvent", "os._exit(0)"]
+
+
+def test_failing_steps_are_logged_with_their_names(run, caplog):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        run(failing={"tree.shutdown", "write_user_setting"})
+    logged = [(r.levelname, r.getMessage(), r.exc_info[0] if r.exc_info else None)
+              for r in caplog.records if "Best-effort" in r.getMessage()]
+    assert logged == [
+        ("WARNING", "Best-effort step failed: stop the file-tree workers", RuntimeError),
+        ("WARNING", "Best-effort step failed: write the user settings", RuntimeError),
+    ]

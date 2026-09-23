@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from Imervue.system.app_paths import icon_path as _app_icon_path
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
@@ -30,7 +31,6 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import (
     write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
 )
-import contextlib
 import weakref
 from Imervue.gui.main_window_filter import MainWindowFilterMixin
 from Imervue.gui.main_window_missing import MainWindowMissingMixin
@@ -45,6 +45,8 @@ from Imervue.gui.main_window_browse import MainWindowBrowseMixin
 # 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
 _SCREEN_ADAPT_DEBOUNCE_MS = 300
 
+
+_logger = logging.getLogger("Imervue.main_window")
 
 def _other_live_windows_remain(registry, closing) -> bool:
     """True if any live main window other than *closing* is still registered.
@@ -464,7 +466,7 @@ class ImervueMainWindow(
             from Imervue.gui.whats_new_dialog import show_whats_new_if_upgraded
         except ImportError:
             return
-        with contextlib.suppress(Exception):
+        with best_effort("show onboarding or What's New at startup", _logger):
             shown = show_onboarding_if_first_run(self)
             if not shown:
                 show_whats_new_if_upgraded(self)
@@ -601,7 +603,7 @@ class ImervueMainWindow(
 
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):
-            with contextlib.suppress(Exception):
+            with best_effort("notify plugins the app is closing and unload them", _logger):
                 self.plugin_manager.dispatch_app_closing(self)
                 self.plugin_manager.unload_all()
 
@@ -624,36 +626,36 @@ class ImervueMainWindow(
         # Snapshot the current folder's view state (incl. whether we're in deep
         # zoom) BEFORE any teardown clears the viewer, so relaunching can return
         # to where the user left off instead of always to the tile wall.
-        with contextlib.suppress(Exception):
+        with best_effort("save the folder session", _logger):
             self._save_current_folder_session()
 
         # --- 斷開分頁切換信號，避免銷毀過程中觸發 ---
-        with contextlib.suppress(Exception):
+        with best_effort("disconnect the tab-change signal", _logger):
             self._main_tabs.currentChanged.disconnect(self._on_main_tab_changed)
 
         # --- 停止 watchdog 觀察執行緒 ---
-        with contextlib.suppress(Exception):
+        with best_effort("stop the file-tree watchdog", _logger):
             if hasattr(self, "_tree_watchdog"):
                 self._tree_watchdog.stop()
 
         # --- 等待背景刪除 worker，避免其 QThread 在 view 銷毀時仍在執行 ---
         # (次要視窗走 deleteLater → destroyed-while-running 崩潰；
         #  主視窗走 os._exit → 半途中止 OS 垃圾桶批次)
-        with contextlib.suppress(Exception):
+        with best_effort("stop the file-tree workers", _logger):
             self.tree.shutdown()
 
         # --- 安全關閉修改面板 ---
         # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
-        with contextlib.suppress(Exception):
+        with best_effort("stop the Modify panel's preview debounce", _logger):
             self.modify_panel._debounce.stop()
             self.modify_panel.recipe_committed.disconnect()
-        with contextlib.suppress(Exception):
+        with best_effort("destroy the Modify canvas", _logger):
             self.modify_panel._destroy_canvas()
-        with contextlib.suppress(Exception):
+        with best_effort("clear the Modify undo stack", _logger):
             self.modify_panel._undo_stack.clear()
 
         # --- 安全關閉 OpenGL viewer ---
-        with contextlib.suppress(Exception):
+        with best_effort("free the viewer's GL textures", _logger):
             self.viewer.makeCurrent()
             self.viewer._delete_all_tile_textures()
             self.viewer._clear_deep_zoom()
@@ -662,18 +664,18 @@ class ImervueMainWindow(
     def _persist_for_close(self) -> None:
         """Save window geometry and settings, then commit pending deletions (best-effort)."""
         # 儲存視窗位置與大小（在寫入設定之前）
-        with contextlib.suppress(Exception):
+        with best_effort("save the window geometry", _logger):
             self._save_window_geometry()
 
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
         # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中
         # 與我們的 flush 競爭寫同一個檔案
-        with contextlib.suppress(Exception):
+        with best_effort("cancel the pending settings save", _logger):
             cancel_pending_save()
-        with contextlib.suppress(Exception):
+        with best_effort("write the user settings", _logger):
             write_user_setting()
 
-        with contextlib.suppress(Exception):
+        with best_effort("commit pending deletions", _logger):
             commit_pending_deletions(self.viewer)
 
     @classmethod
