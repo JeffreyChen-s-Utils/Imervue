@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-31 | 2026-09-23 | Split BrushDock's constructor into section builders | #done #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-30 | 2026-09-23 | Split the puppet workspace's action builder by menu section | #done #refactor #puppet | [2026-09](2026-09.md) |
 | U-20260923-29 | 2026-09-23 | Split ImageSanitizeDialog._build_ui into section builders | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-28 | 2026-09-23 | Split build_file_menu into section builders | #done #refactor #menu | [2026-09](2026-09.md) |
