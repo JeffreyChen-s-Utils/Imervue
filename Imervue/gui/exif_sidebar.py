@@ -4,6 +4,7 @@ Collapsible sidebar showing EXIF metadata for the current image.
 """
 from __future__ import annotations
 
+import html
 import logging
 import sqlite3
 from pathlib import Path
@@ -193,7 +194,7 @@ class ExifSidebar(QWidget):
             else self._exif_lines(p, lang)
         )
         lines: list[str] = [
-            f"<b>{lang.get('exif_filename', 'File')}:</b> {p.name}",
+            f"<b>{lang.get('exif_filename', 'File')}:</b> {html.escape(p.name)}",
             *self._file_stat_lines(p, lang),
             "<hr>",
             *detail_lines,
@@ -243,14 +244,15 @@ class ExifSidebar(QWidget):
             ("Flash", lang.get("exif_flash", "Flash")),
         ]
         lines = [
-            f"<b>{label}:</b> {exif[key]}"
+            f"<b>{label}:</b> {html.escape(str(exif[key]))}"
             for key, label in fields
             if exif.get(key) not in (None, "N/A")
         ]
         w = exif.get("ExifImageWidth") or exif.get("ImageWidth")
         h = exif.get("ExifImageHeight") or exif.get("ImageLength")
         if w and h:
-            lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> {w} x {h}")
+            lines.append(f"<b>{lang.get('exif_resolution', 'Resolution')}:</b> "
+                         f"{html.escape(str(w))} x {html.escape(str(h))}")
         return lines
 
     @staticmethod
@@ -270,7 +272,7 @@ class ExifSidebar(QWidget):
         place = reverse_geocode(lat, lon)
         if place:
             label = lang.get("exif_location", "Location")
-            lines.append(f'<b>{label}:</b> <a href="{_MAP_LINK}">{place}</a>')
+            lines.append(f'<b>{label}:</b> <a href="{_MAP_LINK}">{html.escape(place)}</a>')
         return lines
 
     def _on_link_activated(self, href: str) -> None:  # pragma: no cover - Qt UI
@@ -305,7 +307,7 @@ class ExifSidebar(QWidget):
             lines.append(f"<b>{lang.get('exif_fps', 'Frame rate')}:</b> {fps:.2f} fps")
         codec = meta.get("codec")
         if codec:
-            lines.append(f"<b>{lang.get('exif_codec', 'Codec')}:</b> {codec}")
+            lines.append(f"<b>{lang.get('exif_codec', 'Codec')}:</b> {html.escape(str(codec))}")
         return lines
 
     def _load_note_for(self, path: str | None) -> None:
