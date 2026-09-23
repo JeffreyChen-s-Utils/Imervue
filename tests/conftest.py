@@ -424,6 +424,49 @@ def fake_clipboard(qapp, monkeypatch):
     fake.deleteLater()
 
 
+@pytest.fixture(autouse=True)
+def os_trash(monkeypatch):
+    """Replace ``send2trash.send2trash`` with an in-process trash for every test.
+
+    The real call is a shell operation on the OS Recycle Bin, which every other
+    process shares: under load it fails now and then (a delete test failed about
+    one run in three), and each run filled the developer's own Recycle Bin. The
+    fake takes a path or a list like the real one, removes each file or
+    directory, raises ``FileNotFoundError`` for a missing path, and records
+    every trashed path in the list it yields. Product code imports
+    ``send2trash`` at call time, so the patch reaches it; when the package is
+    not installed a stand-in module takes its place, so the native fallback
+    in ``keyboard_actions._send_to_trash`` is never reached either.
+    """
+    import os
+    import shutil
+    import sys
+    import types
+
+    trashed: list[str] = []
+
+    def _fake_send2trash(paths) -> None:
+        batch = [paths] if isinstance(paths, (str, bytes, os.PathLike)) else list(paths)
+        for path in (os.fspath(p) for p in batch):
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            elif os.path.lexists(path):
+                os.remove(path)
+            else:
+                raise FileNotFoundError(path)
+            trashed.append(path)
+
+    try:
+        import send2trash
+    except ImportError:
+        stand_in = types.ModuleType("send2trash")
+        stand_in.send2trash = _fake_send2trash
+        monkeypatch.setitem(sys.modules, "send2trash", stand_in)
+    else:
+        monkeypatch.setattr(send2trash, "send2trash", _fake_send2trash)
+    return trashed
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _qt_session_teardown():
     """Shut Qt down explicitly at the very end of the session.

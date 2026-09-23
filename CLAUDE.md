@@ -337,6 +337,13 @@ before — the failure mode is a command that *appears* to succeed.
   clipboard. The fixture patches `QApplication.clipboard()` with an in-process clipboard that
   emits `dataChanged` synchronously; product code must keep going through
   `QApplication.clipboard()` for it to take effect.
+- **Tests never touch the OS Recycle Bin — the autouse `os_trash` fixture replaces
+  `send2trash.send2trash`.** The real shell operation is shared with every other process and
+  failed a delete test about one run in three under load; it also filled the developer's own
+  Recycle Bin. The fake removes each path, raises `FileNotFoundError` for a missing one, and
+  yields the list of trashed paths for assertions. Product code must keep importing
+  `send2trash` at call time (`from send2trash import send2trash` inside the function) for the
+  patch to reach it.
 - **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
   ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
   must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

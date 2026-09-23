@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `4928a26` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `47a7dbd` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 762 | 125,554 |
+| `tests/` | 763 | 125,702 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,955 |
 | `Imervue/gui/` | 159 | 32,570 |
 | `Imervue/puppet/` | 57 | 15,184 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,563** | **299,883** |
+| **總計** | **1,564** | **300,031** |
 
 其中 `Imervue/` 套件本身 739 檔 / 159,940 行。
 
@@ -514,7 +514,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-158 個檔、32,567 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,570 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -639,7 +639,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,928 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,955 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -766,7 +766,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,218 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,184 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-752 個檔、124,121 行。`pyproject.toml` 定義三個互斥層級 marker：
+763 個檔、125,702 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -958,8 +958,9 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 `conftest.py` 在 collection 期自動分類並依 `--test-layer` 取捨，同時把 `plugins/` 注入 `sys.path`
 （鏡像執行期 `plugin_manager` 的行為），讓測試能 `from ai_denoise.denoise import …`。
 
-**共用 fixture**：`qapp`、`tmp_path`、`sample_*_array`、`image_folder`，以及 autouse 的
-`_isolate_user_settings`（把設定路徑導開，測試絕不寫真的 `user_setting.json`）。
+**共用 fixture**：`qapp`、`tmp_path`、`sample_*_array`、`image_folder`、`pump_until`（等候排隊中的 Qt 訊號）、
+`fake_clipboard`（行程內剪貼簿），以及 autouse 的 `_isolate_user_settings`（把設定路徑導開，測試絕不寫真的
+`user_setting.json`）和 `os_trash`（以行程內假回收筒取代 `send2trash`，測試絕不碰系統資源回收筒）。
 
 **輔助模組**：`_qt_skip.py`（GL widget 的 CI skip marker）、`_instant_worker.py`、`_toast_spy.py`。
 

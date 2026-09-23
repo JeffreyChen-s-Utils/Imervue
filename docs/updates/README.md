@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-37 | 2026-09-23 | Keep tests off the OS Recycle Bin with an autouse os_trash fixture | #done #tests #flaky | [2026-09](2026-09.md) |
 | U-20260923-36 | 2026-09-23 | Split AIUpscaleDialog._build_ui and share the upscale-model combo fill | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-35 | 2026-09-23 | Build three more dialogs' source-folder rows through folder_picker_row | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-34 | 2026-09-23 | Split ImageOrganizerDialog._build_ui and share the folder-picker row | #done #refactor #gui | [2026-09](2026-09.md) |
