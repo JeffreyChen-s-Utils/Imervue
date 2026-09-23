@@ -20,6 +20,7 @@ from Imervue.image.save_formats import (
     available_formats,
     save_image,
 )
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -46,7 +47,11 @@ class _SizeEstimateWorker(QThread):
             buf = io.BytesIO()
             save_image(img, buf, self._fmt, self._quality)
             self.result_ready.emit(buf.tell(), "")
+        except IMAGE_READ_ERRORS as exc:
+            self.result_ready.emit(0, str(exc))
         except Exception as exc:
+            # Worker boundary: the dialog waits on result_ready, so report even a bug.
+            logger.exception("Estimating the export size of %s failed", self._source_path)
             self.result_ready.emit(0, str(exc))
 
 

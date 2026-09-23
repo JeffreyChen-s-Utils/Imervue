@@ -25,6 +25,19 @@ class TestLoadPreview:
     def test_returns_none_for_missing_file(self, hover_mod, tmp_path):
         assert hover_mod._load_preview(str(tmp_path / "ghost.png")) is None
 
+    def test_returns_none_for_non_image(self, hover_mod, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert hover_mod._load_preview(str(bad)) is None
+
+    def test_unexpected_error_propagates(self, hover_mod, sample_png, monkeypatch):
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(hover_mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            hover_mod._load_preview(sample_png)
+
     def test_loads_pixmap_for_valid_image(self, hover_mod, sample_png):
         pm = hover_mod._load_preview(sample_png, max_edge=256)
         assert pm is not None

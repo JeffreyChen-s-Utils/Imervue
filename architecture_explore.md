@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `6818e18` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `e6d6e71` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 781 | 128,298 |
+| `tests/` | 783 | 128,530 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
-| `Imervue/gui/` | 159 | 32,474 |
+| `Imervue/gui/` | 159 | 32,484 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,779 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,584** | **302,653** |
+| **總計** | **1,586** | **302,895** |
 
-其中 `Imervue/` 套件本身 741 檔 / 159,966 行。
+其中 `Imervue/` 套件本身 741 檔 / 159,976 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -516,7 +516,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,474 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,484 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -536,7 +536,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_missing.py` | 169 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
 | `main_window_folders.py` | 301 | `MainWindowFoldersMixin`：監看目前資料夾、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
-| `main_window_screens.py` | 203 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
+| `main_window_screens.py` | 204 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
@@ -550,7 +550,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `breadcrumb_bar.py` | 148 | 麵包屑路徑列 |
 | `timeline_view.py` | 365 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 97 | Toast / snackbar 通知 |
-| `hover_preview.py` | 185 | 縮圖懸停放大彈窗 |
+| `hover_preview.py` | 186 | 縮圖懸停放大彈窗 |
 | `image_issue_panel.py` | 143 | 圖片載入問題面板（dock） |
 | `multi_monitor_window.py` | 275 | 多螢幕鏡像視窗 |
 | `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
@@ -596,9 +596,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(238) ·
+`batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(243) ·
 `optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(385) · `contact_sheet_dialog.py`(199) ·
-`web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(535) ·
+`web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(536) ·
 `duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(300) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
 `ai_upscale_dialog.py`(716) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
@@ -607,8 +607,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `library_search_dialog.py`(228) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(171) ·
 `similar_search_dialog.py`(105) · `advanced_filter_dialog.py`(291) · `tag_album_dialog.py`(532) ·
-`tag_filter_dialog.py`(172) · `hierarchical_tags_dialog.py`(185) · `auto_tag_dialog.py`(173) ·
-`keyword_editor_dialog.py`(218) · `keyword_vocabulary_dialog.py`(71) · `exif_editor.py`(184) ·
+`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(185) · `auto_tag_dialog.py`(173) ·
+`keyword_editor_dialog.py`(218) · `keyword_vocabulary_dialog.py`(71) · `exif_editor.py`(191) ·
 `gps_geotag_dialog.py`(91) · `map_view_dialog.py`(172) OSM 底圖 · `calendar_view_dialog.py`(109) ·
 `events_dialog.py`(51) · `metadata_export_dialog.py`(95) · `xmp_sidecar_dialog.py`(121) ·
 `bookmark_dialog.py`(350) · `staging_tray_dialog.py`(185) · `reference_panel_dialog.py`(298) ·
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-781 個檔、128,298 行。`pyproject.toml` 定義三個互斥層級 marker：
+783 個檔、128,530 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

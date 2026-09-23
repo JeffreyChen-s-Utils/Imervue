@@ -35,6 +35,7 @@ from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -156,7 +157,7 @@ class _ScanWorker(QThread):
             key = (self._file_hash(path) if self._method == _METHOD_EXACT
                    else self._perceptual_hash(path))
             return key, size
-        except Exception:
+        except IMAGE_READ_ERRORS:
             logger.debug("Skipping %s", path, exc_info=True)
             return None
 
@@ -198,8 +199,8 @@ class _ScanWorker(QThread):
 
     @staticmethod
     def _perceptual_hash(path: str) -> str:
-        img = Image.open(path)
-        return str(_dhash(img))
+        with Image.open(path) as img:
+            return str(_dhash(img))
 
     def _cluster_perceptual(
         self,
@@ -233,18 +234,17 @@ class _ScanWorker(QThread):
 
 def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
     """Create a small QPixmap thumbnail for display in the tree."""
+    import numpy as np
     try:
-        img = Image.open(path)
-        img.thumbnail((size, size), Image.Resampling.LANCZOS)
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        import numpy as np
-        arr = np.array(img)
-        h, w = arr.shape[:2]
-        qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888).copy()
-        return QPixmap.fromImage(qimg)
-    except Exception:
+        with Image.open(path) as src:
+            src.thumbnail((size, size), Image.Resampling.LANCZOS)
+            img = src.convert("RGBA")
+    except IMAGE_READ_ERRORS:
         return QPixmap()
+    arr = np.array(img)
+    h, w = arr.shape[:2]
+    qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888).copy()
+    return QPixmap.fromImage(qimg)
 
 
 # ---------------------------------------------------------------------------

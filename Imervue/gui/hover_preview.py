@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 
 from PIL import Image
+
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from PySide6.QtCore import Qt, QTimer, QPoint, QSize
 from PySide6.QtGui import QPixmap, QImage, QGuiApplication, QFont
 from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout
@@ -116,7 +118,7 @@ def _load_preview(path: str, max_edge: int = PREVIEW_MAX_EDGE) -> QPixmap | None
                 data, im.width, im.height, QImage.Format.Format_RGBA8888
             ).copy()
             return QPixmap.fromImage(qimg)
-    except Exception:
+    except IMAGE_READ_ERRORS:
         return None
 
 

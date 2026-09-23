@@ -5,6 +5,7 @@ Falls back gracefully if piexif is not installed.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
@@ -16,6 +17,9 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+
+logger = logging.getLogger("Imervue.exif_editor")
 
 
 def _try_import_piexif():
@@ -157,22 +161,25 @@ class ExifEditorDialog(QDialog):
             else:
                 ifd[ifd_key] = text.encode("utf-8")
 
+        main_window = self._gui.main_window
         try:
-            exif_bytes = piexif.dump(self._exif_dict)
-            piexif.insert(exif_bytes, self._path)
+            piexif.insert(piexif.dump(self._exif_dict), self._path)
+        # piexif's encoder fails in open-ended ways on a bad value: struct.error for
+        # an out-of-range number, KeyError for an unknown tag, even UnboundLocalError.
+        except Exception as e:  # noqa: BLE001 - piexif raises open-ended types
+            logger.warning("EXIF save failed for %s", self._path, exc_info=True)
+            if hasattr(main_window, "toast"):
+                main_window.toast.error(f"EXIF save failed: {e}")
+            return
 
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.success(
-                    language_wrapper.language_word_dict.get("exif_editor_saved", "EXIF saved!")
-                )
-            # 更新 sidebar
-            if hasattr(self._gui.main_window, "exif_sidebar"):
-                self._gui.main_window.exif_sidebar.update_info(self._path)
-
-            self.accept()
-        except Exception as e:
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.error(f"EXIF save failed: {e}")
+        if hasattr(main_window, "toast"):
+            main_window.toast.success(
+                language_wrapper.language_word_dict.get("exif_editor_saved", "EXIF saved!")
+            )
+        # 更新 sidebar
+        if hasattr(main_window, "exif_sidebar"):
+            main_window.exif_sidebar.update_info(self._path)
+        self.accept()
 
 
 def open_exif_editor(main_gui: GPUImageView):

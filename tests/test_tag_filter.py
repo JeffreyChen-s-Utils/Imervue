@@ -35,3 +35,23 @@ class TestCombineSets:
     def test_unknown_mode_falls_back_to_or(self, mod):
         groups = [{"a"}, {"b"}]
         assert mod.combine_sets(groups, "xyz") == {"a", "b"}
+
+
+class TestLoadGroups:
+    def test_reads_tags_and_albums_from_settings(self, mod, monkeypatch):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        monkeypatch.setitem(user_setting_dict, "image_tags", {"cats": ["a.png"]})
+        monkeypatch.setitem(user_setting_dict, "albums", {"trip": ["b.png"]})
+        assert mod.TagFilterDialog._load_tags() == {"cats": ["a.png"]}
+        assert mod.TagFilterDialog._load_albums() == {"trip": ["b.png"]}
+
+    @pytest.mark.parametrize("stored", [None, {}])
+    def test_missing_or_empty_gives_empty_dict(self, mod, monkeypatch, stored):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        for key in ("image_tags", "albums"):
+            if stored is None:
+                monkeypatch.delitem(user_setting_dict, key, raising=False)
+            else:
+                monkeypatch.setitem(user_setting_dict, key, stored)
+        assert mod.TagFilterDialog._load_tags() == {}
+        assert mod.TagFilterDialog._load_albums() == {}

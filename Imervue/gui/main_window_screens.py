@@ -172,14 +172,15 @@ class MainWindowScreensMixin:
         try:
             geo = QByteArray(base64.b64decode(geo_b64))
             self.restoreGeometry(geo)
-        except Exception:
+        except (ValueError, TypeError):
+            # Not base64 (binascii.Error is a ValueError) or not a string at all.
             self.showMaximized()
             return
 
         # 還原 state（工具列、dock 等）
         state_b64 = user_setting_dict.get("window_state", "")
         if state_b64:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(ValueError, TypeError):
                 self.restoreState(QByteArray(base64.b64decode(state_b64)))
 
         # 確認還原後的視窗中心仍在某個可用螢幕內。若先前的副螢幕被拔除、

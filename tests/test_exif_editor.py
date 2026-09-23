@@ -1,6 +1,7 @@
-"""Tests for the EXIF editor's save."""
+"""Tests for the EXIF editor's save: success path and how a failed write is reported."""
 from __future__ import annotations
 
+import struct
 from types import SimpleNamespace
 
 import pytest
@@ -81,3 +82,21 @@ def test_saved_comment_reopens_without_its_prefix(qapp, editor, text):
 ])
 def test_decode_user_comment(raw, shown):
     assert mod._decode_user_comment(piexif, raw) == shown  # noqa: SLF001
+
+
+@pytest.mark.parametrize("exc", [struct.error("'H' format requires 0 <= number <= 65535"),
+                                 KeyError(65000), ValueError("wrong type"), OSError("locked")])
+def test_failed_write_is_reported_and_logged(editor, monkeypatch, caplog, exc):
+    dlg, _path, toast, sidebar = editor
+
+    def fail(*_a):
+        raise exc
+
+    monkeypatch.setattr(piexif, "insert", fail)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        dlg._save()  # noqa: SLF001
+    assert toast.calls == [("error", (f"EXIF save failed: {exc}",))]
+    assert sidebar.calls == []
+    assert dlg.result() != mod.QDialog.DialogCode.Accepted
+    (record,) = [r for r in caplog.records if r.exc_info]
+    assert record.exc_info[0] is type(exc)

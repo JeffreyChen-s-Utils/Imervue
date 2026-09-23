@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -105,7 +106,7 @@ def _get_resolution_bucket(path: str) -> str:
         if longest >= 1280:
             return "720p+"
         return "small"
-    except Exception:
+    except IMAGE_READ_ERRORS:
         return "unknown"
 
 

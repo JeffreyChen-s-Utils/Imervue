@@ -20,6 +20,7 @@ from Imervue.gui.image_organizer_dialog import (
     _scan_folder,
     plan_organization,
     _OrganizerWorker,
+    _get_resolution_bucket,
     _get_type_bucket,
     RULE_DATE,
     RULE_RESOLUTION,
@@ -327,3 +328,29 @@ class TestPlanInvalidation:
         )
         ImageOrganizerDialog._on_rule_changed(fake, 3)
         assert calls == ["invalidate"]
+
+
+class TestGetResolutionBucket:
+    @pytest.mark.parametrize("size, bucket", [
+        ((3840, 10), "4K+"), ((10, 1920), "1080p+"), ((1280, 720), "720p+"), ((1279, 1), "small"),
+    ])
+    def test_buckets_by_long_edge(self, tmp_path, size, bucket):
+        path = tmp_path / "a.png"
+        Image.new("L", size).save(path)
+        assert _get_resolution_bucket(str(path)) == bucket
+
+    def test_unreadable_files_are_unknown(self, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert _get_resolution_bucket(str(bad)) == "unknown"
+        assert _get_resolution_bucket(str(tmp_path / "gone.png")) == "unknown"
+
+    def test_unexpected_error_propagates(self, monkeypatch):
+        from Imervue.gui import image_organizer_dialog as mod
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            _get_resolution_bucket("x.png")

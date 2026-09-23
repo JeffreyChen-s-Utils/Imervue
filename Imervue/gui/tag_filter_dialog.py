@@ -86,19 +86,13 @@ class TagFilterDialog(QDialog):
     # -------- Data --------
     @staticmethod
     def _load_tags() -> dict[str, list[str]]:
-        try:
-            from Imervue.user_settings.tags import get_all_tags
-            return get_all_tags() or {}
-        except Exception:
-            return {}
+        from Imervue.user_settings.tags import get_all_tags
+        return get_all_tags() or {}
 
     @staticmethod
     def _load_albums() -> dict[str, list[str]]:
-        try:
-            from Imervue.user_settings.tags import get_all_albums
-            return get_all_albums() or {}
-        except Exception:
-            return {}
+        from Imervue.user_settings.tags import get_all_albums
+        return get_all_albums() or {}
 
     @staticmethod
     def _build_checkable_list(groups: dict[str, list[str]]) -> QListWidget:
