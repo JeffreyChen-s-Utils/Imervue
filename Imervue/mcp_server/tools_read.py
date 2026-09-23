@@ -81,40 +81,36 @@ def read_image_metadata(path: str) -> dict[str, Any]:
 
 
 def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
+    from PIL import Image
+
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     try:
-        from PIL import Image
         with Image.open(image_path) as img:
             out["width"] = int(img.width)
             out["height"] = int(img.height)
             out["format"] = img.format or ""
             out["mode"] = img.mode
-    except Exception as exc:   # noqa: BLE001 - Pillow raises a zoo of exception types
+    except IMAGE_READ_ERRORS as exc:
         out["error"] = f"image probe failed: {exc}"
 
 
 def _populate_exif(image_path: Path, out: dict[str, Any]) -> None:
-    try:
-        from Imervue.image.info import get_exif_data
-        exif = get_exif_data(image_path) or {}
-    except Exception:   # noqa: BLE001 - same as Pillow path
-        exif = {}
+    from Imervue.image.info import get_exif_data
+    exif = get_exif_data(image_path) or {}   # {} for an unreadable file or EXIF block
     # EXIF values include byte strings / IFDRational; coerce to JSON-friendly types.
     out["exif"] = {str(k): json_safe(v) for k, v in exif.items()}
 
 
 def _populate_xmp(image_path: Path, out: dict[str, Any]) -> None:
-    try:
-        from Imervue.image import xmp_sidecar
-        xmp = xmp_sidecar.load(image_path)
-        out["xmp"] = {
-            "rating": int(xmp.rating),
-            "title": xmp.title,
-            "description": xmp.description,
-            "keywords": list(xmp.keywords),
-            "color_label": xmp.color_label,
-        }
-    except Exception:   # noqa: BLE001 - missing sidecar is normal
-        out["xmp"] = None
+    from Imervue.image import xmp_sidecar
+    xmp = xmp_sidecar.load(image_path)   # empty XmpData for a missing or malformed sidecar
+    out["xmp"] = {
+        "rating": int(xmp.rating),
+        "title": xmp.title,
+        "description": xmp.description,
+        "keywords": list(xmp.keywords),
+        "color_label": xmp.color_label,
+    }
 
 
 # ---------------------------------------------------------------------------

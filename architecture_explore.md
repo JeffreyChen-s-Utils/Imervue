@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `9e85bf7` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `8a8fb17` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 814 | 133,518 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
+| `tests/` | 814 | 133,634 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,805 |
 | `Imervue/puppet/` | 57 | 15,229 |
 | `Imervue/image/` | 113 | 12,888 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,243 |
-| `Imervue/mcp_server/` | 16 | 4,670 |
+| `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,160 |
 | `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,185 |
-| `Imervue/system/` | 19 | 1,982 |
+| `Imervue/system/` | 19 | 1,993 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,626** | **308,322** |
+| **總計** | **1,626** | **308,446** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,414 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,422 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -230,7 +230,7 @@ ImervueMainWindow
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `file_manager.py` | 40 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`、macOS `open [-R]`、Linux `xdg-open`）；檔案樹、右鍵選單、外掛選單共用 |
 | `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
-| `trash_ops.py` | 199 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
+| `trash_ops.py` | 210 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
@@ -648,7 +648,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,910 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,911 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -658,7 +658,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
-| `canvas.py` | 854 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
+| `canvas.py` | 855 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
 | `canvas_overlays.py` | 538 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
 | `canvas_input.py` | 356 | `PaintCanvasInputMixin`：滑鼠／繪圖板事件轉成 `PointerEvent` 交給工具、平移、滾輪縮放、鋼筆 Enter/Esc、拖放開檔 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
@@ -906,7 +906,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | --- | ---: | --- |
 | `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
 | `tools.py` | 172 | 工具集的對外門面：re-export 全部 56 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
-| `tools_read.py` | 657 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
+| `tools_read.py` | 653 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
 | `tools_edit.py` | 884 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 68 | 兩組處理器共用：`IMAGE_EXTENSIONS`、`NO_ALPHA_FORMATS`、`load_rgba_array`、`validated_dir`／`validated_file`、`json_safe` |
 | `tool_defs_read.py` | 349 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-814 個檔、133,518 行。`pyproject.toml` 定義三個互斥層級 marker：
+814 個檔、133,634 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -70,6 +70,7 @@ from OpenGL.GL import (
     GL_MODELVIEW,
     GL_PROJECTION,
 )
+from OpenGL.error import GLError
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -559,8 +560,6 @@ class PaintCanvas(
         # no other free path.
         if self._onion_skin_texture is not None:
             import contextlib
-
-            from OpenGL.error import GLError
             with self._current_gl_context(), contextlib.suppress(GLError):   # context already gone
                 glDeleteTextures(1, [self._onion_skin_texture])
         self._onion_skin_source = callable_or_none
@@ -742,7 +741,7 @@ class PaintCanvas(
             return False
         try:
             glClear(GL_COLOR_BUFFER_BIT)
-        except Exception:   # noqa: BLE001 - GL context may be torn down
+        except GLError:   # GL context torn down
             return False
         return True
 
@@ -799,7 +798,9 @@ class PaintCanvas(
             )
             glBindTexture(GL_TEXTURE_2D, 0)
             self._checker_texture = tex
-        except Exception:   # noqa: BLE001 - GL/driver dependent
+        except GLError:
+            logger.warning("Could not upload the checker texture; using a plain backdrop",
+                           exc_info=True)
             # Fallback path in paintGL renders the legacy white quad
             # if this stays None.
             self._checker_texture = None

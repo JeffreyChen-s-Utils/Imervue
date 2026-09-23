@@ -442,3 +442,33 @@ def test_extract_video_frame_tool(tmp_path):
     result = extract_video_frame(str(video), str(dst), frame_index=0)
     assert dst.exists()
     assert result["size_bytes"] > 0
+
+
+def test_read_image_metadata_reports_an_unreadable_image(tmp_path):
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"not an image")
+    result = read_image_metadata(str(bad))
+    assert result["error"].startswith("image probe failed")
+    assert "width" not in result
+    assert result["exif"] == {}
+    assert result["xmp"]["rating"] == 0
+
+
+def test_read_image_metadata_treats_a_malformed_sidecar_as_empty(sample_image):
+    from Imervue.image.xmp_sidecar import sidecar_path_for
+
+    sidecar_path_for(sample_image).write_text("<not xml", encoding="utf-8")
+    result = read_image_metadata(str(sample_image))
+    assert result["xmp"] == {"rating": 0, "title": "", "description": "",
+                             "keywords": [], "color_label": ""}
+
+
+def test_read_image_metadata_propagates_an_unexpected_reader_error(sample_image, monkeypatch):
+    from PIL import Image
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        read_image_metadata(str(sample_image))

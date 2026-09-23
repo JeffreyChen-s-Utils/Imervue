@@ -42,7 +42,9 @@ def _trash_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
     try:
         _trash_many(paths)
         return list(paths), []
-    except Exception:  # noqa: BLE001 — send2trash raises mixed OSError/TrashPermissionError/ImportError; isolate below
+    # send2trash raises OSError (TrashPermissionError and Windows COM failures
+    # included) or ImportError for a missing backend; retry per file to isolate it.
+    except (OSError, ImportError):
         from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
         succeeded: list[str] = []
         failed: list[str] = []
@@ -155,7 +157,9 @@ class _BatchFileWorker(QThread):
     agnostic about which operation it is driving.
 
     ``progress`` fires with ``(done, total)`` per chunk; ``finished_with``
-    fires once with ``(succeeded_paths, failed_paths)``.
+    fires once with ``(succeeded_paths, failed_paths)`` — always, so the caller
+    is never left waiting: an unexpected error in *operation* is logged with its
+    traceback and every one of *paths* is reported as failed.
     """
 
     progress = Signal(int, int)
@@ -164,13 +168,19 @@ class _BatchFileWorker(QThread):
     def __init__(
         self,
         operation: Callable[[ProgressCallback], tuple[list[str], list[str]]],
+        paths: list[str],
         parent=None,
     ) -> None:
         super().__init__(parent)
         self._operation = operation
+        self._paths = paths
 
     def run(self) -> None:
-        succeeded, failed = self._operation(self.progress.emit)
+        try:
+            succeeded, failed = self._operation(self.progress.emit)
+        except Exception:  # noqa: BLE001 - worker boundary: the caller must still hear back
+            logger.exception("Batch file operation failed")
+            succeeded, failed = [], list(self._paths)
         for path in failed:
             logger.warning("Batch delete failed on: %s", path)
         self.finished_with.emit(succeeded, failed)
@@ -181,7 +191,7 @@ class FileDeleteWorker(_BatchFileWorker):
 
     def __init__(self, paths: Iterable[str], parent=None) -> None:
         snapshot = list(paths)
-        super().__init__(lambda report: trash_batch(snapshot, report), parent)
+        super().__init__(lambda report: trash_batch(snapshot, report), snapshot, parent)
 
 
 class FilePurgeWorker(_BatchFileWorker):
@@ -196,4 +206,5 @@ class FilePurgeWorker(_BatchFileWorker):
         to_unlink = list(unlink_paths)
         to_trash = list(trash_paths)
         super().__init__(
-            lambda report: purge_batch(to_unlink, to_trash, report), parent)
+            lambda report: purge_batch(to_unlink, to_trash, report),
+            to_unlink + to_trash, parent)

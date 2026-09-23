@@ -70,3 +70,37 @@ def test_grid_vbo_release_propagates_an_unexpected_error(monkeypatch):
     monkeypatch.setattr(overlays_mod, "glDeleteBuffers", _raise(TypeError("bad id list")))
     with pytest.raises(TypeError):
         PaintCanvasOverlaysMixin._release_grid_vbo(_grid_canvas())
+
+
+class _LiveContext:
+    @staticmethod
+    def currentContext():  # noqa: N802 - mirrors Qt's camelCase API
+        return object()
+
+
+def test_context_check_reports_a_torn_down_context(monkeypatch):
+    monkeypatch.setattr("PySide6.QtGui.QOpenGLContext", _LiveContext)
+    monkeypatch.setattr(canvas_mod, "glClear", _raise(GLError(1282, None)))
+    assert PaintCanvas._gl_context_alive() is False
+
+
+def test_context_check_propagates_an_unexpected_error(monkeypatch):
+    monkeypatch.setattr("PySide6.QtGui.QOpenGLContext", _LiveContext)
+    monkeypatch.setattr(canvas_mod, "glClear", _raise(TypeError("bad mask")))
+    with pytest.raises(TypeError):
+        PaintCanvas._gl_context_alive()
+
+
+def test_checker_upload_failure_is_logged_and_falls_back(monkeypatch, caplog):
+    monkeypatch.setattr(canvas_mod, "glGenTextures", _raise(GLError(1282, None)))
+    fake = SimpleNamespace(_checker_texture=5)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        PaintCanvas._upload_checker_texture(fake)
+    assert fake._checker_texture is None
+    assert any("checker texture" in r.getMessage() and r.exc_info for r in caplog.records)
+
+
+def test_checker_upload_propagates_an_unexpected_error(monkeypatch):
+    monkeypatch.setattr(canvas_mod, "glGenTextures", _raise(TypeError("bad count")))
+    with pytest.raises(TypeError):
+        PaintCanvas._upload_checker_texture(SimpleNamespace(_checker_texture=None))
