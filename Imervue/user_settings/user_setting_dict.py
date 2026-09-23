@@ -289,9 +289,10 @@ def switch_profile(name: str) -> bool:
 
 
 def read_json(json_file_path: str) -> Any | None:
-    """
-    use to read action file
-    :param json_file_path JSON file's path to read
+    """Parse the JSON file at *json_file_path*; ``None`` if it is missing or unreadable.
+
+    Unreadable covers I/O errors, invalid UTF-8 or JSON, and nesting too deep to
+    parse; those are logged at debug level. Any other error propagates.
     """
     _lock.acquire()
     try:
@@ -299,7 +300,7 @@ def read_json(json_file_path: str) -> Any | None:
         if file_path.exists() and file_path.is_file():
             with open(json_file_path, encoding="utf-8") as read_file:
                 return json.loads(read_file.read())
-    except Exception as e:
+    except (OSError, ValueError, RecursionError) as e:
         _settings_logger.debug(f"Failed to read {json_file_path}: {e}")
     finally:
         _lock.release()

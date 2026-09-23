@@ -98,3 +98,40 @@ class TestRecentImage:
         clear_recent()
         assert user_setting_dict["user_recent_folders"] == []
         assert user_setting_dict["user_recent_images"] == []
+
+
+class TestReadJson:
+    def test_reads_a_valid_file(self, tmp_path):
+        from Imervue.user_settings.user_setting_dict import read_json
+        path = tmp_path / "s.json"
+        path.write_text('{"a": [1, 2]}', encoding="utf-8")
+        assert read_json(str(path)) == {"a": [1, 2]}
+
+    def test_missing_file_and_directory_give_none(self, tmp_path):
+        from Imervue.user_settings.user_setting_dict import read_json
+        assert read_json(str(tmp_path / "absent.json")) is None
+        assert read_json(str(tmp_path)) is None
+
+    def test_unreadable_contents_give_none(self, tmp_path):
+        from Imervue.user_settings.user_setting_dict import read_json
+        cases = {"bad.json": b"{not json", "latin.json": b'{"a": "\xff"}',
+                 "deep.json": b"[" * 200_000 + b"]" * 200_000}
+        for name, data in cases.items():
+            (tmp_path / name).write_bytes(data)
+            assert read_json(str(tmp_path / name)) is None, name
+
+    def test_unexpected_errors_propagate_and_release_the_lock(self, tmp_path, monkeypatch):
+        import pytest
+
+        from Imervue.user_settings import user_setting_dict as mod
+        path = tmp_path / "s.json"
+        path.write_text("{}", encoding="utf-8")
+
+        def boom(_text):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.json, "loads", boom)
+        with pytest.raises(RuntimeError):
+            mod.read_json(str(path))
+        assert mod._lock.acquire(blocking=False)  # noqa: SLF001
+        mod._lock.release()  # noqa: SLF001
