@@ -21,33 +21,45 @@ RECENT_KEY = "puppet_recent_files"
 class PuppetMenusMixin:
     """Actions, menus and toolbar of :class:`~Imervue.puppet.workspace.PuppetWorkspace`."""
 
+    def _action(self, key: str, fallback: str, slot, *, checkable: bool = False) -> QAction:
+        """A workspace-owned action labelled from the language dict.
+
+        Plain actions call ``slot`` on ``triggered``; checkable ones on
+        ``toggled`` with the new state.
+        """
+        lang = language_wrapper.language_word_dict
+        action = QAction(lang.get(key, fallback), self)
+        if checkable:
+            action.setCheckable(True)
+            action.toggled.connect(slot)
+        else:
+            action.triggered.connect(slot)
+        return action
+
     def _build_actions(self) -> None:
         """Create every QAction up front so the menu bar and the
         toggle toolbar can both reference the same object — toggling
         from one updates the other automatically."""
-        lang = language_wrapper.language_word_dict
+        self._build_file_actions()
+        self._build_edit_actions()
+        self._build_live_actions()
+        self._build_output_actions()
+        self._build_tool_actions()
 
-        # File
-        self._open_action = QAction(lang.get("puppet_open", "Open Puppet…"), self)
-        self._open_action.triggered.connect(self._open_via_dialog)
-        self._save_action = QAction(lang.get("puppet_save_as", "Save As…"), self)
-        self._save_action.triggered.connect(self._save_via_dialog)
-        self._import_png_action = QAction(
-            lang.get("puppet_import_png", "Import PNG…"), self,
-        )
-        self._import_png_action.triggered.connect(self._import_png_via_dialog)
-        self._import_psd_action = QAction(
-            lang.get("puppet_import_psd", "Import PSD…"), self,
-        )
-        self._import_psd_action.triggered.connect(self._import_psd_via_dialog)
-        self._import_cubism_action = QAction(
-            lang.get("puppet_import_cubism", "Import Cubism…"), self,
-        )
-        self._import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
-        self._install_deps_action = QAction(
-            lang.get("puppet_install_deps", "Install dependencies…"), self,
-        )
-        self._install_deps_action.triggered.connect(self._install_all_optional_deps)
+    def _build_file_actions(self) -> None:
+        """Open / save / import actions and the Recent and Examples submenus."""
+        lang = language_wrapper.language_word_dict
+        act = self._action
+        self._open_action = act("puppet_open", "Open Puppet…", self._open_via_dialog)
+        self._save_action = act("puppet_save_as", "Save As…", self._save_via_dialog)
+        self._import_png_action = act(
+            "puppet_import_png", "Import PNG…", self._import_png_via_dialog)
+        self._import_psd_action = act(
+            "puppet_import_psd", "Import PSD…", self._import_psd_via_dialog)
+        self._import_cubism_action = act(
+            "puppet_import_cubism", "Import Cubism…", self._import_cubism_via_dialog)
+        self._install_deps_action = act(
+            "puppet_install_deps", "Install dependencies…", self._install_all_optional_deps)
 
         # Recent submenu
         self._recent_menu = QMenu(lang.get("puppet_recent", "Recent"), self)
@@ -59,117 +71,71 @@ class PuppetMenusMixin:
         )
         self._examples_menu.aboutToShow.connect(self._rebuild_examples_menu)
 
-        # Edit
-        self._add_rot_action = QAction(
-            lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
-        )
-        self._add_rot_action.triggered.connect(self._add_rotation_deformer)
-        self._add_warp_action = QAction(
-            lang.get("puppet_add_warp", "Add Warp Deformer"), self,
-        )
-        self._add_warp_action.triggered.connect(self._add_warp_deformer)
-        self._add_param_action = QAction(
-            lang.get("puppet_add_parameter", "Add Parameter"), self,
-        )
-        self._add_param_action.triggered.connect(self._add_parameter)
-        self._mirror_action = QAction(
-            lang.get("puppet_mirror_drawable", "Mirror drawable…"), self,
-        )
-        self._mirror_action.triggered.connect(self._mirror_drawable_via_dialog)
-        self._edit_motion_action = QAction(
-            lang.get("puppet_edit_motion", "Edit motion…"), self,
-        )
-        self._edit_motion_action.triggered.connect(self._edit_active_motion)
-        self._mesh_edit_toggle = QAction(
-            lang.get("puppet_mesh_edit", "Edit mesh"), self,
-        )
-        self._mesh_edit_toggle.setCheckable(True)
-        self._mesh_edit_toggle.toggled.connect(self._toggle_mesh_edit)
+    def _build_edit_actions(self) -> None:
+        """Rig-editing actions: deformers, parameters, mirroring, motion and mesh edit."""
+        act = self._action
+        self._add_rot_action = act(
+            "puppet_add_rotation", "Add Rotation Deformer", self._add_rotation_deformer)
+        self._add_warp_action = act(
+            "puppet_add_warp", "Add Warp Deformer", self._add_warp_deformer)
+        self._add_param_action = act(
+            "puppet_add_parameter", "Add Parameter", self._add_parameter)
+        self._mirror_action = act(
+            "puppet_mirror_drawable", "Mirror drawable…", self._mirror_drawable_via_dialog)
+        self._edit_motion_action = act(
+            "puppet_edit_motion", "Edit motion…", self._edit_active_motion)
+        self._mesh_edit_toggle = act(
+            "puppet_mesh_edit", "Edit mesh", self._toggle_mesh_edit, checkable=True)
 
-        # Live toggles
-        self._drag_toggle = QAction(
-            lang.get("puppet_drag_track", "Drag-track head"), self,
-        )
-        self._drag_toggle.setCheckable(True)
-        self._drag_toggle.toggled.connect(self._toggle_drag)
-        self._blink_toggle = QAction(
-            lang.get("puppet_auto_blink", "Auto-blink"), self,
-        )
-        self._blink_toggle.setCheckable(True)
-        self._blink_toggle.toggled.connect(self._toggle_blink)
-        self._lipsync_toggle = QAction(
-            lang.get("puppet_lipsync", "Mic lip-sync"), self,
-        )
-        self._lipsync_toggle.setCheckable(True)
-        self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
-        self._webcam_toggle = QAction(
-            lang.get("puppet_webcam", "Webcam tracking"), self,
-        )
-        self._webcam_toggle.setCheckable(True)
-        self._webcam_toggle.toggled.connect(self._toggle_webcam)
-        self._idle_toggle = QAction(
-            lang.get("puppet_auto_idle", "Auto idle"), self,
-        )
-        self._idle_toggle.setCheckable(True)
-        self._idle_toggle.toggled.connect(self._toggle_idle)
-        self._idle_motion_toggle = QAction(
-            lang.get("puppet_idle_motions", "Idle motions"), self,
-        )
-        self._idle_motion_toggle.setCheckable(True)
-        self._idle_motion_toggle.toggled.connect(self._toggle_idle_motions)
+    def _build_live_actions(self) -> None:
+        """Checkable live-state toggles: tracking, blink, lip-sync and idle."""
+        act = self._action
+        self._drag_toggle = act(
+            "puppet_drag_track", "Drag-track head", self._toggle_drag, checkable=True)
+        self._blink_toggle = act(
+            "puppet_auto_blink", "Auto-blink", self._toggle_blink, checkable=True)
+        self._lipsync_toggle = act(
+            "puppet_lipsync", "Mic lip-sync", self._toggle_lipsync, checkable=True)
+        self._webcam_toggle = act(
+            "puppet_webcam", "Webcam tracking", self._toggle_webcam, checkable=True)
+        self._idle_toggle = act(
+            "puppet_auto_idle", "Auto idle", self._toggle_idle, checkable=True)
+        self._idle_motion_toggle = act(
+            "puppet_idle_motions", "Idle motions", self._toggle_idle_motions, checkable=True)
 
-        # Output / capture
-        self._capture_action = QAction(
-            lang.get("puppet_capture", "Capture frame…"), self,
-        )
-        self._capture_action.triggered.connect(self._capture_via_dialog)
-        self._record_action = QAction(lang.get("puppet_record", "Record…"), self)
-        self._record_action.setCheckable(True)
-        self._record_action.toggled.connect(self._toggle_recording)
-        self._motion_record_toggle = QAction(
-            lang.get("puppet_record_motion", "Record motion"), self,
-        )
-        self._motion_record_toggle.setCheckable(True)
-        self._motion_record_toggle.toggled.connect(self._toggle_motion_record)
-        self._batch_export_action = QAction(
-            lang.get("puppet_batch_export", "Export all motions…"), self,
-        )
-        self._batch_export_action.triggered.connect(self._batch_export_via_dialog)
-        self._virtual_camera_toggle = QAction(
-            lang.get("puppet_virtual_camera", "Virtual camera"), self,
-        )
-        self._virtual_camera_toggle.setCheckable(True)
-        self._virtual_camera_toggle.toggled.connect(self._toggle_virtual_camera)
-        self._ndi_toggle = QAction(
-            lang.get("puppet_ndi_output", "NDI output"), self,
-        )
-        self._ndi_toggle.setCheckable(True)
-        self._ndi_toggle.toggled.connect(self._toggle_ndi)
-        self._vts_toggle = QAction(
-            lang.get("puppet_vts_api", "VTS API"), self,
-        )
-        self._vts_toggle.setCheckable(True)
-        self._vts_toggle.toggled.connect(self._toggle_vts_api)
+    def _build_output_actions(self) -> None:
+        """Capture, recording, export and the streaming-output toggles."""
+        act = self._action
+        self._capture_action = act(
+            "puppet_capture", "Capture frame…", self._capture_via_dialog)
+        self._record_action = act(
+            "puppet_record", "Record…", self._toggle_recording, checkable=True)
+        self._motion_record_toggle = act(
+            "puppet_record_motion", "Record motion", self._toggle_motion_record,
+            checkable=True)
+        self._batch_export_action = act(
+            "puppet_batch_export", "Export all motions…", self._batch_export_via_dialog)
+        self._virtual_camera_toggle = act(
+            "puppet_virtual_camera", "Virtual camera", self._toggle_virtual_camera,
+            checkable=True)
+        self._ndi_toggle = act(
+            "puppet_ndi_output", "NDI output", self._toggle_ndi, checkable=True)
+        self._vts_toggle = act(
+            "puppet_vts_api", "VTS API", self._toggle_vts_api, checkable=True)
 
-        # Tools
-        self._validate_action = QAction(
-            lang.get("puppet_validate", "Validate"), self,
-        )
-        self._validate_action.triggered.connect(self._run_validator)
-        self._fit_action = QAction(
-            lang.get("puppet_fit_view", "Fit to Window"), self,
-        )
-        self._fit_action.triggered.connect(self._canvas_reset_view)
+    def _build_tool_actions(self) -> None:
+        """Validate, fit-to-window and reset-to-rest."""
+        act = self._action
+        self._validate_action = act("puppet_validate", "Validate", self._run_validator)
+        self._fit_action = act("puppet_fit_view", "Fit to Window", self._canvas_reset_view)
 
         # Reset-to-rest — single shortcut for "wipe every live-state
         # toggle, stop the motion player, clear expressions / pose
         # group overrides, and snap parameters back to their authored
         # defaults". Without this the rig stays frozen in whatever
         # pose the last motion finished on.
-        self._reset_action = QAction(
-            lang.get("puppet_reset_to_rest", "Reset to rest"), self,
-        )
-        self._reset_action.triggered.connect(self._reset_to_rest)
+        self._reset_action = act(
+            "puppet_reset_to_rest", "Reset to rest", self._reset_to_rest)
 
     def _build_menu_bar(self) -> QMenuBar:
         """Move every non-toggle (and the toggles themselves, for
