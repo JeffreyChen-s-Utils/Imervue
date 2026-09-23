@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-82 | 2026-09-23 | A hidden desktop pet no longer pops a speech bubble | #bugfix #desktop_pet | [2026-09](2026-09.md) |
 | U-20260923-81 | 2026-09-23 | Move the main window's widget builders into MainWindowLayoutMixin (#23) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-80 | 2026-09-23 | Move PetWindow's window-flag, opacity and fullscreen-hide code into a mixin (#23) | #refactor #desktop_pet | [2026-09](2026-09.md) |
 | U-20260923-79 | 2026-09-23 | Restore the app stylesheet between tests too | #tests #flaky | [2026-09](2026-09.md) |

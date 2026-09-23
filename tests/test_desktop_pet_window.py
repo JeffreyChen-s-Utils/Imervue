@@ -542,3 +542,58 @@ def test_fullscreen_state_hides_and_restores(qapp):
     finally:
         window.shutdown()
         window.deleteLater()
+
+
+def _bubble_visible(window: PetWindow) -> bool:
+    return window._speech is not None and window._speech.isVisible()
+
+
+def _close_bubble(window: PetWindow) -> None:
+    if window._speech is not None:
+        window._speech.close_bubble()
+        window._speech.deleteLater()
+
+
+def test_visible_pet_shows_its_speech_bubble(qapp):
+    window = PetWindow()
+    try:
+        window._speech_enabled = True
+        window.show()
+        window.speak("hello")
+        assert _bubble_visible(window)
+    finally:
+        _close_bubble(window)
+        window.shutdown()
+        window.deleteLater()
+
+
+def test_hidden_pet_does_not_pop_a_speech_bubble(qapp):
+    """Webhook / notification / speak-now lines keep arriving while the pet is hidden."""
+    window = PetWindow()
+    try:
+        window._speech_enabled = True
+        window.speak("never shown")
+        assert not _bubble_visible(window)
+        window.show()
+        window.speak("hello")
+        window.hide()
+        window.speak("after hide")
+        assert not _bubble_visible(window)
+    finally:
+        _close_bubble(window)
+        window.shutdown()
+        window.deleteLater()
+
+
+def test_pet_hidden_by_fullscreen_stays_silent(qapp):
+    window = PetWindow()
+    try:
+        window._speech_enabled = True
+        window.show()
+        window._on_fullscreen_state_changed(True)
+        window.speak_notification("New message")
+        assert not _bubble_visible(window)
+    finally:
+        _close_bubble(window)
+        window.shutdown()
+        window.deleteLater()

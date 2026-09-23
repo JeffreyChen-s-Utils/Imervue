@@ -707,8 +707,11 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
     def speech_enabled(self) -> bool:
         return self._speech_enabled
 
-    def _show_speech(self, text: str) -> None:   # pragma: no cover - Qt UI
-        if not self._speech_enabled or not text:
+    def _show_speech(self, text: str) -> None:
+        # Webhook, notification and hotkey lines keep arriving while the pet is
+        # hidden (hotkey, tray, hide-on-fullscreen); a bubble then would float
+        # alone over whatever the pet was hidden for.
+        if not self._speech_enabled or not text or not self.isVisible():
             return
         if self._speech is None:
             self._speech = SpeechBubble()
