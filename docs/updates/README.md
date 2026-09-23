@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-48 | 2026-09-23 | Split CompareDialog's constructor by panel and tab | #done #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-47 | 2026-09-23 | Share the manga config dialogs' controls | #done #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-46 | 2026-09-23 | Split the annotation editor's constructor and menu bar | #done #refactor #gui #annotation | [2026-09](2026-09.md) |
 | U-20260923-45 | 2026-09-23 | Build the last four path rows from dialog_rows; #20 closed | #done #refactor #gui | [2026-09](2026-09.md) |

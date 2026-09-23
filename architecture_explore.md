@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `e9ce354` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `aa1c802` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 770 | 126,921 |
+| `tests/` | 771 | 127,075 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,922 |
 | `Imervue/gui/` | 159 | 32,447 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,767 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,779 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,196 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,571** | **301,094** |
+| **總計** | **1,572** | **301,260** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,784 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,796 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -462,7 +462,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `delete.py` | 222 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 209 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚 |
 | `batch_ops.py` | 307 | 批次重新命名 / 移動 / 複製 / 旋轉 |
-| `compare_dialog.py` | 570 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
+| `compare_dialog.py` | 581 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 212 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 240 | GIF / APNG / Animated WebP 播放器 |
 | `search_dialog.py` | 281 | 檔名即時搜尋 |
@@ -947,7 +947,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-770 個檔、126,921 行。`pyproject.toml` 定義三個互斥層級 marker：
+771 個檔、127,075 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
