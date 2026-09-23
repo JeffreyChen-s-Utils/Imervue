@@ -115,3 +115,69 @@ def test_load_library_raises_with_actionable_message(tmp_path, monkeypatch):
     monkeypatch.delenv(LIBRARY_ENV_VAR, raising=False)
     with pytest.raises(CubismBridgeError, match="<cwd>/sdk/"):
         load_library()
+
+
+# ---------------------------------------------------------------------------
+# ctypes signatures: every exported function's restype / argtypes, generated
+# before ``_bind_signatures`` became table-driven.
+# ---------------------------------------------------------------------------
+
+_EXPECTED_SIGNATURES = {'csmGetDrawableBlendModes': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableConstantFlags': ("<class 'ctypes.LP_c_ubyte'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableCount': ("<class 'ctypes.c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableDrawOrders': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableDynamicFlags': ("<class 'ctypes.LP_c_ubyte'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableIds': ("<class 'ctypes.LP_c_char_p'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableIndexCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableIndices': ("<class 'ctypes.LP_LP_c_ushort'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableMaskCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableMasks': ("<class 'ctypes.LP_LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableOpacities': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableTextureIndices': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableVertexCounts': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableVertexPositions': ("<class 'ctypes.LP_LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetDrawableVertexUvs': ("<class 'ctypes.LP_LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetMocVersion': ("<class 'ctypes.c_ulong'>",
+                      ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
+ 'csmGetParameterCount': ("<class 'ctypes.c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetParameterDefaultValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetParameterIds': ("<class 'ctypes.LP_c_char_p'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetParameterMaximumValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetParameterMinimumValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetParameterValues': ("<class 'ctypes.LP_c_float'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetRenderOrders': ("<class 'ctypes.LP_c_long'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetSizeofModel': ("<class 'ctypes.c_ulong'>", ["<class 'ctypes.c_void_p'>"]),
+ 'csmGetVersion': ("<class 'ctypes.c_ulong'>", []),
+ 'csmHasMocConsistency': ("<class 'ctypes.c_long'>",
+                          ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
+ 'csmInitializeModelInPlace': ("<class 'ctypes.c_void_p'>",
+                               ["<class 'ctypes.c_void_p'>",
+                                "<class 'ctypes.c_void_p'>",
+                                "<class 'ctypes.c_ulong'>"]),
+ 'csmReadCanvasInfo': ('None',
+                       ["<class 'ctypes.c_void_p'>",
+                        "<class 'ctypes.LP_c_float_Array_2'>",
+                        "<class 'ctypes.LP_c_float_Array_2'>",
+                        "<class 'ctypes.LP_c_float'>"]),
+ 'csmReviveMocInPlace': ("<class 'ctypes.c_void_p'>",
+                         ["<class 'ctypes.c_void_p'>", "<class 'ctypes.c_ulong'>"]),
+ 'csmUpdateModel': ('None', ["<class 'ctypes.c_void_p'>"])}
+
+
+def test_bind_signatures_declares_every_function_exactly():
+    from Imervue.puppet import cubism_native_bridge as bridge
+
+    class _Fn:
+        pass
+
+    class _Lib:
+        def __getattr__(self, name):
+            fn = _Fn()
+            object.__setattr__(self, name, fn)
+            return fn
+
+    lib = _Lib()
+    bridge._bind_signatures(lib)  # noqa: SLF001
+    actual = {name: (repr(fn.restype), [repr(a) for a in fn.argtypes])
+              for name, fn in sorted(vars(lib).items())}
+    assert actual == _EXPECTED_SIGNATURES
