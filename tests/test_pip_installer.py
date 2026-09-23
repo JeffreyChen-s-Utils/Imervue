@@ -189,3 +189,24 @@ def test_verify_python_does_not_swallow_unexpected_errors(monkeypatch):
     monkeypatch.setattr(pip_installer.subprocess, "run", run)
     with pytest.raises(RuntimeError):
         pip_installer._verify_python("C:/py/python.exe")  # noqa: SLF001
+
+
+def test_import_worker_logs_a_failing_import_and_imports_the_rest(qapp, caplog, monkeypatch):
+    imported: list[str] = []
+
+    def fake_import(name):
+        if name == "broken_pkg":
+            raise RuntimeError("package init failed")
+        imported.append(name)
+
+    monkeypatch.setattr(pip_installer.importlib, "import_module", fake_import)
+    worker = pip_installer._ImportWorker(["broken_pkg", "fine_pkg"])
+    done: list[bool] = []
+    worker.result_ready.connect(lambda: done.append(True))
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        worker.run()
+    assert imported == ["fine_pkg"]
+    assert done == [True]
+    (record,) = [r for r in caplog.records if "Best-effort" in r.getMessage()]
+    assert "import the installed package broken_pkg" in record.getMessage()
+    assert record.exc_info[0] is RuntimeError

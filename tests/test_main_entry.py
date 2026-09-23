@@ -61,3 +61,44 @@ def test_parse_args_reads_flags_and_file(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["Imervue", "--debug", "--software_opengl", "a.png"])
     args = entry.parse_args()
     assert (args.debug, args.software_opengl, args.file) == (True, True, "a.png")
+
+
+class _Stream:
+    def __init__(self, error=None):
+        self.error = error
+        self.calls: list[dict] = []
+
+    def reconfigure(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+
+
+def test_force_utf8_streams_reconfigures_both(monkeypatch):
+    out, err = _Stream(), _Stream()
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+    entry._force_utf8_streams()
+    assert out.calls == err.calls == [{"encoding": "utf-8", "errors": "replace"}]
+
+
+@pytest.mark.parametrize("error", [ValueError("I/O operation on closed file"),
+                                   OSError("not reconfigurable")])
+def test_force_utf8_streams_skips_a_stream_that_refuses(monkeypatch, error):
+    out, err = _Stream(error), _Stream()
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+    entry._force_utf8_streams()
+    assert len(err.calls) == 1   # the second stream is still switched
+
+
+def test_force_utf8_streams_skips_missing_and_plain_streams(monkeypatch):
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", object())   # no reconfigure
+    entry._force_utf8_streams()                     # must not raise
+
+
+def test_force_utf8_streams_propagates_an_unexpected_error(monkeypatch):
+    monkeypatch.setattr(sys, "stdout", _Stream(TypeError("bad keyword")))
+    with pytest.raises(TypeError):
+        entry._force_utf8_streams()

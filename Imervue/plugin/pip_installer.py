@@ -26,8 +26,6 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request
 
-import contextlib
-
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -52,6 +50,7 @@ from Imervue.system.app_paths import (
     is_frozen as _is_frozen,
     ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
 )
+from Imervue.system.best_effort import best_effort
 
 
 def _https_urlopen(req: Request, timeout: int):
@@ -354,7 +353,8 @@ class _ImportWorker(QThread):
 
     def run(self):
         for name in self._names:
-            with contextlib.suppress(Exception):
+            # A freshly installed package can fail at import time in any way.
+            with best_effort(f"import the installed package {name}", logger):
                 importlib.import_module(name)
         self.result_ready.emit()
 

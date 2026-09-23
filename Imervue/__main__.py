@@ -14,15 +14,27 @@ if "__compiled__" in dir() or getattr(sys, "frozen", False):
     except ImportError:
         pass
 
+
+def _force_utf8_streams() -> None:
+    """Switch stdout / stderr to UTF-8 so CJK text is not printed as ``?``.
+
+    A missing stream (windowed build) or one without ``reconfigure`` is skipped.
+    A stream that is closed or not reconfigurable raises ``ValueError`` or
+    ``io.UnsupportedOperation`` (an ``OSError``) and keeps its encoding; this
+    runs before logging is configured, so there is nowhere to report it.
+    """
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream and hasattr(stream, "reconfigure"):
+            with contextlib.suppress(OSError, ValueError):
+                stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 # 確保 Windows 上所有 I/O 使用 UTF-8，避免 CJK 文字顯示為 ?
 if sys.platform == "win32":
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
     os.environ.setdefault("PYTHONUTF8", "1")
-    for stream_name in ("stdout", "stderr"):
-        stream = getattr(sys, stream_name, None)
-        if stream and hasattr(stream, "reconfigure"):
-            with contextlib.suppress(Exception):
-                stream.reconfigure(encoding="utf-8", errors="replace")
+    _force_utf8_streams()
 
 
 def _set_windows_app_user_model_id() -> None:
