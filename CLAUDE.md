@@ -126,6 +126,9 @@ Rules the tools do **not** catch, which still apply:
   (`GLError`, `IMAGE_READ_ERRORS`, `sqlite3.Error`, `OSError`), or use
   `Imervue.system.best_effort.best_effort("step", logger)` to carry on and log the traceback. A
   worker boundary that must always emit catches the expected errors first, then logs the rest.
+- **Never unpickle a file** — bandit flags `pickle` and `yaml.load`; `tests/test_no_unsafe_deserialization.py`
+  also rejects `np.load(..., allow_pickle=True)` and a `torch.load` without `weights_only=True`.
+  Store strings as JSON bytes or fixed-width arrays instead of object arrays.
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
   repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
   flag both; ruff does not.
