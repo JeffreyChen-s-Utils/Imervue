@@ -249,6 +249,28 @@ def test_e2e_trigger_emits_signal(qapp, running_receiver):
     assert captured == [("Wave", "")]
 
 
+def test_e2e_web_page_origin_is_refused(qapp, running_receiver):
+    receiver, port = running_receiver
+    captured: list = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    status, body = _post_json(port, "/trigger", {"speech": "call this number"},
+                              headers={"Origin": "https://evil.example"})
+    assert status == 403
+    assert json.loads(body) == {"error": "forbidden origin"}
+    qapp.processEvents()
+    assert captured == []
+
+
+def test_e2e_local_origin_is_accepted(qapp, running_receiver):
+    receiver, port = running_receiver
+    captured: list = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    status, _ = _post_json(port, "/trigger", {"group": "Wave"},
+                           headers={"Origin": "http://localhost:5173"})
+    assert status == 200
+    assert _wait_for(qapp, lambda: bool(captured))
+
+
 def test_e2e_invalid_path_returns_404(qapp, running_receiver):
     _, port = running_receiver
     status, _ = _post_json(port, "/wrong", {"group": "Wave"})

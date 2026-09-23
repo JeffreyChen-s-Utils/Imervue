@@ -27,6 +27,11 @@ Security stance:
   must carry ``Authorization: Bearer <token>``; mismatched / empty
   tokens get a 401. When the persisted token is empty, auth is
   off — fine for purely local use, recommended on shared machines.
+* Loopback does not keep out web pages: a browser lets any site POST to
+  localhost, and with the default empty token that would let it drive the
+  pet. A request whose ``Origin`` is a remote web site gets a 403
+  (:mod:`Imervue.system.local_origin`); curl, Stream Deck and other native
+  clients send no ``Origin``.
 """
 from __future__ import annotations
 
@@ -39,6 +44,8 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from PySide6.QtCore import QObject, Signal
+
+from Imervue.system.local_origin import is_allowed_origin
 
 logger = logging.getLogger("Imervue.desktop_pet.webhook_server")
 
@@ -181,6 +188,9 @@ class _WebhookHandler(BaseHTTPRequestHandler):
         receiver = getattr(self.server, "receiver", None)
         if receiver is None or self.path != "/trigger":
             self._reject(404, "not found")
+            return
+        if not is_allowed_origin(self.headers.get("Origin")):
+            self._reject(403, "forbidden origin")
             return
         if not self._check_auth(receiver):
             self._reject(401, "unauthorized")

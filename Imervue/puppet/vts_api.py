@@ -29,20 +29,21 @@ The auto-issued token grants full parameter-write access — this is
 a developer puppet plugin, not a public service. Binding to localhost
 does not keep out web pages: a browser lets any site open a WebSocket to
 ``127.0.0.1``, so connections whose ``Origin`` is a remote ``http(s)``
-site are refused (see :func:`is_allowed_origin`). Messages are capped at
+site are refused (see :mod:`Imervue.system.local_origin`). Messages are capped at
 :data:`MAX_MESSAGE_BYTES`.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import secrets
 import time
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
 
 from PySide6.QtCore import QObject, Signal
-import contextlib
+
+from Imervue.system.local_origin import is_allowed_origin
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -56,23 +57,6 @@ API_VERSION: str = "1.0"
 _NOT_AUTHENTICATED_MSG: str = "not authenticated"
 # Parameter injection sends a few dozen floats; nothing legitimate comes close.
 MAX_MESSAGE_BYTES: int = 1024 * 1024
-_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
-
-
-def is_allowed_origin(origin: str) -> bool:
-    """Whether a WebSocket client with this ``Origin`` header may connect.
-
-    Native trackers send no ``Origin``; pages opened from disk send ``null``
-    or ``file://``; a tracker served locally has a localhost origin. A web
-    page on any other ``http(s)`` host is refused, since a browser would
-    otherwise let every site the user visits drive the puppet.
-    """
-    if not origin or origin == "null":
-        return True
-    parts = urlsplit(origin)
-    if parts.scheme.lower() not in ("http", "https"):
-        return True
-    return (parts.hostname or "").lower() in _LOCAL_HOSTS
 
 
 class VTubeStudioHandler:

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-44 | 2026-09-24 | Refuse web-page requests to the desktop pet's webhook | #fix #security #desktop_pet | [2026-09](2026-09.md) |
 | U-20260924-43 | 2026-09-24 | Keep web pages out of the puppet's VTube Studio API | #fix #security #puppet | [2026-09](2026-09.md) |
 | U-20260924-42 | 2026-09-24 | Refuse puppet archives that expand past 2 GiB | #fix #security #puppet | [2026-09](2026-09.md) |
 | U-20260924-41 | 2026-09-24 | Refuse plugin and file names that could leave the plugins folder | #fix #security #plugin | [2026-09](2026-09.md) |

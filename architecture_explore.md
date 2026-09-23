@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `097c42e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `aaa2103` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 819 | 134,362 |
+| `tests/` | 820 | 134,456 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,821 |
-| `Imervue/puppet/` | 57 | 15,270 |
+| `Imervue/puppet/` | 57 | 15,254 |
 | `Imervue/image/` | 113 | 12,888 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
 | `Imervue/multi_language/` | 8 | 11,304 |
-| `Imervue/desktop_pet/` | 34 | 8,243 |
+| `Imervue/desktop_pet/` | 34 | 8,253 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
 | `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,207 |
-| `Imervue/system/` | 19 | 1,993 |
+| `Imervue/system/` | 20 | 2,021 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,196 |
-| **總計** | **1,633** | **309,073** |
+| **總計** | **1,635** | **309,189** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,515 行。
+其中 `Imervue/` 套件本身 751 檔 / 160,537 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -230,6 +230,7 @@ ImervueMainWindow
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `file_manager.py` | 40 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`、macOS `open [-R]`、Linux `xdg-open`）；檔案樹、右鍵選單、外掛選單共用 |
 | `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
+| `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
 | `trash_ops.py` | 210 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
@@ -775,7 +776,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,270 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,254 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -831,13 +832,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `recorder.py`(199) 幀擷取 · `batch_export.py`(185) 每個 motion 匯出成 MP4/GIF/WebM ·
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
-`vts_api.py`(401) VTube Studio Public API server（最小子集）
+`vts_api.py`(385) VTube Studio Public API server（最小子集）
 
 `workspace.py`(850) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(286，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(360，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,243 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,253 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -873,7 +874,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 #### 外部整合
 
 `obs_event_hook.py`(195) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(277) Twitch 聊天關鍵字 ·
-`webhook_server.py`(313) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(293) Windows toast →
+`webhook_server.py`(323) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(293) Windows toast →
 `Notify` 動作 + 朗讀標題 · `hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
 `command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex）
 
@@ -958,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-819 個檔、134,362 行。`pyproject.toml` 定義三個互斥層級 marker：
+820 個檔、134,456 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
