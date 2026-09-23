@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.library import image_index
 
 logger = logging.getLogger("Imervue.library.auto_tag")
@@ -29,12 +30,12 @@ _DEFAULT_PROMPTS = (
 
 
 def classify_heuristic(path: str | Path) -> list[str]:
-    """Return coarse tags based on image stats. Never fails — returns [] on errors."""
+    """Return coarse tags based on image stats; ``[]`` for an image Pillow cannot read."""
     try:
         with Image.open(path) as im:
             small = im.convert("RGB").resize((64, 64), Image.Resampling.BILINEAR)
             arr = np.asarray(small, dtype=np.float32) / 255.0
-    except Exception:  # noqa: BLE001
+    except IMAGE_READ_ERRORS:
         return []
 
     # Saturation gives a cheap "photo vs document/screenshot" signal.

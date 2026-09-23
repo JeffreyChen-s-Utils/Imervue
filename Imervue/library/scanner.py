@@ -14,6 +14,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.library import image_index
 from Imervue.library.bloom_filter import BloomFilter, fingerprint
 from Imervue.library.phash import compute_phash
@@ -92,7 +93,7 @@ def _index_one(
             from PIL import Image
             with Image.open(path) as im:
                 width, height = im.size
-        except Exception:  # noqa: BLE001, S110  # nosec B110 - size nice-to-have; skip PIL failure
+        except IMAGE_READ_ERRORS:   # size is optional; an unreadable file is indexed without it
             pass
     phash = compute_phash(path) if with_phash else None
     image_index.upsert_image(

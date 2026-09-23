@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `9ee019c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `617dc2f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 810 | 132,888 |
+| `tests/` | 810 | 133,018 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
 | `Imervue/gui/` | 161 | 32,798 |
 | `Imervue/puppet/` | 57 | 15,222 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,622** | **307,656** |
+| **總計** | **1,622** | **307,786** |
 
 其中 `Imervue/` 套件本身 750 檔 / 160,378 行。
 
@@ -488,13 +488,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `image_index.py` | 672 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
-| `scanner.py` | 177 | 背景掃描器，走訪 library roots 填索引 |
+| `scanner.py` | 178 | 背景掃描器，走訪 library roots 填索引 |
 | `maintenance.py` | 54 | 索引與檔案系統對帳 |
 | `smart_album.py` | 348 | Smart Albums：保存查詢並重新套用 |
 | `search_query.py` | 215 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
 | `clip_search.py` | 364 | CLIP 語意搜尋（「找出符合這句話的照片」） |
-| `auto_tag.py` | 110 | 啟發式內容分類 + 選用 CLIP ONNX |
+| `auto_tag.py` | 111 | 啟發式內容分類 + 選用 CLIP ONNX |
 | `phash.py` | 83 | 64-bit DCT pHash |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
@@ -513,11 +513,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `keyword_vocabulary_store.py` | 44 | 詞彙的設定檔儲存 |
 | `tag_relations.py` | 49 | 標籤共現 → 相關標籤建議 |
 | `metadata_audit.py` | 40 | 找出中繼資料不完整的圖片 |
-| `metadata_export.py` | 128 | 中繼資料 CSV / JSON 匯出 |
+| `metadata_export.py` | 131 | 中繼資料 CSV / JSON 匯出 |
 | `collection_stats.py` | 81 | 集合的評分/收藏/色標籤/挑片統計 |
 | `reference_pins.py` | 95 | 釘選參考圖籃子 |
-| `staging_tray.py` | 119 | 跨資料夾選取籃 |
-| `token_rename.py` | 196 | Token 式批次改名 |
+| `staging_tray.py` | 124 | 跨資料夾選取籃 |
+| `token_rename.py` | 198 | Token 式批次改名 |
 
 ### 6.12 `Imervue/gui/`
 
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-810 個檔、132,888 行。`pyproject.toml` 定義三個互斥層級 marker：
+810 個檔、133,018 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

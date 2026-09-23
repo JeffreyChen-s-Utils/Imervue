@@ -128,3 +128,46 @@ class TestCoerceValue:
     def test_scalar_passthrough(self):
         assert metadata_export._coerce_value(42) == 42
         assert metadata_export._coerce_value("hi") == "hi"
+
+
+class TestFailureHandling:
+    def test_unreadable_image_keeps_the_row_without_image_fields(self, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not an image")
+        [rec] = metadata_export.build_records([str(bad)])
+        assert rec["path"] == str(bad)
+        assert "width" not in rec
+
+    def test_corrupt_rating_is_logged_and_skipped(self, png_file, monkeypatch, caplog):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        monkeypatch.setitem(user_setting_dict, "image_ratings", {png_file: "five"})
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            [rec] = metadata_export.build_records([png_file])
+        assert rec["width"] == 18
+        assert "rating" not in rec
+        assert any("user fields" in r.getMessage() and r.exc_info[0] is ValueError
+                   for r in caplog.records)
+
+    def test_library_index_failure_is_logged_and_skipped(self, png_file, monkeypatch, caplog):
+        import sqlite3
+
+        def locked(_path):
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(image_index, "get_note", locked)
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            [rec] = metadata_export.build_records([png_file])
+        assert "note" not in rec
+        assert any("library fields" in r.getMessage()
+                   and r.exc_info[0] is sqlite3.OperationalError for r in caplog.records)
+
+    def test_unexpected_index_error_propagates(self, png_file, monkeypatch):
+        def broken(_path):
+            raise RuntimeError("index bug")
+
+        monkeypatch.setattr(image_index, "get_note", broken)
+        with pytest.raises(RuntimeError, match="index bug"):
+            metadata_export.build_records([png_file])
+
+    def test_bytes_values_decode_with_replacement(self):
+        assert metadata_export._coerce_value(b"Canon\xff") == "Canon\ufffd"

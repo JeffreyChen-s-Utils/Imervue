@@ -109,3 +109,18 @@ class TestAutoTagBatch:
     def test_results_map_has_one_entry_per_path(self, colourful_photo, white_page):
         results = auto_tag.auto_tag_batch([colourful_photo, white_page])
         assert set(results.keys()) == {colourful_photo, white_page}
+
+
+def test_heuristic_returns_nothing_for_an_unreadable_file(tmp_path):
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"not an image")
+    assert auto_tag.classify_heuristic(bad) == []
+
+
+def test_heuristic_propagates_an_unexpected_error(tmp_path, monkeypatch):
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(auto_tag.Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        auto_tag.classify_heuristic(tmp_path / "x.png")

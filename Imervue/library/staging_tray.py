@@ -6,6 +6,7 @@ treat the tray as an ordered, de-duplicated list of absolute paths.
 """
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from collections.abc import Iterable
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from Imervue.image.batch_move_planner import resolve_name_collision
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
+
+logger = logging.getLogger("Imervue.library.staging_tray")
 
 
 def _tray() -> list[str]:
@@ -108,7 +111,9 @@ def _apply_file_op(dest: str, *, move: bool) -> tuple[int, int]:
             else:
                 shutil.copy2(src, str(target))
             ok += 1
-        except Exception:  # noqa: BLE001
+        except OSError:
+            logger.warning("Could not %s %s to %s", "move" if move else "copy", src, target,
+                           exc_info=True)
             failed += 1
     if move and moved_paths:
         tray = _tray()

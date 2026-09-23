@@ -151,3 +151,24 @@ class TestScanWithPhash:
             row = image_index.get_image(p)
             assert row is not None
             assert row["phash"] is not None
+
+
+def test_index_one_indexes_an_unreadable_file_without_size(tmp_path):
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"not an image")
+    assert scanner._index_one(bad, with_phash=True) is True
+    row = image_index.get_image(str(bad))
+    assert row is not None
+    assert row["width"] is None
+
+
+def test_index_one_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
+    img = tmp_path / "a.png"
+    Image.new("RGB", (4, 4)).save(img)
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        scanner._index_one(img, with_phash=True)

@@ -113,3 +113,17 @@ class TestNameCollisions:
         assert (ok, failed) == (2, 0)
         assert sorted(p.read_text() for p in dest.iterdir()) == ["A", "B"]
         assert staging_tray.count() == 0
+
+
+class TestFailedOps:
+    def test_failed_copy_is_counted_and_logged(self, tmp_path, caplog):
+        ghost = tmp_path / "gone.txt"
+        staging_tray.add(str(ghost))
+        dest = tmp_path / "dest"
+        dest.mkdir()
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            ok, failed = staging_tray.copy_all(str(dest))
+        assert (ok, failed) == (0, 1)
+        (record,) = caplog.records
+        assert "Could not copy" in record.getMessage()
+        assert isinstance(record.exc_info[1], OSError)

@@ -13,6 +13,7 @@ from PIL import Image
 from Imervue.library.token_rename import (
     _EPOCH,
     _apply_string_format,
+    _gather_metadata,
     _safe_fromtimestamp,
     apply_plan,
     preview,
@@ -156,3 +157,39 @@ class TestApplyStringFormat:
         assert failed == 2
         survivors = os.listdir(Path(three_images[0]).parent)
         assert "same.png" in survivors
+
+
+def test_metadata_of_an_unreadable_file_falls_back(tmp_path):
+    bad = tmp_path / "bad.jpg"
+    bad.write_bytes(b"not an image")
+    meta = _gather_metadata(str(bad), 1)
+    assert (meta["wxh"], meta["camera"]) == ("0x0", "")
+
+
+def test_metadata_ignores_a_non_text_camera_tag(tmp_path, monkeypatch):
+    from Imervue.library import token_rename
+
+    path = tmp_path / "a.jpg"
+    _make_image(path, 8, 6)
+    real_open = token_rename.Image.open
+
+    def open_with_numeric_make(*args, **kwargs):
+        img = real_open(*args, **kwargs)
+        img.getexif = lambda: {271: 5, 272: "EOS"}
+        return img
+
+    monkeypatch.setattr(token_rename.Image, "open", open_with_numeric_make)
+    meta = _gather_metadata(str(path), 1)
+    assert meta["wxh"] == "8x6"
+    assert meta["camera"] == ""
+
+
+def test_metadata_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
+    from Imervue.library import token_rename
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(token_rename.Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        _gather_metadata(str(tmp_path / "a.jpg"), 1)
