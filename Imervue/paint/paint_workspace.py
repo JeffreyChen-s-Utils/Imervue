@@ -51,6 +51,7 @@ from Imervue.paint.workspace_docks import DockBuilder, DockLayoutMixin
 from Imervue.paint.workspace_shortcuts import ShortcutMixin
 from Imervue.paint.workspace_status import StatusLineMixin
 from Imervue.paint.workspace_tabs import TabManagerMixin
+from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -280,7 +281,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         import contextlib
         # Stop the autosave timer so a queued tick can't fire on the torn-down
         # canvas after close.
-        with contextlib.suppress(Exception):
+        with best_effort("stop the autosave timer", logger):
             self.stop_autosave()
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()

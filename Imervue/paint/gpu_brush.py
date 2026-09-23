@@ -67,12 +67,13 @@ predicates, factory dispatch with stub sessions) is exercised in
 """
 from __future__ import annotations
 
-import contextlib
 import ctypes
 import logging
 from dataclasses import dataclass
 
 import numpy as np
+
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.paint.gpu_brush")
 
@@ -568,7 +569,7 @@ def _cache_program(ctx, key: int, sp: _ShaderProgram) -> None:
     _PROGRAM_CACHE[key] = sp
     signal = getattr(ctx, "aboutToBeDestroyed", None)
     if signal is not None:
-        with contextlib.suppress(Exception):
+        with best_effort("evict the brush shader when its GL context goes away", logger):
             signal.connect(lambda: _PROGRAM_CACHE.pop(key, None))
 
 

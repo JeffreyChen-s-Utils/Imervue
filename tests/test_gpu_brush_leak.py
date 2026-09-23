@@ -100,6 +100,21 @@ def test_program_cache_tolerates_context_without_signal():
     gpu_brush._PROGRAM_CACHE.pop(4243, None)
 
 
+def test_program_cache_logs_a_signal_that_cannot_be_wired(caplog):
+    # The program is still cached; the failed wiring is logged, not hidden.
+    def refuse(_slot):
+        raise RuntimeError("Internal C++ object already deleted")
+
+    ctx = SimpleNamespace(aboutToBeDestroyed=SimpleNamespace(connect=refuse))
+    sentinel = object()
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        gpu_brush._cache_program(ctx, 4244, sentinel)
+    assert gpu_brush._PROGRAM_CACHE.pop(4244) is sentinel
+    (record,) = caplog.records
+    assert "evict the brush shader" in record.getMessage()
+    assert record.exc_info[0] is RuntimeError
+
+
 def test_brush_tool_cancel_disposes_every_active_stroke():
     disposed: list[str] = []
     s1 = SimpleNamespace(dispose=lambda: disposed.append("s1"))

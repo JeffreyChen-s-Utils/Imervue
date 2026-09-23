@@ -97,3 +97,16 @@ def test_close_discarded_proceeds(workspace, monkeypatch):
     evt = _close_event()
     workspace.closeEvent(evt)
     assert evt.isAccepted() is True
+
+
+def test_close_logs_a_failing_autosave_stop_and_still_closes(workspace, monkeypatch, caplog):
+    def broken():
+        raise RuntimeError("timer already deleted")
+
+    monkeypatch.setattr(workspace, "stop_autosave", broken)
+    evt = _close_event()
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        workspace.closeEvent(evt)
+    assert evt.isAccepted() is True
+    logged = [r for r in caplog.records if "stop the autosave timer" in r.getMessage()]
+    assert len(logged) == 1 and logged[0].exc_info[0] is RuntimeError

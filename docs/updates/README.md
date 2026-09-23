@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-22 | 2026-09-24 | Narrow or log the paint/ suppressed failures (#25) | #refactor #error-handling #paint | [2026-09](2026-09.md) |
 | U-20260924-21 | 2026-09-24 | Narrow or log the image/ suppressed failures (#25) | #refactor #error-handling #image | [2026-09](2026-09.md) |
 | U-20260924-20 | 2026-09-24 | Log desktop-pet shutdown failures instead of suppressing them (#25) | #refactor #error-handling #desktop_pet | [2026-09](2026-09.md) |
 | U-20260924-19 | 2026-09-24 | Stop gpu_image_view/ swallowing failures silently (#25) | #refactor #error-handling #gpu_image_view | [2026-09](2026-09.md) |

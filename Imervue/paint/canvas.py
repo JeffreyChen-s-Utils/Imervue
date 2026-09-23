@@ -559,7 +559,9 @@ class PaintCanvas(
         # no other free path.
         if self._onion_skin_texture is not None:
             import contextlib
-            with self._current_gl_context(), contextlib.suppress(Exception):
+
+            from OpenGL.error import GLError
+            with self._current_gl_context(), contextlib.suppress(GLError):   # context already gone
                 glDeleteTextures(1, [self._onion_skin_texture])
         self._onion_skin_source = callable_or_none
         self._onion_skin_texture = None   # force re-upload of new buffers

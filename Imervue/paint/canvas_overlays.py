@@ -529,7 +529,9 @@ class PaintCanvasOverlaysMixin:
         if self._grid_vbo is None:
             return
         import contextlib
-        with contextlib.suppress(Exception):
+
+        from OpenGL.error import GLError
+        with contextlib.suppress(GLError):   # context already gone
             glDeleteBuffers(1, [self._grid_vbo])
         self._grid_vbo = None
         self._grid_vbo_size = None
