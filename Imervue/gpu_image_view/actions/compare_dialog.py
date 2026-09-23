@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QTabWidget, QSlider, QMessageBox,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -271,7 +272,7 @@ def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
                     Image.Resampling.LANCZOS,
                 )
             return np.asarray(im, dtype=np.uint8)
-    except Exception:
+    except IMAGE_READ_ERRORS:
         return None
 
 

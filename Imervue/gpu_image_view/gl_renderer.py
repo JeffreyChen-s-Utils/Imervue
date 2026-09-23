@@ -45,6 +45,7 @@ from OpenGL.GL import (
     glVertexAttribPointer,
 )
 from OpenGL.GL import shaders as gl_shaders
+from OpenGL.error import GLError
 
 logger = logging.getLogger("Imervue.gl_renderer")
 
@@ -207,11 +208,15 @@ class GLRenderer:
                     self._max_anisotropy = min(max_aniso, 8.0)
                 else:
                     self._max_anisotropy = 0
-            except Exception:
+            except GLError:
+                # GL_MAX_TEXTURE_MAX_ANISOTROPY is an extension enum; without it
+                # glGetFloatv raises GL_INVALID_ENUM.
                 self._max_anisotropy = 0
 
-        except Exception as e:
-            logger.warning(f"Shader init failed, using immediate mode: {e}")
+        # Any driver failure while compiling or linking must fall back to
+        # immediate mode rather than leave the viewer unable to draw.
+        except Exception as e:  # noqa: BLE001 - any driver failure falls back
+            logger.warning(f"Shader init failed, using immediate mode: {e}", exc_info=True)
             self.use_shaders = False
 
     def set_ortho(self, w: float, h: float):

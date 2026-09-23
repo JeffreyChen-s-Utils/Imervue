@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `e6d6e71` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `ff6a5e3` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 783 | 128,530 |
+| `tests/` | 786 | 128,824 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,484 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,779 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,799 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,195 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,586** | **302,895** |
+| **總計** | **1,589** | **303,209** |
 
-其中 `Imervue/` 套件本身 741 檔 / 159,976 行。
+其中 `Imervue/` 套件本身 741 檔 / 159,996 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -400,7 +400,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 113 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
-| `gl_renderer.py` | 342 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
+| `gl_renderer.py` | 346 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
 | `tile_grid_renderer.py` | 280 | 縮圖牆 GL 繪製 |
 | `deep_zoom_renderer.py` | 281 | Deep-zoom 圖磚 + minimap GL 繪製 |
 | `overlay_painter.py` | 963 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、badge、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`） |
@@ -453,7 +453,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `image_loader.py` | 486 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口 |
-| `load_thumbnail_worker.py` | 166 | 單張縮圖解碼 `QRunnable` |
+| `load_thumbnail_worker.py` | 167 | 單張縮圖解碼 `QRunnable` |
 | `image_model.py` | 25 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 179 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
 
@@ -463,10 +463,10 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `delete.py` | 222 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 209 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚 |
-| `batch_ops.py` | 307 | 批次重新命名 / 移動 / 複製 / 旋轉 |
-| `compare_dialog.py` | 581 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
+| `batch_ops.py` | 311 | 批次重新命名 / 移動 / 複製 / 旋轉 |
+| `compare_dialog.py` | 582 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 212 | 幻燈片播放控制器 + 對話框 |
-| `animation_player.py` | 240 | GIF / APNG / Animated WebP 播放器 |
+| `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
 | `search_dialog.py` | 281 | 檔名即時搜尋 |
 | `goto_dialog.py` | 103 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 304 | 鍵盤快捷動作實作 |
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-783 個檔、128,530 行。`pyproject.toml` 定義三個互斥層級 marker：
+786 個檔、128,824 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

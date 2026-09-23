@@ -139,7 +139,9 @@ class LoadThumbnailWorker(QRunnable):
                 else:
                     raise ValueError("No valid embedded preview")
 
-            except Exception:
+            # No or unsupported embedded preview (LibRawError), or one that
+            # does not decode (OSError / ValueError from imageio).
+            except (rawpy.LibRawError, OSError, ValueError):
                 # fallback: 用 half_size 降低記憶體
                 img_data = raw.postprocess(
                     half_size=(self.size is not None),

@@ -93,3 +93,31 @@ def test_sync_sbs_labels_propagates_to_other_labels_only(qapp):
     finally:
         source.deleteLater()
         other.deleteLater()
+
+
+class TestLoadRgbaArray:
+    def test_downscales_to_max_edge(self, tmp_path):
+        from PIL import Image
+
+        from Imervue.gpu_image_view.actions.compare_dialog import _load_rgba_array
+        path = tmp_path / "a.png"
+        Image.new("RGB", (40, 20)).save(path)
+        arr = _load_rgba_array(str(path), max_edge=10)
+        assert arr.shape == (5, 10, 4)
+
+    def test_unreadable_gives_none(self, tmp_path):
+        from Imervue.gpu_image_view.actions.compare_dialog import _load_rgba_array
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert _load_rgba_array(str(bad)) is None
+        assert _load_rgba_array(str(tmp_path / "gone.png")) is None
+
+    def test_unexpected_error_propagates(self, monkeypatch):
+        from Imervue.gpu_image_view.actions import compare_dialog as mod
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            mod._load_rgba_array("x.png")

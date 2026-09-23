@@ -4,6 +4,7 @@ Batch operations — rename, move/copy, rotate for selected tiles.
 """
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,10 +15,13 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.batch_ops")
 
 
 # ===========================
@@ -267,7 +271,8 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
             # 清除快取
             main_gui.tile_cache.pop(path, None)
             rotated.append(path)
-        except Exception:
+        except IMAGE_READ_ERRORS:
+            logger.debug("Rotating %s failed", path, exc_info=True)
             failed += 1
     # Free the now-stale rotated textures under the GL context (with accounting).
     free_tile_textures(main_gui, rotated)

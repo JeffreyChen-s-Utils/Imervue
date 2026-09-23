@@ -125,7 +125,8 @@ def _send_to_trash(path: str) -> bool:
 
             shutil.move(path, str(dest))
             return True
-    except Exception:
+    except OSError:
+        # mkdir / write_text / move (shutil.Error is an OSError) on the fallback path.
         return False
 
 

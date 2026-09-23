@@ -12,6 +12,8 @@ import numpy as np
 from PIL import Image
 from PySide6.QtCore import QTimer
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
@@ -67,10 +69,14 @@ class AnimationPlayer:
         """載入所有動畫幀，回傳是否為動畫。"""
         try:
             img = Image.open(self.path)
-        except Exception as e:
+        except IMAGE_READ_ERRORS as e:
             logger.exception(f"Failed to open {self.path}: {e}")
             return False
+        with img:
+            return self._load_frames(img)
 
+    def _load_frames(self, img: Image.Image) -> bool:
+        """Decode every frame of the open *img*; ``False`` unless two or more decode."""
         n_frames = getattr(img, "n_frames", 1)
         if n_frames <= 1:
             return False
@@ -91,7 +97,7 @@ class AnimationPlayer:
                 self.durations.append(dur)
             except EOFError:
                 break
-            except Exception as e:
+            except IMAGE_READ_ERRORS as e:
                 logger.warning(f"Frame {i} failed: {e}")
                 break
 
@@ -233,7 +239,7 @@ def is_animated_file(path: str) -> bool:
     if ext not in ANIMATED_EXTS:
         return False
     try:
-        img = Image.open(path)
-        return getattr(img, "n_frames", 1) > 1
-    except Exception:
+        with Image.open(path) as img:
+            return getattr(img, "n_frames", 1) > 1
+    except IMAGE_READ_ERRORS:
         return False
