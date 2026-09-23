@@ -266,3 +266,23 @@ def test_indicator_tooltip_updates_after_refresh(qapp):
     finally:
         indicator.shutdown()
         indicator.deleteLater()
+
+
+def test_indicator_source_bug_propagates(qapp):
+    """Only a deleted viewer (RuntimeError) is expected; a bug in the source
+    is not hidden."""
+    calls = []
+
+    def buggy():
+        calls.append(True)
+        if len(calls) > 1:   # the constructor's priming refresh succeeds
+            raise KeyError("used_bytes")
+        return {}
+
+    indicator = MemoryPressureIndicator(source=buggy)
+    try:
+        with pytest.raises(KeyError):
+            indicator.refresh()
+    finally:
+        indicator.shutdown()
+        indicator.deleteLater()

@@ -178,7 +178,7 @@ class MemoryPressureIndicator(QWidget):
         manual request."""
         try:
             data = self._source() or {}
-        except Exception:   # noqa: BLE001 - source might be a stale view ref during shutdown
+        except RuntimeError:   # the source's viewer was already deleted during shutdown
             return
         self._used_bytes = int(data.get("used_bytes", 0))
         self._limit_bytes = int(data.get("limit_bytes", 0))

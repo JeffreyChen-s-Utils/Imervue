@@ -41,6 +41,14 @@ class TestBuildPreviewPixmap:
             _FakeGui(), str(tmp_path / "ghost.png"),
         ) is None
 
+    def test_unexpected_reader_error_propagates(self, sample_png, qapp, monkeypatch):
+        def broken(*_args, **_kwargs):
+            raise RuntimeError("reader bug")
+
+        monkeypatch.setattr(Image, "open", broken)
+        with pytest.raises(RuntimeError, match="reader bug"):
+            drag_out._build_preview_pixmap(_FakeGui(), sample_png)
+
     def test_scales_to_96_max_side(self, tmp_path, qapp):
         # Large source should be scaled down to at most 96 on the long edge.
         big = tmp_path / "big.png"

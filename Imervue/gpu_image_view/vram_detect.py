@@ -87,7 +87,9 @@ def _probe_gl_integer(enum: int) -> int:  # pragma: no cover - GL probe path
     """Read an integer (or first element of a vector) from glGetIntegerv."""
     try:
         val = glGetIntegerv(enum)
-    except Exception:  # noqa: BLE001 - any GL failure means "unsupported"
+    # GLError: no context or the driver rejects the enum; KeyError: PyOpenGL has
+    # no size entry for it ("Unknown specifier"). Both mean "unsupported".
+    except (GLError, KeyError):
         return 0
     if isinstance(val, list | tuple):
         return int(val[0]) if val else 0

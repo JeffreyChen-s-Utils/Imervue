@@ -59,6 +59,8 @@ def _build_preview_pixmap(_main_gui: GPUImageView, path: str) -> QPixmap | None:
     """Reuse the cached thumbnail if available; fall back to a plain rect."""
     from PIL import Image
     from PySide6.QtGui import QImage
+
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     try:
         with Image.open(path) as src:
             src.thumbnail((96, 96), Image.Resampling.LANCZOS)
@@ -66,5 +68,5 @@ def _build_preview_pixmap(_main_gui: GPUImageView, path: str) -> QPixmap | None:
             data = im.tobytes("raw", "RGBA")
             qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
             return QPixmap.fromImage(qimg.copy())
-    except Exception:  # noqa: BLE001
+    except IMAGE_READ_ERRORS:
         return None

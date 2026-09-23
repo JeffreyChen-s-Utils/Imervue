@@ -33,6 +33,7 @@ from OpenGL.GL import (
     glOrtho,
     glViewport,
 )
+from OpenGL.error import GLError
 from PySide6.QtCore import QThreadPool, QMutex
 from PySide6.QtGui import QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -323,7 +324,7 @@ class GPUImageView(
 
         try:
             glClear(GL_COLOR_BUFFER_BIT)
-        except Exception:   # noqa: BLE001 - GL context torn down
+        except GLError:   # GL context torn down
             painter.endNativePainting()
             return
 

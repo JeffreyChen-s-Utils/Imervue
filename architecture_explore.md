@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ffb27f4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ec9ce16` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 810 | 133,073 |
+| `tests/` | 811 | 133,173 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
 | `Imervue/gui/` | 161 | 32,805 |
 | `Imervue/puppet/` | 57 | 15,222 |
 | `Imervue/image/` | 113 | 12,874 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,240 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,622** | **307,848** |
+| **總計** | **1,623** | **307,953** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,385 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,390 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -398,7 +398,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 749 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `gpu_image_view.py` | 750 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
 | `view_state_init.py` | 274 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
 | `deep_zoom_loading.py` | 297 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
@@ -447,7 +447,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
 | `deep_zoom_priority.py` | 40 | 圖磚渲染優先權 |
 | `vram_budget.py` | 67 | 純函式：使用者覆寫值 + 夾限策略 |
-| `vram_detect.py` | 102 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
+| `vram_detect.py` | 104 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
 | `memory_pressure.py` | 240 | 狀態列記憶體壓力指示器（綠/黃/紅 + 百分比，點擊清快取） |
 | `worker_pools.py` | 110 | 執行緒池分池策略：縮圖爆量不再和 deep-zoom worker 搶資源 |
 | `signal_coalescer.py` | 89 | 次幀 signal 合併，避免 N 個縮圖回呼各觸發一次進度更新 |
@@ -476,7 +476,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
 | `lossless_rotate.py` | 131 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose |
-| `drag_out.py` | 70 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
+| `drag_out.py` | 72 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
 | `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
 | `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-810 個檔、133,073 行。`pyproject.toml` 定義三個互斥層級 marker：
+811 個檔、133,173 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
