@@ -201,3 +201,32 @@ def test_fetch_unexpected_error_is_reported_and_logged(qapp, monkeypatch, caplog
     assert (results, errors) == ([], ["bug"])
     (record,) = [r for r in caplog.records if r.exc_info]
     assert record.exc_info[0] is RuntimeError
+
+# ---------------------------------------------------------------------------
+# Path safety: names from the listing become local file and directory names
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", ["demo.py", "plugin_x", "my file.py", ".hidden", "a.b.c"])
+def test_safe_path_components(name):
+    assert pd.is_safe_path_component(name)
+
+
+@pytest.mark.parametrize("name", [
+    "", ".", "..", "..\\evil.py", "a\\b.py", "a/b", "C:x.py", "x.", "x ", "a*b", "a?b",
+    'a"b', "a<b", "a>b", "a|b", "tab\tname", "nul\x00name",
+])
+def test_unsafe_path_components(name):
+    assert not pd.is_safe_path_component(name)
+
+
+def test_parse_skips_plugins_and_files_with_unsafe_names():
+    results = pd.parse_plugin_tree(_listing(
+        _tree_entry("plugins/good"),
+        _blob("plugins/good/__init__.py"),
+        _blob("plugins/good/..\\..\\evil.py"),
+        _tree_entry("plugins/..\\escape"),
+        _blob("plugins/..\\escape/__init__.py"),
+    ))
+    assert _names(results) == [("plugins", "good")]
+    assert [f["name"] for f in results[0][2]] == ["__init__.py"]

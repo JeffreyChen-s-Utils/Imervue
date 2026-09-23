@@ -119,6 +119,8 @@ Public interfaces other code or users depend on:
   one recursive git-tree call on `main` (`REPO_TREE_URL`), accepts only the categories `plugins` and
   `languages` (`PLUGIN_CATEGORIES`), and downloads only the files directly inside
   `<category>/<plugin>/` from raw.githubusercontent into `plugins_dir()` (`<app_dir>/plugins/`).
+  A plugin or file name that is not one plain path component on every platform (`..`, a
+  backslash, a character Windows forbids) is skipped when listing and refused when downloading.
   Downloaders released before this change still treat every top-level non-dot directory as a
   category, so the distribution repo must not add other directories until those are out of use.
   Any change under `plugins/<name>/` here must be copied to `D:\Codes\Imervue_Plugins` and pushed

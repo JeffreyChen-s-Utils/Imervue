@@ -75,6 +75,24 @@ def _is_hidden(name: str) -> bool:
     return name.startswith((".", "__"))
 
 
+# Characters Windows refuses or treats as a separator in a file name. A git tree
+# path is split on "/" only, so a name pushed from Linux can still carry a
+# backslash (``..\evil.py``) and step outside the plugin directory on Windows.
+_UNSAFE_NAME_CHARS = frozenset('\\/:*?"<>|')
+
+
+def is_safe_path_component(name: str) -> bool:
+    """True if *name* can be one plain file or directory name on every platform.
+
+    Rejects empty names, ``.`` and ``..``, separators and characters Windows
+    forbids, control characters, and a trailing dot or space (Windows drops
+    them, so the name would resolve to a different file).
+    """
+    if not name or name in (".", "..") or name[-1] in ". ":
+        return False
+    return not any(ch in _UNSAFE_NAME_CHARS or ord(ch) < 32 for ch in name)
+
+
 def parse_plugin_tree(tree: dict) -> list[PluginListing]:
     """Group a recursive git tree listing into ``(category, plugin, files)``.
 
@@ -93,7 +111,7 @@ def parse_plugin_tree(tree: dict) -> list[PluginListing]:
         parts = path.split("/")
         if len(parts) not in (2, 3) or parts[0] not in PLUGIN_CATEGORIES:
             continue
-        if _is_hidden(parts[1]):
+        if _is_hidden(parts[1]) or not all(is_safe_path_component(p) for p in parts[1:]):
             continue
         key = (parts[0], parts[1])
         if len(parts) == 2 and entry.get("type") == "tree":
@@ -151,6 +169,10 @@ class DownloadPluginWorker(QThread):
         import os
         import shutil
         try:
+            names = [self.plugin_name, *(info["name"] for info in self.file_infos)]
+            unsafe = [n for n in names if not is_safe_path_component(n)]
+            if unsafe:
+                raise ValueError(f"Refusing unsafe plugin path: {unsafe[0]!r}")
             plugin_root = _get_plugin_dir()
             plugin_root.mkdir(parents=True, exist_ok=True)
             final_dir = plugin_root / self.plugin_name

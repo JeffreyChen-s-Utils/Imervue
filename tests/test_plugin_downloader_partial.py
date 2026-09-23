@@ -91,3 +91,33 @@ def test_successful_download_installs_every_file(qapp, tmp_path, monkeypatch):
     assert (tmp_path / "myplugin" / "__init__.py").read_bytes() == b"content"
     assert (tmp_path / "myplugin" / "b.py").exists()
     assert not (tmp_path / ".myplugin.partial").exists()
+
+
+def _refused(qapp, tmp_path, monkeypatch, plugin_name, file_name):
+    """Run a download whose names are unsafe; return (errors, urlopen calls)."""
+    monkeypatch.setattr(pd, "_get_plugin_dir", lambda: tmp_path / "plugins")
+    calls: list = []
+    monkeypatch.setattr(pd, "_https_urlopen", lambda req, timeout=30: calls.append(req))
+    errors: list = []
+    worker = pd.DownloadPluginWorker(plugin_name, [
+        {"download_url": "https://x/a", "name": file_name},
+    ])
+    worker.error.connect(errors.append)
+    worker.run()
+    return errors, calls
+
+
+def test_unsafe_plugin_name_is_refused_before_anything_is_touched(qapp, tmp_path, monkeypatch):
+    victim = tmp_path / "keep.txt"
+    victim.write_text("do not delete", encoding="utf-8")
+    errors, calls = _refused(qapp, tmp_path, monkeypatch, "..", "__init__.py")
+    assert errors and "unsafe" in errors[0]
+    assert calls == []
+    assert victim.read_text(encoding="utf-8") == "do not delete"
+
+
+def test_unsafe_file_name_is_refused(qapp, tmp_path, monkeypatch):
+    errors, calls = _refused(qapp, tmp_path, monkeypatch, "myplugin", "..\\..\\evil.py")
+    assert errors and "unsafe" in errors[0]
+    assert calls == []
+    assert not (tmp_path / "evil.py").exists()
