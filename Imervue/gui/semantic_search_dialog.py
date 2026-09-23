@@ -51,7 +51,7 @@ class _IndexBuildWorker(QThread):
                 break               # cancelled: stop embedding, let wait() return
             try:
                 self._index.add(path)
-            except Exception:  # noqa: BLE001 - one bad image must not abort the build
+            except Exception:  # one bad image must not abort the build
                 logger.exception("Failed to embed %s", path)
             self.progress.emit(done_count, total)
         self.done.emit()

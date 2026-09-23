@@ -87,7 +87,7 @@ def _run_overlay_layers(p: QPainter, layers: list) -> list[str]:
     for layer in layers:
         try:
             layer(p)
-        except Exception:  # noqa: BLE001 - one bad layer must not drop the overlay
+        except Exception:  # one bad layer must not drop the overlay
             name = getattr(layer, "__name__", repr(layer))
             logger.exception("Overlay layer %s failed; skipped this frame", name)
             failed.append(name)
@@ -219,7 +219,7 @@ class OverlayPainter:
     def paint(self, painter: QPainter) -> None:  # pragma: no cover - GL compositing
         try:
             layers = self.collect_layers()
-        except Exception:  # noqa: BLE001 - layer selection must not drop the overlay
+        except Exception:  # layer selection must not drop the overlay
             logger.exception("Overlay layer collection failed this frame")
             return
         if not layers:

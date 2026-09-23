@@ -284,7 +284,7 @@ class _UpscaleWorker(QThread):
                 self._run_traditional()
             else:
                 self._run_ai()
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # The onnxruntime import, model download and session build run
             # outside the per-image loop. If they fail (offline, HF unreachable,
             # missing dep) the thread would die and result_ready never fire,

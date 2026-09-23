@@ -583,7 +583,7 @@ class GPUImageView(
             elif self.deep_zoom:
                 self._deep_zoom_renderer.paint()
                 self._deep_zoom_renderer.paint_minimap()
-        except Exception:   # noqa: BLE001 - keep the overlay alive; log the cause
+        except Exception:   # keep the overlay alive; log the cause
             logger.exception("Deep-zoom/tile GL render failed this frame")
 
         painter.endNativePainting()
@@ -594,7 +594,7 @@ class GPUImageView(
         # GL frame (which silently drops the minimap as well as the overlay).
         try:
             self._paint_overlay(painter)
-        except Exception:   # noqa: BLE001 - overlay failure must not leak the painter
+        except Exception:   # overlay failure must not leak the painter
             logger.exception("Overlay paint failed this frame")
         painter.end()
 

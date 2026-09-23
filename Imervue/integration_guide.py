@@ -72,7 +72,7 @@ def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
                 "plugin %r raised RuntimeError in on_build_main_tabs; skipping",
                 getattr(plugin, "plugin_name", type(plugin).__name__),
             )
-        except Exception:  # noqa: BLE001 - plugin sandboxing
+        except Exception:  # plugin sandboxing
             logger.exception(
                 "plugin %r raised in on_build_main_tabs",
                 getattr(plugin, "plugin_name", type(plugin).__name__),

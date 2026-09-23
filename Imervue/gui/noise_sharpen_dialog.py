@@ -55,7 +55,7 @@ class _Worker(QThread):
                 arr = sharpen(arr, self._sharp_amount, self._sharp_radius)
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # A cv2-backed transform raises ImportError (opencv is optional) or
             # cv2.error, which the narrow except missed → done never fired and the
             # dialog hung with Apply disabled. Always report the failure.

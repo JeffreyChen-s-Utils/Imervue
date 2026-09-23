@@ -43,7 +43,7 @@ class _DetectWorker(QThread):
             arr = np.asarray(Image.open(self._path).convert("RGBA"))
             angle = detect_horizon_angle(arr)
             self.done.emit(True, float(angle))
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # A cv2-backed detect raises ImportError (opencv is optional) or
             # cv2.error, which the narrow except missed → done never fired and the
             # dialog hung. Always report the failure.
@@ -66,7 +66,7 @@ class _ApplyWorker(QThread):
             out = straighten(arr, self._angle)
             Image.fromarray(out).save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # See the detect worker above — cv2's ImportError/cv2.error must not
             # escape or the dialog hangs. Always report the failure.
             logger.exception("Auto-straighten apply failed: %s", exc)

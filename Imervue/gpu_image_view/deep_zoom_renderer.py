@@ -240,7 +240,7 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
             canvas_w, canvas_h = canvas_size(view)
             x0, y0, x1, y1 = letterbox_band_rect(canvas_w, canvas_h, reserved)
             view.renderer.draw_colored_rect(x0, y0, x1, y1, *_LETTERBOX_RGBA)
-        except Exception:  # noqa: BLE001 - never let the band break the overlays
+        except Exception:  # never let the band break the overlays
             logger.exception("Letterbox band draw failed; skipping it this frame")
 
     def _draw_minimap_background(self, rect: tuple[int, int, int, int]) -> None:

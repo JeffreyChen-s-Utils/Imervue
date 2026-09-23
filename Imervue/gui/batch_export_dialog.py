@@ -100,7 +100,7 @@ class _ExportWorker(QThread):
             extra = {"dpi": (self._dpi, self._dpi)} if self._dpi > 0 else None
             save_image(img, str(out_path), self._fmt, self._quality, extra)
             return True
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception(f"Batch export failed for {src}: {exc}")
             return False
 

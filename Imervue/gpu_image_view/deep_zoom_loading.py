@@ -293,5 +293,5 @@ class DeepZoomLoadingMixin:
                 reserved_overlay_height(self), self.zoom, fit_zoom(self),
                 self.dz_offset_y,
             )
-        except Exception:  # noqa: BLE001 - diagnostics must never break display
+        except Exception:  # diagnostics must never break display
             logger.exception("overlay-state diagnostics failed")

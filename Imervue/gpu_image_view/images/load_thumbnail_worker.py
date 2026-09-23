@@ -44,7 +44,7 @@ class LoadThumbnailWorker(QRunnable):
                     return
             if not self._abort:
                 self.signals.finished.emit(img_data, self.path, self.generation)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.exception(f"Thumbnail load failed: {self.path} - {e}")
             if not self._abort:
                 self.signals.error.emit(self.path, str(e), self.generation)

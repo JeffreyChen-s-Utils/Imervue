@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-63 | 2026-09-23 | Enable ruff's blind-except rules (closes #21) | #done #tooling #error-handling | [2026-09](2026-09.md) |
 | U-20260923-62 | 2026-09-23 | Narrow the blind excepts in gpu_image_view/ (BLE001 batch 6) | #refactor #error-handling #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-61 | 2026-09-23 | Narrow the blind excepts in gui/ (BLE001 batch 5) | #refactor #error-handling #gui | [2026-09](2026-09.md) |
 | U-20260923-60 | 2026-09-23 | EXIF editor: saving works again and User Comment round-trips | #bug #metadata #gui | [2026-09](2026-09.md) |

@@ -136,7 +136,7 @@ class LibraryScanner(QObject):
             bloom = _build_skip_bloom()
             self._scan_paths(paths, total, bloom)
             self.done.emit(total)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("library scan failed")
             self.error.emit(str(exc))
 

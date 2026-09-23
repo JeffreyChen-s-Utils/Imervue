@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `ff6a5e3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `b7942ed` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -1083,6 +1083,19 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 「Internal C++ object already deleted」，雖然 C++ 選單還活著。走訪選單一律用 `gui/menu_tree.py`
 （`findChildren(QMenu)` + `menuAction()` 對照），要找特定選單就給它 object name 再 `findChild`
 （`extra_tools.<key>`、`language_menu`、`plugin_menu`）。
+
+### 10.11 例外處理：只接看得到的型別
+
+ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，或在處理器裡用
+`logger.exception`／`exc_info=True` 的 error 級紀錄留下 traceback。常用的收窄方式：
+
+- **讀圖**：接 `image/read_errors.py:IMAGE_READ_ERRORS`（`OSError`、`ValueError`、
+  `DecompressionBombError`）。後者不是 `OSError`，漏掉它，超大圖就會把整批流程打斷。
+- **Worker 邊界**：對話框在等 worker 的訊號，所以預期的失敗照常回報；最後一層 `except Exception`
+  先 `logger.exception` 再回報，不能讓例外跑出執行緒，否則對話框會永遠卡住（範本見 `gui/_apply_save.py`、
+  `plugin/plugin_downloader.py`）。
+- **第三方失敗型別沒有邊界時**（piexif 的編碼器、GL 驅動、外掛 import），才保留寬鬆捕捉，寫
+  `# noqa: BLE001 - <理由>`，並附 traceback 紀錄。
 
 ---
 

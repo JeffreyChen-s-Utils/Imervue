@@ -110,7 +110,7 @@ def _make_canvas(qapp):
     try:
         from Imervue.paint.canvas import PaintCanvas
         return PaintCanvas()
-    except Exception:  # pragma: no cover - headless / no GL
+    except Exception:  # noqa: BLE001  # pragma: no cover - headless GL fails in open-ended ways
         return None
 
 

@@ -435,7 +435,7 @@ class _SanitizeWorker(QThread):
             session = ort.InferenceSession(model_path, providers=providers)
             scale = UPSCALE_MODELS[self._model_key]["scale"]
             return session, scale
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("Failed to load AI upscale model")
             return None, 0
 
@@ -468,7 +468,7 @@ class _SanitizeWorker(QThread):
                     trad_resampling=trad_resampling,
                 )
                 success += 1
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("Failed to sanitize %s", path)
                 failed += 1
         return success, failed

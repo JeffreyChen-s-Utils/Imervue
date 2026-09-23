@@ -86,6 +86,7 @@ select = [
     "S",             # flake8-bandit (security)
     "C90",           # mccabe complexity
     "N",             # pep8-naming
+    "BLE",           # flake8-blind-except
 ]
 ignore = [
     # Qt override methods must be camelCase (mousePressEvent, paintEvent, ...)

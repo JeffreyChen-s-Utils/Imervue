@@ -268,7 +268,7 @@ class _FindPythonWorker(QThread):
     def run(self):
         try:
             result = _find_python()
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # Registry / filesystem probes (e.g. iterdir on a locked dir) can
             # raise; without this result_ready never fires and the install dialog
             # hangs with its progress bar spinning. Report "no Python found".

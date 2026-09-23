@@ -836,7 +836,7 @@ class ImervueMainWindow(
         if target.is_file():
             try:
                 open_path(main_gui=self.viewer, path=str(target))
-            except Exception:   # noqa: BLE001 — load surface raises a wide variety
+            except Exception:   # load surface raises a wide variety
                 logger = logging.getLogger("Imervue")
                 logger.exception("drop-load failed: %s", target)
                 if hasattr(self, "toast"):

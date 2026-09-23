@@ -45,7 +45,7 @@ class EffectWorker(QThread):
             result = self._transform(load_rgba(self._path))
             Image.fromarray(result, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - a worker must always report
+        except Exception as exc:  # a worker must always report
             # The transform can raise anything: ImportError for an optional
             # backend (opencv isn't a default dependency), cv2.error, MemoryError,
             # or PIL's DecompressionBombError. Narrowing the except let those
