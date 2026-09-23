@@ -110,6 +110,11 @@ Rules the tools do **not** catch, which still apply:
   enforces it (the `multi_language` dictionaries are exempt as data).
 - **Function length ≤ 80 lines**, docstring included — enforced by the same test file. Split a
   long function into named steps before it crosses.
+- **At most 7 positional parameters** (`self` / `cls` not counted), also enforced there. Reasoned
+  exception to the workspace's 7-parameter rule: options past that must be keyword-only with
+  defaults (`def render(canvas, center, *, fill=None, ...)`), since a named option cannot land in
+  the wrong slot. Related values still travel together — a point is `(x, y)`, a colour one RGBA
+  tuple, a group of settings a frozen dataclass (`SanitizeSettings`, `ExportSettings`, `ImageQuery`).
 - **Every module is imported by production code** — `tests/test_unwired_modules.py` fails on a
   new module nothing in `Imervue/` or `plugins/` imports (the pre-existing ones are listed there).
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't

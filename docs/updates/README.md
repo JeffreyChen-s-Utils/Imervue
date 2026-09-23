@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-14 | 2026-09-24 | Cap positional parameters at 7 with a guard; keyword-only options are the reasoned exception (closes #24) | #done #tooling #quality | [2026-09](2026-09.md) |
 | U-20260924-13 | 2026-09-24 | Collect ToolDispatcher's optional collaborators into DispatcherHooks (#24) | #refactor #paint | [2026-09](2026-09.md) |
 | U-20260924-12 | 2026-09-24 | Give the library index search an ImageQuery (#24) | #refactor #library | [2026-09](2026-09.md) |
 | U-20260924-11 | 2026-09-24 | Pass polar coordinate mappings their grid, centre and size as pairs (#24) | #refactor #image | [2026-09](2026-09.md) |

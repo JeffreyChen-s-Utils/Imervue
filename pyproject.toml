@@ -112,8 +112,10 @@ ignore = [
     "S310",
     # os.startfile / Popen without shell is intentional for "reveal in folder"
     "S606",
-    # Function-shape complexity limits — Qt GUI setup naturally has many
-    # statements / args; enforce cognitive complexity (C901) instead.
+    # Function-shape limits: C901 caps complexity instead of branch / statement
+    # counts. PLR0913 counts keyword-only options too; the project caps
+    # positional parameters at 7 instead (tests/test_code_size_limits.py, see
+    # CLAUDE.md for the keyword-only exception).
     "PLR0911", "PLR0912", "PLR0913", "PLR0915",
 ]
 # McCabe ≤ 15 is the workspace-wide ceiling (D:\Codes\CLAUDE.md, "可讀性"),

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import urllib.request
-import urllib.error
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlparse
