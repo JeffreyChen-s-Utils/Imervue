@@ -22,6 +22,8 @@ from Imervue.gui.image_sanitize_dialog import (
     _compute_upscale_params,
     _PIL_FORMAT_MAP,
     _IMAGE_EXTS,
+    SanitizeSettings,
+    UpscaleSpec,
     sanitize_image,
     TARGET_RESOLUTIONS,
     _SanitizeWorker,
@@ -338,7 +340,7 @@ class TestSanitizeImage:
         os.makedirs(out_dir)
         _make_image(src, "PNG", size=(2000, 1500))
 
-        out = sanitize_image(src, out_dir, "same", target_long_edge=1920)
+        out = sanitize_image(src, out_dir, "same", upscale=UpscaleSpec(target_long_edge=1920))
         img = Image.open(out)
         assert img.size == (1500, 2000)
 
@@ -350,7 +352,7 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(100, 80))
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=1920, ort_session=None)
+                             upscale=UpscaleSpec(target_long_edge=1920, ort_session=None))
         img = Image.open(out)
         assert img.size == (80, 100)  # unchanged
 
@@ -362,8 +364,8 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(100, 80))  # numpy (h, w) → PIL (80, 100)
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=200,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=200,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         # numpy (100,80) → PIL (w=80, h=100), long edge=100→200
         assert img.size == (160, 200)
@@ -377,8 +379,8 @@ class TestSanitizeImage:
         Image.fromarray(arr).save(src, format="PNG")
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=8,
-                             trad_resampling=Image.Resampling.NEAREST)
+                             upscale=UpscaleSpec(target_long_edge=8,
+                                                 trad_resampling=Image.Resampling.NEAREST))
         img = Image.open(out)
         assert img.size == (8, 8)
         arr = np.asarray(img)
@@ -393,8 +395,8 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(200, 300))
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=200,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=200,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         assert img.size == (300, 200)  # unchanged
 
@@ -406,8 +408,8 @@ class TestSanitizeImage:
         _make_image(src, "JPEG", size=(50, 40), with_exif=True)
 
         out = sanitize_image(src, out_dir, ".png",
-                             target_long_edge=100,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=100,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         assert len(img.getexif()) == 0
         assert img.size[0] == 100 or img.size[1] == 100
@@ -561,7 +563,7 @@ class TestSanitizeWorker:
             _make_image(p, "JPEG", with_exif=True)
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -579,7 +581,7 @@ class TestSanitizeWorker:
             _make_image(p, "JPEG", with_exif=True)
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         worker.run()
 
         for f in os.listdir(out_dir):
@@ -595,7 +597,7 @@ class TestSanitizeWorker:
             _make_image(p, "PNG")
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         worker.abort()
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
@@ -612,7 +614,7 @@ class TestSanitizeWorker:
             _make_image(p, "PNG")
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         progress_log = []
         worker.progress.connect(
             lambda cur, tot, name: progress_log.append((cur, tot, name)))
@@ -628,7 +630,7 @@ class TestSanitizeWorker:
         p = str(tmp_path / "img.jpg")
         _make_image(p, "JPEG")
 
-        worker = _SanitizeWorker([p], out_dir, ".png", 8, 95, 6)
+        worker = _SanitizeWorker([p], out_dir, SanitizeSettings(".png"))
         worker.run()
 
         files = os.listdir(out_dir)
@@ -643,8 +645,8 @@ class TestSanitizeWorker:
         _make_image(p, "PNG", size=(50, 40))
 
         worker = _SanitizeWorker(
-            [p], out_dir, "same", 8, 95, 6,
-            target_long_edge=100, model_key="trad:lanczos")
+            [p], out_dir,
+            SanitizeSettings("same", target_long_edge=100, model_key="trad:lanczos"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -664,8 +666,8 @@ class TestSanitizeWorker:
         _make_image(p, "PNG", size=(10, 10))
 
         worker = _SanitizeWorker(
-            [p], out_dir, "same", 8, 95, 6,
-            target_long_edge=20, model_key="trad:nearest")
+            [p], out_dir,
+            SanitizeSettings("same", target_long_edge=20, model_key="trad:nearest"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -683,7 +685,7 @@ class TestSanitizeWorker:
         good = str(tmp_path / "good.png")
         _make_image(good, "PNG")
 
-        worker = _SanitizeWorker([bad, good], out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker([bad, good], out_dir, SanitizeSettings("same"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -706,7 +708,7 @@ class TestSanitizeWorker:
         os.makedirs(out_dir)
         worker = _SanitizeWorker(
             [p_root, p_a, p_ab, p_c],
-            out_dir, "same", 8, 95, 6,
+            out_dir, SanitizeSettings("same"),
             src_root=str(src))
         worker.run()
 
@@ -727,7 +729,7 @@ class TestSanitizeWorker:
 
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
-        worker = _SanitizeWorker([p1, p2], out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker([p1, p2], out_dir, SanitizeSettings("same"))
         worker.run()
 
         # Both files land directly under out_dir — no subfolders created.
@@ -825,7 +827,7 @@ class TestSanitizeWorker:
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
         worker = _SanitizeWorker(
-            [str(outside)], out_dir, "same", 8, 95, 6,
+            [str(outside)], out_dir, SanitizeSettings("same"),
             src_root=str(src))
         worker.run()
 

@@ -146,3 +146,73 @@ def test_missing_folder_argument_leaves_source_empty(qapp, tmp_path):
         assert dlg._src_edit.text() == ""  # noqa: SLF001
     finally:
         dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Start: which settings reach the worker for each upscale choice.
+# ---------------------------------------------------------------------------
+
+def _cfg(worker):
+    s = worker._settings  # noqa: SLF001
+    return (s.output_ext, s.rand_len, s.jpeg_quality, s.png_compress, s.target_long_edge,
+            s.model_key)
+
+
+@pytest.fixture
+def started(qapp, tmp_path, monkeypatch):
+    """Dialog with a one-image source; ``start(res, model)`` presses Start."""
+    from PIL import Image
+    src, out = tmp_path / "src", tmp_path / "out"
+    src.mkdir()
+    Image.new("RGB", (4, 4)).save(src / "a.png")
+    monkeypatch.setattr(mod._SanitizeWorker, "start", lambda self: None)  # noqa: SLF001
+    deps = []
+    from Imervue.plugin import pip_installer
+    monkeypatch.setattr(pip_installer, "ensure_dependencies",
+                        lambda _parent, _packages, on_ready: deps.append(on_ready))
+    dlg = ImageSanitizeDialog(SimpleNamespace(main_window=None))
+
+    def start(res_index, model_key):
+        dlg._src_edit.setText(str(src))  # noqa: SLF001
+        dlg._out_edit.setText(str(out))  # noqa: SLF001
+        dlg._res_combo.setCurrentIndex(res_index)  # noqa: SLF001
+        dlg._model_combo.setCurrentIndex(dlg._model_combo.findData(model_key))  # noqa: SLF001
+        dlg._rand_spin.setValue(12)  # noqa: SLF001
+        dlg._quality_spin.setValue(80)  # noqa: SLF001
+        dlg._do_start()  # noqa: SLF001
+        return dlg
+
+    yield start, deps
+    dlg.deleteLater()
+
+
+def _res_index(px):
+    return [p for *_x, p in TARGET_RESOLUTIONS].index(px)
+
+
+def test_start_without_upscale_drops_the_model(started):
+    start, deps = started
+    ai_model = next(iter(UPSCALE_MODELS))
+    dlg = start(_res_index(0), ai_model)   # "No upscale"
+    assert deps == []
+    ext = dlg._fmt_combo.currentData()  # noqa: SLF001
+    assert _cfg(dlg._worker) == (ext, 12, 80, 6, 0, "")  # noqa: SLF001
+
+
+def test_start_with_traditional_upscale_keeps_target_and_method(started):
+    start, deps = started
+    px = [p for *_x, p in TARGET_RESOLUTIONS if p][0]
+    method = next(iter(TRADITIONAL_METHODS))
+    dlg = start(_res_index(px), method)
+    assert deps == []
+    assert _cfg(dlg._worker)[4:] == (px, method)  # noqa: SLF001
+
+
+def test_start_with_ai_upscale_installs_dependencies_first(started):
+    start, deps = started
+    px = [p for *_x, p in TARGET_RESOLUTIONS if p][0]
+    model = next(iter(UPSCALE_MODELS))
+    dlg = start(_res_index(px), model)
+    assert dlg._worker is None and len(deps) == 1  # noqa: SLF001
+    deps[0]()
+    assert _cfg(dlg._worker)[1:] == (12, 80, 6, px, model)  # noqa: SLF001
