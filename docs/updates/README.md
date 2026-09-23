@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-85 | 2026-09-23 | Move the annotation editor's file actions into a mixin; closes #23 | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-84 | 2026-09-23 | Move the tile badges out of overlay_painter and test them (#23) | #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-83 | 2026-09-23 | Close the breadcrumb test's top-level bar | #tests | [2026-09](2026-09.md) |
 | U-20260923-82 | 2026-09-23 | A hidden desktop pet no longer pops a speech bubble | #bugfix #desktop_pet | [2026-09](2026-09.md) |

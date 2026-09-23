@@ -595,3 +595,126 @@ class TestDialogSaveBehavior:
                 dlg2.deleteLater()
         finally:
             dlg.deleteLater()
+
+
+class TestFileActions:
+    """Save / save-as / project / clipboard paths, pinned before they moved to a mixin."""
+
+    @staticmethod
+    def _dialog(base_pil, source=""):
+        from Imervue.gui.annotation_dialog import AnnotationDialog
+        dlg = AnnotationDialog(base_pil, source_path=source)
+        dlg._canvas._annotations = [Annotation(kind="rect", points=[(5, 5), (25, 25)])]
+        return dlg
+
+    @staticmethod
+    def _save_to(monkeypatch, path):
+        from PySide6.QtWidgets import QFileDialog
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: (str(path), ""))
+
+    @staticmethod
+    def _open_from(monkeypatch, path):
+        from PySide6.QtWidgets import QFileDialog
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *_a, **_k: (str(path), ""))
+
+    @staticmethod
+    def _boxes(monkeypatch):
+        from PySide6.QtWidgets import QMessageBox
+        shown = []
+        monkeypatch.setattr(QMessageBox, "critical", lambda *a, **_k: shown.append(("critical", a[-1])))
+        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **_k: shown.append(("warning", a[-1])))
+        return shown
+
+    def test_save_without_source_asks_for_a_path(self, qapp, base_pil, tmp_path, monkeypatch):
+        target = tmp_path / "out.png"
+        self._save_to(monkeypatch, target)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save()
+            assert Image.open(target).size == (200, 100)
+        finally:
+            dlg.deleteLater()
+
+    def test_save_with_source_writes_it(self, qapp, base_pil, tmp_path, monkeypatch):
+        source = tmp_path / "src.png"
+        base_pil.save(source)
+        self._save_to(monkeypatch, tmp_path / "never.png")
+        dlg = self._dialog(base_pil, str(source))
+        try:
+            dlg._save()
+            assert not (tmp_path / "never.png").exists()
+            assert Image.open(source).getpixel((5, 5)) != (255, 255, 255, 255)
+        finally:
+            dlg.deleteLater()
+
+    def test_save_as_cancelled_writes_nothing(self, qapp, base_pil, tmp_path, monkeypatch):
+        self._save_to(monkeypatch, "")
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_as()
+            assert list(tmp_path.iterdir()) == []
+        finally:
+            dlg.deleteLater()
+
+    @pytest.mark.parametrize("chosen, written", [("proj.json", "proj.json"),
+                                                 ("proj", "proj.imervue_annot.json")])
+    def test_save_project(self, qapp, base_pil, tmp_path, monkeypatch, chosen, written):
+        from Imervue.gui.annotation_models import AnnotationProject
+        self._save_to(monkeypatch, tmp_path / chosen)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_project()
+            project = AnnotationProject.load(tmp_path / written)
+            assert project.source_size == (200, 100)
+            assert [a.kind for a in project.annotations] == ["rect"]
+        finally:
+            dlg.deleteLater()
+
+    def test_save_project_cancelled(self, qapp, base_pil, tmp_path, monkeypatch):
+        self._save_to(monkeypatch, "")
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_project()
+            assert list(tmp_path.iterdir()) == []
+        finally:
+            dlg.deleteLater()
+
+    @pytest.mark.parametrize("size, warned", [((200, 100), False), ((0, 0), False), ((50, 50), True)])
+    def test_load_project(self, qapp, base_pil, tmp_path, monkeypatch, size, warned):
+        from Imervue.gui.annotation_models import AnnotationProject
+        path = tmp_path / "p.json"
+        AnnotationProject(source_path="", source_size=size,
+                          annotations=[Annotation(kind="text", points=[(1, 1)], text="hi")]).save(path)
+        self._open_from(monkeypatch, path)
+        shown = self._boxes(monkeypatch)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._load_project()
+            assert [a.text for a in dlg._canvas.get_annotations()] == ["hi"]
+            assert [kind for kind, _msg in shown] == (["warning"] if warned else [])
+            if warned:
+                assert "50x50" in shown[0][1] and "200x100" in shown[0][1]
+        finally:
+            dlg.deleteLater()
+
+    def test_load_corrupt_project_keeps_annotations(self, qapp, base_pil, tmp_path, monkeypatch):
+        path = tmp_path / "bad.json"
+        path.write_text("{not json", encoding="utf-8")
+        self._open_from(monkeypatch, path)
+        shown = self._boxes(monkeypatch)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._load_project()
+            assert [a.kind for a in dlg._canvas.get_annotations()] == ["rect"]
+            assert [kind for kind, _msg in shown] == ["critical"]
+        finally:
+            dlg.deleteLater()
+
+    def test_copy_to_clipboard(self, qapp, base_pil, fake_clipboard):
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._copy_to_clipboard()
+            image = fake_clipboard.image()
+            assert (image.width(), image.height()) == (200, 100)
+        finally:
+            dlg.deleteLater()

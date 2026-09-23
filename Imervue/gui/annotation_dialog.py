@@ -22,8 +22,6 @@ Layout
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 from collections.abc import Callable
 
@@ -33,8 +31,8 @@ from PySide6.QtGui import (
     QAction, QColor, QFont, QKeySequence, QUndoStack,
 )
 from PySide6.QtWidgets import (
-    QApplication, QButtonGroup, QColorDialog, QDialog, QFileDialog, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QMenu, QMenuBar, QMessageBox, QSizePolicy,
+    QButtonGroup, QColorDialog, QDialog, QFrame,
+    QGridLayout, QHBoxLayout, QLabel, QMenu, QMenuBar, QSizePolicy,
     QStatusBar, QToolButton, QVBoxLayout, QWidget,
     QWidgetAction,
 )
@@ -48,8 +46,9 @@ from Imervue.gui.annotation_canvas import (
     _point_segment_distance,
 )
 from Imervue.gui.annotation_destructive import _BakeDestructiveCommand
-from Imervue.gui.annotation_models import (
-    AnnotationProject, bake,
+from Imervue.gui.annotation_file_actions import (
+    _LOAD_PROJECT_FALLBACK,
+    AnnotationFileActionsMixin,
 )
 from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -83,7 +82,6 @@ __all__ = [
 
 # Dialog-only UI constants (the canvas owns the drawing constants).
 _QSS_PANEL_SECTION = "panelSection"
-_LOAD_PROJECT_FALLBACK = "Load Project..."
 
 # ---------------------------------------------------------------------------
 # Editor widget — reusable QWidget form of the annotation editor.
@@ -142,7 +140,7 @@ QFrame#annotationRightPanel QSlider {
 }
 """
 
-class AnnotationEditorWidget(QWidget):
+class AnnotationEditorWidget(AnnotationFileActionsMixin, QWidget):
     """Professional-editor QWidget: menubar + toolbox + canvas + right panel.
 
     Parameters
@@ -681,156 +679,6 @@ class AnnotationEditorWidget(QWidget):
         )
 
     # ---------- Save / export ----------
-
-    def _baked_image(self) -> Image.Image:
-        return bake(self._canvas.get_base_pil(), self._canvas.get_annotations())
-
-    def _save(self) -> None:
-        if not self._source_path:
-            self._save_as()
-            return
-        self._write(self._source_path)
-
-    def _save_as(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("annotation_save_as", "Save As..."),
-            start_dir,
-            "PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp);;TIFF (*.tiff)",
-        )
-        if path:
-            self._write(path)
-
-    def _write(self, path: str) -> None:
-        """Atomically save the baked image to ``path``.
-
-        Writes to a sibling .tmp file then ``os.replace`` to avoid leaving
-        a half-written file if the process is interrupted mid-save. This
-        also matters because the source path may be open in the main
-        viewer — replacing the file in one atomic step is friendlier than
-        truncating the original.
-        """
-        img = self._baked_image()
-        ext = Path(path).suffix.lower()
-        target = Path(path)
-        tmp = target.with_name(target.name + ".tmp")
-        # Pass ``format=`` explicitly because the .tmp extension would
-        # otherwise stop PIL from inferring the encoder.
-        fmt_by_ext = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-            ".webp": "WEBP",
-        }
-        fmt = fmt_by_ext.get(ext, "PNG")
-        try:
-            if ext in (".jpg", ".jpeg"):
-                img.convert("RGB").save(tmp, format="JPEG", quality=95)
-            else:
-                img.save(tmp, format=fmt)
-            os.replace(tmp, target)
-            self._notify_success(
-                language_wrapper.language_word_dict.get("annotation_saved", "Saved")
-            )
-            if self._on_saved is not None and str(target) == self._source_path:
-                try:
-                    self._on_saved(str(target))
-                except Exception:
-                    logger.exception("on_saved callback raised")
-        except Exception as exc:
-            logger.exception("annotation save failed: %s", path)
-            try:
-                if tmp.exists():
-                    tmp.unlink()
-            except OSError:
-                pass
-            QMessageBox.critical(self, "Error", str(exc))
-
-    def _copy_to_clipboard(self) -> None:
-        img = self._baked_image()
-        qimg = pil_to_qimage(img)
-        QApplication.clipboard().setImage(qimg)
-        self._notify_success(
-            language_wrapper.language_word_dict.get(
-                "annotation_copy_success", "Copied to clipboard"
-            )
-        )
-
-    def _save_project(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        suggested = ""
-        if self._source_path:
-            suggested = str(
-                Path(start_dir) / (Path(self._source_path).stem + ".imervue_annot.json")
-            )
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("annotation_save_project", "Save Project..."),
-            suggested or start_dir,
-            "Imervue Annotation Project (*.imervue_annot.json *.json)",
-        )
-        if not path:
-            return
-        if not path.endswith(".json"):
-            path += ".imervue_annot.json"
-        base = self._canvas.get_base_pil()
-        project = AnnotationProject(
-            source_path=self._source_path,
-            source_size=(base.width, base.height),
-            annotations=self._canvas.get_annotations(),
-        )
-        try:
-            project.save(path)
-            self._notify_success(
-                lang.get("annotation_saved", "Saved")
-            )
-        except Exception as exc:
-            logger.exception("project save failed: %s", path)
-            QMessageBox.critical(self, "Error", str(exc))
-
-    def _load_project(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
-            start_dir,
-            "Imervue Annotation Project (*.json)",
-        )
-        if not path:
-            return
-        try:
-            project = AnnotationProject.load(path)
-        except Exception as exc:
-            logger.exception("project load failed: %s", path)
-            QMessageBox.critical(self, "Error", str(exc))
-            return
-
-        base = self._canvas.get_base_pil()
-        if project.source_size not in {(0, 0), (base.width, base.height)}:
-            warning = lang.get(
-                "annotation_project_size_mismatch",
-                "Project was saved against a {pw}x{ph} image; current image "
-                "is {cw}x{ch}. Annotation positions may be off.",
-            ).format(
-                pw=project.source_size[0], ph=project.source_size[1],
-                cw=base.width, ch=base.height,
-            )
-            QMessageBox.warning(
-                self,
-                lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
-                warning,
-            )
-        self._canvas.set_annotations(project.annotations)
-
-    def _notify_success(self, message: str) -> None:
-        parent = self.parent()
-        if parent is not None and hasattr(parent, "toast"):
-            parent.toast.success(message)
-        else:
-            logger.info(message)
 
 
 # ---------------------------------------------------------------------------
