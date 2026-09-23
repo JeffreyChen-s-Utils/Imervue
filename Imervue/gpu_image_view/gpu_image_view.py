@@ -54,6 +54,16 @@ class GPUImageView(
 
         self.main_window = main_window
 
+        self._init_grid_state()
+        self._init_deep_zoom_state()
+        self._init_browse_state()
+        self._init_interaction_state()
+        self._init_workers()
+        self._init_collaborators()
+        self._init_display_state()
+
+    def _init_grid_state(self) -> None:
+        """Undo stacks and tile-grid layout, selection-cursor and upload state."""
         # ===== Undo =====
         self.undo_stack = []  # legacy delete undo
         self.undo_manager = QUndoStack(self)
@@ -102,6 +112,8 @@ class GPUImageView(
         # GL context exists. Stays None (synchronous fallback) until then.
         self._tile_uploader = None
 
+    def _init_deep_zoom_state(self) -> None:
+        """Deep-zoom image, load tracking and view-fitting state."""
         # ===== DeepZoom =====
         self.zoom = 1.0
         self.dz_offset_x = 0
@@ -146,7 +158,8 @@ class GPUImageView(
         # Retires a screen-settle watch when a newer screen change starts.
         self._screen_settle_generation = 0
 
-
+    def _init_browse_state(self) -> None:
+        """Image switching, filtered list, thumbnail density, filmstrip and fade state."""
         # ===== 圖片切換控制 =====
         self.model = ImageModel()
         self.model.images = []  # 所有圖片路徑
@@ -193,6 +206,8 @@ class GPUImageView(
         from Imervue.gpu_image_view.view_animator import ImageFadeController
         self._image_fade = ImageFadeController(self)
 
+    def _init_interaction_state(self) -> None:
+        """Hover preview, history, grid selection, mouse, rubber-band zoom and smooth navigation."""
         # ===== Hover 預覽 =====
         # Lazy-init 避免在沒有 QApplication 時匯入失敗
         self._hover_controller = None
@@ -240,6 +255,8 @@ class GPUImageView(
         self._pan_momentum = PanMomentumController(self)
         self._last_pan_velocity = (0.0, 0.0)
 
+    def _init_workers(self) -> None:
+        """Worker pools, progress coalescing and in-flight tile workers."""
         # ===== Thread =====
         # Per-workload pools instead of a single oversubscribed
         # global pool — see ``worker_pools.worker_pool_sizes`` for
@@ -278,6 +295,8 @@ class GPUImageView(
         self.active_deep_zoom_worker = None  # 當前 DeepZoom 背景 worker
         self.active_deep_zoom_preview_worker = None
 
+    def _init_collaborators(self) -> None:
+        """View-state memory, prefetch, GL renderer and the drawing / input collaborators."""
         # ===== 記憶位置 & 縮放 =====
         self._view_memory: dict[str, dict] = {}  # path → {zoom, dx, dy}
 
@@ -318,6 +337,8 @@ class GPUImageView(
         from Imervue.gpu_image_view.browse_features import BrowseFeatures
         self._browse = BrowseFeatures(self)
 
+    def _init_display_state(self) -> None:
+        """VRAM budget, histogram, OSD / HUD / loupe / reading-mode toggles and animation."""
         # ===== VRAM 管理 =====
         # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
         # 抓到的話會覆寫成實體 VRAM 的 ~40%，在顯卡強的機器上可大幅放寬 tile cache。
