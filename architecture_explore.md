@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `7d7f90e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `8899553` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -673,7 +673,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 筆刷引擎
 
 `brush_engine.py`(649) 純 NumPy 光柵化 · `gpu_brush.py`(681) OpenGL FBO+GLSL 加速 ·
-`brush_dynamics.py`(150) · `brush_random.py`(143) 散佈/色彩抖動/傾斜旋轉 · `brush_cursor.py`(498) 筆跡游標預覽 ·
+`brush_dynamics.py`(150) · `brush_random.py`(143) 散佈/色彩抖動/傾斜旋轉 · `brush_cursor.py`(515) 筆跡游標預覽 ·
 `brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
 `brush_preset_dialog.py`(267) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
 `custom_brush.py`(95) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
