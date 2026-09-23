@@ -102,6 +102,22 @@ def _preserved_gl_render_state():
         glViewport(*(int(v) for v in prev_viewport))
 
 
+def _fit_scale_and_pan(
+    doc_size: tuple[float, float], width: int, height: int,
+) -> tuple[float, float, float] | None:
+    """``(scale, pan_x, pan_y)`` fitting ``doc_size`` into ``width`` x ``height``.
+
+    Keeps the aspect ratio and centres the document, so the whole canvas
+    lands inside the target with no cropping. ``None`` when the document has
+    no area.
+    """
+    doc_w, doc_h = doc_size
+    if doc_w <= 0 or doc_h <= 0:
+        return None
+    scale = min(width / doc_w, height / doc_h)
+    return scale, (width - doc_w * scale) / 2.0, (height - doc_h * scale) / 2.0
+
+
 class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     """QOpenGLWidget that renders one ``PuppetDocument`` at a time.
 
@@ -658,34 +674,8 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
                 # so this shared-context off-screen render can't corrupt the
                 # next on-screen paintGL — even on the early return below.
                 with _preserved_gl_render_state():
-                    glViewport(0, 0, width, height)
-                    glMatrixMode(GL_PROJECTION)
-                    glLoadIdentity()
-                    glOrtho(0, width, height, 0, -1, 1)
-                    glMatrixMode(GL_MODELVIEW)
-                    glLoadIdentity()
-
-                    # KeepAspectRatio fit of document into the FBO.
-                    doc_w, doc_h = self._document.size
-                    if doc_w <= 0 or doc_h <= 0:
+                    if not self._render_puppet_frame(width, height, background_rgba):
                         return None
-                    scale = min(width / doc_w, height / doc_h)
-                    pan_x = (width - doc_w * scale) / 2.0
-                    pan_y = (height - doc_h * scale) / 2.0
-                    glTranslatef(pan_x, pan_y, 0.0)
-                    glScalef(scale, scale, 1.0)
-
-                    # Clear to the requested background (transparent by
-                    # default). The checker backdrop is intentionally NOT
-                    # drawn — streamers chose the virtual-camera / NDI
-                    # path because they want the character composited
-                    # over their own scene.
-                    r, g, b, a = background_rgba
-                    glClearColor(float(r), float(g), float(b), float(a))
-                    glClear(GL_COLOR_BUFFER_BIT)
-
-                    self._draw_drawables()
-
                     return fbo.toImage()
             finally:
                 fbo.release()
@@ -695,6 +685,43 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             # on every call (once per NDI / virtual-camera frame).
             fbo = None
             self.doneCurrent()
+
+    def _render_puppet_frame(   # pragma: no cover - GL needs display
+        self, width: int, height: int,
+        background_rgba: tuple[float, float, float, float],
+    ) -> bool:
+        """Draw the document fitted into a ``width`` x ``height`` target.
+
+        Sets a pixel-space ortho projection, fits the document with
+        :func:`_fit_scale_and_pan`, clears to ``background_rgba`` and draws
+        the drawables. Returns ``False``, after the projection is set but
+        before clearing, when the document has no area.
+        """
+        glViewport(0, 0, width, height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, width, height, 0, -1, 1)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        fit = _fit_scale_and_pan(self._document.size, width, height)
+        if fit is None:
+            return False
+        scale, pan_x, pan_y = fit
+        glTranslatef(pan_x, pan_y, 0.0)
+        glScalef(scale, scale, 1.0)
+
+        # Clear to the requested background (transparent by
+        # default). The checker backdrop is intentionally NOT
+        # drawn — streamers chose the virtual-camera / NDI
+        # path because they want the character composited
+        # over their own scene.
+        r, g, b, a = background_rgba
+        glClearColor(float(r), float(g), float(b), float(a))
+        glClear(GL_COLOR_BUFFER_BIT)
+
+        self._draw_drawables()
+        return True
 
     # ---- rendering ------------------------------------------------------
 
