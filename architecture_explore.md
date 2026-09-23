@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `2494109` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d1a2512` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 818 | 134,148 |
+| `tests/` | 818 | 134,191 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,821 |
 | `Imervue/puppet/` | 57 | 15,229 |
@@ -75,7 +75,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,243 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
-| `Imervue/library/` | 32 | 4,160 |
+| `Imervue/library/` | 32 | 4,174 |
 | `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,185 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,196 |
-| **總計** | **1,632** | **308,782** |
+| **總計** | **1,632** | **308,839** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,438 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,452 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -493,7 +493,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `smart_album.py` | 348 | Smart Albums：保存查詢並重新套用 |
 | `search_query.py` | 215 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
-| `clip_search.py` | 364 | CLIP 語意搜尋（「找出符合這句話的照片」） |
+| `clip_search.py` | 378 | CLIP 語意搜尋（「找出符合這句話的照片」） |
 | `auto_tag.py` | 111 | 啟發式內容分類 + 選用 CLIP ONNX |
 | `phash.py` | 83 | 64-bit DCT pHash |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-818 個檔、134,148 行。`pyproject.toml` 定義三個互斥層級 marker：
+818 個檔、134,191 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
