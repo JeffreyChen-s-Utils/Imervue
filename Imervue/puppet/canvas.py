@@ -137,10 +137,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         # 8-bit alpha buffer is requested in the surface format so
         # the framebuffer can actually carry that transparency — the
         # default GL widget allocates RGB only.
-        fmt = QSurfaceFormat()
-        fmt.setStencilBufferSize(8)
-        if pet_mode:
-            fmt.setAlphaBufferSize(8)
+        fmt = self._surface_format(pet_mode)
         # Make ``fmt`` the process default only for the duration of surface
         # creation, then restore the previous default. Leaving it set globally
         # perturbed the format inherited by every GL widget constructed after
@@ -156,26 +153,55 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             QSurfaceFormat.setDefaultFormat(prev_default)
         self._pet_mode = bool(pet_mode)
         if pet_mode:
-            # The host PetWindow has WA_TranslucentBackground set,
-            # but Qt would still paint a system-coloured background
-            # behind the GL widget before it renders — leaving an
-            # opaque rectangle around the puppet on the desktop.
-            # Mirror the translucency attributes onto the canvas
-            # itself so no opaque background paint runs, then make
-            # the GL widget stack on top of any sibling so the
-            # window-composite step honours its per-pixel alpha.
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-            self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop, True)
+            self._apply_pet_translucency()
+        self._init_document_state()
+        self._init_view_state()
+        self._init_rig_state()
+        self._init_editor_state()
+        self._init_gl_caches()
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    @staticmethod
+    def _surface_format(pet_mode: bool) -> QSurfaceFormat:
+        """Stencil for clip masks; pet mode adds an 8-bit alpha buffer for transparency."""
+        fmt = QSurfaceFormat()
+        fmt.setStencilBufferSize(8)
+        if pet_mode:
+            fmt.setAlphaBufferSize(8)
+        return fmt
+
+    def _apply_pet_translucency(self) -> None:
+        """Let the desktop show through every pixel the puppet doesn't draw.
+
+        The host PetWindow has WA_TranslucentBackground set, but Qt would
+        still paint a system-coloured background behind the GL widget before
+        it renders — leaving an opaque rectangle around the puppet on the
+        desktop. Mirror the translucency attributes onto the canvas itself so
+        no opaque background paint runs, then make the GL widget stack on top
+        of any sibling so the window-composite step honours its per-pixel alpha.
+        """
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop, True)
+
+    def _init_document_state(self) -> None:
+        """Document, draw list and the per-document texture cache."""
         self._document: PuppetDocument | None = None
         self._draw_list: list[DrawCommand] = []
         self._texture_cache: dict[str, int] = {}
+
+    def _init_view_state(self) -> None:
+        """Zoom / pan and the panning gesture state."""
         self._zoom: float = 1.0
         self._pan_x: float = 0.0
         self._pan_y: float = 0.0
         self._user_view_locked: bool = False
         self._panning: bool = False
         self._pan_anchor: tuple[float, float] = (0.0, 0.0)
+
+    def _init_rig_state(self) -> None:
+        """Parameter values, expressions, pose groups and per-drawable render overrides."""
         self._parameter_values: dict[str, float] = {}
         # Active expressions in priority order — last item wins on
         # overlapping parameter overrides. Editor toggles set / clear
@@ -193,6 +219,9 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._part_opacity: dict[str, float] = {}
         self._drawable_opacity: dict[str, float] = {}
         self._drawable_tint: dict[str, tuple[float, float, float]] = {}
+
+    def _init_editor_state(self) -> None:
+        """Deformer selection, physics and mesh-edit state."""
         # Editor selection — when the bone tree dock picks a deformer
         # we draw a highlight overlay so the user can see which one
         # they targeted without trying to interpret the canvas blind.
@@ -202,6 +231,9 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         # Mesh-edit mode lets the user drag vertices; off by default.
         self._mesh_edit_enabled: bool = False
         self._mesh_edit_target: tuple[str, int] | None = None
+
+    def _init_gl_caches(self) -> None:
+        """GL resources created lazily on first paint: checker, pet shadow, VBOs."""
         # The transparency-checker backdrop used to render as a grid of
         # immediate-mode quads — one per 16-pixel tile. On the March 7th
         # canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
@@ -224,8 +256,6 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         # changed the vertex count). Invalidated on document swap; the
         # next paint lazily recreates the buffers for each drawable.
         self._drawable_buffers: dict[str, dict] = {}
-        self.setMouseTracking(True)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     # ---- public API -----------------------------------------------------
 
