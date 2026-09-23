@@ -11,7 +11,6 @@ to take effect because it is consumed during ``GPUImageView.initializeGL``.
 """
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -27,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 from Imervue.system.themes import DEFAULT_THEME_NAME, list_themes
 from Imervue.system.ui_scale import (
     UI_SCALE_DEFAULT_PERCENT,
@@ -259,7 +259,7 @@ class PreferencesDialog(QDialog):
         viewer = getattr(self.parent(), "viewer", None)
         browse = getattr(viewer, "_browse", None)
         if browse is not None:
-            with contextlib.suppress(Exception):
+            with best_effort("reload the browse settings"):
                 browse.reload_settings()
 
 

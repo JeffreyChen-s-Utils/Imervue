@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 import contextlib
 
 if TYPE_CHECKING:
@@ -141,8 +142,9 @@ def _parse_exif_date(val: str) -> datetime | None:
 
 def _get_image_date(path: str) -> datetime:
     """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
-    with contextlib.suppress(Exception):
-        exif = Image.open(path).getexif()
+    # Unreadable file or a date tag that isn't text: fall back to the file's mtime.
+    with contextlib.suppress(*IMAGE_READ_ERRORS, TypeError), Image.open(path) as img:
+        exif = img.getexif()
         for tag in (_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME):
             val = exif.get(tag)
             parsed = _parse_exif_date(val) if val else None

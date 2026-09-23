@@ -18,6 +18,7 @@ from PySide6.QtGui import QGuiApplication, QImage, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 import contextlib
 
 if TYPE_CHECKING:
@@ -267,7 +268,7 @@ class MultiMonitorController:
 
     def _on_deep_zoom_array(self, arr) -> None:
         # Forward to any previously-registered hook first, then mirror.
-        with contextlib.suppress(Exception):
+        with best_effort("forward the frame to the previous display hook"):
             if self._prev_on_displayed is not None:
                 self._prev_on_displayed(arr)
         if self._window is not None:

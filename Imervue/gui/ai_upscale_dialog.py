@@ -31,7 +31,7 @@ from Imervue.gui.dialog_rows import action_button_row, folder_picker_row, path_b
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
-import contextlib
+from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -676,7 +676,7 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
 
         # Reload viewer if overwritten
         if self._overwrite_check.isChecked():
-            with contextlib.suppress(Exception):
+            with best_effort("reload the viewer after upscaling", logger):
                 if self._gui.tile_grid_mode:
                     self._gui.load_tile_grid_async(list(self._gui.model.images))
                 elif self._gui.deep_zoom:

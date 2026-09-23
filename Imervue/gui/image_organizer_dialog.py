@@ -78,7 +78,8 @@ def _get_image_date(path: str, year_only: bool) -> str:
     """Return a date-based subfolder name for *path*."""
     fmt = "%Y" if year_only else "%Y-%m"
     # Try EXIF DateTimeOriginal (tag 36867)
-    with contextlib.suppress(Exception), Image.open(path) as img:
+    # Unreadable file, or a date tag that is missing, not text or not EXIF-formatted.
+    with contextlib.suppress(*IMAGE_READ_ERRORS, TypeError), Image.open(path) as img:
         exif = img.getexif()
         if exif:
             raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime

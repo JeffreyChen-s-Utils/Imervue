@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QHBoxLayout, QWidget
 
 from Imervue.image.browser_state import ImageFilterSpec, filter_paths, refilter_keeping_current
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 
 
 def _any_tag_label() -> str:
@@ -93,7 +94,7 @@ class MainWindowFilterMixin:
         # baseline label so any locale that already localised
         # the prefix stays untouched.
         extras: list[str] = []
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(AttributeError):   # no viewer / model yet during setup
             images = self.viewer.model.images or []
             idx = self.viewer.current_index
             if 0 <= idx < len(images):
@@ -105,7 +106,7 @@ class MainWindowFilterMixin:
         # Keep the tab bar in lockstep with whatever image the viewer
         # now shows. Only sync in deep-zoom mode — tile grid / folder
         # browsing intentionally doesn't create tabs.
-        with contextlib.suppress(Exception):
+        with best_effort("sync the tab bar with the shown image"):
             images = self.viewer.model.images
             idx = self.viewer.current_index
             if self.viewer.deep_zoom and 0 <= idx < len(images):

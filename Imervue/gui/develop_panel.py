@@ -41,6 +41,7 @@ from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 import contextlib
 
 if TYPE_CHECKING:
@@ -389,13 +390,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
                 self._canvas.context_menu_requested.disconnect(self._show_canvas_menu)
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
-            with contextlib.suppress(Exception):
+            with best_effort("cancel the canvas text edit", logger):
                 self._canvas._cancel_text_edit()
             # Release shiboken-tracked objects held by the canvas so they
             # are freed deterministically right now.
-            with contextlib.suppress(Exception):
-                self._canvas._base_qimg = None
-                self._canvas._preview_qimg = None
+            self._canvas._base_qimg = None
+            self._canvas._preview_qimg = None
             self._canvas.hide()
             self._canvas.setParent(None)
             self._canvas = None
@@ -656,12 +656,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         images = list(getattr(viewer.model, "images", []) or [])
         if not (0 <= viewer.current_index < len(images)):
             return
-        with contextlib.suppress(Exception):
+        with best_effort("make the viewer GL context current", logger):
             viewer.makeCurrent()
         try:
             delete_current_image(viewer)
         finally:
-            with contextlib.suppress(Exception):
+            with best_effort("release the viewer GL context", logger):
                 viewer.doneCurrent()
         target = _rebind_target_after_delete(
             list(viewer.model.images), viewer.current_index)

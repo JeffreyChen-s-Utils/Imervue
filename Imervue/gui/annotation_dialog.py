@@ -53,7 +53,7 @@ from Imervue.gui.annotation_file_actions import (
 from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.qimage_convert import pil_to_qimage, qimage_to_pil
-import contextlib
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.annotation")
 
@@ -778,7 +778,7 @@ def open_annotation_for_path(
         # Lazy import to avoid a top-level dependency on the viewer module
         # for the offline-testable parts of this file.
         from Imervue.gpu_image_view.images.image_loader import open_path
-        with contextlib.suppress(Exception):
+        with best_effort("clear the deep-zoom view before reopening", logger):
             main_gui._clear_deep_zoom()
         try:
             open_path(main_gui=main_gui, path=saved_path)

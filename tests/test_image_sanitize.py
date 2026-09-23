@@ -836,3 +836,31 @@ class TestSanitizeWorker:
         # Nothing should have been created as a sibling of out_dir.
         siblings = {p.name for p in tmp_path.iterdir()}
         assert siblings == {"src", "outside.png", "out"}
+
+
+class TestGetImageDateFailures:
+    def test_unreadable_file_falls_back_to_mtime(self, tmp_path):
+        import datetime as _dt
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"not an image")
+        stamp = _dt.datetime(2020, 5, 6, 7, 8, 9).timestamp()
+        os.utime(bad, (stamp, stamp))
+        assert _get_image_date(str(bad)) == _dt.datetime.fromtimestamp(stamp)
+
+    def test_file_is_released(self, tmp_path):
+        path = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(path)
+        _get_image_date(str(path))
+        os.remove(path)   # fails on Windows while a handle is still open
+
+    def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
+        from Imervue.gui import image_sanitize_dialog as mod
+        path = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(path)
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            _get_image_date(str(path))

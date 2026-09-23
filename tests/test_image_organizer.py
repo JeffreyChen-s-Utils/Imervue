@@ -354,3 +354,38 @@ class TestGetResolutionBucket:
         monkeypatch.setattr(mod.Image, "open", boom)
         with pytest.raises(RuntimeError):
             _get_resolution_bucket("x.png")
+
+
+class TestImageDateBucket:
+    def test_exif_date_wins_then_mtime(self, tmp_path):
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.jpg"
+        exif = Image.Exif()
+        exif[36867] = "2019:02:03 04:05:06"
+        Image.new("RGB", (4, 4)).save(path, exif=exif)
+        assert _get_image_date(str(path), year_only=False) == "2019-02"
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"not an image")
+        stamp = datetime(2021, 7, 1, 12).timestamp()
+        os.utime(bad, (stamp, stamp))
+        assert _get_image_date(str(bad), year_only=True) == "2021"
+
+    def test_unparsable_exif_date_falls_back(self, tmp_path):
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.jpg"
+        exif = Image.Exif()
+        exif[36867] = "not a date"
+        Image.new("RGB", (4, 4)).save(path, exif=exif)
+        stamp = datetime(2018, 1, 1, 12).timestamp()
+        os.utime(path, (stamp, stamp))
+        assert _get_image_date(str(path), year_only=True) == "2018"
+
+    def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
+        from Imervue.gui import image_organizer_dialog as mod
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            mod._get_image_date(str(tmp_path / "a.jpg"), year_only=True)

@@ -13,6 +13,7 @@ from PySide6.QtCore import QByteArray, QTimer
 from PySide6.QtWidgets import QApplication
 
 from Imervue.user_settings.user_setting_dict import user_setting_dict
+from Imervue.system.best_effort import best_effort
 
 
 class MainWindowScreensMixin:
@@ -152,7 +153,7 @@ class MainWindowScreensMixin:
     def _save_window_geometry(self) -> None:
         """Save window geometry + state into user_setting_dict."""
         import base64
-        with contextlib.suppress(Exception):
+        with best_effort("store the window geometry"):
             user_setting_dict["window_geometry"] = base64.b64encode(
                 bytes(self.saveGeometry())
             ).decode("ascii")

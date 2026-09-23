@@ -32,6 +32,7 @@ from Imervue.image.save_formats import (
     save_image,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 import contextlib
 
 if TYPE_CHECKING:
@@ -348,7 +349,7 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
 
         # Reload viewer if converted in-place
         if self._same_dir_check.isChecked():
-            with contextlib.suppress(Exception):
+            with best_effort("reload the tile grid after converting", logger):
                 if self._gui.tile_grid_mode:
                     self._gui.load_tile_grid_async(list(self._gui.model.images))
 

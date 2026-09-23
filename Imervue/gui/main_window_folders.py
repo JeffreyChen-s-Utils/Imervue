@@ -76,7 +76,7 @@ class MainWindowFoldersMixin:
         viewer = self.viewer
         scroll = 0
         if self._browse_mode == "list" and hasattr(self, "image_list_view"):
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(RuntimeError):   # list view already deleted
                 scroll = self.image_list_view.verticalScrollBar().value()
         elif hasattr(viewer, "scroll_y"):
             scroll = int(getattr(viewer, "scroll_y", 0))
