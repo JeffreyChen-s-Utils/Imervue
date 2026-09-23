@@ -48,3 +48,15 @@ def test_one_version_per_action():
             action, _, sha = ref.partition("@")
             seen.setdefault(action, set()).add(sha)
     assert {action: shas for action, shas in seen.items() if len(shas) > 1} == {}
+
+
+def test_dependabot_keeps_pins_current_on_dev():
+    # Pinned SHAs only stay current if something bumps them; every update
+    # goes to dev because a push to main runs the release workflow. Parsed as
+    # text: PyYAML is not a test dependency.
+    text = (_WORKFLOWS[0].parent.parent / "dependabot.yml").read_text(encoding="utf-8")
+    blocks = re.split(r"^\s*-\s*package-ecosystem:", text, flags=re.MULTILINE)[1:]
+    ecosystems = {block.split()[0].strip("\"'") for block in blocks}
+    assert {"pip", "github-actions"} <= ecosystems
+    assert all(re.search(r"^\s*target-branch:\s*\"dev\"", block, re.MULTILINE)
+               for block in blocks)
