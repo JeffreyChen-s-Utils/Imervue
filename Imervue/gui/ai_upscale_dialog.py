@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.folder_row import folder_picker_row
+from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies

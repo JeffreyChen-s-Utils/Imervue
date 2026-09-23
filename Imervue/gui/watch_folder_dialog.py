@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.folder_row import folder_picker_row
+from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.develop_presets import DevelopPresetStore, apply_recipe_to_paths
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper

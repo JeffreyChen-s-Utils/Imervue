@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,14 +17,13 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
-    QSlider,
     QVBoxLayout,
 )
 from PIL import Image
 
+from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
@@ -151,25 +150,57 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
+        browse_text = self._lang.get("export_browse", "Browse...")
 
         # Source folder
         layout.addWidget(QLabel(
             self._lang.get("batch_convert_source", "Source folder:")))
-        src_row = QHBoxLayout()
-        self._src_edit = QLineEdit()
+        src_row, self._src_edit, _src_browse = path_browse_row(
+            self._browse_src, browse_text=browse_text)
         self._src_edit.setPlaceholderText(
             self._lang.get("batch_convert_source_hint",
                            "Choose a folder with images..."))
-        src_browse = QPushButton(self._lang.get("export_browse", "Browse..."))
-        src_browse.clicked.connect(self._browse_src)
-        src_row.addWidget(self._src_edit, 1)
-        src_row.addWidget(src_browse)
         layout.addLayout(src_row)
 
         self._count_label = QLabel("")
         layout.addWidget(self._count_label)
 
-        # Target format
+        layout.addLayout(self._build_format_row())
+
+        # Quality
+        self._quality_label, self._quality_slider = quality_slider(self._lang)
+        self._quality_slider.setToolTip(self._lang.get(
+            "batch_convert_quality_tooltip",
+            "Compression quality (0 worst / smallest, 100 best / "
+            "largest). Ignored for lossless formats like PNG.",
+        ))
+        layout.addWidget(self._quality_label)
+        layout.addWidget(self._quality_slider)
+
+        self._add_option_checks(layout)
+        self._add_output_rows(layout, browse_text)
+
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.setFormat("%v / %m  (%p%)")
+        self._progress.setVisible(False)
+        layout.addWidget(self._progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        # Buttons
+        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
+        cancel_btn.clicked.connect(self.reject)
+        self._start_btn = QPushButton(
+            self._lang.get("batch_convert_start", "Convert"))
+        self._start_btn.clicked.connect(self._do_convert)
+        layout.addLayout(action_button_row(cancel_btn, self._start_btn))
+
+        self._on_format_changed()
+
+    def _build_format_row(self) -> QHBoxLayout:
+        """Target-format combo, WebP preselected."""
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel(
             self._lang.get("batch_convert_format", "Convert to:")))
@@ -184,27 +215,10 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
             "cost of compression artefacts.",
         ))
         fmt_row.addWidget(self._fmt_combo, 1)
-        layout.addLayout(fmt_row)
+        return fmt_row
 
-        # Quality
-        self._quality_label = QLabel(
-            self._lang.get("export_quality", "Quality:") + " 85")
-        self._quality_slider = QSlider(Qt.Orientation.Horizontal)
-        self._quality_slider.setRange(0, 100)
-        self._quality_slider.setValue(85)
-        self._quality_slider.valueChanged.connect(
-            lambda v: self._quality_label.setText(
-                self._lang.get("export_quality", "Quality:") + f" {v}")
-        )
-        self._quality_slider.setToolTip(self._lang.get(
-            "batch_convert_quality_tooltip",
-            "Compression quality (0 worst / smallest, 100 best / "
-            "largest). Ignored for lossless formats like PNG.",
-        ))
-        layout.addWidget(self._quality_label)
-        layout.addWidget(self._quality_slider)
-
-        # Options
+    def _add_option_checks(self, layout: QVBoxLayout) -> None:
+        """Skip-same-format (on) and delete-originals (off) boxes."""
         self._skip_same = QCheckBox(
             self._lang.get("batch_convert_skip_same",
                            "Skip images already in target format"))
@@ -228,7 +242,8 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
         ))
         layout.addWidget(self._delete_orig)
 
-        # Output folder
+    def _add_output_rows(self, layout: QVBoxLayout, browse_text: str) -> None:
+        """Same-folder toggle, then the output label and row it keeps hidden while checked."""
         self._same_dir_check = QCheckBox(
             self._lang.get("batch_convert_same_dir",
                            "Save to same folder as source"))
@@ -240,39 +255,11 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
             self._lang.get("batch_convert_output", "Output folder:"))
         self._out_label.setVisible(False)
         layout.addWidget(self._out_label)
-        out_row = QHBoxLayout()
-        self._out_edit = QLineEdit()
+        out_row, self._out_edit, self._out_browse = path_browse_row(
+            self._browse_out, browse_text=browse_text)
         self._out_edit.setVisible(False)
-        self._out_browse = QPushButton(
-            self._lang.get("export_browse", "Browse..."))
         self._out_browse.setVisible(False)
-        self._out_browse.clicked.connect(self._browse_out)
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(self._out_browse)
         layout.addLayout(out_row)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.setFormat("%v / %m  (%p%)")
-        self._progress.setVisible(False)
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        # Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self.reject)
-        self._start_btn = QPushButton(
-            self._lang.get("batch_convert_start", "Convert"))
-        self._start_btn.clicked.connect(self._do_convert)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._start_btn)
-        layout.addLayout(btn_row)
-
-        self._on_format_changed()
 
     def _browse_src(self):
         folder = QFileDialog.getExistingDirectory(

@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui.folder_row import folder_picker_row
+from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
