@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet import pet_placement
 from Imervue.desktop_pet.fullscreen_detector import FullscreenDetector
@@ -367,15 +368,14 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         threads / OS hooks outlive the destroyed C++ QObject. Nothing is
         persisted, so re-spawning restores whatever the user had enabled.
         """
-        import contextlib
         for controller in self._features.values():
-            with contextlib.suppress(Exception):
+            with best_effort("shut down a feature controller"):
                 controller.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down music rhythm"):
             self._music_rhythm.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down the canvas drivers"):
             self._canvas_drivers.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down the LLM client"):
             # An in-flight LLM request can still be blocked in urlopen; mark it
             # dead so its late reply doesn't emit on this soon-deleted window.
             self._llm.shutdown()

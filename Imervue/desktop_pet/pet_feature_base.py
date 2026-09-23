@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from Imervue.system.best_effort import best_effort
+
 
 class FeatureHost(Protocol):
     """The slice of :class:`PetWindow` a feature controller needs.
@@ -133,8 +135,7 @@ class IntegrationController:
         """
         client = self._client
         if client is not None:
-            import contextlib
-            with contextlib.suppress(Exception):
+            with best_effort("stop the integration client"):
                 client.stop()   # type: ignore[attr-defined]
 
 

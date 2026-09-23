@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
+from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet.click_sfx import ClickSfxPlayer
 from Imervue.desktop_pet.idle_minigame import IdleMinigameDriver
 from Imervue.desktop_pet.llm_dialogue import (
@@ -86,8 +87,7 @@ class CanvasDriverController:
     def shutdown(self) -> None:
         """Stop the driver WITHOUT persisting a disabled state (despawn / close)."""
         if self._driver is not None:
-            import contextlib
-            with contextlib.suppress(Exception):
+            with best_effort("disable the driver"):
                 self._driver.set_enabled(False)   # type: ignore[attr-defined]
 
 

@@ -18,11 +18,11 @@ and keeps the workspace + tray talking to the right ``PetWindow``.
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 
 from PySide6.QtCore import QObject, Signal
 
+from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet.pet_window import PetWindow
 
@@ -86,7 +86,7 @@ class PetRegistry(QObject):
         # the global hotkey hook installed otherwise.
         shutdown = getattr(window, "shutdown", None)
         if callable(shutdown):
-            with contextlib.suppress(Exception):
+            with best_effort("shut down the pet window"):
                 shutdown()
         try:
             window.hide()
