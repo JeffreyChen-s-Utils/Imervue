@@ -18,6 +18,7 @@ from PIL import Image
 
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -378,7 +379,7 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
 
 
 def open_gif_video_dialog(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = GifVideoDialog(main_gui, paths)

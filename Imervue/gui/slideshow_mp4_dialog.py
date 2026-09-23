@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.export.slideshow_mp4 import SlideshowOptions, generate_slideshow_mp4
+from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -123,14 +124,7 @@ class SlideshowMp4Dialog(QDialog):
         return btn_row
 
     def _resolve_images(self) -> list[str]:
-        viewer = getattr(self.ui, "viewer", None)
-        if viewer is None:
-            return []
-        selected = getattr(viewer, "selected_tiles", set())
-        paths = [p for p in selected if isinstance(p, str)]
-        if paths:
-            return paths
-        return list(getattr(viewer.model, "images", []))
+        return selection_or_all(getattr(self.ui, "viewer", None))
 
     def _export(self, images: list[str]) -> None:
         lang = language_wrapper.language_word_dict

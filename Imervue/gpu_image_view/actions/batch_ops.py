@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -296,7 +297,7 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
 # ===========================
 
 def open_batch_rename(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = BatchRenameDialog(main_gui, paths)
@@ -304,7 +305,7 @@ def open_batch_rename(main_gui: GPUImageView):
 
 
 def open_batch_move(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = BatchMoveDialog(main_gui, paths)

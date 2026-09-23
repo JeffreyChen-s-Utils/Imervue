@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `d91fdf8` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `7c1c904` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 789 | 129,255 |
+| `tests/` | 790 | 129,368 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
-| `Imervue/gui/` | 159 | 32,467 |
+| `Imervue/gui/` | 159 | 32,449 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,818 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,842 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,195 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,592** | **303,647** |
+| **總計** | **1,593** | **303,766** |
 
-其中 `Imervue/` 套件本身 741 檔 / 160,003 行。
+其中 `Imervue/` 套件本身 741 檔 / 160,009 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -462,8 +462,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `delete.py` | 222 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
-| `select.py` | 209 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚 |
-| `batch_ops.py` | 311 | 批次重新命名 / 移動 / 複製 / 旋轉 |
+| `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
+| `batch_ops.py` | 312 | 批次重新命名 / 移動 / 複製 / 旋轉 |
 | `compare_dialog.py` | 582 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 212 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
@@ -516,7 +516,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-159 個檔、32,467 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+159 個檔、32,449 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -591,16 +591,16 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `clone_stamp_dialog.py`(208) · `healing_brush_dialog.py`(244) · `sky_replace_dialog.py`(142) ·
 `portrait_retouch_dialog.py`(170) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(233) ·
 `hdr_merge_dialog.py`(150) · `panorama_dialog.py`(160) · `focus_stack_dialog.py`(148) ·
-`stack_blend_dialog.py`(169) · `collage_dialog.py`(89) · `deflicker_dialog.py`(208) ·
+`stack_blend_dialog.py`(169) · `collage_dialog.py`(87) · `deflicker_dialog.py`(208) ·
 `id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(167)
 
 #### 批次 / 匯出 / 管理
 
 `batch_convert_dialog.py`(361) · `batch_export_dialog.py`(388) · `export_dialog.py`(243) ·
-`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(385) · `contact_sheet_dialog.py`(199) ·
-`web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(181) · `image_organizer_dialog.py`(536) ·
+`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(192) ·
+`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(536) ·
 `duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(771) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
+`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(122) · `culling_dialog.py`(257) 挑片 ·
 `ai_upscale_dialog.py`(716) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-789 個檔、129,255 行。`pyproject.toml` 定義三個互斥層級 marker：
+790 個檔、129,368 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

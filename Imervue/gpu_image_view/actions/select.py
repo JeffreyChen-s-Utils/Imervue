@@ -12,6 +12,29 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
+def selected_in_view_order(viewer) -> list[str]:
+    """The selected tile paths, in the order the viewer lists its images.
+
+    ``selected_tiles`` is a set, so iterating it yields hash order: a slideshow,
+    contact sheet, GIF or numbered rename built from it came out shuffled.
+    Selected paths the model no longer lists follow, sorted.
+    """
+    selected = {p for p in getattr(viewer, "selected_tiles", ()) or () if isinstance(p, str)}
+    if not selected:
+        return []
+    images = getattr(getattr(viewer, "model", None), "images", None) or []
+    ordered = [p for p in images if p in selected]
+    return ordered + sorted(selected.difference(ordered))
+
+
+def selection_or_all(viewer) -> list[str]:
+    """The selection in view order, else every image the viewer lists; ``[]`` for no viewer."""
+    if viewer is None:
+        return []
+    return selected_in_view_order(viewer) or list(
+        getattr(getattr(viewer, "model", None), "images", None) or [])
+
+
 def _auto_loop_enabled() -> bool:
     """Whether arrow keys at list ends should wrap around.
 
