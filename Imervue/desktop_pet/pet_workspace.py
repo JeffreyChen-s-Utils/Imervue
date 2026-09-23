@@ -189,57 +189,52 @@ class PetWorkspace(QWidget):
         layout = QVBoxLayout(group)
         settings = pet_settings.load()
 
-        self._show_check = QCheckBox(
-            _tr("desktop_pet_show", "Show pet on desktop"),
-        )
-        self._show_check.toggled.connect(self._on_show_toggled)
-        layout.addWidget(self._show_check)
-
-        self._click_through_check = QCheckBox(
+        self._show_check = self._window_check(
+            _tr("desktop_pet_show", "Show pet on desktop"), None, self._on_show_toggled)
+        self._click_through_check = self._window_check(
             _tr(
                 "desktop_pet_click_through",
                 "Click-through (let mouse events pass to the desktop)",
             ),
-        )
-        self._click_through_check.setChecked(bool(settings["click_through"]))
-        self._click_through_check.toggled.connect(self._on_click_through_toggled)
-        layout.addWidget(self._click_through_check)
-
-        self._anchor_check = QCheckBox(
+            settings["click_through"], self._on_click_through_toggled)
+        self._anchor_check = self._window_check(
             _tr("desktop_pet_anchor", "Lock position (ignore drags)"),
-        )
-        self._anchor_check.setChecked(bool(settings["anchor_locked"]))
-        self._anchor_check.toggled.connect(self._on_anchor_toggled)
-        layout.addWidget(self._anchor_check)
-
-        self._on_bottom_check = QCheckBox(
+            settings["anchor_locked"], self._on_anchor_toggled)
+        self._on_bottom_check = self._window_check(
             _tr(
                 "desktop_pet_on_bottom",
                 "Always on bottom (desktop widget — sits behind every window)",
             ),
-        )
-        self._on_bottom_check.setChecked(bool(settings["always_on_bottom"]))
-        self._on_bottom_check.toggled.connect(self._on_always_on_bottom_toggled)
-        layout.addWidget(self._on_bottom_check)
-
-        self._fullscreen_check = QCheckBox(
+            settings["always_on_bottom"], self._on_always_on_bottom_toggled)
+        self._fullscreen_check = self._window_check(
             _tr(
                 "desktop_pet_hide_fullscreen",
                 "Hide when another app goes fullscreen",
             ),
-        )
-        self._fullscreen_check.setChecked(bool(settings["hide_on_fullscreen"]))
-        self._fullscreen_check.toggled.connect(self._on_fullscreen_toggled)
-        layout.addWidget(self._fullscreen_check)
-
-        self._speech_check = QCheckBox(
+            settings["hide_on_fullscreen"], self._on_fullscreen_toggled)
+        self._speech_check = self._window_check(
             _tr("desktop_pet_speech", "Speech bubble on click"),
-        )
-        self._speech_check.setChecked(bool(settings["speech_enabled"]))
-        self._speech_check.toggled.connect(self._on_speech_toggled)
-        layout.addWidget(self._speech_check)
+            settings["speech_enabled"], self._on_speech_toggled)
+        for box in (self._show_check, self._click_through_check, self._anchor_check,
+                    self._on_bottom_check, self._fullscreen_check, self._speech_check):
+            layout.addWidget(box)
 
-        # Size combo
+        layout.addLayout(self._build_size_row(settings))
+        layout.addLayout(self._build_opacity_row(settings))
+        layout.addLayout(self._build_snap_row(settings))
+        return group
+
+    @staticmethod
+    def _window_check(text: str, saved, on_toggle) -> QCheckBox:
+        """Checkbox restored from ``saved`` (``None`` = leave unchecked), wired to ``on_toggle``."""
+        box = QCheckBox(text)
+        if saved is not None:
+            box.setChecked(bool(saved))
+        box.toggled.connect(on_toggle)
+        return box
+
+    def _build_size_row(self, settings: dict) -> QHBoxLayout:
+        """Size preset combo restored from the saved preset."""
         row = QHBoxLayout()
         row.addWidget(QLabel(_tr("desktop_pet_size_label", "Size:")))
         self._size_combo = QComboBox()
@@ -248,10 +243,14 @@ class PetWorkspace(QWidget):
         self._size_combo.currentTextChanged.connect(self._on_size_changed)
         row.addWidget(self._size_combo)
         row.addStretch(1)
-        layout.addLayout(row)
+        return row
 
-        # Opacity slider — slider expresses tenths (10-100) for
-        # integer precision; converted to 0.1 - 1.0 float on apply.
+    def _build_opacity_row(self, settings: dict) -> QHBoxLayout:
+        """Opacity slider with its percentage readout.
+
+        The slider expresses tenths (10-100) for integer precision; the value
+        is converted to a 0.1 - 1.0 float on apply.
+        """
         row = QHBoxLayout()
         row.addWidget(QLabel(_tr("desktop_pet_opacity_label", "Opacity:")))
         self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
@@ -263,9 +262,10 @@ class PetWorkspace(QWidget):
         self._opacity_label = QLabel(f"{int(float(settings['opacity']) * 100)}%")
         self._opacity_label.setMinimumWidth(40)
         row.addWidget(self._opacity_label)
-        layout.addLayout(row)
+        return row
 
-        # Snap threshold spin box
+    def _build_snap_row(self, settings: dict) -> QHBoxLayout:
+        """Edge-snap threshold in pixels (0-200)."""
         row = QHBoxLayout()
         row.addWidget(QLabel(
             _tr("desktop_pet_snap_label", "Edge-snap threshold (px):"),
@@ -277,8 +277,7 @@ class PetWorkspace(QWidget):
         self._snap_spin.valueChanged.connect(self._on_snap_changed)
         row.addWidget(self._snap_spin)
         row.addStretch(1)
-        layout.addLayout(row)
-        return group
+        return row
 
     def _build_drivers_group(self) -> QGroupBox:
         group = QGroupBox(_tr("desktop_pet_group_drivers", "Live drivers"))

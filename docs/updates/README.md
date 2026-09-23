@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-53 | 2026-09-23 | Split the pet workspace's Window group builder | #done #refactor #desktop_pet | [2026-09](2026-09.md) |
 | U-20260923-52 | 2026-09-23 | Split GifVideoDialog._build_ui into section builders | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-51 | 2026-09-23 | Split FillDock's constructor; share tooltip controls with BrushDock | #done #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-50 | 2026-09-23 | Split PuppetCanvas.__init__ into format, translucency and state groups | #done #refactor #puppet | [2026-09](2026-09.md) |
