@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `a7cbb65` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `bcc5b06` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 787 | 129,027 |
+| `tests/` | 788 | 129,152 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,485 |
 | `Imervue/puppet/` | 57 | 15,214 |
@@ -76,7 +76,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/desktop_pet/` | 33 | 8,195 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
 | `Imervue/library/` | 32 | 4,140 |
-| `Imervue/menu/` | 11 | 3,604 |
+| `Imervue/menu/` | 11 | 3,609 |
 | `Imervue/` 根層 | 5 | 1,799 |
 | `Imervue/plugin/` | 9 | 2,150 |
 | `Imervue/system/` | 16 | 1,840 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,590** | **303,432** |
+| **總計** | **1,591** | **303,562** |
 
-其中 `Imervue/` 套件本身 741 檔 / 160,016 行。
+其中 `Imervue/` 套件本身 741 檔 / 160,021 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -632,7 +632,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `right_click_menu.py` | 897 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
 | `file_menu.py` | 520 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
-| `filter_menu.py` | 276 | 依副檔名 / 星等過濾 |
+| `filter_menu.py` | 280 | 依副檔名 / 星等過濾 |
 | `plugin_menu.py` | 341 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 193 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 175 | 依名稱 / 日期 / 大小 / 解析度排序 |
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-787 個檔、129,027 行。`pyproject.toml` 定義三個互斥層級 marker：
+788 個檔、129,152 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -31,56 +31,21 @@ def build_filter_menu(ui: ImervueMainWindow):
 
     filter_menu = ui.menuBar().addMenu(lang.get("filter_menu_title", "Filter"))
 
-    # ===== 依副檔名 =====
-    ext_menu = filter_menu.addMenu(lang.get("filter_by_extension", "By Extension"))
-    for key in _EXT_GROUPS:
-        label = lang.get(f"filter_ext_{key}", key.upper() if key != "all" else "All")
-        action = ext_menu.addAction(label)
-        action.triggered.connect(lambda checked, k=key: _apply_ext_filter(ui, k))
+    _add_extension_menu(ui, filter_menu, lang)
+    _add_color_menu(ui, filter_menu, lang)
+    _add_rating_menu(ui, filter_menu, lang)
 
-    # ===== 依色彩標籤 =====
-    color_menu = filter_menu.addMenu(lang.get("filter_by_color", "By Color Label"))
-    color_all = color_menu.addAction(lang.get("filter_color_all", "All"))
-    color_all.triggered.connect(lambda: _apply_color_filter(ui, None))
-    color_any = color_menu.addAction(lang.get("filter_color_any", "Any label"))
-    color_any.triggered.connect(lambda: _apply_color_filter(ui, "any"))
-    color_none = color_menu.addAction(lang.get("filter_color_none", "No label"))
-    color_none.triggered.connect(lambda: _apply_color_filter(ui, "none"))
-    color_menu.addSeparator()
-    for c in ("red", "yellow", "green", "blue", "purple"):
-        a = color_menu.addAction(lang.get(f"color_label_{c}", c.title()))
-        a.triggered.connect(lambda checked, cc=c: _apply_color_filter(ui, cc))
-
-    # ===== 依評分 =====
-    rating_menu = filter_menu.addMenu(lang.get("filter_by_rating", "By Rating"))
-    action_all = rating_menu.addAction(lang.get("filter_rating_all", "All"))
-    action_all.triggered.connect(lambda: _apply_rating_filter(ui, 0))
-
-    action_fav = rating_menu.addAction(lang.get("filter_rating_favorited", "Favorited"))
-    action_fav.triggered.connect(lambda: _apply_rating_filter(ui, -1))
-
-    for star in range(1, 6):
-        label = "\u2605" * star
-        action = rating_menu.addAction(label)
-        action.triggered.connect(lambda checked, s=star: _apply_rating_filter(ui, s))
-
-    # ===== 依標籤 =====
-    tag_menu = filter_menu.addMenu(lang.get("filter_by_tag", "By Tag"))
-    _build_tag_filter(ui, tag_menu)
-
-    # ===== 依相簿 =====
-    album_menu = filter_menu.addMenu(lang.get("filter_by_album", "By Album"))
-    _build_album_filter(ui, album_menu)
+    # ===== 依標籤 / 依相簿 =====
+    _build_tag_filter(ui, filter_menu.addMenu(lang.get("filter_by_tag", "By Tag")))
+    _build_album_filter(ui, filter_menu.addMenu(lang.get("filter_by_album", "By Album")))
 
     filter_menu.addSeparator()
 
-    # ===== 多標籤過濾 (AND/OR) =====
+    # ===== 多標籤過濾 (AND/OR) / 進階過濾 =====
     multi_tag_action = filter_menu.addAction(
         lang.get("filter_multi_tag", "Multi-Tag Filter…")
     )
     multi_tag_action.triggered.connect(lambda: _open_multi_tag(ui))
-
-    # ===== 進階過濾 =====
     adv_action = filter_menu.addAction(
         lang.get("filter_advanced", "Advanced Filter…")
     )
@@ -88,17 +53,7 @@ def build_filter_menu(ui: ImervueMainWindow):
 
     filter_menu.addSeparator()
 
-    # ===== 分揀 (Pick / Reject / Unflagged) =====
-    cull_menu = filter_menu.addMenu(lang.get("filter_by_cull", "By Cull State"))
-    cull_all = cull_menu.addAction(lang.get("filter_cull_all", "All"))
-    cull_all.triggered.connect(lambda: _apply_cull_filter(ui, None))
-    for state_key, fallback in (
-        ("pick", "Picks only"),
-        ("reject", "Rejects only"),
-        ("unflagged", "Unflagged only"),
-    ):
-        a = cull_menu.addAction(lang.get(f"filter_cull_{state_key}", fallback))
-        a.triggered.connect(lambda checked, s=state_key: _apply_cull_filter(ui, s))
+    _add_cull_menu(ui, filter_menu, lang)
 
     # ===== Stack RAW+JPEG =====
     stack_action = filter_menu.addAction(
@@ -113,6 +68,56 @@ def build_filter_menu(ui: ImervueMainWindow):
 
     ui._filter_menu = filter_menu
     return filter_menu
+
+
+def _add_extension_menu(ui: ImervueMainWindow, filter_menu, lang: dict) -> None:
+    """By Extension: one entry per group in ``_EXT_GROUPS``."""
+    ext_menu = filter_menu.addMenu(lang.get("filter_by_extension", "By Extension"))
+    for key in _EXT_GROUPS:
+        label = lang.get(f"filter_ext_{key}", key.upper() if key != "all" else "All")
+        action = ext_menu.addAction(label)
+        action.triggered.connect(lambda checked, k=key: _apply_ext_filter(ui, k))
+
+
+def _add_color_menu(ui: ImervueMainWindow, filter_menu, lang: dict) -> None:
+    """By Color Label: All / Any label / No label, a separator, then each colour."""
+    color_menu = filter_menu.addMenu(lang.get("filter_by_color", "By Color Label"))
+    for key, fallback, value in (
+        ("filter_color_all", "All", None),
+        ("filter_color_any", "Any label", "any"),
+        ("filter_color_none", "No label", "none"),
+    ):
+        action = color_menu.addAction(lang.get(key, fallback))
+        action.triggered.connect(lambda checked, v=value: _apply_color_filter(ui, v))
+    color_menu.addSeparator()
+    for c in ("red", "yellow", "green", "blue", "purple"):
+        a = color_menu.addAction(lang.get(f"color_label_{c}", c.title()))
+        a.triggered.connect(lambda checked, cc=c: _apply_color_filter(ui, cc))
+
+
+def _add_rating_menu(ui: ImervueMainWindow, filter_menu, lang: dict) -> None:
+    """By Rating: All (0), Favorited (-1), then one to five stars."""
+    rating_menu = filter_menu.addMenu(lang.get("filter_by_rating", "By Rating"))
+    entries = [(lang.get("filter_rating_all", "All"), 0),
+               (lang.get("filter_rating_favorited", "Favorited"), -1)]
+    entries += [("★" * star, star) for star in range(1, 6)]
+    for label, rating in entries:
+        action = rating_menu.addAction(label)
+        action.triggered.connect(lambda checked, r=rating: _apply_rating_filter(ui, r))
+
+
+def _add_cull_menu(ui: ImervueMainWindow, filter_menu, lang: dict) -> None:
+    """By Cull State: All, then picks / rejects / unflagged only."""
+    cull_menu = filter_menu.addMenu(lang.get("filter_by_cull", "By Cull State"))
+    cull_all = cull_menu.addAction(lang.get("filter_cull_all", "All"))
+    cull_all.triggered.connect(lambda: _apply_cull_filter(ui, None))
+    for state_key, fallback in (
+        ("pick", "Picks only"),
+        ("reject", "Rejects only"),
+        ("unflagged", "Unflagged only"),
+    ):
+        a = cull_menu.addAction(lang.get(f"filter_cull_{state_key}", fallback))
+        a.triggered.connect(lambda checked, s=state_key: _apply_cull_filter(ui, s))
 
 
 def _apply_color_filter(ui: ImervueMainWindow, color: str | None):
