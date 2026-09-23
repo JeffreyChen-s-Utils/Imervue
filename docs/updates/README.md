@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-18 | 2026-09-24 | One shared reveal-in-file-manager for the file tree and both menus | #refactor #system | [2026-09](2026-09.md) |
 | U-20260924-17 | 2026-09-24 | macOS: open the containing folder without an empty argument | #bug #gui #macos | [2026-09](2026-09.md) |
 | U-20260924-16 | 2026-09-24 | Stop gui/ swallowing failures silently (#25) | #refactor #error-handling #gui | [2026-09](2026-09.md) |
 | U-20260924-15 | 2026-09-24 | Log best-effort failures instead of suppressing them; main window first | #refactor #error-handling #system | [2026-09](2026-09.md) |

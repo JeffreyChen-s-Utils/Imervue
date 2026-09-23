@@ -4,9 +4,6 @@ Plugin management menu — view loaded plugins, download, enable/disable, open f
 """
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_in_file_manager
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
@@ -333,9 +331,4 @@ def _open_plugin_folder():
     plugin_dir = _get_plugin_dir()
     plugin_dir.mkdir(exist_ok=True)
 
-    if sys.platform == "win32":
-        os.startfile(str(plugin_dir))
-    elif sys.platform == "darwin":
-        subprocess.Popen(["open", str(plugin_dir)])
-    else:
-        subprocess.Popen(["xdg-open", str(plugin_dir)])
+    reveal_in_file_manager(str(plugin_dir), select=False)

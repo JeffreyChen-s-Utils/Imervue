@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import subprocess
 import sys
@@ -33,6 +34,7 @@ from Imervue.gpu_image_view.actions.select import (
 )
 from Imervue.image.info import get_image_info_at_pos, show_image_info_dialog
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_in_file_manager
 from Imervue.menu.recent_menu import build_recent_menu
 
 if TYPE_CHECKING:
@@ -131,13 +133,11 @@ def _show_in_explorer_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _open_in_explorer(path: str):
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", path])
-        else:
-            subprocess.Popen(["xdg-open", str(Path(path).parent)])
+    try:
+        reveal_in_file_manager(path)
+    except (OSError, ValueError):   # file manager missing, or it refused the path
+        logging.getLogger("Imervue.right_click_menu").warning(
+            "Could not reveal %s in the file manager", path, exc_info=True)
 
 
 # ===========================

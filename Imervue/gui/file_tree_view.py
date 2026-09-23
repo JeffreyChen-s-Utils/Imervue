@@ -4,9 +4,6 @@ The QTreeView subclass with keyboard shortcuts and right-click menu, plus the
 duplicate-name helper. Extracted from ``Imervue_main_window``; re-exported
 there for backwards compatibility.
 """
-import os
-import subprocess  # nosec B404  # NOSONAR - static arg lists for trusted OS file managers
-import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
@@ -25,6 +22,7 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_in_file_manager
 import contextlib
 import logging
 
@@ -99,34 +97,6 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
 
 
 _logger = logging.getLogger("Imervue.file_tree")
-
-
-def _reveal_in_file_manager(path: str, select: bool) -> None:
-    """Open the OS file manager at ``path`` (selecting it when ``select``).
-
-    Static command + a local filesystem path from the file tree — no
-    untrusted input, shell=False. Bandit B603/B607 and Semgrep flag any
-    subprocess use; suppressed inline (rules are also config-skipped).
-    Raises ``OSError`` when the file manager cannot be started.
-    """
-    if sys.platform == "win32":
-        if select and Path(path).is_file():
-            subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                ["explorer", "/select,", os.path.normpath(path)],
-            )
-        else:
-            subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                ["explorer", os.path.normpath(path)],
-            )
-    elif sys.platform == "darwin":
-        subprocess.Popen(  # nosec B603,B607  # nosemgrep
-            ["open", "-R", path] if select else ["open", path],
-        )
-    else:
-        target = path if Path(path).is_dir() else str(Path(path).parent)
-        subprocess.Popen(  # nosec B603,B607  # nosemgrep
-            ["xdg-open", target],
-        )
 
 
 class _FileTreeView(QTreeView):
@@ -646,7 +616,7 @@ class _FileTreeView(QTreeView):
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
         try:
-            _reveal_in_file_manager(path, select)
+            reveal_in_file_manager(path, select=select)
         except (OSError, ValueError):   # file manager missing, or it refused the path
             _logger.warning("Could not reveal %s in the file manager", path, exc_info=True)
 
