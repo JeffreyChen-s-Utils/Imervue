@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `eb8116a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `8e70944` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 792 | 130,454 |
+| `tests/` | 793 | 130,623 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,451 |
 | `Imervue/puppet/` | 57 | 15,214 |
 | `Imervue/image/` | 113 | 12,866 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,842 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 12,868 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 33 | 8,195 |
 | `Imervue/mcp_server/` | 16 | 4,670 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,595** | **304,866** |
+| **總計** | **1,597** | **305,061** |
 
-其中 `Imervue/` 套件本身 741 檔 / 160,023 行。
+其中 `Imervue/` 套件本身 742 檔 / 160,049 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -395,7 +395,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 996 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `gpu_image_view.py` | 748 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `view_state_init.py` | 274 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
 | `deep_zoom_loading.py` | 297 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 113 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
@@ -949,7 +950,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-792 個檔、130,454 行。`pyproject.toml` 定義三個互斥層級 marker：
+793 個檔、130,623 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1137,7 +1138,7 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用），
-   但有 6 個只剩不到 50 行餘裕：`gpu_image_view/gpu_image_view.py`(996)、`plugin/pip_installer.py`(993)、
+   但有 5 個只剩不到 50 行餘裕：`plugin/pip_installer.py`(993)、
    `desktop_pet/pet_window.py`(985)、`Imervue_main_window.py`(971)、`gpu_image_view/overlay_painter.py`(963)、
    `gui/annotation_dialog.py`(956)。要在這些檔案加程式，先拆出模組（`progress.md` #23）。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；

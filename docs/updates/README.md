@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-76 | 2026-09-23 | Move GPUImageView's state initialisers out of the widget (#23) | #refactor #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-75 | 2026-09-23 | Resync every line count in the architecture map; flag six near-limit modules | #docs #architecture | [2026-09](2026-09.md) |
 | U-20260923-74 | 2026-09-23 | Split the main window's closeEvent (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-73 | 2026-09-23 | Split DuplicateDetectionDialog._build_ui (#19) | #refactor #gui | [2026-09](2026-09.md) |

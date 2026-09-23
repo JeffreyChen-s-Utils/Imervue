@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING
 
 
 from Imervue.gpu_image_view.tile_focus import NO_FOCUS
-from Imervue.gpu_image_view.tile_layout import (
-    DEFAULT_THUMBNAIL_SIZE,
-    plan_tile_size_change,
-    resolve_thumbnail_size,
+from Imervue.gpu_image_view.tile_layout import plan_tile_size_change
+from Imervue.gpu_image_view.view_state_init import (
+    init_browse_state,
+    init_deep_zoom_state,
+    init_display_state,
+    init_grid_state,
+    init_interaction_state,
 )
-from Imervue.gpu_image_view.images.image_model import ImageModel
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -30,8 +32,8 @@ from OpenGL.GL import (
     glOrtho,
     glViewport,
 )
-from PySide6.QtCore import QThreadPool, QMutex, Qt, QTimer
-from PySide6.QtGui import QUndoStack, QPainter
+from PySide6.QtCore import QThreadPool, QMutex
+from PySide6.QtGui import QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
@@ -54,206 +56,13 @@ class GPUImageView(
 
         self.main_window = main_window
 
-        self._init_grid_state()
-        self._init_deep_zoom_state()
-        self._init_browse_state()
-        self._init_interaction_state()
+        init_grid_state(self)
+        init_deep_zoom_state(self)
+        init_browse_state(self)
+        init_interaction_state(self)
         self._init_workers()
         self._init_collaborators()
-        self._init_display_state()
-
-    def _init_grid_state(self) -> None:
-        """Undo stacks and tile-grid layout, selection-cursor and upload state."""
-        # ===== Undo =====
-        self.undo_stack = []  # legacy delete undo
-        self.undo_manager = QUndoStack(self)
-
-        # ===== Tile Grid =====
-        self.tile_grid_mode = False
-        self.selected_image_path = None
-        self.tile_rects = []  # 用來存每個 tile 的 rectangle
-        self.grid_offset_x = 0
-        self.grid_offset_y = 0
-        self.tile_scale = 1.0
-        # Effective per-tile draw scale = tile_scale / devicePixelRatio,
-        # recomputed each ``paint_tile_grid`` so thumbnails keep a consistent
-        # physical size across monitors with different display scaling.
-        self._tile_draw_scale = 1.0
-        # Set when the thumbnail size changes while in deep zoom, so the grid
-        # is rebuilt at the new size when the user exits back to the wall.
-        self._tile_size_dirty = False
-        # Keyboard focus cursor — index into ``model.images`` of the tile
-        # highlighted for arrow-key navigation. NO_FOCUS (-1) means nothing is
-        # focused yet, so the highlight only shows once the user starts
-        # keyboard-browsing and never bothers mouse-only users.
-        self.focused_tile_index = NO_FOCUS
-        # The amber ring draws only while this is True — set by arrow-key
-        # navigation, cleared by mouse clicks and by (re)entering the wall,
-        # so the ring never greets the user uninvited.
-        self.focus_ring_visible = False
-        self.tile_textures = {}
-        self.tile_cache = {}  # path -> img_data
-        self.tile_errors: dict[str, str] = {}
-        self._tile_error_toasted: set[str] = set()
-        self._tile_retry_counts: dict[str, int] = {}
-        self.offline_paths: set[str] = set()
-        # 檔案存在檢查全部走背景掃描（tile_loader.OfflineScanWorker），
-        # paint 路徑只查 offline_paths 這個 set，不做任何檔案系統 I/O。
-        self._offline_scan_inflight = False
-        from Imervue.gpu_image_view.tile_loader import OFFLINE_SWEEP_INTERVAL_MS
-        self._offline_sweep_timer = QTimer(self)
-        self._offline_sweep_timer.setInterval(OFFLINE_SWEEP_INTERVAL_MS)
-        self._offline_sweep_timer.timeout.connect(self._tick_offline_sweep)
-        # path -> monotonic arrival time, for the thumbnail fade-in animation.
-        self._tile_load_times: dict[str, float] = {}
-        # path -> (size, mtime_ns, suffix), used to migrate tile cache on rename.
-        self._tile_file_signatures: dict[str, tuple[int, int, str]] = {}
-        # Async PBO streaming uploader; allocated in initializeGL once a
-        # GL context exists. Stays None (synchronous fallback) until then.
-        self._tile_uploader = None
-
-    def _init_deep_zoom_state(self) -> None:
-        """Deep-zoom image, load tracking and view-fitting state."""
-        # ===== DeepZoom =====
-        self.zoom = 1.0
-        self.dz_offset_x = 0
-        self.dz_offset_y = 0
-        self.last_pos = None
-        self.tile_manager = None
-        self.deep_zoom = None
-        # Path of the image whose full pyramid is loading in the background.
-        # While set (and ``deep_zoom`` is still None) the overlay shows a
-        # low-res preview + "Loading…" pill instead of a blank frame.
-        self._deep_zoom_loading: str | None = None
-        # Path of the image currently shown (or targeted) in deep zoom — the
-        # image whose view ``zoom`` / offsets are live. Used to save the view
-        # under the right key when navigating away (see ``save_view_state``).
-        self._deep_zoom_path: str | None = None
-        self._deep_zoom_error: tuple[str, str] | None = None
-        self._deep_zoom_request_id = 0
-        self._deep_zoom_retry_counts: dict[str, int] = {}
-        self._saved_tile_state = None
-        # True while the user is click-dragging inside the deep-zoom minimap
-        # to pan the viewport.
-        self._minimap_dragging = False
-        # When True, the user has zoomed / panned manually so the
-        # canvas should not auto-fit on resize. Cleared on every
-        # fresh image load via :meth:`_fit_to_window`.
-        self._user_locked_view = False
-        # Snapshot (taken before the per-load save) of whether the image being
-        # loaded had a genuinely remembered view, so a fresh entry always fits.
-        self._loading_was_remembered = False
-        # Base dims the remembered zoom was saved against — a mismatch on load
-        # (rotate/crop changed the geometry) forces a refit.
-        self._loading_remembered_dims = None
-        # Whether the remembered view being loaded was a deliberate zoom-in
-        # (kept) or a whole-image fit (re-fit to the current canvas).
-        self._loading_was_locked = False
-        # Most-recent ``resizeGL`` size — same role as the paint
-        # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
-        # so the initial centre uses the GL-reported logical size
-        # rather than ``self.width()`` / ``height()`` which can lag
-        # the actual layout for the first frame or two.
-        self._last_resize_size: tuple[int, int] = (0, 0)
-        # Retires a screen-settle watch when a newer screen change starts.
-        self._screen_settle_generation = 0
-
-    def _init_browse_state(self) -> None:
-        """Image switching, filtered list, thumbnail density, filmstrip and fade state."""
-        # ===== 圖片切換控制 =====
-        self.model = ImageModel()
-        self.model.images = []  # 所有圖片路徑
-        self.current_index = 0
-        self.on_filename_changed = None
-        # Fired with the edited full-resolution base-level array once a deep-zoom
-        # image is on screen. The multi-monitor mirror uses it to show the same
-        # edited result the main viewer shows (not the raw file on disk).
-        self.on_deep_zoom_displayed = None
-        self.deep_zoom_tile_size = 512
-        self._slideshow_opacity = 1.0
-
-        # ===== 篩選前完整圖片列表 =====
-        self._unfiltered_images: list[str] = []
-
-        # ===== 縮圖排列密度 =====
-        # 0 (compact) / 8 (standard) / 16 (relaxed) — 縮圖間額外 padding 像素
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        self.tile_padding = int(user_setting_dict.get("tile_padding", 8))
-        # Persisted thumbnail size — survives restarts (validated against the
-        # known sizes so a corrupt value can't break the grid).
-        self.thumbnail_size = resolve_thumbnail_size(
-            user_setting_dict.get("thumbnail_size", DEFAULT_THUMBNAIL_SIZE),
-        )
-
-        # ===== 底部縮圖膠卷（deep-zoom filmstrip）=====
-        # 在單張檢視時於畫面底部顯示鄰近縮圖，點選即可跳圖。可由設定關閉。
-        self._filmstrip_enabled = bool(
-            user_setting_dict.get("filmstrip_enabled", True),
-        )
-        # path -> QPixmap，膠卷與低解析載入預覽共用；換資料夾時清空。
-        self._filmstrip_thumb_cache: dict = {}
-        # 已排程但尚未完成的膠卷縮圖載入路徑，避免每幀重複丟 worker。
-        # 膠卷與載入預覽的縮圖只來自 tile_cache；某些進入單張檢視的路徑
-        # （直接開檔、單張檢視時的資料夾刷新）不會經過 tile wall 載入，
-        # tile_cache 因此是空的，於是改在繪製時按需補載入到這裡去重。
-        self._filmstrip_pending: set[str] = set()
-
-        # ===== 切換淡入轉場 =====
-        # 顯示新的單張圖時讓它淡入，連續翻圖更順。可由設定關閉。
-        self._transition_enabled = bool(
-            user_setting_dict.get("image_transition_enabled", True),
-        )
-        from Imervue.gpu_image_view.view_animator import ImageFadeController
-        self._image_fade = ImageFadeController(self)
-
-    def _init_interaction_state(self) -> None:
-        """Hover preview, history, grid selection, mouse, rubber-band zoom and smooth navigation."""
-        # ===== Hover 預覽 =====
-        # Lazy-init 避免在沒有 QApplication 時匯入失敗
-        self._hover_controller = None
-        self._hover_last_path: str | None = None
-        self._hover_tile_path: str | None = None
-        self._timeline_grouping_enabled = True
-        self._quick_meta_hud: tuple[str, float] | None = None
-
-        # ===== 瀏覽歷史 =====
-        # 每次進入 deep zoom 的圖片會被 push 到 history controller。
-        # 前進/後退移動指標，不重寫 stack（除非使用者跳到新圖則 truncate）。
-        from Imervue.gpu_image_view.history_controller import HistoryController
-        self._history = HistoryController(self)
-
-        # ===== Tile Grid 選取模式 =====
-        self.tile_selection_mode = False  # 是否在選取模式
-        self.selected_tiles = set()  # 已選取的 tile path
-        self.long_press_threshold = 500  # 長按進入選取模式的毫秒
-        self._press_timer = None
-        self._drag_selecting = False  # 是否正在拖曳框選
-        self._drag_start_pos = None
-        self._drag_end_pos = None
-
-        # ===== Mouse =====
-        self._middle_dragging = False
-        self.press_pos = None
-
-        # ===== 框選放大（deep-zoom rubber-band zoom）=====
-        # 深縮放時左鍵拖一個方框 → 放大到該區域填滿畫面。
-        self._zoom_band_active = False
-        self._zoom_band_start = None
-        self._zoom_band_end = None
-
-        # ===== 平滑導覽：緩動縮放 + 慣性平移 =====
-        # 會改變操作手感，預設關閉；user_setting 開啟後生效。
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        self._smooth_nav_enabled = bool(
-            user_setting_dict.get("smooth_navigation_enabled", False),
-        )
-        from Imervue.gpu_image_view.view_animator import (
-            PanMomentumController,
-            ZoomEaseController,
-        )
-        self._zoom_ease = ZoomEaseController(self)
-        self._pan_momentum = PanMomentumController(self)
-        self._last_pan_velocity = (0.0, 0.0)
+        init_display_state(self)
 
     def _init_workers(self) -> None:
         """Worker pools, progress coalescing and in-flight tile workers."""
@@ -336,63 +145,6 @@ class GPUImageView(
         # ===== Browse features (filmstrip / reading mode / pan clamp / fade) =====
         from Imervue.gpu_image_view.browse_features import BrowseFeatures
         self._browse = BrowseFeatures(self)
-
-    def _init_display_state(self) -> None:
-        """VRAM budget, histogram, OSD / HUD / loupe / reading-mode toggles and animation."""
-        # ===== VRAM 管理 =====
-        # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
-        # 抓到的話會覆寫成實體 VRAM 的 ~40%，在顯卡強的機器上可大幅放寬 tile cache。
-        self._vram_usage = 0  # 目前 tile grid 紋理佔用 bytes
-        self._vram_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB fallback
-        self._vram_limit_default = self._vram_limit
-        self._tile_tex_sizes: dict[str, int] = {}  # path → texture bytes
-
-        # ===== 直方圖 =====
-        self._show_histogram = False
-        self._histogram_cache: tuple | None = None  # (path, Histogram, ClipStats)
-
-        # ===== OSD (On-Screen Display) =====
-        # F3 — 切換右上角顯示檔名 / 尺寸 / 格式 / 檔案大小
-        self._show_osd = False
-        # Ctrl+F3 — Debug HUD：VRAM、tile cache、執行緒池等技術資訊
-        self._show_debug_hud = False
-        # 目前滑鼠在圖片上的像素座標（update_status 用，paint_pixel_view 用）
-        self._hover_image_xy: tuple[int, int] | None = None
-        # OSD 的 EXIF 行快取：(path, lines)，避免每幀重讀檔案
-        self._exif_osd_cache: tuple | None = None
-        # Shift+P — 像素檢視模式：zoom >= 4x 時顯示像素網格 + RGB 值
-        self._pixel_view = False
-        # L — 放大鏡 loupe：跟著游標顯示局部放大，挑片/對焦確認用
-        self._loupe_enabled = False
-        # Shift+滾輪 在 loupe 開啟時調整放大倍率（見 overlay_painter）。
-        from Imervue.gpu_image_view.hud_geometry import LOUPE_MAGNIFICATION
-        self._loupe_magnification = LOUPE_MAGNIFICATION
-        # W — 閱讀模式：fit 寬度 + 垂直捲動，捲到底自動接下一張（webtoon/長圖）
-        self._reading_mode = False
-
-        # ===== 動畫播放 =====
-        self._animation: object | None = None  # AnimationPlayer instance
-
-        # ===== Minimap =====
-        self._minimap_tex = None  # GL texture id
-        self._minimap_dzi = None  # 對應的 DeepZoomImage，用來偵測是否需要重建
-
-        # 原本 deep zoom 模式下 5 秒不動就會自動藏起 menu/status/tree/exif — 使用者
-        # 反映會擋到檢視流程，移除此行為。保留 mouseTracking 讓 cursor 位置更新
-        # 等其他仰賴 mouse move 事件的功能繼續運作。
-        self.setMouseTracking(True)
-
-        # ===== Focus ======
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setFocus()
-
-        # ===== Drag & Drop =====
-        self.setAcceptDrops(True)
-
-        # ===== 觸控板手勢 =====
-        # Pinch → deep zoom 縮放；Swipe 左右 → 切換圖片
-        self.grabGesture(Qt.GestureType.PinchGesture)
-        self.grabGesture(Qt.GestureType.SwipeGesture)
 
     # ===========================
     # Modify panel (non-destructive editing)
