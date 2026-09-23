@@ -41,10 +41,15 @@ logger = logging.getLogger("Imervue.ai_upscale")
 # ---------------------------------------------------------------------------
 # Model registry — HuggingFace repo + filename for each variant
 # ---------------------------------------------------------------------------
+# Each model is pinned to a Hugging Face commit (bandit B615): a later push to
+# the repository cannot change the weights that get downloaded and run.
+_OWL_REVISION = "d783e61585b3d83a85c91ca8a3b299e8ade94d72"
+
 UPSCALE_MODELS = {
     "realesrgan-x4plus": {
         "repo": "OwlMaster/AllFilesRope",
         "file": "RealESRGAN_x4plus.fp16.onnx",
+        "revision": _OWL_REVISION,
         "scale": 4,
         "desc_key": "upscale_model_x4",
         "desc_default": "Real-ESRGAN x4 (general, best quality)",
@@ -52,6 +57,7 @@ UPSCALE_MODELS = {
     "realesrgan-x4plus-anime": {
         "repo": "xiongjie/lightweight-real-ESRGAN-anime",
         "file": "RealESRGAN_x4plus_anime_4B32F.onnx",
+        "revision": "695895c3a4ab540e3710b5e4a3d6f7e734bc1668",
         "scale": 4,
         "desc_key": "upscale_model_x4_anime",
         "desc_default": "Real-ESRGAN x4 Anime (optimized for illustrations)",
@@ -59,6 +65,7 @@ UPSCALE_MODELS = {
     "realesrgan-x2plus": {
         "repo": "OwlMaster/AllFilesRope",
         "file": "RealESRGAN_x2plus.fp16.onnx",
+        "revision": _OWL_REVISION,
         "scale": 2,
         "desc_key": "upscale_model_x2",
         "desc_default": "Real-ESRGAN x2 (general, 2x upscale)",
@@ -147,15 +154,15 @@ _TILE_PAD = 10
 def _download_model(model_key: str) -> str:
     """Download model from HF and return local path.
 
-    The ``revision`` pin is explicit rather than implicit so a future
-    compromise of the HF repo cannot silently swap the weights we load.
+    Every entry in :data:`UPSCALE_MODELS` pins a commit ``revision``, so a
+    future compromise of the HF repo cannot silently swap the weights we load.
     """
     from huggingface_hub import hf_hub_download
     info = UPSCALE_MODELS[model_key]
     return hf_hub_download(
         repo_id=info["repo"],
         filename=info["file"],
-        revision=info.get("revision", "main"),
+        revision=info["revision"],
     )
 
 
