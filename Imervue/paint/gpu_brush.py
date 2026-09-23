@@ -226,6 +226,18 @@ def make_brush_stroke(options, *, prefer_gpu: bool = True):
         return BrushStroke(options)
 
 
+def _dab_quad_vertices(cx: float, cy: float, kw: int, kh: int) -> np.ndarray:
+    """Four ``(x, y, u, v)`` vertices of a ``kw`` x ``kh`` quad centred on ``(cx, cy)``."""
+    x0 = float(cx) - kw / 2.0
+    y0 = float(cy) - kh / 2.0
+    return np.array([
+        x0,           y0,           0.0, 0.0,
+        x0 + kw,      y0,           1.0, 0.0,
+        x0 + kw,      y0 + kh,      1.0, 1.0,
+        x0,           y0 + kh,      0.0, 1.0,
+    ], dtype=np.float32)
+
+
 class GPUDabSession:
     """One stroke's worth of GPU dab rasterisation.
 
@@ -374,7 +386,7 @@ class GPUDabSession:
             GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
         )
 
-    def stamp(  # pragma: no cover - GL needs display server
+    def stamp(
         self,
         kernel: np.ndarray,
         color: tuple[int, int, int],
@@ -383,31 +395,6 @@ class GPUDabSession:
         cy: float,
     ) -> None:
         """Render one dab into the FBO."""
-        from OpenGL.GL import (
-            GL_ARRAY_BUFFER,
-            GL_DYNAMIC_DRAW,
-            GL_FALSE,
-            GL_FLOAT,
-            GL_LUMINANCE,
-            GL_RED,
-            GL_TEXTURE0,
-            GL_TEXTURE_2D,
-            GL_TRIANGLE_FAN,
-            glActiveTexture,
-            glBindBuffer,
-            glBindTexture,
-            glBufferData,
-            glDisableVertexAttribArray,
-            glDrawArrays,
-            glEnableVertexAttribArray,
-            glTexImage2D,
-            glUniform1f,
-            glUniform1i,
-            glUniform3f,
-            glUniformMatrix4fv,
-            glUseProgram,
-            glVertexAttribPointer,
-        )
         if kernel.ndim != 2:
             raise ValueError(f"kernel must be 2-D, got {kernel.shape}")
         kernel_f32 = np.ascontiguousarray(kernel, dtype=np.float32)
@@ -416,6 +403,17 @@ class GPUDabSession:
         if op <= 0.0:
             return
         self._bind_session()
+        self._upload_kernel(kernel_f32)
+        self._set_dab_uniforms(color, op)
+        self._draw_quad(_dab_quad_vertices(cx, cy, kw, kh))
+
+    def _upload_kernel(self, kernel_f32: np.ndarray) -> None:
+        """Load the float kernel into texture unit 0."""
+        from OpenGL.GL import (
+            GL_FLOAT, GL_LUMINANCE, GL_RED, GL_TEXTURE0, GL_TEXTURE_2D,
+            glActiveTexture, glBindTexture, glTexImage2D,
+        )
+        kh, kw = kernel_f32.shape
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, self._kernel_tex)
         # GL 2.1 — no R32F universally; LUMINANCE/FLOAT carries a
@@ -425,6 +423,12 @@ class GPUDabSession:
             GL_TEXTURE_2D, 0, GL_LUMINANCE, kw, kh, 0,
             GL_RED, GL_FLOAT, kernel_f32.tobytes(),
         )
+
+    def _set_dab_uniforms(self, color: tuple[int, int, int], opacity: float) -> None:
+        """Use the dab program with the session MVP, kernel unit, colour and opacity."""
+        from OpenGL.GL import (
+            GL_FALSE, glUniform1f, glUniform1i, glUniform3f, glUniformMatrix4fv, glUseProgram,
+        )
         glUseProgram(self._program.program)
         glUniformMatrix4fv(self._program.u_mvp, 1, GL_FALSE, self._mvp)
         glUniform1i(self._program.u_kernel, 0)
@@ -432,15 +436,15 @@ class GPUDabSession:
             self._program.u_color,
             color[0] / 255.0, color[1] / 255.0, color[2] / 255.0,
         )
-        glUniform1f(self._program.u_opacity, op)
-        x0 = float(cx) - kw / 2.0
-        y0 = float(cy) - kh / 2.0
-        verts = np.array([
-            x0,           y0,           0.0, 0.0,
-            x0 + kw,      y0,           1.0, 0.0,
-            x0 + kw,      y0 + kh,      1.0, 1.0,
-            x0,           y0 + kh,      0.0, 1.0,
-        ], dtype=np.float32)
+        glUniform1f(self._program.u_opacity, opacity)
+
+    def _draw_quad(self, verts: np.ndarray) -> None:
+        """Draw the interleaved position / texcoord quad, then unbind everything."""
+        from OpenGL.GL import (
+            GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, GL_FALSE, GL_FLOAT, GL_TRIANGLE_FAN,
+            glBindBuffer, glBufferData, glDisableVertexAttribArray, glDrawArrays,
+            glEnableVertexAttribArray, glUseProgram, glVertexAttribPointer,
+        )
         glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
         glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_DYNAMIC_DRAW)
         glEnableVertexAttribArray(self._program.a_position)
@@ -625,10 +629,7 @@ def _subclass():
         def end(self, canvas, x, y):  # type: ignore[override]
             result = super().end(canvas, x, y)
             self._sync_to_layer(canvas)
-            if self._gpu is not None:
-                self._gpu.dispose()
-                self._gpu = None
-                self._gpu_layer = None
+            self.dispose()
             return result
 
         def dispose(self):  # type: ignore[override]
@@ -636,8 +637,8 @@ def _subclass():
             (e.g. the user switches tools mid-stroke). Idempotent."""
             if self._gpu is not None:
                 self._gpu.dispose()
-                self._gpu = None
-                self._gpu_layer = None
+            self._gpu = None
+            self._gpu_layer = None
 
         def _sync_to_layer(self, canvas):
             """Copy the FBO's pixels back into the layer numpy buffer.
@@ -653,9 +654,7 @@ def _subclass():
                 self._gpu.read_back(canvas)
             except (RuntimeError, ValueError) as exc:   # pragma: no cover - GL only
                 logger.warning("GPU read_back failed, dropping session: %s", exc)
-                self._gpu.dispose()
-                self._gpu = None
-                self._gpu_layer = None
+                self.dispose()
 
         def _paint_dab(self, canvas, x, y, kernel, *, fade):  # type: ignore[override]
             if self._gpu is None or canvas is not self._gpu_layer:

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-01 | 2026-09-24 | Split GPUDabSession.stamp and pin its GL call sequence (#19) | #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-89 | 2026-09-23 | Share one dab-clipping rule across every dab-based paint tool (#19) | #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-88 | 2026-09-23 | Split flood_fill's painting step into _paint_mask (#19) | #refactor #paint | [2026-09](2026-09.md) |
 | U-20260923-87 | 2026-09-23 | Split make_brush_cursor into ring, crosshair and slash painters (#19) | #refactor #paint | [2026-09](2026-09.md) |
