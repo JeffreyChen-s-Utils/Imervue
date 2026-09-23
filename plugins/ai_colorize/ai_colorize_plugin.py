@@ -36,6 +36,7 @@ from ai_colorize.colorize import (
     heuristic_colorize,
     onnx_colorize,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -293,13 +294,6 @@ def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:
     label.setMinimumWidth(50)
     row.addWidget(label)
     return container
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 def _colorize_dispatch(arr: np.ndarray, method_data: str,

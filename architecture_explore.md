@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `fa6a5d6` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ac7cd3a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 816 | 133,918 |
+| `tests/` | 817 | 134,039 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
-| `Imervue/gui/` | 161 | 32,820 |
+| `Imervue/gui/` | 161 | 32,821 |
 | `Imervue/puppet/` | 57 | 15,229 |
 | `Imervue/image/` | 113 | 12,888 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
@@ -83,10 +83,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
-| `plugins/`（17 個外掛） | 62 | 14,043 |
-| **總計** | **1,628** | **308,398** |
+| `plugins/`（17 個外掛） | 63 | 14,136 |
+| **總計** | **1,630** | **308,613** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,437 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,438 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -521,7 +521,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-161 個檔、32,820 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+161 個檔、32,821 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -568,7 +568,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `settle_poll.py` | 53 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題） |
 | `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 155 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用 |
+| `_apply_save.py` | 156 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用 |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
@@ -932,22 +932,22 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
-| `safety_review` | 15 / 4,554 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用 | nudenet, ultralytics, huggingface_hub |
+| `safety_review` | 15 / 4,541 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用 | nudenet, ultralytics, huggingface_hub |
 | `spanish_translation` | 3 / 1,773 | 西班牙文語言外掛，示範 `register_language()` | — |
-| `ai_background_remover` | 3 / 927 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
-| `ai_object_remove` | 4 / 829 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
-| `object_splitter` | 3 / 698 | 去背 + 連通元件 → 每個物件存成透明 PNG | rembg |
+| `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
+| `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
+| `object_splitter` | 4 / 696 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
 | `video_source` | 3 / 612 | 瀏覽影片並抽出靜幀 | imageio-ffmpeg |
-| `ai_motion_deblur` | 3 / 588 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
-| `ai_portrait_relight` | 3 / 570 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
-| `ai_smart_resize` | 3 / 531 | Seam carving 內容感知縮放 | — (重運算) |
-| `npr_filters` | 3 / 506 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
-| `ai_colorize` | 3 / 511 | 黑白上色：啟發式調色盤 + ONNX | onnxruntime |
+| `ai_motion_deblur` | 3 / 581 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
+| `ai_portrait_relight` | 3 / 565 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
+| `ai_smart_resize` | 3 / 524 | Seam carving 內容感知縮放 | — (重運算) |
+| `npr_filters` | 3 / 499 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
+| `ai_colorize` | 3 / 505 | 黑白上色：啟發式調色盤 + ONNX | onnxruntime |
 | `cloud_share` | 3 / 485 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
-| `ai_denoise` | 3 / 465 | 雙邊濾波（純 NumPy）或 ONNX 神經降噪 | onnxruntime |
-| `ai_style_transfer` | 3 / 407 | ONNX 快速神經風格轉換，自動探索 `models/*.onnx` | onnxruntime |
-| `portrait_mode` | 3 / 390 | rembg 主體遮罩 + 背景模糊（假淺景深） | rembg |
-| `ai_outpaint` | 3 / 244 | 擴張畫布 + 擴散填補邊界 | — |
+| `ai_denoise` | 3 / 458 | 雙邊濾波（純 NumPy）或 ONNX 神經降噪 | onnxruntime |
+| `ai_style_transfer` | 3 / 400 | ONNX 快速神經風格轉換，自動探索 `models/*.onnx` | onnxruntime |
+| `portrait_mode` | 3 / 384 | rembg 主體遮罩 + 背景模糊（假淺景深） | rembg |
+| `ai_outpaint` | 3 / 237 | 擴張畫布 + 擴散填補邊界 | — |
 | `png_to_icon` | 2 / 195 | PNG → 多尺寸 `.ico` + `.png`（純函式 `write_icon_set`，測試 `tests/test_png_to_icon.py`） | — (Pillow 為預設相依) |
 
 **發佈規則（硬性要求）**：`/plugins/` 在本 repo 是 gitignored（新檔要 `git add -f`），
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-816 個檔、133,918 行。`pyproject.toml` 定義三個互斥層級 marker：
+817 個檔、134,039 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -110,11 +110,12 @@ def output_path(source: str, suffix: str) -> str:
 
 
 def load_rgba(path: str) -> np.ndarray:
-    """Load *path* as an HxWx4 RGBA uint8 array."""
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
+    """Load *path* as an HxWx4 RGBA uint8 array, closing the file before returning.
+
+    Plugins in Imervue_Plugins import this (``architecture.md`` §6).
+    """
+    with Image.open(path) as img:
+        return np.array(img if img.mode == "RGBA" else img.convert("RGBA"))
 
 
 def current_image_path(viewer) -> str | None:

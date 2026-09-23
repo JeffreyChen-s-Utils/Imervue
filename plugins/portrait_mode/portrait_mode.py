@@ -33,6 +33,7 @@ from portrait_mode.portrait_blur import (
     PortraitBlurOptions,
     apply_portrait_blur,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -218,13 +219,6 @@ class PortraitModeDialog(WorkerHostMixin, QDialog):
                     "portrait_mode_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 def _extract_subject_mask(arr: np.ndarray) -> np.ndarray:

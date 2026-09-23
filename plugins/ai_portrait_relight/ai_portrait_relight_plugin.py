@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -33,6 +32,7 @@ from ai_portrait_relight.relight import (
     heuristic_relight,
     onnx_relight,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -358,8 +358,3 @@ def _slider(lo: int, hi: int, value: int) -> QSlider:
     return s
 
 
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)

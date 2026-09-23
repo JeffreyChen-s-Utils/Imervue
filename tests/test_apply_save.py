@@ -68,3 +68,32 @@ def test_effect_worker_reports_failure(qapp, tmp_path):
     assert ok is False
     assert "bad effect" in message
     assert not out.exists()
+
+
+def test_load_rgba_converts_and_closes_the_file(tmp_path, monkeypatch):
+    from Imervue.gui import _apply_save
+
+    path = tmp_path / "rgb.png"
+    Image.new("RGB", (3, 2), (10, 20, 30)).save(path)
+    opened: list = []
+    real_open = Image.open
+
+    def tracking_open(*args, **kwargs):
+        img = real_open(*args, **kwargs)
+        opened.append(img)
+        return img
+
+    monkeypatch.setattr(_apply_save.Image, "open", tracking_open)
+    arr = _apply_save.load_rgba(str(path))
+    assert arr.shape == (2, 3, 4)
+    assert arr.dtype == np.uint8
+    assert tuple(arr[0, 0]) == (10, 20, 30, 255)
+    assert opened[0].fp is None   # closed, even though still referenced here
+
+
+def test_load_rgba_keeps_an_rgba_image_as_is(tmp_path):
+    from Imervue.gui._apply_save import load_rgba
+
+    path = tmp_path / "rgba.png"
+    Image.new("RGBA", (2, 2), (1, 2, 3, 4)).save(path)
+    assert tuple(load_rgba(str(path))[1, 1]) == (1, 2, 3, 4)

@@ -21,6 +21,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from Imervue.plugin.pip_installer import _subprocess_kwargs
 from Imervue.plugin.subprocess_util import terminate_process as _terminate_process
 from safety_review._constants import (
     MIN_CONFIDENCE,
@@ -35,7 +36,6 @@ from safety_review._detection import (
     _get_anime_model,
     _get_detector,
     _process_single_image,
-    _subprocess_kwargs,
 )
 
 logger = logging.getLogger("Imervue.plugin.safety_review")

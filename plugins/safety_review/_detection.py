@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
-import sys
 import threading
 from pathlib import Path
 
@@ -115,17 +113,6 @@ def _get_anime_model():
 def _find_external_python() -> str | None:
     from Imervue.plugin.pip_installer import _find_python
     return _find_python()
-
-
-def _subprocess_kwargs() -> dict:
-    kw: dict = {
-        "stdin": subprocess.DEVNULL,
-        "encoding": "utf-8",
-        "errors": "replace",
-    }
-    if sys.platform == "win32":
-        kw["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return kw
 
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:

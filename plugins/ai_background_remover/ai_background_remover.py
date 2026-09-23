@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -23,6 +22,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QMenu,
 )
 
+from Imervue.plugin.pip_installer import _subprocess_kwargs
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.model_dir import ensure_model_dir
@@ -98,18 +98,6 @@ def _find_external_python() -> str | None:
     """Find the external Python used by pip_installer (cached)."""
     from Imervue.plugin.pip_installer import _find_python
     return _find_python()
-
-
-def _subprocess_kwargs() -> dict:
-    """subprocess \u5171\u7528\u53c3\u6578"""
-    kw: dict = {
-        "stdin": subprocess.DEVNULL,
-        "encoding": "utf-8",
-        "errors": "replace",
-    }
-    if sys.platform == "win32":
-        kw["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return kw
 
 
 # ===========================

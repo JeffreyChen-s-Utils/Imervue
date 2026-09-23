@@ -15,7 +15,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -37,6 +36,7 @@ from ai_denoise.denoise import (
     bilateral_denoise,
     onnx_denoise,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -288,13 +288,6 @@ def _discover_onnx_models() -> list[Path]:
     folder in their file manager and drop weights in.
     """
     return discover_models(_MODELS_DIR)
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _DenoiseWorker(QThread):

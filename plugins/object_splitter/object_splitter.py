@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +19,8 @@ from PySide6.QtWidgets import (
     QSpinBox, QGroupBox, QMenu,
 )
 
+from object_splitter._components import _connected_components
+from Imervue.plugin.pip_installer import _subprocess_kwargs
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.model_dir import ensure_model_dir
@@ -62,16 +63,6 @@ MODEL_DESCRIPTIONS = {
 # ===========================
 # Workers
 # ===========================
-
-def _subprocess_kwargs() -> dict:
-    kw: dict = {
-        "stdin": subprocess.DEVNULL,
-        "encoding": "utf-8",
-        "errors": "replace",
-    }
-    if sys.platform == "win32":
-        kw["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return kw
 
 
 def _parse_step_line(payload: str) -> tuple[int, int, str] | None:
@@ -251,33 +242,6 @@ class _InProcessWorker(QThread):
         except Exception as exc:
             logger.error("InProcessWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(False, str(exc))
-
-
-def _connected_components(binary):
-    """Simple BFS connected component labeling (no scipy needed)."""
-    import numpy as np
-    from collections import deque
-
-    h, w = binary.shape
-    labels = np.zeros((h, w), dtype=np.int32)
-    current_label = 0
-
-    for y in range(h):
-        for x in range(w):
-            if binary[y, x] and labels[y, x] == 0:
-                current_label += 1
-                queue = deque()
-                queue.append((y, x))
-                labels[y, x] = current_label
-                while queue:
-                    cy, cx = queue.popleft()
-                    for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                        ny, nx = cy + dy, cx + dx
-                        if 0 <= ny < h and 0 <= nx < w and binary[ny, nx] and labels[ny, nx] == 0:
-                            labels[ny, nx] = current_label
-                            queue.append((ny, nx))
-
-    return labels, current_label
 
 
 # ===========================

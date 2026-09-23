@@ -24,6 +24,8 @@ from safety_review._constants import SHAPE_ELLIPSE, SHAPE_PRECISE, STYLE_BLACK
 
 _PLUGIN_DIR = Path(_runner.__file__).resolve().parent
 
+_RUNNER_FILES = ("_runner.py", "_censor_core.py", "_constants.py")
+
 SHARED = ["_censor_region", "_detect_image_mode", "_ensure_parent", "_expand_box",
           "_junction_bridges", "_merge_gap", "_shrink_box_center"]
 
@@ -50,29 +52,41 @@ def test_runner_ellipse_is_the_inset_one():
     assert img.getpixel((20, 1)) == (255, 255, 255)
 
 
-def _run_isolated(tmp_path, files, *args):
-    """Run the first of *files* as a script, alone with its siblings in *tmp_path*.
+def _run_isolated(tmp_path, files, *argv):
+    """Run this interpreter with *argv* in *tmp_path*, alone with the copied *files*.
 
     With the plugin package off ``sys.path``, only the copied siblings can
-    satisfy the script's imports.
+    satisfy the imports.
     """
     for name in files:
         shutil.copy(_PLUGIN_DIR / name, tmp_path / name)
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
     return subprocess.run(  # noqa: S603 - fixed argv: this interpreter and a copied script
-        [sys.executable, str(tmp_path / files[0]), *args],
+        [sys.executable, *argv],
         capture_output=True, text=True, cwd=tmp_path, env=env, timeout=60, check=False,
     )
 
 
 def test_runner_runs_as_a_script_with_sibling_imports(tmp_path):
-    result = _run_isolated(tmp_path, ("_runner.py", "_censor_core.py", "_constants.py"),
+    result = _run_isolated(tmp_path, _RUNNER_FILES, str(tmp_path / "_runner.py"),
                            "", "no-such-mode")
     assert result.stdout.strip() == "ERROR:Unknown mode: no-such-mode"
     assert result.returncode == 1
 
 
 def test_finetune_runs_as_a_script_with_sibling_imports(tmp_path):
-    result = _run_isolated(tmp_path, ("finetune.py", "_constants.py"), "--help")
+    result = _run_isolated(tmp_path, ("finetune.py", "_constants.py"),
+                           str(tmp_path / "finetune.py"), "--help")
     assert result.returncode == 0, result.stderr
     assert "usage" in result.stdout.lower()
+
+
+@pytest.mark.parametrize("module", ["_constants", "_censor_core", "_runner"])
+def test_loading_needs_no_third_party_package(tmp_path, module):
+    # The runner puts the environment's site-packages on sys.path only after it
+    # has loaded its siblings, so none of them may import NumPy or Pillow then.
+    code = (f"import sys; sys.modules['numpy'] = sys.modules['PIL'] = None; "
+            f"import {module}; print('ok')")
+    result = _run_isolated(tmp_path, _RUNNER_FILES, "-c", code)
+    assert result.stdout.strip() == "ok", result.stderr
+

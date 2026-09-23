@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -32,6 +31,7 @@ from ai_smart_resize.seam_carving import (
     SmartResizeOptions,
     smart_resize,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -241,13 +241,6 @@ class AISmartResizeDialog(WorkerHostMixin, QDialog):
                     "smart_resize_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _SmartResizeWorker(QThread):

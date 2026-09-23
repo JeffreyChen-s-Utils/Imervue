@@ -14,10 +14,14 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import numpy as np
+# Shared with the in-app worker; in the frozen build this file runs in an
+# external Python that cannot import the plugin package, so it loads the
+# helper as a sibling module instead.
+if __package__:   # imported as part of the plugin package (tests)
+    from object_splitter._components import _connected_components
+else:             # run as a script next to its sibling
+    from _components import _connected_components
 
 
 def _run(input_path: str, output_dir: str, model_name: str,
@@ -95,33 +99,6 @@ def _run(input_path: str, output_dir: str, model_name: str,
         print(f"STEP:{i + 1}:{total_objects}:Saved: {out_name}", flush=True)
 
     print(f"OK:{total_objects}", flush=True)
-
-
-def _connected_components(binary: np.ndarray):
-    """Simple BFS-based connected component labeling (no scipy needed)."""
-    import numpy as np
-    from collections import deque
-
-    h, w = binary.shape
-    labels = np.zeros((h, w), dtype=np.int32)
-    current_label = 0
-
-    for y in range(h):
-        for x in range(w):
-            if binary[y, x] and labels[y, x] == 0:
-                current_label += 1
-                queue = deque()
-                queue.append((y, x))
-                labels[y, x] = current_label
-                while queue:
-                    cy, cx = queue.popleft()
-                    for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                        ny, nx = cy + dy, cx + dx
-                        if 0 <= ny < h and 0 <= nx < w and binary[ny, nx] and labels[ny, nx] == 0:
-                            labels[ny, nx] = current_label
-                            queue.append((ny, nx))
-
-    return labels, current_label
 
 
 if __name__ == "__main__":

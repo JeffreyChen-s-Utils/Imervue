@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -39,6 +38,7 @@ from npr_filters.filters import (
     NPRFilterOptions,
     apply_npr_filter,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -306,13 +306,6 @@ class NPRFiltersDialog(WorkerHostMixin, QDialog):
                     "npr_filters_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _NPRFilterWorker(QThread):
