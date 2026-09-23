@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-69 | 2026-09-23 | Combine-to-PDF/TIFF pages and staging-tray adds follow the view order | #bug #menu | [2026-09](2026-09.md) |
 | U-20260923-68 | 2026-09-23 | Multi-selection exports and renames follow the view order | #bug #gpu_image_view #gui | [2026-09](2026-09.md) |
 | U-20260923-67 | 2026-09-23 | Split SlideshowMp4Dialog's constructor (#19) | #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-66 | 2026-09-23 | Split the main window's Filter menu builder (#19) | #refactor #menu | [2026-09](2026-09.md) |

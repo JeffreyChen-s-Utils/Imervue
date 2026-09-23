@@ -28,7 +28,9 @@ from Imervue.gpu_image_view.actions.delete import (
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     copy_image_to_clipboard,
 )
-from Imervue.gpu_image_view.actions.select import switch_to_previous_image, switch_to_next_image
+from Imervue.gpu_image_view.actions.select import (
+    selected_in_view_order, switch_to_next_image, switch_to_previous_image,
+)
 from Imervue.image.info import get_image_info_at_pos, show_image_info_dialog
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.menu.recent_menu import build_recent_menu
@@ -445,7 +447,7 @@ def _staging_tray_actions(main_gui: GPUImageView, menu: QMenu) -> None:
 
 def _add_to_staging_tray(main_gui: GPUImageView) -> None:
     from Imervue.library import staging_tray
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths and main_gui.deep_zoom and main_gui.model.images:
         paths = [main_gui.model.images[main_gui.current_index]]
     if not paths:
@@ -490,7 +492,7 @@ def _import_by_date(main_gui: GPUImageView) -> None:
 def _combine_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from Imervue.image.multipage import combine_to_multipage
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)  # page order
     if not paths:
         return
     lang = language_wrapper.language_word_dict

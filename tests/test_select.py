@@ -111,3 +111,25 @@ def test_export_dialogs_use_view_order(qapp, module, cls):
         assert dialog._resolve_images() == []  # noqa: SLF001
     finally:
         dialog.deleteLater()
+
+
+def test_combine_multipage_pages_follow_view_order(monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+
+    from Imervue.image import multipage
+    from Imervue.menu import right_click_menu as rcm
+    received = []
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: ("C:/out.pdf", ""))
+    monkeypatch.setattr(multipage, "combine_to_multipage",
+                        lambda paths, dest: received.append(paths) or {"pages": len(paths)})
+    rcm._combine_multipage(_viewer(_PICKED))  # noqa: SLF001
+    assert received == [_PICKED]
+
+
+def test_staging_tray_adds_in_view_order(monkeypatch):
+    from Imervue.library import staging_tray
+    from Imervue.menu import right_click_menu as rcm
+    received = []
+    monkeypatch.setattr(staging_tray, "add_many", received.append)
+    rcm._add_to_staging_tray(_viewer(_PICKED))  # noqa: SLF001
+    assert received == [_PICKED]
