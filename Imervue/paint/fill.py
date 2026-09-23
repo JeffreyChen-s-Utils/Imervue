@@ -124,7 +124,11 @@ def flood_fill(
 
     mask = _contiguous_region(candidates, sx, sy) if contiguous else candidates
     mask = _apply_expand(mask, expand_px, selection)
+    return _paint_mask(canvas, mask, color)
 
+
+def _paint_mask(canvas: np.ndarray, mask: np.ndarray, color: tuple[int, int, int]) -> FillResult:
+    """Write opaque ``color`` into ``canvas`` under ``mask``; report the filled bounding box."""
     pixels_filled = int(mask.sum())
     if pixels_filled == 0:
         return FillResult(0, 0, 0, 0, 0)
