@@ -34,7 +34,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication, QButtonGroup, QColorDialog, QDialog, QFileDialog, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QMenuBar, QMessageBox, QSizePolicy,
+    QGridLayout, QHBoxLayout, QLabel, QMenu, QMenuBar, QMessageBox, QSizePolicy,
     QStatusBar, QToolButton, QVBoxLayout, QWidget,
     QWidgetAction,
 )
@@ -95,6 +95,53 @@ _LOAD_PROJECT_FALLBACK = "Load Project..."
 # the main viewer instead of a separate top-level window.
 # ---------------------------------------------------------------------------
 
+# Dark panel styling for the editor's toolbox, right panel and canvas surround. Scoped to
+# those object names so it doesn't fight the application theme elsewhere.
+_EDITOR_STYLE_SHEET = """
+QFrame#annotationCanvasFrame {
+    background-color: #1e1e1e;
+}
+QFrame#annotationLeftToolbox,
+QFrame#annotationRightPanel {
+    background-color: #2d2d30;
+    color: #e0e0e0;
+    border-right: 1px solid #3f3f42;
+}
+QFrame#annotationRightPanel {
+    border-right: none;
+    border-left: 1px solid #3f3f42;
+}
+QFrame#annotationLeftToolbox QToolButton,
+QFrame#annotationRightPanel QToolButton {
+    background-color: #3c3c3c;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 2px;
+}
+QFrame#annotationLeftToolbox QToolButton:hover,
+QFrame#annotationRightPanel QToolButton:hover {
+    background-color: #4a4a4a;
+}
+QFrame#annotationLeftToolbox QToolButton:checked {
+    background-color: #0a6cbc;
+    border: 1px solid #3e95d6;
+}
+QFrame#annotationRightPanel QLabel {
+    color: #e0e0e0;
+}
+QFrame#annotationRightPanel QLabel#panelSection {
+    color: #9cdcfe;
+    font-weight: bold;
+    padding-top: 6px;
+}
+QFrame#annotationRightPanel QSpinBox,
+QFrame#annotationRightPanel QSlider {
+    background-color: #3c3c3c;
+    color: #e0e0e0;
+}
+"""
+
 class AnnotationEditorWidget(QWidget):
     """Professional-editor QWidget: menubar + toolbox + canvas + right panel.
 
@@ -150,28 +197,7 @@ class AnnotationEditorWidget(QWidget):
         root.setMenuBar(self._menu_bar)
 
         # 2) 中段主要內容：左工具箱 / 中央 canvas / 右屬性面板。
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(0)
-
-        self._left_toolbox = self._build_left_toolbox()
-        body.addWidget(self._left_toolbox)
-
-        # Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / external image editors
-        # 在 canvas 四周的 "workspace" 深灰空間感。
-        canvas_frame = QFrame(self)
-        canvas_frame.setObjectName("annotationCanvasFrame")
-        canvas_frame.setFrameShape(QFrame.Shape.NoFrame)
-        canvas_layout = QVBoxLayout(canvas_frame)
-        canvas_layout.setContentsMargins(8, 8, 8, 8)
-        canvas_layout.setSpacing(0)
-        canvas_layout.addWidget(self._canvas, 1)
-        body.addWidget(canvas_frame, 1)
-
-        self._right_panel = self._build_right_panel()
-        body.addWidget(self._right_panel)
-
-        root.addLayout(body, 1)
+        root.addLayout(self._build_body(), 1)
 
         # 3) 底部狀態列 — 顯示當前工具 / 座標 / 影像尺寸。
         self._status_bar = self._build_status_bar()
@@ -180,52 +206,7 @@ class AnnotationEditorWidget(QWidget):
         # ---------- Style ----------
         # 不強制黑底（會跟使用者整體 theme 打架），只對幾個關鍵區塊加背景色
         # 與邊框，讓它看起來有 "多面板編輯器" 的分區感。
-        self.setStyleSheet(
-            """
-            QFrame#annotationCanvasFrame {
-                background-color: #1e1e1e;
-            }
-            QFrame#annotationLeftToolbox,
-            QFrame#annotationRightPanel {
-                background-color: #2d2d30;
-                color: #e0e0e0;
-                border-right: 1px solid #3f3f42;
-            }
-            QFrame#annotationRightPanel {
-                border-right: none;
-                border-left: 1px solid #3f3f42;
-            }
-            QFrame#annotationLeftToolbox QToolButton,
-            QFrame#annotationRightPanel QToolButton {
-                background-color: #3c3c3c;
-                color: #e0e0e0;
-                border: 1px solid #555;
-                border-radius: 3px;
-                padding: 2px;
-            }
-            QFrame#annotationLeftToolbox QToolButton:hover,
-            QFrame#annotationRightPanel QToolButton:hover {
-                background-color: #4a4a4a;
-            }
-            QFrame#annotationLeftToolbox QToolButton:checked {
-                background-color: #0a6cbc;
-                border: 1px solid #3e95d6;
-            }
-            QFrame#annotationRightPanel QLabel {
-                color: #e0e0e0;
-            }
-            QFrame#annotationRightPanel QLabel#panelSection {
-                color: #9cdcfe;
-                font-weight: bold;
-                padding-top: 6px;
-            }
-            QFrame#annotationRightPanel QSpinBox,
-            QFrame#annotationRightPanel QSlider {
-                background-color: #3c3c3c;
-                color: #e0e0e0;
-            }
-            """
-        )
+        self.setStyleSheet(_EDITOR_STYLE_SHEET)
 
         # Connect canvas signals to status bar / property panel updates.
         self._canvas.cursor_image_pos.connect(self._on_cursor_moved)
@@ -237,6 +218,33 @@ class AnnotationEditorWidget(QWidget):
         # Apply default tool if requested (e.g. open directly to mosaic/blur)
         if self._default_tool:
             self._canvas.set_tool(self._default_tool)
+
+    def _build_body(self) -> QHBoxLayout:
+        """Left toolbox, the framed canvas (stretching) and the right properties panel."""
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+        self._left_toolbox = self._build_left_toolbox()
+        body.addWidget(self._left_toolbox)
+        body.addWidget(self._build_canvas_frame(), 1)
+        self._right_panel = self._build_right_panel()
+        body.addWidget(self._right_panel)
+        return body
+
+    def _build_canvas_frame(self) -> QFrame:
+        """Dark surround for the canvas.
+
+        Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / external image editors
+        在 canvas 四周的 "workspace" 深灰空間感。
+        """
+        canvas_frame = QFrame(self)
+        canvas_frame.setObjectName("annotationCanvasFrame")
+        canvas_frame.setFrameShape(QFrame.Shape.NoFrame)
+        canvas_layout = QVBoxLayout(canvas_frame)
+        canvas_layout.setContentsMargins(8, 8, 8, 8)
+        canvas_layout.setSpacing(0)
+        canvas_layout.addWidget(self._canvas, 1)
+        return canvas_frame
 
     # ========================================================================
     # Professional editor layout — menubar / left toolbox / right panel /
@@ -294,52 +302,42 @@ class AnnotationEditorWidget(QWidget):
         """
         lang = language_wrapper.language_word_dict
         mb = QMenuBar(self)
+        self._add_file_menu(mb, lang)
+        self._add_edit_menu(mb, lang)
+        self._add_modify_menu(mb, lang)
+        return mb
 
-        # ---- File ----
+    def _menu_action(self, menu: QMenu, text: str, slot, shortcut=None) -> QAction:
+        """Add an editor-owned action to ``menu``, wired to ``slot``, with an optional shortcut."""
+        action = QAction(text, self)
+        if shortcut is not None:
+            action.setShortcut(QKeySequence(shortcut))
+        action.triggered.connect(slot)
+        menu.addAction(action)
+        return action
+
+    def _add_file_menu(self, mb: QMenuBar, lang) -> None:
+        """Save / Save As / Copy, project save and load, then Close."""
         file_menu = mb.addMenu(lang.get("annotation_menu_file", "File"))
-
-        act_save = QAction(lang.get("annotation_save", "Save"), self)
-        act_save.setShortcut(QKeySequence("Ctrl+S"))
-        act_save.triggered.connect(self._save)
-        file_menu.addAction(act_save)
-
-        act_save_as = QAction(lang.get("annotation_save_as", "Save As..."), self)
-        act_save_as.setShortcut(QKeySequence("Ctrl+Shift+S"))
-        act_save_as.triggered.connect(self._save_as)
-        file_menu.addAction(act_save_as)
-
-        act_copy = QAction(
-            lang.get("annotation_copy_clipboard", "Copy to Clipboard"), self
-        )
-        act_copy.setShortcut(QKeySequence("Ctrl+C"))
-        act_copy.triggered.connect(self._copy_to_clipboard)
-        file_menu.addAction(act_copy)
-
+        self._menu_action(file_menu, lang.get("annotation_save", "Save"), self._save, "Ctrl+S")
+        self._menu_action(file_menu, lang.get("annotation_save_as", "Save As..."),
+                          self._save_as, "Ctrl+Shift+S")
+        self._menu_action(file_menu, lang.get("annotation_copy_clipboard", "Copy to Clipboard"),
+                          self._copy_to_clipboard, "Ctrl+C")
         file_menu.addSeparator()
-
-        act_save_proj = QAction(
-            lang.get("annotation_save_project", "Save Project..."), self
-        )
-        act_save_proj.triggered.connect(self._save_project)
-        file_menu.addAction(act_save_proj)
-
-        act_load_proj = QAction(
-            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK), self
-        )
-        act_load_proj.triggered.connect(self._load_project)
-        file_menu.addAction(act_load_proj)
-
+        self._menu_action(file_menu, lang.get("annotation_save_project", "Save Project..."),
+                          self._save_project)
+        self._menu_action(file_menu, lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
+                          self._load_project)
         file_menu.addSeparator()
-
-        act_close = QAction(lang.get("annotation_menu_close", "Close"), self)
-        act_close.setShortcut(QKeySequence("Ctrl+W"))
         # Emit a signal instead of calling ``self.close``: the editor widget
         # may be embedded in a dialog, tab, or dock — each host decides what
         # "close" means (dialog.accept, tab removal, panel hide, ...).
-        act_close.triggered.connect(self.close_requested.emit)
-        file_menu.addAction(act_close)
+        self._menu_action(file_menu, lang.get("annotation_menu_close", "Close"),
+                          self.close_requested.emit, "Ctrl+W")
 
-        # ---- Edit ----
+    def _add_edit_menu(self, mb: QMenuBar, lang) -> None:
+        """Undo / Redo bound to the editor's undo stack, then Delete Selection."""
         edit_menu = mb.addMenu(lang.get("annotation_menu_edit", "Edit"))
 
         act_undo = self._undo_stack.createUndoAction(
@@ -355,35 +353,31 @@ class AnnotationEditorWidget(QWidget):
         edit_menu.addAction(act_redo)
 
         edit_menu.addSeparator()
+        self._menu_action(
+            edit_menu, lang.get("annotation_menu_delete_selection", "Delete Selection"),
+            self._delete_selected, Qt.Key.Key_Delete)
 
-        act_delete = QAction(
-            lang.get("annotation_menu_delete_selection", "Delete Selection"),
-            self,
+    def _add_modify_menu(self, mb: QMenuBar, lang) -> None:
+        """Develop / Rotate / Flip / Reset for the main viewer's image.
+
+        Only built when a ``modify_target`` (GPUImageView) was supplied,
+        because these operate on the main viewer's current image, not on the
+        in-editor PIL copy. Tests and the clipboard-capture flow don't pass a
+        target, so the menu is simply absent there.
+        """
+        if self._modify_target is None:
+            return
+        from Imervue.gui.modify_actions_widget import ModifyActionsWidget
+
+        modify_menu = mb.addMenu(lang.get("modify_menu_title", "Modify"))
+        modify_widget_action = QWidgetAction(modify_menu)
+        modify_widget = ModifyActionsWidget(
+            main_gui=self._modify_target,
+            parent=modify_menu,
+            on_triggered=modify_menu.close,
         )
-        act_delete.setShortcut(QKeySequence(Qt.Key.Key_Delete))
-        act_delete.triggered.connect(self._delete_selected)
-        edit_menu.addAction(act_delete)
-
-        # ---- Modify ----
-        # Only built when a ``modify_target`` (GPUImageView) was supplied,
-        # because Develop / Rotate / Flip / Reset operate on the main
-        # viewer's current image, not on the in-editor PIL copy. Tests
-        # and the clipboard-capture flow don't pass a target, so the menu
-        # is simply absent there.
-        if self._modify_target is not None:
-            from Imervue.gui.modify_actions_widget import ModifyActionsWidget
-
-            modify_menu = mb.addMenu(lang.get("modify_menu_title", "Modify"))
-            modify_widget_action = QWidgetAction(modify_menu)
-            modify_widget = ModifyActionsWidget(
-                main_gui=self._modify_target,
-                parent=modify_menu,
-                on_triggered=modify_menu.close,
-            )
-            modify_widget_action.setDefaultWidget(modify_widget)
-            modify_menu.addAction(modify_widget_action)
-
-        return mb
+        modify_widget_action.setDefaultWidget(modify_widget)
+        modify_menu.addAction(modify_widget_action)
 
     # ---------- Left toolbox ----------
 
