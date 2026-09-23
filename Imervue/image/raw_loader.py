@@ -27,9 +27,10 @@ JPEG-only sessions don't pull rawpy at all.
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
+
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.image.raw_loader")
 
@@ -50,7 +51,7 @@ def open_raw_efficient(path: str | Path):
         # Close to release the libraw context if we successfully
         # opened the file but ``unpack`` failed — otherwise the
         # caller's ``with`` block never runs.
-        with contextlib.suppress(Exception):
+        with best_effort("close the RAW file after a failed unpack", logger):
             raw.close()
         raise
     return raw
@@ -67,9 +68,9 @@ def _wrap_close_to_release(raw, region, fd):
         try:
             original_close()
         finally:
-            with contextlib.suppress(Exception):
+            with best_effort("unmap the RAW file", logger):
                 region.close()
-            with contextlib.suppress(Exception):
+            with best_effort("close the RAW file handle", logger):
                 fd.close()
 
     raw.close = _close_all
@@ -101,7 +102,7 @@ def open_raw_via_mmap(path: str | Path):
         raw.open_buffer(region)
         raw.unpack()
     except Exception:
-        with contextlib.suppress(Exception):
+        with best_effort("close the RAW buffer after a failed unpack", logger):
             raw.close()
         region.close()
         fd.close()

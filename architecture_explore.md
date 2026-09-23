@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d749665` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `a14bdbf` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 806 | 132,309 |
+| `tests/` | 806 | 132,368 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,903 |
 | `Imervue/gui/` | 161 | 32,798 |
 | `Imervue/puppet/` | 57 | 15,221 |
-| `Imervue/image/` | 113 | 12,866 |
+| `Imervue/image/` | 113 | 12,869 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,240 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,617** | **306,989** |
+| **總計** | **1,617** | **307,051** |
 
-其中 `Imervue/` 套件本身 749 檔 / 160,291 行。
+其中 `Imervue/` 套件本身 749 檔 / 160,294 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -296,7 +296,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-113 個模組、12,866 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+113 個模組、12,869 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -361,7 +361,7 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(124) 省記憶體 RAW 載入 · `heif_support.py`(60) · `jxl_support.py`(50) ·
+`raw_loader.py`(125) 省記憶體 RAW 載入 · `heif_support.py`(60) · `jxl_support.py`(50) ·
 `save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
 `pyramid.py`(38) `DeepZoomImage` 金字塔 · `tile_manager.py`(94) 圖磚 LRU 快取與淘汰 ·
@@ -383,7 +383,7 @@ ImervueMainWindow
 
 #### 其他
 
-`browser_state.py`(402) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
+`browser_state.py`(404) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
 `batch_move_planner.py`(104) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
 `caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(142) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
@@ -957,7 +957,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-806 個檔、132,309 行。`pyproject.toml` 定義三個互斥層級 marker：
+806 個檔、132,368 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

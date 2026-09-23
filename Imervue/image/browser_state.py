@@ -99,10 +99,12 @@ class ImageMetadataIndex:
             cacheable = False
         width = height = None
         if size:
-            with contextlib.suppress(Exception):
-                from PIL import Image
-                with Image.open(path) as img:
-                    width, height = img.size
+            from PIL import Image
+
+            from Imervue.image.read_errors import IMAGE_READ_ERRORS
+            # Not an image Pillow can read: the dimensions stay unknown.
+            with contextlib.suppress(*IMAGE_READ_ERRORS), Image.open(path) as img:
+                width, height = img.size
         return ImageMeta(
             path=path,
             name=p.name.lower(),

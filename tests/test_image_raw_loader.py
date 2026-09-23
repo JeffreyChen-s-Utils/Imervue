@@ -181,3 +181,23 @@ def test_mmap_threshold_custom_minimum():
     streaming over network drive might want a higher cutoff."""
     assert file_size_supports_mmap(2_000_000, minimum_bytes=5_000_000) is False
     assert file_size_supports_mmap(10_000_000, minimum_bytes=5_000_000) is True
+
+
+def test_efficient_close_failure_is_logged_and_keeps_the_unpack_error(
+        stub_rawpy, monkeypatch, tmp_path, caplog):
+    class _BrokenRaw(_StubRaw):
+        def unpack(self):
+            raise RuntimeError("corrupt RAW")
+
+        def close(self):
+            raise OSError("libraw close failed")
+
+    fake = types.ModuleType("rawpy")
+    fake.RawPy = _BrokenRaw   # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "rawpy", fake)
+
+    with caplog.at_level("DEBUG", logger="Imervue"), pytest.raises(RuntimeError, match="corrupt RAW"):
+        open_raw_efficient(tmp_path / "broken.cr3")
+    (record,) = caplog.records
+    assert "close the RAW file after a failed unpack" in record.getMessage()
+    assert record.exc_info[0] is OSError
