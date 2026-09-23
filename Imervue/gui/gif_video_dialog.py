@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSpinBox, QPushButton, QFileDialog, QLineEdit, QProgressBar,
+    QSpinBox, QPushButton, QProgressBar,
     QListWidget, QListWidgetItem, QGroupBox, QCheckBox,
 )
 from PIL import Image
 
+from Imervue.gui.dialog_rows import path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -251,15 +252,11 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         layout.addWidget(settings)
 
         # Output path
-        path_row = QHBoxLayout()
-        self._path_edit = QLineEdit()
+        path_row, self._path_edit, _browse = path_browse_row(
+            self._browse, browse_text=self._lang.get("export_browse", "Browse..."))
         if self._paths:
             default = Path(self._paths[0]).parent / "output.gif"
             self._path_edit.setText(str(default))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        path_row.addWidget(self._path_edit, 1)
-        path_row.addWidget(browse_btn)
         layout.addLayout(path_row)
 
         # Progress
@@ -307,13 +304,8 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
     def _browse(self):
         fmt = self._fmt_combo.currentText()
         ext = ".gif" if fmt == "GIF" else ".mp4"
-        path, _ = QFileDialog.getSaveFileName(
-            self, self._lang.get("gif_video_save", "Save As"),
-            self._path_edit.text(),
-            f"{fmt} (*{ext})",
-        )
-        if path:
-            self._path_edit.setText(path)
+        save_path_into(
+            self, self._path_edit, self._lang.get("gif_video_save", "Save As"), f"{fmt} (*{ext})")
 
     def _get_ordered_paths(self) -> list[str]:
         paths = []

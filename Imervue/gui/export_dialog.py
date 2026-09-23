@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton, QFileDialog, QLineEdit,
+    QSlider, QPushButton,
 )
 from PIL import Image
 
+from Imervue.gui.dialog_rows import path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
@@ -93,13 +94,9 @@ class ExportDialog(WorkerHostMixin, QDialog):
         layout.addWidget(self.quality_slider)
 
         # Output path row
-        path_layout = QHBoxLayout()
-        self.path_edit = QLineEdit()
+        path_layout, self.path_edit, _browse = path_browse_row(
+            self._browse_output, browse_text=self._lang.get("export_browse", "Browse..."))
         self.path_edit.setPlaceholderText("Output path")
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_output)
-        path_layout.addWidget(self.path_edit, 1)
-        path_layout.addWidget(browse_btn)
         layout.addLayout(path_layout)
 
         # Size estimate
@@ -182,14 +179,8 @@ class ExportDialog(WorkerHostMixin, QDialog):
     def _browse_output(self) -> None:
         fmt = self._selected_format()
         ext = FORMAT_EXTENSIONS.get(fmt, ".*")
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            self._lang.get("export_save", "Save"),
-            self.path_edit.text(),
-            f"{fmt} (*{ext})",
-        )
-        if path:
-            self.path_edit.setText(path)
+        save_path_into(
+            self, self.path_edit, self._lang.get("export_save", "Save"), f"{fmt} (*{ext})")
 
     # ------------------------------------------------------------ export
     def _do_export(self) -> None:

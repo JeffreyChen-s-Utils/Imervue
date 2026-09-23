@@ -218,3 +218,17 @@ def test_save_path_into_explicit_start(qapp, monkeypatch):
         assert edit.text() == "/current.png"
     finally:
         edit.deleteLater()
+
+
+def test_open_path_into_explicit_start(qapp, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+    calls = []
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(
+        lambda *args: calls.append(args) or ("", "")))
+    edit = QLineEdit("/keep.cube")
+    try:
+        dialog_rows.open_path_into(None, edit, "LUT", "F", start="C:/luts")
+        assert calls == [(None, "LUT", "C:/luts", "F")]
+        assert edit.text() == "/keep.cube"
+    finally:
+        edit.deleteLater()

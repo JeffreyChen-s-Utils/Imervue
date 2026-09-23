@@ -15,15 +15,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QSlider,
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import folder_picker_row, open_path_into
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -47,9 +46,10 @@ class LutDialog(QDialog):
         recipe = recipe_store.get_for_path(path) or Recipe()
         self._recipe = recipe
 
-        self._path_edit = QLineEdit(recipe.lut_path)
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._browse)
+        row, self._path_edit = folder_picker_row(
+            lang.get("lut_file", ".cube file:"), self._browse,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._path_edit.setText(recipe.lut_path)
         clear = QPushButton(lang.get("lut_clear", "Clear"))
         clear.clicked.connect(lambda: self._path_edit.setText(""))
 
@@ -60,10 +60,6 @@ class LutDialog(QDialog):
         self._intensity.valueChanged.connect(self._update_label)
         self._update_label(self._intensity.value())
 
-        row = QHBoxLayout()
-        row.addWidget(QLabel(lang.get("lut_file", ".cube file:")))
-        row.addWidget(self._path_edit, 1)
-        row.addWidget(browse)
         row.addWidget(clear)
 
         strength = QHBoxLayout()
@@ -91,15 +87,9 @@ class LutDialog(QDialog):
 
     def _browse(self) -> None:
         lang = language_wrapper.language_word_dict
-        start = self._path_edit.text() or str(Path.home())
-        fn, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("lut_pick", "Select .cube LUT"),
-            start,
-            "Cube LUT (*.cube)",
-        )
-        if fn:
-            self._path_edit.setText(fn)
+        open_path_into(
+            self, self._path_edit, lang.get("lut_pick", "Select .cube LUT"), "Cube LUT (*.cube)",
+            start=self._path_edit.text() or str(Path.home()))
 
     def _commit(self) -> None:
         old = self._recipe

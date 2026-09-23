@@ -67,9 +67,11 @@ def save_path_into(
         edit.setText(path)
 
 
-def open_path_into(parent: QWidget, edit: QLineEdit, title: str, file_filter: str) -> None:
-    """Ask for an existing file; a picked path replaces ``edit``'s text."""
-    path, _ = QFileDialog.getOpenFileName(parent, title, "", file_filter)
+def open_path_into(
+    parent: QWidget, edit: QLineEdit, title: str, file_filter: str, *, start: str = "",
+) -> None:
+    """Ask for an existing file starting at ``start``; a picked path replaces ``edit``'s text."""
+    path, _ = QFileDialog.getOpenFileName(parent, title, start, file_filter)
     if path:
         edit.setText(path)
 

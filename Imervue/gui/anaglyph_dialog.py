@@ -14,15 +14,12 @@ from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
-    QFileDialog,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui.dialog_rows import open_path_into, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     finalize_worker,
@@ -75,13 +72,7 @@ class AnaglyphDialog(WorkerHostMixin, QDialog):
         self._method = QComboBox()
         for method in METHODS:
             self._method.addItem(method.title(), method)
-        self._right_edit = QLineEdit()
-        browse = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse.clicked.connect(self._choose_right)
-
-        right_row = QHBoxLayout()
-        right_row.addWidget(self._right_edit, 1)
-        right_row.addWidget(browse)
+        right_row, self._right_edit, _browse = path_browse_row(self._choose_right)
 
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(lang.get("anaglyph_method", "Method:")))
@@ -92,11 +83,9 @@ class AnaglyphDialog(WorkerHostMixin, QDialog):
 
     def _choose_right(self) -> None:  # pragma: no cover - Qt UI
         lang = language_wrapper.language_word_dict
-        chosen, _ = QFileDialog.getOpenFileName(
-            self, lang.get("anaglyph_right", "Right-eye image:"), "",
+        open_path_into(
+            self, self._right_edit, lang.get("anaglyph_right", "Right-eye image:"),
             "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)")
-        if chosen:
-            self._right_edit.setText(chosen)
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         right = self._right_edit.text().strip()
