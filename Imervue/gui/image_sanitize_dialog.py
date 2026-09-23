@@ -508,32 +508,73 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
 
         layout.addSpacing(4)
 
-        # Source folder
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(lang.get("sanitize_source", "Source folder:")))
-        self._src_edit = QLineEdit()
-        src_row.addWidget(self._src_edit, 1)
-        browse_src = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_src.clicked.connect(self._browse_src)
-        src_row.addWidget(browse_src)
+        src_row, self._src_edit = self._folder_row(
+            lang.get("sanitize_source", "Source folder:"), self._browse_src)
         layout.addLayout(src_row)
 
-        # Recursive
         self._recursive_check = QCheckBox(
             lang.get("duplicate_recursive", "Include subfolders"))
         layout.addWidget(self._recursive_check)
 
-        # Output folder
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("organizer_output", "Output folder:")))
-        self._out_edit = QLineEdit()
-        out_row.addWidget(self._out_edit, 1)
-        browse_out = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_out.clicked.connect(self._browse_out)
-        out_row.addWidget(browse_out)
+        out_row, self._out_edit = self._folder_row(
+            lang.get("organizer_output", "Output folder:"), self._browse_out)
         layout.addLayout(out_row)
 
-        # Output format
+        layout.addLayout(self._build_format_row())
+
+        rand_row, self._rand_spin = self._spin_row(
+            lang.get("sanitize_rand_len", "Random string length:"), 4, 32, 8)
+        layout.addLayout(rand_row)
+
+        quality_row, self._quality_spin = self._spin_row(
+            lang.get("sanitize_jpeg_quality", "JPEG quality:"), 1, 100, 95)
+        layout.addLayout(quality_row)
+
+        layout.addWidget(self._build_upscale_group())
+
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.hide()
+        layout.addWidget(self._progress)
+
+        self._tile_progress = QProgressBar()
+        self._tile_progress.setFormat("Tile: %v / %m  (%p%)")
+        self._tile_progress.hide()
+        layout.addWidget(self._tile_progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        layout.addStretch()
+        layout.addLayout(self._build_button_row())
+
+    def _folder_row(self, label: str, on_browse) -> tuple[QHBoxLayout, QLineEdit]:
+        """Label, stretching path edit and a Browse button wired to ``on_browse``."""
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        edit = QLineEdit()
+        row.addWidget(edit, 1)
+        browse = QPushButton(self._lang.get("batch_convert_browse", "Browse..."))
+        browse.clicked.connect(on_browse)
+        row.addWidget(browse)
+        return row, edit
+
+    @staticmethod
+    def _spin_row(label: str, minimum: int, maximum: int,
+                  value: int) -> tuple[QHBoxLayout, QSpinBox]:
+        """Label and a left-aligned spin box with the given range and start value."""
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        spin = QSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setValue(value)
+        row.addWidget(spin)
+        row.addStretch()
+        return row, spin
+
+    def _build_format_row(self) -> QHBoxLayout:
+        """Output-format combo: "same as source" followed by the fixed formats."""
+        lang = self._lang
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel(
             lang.get("sanitize_output_format", "Output format:")))
@@ -546,31 +587,11 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         self._fmt_combo.addItem("BMP (.bmp)", _EXT_BMP)
         self._fmt_combo.addItem("TIFF (.tiff)", _EXT_TIFF)
         fmt_row.addWidget(self._fmt_combo, 1)
-        layout.addLayout(fmt_row)
+        return fmt_row
 
-        # Random string length
-        rand_row = QHBoxLayout()
-        rand_row.addWidget(QLabel(
-            lang.get("sanitize_rand_len", "Random string length:")))
-        self._rand_spin = QSpinBox()
-        self._rand_spin.setRange(4, 32)
-        self._rand_spin.setValue(8)
-        rand_row.addWidget(self._rand_spin)
-        rand_row.addStretch()
-        layout.addLayout(rand_row)
-
-        # JPEG quality
-        quality_row = QHBoxLayout()
-        quality_row.addWidget(QLabel(
-            lang.get("sanitize_jpeg_quality", "JPEG quality:")))
-        self._quality_spin = QSpinBox()
-        self._quality_spin.setRange(1, 100)
-        self._quality_spin.setValue(95)
-        quality_row.addWidget(self._quality_spin)
-        quality_row.addStretch()
-        layout.addLayout(quality_row)
-
-        # --- AI Upscale group ---
+    def _build_upscale_group(self) -> QGroupBox:
+        """Target-resolution and model combos with the hint that tracks them."""
+        lang = self._lang
         upscale_group = QGroupBox(
             lang.get("sanitize_upscale_group", "Upscale (optional)"))
         upscale_layout = QVBoxLayout(upscale_group)
@@ -601,14 +622,11 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         from Imervue.gui.ai_upscale_dialog import (
             UPSCALE_MODELS, TRADITIONAL_METHODS,
         )
-        # Traditional methods first (no dependencies needed)
-        for mkey, minfo in TRADITIONAL_METHODS.items():
-            label = lang.get(minfo["desc_key"], minfo["desc_default"])
-            self._model_combo.addItem(label, mkey)
-        # AI models
-        for mkey, minfo in UPSCALE_MODELS.items():
-            label = lang.get(minfo["desc_key"], minfo["desc_default"])
-            self._model_combo.addItem(label, mkey)
+        # Traditional methods first (no dependencies needed), then AI models
+        for methods in (TRADITIONAL_METHODS, UPSCALE_MODELS):
+            for mkey, minfo in methods.items():
+                label = lang.get(minfo["desc_key"], minfo["desc_default"])
+                self._model_combo.addItem(label, mkey)
         model_row.addWidget(self._model_combo, 1)
         upscale_layout.addLayout(model_row)
 
@@ -618,34 +636,19 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         upscale_layout.addWidget(self._model_hint)
         self._res_combo.currentIndexChanged.connect(self._on_res_changed)
         self._on_res_changed()
+        return upscale_group
 
-        layout.addWidget(upscale_group)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.hide()
-        layout.addWidget(self._progress)
-
-        self._tile_progress = QProgressBar()
-        self._tile_progress.setFormat("Tile: %v / %m  (%p%)")
-        self._tile_progress.hide()
-        layout.addWidget(self._tile_progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        layout.addStretch()
-
-        # Buttons
+    def _build_button_row(self) -> QHBoxLayout:
+        """Start on the left, Close on the right."""
         btn_row = QHBoxLayout()
-        self._start_btn = QPushButton(lang.get("organizer_start", "Start"))
+        self._start_btn = QPushButton(self._lang.get("organizer_start", "Start"))
         self._start_btn.clicked.connect(self._do_start)
         btn_row.addWidget(self._start_btn)
         btn_row.addStretch()
-        close_btn = QPushButton(lang.get("export_cancel", "Close"))
+        close_btn = QPushButton(self._lang.get("export_cancel", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     # --- Resolution hint ---
 

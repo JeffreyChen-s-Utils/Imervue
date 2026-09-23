@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-29 | 2026-09-23 | Split ImageSanitizeDialog._build_ui into section builders | #done #refactor #gui | [2026-09](2026-09.md) |
 | U-20260923-28 | 2026-09-23 | Split build_file_menu into section builders | #done #refactor #menu | [2026-09](2026-09.md) |
 | U-20260923-27 | 2026-09-23 | Split the viewer and main-window constructors into section builders | #done #refactor #main_window #gpu_image_view | [2026-09](2026-09.md) |
 | U-20260923-26 | 2026-09-23 | Drop five per-file ruff exemptions that no longer match anything | #done #lint | [2026-09](2026-09.md) |
