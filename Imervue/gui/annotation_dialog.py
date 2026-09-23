@@ -431,6 +431,15 @@ class AnnotationEditorWidget(QWidget):
         self._canvas.set_stroke_width(width)
         self._refresh_status_bar()
 
+    @staticmethod
+    def _wide_button(frame: QFrame, text: str, height: int) -> QToolButton:
+        """A tool button that stretches across its row at a fixed height."""
+        btn = QToolButton(frame)
+        btn.setText(text)
+        btn.setFixedHeight(height)
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        return btn
+
     def _build_right_panel(self) -> QFrame:
         lang = language_wrapper.language_word_dict
         frame = QFrame(self)
@@ -441,7 +450,57 @@ class AnnotationEditorWidget(QWidget):
         lay = QVBoxLayout(frame)
         lay.setContentsMargins(12, 12, 12, 12)
         lay.setSpacing(6)
+        self._add_panel_header(frame, lay, lang)
+        lay.addSpacing(6)
 
+        # ---- Color section ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_color", "Color")))
+        lay.addWidget(self._build_color_button(frame, lang))
+        lay.addSpacing(4)
+
+        # ---- Stroke width section ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_stroke_width_label", "Stroke Width")))
+        self._width_slider, self._width_spin, sw_row = make_slider_spin(
+            frame, 1, 40, 3, on_change=self._on_stroke_width_changed)
+        lay.addLayout(sw_row)
+        lay.addSpacing(8)
+
+        # ---- History quick actions (Undo / Redo) ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_history_section", "History")))
+        lay.addLayout(self._build_history_row(frame, lang))
+        lay.addSpacing(8)
+
+        # ---- Brush section (freehand only) ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_brush_section", "Brush")))
+        lay.addLayout(self._build_brush_grid(frame, lang))
+        lay.addSpacing(4)
+
+        # Opacity slider + spin
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_opacity", "Opacity")))
+        self._opacity_slider, self._opacity_spin, op_row = make_slider_spin(
+            frame, 0, 100, 100, suffix=" %",
+            on_change=lambda v: self._canvas.set_brush_opacity(v))
+        lay.addLayout(op_row)
+        lay.addSpacing(4)
+
+        # Spacing slider + spin (spray only, but always visible for clarity)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_spacing", "Spacing")))
+        self._spacing_slider, self._spacing_spin, sp_row = make_slider_spin(
+            frame, 1, 40, 8,
+            on_change=lambda v: self._canvas.set_brush_spacing(v))
+        lay.addLayout(sp_row)
+
+        lay.addStretch(1)
+        return frame
+
+    def _add_panel_header(self, frame: QFrame, lay: QVBoxLayout, lang) -> None:
+        """Bold "Properties" title and the current-tool readout under it."""
         title = QLabel(lang.get("annotation_properties", "Properties"), frame)
         title_font = QFont(title.font())
         title_font.setPointSize(12)
@@ -458,69 +517,35 @@ class AnnotationEditorWidget(QWidget):
         self._current_tool_label.setStyleSheet("color: #cccccc;")
         lay.addWidget(self._current_tool_label)
 
-        lay.addSpacing(6)
-
-        # ---- Color section ----
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_color", "Color")))
-
+    def _build_color_button(self, frame: QFrame, lang) -> QToolButton:
+        """Swatch button showing the stroke colour; clicking opens the picker."""
         self._color = (255, 0, 0, 255)
-        self._color_btn = QToolButton(frame)
-        self._color_btn.setText(lang.get("annotation_color", "Color"))
-        self._color_btn.setFixedHeight(44)
-        self._color_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self._color_btn = self._wide_button(
+            frame, lang.get("annotation_color", "Color"), 44)
         self._color_btn.setAutoRaise(False)
         self._color_btn.clicked.connect(self._pick_color)
         self._update_color_button_style()
-        lay.addWidget(self._color_btn)
+        return self._color_btn
 
-        lay.addSpacing(4)
-
-        # ---- Stroke width section ----
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_stroke_width_label", "Stroke Width")))
-        self._width_slider, self._width_spin, sw_row = make_slider_spin(
-            frame, 1, 40, 3, on_change=self._on_stroke_width_changed)
-        lay.addLayout(sw_row)
-
-        lay.addSpacing(8)
-
-        # ---- History quick actions (Undo / Redo) ----
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_history_section", "History")))
-
+    def _build_history_row(self, frame: QFrame, lang) -> QHBoxLayout:
+        """Undo / Redo buttons bound to the dialog's undo stack."""
         hist_row = QHBoxLayout()
         hist_row.setContentsMargins(0, 0, 0, 0)
         hist_row.setSpacing(6)
 
-        undo_btn = QToolButton(frame)
-        undo_btn.setText("↶ " + lang.get("annotation_undo", "Undo"))
-        undo_btn.setFixedHeight(36)
-        undo_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        undo_btn = self._wide_button(
+            frame, "↶ " + lang.get("annotation_undo", "Undo"), 36)
         undo_btn.clicked.connect(self._undo_stack.undo)
         hist_row.addWidget(undo_btn)
 
-        redo_btn = QToolButton(frame)
-        redo_btn.setText("↷ " + lang.get("annotation_redo", "Redo"))
-        redo_btn.setFixedHeight(36)
-        redo_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        redo_btn = self._wide_button(
+            frame, "↷ " + lang.get("annotation_redo", "Redo"), 36)
         redo_btn.clicked.connect(self._undo_stack.redo)
         hist_row.addWidget(redo_btn)
+        return hist_row
 
-        lay.addLayout(hist_row)
-
-        lay.addSpacing(8)
-
-        # ---- Brush section (freehand only) ----
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_brush_section", "Brush")))
-
+    def _build_brush_grid(self, frame: QFrame, lang) -> QGridLayout:
+        """Two-column grid of exclusive brush buttons, Pen checked."""
         brush_grid = QGridLayout()
         brush_grid.setContentsMargins(0, 0, 0, 0)
         brush_grid.setSpacing(4)
@@ -536,43 +561,15 @@ class AnnotationEditorWidget(QWidget):
             ("spray",       "💨", lang.get("annotation_brush_spray",       "Spray")),
         ]
         for idx, (key, glyph, label) in enumerate(brush_defs):
-            btn = QToolButton(frame)
-            btn.setText(f"{glyph} {label}")
+            btn = self._wide_button(frame, f"{glyph} {label}", 30)
             btn.setCheckable(True)
-            btn.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-            )
-            btn.setFixedHeight(30)
             btn.clicked.connect(lambda _=False, k=key: self._on_brush_selected(k))
             row, col = divmod(idx, 2)
             brush_grid.addWidget(btn, row, col)
             self._brush_buttons[key] = btn
             self._brush_button_group.addButton(btn)
         self._brush_buttons["pen"].setChecked(True)
-        lay.addLayout(brush_grid)
-
-        lay.addSpacing(4)
-
-        # Opacity slider + spin
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_opacity", "Opacity")))
-        self._opacity_slider, self._opacity_spin, op_row = make_slider_spin(
-            frame, 0, 100, 100, suffix=" %",
-            on_change=lambda v: self._canvas.set_brush_opacity(v))
-        lay.addLayout(op_row)
-
-        lay.addSpacing(4)
-
-        # Spacing slider + spin (spray only, but always visible for clarity)
-        lay.addWidget(self._section_label(
-            frame, lang.get("annotation_spacing", "Spacing")))
-        self._spacing_slider, self._spacing_spin, sp_row = make_slider_spin(
-            frame, 1, 40, 8,
-            on_change=lambda v: self._canvas.set_brush_spacing(v))
-        lay.addLayout(sp_row)
-
-        lay.addStretch(1)
-        return frame
+        return brush_grid
 
     def _on_brush_selected(self, brush: str) -> None:
         if brush not in self._brush_buttons:
