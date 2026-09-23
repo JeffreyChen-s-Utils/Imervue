@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `06dda12` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `d60059d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 775 | 127,938 |
+| `tests/` | 778 | 128,084 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,459 |
 | `Imervue/puppet/` | 57 | 15,214 |
@@ -80,13 +80,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/` 根層 | 5 | 1,799 |
 | `Imervue/plugin/` | 9 | 2,150 |
 | `Imervue/system/` | 16 | 1,840 |
-| `Imervue/export/` | 8 | 1,047 |
+| `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,576** | **302,229** |
+| **總計** | **1,580** | **302,406** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,902 行。
+其中 `Imervue/` 套件本身 740 檔 / 159,933 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -283,13 +283,14 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `contact_sheet.py` | 182 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab） |
+| `contact_sheet.py` | 187 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab） |
 | `contact_sheet_layouts.py` | 56 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
 | `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依） |
 | `gallery_sort.py` | 76 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
 | `slideshow_mp4.py` | 141 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 102 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
-| `cheat_sheet.py` | 234 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
+| `cheat_sheet.py` | 237 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
+| `pdf_output.py` | 21 | `begin_pdf_painter`：在 `QPdfWriter` 上開啟 `QPainter`，目標無法寫入時丟 `OSError`（`QPdfWriter` 本身不丟例外，只讓 `begin` 回傳 `False`） |
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
@@ -947,7 +948,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-775 個檔、127,938 行。`pyproject.toml` 定義三個互斥層級 marker：
+778 個檔、128,084 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1135,6 +1136,10 @@ PySide6（6.11.0 / 6.11.1 實測）的 `QAction.menu()` 會把回傳的 `QMenu` 
 9. **不要用 `QAction.menu()` 走訪選單**（§10.10）。它讓外掛語言從語言選單消失、讓命令面板用過之後
    「重新載入外掛」拿到失效的 Plugins 選單。外掛的 `on_build_menu_bar` 拿到的是 Plugins `QMenu`
    不是 `QMenuBar`，要放進 Extra Tools 子選單請 `findChild(QMenu, "extra_tools.<key>")`。
+
+10. **`QPdfWriter` 寫不進目標時不丟例外。** 只會讓 `QPainter.begin` 回傳 `False`，之後的繪製全是
+    no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
+    它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
 
 
