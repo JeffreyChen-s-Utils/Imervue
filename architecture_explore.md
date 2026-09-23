@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `86adb8d` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `154ff16` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 824 | 134,775 |
+| `tests/` | 824 | 134,820 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,911 |
 | `Imervue/gui/` | 161 | 32,828 |
 | `Imervue/puppet/` | 57 | 15,283 |
@@ -79,14 +79,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/menu/` | 11 | 3,576 |
 | `Imervue/` 根層 | 5 | 1,549 |
 | `Imervue/plugin/` | 10 | 2,243 |
-| `Imervue/system/` | 20 | 2,021 |
+| `Imervue/system/` | 20 | 2,053 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,196 |
-| **總計** | **1,639** | **309,580** |
+| **總計** | **1,639** | **309,657** |
 
-其中 `Imervue/` 套件本身 751 檔 / 160,609 行。
+其中 `Imervue/` 套件本身 751 檔 / 160,641 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -217,7 +217,7 @@ ImervueMainWindow
 | --- | ---: | --- |
 | `app_paths.py` | 109 | 凍結環境安全的路徑解析（icon / plugins / 設定檔），PyInstaller & Nuitka 都適用 |
 | `clipboard_monitor.py` | 136 | ShareX 式剪貼簿監聽：PrintScreen 截圖 → 自動開啟註解視窗 |
-| `error_report.py` | 145 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
+| `error_report.py` | 177 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
 | `file_association.py` | 239 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
 | `file_tree_watcher.py` | 171 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
 | `qimage_convert.py` | 33 | `pil_to_qimage()` / `qimage_to_pil()`：經 RGBA8888 並複製緩衝區的雙向轉換（標註與剪貼簿共用） |
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-824 個檔、134,775 行。`pyproject.toml` 定義三個互斥層級 marker：
+824 個檔、134,820 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

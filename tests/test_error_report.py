@@ -155,3 +155,48 @@ def test_build_report_does_not_overwrite_existing(tmp_path):
     # Build should land at bundle-1.zip, leaving the existing untouched
     assert out != target
     assert target.read_bytes() == b"existing"
+
+
+# ---------------------------------------------------------------------------
+# Credentials nested anywhere in the settings are masked
+# ---------------------------------------------------------------------------
+
+_FAKE_TOKEN = "fake-webhook-token-for-tests"  # noqa: S105 - test fixture, not a credential
+_FAKE_OAUTH = "oauth:fake-twitch-token-for-tests"  # noqa: S105 - test fixture
+
+
+def test_credential_key_names():
+    from Imervue.system.error_report import is_credential_key
+    for name in ("webhook_token", "obs_password", "twitch_oauth", "api_key",
+                 "openai_api_key", "imgur_client_id", "secret", "token", "bearer_token"):
+        assert is_credential_key(name), name
+    for name in ("token_rename_template", "tokens_used", "client_idle", "language",
+                 "passwordless", "theme"):
+        assert not is_credential_key(name), name
+
+
+def test_nested_credentials_are_redacted_but_keys_stay():
+    from Imervue.system.error_report import REDACTED
+    raw = {
+        "language": "English",
+        "desktop_pet": {"webhook_token": _FAKE_TOKEN, "twitch_oauth": _FAKE_OAUTH,
+                        "obs_password": "", "scale": 1.5},
+        "profiles": [{"name": "work", "api_key": "k-123"}],
+        "token_rename_template": "{date}_{n}",
+    }
+    out = sanitise_settings(raw)
+    assert out["desktop_pet"] == {"webhook_token": REDACTED, "twitch_oauth": REDACTED,
+                                  "obs_password": "", "scale": 1.5}
+    assert out["profiles"] == [{"name": "work", "api_key": REDACTED}]
+    assert out["token_rename_template"] == "{date}_{n}"  # noqa: S105 - not a secret
+    assert raw["desktop_pet"]["webhook_token"] == _FAKE_TOKEN   # input untouched
+
+
+def test_build_report_never_contains_pet_credentials(tmp_path):
+    user_setting_dict["desktop_pet"] = {"webhook_token": _FAKE_TOKEN, "twitch_oauth": _FAKE_OAUTH}
+    out_path = tmp_path / "bundle.zip"
+    build_report(out_path)
+    with zipfile.ZipFile(out_path) as zf:
+        blob = b"".join(zf.read(name) for name in zf.namelist())
+    assert _FAKE_TOKEN.encode() not in blob
+    assert _FAKE_OAUTH.encode() not in blob

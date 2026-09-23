@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-52 | 2026-09-24 | Keep the desktop pet's credentials out of the support bundle | #fix #security #privacy | [2026-09](2026-09.md) |
 | U-20260924-51 | 2026-09-24 | Move the plugin interpreter to CPython 3.12.10 | #deps #security #plugin | [2026-09](2026-09.md) |
 | U-20260924-50 | 2026-09-24 | Verify the embeddable Python and install pip from a pinned wheel | #fix #security #supply-chain #plugin | [2026-09](2026-09.md) |
 | U-20260924-49 | 2026-09-24 | Pin the upscale models to commits and verify the face-landmark model | #fix #security #supply-chain | [2026-09](2026-09.md) |
