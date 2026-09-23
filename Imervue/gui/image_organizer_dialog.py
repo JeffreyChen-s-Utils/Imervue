@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
     QRadioButton,
@@ -31,6 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.folder_row import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
@@ -260,110 +260,21 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
         lang = self._lang
         layout = QVBoxLayout(self)
 
-        # Source folder
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(lang.get("organizer_source", "Source folder:")))
-        self._src_edit = QLineEdit()
+        src_row, self._src_edit = folder_picker_row(
+            lang.get("organizer_source", "Source folder:"), self._browse_src)
         self._src_edit.textChanged.connect(self._invalidate_plan)
-        src_row.addWidget(self._src_edit, 1)
-        src_browse = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        src_browse.clicked.connect(self._browse_src)
-        src_row.addWidget(src_browse)
         layout.addLayout(src_row)
-
-        # Rule selector
-        rule_row = QHBoxLayout()
-        rule_row.addWidget(QLabel(lang.get("organizer_rule", "Organize by:")))
-        self._rule_combo = QComboBox()
-        self._rule_combo.addItem(lang.get("organizer_rule_date", "Date"), RULE_DATE)
-        self._rule_combo.addItem(
-            lang.get("organizer_rule_resolution", "Resolution"), RULE_RESOLUTION
-        )
-        self._rule_combo.addItem(lang.get("organizer_rule_type", "File Type"), RULE_TYPE)
-        self._rule_combo.addItem(lang.get("organizer_rule_size", "File Size"), RULE_SIZE)
-        self._rule_combo.addItem(lang.get("organizer_rule_count", "Fixed Count"), RULE_COUNT)
-        self._rule_combo.currentIndexChanged.connect(self._on_rule_changed)
-        rule_row.addWidget(self._rule_combo, 1)
-        layout.addLayout(rule_row)
+        layout.addLayout(self._build_rule_row(lang))
 
         # --- Rule-specific options ---
+        layout.addLayout(self._build_date_row(lang))
+        layout.addLayout(self._build_size_row(lang))
+        layout.addLayout(self._build_count_row(lang))
 
-        # Date options
-        self._date_row = QHBoxLayout()
-        self._date_row_widgets: list = []
-        lbl = QLabel(lang.get("organizer_date_granularity", "Group by:"))
-        self._date_row.addWidget(lbl)
-        self._date_row_widgets.append(lbl)
-        self._date_combo = QComboBox()
-        self._date_combo.addItem(lang.get("organizer_date_year_month", "Year-Month"), False)
-        self._date_combo.addItem(lang.get("organizer_date_year", "Year only"), True)
-        self._date_combo.currentIndexChanged.connect(self._invalidate_plan)
-        self._date_row.addWidget(self._date_combo)
-        self._date_row_widgets.append(self._date_combo)
-        self._date_row.addStretch()
-        layout.addLayout(self._date_row)
-
-        # Size options
-        self._size_row = QHBoxLayout()
-        self._size_row_widgets: list = []
-        lbl2 = QLabel(lang.get("organizer_size_large", "Large threshold (MB):"))
-        self._size_row.addWidget(lbl2)
-        self._size_row_widgets.append(lbl2)
-        self._size_large_spin = QSpinBox()
-        self._size_large_spin.setRange(1, 1000)
-        self._size_large_spin.setValue(5)
-        self._size_large_spin.valueChanged.connect(self._invalidate_plan)
-        self._size_row.addWidget(self._size_large_spin)
-        self._size_row_widgets.append(self._size_large_spin)
-        lbl3 = QLabel(lang.get("organizer_size_small", "Small threshold (MB):"))
-        self._size_row.addWidget(lbl3)
-        self._size_row_widgets.append(lbl3)
-        self._size_small_spin = QSpinBox()
-        self._size_small_spin.setRange(0, 999)
-        self._size_small_spin.setValue(1)
-        self._size_small_spin.valueChanged.connect(self._invalidate_plan)
-        self._size_row.addWidget(self._size_small_spin)
-        self._size_row_widgets.append(self._size_small_spin)
-        self._size_row.addStretch()
-        layout.addLayout(self._size_row)
-
-        # Count options
-        self._count_row = QHBoxLayout()
-        self._count_row_widgets: list = []
-        lbl4 = QLabel(lang.get("organizer_count_per_folder", "Images per subfolder:"))
-        self._count_row.addWidget(lbl4)
-        self._count_row_widgets.append(lbl4)
-        self._count_spin = QSpinBox()
-        self._count_spin.setRange(1, 10000)
-        self._count_spin.setValue(100)
-        self._count_spin.valueChanged.connect(self._invalidate_plan)
-        self._count_row.addWidget(self._count_spin)
-        self._count_row_widgets.append(self._count_spin)
-        self._count_row.addStretch()
-        layout.addLayout(self._count_row)
-
-        # Output folder
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("organizer_output", "Output folder:")))
-        self._out_edit = QLineEdit()
-        out_row.addWidget(self._out_edit, 1)
-        out_browse = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        out_browse.clicked.connect(self._browse_out)
-        out_row.addWidget(out_browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("organizer_output", "Output folder:"), self._browse_out)
         layout.addLayout(out_row)
-
-        # Copy / Move
-        mode_row = QHBoxLayout()
-        self._copy_radio = QRadioButton(lang.get("organizer_mode_copy", "Copy files"))
-        self._move_radio = QRadioButton(lang.get("organizer_mode_move", "Move files"))
-        self._copy_radio.setChecked(True)
-        grp = QButtonGroup(self)
-        grp.addButton(self._copy_radio)
-        grp.addButton(self._move_radio)
-        mode_row.addWidget(self._copy_radio)
-        mode_row.addWidget(self._move_radio)
-        mode_row.addStretch()
-        layout.addLayout(mode_row)
+        layout.addLayout(self._build_mode_row(lang))
 
         # Preview tree
         self._tree = QTreeWidget()
@@ -378,8 +289,93 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
 
         self._status_label = QLabel("")
         layout.addWidget(self._status_label)
+        layout.addLayout(self._build_button_row(lang))
 
-        # Buttons
+        # Initial visibility
+        self._on_rule_changed(0)
+
+    def _build_rule_row(self, lang) -> QHBoxLayout:
+        """The "Organize by" combo listing the five rules."""
+        rule_row = QHBoxLayout()
+        rule_row.addWidget(QLabel(lang.get("organizer_rule", "Organize by:")))
+        self._rule_combo = QComboBox()
+        self._rule_combo.addItem(lang.get("organizer_rule_date", "Date"), RULE_DATE)
+        self._rule_combo.addItem(
+            lang.get("organizer_rule_resolution", "Resolution"), RULE_RESOLUTION
+        )
+        self._rule_combo.addItem(lang.get("organizer_rule_type", "File Type"), RULE_TYPE)
+        self._rule_combo.addItem(lang.get("organizer_rule_size", "File Size"), RULE_SIZE)
+        self._rule_combo.addItem(lang.get("organizer_rule_count", "Fixed Count"), RULE_COUNT)
+        self._rule_combo.currentIndexChanged.connect(self._on_rule_changed)
+        rule_row.addWidget(self._rule_combo, 1)
+        return rule_row
+
+    @staticmethod
+    def _option_row(widgets: list) -> QHBoxLayout:
+        """Left-aligned row of ``widgets``; the list is kept to toggle them per rule."""
+        row = QHBoxLayout()
+        for widget in widgets:
+            row.addWidget(widget)
+        row.addStretch()
+        return row
+
+    def _plan_spin(self, minimum: int, maximum: int, value: int) -> QSpinBox:
+        """Spin box whose every change invalidates the previewed plan."""
+        spin = QSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setValue(value)
+        spin.valueChanged.connect(self._invalidate_plan)
+        return spin
+
+    def _build_date_row(self, lang) -> QHBoxLayout:
+        """Year-Month / Year-only grouping, shown for the date rule."""
+        self._date_combo = QComboBox()
+        self._date_combo.addItem(lang.get("organizer_date_year_month", "Year-Month"), False)
+        self._date_combo.addItem(lang.get("organizer_date_year", "Year only"), True)
+        self._date_combo.currentIndexChanged.connect(self._invalidate_plan)
+        self._date_row_widgets: list = [
+            QLabel(lang.get("organizer_date_granularity", "Group by:")),
+            self._date_combo,
+        ]
+        return self._option_row(self._date_row_widgets)
+
+    def _build_size_row(self, lang) -> QHBoxLayout:
+        """Large / small thresholds in MB, shown for the file-size rule."""
+        self._size_large_spin = self._plan_spin(1, 1000, 5)
+        self._size_small_spin = self._plan_spin(0, 999, 1)
+        self._size_row_widgets: list = [
+            QLabel(lang.get("organizer_size_large", "Large threshold (MB):")),
+            self._size_large_spin,
+            QLabel(lang.get("organizer_size_small", "Small threshold (MB):")),
+            self._size_small_spin,
+        ]
+        return self._option_row(self._size_row_widgets)
+
+    def _build_count_row(self, lang) -> QHBoxLayout:
+        """Images per subfolder, shown for the fixed-count rule."""
+        self._count_spin = self._plan_spin(1, 10000, 100)
+        self._count_row_widgets: list = [
+            QLabel(lang.get("organizer_count_per_folder", "Images per subfolder:")),
+            self._count_spin,
+        ]
+        return self._option_row(self._count_row_widgets)
+
+    def _build_mode_row(self, lang) -> QHBoxLayout:
+        """Exclusive Copy / Move choice, Copy checked."""
+        mode_row = QHBoxLayout()
+        self._copy_radio = QRadioButton(lang.get("organizer_mode_copy", "Copy files"))
+        self._move_radio = QRadioButton(lang.get("organizer_mode_move", "Move files"))
+        self._copy_radio.setChecked(True)
+        grp = QButtonGroup(self)
+        grp.addButton(self._copy_radio)
+        grp.addButton(self._move_radio)
+        mode_row.addWidget(self._copy_radio)
+        mode_row.addWidget(self._move_radio)
+        mode_row.addStretch()
+        return mode_row
+
+    def _build_button_row(self, lang) -> QHBoxLayout:
+        """Preview and Start (disabled until a preview) on the left, Close on the right."""
         btn_row = QHBoxLayout()
         self._preview_btn = QPushButton(lang.get("organizer_preview", "Preview"))
         self._preview_btn.clicked.connect(self._do_preview)
@@ -394,10 +390,7 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
         close_btn = QPushButton(lang.get("export_cancel", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
-
-        # Initial visibility
-        self._on_rule_changed(0)
+        return btn_row
 
     # ---- Helpers ----
 

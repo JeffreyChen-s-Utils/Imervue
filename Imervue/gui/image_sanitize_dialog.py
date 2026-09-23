@@ -28,13 +28,13 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
 )
 
+from Imervue.gui.folder_row import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
@@ -508,7 +508,7 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
 
         layout.addSpacing(4)
 
-        src_row, self._src_edit = self._folder_row(
+        src_row, self._src_edit = folder_picker_row(
             lang.get("sanitize_source", "Source folder:"), self._browse_src)
         layout.addLayout(src_row)
 
@@ -516,7 +516,7 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
             lang.get("duplicate_recursive", "Include subfolders"))
         layout.addWidget(self._recursive_check)
 
-        out_row, self._out_edit = self._folder_row(
+        out_row, self._out_edit = folder_picker_row(
             lang.get("organizer_output", "Output folder:"), self._browse_out)
         layout.addLayout(out_row)
 
@@ -547,17 +547,6 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
 
         layout.addStretch()
         layout.addLayout(self._build_button_row())
-
-    def _folder_row(self, label: str, on_browse) -> tuple[QHBoxLayout, QLineEdit]:
-        """Label, stretching path edit and a Browse button wired to ``on_browse``."""
-        row = QHBoxLayout()
-        row.addWidget(QLabel(label))
-        edit = QLineEdit()
-        row.addWidget(edit, 1)
-        browse = QPushButton(self._lang.get("batch_convert_browse", "Browse..."))
-        browse.clicked.connect(on_browse)
-        row.addWidget(browse)
-        return row, edit
 
     @staticmethod
     def _spin_row(label: str, minimum: int, maximum: int,
