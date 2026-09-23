@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-56 | 2026-09-24 | Translate 334 UI strings that every language showed in English | #i18n #gui | [2026-09](2026-09.md) |
 | U-20260924-55 | 2026-09-24 | Load rawpy and imageio only when a RAW file is decoded | #perf #startup | [2026-09](2026-09.md) |
 | U-20260924-54 | 2026-09-24 | Pin Leaflet with Subresource Integrity; fit single places at city zoom | #fix #security #gui | [2026-09](2026-09.md) |
 | U-20260924-53 | 2026-09-24 | Show EXIF values and file names as text in the sidebar | #fix #security #gui | [2026-09](2026-09.md) |

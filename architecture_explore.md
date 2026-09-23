@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `01f2995` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `63ecbf9` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -72,7 +72,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,888 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,912 |
-| `Imervue/multi_language/` | 8 | 11,304 |
+| `Imervue/multi_language/` | 8 | 12,974 |
 | `Imervue/desktop_pet/` | 34 | 8,253 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,196 |
-| **總計** | **1,639** | **309,747** |
+| **總計** | **1,639** | **311,417** |
 
-其中 `Imervue/` 套件本身 751 檔 / 160,655 行。
+其中 `Imervue/` 套件本身 751 檔 / 162,325 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -253,11 +253,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,235 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,200 | 繁體中文 |
-| `chinese.py` | 2,201 | 簡體中文 |
-| `japanese.py` | 2,214 | 日文 |
-| `korean.py` | 2,212 | 韓文 |
+| `english.py` | 2,569 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,534 | 繁體中文 |
+| `chinese.py` | 2,535 | 簡體中文 |
+| `japanese.py` | 2,548 | 日文 |
+| `korean.py` | 2,546 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
