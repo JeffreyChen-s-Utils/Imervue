@@ -98,7 +98,11 @@ def show_image_info_dialog(main_gui: GPUImageView, info: dict[str, Any]):
         return
 
     if "error" in info:
-        QMessageBox.warning(main_gui, "Image Info Error", info["error"])
+        QMessageBox.warning(
+            main_gui,
+            language_wrapper.language_word_dict.get("image_info_error_title", "Image Info Error"),
+            info["error"],
+        )
         return
 
     lang = language_wrapper.language_word_dict

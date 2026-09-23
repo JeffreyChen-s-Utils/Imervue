@@ -2566,4 +2566,13 @@ english_word_dict = {
     "velvia_protection": "Shadow protection:",
     "velvia_strength": "Strength:",
     "velvia_title": "Velvia",
+    "semantic_search_title": "Semantic Search",
+    "semantic_search_placeholder": "Describe the photo — e.g. 'beach at sunset'",
+    "semantic_search_building": "Building index…",
+    "semantic_search_unavailable": "Natural-language search needs the optional 'open_clip_torch' backend.\nInstall it (pip install open_clip_torch torch) to enable this feature.",
+    "develop_preset_delete_title": "Delete Preset",
+    "develop_preset_delete_confirm": "Delete '{name}'?",
+    "export_output_path_placeholder": "Output path",
+    "watermark_text_placeholder": "© Your name",
+    "image_info_error_title": "Image Info Error",
 }

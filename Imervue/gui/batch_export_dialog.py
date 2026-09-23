@@ -260,7 +260,8 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         wm_text_row = QHBoxLayout()
         wm_text_row.addWidget(QLabel(self._lang.get("watermark_text", "Text:")))
         self._wm_text = QLineEdit()
-        self._wm_text.setPlaceholderText("© Your name")
+        self._wm_text.setPlaceholderText(
+            self._lang.get("watermark_text_placeholder", "© Your name"))
         wm_text_row.addWidget(self._wm_text, 1)
         wm_layout.addLayout(wm_text_row)
         wm_opts_row = QHBoxLayout()

@@ -2545,4 +2545,13 @@ japanese_word_dict = {
     "velvia_protection": "シャドウ保護：",
     "velvia_strength": "強さ：",
     "velvia_title": "Velvia",
+    "semantic_search_title": "セマンティック検索",
+    "semantic_search_placeholder": "写真の内容を入力（例：「夕暮れのビーチ」）",
+    "semantic_search_building": "インデックスを作成中…",
+    "semantic_search_unavailable": "自然言語検索にはオプションの「open_clip_torch」バックエンドが必要です。\nこの機能を使うにはインストールしてください（pip install open_clip_torch torch）。",
+    "develop_preset_delete_title": "プリセットを削除",
+    "develop_preset_delete_confirm": "「{name}」を削除しますか？",
+    "export_output_path_placeholder": "出力パス",
+    "watermark_text_placeholder": "© あなたの名前",
+    "image_info_error_title": "画像情報のエラー",
 }

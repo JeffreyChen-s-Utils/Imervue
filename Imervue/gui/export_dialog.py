@@ -101,7 +101,8 @@ class ExportDialog(WorkerHostMixin, QDialog):
         # Output path row
         path_layout, self.path_edit, _browse = path_browse_row(
             self._browse_output, browse_text=self._lang.get("export_browse", "Browse..."))
-        self.path_edit.setPlaceholderText("Output path")
+        self.path_edit.setPlaceholderText(
+            self._lang.get("export_output_path_placeholder", "Output path"))
         layout.addLayout(path_layout)
 
         # Size estimate

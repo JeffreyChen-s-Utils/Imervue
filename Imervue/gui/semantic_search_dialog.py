@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.library.clip_search import ClipSearchIndex, SearchHit
+from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.worker_host import WorkerHostMixin
 
 logger = logging.getLogger("Imervue.gui.semantic_search_dialog")
@@ -71,7 +72,8 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         self._viewer = viewer
         self._index = index
         self._worker: _IndexBuildWorker | None = None
-        self.setWindowTitle("Semantic Search")
+        self.setWindowTitle(language_wrapper.language_word_dict.get(
+            "semantic_search_title", "Semantic Search"))
         self.resize(520, 560)
         self._build_ui()
         if build_paths:
@@ -79,7 +81,8 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
 
     def _build_ui(self) -> None:
         self._query = QLineEdit()
-        self._query.setPlaceholderText("Describe the photo — e.g. 'beach at sunset'")
+        self._query.setPlaceholderText(language_wrapper.language_word_dict.get(
+            "semantic_search_placeholder", "Describe the photo — e.g. 'beach at sunset'"))
         self._query.returnPressed.connect(self._search)
         self._search_btn = QPushButton("Search")
         self._search_btn.clicked.connect(self._search)
@@ -105,7 +108,8 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         self._set_search_enabled(False)
         self._progress.setVisible(True)
         self._progress.setRange(0, len(paths))
-        self._status.setText("Building index…")
+        self._status.setText(language_wrapper.language_word_dict.get(
+            "semantic_search_building", "Building index…"))
         self._worker = _IndexBuildWorker(self._index, paths, self)
         self._worker.progress.connect(lambda done, _t: self._progress.setValue(done))
         self._worker.done.connect(self._on_index_ready)
@@ -152,10 +156,12 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
 
 def _warn_unavailable(parent) -> None:
     from PySide6.QtWidgets import QMessageBox
+    lang = language_wrapper.language_word_dict
     QMessageBox.information(
-        parent, "Semantic Search",
-        "Natural-language search needs the optional 'open_clip_torch' backend.\n"
-        "Install it (pip install open_clip_torch torch) to enable this feature.")
+        parent, lang.get("semantic_search_title", "Semantic Search"),
+        lang.get("semantic_search_unavailable",
+                 "Natural-language search needs the optional 'open_clip_torch' backend.\n"
+                 "Install it (pip install open_clip_torch torch) to enable this feature."))
 
 
 def open_semantic_search_dialog(viewer) -> None:

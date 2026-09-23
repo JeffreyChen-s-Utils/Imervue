@@ -2531,4 +2531,13 @@ traditional_chinese_word_dict = {
     "velvia_protection": "陰影保護：",
     "velvia_strength": "強度：",
     "velvia_title": "Velvia",
+    "semantic_search_title": "語意搜尋",
+    "semantic_search_placeholder": "描述照片內容，例如「夕陽下的海灘」",
+    "semantic_search_building": "正在建立索引…",
+    "semantic_search_unavailable": "自然語言搜尋需要選用的「open_clip_torch」後端。\n請安裝它（pip install open_clip_torch torch）以啟用此功能。",
+    "develop_preset_delete_title": "刪除預設集",
+    "develop_preset_delete_confirm": "要刪除「{name}」嗎？",
+    "export_output_path_placeholder": "輸出路徑",
+    "watermark_text_placeholder": "© 你的名字",
+    "image_info_error_title": "圖片資訊錯誤",
 }
