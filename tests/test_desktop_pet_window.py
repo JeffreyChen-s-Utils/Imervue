@@ -489,3 +489,56 @@ def test_load_puppet_file_returns_false_on_missing(qapp, tmp_path):
         assert window.document() is None
     finally:
         window.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Window-flag and fullscreen characterisation (pinned before the flag methods
+# moved to ``pet_window_flags.PetWindowFlagsMixin``).
+# ---------------------------------------------------------------------------
+
+def test_configure_window_flags_combinations(qapp):
+    window = PetWindow()
+    try:
+        for click_through, on_bottom in ((False, False), (True, False), (False, True), (True, True)):
+            window._configure_window_flags(click_through=click_through, on_bottom=on_bottom)
+            flags = window.windowFlags()
+            assert _has_flag(flags, Qt.WindowType.FramelessWindowHint)
+            assert _has_flag(flags, Qt.WindowType.Tool)
+            assert _has_flag(flags, Qt.WindowType.WindowStaysOnBottomHint) is on_bottom
+            assert _has_flag(flags, Qt.WindowType.WindowDoesNotAcceptFocus) is on_bottom
+            assert _has_flag(flags, Qt.WindowType.WindowStaysOnTopHint) is not on_bottom
+            assert _has_flag(flags, Qt.WindowType.WindowTransparentForInput) is click_through
+    finally:
+        window.deleteLater()
+
+
+def test_snap_and_opacity_are_clamped(qapp):
+    import pytest
+    window = PetWindow()
+    try:
+        for given, kept in ((-5, 0), (57, 57), (500, 200)):
+            window.set_snap_threshold(given)
+            assert window.snap_threshold() == kept
+        for given, kept in ((0.0, 0.1), (0.55, 0.55), (3.0, 1.0)):
+            window.set_pet_opacity(given)
+            assert window.pet_opacity() == pytest.approx(kept, abs=0.01)
+    finally:
+        window.deleteLater()
+
+
+def test_fullscreen_state_hides_and_restores(qapp):
+    window = PetWindow()
+    try:
+        window.show()
+        window._on_fullscreen_state_changed(True)
+        assert window.isHidden() and window._hidden_by_fullscreen
+        window._on_fullscreen_state_changed(False)
+        assert not window.isHidden() and not window._hidden_by_fullscreen
+        window.hide()
+        window._on_fullscreen_state_changed(True)      # already hidden: not "ours" to restore
+        assert not window._hidden_by_fullscreen
+        window._on_fullscreen_state_changed(False)
+        assert window.isHidden()
+    finally:
+        window.shutdown()
+        window.deleteLater()
