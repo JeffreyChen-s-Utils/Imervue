@@ -50,6 +50,36 @@ def test_partial_download_leaves_no_plugin_dir(qapp, tmp_path, monkeypatch):
     assert not (tmp_path / ".myplugin.partial").exists()  # temp cleaned up
 
 
+def _run_failing(tmp_path, monkeypatch, caplog, exc):
+    monkeypatch.setattr(pd, "_get_plugin_dir", lambda: tmp_path)
+
+    def fake_urlopen(_req, timeout=30):
+        raise exc
+
+    monkeypatch.setattr(pd, "_https_urlopen", fake_urlopen)
+    errors: list = []
+    worker = _worker()
+    worker.error.connect(errors.append)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        worker.run()
+    return errors, [r for r in caplog.records if r.exc_info]
+
+
+def test_network_error_is_reported_without_traceback(qapp, tmp_path, monkeypatch, caplog):
+    errors, tracebacks = _run_failing(tmp_path, monkeypatch, caplog, OSError("offline"))
+    assert errors == ["offline"]
+    assert tracebacks == []
+    assert not (tmp_path / ".myplugin.partial").exists()
+
+
+def test_unexpected_error_is_reported_with_traceback(qapp, tmp_path, monkeypatch, caplog):
+    errors, tracebacks = _run_failing(tmp_path, monkeypatch, caplog, RuntimeError("bug"))
+    assert errors == ["bug"]
+    (record,) = tracebacks
+    assert record.exc_info[0] is RuntimeError and "myplugin" in record.getMessage()
+    assert not (tmp_path / ".myplugin.partial").exists()
+
+
 def test_successful_download_installs_every_file(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(pd, "_get_plugin_dir", lambda: tmp_path)
     monkeypatch.setattr(pd, "_https_urlopen", lambda _req, timeout=30: _FakeResp())

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260923-56 | 2026-09-23 | Split expected from unexpected failures in plugin/ (BLE001 batch 2) | #refactor #error-handling #plugin | [2026-09](2026-09.md) |
 | U-20260923-55 | 2026-09-23 | Narrow the blind excepts in image/ (BLE001 batch 1) | #refactor #error-handling #image | [2026-09](2026-09.md) |
 | U-20260923-54 | 2026-09-23 | Stop the plugin installer's Python probe from rejecting slow interpreters silently | #done #bug #plugin | [2026-09](2026-09.md) |
 | U-20260923-53 | 2026-09-23 | Split the pet workspace's Window group builder | #done #refactor #desktop_pet | [2026-09](2026-09.md) |

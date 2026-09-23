@@ -468,7 +468,9 @@ def check_missing_packages(
             logger.info("check_missing_packages: trying import '%s'", import_name)
             importlib.import_module(import_name)
             logger.info("check_missing_packages: '%s' OK", import_name)
-        except Exception as e:
+        # An optional package's import runs its native init (DLL loads, CUDA
+        # probes), which can raise anything; every failure means "missing".
+        except Exception as e:  # noqa: BLE001 - any import failure means "missing"
             logger.info(
                 "check_missing_packages: '%s' missing (%s: %s)",
                 import_name, type(e).__name__, e,
@@ -585,7 +587,12 @@ class _InstallWorker(QThread):
                 returncode = self._run_with_live_output(cmd, timeout=600)
             except FileNotFoundError:
                 return False, f"Python not found: {self._python}"
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                return False, str(exc)
             except Exception as exc:
+                # Worker boundary: the dialog waits on result_ready, so even a
+                # bug must be reported rather than escape the thread.
+                logger.exception("Installing %s failed unexpectedly", name)
                 return False, str(exc)
             if returncode != 0:
                 return False, f"Failed to install {name} (exit code {returncode})"

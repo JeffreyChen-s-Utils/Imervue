@@ -73,6 +73,45 @@ def test_other_errors_are_reported(run_worker):
     assert results == [(False, "disk full")]
 
 
+def _tracebacks(caplog):
+    return [r for r in caplog.records if r.exc_info]
+
+
+@pytest.mark.parametrize("exc", [
+    OSError("disk full"), ValueError("embedded null byte"),
+    subprocess.SubprocessError("pipe broke"),
+])
+def test_expected_errors_are_reported_without_a_traceback(run_worker, caplog, exc):
+    def outcome(_cmd):
+        raise exc
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        _commands, _texts, results = run_worker(["a", "b"], outcome=outcome)
+    assert results == [(False, str(exc))]
+    assert _tracebacks(caplog) == []
+
+
+def test_unexpected_errors_are_reported_and_logged_with_traceback(run_worker, caplog):
+    def outcome(_cmd):
+        raise RuntimeError("bug in the runner")
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        commands, _texts, results = run_worker(["a", "b"], outcome=outcome)
+    assert [c[-1] for c in commands] == ["a"]
+    assert results == [(False, "bug in the runner")]
+    (record,) = _tracebacks(caplog)
+    assert record.exc_info[0] is RuntimeError and "a" in record.getMessage()
+
+
+def test_check_missing_counts_any_import_failure_as_missing(monkeypatch):
+    def fake_import(name):
+        if name == "native_pkg":
+            raise RuntimeError("DLL init failed")
+        return object()
+    monkeypatch.setattr(pip_installer, "_is_frozen", lambda: False)
+    monkeypatch.setattr(pip_installer.importlib, "import_module", fake_import)
+    assert pip_installer.check_missing_packages(
+        [("ok_pkg", "ok-pkg"), ("native_pkg", "native-pkg")]) == [("native_pkg", "native-pkg")]
+
+
 def test_no_packages_still_succeeds(run_worker):
     commands, _texts, results = run_worker([])
     assert commands == []

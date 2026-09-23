@@ -183,3 +183,21 @@ def test_fetch_reports_truncated_listing(qapp, monkeypatch):
     assert results == []
     assert len(errors) == 1
     assert "truncated" in errors[0]
+
+
+@pytest.mark.parametrize("exc", [
+    OSError("offline"), ValueError("bad json"), KeyError("tree"), TypeError("odd shape"),
+])
+def test_fetch_expected_errors_log_no_traceback(qapp, monkeypatch, caplog, exc):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        _requested, results, errors = _run_fetch(monkeypatch, exc)
+    assert (results, errors) == ([], [str(exc)])
+    assert [r for r in caplog.records if r.exc_info] == []
+
+
+def test_fetch_unexpected_error_is_reported_and_logged(qapp, monkeypatch, caplog):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        _requested, results, errors = _run_fetch(monkeypatch, RuntimeError("bug"))
+    assert (results, errors) == ([], ["bug"])
+    (record,) = [r for r in caplog.records if r.exc_info]
+    assert record.exc_info[0] is RuntimeError

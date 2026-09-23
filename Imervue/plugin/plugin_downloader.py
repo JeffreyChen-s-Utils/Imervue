@@ -37,6 +37,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.plugin.downloader")
 
+# Failures a fetch or download is expected to meet: network and HTTP errors and
+# disk errors (``OSError``), bad JSON or a truncated listing (``ValueError``), a
+# listing of the wrong shape (``TypeError``, ``KeyError``). Anything else is a bug
+# and is logged with its traceback.
+_EXPECTED_FETCH_ERRORS = (OSError, ValueError, TypeError, KeyError)
+
 REPO_BRANCH = "main"
 # One recursive tree listing replaces a Contents API call per directory, which
 # spent ~20 of the 60 requests per hour GitHub allows an unauthenticated client
@@ -120,7 +126,11 @@ class FetchPluginListWorker(QThread):
             if not isinstance(tree, dict):
                 raise TypeError("Unexpected plugin repository listing")
             self.result_ready.emit(parse_plugin_tree(tree))
+        except _EXPECTED_FETCH_ERRORS as e:
+            self.error.emit(str(e))
         except Exception as e:
+            # Worker boundary: the dialog waits on a signal, so report even a bug.
+            logger.exception("Fetching the plugin list failed unexpectedly")
             self.error.emit(str(e))
 
 
@@ -169,7 +179,10 @@ class DownloadPluginWorker(QThread):
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 raise
             self.result_ready.emit(self.plugin_name)
+        except _EXPECTED_FETCH_ERRORS as e:
+            self.error.emit(str(e))
         except Exception as e:
+            logger.exception("Downloading plugin %s failed unexpectedly", self.plugin_name)
             self.error.emit(str(e))
 
 
