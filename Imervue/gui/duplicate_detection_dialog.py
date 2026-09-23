@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -32,6 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.folder_row import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
@@ -282,13 +282,8 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         layout = QVBoxLayout(self)
 
         # Source folder
-        folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel(lang.get("duplicate_source", "Source folder:")))
-        self._folder_edit = QLineEdit()
-        folder_row.addWidget(self._folder_edit, 1)
-        browse_btn = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_folder)
-        folder_row.addWidget(browse_btn)
+        folder_row, self._folder_edit = folder_picker_row(
+            lang.get("duplicate_source", "Source folder:"), self._browse_folder)
         layout.addLayout(folder_row)
 
         # Options row

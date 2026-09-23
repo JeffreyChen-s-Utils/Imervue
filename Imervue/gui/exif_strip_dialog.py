@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.folder_row import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -171,13 +172,8 @@ class ExifStripDialog(WorkerHostMixin, QDialog):
         layout = QVBoxLayout(self)
 
         # Source folder
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(lang.get("exif_strip_source", "Source folder:")))
-        self._src_edit = QLineEdit()
-        src_row.addWidget(self._src_edit, 1)
-        browse_btn = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_folder)
-        src_row.addWidget(browse_btn)
+        src_row, self._src_edit = folder_picker_row(
+            lang.get("exif_strip_source", "Source folder:"), self._browse_folder)
         layout.addLayout(src_row)
 
         # Info

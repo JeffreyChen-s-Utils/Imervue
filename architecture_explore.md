@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `2979a95` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-22 · 對應 commit `f09cb50` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 760 | 125,287 |
+| `tests/` | 761 | 125,344 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,955 |
-| `Imervue/gui/` | 159 | 32,576 |
+| `Imervue/gui/` | 159 | 32,562 |
 | `Imervue/puppet/` | 57 | 15,184 |
 | `Imervue/image/` | 112 | 12,831 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 66 | 12,767 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 992 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,561** | **299,622** |
+| **總計** | **1,562** | **299,665** |
 
-其中 `Imervue/` 套件本身 739 檔 / 159,946 行。
+其中 `Imervue/` 套件本身 739 檔 / 159,932 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -597,8 +597,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `batch_convert_dialog.py`(375) · `batch_export_dialog.py`(393) · `export_dialog.py`(248) ·
 `optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(392) · `contact_sheet_dialog.py`(199) ·
 `web_gallery_dialog.py`(157) · `slideshow_mp4_dialog.py`(200) · `image_organizer_dialog.py`(535) ·
-`duplicate_detection_dialog.py`(563) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(777) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(305) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
+`duplicate_detection_dialog.py`(557) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(777) 淨化重繪（剝除所有隱藏資料）·
+`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(123) · `culling_dialog.py`(257) 挑片 ·
 `ai_upscale_dialog.py`(715) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
@@ -617,7 +617,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `preferences_dialog.py`(269) · `shortcut_settings_dialog.py`(405) · `profiles_dialog.py`(208) 多帳號 ·
 `workspace_dialog.py`(243) · `external_editors_settings.py`(152) · `recycle_bin_dialog.py`(368) 軟刪除回收桶 ·
-`cache_maintenance_dialog.py`(54) · `watch_folder_dialog.py`(117) · `macro_manager_dialog.py`(339) ·
+`cache_maintenance_dialog.py`(54) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(339) ·
 `dual_pane_dialog.py`(179) 雙窗格檔案管理 · `onboarding_dialog.py`(136) 首次導覽 · `whats_new_dialog.py`(144)
 
 ### 6.13 `Imervue/menu/`
