@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `e50f6f4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-23 · 對應 commit `102cf2a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 790 | 129,390 |
+| `tests/` | 791 | 129,497 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,927 |
 | `Imervue/gui/` | 159 | 32,449 |
 | `Imervue/puppet/` | 57 | 15,214 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,389 |
-| **總計** | **1,593** | **303,790** |
+| **總計** | **1,594** | **303,897** |
 
 其中 `Imervue/` 套件本身 741 檔 / 160,011 行。
 
@@ -949,7 +949,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-790 個檔、129,390 行。`pyproject.toml` 定義三個互斥層級 marker：
+791 個檔、129,497 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1154,6 +1154,11 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
 10. **`QPdfWriter` 寫不進目標時不丟例外。** 只會讓 `QPainter.begin` 回傳 `False`，之後的繪製全是
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
+
+11. **有 58 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    34 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+    不代表它已經接上選單；`paint/watercolor.py`、`paint/comic_formats.py`、`paint/speech_bubbles.py`
+    另有已接上的實作。新增模組若沒被 import，該測試會失敗；要接上或刪除由擁有者決定（`progress.md` #22）。
 
 
 
