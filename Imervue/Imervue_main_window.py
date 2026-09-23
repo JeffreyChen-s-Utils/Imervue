@@ -859,6 +859,42 @@ class ImervueMainWindow(
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
 
+        self._release_for_close()
+        self._persist_for_close()
+
+        # Only the LAST main window runs the app-global teardown below. A
+        # secondary window (File → New Window) shares this closeEvent; running
+        # the plugin unload + os._exit for it would kill the whole process and
+        # unload plugins out from under the windows that are still open.
+        ImervueMainWindow._live_windows.discard(self)
+        if _other_live_windows_remain(ImervueMainWindow._live_windows, self):
+            event.accept()
+            super().closeEvent(event)
+            self.deleteLater()
+            return
+
+        # Plugin hook: app closing
+        if hasattr(self, "plugin_manager"):
+            with contextlib.suppress(Exception):
+                self.plugin_manager.dispatch_app_closing(self)
+                self.plugin_manager.unload_all()
+
+        event.accept()
+        super().closeEvent(event)
+        # 用 os._exit 直接結束行程，跳過 Python 解釋器關閉階段的 GC。
+        # PySide6 在 Windows 上的已知問題：Python shutdown 時 GC 以
+        # 不確定順序銷毀 QApplication 與 QWidget，shiboken 和 Qt 對物件
+        # 所有權認知不一致 → double-free → heap corruption (0xC0000374)。
+        # 所有重要資料（設定、刪除佇列、外掛）都已在上面儲存完畢，
+        # 此處不再需要 Python 的正常清理流程。
+        import os as _os
+        _os._exit(0)
+
+    def _release_for_close(self) -> None:
+        """Snapshot the folder session, then stop signals, watchers, workers and GL state.
+
+        Each group is best-effort: a failure skips the rest of its group only.
+        """
         # Snapshot the current folder's view state (incl. whether we're in deep
         # zoom) BEFORE any teardown clears the viewer, so relaunching can return
         # to where the user left off instead of always to the tile wall.
@@ -897,6 +933,8 @@ class ImervueMainWindow(
             self.viewer._clear_deep_zoom()
             self.viewer.doneCurrent()
 
+    def _persist_for_close(self) -> None:
+        """Save window geometry and settings, then commit pending deletions (best-effort)."""
         # 儲存視窗位置與大小（在寫入設定之前）
         with contextlib.suppress(Exception):
             self._save_window_geometry()
@@ -911,34 +949,6 @@ class ImervueMainWindow(
 
         with contextlib.suppress(Exception):
             commit_pending_deletions(self.viewer)
-
-        # Only the LAST main window runs the app-global teardown below. A
-        # secondary window (File → New Window) shares this closeEvent; running
-        # the plugin unload + os._exit for it would kill the whole process and
-        # unload plugins out from under the windows that are still open.
-        ImervueMainWindow._live_windows.discard(self)
-        if _other_live_windows_remain(ImervueMainWindow._live_windows, self):
-            event.accept()
-            super().closeEvent(event)
-            self.deleteLater()
-            return
-
-        # Plugin hook: app closing
-        if hasattr(self, "plugin_manager"):
-            with contextlib.suppress(Exception):
-                self.plugin_manager.dispatch_app_closing(self)
-                self.plugin_manager.unload_all()
-
-        event.accept()
-        super().closeEvent(event)
-        # 用 os._exit 直接結束行程，跳過 Python 解釋器關閉階段的 GC。
-        # PySide6 在 Windows 上的已知問題：Python shutdown 時 GC 以
-        # 不確定順序銷毀 QApplication 與 QWidget，shiboken 和 Qt 對物件
-        # 所有權認知不一致 → double-free → heap corruption (0xC0000374)。
-        # 所有重要資料（設定、刪除佇列、外掛）都已在上面儲存完畢，
-        # 此處不再需要 Python 的正常清理流程。
-        import os as _os
-        _os._exit(0)
 
     @classmethod
     def debug_close(cls) -> None:
