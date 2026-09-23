@@ -9,8 +9,12 @@ False, ``extract_*`` raises :class:`OcrUnavailableError`).
 """
 from __future__ import annotations
 
+import logging
+import subprocess  # nosec B404  # only for CalledProcessError from pytesseract's probe
 from dataclasses import dataclass
 from functools import lru_cache
+
+logger = logging.getLogger("Imervue.image.ocr")
 
 
 class OcrUnavailableError(RuntimeError):
@@ -122,7 +126,14 @@ def ocr_available() -> bool:
     """
     try:
         return _probe_tesseract()
-    except Exception:  # noqa: BLE001 - any failure means OCR is unavailable
+    except (ImportError, OSError, subprocess.CalledProcessError):
+        # No pytesseract, no binary (TesseractNotFoundError is an OSError), or
+        # ``tesseract --version`` exited non-zero.
+        return False
+    except SystemExit:
+        # pytesseract raises SystemExit, not an Exception, for a Tesseract
+        # older than it supports; letting it through would quit the app.
+        logger.warning("Tesseract is installed but too old for pytesseract", exc_info=True)
         return False
 
 
@@ -132,8 +143,11 @@ def extract_words(image, min_confidence: float = 0.0) -> list[OcrWord]:
         raise OcrUnavailableError("Tesseract OCR is not installed.")
     import pytesseract
     from PIL import Image
-    opened = image if isinstance(image, Image.Image) else Image.open(image)
-    tsv = pytesseract.image_to_data(opened)
+    if isinstance(image, Image.Image):
+        tsv = pytesseract.image_to_data(image)
+    else:
+        with Image.open(image) as opened:
+            tsv = pytesseract.image_to_data(opened)
     return parse_tsv(tsv, min_confidence)
 
 

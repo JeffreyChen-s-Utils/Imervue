@@ -150,3 +150,64 @@ def test_ocr_dialog_uses_worker_host_mixin():
     from Imervue.gui.ocr_dialog import OcrDialog
     assert issubclass(OcrDialog, WorkerHostMixin)
     assert "closeEvent" not in OcrDialog.__dict__
+
+
+def _fake_pytesseract(monkeypatch, probe, **extra):
+    import sys
+    import types
+
+    ocr._probe_tesseract.cache_clear()
+    monkeypatch.setitem(sys.modules, "pytesseract",
+                        types.SimpleNamespace(get_tesseract_version=probe, **extra))
+
+
+def _raising(exc):
+    def _fail(*_args, **_kwargs):
+        raise exc
+    return _fail
+
+
+def test_too_old_tesseract_reports_unavailable_instead_of_exiting(monkeypatch, caplog):
+    # pytesseract raises SystemExit for a Tesseract below its minimum version.
+    _fake_pytesseract(monkeypatch, _raising(SystemExit('Invalid tesseract version: "3.02"')))
+    try:
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            assert ocr.ocr_available() is False
+        assert any("too old" in r.getMessage() for r in caplog.records)
+    finally:
+        ocr._probe_tesseract.cache_clear()
+
+
+def test_failing_version_probe_reports_unavailable(monkeypatch):
+    import subprocess
+
+    _fake_pytesseract(monkeypatch, _raising(subprocess.CalledProcessError(1, ["tesseract"])))
+    try:
+        assert ocr.ocr_available() is False
+    finally:
+        ocr._probe_tesseract.cache_clear()
+
+
+def test_unexpected_probe_error_propagates(monkeypatch):
+    _fake_pytesseract(monkeypatch, _raising(RuntimeError("probe bug")))
+    try:
+        with pytest.raises(RuntimeError, match="probe bug"):
+            ocr.ocr_available()
+    finally:
+        ocr._probe_tesseract.cache_clear()
+
+
+def test_extract_words_from_a_path_closes_the_image(monkeypatch, tmp_path):
+    from PIL import Image
+
+    path = tmp_path / "scan.png"
+    Image.new("RGB", (8, 8), "white").save(path)
+    seen: list = []
+    _fake_pytesseract(monkeypatch, lambda: "5.3.0",
+                      image_to_data=lambda img: seen.append(img) or "")
+    try:
+        assert ocr.extract_words(str(path)) == []
+        # Still referenced here, so only an explicit close releases the file.
+        assert seen[0].fp is None
+    finally:
+        ocr._probe_tesseract.cache_clear()

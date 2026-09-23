@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `c562f39` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `9e85bf7` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 813 | 133,367 |
+| `tests/` | 814 | 133,518 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,910 |
 | `Imervue/gui/` | 161 | 32,805 |
 | `Imervue/puppet/` | 57 | 15,229 |
-| `Imervue/image/` | 113 | 12,874 |
+| `Imervue/image/` | 113 | 12,888 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,909 |
 | `Imervue/multi_language/` | 8 | 11,304 |
 | `Imervue/desktop_pet/` | 34 | 8,243 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 62 | 14,390 |
-| **總計** | **1,625** | **308,157** |
+| **總計** | **1,626** | **308,322** |
 
-其中 `Imervue/` 套件本身 750 檔 / 160,400 行。
+其中 `Imervue/` 套件本身 750 檔 / 160,414 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -297,7 +297,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-113 個模組、12,874 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+113 個模組、12,888 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -386,7 +386,7 @@ ImervueMainWindow
 
 `browser_state.py`(404) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
 `batch_move_planner.py`(104) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
-`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(142) Tesseract · `portrait_retouch.py`(177) ·
+`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(156) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
 
 ### 6.10 `Imervue/gpu_image_view/`
@@ -958,7 +958,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-813 個檔、133,367 行。`pyproject.toml` 定義三個互斥層級 marker：
+814 個檔、133,518 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
