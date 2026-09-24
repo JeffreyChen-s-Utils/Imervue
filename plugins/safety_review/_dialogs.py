@@ -829,9 +829,10 @@ class SafetyReviewDialog(_SettingsDialogBase):
         self._progress_bar.setVisible(False)
         self._run_btn.setEnabled(True)
         if not ok:
-            self._status_label.setText(f"Error: {result}")
+            text = self._lang.get("generic_error", "Error: {error}").format(error=result)
+            self._status_label.setText(text)
             if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.info(f"Error: {result}")
+                self._gui.main_window.toast.info(text)
             return
 
         if count == 0:

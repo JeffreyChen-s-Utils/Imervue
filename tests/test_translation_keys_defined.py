@@ -183,3 +183,14 @@ def test_no_toast_shows_hard_coded_english():
     )
     assert found == []
 
+
+def test_no_plugin_toast_shows_hard_coded_english():
+    plugins = _ROOT.parent / "plugins"
+    found = sorted(
+        f"{path.relative_to(plugins.parent).as_posix()}:{line} {text!r}"
+        for path in plugins.rglob("*.py")
+        if "__pycache__" not in path.parts and not path.parent.name.endswith("_translation")
+        for line, text in _hard_coded_toasts(path.read_text(encoding="utf-8"))
+    )
+    assert found == []
+
