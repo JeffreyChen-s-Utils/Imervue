@@ -176,7 +176,7 @@ class ImervueMainWindow(
 
         # ===== What's New 自動彈出（升級後第一次啟動）=====
         # 延遲到主視窗顯示後再跑,避免遮住啟動畫面
-        QTimer.singleShot(800, self._maybe_show_whats_new)
+        call_later(800, self, self._maybe_show_whats_new)
 
         # ===== 分頁快捷鍵 =====
         # Ctrl+T 新分頁 / Ctrl+W 關閉 / Ctrl+Tab 下一個 / Ctrl+Shift+Tab 上一個。
@@ -228,7 +228,7 @@ class ImervueMainWindow(
         # born on to a different monitor. Listen for that (and later drags) so
         # the view is re-fitted to the actual screen instead of keeping the
         # first screen's size. Deferred so windowHandle() exists.
-        QTimer.singleShot(0, self._connect_screen_change_signal)
+        call_later(0, self, self._connect_screen_change_signal)
 
     def _install_desktop_pet_tab(self, lang) -> None:
         """Wire the 5th tab (Desktop Pet) — frameless / transparent

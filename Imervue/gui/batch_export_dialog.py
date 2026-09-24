@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.system.qt_timers import call_later
 from Imervue.gui.export_source import open_export_source
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -374,7 +375,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             else:
                 self._gui.main_window.toast.success(msg)
 
-        QTimer.singleShot(0, self.accept)
+        call_later(0, self, self.accept)
 
 
 def open_batch_export(main_gui: GPUImageView):

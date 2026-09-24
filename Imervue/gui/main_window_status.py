@@ -6,8 +6,8 @@ info label (file name, size, zoom, index) kept in step with the viewer.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QTimer
 
+from Imervue.system.qt_timers import call_later
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
@@ -27,7 +27,7 @@ class MainWindowStatusMixin:
             ).format(current=current, total=total)
         )
         if current >= total:
-            QTimer.singleShot(800, self._hide_progress)
+            call_later(800, self, self._hide_progress)
 
     def _hide_progress(self):
         self._progress_bar.setVisible(False)

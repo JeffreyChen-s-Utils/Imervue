@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.system.qt_timers import call_later
 from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet import pet_placement
@@ -344,7 +345,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # mid-show — without it, the first visible frame can flash
         # white silhouettes on a black backdrop while the GL thread
         # is still wiring up the texture cache.
-        QTimer.singleShot(50, self._canvas.update)
+        call_later(50, self._canvas, self._canvas.update)
         self.visibility_changed.emit(True)
 
     def hideEvent(self, event) -> None:   # pragma: no cover - Qt UI
@@ -412,7 +413,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # 50 ms is "next event loop tick + a couple of paint frames" —
         # enough for the texture cache to populate without making the
         # rig load feel laggy.
-        QTimer.singleShot(50, self._canvas.update)
+        call_later(50, self._canvas, self._canvas.update)
 
     def document(self) -> PuppetDocument | None:
         return self._canvas.document()

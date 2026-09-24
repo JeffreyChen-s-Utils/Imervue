@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `4ef2126` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `db3aa4c` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -229,7 +229,7 @@ ImervueMainWindow
 | `themes.py` | 175 | 內建配色主題 |
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `qt_translations.py` | 60 | `install_qt_translations(app, language)`：依介面語言載入 PySide6 附帶的 `qtbase_<locale>.qm`，讓 Qt 內建字串（確定 / 取消、是 / 否、檔案對話框、分頁關閉提示）跟著翻譯；英文或外掛語言不裝 |
-| `qt_timers.py` | 26 | `call_later(ms, owner, fn)`：延遲呼叫，`owner`（QObject）先被銷毀就由 Qt 取消；取代 `QTimer.singleShot(ms, lambda: …)`，後者在物件刪除後照樣執行 |
+| `qt_timers.py` | 27 | `call_later(ms, owner, fn)`：延遲呼叫，`owner`（QObject）先被銷毀就由 Qt 取消；取代 `QTimer.singleShot(ms, lambda: …)` 與 `singleShot(ms, obj.method)`，兩者在物件刪除後都照樣執行 |
 | `file_manager.py` | 40 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`、macOS `open [-R]`、Linux `xdg-open`）；檔案樹、右鍵選單、外掛選單共用 |
 | `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
@@ -454,7 +454,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `vram_detect.py` | 104 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
 | `memory_pressure.py` | 246 | 狀態列記憶體壓力指示器（綠/黃/紅 + 百分比，點擊清快取） |
 | `worker_pools.py` | 110 | 執行緒池分池策略：縮圖爆量不再和 deep-zoom worker 搶資源 |
-| `signal_coalescer.py` | 89 | 次幀 signal 合併，避免 N 個縮圖回呼各觸發一次進度更新 |
+| `signal_coalescer.py` | 92 | 次幀 signal 合併，避免 N 個縮圖回呼各觸發一次進度更新 |
 | `cvd_view_mode.py` | 98 | 色覺障礙模擬（view-time 模組級開關，載入時套用） |
 
 #### `gpu_image_view/images/` — 載入層
@@ -608,8 +608,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(364) · `batch_export_dialog.py`(385) · `export_dialog.py`(218) · `export_source.py`(36) `open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
-`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(187) ·
+`batch_convert_dialog.py`(364) · `batch_export_dialog.py`(386) · `export_dialog.py`(218) · `export_source.py`(36) `open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
+`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(387) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
 `duplicate_detection_dialog.py`(561) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(303) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
@@ -663,7 +663,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
-| `canvas.py` | 855 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
+| `canvas.py` | 856 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
 | `canvas_overlays.py` | 538 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
 | `canvas_input.py` | 356 | `PaintCanvasInputMixin`：滑鼠／繪圖板事件轉成 `PointerEvent` 交給工具、平移、滾輪縮放、鋼筆 Enter/Esc、拖放開檔 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
@@ -849,7 +849,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_window.py` | 835 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
+| `pet_window.py` | 836 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
 | `pet_window_flags.py` | 174 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 219 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、OBS／Twitch、虛擬攝影機、LLM、音樂律動、閒置小遊戲、通知、webhook、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
 | `pet_workspace.py` | 713 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設） |
@@ -1060,9 +1060,9 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 正解是 `gui/settle_poll.py` 的 `poll_settle`：有界地重跑佈局步驟直到穩定。
 新增類似邏輯時必須同時檢查所有呼叫端。
 
-延遲呼叫一律走 `system/qt_timers.call_later(ms, owner, fn)`，不寫 `QTimer.singleShot(ms, lambda: …)`：
-lambda 不屬於任何 QObject，物件刪除後照樣執行、碰到已刪除的 C++ 物件。綁定方法與帶 context 的多載
-會被 Qt 自動取消。`tests/test_qt_timers.py` 會拒絕新的 bare-lambda `singleShot`。
+延遲呼叫一律走 `system/qt_timers.call_later(ms, owner, fn)`，不寫 `QTimer.singleShot(ms, lambda: …)` 或 `QTimer.singleShot(ms, obj.method)`：
+lambda 與綁定方法都不會隨物件刪除而取消（PySide6 6.11 實測：Python 方法與 `widget.update` 這類 C++ 槽都照樣執行），只有帶 context 的多載
+會被 Qt 自動取消。`tests/test_qt_timers.py` 會拒絕 bare-lambda `singleShot`，以及主程式裡的 `singleShot(ms, obj.method)`（外掛要能在沒有 `call_later` 的舊版上執行，保留原寫法）。
 
 ### 10.6 批次刪除必須走 `trash_ops`
 

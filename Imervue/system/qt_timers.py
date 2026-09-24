@@ -1,11 +1,12 @@
 """Deferred calls that die with the object they belong to.
 
-``QTimer.singleShot(ms, lambda: self.x())`` keeps the lambda alive on its own:
-if ``self`` is destroyed first, the lambda still runs and touches a deleted C++
-object (``RuntimeError: Internal C++ object already deleted``). The
-``singleShot(ms, context, callable)`` overload lets Qt drop the call when
-``context`` is destroyed; a bound method of a ``QObject`` gets the same
-treatment automatically, a lambda or closure does not.
+``QTimer.singleShot(ms, fn)`` keeps *fn* alive on its own: if the object *fn*
+belongs to is destroyed first, the call still runs and touches a deleted C++
+object (``RuntimeError: Internal C++ object already deleted``). That holds for
+a lambda and equally for a bound method: measured on PySide6 6.11, both a
+Python method and a C++ slot such as ``widget.update`` still ran after the
+widget was deleted. Only the ``singleShot(ms, context, callable)`` overload
+lets Qt drop the call when ``context`` is destroyed, and ``call_later`` is that.
 """
 from __future__ import annotations
 

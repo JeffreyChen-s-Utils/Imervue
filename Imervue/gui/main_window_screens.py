@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import contextlib
 
-from PySide6.QtCore import QByteArray, QTimer
+from PySide6.QtCore import QByteArray
 from PySide6.QtWidgets import QApplication
 
 from Imervue.system.qt_timers import call_later
@@ -95,7 +95,7 @@ class MainWindowScreensMixin:
                 # without the second an intermediate width is locked in.
                 self.modify_panel._size_modify_splitter(splitter)
                 self.modify_panel.schedule_modify_splitter_settle(splitter)
-            QTimer.singleShot(0, canvas.update)
+            call_later(0, canvas, canvas.update)
 
     def _adapt_to_current_screen(self) -> None:
         """Debounced ``moveEvent`` handler.

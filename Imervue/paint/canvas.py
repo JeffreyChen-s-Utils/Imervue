@@ -75,6 +75,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
+from Imervue.system.qt_timers import call_later
 from Imervue.paint.damage import EMPTY as EMPTY_DAMAGE
 from Imervue.paint.damage import DamageRect
 from Imervue.paint.document import PaintDocument
@@ -631,7 +632,7 @@ class PaintCanvas(
         """
         super().showEvent(event)
         self._fit_pending = True
-        QTimer.singleShot(0, self._deferred_fit_after_show)
+        call_later(0, self, self._deferred_fit_after_show)
 
     def _deferred_fit_after_show(self) -> None:  # pragma: no cover - Qt UI
         """Recompute the fit once Qt has finalised the widget layout."""

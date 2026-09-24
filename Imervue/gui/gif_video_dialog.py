@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSpinBox, QPushButton, QProgressBar,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
+from Imervue.system.qt_timers import call_later
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
@@ -371,7 +372,7 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
             self._status_label.setText(msg)
             if hasattr(self._gui.main_window, "toast"):
                 self._gui.main_window.toast.success(msg)
-            QTimer.singleShot(0, self.accept)
+            call_later(0, self, self.accept)
         else:
             self._status_label.setText(f"Error: {message}")
             if hasattr(self._gui.main_window, "toast"):

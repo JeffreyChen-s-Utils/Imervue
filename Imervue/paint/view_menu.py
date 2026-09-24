@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QKeySequence
 
+from Imervue.system.qt_timers import call_later
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.paint_menu_bar import menu_for
 
@@ -89,8 +90,7 @@ def populate_view_menu(workspace: PaintWorkspace) -> None:
     # defer the connection (and the first refresh) to the next
     # event-loop iteration — by which time ``workspace.canvas()``
     # is real and ``zoom_changed`` is wired up.
-    from PySide6.QtCore import QTimer
-    QTimer.singleShot(0, bridge.connect_canvas_signals)
+    call_later(0, workspace, bridge.connect_canvas_signals)
 
 
 # ---------------------------------------------------------------------------
