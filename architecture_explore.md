@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 828 | 135,248 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,980 |
+| `tests/` | 829 | 135,452 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,050 |
 | `Imervue/gui/` | 161 | 32,851 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,892 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,643** | **312,276** |
+| **總計** | **1,645** | **312,550** |
 
-其中 `Imervue/` 套件本身 751 檔 / 162,822 行。
+其中 `Imervue/` 套件本身 752 檔 / 162,892 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -649,7 +649,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,980 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,050 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-828 個檔、135,248 行。`pyproject.toml` 定義三個互斥層級 marker：
+829 個檔、135,452 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
