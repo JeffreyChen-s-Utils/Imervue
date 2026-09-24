@@ -18,3 +18,17 @@ def p3_green(path):
     """A pure Display P3 green, which lies outside sRGB: converted, it clips to (0, 255, …)."""
     Image.new("RGB", (8, 8), (0, 255, 0)).save(path, icc_profile=DISPLAY_P3)
     return path
+
+
+def upright_and_tagged_copies(folder):
+    """The same shot twice: stored upright, and stored on its side with a turn tag."""
+    import numpy as np
+    rng = np.random.default_rng(1)
+    upright = Image.fromarray(rng.integers(0, 255, (60, 40, 3), dtype=np.uint8)).resize((200, 300))
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    tagged = folder / "tagged.jpg"
+    upright.transpose(Image.Transpose.ROTATE_90).save(tagged, exif=exif, quality=95)
+    plain = folder / "upright.jpg"
+    upright.save(plain, quality=95)
+    return str(plain), str(tagged)

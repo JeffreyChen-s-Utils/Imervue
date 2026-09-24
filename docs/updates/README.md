@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-07 | 2026-09-25 | Perceptual hashes see a tagged photo upright: duplicates across orientation are found | #fix #duplicates #orientation | [2026-09](2026-09.md) |
 | U-20260925-06 | 2026-09-25 | Deflicker writes JPEG time-lapses (it failed every frame); RAW developed, EXIF kept | #fix #timelapse | [2026-09](2026-09.md) |
 | U-20260925-05 | 2026-09-25 | Gallery, contact sheet, print layout, compare, side panels and Ctrl+C decode like the viewer | #fix #orientation #colour | [2026-09](2026-09.md) |
 | U-20260925-04 | 2026-09-25 | Move / Copy never overwrites: numbered names, case-aware, re-checked before writing | #fix #data-loss | [2026-09](2026-09.md) |

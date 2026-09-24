@@ -37,6 +37,7 @@ from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.dimensions import image_dimensions
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
+from Imervue.image.perceptual_hash import upright
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -203,7 +204,7 @@ class _ScanWorker(QThread):
     @staticmethod
     def _perceptual_hash(path: str) -> str:
         with Image.open(path) as img:
-            return str(_dhash(img))
+            return str(_dhash(upright(img)))
 
     def _cluster_perceptual(
         self,

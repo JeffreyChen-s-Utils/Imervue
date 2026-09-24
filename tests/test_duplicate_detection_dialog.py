@@ -260,3 +260,14 @@ def test_button_row(qapp, english, monkeypatch):
         assert not dlg.isVisible()
     finally:
         dlg.deleteLater()
+
+
+def test_perceptual_hash_sees_a_tagged_photo_upright(qapp, tmp_path):
+    from _decode_samples import upright_and_tagged_copies
+
+    from Imervue.gui.duplicate_detection_dialog import _ScanWorker
+    from Imervue.image.perceptual_hash import hamming_distance
+    plain, tagged = upright_and_tagged_copies(tmp_path)
+    a = int(_ScanWorker._perceptual_hash(plain))  # noqa: SLF001
+    b = int(_ScanWorker._perceptual_hash(tagged))  # noqa: SLF001
+    assert hamming_distance(a, b) <= 4
