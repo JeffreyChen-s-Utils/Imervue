@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PIL import Image
-from PIL import ExifTags
 from PIL.ExifTags import TAGS
 from PySide6.QtWidgets import QMessageBox
 
 from Imervue.gpu_image_view.images.image_loader import load_image_file
+from Imervue.image.exif_merge import merged_exif
 from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -150,27 +150,12 @@ def get_file_times(path: Path):
 # EXIF
 # ==========================================================
 
-def _merged_exif(img: Image.Image) -> dict[int, Any]:
-    """Return IFD0 plus the Exif and GPS sub-IFDs as one ``{tag: value}`` dict.
-
-    The same shape as the ``_getexif()`` that only Pillow's JPEG / PNG / WebP
-    plugins provide, built from the public ``getexif()`` so HEIC and JPEG XL
-    files get theirs too. GPS stays nested under ``GPSInfo`` (0x8825).
-    """
-    exif = img.getexif()
-    merged: dict[int, Any] = dict(exif)
-    merged.update(exif.get_ifd(ExifTags.IFD.Exif))
-    if ExifTags.IFD.GPSInfo in exif:
-        merged[ExifTags.IFD.GPSInfo] = dict(exif.get_ifd(ExifTags.IFD.GPSInfo))
-    return merged
-
-
 def get_exif_data(path: Path):
     """Return ``{tag name: value}`` for *path*, or ``{}`` when it has no EXIF or cannot be read."""
     ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as img:
-            exif_raw = _merged_exif(img)
+            exif_raw = merged_exif(img)
 
         if not exif_raw:
             return {}

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `0f4d4f8` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `32e2b9a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,16 +66,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 832 | 135,977 |
+| `tests/` | 833 | 136,058 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
 | `Imervue/gui/` | 162 | 32,853 |
 | `Imervue/puppet/` | 57 | 15,285 |
-| `Imervue/image/` | 114 | 12,946 |
+| `Imervue/image/` | 115 | 12,956 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
 | `Imervue/multi_language/` | 8 | 13,959 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
-| `Imervue/library/` | 32 | 4,169 |
+| `Imervue/library/` | 32 | 4,176 |
 | `Imervue/menu/` | 11 | 3,578 |
 | `Imervue/` 根層 | 5 | 1,554 |
 | `Imervue/plugin/` | 10 | 2,243 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,651** | **313,834** |
+| **總計** | **1,653** | **313,932** |
 
-其中 `Imervue/` 套件本身 755 檔 / 163,651 行。
+其中 `Imervue/` 套件本身 756 檔 / 163,668 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -299,7 +299,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-114 個模組、12,946 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+115 個模組、12,956 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -377,7 +377,7 @@ ImervueMainWindow
 `xmp_sidecar.py`(386) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
 `gps.py`(90) EXIF GPS 擷取 · `gps_geotag.py`(62) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(45) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
-`annotations.py`(270) JSON sidecar 註解 · `info.py`(210) 圖片資訊組裝與對話框；`get_exif_data()` 以 `getexif()` 攤平 Exif / GPS 子 IFD，HEIC / JXL 也讀得到
+`annotations.py`(270) JSON sidecar 註解 · `exif_merge.py`(25) `merged_exif(img)`：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(195) 圖片資訊組裝與對話框；`get_exif_data()` 經 `exif_merge` 讀，HEIC / JXL 也讀得到
 
 #### 分析 / 品質
 
@@ -516,7 +516,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `keyword_vocabulary_store.py` | 44 | 詞彙的設定檔儲存 |
 | `tag_relations.py` | 49 | 標籤共現 → 相關標籤建議 |
 | `metadata_audit.py` | 40 | 找出中繼資料不完整的圖片 |
-| `metadata_export.py` | 131 | 中繼資料 CSV / JSON 匯出 |
+| `metadata_export.py` | 138 | 中繼資料 CSV / JSON 匯出（EXIF 欄位經 `exif_merge` 讀子 IFD，有理數輸出為數字） |
 | `collection_stats.py` | 81 | 集合的評分/收藏/色標籤/挑片統計 |
 | `reference_pins.py` | 95 | 釘選參考圖籃子 |
 | `staging_tray.py` | 124 | 跨資料夾選取籃 |
@@ -962,7 +962,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-832 個檔、135,977 行。`pyproject.toml` 定義三個互斥層級 marker：
+833 個檔、136,058 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import numbers
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,8 @@ from typing import Any
 from PIL import Image
 from PIL.ExifTags import TAGS
 
+from Imervue.image.exif_merge import merged_exif
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.library.metadata_export")
@@ -86,10 +89,11 @@ def _build_one(path: str) -> dict[str, Any]:
 
 
 def _populate_image_fields(path: str, rec: dict[str, Any]) -> None:
+    ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as im:
             rec["width"], rec["height"] = im.size
-            exif_raw = im.getexif()
+            exif_raw = merged_exif(im)   # the camera fields live in the Exif sub-IFD
             if exif_raw:
                 for tag_id, value in exif_raw.items():
                     tag = TAGS.get(tag_id, str(tag_id))
@@ -124,6 +128,9 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
 
 
 def _coerce_value(v: Any) -> Any:
+    if isinstance(v, numbers.Rational) and not isinstance(v, int):
+        # ExposureTime / FNumber / FocalLength arrive as IFDRational; x/0 is "unknown".
+        return float(v) if v.denominator else None
     if isinstance(v, bytes):
         return v.decode("utf-8", errors="replace")
     if isinstance(v, tuple | list):
