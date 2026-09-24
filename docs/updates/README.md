@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-64 | 2026-09-24 | Translate 100 UI keys that hid behind helper calls and table rows | #i18n #fix | [2026-09](2026-09.md) |
 | U-20260924-63 | 2026-09-24 | Paint shortcut dialog flags keys other actions already hold | #feature #paint #shortcuts | [2026-09](2026-09.md) |
 | U-20260924-62 | 2026-09-24 | Paint shortcut remaps apply to every registry entry, live | #fix #paint #shortcuts | [2026-09](2026-09.md) |
 | U-20260924-61 | 2026-09-24 | Paint tab keys have one owner each; 22 dead keys work again | #fix #paint #shortcuts | [2026-09](2026-09.md) |
