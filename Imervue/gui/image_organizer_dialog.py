@@ -34,6 +34,7 @@ from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import carry_sidecars, follow_saved_data
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -147,6 +148,8 @@ def plan_organization(
 class _OrganizerWorker(QThread):
     progress = Signal(int, int, str)   # current, total, filename
     result_ready = Signal(int, int)    # success, failed
+    # {old: new} of the files moved, for their saved data to follow on the GUI thread
+    files_moved = Signal(dict)
 
     def __init__(
         self,
@@ -160,6 +163,7 @@ class _OrganizerWorker(QThread):
         self._output_dir = output_dir
         self._move = move
         self._abort = False
+        self._moved: dict[str, str] = {}
 
     def abort(self):
         self._abort = True
@@ -171,8 +175,9 @@ class _OrganizerWorker(QThread):
             dest_dir = os.path.join(self._output_dir, subfolder)
             os.makedirs(dest_dir, exist_ok=True)
             if self._process_group(paths, dest_dir, total, state):
-                self.result_ready.emit(state["success"], state["failed"])
-                return
+                break
+        if self._moved:
+            self.files_moved.emit(dict(self._moved))
         self.result_ready.emit(state["success"], state["failed"])
 
     def _process_group(self, paths, dest_dir: str, total: int, state: dict) -> bool:
@@ -211,11 +216,16 @@ class _OrganizerWorker(QThread):
                 shutil.move(src, dest)
             else:
                 shutil.copy2(src, dest)
-            return True
         except OSError:
             # shutil.Error inherits from OSError, so the bare OSError catches both.
             logger.exception("Failed to %s %s", "move" if self._move else "copy", src)
             return False
+        # The XMP / annotation sidecars go along; the saved rating, tags and
+        # library rows are re-keyed on the GUI thread (files_moved).
+        carry_sidecars([(src, dest)], move=self._move)
+        if self._move:
+            self._moved[src] = dest
+        return True
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +491,7 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
             self._last_plan, out, move=self._move_radio.isChecked(), parent=self)
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_result)
+        self._worker.files_moved.connect(self._on_files_moved)
         self._worker.finished.connect(self._on_finished)
         self._worker.start()
 
@@ -490,6 +501,10 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
         self._status_label.setText(
             self._lang.get("organizer_processing", "Processing: {name}")
             .replace("{name}", filename))
+
+    def _on_files_moved(self, moved: dict) -> None:
+        # A bound method, so the queued signal runs this on the dialog's (GUI) thread.
+        follow_saved_data(moved)
 
     def _on_result(self, success: int, failed: int):
         self._status_label.setText(

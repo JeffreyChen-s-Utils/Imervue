@@ -1748,6 +1748,15 @@ In thumbnail mode, select multiple images then right-click:
    * - Add to Album
      - Place all selected images into an album
 
+A move or copy never overwrites a file of the same name: it arrives as
+``name_1.ext``. A photo renamed or moved in Imervue — Batch Rename, Token Batch
+Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer —
+keeps its rating, favourite, tags, colour label, title, description, library
+note and cull flag (a renamed or moved folder keeps those of every photo in it).
+Its sidecars go with it: ``IMG.xmp``, ``IMG.JPG.xmp`` and
+``IMG.JPG.annotations.json``. An ``IMG.xmp`` that the RAW of a RAW + JPEG pair
+still uses is copied rather than moved.
+
 ----
 
 RGB Histogram

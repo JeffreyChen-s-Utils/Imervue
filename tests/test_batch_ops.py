@@ -157,6 +157,25 @@ class TestBatchRenameDialog:
         assert gui.model.images == [str(tmp_path / "shot_1.jpg"), str(taken)]
         assert toasts == [("info", "Renamed 1/2 file(s)")]
 
+    def test_renamed_files_keep_their_rating_and_sidecars(self, qapp, tmp_path):
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        raw, jpeg = tmp_path / "IMG.CR2", tmp_path / "IMG.JPG"
+        raw.write_text("raw", encoding="utf-8")
+        jpeg.write_text("jpg", encoding="utf-8")
+        (tmp_path / "IMG.xmp").write_text("edits", encoding="utf-8")
+        user_setting_dict["image_ratings"] = {str(raw): 5, str(jpeg): 3}
+        dlg, _gui, _toasts = self._dialog(qapp, [str(raw), str(jpeg)])
+        dlg._template.setText("shot_{n}{ext}")  # noqa: SLF001
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert user_setting_dict["image_ratings"] == {
+            str(tmp_path / "shot_1.CR2"): 5, str(tmp_path / "shot_2.JPG"): 3}
+        # The pair shared IMG.xmp: each renamed file gets its own copy.
+        assert sorted(p.name for p in tmp_path.iterdir()) == [
+            "shot_1.CR2", "shot_1.xmp", "shot_2.JPG", "shot_2.xmp"]
+
     def test_toast_follows_the_ui_language(self, qapp, tmp_path):
         from Imervue.multi_language.language_wrapper import language_wrapper
         a = tmp_path / "a.jpg"

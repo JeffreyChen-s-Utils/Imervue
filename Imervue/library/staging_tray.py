@@ -90,9 +90,9 @@ def _apply_file_op(dest: str, *, move: bool) -> tuple[int, int]:
     # already in dest).
     result = transfer_into(list(_tray()), dest_path, move=move)
     if move and result.done:
+        # The move re-pointed the tray's entries at their new paths already.
+        moved = {path for pair in result.done for path in pair}
         tray = _tray()
-        for source, _target in result.done:
-            if source in tray:
-                tray.remove(source)
+        tray[:] = [path for path in tray if path not in moved]
         schedule_save()
     return len(result.done), len(result.failed)

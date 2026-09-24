@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_in_file_manager
-from Imervue.system.file_transfer import is_same_file
+from Imervue.system.file_transfer import carry_along, is_same_file
 import contextlib
 import logging
 
@@ -582,6 +582,8 @@ class _FileTreeView(QTreeView):
                     f"{lang.get('tree_rename_failed', 'Rename failed')}: {exc}",
                 )
             return
+        # Sidecars and saved ratings / tags follow (every file's, for a folder).
+        carry_along([(str(target), str(new_path))], move=True)
         self._refresh_tree()
         if hasattr(self._main_window, "toast"):
             self._main_window.toast.success(

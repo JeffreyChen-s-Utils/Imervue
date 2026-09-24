@@ -158,6 +158,18 @@ class TestApplyStringFormat:
         survivors = os.listdir(Path(three_images[0]).parent)
         assert "same.png" in survivors
 
+    def test_a_renamed_file_keeps_its_rating_and_sidecar(self, three_images):
+        """The rating stayed under the old name and IMG.xmp was left behind."""
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        first = Path(three_images[0])
+        first.with_suffix(".xmp").write_text("edits", encoding="utf-8")
+        user_setting_dict["image_ratings"] = {str(first): 4}
+        apply_plan(preview([str(first)], "renamed{ext}"))
+        new = first.with_name("renamed.png")
+        assert user_setting_dict["image_ratings"] == {str(new): 4}
+        assert new.with_suffix(".xmp").read_text(encoding="utf-8") == "edits"
+        assert not first.with_suffix(".xmp").exists()
+
 
 def test_metadata_of_an_unreadable_file_falls_back(tmp_path):
     bad = tmp_path / "bad.jpg"

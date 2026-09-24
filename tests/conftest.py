@@ -325,6 +325,21 @@ def _isolate_user_settings(tmp_path, monkeypatch):
         mod.user_setting_dict.update(original)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_library_db(tmp_path):
+    """Point the library index at a throw-away DB, never the real ``library.db``.
+
+    Renames and moves re-point the library's rows (notes, cull flags, tags), so
+    a test that moves a file would otherwise open the developer's own catalog.
+    """
+    from Imervue.library import image_index
+    image_index.set_db_path(tmp_path / "library.db")
+    try:
+        yield
+    finally:
+        image_index.close()
+
+
 # ===========================
 # Qt fixture (session-scoped — only one QApplication can exist per process)
 # ===========================

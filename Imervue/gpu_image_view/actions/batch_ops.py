@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_transfer import is_same_file, transfer_into
+from Imervue.system.file_transfer import carry_along, is_same_file, transfer_into
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -137,6 +137,9 @@ class BatchRenameDialog(QDialog):
                 if str(new_path) != str(p) and (not new_path.exists() or is_same_file(p, new_path)):
                     p.rename(new_path)
                     renamed.append((old_path, str(new_path)))
+                    # Its sidecars and saved rating / tags follow, one file at a
+                    # time so a RAW + JPEG pair's shared IMG.xmp reaches both.
+                    carry_along([(old_path, str(new_path))], move=True)
                 else:
                     failed += 1
             except OSError:

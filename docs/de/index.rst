@@ -1814,6 +1814,16 @@ Im Miniaturansichten-Modus mehrere Bilder auswählen, dann Rechtsklick:
    * - Zu Album hinzufügen
      - Alle ausgewählten Bilder in ein Album legen
 
+Verschieben oder Kopieren überschreibt nie eine gleichnamige Datei: Sie kommt als
+``name_1.ext`` an. Ein in Imervue umbenanntes oder verschobenes Foto —
+Stapel-Umbenennen, Token-Stapel-Umbenennen, Ordnerbaum, Verschieben / Kopieren,
+Zwei-Fenster-Ansicht, Staging-Ablage, Bild-Organizer — behält Bewertung, Favorit,
+Tags, Farbetikett, Titel, Beschreibung, Bibliotheksnotiz und Auswahl-Markierung
+(ein umbenannter oder verschobener Ordner die aller Fotos darin). Seine Sidecars
+wandern mit: ``IMG.xmp``, ``IMG.JPG.xmp`` und ``IMG.JPG.annotations.json``. Ein
+``IMG.xmp``, das das RAW eines RAW-+-JPEG-Paars noch nutzt, wird kopiert statt
+verschoben.
+
 ----
 
 RGB-Histogramm

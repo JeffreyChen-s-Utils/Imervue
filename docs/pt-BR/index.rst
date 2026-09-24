@@ -1759,6 +1759,15 @@ No modo de miniaturas, selecione várias imagens e clique com o botão direito:
    * - Adicionar ao Álbum
      - Colocar todas as imagens selecionadas em um álbum
 
+Mover ou copiar nunca sobrescreve um arquivo de mesmo nome: ele chega como
+``name_1.ext``. Uma foto renomeada ou movida no Imervue — renomeação em lote,
+renomeação por tokens, árvore de pastas, Mover / Copiar, painel duplo, bandeja de
+preparação, organizador de imagens — mantém a avaliação, o favorito, as tags, o
+rótulo de cor, o título, a descrição, a nota da biblioteca e a marcação de
+seleção (uma pasta renomeada ou movida, as de todas as suas fotos). Os sidecars
+vão junto: ``IMG.xmp``, ``IMG.JPG.xmp`` e ``IMG.JPG.annotations.json``. Um
+``IMG.xmp`` que o RAW de um par RAW + JPEG ainda usa é copiado em vez de movido.
+
 ----
 
 Histograma RGB

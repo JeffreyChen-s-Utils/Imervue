@@ -1780,6 +1780,16 @@ En mode vignettes, sélectionnez plusieurs images puis clic droit :
    * - Ajouter à un album
      - Placer toutes les images sélectionnées dans un album
 
+Déplacer ou copier n'écrase jamais un fichier du même nom : il arrive sous
+``name_1.ext``. Une photo renommée ou déplacée dans Imervue — renommage par lots,
+renommage par jetons, arborescence, Déplacer / Copier, double volet, bac de
+préparation, organisateur d'images — garde sa note, son favori, ses tags, son
+étiquette de couleur, son titre, sa description, sa note de bibliothèque et son
+marquage de tri (un dossier renommé ou déplacé, ceux de toutes ses photos). Ses
+sidecars la suivent : ``IMG.xmp``, ``IMG.JPG.xmp`` et
+``IMG.JPG.annotations.json``. Un ``IMG.xmp`` encore utilisé par le RAW d'une
+paire RAW + JPEG est copié plutôt que déplacé.
+
 ----
 
 Histogramme RGB

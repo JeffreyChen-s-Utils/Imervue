@@ -2,8 +2,9 @@
 
 When library entries point at files that no longer exist: the batch menu that
 auto-matches them by name, removes them, or relocates a whole root folder,
-and the migration of per-path metadata (tags, ratings, recipes) to the new
-paths. ``ImervueMainWindow`` mixes these methods in.
+and the migration of per-path data (ratings, tags, labels, titles,
+bookmarks, library notes and cull flags) to the new paths.
+``ImervueMainWindow`` mixes these methods in.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from Imervue.image.browser_state import (
     remove_missing,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.user_settings.user_setting_dict import user_setting_dict
+from Imervue.system.file_transfer import follow_saved_data
 
 
 class MainWindowMissingMixin:
@@ -118,7 +119,8 @@ class MainWindowMissingMixin:
         migrate_view_path_state(viewer, mapping)
         for old, new in mapping.items():
             self._image_metadata_index.move(old, new)
-            self._migrate_user_path_metadata(old, new)
+        # The relinked path may already carry data of its own, which wins.
+        follow_saved_data(mapping, keep_existing=True)
         for attr in ("_unfiltered_images",):
             paths = list(getattr(viewer, attr, []) or [])
             setattr(viewer, attr, [mapping.get(path, path) for path in paths])
@@ -131,17 +133,6 @@ class MainWindowMissingMixin:
                 viewer.load_deep_zoom_image(mapping[old_path])
         self._apply_image_filter()
         self._toast_missing_result("missing_batch_relinked_done", len(mapping))
-
-    @staticmethod
-    def _migrate_user_path_metadata(old_path: str, new_path: str) -> None:
-        ratings = user_setting_dict.get("image_ratings")
-        if isinstance(ratings, dict) and old_path in ratings and new_path not in ratings:
-            ratings[new_path] = ratings.pop(old_path)
-        tags = user_setting_dict.get("image_tags")
-        if isinstance(tags, dict):
-            for paths in tags.values():
-                if isinstance(paths, list) and old_path in paths and new_path not in paths:
-                    paths[paths.index(old_path)] = new_path
 
     def _toast_missing_result(self, key: str, count: int) -> None:
         if not hasattr(self, "toast"):

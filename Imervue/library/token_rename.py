@@ -34,7 +34,7 @@ from PIL import Image
 
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.system.file_transfer import is_same_file
+from Imervue.system.file_transfer import carry_along, is_same_file
 
 _TOKEN_RE = re.compile(r"\{([a-zA-Z_]+)(?::([^{}]+))?\}")
 
@@ -92,7 +92,11 @@ def preview(
 
 
 def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
-    """Rename everything in the plan. Returns (successes, failures)."""
+    """Rename everything in the plan. Returns (successes, failures).
+
+    Each renamed file's sidecars and saved rating / tags / labels follow it
+    (:func:`Imervue.system.file_transfer.carry_along`).
+    """
     ok = failed = 0
     for plan in plans:
         if plan.conflict or os.path.abspath(plan.src) == os.path.abspath(plan.dst):
@@ -100,9 +104,11 @@ def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
             continue
         try:
             os.rename(plan.src, plan.dst)
-            ok += 1
         except OSError:
             failed += 1
+            continue
+        ok += 1
+        carry_along([(plan.src, plan.dst)], move=True)
     return ok, failed
 
 

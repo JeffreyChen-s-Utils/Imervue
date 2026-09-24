@@ -345,7 +345,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Filigrane superposé** — texte ou image, 9 positions d'ancrage, opacité, échelle ; appliqué uniquement à l'export
 - **Préréglages d'export** — pipelines en un clic Web 1600 / Print 300 dpi / Instagram 1080
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF avec curseur de qualité pour les formats avec perte ; conserve les EXIF d'appareil, d'objectif et de date de prise de vue, la localisation étant facultative (**Métadonnées** : toutes / toutes sauf localisation / aucune)
-- **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées
+- **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées. Déplacer ou copier n'écrase jamais un fichier du même nom (il arrive sous `name_1`), et une photo renommée ou déplacée dans Imervue (renommage par lots, renommage par jetons, arborescence, Déplacer / Copier, double volet, bac de préparation, organisateur d'images) garde sa note, son favori, ses tags, son étiquette de couleur, son titre, ses notes et son marquage de tri ; ses sidecars `.xmp` et d'annotations la suivent
 - **PDF planche-contact** — grille multi-pages avec légendes (A4 / A3 / Letter / Legal)
 - **Galerie web HTML** — dossier autonome avec `index.html` + miniatures JPEG + lightbox en ligne
 - **Diaporama MP4** — vidéo H.264 avec FPS / temps d'affichage par image / transitions par fondu / dissolution / glissement / balayage configurables (`imageio-ffmpeg`)

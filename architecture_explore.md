@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `7a83c0c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `c4a1a9e` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 859 | 140,444 |
+| `tests/` | 861 | 141,016 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
-| `Imervue/gui/` | 165 | 32,979 |
+| `Imervue/gui/` | 165 | 32,987 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 125 | 14,340 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,927 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,930 |
 | `Imervue/multi_language/` | 8 | 14,069 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
-| `Imervue/library/` | 32 | 4,156 |
+| `Imervue/library/` | 32 | 4,225 |
 | `Imervue/menu/` | 11 | 3,583 |
 | `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,243 |
-| `Imervue/system/` | 23 | 2,232 |
+| `Imervue/system/` | 23 | 2,371 |
 | `Imervue/export/` | 9 | 1,081 |
-| `Imervue/user_settings/` | 9 | 993 |
+| `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,256 |
-| **總計** | **1,694** | **320,162** |
+| **總計** | **1,697** | **321,090** |
 
-其中 `Imervue/` 套件本身 771 檔 / 165,462 行。
+其中 `Imervue/` 套件本身 772 檔 / 165,818 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -234,7 +234,7 @@ ImervueMainWindow
 | `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
 | `trash_ops.py` | 210 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈 |
-| `file_transfer.py` | 92 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
+| `file_transfer.py` | 231 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
@@ -247,6 +247,7 @@ ImervueMainWindow
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
 | `metadata_template.py` | 72 | IPTC/XMP 欄位範本（stationery pad） |
+| `path_metadata.py` | 137 | 設定裡以圖片路徑為鍵的資料（評分、色標籤、標題、描述、收藏、書籤、staging tray、參考圖釘選、最近圖片、標籤與相簿成員）跟著改名／搬移的檔案走：`move_path_metadata(mapping, *, keep_existing)` 同時改鍵（`a→b` 與 `b→c` 並存也只搬一次），新路徑上前一個檔案留下的資料清掉；`folder_moves` 把資料夾搬移展開成其下每個路徑；`stored_paths` |
 | `recent_image.py` | 65 | 最近資料夾 / 圖片追蹤，上限由設定控制 |
 | `tag_validator.py` | 106 | 標籤 / 相簿集合的完整性檢查與清理 |
 | `tags.py` | 133 | 自訂標籤與虛擬相簿管理 |
@@ -473,7 +474,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
-| `batch_ops.py` | 297 | 批次重新命名 / 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
+| `batch_ops.py` | 300 | 批次重新命名 / 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
@@ -492,7 +493,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_index.py` | 672 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標 |
+| `image_index.py` | 735 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標；`move_paths(mapping, *, keep_existing)` 在一個交易內把 images／notes／culling／image_tags 的路徑改到新位置（檔案改名、搬移、重新連結時），`stored_paths()` 列出所有表的路徑 |
 | `scanner.py` | 167 | 背景掃描器，走訪 library roots 填索引（走訪沿用 `maintenance.scan_image_files`，HEIC / JXL 先註冊解碼器） |
 | `maintenance.py` | 50 | 索引與檔案系統對帳；`scan_image_files()` 收 `formats.STILL_IMAGE_EXTENSIONS`，也是掃描器的走訪 |
 | `smart_album.py` | 347 | Smart Albums：保存查詢並重新套用 |
@@ -522,11 +523,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `collection_stats.py` | 81 | 集合的評分/收藏/色標籤/挑片統計 |
 | `reference_pins.py` | 95 | 釘選參考圖籃子 |
 | `staging_tray.py` | 98 | 跨資料夾選取籃 |
-| `token_rename.py` | 202 | Token 式批次改名 |
+| `token_rename.py` | 208 | Token 式批次改名 |
 
 ### 6.12 `Imervue/gui/`
 
-165 個檔、32,979 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+165 個檔、32,987 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -545,7 +546,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
 | `slider_spin.py` | 75 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `main_window_filter.py` | 262 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
-| `main_window_missing.py` | 169 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
+| `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
 | `main_window_folders.py` | 301 | `MainWindowFoldersMixin`：監看目前資料夾、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
 | `main_window_screens.py` | 205 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
@@ -554,7 +555,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_layout.py` | 296 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
-| `file_tree_view.py` | 933 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
+| `file_tree_view.py` | 935 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 178 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
 | `image_list_view.py` | 607 | 清單檢視（`QTableView`，縮圖牆的替代） |
@@ -611,7 +612,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `batch_convert_dialog.py`(400) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(395) · `export_dialog.py`(224) · `export_source.py`(49) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source()`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再套 recipe；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(383) · `contact_sheet_dialog.py`(187) ·
-`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
+`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(532) ·
 `duplicate_detection_dialog.py`(565) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(299) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
 `ai_upscale_dialog.py`(736) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
@@ -964,7 +965,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-859 個檔、140,444 行。`pyproject.toml` 定義三個互斥層級 marker：
+861 個檔、141,016 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1115,6 +1116,17 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
   `plugin/plugin_downloader.py`）。
 - **第三方失敗型別沒有邊界時**（piexif 的編碼器、GL 驅動、外掛 import），才保留寬鬆捕捉，寫
   `# noqa: BLE001 - <理由>`，並附 traceback 紀錄。
+
+### 10.12 改名／搬移檔案時帶走每路徑資料
+
+設定（`image_ratings`、`image_tags`、`bookmarks`…）與圖庫 DB（notes、culling、image_tags）都以圖片的絕對路徑為鍵，
+sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名對應。主程式自己改名或搬移檔案的路徑
+（Batch Rename、Token Rename、檔案樹、`transfer_into` 的所有使用者、Image Organizer）搬完後一律呼叫
+`system/file_transfer.carry_along`；在 worker 執行緒裡只能呼叫 `carry_sidecars`，再用訊號把 `{old: new}` 交回 GUI 執行緒呼叫
+`follow_saved_data`（設定字典不能在 worker 裡改）。遺失檔重新連結用 `follow_saved_data(..., keep_existing=True)`。
+新增以路徑為鍵的設定時，把鍵加進 `user_settings/path_metadata.py` 的 `_VALUE_KEYS`／`_LIST_KEYS`／`_GROUP_KEYS`；
+新增以路徑為鍵的 DB 表時，加進 `library/image_index._PATH_TABLES`。測試一律透過 `conftest` 的 `_isolate_library_db`
+使用暫存 DB。
 
 ---
 
