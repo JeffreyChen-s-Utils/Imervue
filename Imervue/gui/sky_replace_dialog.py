@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.segmentation import remove_background, replace_sky
@@ -111,7 +112,7 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
         save_path_into(
-            self, self._out_edit, lang.get("sky_output", "Output"), "Images (*.png *.tif)")
+            self, self._out_edit, lang.get("sky_output", "Output"), image_filter(("png", "tif")))
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

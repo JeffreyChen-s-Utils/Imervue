@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
 )
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 from Imervue.puppet.canvas import PuppetCanvas
@@ -195,7 +196,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             self,
             lang.get("puppet_open_dialog_title", "Open Puppet"),
             "",
-            "Puppet (*.puppet)",
+            translated_filter("file_filter_puppet", "Puppet files", ("puppet",)),
         )
         if not path:
             return
@@ -300,7 +301,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             self,
             lang.get("puppet_save_dialog_title", "Save Puppet As"),
             "",
-            "Puppet (*.puppet)",
+            translated_filter("file_filter_puppet", "Puppet files", ("puppet",)),
         )
         if not path:
             return

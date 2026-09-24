@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.clone_stamp import CloneStamp, apply_clone_stamp
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -177,7 +177,7 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
         save_path_into(
-            self, self._out_edit, lang.get("stamp_output", "Output"), IMAGE_SAVE_FILTER)
+            self, self._out_edit, lang.get("stamp_output", "Output"), image_save_filter())
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

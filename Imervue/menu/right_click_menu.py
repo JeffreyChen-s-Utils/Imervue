@@ -15,6 +15,7 @@ from Imervue.gui.modify_actions_widget import ModifyActionsWidget
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
 from Imervue.gui.export_dialog import open_export_dialog
+from Imervue.gui.file_filters import viewer_filter
 from Imervue.gui.batch_export_dialog import open_batch_export
 from Imervue.system.wallpaper import set_desktop_wallpaper
 from Imervue.gui.gif_video_dialog import open_gif_video_dialog
@@ -176,8 +177,7 @@ def _relocate_missing(main_gui: GPUImageView, old_path: str) -> None:
         main_gui,
         lang.get("missing_relocate", "Relocate Missing File..."),
         str(Path(old_path).parent),
-        "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.gif *.svg "
-        "*.cr2 *.nef *.arw *.dng *.raf *.orf)",
+        viewer_filter(),
     )
     if not new_path:
         return

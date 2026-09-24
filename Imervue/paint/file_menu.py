@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.brush_preset_io import (
     IMERVUE_BRUSH_EXTENSION,
@@ -357,7 +358,7 @@ class _FileMenuBridge:
         path = self._pick_save_file(
             title_key="paint_file_export_pages_cbz",
             title_fallback="Export pages → CBZ",
-            name_filter="Comic Book Zip (*.cbz)",
+            name_filter=translated_filter("file_filter_comic_zip", "Comic book archive", ("cbz",)),
         )
         if not path:
             return

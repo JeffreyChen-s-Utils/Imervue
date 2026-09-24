@@ -14,6 +14,7 @@ from pathlib import Path
 from PIL import Image
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.annotation_models import AnnotationProject, bake
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.qimage_convert import pil_to_qimage
@@ -21,6 +22,12 @@ from Imervue.system.qimage_convert import pil_to_qimage
 logger = logging.getLogger("Imervue.annotation")
 
 _LOAD_PROJECT_FALLBACK = "Load Project..."
+
+
+def _project_filter(extensions: tuple[str, ...]) -> str:
+    return translated_filter(
+        "file_filter_annotation_project", "Imervue annotation project", extensions,
+    )
 
 
 class AnnotationFileActionsMixin:
@@ -113,7 +120,7 @@ class AnnotationFileActionsMixin:
             self,
             lang.get("annotation_save_project", "Save Project..."),
             suggested or start_dir,
-            "Imervue Annotation Project (*.imervue_annot.json *.json)",
+            _project_filter(("imervue_annot.json", "json")),
         )
         if not path:
             return
@@ -141,7 +148,7 @@ class AnnotationFileActionsMixin:
             self,
             lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
             start_dir,
-            "Imervue Annotation Project (*.json)",
+            _project_filter(("json",)),
         )
         if not path:
             return

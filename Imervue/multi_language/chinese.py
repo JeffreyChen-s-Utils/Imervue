@@ -1466,7 +1466,6 @@ chinese_word_dict = {
     "reference_panel_no_preview": "尚未选择参考图。",
     "reference_panel_load_failed": "无法加载预览。",
     "reference_panel_pick_files": "选择参考图像",
-    "reference_panel_filter": "图像 (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
     # 双窗格文件管理器
     "dual_pane_title": "双窗格文件管理器",
     "dual_pane_copy_right": "复制 \u2192",
@@ -2723,4 +2722,11 @@ chinese_word_dict = {
     "puppet_idle_off": "自动待机动作已关闭",
     "puppet_idle_on": "自动待机动作已开启",
     "thumbnail_size_original": "原始大小",
+    "file_filter_images": "图片",
+    "file_filter_viewer": "图片与视频",
+    "file_filter_puppet": "偶动画文件",
+    "file_filter_pet_script": "宠物脚本",
+    "file_filter_annotation_project": "Imervue 注释项目",
+    "file_filter_icc_profiles": "ICC 配置文件",
+    "file_filter_comic_zip": "漫画压缩包",
 }

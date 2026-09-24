@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
+from Imervue.gui.file_filters import image_filter
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.stack_blend import (
     STACK_MAX,
@@ -131,7 +132,7 @@ class StackBlendDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         files, _ = QFileDialog.getOpenFileNames(
             self, lang.get("fstack_add", "Add images..."), "",
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)",
+            image_filter(("jpg", "jpeg", "png", "tif", "tiff", "webp")),
         )
         for f in files:
             self._list.addItem(f)
@@ -139,7 +140,7 @@ class StackBlendDialog(WorkerHostMixin, QDialog):
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
         save_path_into(
-            self, self._out_edit, lang.get("fstack_output", "Output"), IMAGE_SAVE_FILTER,
+            self, self._out_edit, lang.get("fstack_output", "Output"), image_save_filter(),
             start="stacked.png")
 
     def _collected_paths(self) -> list[str]:

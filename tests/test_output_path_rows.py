@@ -42,7 +42,7 @@ _CASES = [
     ("print_layout_dialog", "PrintLayoutDialog", "_out_edit", "Output PDF:",
      "getSaveFileName", "Output PDF", "PDF (*.pdf)", None, _EDIT),
     ("soft_proof_dialog", "SoftProofDialog", "_profile_edit", "ICC profile:",
-     "getOpenFileName", "ICC profile", "ICC Profiles (*.icc *.icm)", "", ""),
+     "getOpenFileName", "ICC profile", "ICC profiles (*.icc *.icm)", "", ""),
     ("focus_stack_dialog", "FocusStackDialog", "_out_edit", "Output:",
      "getSaveFileName", "Output", "Images (*.jpg *.png *.tif)", "", "stacked.jpg"),
     ("hdr_merge_dialog", "HdrMergeDialog", "_out_edit", "Output:",

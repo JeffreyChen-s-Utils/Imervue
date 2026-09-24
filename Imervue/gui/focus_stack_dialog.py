@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.focus_stack import FocusStackOptions, stack_focus
@@ -110,7 +111,7 @@ class FocusStackDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         files, _ = QFileDialog.getOpenFileNames(
             self, lang.get("fstack_add", "Add images..."), "",
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)",
+            image_filter(("jpg", "jpeg", "png", "tif", "tiff", "webp")),
         )
         for f in files:
             self._list.addItem(f)
@@ -118,7 +119,8 @@ class FocusStackDialog(WorkerHostMixin, QDialog):
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
         save_path_into(
-            self, self._out_edit, lang.get("fstack_output", "Output"), "Images (*.jpg *.png *.tif)",
+            self, self._out_edit, lang.get("fstack_output", "Output"),
+            image_filter(("jpg", "png", "tif")),
             start="stacked.jpg")
 
     def _collected_paths(self) -> list[str]:

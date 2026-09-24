@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.dialog_rows import folder_picker_row, open_path_into
 from Imervue.image.soft_proof import simulate_profile
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -67,7 +68,7 @@ class SoftProofDialog(QDialog):
         lang = language_wrapper.language_word_dict
         open_path_into(
             self, self._profile_edit, lang.get("proof_profile", "ICC profile"),
-            "ICC Profiles (*.icc *.icm)")
+            translated_filter("file_filter_icc_profiles", "ICC profiles", ("icc", "icm")))
 
     def _preview_profile(self) -> None:
         lang = language_wrapper.language_word_dict

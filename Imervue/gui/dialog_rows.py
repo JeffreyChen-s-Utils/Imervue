@@ -14,10 +14,12 @@ from PySide6.QtWidgets import (
     QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QWidget,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 
-# Save-dialog filter shared by the single-image tool dialogs that write PNG / JPEG / TIFF.
-IMAGE_SAVE_FILTER = "Images (*.png *.jpg *.tif)"
+def image_save_filter() -> str:
+    """Save-dialog filter shared by the single-image tool dialogs that write PNG / JPEG / TIFF."""
+    return image_filter(("png", "jpg", "tif"))
 
 
 def path_browse_row(

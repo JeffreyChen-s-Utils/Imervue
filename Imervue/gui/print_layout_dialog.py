@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.print_layout import PAGE_SIZES, PrintLayout, export_print_pdf
@@ -127,7 +128,7 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         fns, _ = QFileDialog.getOpenFileNames(
             self, lang.get("print_add", "Add files"), "",
-            "Images (*.png *.jpg *.jpeg *.tif *.tiff)",
+            image_filter(("png", "jpg", "jpeg", "tif", "tiff")),
         )
         for fn in fns:
             self._files.addItem(fn)

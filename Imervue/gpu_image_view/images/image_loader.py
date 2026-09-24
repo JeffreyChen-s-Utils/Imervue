@@ -219,7 +219,7 @@ class FolderScanWorker(QRunnable):
                     if not entry.is_file(follow_symlinks=False):
                         continue
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext not in _SUPPORTED_EXTS:
+                    if ext not in SUPPORTED_EXTENSIONS:
                         continue
                     batch.append(entry.path)
                     found.append(entry.path)
@@ -239,11 +239,12 @@ class FolderScanWorker(QRunnable):
 # 開啟路徑（資料夾或檔案）
 # ================================================================
 
-_SUPPORTED_EXTS = {
+SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
     ".gif", ".apng", ".svg",
     ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-} | VIDEO_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
+}) | VIDEO_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
+"""Every extension the viewer opens; the Open and Relocate dialogs filter on it too."""
 
 
 def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
@@ -298,7 +299,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
             for entry in it:
                 if entry.is_file(follow_symlinks=False):
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext in _SUPPORTED_EXTS:
+                    if ext in SUPPORTED_EXTENSIONS:
                         result.append(entry.path)
     except OSError:
         return []
@@ -354,7 +355,7 @@ def open_path(main_gui: GPUImageView, path: str):
     # positives for that threat model.
     if path_obj.is_dir():  # NOSONAR
         _open_folder(main_gui, path_obj)
-    elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:  # NOSONAR
+    elif path_obj.is_file() and path_obj.suffix.lower() in SUPPORTED_EXTENSIONS:  # NOSONAR
         _open_file(main_gui, path_obj)
 
 

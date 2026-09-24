@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui.dialog_rows import IMAGE_SAVE_FILTER, folder_picker_row, save_path_into
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
 from Imervue.image.geometry import straighten
@@ -128,7 +128,7 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
         save_path_into(
-            self, self._out_edit, lang.get("autostr_output", "Output"), IMAGE_SAVE_FILTER)
+            self, self._out_edit, lang.get("autostr_output", "Output"), image_save_filter())
 
     def _set_running(self, running: bool) -> None:
         """Disable both entry points while a worker runs.

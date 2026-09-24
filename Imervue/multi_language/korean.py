@@ -1477,7 +1477,6 @@ korean_word_dict = {
     "reference_panel_no_preview": "레퍼런스가 선택되지 않았습니다.",
     "reference_panel_load_failed": "미리보기를 불러오지 못했습니다.",
     "reference_panel_pick_files": "참조 이미지 선택",
-    "reference_panel_filter": "이미지 (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
     # 듀얼 패널 파일 관리자
     "dual_pane_title": "듀얼 패널 파일 관리자",
     "dual_pane_copy_right": "복사 \u2192",
@@ -2734,4 +2733,11 @@ korean_word_dict = {
     "puppet_idle_off": "자동 대기 동작 꺼짐",
     "puppet_idle_on": "자동 대기 동작 켜짐",
     "thumbnail_size_original": "원본 크기",
+    "file_filter_images": "이미지",
+    "file_filter_viewer": "이미지 및 동영상",
+    "file_filter_puppet": "퍼펫 파일",
+    "file_filter_pet_script": "펫 스크립트",
+    "file_filter_annotation_project": "Imervue 주석 프로젝트",
+    "file_filter_icc_profiles": "ICC 프로파일",
+    "file_filter_comic_zip": "만화 압축 파일",
 }

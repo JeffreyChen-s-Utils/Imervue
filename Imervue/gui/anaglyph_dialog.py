@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import open_path_into, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
@@ -85,7 +86,7 @@ class AnaglyphDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         open_path_into(
             self, self._right_edit, lang.get("anaglyph_right", "Right-eye image:"),
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)")
+            image_filter(("jpg", "jpeg", "png", "tif", "tiff", "webp")))
 
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         right = self._right_edit.text().strip()

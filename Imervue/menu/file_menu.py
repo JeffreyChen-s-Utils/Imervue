@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QFileDialog, QMenu
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.tile_layout import is_active_thumbnail_choice
 from Imervue.gpu_image_view.images.image_loader import open_path
+from Imervue.gui.file_filters import viewer_filter
 from Imervue.menu.recent_menu import rebuild_recent_menu, build_recent_menu
 from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -293,8 +294,7 @@ def open_image(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set,
         language_wrapper.language_word_dict.get("main_window_select_image"),
         "",
-        "Images (*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.webp *.gif *.apng *.svg "
-        "*.cr2 *.nef *.arw *.dng *.raf *.orf)"
+        viewer_filter()
     )
 
     if not file_path:

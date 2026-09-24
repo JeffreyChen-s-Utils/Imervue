@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet.hotkey_manager import (
     ACTION_SPEAK_NOW,
@@ -444,7 +445,7 @@ class PetWorkspace(QWidget):
             self,
             _tr("desktop_pet_open_puppet", "Open Puppet…"),
             "",
-            "Puppet files (*.puppet)",
+            translated_filter("file_filter_puppet", "Puppet files", ("puppet",)),
         )
         if path:
             self.load_puppet(path)
@@ -517,7 +518,7 @@ class PetWorkspace(QWidget):
             self,
             _tr("desktop_pet_load_script_title", "Load pet script"),
             "",
-            "Pet script (*.json *.petscript.json)",
+            translated_filter("file_filter_pet_script", "Pet script", ("json", "petscript.json")),
         )
         if path:
             self.load_script(path)
@@ -565,7 +566,7 @@ class PetWorkspace(QWidget):
             self,
             _tr("desktop_pet_save_script_title", "Save pet script"),
             start_dir,
-            "Pet script (*.json *.petscript.json)",
+            translated_filter("file_filter_pet_script", "Pet script", ("json", "petscript.json")),
         )
         if not path:
             return

@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 REFERENCE_MIN_SCALE = 0.1
@@ -244,7 +245,7 @@ class ReferenceDock(QDockWidget):
             self,
             lang.get("paint_reference_open", "Open reference image"),
             "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)",
+            image_filter(("png", "jpg", "jpeg", "bmp", "tif", "tiff", "webp")),
         )
         if path:
             self.load_image_from_path(path)

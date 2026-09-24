@@ -1492,7 +1492,6 @@ english_word_dict = {
     "reference_panel_no_preview": "No reference selected.",
     "reference_panel_load_failed": "Failed to load preview.",
     "reference_panel_pick_files": "Select reference images",
-    "reference_panel_filter": "Images (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
     # Dual-Pane File Manager
     "dual_pane_title": "Dual-Pane File Manager",
     "dual_pane_copy_right": "Copy \u2192",
@@ -2757,4 +2756,11 @@ english_word_dict = {
     "puppet_idle_off": "Auto idle off",
     "puppet_idle_on": "Auto idle on",
     "thumbnail_size_original": "Original size",
+    "file_filter_images": "Images",
+    "file_filter_viewer": "Images and videos",
+    "file_filter_puppet": "Puppet files",
+    "file_filter_pet_script": "Pet script",
+    "file_filter_annotation_project": "Imervue annotation project",
+    "file_filter_icc_profiles": "ICC profiles",
+    "file_filter_comic_zip": "Comic book archive",
 }

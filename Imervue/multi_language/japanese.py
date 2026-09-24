@@ -1479,7 +1479,6 @@ japanese_word_dict = {
     "reference_panel_no_preview": "リファレンスが選択されていません。",
     "reference_panel_load_failed": "プレビューの読み込みに失敗しました。",
     "reference_panel_pick_files": "リファレンス画像を選択",
-    "reference_panel_filter": "画像 (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
     # デュアルペインファイルマネージャ
     "dual_pane_title": "デュアルペインファイルマネージャ",
     "dual_pane_copy_right": "コピー \u2192",
@@ -2736,4 +2735,11 @@ japanese_word_dict = {
     "puppet_idle_off": "自動アイドル オフ",
     "puppet_idle_on": "自動アイドル オン",
     "thumbnail_size_original": "元のサイズ",
+    "file_filter_images": "画像",
+    "file_filter_viewer": "画像と動画",
+    "file_filter_puppet": "パペットファイル",
+    "file_filter_pet_script": "ペットスクリプト",
+    "file_filter_annotation_project": "Imervue 注釈プロジェクト",
+    "file_filter_icc_profiles": "ICC プロファイル",
+    "file_filter_comic_zip": "コミックアーカイブ",
 }

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QCheckBox, QFileDialog, QInputDialog, QMessageBox
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
 from Imervue.puppet.cubism_import import (
@@ -81,7 +82,7 @@ class PuppetImportMixin:
             self,
             lang.get("puppet_import_png_title", "Import PNG"),
             "",
-            "PNG (*.png);;Images (*.png *.jpg *.jpeg *.bmp *.tiff)",
+            "PNG (*.png);;" + image_filter(("png", "jpg", "jpeg", "bmp", "tiff")),
         )
         if not path:
             return

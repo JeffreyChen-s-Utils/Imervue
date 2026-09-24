@@ -1465,7 +1465,6 @@ traditional_chinese_word_dict = {
     "reference_panel_no_preview": "尚未選擇參考圖。",
     "reference_panel_load_failed": "無法載入預覽。",
     "reference_panel_pick_files": "選擇參考影像",
-    "reference_panel_filter": "影像 (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
     # 雙窗格檔案管理員
     "dual_pane_title": "雙窗格檔案管理員",
     "dual_pane_copy_right": "複製 \u2192",
@@ -2722,4 +2721,11 @@ traditional_chinese_word_dict = {
     "puppet_idle_off": "自動待機動作已關閉",
     "puppet_idle_on": "自動待機動作已開啟",
     "thumbnail_size_original": "原始大小",
+    "file_filter_images": "圖片",
+    "file_filter_viewer": "圖片與影片",
+    "file_filter_puppet": "偶動畫檔",
+    "file_filter_pet_script": "寵物腳本",
+    "file_filter_annotation_project": "Imervue 註解專案",
+    "file_filter_icc_profiles": "ICC 色彩描述檔",
+    "file_filter_comic_zip": "漫畫壓縮檔",
 }
