@@ -2110,6 +2110,12 @@ XMP-aware tools.
 
 Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
 
+Besides ``photo.xmp`` (Lightroom, Bridge), the ``photo.jpg.xmp`` that darktable
+and digiKam write is read and updated when it is the only sidecar. Colour labels
+are understood in Lightroom's words (``Red`` … ``Purple``) and Bridge's
+(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), and exported as
+Lightroom writes them; a label with no colour (a custom one) is left in the sidecar.
+
 - **Import XMP for current image** — pulls rating / title / keywords /
   color label from the sidecar into the internal database.
 - **Export XMP for current image** — writes the current rating / title /

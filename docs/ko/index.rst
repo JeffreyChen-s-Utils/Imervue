@@ -1273,6 +1273,12 @@ Imervue는 Adobe XMP sidecar 파일 (``photo.jpg`` ↔ ``photo.xmp``) 읽기/쓰
 
 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다.
 
+``photo.xmp``\ (Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는
+``photo.jpg.xmp``\ 도 그것이 유일한 sidecar이면 읽고 갱신합니다. 색상 라벨은
+Lightroom 표기(``Red`` … ``Purple``)와 Bridge 표기(``Select``, ``Second``,
+``Approved``, ``Review``, ``To Do``)를 이해하며, 내보낼 때는 Lightroom 표기로
+씁니다. 색상에 대응하지 않는 사용자 라벨은 sidecar에 남겨 둡니다.
+
 - **현재 이미지용 XMP 가져오기** — sidecar에서 평점 / 제목 / 키워드 / 색상
   라벨을 내부 DB로 가져옵니다.
 - **현재 이미지용 XMP 내보내기** — 현재 평점 / 제목 / 키워드 / 색상 라벨을

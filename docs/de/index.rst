@@ -2177,6 +2177,13 @@ hin- und herwandern.
 
 Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben.
 
+Neben ``photo.xmp`` (Lightroom, Bridge) wird auch die von darktable und digiKam
+geschriebene ``photo.jpg.xmp`` gelesen und aktualisiert, wenn sie die einzige
+Sidecar-Datei ist. Farbetiketten werden in Lightrooms Wörtern (``Red`` … ``Purple``)
+und in Bridges (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``)
+verstanden und so exportiert, wie Lightroom sie schreibt; ein Etikett ohne Farbe
+(ein eigenes) bleibt in der Sidecar-Datei stehen.
+
 - **XMP für aktuelles Bild importieren** — zieht Bewertung / Titel / Stichwörter /
   Farbetikett aus dem Sidecar in die interne Datenbank.
 - **XMP für aktuelles Bild exportieren** — schreibt die aktuelle Bewertung / Titel /

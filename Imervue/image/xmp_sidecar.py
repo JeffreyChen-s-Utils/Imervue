@@ -1,8 +1,9 @@
 """
 XMP sidecar read/write for cross-editor interoperability.
 
-An XMP sidecar is a ``<image>.xmp`` XML file stored next to the image that
-holds ratings, keywords, titles, descriptions, and colour labels. Most
+An XMP sidecar is an XML file stored next to the image that holds ratings,
+keywords, titles, descriptions, and colour labels: ``<image>.xmp`` as Adobe
+names it, or ``<image>.<ext>.xmp`` as darktable and digiKam do. Most
 XMP-aware photo managers write one automatically and most raw developers
 can read them. Exchanging these lets Imervue round-trip metadata with
 other editors without touching the image file itself.
@@ -16,7 +17,7 @@ Imervue       XMP element   Notes
 rating        xmp:Rating    integer 0\u20135 (0 = unrated, -1 = rejected)
 title         dc:title      single language default entry
 keywords      dc:subject    list of strings → ``image_tags``
-color label   xmp:Label     free string; Imervue uses canonical names
+color label   xmp:Label     Lightroom's colour name or Bridge's word
 ============  ============  =======================================
 
 All XML parsing goes through ``defusedxml`` to stay safe against XXE /
@@ -32,6 +33,8 @@ from pathlib import Path
 
 from defusedxml import ElementTree as DefusedET
 from defusedxml.common import DefusedXmlException
+
+from Imervue.user_settings.color_labels import COLORS
 
 # NOTE: the values below are XML *namespace identifiers*, not network URLs.
 # XML namespaces (W3C REC-xml-names) are opaque strings that uniquely identify
@@ -50,6 +53,10 @@ _NS = {
 _RATING_MIN = -1
 _RATING_MAX = 5
 _XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+# Adobe Bridge (and Lightroom's "Bridge Default" label set) labels with a
+# workflow word per colour; Lightroom writes the colour's own name.
+_BRIDGE_LABELS = {"select": "red", "second": "yellow", "approved": "green",
+                  "review": "blue", "to do": "purple"}
 
 
 @dataclass
@@ -79,19 +86,54 @@ class XmpData:
 # Path helpers
 # ---------------------------------------------------------------------------
 
-def sidecar_path_for(image_path: str | Path) -> Path:
-    """Return the canonical ``<image>.xmp`` path beside ``image_path``.
+def _existing_sidecar(image_path: str | Path) -> Path | None:
+    """The sidecar beside *image_path*: ``foo.xmp``, else ``foo.jpg.xmp``; None without one."""
+    image = Path(image_path)
+    for candidate in (image.with_suffix(".xmp"), image.with_name(image.name + ".xmp")):
+        if candidate.is_file():
+            return candidate
+    return None
 
-    Uses Adobe Bridge's convention of replacing the extension (``foo.jpg``
-    \u2192 ``foo.xmp``) rather than appending. Simpler to find, simpler to
-    clean up, and unambiguous for our primary targets (JPEG/PNG/TIFF).
+
+def sidecar_path_for(image_path: str | Path) -> Path:
+    """Return the sidecar path for ``image_path``: the existing one, else ``<image>.xmp``.
+
+    Adobe's convention replaces the extension (``foo.jpg`` \u2192 ``foo.xmp``)
+    and wins when both files exist; darktable and digiKam append it
+    (``foo.jpg.xmp``), and that file is read and merged into when it is the
+    only one. A new sidecar is written the Adobe way.
     """
-    return Path(image_path).with_suffix(".xmp")
+    return _existing_sidecar(image_path) or Path(image_path).with_suffix(".xmp")
 
 
 def has_sidecar(image_path: str | Path) -> bool:
     """Return True if a sidecar exists for ``image_path``."""
-    return sidecar_path_for(image_path).is_file()
+    return _existing_sidecar(image_path) is not None
+
+
+def label_color(label: str) -> str | None:
+    """The Imervue colour an ``xmp:Label`` stands for, or None for a label it has no colour for.
+
+    Lightroom writes the colour's name (``Red``), Bridge a workflow word
+    (``Select`` = red, ``Second`` = yellow, ``Approved`` = green, ``Review`` =
+    blue, ``To Do`` = purple); case is ignored.
+    """
+    text = label.strip().lower()
+    return text if text in COLORS else _BRIDGE_LABELS.get(text)
+
+
+def _label_to_write(color: str | None, existing: str) -> str:
+    """The ``xmp:Label`` for Imervue's *color*, keeping the sidecar's *existing* word if it can.
+
+    The same colour keeps its word (Bridge's ``Select`` stays); another
+    colour is written as Lightroom names it (``Red``). With no colour in
+    Imervue, a label it has no colour for (a custom one) is kept rather than
+    wiped: Imervue never showed it, so it can't have been cleared there.
+    """
+    known = label_color(existing)
+    if color is None:
+        return existing if known is None else ""
+    return existing if known == color else color.capitalize()
 
 
 # ---------------------------------------------------------------------------
@@ -171,8 +213,8 @@ def load(image_path: str | Path) -> XmpData:
     XML is malformed \u2014 we never raise on bad user files, because losing the
     image view because of a broken sidecar would be a poor UX.
     """
-    path = sidecar_path_for(image_path)
-    if not path.is_file():
+    path = _existing_sidecar(image_path)
+    if path is None:
         return XmpData()
     try:
         tree = DefusedET.parse(str(path))
@@ -389,6 +431,8 @@ def snapshot_from_settings(path: str) -> XmpData:
     carried over from any existing sidecar. Without this, exporting settings
     would blank a creator an external editor (e.g. Lightroom) had written — and
     an otherwise-empty snapshot would delete a creator-only sidecar outright.
+    The colour label is written as Lightroom names it unless the sidecar
+    already words that colour its own way (see :func:`_label_to_write`).
     """
     from Imervue.user_settings.color_labels import get_color_label
     from Imervue.user_settings.tags import get_tags_for_image
@@ -402,14 +446,15 @@ def snapshot_from_settings(path: str) -> XmpData:
 
     titles = user_setting_dict.get("image_titles") or {}
     descriptions = user_setting_dict.get("image_descriptions") or {}
+    existing = load(path)
 
     return XmpData(
         rating=rating,
         title=str(titles.get(path, "")),
         description=str(descriptions.get(path, "")),
         keywords=list(get_tags_for_image(path)),
-        color_label=get_color_label(path) or "",
-        creator=load(path).creator,
+        color_label=_label_to_write(get_color_label(path), existing.color_label),
+        creator=existing.creator,
     )
 
 
@@ -418,7 +463,8 @@ def apply_to_settings(path: str, data: XmpData) -> None:
 
     Tags from the sidecar are merged into ``image_tags`` \u2014 we never delete
     tags the user already assigned just because the external editor didn't
-    know about them.
+    know about them. The label becomes the colour it stands for
+    (:func:`label_color`); one with no colour clears Imervue's.
     """
     from Imervue.user_settings.color_labels import set_color_label
     from Imervue.user_settings.tags import add_tag
@@ -446,7 +492,7 @@ def apply_to_settings(path: str, data: XmpData) -> None:
         if keyword:
             add_tag(keyword, path)
 
-    set_color_label(path, data.color_label or None)
+    set_color_label(path, label_color(data.color_label))
     schedule_save()
 
 

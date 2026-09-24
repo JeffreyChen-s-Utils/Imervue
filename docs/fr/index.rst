@@ -2141,6 +2141,13 @@ XMP, d'autres gestionnaires de photos compatibles XMP, Bridge et autres outils X
 
 L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé.
 
+Outre ``photo.xmp`` (Lightroom, Bridge), le ``photo.jpg.xmp`` qu'écrivent
+darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar. Les
+étiquettes de couleur sont comprises dans les mots de Lightroom (``Red`` …
+``Purple``) et de Bridge (``Select``, ``Second``, ``Approved``, ``Review``,
+``To Do``), et exportées comme Lightroom les écrit ; une étiquette sans couleur
+(personnalisée) reste dans le sidecar.
+
 - **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
   l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
 - **Exporter XMP pour l'image courante** — écrit la note / le titre / les

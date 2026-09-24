@@ -1272,6 +1272,12 @@ Imervue 支援讀寫 Adobe XMP sidecar 檔（``photo.jpg`` ↔ ``photo.xmp``）�
 
 儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。
 
+除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 與 digiKam 寫的
+``photo.jpg.xmp`` 在它是唯一的 sidecar 時也會讀取並更新。色彩標籤看得懂
+Lightroom 的寫法（``Red`` … ``Purple``）與 Bridge 的寫法（``Select``、``Second``、
+``Approved``、``Review``、``To Do``），匯出時照 Lightroom 的寫法寫入；沒有對應顏色的
+自訂標籤會留在 sidecar 裡。
+
 - **為當前圖片匯入 XMP** — 從 sidecar 讀取星等 / 標題 / 關鍵字 / 色彩標籤
   寫入內部資料庫。
 - **為當前圖片匯出 XMP** — 將當前星等 / 標題 / 關鍵字 / 色彩標籤寫入

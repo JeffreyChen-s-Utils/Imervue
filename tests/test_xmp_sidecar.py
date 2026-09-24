@@ -35,6 +35,48 @@ class TestSidecarPath:
         assert xmp.has_sidecar(image_path) is True
 
 
+class TestDarktableAndDigikamNaming:
+    """darktable and digiKam write photo.jpg.xmp, which Imervue never looked for."""
+
+    def test_an_appended_sidecar_is_read(self, xmp, image_path):
+        Path(image_path + ".xmp").write_text(_DARKTABLE_SIDECAR, encoding="utf-8")
+        assert xmp.has_sidecar(image_path)
+        loaded = xmp.load(image_path)
+        assert (loaded.rating, loaded.keywords) == (4, ["street", "night"])
+
+    def test_saving_merges_into_the_appended_sidecar(self, xmp, image_path):
+        appended = Path(image_path + ".xmp")
+        appended.write_text(_DARKTABLE_SIDECAR, encoding="utf-8")
+        assert xmp.save(image_path, xmp.XmpData(rating=2, keywords=["street"])) == appended
+        assert not Path(image_path).with_suffix(".xmp").exists()
+        (desc,) = _descriptions(appended)
+        assert desc.find("{http://darktable.sf.net/}history") is not None
+        assert xmp.load(image_path).rating == 2
+
+    def test_the_adobe_name_wins_when_both_exist(self, xmp, image_path):
+        Path(image_path + ".xmp").write_text(_DARKTABLE_SIDECAR, encoding="utf-8")
+        xmp.save(image_path, xmp.XmpData(rating=1))   # no photo.xmp yet: goes to photo.jpg.xmp
+        adobe = Path(image_path).with_suffix(".xmp")
+        adobe.write_text(_LIGHTROOM_SIDECAR, encoding="utf-8")
+        assert xmp.sidecar_path_for(image_path) == adobe
+        assert xmp.load(image_path).rating == 3
+
+    def test_a_new_sidecar_uses_the_adobe_name(self, xmp, image_path):
+        assert xmp.save(image_path, xmp.XmpData(rating=5)).name == "photo.xmp"
+        assert not Path(image_path + ".xmp").exists()
+
+
+class TestLabelColor:
+    @pytest.mark.parametrize(("label", "color"), [
+        ("Red", "red"), ("yellow", "yellow"), (" GREEN ", "green"),     # Lightroom
+        ("Select", "red"), ("Second", "yellow"), ("Approved", "green"),  # Bridge
+        ("Review", "blue"), ("To Do", "purple"),
+        ("", None), ("Needs retouch", None), ("Rot", None),
+    ])
+    def test_maps_lightroom_and_bridge_words(self, xmp, label, color):
+        assert xmp.label_color(label) == color
+
+
 class TestRoundTrip:
     def test_save_then_load_preserves_fields(self, xmp, image_path):
         data = xmp.XmpData(
@@ -146,6 +188,42 @@ class TestSettingsIntegration:
         assert user_setting_dict["image_titles"][image_path] == "Imported"
         assert set(get_tags_for_image(image_path)) == {"alpha", "beta"}
 
+    @pytest.mark.parametrize("label", ["Red", "Select"])
+    def test_import_understands_lightroom_and_bridge_labels(self, xmp, image_path, label):
+        """Lightroom's "Red" and Bridge's "Select" were rejected, clearing the label."""
+        from Imervue.user_settings.color_labels import get_color_label
+        xmp.save(image_path, xmp.XmpData(color_label=label))
+        xmp.import_for(image_path)
+        assert get_color_label(image_path) == "red"
+
+    def test_import_of_a_label_without_a_colour_clears_it(self, xmp, image_path):
+        from Imervue.user_settings.color_labels import get_color_label, set_color_label
+        set_color_label(image_path, "blue")
+        xmp.save(image_path, xmp.XmpData(color_label="Needs retouch"))
+        xmp.import_for(image_path)
+        assert get_color_label(image_path) is None
+
+    def test_export_writes_the_label_as_lightroom_names_it(self, xmp, image_path):
+        from Imervue.user_settings.color_labels import set_color_label
+        set_color_label(image_path, "green")
+        xmp.export_for(image_path)
+        assert xmp.load(image_path).color_label == "Green"
+
+    @pytest.mark.parametrize(("existing", "color", "written"), [
+        ("Approved", "green", "Approved"),    # Bridge's word for the same colour stays
+        ("Approved", "red", "Red"),           # another colour replaces it
+        ("Approved", None, ""),               # cleared in Imervue
+        ("Needs retouch", None, "Needs retouch"),   # a label Imervue can't show is kept
+        ("Needs retouch", "blue", "Blue"),
+    ])
+    def test_export_keeps_the_sidecars_wording_where_it_can(
+            self, xmp, image_path, existing, color, written):
+        from Imervue.user_settings.color_labels import set_color_label
+        xmp.save(image_path, xmp.XmpData(rating=1, color_label=existing))
+        set_color_label(image_path, color)
+        xmp.export_for(image_path)
+        assert xmp.load(image_path).color_label == written
+
     def test_import_empty_rating_clears_existing(self, xmp, image_path):
         from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -177,6 +255,21 @@ _LIGHTROOM_SIDECAR = """<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP C
    crs:Exposure2012="+0.65" crs:HasCrop="True">
    <crs:ToneCurvePV2012><rdf:Seq><rdf:li>0, 0</rdf:li><rdf:li>255, 255</rdf:li></rdf:Seq></crs:ToneCurvePV2012>
    <dc:subject><rdf:Bag><rdf:li>old</rdf:li></rdf:Bag></dc:subject>
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>
+"""
+_DARKTABLE_SIDECAR = """<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="XMP Core 4.4.0-Exiv2">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about=""
+    xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:darktable="http://darktable.sf.net/"
+   xmp:Rating="4" darktable:xmp_version="5" darktable:history_end="1">
+   <darktable:colorlabels><rdf:Seq><rdf:li>0</rdf:li></rdf:Seq></darktable:colorlabels>
+   <darktable:history><rdf:Seq><rdf:li darktable:operation="exposure"/></rdf:Seq></darktable:history>
+   <dc:subject><rdf:Bag><rdf:li>street</rdf:li><rdf:li>night</rdf:li></rdf:Bag></dc:subject>
   </rdf:Description>
  </rdf:RDF>
 </x:xmpmeta>

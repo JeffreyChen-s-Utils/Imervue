@@ -2123,6 +2123,12 @@ com suporte a XMP, Bridge e outras ferramentas com suporte a XMP.
 
 Salvar mescla no sidecar existente: só estes campos mudam, então as configurações de revelação, o recorte e o histórico de outro programa são mantidos, e um sidecar ilegível nunca é sobrescrito.
 
+Além de ``photo.xmp`` (Lightroom, Bridge), o ``photo.jpg.xmp`` que o darktable
+e o digiKam escrevem é lido e atualizado quando é o único sidecar. Os rótulos de
+cor são entendidos nas palavras do Lightroom (``Red`` … ``Purple``) e do Bridge
+(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), e exportados como o
+Lightroom os escreve; um rótulo sem cor (personalizado) fica no sidecar.
+
 - **Importar XMP da imagem atual** — extrai avaliação / título / palavras-chave /
   rótulo de cor do sidecar para o banco de dados interno.
 - **Exportar XMP da imagem atual** — grava a avaliação / título /

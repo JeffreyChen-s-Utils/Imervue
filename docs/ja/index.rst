@@ -1279,6 +1279,13 @@ other XMP-aware photo managers、other XMP-aware photo managers、Bridge など�
 
 保存時は既存の sidecar にマージします。変わるのはこれらの項目だけなので、RAW 現像ソフトが保存した現像設定・切り抜き・履歴は残り、解析できない sidecar は上書きしません。
 
+``photo.xmp``\ （Lightroom、Bridge）のほか、darktable と digiKam が書く
+``photo.jpg.xmp`` も、それが唯一の sidecar なら読み込んで更新します。
+カラーラベルは Lightroom の表記（``Red`` … ``Purple``）と Bridge の表記
+（``Select``、``Second``、``Approved``、``Review``、``To Do``）を理解し、
+エクスポート時は Lightroom の表記で書き込みます。色に対応しない独自ラベルは
+sidecar に残します。
+
 - **現在の画像の XMP をインポート** — sidecar から評価 / タイトル / キーワード
   / カラーラベルを内部 DB に取り込みます。
 - **現在の画像の XMP をエクスポート** — 現在の評価 / タイトル / キーワード /

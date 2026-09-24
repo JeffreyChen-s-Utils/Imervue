@@ -2143,6 +2143,13 @@ herramientas con soporte XMP.
 
 Al guardar se fusiona con el sidecar existente: solo cambian estos campos, así que los ajustes de revelado, el recorte y el historial de otro programa se conservan, y un sidecar ilegible nunca se sobrescribe.
 
+Además de ``photo.xmp`` (Lightroom, Bridge), se lee y actualiza el
+``photo.jpg.xmp`` que escriben darktable y digiKam cuando es el único sidecar.
+Las etiquetas de color se entienden con las palabras de Lightroom (``Red`` …
+``Purple``) y las de Bridge (``Select``, ``Second``, ``Approved``, ``Review``,
+``To Do``), y se exportan como las escribe Lightroom; una etiqueta sin color (una
+personalizada) se deja en el sidecar.
+
 - **Import XMP for current image** — extrae valoración / título / palabras clave /
   etiqueta de color del archivo secundario a la base de datos interna.
 - **Export XMP for current image** — escribe la valoración / título / palabras clave /
