@@ -40,13 +40,47 @@ def transform_for_orientation(arr: np.ndarray, code: int) -> np.ndarray:
     return np.ascontiguousarray(transform(arr))
 
 
+# Code → Pillow transpose; the same mapping ``ImageOps.exif_transpose`` uses.
+_PIL_TRANSPOSE = {
+    2: Image.Transpose.FLIP_LEFT_RIGHT,
+    3: Image.Transpose.ROTATE_180,
+    4: Image.Transpose.FLIP_TOP_BOTTOM,
+    5: Image.Transpose.TRANSPOSE,
+    6: Image.Transpose.ROTATE_270,
+    7: Image.Transpose.TRANSVERSE,
+    8: Image.Transpose.ROTATE_90,
+}
+
+
+def exif_orientation(img: Image.Image) -> int:
+    """Return the EXIF orientation code of an open image (1 when absent or unreadable)."""
+    try:
+        return int(img.getexif().get(_ORIENTATION_TAG, _TOP_LEFT))
+    except (*IMAGE_READ_ERRORS, AttributeError, TypeError):   # corrupt EXIF, or a non-numeric tag
+        return _TOP_LEFT
+
+
+def transpose_for(img: Image.Image, code: int) -> Image.Image:
+    """Return *img* turned upright for orientation *code*; *img* itself when no turn is needed.
+
+    Unlike ``ImageOps.exif_transpose`` this never copies an already-upright
+    image, which matters for a full-resolution load.
+    """
+    method = _PIL_TRANSPOSE.get(code)
+    return img if method is None else img.transpose(method)
+
+
+def upright(img: Image.Image) -> Image.Image:
+    """Return *img* turned upright by its own EXIF orientation."""
+    return transpose_for(img, exif_orientation(img))
+
+
 def read_orientation(path: str) -> int:
     """Return the EXIF orientation code of *path* (1 when absent / unreadable)."""
     try:
         with Image.open(path) as img:
-            exif = img.getexif()
-        return int(exif.get(_ORIENTATION_TAG, _TOP_LEFT))
-    except (*IMAGE_READ_ERRORS, AttributeError, TypeError):   # unreadable, or a non-numeric tag
+            return exif_orientation(img)
+    except IMAGE_READ_ERRORS:
         return _TOP_LEFT
 
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-78 | 2026-09-24 | Show EXIF-tagged photos upright across the viewer and Modify | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-77 | 2026-09-24 | Drop deferred calls whose widget was destroyed | #fix #qt | [2026-09](2026-09.md) |
 | U-20260924-76 | 2026-09-24 | Fix the viewer reload ImportError and check every internal import resolves | #fix #regression #test | [2026-09](2026-09.md) |
 | U-20260924-75 | 2026-09-24 | Let Image Organizer sort HEIC, JPEG XL and RAW photos | #feature #formats | [2026-09](2026-09.md) |

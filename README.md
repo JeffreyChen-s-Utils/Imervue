@@ -186,6 +186,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Separate worker pools** — thumbnail bursts and deep-zoom decodes run on different pools, so opening a large folder never starves the image you are actually looking at
 - **Virtualized thumbnail grid** — only visible tiles are rendered; thumbnail size is configurable (128 / 256 / 512 / 1024 / auto)
 - **Disk cache** — compressed PNG thumbnails with MD5-based invalidation under `%LOCALAPPDATA%/Imervue/cache/thumbnails` (or `~/.cache/imervue/thumbnails`)
+- **EXIF orientation** — portrait shots that a phone or camera tagged instead of turning are shown upright in the viewer, thumbnails, list view, hover preview and Modify tab; a develop crop / rotate saved before this keeps applying to the orientation it was drawn on
 - **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls
 
 ### Browsing modes

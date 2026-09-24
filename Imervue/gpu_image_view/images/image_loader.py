@@ -10,6 +10,7 @@ from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 
@@ -69,21 +70,23 @@ def _load_raw_thumbnail(raw) -> np.ndarray:
         )
 
 
-def _load_raster(path: str) -> np.ndarray:
+def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
+    code = exif_orientation(img) if orient else 1
     # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
     # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
     # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
     if img.mode not in ("RGB", "RGBA", "L"):
         img = img.convert("RGBA")
-    return np.array(img)
+    return np.array(transpose_for(img, code))
 
 
-def _load_raster_thumbnail(path: str, max_edge: int = 1600) -> np.ndarray:
+def _load_raster_thumbnail(path: str, max_edge: int = 1600, *, orient: bool = True) -> np.ndarray:
     with Image.open(path) as img:
+        code = exif_orientation(img) if orient else 1
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
         thumb = img.convert("RGBA") if img.mode not in ("RGB", "RGBA", "L") else img
-        return np.array(thumb)
+        return np.array(transpose_for(thumb, code))
 
 
 def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
@@ -104,8 +107,12 @@ def load_image_file(path, thumbnail=False, recipe=None):
     ``recipe`` 是可選的 :class:`Imervue.image.recipe.Recipe`: 若提供, 非 identity
     的部分會在回傳前套到 RGBA 陣列上. 呼叫端也可以先自行查 recipe_store 再決定
     要不要傳進來, 這個函式不強制依賴 store.
+
+    點陣圖依 EXIF Orientation 轉正; 例外是 recipe 的幾何是在轉正之前設定的
+    (``Recipe.base_is_oriented``), 那種 recipe 仍套在原始方向上.
     """
     ext = Path(path).suffix.lower()
+    orient = recipe is None or recipe.base_is_oriented()
     if ext in RAW_EXTENSIONS:
         img_data = _load_raw(path, thumbnail)
     elif ext == ".svg":
@@ -114,7 +121,8 @@ def load_image_file(path, thumbnail=False, recipe=None):
         img_data = poster_frame(path)
     else:
         ensure_pillow_opener(ext)
-        img_data = _load_raster_thumbnail(path) if thumbnail else _load_raster(path)
+        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
+                    else _load_raster(path, orient=orient))
 
     img_data = _ensure_rgba(img_data)
 

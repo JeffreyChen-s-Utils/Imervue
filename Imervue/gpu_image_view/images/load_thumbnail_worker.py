@@ -5,6 +5,7 @@ from PySide6.QtCore import QRunnable, Signal, QObject
 import numpy as np
 from PIL import Image
 
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.recipe_store import recipe_store
 from Imervue.image.thumbnail_disk_cache import thumbnail_disk_cache
 
@@ -53,7 +54,7 @@ class LoadThumbnailWorker(QRunnable):
         return thumbnail_disk_cache.get(self.path, self.size, r_hash)
 
     def _bake_fresh(self, recipe, r_hash: str):
-        img_data = self._load_by_extension()
+        img_data = self._load_by_extension(orient=recipe is None or recipe.base_is_oriented())
         if self._abort:
             return None
         img_data = self._ensure_rgba(img_data)
@@ -62,7 +63,7 @@ class LoadThumbnailWorker(QRunnable):
             thumbnail_disk_cache.put(self.path, self.size, img_data, r_hash)
         return img_data
 
-    def _load_by_extension(self):
+    def _load_by_extension(self, *, orient: bool = True):
         from Imervue.image.formats import RAW_EXTENSIONS
         from Imervue.image.heif_support import ensure_heif_opener, is_heif_path
         from Imervue.image.jxl_support import ensure_jxl_opener, is_jxl_path
@@ -78,7 +79,7 @@ class LoadThumbnailWorker(QRunnable):
             ensure_heif_opener()
         elif is_jxl_path(self.path):
             ensure_jxl_opener()
-        return self._load_standard()
+        return self._load_standard(orient=orient)
 
     def _load_video(self) -> np.ndarray:
         """Decode a video poster frame, downscaled for thumbnails."""
@@ -108,15 +109,16 @@ class LoadThumbnailWorker(QRunnable):
             logger.warning(f"Recipe apply failed for thumbnail {self.path}: {e}")
             return img_data
 
-    def _load_standard(self) -> np.ndarray:
-        """載入一般圖片，使用 thumbnail() 減少記憶體峰值"""
+    def _load_standard(self, *, orient: bool = True) -> np.ndarray:
+        """載入一般圖片，使用 thumbnail() 減少記憶體峰值；依 EXIF Orientation 轉正"""
         img = Image.open(self.path)
+        code = exif_orientation(img) if orient else 1
 
         if self.size is not None:
             # thumbnail() 會用 draft() 跳過不需要的解碼，大幅降低記憶體
             img.thumbnail((self.size, self.size), Image.Resampling.LANCZOS)
 
-        img = img.convert("RGBA")
+        img = transpose_for(img.convert("RGBA"), code)
         return np.array(img)
 
     def _load_svg(self) -> np.ndarray:

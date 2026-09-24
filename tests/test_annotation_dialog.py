@@ -718,3 +718,29 @@ class TestFileActions:
             assert (image.width(), image.height()) == (200, 100)
         finally:
             dlg.deleteLater()
+
+
+def test_open_for_path_hands_the_dialog_an_upright_image(qapp, tmp_path, monkeypatch):
+    """Save writes no EXIF, so a sideways base would be saved sideways for good."""
+    from unittest.mock import MagicMock
+
+    from PIL import Image as PILImage
+
+    import Imervue.gui.annotation_dialog as mod
+    exif = PILImage.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    PILImage.new("RGB", (40, 20)).save(path, exif=exif)
+    seen = []
+
+    class _Dialog:
+        def __init__(self, img, **_kwargs):
+            seen.append(img.size)
+
+        def __getattr__(self, _name):
+            return MagicMock()
+
+    monkeypatch.setattr(mod, "AnnotationDialog", _Dialog)
+    mod.open_annotation_for_path(MagicMock(), str(path))
+    assert seen == [(20, 40)]
+

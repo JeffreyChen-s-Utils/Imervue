@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ae9fa9e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `b347f71` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 837 | 136,575 |
+| `tests/` | 837 | 136,591 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
 | `Imervue/gui/` | 162 | 32,869 |
 | `Imervue/puppet/` | 57 | 15,286 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,659** | **314,603** |
+| **總計** | **1,659** | **314,619** |
 
 其中 `Imervue/` 套件本身 758 檔 / 163,822 行。
 
@@ -307,7 +307,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `recipe.py` | 598 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`，以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效） |
+| `recipe.py` | 613 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效） |
 | `recipe_store.py` | 374 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體） |
 | `recipe_adjustments.py` | 124 | `Recipe.apply` 用到的逐通道色調調整 |
 | `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
@@ -336,7 +336,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(57) EXIF orientation 烘焙
+`orientation.py`(91) EXIF orientation：`exif_orientation` / `transpose_for` / `upright`（檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）與 `oriented_array` 烘焙
 
 #### 藝術效果 / 疊加
 
@@ -365,12 +365,12 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `dimensions.py`(27) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
+`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `dimensions.py`(35) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
 `formats.py`(35) 能開的副檔名唯一來源：`RAW_EXTENSIONS`、`STILL_IMAGE_EXTENSIONS`（媒體庫）、`VIEWER_EXTENSIONS`（再加影片；檢視器、檔案樹、拖放、開啟對話框）、`ensure_pillow_opener(ext)` ·
 `save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
 `pyramid.py`(38) `DeepZoomImage` 金字塔 · `tile_manager.py`(94) 圖磚 LRU 快取與淘汰 ·
-`thumbnail_disk_cache.py`(234) 縮圖磁碟快取 · `folder_index.py`(59) 每資料夾圖片清單快取 ·
+`thumbnail_disk_cache.py`(237) 縮圖磁碟快取（鍵含 `_KEY_VERSION`，快取像素的意義改變時遞增） · `folder_index.py`(59) 每資料夾圖片清單快取 ·
 `read_errors.py`(15) `IMAGE_READ_ERRORS`：Pillow 讀圖失敗會丟的例外（`OSError`、`ValueError`、`SyntaxError`（損壞的 WebP EXIF）、`DecompressionBombError`）
 
 #### 中繼資料
@@ -461,8 +461,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 473 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；能開的副檔名取自 `image/formats.py` |
-| `load_thumbnail_worker.py` | 168 | 單張縮圖解碼 `QRunnable` |
+| `image_loader.py` | 481 | **核心載入路徑**：`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `load_thumbnail_worker.py` | 170 | 單張縮圖解碼 `QRunnable`（與 `load_image_file` 同一條 EXIF 轉正規則） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
 
@@ -531,14 +531,14 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 896 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_panel.py` | 905 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
-| `annotation_dialog.py` | 804 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
+| `annotation_dialog.py` | 809 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
 | `annotation_file_actions.py` | 184 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 98 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
@@ -556,13 +556,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_tree_view.py` | 932 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 182 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 599 | 清單檢視（`QTableView`，縮圖牆的替代） |
+| `image_list_view.py` | 606 | 清單檢視（`QTableView`，縮圖牆的替代） |
 | `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
 | `timeline_view.py` | 359 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
-| `hover_preview.py` | 186 | 縮圖懸停放大彈窗 |
+| `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
 | `multi_monitor_window.py` | 275 | 多螢幕鏡像視窗 |
 | `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-837 個檔、136,575 行。`pyproject.toml` 定義三個互斥層級 marker：
+837 個檔、136,591 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

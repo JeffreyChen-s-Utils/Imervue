@@ -184,6 +184,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Pools de workers séparés** — les rafales de vignettes et les décodages de zoom profond tournent sur des pools distincts, si bien qu'ouvrir un grand dossier n'affame jamais l'image que vous regardez
 - **Grille de vignettes virtualisée** — seules les tuiles visibles sont rendues ; taille de vignette configurable (128 / 256 / 512 / 1024 / auto)
 - **Cache disque** — vignettes PNG compressées avec invalidation basée sur MD5 sous `%LOCALAPPDATA%/Imervue/cache/thumbnails` (ou `~/.cache/imervue/thumbnails`)
+- **Orientation EXIF** — les photos en portrait que le téléphone ou l'appareil a seulement marquées au lieu de les pivoter s'affichent droites dans la visionneuse, les vignettes, la vue liste, l'aperçu au survol et l'onglet Modify ; un recadrage / une rotation de développement enregistré auparavant continue de s'appliquer à l'orientation sur laquelle il a été tracé
 - **Lecture d'animations** — GIF / APNG avec lecture / pause / défilement image par image / contrôle de vitesse
 
 ### Modes de navigation

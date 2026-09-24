@@ -487,7 +487,7 @@ class TestDecodedSourceCache:
 
         p.bind_to_path(None)
         assert p._decoded_source is None
-        assert p._decoded_source_path is None
+        assert p._decoded_source_key is None
 
         # Re-binding must decode again (cache was cleared).
         calls = self._spy_image_open(monkeypatch)
@@ -527,7 +527,33 @@ class TestDecodedSourceCache:
         result = p._load_image_with_recipe(str(real_image) + "x")
         assert result is None
         assert p._decoded_source is None
-        assert p._decoded_source_path is None
+        assert p._decoded_source_key is None
+
+
+class TestExifOrientedSource:
+    """The Modify tab decodes its own source; it must agree with the viewer."""
+
+    @staticmethod
+    def _portrait(tmp_path):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        path = tmp_path / "portrait.jpg"
+        Image.new("RGB", (40, 20)).save(path, exif=exif)
+        return str(path)
+
+    def test_tagged_photo_is_decoded_upright(self, panel, tmp_path):
+        p, _ = panel
+        p._current = Recipe()
+        assert p._decode_source(self._portrait(tmp_path)).size == (20, 40)
+
+    def test_legacy_geometry_recipe_decodes_the_stored_orientation(self, panel, tmp_path):
+        p, _ = panel
+        path = self._portrait(tmp_path)
+        p._current = Recipe.from_dict({"crop": [0, 0, 10, 10]})
+        assert p._decode_source(path).size == (40, 20)
+        p._current = Recipe()   # same path, other base: the cache must not answer
+        assert p._decode_source(path).size == (20, 40)
 
 
 class TestCropSave:

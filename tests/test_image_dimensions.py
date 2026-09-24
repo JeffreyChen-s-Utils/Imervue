@@ -48,3 +48,11 @@ def test_codec_is_registered_before_reading(tmp_path, monkeypatch):
     monkeypatch.setattr(dimensions, "ensure_pillow_opener", seen.append)
     image_dimensions(tmp_path / "a.JXL")
     assert seen == [".jxl"]
+
+
+def test_quarter_turn_orientation_reports_the_upright_size(tmp_path):
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    assert image_dimensions(path) == (20, 40)

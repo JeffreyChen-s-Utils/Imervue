@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
@@ -151,7 +152,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         # high-frequency operation; without this every debounce tick would
         # re-open and re-decode the full-resolution file from disk. We keep at
         # most one entry (the current path) so memory stays bounded.
-        self._decoded_source_path: str | None = None
+        # (path, EXIF-upright?) of the cached decode — see _decode_source.
+        self._decoded_source_key: tuple[str, bool] | None = None
         self._decoded_source: Image.Image | None = None
 
     # ------------------------------------------------------------------
@@ -279,12 +281,18 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         so repeated recipe previews for the same image reuse it instead of
         re-reading and re-decoding the file on every debounce tick. Only the
         current path is retained; binding to a different path discards it.
+
+        The source is turned upright by its EXIF orientation, as the viewer
+        loads it, unless the working recipe's geometry predates that
+        (``Recipe.base_is_oriented``).
         """
-        if self._decoded_source_path == path and self._decoded_source is not None:
+        orient = self._current.base_is_oriented()
+        if self._decoded_source_key == (path, orient) and self._decoded_source is not None:
             return self._decoded_source
 
         try:
             img = Image.open(path)
+            code = exif_orientation(img) if orient else 1
             if img.mode not in ("RGB", "RGBA", "L"):
                 img = img.convert("RGBA")
             else:
@@ -296,14 +304,15 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
         if img.mode != "RGBA":
             img = img.convert("RGBA")
+        img = transpose_for(img, code)
 
-        self._decoded_source_path = path
+        self._decoded_source_key = (path, orient)
         self._decoded_source = img
         return img
 
     def _invalidate_decoded_source(self) -> None:
         """Drop the cached decoded source so the next load re-decodes."""
-        self._decoded_source_path = None
+        self._decoded_source_key = None
         self._decoded_source = None
 
     def _load_image_with_recipe(self, path: str) -> Image.Image | None:

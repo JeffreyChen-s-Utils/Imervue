@@ -79,6 +79,10 @@ class Recipe:
     flip_h: bool = False
     flip_v: bool = False
     crop: tuple[int, int, int, int] | None = None   # (x, y, w, h) post-rotate
+    # Whether the geometry above was set on the EXIF-upright image. Images load
+    # upright now; a recipe saved before that (no such key, see ``from_dict``)
+    # set its rotate / flip / crop on the sideways pixels, so those keep them.
+    exif_oriented: bool = True
     brightness: float = 0.0        # -1..+1
     contrast: float = 0.0          # -1..+1
     saturation: float = 0.0        # -1..+1
@@ -148,6 +152,14 @@ class Recipe:
             and is_identity_points(self.tone_curve_b)
         )
 
+    def base_is_oriented(self) -> bool:
+        """Whether this recipe applies to the EXIF-upright image.
+
+        True unless it is a recipe saved before images loaded upright AND it
+        carries geometry; tone-only edits don't depend on the orientation.
+        """
+        return self.exif_oriented or self._geometry_is_identity()
+
     def _geometry_is_identity(self) -> bool:
         return (
             self.rotate_steps % 4 == 0
@@ -187,6 +199,7 @@ class Recipe:
             flip_h=bool(self.flip_h),
             flip_v=bool(self.flip_v),
             crop=crop,
+            exif_oriented=bool(self.exif_oriented),
             brightness=float(self.brightness),
             contrast=float(self.contrast),
             saturation=float(self.saturation),
@@ -245,6 +258,8 @@ class Recipe:
                     (float(p[0]), float(p[1])) for p in kwargs[curve_key]
                 ]
         kwargs["extra"] = extra
+        # Saved before images loaded EXIF-upright: its geometry is sideways-based.
+        kwargs.setdefault("exif_oriented", False)
         return cls(**kwargs)
 
     # ------------------------------------------------------------------

@@ -71,3 +71,27 @@ def test_falls_back_to_a_full_decode(monkeypatch, failure):
 def test_unexpected_error_propagates(monkeypatch):
     with pytest.raises(RuntimeError):
         _load(monkeypatch, RuntimeError("bug"))
+
+
+def _portrait(tmp_path):
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+@pytest.mark.parametrize("size", [None, 16])
+def test_tagged_photo_thumbnail_is_upright(tmp_path, size):
+    worker = mod.LoadThumbnailWorker(_portrait(tmp_path), size=size)
+    arr = worker._bake_fresh(None, "")
+    height, width = arr.shape[:2]
+    assert height > width
+
+
+def test_legacy_geometry_recipe_keeps_the_stored_orientation(tmp_path):
+    from Imervue.image.recipe import Recipe
+    worker = mod.LoadThumbnailWorker(_portrait(tmp_path), size=None)
+    arr = worker._bake_fresh(Recipe.from_dict({"rotate_steps": 2}), "x")
+    assert arr.shape[:2] == (20, 40)   # rotated 180 on the stored 40x20 pixels
+

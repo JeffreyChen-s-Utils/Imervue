@@ -184,6 +184,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Getrennte Worker-Pools** — Thumbnail-Schübe und Deep-Zoom-Dekodierungen laufen in verschiedenen Pools, sodass das Öffnen eines großen Ordners nie das Bild aushungert, das du gerade ansiehst
 - **Virtualisiertes Thumbnail-Grid** — Nur sichtbare Tiles werden gerendert; Thumbnail-Größe konfigurierbar (128 / 256 / 512 / 1024 / auto)
 - **Festplatten-Cache** — Komprimierte PNG-Thumbnails mit MD5-basierter Invalidierung unter `%LOCALAPPDATA%/Imervue/cache/thumbnails` (oder `~/.cache/imervue/thumbnails`)
+- **EXIF-Ausrichtung** — Hochformatfotos, die Handy oder Kamera nur markiert statt gedreht haben, erscheinen aufrecht in Viewer, Thumbnails, Listenansicht, Hover-Vorschau und Modify-Tab; ein zuvor gespeicherter Develop-Zuschnitt / eine Drehung gilt weiter für die Ausrichtung, auf der er erstellt wurde
 - **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung
 
 ### Browse-Modi

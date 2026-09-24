@@ -45,6 +45,9 @@ from Imervue.image.read_errors import IMAGE_READ_ERRORS
 logger = logging.getLogger("Imervue.thumbnail_cache")
 
 _CACHE_EXT = ".png"
+# Bump when the cached pixels change meaning, so older entries stop matching.
+# 2: thumbnails are EXIF-upright.
+_KEY_VERSION = 2
 _LEGACY_EXTS = (".npy",)  # formats we quietly clean up at startup
 
 
@@ -130,7 +133,7 @@ class ThumbnailDiskCache:
     def _key(path: str, size: int, recipe_hash: str = "") -> str:
         try:
             st = Path(path).stat()
-            raw = f"{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
+            raw = f"{_KEY_VERSION}|{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
         except OSError:
             return ""
         return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()

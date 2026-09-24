@@ -27,6 +27,9 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.file_filters import viewer_filter
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -77,15 +80,19 @@ class _ThumbWorker(QRunnable):
             stat = os.stat(self.path)
             size_kb = stat.st_size / 1024
             mtime = stat.st_mtime
+            ensure_pillow_opener(Path(self.path).suffix)
             with Image.open(self.path) as src:
                 w, h = src.size
+                code = exif_orientation(src)
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = src.convert("RGBA")
-                data = im.tobytes("raw", "RGBA")
-                qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
-                # .copy() detaches from the soon-freed `data` buffer; the GUI
-                # thread turns this QImage into a QPixmap in _on_fetched.
-                img = qimg.copy()
+                im = transpose_for(src.convert("RGBA"), code)
+            # The upright size, and the developed size for RAW (Pillow sees its preview).
+            w, h = image_dimensions(self.path) or (w, h)
+            data = im.tobytes("raw", "RGBA")
+            qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
+            # .copy() detaches from the soon-freed `data` buffer; the GUI
+            # thread turns this QImage into a QPixmap in _on_fetched.
+            img = qimg.copy()
         # Any failure must still emit so the model clears the in-flight marker
         # and can retry rather than leaving the row stuck forever. A null QImage
         # tells the slot to build the placeholder pixmap on the GUI thread.

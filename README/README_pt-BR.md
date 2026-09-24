@@ -184,6 +184,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Pools de workers separados** — rajadas de miniaturas e decodificações de zoom profundo rodam em pools distintos, então abrir uma pasta grande nunca deixa sem recursos a imagem que você está vendo
 - **Grade virtualizada de miniaturas** — apenas tiles visíveis são renderizados; o tamanho das miniaturas é configurável (128 / 256 / 512 / 1024 / auto)
 - **Cache em disco** — miniaturas PNG comprimidas com invalidação baseada em MD5 em `%LOCALAPPDATA%/Imervue/cache/thumbnails` (ou `~/.cache/imervue/thumbnails`)
+- **Orientação EXIF** — fotos em retrato que o celular ou a câmera apenas marcaram em vez de girar aparecem na posição certa no visualizador, nas miniaturas, na lista, na prévia ao passar o mouse e na aba Modify; um recorte / giro de revelação salvo antes continua valendo para a orientação em que foi feito
 - **Reprodução de animação** — GIF / APNG com controles de play / pause / passo por quadro / velocidade
 
 ### Modos de navegação

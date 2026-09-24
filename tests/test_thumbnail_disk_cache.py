@@ -49,6 +49,12 @@ class TestKey:
         assert tdc.ThumbnailDiskCache._key(source_image, 128) != \
                tdc.ThumbnailDiskCache._key(source_image, 256)
 
+    def test_depends_on_the_key_version(self, source_image, monkeypatch):
+        """Bumping the version retires entries baked the old way (v2: EXIF-upright)."""
+        before = tdc.ThumbnailDiskCache._key(source_image, 128)
+        monkeypatch.setattr(tdc, "_KEY_VERSION", tdc._KEY_VERSION + 1)
+        assert tdc.ThumbnailDiskCache._key(source_image, 128) != before
+
     def test_depends_on_recipe_hash(self, source_image):
         assert tdc.ThumbnailDiskCache._key(source_image, 128, "rA") != \
                tdc.ThumbnailDiskCache._key(source_image, 128, "rB")

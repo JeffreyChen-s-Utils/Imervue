@@ -14,6 +14,9 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from PySide6.QtCore import Qt, QTimer, QPoint, QSize
 from PySide6.QtGui import QPixmap, QImage, QGuiApplication, QFont
@@ -72,7 +75,7 @@ class HoverPreviewPopup(QWidget):
         self._image_label.setPixmap(pm)
         self._image_label.setFixedSize(pm.size())
 
-        caption = self._build_caption(path, pm)
+        caption = self._build_caption(path, image_dimensions(path) or (pm.width(), pm.height()))
         self._caption.setText(caption)
         self.adjustSize()
 
@@ -80,7 +83,8 @@ class HoverPreviewPopup(QWidget):
         self.show()
         self.raise_()
 
-    def _build_caption(self, path: str, pm: QPixmap) -> str:
+    def _build_caption(self, path: str, dims: tuple[int, int]) -> str:
+        """``name · W×H · size``; *dims* is the image's own size, not the scaled preview's."""
         name = Path(path).name
         try:
             stat = os.stat(path)
@@ -93,18 +97,20 @@ class HoverPreviewPopup(QWidget):
             size_str = f"{size / 1024:.0f} KB"
         else:
             size_str = "—"
-        return f"{name}   \u00B7   {pm.width()}\u00D7{pm.height()}   \u00B7   {size_str}"
+        return f"{name}   \u00B7   {dims[0]}\u00D7{dims[1]}   \u00B7   {size_str}"
 
 
 def _load_preview(path: str, max_edge: int = PREVIEW_MAX_EDGE) -> QPixmap | None:
     """Load a file and downscale to ``max_edge`` on the long side.
 
     Falls back to whatever PIL can open; returns None on failure so the
-    popup stays hidden rather than showing a broken preview.
+    popup stays hidden rather than showing a broken preview. The preview is
+    turned upright by the file's EXIF orientation, as the viewer shows it.
     """
+    ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as src:
-            im = src.convert("RGBA")
+            im = transpose_for(src.convert("RGBA"), exif_orientation(src))
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:

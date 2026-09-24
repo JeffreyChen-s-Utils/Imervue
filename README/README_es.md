@@ -184,6 +184,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Pools de trabajo separados** — las ráfagas de miniaturas y las decodificaciones de zoom profundo usan pools distintos, así abrir una carpeta grande nunca deja sin recursos a la imagen que estás mirando
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)
 - **Caché en disco** — miniaturas PNG comprimidas con invalidación basada en MD5 en `%LOCALAPPDATA%/Imervue/cache/thumbnails` (o `~/.cache/imervue/thumbnails`)
+- **Orientación EXIF** — las fotos verticales que el móvil o la cámara solo marcaron en lugar de girarlas se muestran derechas en el visor, las miniaturas, la vista de lista, la vista previa al pasar el cursor y la pestaña Modify; un recorte / giro de revelado guardado antes sigue aplicándose a la orientación sobre la que se hizo
 - **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad
 
 ### Modos de exploración

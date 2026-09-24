@@ -46,6 +46,7 @@ from Imervue.gui.annotation_canvas import (
     _point_segment_distance,
 )
 from Imervue.gui.annotation_destructive import _BakeDestructiveCommand
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.gui.annotation_file_actions import (
     _LOAD_PROJECT_FALLBACK,
     AnnotationFileActionsMixin,
@@ -764,10 +765,14 @@ def open_annotation_for_path(
     """
     try:
         img = Image.open(path)
+        code = exif_orientation(img)
         if img.mode not in ("RGB", "RGBA", "L"):
             img = img.convert(_MODE_RGBA)
         else:
             img.load()  # force decode now so errors surface before the dialog
+        # Upright, as the viewer shows it. The save writes no EXIF, so pixels
+        # left sideways would lose their orientation tag and stay sideways.
+        img = transpose_for(img, code)
     except Exception as exc:
         logger.exception("annotation load failed: %s", path)
         if hasattr(main_gui.main_window, "toast"):
