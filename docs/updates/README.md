@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-69 | 2026-09-24 | Count, not time, the pump_until immediate-return test | #test #flaky | [2026-09](2026-09.md) |
 | U-20260924-68 | 2026-09-24 | Offer every viewer format in Open and Relocate, and translate file-dialog filter labels | #i18n #fix | [2026-09](2026-09.md) |
 | U-20260924-67 | 2026-09-24 | Label the full-resolution thumbnail entry instead of showing None | #i18n #fix | [2026-09](2026-09.md) |
 | U-20260924-66 | 2026-09-24 | Translate the slider range, VRAM tooltip, pet sizes and idle toasts | #i18n #fix | [2026-09](2026-09.md) |

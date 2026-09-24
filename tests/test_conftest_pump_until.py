@@ -8,10 +8,13 @@ from __future__ import annotations
 import time
 
 
-def test_returns_true_as_soon_as_the_predicate_holds(pump_until):
-    started = time.monotonic()
-    assert pump_until(lambda: True) is True
-    assert time.monotonic() - started < 1.0
+def test_returns_true_as_soon_as_the_predicate_holds(pump_until, monkeypatch):
+    # Counted, not timed: one processEvents pass on a loaded machine has taken
+    # over a second, which a wall-clock bound read as waiting.
+    calls, sleeps = [], []
+    monkeypatch.setattr(time, "sleep", sleeps.append)
+    assert pump_until(lambda: calls.append(1) or True) is True
+    assert (len(calls), sleeps) == (1, [])
 
 
 def test_returns_false_after_the_timeout(pump_until):
