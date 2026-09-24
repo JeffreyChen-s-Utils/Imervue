@@ -240,7 +240,7 @@ spanish_word_dict.update({
     "editor_saved": "Guardado",
     "exif_edit_button": "Editar EXIF",
     "exif_editor_title": "Editar metadatos EXIF",
-    "exif_editor_unsupported": "El EXIF se puede editar en archivos JPEG (los archivos WebP necesitan el paquete piexif).",
+    "exif_editor_unsupported": "El EXIF solo se puede editar en archivos JPEG y WebP.",
     "exif_editor_fields": "Campos de metadatos",
     "exif_editor_save": "Guardar",
     "exif_editor_cancel": "Cancelar",

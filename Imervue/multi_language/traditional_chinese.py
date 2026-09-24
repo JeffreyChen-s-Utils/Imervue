@@ -322,7 +322,7 @@ traditional_chinese_word_dict = {
     # EXIF 編輯器
     "exif_edit_button": "編輯 EXIF",
     "exif_editor_title": "編輯 EXIF 元資料",
-    "exif_editor_unsupported": "可以編輯 JPEG 檔的 EXIF（WebP 檔需要 piexif 套件）。",
+    "exif_editor_unsupported": "只能編輯 JPEG 與 WebP 檔的 EXIF。",
     "exif_editor_fields": "元資料欄位",
     "exif_editor_save": "儲存",
     "exif_editor_cancel": "取消",

@@ -106,3 +106,35 @@ def test_save_over_source_refuses_a_file_it_cannot_rewrite(tmp_path):
     with pytest.raises(ValueError, match="saved back whole"):
         save_over_source(raw, Image.new("RGB", (4, 4)))
     assert raw.read_bytes() == b"RAW"
+
+
+@pytest.mark.parametrize("name", ["a.jpg", "a.webp"])
+def test_rewrite_exif_edits_only_the_exif(tmp_path, name):
+    from PIL import Image
+
+    from Imervue.image.in_place_save import can_rewrite_exif, rewrite_exif
+    path = tmp_path / name
+    Image.new("RGB", (8, 8), (40, 80, 120)).save(path)
+    with Image.open(path) as img:
+        pixels = img.convert("RGB").tobytes()
+    assert can_rewrite_exif(path) is True
+
+    def tag(exif):
+        exif[0x010F] = "Canon"
+
+    rewrite_exif(path, tag)
+    with Image.open(path) as img:
+        assert img.getexif()[0x010F] == "Canon"
+        assert img.convert("RGB").tobytes() == pixels
+    assert [p.name for p in tmp_path.iterdir()] == [name]
+
+
+def test_rewrite_exif_refuses_other_formats(tmp_path):
+    from PIL import Image
+
+    from Imervue.image.in_place_save import can_rewrite_exif, rewrite_exif
+    path = tmp_path / "a.png"
+    Image.new("RGB", (4, 4)).save(path)
+    assert can_rewrite_exif(path) is False
+    with pytest.raises(ValueError, match="can't rewrite the EXIF"):
+        rewrite_exif(path, lambda _exif: None)

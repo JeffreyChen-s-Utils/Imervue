@@ -333,7 +333,7 @@ japanese_word_dict = {
     # EXIF エディター
     "exif_edit_button": "EXIF を編集",
     "exif_editor_title": "EXIF メタデータを編集",
-    "exif_editor_unsupported": "EXIF を編集できるのは JPEG ファイルです（WebP ファイルには piexif パッケージが必要です）。",
+    "exif_editor_unsupported": "EXIF を編集できるのは JPEG と WebP ファイルです。",
     "exif_editor_fields": "メタデータフィールド",
     "exif_editor_save": "保存",
     "exif_editor_cancel": _JAPANESE_TR30AD30E330F330BB,

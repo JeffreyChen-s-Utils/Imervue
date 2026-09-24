@@ -2407,9 +2407,9 @@ Geoetiqueta GPS
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` lee cualquier etiqueta GPS existente
 de EXIF y le permite editar o establecer nuevas coordenadas en grados decimales. Un JPEG se
 escribe in situ sin paquetes extra: solo cambia su bloque EXIF, así que los píxeles, las demás
-etiquetas y la miniatura quedan igual. Otros formatos necesitan ``piexif``.
+etiquetas y la miniatura quedan igual. Un WebP se trata igual; los demás formatos no se pueden etiquetar.
 
-El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG no necesita paquetes extra y solo se reescribe su bloque EXIF; WebP necesita ``piexif`` y los demás formatos explican por qué no se pueden editar.
+El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG o WebP no necesita paquetes extra y solo se reescribe su bloque EXIF; los demás formatos explican por qué no se pueden editar.
 
 Diseño de impresión
 ^^^^^^^^^^^^^^^^^^^

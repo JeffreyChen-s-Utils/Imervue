@@ -19,8 +19,10 @@ from pathlib import Path
 from PIL import Image, JpegImagePlugin, PngImagePlugin
 
 from Imervue.image.exif_types import restore_types
+from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.webp_exif import update_webp_exif
 
 _IN_PLACE_FORMATS: dict[str, str] = {
     ".png": "PNG",
@@ -231,3 +233,29 @@ def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
     if fmt == "WEBP" and "lossless" not in kwargs:
         kwargs.setdefault("quality", 90)
     return kwargs
+
+
+_EXIF_REWRITERS: dict[str, Callable[[bytes, Callable[[Image.Exif], None]], bytes]] = {
+    "JPEG": update_jpeg_exif, "WEBP": update_webp_exif,
+}
+
+
+def can_rewrite_exif(path: str | Path) -> bool:
+    """Whether :func:`rewrite_exif` can edit *path*'s EXIF without re-encoding it (JPEG, WebP)."""
+    return in_place_format(path) in _EXIF_REWRITERS
+
+
+def rewrite_exif(path: str | Path, update: Callable[[Image.Exif], None]) -> None:
+    """Apply *update* to the EXIF of *path* and replace the file in one step.
+
+    Only the EXIF block changes: a JPEG's APP1 segment or a WebP's ``EXIF``
+    chunk is swapped, so the image data, the other metadata and the embedded
+    thumbnail stay byte for byte. Raises ``ValueError`` for a format
+    :func:`can_rewrite_exif` refuses or a malformed file, ``OSError`` when the
+    read or write fails.
+    """
+    rewriter = _EXIF_REWRITERS.get(in_place_format(path) or "")
+    if rewriter is None:
+        raise ValueError(f"can't rewrite the EXIF of {path}")
+    rewritten = rewriter(Path(path).read_bytes(), update)
+    replace_atomically(path, lambda tmp: tmp.write_bytes(rewritten))

@@ -127,7 +127,20 @@ def test_failed_write_is_reported_and_logged(editor, monkeypatch, caplog, exc):
     assert record.exc_info[0] is type(exc)
 
 
-@pytest.mark.parametrize("name", ["a.png", "a.webp", "a.tif"])
+def test_webp_is_edited_too(qapp, tmp_path):
+    path = tmp_path / "a.webp"
+    Image.new("RGB", (8, 8)).save(path)
+    dlg, toast, _s = _dialog(path)
+    try:
+        dlg._fields[_ARTIST].setText("Ada")  # noqa: SLF001
+        dlg._save()  # noqa: SLF001
+        assert toast.calls == [("success", ("EXIF saved!",))]
+    finally:
+        dlg.deleteLater()
+    assert _exif(path)[_ARTIST] == "Ada"
+
+
+@pytest.mark.parametrize("name", ["a.png", "a.gif", "a.tif"])
 def test_other_formats_explain_instead_of_editing(qapp, tmp_path, name):
     path = tmp_path / name
     Image.new("RGB", (8, 8)).save(path)
@@ -135,7 +148,7 @@ def test_other_formats_explain_instead_of_editing(qapp, tmp_path, name):
     try:
         assert dlg._fields == {}  # noqa: SLF001
         texts = [dlg.layout().itemAt(i).widget().text() for i in range(dlg.layout().count())]
-        assert texts[0].startswith("EXIF can be edited in JPEG files")
+        assert texts[0] == "EXIF can be edited in JPEG and WebP files."
         assert texts[1] == "Close"
     finally:
         dlg.deleteLater()

@@ -3,8 +3,8 @@ EXIF 元資料編輯對話框
 Edit a handful of EXIF text fields and save them back to the file.
 
 The reading, encoding and writing live in :mod:`Imervue.image.exif_fields`:
-a JPEG is edited through Pillow alone (only its EXIF segment is rewritten), a
-WebP needs ``piexif``, and other formats get a read-only explanation.
+a JPEG or WebP is edited through Pillow alone (only its EXIF block is
+rewritten), and other formats get an explanation instead.
 """
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ class ExifEditorDialog(QDialog):
         layout.addWidget(QLabel(
             lang.get(
                 "exif_editor_unsupported",
-                "EXIF can be edited in JPEG files (WebP files need the piexif package).",
+                "EXIF can be edited in JPEG and WebP files.",
             )
         ))
         close_btn = QPushButton(lang.get("exif_editor_close", "Close"))
@@ -108,7 +108,7 @@ class ExifEditorDialog(QDialog):
         values = {tag: edit.text() for tag, edit in self._fields.items()}
         try:
             save_fields(self._path, values)
-        # Pillow's EXIF writer and piexif fail in open-ended ways on a bad value:
+        # Pillow's EXIF writer fails in open-ended ways on a bad value:
         # struct.error for an out-of-range number, KeyError / TypeError for an
         # odd tag, on top of the ValueError / OSError of a malformed or locked file.
         except Exception as e:  # noqa: BLE001 - EXIF encoders raise open-ended types

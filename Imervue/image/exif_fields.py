@@ -1,9 +1,9 @@
 """The EXIF editor's fields: read, apply and save them without piexif.
 
 Pure logic behind ``gui/exif_editor.py``. The model is Pillow's
-``Image.Exif``. A JPEG is saved by swapping its EXIF segment
-(``jpeg_exif``), so the pixels and every other tag stay as they were. A WebP
-still needs ``piexif`` to insert the block; nothing else is editable.
+``Image.Exif``. A JPEG or WebP is saved by swapping only its EXIF block
+(``in_place_save.rewrite_exif``), so the image data and every other tag stay
+as they were; other formats aren't editable.
 """
 from __future__ import annotations
 
@@ -14,8 +14,7 @@ from pathlib import Path
 from PIL import Image
 
 from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.in_place_save import in_place_format, replace_atomically
-from Imervue.image.jpeg_exif import serialize_exif, update_jpeg_exif
+from Imervue.image.in_place_save import can_rewrite_exif, rewrite_exif
 
 _EXIF_IFD = 0x8769
 _GPS_IFD = 0x8825
@@ -48,7 +47,7 @@ EDITABLE_FIELDS: tuple[ExifField, ...] = (
 
 
 def _utf16(exif: Image.Exif) -> str:
-    """UTF-16 in the block's byte order, as piexif and the EXIF spec write UNICODE comments."""
+    """UTF-16 in the block's byte order, as the EXIF spec (and piexif) write UNICODE comments."""
     return "utf-16-le" if exif.endian == "<" else "utf-16-be"
 
 
@@ -126,18 +125,9 @@ def apply_fields(exif: Image.Exif, values: Mapping[int, str]) -> None:
         exif[_EXIF_IFD] = exif.get(_EXIF_IFD, 0)   # the save writes the IFD and its real offset
 
 
-def _piexif():
-    try:
-        import piexif
-    except ImportError:
-        return None
-    return piexif
-
-
 def can_edit(path: str | Path) -> bool:
-    """Whether :func:`save_fields` can write *path*: a JPEG, or a WebP when piexif is installed."""
-    fmt = in_place_format(path)
-    return fmt == "JPEG" or (fmt == "WEBP" and _piexif() is not None)
+    """Whether :func:`save_fields` can write *path* (a JPEG or WebP)."""
+    return can_rewrite_exif(path)
 
 
 def load_exif(path: str | Path) -> Image.Exif:
@@ -156,19 +146,8 @@ def load_exif(path: str | Path) -> Image.Exif:
 def save_fields(path: str | Path, values: Mapping[int, str]) -> None:
     """Write *values* into the EXIF of *path*, replacing the file in one step.
 
-    A JPEG keeps its pixels, other tags and thumbnail byte for byte. Raises
-    ``ValueError`` for a file :func:`can_edit` refuses or a malformed JPEG,
+    The image data, other tags and thumbnail stay byte for byte. Raises
+    ``ValueError`` for a file :func:`can_edit` refuses or a malformed one,
     ``OSError`` when the write fails.
     """
-    fmt = in_place_format(path)
-    if fmt == "JPEG":
-        data = Path(path).read_bytes()
-        rewritten = update_jpeg_exif(data, lambda exif: apply_fields(exif, values))
-        replace_atomically(path, lambda tmp: tmp.write_bytes(rewritten))
-        return
-    piexif = _piexif() if fmt == "WEBP" else None
-    if piexif is None:
-        raise ValueError(f"can't write EXIF into {path}")
-    exif = load_exif(path)
-    apply_fields(exif, values)
-    piexif.insert(serialize_exif(exif), str(path))
+    rewrite_exif(path, lambda exif: apply_fields(exif, values))

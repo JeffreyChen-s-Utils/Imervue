@@ -330,7 +330,7 @@ korean_word_dict = {
     # EXIF 편집기
     "exif_edit_button": "EXIF 편집",
     "exif_editor_title": "EXIF 메타데이터 편집",
-    "exif_editor_unsupported": "EXIF는 JPEG 파일에서 편집할 수 있습니다 (WebP 파일은 piexif 패키지가 필요합니다).",
+    "exif_editor_unsupported": "EXIF는 JPEG와 WebP 파일에서만 편집할 수 있습니다.",
     "exif_editor_fields": "메타데이터 필드",
     "exif_editor_save": "저장",
     "exif_editor_cancel": "취소",

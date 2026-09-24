@@ -103,20 +103,23 @@ class TestWithoutPiexif:
         assert path.read_bytes() == b"\xff\xd8\xff\xe1\x00"
         assert [f.name for f in tmp_path.iterdir()] == ["broken.jpg"]
 
-    def test_other_formats_need_piexif(self, tmp_path, no_piexif):
+    def test_webp_is_tagged_without_piexif(self, tmp_path, no_piexif):
+        """WebP used to need piexif; its EXIF chunk is now swapped directly."""
         path = tmp_path / "a.webp"
+        Image.new("RGB", (8, 8), (10, 20, 30)).save(path, quality=90)
+        before = Image.open(path).convert("RGB").tobytes()
+        assert gps_geotag.write_gps(path, 12.5, -45.25) is True
+        assert extract_gps(path) == pytest.approx((12.5, -45.25), abs=1e-6)
+        with Image.open(path) as img:
+            assert img.convert("RGB").tobytes() == before
+
+    @pytest.mark.parametrize("name", ["a.png", "a.tif", "a.gif"])
+    def test_formats_without_an_exif_rewrite_are_refused(self, tmp_path, no_piexif, name):
+        path = tmp_path / name
         Image.new("RGB", (8, 8)).save(path)
         before = path.read_bytes()
         assert gps_geotag.write_gps(path, 1.0, 2.0) is False
         assert path.read_bytes() == before
-
-
-def test_webp_goes_through_piexif_when_installed(tmp_path):
-    pytest.importorskip("piexif")
-    path = tmp_path / "a.webp"
-    Image.new("RGB", (8, 8)).save(path)
-    assert gps_geotag.write_gps(path, 12.5, -45.25) is True
-    assert extract_gps(path) == pytest.approx((12.5, -45.25), abs=1e-6)
 
 
 class TestToRational:

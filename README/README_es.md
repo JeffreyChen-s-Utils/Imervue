@@ -257,11 +257,11 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Metadatos
 
 - **Barra lateral EXIF** con grupos colapsables + tira en línea de 0-5 estrellas
-- Diálogo **editor EXIF** — descripción, artista, copyright, cámara y comentario (Unicode incluido) escritos en un JPEG sin paquetes extra, sin tocar los píxeles ni las demás etiquetas (WebP necesita `piexif`)
+- Diálogo **editor EXIF** — descripción, artista, copyright, cámara y comentario (Unicode incluido) escritos en un JPEG o WebP sin paquetes extra, sin tocar los píxeles ni las demás etiquetas
 - **Editor de palabras clave** — título / autor / descripción / palabras clave, con **sugerencias de etiquetas relacionadas** derivadas de la coocurrencia de etiquetas y expansión de vocabulario controlado (una palabra clave hoja aplica automáticamente sus ancestros + sinónimos desde un vocabulario jerárquico editable)
 - Diálogo de **información de imagen** (dimensiones / tamaño / fechas)
 - **Sidecars XMP** (archivos `.xmp` acompañantes) — ida y vuelta de calificación / título / descripción / palabras clave / etiqueta de color para interoperabilidad con otros gestores de fotos XMP-aware (XML seguro vía `defusedxml`)
-- **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon en un JPEG sin paquetes extra, sin tocar sus píxeles, otras etiquetas ni la miniatura (otros formatos necesitan `piexif`)
+- **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon en un JPEG o WebP sin paquetes extra, sin tocar sus píxeles, otras etiquetas ni la miniatura
 - **Renombrado por lotes con tokens** — plantillas con vista previa en vivo como `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exportar metadatos a CSV / JSON** — una fila por imagen incluyendo culling / calificación / etiquetas / notas
 

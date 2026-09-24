@@ -6,7 +6,6 @@ import sys
 import pytest
 from PIL import Image
 
-from Imervue.image import exif_fields as mod
 from Imervue.image.exif_fields import (
     USER_COMMENT, apply_fields, can_edit, decode_user_comment, encode_user_comment,
     read_fields, save_fields,
@@ -67,29 +66,28 @@ def test_latin1_text_that_is_not_utf8_is_shown_as_is():
     assert read_fields(_round_trip(exif))[_ARTIST] == "René"
 
 
-@pytest.mark.parametrize(("name", "piexif_installed", "expected"), [
-    ("a.jpg", False, True), ("a.JPEG", False, True), ("a.webp", False, False),
-    ("a.webp", True, True), ("a.png", True, False), ("a.cr2", True, False),
+@pytest.mark.parametrize(("name", "expected"), [
+    ("a.jpg", True), ("a.JPEG", True), ("a.webp", True),
+    ("a.png", False), ("a.tif", False), ("a.cr2", False), ("a.heic", False),
 ])
-def test_can_edit(monkeypatch, name, piexif_installed, expected):
-    monkeypatch.setattr(mod, "_piexif", lambda: object() if piexif_installed else None)
+def test_can_edit(name, expected):
     assert can_edit(name) is expected
 
 
-def test_save_refuses_an_uneditable_file(tmp_path, monkeypatch):
-    monkeypatch.setitem(sys.modules, "piexif", None)
+def test_save_refuses_an_uneditable_file(tmp_path):
     path = tmp_path / "a.png"
     Image.new("RGB", (4, 4)).save(path)
     before = path.read_bytes()
-    with pytest.raises(ValueError, match="can't write EXIF"):
+    with pytest.raises(ValueError, match="can't rewrite the EXIF"):
         save_fields(path, {_ARTIST: "Ada"})
     assert path.read_bytes() == before
 
 
-def test_save_into_webp_goes_through_piexif(tmp_path):
-    pytest.importorskip("piexif")
+def test_save_into_webp_needs_no_piexif(tmp_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, "piexif", None)
     path = tmp_path / "a.webp"
     Image.new("RGB", (8, 8)).save(path)
-    save_fields(path, {_ARTIST: "Ada"})
+    save_fields(path, {_ARTIST: "Ada", USER_COMMENT: "中文"})
     with Image.open(path) as img:
-        assert read_fields(img.getexif())[_ARTIST] == "Ada"
+        values = read_fields(img.getexif())
+    assert (values[_ARTIST], values[USER_COMMENT]) == ("Ada", "中文")
