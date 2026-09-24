@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,8 +32,8 @@ from PySide6.QtWidgets import (
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -76,22 +75,10 @@ def _scan_folder(folder: str) -> list[str]:
 
 def _get_image_date(path: str, year_only: bool) -> str:
     """Return a date-based subfolder name for *path*."""
-    fmt = "%Y" if year_only else "%Y-%m"
-    # Try EXIF DateTimeOriginal (tag 36867)
-    # Unreadable file, or a date tag that is missing, not text or not EXIF-formatted.
-    with contextlib.suppress(*IMAGE_READ_ERRORS, TypeError), Image.open(path) as img:
-        exif = img.getexif()
-        if exif:
-            raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime
-            if raw:
-                dt = datetime.strptime(raw, "%Y:%m:%d %H:%M:%S")
-                return dt.strftime(fmt)
-    # Fallback: file modification time
-    try:
-        mtime = os.path.getmtime(path)
-        return datetime.fromtimestamp(mtime).strftime(fmt)
-    except OSError:
+    taken = capture_datetime(path)
+    if taken == UNKNOWN_DATETIME:
         return "unknown"
+    return taken.strftime("%Y" if year_only else "%Y-%m")
 
 
 def _get_resolution_bucket(path: str) -> str:

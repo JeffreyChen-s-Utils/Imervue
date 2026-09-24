@@ -399,3 +399,23 @@ class TestImageDateBucket:
         monkeypatch.setattr(mod.Image, "open", boom)
         with pytest.raises(RuntimeError):
             mod._get_image_date(str(tmp_path / "a.jpg"), year_only=True)
+
+
+def _photo_with_original_date(path, when="2019:05:06 07:08:09"):
+    """A JPEG whose only date is DateTimeOriginal, in the Exif sub-IFD where cameras put it."""
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = when
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    return path
+
+
+def test_date_bucket_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    """It read IFD0 only, so a camera's DateTimeOriginal was never seen."""
+    from Imervue.gui.image_organizer_dialog import _get_image_date
+    path = _photo_with_original_date(tmp_path / "a.jpg")
+    assert _get_image_date(str(path), year_only=False) == "2019-05"
+
+
+def test_date_bucket_of_a_missing_file_is_unknown(tmp_path):
+    from Imervue.gui.image_organizer_dialog import _get_image_date
+    assert _get_image_date(str(tmp_path / "gone.jpg"), year_only=True) == "unknown"

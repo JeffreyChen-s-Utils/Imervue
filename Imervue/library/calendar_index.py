@@ -20,6 +20,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.calendar_index")
@@ -32,6 +33,7 @@ _EXIF_DT_ORIGINAL = 0x9003
 _EXIF_DT_DIGITIZED = 0x9004
 _EXIF_IFD = 0x8769  # sub-IFD where DateTimeOriginal actually lives on some images
 _EXIF_DT_TOP = 0x0132  # DateTime at the top-level IFD
+_EXIF_DATETIME_FORMATS = ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S")
 
 
 def _parse_exif_datetime(value: str) -> _dt.date | None:
@@ -50,14 +52,17 @@ def _parse_exif_datetime(value: str) -> _dt.date | None:
 
 
 def _parse_exif_datetime_full(value: str) -> _dt.datetime | None:
-    """Parse ``YYYY:MM:DD HH:MM:SS``; fall back to the date at midnight."""
+    """Parse ``YYYY:MM:DD HH:MM:SS`` (or the ``YYYY-MM-DD`` form some writers use);
+    fall back to the date at midnight."""
     if not isinstance(value, str) or not value.strip():
         return None
-    try:
-        return _dt.datetime.strptime(value.strip(), "%Y:%m:%d %H:%M:%S")
-    except ValueError:
-        date = _parse_exif_datetime(value)
-        return _dt.datetime(date.year, date.month, date.day) if date else None
+    for fmt in _EXIF_DATETIME_FORMATS:
+        try:
+            return _dt.datetime.strptime(value.strip(), fmt)
+        except ValueError:
+            continue
+    date = _parse_exif_datetime(value)
+    return _dt.datetime(date.year, date.month, date.day) if date else None
 
 
 def _exif_datetime(exif) -> _dt.datetime | None:
@@ -78,6 +83,7 @@ def _exif_datetime(exif) -> _dt.datetime | None:
 def capture_datetime(path: str | Path) -> _dt.datetime:
     """Return the capture datetime (EXIF original → digitised → top → mtime)."""
     p = Path(path)
+    ensure_pillow_opener(p.suffix)   # HEIC / JXL carry EXIF too, once their codec is registered
     try:
         with Image.open(p) as im:
             exif = im.getexif()

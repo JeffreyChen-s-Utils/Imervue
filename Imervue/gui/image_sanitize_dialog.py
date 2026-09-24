@@ -37,10 +37,9 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.dialog_rows import folder_picker_row
+from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -126,34 +125,10 @@ def _scandir_images(folder: str) -> list[str]:
 # Core sanitize logic (pure, testable)
 # ---------------------------------------------------------------------------
 
-_EXIF_TAG_DATETIME_ORIGINAL = 36867
-_EXIF_TAG_DATETIME = 306
-_EXIF_DATE_FORMATS = ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S")
-
-
-def _parse_exif_date(val: str) -> datetime | None:
-    for fmt in _EXIF_DATE_FORMATS:
-        try:
-            return datetime.strptime(val, fmt)
-        except (ValueError, TypeError):
-            continue
-    return None
-
-
 def _get_image_date(path: str) -> datetime:
-    """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
-    # Unreadable file or a date tag that isn't text: fall back to the file's mtime.
-    with contextlib.suppress(*IMAGE_READ_ERRORS, TypeError), Image.open(path) as img:
-        exif = img.getexif()
-        for tag in (_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME):
-            val = exif.get(tag)
-            parsed = _parse_exif_date(val) if val else None
-            if parsed is not None:
-                return parsed
-    try:
-        return datetime.fromtimestamp(os.path.getmtime(path))
-    except OSError:
-        return datetime.now()
+    """Extract the best date for an image: EXIF capture time > file mtime > now."""
+    taken = capture_datetime(path)
+    return datetime.now() if taken == UNKNOWN_DATETIME else taken
 
 
 def _generate_name(dt: datetime, rand_len: int, ext: str) -> str:

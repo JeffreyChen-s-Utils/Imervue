@@ -206,3 +206,23 @@ def test_timeline_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatc
     assert args[-1] is False
     (record,) = caplog.records
     assert record.exc_info[0] is RuntimeError
+
+
+def test_extract_date_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    from datetime import datetime
+
+    from PIL import Image
+
+    import Imervue.gui.timeline_view as tv
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = "2019:05:06 07:08:09"
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    assert tv._extract_date(str(path)) == datetime(2019, 5, 6, 7, 8, 9)
+
+
+def test_extract_date_of_a_missing_file_is_the_epoch(tmp_path):
+    from datetime import datetime
+
+    import Imervue.gui.timeline_view as tv
+    assert tv._extract_date(str(tmp_path / "gone.jpg")) == datetime.fromtimestamp(0)

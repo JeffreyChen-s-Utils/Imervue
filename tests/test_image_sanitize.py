@@ -864,3 +864,16 @@ class TestGetImageDateFailures:
         monkeypatch.setattr(mod.Image, "open", boom)
         with pytest.raises(RuntimeError):
             _get_image_date(str(path))
+
+
+def _photo_with_original_date(path, when="2019:05:06 07:08:09"):
+    """A JPEG whose only date is DateTimeOriginal, in the Exif sub-IFD where cameras put it."""
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = when
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    return path
+
+
+def test_image_date_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    path = _photo_with_original_date(tmp_path / "a.jpg")
+    assert _get_image_date(str(path)) == datetime(2019, 5, 6, 7, 8, 9)

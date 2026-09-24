@@ -124,3 +124,28 @@ def test_corrupt_webp_exif_falls_back_to_mtime(tmp_path):
     stamp = _dt.datetime(2016, 3, 4, 5, 6, 7).timestamp()
     os.utime(p, (stamp, stamp))
     assert ci.capture_datetime(str(p)) == _dt.datetime(2016, 3, 4, 5, 6, 7)
+
+
+def test_dashed_exif_datetime_is_read(tmp_path):
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = "2020-01-02 03:04:05"
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    assert ci.capture_datetime(str(path)) == _dt.datetime(2020, 1, 2, 3, 4, 5)
+
+
+def test_heic_capture_time_is_read(tmp_path):
+    pillow_heif = pytest.importorskip("pillow_heif")
+    pillow_heif.register_heif_opener()
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = "2018:09:10 11:12:13"
+    path = tmp_path / "a.heic"
+    Image.new("RGB", (16, 16)).save(path, exif=exif)
+    assert ci.capture_datetime(str(path)) == _dt.datetime(2018, 9, 10, 11, 12, 13)
+
+
+def test_codec_is_registered_before_reading(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(ci, "ensure_pillow_opener", seen.append)
+    ci.capture_datetime(str(tmp_path / "missing.jxl"))
+    assert seen == [".jxl"]

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-71 | 2026-09-24 | Read the capture date from the Exif sub-IFD in Organizer, Timeline and Sanitize | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-70 | 2026-09-24 | Show, drop and index HEIC, JPEG XL and video wherever the viewer opens them | #fix #formats | [2026-09](2026-09.md) |
 | U-20260924-69 | 2026-09-24 | Count, not time, the pump_until immediate-return test | #test #flaky | [2026-09](2026-09.md) |
 | U-20260924-68 | 2026-09-24 | Offer every viewer format in Open and Relocate, and translate file-dialog filter labels | #i18n #fix | [2026-09](2026-09.md) |

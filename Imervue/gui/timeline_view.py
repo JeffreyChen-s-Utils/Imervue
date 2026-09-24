@@ -22,6 +22,7 @@ from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QListView
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -84,24 +85,9 @@ class _TimelineThumbWorker(QRunnable):
 
 
 def _extract_date(path: str) -> datetime:
-    """Prefer EXIF DateTimeOriginal; fall back to file mtime."""
-    try:
-        with Image.open(path) as im:
-            exif = im.getexif()
-            if exif:
-                raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime
-                if raw:
-                    try:
-                        return datetime.strptime(str(raw), "%Y:%m:%d %H:%M:%S")
-                    except ValueError:
-                        pass
-    except IMAGE_READ_ERRORS:   # unreadable file or EXIF: fall back to mtime below
-        pass
-    try:
-        mtime = Path(path).stat().st_mtime
-        return datetime.fromtimestamp(mtime)
-    except OSError:
-        return datetime.fromtimestamp(0)
+    """Prefer the EXIF capture time; fall back to file mtime, then the epoch."""
+    taken = capture_datetime(path)
+    return datetime.fromtimestamp(0) if taken == UNKNOWN_DATETIME else taken
 
 
 def _extract_date_fast(path: str) -> datetime:

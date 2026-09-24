@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `2cd030d` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `23565f0` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,16 +66,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 832 | 135,838 |
+| `tests/` | 832 | 135,916 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
-| `Imervue/gui/` | 162 | 32,905 |
+| `Imervue/gui/` | 162 | 32,853 |
 | `Imervue/puppet/` | 57 | 15,285 |
 | `Imervue/image/` | 114 | 12,927 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
 | `Imervue/multi_language/` | 8 | 13,959 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
-| `Imervue/library/` | 32 | 4,163 |
+| `Imervue/library/` | 32 | 4,169 |
 | `Imervue/menu/` | 11 | 3,578 |
 | `Imervue/` 根層 | 5 | 1,554 |
 | `Imervue/plugin/` | 10 | 2,243 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,651** | **313,722** |
+| **總計** | **1,651** | **313,754** |
 
-其中 `Imervue/` 套件本身 755 檔 / 163,678 行。
+其中 `Imervue/` 套件本身 755 檔 / 163,632 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -503,7 +503,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
 | `stacks.py` | 89 | RAW + JPEG 配對堆疊 |
 | `events.py` | 89 | 依拍攝時間間隔把照片分成「事件」 |
-| `calendar_index.py` | 160 | 依拍攝日分桶，供 Calendar View |
+| `calendar_index.py` | 166 | 依拍攝日分桶，供 Calendar View；`capture_datetime()` 是讀拍攝時間的共用入口（Exif 子 IFD → IFD0 → 修改時間），整理工具、時間軸、圖片淨化都走它 |
 | `capture_time.py` | 49 | 批次位移 EXIF 時間戳 |
 | `date_import.py` | 101 | 依拍攝日匯入到日期資料夾 |
 | `gpx_geotag.py` | 113 | GPX 軌跡對時取得座標 |
@@ -524,7 +524,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-162 個檔、32,905 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+162 個檔、32,853 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -559,7 +559,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
-| `timeline_view.py` | 373 | 時間軸檢視（年/月/日分組） |
+| `timeline_view.py` | 359 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `hover_preview.py` | 186 | 縮圖懸停放大彈窗 |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
@@ -609,8 +609,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `batch_convert_dialog.py`(362) · `batch_export_dialog.py`(405) · `export_dialog.py`(244) ·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(187) ·
-`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(537) ·
-`duplicate_detection_dialog.py`(564) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(789) 淨化重繪（剝除所有隱藏資料）·
+`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(524) ·
+`duplicate_detection_dialog.py`(564) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(764) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(300) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
 `ai_upscale_dialog.py`(723) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
@@ -962,7 +962,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-832 個檔、135,838 行。`pyproject.toml` 定義三個互斥層級 marker：
+832 個檔、135,916 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
