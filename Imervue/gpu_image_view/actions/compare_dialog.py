@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QTabWidget, QSlider, QMessageBox,
 )
 
+from Imervue.gui.shown_qimage import shown_qimage
 from Imervue.image.shown import as_shown
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -54,7 +55,7 @@ class _ImageLabel(QLabel):
             self.load(path)
 
     def load(self, path: str) -> None:
-        self._pixmap = QPixmap(path)
+        self._pixmap = QPixmap.fromImage(shown_qimage(path))
         self.reset_view()
         self.update()
 
@@ -168,8 +169,8 @@ class _SplitLabel(QWidget):
 
     # --- Public API ---
     def set_pair(self, a_path: str, b_path: str) -> None:
-        self._pm_a = QPixmap(a_path)
-        self._pm_b = QPixmap(b_path)
+        self._pm_a = QPixmap.fromImage(shown_qimage(a_path))
+        self._pm_b = QPixmap.fromImage(shown_qimage(b_path))
         self.update()
 
     def set_split(self, fraction: float) -> None:

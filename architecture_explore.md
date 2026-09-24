@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `adce250` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `e824adf` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 854 | 139,755 |
+| `tests/` | 857 | 140,018 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
-| `Imervue/gui/` | 164 | 32,950 |
+| `Imervue/gui/` | 165 | 32,978 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 125 | 14,262 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,905 |
+| `Imervue/image/` | 125 | 14,269 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,928 |
 | `Imervue/multi_language/` | 8 | 14,049 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
@@ -80,13 +80,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 23 | 2,220 |
-| `Imervue/export/` | 9 | 1,078 |
+| `Imervue/export/` | 9 | 1,081 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,688** | **319,298** |
+| **總計** | **1,692** | **319,622** |
 
-其中 `Imervue/` 套件本身 770 檔 / 165,292 行。
+其中 `Imervue/` 套件本身 771 檔 / 165,353 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -290,9 +290,9 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `contact_sheet.py` | 187 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab） |
+| `contact_sheet.py` | 189 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab）；格子影像經 `decode_image` |
 | `contact_sheet_layouts.py` | 55 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
-| `web_gallery.py` | 261 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依） |
+| `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
 | `gallery_sort.py` | 75 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
 | `slideshow_mp4.py` | 140 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
@@ -301,7 +301,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-125 個模組、14,262 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+125 個模組、14,269 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -350,7 +350,7 @@ ImervueMainWindow
 
 `hdr_merge.py`(117) · `panorama.py`(84)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
 `stack_blend.py`(120) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
-`deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(111) ·
+`deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(118) 列印拼版 PDF（reportlab；影像經 `decode_image`） ·
 `multipage.py`(72) 多頁 PDF/TIFF 合併與拆分
 
 #### 遮罩 / 修補 / 圖層
@@ -462,7 +462,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 497 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `image_loader.py` | 528 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
 | `load_thumbnail_worker.py` | 171 | 單張縮圖解碼 `QRunnable`（與 `load_image_file` 同一條 EXIF 轉正規則） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
@@ -474,12 +474,12 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
 | `batch_ops.py` | 298 | 批次重新命名 / 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
-| `compare_dialog.py` | 583 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
+| `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
-| `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
+| `keyboard_actions.py` | 310 | 鍵盤快捷動作實作（Ctrl+C 複製檢視器顯示的金字塔底層，沒有時才解碼檔案） |
 | `lossless_rotate.py` | 99 | 90° 旋轉檔案：JPEG 只改 EXIF 轉向標籤（`jpeg_orientation`，不需 piexif、其餘位元組不變）；其他格式從檢視器看到的影像轉後原子重存，以 `in_place_save.carried_save_kwargs` 帶回 metadata 與壓縮設定；RAW、多影格等無法完整寫回的檔案拒絕處理 |
 | `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
@@ -526,7 +526,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-164 個檔、32,950 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+165 個檔、32,978 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -556,16 +556,16 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 932 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
-| `folder_thumbnail_model.py` | 182 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
+| `folder_thumbnail_model.py` | 178 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
 | `image_list_view.py` | 607 | 清單檢視（`QTableView`，縮圖牆的替代） |
-| `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
+| `dual_image_view.py` | 196 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
 | `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
-| `multi_monitor_window.py` | 275 | 多螢幕鏡像視窗 |
+| `multi_monitor_window.py` | 276 | 多螢幕鏡像視窗 |
 | `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
 | `menu_tree.py` | 59 | 不經 `QAction.menu()` 走訪選單樹（`submenu_index` / `iter_menu_actions`），見 §10.10 |
 | `modify_actions_widget.py` | 203 | 共用的 Modify 動作按鈕組（選單與右鍵共用） |
@@ -609,7 +609,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(400) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(395) · `export_dialog.py`(224) · `export_source.py`(52) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（不套 recipe 的檢視器解碼，全不透明時轉 RGB；AI 放大與批次轉換共用）、`open_export_source()`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再套 recipe；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
+`batch_convert_dialog.py`(400) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(395) · `export_dialog.py`(224) · `export_source.py`(49) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source()`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再套 recipe；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(388) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
 `duplicate_detection_dialog.py`(564) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
@@ -964,7 +964,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-854 個檔、139,755 行。`pyproject.toml` 定義三個互斥層級 marker：
+857 個檔、140,018 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

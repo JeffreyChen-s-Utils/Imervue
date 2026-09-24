@@ -220,3 +220,16 @@ class TestDynamicIconSize:
         tree.setModel(FolderThumbnailModel())
         tree.set_thumbnail_size(9999)
         assert tree.iconSize().width() == MAX_ICON_SIZE
+
+
+def test_folder_preview_of_a_tagged_photo_is_upright(qapp, tmp_path):
+    from _decode_samples import tagged_portrait
+    folder = tmp_path / "f"
+    folder.mkdir()
+    tagged_portrait(folder / "a.jpg", size=(80, 40))
+    captured = []
+    worker = _PreviewWorker(str(folder), {".jpg"}, 32)
+    worker.signals.done.connect(lambda _fp, img, _had: captured.append(img))
+    worker.run()
+    (thumb,) = captured
+    assert (thumb.width(), thumb.height()) == (16, 32)

@@ -159,3 +159,13 @@ class TestController:
         ctrl._window = _FakeWindow()
         ctrl._mirror_current()
         assert ctrl._window.images == [None]
+
+
+def test_preview_panel_shows_a_tagged_photo_upright(qapp, tmp_path):
+    from _decode_samples import tagged_portrait
+    panel = _PreviewPanel()
+    try:
+        panel.set_image(str(tagged_portrait(tmp_path / "p.jpg")))
+        assert (panel._pixmap.width(), panel._pixmap.height()) == (20, 40)  # noqa: SLF001
+    finally:
+        panel.deleteLater()

@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QSplitter, QSizePolicy,
 )
 
+from Imervue.gui.shown_qimage import shown_qimage
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ class _Panel(QLabel):
             self.setPixmap(QPixmap())
             self.setText("—")
             return
-        pm = QPixmap(path)
+        pm = QPixmap.fromImage(shown_qimage(path))
         if pm.isNull():
             self._pixmap = None
             self.setText("—")

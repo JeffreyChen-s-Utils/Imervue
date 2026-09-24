@@ -14,9 +14,6 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage
-
 logger = logging.getLogger("Imervue.export.web_gallery")
 
 
@@ -45,18 +42,22 @@ def review_comments_key(gallery_title: str) -> str:
 
 
 def _make_thumbnail(src: str, dest: Path, max_side: int, quality: int) -> bool:
-    """Write a JPEG thumbnail of ``src`` to ``dest``. Returns success flag."""
-    img = QImage(src)
-    if img.isNull():
+    """Write a JPEG thumbnail of ``src`` to ``dest``. Returns success flag.
+
+    Decoded as the viewer shows it — upright, sRGB, RAW / HEIC included. A
+    QImage load ignored the EXIF orientation (portrait phone photos came out
+    sideways) and the colour profile, and could not open a RAW at all.
+    """
+    from Imervue.gpu_image_view.images.image_loader import decode_image
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    try:
+        img = decode_image(src, max_edge=max_side)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        img.convert("RGB").save(dest, "JPEG", quality=quality)
+    except IMAGE_READ_ERRORS:
+        logger.debug("Thumbnail of %s failed", src, exc_info=True)
         return False
-    if max(img.width(), img.height()) > max_side:
-        img = img.scaled(
-            max_side, max_side,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    return img.save(str(dest), "JPEG", quality)
+    return True
 
 
 _HTML_TEMPLATE = """<!DOCTYPE html>

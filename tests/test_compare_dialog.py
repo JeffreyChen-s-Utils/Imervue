@@ -121,3 +121,21 @@ class TestLoadRgbaArray:
         monkeypatch.setattr(mod.Image, "open", boom)
         with pytest.raises(RuntimeError):
             mod._load_rgba_array("x.png")
+
+
+def test_side_by_side_and_split_show_tagged_photos_upright(qapp, tmp_path):
+    """Overlay and difference decoded like the viewer; these two used QPixmap(path)."""
+    from _decode_samples import tagged_portrait
+    from Imervue.gpu_image_view.actions.compare_dialog import _SplitLabel
+    a = str(tagged_portrait(tmp_path / "a.jpg"))
+    b = str(tagged_portrait(tmp_path / "b.jpg"))
+    label = _ImageLabel(a)
+    split = _SplitLabel()
+    try:
+        assert (label._pixmap.width(), label._pixmap.height()) == (20, 40)  # noqa: SLF001
+        split.set_pair(a, b)
+        assert (split._pm_a.width(), split._pm_a.height()) == (20, 40)  # noqa: SLF001
+        assert (split._pm_b.width(), split._pm_b.height()) == (20, 40)  # noqa: SLF001
+    finally:
+        label.deleteLater()
+        split.deleteLater()

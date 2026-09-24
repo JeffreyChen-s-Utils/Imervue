@@ -34,13 +34,10 @@ def recipe_base_image(path: str, recipe: Recipe | None) -> Image.Image:
 def upright_image(path: str) -> Image.Image:
     """Return *path* as the viewer decodes it, without any recipe: full-size RAW, sRGB, upright.
 
-    RGB when every pixel is opaque (the decode is always RGBA), so a format
-    without alpha isn't handed a needless channel and one with it keeps it.
+    RGB when every pixel is opaque (``image_loader.decode_image``).
     """
-    img = recipe_base_image(path, None)
-    if img.getextrema()[3] == (255, 255):
-        img = img.convert("RGB")
-    return img
+    from Imervue.gpu_image_view.images.image_loader import decode_image
+    return decode_image(path)
 
 
 def open_export_source(path: str) -> Image.Image:

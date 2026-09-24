@@ -35,6 +35,9 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
 
 
 
+_THUMBNAIL_EDGE = 1600   # long side of a thumbnail decode of a raster
+
+
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
     """Develop the camera RAW at *path*; ``OSError`` when libraw can't read it.
 
@@ -93,7 +96,8 @@ def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     return np.array(transpose_for(img, code))
 
 
-def _load_raster_thumbnail(path: str, max_edge: int = 1600, *, orient: bool = True) -> np.ndarray:
+def _load_raster_thumbnail(path: str, max_edge: int = _THUMBNAIL_EDGE, *,
+                           orient: bool = True) -> np.ndarray:
     with Image.open(path) as img:
         code = exif_orientation(img) if orient else 1
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
@@ -133,6 +137,23 @@ def decode_image_file(path, *, thumbnail: bool = False, orient: bool = True) -> 
         img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
                     else _load_raster(path, orient=orient))
     return _ensure_rgba(img_data)
+
+
+def decode_image(path, *, max_edge: int | None = None) -> Image.Image:
+    """:func:`decode_image_file` as a Pillow image: RGB when every pixel is opaque, else RGBA.
+
+    What a file written from the viewer's pixels starts from (a thumbnail, a
+    PDF page, a converted copy): camera RAW developed, sRGB, upright. With
+    *max_edge* the long side is scaled down to it, through the fast thumbnail
+    decode (a RAW's embedded preview, a 1600 px raster) when that is big enough.
+    """
+    fast = max_edge is not None and max_edge <= _THUMBNAIL_EDGE
+    img = Image.fromarray(decode_image_file(path, thumbnail=fast), "RGBA")
+    if max_edge is not None:
+        img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+    if img.getextrema()[3] == (255, 255):
+        img = img.convert("RGB")
+    return img
 
 
 def load_image_file(path, thumbnail=False, recipe=None):

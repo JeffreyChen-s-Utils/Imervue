@@ -179,26 +179,27 @@ def copy_image_to_clipboard(main_gui: GPUImageView):
 
     path = images[main_gui.current_index]
     with best_effort("copy the image to the clipboard"):
-        qimg = QImage(path)
-        if qimg.isNull() and main_gui.deep_zoom is not None:
-            # QImage 無法直接載入（例如 SVG），從 deep zoom 金字塔取得
-            import numpy as np
-            data = main_gui.deep_zoom.levels[0]
-            h, w = data.shape[:2]
-            ch = data.shape[2] if data.ndim == 3 else 1
-            if ch == 4:
-                # RGBA → BGRA for QImage
-                bgra = data.copy()
-                bgra[:, :, [0, 2]] = bgra[:, :, [2, 0]]
-                qimg = QImage(bgra.data, w, h, w * 4, QImage.Format.Format_ARGB32)
-                qimg = qimg.copy()  # 脫離 numpy buffer
-            elif ch == 3:
-                rgb = np.ascontiguousarray(data)
-                qimg = QImage(rgb.data, w, h, w * 3, QImage.Format.Format_RGB888)
-                qimg = qimg.copy()
+        qimg = _shown_image(main_gui, path)
         if not qimg.isNull():
             clipboard = QApplication.clipboard()
             clipboard.setImage(qimg)
+
+
+def _shown_image(main_gui: GPUImageView, path: str) -> QImage:
+    """What the viewer shows for *path*: its full-size pyramid level, else a fresh decode.
+
+    The deep-zoom base level carries the develop recipe, the sRGB conversion
+    and the EXIF turn; ``QImage(path)`` had none of them (a portrait phone
+    photo was pasted sideways) and could not read a RAW or HEIC.
+    """
+    if main_gui.deep_zoom is not None:
+        import numpy as np
+        from PIL import Image
+
+        from Imervue.system.qimage_convert import pil_to_qimage
+        return pil_to_qimage(Image.fromarray(np.ascontiguousarray(main_gui.deep_zoom.levels[0])))
+    from Imervue.gui.shown_qimage import shown_qimage
+    return shown_qimage(path)
 
 
 # ===========================

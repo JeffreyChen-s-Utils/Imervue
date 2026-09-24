@@ -17,6 +17,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QGuiApplication, QImage, QPixmap, QKeyEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
+from Imervue.gui.shown_qimage import shown_qimage
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
 import contextlib
@@ -97,7 +98,7 @@ class _PreviewPanel(QLabel):
             )
             self.setStyleSheet("background-color: #000; color: #888;")
             return
-        pm = QPixmap(path)
+        pm = QPixmap.fromImage(shown_qimage(path))
         if pm.isNull():
             self._pixmap = None
             return

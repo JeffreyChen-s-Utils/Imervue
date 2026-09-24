@@ -10,6 +10,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 logger = logging.getLogger("Imervue.print_layout")
 
 # Page sizes in points (1 pt = 1/72 in).
@@ -75,6 +77,8 @@ def export_print_pdf(layout: PrintLayout, output_path: str | Path) -> Path:
     from reportlab.pdfgen import canvas as pdf_canvas
     from reportlab.lib.utils import ImageReader
 
+    from Imervue.gpu_image_view.images.image_loader import decode_image
+
     page_w, page_h = _page_dimensions(layout)
     out_path = Path(output_path)
     c = pdf_canvas.Canvas(str(out_path), pagesize=(page_w, page_h))
@@ -93,7 +97,10 @@ def export_print_pdf(layout: PrintLayout, output_path: str | Path) -> Path:
             cx = x0 + col * (cell_w + layout.gutter_pt)
             cy = page_h - layout.margin_pt - (r + 1) * cell_h - r * layout.gutter_pt
             try:
-                img = ImageReader(str(img_path))
+                # The viewer's decode: upright, sRGB, a RAW developed. Handing
+                # ReportLab the path printed portrait phone photos sideways,
+                # ignored the colour profile and could not read a RAW.
+                img = ImageReader(decode_image(str(img_path)))
                 iw, ih = img.getSize()
                 scale = min(cell_w / iw, cell_h / ih)
                 dw, dh = iw * scale, ih * scale
@@ -101,7 +108,7 @@ def export_print_pdf(layout: PrintLayout, output_path: str | Path) -> Path:
                 dy = cy + (cell_h - dh) / 2.0
                 c.drawImage(img, dx, dy, dw, dh,
                             preserveAspectRatio=True, mask="auto")
-            except (OSError, ValueError) as err:
+            except IMAGE_READ_ERRORS as err:
                 logger.warning("Skipping %s: %s", img_path, err)
                 continue
             if layout.crop_marks:
