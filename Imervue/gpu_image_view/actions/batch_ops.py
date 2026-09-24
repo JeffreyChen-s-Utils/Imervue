@@ -9,15 +9,12 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
-from Imervue.image.in_place_save import can_rewrite_in_place
-from Imervue.image.shown import as_shown
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -260,27 +257,20 @@ class BatchMoveDialog(QDialog):
 # ===========================
 
 def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
-    """旋轉選取的圖片並儲存"""
+    """Quarter-turn each file in *paths* on disk (*degrees* is 90 or -90) and refresh the grid."""
     from Imervue.gpu_image_view.tile_textures import free_tile_textures
     count = 0
     failed = 0
     rotated: list[str] = []
     for path in paths:
-        if not can_rewrite_in_place(path):   # RAW, animated, multi-page: a re-save would destroy it
-            logger.warning("Not rotating %s: it can't be saved back whole", path)
-            failed += 1
-            continue
-        try:
-            # Rotate what is shown: the re-save drops the EXIF orientation.
-            img = as_shown(Image.open(path))
-            img = img.rotate(-degrees, expand=True)
-            img.save(path)
+        # One quarter turn at a time, the way Lossless Rotate does it: a JPEG
+        # only gets a new EXIF orientation, other files keep their metadata,
+        # and RAW / animated / multi-page files are refused untouched.
+        if lossless_rotate(path, clockwise=degrees > 0):
             count += 1
-            # 清除快取
             main_gui.tile_cache.pop(path, None)
             rotated.append(path)
-        except IMAGE_READ_ERRORS:
-            logger.debug("Rotating %s failed", path, exc_info=True)
+        else:
             failed += 1
     # Free the now-stale rotated textures under the GL context (with accounting).
     free_tile_textures(main_gui, rotated)

@@ -99,13 +99,13 @@ def _drop_orientation_tag(img: Image.Image) -> None:
         img.info["exif"] = exif.tobytes()
     for key in ("XML:com.adobe.xmp", "xmp"):
         if key in img.info:
-            img.info[key] = _strip_xmp_orientation(img.info[key])
+            img.info[key] = strip_xmp_orientation(img.info[key])
 
 
-def _strip_xmp_orientation(value):
-    """Return *value* (str, bytes or a tuple of bytes) without its orientation attribute."""
+def strip_xmp_orientation(value: str | bytes | tuple) -> str | bytes | tuple:
+    """Return XMP *value* (str, bytes or a tuple of bytes) without its orientation attribute."""
     if isinstance(value, tuple):
-        return tuple(_strip_xmp_orientation(part) for part in value)
+        return tuple(strip_xmp_orientation(part) for part in value)
     for pattern in _XMP_ORIENTATION:
         if isinstance(value, str):
             value = re.sub(pattern, "", value)

@@ -132,9 +132,29 @@ class TestBatchRotate:
     def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
         from Imervue.gpu_image_view.actions import batch_ops
 
-        def boom(_path):
+        def boom(_path, clockwise):
             raise RuntimeError("bug")
 
-        monkeypatch.setattr(batch_ops.Image, "open", boom)
+        monkeypatch.setattr(batch_ops, "lossless_rotate", boom)
         with pytest.raises(RuntimeError):
             batch_ops.batch_rotate(self._gui([]), [str(tmp_path / "a.png")], 90)
+
+    def test_jpeg_keeps_its_pixels_and_exif(self, tmp_path):
+        """The batch re-encoded every JPEG at quality 75 and dropped its camera, date and GPS."""
+        from PIL import Image
+
+        from Imervue.gpu_image_view.actions.batch_ops import batch_rotate
+        exif = Image.Exif()
+        exif[0x010F] = "Canon"
+        exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (40, 20), (10, 200, 30)).save(path, quality=97, exif=exif)
+        before = path.read_bytes()
+        batch_rotate(self._gui([str(path)]), [str(path)], -90)
+        after = path.read_bytes()
+        scan = b"\xff\xda"                                      # the compressed pixels
+        assert after[after.index(scan):] == before[before.index(scan):]
+        with Image.open(path) as img:
+            assert img.getexif()[0x0112] == 8                   # counter-clockwise
+            assert img.getexif()[0x010F] == "Canon"
+            assert img.getexif().get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"

@@ -9,6 +9,8 @@ editor's Save) asks :func:`can_rewrite_in_place` first.
 """
 from __future__ import annotations
 
+import os
+from collections.abc import Callable
 from pathlib import Path
 
 from PIL import Image
@@ -28,6 +30,22 @@ _IN_PLACE_FORMATS: dict[str, str] = {
 def in_place_format(path: str | Path) -> str | None:
     """Return the Pillow format to write *path* back in, or ``None`` if it can't be."""
     return _IN_PLACE_FORMATS.get(Path(path).suffix.lower())
+
+
+def replace_atomically(path: str | Path, write: Callable[[Path], None]) -> None:
+    """Replace *path* with what *write* puts in a ``.tmp`` sibling, in one step.
+
+    A crash or an error mid-write leaves the original whole: the sibling is
+    removed and the error propagates. *write* gets the sibling's path, whose
+    extension is ``.tmp``, so a Pillow save must name its ``format=``.
+    """
+    target = Path(path)
+    tmp = target.with_name(target.name + ".tmp")
+    try:
+        write(tmp)
+        os.replace(tmp, target)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def can_rewrite_in_place(path: str | Path) -> bool:
