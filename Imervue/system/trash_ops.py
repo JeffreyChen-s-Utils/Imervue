@@ -109,6 +109,32 @@ def _apply_in_chunks(
     return succeeded, failed
 
 
+def _files_only(paths: Sequence[str]) -> set[str]:
+    """Which of *paths* are files; asked before removing them, while a folder still is one."""
+    return {path for path in paths if Path(path).is_file()}
+
+
+def _sidecars_along(done: Sequence[str], files: set[str], handler: ChunkHandler,
+                    chunk_size: int) -> None:
+    """Send the sidecars of the files just removed the same way; best effort, not reported.
+
+    An ``IMG.xmp`` left behind would otherwise attach itself — rating, crop,
+    a raw developer's edits — to the next ``IMG.*`` the camera writes under
+    the same name. See :func:`Imervue.system.file_transfer.sidecars_of`.
+    """
+    from Imervue.system.file_transfer import sidecars_of
+    listed = set(done)
+    sidecars = list(dict.fromkeys(
+        side for path in done if path in files
+        for side in sidecars_of(path) if side not in listed))
+    if not sidecars:
+        return
+    _good, bad = _apply_in_chunks(
+        sidecars, handler, chunk_size, _ProgressReporter(len(sidecars), None))
+    for path in bad:
+        logger.warning("Couldn't remove the sidecar %s", path)
+
+
 def trash_batch(
     paths: Sequence[str],
     on_progress: ProgressCallback | None = None,
@@ -116,13 +142,17 @@ def trash_batch(
 ) -> tuple[list[str], list[str]]:
     """Move *paths* to the OS trash in chunks; returns ``(trashed, failed)``.
 
-    *on_progress* is called after each chunk with ``(done, total)``.
+    *on_progress* is called after each chunk with ``(done, total)``. The
+    sidecars of the trashed files follow them into the trash (not counted).
     """
     paths = list(paths)
-    return _apply_in_chunks(
+    files = _files_only(paths)
+    trashed, failed = _apply_in_chunks(
         paths, _trash_chunk, chunk_size,
         _ProgressReporter(len(paths), on_progress),
     )
+    _sidecars_along(trashed, files, _trash_chunk, chunk_size)
+    return trashed, failed
 
 
 def purge_batch(
@@ -138,14 +168,18 @@ def purge_batch(
     folders / file-tree entries were only hidden, so they go to the OS bin
     and stay recoverable from there. Both groups share one progress count so
     the caller shows a single bar. Returns ``(removed, failed)`` over both.
+    Each file's sidecars go the way the file went (not counted).
     """
     unlink_paths = list(unlink_paths)
     trash_paths = list(trash_paths)
     reporter = _ProgressReporter(len(unlink_paths) + len(trash_paths), on_progress)
+    files = _files_only(unlink_paths + trash_paths)
     removed, failed = _apply_in_chunks(
         unlink_paths, _unlink_chunk, chunk_size, reporter)
     trashed, trash_failed = _apply_in_chunks(
         trash_paths, _trash_chunk, chunk_size, reporter)
+    _sidecars_along(removed, files, _unlink_chunk, chunk_size)
+    _sidecars_along(trashed, files, _trash_chunk, chunk_size)
     return removed + trashed, failed + trash_failed
 
 

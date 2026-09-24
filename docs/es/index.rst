@@ -1753,6 +1753,11 @@ Eliminar imágenes
 Las imágenes se mueven a la Papelera de reciclaje / Papelera del sistema y se pueden recuperar
 desde allí.
 
+Sus sidecars van con ellas: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` e
+``IMG.xmp``, salvo que el RAW de un par RAW + JPEG todavía use este último. Un
+sidecar abandonado pegaría su valoración y sus ediciones al siguiente ``IMG.*``
+que la cámara escriba con el mismo nombre.
+
 ----
 
 Operaciones por lotes

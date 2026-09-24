@@ -1733,6 +1733,11 @@ Excluindo Imagens
 
 As imagens são movidas para a Lixeira do sistema e podem ser recuperadas de lá.
 
+Os sidecars vão junto: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` e
+``IMG.xmp``, a menos que o RAW de um par RAW + JPEG ainda use este último. Um
+sidecar deixado para trás grudaria a avaliação e as edições no próximo ``IMG.*``
+que a câmera gravar com o mesmo nome.
+
 ----
 
 Operações em Lote

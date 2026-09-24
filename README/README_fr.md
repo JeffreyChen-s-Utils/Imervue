@@ -673,7 +673,7 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | Shift+S | Vue divisée |
 | Shift+D / Ctrl+Shift+D | Double page (LTR / RTL) |
 | Ctrl+Shift+M | Fenêtre miroir multi-écrans |
-| Delete | Déplacer vers la corbeille (annulable) |
+| Delete | Déplacer vers la corbeille avec ses sidecars `.xmp` / d'annotations (annulable) |
 | Escape | Quitter le deep zoom / Quitter le plein écran |
 
 ### Lecture d'animation (GIF / APNG)

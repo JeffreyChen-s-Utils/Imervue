@@ -668,7 +668,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | Shift+S | 분할 뷰 |
 | Shift+D / Ctrl+Shift+D | 양면 페이지 (LTR / RTL) |
 | Ctrl+Shift+M | 다중 모니터 미러 창 |
-| Delete | 휴지통으로 이동 (실행 취소 가능) |
+| Delete | `.xmp` / 주석 sidecar와 함께 휴지통으로 이동 (실행 취소 가능) |
 | Escape | 딥 줌 종료 / 전체 화면 종료 |
 
 ### 애니메이션 재생 (GIF / APNG)

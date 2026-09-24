@@ -916,6 +916,11 @@ GIF、APNG、アニメーション WebP を開くと、自動的にアニメー�
 
 画像はシステムのゴミ箱に移動され、そこから復元できます。
 
+sidecar も一緒に移ります:``IMG.JPG.xmp``、``IMG.JPG.annotations.json``、
+``IMG.xmp``。ただし RAW + JPEG のペアで RAW がまだ使っている ``IMG.xmp`` は残します。
+残った sidecar は、カメラが同じ名前で次に書く ``IMG.*`` に評価や編集を付けてしまう
+ためです。
+
 ----
 
 バッチ操作

@@ -912,6 +912,11 @@ GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생
 
 이미지는 시스템 휴지통으로 이동되며, 거기에서 복원할 수 있습니다.
 
+sidecar도 함께 옮겨집니다: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json``,
+``IMG.xmp``. 단, RAW + JPEG 쌍에서 RAW가 아직 쓰는 ``IMG.xmp``\ 는 남깁니다. 남은
+sidecar는 카메라가 같은 이름으로 다음에 쓰는 ``IMG.*``\ 에 별점과 편집을 붙이기
+때문입니다.
+
 ----
 
 일괄 작업

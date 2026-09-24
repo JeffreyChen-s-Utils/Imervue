@@ -191,6 +191,19 @@ def carry_sidecars(pairs: Iterable[tuple[str, str]], *, move: bool) -> dict[str,
     return carried
 
 
+def sidecars_of(path: str) -> list[str]:
+    """The sidecars beside *path* that belong to it alone, whether or not *path* still exists.
+
+    ``IMG.JPG.xmp`` and ``IMG.JPG.annotations.json`` always; ``IMG.xmp`` only
+    while no other ``IMG.*`` (the RAW of a RAW + JPEG pair) uses it.
+    """
+    image = Path(path)
+    if image.is_dir():
+        return []
+    return [str(side) for side, _unused, adobe in _sidecar_pairs(image, image)
+            if side.is_file() and not (adobe and _shares_adobe_sidecar(image))]
+
+
 def follow_saved_data(files: Mapping[str, str], folders: Mapping[str, str] | None = None, *,
                       keep_existing: bool = False) -> None:
     """Re-key what Imervue saved per image path for files and folders now elsewhere.

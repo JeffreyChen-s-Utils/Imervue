@@ -694,7 +694,7 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | Shift+S | Vista dividida |
 | Shift+D / Ctrl+Shift+D | Página dupla (LTR / RTL) |
 | Ctrl+Shift+M | Janela de espelhamento multi-monitor |
-| Delete | Mover para lixeira (com undo) |
+| Delete | Mover para lixeira com os sidecars `.xmp` / de anotações (com undo) |
 | Escape | Sair do deep zoom / Sair da tela cheia |
 
 ### Reprodução de animação (GIF / APNG)

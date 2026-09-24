@@ -1754,6 +1754,11 @@ Supprimer des images
 
 Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées.
 
+Leurs sidecars les suivent : ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` et
+``IMG.xmp``, sauf si le RAW d'une paire RAW + JPEG utilise encore ce dernier. Un
+sidecar laissé derrière collerait sa note et ses retouches au prochain ``IMG.*``
+que l'appareil écrit sous le même nom.
+
 ----
 
 Opérations par lots

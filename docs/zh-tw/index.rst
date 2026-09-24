@@ -899,6 +899,10 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 
 圖片會移到系統資源回收桶，可以從那邊還原。
 
+sidecar 會一起移過去：``IMG.JPG.xmp``、``IMG.JPG.annotations.json`` 與
+``IMG.xmp``；RAW + JPEG 成對時，RAW 仍在使用的 ``IMG.xmp`` 會留下。留下的 sidecar
+會把評等和編輯套到相機之後以同名寫入的 ``IMG.*`` 上。
+
 ----
 
 批次操作

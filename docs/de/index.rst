@@ -1788,6 +1788,11 @@ Bilder löschen
 
 Bilder werden in den System-Papierkorb verschoben und können von dort wiederhergestellt werden.
 
+Ihre Sidecars gehen mit: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` und
+``IMG.xmp``, außer das RAW eines RAW-+-JPEG-Paars nutzt Letzteres noch. Eine
+zurückgelassene Sidecar-Datei würde Bewertung und Bearbeitung an das nächste
+``IMG.*`` hängen, das die Kamera unter demselben Namen schreibt.
+
 ----
 
 Stapeloperationen

@@ -1722,6 +1722,11 @@ Deleting Images
 
 Images are moved to the system Recycle Bin / Trash and can be recovered from there.
 
+Their sidecars go with them: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` and
+``IMG.xmp``, unless the RAW of a RAW + JPEG pair still uses that last one. A
+sidecar left behind would attach its rating and edits to the next ``IMG.*`` the
+camera writes under the same name.
+
 ----
 
 Batch Operations

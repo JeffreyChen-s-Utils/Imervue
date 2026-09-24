@@ -257,3 +257,75 @@ class TestWorkerBoundary:
         worker.finished_with.connect(lambda ok, bad: results.append((ok, bad)))
         worker.run()
         assert results == [([], [unlink, trash])]
+
+
+class TestSidecarsGoToo:
+    """A deleted IMG_0001.JPG left IMG_0001.xmp behind for the camera's next IMG_0001.JPG."""
+
+    @staticmethod
+    def _photo(folder, name="IMG.JPG", sidecars=("IMG.xmp", "IMG.JPG.xmp",
+                                                   "IMG.JPG.annotations.json")):
+        folder.mkdir(exist_ok=True)
+        image = folder / name
+        image.write_bytes(b"jpg")
+        for side in sidecars:
+            (folder / side).write_text("x", encoding="utf-8")
+        return str(image)
+
+    def test_trashed_files_take_their_sidecars_along(self, tmp_path, os_trash):
+        image = self._photo(tmp_path)
+        trashed, failed = trash_batch([image])
+        assert (trashed, failed) == ([image], [])        # sidecars are not reported
+        assert sorted(Path(p).name for p in os_trash) == [
+            "IMG.JPG", "IMG.JPG.annotations.json", "IMG.JPG.xmp", "IMG.xmp"]
+        assert list(tmp_path.iterdir()) == []
+
+    def test_an_adobe_sidecar_the_raw_still_uses_stays(self, tmp_path, os_trash):
+        image = self._photo(tmp_path)
+        (tmp_path / "IMG.CR2").write_bytes(b"raw")
+        trash_batch([image])
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["IMG.CR2", "IMG.xmp"]
+
+    def test_deleting_the_whole_pair_takes_the_shared_sidecar(self, tmp_path, os_trash):
+        jpeg = self._photo(tmp_path, sidecars=("IMG.xmp",))
+        raw = str(tmp_path / "IMG.CR2")
+        Path(raw).write_bytes(b"raw")
+        trash_batch([raw, jpeg])
+        assert list(tmp_path.iterdir()) == []
+
+    def test_unlinked_files_take_their_sidecars_along(self, tmp_path, os_trash):
+        image = self._photo(tmp_path)
+        removed, _failed = purge_batch([image])
+        assert removed == [image]
+        assert list(tmp_path.iterdir()) == []
+        assert os_trash == []                              # unlinked, not trashed
+
+    def test_a_folder_named_like_a_file_takes_nothing_beside_it(self, tmp_path, os_trash):
+        """``Trip.2024`` is a folder, not ``Trip`` with extension ``.2024``."""
+        folder = tmp_path / "Trip.2024"
+        folder.mkdir()
+        (tmp_path / "Trip.xmp").write_text("another photo's", encoding="utf-8")
+        purge_batch([], [str(folder)])
+        assert [p.name for p in tmp_path.iterdir()] == ["Trip.xmp"]
+
+    def test_a_sidecar_already_listed_is_handled_once(self, tmp_path, batch_spy):
+        image = self._photo(tmp_path, sidecars=("IMG.xmp",))
+        side = str(tmp_path / "IMG.xmp")
+        trashed, _failed = trash_batch([image, side])
+        assert trashed == [image, side]
+        assert batch_spy == [[image, side]]                # no second call for it
+
+    def test_a_sidecar_that_cannot_go_is_logged(self, tmp_path, monkeypatch, caplog):
+        image = self._photo(tmp_path, sidecars=("IMG.JPG.xmp",))
+
+        def refuse_sidecars(paths):
+            good = [p for p in paths if not p.endswith(".xmp")]
+            for p in good:
+                Path(p).unlink()
+            return good, [p for p in paths if p.endswith(".xmp")]
+
+        monkeypatch.setattr(trash_ops, "_trash_chunk", refuse_sidecars)
+        with caplog.at_level("WARNING", logger="Imervue"):
+            trashed, failed = trash_batch([image])
+        assert (trashed, failed) == ([image], [])
+        assert any("sidecar" in r.getMessage() for r in caplog.records)

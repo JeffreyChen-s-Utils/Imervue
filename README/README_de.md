@@ -720,7 +720,7 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | Shift+S | Split View |
 | Shift+D / Ctrl+Shift+D | Dual-Page (LTR / RTL) |
 | Ctrl+Shift+M | Multi-Monitor-Mirror-Fenster |
-| Delete | In Papierkorb verschieben (rückgängig machbar) |
+| Delete | Samt `.xmp`- / Anmerkungs-Sidecars in den Papierkorb verschieben (rückgängig machbar) |
 | Escape | Deep Zoom verlassen / Vollbild verlassen |
 
 ### Animations-Wiedergabe (GIF / APNG)

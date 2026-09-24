@@ -720,7 +720,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | Shift+S | Split view |
 | Shift+D / Ctrl+Shift+D | Dual-page (LTR / RTL) |
 | Ctrl+Shift+M | Multi-monitor mirror window |
-| Delete | Move to trash (undoable) |
+| Delete | Move to trash with its `.xmp` / annotation sidecars (undoable) |
 | Escape | Exit deep zoom / Exit fullscreen |
 
 ### Animation playback (GIF / APNG)
