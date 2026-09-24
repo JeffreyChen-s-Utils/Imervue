@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-18 | 2026-09-25 | Batch Convert hands a replaced original's ratings to its conversion; tree Duplicate copies sidecars | #fix #convert | [2026-09](2026-09.md) |
 | U-20260925-17 | 2026-09-25 | Deleted photos take their .xmp and annotation sidecars along | #fix #delete #xmp | [2026-09](2026-09.md) |
 | U-20260925-16 | 2026-09-25 | Deleted photos go to the Recycle Bin at shutdown instead of being unlinked | #fix #data-loss #delete | [2026-09](2026-09.md) |
 | U-20260925-15 | 2026-09-25 | Photos renamed outside Imervue keep their ratings, tags and library notes | #fix #rename | [2026-09](2026-09.md) |

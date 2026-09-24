@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_in_file_manager
-from Imervue.system.file_transfer import carry_along, is_same_file
+from Imervue.system.file_transfer import carry_along, carry_sidecars, is_same_file
 import contextlib
 import logging
 
@@ -593,7 +593,7 @@ class _FileTreeView(QTreeView):
             )
 
     def _duplicate_file(self, path: str) -> None:
-        """Copy ``path`` to a sibling with a "(copy)" suffix."""
+        """Copy ``path`` to a sibling with a "(copy)" suffix, its sidecars with it."""
         import shutil
         lang = language_wrapper.language_word_dict
         source = Path(path)
@@ -608,6 +608,7 @@ class _FileTreeView(QTreeView):
                     f"{lang.get('tree_duplicate_failed', 'Duplicate failed')}: {exc}",
                 )
             return
+        carry_sidecars([(str(source), str(candidate))], move=False)
         self._refresh_tree()
         if hasattr(self._main_window, "toast"):
             self._main_window.toast.success(

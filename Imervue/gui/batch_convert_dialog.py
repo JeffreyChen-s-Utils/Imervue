@@ -36,6 +36,7 @@ from Imervue.image.save_formats import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
+from Imervue.system.file_transfer import follow_saved_data
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -66,6 +67,8 @@ def _scan_folder(folder: str) -> list[str]:
 class _ConvertWorker(QThread):
     progress = Signal(int, int, str)  # current, total, filename
     result_ready = Signal(int, int, int)  # success, failed, skipped
+    # {trashed original: its conversion}, for the saved data to follow on the GUI thread
+    originals_replaced = Signal(dict)
 
     def __init__(self, paths: list[str], output_dir: str, fmt: str,
                  quality: int, delete_originals: bool, skip_same_fmt: bool):
@@ -82,7 +85,7 @@ class _ConvertWorker(QThread):
         success = 0
         failed = 0
         skipped = 0
-        converted: list[str] = []
+        converted: dict[str, str] = {}
         total = len(self._paths)
         for i, src in enumerate(self._paths):
             if self.isInterruptionRequested():
@@ -95,11 +98,13 @@ class _ConvertWorker(QThread):
                 out_path = self._convert_one(src, target_ext)
                 success += 1
                 if self._may_delete(src, out_path):
-                    converted.append(src)
+                    converted[src] = out_path
             except IMAGE_READ_ERRORS as exc:
                 logger.exception("Batch convert failed for %s: %s", src, exc)
                 failed += 1
-        self._trash_originals(converted)
+        trashed = self._trash_originals(list(converted))
+        if trashed:
+            self.originals_replaced.emit({src: converted[src] for src in trashed})
         self.result_ready.emit(success, failed, skipped)
 
     def _should_skip(self, src: str, target_ext: str) -> bool:
@@ -158,14 +163,15 @@ class _ConvertWorker(QThread):
         return True
 
     @staticmethod
-    def _trash_originals(paths: list[str]) -> None:
-        """Send the converted originals to the recycle bin in one batch."""
+    def _trash_originals(paths: list[str]) -> list[str]:
+        """Send the converted originals to the recycle bin in one batch; returns those trashed."""
         if not paths:
-            return
+            return []
         from Imervue.system.trash_ops import trash_batch
-        _trashed, failed = trash_batch(paths)
+        trashed, failed = trash_batch(paths)
         for path in failed:
             logger.warning("Could not move the converted original %s to the trash", path)
+        return trashed
 
 
 class BatchConvertDialog(WorkerHostMixin, QDialog):
@@ -359,6 +365,7 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
         )
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_finished)
+        self._worker.originals_replaced.connect(self._on_originals_replaced)
         self._worker.finished.connect(self._cleanup)
         self._worker.start()
 
@@ -368,6 +375,12 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
 
     def _cleanup(self):
         self._worker = None
+
+    def _on_originals_replaced(self, replaced: dict) -> None:
+        # A bound method, so the queued signal runs this on the GUI thread. The
+        # conversion took the trashed original's place: its rating, tags and
+        # library notes move over, as a rename would carry them.
+        follow_saved_data(replaced)
 
     def _on_finished(self, success, failed, skipped):
         self._progress.setValue(len(self._paths))

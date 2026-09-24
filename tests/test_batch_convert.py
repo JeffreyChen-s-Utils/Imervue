@@ -299,6 +299,48 @@ class TestConvertKeepsWhatItShould:
         assert results == [(0, 2, 0)]
         assert bad_raw.exists() and bad_png.exists() and os_trash == []
 
+    def test_a_replaced_original_hands_its_saved_data_to_the_conversion(self, tmp_path, os_trash):
+        """Its rating and tags stayed keyed to the trashed original's path."""
+        src = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(src)
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, _results = _worker([src], out, delete=True)
+        replaced = []
+        worker.originals_replaced.connect(replaced.append)
+        worker.run()
+        assert replaced == [{str(src): str(out / "a.jpg")}]
+
+    def test_kept_or_untrashable_originals_hand_nothing_over(self, tmp_path, monkeypatch):
+        from Imervue.system import trash_ops
+        src = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(src)
+        out = tmp_path / "out"
+        out.mkdir()
+        replaced = []
+        kept, _results = _worker([src], out, delete=False)
+        kept.originals_replaced.connect(replaced.append)
+        kept.run()
+        monkeypatch.setattr(trash_ops, "trash_batch", lambda paths: ([], list(paths)))
+        refused, _results = _worker([src], out, delete=True)
+        refused.originals_replaced.connect(replaced.append)
+        refused.run()
+        assert replaced == []
+
+    def test_the_dialog_moves_the_saved_data_to_the_conversion(self, qapp, tmp_path):
+        from types import SimpleNamespace
+
+        from Imervue.gui.batch_convert_dialog import BatchConvertDialog
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        src, conversion = str(tmp_path / "a.cr2"), str(tmp_path / "a.jpg")
+        user_setting_dict["image_ratings"] = {src: 5}
+        dlg = BatchConvertDialog(SimpleNamespace(main_window=None))
+        try:
+            dlg._on_originals_replaced({src: conversion})  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert user_setting_dict["image_ratings"] == {conversion: 5}
+
     def test_failed_trash_is_logged(self, tmp_path, monkeypatch, caplog):
         from Imervue.system import trash_ops
         src = tmp_path / "a.png"
