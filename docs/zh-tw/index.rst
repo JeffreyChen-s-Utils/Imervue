@@ -1292,6 +1292,10 @@ Lightroom 的寫法（``Red`` … ``Purple``）與 Bridge 的寫法（``Select``
 ``Approved``、``Review``、``To Do``），匯出時照 Lightroom 的寫法寫入；沒有對應顏色的
 自訂標籤會留在 sidecar 裡。
 
+被拒絕的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）匯入後成為篩選的
+**拒絕**\ 且不帶星等，**拒絕**\ 匯出時寫成 -1。sidecar 不是拒絕時會解除「拒絕」，
+「選用」則不受影響。
+
 - **為當前圖片匯入 XMP** — 從 sidecar 讀取星等 / 標題 / 關鍵字 / 色彩標籤
   寫入內部資料庫。
 - **為當前圖片匯出 XMP** — 將當前星等 / 標題 / 關鍵字 / 色彩標籤寫入

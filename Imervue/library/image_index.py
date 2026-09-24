@@ -281,8 +281,8 @@ _PATH_TABLES = ("images", "notes", "culling", "image_tags")
 _MOVING = "\u0001moving\u0001"
 
 
-def _library_exists() -> bool:
-    """Whether the library DB is open or on disk — a rename must not create one."""
+def library_exists() -> bool:
+    """Whether the library DB is open or on disk — a rename or a read must not create one."""
     return _conn is not None or get_db_path().exists()
 
 
@@ -313,7 +313,7 @@ def move_paths(mapping: Mapping[str, str], *, keep_existing: bool = False) -> No
     never opened (no DB file is created for it).
     """
     pairs = {str(old): str(new) for old, new in mapping.items() if str(old) != str(new)}
-    if not pairs or not _library_exists():
+    if not pairs or not library_exists():
         return
     with write_batch():
         c = conn()
@@ -328,7 +328,7 @@ def move_paths(mapping: Mapping[str, str], *, keep_existing: bool = False) -> No
 
 def stored_paths() -> list[str]:
     """Every distinct image path any table keeps rows for; empty without a library."""
-    if not _library_exists():
+    if not library_exists():
         return []
     rows = conn().execute(
         " UNION ".join(f"SELECT path FROM {table}"  # noqa: S608  # nosec B608  # table from _PATH_TABLES

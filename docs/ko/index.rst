@@ -1295,6 +1295,10 @@ Lightroom 표기(``Red`` … ``Purple``)와 Bridge 표기(``Select``, ``Second``
 ``Approved``, ``Review``, ``To Do``)를 이해하며, 내보낼 때는 Lightroom 표기로
 씁니다. 색상에 대응하지 않는 사용자 라벨은 sidecar에 남겨 둡니다.
 
+거부된 사진(Lightroom, Bridge, darktable의 ``xmp:Rating`` -1)은 별점 없는 선별
+**거부**\ 로 가져오고, **거부**\ 는 -1로 내보냅니다. 거부가 아닌 sidecar는 '거부'를
+해제하며, '선택'은 그대로 둡니다.
+
 - **현재 이미지용 XMP 가져오기** — sidecar에서 평점 / 제목 / 키워드 / 색상
   라벨을 내부 DB로 가져옵니다.
 - **현재 이미지용 XMP 내보내기** — 현재 평점 / 제목 / 키워드 / 색상 라벨을

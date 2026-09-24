@@ -2133,6 +2133,10 @@ are understood in Lightroom's words (``Red`` … ``Purple``) and Bridge's
 (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), and exported as
 Lightroom writes them; a label with no colour (a custom one) is left in the sidecar.
 
+A rejected photo — ``xmp:Rating`` -1 in Lightroom, Bridge and darktable — is
+imported as a culling **Reject** with no stars, and a Reject is exported as -1.
+A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
+
 - **Import XMP for current image** — pulls rating / title / keywords /
   color label from the sidecar into the internal database.
 - **Export XMP for current image** — writes the current rating / title /

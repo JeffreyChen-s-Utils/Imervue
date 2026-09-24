@@ -2167,6 +2167,10 @@ darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar. Les
 ``To Do``), et exportées comme Lightroom les écrit ; une étiquette sans couleur
 (personnalisée) reste dans le sidecar.
 
+Une photo rejetée — ``xmp:Rating`` -1 dans Lightroom, Bridge et darktable — est
+importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -1.
+Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
+
 - **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
   l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
 - **Exporter XMP pour l'image courante** — écrit la note / le titre / les

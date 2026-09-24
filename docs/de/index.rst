@@ -2203,6 +2203,11 @@ und in Bridges (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``)
 verstanden und so exportiert, wie Lightroom sie schreibt; ein Etikett ohne Farbe
 (ein eigenes) bleibt in der Sidecar-Datei stehen.
 
+Ein abgelehntes Foto — ``xmp:Rating`` -1 in Lightroom, Bridge und darktable —
+wird als Culling-**Reject** ohne Sterne importiert, und ein Reject wird als -1
+exportiert. Eine nicht abgelehnte Sidecar-Datei hebt ein Reject auf; ein Pick
+bleibt unberührt.
+
 - **XMP für aktuelles Bild importieren** — zieht Bewertung / Titel / Stichwörter /
   Farbetikett aus dem Sidecar in die interne Datenbank.
 - **XMP für aktuelles Bild exportieren** — schreibt die aktuelle Bewertung / Titel /

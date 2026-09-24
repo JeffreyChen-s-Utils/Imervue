@@ -224,6 +224,41 @@ class TestSettingsIntegration:
         xmp.export_for(image_path)
         assert xmp.load(image_path).color_label == written
 
+    def test_a_rejected_sidecar_becomes_a_cull_reject(self, xmp, image_path):
+        """Lightroom's reject (xmp:Rating -1) was stored as a -1 star rating nothing shows."""
+        from Imervue.library import image_index
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        user_setting_dict["image_ratings"] = {image_path: 4}
+        xmp.save(image_path, xmp.XmpData(rating=-1))
+        xmp.import_for(image_path)
+        assert image_index.get_cull_state(image_path) == image_index.CULL_REJECT
+        assert image_path not in user_setting_dict["image_ratings"]
+
+    @pytest.mark.parametrize(("state", "after"), [("reject", "unflagged"), ("pick", "pick")])
+    def test_a_sidecar_not_rejected_lifts_only_a_reject(self, xmp, image_path, state, after):
+        from Imervue.library import image_index
+        image_index.set_cull_state(image_path, state)
+        xmp.save(image_path, xmp.XmpData(rating=3))
+        xmp.import_for(image_path)
+        assert image_index.get_cull_state(image_path) == after
+
+    def test_a_reject_is_exported_as_rating_minus_one(self, xmp, image_path):
+        from Imervue.library import image_index
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        user_setting_dict["image_ratings"] = {image_path: 2}
+        image_index.set_cull_state(image_path, image_index.CULL_REJECT)
+        xmp.export_for(image_path)
+        assert xmp.load(image_path).rating == -1
+
+    def test_no_library_is_created_for_an_export_or_a_plain_import(self, xmp, image_path, tmp_path):
+        from Imervue.library import image_index
+        image_index.close()
+        image_index.set_db_path(tmp_path / "none" / "library.db")
+        xmp.save(image_path, xmp.XmpData(rating=3))
+        xmp.import_for(image_path)
+        xmp.export_for(image_path)
+        assert not (tmp_path / "none").exists()
+
     def test_import_empty_rating_clears_existing(self, xmp, image_path):
         from Imervue.user_settings.user_setting_dict import user_setting_dict
 

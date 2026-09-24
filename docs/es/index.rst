@@ -2169,6 +2169,10 @@ Las etiquetas de color se entienden con las palabras de Lightroom (``Red`` …
 ``To Do``), y se exportan como las escribe Lightroom; una etiqueta sin color (una
 personalizada) se deja en el sidecar.
 
+Una foto rechazada — ``xmp:Rating`` -1 en Lightroom, Bridge y darktable — se
+importa como **Reject** de la selección sin estrellas, y un Reject se exporta como
+-1. Un sidecar no rechazado quita un Reject; un Pick no cambia.
+
 - **Import XMP for current image** — extrae valoración / título / palabras clave /
   etiqueta de color del archivo secundario a la base de datos interna.
 - **Export XMP for current image** — escribe la valoración / título / palabras clave /

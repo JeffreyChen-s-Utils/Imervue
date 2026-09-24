@@ -2146,6 +2146,10 @@ cor são entendidos nas palavras do Lightroom (``Red`` … ``Purple``) e do Brid
 (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), e exportados como o
 Lightroom os escreve; um rótulo sem cor (personalizado) fica no sidecar.
 
+Uma foto rejeitada — ``xmp:Rating`` -1 no Lightroom, Bridge e darktable — é
+importada como **Reject** da seleção, sem estrelas, e um Reject é exportado como
+-1. Um sidecar não rejeitado remove um Reject; um Pick fica como está.
+
 - **Importar XMP da imagem atual** — extrai avaliação / título / palavras-chave /
   rótulo de cor do sidecar para o banco de dados interno.
 - **Exportar XMP da imagem atual** — grava a avaliação / título /

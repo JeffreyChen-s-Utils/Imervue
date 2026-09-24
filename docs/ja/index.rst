@@ -1303,6 +1303,10 @@ other XMP-aware photo managers、other XMP-aware photo managers、Bridge など�
 エクスポート時は Lightroom の表記で書き込みます。色に対応しない独自ラベルは
 sidecar に残します。
 
+除外された写真(Lightroom、Bridge、darktable の ``xmp:Rating`` -1)は、星なしの
+選別 **除外** として取り込み、**除外** は -1 としてエクスポートします。除外でない
+sidecar は「除外」を解除し、「採用」はそのままです。
+
 - **現在の画像の XMP をインポート** — sidecar から評価 / タイトル / キーワード
   / カラーラベルを内部 DB に取り込みます。
 - **現在の画像の XMP をエクスポート** — 現在の評価 / タイトル / キーワード /

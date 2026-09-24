@@ -14,7 +14,7 @@ cleanly to Adobe's XMP schema:
 ============  ============  =======================================
 Imervue       XMP element   Notes
 ============  ============  =======================================
-rating        xmp:Rating    integer 0\u20135 (0 = unrated, -1 = rejected)
+rating        xmp:Rating    0\u20135; -1 = rejected, the library's cull reject
 title         dc:title      single language default entry
 keywords      dc:subject    list of strings → ``image_tags``
 color label   xmp:Label     Lightroom's colour name or Bridge's word
@@ -52,6 +52,7 @@ _NS = {
 }
 _RATING_MIN = -1
 _RATING_MAX = 5
+_REJECTED = -1         # xmp:Rating of a rejected photo in Lightroom, Bridge and darktable
 _XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 # Adobe Bridge (and Lightroom's "Bridge Default" label set) labels with a
 # workflow word per colour; Lightroom writes the colour's own name.
@@ -432,7 +433,9 @@ def snapshot_from_settings(path: str) -> XmpData:
     would blank a creator an external editor (e.g. Lightroom) had written — and
     an otherwise-empty snapshot would delete a creator-only sidecar outright.
     The colour label is written as Lightroom names it unless the sidecar
-    already words that colour its own way (see :func:`_label_to_write`).
+    already words that colour its own way (see :func:`_label_to_write`). A
+    photo culled as a reject is written ``xmp:Rating="-1"``, as Lightroom,
+    Bridge and darktable mark a rejected photo.
     """
     from Imervue.user_settings.color_labels import get_color_label
     from Imervue.user_settings.tags import get_tags_for_image
@@ -449,7 +452,7 @@ def snapshot_from_settings(path: str) -> XmpData:
     existing = load(path)
 
     return XmpData(
-        rating=rating,
+        rating=_REJECTED if _is_rejected(path) else rating,
         title=str(titles.get(path, "")),
         description=str(descriptions.get(path, "")),
         keywords=list(get_tags_for_image(path)),
@@ -464,7 +467,9 @@ def apply_to_settings(path: str, data: XmpData) -> None:
     Tags from the sidecar are merged into ``image_tags`` \u2014 we never delete
     tags the user already assigned just because the external editor didn't
     know about them. The label becomes the colour it stands for
-    (:func:`label_color`); one with no colour clears Imervue's.
+    (:func:`label_color`); one with no colour clears Imervue's. A rating of -1
+    (rejected in Lightroom, Bridge and darktable) becomes the library's cull
+    reject with no stars; any other rating lifts a reject Imervue had.
     """
     from Imervue.user_settings.color_labels import set_color_label
     from Imervue.user_settings.tags import add_tag
@@ -473,10 +478,11 @@ def apply_to_settings(path: str, data: XmpData) -> None:
     )
 
     ratings = user_setting_dict.setdefault("image_ratings", {})
-    if data.rating:
+    if data.rating > 0:
         ratings[path] = int(data.rating)
     else:
         ratings.pop(path, None)
+    _set_rejected(path, data.rating == _REJECTED)
 
     if data.title:
         user_setting_dict.setdefault("image_titles", {})[path] = data.title
@@ -494,6 +500,23 @@ def apply_to_settings(path: str, data: XmpData) -> None:
 
     set_color_label(path, label_color(data.color_label))
     schedule_save()
+
+
+def _is_rejected(path: str) -> bool:
+    """Whether the library culls *path* as a reject; False without a library (none is created)."""
+    from Imervue.library import image_index
+    if not image_index.library_exists():
+        return False
+    return image_index.get_cull_state(path) == image_index.CULL_REJECT
+
+
+def _set_rejected(path: str, rejected: bool) -> None:
+    """Flag *path* a reject in the library, or lift a reject it has; other flags stay."""
+    from Imervue.library import image_index
+    if rejected:
+        image_index.set_cull_state(path, image_index.CULL_REJECT)
+    elif _is_rejected(path):
+        image_index.set_cull_state(path, image_index.CULL_UNFLAGGED)
 
 
 def export_for(path: str) -> Path:
