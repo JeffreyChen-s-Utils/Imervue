@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `e824adf` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `addd722` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 857 | 140,018 |
+| `tests/` | 857 | 140,061 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
-| `Imervue/gui/` | 165 | 32,978 |
+| `Imervue/gui/` | 165 | 32,986 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 125 | 14,269 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,928 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,692** | **319,622** |
+| **總計** | **1,692** | **319,673** |
 
-其中 `Imervue/` 套件本身 771 檔 / 165,353 行。
+其中 `Imervue/` 套件本身 771 檔 / 165,361 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -526,7 +526,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-165 個檔、32,978 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+165 個檔、32,986 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -604,7 +604,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `clone_stamp_dialog.py`(209) · `healing_brush_dialog.py`(245) · `sky_replace_dialog.py`(143) ·
 `portrait_retouch_dialog.py`(163) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(236) ·
 `hdr_merge_dialog.py`(151) · `panorama_dialog.py`(162) · `focus_stack_dialog.py`(150) ·
-`stack_blend_dialog.py`(170) · `collage_dialog.py`(87) · `deflicker_dialog.py`(228) ·
+`stack_blend_dialog.py`(170) · `collage_dialog.py`(87) · `deflicker_dialog.py`(236) 縮時去閃（檢視器解碼；輸出到 `deflickered/`，可寫回的格式沿用並帶 EXIF，RAW 存 PNG） ·
 `id_photo_sheet_dialog.py`(106) · `print_layout_dialog.py`(168)
 
 #### 批次 / 匯出 / 管理
@@ -964,7 +964,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-857 個檔、140,018 行。`pyproject.toml` 定義三個互斥層級 marker：
+857 個檔、140,061 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
