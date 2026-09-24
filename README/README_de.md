@@ -261,7 +261,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)
 - **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`)
-- **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon via piexif schreiben (JPEG)
+- **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon ohne Zusatzpaket in JPEGs schreiben, Pixel, übrige Tags und Vorschaubild bleiben unverändert (andere Formate benötigen `piexif`)
 - **Token Batch Rename** — Live-Preview-Templates wie `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — eine Zeile pro Bild inkl. Cull / Rating / Tags / Notes
 

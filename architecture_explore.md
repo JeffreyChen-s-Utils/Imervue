@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d31d2d8` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `f8416d9` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 848 | 138,646 |
+| `tests/` | 850 | 138,865 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
 | `Imervue/gui/` | 164 | 32,975 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 121 | 13,594 |
+| `Imervue/image/` | 122 | 13,756 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,908 |
 | `Imervue/multi_language/` | 8 | 14,049 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,677** | **317,495** |
+| **總計** | **1,678** | **317,724** |
 
-其中 `Imervue/` 套件本身 765 檔 / 164,598 行。
+其中 `Imervue/` 套件本身 766 檔 / 164,760 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-121 個模組、13,594 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+122 個模組、13,756 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -365,7 +365,7 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `in_place_save.py`(218) `can_rewrite_in_place(path)` / `in_place_format(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`replace_atomically(path, write)` 經 `.tmp` 兄弟檔一步替換；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數；`save_over_source(path, edited)` 把編輯後（已轉正、sRGB）的影像原子寫回原檔並帶回這些 metadata（不帶 ICC 與轉向），Modify 套用裁切／儲存註解、註解編輯器的 Save 與 AI 放大的覆寫都走它；`save_edited_copy(source, edited, target)` 寫新檔時也帶回來源的描述性 EXIF 與 DPI（同格式則全套）；`descriptive_exif(..., keep_location=False)` 另外去掉 GPS IFD 與 XMP · `export_metadata.py`(62) 匯出的 metadata 政策：`export_save_options(source, policy)` 依「全部／位置以外（預設）／無」回傳 `{"exif": bytes}`，不帶轉向與像素尺寸 · `jpeg_orientation.py`(118) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
+`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `in_place_save.py`(218) `can_rewrite_in_place(path)` / `in_place_format(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`replace_atomically(path, write)` 經 `.tmp` 兄弟檔一步替換；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數；`save_over_source(path, edited)` 把編輯後（已轉正、sRGB）的影像原子寫回原檔並帶回這些 metadata（不帶 ICC 與轉向），Modify 套用裁切／儲存註解、註解編輯器的 Save 與 AI 放大的覆寫都走它；`save_edited_copy(source, edited, target)` 寫新檔時也帶回來源的描述性 EXIF 與 DPI（同格式則全套）；`descriptive_exif(..., keep_location=False)` 另外去掉 GPS IFD 與 XMP · `export_metadata.py`(62) 匯出的 metadata 政策：`export_save_options(source, policy)` 依「全部／位置以外（預設）／無」回傳 `{"exif": bytes}`，不帶轉向與像素尺寸 · `jpeg_orientation.py`(65) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `jpeg_exif.py`(166) 只靠 Pillow 改 JPEG 的 EXIF：`header_segments` / `exif_segment` / `replace_exif_segment` 換掉 APP1 段、`serialize_exif(exif, original)` 補回 `Image.Exif.tobytes` 會丟的 IFD1 縮圖、`update_jpeg_exif(data, update)` 一次做完（像素位元組不變） · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
 `formats.py`(35) 能開的副檔名唯一來源：`RAW_EXTENSIONS`、`STILL_IMAGE_EXTENSIONS`（媒體庫）、`VIEWER_EXTENSIONS`（再加影片；檢視器、檔案樹、拖放、開啟對話框）、`ensure_pillow_opener(ext)` ·
 `save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
@@ -376,7 +376,7 @@ ImervueMainWindow
 #### 中繼資料
 
 `xmp_sidecar.py`(386) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
-`gps.py`(90) EXIF GPS 擷取 · `gps_geotag.py`(70) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
+`gps.py`(90) EXIF GPS 擷取 · `gps_geotag.py`(119) 寫入（JPEG 走 `jpeg_exif`，不需 piexif；其他格式有 piexif 才寫） · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(45) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
 `annotations.py`(270) JSON sidecar 註解 · `shown.py`(32) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正），`load_shown_rgb(path)`；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP 都走它 · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(25) `merged_exif(img)`：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(194) 圖片資訊組裝與對話框；`get_exif_data()` 經 `exif_merge` 讀，HEIC / JXL 也讀得到
 
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-848 個檔、138,646 行。`pyproject.toml` 定義三個互斥層級 marker：
+848 個檔、138,713 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

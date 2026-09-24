@@ -160,3 +160,12 @@ def test_exif_that_outgrows_its_segment_is_rejected():
     data = _jpeg(exif)
     with pytest.raises(ValueError, match="too large"):
         set_jpeg_orientation(data, 6)
+
+
+def test_rebuilt_exif_keeps_the_thumbnail():
+    """Adding a missing tag re-serialises the block; the IFD1 thumbnail must survive it."""
+    from _exif_samples import payload_with_thumbnail, thumbnail_jpeg, thumbnail_of
+    before = _jpeg(payload_with_thumbnail())
+    after = set_jpeg_orientation(before, 6)
+    assert _exif_of(after)[_ORIENTATION] == 6
+    assert thumbnail_of(after) == thumbnail_jpeg()

@@ -2387,8 +2387,9 @@ Geotag GPS
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` lê quaisquer tags GPS EXIF existentes e
-permite editar ou definir novas coordenadas em graus decimais. Requer ``piexif``
-instalado; grava em JPEG no local.
+permite editar ou definir novas coordenadas em graus decimais. Um JPEG é gravado no local
+sem pacote extra: só o bloco EXIF muda, então os pixels, as outras tags e a miniatura
+continuam iguais. Outros formatos precisam de ``piexif``.
 
 Layout de Impressão
 ^^^^^^^^^^^^^^^^^^^

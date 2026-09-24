@@ -261,7 +261,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
 - **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur pour l'interopérabilité avec d'autres gestionnaires photo XMP (XML sécurisé via `defusedxml`)
-- **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes via piexif (JPEG)
+- **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes dans un JPEG sans paquet supplémentaire, sans toucher aux pixels, aux autres tags ni à la vignette (les autres formats nécessitent `piexif`)
 - **Renommage par lot avec jetons** — modèles avec aperçu en direct comme `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exporter les métadonnées CSV / JSON** — une ligne par image avec tri / note / étiquettes / notes
 

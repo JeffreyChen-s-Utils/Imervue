@@ -2403,8 +2403,9 @@ Geoetiqueta GPS
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` lee cualquier etiqueta GPS existente
-de EXIF y le permite editar o establecer nuevas coordenadas en grados decimales. Requiere
-``piexif`` instalado; escribe en JPEG in situ.
+de EXIF y le permite editar o establecer nuevas coordenadas en grados decimales. Un JPEG se
+escribe in situ sin paquetes extra: solo cambia su bloque EXIF, así que los píxeles, las demás
+etiquetas y la miniatura quedan igual. Otros formatos necesitan ``piexif``.
 
 Diseño de impresión
 ^^^^^^^^^^^^^^^^^^^

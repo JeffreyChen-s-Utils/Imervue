@@ -261,7 +261,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Editor de palavras-chave** — título / autor / descrição / palavras-chave, com **sugestões de tags relacionadas** extraídas da coocorrência de tags e expansão de vocabulário controlado (uma palavra-chave folha aplica automaticamente seus ancestrais + sinônimos de um vocabulário hierárquico editável)
 - Diálogo de **informações da imagem** (dimensões / tamanho / datas)
 - **Sidecars XMP** (`.xmp` companheiros) — avaliação / título / descrição / palavras-chave / etiqueta de cor com round-trip para interoperabilidade com outros gerenciadores XMP-aware (XML seguro via `defusedxml`)
-- **Editor de Geotag GPS** — lê GPS EXIF existente, escreve nova lat/lon via piexif (JPEG)
+- **Editor de Geotag GPS** — lê GPS EXIF existente, escreve nova lat/lon em um JPEG sem pacote extra, sem alterar pixels, outras tags nem a miniatura (outros formatos precisam de `piexif`)
 - **Token Batch Rename** — templates com preview ao vivo como `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — uma linha por imagem incluindo triagem / avaliação / tags / notas
 

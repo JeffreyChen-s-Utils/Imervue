@@ -64,6 +64,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-103 | 2026-09-24 | Export keeps camera, lens and capture date, with a metadata policy | #feature #metadata #export | [2026-09](2026-09.md) |
 | U-20260924-104 | 2026-09-24 | CLI and Auto-Orient decode like the viewer: upright, sRGB, HEIC readable | #fix #cli #orientation #colour | [2026-09](2026-09.md) |
 | U-20260924-105 | 2026-09-24 | Thumbnail cache: drop the fromarray mode conversion Pillow 13 removes | #fix #compat #pillow | [2026-09](2026-09.md) |
+| U-20260924-106 | 2026-09-24 | GPS geotag writes JPEGs without piexif; EXIF rewrites keep the thumbnail | #fix #metadata #gps | [2026-09](2026-09.md) |
 | U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |
 | U-20260924-98 | 2026-09-24 | Keep AI Upscale overwrite and EXIF Strip from truncating animated or multi-page files | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |

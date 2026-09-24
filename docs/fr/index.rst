@@ -2403,8 +2403,9 @@ Géolocalisation GPS
 ^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` lit les tags GPS EXIF existants et
-vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux. Nécessite l'installation
-de ``piexif`` ; écrit dans le JPEG sur place.
+vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux. Un JPEG est écrit
+sur place sans paquet supplémentaire : seul son bloc EXIF change, les pixels, les autres tags et
+la vignette restent intacts. Les autres formats nécessitent ``piexif``.
 
 Mise en page d'impression
 ^^^^^^^^^^^^^^^^^^^^^^^^^
