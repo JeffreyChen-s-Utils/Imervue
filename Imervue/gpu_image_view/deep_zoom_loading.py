@@ -130,8 +130,8 @@ class DeepZoomLoadingMixin:
         self.deepzoom_pool.start(worker)
 
     def _should_progressive_decode(self, path: str) -> bool:
-        from Imervue.gpu_image_view.images.image_loader import _RAW_EXTS
-        if Path(path).suffix.lower() in _RAW_EXTS:
+        from Imervue.image.formats import RAW_EXTENSIONS
+        if Path(path).suffix.lower() in RAW_EXTENSIONS:
             return True
         try:
             # Justification: local image path picked in the browser.

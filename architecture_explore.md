@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `fe80ddd` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `13396ea` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 834 | 136,171 |
+| `tests/` | 836 | 136,263 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
 | `Imervue/gui/` | 162 | 32,839 |
 | `Imervue/puppet/` | 57 | 15,285 |
-| `Imervue/image/` | 116 | 13,004 |
+| `Imervue/image/` | 116 | 13,019 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,904 |
 | `Imervue/multi_language/` | 8 | 13,959 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,655** | **314,077** |
+| **總計** | **1,657** | **314,184** |
 
-其中 `Imervue/` 套件本身 757 檔 / 163,700 行。
+其中 `Imervue/` 套件本身 757 檔 / 163,715 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -299,7 +299,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-116 個模組、13,004 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+116 個模組、13,019 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -962,7 +962,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-834 個檔、136,171 行。`pyproject.toml` 定義三個互斥層級 marker：
+836 個檔、136,263 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1180,6 +1180,10 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
     `QShortcut`、選單列共用一張表：工具鍵只綁在 Tools 選單（工具列只顯示），主視窗的資料夾分頁鍵
     （`Ctrl+T/W/Tab/Shift+Tab`）離開 Imervue 分頁就停用。`tests/test_main_window_shortcut_conflicts.py`
     逐分頁檢查。
+13. **很多 import 寫在函式裡，改名或移除時容易漏改。** 那一處只有在函式第一次執行時才會 `ImportError`，
+    測試若沒走到就一路綠燈（移除 `image_loader._RAW_EXTS` 時，`deep_zoom_loading` 的漸進解碼判斷就這樣壞掉，
+    檢視器每次重新套用 recipe 都丟例外）。`tests/test_internal_imports_resolve.py` 掃描 `Imervue/` 與
+    `plugins/` 每一個 `from Imervue... import 名稱`（含函式內），確認名稱真的存在。
 
 
 
