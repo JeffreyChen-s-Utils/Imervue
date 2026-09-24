@@ -815,7 +815,7 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP(+ オプションで HEIC / AVIF / JXL)間で変換 |
 | `apply_watermark` / `apply_frame` | テキストウォーターマークを焼き込み、またはマット / ポラロイドフレーム + キャプションを追加 |
 | `build_collage` | 複数の画像をグリッドモンタージュに合成(進捗付き) |
-| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転 |
+| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転。サイズと座標は EXIF の向きを適用した画像が基準です。 |
 | `collection_stats` | フォルダのレーティング / お気に入り / カラーラベル / カリングのサマリー |
 | `search_images` | スマートアルバムのクエリ DSL でフォルダをフィルタ(パス / EXIF / サイズ / 寸法) |
 | `extract_gps` / `dominant_colors` | EXIF GPS 座標を読み取り(`reverse_geocode` に連鎖)、median-cut のカラーパレット(rgb / hex / 占有率) |

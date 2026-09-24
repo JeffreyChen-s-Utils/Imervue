@@ -2515,6 +2515,7 @@ Ferramentas Disponíveis
      - Recorte por caixa de pixels, redimensionamento preservando a
        proporção e rotação sem perdas de 90/180/270 ou espelhamento
        horizontal/vertical.
+       Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF.
    * - ``collection_stats``
      - Resume avaliações, favoritos, rótulos de cor e estados de triagem de
        uma pasta (contagens, distribuição de 0–5 estrelas e média).

@@ -2525,6 +2525,7 @@ Herramientas disponibles
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Recorte por caja de píxeles, redimensión que preserva el aspecto y rotación
        sin pérdida de 90/180/270 o volteo horizontal/vertical.
+       Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF.
    * - ``collection_stats``
      - Resume las calificaciones, favoritos, etiquetas de color y estados de culling de
        una carpeta (conteos, distribución de 0–5 estrellas y promedio).

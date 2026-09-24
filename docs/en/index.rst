@@ -2502,6 +2502,7 @@ Available Tools
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Pixel-box crop, aspect-preserving resize, and lossless 90/180/270
        rotation or horizontal/vertical flip.
+       Sizes and coordinates refer to the EXIF-upright image.
    * - ``collection_stats``
      - Summarise a folder's ratings, favourites, colour labels and cull
        states (counts, 0–5 star distribution and average).

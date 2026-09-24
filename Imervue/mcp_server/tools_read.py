@@ -13,6 +13,7 @@ from Imervue.mcp_server.tool_support import (
     NO_ALPHA_FORMATS,
     json_safe,
     load_rgba_array,
+    open_upright,
     validated_dir,
     validated_file,
 )
@@ -83,11 +84,16 @@ def read_image_metadata(path: str) -> dict[str, Any]:
 def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
     from PIL import Image
 
+    from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
     try:
         with Image.open(image_path) as img:
-            out["width"] = int(img.width)
-            out["height"] = int(img.height)
+            # The upright size the other tools (crop, resize, …) work in.
+            width, height = img.size
+            if exif_orientation(img) in QUARTER_TURN_CODES:
+                width, height = height, width
+            out["width"] = int(width)
+            out["height"] = int(height)
             out["format"] = img.format or ""
             out["mode"] = img.mode
     except IMAGE_READ_ERRORS as exc:
@@ -164,8 +170,7 @@ def convert_format(
             f"unsupported destination format {fmt!r}; "
             f"expected one of {sorted(_CONVERTIBLE_FORMATS | set(_EXTRA_FORMAT_NAMES))}",
         )
-    from PIL import Image
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         save_kwargs: dict[str, Any] = {}
         normalised = "jpeg" if fmt in {"jpg", "jpeg"} else fmt
         if normalised in {"jpeg", "webp"}:
@@ -257,9 +262,8 @@ def puppet_inspect(path: str) -> dict[str, Any]:
 
 def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
     """Convert through save_formats for the optional HEIC/AVIF/JXL backends."""
-    from PIL import Image
     from Imervue.image.save_formats import save_image
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         save_image(opened, str(dst), _EXTRA_FORMAT_NAMES[fmt], max(1, min(100, int(quality))))
     return {
         "source": str(src),
@@ -328,11 +332,10 @@ def extract_video_frame(
 def sharpness_score(path: str) -> dict[str, Any]:
     """Score an image's sharpness (Laplacian variance); flag likely-blurry."""
     import numpy as np
-    from PIL import Image
     from Imervue.image.sharpness import DEFAULT_BLUR_THRESHOLD
     from Imervue.image.sharpness import sharpness_score as _score
     img_path = validated_file(path)
-    with Image.open(img_path) as opened:
+    with open_upright(img_path) as opened:
         gray = opened.convert("L")
         gray.thumbnail((_SHARPNESS_MAX_SIDE, _SHARPNESS_MAX_SIDE))
         arr = np.asarray(gray, dtype=np.float64)
@@ -436,7 +439,7 @@ def image_thumbnail(path: str, max_size: int = 256) -> dict[str, Any]:
     from PIL import Image
     img_path = validated_file(path)
     box = max(16, min(_THUMB_MAX, int(max_size)))
-    with Image.open(img_path) as opened:
+    with open_upright(img_path) as opened:
         thumb = opened.convert("RGBA")
         thumb.thumbnail((box, box), Image.Resampling.LANCZOS)
         buffer = io.BytesIO()

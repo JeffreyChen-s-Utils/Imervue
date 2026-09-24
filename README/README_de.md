@@ -865,7 +865,7 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP konvertieren (+ optional HEIC / AVIF / JXL) |
 | `apply_watermark` / `apply_frame` | Ein Text-Wasserzeichen oder einen Passepartout- / Polaroid-Rahmen + Caption einbrennen |
 | `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
 | `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
 | `search_images` | Einen Ordner mit der Smart-Album-Query-DSL filtern (Pfad / EXIF / Größe / Maße) |
 | `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |

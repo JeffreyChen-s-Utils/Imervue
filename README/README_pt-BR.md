@@ -839,7 +839,7 @@ longa duração transmitem `notifications/progress`.
 | `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionais) |
 | `apply_watermark` / `apply_frame` | Gravar uma marca d'água de texto ou uma moldura passe-partout / Polaroid + legenda |
 | `build_collage` | Compor imagens em uma montagem em grade (com progresso) |
-| `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas. Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF. |
 | `collection_stats` | Resumo de avaliação / favorito / etiqueta de cor / triagem da pasta |
 | `search_images` | Filtra uma pasta com a DSL de consulta dos smart albums (caminho / EXIF / tamanho / dimensões) |
 | `extract_gps` / `dominant_colors` | Lê coordenadas GPS do EXIF (encadeia com `reverse_geocode`); paleta de cores por median-cut (rgb / hex / proporção) |

@@ -19,6 +19,9 @@ from Imervue.image.read_errors import IMAGE_READ_ERRORS
 _TOP_LEFT = 1  # the "already upright" orientation
 _ORIENTATION_TAG = 0x0112
 
+QUARTER_TURN_CODES: frozenset[int] = frozenset({5, 6, 7, 8})
+"""Orientations that turn the image a quarter turn, so its upright width and height swap."""
+
 # Code → array transform, matching PIL.ImageOps.exif_transpose semantics
 # (np.rot90 is counter-clockwise; k=-1 is a clockwise quarter turn).
 _TRANSFORMS = {

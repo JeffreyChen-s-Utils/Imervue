@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 (+ 선택적 HEIC / AVIF / JXL) |
 | `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
 | `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
-| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전 |
+| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
 | `collection_stats` | 폴더 별점 / 즐겨찾기 / 컬러 라벨 / 컬링 요약 |
 | `search_images` | 스마트 앨범 쿼리 DSL로 폴더 필터링 (경로 / EXIF / 크기 / 해상도) |
 | `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / 비율) |

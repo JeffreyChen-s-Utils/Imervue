@@ -2529,6 +2529,7 @@ Outils disponibles
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Recadrage en boîte de pixels, redimensionnement préservant le rapport, et
        rotation 90/180/270 sans perte ou retournement horizontal/vertical.
+       Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF.
    * - ``collection_stats``
      - Synthétise les notes, favoris, étiquettes de couleur et états de tri d'un
        dossier (comptes, distribution 0–5 étoiles et moyenne).

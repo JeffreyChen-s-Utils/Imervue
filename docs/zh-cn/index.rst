@@ -2097,6 +2097,7 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - 像素框裁切、保持长宽比的缩放，以及无损 90/180/270 旋转或
        水平 / 垂直翻转。
+       尺寸与坐标以依 EXIF 方向摆正后的图像为准。
    * - ``collection_stats``
      - 汇总文件夹的评级、收藏、颜色标签与挑片状态（计数、0–5 星
        分布与平均值）。

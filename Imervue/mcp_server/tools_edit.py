@@ -13,6 +13,7 @@ from typing import Any
 from Imervue.mcp_server.tool_support import (
     NO_ALPHA_FORMATS,
     load_rgba_array,
+    open_upright,
     validated_file,
 )
 
@@ -79,14 +80,13 @@ def apply_watermark(
         )
     dst = _validated_destination(destination)
     rgb = _validated_rgb_triplet(color, _DEFAULT_WATERMARK_COLOR)
-    from PIL import Image
     from Imervue.image.watermark import WatermarkOptions
     from Imervue.image.watermark import apply_watermark as _apply
     opts = WatermarkOptions(
         text=text, corner=corner, opacity=float(opacity),
         font_fraction=float(font_fraction), color=rgb, shadow=bool(shadow),
     )
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         _save_image_to(dst, _apply(opened, opts))
     return {
         "source": str(src),
@@ -250,8 +250,7 @@ def crop_image(
         raise ValueError("width and height must be positive")
     if left < 0 or top < 0:
         raise ValueError("x and y must be non-negative")
-    from PIL import Image
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         img_w, img_h = opened.size
         if left + box_w > img_w or top + box_h > img_h:
             raise ValueError(
@@ -317,7 +316,7 @@ def resize_image(
     ):
         raise ValueError("width and height must be positive")
     from PIL import Image
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         src_w, src_h = opened.size
         target = _resize_dims(src_w, src_h, target_w, target_h)
         _guard_output_pixels(*target)
@@ -363,7 +362,7 @@ def rotate_image(source: str, destination: str, operation: str) -> dict[str, Any
             f"got {operation!r}",
         )
     from PIL import Image
-    with Image.open(src) as opened:
+    with open_upright(src) as opened:
         result = opened.transpose(getattr(Image.Transpose, transpose_name))
         width, height = result.size
         _save_image_to(dst, result)

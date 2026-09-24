@@ -12,12 +12,9 @@ from pathlib import Path
 from PIL import Image
 
 from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
-from Imervue.image.orientation import exif_orientation
+from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
 from Imervue.image.raw_loader import raw_dimensions
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-
-# EXIF orientations that turn the image a quarter turn (transpose, rotate 90 / 270, transverse).
-_QUARTER_TURNS = frozenset({5, 6, 7, 8})
 
 
 def image_dimensions(path: str | Path) -> tuple[int, int] | None:
@@ -29,7 +26,7 @@ def image_dimensions(path: str | Path) -> tuple[int, int] | None:
     try:
         with Image.open(path) as img:
             width, height = img.size
-            quarter_turn = exif_orientation(img) in _QUARTER_TURNS
+            quarter_turn = exif_orientation(img) in QUARTER_TURN_CODES
     except IMAGE_READ_ERRORS:
         return None
     return (height, width) if quarter_turn else (width, height)

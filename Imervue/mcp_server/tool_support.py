@@ -18,11 +18,25 @@ IMAGE_EXTENSIONS: frozenset[str] = frozenset({
 NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 
 
-def load_rgba_array(image_path: Path):
-    """Load *image_path* as an HxWx4 uint8 RGBA array."""
-    import numpy as np
+def open_upright(image_path: Path):
+    """Open *image_path* decoded and turned upright by its EXIF orientation.
+
+    Every tool works on the image as a viewer shows it: sizes, crop boxes and
+    the written copies (which carry no EXIF) all use the upright pixels.
+    """
     from PIL import Image
+
+    from Imervue.image.orientation import exif_orientation, transpose_for
     with Image.open(image_path) as opened:
+        opened.load()
+        turned = transpose_for(opened, exif_orientation(opened))
+        return turned if turned is not opened else opened.copy()
+
+
+def load_rgba_array(image_path: Path):
+    """Load *image_path* as an upright HxWx4 uint8 RGBA array."""
+    import numpy as np
+    with open_upright(image_path) as opened:
         return np.array(opened.convert("RGBA"))
 
 

@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 | `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP（+ 可选 HEIC / AVIF / JXL） |
 | `apply_watermark` / `apply_frame` | 烧入文字水印或衬边 / 拍立得相框 + 说明文字 |
 | `build_collage` | 将多张图片合成为网格拼贴（带进度） |
-| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保持长宽比的缩放、无损旋转 / 翻转 |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保持长宽比的缩放、无损旋转 / 翻转。尺寸与坐标以依 EXIF 方向摆正后的图像为准。 |
 | `collection_stats` | 文件夹的评级 / 收藏 / 颜色标签 / 挑片汇总 |
 | `search_images` | 以智能相册查询 DSL 筛选文件夹（路径 / EXIF / 大小 / 尺寸） |
 | `extract_gps` / `dominant_colors` | 读取 EXIF GPS 坐标（可接 `reverse_geocode`）；median-cut 调色板（rgb / hex / 占比） |

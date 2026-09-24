@@ -2531,6 +2531,7 @@ Verfügbare Werkzeuge
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Pixel-Box-Crop, seitenverhältniserhaltendes Resize und verlustfreies
        90/180/270-Rotate oder Horizontal-/Vertikal-Flip.
+       Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild.
    * - ``collection_stats``
      - Ratings, Favoriten, Farbetiketten und Cull-Zustände eines Ordners
        zusammenfassen (Counts, 0–5-Sterne-Verteilung und Durchschnitt).
