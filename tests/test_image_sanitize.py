@@ -877,3 +877,19 @@ def _photo_with_original_date(path, when="2019:05:06 07:08:09"):
 def test_image_date_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
     path = _photo_with_original_date(tmp_path / "a.jpg")
     assert _get_image_date(str(path)) == datetime(2019, 5, 6, 7, 8, 9)
+
+
+def _tagged_portrait(path):
+    """40x20 stored pixels tagged 6, so shown (and expected out) as 20x40."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+def test_sanitize_bakes_the_orientation_before_dropping_it(tmp_path):
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    out = sanitize_image(_tagged_portrait(tmp_path / "p.jpg"), str(out_dir), "same")
+    with Image.open(out) as saved:
+        assert saved.size == (20, 40)

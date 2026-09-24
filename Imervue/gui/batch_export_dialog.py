@@ -15,13 +15,12 @@ from PySide6.QtWidgets import (
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
     QProgressBar, QGroupBox,
 )
-import numpy as np
 from PIL import Image
 
+from Imervue.gui.export_source import open_export_source
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import export_presets
-from Imervue.image.recipe_store import recipe_store
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
     QUALITY_FORMATS,
@@ -97,8 +96,7 @@ class _ExportWorker(QThread):
     def _process_one(self, src: str) -> bool:
         s = self._settings
         try:
-            img = _open_for_export(src)
-            img = _apply_recipe(src, img)
+            img = open_export_source(src)
             if s.square_crop:
                 img = export_presets.square_crop(img)
             img = self._resize_if_needed(img)
@@ -123,16 +121,6 @@ class _ExportWorker(QThread):
         if w > max_w or h > max_h:
             img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
         return img
-
-
-def _apply_recipe(src: str, img: Image.Image) -> Image.Image:
-    """Bake the stored non-destructive recipe onto ``img`` if one exists."""
-    recipe = recipe_store.get_for_path(src)
-    if recipe is None or recipe.is_identity():
-        return img
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return Image.fromarray(recipe.apply(np.array(img)))
 
 
 def _build_output_path(src: Path, output_dir: str, ext: str) -> Path:
@@ -387,14 +375,6 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
                 self._gui.main_window.toast.success(msg)
 
         QTimer.singleShot(0, self.accept)
-
-
-def _open_for_export(path: str) -> Image.Image:
-    if Path(path).suffix.lower() == ".svg":
-        from Imervue.gpu_image_view.images.image_loader import _load_svg
-        arr = _load_svg(path, thumbnail=False)
-        return Image.fromarray(arr)
-    return Image.open(path)
 
 
 def open_batch_export(main_gui: GPUImageView):

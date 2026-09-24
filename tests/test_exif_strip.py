@@ -211,3 +211,20 @@ class TestStripWorker:
         worker.run()
 
         assert results == [(0, 0)]
+
+
+def _tagged_portrait(path):
+    """40x20 stored pixels tagged 6, so shown (and expected out) as 20x40."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+def test_strip_bakes_the_orientation_before_dropping_it(tmp_path):
+    """Stripping (in place by default) turned a portrait phone photo sideways for good."""
+    path = _tagged_portrait(tmp_path / "p.jpg")
+    strip_exif(path)
+    with Image.open(path) as out:
+        assert out.size == (20, 40)
+        assert out.getexif().get(0x0112) is None

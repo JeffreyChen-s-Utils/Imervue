@@ -10,8 +10,8 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton,
 )
-from PIL import Image
 
+from Imervue.gui.export_source import open_export_source
 from Imervue.gui.dialog_rows import path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -43,7 +43,7 @@ class _SizeEstimateWorker(QThread):
     def run(self):
         try:
             import io
-            img = _open_image_for_export(self._source_path)
+            img = open_export_source(self._source_path)
             buf = io.BytesIO()
             save_image(img, buf, self._fmt, self._quality)
             self.result_ready.emit(buf.tell(), "")
@@ -196,38 +196,12 @@ class ExportDialog(WorkerHostMixin, QDialog):
 
         fmt = self._selected_format()
         try:
-            img = _open_image_for_export(self.source_path)
+            img = open_export_source(self.source_path)
             save_image(img, output_path, fmt, self._quality_for(fmt))
             logger.info(f"Exported image to {output_path} as {fmt}")
             self.accept()
         except Exception as exc:
             logger.exception(f"Export failed: {exc}")
-
-
-def _open_image_for_export(path: str) -> Image.Image:
-    """Open an image file for export, handling SVG via QSvgRenderer.
-
-    Also applies the non-destructive Develop recipe (if any) so exports
-    include any adjustments the user has made — the whole point of a
-    recipe system is that the pixels follow the file regardless of which
-    code path is rendering them.
-    """
-    import numpy as np
-    from Imervue.image.recipe_store import recipe_store
-
-    if Path(path).suffix.lower() == ".svg":
-        from Imervue.gpu_image_view.images.image_loader import _load_svg
-        arr = _load_svg(path, thumbnail=False)
-        img = Image.fromarray(arr)
-    else:
-        img = Image.open(path)
-
-    recipe = recipe_store.get_for_path(path)
-    if recipe is not None and not recipe.is_identity():
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        img = Image.fromarray(recipe.apply(np.array(img)))
-    return img
 
 
 def open_export_dialog(main_gui: GPUImageView) -> None:

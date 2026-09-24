@@ -38,7 +38,7 @@ def test_unexpected_error_is_reported_with_traceback(qapp, tmp_path, caplog, mon
     def boom(_path):
         raise RuntimeError("bug")
 
-    monkeypatch.setattr(mod, "_open_image_for_export", boom)
+    monkeypatch.setattr(mod, "open_export_source", boom)
     ((size, err),), tracebacks = _estimate(tmp_path / "a.png", caplog)
     assert (size, err) == (0, "bug")
     (record,) = tracebacks

@@ -9,6 +9,8 @@ Pure NumPy transforms (unit-tested); the EXIF read is a thin Pillow wrapper.
 """
 from __future__ import annotations
 
+import re
+
 import numpy as np
 from PIL import Image
 
@@ -64,10 +66,49 @@ def transpose_for(img: Image.Image, code: int) -> Image.Image:
     """Return *img* turned upright for orientation *code*; *img* itself when no turn is needed.
 
     Unlike ``ImageOps.exif_transpose`` this never copies an already-upright
-    image, which matters for a full-resolution load.
+    image, which matters for a full-resolution load. Like it, the result no
+    longer carries the orientation tag (``transpose`` copies ``info``), so a
+    later reader can't turn the pixels a second time.
     """
     method = _PIL_TRANSPOSE.get(code)
-    return img if method is None else img.transpose(method)
+    if method is None:
+        return img
+    turned = img.transpose(method)
+    _drop_orientation_tag(turned)
+    return turned
+
+
+# XMP spellings of the orientation Pillow's ``getexif`` also reads.
+_XMP_ORIENTATION = (r'tiff:Orientation="[0-9]"', r"<tiff:Orientation>[0-9]</tiff:Orientation>")
+
+
+def _drop_orientation_tag(img: Image.Image) -> None:
+    """Remove the EXIF and XMP orientation from *img*'s ``info``, in place."""
+    try:
+        exif = img.getexif()
+    except IMAGE_READ_ERRORS:   # unreadable EXIF: drop it rather than risk a second turn
+        img.info.pop("exif", None)
+        return
+    if _ORIENTATION_TAG not in exif:
+        return
+    del exif[_ORIENTATION_TAG]
+    if "exif" in img.info:
+        img.info["exif"] = exif.tobytes()
+    for key in ("XML:com.adobe.xmp", "xmp"):
+        if key in img.info:
+            img.info[key] = _strip_xmp_orientation(img.info[key])
+
+
+def _strip_xmp_orientation(value):
+    """Return *value* (str, bytes or a tuple of bytes) without its orientation attribute."""
+    if isinstance(value, tuple):
+        return tuple(_strip_xmp_orientation(part) for part in value)
+    for pattern in _XMP_ORIENTATION:
+        if isinstance(value, str):
+            value = re.sub(pattern, "", value)
+        else:
+            value = re.sub(pattern.encode(), b"", value)
+    return value
 
 
 def upright(img: Image.Image) -> Image.Image:

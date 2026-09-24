@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `3344a1f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d1a909f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 837 | 136,672 |
+| `tests/` | 838 | 136,787 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
-| `Imervue/gui/` | 162 | 32,878 |
+| `Imervue/gui/` | 163 | 32,874 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 116 | 13,067 |
+| `Imervue/image/` | 116 | 13,108 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,916 |
 | `Imervue/multi_language/` | 8 | 13,959 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,659** | **314,717** |
+| **總計** | **1,661** | **314,869** |
 
-其中 `Imervue/` 套件本身 758 檔 / 163,839 行。
+其中 `Imervue/` 套件本身 759 檔 / 163,876 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-116 個模組、13,067 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+116 個模組、13,108 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -336,7 +336,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(91) EXIF orientation：`exif_orientation` / `transpose_for` / `upright`（檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）與 `oriented_array` 烘焙
+`orientation.py`(132) EXIF orientation：`exif_orientation` / `transpose_for` / `upright`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次；檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）與 `oriented_array` 烘焙
 
 #### 藝術效果 / 疊加
 
@@ -525,7 +525,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-162 個檔、32,878 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+163 個檔、32,874 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -608,11 +608,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(362) · `batch_export_dialog.py`(405) · `export_dialog.py`(244) ·
+`batch_convert_dialog.py`(364) · `batch_export_dialog.py`(385) · `export_dialog.py`(218) · `export_source.py`(36) `open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(386) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
-`duplicate_detection_dialog.py`(561) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(764) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(300) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
+`duplicate_detection_dialog.py`(561) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
+`exif_strip_dialog.py`(303) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
 `ai_upscale_dialog.py`(723) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-837 個檔、136,672 行。`pyproject.toml` 定義三個互斥層級 marker：
+838 個檔、136,787 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-82 | 2026-09-24 | Keep converted, exported, stripped and sanitised copies upright | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-81 | 2026-09-24 | Load the hand-loading tool dialogs and image layers upright | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-80 | 2026-09-24 | Load tool inputs and the rotate fallback from the EXIF-upright image | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-79 | 2026-09-24 | Check plugin-to-plugin imports resolve too | #test | [2026-09](2026-09.md) |

@@ -92,3 +92,17 @@ def test_exif_orientation_reads_the_tag_and_defaults_to_upright():
 def test_upright_turns_by_the_images_own_tag():
     assert upright(_tagged(6, size=(6, 4))).size == (4, 6)
     assert upright(_tagged(3, size=(6, 4))).size == (6, 4)
+
+
+def test_turned_image_no_longer_carries_the_tag(tmp_path):
+    """``transpose`` copies ``info``; a second reader would turn the pixels again."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    xmp = b'<x:xmpmeta><rdf:Description tiff:Orientation="6"/></x:xmpmeta>'
+    path = tmp_path / "p.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif, xmp=xmp)
+    with Image.open(path) as img:
+        turned = upright(img)
+    assert turned.size == (20, 40)
+    assert exif_orientation(turned) == 1
+    assert b"tiff:Orientation" not in turned.info.get("xmp", b"")
