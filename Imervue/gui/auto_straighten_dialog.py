@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
@@ -40,7 +40,7 @@ class _DetectWorker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._path).convert("RGBA"))
+            arr = load_rgba(self._path)
             angle = detect_horizon_angle(arr)
             self.done.emit(True, float(angle))
         except Exception as exc:  # worker must always report
@@ -62,7 +62,7 @@ class _ApplyWorker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             out = straighten(arr, self._angle)
             Image.fromarray(out).save(self._out)
             self.done.emit(True, self._out)

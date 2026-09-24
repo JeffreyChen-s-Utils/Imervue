@@ -506,3 +506,19 @@ def test_open_layers_dialog_returns_layers_on_accept(qapp, monkeypatch):
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0]["kind"] == "text"
+
+
+def test_image_layer_is_placed_upright(tmp_path):
+    """A phone photo used as a layer lay on its side: its EXIF turn was ignored."""
+    from PIL import Image
+
+    from Imervue.image.layers import _render_image_layer
+    arr = np.zeros((20, 40, 3), dtype=np.uint8)
+    arr[:, :20] = 255   # stored left half white; tag 6 puts it on top
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "layer.jpg"
+    Image.fromarray(arr).save(path, exif=exif, quality=100)
+    out = _render_image_layer(np.zeros((40, 20, 4), dtype=np.uint8), {"path": str(path)})
+    assert out[5, 10, 0] > 200 and out[35, 10, 0] < 60
+

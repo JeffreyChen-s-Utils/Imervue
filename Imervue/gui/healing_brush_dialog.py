@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.healing import HealingSpot, apply_healing
@@ -117,7 +118,7 @@ class _HealWorker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             result = apply_healing(arr, self._spots)
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
@@ -191,7 +192,7 @@ class HealingBrushDialog(WorkerHostMixin, QDialog):
 
     @staticmethod
     def _build_preview(path: str) -> tuple[QPixmap, tuple[int, int]]:
-        img = Image.open(path).convert("RGBA")
+        img = Image.fromarray(load_rgba(path))
         w, h = img.size
         scale = min(1.0, _PREVIEW_MAX / max(w, h))
         pw, ph = max(1, int(w * scale)), max(1, int(h * scale))

@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
@@ -17,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -42,7 +42,7 @@ class _Worker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             if self._mode == "sky_gradient":
                 arr = replace_sky(arr)
             elif self._mode == "bg_white":

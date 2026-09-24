@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.dialog_rows import folder_picker_row, open_path_into
 from Imervue.image.soft_proof import simulate_profile
@@ -77,7 +78,7 @@ class SoftProofDialog(QDialog):
             self._status.setText(lang.get("proof_pick", "Select an ICC profile."))
             return
         try:
-            img = Image.open(self._path).convert("RGBA")
+            img = Image.fromarray(load_rgba(self._path))
             img.thumbnail((_PREVIEW_MAX, _PREVIEW_MAX))
             arr = np.asarray(img)
         except (OSError, ValueError) as err:

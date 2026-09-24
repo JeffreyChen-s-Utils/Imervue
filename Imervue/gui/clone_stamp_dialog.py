@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.clone_stamp import CloneStamp, apply_clone_stamp
@@ -104,7 +105,7 @@ class _StampWorker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             result = apply_clone_stamp(arr, self._stamps)
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
@@ -122,7 +123,7 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("stamp_title", "Clone Stamp"))
 
-        img = Image.open(path).convert("RGBA")
+        img = Image.fromarray(load_rgba(path))
         iw, ih = img.size
         scale = min(1.0, _PREVIEW_MAX / max(iw, ih))
         preview = img.resize((int(iw * scale), int(ih * scale)))

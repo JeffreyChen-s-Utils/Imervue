@@ -112,3 +112,12 @@ def test_load_rgba_returns_the_exif_upright_pixels(tmp_path):
     assert out.shape == (40, 20, 4)
     assert tuple(out[5, 10, :3]) == (255, 0, 0)
     assert tuple(out[35, 10, :3]) == (0, 0, 0)
+
+
+def test_tools_load_the_current_image_through_load_rgba():
+    """An inline ``Image.open(p).convert("RGBA")`` skips the EXIF turn and leaks the handle."""
+    import re
+    root = Path(__file__).resolve().parent.parent / "Imervue" / "gui"
+    inline = re.compile(r'Image\.open\([\w.]+\)\.convert\("RGBA"\)')
+    assert sorted(p.name for p in root.glob("*.py") if inline.search(p.read_text(encoding="utf-8"))) == []
+

@@ -27,6 +27,8 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from Imervue.image.orientation import exif_orientation, transpose_for
+
 logger = logging.getLogger("Imervue.layers")
 
 LAYER_KINDS = ("text", "image", "lut")
@@ -173,7 +175,8 @@ def _render_image_layer(base: np.ndarray, params: dict) -> np.ndarray | None:
     if not path or not Path(path).is_file():
         return None
     try:
-        overlay = Image.open(path).convert("RGBA")
+        with Image.open(path) as src:   # upright, as the viewer shows it
+            overlay = transpose_for(src.convert("RGBA"), exif_orientation(src))
     except OSError as exc:
         logger.warning("Image layer load failed (%s): %s", path, exc)
         return None

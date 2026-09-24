@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `3221561` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `3344a1f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 837 | 136,621 |
+| `tests/` | 837 | 136,672 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
-| `Imervue/gui/` | 162 | 32,875 |
+| `Imervue/gui/` | 162 | 32,878 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 116 | 13,064 |
+| `Imervue/image/` | 116 | 13,067 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,916 |
 | `Imervue/multi_language/` | 8 | 13,959 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,659** | **314,660** |
+| **總計** | **1,659** | **314,717** |
 
-其中 `Imervue/` 套件本身 758 檔 / 163,833 行。
+其中 `Imervue/` 套件本身 758 檔 / 163,839 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-116 個模組、13,064 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+116 個模組、13,067 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -354,7 +354,7 @@ ImervueMainWindow
 
 #### 遮罩 / 修補 / 圖層
 
-`masks.py`(296) 筆刷/放射/線性遮罩 · `layers.py`(254) 疊加圖層合成 · `healing.py`(103) OpenCV inpaint ·
+`masks.py`(296) 筆刷/放射/線性遮罩 · `layers.py`(257) 疊加圖層合成 · `healing.py`(103) OpenCV inpaint ·
 `clone_stamp.py`(137) · `inpaint.py`(54) 無模型擴散修補 · `segmentation.py`(130) 天空/前景/背景遮罩 ·
 `saliency.py`(170) 啟發式顯著性 + 三分法裁切建議
 
@@ -525,7 +525,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-162 個檔、32,875 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+162 個檔、32,878 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -583,7 +583,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `solarize_dialog.py`(139) · `velvia_dialog.py`(84) · `film_negative_dialog.py`(81) ·
 `filmic_tonemap_dialog.py`(106) · `tone_equalizer_dialog.py`(96) · `detail_equalizer_dialog.py`(91) ·
 `auto_color_balance_dialog.py`(206) · `local_contrast_dialog.py`(120) · `clahe_dialog.py`(100) ·
-`defringe_dialog.py`(95) · `graduated_density_dialog.py`(95) · `soft_proof_dialog.py`(126) ·
+`defringe_dialog.py`(95) · `graduated_density_dialog.py`(95) · `soft_proof_dialog.py`(127) ·
 `develop_presets_dialog.py`(167) · `virtual_copies_dialog.py`(159) · `before_after_dialog.py`(174) 分割滑桿對照 ·
 `layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(223) 局部調整遮罩
 
@@ -600,7 +600,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `crop_straighten_dialog.py`(211) · `auto_straighten_dialog.py`(189) · `lens_correction_dialog.py`(157) ·
 `smart_crop_dialog.py`(126) 顯著性裁切建議 · `tiny_planet_dialog.py`(111) ·
-`clone_stamp_dialog.py`(208) · `healing_brush_dialog.py`(244) · `sky_replace_dialog.py`(143) ·
+`clone_stamp_dialog.py`(209) · `healing_brush_dialog.py`(245) · `sky_replace_dialog.py`(143) ·
 `portrait_retouch_dialog.py`(169) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(233) ·
 `hdr_merge_dialog.py`(151) · `panorama_dialog.py`(162) · `focus_stack_dialog.py`(150) ·
 `stack_blend_dialog.py`(170) · `collage_dialog.py`(87) · `deflicker_dialog.py`(228) ·
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-837 個檔、136,621 行。`pyproject.toml` 定義三個互斥層級 marker：
+837 個檔、136,672 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

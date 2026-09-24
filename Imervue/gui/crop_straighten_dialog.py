@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -27,6 +26,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.image.dimensions import image_dimensions
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.crop_geometry import (
@@ -57,7 +58,7 @@ class _Worker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             if abs(self._angle) > 1e-4:
                 arr = straighten(arr, self._angle)
             if self._rect is not None:
@@ -142,14 +143,13 @@ class CropStraightenDialog(WorkerHostMixin, QDialog):
         return s
 
     def _probe_image_aspect(self) -> float:
-        """Image width/height for aspect framing; 1.0 if the size can't be read.
+        """Upright image width/height for aspect framing; 1.0 if the size can't be read.
 
-        Uses PIL's lazy ``size`` (header only, no pixel decode)."""
-        try:
-            with Image.open(self._path) as im:
-                w, h = im.size
-        except (OSError, ValueError):
+        Reads the header only (no pixel decode)."""
+        dims = image_dimensions(self._path)
+        if dims is None:
             return 1.0
+        w, h = dims
         return w / h if h else 1.0
 
     def _apply_aspect_preset(self, label: str) -> None:
